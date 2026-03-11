@@ -82,7 +82,22 @@ Read `CLAUDE.md` for project-specific Bevy conventions, architecture notes, and 
 - `Query<&T>` is read, `Query<&mut T>` is write, `Query<(Entity, &T, &mut U)>` is mixed
 - `Commands` implies deferred world mutation — note but don't flag as a conflict with queries
 - If the codebase is small or early-stage, say so and keep the report proportional
-- **NEVER edit or write source files.** Only analyze and report. The only files you may write/edit are your own memory files under `.claude/agent-memory/system-dependency-mapper/`.
+
+⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
+**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
+- `cargo dbuild` — build (dynamic linking)
+- `cargo dcheck` — type check (dynamic linking)
+- `cargo dclippy` — lint (dynamic linking)
+- `cargo dtest` — test (dynamic linking)
+The only exception is `cargo fmt` which has no dev alias.
+
+⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
+**NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:
+- Do NOT fix code — not even "obvious" fixes
+- Do NOT create helper scripts or new files
+- Do NOT delete any file for any reason
+- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/system-dependency-mapper/`
+If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
 # Persistent Agent Memory
 

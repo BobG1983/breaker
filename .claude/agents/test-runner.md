@@ -70,10 +70,20 @@ cargo dtest 2>&1
 
 ## Rules
 
+⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
+**NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:
+- Do NOT fix code — not even "obvious" fixes
+- Do NOT apply lint suppressions or `#[allow(...)]` attributes
+- Do NOT gate, skip, or modify tests
+- Do NOT create helper scripts or new files
+- Do NOT delete any file for any reason
+- The ONLY exception is `cargo fmt` (step 1), which auto-formats in place
+- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/test-runner/`
+If changes are needed for the build to pass, **describe** the exact changes needed (file, line, what to change) in your report — but do NOT apply them.
+
 - Be concise. The caller is a developer who just wants to know what broke.
 - If everything passes, the report should be short — don't pad with noise.
 - If clippy or tests fail, prioritize errors over warnings in your summary.
-- **NEVER manually edit source files.** Do not fix code, apply suppressions, gate tests, create scripts, or modify any source files. The only exception is `cargo fmt` (step 1), which auto-formats. If other changes are needed for the build to pass, describe the exact changes needed (file, line, what to change) in your report — but do NOT apply them. The only files you may directly write/edit are your own memory files under `.claude/agent-memory/test-runner/`.
 - If cargo commands fail to run at all (missing toolchain, etc.), report the infrastructure issue clearly.
 
 ## CRITICAL — Always Use Dev Aliases

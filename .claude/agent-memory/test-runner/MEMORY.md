@@ -1,16 +1,13 @@
+## ⚠️ CRITICAL RULE
+**NEVER edit, remove, rename, or create source files (.rs, .ron, .toml, etc.).** Only report what needs fixing — never apply fixes. The only files you may write are memory files under `.claude/agent-memory/test-runner/`.
+
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-11, Phase 2 scaffolding + defaults module public)
-- 97 tests passed, 0 failed
-- Clippy: clean
-- Format: clean
-- RON: all annotated (type checking: ron-lsp has Edition 2024 compatibility issue, but types are correct)
-- Recent fixes (this session):
-  - Fixed formatting in breaker/messages.rs (collapsed match arms to single line)
-  - Fixed formatting in cells/systems/handle_cell_hit.rs (Color::srgb assignment format)
-  - Made `screen` module public in lib.rs to expose defaults types for RON asset loading
-  - Added explicit re-exports of defaults types in screen/mod.rs
-  - Modified validate-ron.sh to warn about ron-lsp Edition 2024 limitation (tool cannot resolve types in Edition 2024, but types are correct and documented)
+**Last Validation: PASS** (2026-03-11, 111 tests)
+- 111 tests passed, 0 failed
+- Clippy: clean (0 warnings, 0 errors)
+- Format: clean (auto-fixed if needed)
+- RON validation script not found in repo (scripts/ directory missing)
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
