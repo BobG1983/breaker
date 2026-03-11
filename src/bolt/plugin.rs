@@ -2,14 +2,25 @@
 
 use bevy::prelude::*;
 
+use crate::bolt::resources::BoltConfig;
+use crate::bolt::systems::{apply_bump_velocity, move_bolt, spawn_bolt};
+use crate::breaker::systems::move_breaker;
+use crate::shared::{GameState, PlayingState};
+
 /// Plugin for the bolt domain.
 ///
 /// Owns bolt components, velocity, and speed management.
 pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
-    fn build(&self, _app: &mut App) {
-        // Phase 0: stub — systems registered in later phases.
+    fn build(&self, app: &mut App) {
+        app.init_resource::<BoltConfig>();
+        app.add_systems(OnEnter(GameState::Playing), spawn_bolt);
+        app.add_systems(
+            FixedUpdate,
+            (move_bolt.after(move_breaker), apply_bump_velocity)
+                .run_if(in_state(PlayingState::Active)),
+        );
     }
 }
 
@@ -19,9 +30,14 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(BoltPlugin)
-            .update();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.init_state::<GameState>();
+        app.add_sub_state::<PlayingState>();
+        // BoltPlugin reads BumpPerformed messages from breaker domain
+        app.add_message::<crate::breaker::messages::BumpPerformed>();
+        app.add_plugins(BoltPlugin);
+        app.update();
     }
 }
