@@ -127,7 +127,7 @@ mod tests {
     fn spawn_breaker_at(app: &mut App, x: f32, y: f32) {
         app.world_mut().spawn((
             Breaker,
-            BreakerTilt { angle: 0.0 },
+            BreakerTilt::default(),
             Transform::from_xyz(x, y, 0.0),
         ));
     }
@@ -211,7 +211,10 @@ mod tests {
         // Breaker tilted right
         app.world_mut().spawn((
             Breaker,
-            BreakerTilt { angle: 0.3 },
+            BreakerTilt {
+                angle: 0.3,
+                settle_start_angle: 0.0,
+            },
             Transform::from_xyz(0.0, bc.y_position, 0.0),
         ));
 

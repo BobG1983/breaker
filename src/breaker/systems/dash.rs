@@ -46,7 +46,7 @@ pub fn update_breaker_state(
                 handle_dashing(&config, dt, &mut state, &velocity, &mut tilt, &mut timer);
             }
             BreakerState::Braking => {
-                handle_braking(&config, dt, &mut state, &mut velocity);
+                handle_braking(&config, dt, &mut state, &mut velocity, &mut tilt);
             }
         }
     }
@@ -70,7 +70,7 @@ fn handle_idle_or_settling(
         } else {
             1.0
         };
-        tilt.angle *= 1.0 - settle_progress;
+        tilt.angle = tilt.settle_start_angle * (1.0 - settle_progress);
 
         if timer.remaining <= 0.0 {
             *state = BreakerState::Idle;
@@ -126,6 +126,7 @@ fn handle_braking(
     dt: f32,
     state: &mut BreakerState,
     velocity: &mut BreakerVelocity,
+    tilt: &mut BreakerTilt,
 ) {
     let brake_decel = config.deceleration * config.brake_decel_multiplier;
 
@@ -138,11 +139,9 @@ fn handle_braking(
     // Speed near zero → transition to Settling
     if velocity.x.abs() <= f32::EPSILON {
         velocity.x = 0.0;
+        tilt.settle_start_angle = tilt.angle;
         *state = BreakerState::Settling;
-        // Tilt carries over from braking, will be eased back to zero
     }
-
-    // Tilt was set when entering Braking; stays until Settling eases it back.
 }
 
 #[cfg(test)]
@@ -156,7 +155,10 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 0.0 },
-                BreakerTilt { angle: 0.0 },
+                BreakerTilt {
+                    angle: 0.0,
+                    settle_start_angle: 0.0,
+                },
                 BreakerStateTimer { remaining: 0.0 },
             ))
             .id()
@@ -278,10 +280,11 @@ mod tests {
 
         // Enter settling with some tilt and expired timer
         *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Settling;
-        app.world_mut()
-            .get_mut::<BreakerTilt>(entity)
-            .unwrap()
-            .angle = 0.3;
+        {
+            let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
+            tilt.angle = 0.3;
+            tilt.settle_start_angle = 0.3;
+        }
         app.world_mut()
             .get_mut::<BreakerStateTimer>(entity)
             .unwrap()
@@ -301,6 +304,80 @@ mod tests {
             tilt.angle.abs() < f32::EPSILON,
             "tilt should be reset to zero after settling, got {}",
             tilt.angle
+        );
+    }
+
+    #[test]
+    fn settling_tilt_is_frame_rate_independent() {
+        use std::time::Duration;
+
+        let start_angle = 0.44;
+        let config = BreakerConfig::default();
+        let settle_dur = config.settle_duration;
+
+        // Use 3 steps at 1/60 and 12 steps at 1/240 — both equal exactly 0.05s elapsed
+        let dt_60 = Duration::from_secs_f64(1.0 / 60.0);
+        let steps_60: u32 = 3;
+        let dt_240 = Duration::from_secs_f64(1.0 / 240.0);
+        let steps_240: u32 = 12;
+
+        // Run settling at 60fps timestep
+        let mut app_60 = test_app();
+        let e60 = spawn_test_breaker(&mut app_60);
+        *app_60.world_mut().get_mut::<BreakerState>(e60).unwrap() = BreakerState::Settling;
+        {
+            let mut tilt = app_60.world_mut().get_mut::<BreakerTilt>(e60).unwrap();
+            tilt.angle = start_angle;
+            tilt.settle_start_angle = start_angle;
+        }
+        app_60
+            .world_mut()
+            .get_mut::<BreakerStateTimer>(e60)
+            .unwrap()
+            .remaining = settle_dur;
+        app_60
+            .world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .set_timestep(dt_60);
+        for _ in 0..steps_60 {
+            app_60
+                .world_mut()
+                .resource_mut::<Time<Fixed>>()
+                .advance_by(dt_60);
+            app_60.update();
+        }
+        let angle_60 = app_60.world().get::<BreakerTilt>(e60).unwrap().angle;
+
+        // Run settling at 240fps timestep
+        let mut app_240 = test_app();
+        let e240 = spawn_test_breaker(&mut app_240);
+        *app_240.world_mut().get_mut::<BreakerState>(e240).unwrap() = BreakerState::Settling;
+        {
+            let mut tilt = app_240.world_mut().get_mut::<BreakerTilt>(e240).unwrap();
+            tilt.angle = start_angle;
+            tilt.settle_start_angle = start_angle;
+        }
+        app_240
+            .world_mut()
+            .get_mut::<BreakerStateTimer>(e240)
+            .unwrap()
+            .remaining = settle_dur;
+        app_240
+            .world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .set_timestep(dt_240);
+        for _ in 0..steps_240 {
+            app_240
+                .world_mut()
+                .resource_mut::<Time<Fixed>>()
+                .advance_by(dt_240);
+            app_240.update();
+        }
+        let angle_240 = app_240.world().get::<BreakerTilt>(e240).unwrap().angle;
+
+        assert!(
+            (angle_60 - angle_240).abs() < 0.001,
+            "tilt should be frame-rate independent: 60fps={angle_60}, 240fps={angle_240}"
         );
     }
 

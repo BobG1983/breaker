@@ -38,6 +38,8 @@ pub enum BreakerState {
 pub struct BreakerTilt {
     /// Current tilt angle in radians.
     pub angle: f32,
+    /// Angle captured when entering Settling, used for frame-rate-independent lerp.
+    pub settle_start_angle: f32,
 }
 
 /// Tracks the bump state for timing-grade calculations.
@@ -98,6 +100,7 @@ mod tests {
     fn breaker_tilt_default_is_zero() {
         let tilt = BreakerTilt::default();
         assert!((tilt.angle - 0.0).abs() < f32::EPSILON);
+        assert!((tilt.settle_start_angle - 0.0).abs() < f32::EPSILON);
     }
 
     #[test]
