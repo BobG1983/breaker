@@ -17,6 +17,11 @@ use crate::physics::messages::BoltHitCell;
 /// at high speeds.
 const MIN_PHYSICS_FPS: f32 = 30.0;
 
+/// When X and Y penetration depths are within this ratio, the hit is
+/// ambiguous (corner clip). In that case, the bolt's velocity direction
+/// is used as a tiebreaker instead of raw penetration depth.
+const CORNER_DEPTH_RATIO: f32 = 1.5;
+
 /// Query filter for cell data.
 type CellQueryFilter = (With<Cell>, Without<Bolt>);
 
@@ -108,7 +113,16 @@ pub fn bolt_cell_collision(
                 let depth_x = half_extents.x - dx;
                 let depth_y = half_extents.y - dy;
                 let min_depth = depth_x.min(depth_y);
-                let is_side = depth_x < depth_y;
+
+                // Determine side vs top/bottom hit. When depths are
+                // similar (corner clip), use velocity direction as a
+                // tiebreaker so an upward bolt reflects Y, not X.
+                let ratio = depth_x.max(depth_y) / depth_x.min(depth_y).max(f32::EPSILON);
+                let is_side = if ratio < CORNER_DEPTH_RATIO {
+                    bolt_velocity.value.x.abs() > bolt_velocity.value.y.abs()
+                } else {
+                    depth_x < depth_y
+                };
 
                 if best_direct.is_none_or(|(_, _, d, _)| min_depth < d) {
                     best_direct = Some((cell_entity, cell_pos, min_depth, is_side));
@@ -342,6 +356,41 @@ mod tests {
         assert_eq!(hits.0.len(), 2, "both bolts should register hits");
         assert!(hits.0.contains(&cell_a), "cell A should be in the hit list");
         assert!(hits.0.contains(&cell_b), "cell B should be in the hit list");
+    }
+
+    #[test]
+    fn upward_bolt_clipping_corner_reflects_y_not_x() {
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        // Cell at (0, 100)
+        spawn_cell(&mut app, 0.0, 100.0);
+
+        // Bolt approaching from below, slightly off-center — clips the corner.
+        // With pure penetration-depth logic, depth_x ≈ depth_y at corners,
+        // which can misidentify this as a side hit (reflecting X while Y
+        // continues upward). The bolt should reflect Y (bounce down).
+        let bolt_x = cc.half_width + bc.radius - 2.5; // just inside the right edge
+        let bolt_y = 100.0 - cc.half_height - bc.radius + 3.0; // just inside the bottom edge
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(50.0, 350.0), // mostly upward with slight rightward drift
+            Transform::from_xyz(bolt_x, bolt_y, 0.0),
+        ));
+        app.update();
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "bolt moving mostly upward should reflect Y on corner hit, got vy={:.1}",
+            vel.value.y
+        );
     }
 
     #[test]
