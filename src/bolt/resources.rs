@@ -1,56 +1,12 @@
 //! Bolt domain resources.
 
 use bevy::prelude::*;
+use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
-/// Configuration for bolt mechanics.
-#[derive(Resource, Debug, Clone)]
-pub struct BoltConfig {
-    /// Base speed in world units per second.
-    pub base_speed: f32,
-    /// Minimum speed cap.
-    pub min_speed: f32,
-    /// Maximum speed cap.
-    pub max_speed: f32,
-    /// Minimum angle from horizontal in radians.
-    pub min_angle_from_horizontal: f32,
-    /// Bolt radius in world units.
-    pub radius: f32,
-    /// Vertical offset above the breaker where the bolt spawns.
-    pub spawn_offset_y: f32,
-    /// Initial launch angle from vertical in radians.
-    pub initial_angle: f32,
-    /// Vertical offset above the breaker for bolt respawn after loss.
-    pub respawn_offset_y: f32,
-    /// RGB values for the bolt HDR color.
-    pub color_rgb: [f32; 3],
-}
-
-impl Default for BoltConfig {
-    fn default() -> Self {
-        BoltDefaults::default().into()
-    }
-}
-
-impl BoltConfig {
-    /// Bolt color as a Bevy [`Color`].
-    #[must_use]
-    pub fn color(&self) -> Color {
-        crate::shared::color_from_rgb(self.color_rgb)
-    }
-
-    /// Initial launch velocity based on `base_speed` and `initial_angle`.
-    #[must_use]
-    pub fn initial_velocity(&self) -> Vec2 {
-        Vec2::new(
-            self.base_speed * self.initial_angle.sin(),
-            self.base_speed * self.initial_angle.cos(),
-        )
-    }
-}
-
 /// Bolt defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "BoltConfig")]
 pub struct BoltDefaults {
     /// Base speed in world units per second.
     pub base_speed: f32,
@@ -88,19 +44,20 @@ impl Default for BoltDefaults {
     }
 }
 
-impl From<BoltDefaults> for BoltConfig {
-    fn from(d: BoltDefaults) -> Self {
-        Self {
-            base_speed: d.base_speed,
-            min_speed: d.min_speed,
-            max_speed: d.max_speed,
-            min_angle_from_horizontal: d.min_angle_from_horizontal,
-            radius: d.radius,
-            spawn_offset_y: d.spawn_offset_y,
-            initial_angle: d.initial_angle,
-            respawn_offset_y: d.respawn_offset_y,
-            color_rgb: d.color_rgb,
-        }
+impl BoltConfig {
+    /// Bolt color as a Bevy [`Color`].
+    #[must_use]
+    pub fn color(&self) -> Color {
+        crate::shared::color_from_rgb(self.color_rgb)
+    }
+
+    /// Initial launch velocity based on `base_speed` and `initial_angle`.
+    #[must_use]
+    pub fn initial_velocity(&self) -> Vec2 {
+        Vec2::new(
+            self.base_speed * self.initial_angle.sin(),
+            self.base_speed * self.initial_angle.cos(),
+        )
     }
 }
 

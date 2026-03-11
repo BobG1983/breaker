@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "brickbreaker_derive"]
+
 [package]
 name = "brickbreaker"
 version = "0.1.0"
@@ -10,6 +13,7 @@ dev = ["dep:bevy_egui"]
 [dependencies]
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 bevy_egui = { version = "0.39", optional = true }
+brickbreaker_derive = { path = "brickbreaker_derive" }
 serde = { version = "1", features = ["derive"] }
 ron = "0.11"
 bevy_common_assets = { version = "0.15", features = ["ron"] }

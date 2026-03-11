@@ -1,75 +1,12 @@
 //! Breaker domain resources.
 
 use bevy::prelude::*;
+use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
-/// Configuration for breaker mechanics.
-///
-/// All tunable breaker parameters in one place. Loaded as a `Resource`.
-#[derive(Resource, Debug, Clone)]
-pub struct BreakerConfig {
-    /// Half-width of the breaker in world units.
-    pub half_width: f32,
-    /// Half-height of the breaker in world units.
-    pub half_height: f32,
-    /// Maximum horizontal speed in world units per second.
-    pub max_speed: f32,
-    /// Horizontal acceleration in world units per second squared.
-    pub acceleration: f32,
-    /// Horizontal deceleration (friction) in world units per second squared.
-    pub deceleration: f32,
-    /// Dash speed multiplier relative to max speed.
-    pub dash_speed_multiplier: f32,
-    /// Duration of the dash in seconds.
-    pub dash_duration: f32,
-    /// Brake deceleration multiplier relative to normal deceleration.
-    pub brake_decel_multiplier: f32,
-    /// Duration of the settle phase in seconds.
-    pub settle_duration: f32,
-    /// Maximum tilt angle during dash in radians.
-    pub dash_tilt_angle: f32,
-    /// Maximum tilt angle during brake in radians.
-    pub brake_tilt_angle: f32,
-    /// Y position of the breaker.
-    pub y_position: f32,
-    /// Duration of the bump active window in seconds.
-    pub bump_duration: f32,
-    /// Cooldown between bumps in seconds.
-    pub bump_cooldown: f32,
-    /// Perfect bump timing window (seconds).
-    pub perfect_bump_window: f32,
-    /// Early bump window (seconds).
-    pub early_bump_window: f32,
-    /// Velocity multiplier for perfect bump.
-    pub perfect_bump_multiplier: f32,
-    /// Velocity multiplier for early/late bump.
-    pub weak_bump_multiplier: f32,
-    /// Velocity multiplier for no bump.
-    pub no_bump_multiplier: f32,
-    /// RGB values for the breaker HDR color.
-    pub color_rgb: [f32; 3],
-    /// Duration of the bump pop animation in seconds.
-    pub bump_visual_duration: f32,
-    /// Maximum Y offset at the peak of the bump pop animation (world units).
-    pub bump_visual_peak: f32,
-}
-
-impl Default for BreakerConfig {
-    fn default() -> Self {
-        BreakerDefaults::default().into()
-    }
-}
-
-impl BreakerConfig {
-    /// Breaker color as a Bevy [`Color`].
-    #[must_use]
-    pub fn color(&self) -> Color {
-        crate::shared::color_from_rgb(self.color_rgb)
-    }
-}
-
 /// Breaker defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "BreakerConfig")]
 pub struct BreakerDefaults {
     /// Half-width of the breaker in world units.
     pub half_width: f32,
@@ -146,32 +83,11 @@ impl Default for BreakerDefaults {
     }
 }
 
-impl From<BreakerDefaults> for BreakerConfig {
-    fn from(d: BreakerDefaults) -> Self {
-        Self {
-            half_width: d.half_width,
-            half_height: d.half_height,
-            max_speed: d.max_speed,
-            acceleration: d.acceleration,
-            deceleration: d.deceleration,
-            dash_speed_multiplier: d.dash_speed_multiplier,
-            dash_duration: d.dash_duration,
-            brake_decel_multiplier: d.brake_decel_multiplier,
-            settle_duration: d.settle_duration,
-            dash_tilt_angle: d.dash_tilt_angle,
-            brake_tilt_angle: d.brake_tilt_angle,
-            y_position: d.y_position,
-            bump_duration: d.bump_duration,
-            bump_cooldown: d.bump_cooldown,
-            perfect_bump_window: d.perfect_bump_window,
-            early_bump_window: d.early_bump_window,
-            perfect_bump_multiplier: d.perfect_bump_multiplier,
-            weak_bump_multiplier: d.weak_bump_multiplier,
-            no_bump_multiplier: d.no_bump_multiplier,
-            color_rgb: d.color_rgb,
-            bump_visual_duration: d.bump_visual_duration,
-            bump_visual_peak: d.bump_visual_peak,
-        }
+impl BreakerConfig {
+    /// Breaker color as a Bevy [`Color`].
+    #[must_use]
+    pub fn color(&self) -> Color {
+        crate::shared::color_from_rgb(self.color_rgb)
     }
 }
 

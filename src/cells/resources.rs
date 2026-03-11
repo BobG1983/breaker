@@ -1,67 +1,12 @@
 //! Cells domain resources.
 
 use bevy::prelude::*;
+use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
-/// Configuration for cell mechanics.
-#[derive(Resource, Debug, Clone)]
-pub struct CellConfig {
-    /// Half-width of a cell in world units.
-    pub half_width: f32,
-    /// Half-height of a cell in world units.
-    pub half_height: f32,
-    /// Horizontal padding between cells.
-    pub padding_x: f32,
-    /// Vertical padding between cells.
-    pub padding_y: f32,
-    /// Number of columns in the grid.
-    pub grid_cols: u32,
-    /// Number of rows in the grid.
-    pub grid_rows: u32,
-    /// Y offset from playfield top for grid start.
-    pub grid_top_offset: f32,
-    /// HP for standard cells.
-    pub standard_hp: u32,
-    /// HP for tough cells.
-    pub tough_hp: u32,
-    /// RGB values for standard cell HDR color.
-    pub standard_color_rgb: [f32; 3],
-    /// RGB values for tough cell HDR color.
-    pub tough_color_rgb: [f32; 3],
-    /// Row index (0-indexed from top) that contains tough cells.
-    pub tough_row_index: u32,
-    /// HDR intensity multiplier for damaged cells at full health.
-    pub damage_hdr_base: f32,
-    /// Minimum green channel value for damage color feedback.
-    pub damage_green_min: f32,
-    /// Blue channel range added based on health fraction.
-    pub damage_blue_range: f32,
-    /// Base blue channel value for damage color feedback.
-    pub damage_blue_base: f32,
-}
-
-impl CellConfig {
-    /// Standard cell color as a Bevy [`Color`].
-    #[must_use]
-    pub fn standard_color(&self) -> Color {
-        crate::shared::color_from_rgb(self.standard_color_rgb)
-    }
-
-    /// Tough cell color as a Bevy [`Color`].
-    #[must_use]
-    pub fn tough_color(&self) -> Color {
-        crate::shared::color_from_rgb(self.tough_color_rgb)
-    }
-}
-
-impl Default for CellConfig {
-    fn default() -> Self {
-        CellDefaults::default().into()
-    }
-}
-
 /// Cell defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "CellConfig")]
 pub struct CellDefaults {
     /// Half-width of a cell in world units.
     pub half_width: f32,
@@ -120,26 +65,17 @@ impl Default for CellDefaults {
     }
 }
 
-impl From<CellDefaults> for CellConfig {
-    fn from(d: CellDefaults) -> Self {
-        Self {
-            half_width: d.half_width,
-            half_height: d.half_height,
-            padding_x: d.padding_x,
-            padding_y: d.padding_y,
-            grid_cols: d.grid_cols,
-            grid_rows: d.grid_rows,
-            grid_top_offset: d.grid_top_offset,
-            standard_hp: d.standard_hp,
-            tough_hp: d.tough_hp,
-            standard_color_rgb: d.standard_color_rgb,
-            tough_color_rgb: d.tough_color_rgb,
-            tough_row_index: d.tough_row_index,
-            damage_hdr_base: d.damage_hdr_base,
-            damage_green_min: d.damage_green_min,
-            damage_blue_range: d.damage_blue_range,
-            damage_blue_base: d.damage_blue_base,
-        }
+impl CellConfig {
+    /// Standard cell color as a Bevy [`Color`].
+    #[must_use]
+    pub fn standard_color(&self) -> Color {
+        crate::shared::color_from_rgb(self.standard_color_rgb)
+    }
+
+    /// Tough cell color as a Bevy [`Color`].
+    #[must_use]
+    pub fn tough_color(&self) -> Color {
+        crate::shared::color_from_rgb(self.tough_color_rgb)
     }
 }
 

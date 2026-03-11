@@ -1820,10 +1820,20 @@ dependencies = [
  "bevy_asset_loader",
  "bevy_common_assets",
  "bevy_egui",
+ "brickbreaker_derive",
  "iyes_progress",
  "proptest",
  "ron 0.11.0",
  "serde",
+]
+
+[[package]]
+name = "brickbreaker_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

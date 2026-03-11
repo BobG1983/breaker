@@ -1,23 +1,12 @@
 //! Physics domain resources.
 
 use bevy::prelude::*;
+use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
-/// Configuration for physics mechanics.
-#[derive(Resource, Debug, Clone)]
-pub struct PhysicsConfig {
-    /// Maximum reflection angle from vertical in radians.
-    pub max_reflection_angle: f32,
-}
-
-impl Default for PhysicsConfig {
-    fn default() -> Self {
-        PhysicsDefaults::default().into()
-    }
-}
-
 /// Physics defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "PhysicsConfig")]
 pub struct PhysicsDefaults {
     /// Maximum reflection angle from vertical in radians.
     pub max_reflection_angle: f32,
@@ -27,14 +16,6 @@ impl Default for PhysicsDefaults {
     fn default() -> Self {
         Self {
             max_reflection_angle: 1.31,
-        }
-    }
-}
-
-impl From<PhysicsDefaults> for PhysicsConfig {
-    fn from(d: PhysicsDefaults) -> Self {
-        Self {
-            max_reflection_angle: d.max_reflection_angle,
         }
     }
 }

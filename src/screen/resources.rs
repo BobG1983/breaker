@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
 use super::components::MenuItem;
@@ -34,37 +35,6 @@ pub struct DefaultsCollection {
     pub mainmenu: Handle<MainMenuDefaults>,
 }
 
-/// Main menu visual configuration, seeded from [`MainMenuDefaults`].
-#[derive(Resource, Clone, Debug)]
-pub struct MainMenuConfig {
-    /// Font size for the title text.
-    pub title_font_size: f32,
-    /// Font size for menu item text.
-    pub menu_font_size: f32,
-    /// HDR RGB color for the title.
-    pub title_color_rgb: [f32; 3],
-    /// HDR RGB color for the selected menu item.
-    pub selected_color_rgb: [f32; 3],
-    /// RGB color for unselected menu items.
-    pub normal_color_rgb: [f32; 3],
-    /// RGB color for disabled menu items.
-    pub disabled_color_rgb: [f32; 3],
-    /// Bottom margin below the title in pixels.
-    pub title_bottom_margin: f32,
-    /// Gap between menu items in pixels.
-    pub menu_item_gap: f32,
-    /// Asset path for the title font.
-    pub title_font_path: String,
-    /// Asset path for the menu font.
-    pub menu_font_path: String,
-}
-
-impl Default for MainMenuConfig {
-    fn default() -> Self {
-        MainMenuDefaults::default().into()
-    }
-}
-
 /// Tracks the currently selected menu item.
 #[derive(Resource, Debug)]
 pub struct MainMenuSelection {
@@ -73,7 +43,8 @@ pub struct MainMenuSelection {
 }
 
 /// Main menu defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "MainMenuConfig")]
 pub struct MainMenuDefaults {
     /// Font size for the title text.
     pub title_font_size: f32,
@@ -110,23 +81,6 @@ impl Default for MainMenuDefaults {
             menu_item_gap: 12.0,
             title_font_path: "fonts/Orbitron-Bold.ttf".to_owned(),
             menu_font_path: "fonts/Rajdhani-Medium.ttf".to_owned(),
-        }
-    }
-}
-
-impl From<MainMenuDefaults> for MainMenuConfig {
-    fn from(d: MainMenuDefaults) -> Self {
-        Self {
-            title_font_size: d.title_font_size,
-            menu_font_size: d.menu_font_size,
-            title_color_rgb: d.title_color_rgb,
-            selected_color_rgb: d.selected_color_rgb,
-            normal_color_rgb: d.normal_color_rgb,
-            disabled_color_rgb: d.disabled_color_rgb,
-            title_bottom_margin: d.title_bottom_margin,
-            menu_item_gap: d.menu_item_gap,
-            title_font_path: d.title_font_path,
-            menu_font_path: d.menu_font_path,
         }
     }
 }

@@ -4,6 +4,7 @@
 //! configuration. No systems or plugins — those live in domain plugins.
 
 use bevy::prelude::*;
+use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
 /// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
@@ -13,28 +14,9 @@ pub fn color_from_rgb(rgb: [f32; 3]) -> Color {
     Color::srgb(rgb[0], rgb[1], rgb[2])
 }
 
-/// Configuration for the playfield dimensions.
-///
-/// All playfield boundary queries should go through this resource
-/// rather than using raw constants.
-#[derive(Resource, Debug, Clone)]
-pub struct PlayfieldConfig {
-    /// Width of the playfield in world units.
-    pub width: f32,
-    /// Height of the playfield in world units.
-    pub height: f32,
-    /// RGB values for the background clear color.
-    pub background_color_rgb: [f32; 3],
-}
-
-impl Default for PlayfieldConfig {
-    fn default() -> Self {
-        PlayfieldDefaults::default().into()
-    }
-}
-
 /// Playfield defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "PlayfieldConfig")]
 pub struct PlayfieldDefaults {
     /// Width of the playfield in world units.
     pub width: f32,
@@ -50,16 +32,6 @@ impl Default for PlayfieldDefaults {
             width: 800.0,
             height: 600.0,
             background_color_rgb: [0.02, 0.01, 0.04],
-        }
-    }
-}
-
-impl From<PlayfieldDefaults> for PlayfieldConfig {
-    fn from(d: PlayfieldDefaults) -> Self {
-        Self {
-            width: d.width,
-            height: d.height,
-            background_color_rgb: d.background_color_rgb,
         }
     }
 }
