@@ -46,7 +46,7 @@ pub fn update_breaker_state(
                 handle_dashing(&config, dt, &mut state, &velocity, &mut tilt, &mut timer);
             }
             BreakerState::Braking => {
-                handle_braking(&config, dt, &mut state, &mut velocity, &tilt);
+                handle_braking(&config, dt, &mut state, &mut velocity);
             }
         }
     }
@@ -126,7 +126,6 @@ fn handle_braking(
     dt: f32,
     state: &mut BreakerState,
     velocity: &mut BreakerVelocity,
-    _tilt: &BreakerTilt,
 ) {
     let brake_decel = config.deceleration * config.brake_decel_multiplier;
 
