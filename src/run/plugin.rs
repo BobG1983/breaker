@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::run::messages::{NodeCleared, TimerExpired};
-use crate::run::resources::RunState;
+use crate::run::{
+    messages::{NodeCleared, TimerExpired},
+    resources::RunState,
+};
 
 /// Plugin for the run domain.
 ///

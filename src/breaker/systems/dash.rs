@@ -2,10 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::components::{
-    Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity,
+use crate::breaker::{
+    components::{Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity},
+    resources::BreakerConfig,
 };
-use crate::breaker::resources::BreakerConfig;
 
 /// Handles dash input and the Dashing → Braking → Settling → Idle state machine.
 ///

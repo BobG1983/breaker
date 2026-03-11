@@ -2,10 +2,14 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::components::{Breaker, BreakerState, BreakerStateTimer, BumpState};
-use crate::breaker::messages::{BumpGrade, BumpPerformed};
-use crate::breaker::resources::BreakerConfig;
-use crate::physics::messages::BoltHitBreaker;
+use crate::{
+    breaker::{
+        components::{Breaker, BreakerState, BreakerStateTimer, BumpState},
+        messages::{BumpGrade, BumpPerformed},
+        resources::BreakerConfig,
+    },
+    physics::messages::BoltHitBreaker,
+};
 
 /// Updates bump state: handles input, ticks timers, cools down.
 pub fn update_bump(

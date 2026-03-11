@@ -4,11 +4,10 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use serde::Deserialize;
 
-use crate::bolt::BoltDefaults;
-use crate::breaker::BreakerDefaults;
-use crate::cells::CellDefaults;
-use crate::physics::PhysicsDefaults;
-use crate::shared::PlayfieldDefaults;
+use crate::{
+    bolt::BoltDefaults, breaker::BreakerDefaults, cells::CellDefaults, physics::PhysicsDefaults,
+    shared::PlayfieldDefaults,
+};
 
 use super::components::MenuItem;
 

@@ -2,12 +2,16 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
-use crate::bolt::filters::ActiveBoltFilter;
-use crate::breaker::components::Breaker;
-use crate::physics::messages::BoltLost;
-use crate::shared::PlayfieldConfig;
+use crate::{
+    bolt::{
+        BoltConfig,
+        components::{Bolt, BoltVelocity},
+        filters::ActiveBoltFilter,
+    },
+    breaker::components::Breaker,
+    physics::messages::BoltLost,
+    shared::PlayfieldConfig,
+};
 
 /// Detects when the bolt falls below the playfield and respawns it.
 ///
@@ -42,8 +46,10 @@ pub fn bolt_lost(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::{Bolt, BoltVelocity};
-    use crate::breaker::components::Breaker;
+    use crate::{
+        bolt::components::{Bolt, BoltVelocity},
+        breaker::components::Breaker,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();

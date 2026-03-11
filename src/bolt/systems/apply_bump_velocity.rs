@@ -2,10 +2,16 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
-use crate::breaker::BreakerConfig;
-use crate::breaker::messages::{BumpGrade, BumpPerformed};
+use crate::{
+    bolt::{
+        BoltConfig,
+        components::{Bolt, BoltVelocity},
+    },
+    breaker::{
+        BreakerConfig,
+        messages::{BumpGrade, BumpPerformed},
+    },
+};
 
 /// Reads [`BumpPerformed`] messages and applies the corresponding velocity
 /// multiplier to the bolt.
@@ -40,8 +46,10 @@ pub fn apply_bump_velocity(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::BoltConfig;
-    use crate::bolt::components::{Bolt, BoltVelocity};
+    use crate::bolt::{
+        BoltConfig,
+        components::{Bolt, BoltVelocity},
+    };
 
     #[derive(Resource)]
     struct TestMessage(Option<BumpPerformed>);

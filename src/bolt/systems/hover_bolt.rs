@@ -2,9 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{Bolt, BoltServing};
-use crate::bolt::resources::BoltConfig;
-use crate::breaker::components::Breaker;
+use crate::{
+    bolt::{
+        components::{Bolt, BoltServing},
+        resources::BoltConfig,
+    },
+    breaker::components::Breaker,
+};
 
 /// Keeps the bolt positioned above the breaker while serving.
 ///

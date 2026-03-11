@@ -2,13 +2,17 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::messages::BumpPerformed;
-use crate::breaker::resources::BreakerConfig;
-use crate::breaker::systems::{
-    animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, spawn_breaker,
-    trigger_bump_visual, update_breaker_state, update_bump,
+use crate::{
+    breaker::{
+        messages::BumpPerformed,
+        resources::BreakerConfig,
+        systems::{
+            animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, spawn_breaker,
+            trigger_bump_visual, update_breaker_state, update_bump,
+        },
+    },
+    shared::{GameState, PlayingState},
 };
-use crate::shared::{GameState, PlayingState};
 
 /// Plugin for the breaker domain.
 ///

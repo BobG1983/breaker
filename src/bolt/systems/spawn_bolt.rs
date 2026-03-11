@@ -2,11 +2,15 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{Bolt, BoltServing, BoltVelocity};
-use crate::bolt::resources::BoltConfig;
-use crate::breaker::BreakerConfig;
-use crate::run::RunState;
-use crate::shared::CleanupOnNodeExit;
+use crate::{
+    bolt::{
+        components::{Bolt, BoltServing, BoltVelocity},
+        resources::BoltConfig,
+    },
+    breaker::BreakerConfig,
+    run::RunState,
+    shared::CleanupOnNodeExit,
+};
 
 /// Spawns the bolt entity above the breaker.
 ///

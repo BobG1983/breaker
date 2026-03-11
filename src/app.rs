@@ -1,11 +1,8 @@
 //! App construction — builds the Bevy [`App`] with all plugins.
 
-use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::post_process::bloom::Bloom;
-use bevy::prelude::*;
+use bevy::{core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom, prelude::*};
 
-use crate::game::Game;
-use crate::shared::PlayfieldConfig;
+use crate::{game::Game, shared::PlayfieldConfig};
 
 /// Constructs and returns the configured Bevy [`App`].
 ///

@@ -2,12 +2,16 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::resources::BoltConfig;
-use crate::bolt::systems::{
-    apply_bump_velocity, hover_bolt, launch_bolt, prepare_bolt_velocity, spawn_bolt,
+use crate::{
+    bolt::{
+        resources::BoltConfig,
+        systems::{
+            apply_bump_velocity, hover_bolt, launch_bolt, prepare_bolt_velocity, spawn_bolt,
+        },
+    },
+    breaker::systems::move_breaker,
+    shared::{GameState, PlayingState},
 };
-use crate::breaker::systems::move_breaker;
-use crate::shared::{GameState, PlayingState};
 
 /// Plugin for the bolt domain.
 ///

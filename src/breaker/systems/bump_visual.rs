@@ -1,11 +1,14 @@
 //! Bump visual feedback — eased upward pop animation on the breaker.
 
-use bevy::math::curve::Curve;
-use bevy::math::curve::easing::EaseFunction;
-use bevy::prelude::*;
+use bevy::{
+    math::curve::{Curve, easing::EaseFunction},
+    prelude::*,
+};
 
-use crate::breaker::components::{Breaker, BumpState, BumpVisual};
-use crate::breaker::resources::BreakerConfig;
+use crate::breaker::{
+    components::{Breaker, BumpState, BumpVisual},
+    resources::BreakerConfig,
+};
 
 /// Easing function for the bump pop animation.
 const BUMP_EASE: EaseFunction = EaseFunction::QuadraticOut;

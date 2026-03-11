@@ -1,11 +1,12 @@
 //! Debug UI panel system.
 
-use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
-use bevy::prelude::*;
+use bevy::{
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    prelude::*,
+};
 use bevy_egui::EguiContexts;
 
-use crate::debug::resources::DebugOverlays;
-use crate::shared::GameState;
+use crate::{debug::resources::DebugOverlays, shared::GameState};
 
 /// Renders the debug UI panel using egui.
 pub fn debug_ui_system(

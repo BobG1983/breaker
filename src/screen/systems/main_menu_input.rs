@@ -1,12 +1,13 @@
 //! Main menu keyboard and mouse input handling.
 
-use bevy::app::AppExit;
-use bevy::prelude::*;
+use bevy::{app::AppExit, prelude::*};
 
 use crate::shared::GameState;
 
-use crate::screen::components::{MENU_ITEMS, MenuItem};
-use crate::screen::resources::MainMenuSelection;
+use crate::screen::{
+    components::{MENU_ITEMS, MenuItem},
+    resources::MainMenuSelection,
+};
 
 /// Handles keyboard and mouse input for the main menu.
 pub fn handle_main_menu_input(
@@ -78,8 +79,7 @@ fn confirm_selection(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::ecs::message::Messages;
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
 
     fn test_app() -> App {
         let mut app = App::new();

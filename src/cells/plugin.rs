@@ -2,10 +2,14 @@
 
 use bevy::prelude::*;
 
-use crate::cells::messages::CellDestroyed;
-use crate::cells::resources::CellConfig;
-use crate::cells::systems::{handle_cell_hit, spawn_cells};
-use crate::shared::{GameState, PlayingState};
+use crate::{
+    cells::{
+        messages::CellDestroyed,
+        resources::CellConfig,
+        systems::{handle_cell_hit, spawn_cells},
+    },
+    shared::{GameState, PlayingState},
+};
 
 /// Plugin for the cells domain.
 ///

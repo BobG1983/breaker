@@ -2,13 +2,15 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::systems::prepare_bolt_velocity;
-use crate::physics::messages::{BoltHitBreaker, BoltHitCell, BoltLost};
-use crate::physics::resources::PhysicsConfig;
-use crate::physics::systems::{
-    bolt_breaker_collision, bolt_cell_collision, bolt_lost, wall_collision,
+use crate::{
+    bolt::systems::prepare_bolt_velocity,
+    physics::{
+        messages::{BoltHitBreaker, BoltHitCell, BoltLost},
+        resources::PhysicsConfig,
+        systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost, wall_collision},
+    },
+    shared::PlayingState,
 };
-use crate::shared::PlayingState;
 
 /// Plugin for the physics domain.
 ///

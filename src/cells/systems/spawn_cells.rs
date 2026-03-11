@@ -2,9 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::cells::components::{Cell, CellHealth};
-use crate::cells::resources::CellConfig;
-use crate::shared::{CleanupOnNodeExit, PlayfieldConfig};
+use crate::{
+    cells::{
+        components::{Cell, CellHealth},
+        resources::CellConfig,
+    },
+    shared::{CleanupOnNodeExit, PlayfieldConfig},
+};
 
 /// Spawns a grid of cells at the top of the playfield.
 ///

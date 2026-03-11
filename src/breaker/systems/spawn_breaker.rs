@@ -2,11 +2,15 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::components::{
-    Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BumpState,
+use crate::{
+    breaker::{
+        components::{
+            Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BumpState,
+        },
+        resources::BreakerConfig,
+    },
+    shared::{CleanupOnNodeExit, CleanupOnRunEnd},
 };
-use crate::breaker::resources::BreakerConfig;
-use crate::shared::{CleanupOnNodeExit, CleanupOnRunEnd};
 
 /// Spawns the breaker entity with all required components.
 ///

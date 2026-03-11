@@ -2,10 +2,14 @@
 
 use bevy::prelude::*;
 
-use crate::cells::components::{Cell, CellHealth};
-use crate::cells::messages::CellDestroyed;
-use crate::cells::resources::CellConfig;
-use crate::physics::messages::BoltHitCell;
+use crate::{
+    cells::{
+        components::{Cell, CellHealth},
+        messages::CellDestroyed,
+        resources::CellConfig,
+    },
+    physics::messages::BoltHitCell,
+};
 
 /// Handles cell damage in response to [`BoltHitCell`] messages.
 ///

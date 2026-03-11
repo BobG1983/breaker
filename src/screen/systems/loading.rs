@@ -3,13 +3,17 @@
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
-use crate::bolt::{BoltConfig, BoltDefaults};
-use crate::breaker::{BreakerConfig, BreakerDefaults};
-use crate::cells::{CellConfig, CellDefaults};
-use crate::physics::{PhysicsConfig, PhysicsDefaults};
-use crate::screen::components::{LoadingBarFill, LoadingProgressText, LoadingScreen};
-use crate::screen::resources::{DefaultsCollection, MainMenuConfig, MainMenuDefaults};
-use crate::shared::{PlayfieldConfig, PlayfieldDefaults};
+use crate::{
+    bolt::{BoltConfig, BoltDefaults},
+    breaker::{BreakerConfig, BreakerDefaults},
+    cells::{CellConfig, CellDefaults},
+    physics::{PhysicsConfig, PhysicsDefaults},
+    screen::{
+        components::{LoadingBarFill, LoadingProgressText, LoadingScreen},
+        resources::{DefaultsCollection, MainMenuConfig, MainMenuDefaults},
+    },
+    shared::{PlayfieldConfig, PlayfieldDefaults},
+};
 
 /// Reads loaded `*Defaults` assets and inserts the corresponding `*Config`
 /// resources. Returns [`Progress`] to block the loading state transition

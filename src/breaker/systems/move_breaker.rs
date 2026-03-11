@@ -2,9 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::components::{Breaker, BreakerState, BreakerVelocity};
-use crate::breaker::resources::BreakerConfig;
-use crate::shared::PlayfieldConfig;
+use crate::{
+    breaker::{
+        components::{Breaker, BreakerState, BreakerVelocity},
+        resources::BreakerConfig,
+    },
+    shared::PlayfieldConfig,
+};
 
 /// Reads keyboard input and moves the breaker horizontally.
 ///

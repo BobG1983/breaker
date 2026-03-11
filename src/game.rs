@@ -1,18 +1,12 @@
 //! Game plugin group — wires together all domain plugins.
 
-use bevy::app::PluginGroupBuilder;
-use bevy::prelude::*;
+use bevy::{app::PluginGroupBuilder, prelude::*};
 
-use crate::audio::AudioPlugin;
-use crate::bolt::BoltPlugin;
-use crate::breaker::BreakerPlugin;
-use crate::cells::CellsPlugin;
-use crate::debug::DebugPlugin;
-use crate::physics::PhysicsPlugin;
-use crate::run::RunPlugin;
-use crate::screen::ScreenPlugin;
-use crate::ui::UiPlugin;
-use crate::upgrades::UpgradesPlugin;
+use crate::{
+    audio::AudioPlugin, bolt::BoltPlugin, breaker::BreakerPlugin, cells::CellsPlugin,
+    debug::DebugPlugin, physics::PhysicsPlugin, run::RunPlugin, screen::ScreenPlugin, ui::UiPlugin,
+    upgrades::UpgradesPlugin,
+};
 
 /// Plugin group that assembles all game domain plugins.
 ///

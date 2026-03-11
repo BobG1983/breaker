@@ -2,10 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::BoltConfig;
-use crate::bolt::components::BoltVelocity;
-use crate::bolt::filters::ActiveBoltFilter;
-use crate::shared::PlayfieldConfig;
+use crate::{
+    bolt::{BoltConfig, components::BoltVelocity, filters::ActiveBoltFilter},
+    shared::PlayfieldConfig,
+};
 
 /// Reflects the bolt off walls and ceiling.
 ///

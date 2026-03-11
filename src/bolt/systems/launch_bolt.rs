@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{Bolt, BoltServing, BoltVelocity};
-use crate::bolt::resources::BoltConfig;
+use crate::bolt::{
+    components::{Bolt, BoltServing, BoltVelocity},
+    resources::BoltConfig,
+};
 
 type LaunchBoltFilter = (With<Bolt>, With<BoltServing>);
 

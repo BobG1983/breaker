@@ -2,13 +2,18 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
-use crate::bolt::filters::ActiveBoltFilter;
-use crate::breaker::BreakerConfig;
-use crate::breaker::components::{Breaker, BreakerTilt};
-use crate::physics::messages::BoltHitBreaker;
-use crate::physics::resources::PhysicsConfig;
+use crate::{
+    bolt::{
+        BoltConfig,
+        components::{Bolt, BoltVelocity},
+        filters::ActiveBoltFilter,
+    },
+    breaker::{
+        BreakerConfig,
+        components::{Breaker, BreakerTilt},
+    },
+    physics::{messages::BoltHitBreaker, resources::PhysicsConfig},
+};
 
 /// Query filter for breaker data.
 type BreakerQueryFilter = (With<Breaker>, Without<Bolt>);
@@ -103,8 +108,10 @@ pub fn bolt_breaker_collision(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::{Bolt, BoltVelocity};
-    use crate::breaker::components::{Breaker, BreakerTilt};
+    use crate::{
+        bolt::components::{Bolt, BoltVelocity},
+        breaker::components::{Breaker, BreakerTilt},
+    };
 
     fn test_app() -> App {
         let mut app = App::new();

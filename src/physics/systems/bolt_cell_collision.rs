@@ -11,12 +11,15 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
-use crate::bolt::filters::ActiveBoltFilter;
-use crate::cells::CellConfig;
-use crate::cells::components::Cell;
-use crate::physics::messages::BoltHitCell;
+use crate::{
+    bolt::{
+        BoltConfig,
+        components::{Bolt, BoltVelocity},
+        filters::ActiveBoltFilter,
+    },
+    cells::{CellConfig, components::Cell},
+    physics::messages::BoltHitCell,
+};
 
 /// Maximum number of cell bounces resolved per bolt per frame.
 ///
