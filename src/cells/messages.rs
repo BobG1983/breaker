@@ -6,6 +6,7 @@ use bevy::prelude::*;
 ///
 /// Consumed by run (progress tracking), upgrades (overclock triggers), and audio.
 #[derive(Message, Clone, Debug)]
+#[allow(dead_code)]
 pub struct CellDestroyed {
     /// The entity that was destroyed.
     pub entity: Entity,
