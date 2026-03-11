@@ -19,6 +19,7 @@ pub enum BumpGrade {
 ///
 /// Consumed by audio, upgrades (overclock triggers), and UI.
 #[derive(Message, Clone, Debug)]
+#[allow(dead_code)]
 pub struct BumpPerformed {
     /// The timing grade of the bump.
     pub grade: BumpGrade,
@@ -29,14 +30,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bump_grade_has_four_variants() {
-        let grades = [
+    fn bump_grade_exhaustive_match() {
+        // Ensures all BumpGrade variants are covered — if a new variant is
+        // added, this match will fail to compile until updated.
+        for grade in [
             BumpGrade::None,
             BumpGrade::Early,
             BumpGrade::Perfect,
             BumpGrade::Late,
-        ];
-        assert_eq!(grades.len(), 4);
+        ] {
+            match grade {
+                BumpGrade::None | BumpGrade::Early | BumpGrade::Perfect | BumpGrade::Late => {}
+            }
+        }
     }
 
     #[test]
