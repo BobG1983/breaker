@@ -44,16 +44,16 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BoltConfig>();
-        app.add_systems(FixedUpdate, move_bolt);
-        // Prime time baseline
-        app.update();
+        app.add_systems(Update, move_bolt);
         app
     }
 
-    /// Runs enough updates with sleeps to ensure `FixedUpdate` ticks at least once.
-    fn tick_fixed(app: &mut App) {
-        // FixedUpdate needs wall-clock time to accumulate past the timestep (~16ms)
-        std::thread::sleep(std::time::Duration::from_millis(20));
+    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(timestep);
         app.update();
     }
 
@@ -67,7 +67,7 @@ mod tests {
             BoltVelocity::new(0.0, 400.0),
         ));
 
-        tick_fixed(&mut app);
+        tick(&mut app);
 
         let tf = app
             .world_mut()
@@ -97,7 +97,7 @@ mod tests {
             ))
             .id();
 
-        tick_fixed(&mut app);
+        tick(&mut app);
 
         let tf = app.world().get::<Transform>(entity).unwrap();
         assert!(
@@ -118,7 +118,7 @@ mod tests {
             BoltVelocity::new(0.0, 1.0), // far below min_speed
         ));
 
-        tick_fixed(&mut app);
+        tick(&mut app);
 
         let vel = app
             .world_mut()

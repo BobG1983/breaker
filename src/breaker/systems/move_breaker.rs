@@ -98,15 +98,16 @@ mod tests {
         app.init_resource::<BreakerConfig>();
         app.init_resource::<PlayfieldConfig>();
         app.init_resource::<ButtonInput<KeyCode>>();
-        app.add_systems(FixedUpdate, move_breaker);
-        // Prime time baseline
-        app.update();
+        app.add_systems(Update, move_breaker);
         app
     }
 
-    /// Runs enough updates with sleeps to ensure `FixedUpdate` ticks at least once.
-    fn tick_fixed(app: &mut App) {
-        std::thread::sleep(std::time::Duration::from_millis(20));
+    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(timestep);
         app.update();
     }
 
@@ -130,7 +131,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::ArrowRight);
-        tick_fixed(&mut app);
+        tick(&mut app);
 
         let tf = app.world().get::<Transform>(entity).unwrap();
         assert!(
@@ -149,7 +150,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::ArrowRight);
-        tick_fixed(&mut app);
+        tick(&mut app);
 
         let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
         assert!(
@@ -172,7 +173,7 @@ mod tests {
             .unwrap()
             .translation
             .x = 9999.0;
-        tick_fixed(&mut app);
+        tick(&mut app);
 
         let tf = app.world().get::<Transform>(entity).unwrap();
         let max_x = playfield.right() - config.half_width;

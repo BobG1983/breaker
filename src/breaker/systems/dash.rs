@@ -167,17 +167,24 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
         app.init_resource::<ButtonInput<KeyCode>>();
-        // Use Update instead of FixedUpdate for unit tests to avoid
-        // timing issues with fixed timestep accumulation.
         app.add_systems(Update, update_breaker_state);
         app
+    }
+
+    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(timestep);
+        app.update();
     }
 
     #[test]
     fn idle_stays_idle_without_input() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Idle);
@@ -198,7 +205,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::ShiftLeft);
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Dashing);
@@ -217,7 +224,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::ShiftLeft);
-        app.update();
+        tick(&mut app);
 
         let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
         assert!(tilt.angle > 0.0, "dashing right should tilt right");
@@ -232,7 +239,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::ShiftLeft);
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(
@@ -258,7 +265,7 @@ mod tests {
             .unwrap()
             .remaining = 0.0;
 
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Braking);
@@ -280,7 +287,7 @@ mod tests {
             .unwrap()
             .remaining = 0.0;
 
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(
@@ -309,7 +316,7 @@ mod tests {
             .unwrap()
             .x = 0.0;
 
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Settling);

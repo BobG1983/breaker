@@ -42,7 +42,7 @@ pub fn trigger_bump_visual(
 /// Removes [`BumpVisual`] when the animation completes.
 pub fn animate_bump_visual(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     config: Res<BreakerConfig>,
     mut query: Query<(Entity, &mut Transform, &mut BumpVisual), With<Breaker>>,
 ) {
@@ -249,11 +249,17 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
-        // Use Update instead of FixedUpdate — FixedUpdate may not tick on first app.update()
         app.add_systems(Update, animate_bump_visual);
-        // First update initializes time so subsequent updates have non-zero delta
-        app.update();
         app
+    }
+
+    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(timestep);
+        app.update();
     }
 
     #[test]
@@ -271,7 +277,7 @@ mod tests {
             },
         ));
 
-        app.update();
+        tick(&mut app);
 
         let tf = app
             .world_mut()
@@ -307,7 +313,7 @@ mod tests {
             ))
             .id();
 
-        app.update();
+        tick(&mut app);
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_none(),
@@ -339,9 +345,9 @@ mod tests {
             },
         ));
 
-        // A few updates to let the timer expire and commands flush
+        // A few ticks to let the timer expire and commands flush
         for _ in 0..5 {
-            app.update();
+            tick(&mut app);
         }
 
         let tf = app
