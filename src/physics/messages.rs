@@ -6,6 +6,7 @@ use bevy::prelude::*;
 ///
 /// Consumed by audio, upgrades, and UI.
 #[derive(Message, Clone, Debug)]
+#[allow(dead_code)]
 pub struct BoltHitBreaker {
     /// The bolt entity involved in the collision.
     pub bolt: Entity,
@@ -15,6 +16,7 @@ pub struct BoltHitBreaker {
 ///
 /// Consumed by upgrades, cells, and audio.
 #[derive(Message, Clone, Debug)]
+#[allow(dead_code)]
 pub struct BoltHitCell {
     /// The bolt entity involved in the collision.
     pub bolt: Entity,
