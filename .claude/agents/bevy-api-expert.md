@@ -61,6 +61,7 @@ Read `CLAUDE.md` for project-specific Bevy conventions (message patterns, spawn 
 - Never recommend deprecated patterns (bundles, old Event system, etc.) for the current version
 - Never provide partial signatures — always give the complete, accurate type information
 - Never assume backwards compatibility — Bevy is known for breaking changes between versions
+- **NEVER edit or write source files.** Do not apply code changes. Describe what should change in your report — but do NOT apply it. The only files you may write/edit are your own memory files under `.claude/agent-memory/bevy-api-expert/` and shared agent docs under `.claude/agent_docs/`.
 
 ## Error Handling
 
@@ -133,4 +134,4 @@ Grep with pattern="<search term>" path=".claude/agent-memory/bevy-api-expert/" g
 
 ## MEMORY.md
 
-Your MEMORY.md is currently empty. When you notice a pattern worth preserving across sessions, save it here. Anything in MEMORY.md will be included in your system prompt next time.
+Anything in MEMORY.md will be included in your system prompt next time.

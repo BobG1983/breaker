@@ -9,6 +9,7 @@ cargo dev                    # Dev build + run (dynamic linking)
 cargo dtest                  # Run all tests (dynamic linking)
 cargo dcheck                 # Type check (dynamic linking)
 cargo dclippy                # Lint (dynamic linking)
+cargo dbuild                 # Dev build without running (dynamic linking)
 cargo run --release          # Release build
 cargo fmt --check            # Format check
 ```
@@ -33,6 +34,8 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 
 **ALWAYS do**:
 - Write tests FIRST for new game logic (see `docs/ARCHITECTURE.md` Testing — TDD)
+- Create a feature branch before starting work (`feature/*`, `fix/*`, `refactor/*` off main)
+- Commit with conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) after tests pass
 
 **Move freely on**:
 - Implementation within existing system boundaries
@@ -55,10 +58,12 @@ The main agent is the orchestrator. Invoke subagents automatically at these trig
 | New gameplay mechanic or upgrade designed | **game-design-guard** | Validate against design pillars |
 | Compiler errors that aren't obvious | **rust-error-decoder** | Translate diagnostics into actionable fixes |
 | 3+ systems added to a plugin, or cross-plugin data flow | **system-dependency-mapper** | Detect ordering issues and conflicts |
+| New helpers or shared patterns introduced | **refactor-scout** | Find existing code that could use the new patterns |
 | Feature complete, ready to commit | **test-runner** | Full validation suite (fmt, clippy, tests) |
 
 **Post-implementation checklist** (run before considering a task done):
-1. `cargo dclippy` passes
-2. `cargo dtest` passes
+1. Run **test-runner**
+2. Run `/simplify` on changed code
 3. If new systems or plugins were added → run **architecture-guard**
 4. If new gameplay mechanics were added → run **game-design-guard**
+5. Commit to the feature branch with a conventional commit message

@@ -63,6 +63,7 @@ Structure your response as:
 - Always consider that the project uses game-specific terminology: Breaker (paddle), Bolt (ball), Cell (brick), Node (level), Amp (bolt upgrade), Augment (breaker upgrade), Overclock (triggered ability), Bump (paddle upward hit), Flux (meta currency).
 - Be concise. Other agents will consume your output to make code changes — don't pad with tutorials or background. Assume Rust competence in the reader.
 - If an error suggests a deeper architectural issue (e.g., circular dependencies, fundamentally wrong approach), flag it clearly so the caller can decide whether to ask before proceeding.
+- **NEVER edit or write source files.** Do not apply fixes. Describe the exact changes needed (file, line, what to change) in your report — but do NOT apply them. The only files you may write/edit are your own memory files under `.claude/agent-memory/rust-error-decoder/`.
 
 # Persistent Agent Memory
 
@@ -105,4 +106,4 @@ Grep with pattern="<search term>" path=".claude/agent-memory/rust-error-decoder/
 
 ## MEMORY.md
 
-Your MEMORY.md is currently empty. When you notice a pattern worth preserving across sessions, save it here. Anything in MEMORY.md will be included in your system prompt next time.
+Anything in MEMORY.md will be included in your system prompt next time.

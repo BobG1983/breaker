@@ -1,7 +1,8 @@
 # Architecture Guard Memory
 
 ## Project State
-- Phase 0 scaffolding complete, reviewed 2026-03-10
+- Phase 0 scaffolding complete, reviewed 2025-03-10
+- Phase 1 core mechanics implemented, reviewed 2025-03-10
 - Bevy 0.18.1, bevy_egui 0.39, edition 2024
 - Single crate, plugin-per-domain, message-driven decoupling
 
@@ -14,18 +15,31 @@
 - All 8 messages from architecture table are implemented and registered
 - lib.rs visibility correct: pub for app/game/shared, pub(crate) for all domain modules
 - proptest dev-dependency is present in Cargo.toml
+- Physics domain reads other domains' components (acceptable per ECS convention)
+- Physics owns collision detection + bolt reflection (collision response)
 
-## Open Issues (Phase 0)
-- V1: ARCHITECTURE.md file tree shows assets/ under src/ but actual location is project root (doc bug)
-- N2/N3: "upgrades" module and "UpgradeSelected" message use generic term; TERMINOLOGY.md forbids it but ARCHITECTURE.md uses it. Docs contradict each other.
-- N5: Redundant run_if(resource_exists::<DebugOverlays>) in debug/mod.rs
-- I3: Dev-feature path of DebugPlugin not testable headlessly
+## Phase 1 Boundary Violations — Status
+- V1: RESOLVED — apply_bump_velocity in bolt domain reads BumpPerformed, mutates only BoltVelocity
+- V2: RESOLVED — physics writes BoltHitCell only, cells domain handles damage/despawn
+- V3: RESOLVED — enforce_min_angle is now a method on BoltVelocity in bolt/components.rs
+- M1: Pending — CellDestroyed should be written by cells domain (needs cells system reading BoltHitCell)
+- M2: Pending — bump grading uses velocity direction check instead of reading BoltHitBreaker messages
+- O1: Pending — Cross-plugin physics chain ordering not implemented
+
+## Physics Improvements (Phase 1 iteration)
+- bolt_breaker_collision: side-hit vs top-hit via overlap depth comparison
+- bolt_cell_collision: nearest-cell selection (min penetration), swept ray-AABB for tunneling
+- bolt_lost: respawn straight up (vx=0, vy=min_speed) as penalty
+- apply_bump_velocity: speed clamping via BoltConfig.max_speed after bump multiplier
+- Note: MIN_PHYSICS_FPS constant in bolt_cell_collision should track FixedUpdate rate if it becomes configurable
 
 ## Message Inventory
 See [message-inventory.md](message-inventory.md) for full table.
 
 ## Test Pattern
-- Every plugin has a `plugin_builds` headless test (except DebugPlugin which requires render context)
-- `app.rs` headless test disables DebugPlugin via `.disable::<DebugPlugin>()`
+- Every plugin has a `plugin_builds` headless test (except DebugPlugin)
 - Tests are in-module `#[cfg(test)]` blocks
-- DebugPlugin has `plugin_builds_headless` test gated behind `#[cfg(not(feature = "dev"))]`
+
+## Open Issues (Phase 0, still valid)
+- ARCHITECTURE.md file tree shows assets/ under src/ but actual is project root
+- "upgrades" module uses generic term; TERMINOLOGY.md vs ARCHITECTURE.md contradiction

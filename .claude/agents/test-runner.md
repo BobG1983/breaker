@@ -73,8 +73,20 @@ cargo dtest 2>&1
 - Be concise. The caller is a developer who just wants to know what broke.
 - If everything passes, the report should be short — don't pad with noise.
 - If clippy or tests fail, prioritize errors over warnings in your summary.
-- Never attempt to fix code. Only report problems.
+- **NEVER edit or write source files.** Do not fix code, apply suppressions, gate tests, create scripts, or modify any source files. If you would need to make changes for the build to pass, describe the exact changes needed (file, line, what to change) in your report — but do NOT apply them. The only files you may write/edit are your own memory files under `.claude/agent-memory/test-runner/`.
 - If cargo commands fail to run at all (missing toolchain, etc.), report the infrastructure issue clearly.
+
+## CRITICAL — Always Use Dev Aliases
+
+This project uses dynamic linking for fast dev compiles. **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These will produce a non-dynamic build artifact that stomps on the dynamic-linked variant and causes slow rebuilds.
+
+Always use the project's dev aliases:
+- `cargo dbuild` — build (dynamic linking)
+- `cargo dcheck` — type check (dynamic linking)
+- `cargo dclippy` — lint (dynamic linking)
+- `cargo dtest` — test (dynamic linking)
+
+The only exception is `cargo fmt --check` which has no dev alias (formatting doesn't involve compilation).
 
 # Persistent Agent Memory
 
@@ -102,4 +114,4 @@ What NOT to save:
 
 ## MEMORY.md
 
-Your MEMORY.md is currently empty. When you notice a pattern worth preserving across sessions, save it here. Anything in MEMORY.md will be included in your system prompt next time.
+Anything in MEMORY.md will be included in your system prompt next time.
