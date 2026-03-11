@@ -8,11 +8,13 @@ use iyes_progress::prelude::*;
 use crate::shared::{GameState, PlayfieldConfig, PlayingState};
 
 use super::defaults::{
-    BoltDefaults, BreakerDefaults, CellDefaults, PhysicsDefaults, PlayfieldDefaults,
+    BoltDefaults, BreakerDefaults, CellDefaults, MainMenuDefaults, PhysicsDefaults,
+    PlayfieldDefaults,
 };
 use super::systems::{
-    DefaultsCollection, cleanup_loading_screen, cleanup_on_node_exit, cleanup_on_run_end,
-    seed_configs_from_defaults, spawn_loading_screen, start_game_on_input, update_loading_bar,
+    DefaultsCollection, cleanup_loading_screen, cleanup_main_menu, cleanup_on_node_exit,
+    cleanup_on_run_end, handle_main_menu_input, seed_configs_from_defaults, spawn_loading_screen,
+    spawn_main_menu, update_loading_bar, update_menu_colors,
 };
 
 /// Plugin for screen state management.
@@ -38,6 +40,7 @@ impl Plugin for ScreenPlugin {
             RonAssetPlugin::<BreakerDefaults>::new(&["breaker.ron"]),
             RonAssetPlugin::<CellDefaults>::new(&["cells.ron"]),
             RonAssetPlugin::<PhysicsDefaults>::new(&["physics.ron"]),
+            RonAssetPlugin::<MainMenuDefaults>::new(&["mainmenu.ron"]),
         ));
 
         // Progress plugin drives Loading → MainMenu transition.
@@ -68,11 +71,15 @@ impl Plugin for ScreenPlugin {
         );
         app.add_systems(OnExit(GameState::Loading), cleanup_loading_screen);
 
-        // Game start
+        // Main menu
+        app.add_systems(OnEnter(GameState::MainMenu), spawn_main_menu);
         app.add_systems(
             Update,
-            start_game_on_input.run_if(in_state(GameState::MainMenu)),
+            (handle_main_menu_input, update_menu_colors)
+                .chain()
+                .run_if(in_state(GameState::MainMenu)),
         );
+        app.add_systems(OnExit(GameState::MainMenu), cleanup_main_menu);
 
         // Cleanup
         app.add_systems(OnExit(GameState::Playing), cleanup_on_node_exit);

@@ -13,6 +13,8 @@ use crate::cells::CellConfig;
 use crate::physics::PhysicsConfig;
 use crate::shared::PlayfieldConfig;
 
+use super::resources::MainMenuConfig;
+
 /// Playfield defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct PlayfieldDefaults {
@@ -305,6 +307,65 @@ impl From<PhysicsDefaults> for PhysicsConfig {
     }
 }
 
+/// Main menu defaults loaded from RON.
+#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+pub struct MainMenuDefaults {
+    /// Font size for the title text.
+    pub title_font_size: f32,
+    /// Font size for menu item text.
+    pub menu_font_size: f32,
+    /// HDR RGB color for the title.
+    pub title_color_rgb: [f32; 3],
+    /// HDR RGB color for the selected menu item.
+    pub selected_color_rgb: [f32; 3],
+    /// RGB color for unselected menu items.
+    pub normal_color_rgb: [f32; 3],
+    /// RGB color for disabled menu items.
+    pub disabled_color_rgb: [f32; 3],
+    /// Bottom margin below the title in pixels.
+    pub title_bottom_margin: f32,
+    /// Gap between menu items in pixels.
+    pub menu_item_gap: f32,
+    /// Asset path for the title font.
+    pub title_font_path: String,
+    /// Asset path for the menu font.
+    pub menu_font_path: String,
+}
+
+impl Default for MainMenuDefaults {
+    fn default() -> Self {
+        Self {
+            title_font_size: 96.0,
+            menu_font_size: 36.0,
+            title_color_rgb: [2.0, 4.0, 5.0],
+            selected_color_rgb: [0.4, 3.0, 4.0],
+            normal_color_rgb: [0.6, 0.6, 0.7],
+            disabled_color_rgb: [0.25, 0.25, 0.3],
+            title_bottom_margin: 48.0,
+            menu_item_gap: 12.0,
+            title_font_path: "fonts/Orbitron-Bold.ttf".to_owned(),
+            menu_font_path: "fonts/Rajdhani-Medium.ttf".to_owned(),
+        }
+    }
+}
+
+impl From<MainMenuDefaults> for MainMenuConfig {
+    fn from(d: MainMenuDefaults) -> Self {
+        Self {
+            title_font_size: d.title_font_size,
+            menu_font_size: d.menu_font_size,
+            title_color_rgb: d.title_color_rgb,
+            selected_color_rgb: d.selected_color_rgb,
+            normal_color_rgb: d.normal_color_rgb,
+            disabled_color_rgb: d.disabled_color_rgb,
+            title_bottom_margin: d.title_bottom_margin,
+            menu_item_gap: d.menu_item_gap,
+            title_font_path: d.title_font_path,
+            menu_font_path: d.menu_font_path,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,6 +396,14 @@ mod tests {
         let ron_str = include_str!("../../assets/config/defaults.physics.ron");
         let result: PhysicsDefaults = ron::de::from_str(ron_str).expect("physics RON should parse");
         assert!(result.max_reflection_angle > 0.0);
+    }
+
+    #[test]
+    fn main_menu_defaults_ron_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.mainmenu.ron");
+        let result: MainMenuDefaults =
+            ron::de::from_str(ron_str).expect("mainmenu RON should parse");
+        assert!(result.title_font_size > 0.0);
     }
 
     #[test]

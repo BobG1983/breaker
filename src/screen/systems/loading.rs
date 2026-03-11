@@ -9,8 +9,10 @@ use crate::breaker::BreakerConfig;
 use crate::cells::CellConfig;
 use crate::physics::PhysicsConfig;
 use crate::screen::defaults::{
-    BoltDefaults, BreakerDefaults, CellDefaults, PhysicsDefaults, PlayfieldDefaults,
+    BoltDefaults, BreakerDefaults, CellDefaults, MainMenuDefaults, PhysicsDefaults,
+    PlayfieldDefaults,
 };
+use crate::screen::resources::MainMenuConfig;
 use crate::shared::PlayfieldConfig;
 
 /// Asset collection for all defaults — automatically loaded during
@@ -32,6 +34,9 @@ pub struct DefaultsCollection {
     /// Handle for physics defaults.
     #[asset(path = "config/defaults.physics.ron")]
     pub physics: Handle<PhysicsDefaults>,
+    /// Handle for main menu defaults.
+    #[asset(path = "config/defaults.mainmenu.ron")]
+    pub mainmenu: Handle<MainMenuDefaults>,
 }
 
 /// Reads loaded `*Defaults` assets and inserts the corresponding `*Config`
@@ -48,6 +53,7 @@ pub fn seed_configs_from_defaults(
     breaker_assets: Res<Assets<BreakerDefaults>>,
     cell_assets: Res<Assets<CellDefaults>>,
     physics_assets: Res<Assets<PhysicsDefaults>>,
+    mainmenu_assets: Res<Assets<MainMenuDefaults>>,
     mut commands: Commands,
     mut seeded: Local<bool>,
 ) -> Progress {
@@ -75,12 +81,16 @@ pub fn seed_configs_from_defaults(
     let Some(physics) = physics_assets.get(&collection.physics) else {
         return Progress { done: 0, total: 1 };
     };
+    let Some(mainmenu) = mainmenu_assets.get(&collection.mainmenu) else {
+        return Progress { done: 0, total: 1 };
+    };
 
     commands.insert_resource::<PlayfieldConfig>(playfield.clone().into());
     commands.insert_resource::<BoltConfig>(bolt.clone().into());
     commands.insert_resource::<BreakerConfig>(breaker.clone().into());
     commands.insert_resource::<CellConfig>(cells.clone().into());
     commands.insert_resource::<PhysicsConfig>(physics.clone().into());
+    commands.insert_resource::<MainMenuConfig>(mainmenu.clone().into());
 
     *seeded = true;
     Progress { done: 1, total: 1 }
