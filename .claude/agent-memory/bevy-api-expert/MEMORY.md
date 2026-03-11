@@ -224,6 +224,15 @@ app.update(); // FixedUpdate will now run once
 - Both `Time<Fixed>` and `Time<Virtual>` must exist in the world; `MinimalPlugins` includes `TimePlugin` which inserts all three `Time<T>` variants
 - Sources: `crates/bevy_time/src/fixed.rs` v0.18.0, `crates/bevy_app/src/main_schedule.rs` v0.18.0
 
+## KeyboardInput (see keyboard_input.md for full details)
+
+- `KeyboardInput` is a `Message` (NOT Event) — use `MessageReader<KeyboardInput>`, never `EventReader`
+- Fields: `key_code: KeyCode`, `logical_key: Key`, `state: ButtonState`, `text: Option<SmolStr>`, `repeat: bool`, `window: Entity`
+- `text` field IS present — include `text: None` when constructing
+- System set is `InputSystems` (plural), NOT `InputSystem`
+- Send in tests: `app.world_mut().write_message(KeyboardInput { ... })` — NOT `send_event()`
+- `KeyboardInput`/`Key`/`ButtonState` NOT in prelude — import from `bevy::input::keyboard`
+
 ## Sources
 
 - Feature flags: https://docs.rs/bevy/0.18.1/bevy/index.html#cargo-features
