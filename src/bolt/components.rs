@@ -114,4 +114,17 @@ mod tests {
         assert!(vel.value.x < 0.0);
         assert!(vel.value.y < 0.0);
     }
+
+    #[test]
+    fn enforce_min_angle_horizontal_defaults_upward() {
+        use std::f32::consts::FRAC_PI_4;
+        let mut vel = BoltVelocity::new(10.0, 0.0);
+        let speed_before = vel.speed();
+        vel.enforce_min_angle(FRAC_PI_4);
+        let speed_after = vel.speed();
+        assert!((speed_before - speed_after).abs() < 1e-4, "speed should be preserved");
+        assert!(vel.value.y > 0.0, "horizontal velocity should default to upward");
+        let angle = vel.value.y.abs().atan2(vel.value.x.abs());
+        assert!(angle >= FRAC_PI_4 - 1e-4, "angle should be at least min_angle");
+    }
 }
