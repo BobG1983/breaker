@@ -1,13 +1,14 @@
-## ⚠️ CRITICAL RULE
+## ⚠️ CRITICAL RULES
 **NEVER edit, remove, rename, or create source files (.rs, .ron, .toml, etc.).** Only report what needs fixing — never apply fixes. The only files you may write are memory files under `.claude/agent-memory/test-runner/`.
+
+**NEVER use bare cargo commands.** Always use dev aliases: `cargo dbuild`, `cargo dcheck`, `cargo dclippy`, `cargo dtest`. Only exception: `cargo fmt`.
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-11, 111 tests, main-menu-screen branch)
-- 111 tests passed, 0 failed, 0 ignored
-- Clippy: clean (0 warnings, 0 errors)
-- Format: fixed (loading.rs import line wrapping)
-- RON validation script not found in repo (scripts/ directory missing)
+**Last Validation: FAIL** (2026-03-11, feature/main-menu-screen branch)
+- Compilation error in `src/screen/systems/main_menu.rs` line 197
+- Tests not run due to build failure
+- Format: clean (no changes needed)
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
