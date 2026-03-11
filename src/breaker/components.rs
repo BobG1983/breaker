@@ -51,6 +51,17 @@ pub struct BumpState {
     pub cooldown: f32,
 }
 
+/// Tracks the bump pop animation — an eased upward offset on the breaker.
+#[derive(Component, Debug)]
+pub struct BumpVisual {
+    /// Time remaining in the animation (seconds).
+    pub timer: f32,
+    /// Total duration of the animation (seconds).
+    pub duration: f32,
+    /// Maximum Y offset at peak (world units).
+    pub peak_offset: f32,
+}
+
 /// Tracks the remaining time in timed breaker states (Dashing, Settling).
 #[derive(Component, Debug, Default)]
 pub struct BreakerStateTimer {

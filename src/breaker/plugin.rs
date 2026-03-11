@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use crate::breaker::messages::BumpPerformed;
 use crate::breaker::resources::BreakerConfig;
 use crate::breaker::systems::{
-    grade_bump, move_breaker, perfect_bump_dash_cancel, spawn_breaker, update_breaker_state,
-    update_bump,
+    animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, spawn_breaker,
+    trigger_bump_visual, update_breaker_state, update_bump,
 };
 use crate::shared::{GameState, PlayingState};
 
@@ -28,6 +28,10 @@ impl Plugin for BreakerPlugin {
                 update_breaker_state.after(move_breaker),
                 grade_bump.after(update_breaker_state),
                 perfect_bump_dash_cancel.after(grade_bump),
+                trigger_bump_visual.after(update_bump),
+                animate_bump_visual
+                    .after(trigger_bump_visual)
+                    .after(move_breaker),
             )
                 .run_if(in_state(PlayingState::Active)),
         );
