@@ -1,4 +1,7 @@
-//! System to move the bolt by its velocity each fixed tick.
+//! System to prepare bolt velocity each fixed tick.
+//!
+//! Enforces speed clamping and minimum angle. Does NOT update position —
+//! the CCD system in the physics domain handles position advancement.
 
 use bevy::prelude::*;
 
@@ -7,18 +10,12 @@ use crate::bolt::resources::BoltConfig;
 
 type MoveBoltFilter = (With<Bolt>, Without<BoltServing>);
 
-/// Moves the bolt by its velocity each fixed timestep.
+/// Prepares the bolt velocity for the current timestep.
 ///
-/// Enforces speed clamping and minimum angle from horizontal.
-pub fn move_bolt(
-    config: Res<BoltConfig>,
-    time: Res<Time<Fixed>>,
-    mut query: Query<(&mut Transform, &mut BoltVelocity), MoveBoltFilter>,
-) {
-    let dt = time.delta_secs();
-
-    for (mut transform, mut velocity) in &mut query {
-        // Enforce speed bounds
+/// Enforces speed clamping (min/max) and minimum angle from horizontal.
+/// Position advancement is handled by the CCD collision system.
+pub fn move_bolt(config: Res<BoltConfig>, mut query: Query<&mut BoltVelocity, MoveBoltFilter>) {
+    for mut velocity in &mut query {
         let speed = velocity.speed();
         if speed > f32::EPSILON {
             let clamped_speed = speed.clamp(config.min_speed, config.max_speed);
@@ -26,13 +23,8 @@ pub fn move_bolt(
                 velocity.value = velocity.direction() * clamped_speed;
             }
 
-            // Enforce minimum angle from horizontal
             velocity.enforce_min_angle(config.min_angle_from_horizontal);
         }
-
-        // Apply velocity to position
-        transform.translation.x = velocity.value.x.mul_add(dt, transform.translation.x);
-        transform.translation.y = velocity.value.y.mul_add(dt, transform.translation.y);
     }
 }
 
@@ -48,26 +40,17 @@ mod tests {
         app
     }
 
-    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
-        app.update();
-    }
-
     #[test]
-    fn move_bolt_translates_position() {
+    fn move_bolt_does_not_translate_position() {
         let mut app = test_app();
 
         app.world_mut().spawn((
             Bolt,
-            Transform::from_xyz(0.0, 0.0, 0.0),
             BoltVelocity::new(0.0, 400.0),
+            Transform::from_xyz(0.0, 0.0, 0.0),
         ));
 
-        tick(&mut app);
+        app.update();
 
         let tf = app
             .world_mut()
@@ -77,14 +60,14 @@ mod tests {
             .expect("bolt should exist");
 
         assert!(
-            tf.translation.y > 0.0,
-            "bolt should move upward, got y={}",
+            tf.translation.y.abs() < f32::EPSILON,
+            "move_bolt should NOT update position (CCD handles that), got y={}",
             tf.translation.y
         );
     }
 
     #[test]
-    fn serving_bolt_is_not_moved() {
+    fn serving_bolt_velocity_unchanged() {
         let mut app = test_app();
 
         let entity = app
@@ -92,18 +75,17 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
-                Transform::from_xyz(0.0, 0.0, 0.0),
-                BoltVelocity::new(0.0, 400.0),
+                BoltVelocity::new(0.0, 1.0), // below min_speed
             ))
             .id();
 
-        tick(&mut app);
+        app.update();
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
+        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
         assert!(
-            tf.translation.y.abs() < f32::EPSILON,
-            "serving bolt should not move, got y={}",
-            tf.translation.y
+            (vel.speed() - 1.0).abs() < f32::EPSILON,
+            "serving bolt velocity should not be clamped, got speed={}",
+            vel.speed()
         );
     }
 
@@ -114,11 +96,10 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            Transform::from_xyz(0.0, 0.0, 0.0),
             BoltVelocity::new(0.0, 1.0), // far below min_speed
         ));
 
-        tick(&mut app);
+        app.update();
 
         let vel = app
             .world_mut()

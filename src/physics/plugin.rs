@@ -25,9 +25,9 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             FixedUpdate,
             (
-                wall_collision.after(move_bolt),
+                bolt_cell_collision.after(move_bolt),
+                wall_collision.after(bolt_cell_collision),
                 bolt_breaker_collision.after(wall_collision),
-                bolt_cell_collision.after(wall_collision),
                 bolt_lost.after(bolt_breaker_collision),
             )
                 .run_if(in_state(PlayingState::Active)),
