@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::systems::prepare_bolt_velocity,
+    bolt::BoltSystems,
     physics::{
         messages::{BoltHitBreaker, BoltHitCell, BoltLost},
         resources::PhysicsConfig,
@@ -30,7 +30,7 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             FixedUpdate,
             (
-                bolt_cell_collision.after(prepare_bolt_velocity),
+                bolt_cell_collision.after(BoltSystems::PrepareVelocity),
                 bolt_breaker_collision.after(bolt_cell_collision),
                 bolt_lost.after(bolt_breaker_collision),
             )

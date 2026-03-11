@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{
+        BreakerSystems,
         messages::BumpPerformed,
         resources::BreakerConfig,
         systems::{
@@ -28,7 +29,7 @@ impl Plugin for BreakerPlugin {
             FixedUpdate,
             (
                 update_bump,
-                move_breaker.after(update_bump),
+                move_breaker.after(update_bump).in_set(BreakerSystems::Move),
                 update_breaker_state.after(move_breaker),
                 grade_bump.after(update_breaker_state),
                 perfect_bump_dash_cancel.after(grade_bump),

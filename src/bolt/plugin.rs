@@ -4,12 +4,13 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::{
+        BoltSystems,
         resources::BoltConfig,
         systems::{
             apply_bump_velocity, hover_bolt, launch_bolt, prepare_bolt_velocity, spawn_bolt,
         },
     },
-    breaker::systems::move_breaker,
+    breaker::BreakerSystems,
     shared::{GameState, PlayingState},
 };
 
@@ -26,8 +27,10 @@ impl Plugin for BoltPlugin {
             FixedUpdate,
             (
                 launch_bolt,
-                hover_bolt.after(move_breaker),
-                prepare_bolt_velocity.after(move_breaker),
+                hover_bolt.after(BreakerSystems::Move),
+                prepare_bolt_velocity
+                    .after(BreakerSystems::Move)
+                    .in_set(BoltSystems::PrepareVelocity),
                 apply_bump_velocity,
             )
                 .run_if(in_state(PlayingState::Active)),
