@@ -6,6 +6,7 @@ use bevy::prelude::*;
 ///
 /// Consumed by the upgrades plugin (applies effects).
 #[derive(Message, Clone, Debug)]
+#[allow(dead_code)]
 pub struct UpgradeSelected {
     /// Index of the selected upgrade option (0-based).
     pub choice: usize,

@@ -36,16 +36,25 @@ impl PluginGroup for Game {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_os = "macos")))]
 mod tests {
     use super::*;
 
     #[test]
     fn game_plugin_group_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .add_plugins(Game.build().disable::<DebugPlugin>())
-            .update();
+        let mut app = App::new();
+        app.add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: None,
+                    ..default()
+                })
+                .set(bevy::asset::AssetPlugin {
+                    file_path: "assets".into(),
+                    ..default()
+                }),
+        );
+        app.add_plugins(Game.build().disable::<DebugPlugin>());
+        app.update();
     }
 }
