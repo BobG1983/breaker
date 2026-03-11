@@ -7,7 +7,8 @@ use crate::{
         BoltSystems,
         resources::BoltConfig,
         systems::{
-            apply_bump_velocity, hover_bolt, launch_bolt, prepare_bolt_velocity, spawn_bolt,
+            animate_fade_out, apply_bump_velocity, hover_bolt, launch_bolt, prepare_bolt_velocity,
+            spawn_bolt, spawn_bolt_lost_text,
         },
     },
     breaker::BreakerSystems,
@@ -32,8 +33,13 @@ impl Plugin for BoltPlugin {
                     .after(BreakerSystems::Move)
                     .in_set(BoltSystems::PrepareVelocity),
                 apply_bump_velocity,
+                spawn_bolt_lost_text,
             )
                 .run_if(in_state(PlayingState::Active)),
+        );
+        app.add_systems(
+            Update,
+            animate_fade_out.run_if(in_state(PlayingState::Active)),
         );
     }
 }
@@ -50,7 +56,9 @@ mod tests {
         app.init_state::<GameState>();
         app.add_sub_state::<PlayingState>();
         // BoltPlugin reads BumpPerformed messages from breaker domain
+        // and BoltLost messages from physics domain
         app.add_message::<crate::breaker::messages::BumpPerformed>();
+        app.add_message::<crate::physics::messages::BoltLost>();
         app.add_plugins(BoltPlugin);
         app.update();
     }
