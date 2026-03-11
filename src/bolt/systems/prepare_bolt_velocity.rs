@@ -5,7 +5,8 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{ActiveBoltFilter, BoltVelocity};
+use crate::bolt::components::BoltVelocity;
+use crate::bolt::filters::ActiveBoltFilter;
 use crate::bolt::resources::BoltConfig;
 
 /// Prepares the bolt velocity for the current timestep.

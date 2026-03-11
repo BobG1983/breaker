@@ -12,7 +12,8 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{ActiveBoltFilter, Bolt, BoltVelocity};
+use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::filters::ActiveBoltFilter;
 use crate::cells::CellConfig;
 use crate::cells::components::Cell;
 use crate::physics::messages::BoltHitCell;

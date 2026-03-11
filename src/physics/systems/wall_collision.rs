@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{ActiveBoltFilter, BoltVelocity};
+use crate::bolt::components::BoltVelocity;
+use crate::bolt::filters::ActiveBoltFilter;
 use crate::shared::PlayfieldConfig;
 
 /// Reflects the bolt off walls and ceiling.

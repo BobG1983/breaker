@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{ActiveBoltFilter, Bolt, BoltVelocity};
+use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::filters::ActiveBoltFilter;
 use crate::breaker::BreakerConfig;
 use crate::breaker::components::{Breaker, BreakerTilt};
 use crate::physics::messages::BoltHitBreaker;
