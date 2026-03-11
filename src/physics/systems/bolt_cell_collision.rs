@@ -173,12 +173,14 @@ pub fn bolt_cell_collision(
         if let Some((cell_entity, cell_pos, _, is_side)) = hit {
             if is_side {
                 bolt_velocity.value.x = -bolt_velocity.value.x;
-                let sign = (bolt_pos.x - cell_pos.x).signum();
+                // Push in the direction the bolt is NOW traveling (post-reflection).
+                // Using position-based sign fails when the bolt overshoots cell center.
+                let sign = bolt_velocity.value.x.signum();
                 bolt_transform.translation.x =
                     sign.mul_add(cell_half_width + bolt_config.radius, cell_pos.x);
             } else {
                 bolt_velocity.value.y = -bolt_velocity.value.y;
-                let sign = (bolt_pos.y - cell_pos.y).signum();
+                let sign = bolt_velocity.value.y.signum();
                 bolt_transform.translation.y =
                     sign.mul_add(cell_half_height + bolt_config.radius, cell_pos.y);
             }
@@ -356,6 +358,51 @@ mod tests {
         assert_eq!(hits.0.len(), 2, "both bolts should register hits");
         assert!(hits.0.contains(&cell_a), "cell A should be in the hit list");
         assert!(hits.0.contains(&cell_b), "cell B should be in the hit list");
+    }
+
+    #[test]
+    fn fast_bolt_does_not_ping_pong_inside_cell() {
+        let mut app = test_app();
+        app.insert_resource(HitCells::default());
+        app.add_systems(Update, collect_cell_hits.after(bolt_cell_collision));
+
+        // Cell at y=100. Bolt moving fast upward — will overshoot cell
+        // center on the first tick, landing above it.
+        spawn_cell(&mut app, 0.0, 100.0);
+
+        // Position the bolt so move_bolt (not running here) would place it
+        // past cell center. We simulate the post-move position directly.
+        // Bolt is ABOVE cell center, velocity upward — should be pushed below.
+        let bolt_y = 100.0 + 2.0; // past cell center
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(50.0, 600.0),
+            Transform::from_xyz(0.0, bolt_y, 0.0),
+        ));
+
+        app.update();
+
+        let hits = app.world().resource::<HitCells>();
+        assert_eq!(
+            hits.0.len(),
+            1,
+            "bolt should hit cell exactly once, not ping-pong (got {} hits)",
+            hits.0.len()
+        );
+
+        // Verify bolt was pushed BELOW the cell (in approach direction),
+        // not above (wrong side when bolt overshoots cell center)
+        let bolt_tf = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            bolt_tf.translation.y < 100.0,
+            "bolt should be pushed below cell, not above (y={:.1})",
+            bolt_tf.translation.y
+        );
     }
 
     #[test]
