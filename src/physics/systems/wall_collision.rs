@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::components::{ActiveBoltFilter, BoltVelocity};
 use crate::shared::PlayfieldConfig;
 
 /// Reflects the bolt off walls and ceiling.
@@ -13,7 +13,7 @@ use crate::shared::PlayfieldConfig;
 pub fn wall_collision(
     config: Res<BoltConfig>,
     playfield: Res<PlayfieldConfig>,
-    mut query: Query<(&mut Transform, &mut BoltVelocity), With<Bolt>>,
+    mut query: Query<(&mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
 ) {
     let left_bound = playfield.left() + config.radius;
     let right_bound = playfield.right() - config.radius;

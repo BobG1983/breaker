@@ -12,7 +12,7 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltServing, BoltVelocity};
+use crate::bolt::components::{ActiveBoltFilter, Bolt, BoltVelocity};
 use crate::cells::CellConfig;
 use crate::cells::components::Cell;
 use crate::physics::messages::BoltHitCell;
@@ -28,9 +28,6 @@ const MAX_BOUNCES: u32 = 4;
 /// The bolt is placed this far outside the cell's expanded AABB to prevent
 /// floating-point touching on the next sweep.
 const CCD_EPSILON: f32 = 0.01;
-
-/// Query filter for active (non-serving) bolts.
-type BoltFilter = (With<Bolt>, Without<BoltServing>);
 
 /// Query filter for cell data.
 type CellFilter = (With<Cell>, Without<Bolt>);
@@ -134,7 +131,7 @@ pub fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
     bolt_config: Res<BoltConfig>,
     cell_config: Res<CellConfig>,
-    mut bolt_query: Query<(Entity, &mut Transform, &mut BoltVelocity), BoltFilter>,
+    mut bolt_query: Query<(Entity, &mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
     cell_query: Query<(Entity, &Transform), CellFilter>,
     mut hit_writer: MessageWriter<BoltHitCell>,
 ) {
@@ -155,7 +152,7 @@ pub fn bolt_cell_collision(
             }
 
             let direction = velocity.normalize_or_zero();
-            if direction.length_squared() < f32::EPSILON {
+            if direction == Vec2::ZERO {
                 break;
             }
 
@@ -181,7 +178,7 @@ pub fn bolt_cell_collision(
             // Move to just before the impact point
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
             position += direction * advance;
-            remaining -= hit.distance;
+            remaining -= advance;
 
             // Reflect velocity off the hit face
             velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
@@ -200,6 +197,7 @@ pub fn bolt_cell_collision(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bolt::components::{Bolt, BoltServing};
 
     // --- ray_expanded_aabb unit tests ---
 

@@ -36,6 +36,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Write tests FIRST for new game logic (see `docs/ARCHITECTURE.md` Testing — TDD)
 - Create a feature branch before starting work (`feature/*`, `fix/*`, `refactor/*` off main)
 - Commit with conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) after tests pass
+- After merging a branch to main, delete it locally and from the remote
 
 **Move freely on**:
 - Implementation within existing system boundaries

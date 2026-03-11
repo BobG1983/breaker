@@ -5,16 +5,17 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{Bolt, BoltServing, BoltVelocity};
+use crate::bolt::components::{ActiveBoltFilter, BoltVelocity};
 use crate::bolt::resources::BoltConfig;
-
-type MoveBoltFilter = (With<Bolt>, Without<BoltServing>);
 
 /// Prepares the bolt velocity for the current timestep.
 ///
 /// Enforces speed clamping (min/max) and minimum angle from horizontal.
 /// Position advancement is handled by the CCD collision system.
-pub fn move_bolt(config: Res<BoltConfig>, mut query: Query<&mut BoltVelocity, MoveBoltFilter>) {
+pub fn prepare_bolt_velocity(
+    config: Res<BoltConfig>,
+    mut query: Query<&mut BoltVelocity, ActiveBoltFilter>,
+) {
     for mut velocity in &mut query {
         let speed = velocity.speed();
         if speed > f32::EPSILON {
@@ -31,12 +32,13 @@ pub fn move_bolt(config: Res<BoltConfig>, mut query: Query<&mut BoltVelocity, Mo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bolt::components::{Bolt, BoltServing};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BoltConfig>();
-        app.add_systems(Update, move_bolt);
+        app.add_systems(Update, prepare_bolt_velocity);
         app
     }
 

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::components::{ActiveBoltFilter, Bolt, BoltVelocity};
 use crate::breaker::BreakerConfig;
 use crate::breaker::components::{Breaker, BreakerTilt};
 use crate::physics::messages::BoltHitBreaker;
@@ -23,7 +23,7 @@ pub fn bolt_breaker_collision(
     bolt_config: Res<BoltConfig>,
     breaker_config: Res<BreakerConfig>,
     physics_config: Res<PhysicsConfig>,
-    mut bolt_query: Query<(Entity, &mut Transform, &mut BoltVelocity), With<Bolt>>,
+    mut bolt_query: Query<(Entity, &mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
     breaker_query: Query<(&Transform, &BreakerTilt), BreakerQueryFilter>,
     mut writer: MessageWriter<BoltHitBreaker>,
 ) {

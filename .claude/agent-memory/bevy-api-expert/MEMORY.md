@@ -184,6 +184,46 @@ lto = "thin"
   - Constructor: `Rectangle::new(width: f32, height: f32) -> Rectangle`
   - Stores half-sizes internally
 
+## Testing Time<Fixed> / FixedUpdate Systems (verified v0.18.0 source)
+
+Two verified approaches — both confirmed from Bevy source tests:
+
+### Approach 1: Run system in Update schedule, inject delta via advance_by (recommended)
+Register system in `Update` in tests; call `app.world_mut().resource_mut::<Time<Fixed>>().advance_by(duration)` before `app.update()`. This directly sets `delta()` without touching overstep or the FixedUpdate scheduler.
+
+```rust
+app.world_mut()
+    .resource_mut::<Time<Fixed>>()
+    .advance_by(Duration::from_secs_f32(1.0 / 64.0));
+app.update();
+```
+
+### Approach 2: Force FixedUpdate to run via accumulate_overstep (Bevy-documented test helper)
+`accumulate_overstep` is explicitly documented as "provided for use in tests". Call it with at least one full timestep's worth of time, then call `app.update()` — the scheduler will see enough overstep and run FixedUpdate.
+
+```rust
+// Set a known timestep first (optional but makes assertions deterministic)
+app.world_mut()
+    .resource_mut::<Time<Fixed>>()
+    .set_timestep_hz(64.0);
+
+// Accumulate enough overstep to trigger one FixedUpdate run
+let timestep = app.world().resource::<Time<Fixed>>().timestep();
+app.world_mut()
+    .resource_mut::<Time<Fixed>>()
+    .accumulate_overstep(timestep);
+app.update(); // FixedUpdate will now run once
+```
+
+### Key facts
+- `advance_by(&mut self, delta: Duration)` — sets delta and elapsed directly on the clock
+- `accumulate_overstep(&mut self, delta: Duration)` — documented test helper; scheduler reads this to decide how many FixedUpdate ticks to run
+- `expend(&mut self) -> bool` — PRIVATE in user code; called internally by scheduler per tick
+- Default timestep: 64 Hz (15625 microseconds) — `Time::<Fixed>::DEFAULT_TIMESTEP`
+- `delta()` on `Time<Fixed>` always equals `timestep()` when a tick fires (not variable)
+- Both `Time<Fixed>` and `Time<Virtual>` must exist in the world; `MinimalPlugins` includes `TimePlugin` which inserts all three `Time<T>` variants
+- Sources: `crates/bevy_time/src/fixed.rs` v0.18.0, `crates/bevy_app/src/main_schedule.rs` v0.18.0
+
 ## Sources
 
 - Feature flags: https://docs.rs/bevy/0.18.1/bevy/index.html#cargo-features

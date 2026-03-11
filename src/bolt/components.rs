@@ -11,6 +11,11 @@ pub struct Bolt;
 #[derive(Component, Debug)]
 pub struct BoltServing;
 
+/// Query filter for active (non-serving) bolts.
+///
+/// Shared across bolt and physics systems that should skip serving bolts.
+pub type ActiveBoltFilter = (With<Bolt>, Without<BoltServing>);
+
 /// The bolt's velocity in world units per second.
 #[derive(Component, Debug, Clone)]
 pub struct BoltVelocity {

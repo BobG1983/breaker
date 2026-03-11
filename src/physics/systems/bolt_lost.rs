@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::bolt::BoltConfig;
-use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::components::{ActiveBoltFilter, Bolt, BoltVelocity};
 use crate::breaker::components::Breaker;
 use crate::physics::messages::BoltLost;
 use crate::shared::PlayfieldConfig;
@@ -15,7 +15,7 @@ use crate::shared::PlayfieldConfig;
 pub fn bolt_lost(
     bolt_config: Res<BoltConfig>,
     playfield: Res<PlayfieldConfig>,
-    mut bolt_query: Query<(&mut Transform, &mut BoltVelocity), With<Bolt>>,
+    mut bolt_query: Query<(&mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
     breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
     mut writer: MessageWriter<BoltLost>,
 ) {

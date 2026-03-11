@@ -36,6 +36,8 @@ src/<domain>/
 ├── components.rs    # All #[derive(Component)] types for this domain.
 ├── messages.rs      # All #[derive(Message)] types for this domain.
 ├── resources.rs     # All #[derive(Resource)] types for this domain.
+├── queries.rs       # Query type aliases (optional — for clippy type_complexity).
+├── filters.rs       # Query filter type aliases (optional — for clippy type_complexity).
 └── systems/
     ├── mod.rs       # Re-exports ONLY — pub mod + pub use for each system.
     └── <name>.rs    # One file per system function (or tightly related group).
@@ -45,6 +47,7 @@ src/<domain>/
 - `mod.rs` is a routing file. If it contains `fn`, `struct`, `enum`, or `impl` — that's a violation. Move it.
 - `plugin.rs` is the ONLY file that wires things to the Bevy `App`. Systems, messages, states all registered here.
 - `components.rs`, `messages.rs`, `resources.rs` — one file each. If a domain has no messages, omit `messages.rs`. Don't create the file just to have it.
+- `queries.rs`, `filters.rs` — optional files for query and filter type aliases (clippy `type_complexity`). Omit if not needed.
 - `systems/` — one `.rs` file per system function or per tightly-coupled group (e.g., a system + its helper). Each system file is named after the system. `systems/mod.rs` re-exports them, nothing else.
 - Files that don't fit these categories don't belong. No `utils.rs`, no `helpers.rs`, no `types.rs`.
 
@@ -125,7 +128,7 @@ Does this follow strict-dev, lenient-release?
 4. **The verdict**: Approve, modify, or reject with specific reasoning.
 
 ### For Code Review (Structural)
-1. **Folder structure**: Verify every domain follows the canonical layout (mod.rs exports only, plugin.rs, components.rs, messages.rs, resources.rs, systems/*.rs). This is the FIRST thing you check.
+1. **Folder structure**: Verify every domain follows the canonical layout (mod.rs exports only, plugin.rs, components.rs, messages.rs, resources.rs, queries.rs, filters.rs, systems/*.rs). This is the FIRST thing you check.
 2. **Boundary violations**: Flag any cross-domain mutation, direct imports for data flow, or missing message indirection.
 3. **Missing patterns**: Flag missing cleanup markers, direct ID string matching, unregistered message types.
 4. **Ordering concerns**: Flag speculative ordering constraints or missing proven ones.
