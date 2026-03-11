@@ -8,8 +8,8 @@ use crate::{
         messages::BumpPerformed,
         resources::BreakerConfig,
         systems::{
-            animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, spawn_breaker,
-            trigger_bump_visual, update_breaker_state, update_bump,
+            animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, reset_breaker,
+            spawn_breaker, trigger_bump_visual, update_breaker_state, update_bump,
         },
     },
     shared::{GameState, PlayingState},
@@ -24,7 +24,10 @@ impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<BumpPerformed>();
         app.init_resource::<BreakerConfig>();
-        app.add_systems(OnEnter(GameState::Playing), spawn_breaker);
+        app.add_systems(
+            OnEnter(GameState::Playing),
+            (spawn_breaker, reset_breaker.after(spawn_breaker)),
+        );
         app.add_systems(
             FixedUpdate,
             (
