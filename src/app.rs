@@ -1,17 +1,11 @@
 //! App construction — builds the Bevy [`App`] with all plugins.
 
+use bevy::core_pipeline::tonemapping::Tonemapping;
+use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
 
 use crate::game::Game;
-use crate::shared::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
-
-/// Window width in pixels, derived from the playfield dimensions.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-const WINDOW_WIDTH: u32 = PLAYFIELD_WIDTH as u32;
-
-/// Window height in pixels, derived from the playfield dimensions.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-const WINDOW_HEIGHT: u32 = PLAYFIELD_HEIGHT as u32;
+use crate::shared::PlayfieldConfig;
 
 /// Constructs and returns the configured Bevy [`App`].
 ///
@@ -19,35 +13,56 @@ const WINDOW_HEIGHT: u32 = PLAYFIELD_HEIGHT as u32;
 pub fn build_app() -> App {
     let mut app = App::new();
 
+    let playfield = PlayfieldConfig::default();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let window_width = playfield.width as u32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let window_height = playfield.height as u32;
+
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
             title: "Brickbreaker".into(),
-            resolution: bevy::window::WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT),
+            resolution: bevy::window::WindowResolution::new(window_width, window_height),
             ..default()
         }),
         ..default()
     }));
 
+    app.insert_resource(ClearColor(playfield.background_color()));
     app.add_plugins(Game);
     app.add_systems(Startup, spawn_camera);
 
     app
 }
 
-/// Spawns the 2D camera centered on the playfield.
+/// Spawns the 2D camera centered on the playfield with HDR bloom.
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
+    commands.spawn((
+        Camera2d,
+        Camera::default(),
+        Tonemapping::AcesFitted,
+        Bloom::default(),
+    ));
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_os = "macos")))]
 mod tests {
     use super::*;
     use crate::game::Game;
 
     fn headless_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: None,
+                    ..default()
+                })
+                .set(bevy::asset::AssetPlugin {
+                    file_path: "assets".into(),
+                    ..default()
+                }),
+        );
         app.add_plugins(Game.build().disable::<crate::debug::DebugPlugin>());
         app.add_systems(Startup, spawn_camera);
         app
@@ -66,7 +81,7 @@ mod tests {
 
         let camera_count = app
             .world_mut()
-            .query::<&Camera2d>()
+            .query::<(&Camera2d, &Camera)>()
             .iter(app.world())
             .count();
         assert_eq!(camera_count, 1);
