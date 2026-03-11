@@ -18,12 +18,23 @@ impl Plugin for DebugPlugin {
             use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
             use bevy_egui::EguiPlugin;
 
+            use super::systems::{
+                bolt_info_ui, breaker_state_ui, debug_ui_system, draw_hitboxes,
+                draw_velocity_vectors,
+            };
+
             app.add_plugins(EguiPlugin::default());
             app.add_plugins(FrameTimeDiagnosticsPlugin::default());
             app.init_resource::<DebugOverlays>();
+
             app.add_systems(
                 bevy_egui::EguiPrimaryContextPass,
-                super::systems::debug_ui_system.run_if(resource_exists::<DebugOverlays>),
+                (debug_ui_system, bolt_info_ui, breaker_state_ui)
+                    .run_if(resource_exists::<DebugOverlays>),
+            );
+            app.add_systems(
+                Update,
+                (draw_hitboxes, draw_velocity_vectors).run_if(resource_exists::<DebugOverlays>),
             );
         }
     }

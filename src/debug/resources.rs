@@ -14,6 +14,10 @@ pub struct DebugOverlays {
     pub show_velocity_vectors: bool,
     /// Show current game state label.
     pub show_state: bool,
+    /// Show bolt telemetry window.
+    pub show_bolt_info: bool,
+    /// Show breaker state telemetry window.
+    pub show_breaker_state: bool,
 }
 
 #[cfg(test)]
@@ -27,5 +31,7 @@ mod tests {
         assert!(!overlays.show_hitboxes);
         assert!(!overlays.show_velocity_vectors);
         assert!(!overlays.show_state);
+        assert!(!overlays.show_bolt_info);
+        assert!(!overlays.show_breaker_state);
     }
 }
