@@ -1,4 +1,4 @@
-/* @[brickbreaker::screen::defaults::MainMenuDefaults] */
+/* @[brickbreaker::screen::resources::MainMenuDefaults] */
 (
     title_font_size: 96.0,
     menu_font_size: 36.0,

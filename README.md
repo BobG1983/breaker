@@ -4,7 +4,7 @@ A roguelite Arkanoid clone — the reflex pressure of Ikaruga meets the build-cr
 
 ## Build & Run
 
-**Prerequisites:** Rust toolchain (stable). [mold](https://github.com/rui314/mold) or lld recommended for fast linking.
+**Prerequisites:** Rust toolchain (nightly). [mold](https://github.com/rui314/mold) or lld recommended for fast linking.
 
 ```
 cargo dev                    # Dev build + run (dynamic linking)

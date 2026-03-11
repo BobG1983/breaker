@@ -1,4 +1,4 @@
-/* @[brickbreaker::screen::defaults::BreakerDefaults] */
+/* @[brickbreaker::breaker::resources::BreakerDefaults] */
 (
     half_width: 60.0,
     half_height: 10.0,

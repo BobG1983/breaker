@@ -1,4 +1,4 @@
-/* @[brickbreaker::screen::defaults::PhysicsDefaults] */
+/* @[brickbreaker::physics::resources::PhysicsDefaults] */
 (
     max_reflection_angle: 1.31,
 )

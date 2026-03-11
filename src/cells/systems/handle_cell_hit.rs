@@ -42,7 +42,7 @@ pub fn handle_cell_hit(
                     intensity,
                     cell_config.damage_green_min * frac,
                     cell_config
-                        .damage_green_range
+                        .damage_blue_range
                         .mul_add(1.0 - frac, cell_config.damage_blue_base),
                 );
             }

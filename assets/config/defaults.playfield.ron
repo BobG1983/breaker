@@ -1,4 +1,4 @@
-/* @[brickbreaker::screen::defaults::PlayfieldDefaults] */
+/* @[brickbreaker::shared::PlayfieldDefaults] */
 (
     width: 800.0,
     height: 600.0,

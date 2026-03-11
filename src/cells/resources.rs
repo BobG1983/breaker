@@ -34,8 +34,8 @@ pub struct CellConfig {
     pub damage_hdr_base: f32,
     /// Minimum green channel value for damage color feedback.
     pub damage_green_min: f32,
-    /// Green channel range added based on health fraction.
-    pub damage_green_range: f32,
+    /// Blue channel range added based on health fraction.
+    pub damage_blue_range: f32,
     /// Base blue channel value for damage color feedback.
     pub damage_blue_base: f32,
 }
@@ -91,8 +91,8 @@ pub struct CellDefaults {
     pub damage_hdr_base: f32,
     /// Minimum green channel value for damage color feedback.
     pub damage_green_min: f32,
-    /// Green channel range added based on health fraction.
-    pub damage_green_range: f32,
+    /// Blue channel range added based on health fraction.
+    pub damage_blue_range: f32,
     /// Base blue channel value for damage color feedback.
     pub damage_blue_base: f32,
 }
@@ -114,7 +114,7 @@ impl Default for CellDefaults {
             tough_row_index: 0,
             damage_hdr_base: 4.0,
             damage_green_min: 0.2,
-            damage_green_range: 0.4,
+            damage_blue_range: 0.4,
             damage_blue_base: 0.2,
         }
     }
@@ -137,7 +137,7 @@ impl From<CellDefaults> for CellConfig {
             tough_row_index: d.tough_row_index,
             damage_hdr_base: d.damage_hdr_base,
             damage_green_min: d.damage_green_min,
-            damage_green_range: d.damage_green_range,
+            damage_blue_range: d.damage_blue_range,
             damage_blue_base: d.damage_blue_base,
         }
     }
