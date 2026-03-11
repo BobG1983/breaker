@@ -32,8 +32,8 @@ pub fn bolt_lost(
             bolt_transform.translation.x = breaker_pos.x;
             bolt_transform.translation.y = breaker_pos.y + bolt_config.respawn_offset_y;
 
-            // Relaunch straight up at min speed — losing the bolt should sting
-            bolt_velocity.value = Vec2::new(0.0, bolt_config.min_speed);
+            // Relaunch straight up at base speed — losing position is penalty enough
+            bolt_velocity.value = Vec2::new(0.0, bolt_config.base_speed);
         }
     }
 }
@@ -106,9 +106,9 @@ mod tests {
             vel.value.x,
         );
         assert!(
-            (vel.value.y - bolt_config.min_speed).abs() < 1.0,
-            "respawn vy should equal min_speed {:.0}, got {:.1}",
-            bolt_config.min_speed,
+            (vel.value.y - bolt_config.base_speed).abs() < 1.0,
+            "respawn vy should equal base_speed {:.0}, got {:.1}",
+            bolt_config.base_speed,
             vel.value.y,
         );
         assert!(
