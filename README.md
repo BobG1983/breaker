@@ -34,7 +34,7 @@ Dev aliases are defined in `.cargo/config.toml` and use `bevy/dynamic_linking` f
 
 ## Project Status
 
-**Phase 0: Project Scaffolding & Architecture** — establishing the plugin architecture and foundational systems.
+**Phases 0-1 complete, Phase 2 next.** Scaffolding, plugin architecture, and core mechanics (breaker, bolt, cells, physics, bump system) are implemented. Next up: game loop (timer, bolt-lost penalties, level completion, level loading).
 
 ## License
 
