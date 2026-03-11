@@ -58,7 +58,6 @@ The main agent is the orchestrator. Invoke subagents automatically at these trig
 | New gameplay mechanic or upgrade designed | **game-design-guard** | Validate against design pillars |
 | Compiler errors that aren't obvious | **rust-error-decoder** | Translate diagnostics into actionable fixes |
 | 3+ systems added to a plugin, or cross-plugin data flow | **system-dependency-mapper** | Detect ordering issues and conflicts |
-| New helpers or shared patterns introduced | **refactor-scout** | Find existing code that could use the new patterns |
 | Feature complete, ready to commit | **test-runner** | Full validation suite (fmt, clippy, tests) |
 
 **Post-implementation checklist** (run before considering a task done):
