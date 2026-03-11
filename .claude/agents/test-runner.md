@@ -33,14 +33,7 @@ cargo fmt 2>&1
 - Run `cargo fmt` to auto-format. Then run `cargo fmt --check` to verify nothing remains.
 - If files were formatted, list them in the report.
 
-### 2. RON Validation
-```
-bash scripts/validate-ron.sh 2>&1
-```
-- Checks all `.ron` files have `/* @[...] */` type annotations.
-- Runs `ron-lsp check .` if installed, warns if not.
-
-### 3. Clippy
+### 2. Clippy
 ```
 cargo dclippy 2>&1
 ```
@@ -48,7 +41,7 @@ cargo dclippy 2>&1
 - For each warning/error: file:line, the lint name, and a one-line summary.
 - Count total warnings and errors.
 
-### 4. Tests
+### 3. Tests
 ```
 cargo dtest 2>&1
 ```
@@ -63,9 +56,6 @@ cargo dtest 2>&1
 
 ### Format: PASS / FAIL
 [details if FAIL]
-
-### RON Validation: PASS / N unannotated / N type errors
-[details if issues found]
 
 ### Clippy: PASS / N warnings / N errors
 [details for each warning/error]
