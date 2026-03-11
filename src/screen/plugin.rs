@@ -30,13 +30,14 @@ impl Plugin for ScreenPlugin {
         app.init_state::<GameState>();
         app.add_sub_state::<PlayingState>();
 
-        // RON asset plugins — register deserialization for each defaults type
+        // RON asset plugins — each type gets a unique extension to avoid
+        // bevy_common_assets trying every loader on every file.
         app.add_plugins((
-            RonAssetPlugin::<PlayfieldDefaults>::new(&["defaults.ron"]),
-            RonAssetPlugin::<BoltDefaults>::new(&["defaults.ron"]),
-            RonAssetPlugin::<BreakerDefaults>::new(&["defaults.ron"]),
-            RonAssetPlugin::<CellDefaults>::new(&["defaults.ron"]),
-            RonAssetPlugin::<PhysicsDefaults>::new(&["defaults.ron"]),
+            RonAssetPlugin::<PlayfieldDefaults>::new(&["playfield.ron"]),
+            RonAssetPlugin::<BoltDefaults>::new(&["bolt.ron"]),
+            RonAssetPlugin::<BreakerDefaults>::new(&["breaker.ron"]),
+            RonAssetPlugin::<CellDefaults>::new(&["cells.ron"]),
+            RonAssetPlugin::<PhysicsDefaults>::new(&["physics.ron"]),
         ));
 
         // Progress plugin drives Loading → MainMenu transition.

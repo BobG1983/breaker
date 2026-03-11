@@ -8,5 +8,5 @@
     spawn_offset_y: 30.0,
     initial_angle: 0.26,
     respawn_offset_y: 30.0,
-    color_rgb: [6.0, 5.0, 0.5],
+    color_rgb: (6.0, 5.0, 0.5),
 )

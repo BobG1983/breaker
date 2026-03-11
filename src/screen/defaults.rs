@@ -304,3 +304,44 @@ impl From<PhysicsDefaults> for PhysicsConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bolt_defaults_ron_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.bolt.ron");
+        let result: BoltDefaults = ron::de::from_str(ron_str).expect("bolt RON should parse");
+        assert!(result.base_speed > 0.0);
+    }
+
+    #[test]
+    fn breaker_defaults_ron_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.breaker.ron");
+        let result: BreakerDefaults = ron::de::from_str(ron_str).expect("breaker RON should parse");
+        assert!(result.half_width > 0.0);
+    }
+
+    #[test]
+    fn cell_defaults_ron_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.cells.ron");
+        let result: CellDefaults = ron::de::from_str(ron_str).expect("cells RON should parse");
+        assert!(result.grid_cols > 0);
+    }
+
+    #[test]
+    fn physics_defaults_ron_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.physics.ron");
+        let result: PhysicsDefaults = ron::de::from_str(ron_str).expect("physics RON should parse");
+        assert!(result.max_reflection_angle > 0.0);
+    }
+
+    #[test]
+    fn playfield_defaults_ron_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.playfield.ron");
+        let result: PlayfieldDefaults =
+            ron::de::from_str(ron_str).expect("playfield RON should parse");
+        assert!(result.width > 0.0);
+    }
+}

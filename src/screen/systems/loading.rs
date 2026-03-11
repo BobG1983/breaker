@@ -18,19 +18,19 @@ use crate::shared::PlayfieldConfig;
 #[derive(AssetCollection, Resource)]
 pub struct DefaultsCollection {
     /// Handle for playfield defaults.
-    #[asset(path = "config/playfield.defaults.ron")]
+    #[asset(path = "config/defaults.playfield.ron")]
     pub playfield: Handle<PlayfieldDefaults>,
     /// Handle for bolt defaults.
-    #[asset(path = "config/bolt.defaults.ron")]
+    #[asset(path = "config/defaults.bolt.ron")]
     pub bolt: Handle<BoltDefaults>,
     /// Handle for breaker defaults.
-    #[asset(path = "config/breaker.defaults.ron")]
+    #[asset(path = "config/defaults.breaker.ron")]
     pub breaker: Handle<BreakerDefaults>,
     /// Handle for cells defaults.
-    #[asset(path = "config/cells.defaults.ron")]
+    #[asset(path = "config/defaults.cells.ron")]
     pub cells: Handle<CellDefaults>,
     /// Handle for physics defaults.
-    #[asset(path = "config/physics.defaults.ron")]
+    #[asset(path = "config/defaults.physics.ron")]
     pub physics: Handle<PhysicsDefaults>,
 }
 
