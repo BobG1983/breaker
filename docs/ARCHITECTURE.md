@@ -323,7 +323,7 @@ Added in Phase 0. The debug console is a development tool, not a player feature 
 ## Code Standards
 
 - **Pragmatic Rust + Bevy**: Follow rustfmt and clippy. Use Bevy conventions where they matter (system fn signatures, component derives, required components). Don't be dogmatic.
-- **No magic numbers**: ALL tunable values (physics constants, timing windows, sizes, speeds) must be named constants or loaded from RON data. No raw numeric literals in game logic.
+- **No magic numbers**: ALL tunable values (physics constants, timing windows, sizes, speeds) MUST be loaded from RON data. No raw numeric literals in game logic, except in Default impl blocks, and only where a RON will override them if succesfully loaded.
 - **No over-engineering**: No abstractions, generics, or indirection until there's a concrete second use case. YAGNI. Three similar lines > premature abstraction.
 - **Conventional Commits**: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:` with optional scope. Branch naming: `feature/*`, `fix/*`, `refactor/*`.
 
