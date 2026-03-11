@@ -3,10 +3,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-11, 111 tests)
-- 111 tests passed, 0 failed
+**Last Validation: PASS** (2026-03-11, 111 tests, main-menu-screen branch)
+- 111 tests passed, 0 failed, 0 ignored
 - Clippy: clean (0 warnings, 0 errors)
-- Format: clean (auto-fixed if needed)
+- Format: fixed (loading.rs import line wrapping)
 - RON validation script not found in repo (scripts/ directory missing)
 
 ## Bevy 0.18.1 API Notes

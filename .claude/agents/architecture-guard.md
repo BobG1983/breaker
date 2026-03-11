@@ -27,7 +27,7 @@ When evaluating any structural proposal, interrogate it against ALL of these:
 
 ### 1. Domain Folder Structure (CRITICAL)
 
-Every domain folder MUST follow this internal layout. No exceptions.
+Every domain folder MUST follow this internal layout. No exceptions, except a given .rs file could be replaced with a folder (ie. components/mod.rs).
 
 ```
 src/<domain>/

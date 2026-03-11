@@ -3,6 +3,7 @@
 ## Project State
 - Phase 0 scaffolding complete, reviewed 2025-03-10
 - Phase 1 core mechanics implemented, reviewed 2025-03-10
+- Main menu screen implemented, reviewed 2026-03-11
 - Bevy 0.18.1, bevy_egui 0.39, edition 2024
 - Single crate, plugin-per-domain, message-driven decoupling
 
@@ -18,13 +19,18 @@
 - Physics domain reads other domains' components (acceptable per ECS convention)
 - Physics owns collision detection + bolt reflection (collision response)
 
-## Phase 1 Boundary Violations — Status
-- V1: RESOLVED — apply_bump_velocity in bolt domain reads BumpPerformed, mutates only BoltVelocity
-- V2: RESOLVED — physics writes BoltHitCell only, cells domain handles damage/despawn
-- V3: RESOLVED — enforce_min_angle is now a method on BoltVelocity in bolt/components.rs
-- M1: Pending — CellDestroyed should be written by cells domain (needs cells system reading BoltHitCell)
-- M2: Pending — bump grading uses velocity direction check instead of reading BoltHitBreaker messages
-- O1: Pending — Cross-plugin physics chain ordering not implemented
+## Phase 1 Boundary Violations — All RESOLVED
+- V1: apply_bump_velocity in bolt domain reads BumpPerformed, mutates only BoltVelocity
+- V2: physics writes BoltHitCell only, cells domain handles damage/despawn
+- V3: enforce_min_angle is now a method on BoltVelocity in bolt/components.rs
+- M1: CellDestroyed written by cells domain via handle_cell_hit
+- M2: grade_bump reads BoltHitBreaker messages correctly
+- O1: Cross-plugin physics chain ordering implemented
+
+## Screen Domain Violations (2026-03-11)
+- V1: screen/defaults.rs is non-canonical file (not in components/messages/resources/systems)
+- V2: Components defined in system files (loading.rs: LoadingScreen/LoadingBarFill/LoadingProgressText; main_menu.rs: MainMenuScreen/MenuItem/MainMenuSelection/MENU_ITEMS)
+- V3: pub mod defaults in screen/mod.rs exposes internals for config bootstrapping (deliberate trade-off)
 
 ## Physics Improvements (Phase 1 iteration)
 - bolt_breaker_collision: side-hit vs top-hit via overlap depth comparison
