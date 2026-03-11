@@ -28,10 +28,14 @@ impl Plugin for BreakerPlugin {
                 update_breaker_state.after(move_breaker),
                 grade_bump.after(update_breaker_state),
                 perfect_bump_dash_cancel.after(grade_bump),
-                trigger_bump_visual.after(update_bump),
-                animate_bump_visual
-                    .after(trigger_bump_visual)
-                    .after(move_breaker),
+            )
+                .run_if(in_state(PlayingState::Active)),
+        );
+        app.add_systems(
+            Update,
+            (
+                trigger_bump_visual,
+                animate_bump_visual.after(trigger_bump_visual),
             )
                 .run_if(in_state(PlayingState::Active)),
         );

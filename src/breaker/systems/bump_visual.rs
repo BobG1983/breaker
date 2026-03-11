@@ -42,7 +42,7 @@ pub fn trigger_bump_visual(
 /// Removes [`BumpVisual`] when the animation completes.
 pub fn animate_bump_visual(
     mut commands: Commands,
-    time: Res<Time<Fixed>>,
+    time: Res<Time>,
     config: Res<BreakerConfig>,
     mut query: Query<(Entity, &mut Transform, &mut BumpVisual), With<Breaker>>,
 ) {
@@ -250,16 +250,9 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
         app.add_systems(Update, animate_bump_visual);
-        app
-    }
-
-    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
+        // Prime wall-clock time so the next update has a non-zero delta
         app.update();
+        app
     }
 
     #[test]
@@ -277,7 +270,7 @@ mod tests {
             },
         ));
 
-        tick(&mut app);
+        app.update();
 
         let tf = app
             .world_mut()
@@ -313,7 +306,7 @@ mod tests {
             ))
             .id();
 
-        tick(&mut app);
+        app.update();
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_none(),
@@ -347,7 +340,7 @@ mod tests {
 
         // A few ticks to let the timer expire and commands flush
         for _ in 0..5 {
-            tick(&mut app);
+            app.update();
         }
 
         let tf = app
