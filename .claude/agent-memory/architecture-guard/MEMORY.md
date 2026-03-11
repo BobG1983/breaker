@@ -4,8 +4,11 @@
 - Phase 0 scaffolding complete, reviewed 2025-03-10
 - Phase 1 core mechanics implemented, reviewed 2025-03-10
 - Main menu screen implemented, reviewed 2026-03-11
+- Full audit completed 2026-03-11: clean, no critical violations
+- Post-Phase1 additions audit 2026-03-11: BoltServing, hover_bolt, launch_bolt, BumpVisual, RunState, cleanup_entities<T> — all clean
 - Bevy 0.18.1, bevy_egui 0.39, edition 2024
 - Single crate, plugin-per-domain, message-driven decoupling
+- Also depends on: bevy_asset_loader 0.25, bevy_common_assets 0.15, iyes_progress 0.16
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -27,10 +30,10 @@
 - M2: grade_bump reads BoltHitBreaker messages correctly
 - O1: Cross-plugin physics chain ordering implemented
 
-## Screen Domain Violations (2026-03-11)
-- V1: screen/defaults.rs is non-canonical file (not in components/messages/resources/systems)
-- V2: Components defined in system files (loading.rs: LoadingScreen/LoadingBarFill/LoadingProgressText; main_menu.rs: MainMenuScreen/MenuItem/MainMenuSelection/MENU_ITEMS)
-- V3: pub mod defaults in screen/mod.rs exposes internals for config bootstrapping (deliberate trade-off)
+## Screen Domain — Clean (2026-03-11)
+- All prior violations resolved
+- DefaultsCollection now in screen/resources.rs (confirmed)
+- apply_bump_velocity one-frame delay is expected message-driven behavior (confirmed)
 
 ## Physics Improvements (Phase 1 iteration)
 - bolt_breaker_collision: side-hit vs top-hit via overlap depth comparison
@@ -46,6 +49,16 @@ See [message-inventory.md](message-inventory.md) for full table.
 - Every plugin has a `plugin_builds` headless test (except DebugPlugin)
 - Tests are in-module `#[cfg(test)]` blocks
 
+## Accepted Architectural Compromises
+- Cross-domain system fn refs in .before()/.after() ordering (no alternative in Bevy API)
+- Physics domain mutates bolt Transform + BoltVelocity for collision response (minimum necessary)
+- bolt/apply_bump_velocity reads BreakerConfig for bump multipliers (read-only, acceptable)
+- Screen domain seeds ALL domain configs during loading (centralized boot sequence per ARCHITECTURE.md)
+- bolt/hover_bolt reads breaker Transform (read-only cross-domain query, acceptable ECS pattern)
+- bolt/spawn_bolt reads BreakerConfig and RunState (read-only, config access for spawn positioning)
+- physics/bolt_lost reads breaker Transform (read-only, for respawn position)
+
 ## Open Issues (Phase 0, still valid)
 - ARCHITECTURE.md file tree shows assets/ under src/ but actual is project root
 - "upgrades" module uses generic term; TERMINOLOGY.md vs ARCHITECTURE.md contradiction
+- ARCHITECTURE.md ordering section should explicitly document the cross-domain system ref carve-out

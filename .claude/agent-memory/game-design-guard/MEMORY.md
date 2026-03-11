@@ -1,13 +1,16 @@
 # Game Design Guard Memory
 
-## Phase 1 Validation (2026-03-10)
+## Phase 1 Validation (2026-03-11, updated)
 - Phase 1 core mechanics APPROVED against design pillars
 - See `phase1-review.md` for detailed findings
+- Bump grade detection NOW USES BoltHitBreaker messages (fixed since last review)
+- Perfect bump dash-cancel IS IMPLEMENTED -- schedule ordering VERIFIED CORRECT
 
 ## Open Issues
-- Perfect bump dash-cancel NOT YET IMPLEMENTED (deferred due to query conflicts) -- this is the crown jewel mechanic, must ship
-- Bump grade detection uses bolt_velocity.y > 0 as collision proxy -- fragile, should use BoltHitBreaker message instead
-- Bolt-lost respawn has no weight/penalty pre-Phase 2 -- respawn at min_speed recommended
+- apply_bump_velocity lacks explicit .after() ordering in bolt/plugin.rs -- works by accident, should fix
+- Bolt-lost respawn has no weight/penalty pre-Phase 2 -- deferred, acceptable
+- No bolt speed decay mechanism -- track for Phase 2 discussion
+- MIN_PHYSICS_FPS (30.0) hardcoded in bolt_cell_collision -- needs comment about max_speed dependency
 
 ## Key Parameter Values (Phase 1)
 - Breaker: max_speed=500, dash_mult=2.0x, dash_dur=0.15s
@@ -16,9 +19,24 @@
 - Bump multipliers: perfect=1.5x, early/late=0.8x (penalty!), none=1.0x
 - Tilt: dash=~15deg, brake=~25deg
 - Max reflection: ~75deg from vertical
+- Bolt speed floored to base_speed (400) on every breaker contact
 
 ## Design Principles Confirmed
 - Mistimed bumps (0.8x) are WORSE than no bump (1.0x) -- mashing is punished
 - Bolt reflection completely overwrites direction -- every breaker contact is skill expression
 - Dash requires directional commitment -- no stationary dashes
 - Three control axes: position, tilt angle, bump timing
+- All gameplay parameters are data-driven (RON configs + Rust defaults)
+
+## Data-Driven Config Status
+- bolt: RON + BoltDefaults + BoltConfig -- COMPLETE
+- breaker: RON + BreakerDefaults + BreakerConfig -- COMPLETE
+- cells: RON + CellDefaults + CellConfig -- COMPLETE
+- physics: RON + PhysicsDefaults + PhysicsConfig -- COMPLETE
+- playfield: RON + PlayfieldDefaults + PlayfieldConfig -- COMPLETE
+- mainmenu: RON + MainMenuDefaults + MainMenuConfig -- COMPLETE
+
+## Future Design Notes
+- Speed decay: recommend per-bounce/per-cell-hit decay, NOT passive time decay
+- Bolt-lost respawn: consider random angle on respawn to force reaction
+- Piercing Amps will need "one cell per tick" limit revisited

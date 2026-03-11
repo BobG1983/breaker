@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: FAIL** (2026-03-11, feature/main-menu-screen branch)
-- Compilation error in `src/screen/systems/main_menu.rs` line 197
-- Tests not run due to build failure
-- Format: clean (no changes needed)
+**Last Validation: PASS** (2026-03-11, feature/main-menu-screen branch, latest)
+- Format: clean
+- Clippy: clean (no warnings or errors)
+- Tests: 131 passed, 0 failed, 0 ignored
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -24,3 +24,9 @@
 - Type aliases required for complex Query filters (CellQueryFilter, BreakerQueryFilter)
 - Use `.mul_add()` for floating point operations to satisfy suboptimal_flops lint
 - Message struct fields marked with `#[allow(dead_code)]` if intentional API not yet consumed
+
+## FixedUpdate Test Issue
+- FixedUpdate systems DO NOT run on first `app.update()` in tests (fixed timestep accumulation)
+- Solution: use `Update` schedule in test systems instead (see dash.rs for pattern)
+- Affects: bump_visual tests `animate_applies_y_offset_during_animation` and `animate_removes_bump_visual_when_done`
+- File: src/breaker/systems/bump_visual.rs lines 190, 195-225, 228-259

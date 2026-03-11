@@ -1,4 +1,4 @@
-# Phase 1 Core Mechanics Review (2026-03-10)
+# Phase 1 Core Mechanics Review (2026-03-11, updated)
 
 ## Breaker State Machine: PASS
 - Idle -> Dashing -> Braking -> Settling -> Idle matches design doc
@@ -10,25 +10,38 @@
 - hit_fraction + tilt angle + speed preservation all correct
 - speed.max(base_speed) prevents momentum death spirals
 
-## Bump System: PASS with concerns
+## Bump System: PASS
 - Timing grades correct: Early/Late punish (0.8x), Perfect rewards (1.5x), None neutral (1.0x)
-- CONCERN: apply_bump_grade uses bolt_velocity.y > 0 as collision proxy -- fragile
-- CONCERN: Perfect bump dash-cancel deferred -- must be implemented (crown jewel mechanic)
+- RESOLVED: grade_bump now uses BoltHitBreaker messages (not bolt_velocity.y proxy)
+- IMPLEMENTED: perfect_bump_dash_cancel system exists -- needs schedule ordering verification
 
 ## Bolt-Cell Collision: PASS
-- AABB + face-based reflection + health decrement correct
+- AABB + swept raycasting for tunneling + face-based reflection correct
 - "One cell per tick" limit fine for Phase 1, revisit for piercing Amps
+- MIN_PHYSICS_FPS hardcoded at 30.0 -- acceptable but needs max_speed dependency comment
 
 ## Bolt-Lost: CONDITIONAL PASS
-- Respawn works but is too forgiving (base speed, no penalty feel)
-- Recommendation: respawn at min_speed to create momentum-rebuild pressure
+- Respawns at min_speed straight up -- functional but no real penalty
+- Phase 2 adds breaker-type penalties (lives/time) which will fix this
+- Straight-up respawn is actually easiest recovery -- consider random angle
 
 ## Min Angle Enforcement: PASS
 - ~10deg from horizontal prevents tedious lateral ping-pong
 - Preserves speed and sign when correcting
 
+## Speed Management: PASS with note
+- Bolt speed floored to base_speed on breaker contact (prevents death spirals)
+- No speed decay mechanism -- one perfect bump permanently elevates speed
+- Consider per-bounce decay in Phase 2 to reward consistent execution
+
+## Data-Driven Parameters: PASS
+- Every gameplay tunable in RON configs
+- Rust defaults match RON values
+- Tests verify RON parsing for all config types
+- Only non-RON constants are UI layout (loading bar) and physics robustness (MIN_PHYSICS_FPS)
+
 ## Parameter Assessment
-- Perfect window (50ms / ~3 frames at 60fps) is tight but learnable -- fighting game parry territory
-- Bump anticipation distance ~60 world units at base speed -- react to bolt approach
-- Brake tilt > dash tilt creates interesting "which angle do I want" decisions
-- Dash covers ~half playfield width -- emergency repositioning, not safe travel
+- Perfect window (50ms / ~3 frames at 60fps) is tight but learnable
+- Bump anticipation distance ~60 world units at base speed
+- Brake tilt > dash tilt creates "which angle do I want" decisions
+- Dash covers ~19% playfield width -- emergency repositioning, not safe travel
