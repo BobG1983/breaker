@@ -1,0 +1,6 @@
+[alias]
+dev = "run --features bevy/dynamic_linking"
+dbuild = "build --features bevy/dynamic_linking"
+dtest = "test --features bevy/dynamic_linking"
+dcheck = "check --features bevy/dynamic_linking"
+dclippy = "clippy --all-targets --features bevy/dynamic_linking"

@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "output=$(cargo dclippy 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"$output\" >&2; exit 2; fi",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(cat | python3 -c \"import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('command',''))\" 2>/dev/null); case \"$cmd\" in 'git commit'*) output=$(cargo fmt --check 2>&1 && cargo dclippy 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"Pre-commit checks failed:\" >&2; echo \"$output\" >&2; exit 2; fi;; esac; exit 0",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
