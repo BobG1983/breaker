@@ -121,8 +121,9 @@ pub fn cleanup_main_menu(mut commands: Commands) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::state::app::StatesPlugin;
+
+    use super::*;
 
     fn test_config() -> MainMenuConfig {
         MainMenuConfig {

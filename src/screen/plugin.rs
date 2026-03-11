@@ -5,6 +5,14 @@ use bevy_asset_loader::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
 use iyes_progress::prelude::*;
 
+use super::{
+    components::{LoadingScreen, MainMenuScreen},
+    resources::{DefaultsCollection, MainMenuDefaults},
+    systems::{
+        cleanup_entities, cleanup_main_menu, handle_main_menu_input, seed_configs_from_defaults,
+        spawn_loading_screen, spawn_main_menu, update_loading_bar, update_menu_colors,
+    },
+};
 use crate::{
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
@@ -13,15 +21,6 @@ use crate::{
     shared::{
         CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
         PlayingState,
-    },
-};
-
-use super::{
-    components::{LoadingScreen, MainMenuScreen},
-    resources::{DefaultsCollection, MainMenuDefaults},
-    systems::{
-        cleanup_entities, cleanup_main_menu, handle_main_menu_input, seed_configs_from_defaults,
-        spawn_loading_screen, spawn_main_menu, update_loading_bar, update_menu_colors,
     },
 };
 

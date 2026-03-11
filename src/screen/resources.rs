@@ -4,12 +4,11 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use serde::Deserialize;
 
+use super::components::MenuItem;
 use crate::{
     bolt::BoltDefaults, breaker::BreakerDefaults, cells::CellDefaults, physics::PhysicsDefaults,
     shared::PlayfieldDefaults,
 };
-
-use super::components::MenuItem;
 
 /// Asset collection for all defaults — automatically loaded during
 /// [`GameState::Loading`] by `bevy_asset_loader`.

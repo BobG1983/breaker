@@ -2,11 +2,12 @@
 
 use bevy::{app::AppExit, prelude::*};
 
-use crate::shared::GameState;
-
-use crate::screen::{
-    components::{MENU_ITEMS, MenuItem},
-    resources::MainMenuSelection,
+use crate::{
+    screen::{
+        components::{MENU_ITEMS, MenuItem},
+        resources::MainMenuSelection,
+    },
+    shared::GameState,
 };
 
 /// Handles keyboard and mouse input for the main menu.
@@ -78,8 +79,9 @@ fn confirm_selection(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+
+    use super::*;
 
     fn test_app() -> App {
         let mut app = App::new();
