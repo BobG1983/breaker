@@ -5,7 +5,8 @@ use bevy::prelude::*;
 
 use crate::shared::GameState;
 
-use super::main_menu::{MENU_ITEMS, MainMenuSelection, MenuItem};
+use crate::screen::components::{MENU_ITEMS, MenuItem};
+use crate::screen::resources::MainMenuSelection;
 
 /// Handles keyboard and mouse input for the main menu.
 pub fn handle_main_menu_input(

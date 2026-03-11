@@ -1,43 +1,15 @@
 //! Loading state — asset collection, config seeding, and loading screen UI.
 
 use bevy::prelude::*;
-use bevy_asset_loader::prelude::*;
 use iyes_progress::prelude::*;
 
-use crate::bolt::BoltConfig;
-use crate::breaker::BreakerConfig;
-use crate::cells::CellConfig;
-use crate::physics::PhysicsConfig;
-use crate::screen::defaults::{
-    BoltDefaults, BreakerDefaults, CellDefaults, MainMenuDefaults, PhysicsDefaults,
-    PlayfieldDefaults,
-};
-use crate::screen::resources::MainMenuConfig;
-use crate::shared::PlayfieldConfig;
-
-/// Asset collection for all defaults — automatically loaded during
-/// [`GameState::Loading`] by `bevy_asset_loader`.
-#[derive(AssetCollection, Resource)]
-pub struct DefaultsCollection {
-    /// Handle for playfield defaults.
-    #[asset(path = "config/defaults.playfield.ron")]
-    pub playfield: Handle<PlayfieldDefaults>,
-    /// Handle for bolt defaults.
-    #[asset(path = "config/defaults.bolt.ron")]
-    pub bolt: Handle<BoltDefaults>,
-    /// Handle for breaker defaults.
-    #[asset(path = "config/defaults.breaker.ron")]
-    pub breaker: Handle<BreakerDefaults>,
-    /// Handle for cells defaults.
-    #[asset(path = "config/defaults.cells.ron")]
-    pub cells: Handle<CellDefaults>,
-    /// Handle for physics defaults.
-    #[asset(path = "config/defaults.physics.ron")]
-    pub physics: Handle<PhysicsDefaults>,
-    /// Handle for main menu defaults.
-    #[asset(path = "config/defaults.mainmenu.ron")]
-    pub mainmenu: Handle<MainMenuDefaults>,
-}
+use crate::bolt::{BoltConfig, BoltDefaults};
+use crate::breaker::{BreakerConfig, BreakerDefaults};
+use crate::cells::{CellConfig, CellDefaults};
+use crate::physics::{PhysicsConfig, PhysicsDefaults};
+use crate::screen::components::{LoadingBarFill, LoadingProgressText, LoadingScreen};
+use crate::screen::resources::{DefaultsCollection, MainMenuConfig, MainMenuDefaults};
+use crate::shared::{PlayfieldConfig, PlayfieldDefaults};
 
 /// Reads loaded `*Defaults` assets and inserts the corresponding `*Config`
 /// resources. Returns [`Progress`] to block the loading state transition
@@ -95,18 +67,6 @@ pub fn seed_configs_from_defaults(
     *seeded = true;
     Progress { done: 1, total: 1 }
 }
-
-/// Marker component for loading screen entities.
-#[derive(Component)]
-pub struct LoadingScreen;
-
-/// Marker for the loading progress bar inner fill.
-#[derive(Component)]
-pub struct LoadingBarFill;
-
-/// Marker for the loading progress text.
-#[derive(Component)]
-pub struct LoadingProgressText;
 
 /// Width of the loading bar background in pixels.
 const LOADING_BAR_WIDTH: f32 = 400.0;
@@ -184,12 +144,5 @@ pub fn update_loading_bar(
 
     for mut text in &mut text_query {
         **text = format!("Loading... {}/{}", global.done, global.total);
-    }
-}
-
-/// Despawns all loading screen entities.
-pub fn cleanup_loading_screen(mut commands: Commands, query: Query<Entity, With<LoadingScreen>>) {
-    for entity in &query {
-        commands.entity(entity).despawn();
     }
 }

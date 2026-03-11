@@ -7,4 +7,4 @@ pub mod resources;
 mod systems;
 
 pub use plugin::CellsPlugin;
-pub use resources::CellConfig;
+pub use resources::{CellConfig, CellDefaults};

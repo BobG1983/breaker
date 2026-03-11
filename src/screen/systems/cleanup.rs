@@ -2,17 +2,8 @@
 
 use bevy::prelude::*;
 
-use crate::shared::{CleanupOnNodeExit, CleanupOnRunEnd};
-
-/// Despawns all entities marked with [`CleanupOnNodeExit`].
-pub fn cleanup_on_node_exit(mut commands: Commands, query: Query<Entity, With<CleanupOnNodeExit>>) {
-    for entity in &query {
-        commands.entity(entity).despawn();
-    }
-}
-
-/// Despawns all entities marked with [`CleanupOnRunEnd`].
-pub fn cleanup_on_run_end(mut commands: Commands, query: Query<Entity, With<CleanupOnRunEnd>>) {
+/// Generic cleanup system — despawns all entities with the given marker component.
+pub fn cleanup_entities<T: Component>(mut commands: Commands, query: Query<Entity, With<T>>) {
     for entity in &query {
         commands.entity(entity).despawn();
     }
@@ -21,12 +12,13 @@ pub fn cleanup_on_run_end(mut commands: Commands, query: Query<Entity, With<Clea
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::{CleanupOnNodeExit, CleanupOnRunEnd};
 
     #[test]
     fn cleanup_on_node_exit_despawns_marked_entities() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, cleanup_on_node_exit);
+        app.add_systems(Update, cleanup_entities::<CleanupOnNodeExit>);
 
         let marked = app.world_mut().spawn(CleanupOnNodeExit).id();
         let unmarked = app.world_mut().spawn_empty().id();
@@ -41,7 +33,7 @@ mod tests {
     fn cleanup_on_run_end_despawns_marked_entities() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, cleanup_on_run_end);
+        app.add_systems(Update, cleanup_entities::<CleanupOnRunEnd>);
 
         let marked = app.world_mut().spawn(CleanupOnRunEnd).id();
         let unmarked = app.world_mut().spawn_empty().id();

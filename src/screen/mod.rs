@@ -1,6 +1,6 @@
 //! Screen domain plugin — state registration, transitions, and cleanup.
 
-pub mod defaults;
+mod components;
 mod plugin;
 mod resources;
 mod systems;

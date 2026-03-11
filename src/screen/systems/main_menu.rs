@@ -2,37 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::screen::resources::MainMenuConfig;
-
-/// Marker component on the root main menu UI entity.
-#[derive(Component)]
-pub struct MainMenuScreen;
-
-/// Identifies a menu item and its action.
-#[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MenuItem {
-    /// Start a new run.
-    Play,
-    /// Open settings (not yet implemented).
-    Settings,
-    /// Exit the application.
-    Quit,
-}
-
-/// Tracks the currently selected menu item.
-#[derive(Resource, Debug)]
-pub struct MainMenuSelection {
-    /// The currently highlighted menu item.
-    pub selected: MenuItem,
-}
-
-/// All menu items in display order.
-pub const MENU_ITEMS: [MenuItem; 3] = [MenuItem::Play, MenuItem::Settings, MenuItem::Quit];
-
-/// Converts an `[f32; 3]` RGB triple into a linear [`Color`].
-const fn color_from_rgb(rgb: [f32; 3]) -> Color {
-    Color::linear_rgb(rgb[0], rgb[1], rgb[2])
-}
+use crate::screen::components::{MENU_ITEMS, MainMenuScreen, MenuItem};
+use crate::screen::resources::{MainMenuConfig, MainMenuSelection};
+use crate::shared::color_from_rgb;
 
 /// Spawns the main menu UI.
 pub fn spawn_main_menu(
@@ -138,11 +110,8 @@ pub fn update_menu_colors(
     }
 }
 
-/// Despawns all main menu entities and removes the selection resource.
-pub fn cleanup_main_menu(mut commands: Commands, query: Query<Entity, With<MainMenuScreen>>) {
-    for entity in &query {
-        commands.entity(entity).despawn();
-    }
+/// Removes the selection resource after main menu entity cleanup.
+pub fn cleanup_main_menu(mut commands: Commands) {
     commands.remove_resource::<MainMenuSelection>();
 }
 
@@ -225,7 +194,10 @@ mod tests {
         app.add_systems(OnEnter(crate::shared::GameState::MainMenu), spawn_main_menu);
         app.add_systems(
             OnExit(crate::shared::GameState::MainMenu),
-            cleanup_main_menu,
+            (
+                super::super::cleanup_entities::<MainMenuScreen>,
+                cleanup_main_menu,
+            ),
         );
 
         // Enter MainMenu state

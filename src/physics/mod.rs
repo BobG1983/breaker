@@ -6,4 +6,4 @@ pub mod resources;
 mod systems;
 
 pub use plugin::PhysicsPlugin;
-pub use resources::PhysicsConfig;
+pub use resources::{PhysicsConfig, PhysicsDefaults};
