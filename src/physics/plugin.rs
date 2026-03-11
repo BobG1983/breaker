@@ -7,14 +7,15 @@ use crate::{
     physics::{
         messages::{BoltHitBreaker, BoltHitCell, BoltLost},
         resources::PhysicsConfig,
-        systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost, wall_collision},
+        systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost, spawn_walls},
     },
-    shared::PlayingState,
+    shared::{GameState, PlayingState},
 };
 
 /// Plugin for the physics domain.
 ///
-/// Owns collision detection, quadtree, and collision response systems.
+/// Owns collision detection and collision response systems.
+/// Spawns wall entities on node entry and runs CCD collision in `FixedUpdate`.
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
@@ -24,12 +25,13 @@ impl Plugin for PhysicsPlugin {
         app.add_message::<BoltHitCell>();
         app.add_message::<BoltLost>();
 
+        app.add_systems(OnEnter(GameState::Playing), spawn_walls);
+
         app.add_systems(
             FixedUpdate,
             (
                 bolt_cell_collision.after(prepare_bolt_velocity),
-                wall_collision.after(bolt_cell_collision),
-                bolt_breaker_collision.after(wall_collision),
+                bolt_breaker_collision.after(bolt_cell_collision),
                 bolt_lost.after(bolt_breaker_collision),
             )
                 .run_if(in_state(PlayingState::Active)),

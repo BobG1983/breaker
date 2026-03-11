@@ -1,13 +1,13 @@
-//! Bolt-cell collision detection via swept CCD (continuous collision detection).
+//! Bolt-cell-wall collision detection via swept CCD (continuous collision detection).
 //!
 //! Instead of moving the bolt first and then checking for overlaps, this system
 //! traces the bolt's path forward using ray-vs-expanded-AABB intersection.
 //! On each hit, the bolt is placed just before the impact point, the velocity
 //! is reflected, and the remaining movement continues. The bolt never overlaps
-//! any cell.
+//! any cell or wall.
 //!
 //! Cell damage and destruction are handled by the cells domain via
-//! [`BoltHitCell`] messages.
+//! [`BoltHitCell`] messages. Wall hits reflect only (no message).
 
 use bevy::prelude::*;
 
@@ -18,129 +18,37 @@ use crate::{
         filters::ActiveBoltFilter,
     },
     cells::{CellConfig, components::Cell},
-    physics::messages::BoltHitCell,
+    physics::{
+        ccd::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
+        components::{Wall, WallSize},
+        messages::BoltHitCell,
+    },
 };
 
-/// Maximum number of cell bounces resolved per bolt per frame.
-///
-/// Prevents infinite loops in degenerate geometries. At max bolt speed (800)
-/// and 64 Hz, the bolt travels ~12.5 units per frame — 4 bounces is generous.
-const MAX_BOUNCES: u32 = 4;
-
-/// Sub-pixel separation gap applied after each collision.
-///
-/// The bolt is placed this far outside the cell's expanded AABB to prevent
-/// floating-point touching on the next sweep.
-const CCD_EPSILON: f32 = 0.01;
-
 /// Query filter for cell data.
-type CellFilter = (With<Cell>, Without<Bolt>);
+type CellFilter = (With<Cell>, Without<Bolt>, Without<Wall>);
 
-/// Result of a ray-vs-expanded-AABB intersection test.
-struct RayHit {
-    /// Distance along the ray to the entry point.
-    distance: f32,
-    /// Outward face normal at the entry point.
-    normal: Vec2,
-}
+/// Query filter for wall data.
+type WallFilter = (With<Wall>, Without<Bolt>, Without<Cell>);
 
-/// Casts a ray against an AABB and returns the entry distance and face normal.
-///
-/// The AABB should already be Minkowski-expanded by the bolt radius so that
-/// a point-ray test is equivalent to a circle-vs-rectangle test.
-///
-/// Returns `None` if the ray misses, the origin is inside the AABB, or the
-/// hit is beyond `max_dist`.
-fn ray_expanded_aabb(
-    origin: Vec2,
-    direction: Vec2,
-    max_dist: f32,
-    aabb_center: Vec2,
-    aabb_half_extents: Vec2,
-) -> Option<RayHit> {
-    let aabb_min = aabb_center - aabb_half_extents;
-    let aabb_max = aabb_center + aabb_half_extents;
-
-    let mut tmin = 0.0_f32;
-    let mut tmax = max_dist;
-    let mut normal = Vec2::ZERO;
-
-    // X slab
-    if direction.x.abs() < f32::EPSILON {
-        if origin.x < aabb_min.x || origin.x > aabb_max.x {
-            return None;
-        }
-    } else {
-        let inv_d = direction.x.recip();
-        let t1 = (aabb_min.x - origin.x) * inv_d;
-        let t2 = (aabb_max.x - origin.x) * inv_d;
-        let (t_near, t_far, near_normal) = if t1 < t2 {
-            (t1, t2, Vec2::NEG_X)
-        } else {
-            (t2, t1, Vec2::X)
-        };
-        if t_near > tmin {
-            tmin = t_near;
-            normal = near_normal;
-        }
-        tmax = tmax.min(t_far);
-        if tmin > tmax {
-            return None;
-        }
-    }
-
-    // Y slab
-    if direction.y.abs() < f32::EPSILON {
-        if origin.y < aabb_min.y || origin.y > aabb_max.y {
-            return None;
-        }
-    } else {
-        let inv_d = direction.y.recip();
-        let t1 = (aabb_min.y - origin.y) * inv_d;
-        let t2 = (aabb_max.y - origin.y) * inv_d;
-        let (t_near, t_far, near_normal) = if t1 < t2 {
-            (t1, t2, Vec2::NEG_Y)
-        } else {
-            (t2, t1, Vec2::Y)
-        };
-        if t_near > tmin {
-            tmin = t_near;
-            normal = near_normal;
-        }
-        tmax = tmax.min(t_far);
-        if tmin > tmax {
-            return None;
-        }
-    }
-
-    // Origin inside AABB (tmin == 0 means the ray starts overlapping)
-    if tmin <= 0.0 {
-        return None;
-    }
-
-    Some(RayHit {
-        distance: tmin,
-        normal,
-    })
-}
-
-/// Advances bolts along their velocity, reflecting off cells via swept CCD.
+/// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
 ///
 /// For each bolt, traces a ray from its current position in the velocity
-/// direction. If a cell is hit, the bolt is placed just before the impact
-/// point, the velocity is reflected off the hit face, and tracing continues
-/// with the remaining movement distance. Sends [`BoltHitCell`] messages for
-/// each cell hit.
+/// direction. If a cell or wall is hit, the bolt is placed just before the
+/// impact point, the velocity is reflected off the hit face, and tracing
+/// continues with the remaining movement distance. Sends [`BoltHitCell`]
+/// messages for each cell hit. Wall hits reflect only.
 pub fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
     bolt_config: Res<BoltConfig>,
     cell_config: Res<CellConfig>,
     mut bolt_query: Query<(Entity, &mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
     cell_query: Query<(Entity, &Transform), CellFilter>,
+    wall_query: Query<(Entity, &Transform, &WallSize), WallFilter>,
     mut hit_writer: MessageWriter<BoltHitCell>,
 ) {
     let dt = time.delta_secs();
-    let half_extents = Vec2::new(
+    let cell_half_extents = Vec2::new(
         cell_config.half_width + bolt_config.radius,
         cell_config.half_height + bolt_config.radius,
     );
@@ -160,21 +68,37 @@ pub fn bolt_cell_collision(
                 break;
             }
 
-            // Find the nearest cell hit along the ray
-            let mut best: Option<(Entity, RayHit)> = None;
+            // Find the nearest hit among all cells and walls
+            let mut best: Option<(Option<Entity>, crate::physics::ccd::RayHit)> = None;
 
+            // Check cells
             for (cell_entity, cell_tf) in &cell_query {
                 let cell_pos = cell_tf.translation.truncate();
                 if let Some(hit) =
-                    ray_expanded_aabb(position, direction, remaining, cell_pos, half_extents)
+                    ray_vs_aabb(position, direction, remaining, cell_pos, cell_half_extents)
                     && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
                 {
-                    best = Some((cell_entity, hit));
+                    best = Some((Some(cell_entity), hit));
                 }
             }
 
-            let Some((cell_entity, hit)) = best else {
-                // No cell in path — move the full remaining distance
+            // Check walls
+            for (_wall_entity, wall_tf, wall_size) in &wall_query {
+                let wall_pos = wall_tf.translation.truncate();
+                let wall_half_extents = Vec2::new(
+                    wall_size.half_width + bolt_config.radius,
+                    wall_size.half_height + bolt_config.radius,
+                );
+                if let Some(hit) =
+                    ray_vs_aabb(position, direction, remaining, wall_pos, wall_half_extents)
+                    && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
+                {
+                    best = Some((None, hit));
+                }
+            }
+
+            let Some((hit_cell, hit)) = best else {
+                // No target in path — move the full remaining distance
                 position += direction * remaining;
                 break;
             };
@@ -187,10 +111,13 @@ pub fn bolt_cell_collision(
             // Reflect velocity off the hit face
             velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
 
-            hit_writer.write(BoltHitCell {
-                bolt: bolt_entity,
-                cell: cell_entity,
-            });
+            // Only emit BoltHitCell for cell hits (not walls)
+            if let Some(cell_entity) = hit_cell {
+                hit_writer.write(BoltHitCell {
+                    bolt: bolt_entity,
+                    cell: cell_entity,
+                });
+            }
         }
 
         bolt_tf.translation = position.extend(bolt_tf.translation.z);
@@ -202,82 +129,6 @@ pub fn bolt_cell_collision(
 mod tests {
     use super::*;
     use crate::bolt::components::{Bolt, BoltServing};
-
-    // --- ray_expanded_aabb unit tests ---
-
-    #[test]
-    fn ray_hit_from_below() {
-        let hit = ray_expanded_aabb(
-            Vec2::new(0.0, -30.0),
-            Vec2::Y,
-            100.0,
-            Vec2::ZERO,
-            Vec2::new(43.0, 20.0),
-        )
-        .expect("should hit");
-
-        assert!(
-            (hit.distance - 10.0).abs() < 0.01,
-            "distance={}",
-            hit.distance
-        );
-        assert_eq!(hit.normal, Vec2::NEG_Y);
-    }
-
-    #[test]
-    fn ray_hit_from_side() {
-        let hit = ray_expanded_aabb(
-            Vec2::new(-60.0, 0.0),
-            Vec2::X,
-            100.0,
-            Vec2::ZERO,
-            Vec2::new(43.0, 20.0),
-        )
-        .expect("should hit");
-
-        assert!(
-            (hit.distance - 17.0).abs() < 0.01,
-            "distance={}",
-            hit.distance
-        );
-        assert_eq!(hit.normal, Vec2::NEG_X);
-    }
-
-    #[test]
-    fn ray_miss_parallel() {
-        let result = ray_expanded_aabb(
-            Vec2::new(0.0, -30.0),
-            Vec2::X, // parallel to Y extent
-            100.0,
-            Vec2::ZERO,
-            Vec2::new(43.0, 20.0),
-        );
-        assert!(result.is_none(), "parallel ray should miss");
-    }
-
-    #[test]
-    fn ray_miss_beyond_max_dist() {
-        let result = ray_expanded_aabb(
-            Vec2::new(0.0, -200.0),
-            Vec2::Y,
-            10.0, // too short to reach
-            Vec2::ZERO,
-            Vec2::new(43.0, 20.0),
-        );
-        assert!(result.is_none(), "ray should not reach cell");
-    }
-
-    #[test]
-    fn ray_origin_inside_returns_none() {
-        let result = ray_expanded_aabb(
-            Vec2::ZERO, // inside the AABB
-            Vec2::Y,
-            100.0,
-            Vec2::ZERO,
-            Vec2::new(43.0, 20.0),
-        );
-        assert!(result.is_none(), "origin inside AABB should return None");
-    }
 
     // --- CCD system tests ---
 
@@ -754,5 +605,101 @@ mod tests {
             "serving bolt should not be moved by CCD, got y={}",
             tf.translation.y
         );
+    }
+
+    // --- Wall collision tests ---
+
+    fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_height: f32) {
+        app.world_mut().spawn((
+            Wall,
+            WallSize {
+                half_width,
+                half_height,
+            },
+            Transform::from_xyz(x, y, 0.0),
+        ));
+    }
+
+    #[test]
+    fn bolt_reflects_off_wall() {
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+
+        // Place a wall to the right
+        spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+
+        // Bolt moving right toward the wall
+        let start_x = 200.0 - 50.0 - bc.radius - 5.0;
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(400.0, 0.1),
+            Transform::from_xyz(start_x, 0.0, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.x < 0.0,
+            "bolt should reflect off wall, got vx={}",
+            vel.value.x
+        );
+    }
+
+    #[test]
+    fn wall_hit_does_not_emit_cell_message() {
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        app.insert_resource(HitCells::default());
+        app.add_systems(Update, collect_cell_hits.after(bolt_cell_collision));
+
+        spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+
+        let start_x = 200.0 - 50.0 - bc.radius - 5.0;
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(400.0, 0.1),
+            Transform::from_xyz(start_x, 0.0, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<HitCells>();
+        assert!(
+            hits.0.is_empty(),
+            "wall hit should not emit BoltHitCell message"
+        );
+    }
+
+    #[test]
+    fn cell_hit_preferred_over_farther_wall() {
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+        app.insert_resource(HitCells::default());
+        app.add_systems(Update, collect_cell_hits.after(bolt_cell_collision));
+
+        // Cell closer than wall
+        let cell_y = 50.0;
+        let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
+        spawn_wall(&mut app, 0.0, 200.0, 400.0, 50.0);
+
+        let start_y = cell_y - cc.half_height - bc.radius - 2.0;
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, 400.0),
+            Transform::from_xyz(0.0, start_y, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<HitCells>();
+        assert_eq!(hits.0.len(), 1);
+        assert_eq!(hits.0[0], cell_entity, "should hit cell, not wall");
     }
 }
