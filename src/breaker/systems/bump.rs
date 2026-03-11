@@ -19,7 +19,7 @@ pub fn update_bump(
     for mut bump in &mut query {
         // Tick cooldown
         if bump.cooldown > 0.0 {
-            bump.cooldown -= dt;
+            bump.cooldown = (bump.cooldown - dt).max(0.0);
         }
 
         // Tick active timer
