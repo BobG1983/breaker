@@ -38,6 +38,15 @@ impl BoltConfig {
     pub fn color(&self) -> Color {
         crate::shared::color_from_rgb(self.color_rgb)
     }
+
+    /// Initial launch velocity based on `base_speed` and `initial_angle`.
+    #[must_use]
+    pub fn initial_velocity(&self) -> Vec2 {
+        Vec2::new(
+            self.base_speed * self.initial_angle.sin(),
+            self.base_speed * self.initial_angle.cos(),
+        )
+    }
 }
 
 /// Bolt defaults loaded from RON.

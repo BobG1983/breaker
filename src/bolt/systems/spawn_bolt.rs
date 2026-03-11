@@ -32,9 +32,8 @@ pub fn spawn_bolt(
     let velocity = if serving {
         BoltVelocity::new(0.0, 0.0)
     } else {
-        let vx = config.base_speed * config.initial_angle.sin();
-        let vy = config.base_speed * config.initial_angle.cos();
-        BoltVelocity::new(vx, vy)
+        let v = config.initial_velocity();
+        BoltVelocity::new(v.x, v.y)
     };
 
     let mut entity = commands.spawn((

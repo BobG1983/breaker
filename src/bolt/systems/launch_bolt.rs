@@ -22,9 +22,7 @@ pub fn launch_bolt(
     }
 
     for (entity, mut velocity) in &mut query {
-        let vx = config.base_speed * config.initial_angle.sin();
-        let vy = config.base_speed * config.initial_angle.cos();
-        velocity.value = Vec2::new(vx, vy);
+        velocity.value = config.initial_velocity();
         commands.entity(entity).remove::<BoltServing>();
     }
 }
