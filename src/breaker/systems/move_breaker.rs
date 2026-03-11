@@ -7,16 +7,17 @@ use crate::{
         components::{Breaker, BreakerState, BreakerVelocity},
         resources::BreakerConfig,
     },
+    input::resources::{GameAction, InputActions},
     shared::PlayfieldConfig,
 };
 
-/// Reads keyboard input and moves the breaker horizontally.
+/// Reads input actions and moves the breaker horizontally.
 ///
-/// Accelerates toward max speed when input is held, decelerates when released.
+/// Accelerates toward max speed when movement is active, decelerates when released.
 /// Movement is allowed in [`BreakerState::Idle`] and [`BreakerState::Settling`].
 /// Clamps position to playfield bounds.
 pub fn move_breaker(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    actions: Res<InputActions>,
     config: Res<BreakerConfig>,
     playfield: Res<PlayfieldConfig>,
     time: Res<Time<Fixed>>,
@@ -30,10 +31,10 @@ pub fn move_breaker(
 
         if can_move {
             let mut input_dir: f32 = 0.0;
-            if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
+            if actions.active(GameAction::MoveLeft) {
                 input_dir -= 1.0;
             }
-            if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
+            if actions.active(GameAction::MoveRight) {
                 input_dir += 1.0;
             }
 
@@ -101,7 +102,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
         app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<InputActions>();
         app.add_systems(Update, move_breaker);
         app
     }
@@ -133,8 +134,9 @@ mod tests {
         let entity = spawn_breaker(&mut app, BreakerState::Idle);
 
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ArrowRight);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MoveRight);
         tick(&mut app);
 
         let tf = app.world().get::<Transform>(entity).unwrap();
@@ -146,14 +148,15 @@ mod tests {
     }
 
     #[test]
-    fn dashing_blocks_keyboard_acceleration() {
+    fn dashing_blocks_input_acceleration() {
         let mut app = integration_app();
         let entity = spawn_breaker(&mut app, BreakerState::Dashing);
 
-        // Set velocity to zero, then press input — Dashing should not accelerate
+        // Set velocity to zero, then push MoveRight — Dashing should not accelerate
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ArrowRight);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MoveRight);
         tick(&mut app);
 
         let vel = app.world().get::<BreakerVelocity>(entity).unwrap();

@@ -13,6 +13,8 @@ pub enum BumpGrade {
     Perfect,
     /// Bump pressed too late.
     Late,
+    /// Bump window expired without bolt contact.
+    Timeout,
 }
 
 /// Sent when the breaker performs a bump.
@@ -38,9 +40,14 @@ mod tests {
             BumpGrade::Early,
             BumpGrade::Perfect,
             BumpGrade::Late,
+            BumpGrade::Timeout,
         ] {
             match grade {
-                BumpGrade::None | BumpGrade::Early | BumpGrade::Perfect | BumpGrade::Late => {}
+                BumpGrade::None
+                | BumpGrade::Early
+                | BumpGrade::Perfect
+                | BumpGrade::Late
+                | BumpGrade::Timeout => {}
             }
         }
     }

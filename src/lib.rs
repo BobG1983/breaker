@@ -12,6 +12,7 @@ pub(crate) mod bolt;
 pub(crate) mod breaker;
 pub(crate) mod cells;
 pub(crate) mod debug;
+pub(crate) mod input;
 pub(crate) mod physics;
 pub(crate) mod run;
 pub(crate) mod ui;

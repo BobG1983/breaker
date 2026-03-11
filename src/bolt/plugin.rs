@@ -55,6 +55,10 @@ mod tests {
         app.add_plugins(bevy::state::app::StatesPlugin);
         app.init_state::<GameState>();
         app.add_sub_state::<PlayingState>();
+        // InputPlugin owns InputActions
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.add_message::<bevy::input::keyboard::KeyboardInput>();
+        app.add_plugins(crate::input::InputPlugin);
         // BoltPlugin reads BumpPerformed messages from breaker domain
         // and BoltLost messages from physics domain
         app.add_message::<crate::breaker::messages::BumpPerformed>();

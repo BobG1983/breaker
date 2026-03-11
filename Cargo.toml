@@ -11,7 +11,7 @@ default = ["dev"]
 dev = ["dep:bevy_egui"]
 
 [dependencies]
-bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
+bevy = { version = "0.18.1", default-features = false, features = ["2d", "serialize"] }
 bevy_egui = { version = "0.39", optional = true }
 brickbreaker_derive = { path = "brickbreaker_derive" }
 serde = { version = "1", features = ["derive"] }

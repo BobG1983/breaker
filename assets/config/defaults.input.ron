@@ -1,0 +1,7 @@
+/* @[brickbreaker::input::resources::InputDefaults] */
+(
+    move_left: [ArrowLeft, KeyA],
+    move_right: [ArrowRight, KeyD],
+    bump: [ArrowUp, KeyW],
+    double_tap_window: 0.25,
+)

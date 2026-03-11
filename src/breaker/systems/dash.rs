@@ -2,19 +2,22 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::{
-    components::{Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity},
-    resources::BreakerConfig,
+use crate::{
+    breaker::{
+        components::{Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity},
+        resources::BreakerConfig,
+    },
+    input::resources::{GameAction, InputActions},
 };
 
 /// Handles dash input and the Dashing → Braking → Settling → Idle state machine.
 ///
-/// - Dash input (Space): triggers dash from Idle or Settling
+/// - Dash input (`DashLeft`/`DashRight` from input domain): triggers dash from Idle or Settling
 /// - Dashing: high-speed burst with tilt, transitions to Braking when timer expires
 /// - Braking: rapid deceleration with opposite tilt, transitions to Settling when speed ~0
 /// - Settling: tilt returns to neutral, transitions to Idle when timer expires
 pub fn update_breaker_state(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    actions: Res<InputActions>,
     config: Res<BreakerConfig>,
     time: Res<Time<Fixed>>,
     mut query: Query<
@@ -33,7 +36,7 @@ pub fn update_breaker_state(
         match *state {
             BreakerState::Idle | BreakerState::Settling => {
                 handle_idle_or_settling(
-                    &keyboard,
+                    &actions,
                     &config,
                     dt,
                     &mut state,
@@ -52,9 +55,9 @@ pub fn update_breaker_state(
     }
 }
 
-/// In Idle or Settling: check for dash input.
+/// In Idle or Settling: check for dash actions from the input domain.
 fn handle_idle_or_settling(
-    keyboard: &ButtonInput<KeyCode>,
+    actions: &InputActions,
     config: &BreakerConfig,
     dt: f32,
     state: &mut BreakerState,
@@ -78,24 +81,31 @@ fn handle_idle_or_settling(
         }
     }
 
-    // Dash input: LShift or RShift
-    if keyboard.just_pressed(KeyCode::ShiftLeft) || keyboard.just_pressed(KeyCode::ShiftRight) {
-        // Need a movement direction to dash — use current velocity or input
-        let dash_dir = if velocity.x.abs() > f32::EPSILON {
-            velocity.x.signum()
-        } else if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
-            -1.0
-        } else if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
-            1.0
-        } else {
-            return; // No direction — can't dash
-        };
-
-        *state = BreakerState::Dashing;
-        velocity.x = dash_dir * config.max_speed * config.dash_speed_multiplier;
-        tilt.angle = dash_dir * config.dash_tilt_angle;
-        timer.remaining = config.dash_duration;
+    // Dash left
+    if actions.active(GameAction::DashLeft) {
+        start_dash(-1.0, config, state, velocity, tilt, timer);
+        return;
     }
+
+    // Dash right
+    if actions.active(GameAction::DashRight) {
+        start_dash(1.0, config, state, velocity, tilt, timer);
+    }
+}
+
+/// Enters the Dashing state in the given direction.
+fn start_dash(
+    direction: f32,
+    config: &BreakerConfig,
+    state: &mut BreakerState,
+    velocity: &mut BreakerVelocity,
+    tilt: &mut BreakerTilt,
+    timer: &mut BreakerStateTimer,
+) {
+    *state = BreakerState::Dashing;
+    velocity.x = direction * config.max_speed * config.dash_speed_multiplier;
+    tilt.angle = direction * config.dash_tilt_angle;
+    timer.remaining = config.dash_duration;
 }
 
 /// Dashing: count down timer, then transition to Braking.
@@ -168,7 +178,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
-        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<InputActions>();
         app.add_systems(Update, update_breaker_state);
         app
     }
@@ -193,39 +203,50 @@ mod tests {
     }
 
     #[test]
-    fn dash_transitions_from_idle() {
+    fn dash_left_triggers_dashing() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
 
-        // Set velocity so there's a direction to dash
         app.world_mut()
-            .get_mut::<BreakerVelocity>(entity)
-            .unwrap()
-            .x = 100.0;
-
-        // Simulate shift press
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ShiftLeft);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::DashLeft);
         tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Dashing);
+
+        let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
+        assert!(vel.x < 0.0, "dash left should have negative velocity");
     }
 
     #[test]
-    fn dash_sets_tilt() {
+    fn dash_right_triggers_dashing() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
 
-        // Moving right, then dash
         app.world_mut()
-            .get_mut::<BreakerVelocity>(entity)
-            .unwrap()
-            .x = 100.0;
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::DashRight);
+        tick(&mut app);
+
+        let state = app.world().get::<BreakerState>(entity).unwrap();
+        assert_eq!(*state, BreakerState::Dashing);
+
+        let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
+        assert!(vel.x > 0.0, "dash right should have positive velocity");
+    }
+
+    #[test]
+    fn dash_right_sets_tilt() {
+        let mut app = test_app();
+        let entity = spawn_test_breaker(&mut app);
+
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ShiftLeft);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::DashRight);
         tick(&mut app);
 
         let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
@@ -233,30 +254,10 @@ mod tests {
     }
 
     #[test]
-    fn cannot_dash_without_direction() {
-        let mut app = test_app();
-        let entity = spawn_test_breaker(&mut app);
-
-        // No velocity, no directional input
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ShiftLeft);
-        tick(&mut app);
-
-        let state = app.world().get::<BreakerState>(entity).unwrap();
-        assert_eq!(
-            *state,
-            BreakerState::Idle,
-            "should not dash without direction"
-        );
-    }
-
-    #[test]
     fn dashing_transitions_to_braking() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
 
-        // Enter dashing state manually
         *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Dashing;
         app.world_mut()
             .get_mut::<BreakerVelocity>(entity)
@@ -278,7 +279,6 @@ mod tests {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
 
-        // Enter settling with some tilt and expired timer
         *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Settling;
         {
             let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
@@ -315,13 +315,11 @@ mod tests {
         let config = BreakerConfig::default();
         let settle_dur = config.settle_duration;
 
-        // Use 3 steps at 1/60 and 12 steps at 1/240 — both equal exactly 0.05s elapsed
         let dt_60 = Duration::from_secs_f64(1.0 / 60.0);
         let steps_60: u32 = 3;
         let dt_240 = Duration::from_secs_f64(1.0 / 240.0);
         let steps_240: u32 = 12;
 
-        // Run settling at 60fps timestep
         let mut app_60 = test_app();
         let e60 = spawn_test_breaker(&mut app_60);
         *app_60.world_mut().get_mut::<BreakerState>(e60).unwrap() = BreakerState::Settling;
@@ -348,7 +346,6 @@ mod tests {
         }
         let angle_60 = app_60.world().get::<BreakerTilt>(e60).unwrap().angle;
 
-        // Run settling at 240fps timestep
         let mut app_240 = test_app();
         let e240 = spawn_test_breaker(&mut app_240);
         *app_240.world_mut().get_mut::<BreakerState>(e240).unwrap() = BreakerState::Settling;
@@ -386,7 +383,6 @@ mod tests {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
 
-        // Enter braking with near-zero velocity
         *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Braking;
         app.world_mut()
             .get_mut::<BreakerVelocity>(entity)

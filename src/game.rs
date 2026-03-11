@@ -4,8 +4,8 @@ use bevy::{app::PluginGroupBuilder, prelude::*};
 
 use crate::{
     audio::AudioPlugin, bolt::BoltPlugin, breaker::BreakerPlugin, cells::CellsPlugin,
-    debug::DebugPlugin, physics::PhysicsPlugin, run::RunPlugin, screen::ScreenPlugin, ui::UiPlugin,
-    upgrades::UpgradesPlugin,
+    debug::DebugPlugin, input::InputPlugin, physics::PhysicsPlugin, run::RunPlugin,
+    screen::ScreenPlugin, ui::UiPlugin, upgrades::UpgradesPlugin,
 };
 
 /// Plugin group that assembles all game domain plugins.
@@ -17,6 +17,7 @@ pub struct Game;
 impl PluginGroup for Game {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
+            .add(InputPlugin)
             .add(ScreenPlugin)
             .add(PhysicsPlugin)
             .add(BreakerPlugin)

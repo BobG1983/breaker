@@ -9,7 +9,8 @@ use crate::{
         resources::BreakerConfig,
         systems::{
             animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, reset_breaker,
-            spawn_breaker, trigger_bump_visual, update_breaker_state, update_bump,
+            spawn_breaker, spawn_bump_grade_text, trigger_bump_visual, update_breaker_state,
+            update_bump,
         },
     },
     shared::{GameState, PlayingState},
@@ -36,6 +37,7 @@ impl Plugin for BreakerPlugin {
                 update_breaker_state.after(move_breaker),
                 grade_bump.after(update_breaker_state),
                 perfect_bump_dash_cancel.after(grade_bump),
+                spawn_bump_grade_text.after(update_bump),
             )
                 .run_if(in_state(PlayingState::Active)),
         );
@@ -62,6 +64,10 @@ mod tests {
         app.init_state::<GameState>();
         app.add_sub_state::<PlayingState>();
         app.init_resource::<crate::shared::PlayfieldConfig>();
+        // InputPlugin owns InputActions — init resources it provides
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.add_message::<bevy::input::keyboard::KeyboardInput>();
+        app.add_plugins(crate::input::InputPlugin);
         // BreakerPlugin reads BoltHitBreaker messages from the physics domain
         app.add_message::<crate::physics::messages::BoltHitBreaker>();
         app.add_plugins(BreakerPlugin);

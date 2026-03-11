@@ -8,15 +8,20 @@ use crate::{
         messages::{BumpGrade, BumpPerformed},
         resources::BreakerConfig,
     },
+    input::resources::{GameAction, InputActions},
     physics::messages::BoltHitBreaker,
 };
 
 /// Updates bump state: handles input, ticks timers, cools down.
+///
+/// Cooldown starts when the bump *deactivates* (not on activation), so rapid
+/// re-bumps aren't swallowed while the previous bump is still active.
 pub fn update_bump(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    actions: Res<InputActions>,
     config: Res<BreakerConfig>,
     time: Res<Time<Fixed>>,
     mut query: Query<&mut BumpState, With<Breaker>>,
+    mut writer: MessageWriter<BumpPerformed>,
 ) {
     let dt = time.delta_secs();
 
@@ -32,17 +37,17 @@ pub fn update_bump(
             if bump.timer <= 0.0 {
                 bump.active = false;
                 bump.timer = 0.0;
+                bump.cooldown = config.bump_cooldown;
+                writer.write(BumpPerformed {
+                    grade: BumpGrade::Timeout,
+                });
             }
         }
 
-        // Bump input: Up arrow or W
-        if (keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW))
-            && !bump.active
-            && bump.cooldown <= 0.0
-        {
+        // Bump input via InputActions
+        if actions.active(GameAction::Bump) && !bump.active && bump.cooldown <= 0.0 {
             bump.active = true;
             bump.timer = config.bump_duration;
-            bump.cooldown = config.bump_cooldown;
         }
     }
 }

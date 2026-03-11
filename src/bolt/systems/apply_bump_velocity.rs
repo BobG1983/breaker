@@ -28,7 +28,7 @@ pub fn apply_bump_velocity(
         let multiplier = match performed.grade {
             BumpGrade::Perfect => config.perfect_bump_multiplier,
             BumpGrade::Early | BumpGrade::Late => config.weak_bump_multiplier,
-            BumpGrade::None => config.no_bump_multiplier,
+            BumpGrade::None | BumpGrade::Timeout => config.no_bump_multiplier,
         };
 
         for mut bolt_velocity in &mut bolt_query {

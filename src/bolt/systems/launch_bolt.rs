@@ -2,24 +2,27 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::{
-    components::{Bolt, BoltServing, BoltVelocity},
-    resources::BoltConfig,
+use crate::{
+    bolt::{
+        components::{Bolt, BoltServing, BoltVelocity},
+        resources::BoltConfig,
+    },
+    input::resources::{GameAction, InputActions},
 };
 
 type LaunchBoltFilter = (With<Bolt>, With<BoltServing>);
 
-/// Launches the bolt when the player presses the bump button (Up / W).
+/// Launches the bolt when the player activates bump.
 ///
 /// Removes [`BoltServing`] and sets the launch velocity. Only affects
 /// bolts that are currently serving.
 pub fn launch_bolt(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    actions: Res<InputActions>,
     config: Res<BoltConfig>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut BoltVelocity), LaunchBoltFilter>,
 ) {
-    if !keyboard.just_pressed(KeyCode::ArrowUp) && !keyboard.just_pressed(KeyCode::KeyW) {
+    if !actions.active(GameAction::Bump) {
         return;
     }
 
@@ -37,21 +40,22 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BoltConfig>();
-        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<InputActions>();
         app.add_systems(Update, launch_bolt);
         app
     }
 
     #[test]
-    fn pressing_up_launches_serving_bolt() {
+    fn bump_launches_serving_bolt() {
         let mut app = test_app();
 
         app.world_mut()
             .spawn((Bolt, BoltServing, BoltVelocity::new(0.0, 0.0)));
 
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ArrowUp);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
         app.update();
 
         // BoltServing should be removed
@@ -74,29 +78,6 @@ mod tests {
             .expect("bolt should have velocity");
         assert!(velocity.value.y > 0.0, "bolt should launch upward");
         assert!(velocity.speed() > 0.0, "bolt should have non-zero speed");
-    }
-
-    #[test]
-    fn pressing_w_also_launches() {
-        let mut app = test_app();
-
-        app.world_mut()
-            .spawn((Bolt, BoltServing, BoltVelocity::new(0.0, 0.0)));
-
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::KeyW);
-        app.update();
-
-        let serving_count = app
-            .world_mut()
-            .query_filtered::<Entity, (With<Bolt>, With<BoltServing>)>()
-            .iter(app.world())
-            .count();
-        assert_eq!(
-            serving_count, 0,
-            "BoltServing should be removed after W press"
-        );
     }
 
     #[test]
@@ -139,8 +120,9 @@ mod tests {
             .spawn((Bolt, BoltVelocity::new(100.0, 300.0)));
 
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ArrowUp);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
         app.update();
 
         let velocity = app
