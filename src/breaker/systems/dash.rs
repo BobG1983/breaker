@@ -283,7 +283,11 @@ mod tests {
         app.update();
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
-        assert_eq!(*state, BreakerState::Idle, "settling should transition to idle when timer expires");
+        assert_eq!(
+            *state,
+            BreakerState::Idle,
+            "settling should transition to idle when timer expires"
+        );
 
         let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
         assert!(

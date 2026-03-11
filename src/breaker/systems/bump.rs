@@ -221,7 +221,10 @@ mod tests {
         app.update();
 
         let captured = app.world().resource::<CapturedBump>();
-        let msg = captured.0.as_ref().expect("BumpPerformed should have been sent");
+        let msg = captured
+            .0
+            .as_ref()
+            .expect("BumpPerformed should have been sent");
         assert_eq!(msg.grade, BumpGrade::Perfect);
     }
 
