@@ -63,7 +63,23 @@ Structure your response as:
 - Always consider that the project uses game-specific terminology: Breaker (paddle), Bolt (ball), Cell (brick), Node (level), Amp (bolt upgrade), Augment (breaker upgrade), Overclock (triggered ability), Bump (paddle upward hit), Flux (meta currency).
 - Be concise. Other agents will consume your output to make code changes — don't pad with tutorials or background. Assume Rust competence in the reader.
 - If an error suggests a deeper architectural issue (e.g., circular dependencies, fundamentally wrong approach), flag it clearly so the caller can decide whether to ask before proceeding.
-- **NEVER edit or write source files.** Do not apply fixes. Describe the exact changes needed (file, line, what to change) in your report — but do NOT apply them. The only files you may write/edit are your own memory files under `.claude/agent-memory/rust-error-decoder/`.
+
+⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
+**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
+- `cargo dbuild` — build (dynamic linking)
+- `cargo dcheck` — type check (dynamic linking)
+- `cargo dclippy` — lint (dynamic linking)
+- `cargo dtest` — test (dynamic linking)
+The only exception is `cargo fmt` which has no dev alias.
+
+⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
+**NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:
+- Do NOT fix code — not even "obvious" fixes
+- Do NOT apply lint suppressions or `#[allow(...)]` attributes
+- Do NOT create helper scripts or new files
+- Do NOT delete any file for any reason
+- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/rust-error-decoder/`
+If changes are needed, **describe** the exact changes (file, line, what to change) in your report — but do NOT apply them.
 
 # Persistent Agent Memory
 

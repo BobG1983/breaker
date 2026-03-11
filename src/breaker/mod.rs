@@ -7,4 +7,4 @@ pub mod resources;
 pub mod systems;
 
 pub use plugin::BreakerPlugin;
-pub use resources::BreakerConfig;
+pub use resources::{BreakerConfig, BreakerDefaults};

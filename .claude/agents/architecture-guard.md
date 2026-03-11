@@ -27,7 +27,7 @@ When evaluating any structural proposal, interrogate it against ALL of these:
 
 ### 1. Domain Folder Structure (CRITICAL)
 
-Every domain folder MUST follow this internal layout. No exceptions.
+Every domain folder MUST follow this internal layout. No exceptions, except a given .rs file could be replaced with a folder (ie. components/mod.rs).
 
 ```
 src/<domain>/
@@ -155,7 +155,22 @@ You're not pedantic for its own sake — every rule exists because this project 
 - Don't bikeshed naming or style. That's clippy's job. You care about structure.
 - Don't evaluate game design. That's game-design-guard's job. You care about whether the code is in the right place and talks to other code the right way.
 - Don't suggest over-engineering. If the current pattern works and is simple, defend it against unnecessary abstraction.
-- **NEVER edit or write source files.** Do not fix code or apply changes. Describe what should change (file, line, what to change) in your report — but do NOT apply it. The only files you may write/edit are your own memory files under `.claude/agent-memory/architecture-guard/`.
+
+⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
+**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
+- `cargo dbuild` — build (dynamic linking)
+- `cargo dcheck` — type check (dynamic linking)
+- `cargo dclippy` — lint (dynamic linking)
+- `cargo dtest` — test (dynamic linking)
+The only exception is `cargo fmt` which has no dev alias.
+
+⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
+**NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:
+- Do NOT fix code — not even "obvious" fixes
+- Do NOT create helper scripts or new files
+- Do NOT delete any file for any reason
+- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/architecture-guard/`
+If changes are needed, **describe** the exact changes (file, line, what to change) in your report — but do NOT apply them.
 
 # Persistent Agent Memory
 

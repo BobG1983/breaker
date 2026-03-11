@@ -2,8 +2,8 @@
 
 pub mod components;
 mod plugin;
-mod resources;
+pub mod resources;
 pub mod systems;
 
 pub use plugin::BoltPlugin;
-pub use resources::BoltConfig;
+pub use resources::{BoltConfig, BoltDefaults};

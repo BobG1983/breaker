@@ -4,6 +4,14 @@
 //! configuration. No systems or plugins — those live in domain plugins.
 
 use bevy::prelude::*;
+use serde::Deserialize;
+
+/// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
+#[must_use]
+#[allow(clippy::missing_const_for_fn)]
+pub fn color_from_rgb(rgb: [f32; 3]) -> Color {
+    Color::srgb(rgb[0], rgb[1], rgb[2])
+}
 
 /// Configuration for the playfield dimensions.
 ///
@@ -21,7 +29,38 @@ pub struct PlayfieldConfig {
 
 impl Default for PlayfieldConfig {
     fn default() -> Self {
-        crate::screen::defaults::PlayfieldDefaults::default().into()
+        PlayfieldDefaults::default().into()
+    }
+}
+
+/// Playfield defaults loaded from RON.
+#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+pub struct PlayfieldDefaults {
+    /// Width of the playfield in world units.
+    pub width: f32,
+    /// Height of the playfield in world units.
+    pub height: f32,
+    /// RGB values for the background clear color.
+    pub background_color_rgb: [f32; 3],
+}
+
+impl Default for PlayfieldDefaults {
+    fn default() -> Self {
+        Self {
+            width: 800.0,
+            height: 600.0,
+            background_color_rgb: [0.02, 0.01, 0.04],
+        }
+    }
+}
+
+impl From<PlayfieldDefaults> for PlayfieldConfig {
+    fn from(d: PlayfieldDefaults) -> Self {
+        Self {
+            width: d.width,
+            height: d.height,
+            background_color_rgb: d.background_color_rgb,
+        }
     }
 }
 
@@ -52,13 +91,8 @@ impl PlayfieldConfig {
 
     /// Background clear color as a Bevy [`Color`].
     #[must_use]
-    #[allow(clippy::missing_const_for_fn)]
     pub fn background_color(&self) -> Color {
-        Color::srgb(
-            self.background_color_rgb[0],
-            self.background_color_rgb[1],
-            self.background_color_rgb[2],
-        )
+        color_from_rgb(self.background_color_rgb)
     }
 }
 
@@ -141,5 +175,13 @@ mod tests {
         let config = PlayfieldConfig::default();
         assert!((config.right() - config.left() - config.width).abs() < f32::EPSILON);
         assert!((config.top() - config.bottom() - config.height).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn playfield_defaults_ron_parses() {
+        let ron_str = include_str!("../assets/config/defaults.playfield.ron");
+        let result: PlayfieldDefaults =
+            ron::de::from_str(ron_str).expect("playfield RON should parse");
+        assert!(result.width > 0.0);
     }
 }
