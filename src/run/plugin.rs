@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::run::messages::{NodeCleared, TimerExpired};
+use crate::run::resources::RunState;
 
 /// Plugin for the run domain.
 ///
@@ -11,6 +12,7 @@ pub struct RunPlugin;
 
 impl Plugin for RunPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<RunState>();
         app.add_message::<NodeCleared>();
         app.add_message::<TimerExpired>();
     }

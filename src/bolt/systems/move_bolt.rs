@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::components::{Bolt, BoltServing, BoltVelocity};
 use crate::bolt::resources::BoltConfig;
+
+type MoveBoltFilter = (With<Bolt>, Without<BoltServing>);
 
 /// Moves the bolt by its velocity each fixed timestep.
 ///
@@ -11,7 +13,7 @@ use crate::bolt::resources::BoltConfig;
 pub fn move_bolt(
     config: Res<BoltConfig>,
     time: Res<Time<Fixed>>,
-    mut query: Query<(&mut Transform, &mut BoltVelocity), With<Bolt>>,
+    mut query: Query<(&mut Transform, &mut BoltVelocity), MoveBoltFilter>,
 ) {
     let dt = time.delta_secs();
 

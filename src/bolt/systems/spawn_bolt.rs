@@ -2,35 +2,44 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::components::{Bolt, BoltVelocity};
+use crate::bolt::components::{Bolt, BoltServing, BoltVelocity};
 use crate::bolt::resources::BoltConfig;
-use crate::breaker::components::Breaker;
+use crate::breaker::BreakerConfig;
+use crate::run::RunState;
 use crate::shared::CleanupOnNodeExit;
 
 /// Spawns the bolt entity above the breaker.
 ///
-/// Runs once when entering [`GameState::Playing`].
+/// Uses [`BreakerConfig::y_position`] for placement rather than querying
+/// the breaker entity — both systems run on `OnEnter(Playing)` and deferred
+/// commands mean the breaker entity may not exist yet.
+///
+/// On the first node (`RunState.node_index == 0`), the bolt spawns with
+/// zero velocity and a [`BoltServing`] marker — it hovers until the player
+/// presses the bump button. On subsequent nodes it launches immediately.
 pub fn spawn_bolt(
     mut commands: Commands,
     config: Res<BoltConfig>,
-    breaker_query: Query<&Transform, With<Breaker>>,
+    breaker_config: Res<BreakerConfig>,
+    run_state: Res<RunState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let Ok(breaker_transform) = breaker_query.single() else {
-        return;
+    let spawn_pos = Vec3::new(0.0, breaker_config.y_position + config.spawn_offset_y, 1.0);
+
+    let serving = run_state.node_index == 0;
+
+    let velocity = if serving {
+        BoltVelocity::new(0.0, 0.0)
+    } else {
+        let vx = config.base_speed * config.initial_angle.sin();
+        let vy = config.base_speed * config.initial_angle.cos();
+        BoltVelocity::new(vx, vy)
     };
-    let breaker_pos = breaker_transform.translation;
 
-    let spawn_pos = Vec3::new(breaker_pos.x, breaker_pos.y + config.spawn_offset_y, 0.0);
-
-    // Launch upward with a slight rightward angle
-    let vx = config.base_speed * config.initial_angle.sin();
-    let vy = config.base_speed * config.initial_angle.cos();
-
-    commands.spawn((
+    let mut entity = commands.spawn((
         Bolt,
-        BoltVelocity::new(vx, vy),
+        velocity,
         Mesh2d(meshes.add(Circle::new(1.0))),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
         Transform {
@@ -40,20 +49,23 @@ pub fn spawn_bolt(
         },
         CleanupOnNodeExit,
     ));
+
+    if serving {
+        entity.insert(BoltServing);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::bolt::components::Bolt;
-    use crate::breaker::BreakerConfig;
-    use crate::breaker::components::Breaker;
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BoltConfig>();
         app.init_resource::<BreakerConfig>();
+        app.init_resource::<RunState>();
         app.init_resource::<Assets<Mesh>>();
         app.init_resource::<Assets<ColorMaterial>>();
         app
@@ -62,9 +74,6 @@ mod tests {
     #[test]
     fn spawn_bolt_creates_entity() {
         let mut app = test_app();
-        // Spawn a breaker first so the bolt can reference its position
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
         app.add_systems(Startup, spawn_bolt);
         app.update();
 
@@ -73,14 +82,12 @@ mod tests {
     }
 
     #[test]
-    fn bolt_spawns_above_breaker() {
+    fn bolt_spawns_above_breaker_y() {
         let mut app = test_app();
-        let breaker_y = -250.0;
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, breaker_y, 0.0)));
         app.add_systems(Startup, spawn_bolt);
         app.update();
 
+        let breaker_y = BreakerConfig::default().y_position;
         let bolt_transform = app
             .world_mut()
             .query_filtered::<&Transform, With<Bolt>>()
@@ -91,12 +98,65 @@ mod tests {
     }
 
     #[test]
-    fn bolt_has_upward_velocity() {
+    fn bolt_spawns_at_z_above_zero() {
         let mut app = test_app();
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
         app.add_systems(Startup, spawn_bolt);
         app.update();
+
+        let bolt_transform = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        assert!(
+            bolt_transform.translation.z > 0.0,
+            "bolt z should be above 0 to render in front of breaker/cells, got {}",
+            bolt_transform.translation.z
+        );
+    }
+
+    #[test]
+    fn first_node_spawns_serving_bolt_with_zero_velocity() {
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let serving_count = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<BoltServing>)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(serving_count, 1, "first node bolt should have BoltServing");
+
+        let velocity = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have velocity");
+        assert!(
+            velocity.speed() < f32::EPSILON,
+            "serving bolt should have zero velocity"
+        );
+    }
+
+    #[test]
+    fn subsequent_node_spawns_launched_bolt() {
+        let mut app = test_app();
+        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let serving_count = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<BoltServing>)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            serving_count, 0,
+            "subsequent node bolt should not have BoltServing"
+        );
 
         let velocity = app
             .world_mut()
@@ -105,5 +165,16 @@ mod tests {
             .next()
             .expect("bolt should have velocity");
         assert!(velocity.value.y > 0.0, "bolt should launch upward");
+    }
+
+    #[test]
+    fn spawn_does_not_depend_on_breaker_entity() {
+        let mut app = test_app();
+        // No breaker entity spawned — bolt should still spawn using config
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let count = app.world_mut().query::<&Bolt>().iter(app.world()).count();
+        assert_eq!(count, 1, "bolt should spawn even without a breaker entity");
     }
 }

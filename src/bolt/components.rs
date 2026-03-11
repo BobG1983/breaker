@@ -6,6 +6,11 @@ use bevy::prelude::*;
 #[derive(Component, Debug)]
 pub struct Bolt;
 
+/// Marker component indicating the bolt is hovering above the breaker,
+/// waiting for the player to launch it. Present only on the first node.
+#[derive(Component, Debug)]
+pub struct BoltServing;
+
 /// The bolt's velocity in world units per second.
 #[derive(Component, Debug, Clone)]
 pub struct BoltVelocity {
