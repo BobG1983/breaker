@@ -122,9 +122,18 @@ mod tests {
         let speed_before = vel.speed();
         vel.enforce_min_angle(FRAC_PI_4);
         let speed_after = vel.speed();
-        assert!((speed_before - speed_after).abs() < 1e-4, "speed should be preserved");
-        assert!(vel.value.y > 0.0, "horizontal velocity should default to upward");
+        assert!(
+            (speed_before - speed_after).abs() < 1e-4,
+            "speed should be preserved"
+        );
+        assert!(
+            vel.value.y > 0.0,
+            "horizontal velocity should default to upward"
+        );
         let angle = vel.value.y.abs().atan2(vel.value.x.abs());
-        assert!(angle >= FRAC_PI_4 - 1e-4, "angle should be at least min_angle");
+        assert!(
+            angle >= FRAC_PI_4 - 1e-4,
+            "angle should be at least min_angle"
+        );
     }
 }
