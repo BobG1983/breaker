@@ -166,6 +166,118 @@ mod tests {
         assert!(config.perfect_bump_multiplier > config.no_bump_multiplier);
     }
 
+    #[derive(Resource)]
+    struct TestHitMessage(Option<BoltHitBreaker>);
+
+    fn enqueue_hit(msg_res: Res<TestHitMessage>, mut writer: MessageWriter<BoltHitBreaker>) {
+        if let Some(msg) = msg_res.0.clone() {
+            writer.write(msg);
+        }
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedBump(Option<BumpPerformed>);
+
+    fn capture_bump(mut reader: MessageReader<BumpPerformed>, mut captured: ResMut<CapturedBump>) {
+        for msg in reader.read() {
+            captured.0 = Some(msg.clone());
+        }
+    }
+
+    #[test]
+    fn grade_bump_sends_message_on_hit() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BreakerConfig>();
+        app.add_message::<BoltHitBreaker>();
+        app.add_message::<BumpPerformed>();
+
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        // Spawn breaker with active bump at the perfect timing
+        let elapsed = config.early_bump_window;
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                active: true,
+                timer: config.bump_duration - elapsed,
+                cooldown: 0.0,
+            },
+        ));
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        app.init_resource::<CapturedBump>();
+
+        app.add_systems(
+            Update,
+            (
+                enqueue_hit.before(grade_bump),
+                grade_bump,
+                capture_bump.after(grade_bump),
+            ),
+        );
+        app.update();
+
+        let captured = app.world().resource::<CapturedBump>();
+        let msg = captured.0.as_ref().expect("BumpPerformed should have been sent");
+        assert_eq!(msg.grade, BumpGrade::Perfect);
+    }
+
+    #[derive(Resource)]
+    struct TestBumpMessage(Option<BumpPerformed>);
+
+    fn enqueue_bump(msg_res: Res<TestBumpMessage>, mut writer: MessageWriter<BumpPerformed>) {
+        if let Some(msg) = msg_res.0.clone() {
+            writer.write(msg);
+        }
+    }
+
+    #[test]
+    fn perfect_bump_cancels_dash() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BreakerConfig>();
+        app.add_message::<BumpPerformed>();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BreakerState::Dashing,
+                BreakerStateTimer { remaining: 0.1 },
+            ))
+            .id();
+
+        app.insert_resource(TestBumpMessage(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+        })));
+
+        app.add_systems(
+            Update,
+            (
+                enqueue_bump.before(perfect_bump_dash_cancel),
+                perfect_bump_dash_cancel,
+            ),
+        );
+        app.update();
+
+        let state = app.world().get::<BreakerState>(entity).unwrap();
+        assert_eq!(
+            *state,
+            BreakerState::Settling,
+            "perfect bump during dash should transition to settling"
+        );
+
+        let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+        assert!(
+            (timer.remaining - config.settle_duration).abs() < f32::EPSILON,
+            "settle timer should be set to config.settle_duration"
+        );
+    }
+
     #[test]
     fn bump_zones_cover_full_duration() {
         let config = BreakerConfig::default();

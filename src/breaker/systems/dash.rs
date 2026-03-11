@@ -265,6 +265,35 @@ mod tests {
     }
 
     #[test]
+    fn settling_transitions_to_idle_and_resets_tilt() {
+        let mut app = test_app();
+        let entity = spawn_test_breaker(&mut app);
+
+        // Enter settling with some tilt and expired timer
+        *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Settling;
+        app.world_mut()
+            .get_mut::<BreakerTilt>(entity)
+            .unwrap()
+            .angle = 0.3;
+        app.world_mut()
+            .get_mut::<BreakerStateTimer>(entity)
+            .unwrap()
+            .remaining = 0.0;
+
+        app.update();
+
+        let state = app.world().get::<BreakerState>(entity).unwrap();
+        assert_eq!(*state, BreakerState::Idle, "settling should transition to idle when timer expires");
+
+        let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
+        assert!(
+            tilt.angle.abs() < f32::EPSILON,
+            "tilt should be reset to zero after settling, got {}",
+            tilt.angle
+        );
+    }
+
+    #[test]
     fn braking_transitions_to_settling() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);

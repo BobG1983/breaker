@@ -91,4 +91,96 @@ mod tests {
         apply_deceleration(&mut vel, 500.0, 1.0);
         assert!((vel - 0.0).abs() < f32::EPSILON);
     }
+
+    fn integration_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BreakerConfig>();
+        app.init_resource::<PlayfieldConfig>();
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.add_systems(FixedUpdate, move_breaker);
+        // Prime time baseline
+        app.update();
+        app
+    }
+
+    /// Runs enough updates with sleeps to ensure `FixedUpdate` ticks at least once.
+    fn tick_fixed(app: &mut App) {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        app.update();
+    }
+
+    fn spawn_breaker(app: &mut App, state: BreakerState) -> Entity {
+        let config = app.world().resource::<BreakerConfig>().clone();
+        app.world_mut()
+            .spawn((
+                Breaker,
+                state,
+                BreakerVelocity { x: 0.0 },
+                Transform::from_xyz(0.0, config.y_position, 0.0),
+            ))
+            .id()
+    }
+
+    #[test]
+    fn right_input_moves_breaker_right() {
+        let mut app = integration_app();
+        let entity = spawn_breaker(&mut app, BreakerState::Idle);
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ArrowRight);
+        tick_fixed(&mut app);
+
+        let tf = app.world().get::<Transform>(entity).unwrap();
+        assert!(
+            tf.translation.x > 0.0,
+            "breaker should move right, got x={}",
+            tf.translation.x
+        );
+    }
+
+    #[test]
+    fn dashing_blocks_keyboard_acceleration() {
+        let mut app = integration_app();
+        let entity = spawn_breaker(&mut app, BreakerState::Dashing);
+
+        // Set velocity to zero, then press input — Dashing should not accelerate
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::ArrowRight);
+        tick_fixed(&mut app);
+
+        let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
+        assert!(
+            vel.x.abs() < f32::EPSILON,
+            "dashing state should not accelerate from keyboard, got vx={}",
+            vel.x
+        );
+    }
+
+    #[test]
+    fn position_clamped_to_playfield_bounds() {
+        let mut app = integration_app();
+        let entity = spawn_breaker(&mut app, BreakerState::Idle);
+        let playfield = app.world().resource::<PlayfieldConfig>().clone();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        // Push breaker far past right boundary
+        app.world_mut()
+            .get_mut::<Transform>(entity)
+            .unwrap()
+            .translation
+            .x = 9999.0;
+        tick_fixed(&mut app);
+
+        let tf = app.world().get::<Transform>(entity).unwrap();
+        let max_x = playfield.right() - config.half_width;
+        assert!(
+            tf.translation.x <= max_x + f32::EPSILON,
+            "breaker should be clamped to playfield, got x={} max={}",
+            tf.translation.x,
+            max_x
+        );
+    }
 }
