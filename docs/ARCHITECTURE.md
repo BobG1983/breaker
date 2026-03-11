@@ -35,8 +35,8 @@ src/
 ├── physics/          # Quadtree, collision detection, collision response
 ├── audio/            # Event-driven audio, adaptive intensity
 ├── ui/               # HUD, menus, upgrade selection screen
-├── debug/            # bevy_egui debug console, overlays
-└── assets/           # RON data files, shaders, textures, audio
+└── debug/            # bevy_egui debug console, overlays
+assets/               # RON data files, shaders, textures, audio (project root, not inside src/)
 ```
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
