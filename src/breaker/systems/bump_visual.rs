@@ -7,12 +7,6 @@ use bevy::prelude::*;
 use crate::breaker::components::{Breaker, BumpState, BumpVisual};
 use crate::breaker::resources::BreakerConfig;
 
-/// Duration of the bump pop animation in seconds.
-const BUMP_VISUAL_DURATION: f32 = 0.15;
-
-/// Maximum Y offset at the peak of the pop animation (world units).
-const BUMP_VISUAL_PEAK: f32 = 6.0;
-
 /// Easing function for the bump pop animation.
 const BUMP_EASE: EaseFunction = EaseFunction::QuadraticOut;
 
@@ -34,9 +28,9 @@ pub fn trigger_bump_visual(
         let just_started = (bump.timer - config.bump_duration).abs() < f32::EPSILON;
         if bump.active && just_started {
             commands.entity(entity).insert(BumpVisual {
-                timer: BUMP_VISUAL_DURATION,
-                duration: BUMP_VISUAL_DURATION,
-                peak_offset: BUMP_VISUAL_PEAK,
+                timer: config.bump_visual_duration,
+                duration: config.bump_visual_duration,
+                peak_offset: config.bump_visual_peak,
             });
         }
     }
@@ -97,30 +91,33 @@ mod tests {
 
     #[test]
     fn bump_offset_starts_at_zero() {
+        let config = BreakerConfig::default();
         let visual = BumpVisual {
-            timer: BUMP_VISUAL_DURATION,
-            duration: BUMP_VISUAL_DURATION,
-            peak_offset: BUMP_VISUAL_PEAK,
+            timer: config.bump_visual_duration,
+            duration: config.bump_visual_duration,
+            peak_offset: config.bump_visual_peak,
         };
         assert!(bump_offset(&visual).abs() < f32::EPSILON);
     }
 
     #[test]
     fn bump_offset_ends_at_zero() {
+        let config = BreakerConfig::default();
         let visual = BumpVisual {
             timer: 0.0,
-            duration: BUMP_VISUAL_DURATION,
-            peak_offset: BUMP_VISUAL_PEAK,
+            duration: config.bump_visual_duration,
+            peak_offset: config.bump_visual_peak,
         };
         assert!(bump_offset(&visual).abs() < 1e-5);
     }
 
     #[test]
     fn bump_offset_positive_mid_animation() {
+        let config = BreakerConfig::default();
         let visual = BumpVisual {
-            timer: BUMP_VISUAL_DURATION / 2.0,
-            duration: BUMP_VISUAL_DURATION,
-            peak_offset: BUMP_VISUAL_PEAK,
+            timer: config.bump_visual_duration / 2.0,
+            duration: config.bump_visual_duration,
+            peak_offset: config.bump_visual_peak,
         };
         assert!(
             bump_offset(&visual) > 0.0,
@@ -229,8 +226,8 @@ mod tests {
                 },
                 BumpVisual {
                     timer: 0.1,
-                    duration: BUMP_VISUAL_DURATION,
-                    peak_offset: BUMP_VISUAL_PEAK,
+                    duration: config.bump_visual_duration,
+                    peak_offset: config.bump_visual_peak,
                 },
             ))
             .id();
@@ -268,9 +265,9 @@ mod tests {
             Breaker,
             Transform::from_xyz(0.0, config.y_position, 0.0),
             BumpVisual {
-                timer: BUMP_VISUAL_DURATION,
-                duration: BUMP_VISUAL_DURATION,
-                peak_offset: BUMP_VISUAL_PEAK,
+                timer: config.bump_visual_duration,
+                duration: config.bump_visual_duration,
+                peak_offset: config.bump_visual_peak,
             },
         ));
 
@@ -304,8 +301,8 @@ mod tests {
                 BumpVisual {
                     // Zero timer — will expire on next tick
                     timer: 0.0,
-                    duration: BUMP_VISUAL_DURATION,
-                    peak_offset: BUMP_VISUAL_PEAK,
+                    duration: config.bump_visual_duration,
+                    peak_offset: config.bump_visual_peak,
                 },
             ))
             .id();
@@ -337,8 +334,8 @@ mod tests {
             BumpVisual {
                 // Near-expired timer — will complete within a few test updates
                 timer: 0.0001,
-                duration: BUMP_VISUAL_DURATION,
-                peak_offset: BUMP_VISUAL_PEAK,
+                duration: config.bump_visual_duration,
+                peak_offset: config.bump_visual_peak,
             },
         ));
 

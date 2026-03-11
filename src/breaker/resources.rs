@@ -48,6 +48,10 @@ pub struct BreakerConfig {
     pub no_bump_multiplier: f32,
     /// RGB values for the breaker HDR color.
     pub color_rgb: [f32; 3],
+    /// Duration of the bump pop animation in seconds.
+    pub bump_visual_duration: f32,
+    /// Maximum Y offset at the peak of the bump pop animation (world units).
+    pub bump_visual_peak: f32,
 }
 
 impl Default for BreakerConfig {
@@ -107,6 +111,10 @@ pub struct BreakerDefaults {
     pub no_bump_multiplier: f32,
     /// RGB values for the breaker HDR color.
     pub color_rgb: [f32; 3],
+    /// Duration of the bump pop animation in seconds.
+    pub bump_visual_duration: f32,
+    /// Maximum Y offset at the peak of the bump pop animation (world units).
+    pub bump_visual_peak: f32,
 }
 
 impl Default for BreakerDefaults {
@@ -132,6 +140,8 @@ impl Default for BreakerDefaults {
             weak_bump_multiplier: 0.8,
             no_bump_multiplier: 1.0,
             color_rgb: [0.2, 2.0, 3.0],
+            bump_visual_duration: 0.15,
+            bump_visual_peak: 6.0,
         }
     }
 }
@@ -159,6 +169,8 @@ impl From<BreakerDefaults> for BreakerConfig {
             weak_bump_multiplier: d.weak_bump_multiplier,
             no_bump_multiplier: d.no_bump_multiplier,
             color_rgb: d.color_rgb,
+            bump_visual_duration: d.bump_visual_duration,
+            bump_visual_peak: d.bump_visual_peak,
         }
     }
 }

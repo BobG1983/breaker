@@ -20,4 +20,6 @@
     weak_bump_multiplier: 0.8,
     no_bump_multiplier: 1.0,
     color_rgb: (0.2, 2.0, 3.0),
+    bump_visual_duration: 0.15,
+    bump_visual_peak: 6.0,
 )
