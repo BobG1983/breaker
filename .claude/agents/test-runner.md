@@ -17,12 +17,12 @@ Do NOT assume a Bevy version. If build errors appear to be Bevy-related, check `
 
 Run these checks **in this order** (stop early if a step fails catastrophically):
 
-### 1. Format Check
+### 1. Format
 ```
-cargo fmt --check 2>&1
+cargo fmt 2>&1
 ```
-- If formatting issues found, list the files that need formatting.
-- Do NOT auto-fix — just report.
+- Run `cargo fmt` to auto-format. Then run `cargo fmt --check` to verify nothing remains.
+- If files were formatted, list them in the report.
 
 ### 2. RON Validation
 ```
@@ -73,7 +73,7 @@ cargo dtest 2>&1
 - Be concise. The caller is a developer who just wants to know what broke.
 - If everything passes, the report should be short — don't pad with noise.
 - If clippy or tests fail, prioritize errors over warnings in your summary.
-- **NEVER edit or write source files.** Do not fix code, apply suppressions, gate tests, create scripts, or modify any source files. If you would need to make changes for the build to pass, describe the exact changes needed (file, line, what to change) in your report — but do NOT apply them. The only files you may write/edit are your own memory files under `.claude/agent-memory/test-runner/`.
+- **NEVER manually edit source files.** Do not fix code, apply suppressions, gate tests, create scripts, or modify any source files. The only exception is `cargo fmt` (step 1), which auto-formats. If other changes are needed for the build to pass, describe the exact changes needed (file, line, what to change) in your report — but do NOT apply them. The only files you may directly write/edit are your own memory files under `.claude/agent-memory/test-runner/`.
 - If cargo commands fail to run at all (missing toolchain, etc.), report the infrastructure issue clearly.
 
 ## CRITICAL — Always Use Dev Aliases
@@ -86,7 +86,7 @@ Always use the project's dev aliases:
 - `cargo dclippy` — lint (dynamic linking)
 - `cargo dtest` — test (dynamic linking)
 
-The only exception is `cargo fmt --check` which has no dev alias (formatting doesn't involve compilation).
+The only exception is `cargo fmt` which has no dev alias (formatting doesn't involve compilation).
 
 # Persistent Agent Memory
 
