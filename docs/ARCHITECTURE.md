@@ -21,9 +21,12 @@ Everything lives inside a single `brickbreaker` crate:
 
 ```
 src/
-├── main.rs           # Entry point: constructs App, runs it
+├── lib.rs            # Library root: declares all domain modules
+├── main.rs           # Binary entry point: calls lib to build and run
 ├── app.rs            # App — constructs the Bevy App with DefaultPlugins + Game
 ├── game.rs           # Game — PluginGroup that wires together all domain plugins
+├── shared.rs         # Passive types: GameState, PlayingState, cleanup markers, constants
+├── screen/           # Screen state registration, transitions, cleanup systems
 ├── breaker/          # Breaker mechanics, state machine, bump system
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
@@ -36,7 +39,7 @@ src/
 └── assets/           # RON data files, shaders, textures, audio
 ```
 
-**`main.rs`** is minimal — it constructs `App` and runs it.
+**`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
@@ -47,6 +50,29 @@ src/
 - Registers its Bevy systems, messages, and states
 - Owns its components and resources
 - Communicates outward only through messages — no direct cross-module imports for data flow
+
+### Domain Folder Layout
+
+Every domain folder follows this canonical internal structure:
+
+```
+src/<domain>/
+├── mod.rs           # Re-exports ONLY — pub mod declarations, pub use re-exports. No logic, no types.
+├── plugin.rs        # The Plugin impl. Registers systems, messages, states. One per domain.
+├── components.rs    # All #[derive(Component)] types for this domain.
+├── messages.rs      # All #[derive(Message)] types for this domain.
+├── resources.rs     # All #[derive(Resource)] types for this domain.
+└── systems/
+    ├── mod.rs       # Re-exports ONLY — pub mod + pub use for each system.
+    └── <name>.rs    # One file per system function (or tightly related group).
+```
+
+**Rules:**
+- **`mod.rs`** is a routing file. It contains `pub mod` and `pub use` statements only. No `fn`, `struct`, `enum`, or `impl`.
+- **`plugin.rs`** is the only file that wires things to the Bevy `App` — system registration, message registration, state registration all happen here.
+- **`components.rs`**, **`messages.rs`**, **`resources.rs`** — one file each per category. Omit the file if the domain has none of that category (e.g., no `messages.rs` if the domain sends no messages).
+- **`systems/`** — one `.rs` file per system function, or per tightly-coupled group (e.g., a system + its helper). Files are named after the system. `systems/mod.rs` only re-exports.
+- No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`. If it doesn't fit the categories above, it probably belongs in an existing file or a different domain.
 
 ---
 
@@ -71,18 +97,26 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 
 ## State Management
 
-Bevy `States` for top-level game state. Sub-states where a state only exists within a parent.
+Bevy `States` for top-level game state. `SubStates` where a state only exists within a parent.
 
-**Top-level states:**
+**Top-level states (`GameState`):**
+- `Loading` — asset preload (default/initial state)
 - `MainMenu`
 - `RunSetup` — breaker/seed selection
-- `Playing` — active node
+- `Playing` — active node (see sub-states below)
 - `UpgradeSelect` — timed upgrade selection
-- `Paused`
 - `RunEnd` — win/lose screen
 - `MetaProgression` — between-run Flux spending
 
-States control which systems run. Physics only ticks in `Playing`. UI systems are state-aware.
+**Playing sub-states (`PlayingState`):**
+- `Active` — normal gameplay (default when entering `Playing`)
+- `Paused` — all gameplay frozen
+
+`PlayingState` only exists when `GameState::Playing` is active — it is automatically created and destroyed by Bevy's sub-state lifecycle. Pausing is modeled as a sub-state (not top-level) because you can only pause from active gameplay. This constraint is encoded in the type system.
+
+Systems that should freeze during pause use `run_if(in_state(PlayingState::Active))`. Systems that should run regardless of pause (e.g., pause menu UI) use `run_if(in_state(GameState::Playing))`.
+
+**Passive types vs. active logic:** `GameState`, `PlayingState`, cleanup markers, and playfield constants are passive types defined in `shared.rs` (imported by all domains). State registration, transitions, and cleanup systems live in the `screen/` domain plugin.
 
 ---
 

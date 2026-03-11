@@ -25,7 +25,32 @@ This project uses **plugin-per-domain** with **message-driven decoupling**. Each
 
 When evaluating any structural proposal, interrogate it against ALL of these:
 
-### 1. Plugin Boundaries
+### 1. Domain Folder Structure (CRITICAL)
+
+Every domain folder MUST follow this internal layout. No exceptions.
+
+```
+src/<domain>/
+├── mod.rs           # Re-exports ONLY — pub mod declarations, pub use re-exports. No logic, no types.
+├── plugin.rs        # The Plugin impl. Registers systems, messages, states. One per domain.
+├── components.rs    # All #[derive(Component)] types for this domain.
+├── messages.rs      # All #[derive(Message)] types for this domain.
+├── resources.rs     # All #[derive(Resource)] types for this domain.
+└── systems/
+    ├── mod.rs       # Re-exports ONLY — pub mod + pub use for each system.
+    └── <name>.rs    # One file per system function (or tightly related group).
+```
+
+**Rules:**
+- `mod.rs` is a routing file. If it contains `fn`, `struct`, `enum`, or `impl` — that's a violation. Move it.
+- `plugin.rs` is the ONLY file that wires things to the Bevy `App`. Systems, messages, states all registered here.
+- `components.rs`, `messages.rs`, `resources.rs` — one file each. If a domain has no messages, omit `messages.rs`. Don't create the file just to have it.
+- `systems/` — one `.rs` file per system function or per tightly-coupled group (e.g., a system + its helper). Each system file is named after the system. `systems/mod.rs` re-exports them, nothing else.
+- Files that don't fit these categories don't belong. No `utils.rs`, no `helpers.rs`, no `types.rs`.
+
+**When reviewing, actively verify:** Is plugin logic in `plugin.rs`? Are components in `components.rs`? Are systems each in their own file under `systems/`? Is `mod.rs` clean? Flag every deviation.
+
+### 2. Plugin Boundaries
 
 Is the code in the right domain? Does it respect module ownership?
 
@@ -35,7 +60,7 @@ Is the code in the right domain? Does it respect module ownership?
 - Reading another domain's components in a query is fine (it's ECS). Writing to them is a boundary violation.
 - `game.rs` is the ONLY file that knows about all plugins. Domain plugins don't know about each other.
 
-### 2. Message Discipline
+### 3. Message Discipline
 
 Is inter-domain communication flowing through messages?
 
@@ -44,7 +69,7 @@ Is inter-domain communication flowing through messages?
 - New message types should be documented in docs/ARCHITECTURE.md's message table
 - Messages are fire-and-forget. If you need request-response, you probably need to rethink the data flow.
 
-### 3. Entity Lifecycle
+### 4. Entity Lifecycle
 
 Are entities properly tagged and cleaned up?
 
@@ -53,7 +78,7 @@ Are entities properly tagged and cleaned up?
 - Despawn happens in `OnExit` systems that query for markers
 - If an entity outlives its expected scope, that's a bug in the architecture, not just a bug in the code
 
-### 4. Content Identity
+### 5. Content Identity
 
 Does new content follow the enum-behavior + RON-instance pattern?
 
@@ -63,7 +88,7 @@ Does new content follow the enum-behavior + RON-instance pattern?
 - New content = new RON files (no recompile needed)
 - Registries (`Resource`s) load and validate RON at boot. Game logic goes through registries, never matches on raw ID strings.
 
-### 5. System Ordering
+### 6. System Ordering
 
 Is ordering minimal and justified?
 
@@ -73,7 +98,7 @@ Is ordering minimal and justified?
 - If you're adding ordering "just in case" — don't. Wait until you have a bug that proves the dependency.
 - Physics chain is ordered (input → move breaker → move bolt → collisions → response). Everything else runs freely.
 
-### 6. State Management
+### 7. State Management
 
 Are states used correctly?
 
@@ -82,7 +107,7 @@ Are states used correctly?
 - `.run_if(in_state(...))` gates which systems run
 - State transitions are the primary control flow — not boolean flags on resources
 
-### 7. Error Handling
+### 8. Error Handling
 
 Does this follow strict-dev, lenient-release?
 
@@ -100,10 +125,11 @@ Does this follow strict-dev, lenient-release?
 4. **The verdict**: Approve, modify, or reject with specific reasoning.
 
 ### For Code Review (Structural)
-1. **Boundary violations**: Flag any cross-domain mutation, direct imports for data flow, or missing message indirection.
-2. **Missing patterns**: Flag missing cleanup markers, direct ID string matching, unregistered message types.
-3. **Ordering concerns**: Flag speculative ordering constraints or missing proven ones.
-4. **File placement**: Flag code in the wrong module.
+1. **Folder structure**: Verify every domain follows the canonical layout (mod.rs exports only, plugin.rs, components.rs, messages.rs, resources.rs, systems/*.rs). This is the FIRST thing you check.
+2. **Boundary violations**: Flag any cross-domain mutation, direct imports for data flow, or missing message indirection.
+3. **Missing patterns**: Flag missing cleanup markers, direct ID string matching, unregistered message types.
+4. **Ordering concerns**: Flag speculative ordering constraints or missing proven ones.
+5. **File placement**: Flag code in the wrong file within a domain (e.g., component defined in plugin.rs, system logic in mod.rs).
 
 ### For Data Architecture Questions
 1. **Component vs Resource vs Message**: Components for per-entity state. Resources for global/singleton state. Messages for inter-domain communication. If it's unclear, explain the trade-off and commit to a recommendation.
