@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     breaker::{
         components::{Breaker, BreakerState, BreakerStateTimer, BumpState},
-        messages::{BumpGrade, BumpPerformed},
+        messages::{BumpGrade, BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
     },
     input::resources::{GameAction, InputActions},
@@ -35,9 +35,17 @@ pub fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> BumpGrade 
     }
 }
 
+/// Returns the grade-dependent cooldown duration.
+fn cooldown_for_grade(grade: BumpGrade, config: &BreakerConfig) -> f32 {
+    match grade {
+        BumpGrade::Perfect => config.perfect_bump_cooldown,
+        BumpGrade::Early | BumpGrade::Late => config.weak_bump_cooldown,
+    }
+}
+
 /// Updates bump state: handles input, ticks timers, resolves retroactive bumps.
 ///
-/// Forward window expires silently — no message, no cooldown.
+/// Forward window expiry sends [`BumpWhiffed`] and sets whiff cooldown.
 /// Retroactive bumps grade and write immediately on press.
 pub fn update_bump(
     actions: Res<InputActions>,
@@ -45,6 +53,7 @@ pub fn update_bump(
     time: Res<Time<Fixed>>,
     mut query: Query<&mut BumpState, With<Breaker>>,
     mut writer: MessageWriter<BumpPerformed>,
+    mut whiff_writer: MessageWriter<BumpWhiffed>,
 ) {
     let dt = time.delta_secs();
 
@@ -59,12 +68,14 @@ pub fn update_bump(
             bump.post_hit_timer = (bump.post_hit_timer - dt).max(0.0);
         }
 
-        // Tick active timer — expire silently
+        // Tick active timer — whiff on expiry
         if bump.active {
             bump.timer -= dt;
             if bump.timer <= 0.0 {
                 bump.active = false;
                 bump.timer = 0.0;
+                whiff_writer.write(BumpWhiffed);
+                bump.cooldown = config.weak_bump_cooldown;
             }
         }
 
@@ -76,7 +87,7 @@ pub fn update_bump(
                     (config.perfect_window + config.late_window) - bump.post_hit_timer;
                 let grade = retroactive_grade(time_since_hit, config.perfect_window);
                 writer.write(BumpPerformed { grade });
-                bump.cooldown = config.bump_cooldown;
+                bump.cooldown = cooldown_for_grade(grade, &config);
                 bump.post_hit_timer = 0.0;
                 bump.active = false;
             } else if !bump.active {
@@ -109,7 +120,7 @@ pub fn grade_bump(
             let grade = forward_grade(bump.timer, config.perfect_window);
             writer.write(BumpPerformed { grade });
             bump.active = false;
-            bump.cooldown = config.bump_cooldown;
+            bump.cooldown = cooldown_for_grade(grade, &config);
         } else {
             // No active bump — open retroactive window for update_bump
             bump.post_hit_timer = config.perfect_window + config.late_window;
@@ -203,6 +214,9 @@ mod tests {
     #[derive(Resource, Default)]
     struct CapturedBumps(Vec<BumpPerformed>);
 
+    #[derive(Resource, Default)]
+    struct CapturedWhiffs(u32);
+
     fn capture_bumps(
         mut reader: MessageReader<BumpPerformed>,
         mut captured: ResMut<CapturedBumps>,
@@ -212,13 +226,24 @@ mod tests {
         }
     }
 
+    fn capture_whiffs(
+        mut reader: MessageReader<BumpWhiffed>,
+        mut captured: ResMut<CapturedWhiffs>,
+    ) {
+        for _msg in reader.read() {
+            captured.0 += 1;
+        }
+    }
+
     fn update_bump_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
         app.init_resource::<InputActions>();
         app.add_message::<BumpPerformed>();
+        app.add_message::<BumpWhiffed>();
         app.init_resource::<CapturedBumps>();
+        app.init_resource::<CapturedWhiffs>();
         app.insert_resource(TestInputActive(false));
         app.add_systems(
             Update,
@@ -226,6 +251,7 @@ mod tests {
                 set_bump_action.before(update_bump),
                 update_bump,
                 capture_bumps.after(update_bump),
+                capture_whiffs.after(update_bump),
             ),
         );
         app
@@ -312,8 +338,9 @@ mod tests {
     }
 
     #[test]
-    fn forward_window_expires_silently_no_message_no_cooldown() {
+    fn forward_window_expiry_sends_whiff_and_sets_cooldown() {
         let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = app
             .world_mut()
@@ -333,20 +360,20 @@ mod tests {
         let bump = app.world().get::<BumpState>(entity).unwrap();
         assert!(!bump.active, "should have expired");
         assert!(
-            bump.cooldown <= 0.0,
-            "no cooldown on silent expiry, got {}",
+            (bump.cooldown - config.weak_bump_cooldown).abs() < f32::EPSILON,
+            "whiff should set weak cooldown, got {}",
             bump.cooldown
         );
 
         let captured = app.world().resource::<CapturedBumps>();
-        assert!(
-            captured.0.is_empty(),
-            "no message should be sent on silent expiry"
-        );
+        assert!(captured.0.is_empty(), "no BumpPerformed on whiff");
+
+        let whiffs = app.world().resource::<CapturedWhiffs>();
+        assert_eq!(whiffs.0, 1, "should send one BumpWhiffed message");
     }
 
     #[test]
-    fn retroactive_perfect_grades_and_sets_cooldown() {
+    fn retroactive_perfect_grades_and_sets_zero_cooldown() {
         let mut app = update_bump_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
@@ -366,7 +393,12 @@ mod tests {
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
-        assert!(bump.cooldown > 0.0, "should set cooldown");
+        assert!(
+            (bump.cooldown - config.perfect_bump_cooldown).abs() < f32::EPSILON,
+            "perfect retroactive should set perfect_bump_cooldown ({}), got {}",
+            config.perfect_bump_cooldown,
+            bump.cooldown
+        );
         assert!(bump.post_hit_timer <= 0.0, "should clear post_hit_timer");
 
         let captured = app.world().resource::<CapturedBumps>();
@@ -495,7 +527,12 @@ mod tests {
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
         assert!(!bump.active, "should deactivate");
-        assert!(bump.cooldown > 0.0, "should set cooldown");
+        assert!(
+            (bump.cooldown - config.perfect_bump_cooldown).abs() < f32::EPSILON,
+            "perfect forward should set perfect_bump_cooldown ({}), got {}",
+            config.perfect_bump_cooldown,
+            bump.cooldown
+        );
         assert!(bump.post_hit_timer <= 0.0, "should clear post_hit_timer");
 
         let captured = app.world().resource::<CapturedBumps>();
@@ -508,19 +545,30 @@ mod tests {
         let mut app = grade_bump_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
-        app.world_mut().spawn((
-            Breaker,
-            BumpState {
-                active: true,
-                timer: config.early_window + config.perfect_window, // just started
-                ..Default::default()
-            },
-        ));
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    active: true,
+                    timer: config.early_window + config.perfect_window, // just started
+                    ..Default::default()
+                },
+            ))
+            .id();
 
         app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
             bolt: Entity::PLACEHOLDER,
         })));
         app.update();
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(
+            (bump.cooldown - config.weak_bump_cooldown).abs() < f32::EPSILON,
+            "early forward should set weak_bump_cooldown ({}), got {}",
+            config.weak_bump_cooldown,
+            bump.cooldown
+        );
 
         let captured = app.world().resource::<CapturedBumps>();
         assert_eq!(captured.0.len(), 1);

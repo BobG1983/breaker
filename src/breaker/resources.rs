@@ -32,8 +32,10 @@ pub struct BreakerDefaults {
     pub brake_tilt_angle: f32,
     /// Y position of the breaker.
     pub y_position: f32,
-    /// Cooldown between bumps in seconds.
-    pub bump_cooldown: f32,
+    /// Cooldown after a perfect bump in seconds.
+    pub perfect_bump_cooldown: f32,
+    /// Cooldown after an early/late bump or whiff in seconds.
+    pub weak_bump_cooldown: f32,
     /// Perfect bump timing window (seconds, each side of T=0).
     pub perfect_window: f32,
     /// Early bump window (seconds, before perfect zone).
@@ -79,7 +81,8 @@ impl Default for BreakerDefaults {
             dash_tilt_angle: 0.26,
             brake_tilt_angle: 0.44,
             y_position: -250.0,
-            bump_cooldown: 0.3,
+            perfect_bump_cooldown: 0.0,
+            weak_bump_cooldown: 0.15,
             perfect_window: 0.05,
             early_window: 0.15,
             late_window: 0.15,

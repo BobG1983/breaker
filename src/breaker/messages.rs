@@ -23,6 +23,12 @@ pub struct BumpPerformed {
     pub grade: BumpGrade,
 }
 
+/// Sent when a forward bump window expires without bolt contact.
+///
+/// Consumed by UI for "WHIFF" feedback text.
+#[derive(Message, Clone, Debug)]
+pub struct BumpWhiffed;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -42,5 +48,11 @@ mod tests {
             grade: BumpGrade::Perfect,
         };
         assert!(format!("{msg:?}").contains("Perfect"));
+    }
+
+    #[test]
+    fn bump_whiffed_debug_format() {
+        let msg = BumpWhiffed;
+        assert!(format!("{msg:?}").contains("BumpWhiffed"));
     }
 }
