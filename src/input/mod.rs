@@ -2,7 +2,7 @@
 
 mod plugin;
 pub mod resources;
-mod systems;
+pub mod systems;
 
 pub use plugin::InputPlugin;
 pub use resources::{InputConfig, InputDefaults};

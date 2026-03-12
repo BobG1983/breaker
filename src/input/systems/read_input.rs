@@ -4,10 +4,19 @@ use bevy::{input::keyboard::KeyboardInput, prelude::*};
 
 use crate::input::resources::{DoubleTapState, GameAction, InputActions, InputConfig};
 
+/// Clears [`InputActions`] at the start of each fixed tick.
+///
+/// Runs in `FixedPreUpdate` so one-shot actions persist across frames until
+/// `FixedUpdate` has a chance to consume them.
+pub fn clear_input_actions(mut actions: ResMut<InputActions>) {
+    actions.0.clear();
+}
+
 /// Translates raw keyboard input into [`InputActions`].
 ///
 /// Runs in `PreUpdate` after `InputSystems`. Reads held keys for movement
 /// and `MessageReader<KeyboardInput>` for one-shot presses (bump, dash).
+/// Does not clear — [`clear_input_actions`] handles that in `FixedPreUpdate`.
 pub fn read_input_actions(
     keyboard: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
@@ -16,8 +25,6 @@ pub fn read_input_actions(
     mut double_tap: ResMut<DoubleTapState>,
     mut key_events: MessageReader<KeyboardInput>,
 ) {
-    actions.0.clear();
-
     // Held keys → continuous movement
     if config.move_left.iter().any(|k| keyboard.pressed(*k)) {
         actions.0.push(GameAction::MoveLeft);

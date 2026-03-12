@@ -2,4 +2,4 @@
 
 mod read_input;
 
-pub use read_input::read_input_actions;
+pub use read_input::{clear_input_actions, read_input_actions};

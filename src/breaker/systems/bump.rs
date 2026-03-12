@@ -285,7 +285,7 @@ mod tests {
         app.init_resource::<CapturedWhiffs>();
         app.insert_resource(TestInputActive(false));
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 set_bump_action.before(update_bump),
                 update_bump,
@@ -295,12 +295,12 @@ mod tests {
         app
     }
 
-    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    /// Accumulates one fixed timestep of overstep, then runs one update.
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
+            .accumulate_overstep(timestep);
         app.update();
     }
 
@@ -545,7 +545,7 @@ mod tests {
         app.init_resource::<CapturedBumps>();
         app.insert_resource(TestHitMessage(None));
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 enqueue_hit.before(grade_bump),
                 grade_bump,
@@ -576,7 +576,7 @@ mod tests {
         app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
             bolt: Entity::PLACEHOLDER,
         })));
-        app.update();
+        tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
         assert!(!bump.active, "should deactivate");
@@ -614,7 +614,7 @@ mod tests {
         app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
             bolt: Entity::PLACEHOLDER,
         })));
-        app.update();
+        tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
         assert!(
@@ -642,7 +642,7 @@ mod tests {
         app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
             bolt: Entity::PLACEHOLDER,
         })));
-        app.update();
+        tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
         let expected = config.perfect_window + config.late_window;
@@ -667,7 +667,7 @@ mod tests {
             .id();
 
         // No hit message
-        app.update();
+        tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
         assert!(!bump.active);
@@ -694,7 +694,7 @@ mod tests {
         app.insert_resource(TestInputActive(false));
         app.insert_resource(TestHitMessage(None));
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 set_bump_action.before(update_bump),
                 enqueue_hit.before(grade_bump),
@@ -756,6 +756,67 @@ mod tests {
         );
     }
 
+    // ── FixedUpdate input loss test ─────────────────────────────────
+
+    /// App that mirrors production scheduling: input in `PreUpdate`, bump in `FixedUpdate`.
+    fn fixed_schedule_bump_app() -> App {
+        use crate::input::systems::clear_input_actions;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BreakerConfig>();
+        app.init_resource::<InputActions>();
+        app.add_message::<BumpPerformed>();
+        app.add_message::<BumpWhiffed>();
+        app.add_message::<BoltHitBreaker>();
+        app.init_resource::<CapturedBumps>();
+        app.init_resource::<CapturedWhiffs>();
+        app.insert_resource(TestInputActive(false));
+
+        // PreUpdate: populate InputActions (like read_input_actions)
+        app.add_systems(PreUpdate, set_bump_action);
+
+        // FixedPostUpdate: clear after FixedUpdate consumes actions
+        app.add_systems(FixedPostUpdate, clear_input_actions);
+
+        // FixedUpdate: process bumps (production schedule)
+        app.add_systems(FixedUpdate, update_bump);
+
+        // Update: capture results
+        app.add_systems(Update, (capture_bumps, capture_whiffs));
+
+        app
+    }
+
+    #[test]
+    fn bump_not_lost_when_fixed_update_skips_frame() {
+        let mut app = fixed_schedule_bump_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+            .id();
+
+        // Frame 1: bump input active, but FixedUpdate won't run (no overstep).
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        // Frame 2: input no longer active, accumulate overstep so FixedUpdate runs.
+        app.insert_resource(TestInputActive(false));
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(
+            bump.active,
+            "bump input should not be lost when FixedUpdate skips a frame"
+        );
+    }
+
     // ── perfect_bump_dash_cancel tests ───────────────────────────────
 
     #[derive(Resource)]
@@ -790,13 +851,13 @@ mod tests {
         })));
 
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 enqueue_bump.before(perfect_bump_dash_cancel),
                 perfect_bump_dash_cancel,
             ),
         );
-        app.update();
+        tick(&mut app);
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(

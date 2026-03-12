@@ -4,7 +4,7 @@ use bevy::{input::InputSystems, prelude::*};
 
 use crate::input::{
     resources::{DoubleTapState, InputActions, InputConfig},
-    systems::read_input_actions,
+    systems::{clear_input_actions, read_input_actions},
 };
 
 /// Plugin for the input domain.
@@ -20,6 +20,7 @@ impl Plugin for InputPlugin {
         app.init_resource::<InputConfig>();
         app.init_resource::<DoubleTapState>();
         app.add_systems(PreUpdate, read_input_actions.after(InputSystems));
+        app.add_systems(FixedPostUpdate, clear_input_actions);
     }
 }
 
