@@ -1,47 +1,44 @@
 //! Bump visual feedback — eased upward pop animation on the breaker.
 
-use bevy::{
-    math::curve::{Curve, easing::EaseFunction},
-    prelude::*,
+use bevy::{math::curve::Curve, prelude::*};
+
+use crate::{
+    breaker::{
+        components::{Breaker, BumpVisual},
+        resources::BreakerConfig,
+    },
+    input::resources::{GameAction, InputActions},
 };
 
-use crate::breaker::{
-    components::{Breaker, BumpState, BumpVisual},
-    resources::BreakerConfig,
-};
-
-/// Easing function for the bump pop animation.
-const BUMP_EASE: EaseFunction = EaseFunction::QuadraticOut;
-
-/// Query filter for bump entities needing visual feedback.
+/// Query filter for breakers eligible for a new bump visual.
 type BumpTriggerFilter = (With<Breaker>, Without<BumpVisual>);
 
-/// Triggers a bump pop animation when the bump is first activated.
+/// Triggers a bump pop animation when the player presses bump.
 ///
-/// Inserts a [`BumpVisual`] component on the breaker entity. Only fires
-/// when the bump timer equals the full duration (just started), preventing
-/// re-triggers while the bump is still active after the animation ends.
+/// Reads [`InputActions`] directly so the visual fires on every press,
+/// regardless of cooldown or active-window state. The [`Without<BumpVisual>`]
+/// filter in [`BumpTriggerFilter`] prevents duplicate triggers.
 pub fn trigger_bump_visual(
     mut commands: Commands,
     config: Res<BreakerConfig>,
-    query: Query<(Entity, &BumpState), BumpTriggerFilter>,
+    actions: Res<InputActions>,
+    query: Query<Entity, BumpTriggerFilter>,
 ) {
-    for (entity, bump) in &query {
-        // Only trigger on fresh bumps — timer equals duration on the activation frame
-        let just_started = (bump.timer - config.bump_duration).abs() < f32::EPSILON;
-        if bump.active && just_started {
-            commands.entity(entity).insert(BumpVisual {
-                timer: config.bump_visual_duration,
-                duration: config.bump_visual_duration,
-                peak_offset: config.bump_visual_peak,
-            });
-        }
+    if !actions.active(GameAction::Bump) {
+        return;
+    }
+    for entity in &query {
+        commands.entity(entity).insert(BumpVisual {
+            timer: config.bump_visual_duration,
+            duration: config.bump_visual_duration,
+            peak_offset: config.bump_visual_peak,
+        });
     }
 }
 
-/// Animates the bump pop — eased upward then back down.
+/// Animates the bump pop — fast rise, slower settle.
 ///
-/// Uses a 0→1→0 envelope with the configured [`BUMP_EASE`] curve.
+/// Uses a piecewise two-phase curve with configurable easing per phase.
 /// Removes [`BumpVisual`] when the animation completes.
 pub fn animate_bump_visual(
     mut commands: Commands,
@@ -53,7 +50,7 @@ pub fn animate_bump_visual(
 
     for (entity, mut transform, mut visual) in &mut query {
         // Remove previous frame's offset
-        let prev_offset = bump_offset(&visual);
+        let prev_offset = bump_offset(&visual, &config);
         transform.translation.y -= prev_offset;
 
         visual.timer -= dt;
@@ -64,169 +61,203 @@ pub fn animate_bump_visual(
             commands.entity(entity).remove::<BumpVisual>();
         } else {
             // Apply new eased offset
-            let offset = bump_offset(&visual);
-            transform.translation.y += offset;
+            transform.translation.y += bump_offset(&visual, &config);
         }
     }
 }
 
 /// Calculates the current Y offset for the bump animation.
 ///
-/// Maps the timer to a 0→1→0 envelope: normalized progress goes 0→1
-/// over the animation lifetime, then a sine envelope turns it into
-/// 0→peak→0 so the breaker pops up and settles back down.
-fn bump_offset(visual: &BumpVisual) -> f32 {
+/// Piecewise two-phase curve: rise phase (0→peak) uses `bump_visual_rise_ease`,
+/// fall phase (peak→0) uses `bump_visual_fall_ease`. `bump_visual_peak_fraction`
+/// controls what fraction of the total duration is spent rising.
+fn bump_offset(visual: &BumpVisual, config: &BreakerConfig) -> f32 {
+    let peak_fraction = config.bump_visual_peak_fraction;
     // progress: 0.0 at start → 1.0 at end
     let progress = 1.0 - (visual.timer / visual.duration).clamp(0.0, 1.0);
 
-    // Ease the progress for a snappy rise
-    let eased = BUMP_EASE.sample_clamped(progress);
-
-    // Envelope: sin(π * eased) gives 0→1→0 shape over the full range
-    let envelope = (std::f32::consts::PI * eased).sin();
-
-    envelope * visual.peak_offset
+    if progress <= peak_fraction {
+        // Rise phase: 0→peak_offset
+        let rise_t = if peak_fraction > f32::EPSILON {
+            progress / peak_fraction
+        } else {
+            1.0
+        };
+        config.bump_visual_rise_ease.sample_clamped(rise_t) * visual.peak_offset
+    } else {
+        // Fall phase: peak_offset→0
+        let fall_t = if (1.0 - peak_fraction) > f32::EPSILON {
+            (progress - peak_fraction) / (1.0 - peak_fraction)
+        } else {
+            1.0
+        };
+        (1.0 - config.bump_visual_fall_ease.sample_clamped(fall_t)) * visual.peak_offset
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn bump_offset_starts_at_zero() {
+    fn test_bump_offset(timer_fraction: f32) -> f32 {
         let config = BreakerConfig::default();
         let visual = BumpVisual {
-            timer: config.bump_visual_duration,
+            timer: config.bump_visual_duration * timer_fraction,
             duration: config.bump_visual_duration,
             peak_offset: config.bump_visual_peak,
         };
-        assert!(bump_offset(&visual).abs() < f32::EPSILON);
+        bump_offset(&visual, &config)
+    }
+
+    #[test]
+    fn bump_offset_starts_at_zero() {
+        assert!(test_bump_offset(1.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn bump_offset_ends_at_zero() {
-        let config = BreakerConfig::default();
-        let visual = BumpVisual {
-            timer: 0.0,
-            duration: config.bump_visual_duration,
-            peak_offset: config.bump_visual_peak,
-        };
-        assert!(bump_offset(&visual).abs() < 1e-5);
+        assert!(test_bump_offset(0.0).abs() < 1e-5);
     }
 
     #[test]
     fn bump_offset_positive_mid_animation() {
-        let config = BreakerConfig::default();
-        let visual = BumpVisual {
-            timer: config.bump_visual_duration / 2.0,
-            duration: config.bump_visual_duration,
-            peak_offset: config.bump_visual_peak,
-        };
         assert!(
-            bump_offset(&visual) > 0.0,
+            test_bump_offset(0.5) > 0.0,
             "offset should be positive during animation"
         );
     }
 
     #[test]
-    fn trigger_inserts_bump_visual_on_fresh_bump() {
+    fn bump_offset_at_peak_fraction_equals_peak() {
+        let config = BreakerConfig::default();
+        let timer = config.bump_visual_duration * (1.0 - config.bump_visual_peak_fraction);
+        let visual = BumpVisual {
+            timer,
+            duration: config.bump_visual_duration,
+            peak_offset: config.bump_visual_peak,
+        };
+        let offset = bump_offset(&visual, &config);
+        assert!(
+            (offset - config.bump_visual_peak).abs() < 0.01,
+            "offset at peak_fraction should equal peak_offset, got {offset}"
+        );
+    }
+
+    #[test]
+    fn bump_offset_asymmetric_shape() {
+        let config = BreakerConfig::default();
+        let rise_mid = bump_offset(
+            &BumpVisual {
+                timer: config.bump_visual_duration * (1.0 - 0.15),
+                duration: config.bump_visual_duration,
+                peak_offset: config.bump_visual_peak,
+            },
+            &config,
+        );
+
+        let fall_mid = bump_offset(
+            &BumpVisual {
+                timer: config.bump_visual_duration * (1.0 - 0.65),
+                duration: config.bump_visual_duration,
+                peak_offset: config.bump_visual_peak,
+            },
+            &config,
+        );
+
+        // With CubicOut rise (fast start) and QuadraticIn fall (lingers near peak),
+        // both should be well above 50% of peak at their respective midpoints.
+        assert!(
+            rise_mid > config.bump_visual_peak * 0.5,
+            "CubicOut rise at 50% should be above 50% of peak, got {rise_mid}"
+        );
+        assert!(
+            fall_mid > config.bump_visual_peak * 0.5,
+            "QuadraticIn fall at 50% should still be above 50% of peak (lingering), got {fall_mid}"
+        );
+    }
+
+    use crate::breaker::components::BumpState;
+
+    fn trigger_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
-        let config = app.world().resource::<BreakerConfig>().clone();
-
-        let entity = app
-            .world_mut()
-            .spawn((
-                Breaker,
-                BumpState {
-                    active: true,
-                    timer: config.bump_duration, // just started
-                    cooldown: 0.0,
-                },
-            ))
-            .id();
-
+        app.init_resource::<InputActions>();
         app.add_systems(Update, trigger_bump_visual);
+        app
+    }
+
+    fn set_bump_action(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+    }
+
+    #[test]
+    fn trigger_inserts_bump_visual_on_bump_action() {
+        let mut app = trigger_test_app();
+
+        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+
+        set_bump_action(&mut app);
         app.update();
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_some(),
-            "BumpVisual should be inserted when bump just started"
+            "BumpVisual should be inserted when Bump action is active"
         );
     }
 
     #[test]
-    fn trigger_skips_mid_bump() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        let config = app.world().resource::<BreakerConfig>().clone();
+    fn trigger_skips_without_bump_action() {
+        let mut app = trigger_test_app();
+
+        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+
+        // No Bump action set
+        app.update();
+
+        assert!(
+            app.world().get::<BumpVisual>(entity).is_none(),
+            "BumpVisual should not be inserted without Bump action"
+        );
+    }
+
+    #[test]
+    fn trigger_fires_during_cooldown() {
+        let mut app = trigger_test_app();
 
         let entity = app
             .world_mut()
             .spawn((
                 Breaker,
                 BumpState {
-                    active: true,
-                    timer: config.bump_duration * 0.5, // mid-bump, not fresh
-                    cooldown: 0.0,
+                    cooldown: 0.5,
+                    ..Default::default()
                 },
             ))
             .id();
 
-        app.add_systems(Update, trigger_bump_visual);
+        set_bump_action(&mut app);
         app.update();
 
         assert!(
-            app.world().get::<BumpVisual>(entity).is_none(),
-            "BumpVisual should NOT be inserted mid-bump"
-        );
-    }
-
-    #[test]
-    fn trigger_skips_inactive_bump() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-
-        let entity = app
-            .world_mut()
-            .spawn((
-                Breaker,
-                BumpState {
-                    active: false,
-                    timer: 0.0,
-                    cooldown: 0.0,
-                },
-            ))
-            .id();
-
-        app.add_systems(Update, trigger_bump_visual);
-        app.update();
-
-        assert!(
-            app.world().get::<BumpVisual>(entity).is_none(),
-            "BumpVisual should not be inserted when bump is inactive"
+            app.world().get::<BumpVisual>(entity).is_some(),
+            "BumpVisual should fire even during cooldown"
         );
     }
 
     #[test]
     fn trigger_does_not_retrigger_while_animating() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
+        let mut app = trigger_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = app
             .world_mut()
             .spawn((
                 Breaker,
-                BumpState {
-                    active: true,
-                    timer: config.bump_duration,
-                    cooldown: 0.0,
-                },
+                BumpState::default(),
                 BumpVisual {
                     timer: 0.1,
                     duration: config.bump_visual_duration,
@@ -235,7 +266,7 @@ mod tests {
             ))
             .id();
 
-        app.add_systems(Update, trigger_bump_visual);
+        set_bump_action(&mut app);
         app.update();
 
         let visual = app

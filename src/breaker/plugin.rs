@@ -13,6 +13,7 @@ use crate::{
             trigger_bump_visual, update_breaker_state, update_bump,
         },
     },
+    physics::PhysicsSystems,
     shared::{GameState, PlayingState},
 };
 
@@ -35,20 +36,18 @@ impl Plugin for BreakerPlugin {
                 update_bump,
                 move_breaker.after(update_bump).in_set(BreakerSystems::Move),
                 update_breaker_state.after(move_breaker),
-                grade_bump.after(update_breaker_state),
+                grade_bump
+                    .after(update_bump)
+                    .after(PhysicsSystems::BreakerCollision),
                 perfect_bump_dash_cancel.after(grade_bump),
-                spawn_bump_grade_text.after(update_bump),
+                spawn_bump_grade_text.after(grade_bump),
+                trigger_bump_visual.after(update_bump),
             )
                 .run_if(in_state(PlayingState::Active)),
         );
         app.add_systems(
             Update,
-            (
-                trigger_bump_visual,
-                animate_bump_visual.after(trigger_bump_visual),
-                animate_tilt_visual,
-            )
-                .run_if(in_state(PlayingState::Active)),
+            (animate_bump_visual, animate_tilt_visual).run_if(in_state(PlayingState::Active)),
         );
     }
 }

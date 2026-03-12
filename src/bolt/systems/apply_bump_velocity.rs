@@ -28,7 +28,6 @@ pub fn apply_bump_velocity(
         let multiplier = match performed.grade {
             BumpGrade::Perfect => config.perfect_bump_multiplier,
             BumpGrade::Early | BumpGrade::Late => config.weak_bump_multiplier,
-            BumpGrade::None | BumpGrade::Timeout => config.no_bump_multiplier,
         };
 
         for mut bolt_velocity in &mut bolt_query {
@@ -245,13 +244,14 @@ mod tests {
     }
 
     #[test]
-    fn no_bump_preserves_velocity() {
+    fn weak_bump_reduces_velocity() {
         let mut app = test_app();
+        let config = BreakerConfig::default();
 
         app.world_mut().spawn((Bolt, BoltVelocity::new(0.0, 400.0)));
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
-            grade: BumpGrade::None,
+            grade: BumpGrade::Early,
         })));
 
         app.add_systems(Update, enqueue_from_resource.before(apply_bump_velocity));
@@ -263,9 +263,10 @@ mod tests {
             .iter(app.world())
             .next()
             .unwrap();
+        let expected = 400.0 * config.weak_bump_multiplier;
         assert!(
-            (vel.value.y - 400.0).abs() < 1.0,
-            "no bump should preserve velocity"
+            (vel.value.y - expected).abs() < 1.0,
+            "early bump should apply weak multiplier"
         );
     }
 }

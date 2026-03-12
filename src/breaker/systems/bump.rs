@@ -12,10 +12,33 @@ use crate::{
     physics::messages::BoltHitBreaker,
 };
 
-/// Updates bump state: handles input, ticks timers, cools down.
+/// Determines the forward-window grade based on remaining timer.
 ///
-/// Cooldown starts when the bump *deactivates* (not on activation), so rapid
-/// re-bumps aren't swallowed while the previous bump is still active.
+/// Called when the bolt hits while a forward bump is active.
+/// Timer counts down from `early_window + perfect_window`.
+pub fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
+    if timer <= perfect_window {
+        BumpGrade::Perfect
+    } else {
+        BumpGrade::Early
+    }
+}
+
+/// Determines the retroactive grade based on time elapsed since hit.
+///
+/// Called when the player presses bump after the bolt has already hit.
+pub fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> BumpGrade {
+    if time_since_hit <= perfect_window {
+        BumpGrade::Perfect
+    } else {
+        BumpGrade::Late
+    }
+}
+
+/// Updates bump state: handles input, ticks timers, resolves retroactive bumps.
+///
+/// Forward window expires silently — no message, no cooldown.
+/// Retroactive bumps grade and write immediately on press.
 pub fn update_bump(
     actions: Res<InputActions>,
     config: Res<BreakerConfig>,
@@ -31,44 +54,66 @@ pub fn update_bump(
             bump.cooldown = (bump.cooldown - dt).max(0.0);
         }
 
-        // Tick active timer
+        // Tick post-hit timer
+        if bump.post_hit_timer > 0.0 {
+            bump.post_hit_timer = (bump.post_hit_timer - dt).max(0.0);
+        }
+
+        // Tick active timer — expire silently
         if bump.active {
             bump.timer -= dt;
             if bump.timer <= 0.0 {
                 bump.active = false;
                 bump.timer = 0.0;
-                bump.cooldown = config.bump_cooldown;
-                writer.write(BumpPerformed {
-                    grade: BumpGrade::Timeout,
-                });
             }
         }
 
-        // Bump input via InputActions
-        if actions.active(GameAction::Bump) && !bump.active && bump.cooldown <= 0.0 {
-            bump.active = true;
-            bump.timer = config.bump_duration;
+        // Bump input
+        if actions.active(GameAction::Bump) && bump.cooldown <= 0.0 {
+            if bump.post_hit_timer > 0.0 {
+                // Retroactive path: bolt already hit, player pressing after
+                let time_since_hit =
+                    (config.perfect_window + config.late_window) - bump.post_hit_timer;
+                let grade = retroactive_grade(time_since_hit, config.perfect_window);
+                writer.write(BumpPerformed { grade });
+                bump.cooldown = config.bump_cooldown;
+                bump.post_hit_timer = 0.0;
+                bump.active = false;
+            } else if !bump.active {
+                // Forward path: no recent hit, open the window
+                bump.active = true;
+                bump.timer = config.early_window + config.perfect_window;
+            }
         }
     }
 }
 
 /// Grades bump timing on bolt-breaker contact and sends [`BumpPerformed`].
 ///
-/// Consumes [`BoltHitBreaker`] messages to know when a collision occurred.
-/// The bolt domain applies the velocity multiplier via a separate system.
+/// Must run after `PhysicsSystems::BreakerCollision` to ensure messages are available.
+/// If a forward bump is active, grades immediately. Otherwise, sets `post_hit_timer`
+/// for the retroactive path in `update_bump`.
 pub fn grade_bump(
     config: Res<BreakerConfig>,
-    bump_query: Query<&BumpState, With<Breaker>>,
+    mut bump_query: Query<&mut BumpState, With<Breaker>>,
     mut hit_reader: MessageReader<BoltHitBreaker>,
     mut writer: MessageWriter<BumpPerformed>,
 ) {
-    let Ok(bump) = bump_query.single() else {
+    let Ok(mut bump) = bump_query.single_mut() else {
         return;
     };
 
     for _hit in hit_reader.read() {
-        let grade = calculate_bump_grade(bump, &config);
-        writer.write(BumpPerformed { grade });
+        if bump.active {
+            // Forward path: grade based on timer position
+            let grade = forward_grade(bump.timer, config.perfect_window);
+            writer.write(BumpPerformed { grade });
+            bump.active = false;
+            bump.cooldown = config.bump_cooldown;
+        } else {
+            // No active bump — open retroactive window for update_bump
+            bump.post_hit_timer = config.perfect_window + config.late_window;
+        }
     }
 }
 
@@ -95,85 +140,308 @@ pub fn perfect_bump_dash_cancel(
     }
 }
 
-/// Determines the bump grade based on bump state timing.
-fn calculate_bump_grade(bump: &BumpState, config: &BreakerConfig) -> BumpGrade {
-    if !bump.active {
-        return BumpGrade::None;
-    }
-
-    // Time elapsed since bump was activated
-    let elapsed = config.bump_duration - bump.timer;
-
-    // Zones: Early → Perfect → Late
-    // Early: [0, early_window - perfect_window]
-    // Perfect: (early_window - perfect_window, early_window + perfect_window]
-    // Late: (early_window + perfect_window, bump_duration]
-    if elapsed <= config.early_bump_window - config.perfect_bump_window {
-        BumpGrade::Early
-    } else if elapsed <= config.early_bump_window + config.perfect_bump_window {
-        BumpGrade::Perfect
-    } else {
-        BumpGrade::Late
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // ── Pure grade helper tests ──────────────────────────────────────
+
     #[test]
-    fn no_bump_when_inactive() {
-        let bump = BumpState {
-            active: false,
-            timer: 0.0,
-            cooldown: 0.0,
-        };
-        let config = BreakerConfig::default();
-        assert_eq!(calculate_bump_grade(&bump, &config), BumpGrade::None);
+    fn forward_just_activated_is_early() {
+        // Timer at max (just pressed) — well above perfect_window
+        let grade = forward_grade(0.20, 0.05);
+        assert_eq!(grade, BumpGrade::Early);
     }
 
     #[test]
-    fn early_bump_grade() {
-        let config = BreakerConfig::default();
-        let bump = BumpState {
-            active: true,
-            timer: config.bump_duration, // just started
-            cooldown: 0.0,
-        };
-        assert_eq!(calculate_bump_grade(&bump, &config), BumpGrade::Early);
+    fn forward_at_perfect_boundary_is_perfect() {
+        let grade = forward_grade(0.05, 0.05);
+        assert_eq!(grade, BumpGrade::Perfect);
     }
 
     #[test]
-    fn perfect_bump_grade() {
-        let config = BreakerConfig::default();
-        // Timer should be at the sweet spot
-        let elapsed = config.early_bump_window;
-        let bump = BumpState {
-            active: true,
-            timer: config.bump_duration - elapsed,
-            cooldown: 0.0,
-        };
-        assert_eq!(calculate_bump_grade(&bump, &config), BumpGrade::Perfect);
+    fn forward_within_perfect_zone_is_perfect() {
+        let grade = forward_grade(0.02, 0.05);
+        assert_eq!(grade, BumpGrade::Perfect);
     }
 
     #[test]
-    fn late_bump_grade() {
-        let config = BreakerConfig::default();
-        // Timer near the end — elapsed well past the perfect window
-        let bump = BumpState {
-            active: true,
-            timer: 0.01,
-            cooldown: 0.0,
-        };
-        assert_eq!(calculate_bump_grade(&bump, &config), BumpGrade::Late);
+    fn forward_just_outside_perfect_is_early() {
+        let grade = forward_grade(0.05 + 0.001, 0.05);
+        assert_eq!(grade, BumpGrade::Early);
     }
 
     #[test]
-    fn perfect_multiplier_exceeds_others() {
-        let config = BreakerConfig::default();
-        assert!(config.perfect_bump_multiplier > config.weak_bump_multiplier);
-        assert!(config.perfect_bump_multiplier > config.no_bump_multiplier);
+    fn retroactive_immediate_is_perfect() {
+        let grade = retroactive_grade(0.0, 0.05);
+        assert_eq!(grade, BumpGrade::Perfect);
     }
+
+    #[test]
+    fn retroactive_at_boundary_is_perfect() {
+        let grade = retroactive_grade(0.05, 0.05);
+        assert_eq!(grade, BumpGrade::Perfect);
+    }
+
+    #[test]
+    fn retroactive_just_past_boundary_is_late() {
+        let grade = retroactive_grade(0.05 + 0.001, 0.05);
+        assert_eq!(grade, BumpGrade::Late);
+    }
+
+    // ── update_bump integration tests ────────────────────────────────
+
+    #[derive(Resource)]
+    struct TestInputActive(bool);
+
+    fn set_bump_action(mut actions: ResMut<InputActions>, active: Res<TestInputActive>) {
+        if active.0 {
+            actions.0.push(GameAction::Bump);
+        }
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedBumps(Vec<BumpPerformed>);
+
+    fn capture_bumps(
+        mut reader: MessageReader<BumpPerformed>,
+        mut captured: ResMut<CapturedBumps>,
+    ) {
+        for msg in reader.read() {
+            captured.0.push(msg.clone());
+        }
+    }
+
+    fn update_bump_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BreakerConfig>();
+        app.init_resource::<InputActions>();
+        app.add_message::<BumpPerformed>();
+        app.init_resource::<CapturedBumps>();
+        app.insert_resource(TestInputActive(false));
+        app.add_systems(
+            Update,
+            (
+                set_bump_action.before(update_bump),
+                update_bump,
+                capture_bumps.after(update_bump),
+            ),
+        );
+        app
+    }
+
+    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(timestep);
+        app.update();
+    }
+
+    #[test]
+    fn input_opens_forward_window() {
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(bump.active);
+        assert!(
+            (bump.timer - (config.early_window + config.perfect_window)).abs() < 0.02,
+            "timer should be near early_window + perfect_window, got {}",
+            bump.timer
+        );
+    }
+
+    #[test]
+    fn input_on_cooldown_ignored() {
+        let mut app = update_bump_test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    cooldown: 0.5,
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(!bump.active, "bump should not activate while on cooldown");
+    }
+
+    #[test]
+    fn input_while_active_ignored() {
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    active: true,
+                    timer: config.early_window, // mid-window
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        let timer_before = config.early_window;
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(bump.active, "should still be active");
+        // Timer should have ticked down, not been reset
+        assert!(
+            bump.timer < timer_before,
+            "timer should tick down, not reset"
+        );
+    }
+
+    #[test]
+    fn forward_window_expires_silently_no_message_no_cooldown() {
+        let mut app = update_bump_test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    active: true,
+                    timer: 0.001, // about to expire
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.insert_resource(TestInputActive(false));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(!bump.active, "should have expired");
+        assert!(
+            bump.cooldown <= 0.0,
+            "no cooldown on silent expiry, got {}",
+            bump.cooldown
+        );
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert!(
+            captured.0.is_empty(),
+            "no message should be sent on silent expiry"
+        );
+    }
+
+    #[test]
+    fn retroactive_perfect_grades_and_sets_cooldown() {
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        // post_hit_timer at max — just hit, pressing immediately
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    post_hit_timer: config.perfect_window + config.late_window,
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(bump.cooldown > 0.0, "should set cooldown");
+        assert!(bump.post_hit_timer <= 0.0, "should clear post_hit_timer");
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].grade, BumpGrade::Perfect);
+    }
+
+    #[test]
+    fn retroactive_late_grades_correctly() {
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        // post_hit_timer low — hit happened a while ago, pressing late
+        let remaining = config.late_window * 0.5; // some time left but past perfect
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                post_hit_timer: remaining,
+                ..Default::default()
+            },
+        ));
+
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].grade, BumpGrade::Late);
+    }
+
+    #[test]
+    fn post_hit_timer_ticks_down() {
+        let mut app = update_bump_test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    post_hit_timer: 0.1,
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.insert_resource(TestInputActive(false));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(bump.post_hit_timer < 0.1, "post_hit_timer should tick down");
+    }
+
+    #[test]
+    fn cooldown_ticks_down() {
+        let mut app = update_bump_test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    cooldown: 0.1,
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.insert_resource(TestInputActive(false));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(bump.cooldown < 0.1, "cooldown should tick down");
+    }
+
+    // ── grade_bump integration tests ─────────────────────────────────
 
     #[derive(Resource)]
     struct TestHitMessage(Option<BoltHitBreaker>);
@@ -184,58 +452,123 @@ mod tests {
         }
     }
 
-    #[derive(Resource, Default)]
-    struct CapturedBump(Option<BumpPerformed>);
-
-    fn capture_bump(mut reader: MessageReader<BumpPerformed>, mut captured: ResMut<CapturedBump>) {
-        for msg in reader.read() {
-            captured.0 = Some(msg.clone());
-        }
-    }
-
-    #[test]
-    fn grade_bump_sends_message_on_hit() {
+    fn grade_bump_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
         app.add_message::<BoltHitBreaker>();
         app.add_message::<BumpPerformed>();
+        app.init_resource::<CapturedBumps>();
+        app.insert_resource(TestHitMessage(None));
+        app.add_systems(
+            Update,
+            (
+                enqueue_hit.before(grade_bump),
+                grade_bump,
+                capture_bumps.after(grade_bump),
+            ),
+        );
+        app
+    }
 
+    #[test]
+    fn bolt_hit_with_active_forward_perfect() {
+        let mut app = grade_bump_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
-        // Spawn breaker with active bump at the perfect timing
-        let elapsed = config.early_bump_window;
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    active: true,
+                    timer: config.perfect_window * 0.5, // in the perfect zone
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        app.update();
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(!bump.active, "should deactivate");
+        assert!(bump.cooldown > 0.0, "should set cooldown");
+        assert!(bump.post_hit_timer <= 0.0, "should clear post_hit_timer");
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].grade, BumpGrade::Perfect);
+    }
+
+    #[test]
+    fn bolt_hit_with_active_forward_early() {
+        let mut app = grade_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
         app.world_mut().spawn((
             Breaker,
             BumpState {
                 active: true,
-                timer: config.bump_duration - elapsed,
-                cooldown: 0.0,
+                timer: config.early_window + config.perfect_window, // just started
+                ..Default::default()
             },
         ));
 
         app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
             bolt: Entity::PLACEHOLDER,
         })));
-        app.init_resource::<CapturedBump>();
-
-        app.add_systems(
-            Update,
-            (
-                enqueue_hit.before(grade_bump),
-                grade_bump,
-                capture_bump.after(grade_bump),
-            ),
-        );
         app.update();
 
-        let captured = app.world().resource::<CapturedBump>();
-        let msg = captured
-            .0
-            .as_ref()
-            .expect("BumpPerformed should have been sent");
-        assert_eq!(msg.grade, BumpGrade::Perfect);
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].grade, BumpGrade::Early);
     }
+
+    #[test]
+    fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
+        let mut app = grade_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        app.update();
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        let expected = config.perfect_window + config.late_window;
+        assert!(
+            (bump.post_hit_timer - expected).abs() < f32::EPSILON,
+            "post_hit_timer should be set to perfect + late window, got {}",
+            bump.post_hit_timer
+        );
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert!(captured.0.is_empty(), "no message when bump not active");
+    }
+
+    #[test]
+    fn no_hit_no_change() {
+        let mut app = grade_bump_test_app();
+
+        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+
+        // No hit message
+        app.update();
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(!bump.active);
+        assert!(bump.post_hit_timer <= 0.0);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert!(captured.0.is_empty());
+    }
+
+    // ── perfect_bump_dash_cancel tests ───────────────────────────────
 
     #[derive(Resource)]
     struct TestBumpMessage(Option<BumpPerformed>);
@@ -287,18 +620,6 @@ mod tests {
         assert!(
             (timer.remaining - config.settle_duration).abs() < f32::EPSILON,
             "settle timer should be set to config.settle_duration"
-        );
-    }
-
-    #[test]
-    fn bump_zones_cover_full_duration() {
-        let config = BreakerConfig::default();
-        let early_end = config.early_bump_window - config.perfect_bump_window;
-        let perfect_end = config.early_bump_window + config.perfect_bump_window;
-        assert!(early_end > 0.0, "early zone should have positive duration");
-        assert!(
-            perfect_end < config.bump_duration,
-            "perfect zone should end before bump expires, leaving room for late"
         );
     }
 }

@@ -1,6 +1,9 @@
 //! Dash, brake, and settle state machine systems.
 
-use bevy::prelude::*;
+use bevy::{
+    math::curve::{Curve, easing::EaseFunction},
+    prelude::*,
+};
 
 use crate::{
     breaker::{
@@ -66,14 +69,15 @@ fn handle_idle_or_settling(
     timer: &mut BreakerStateTimer,
 ) {
     if *state == BreakerState::Settling {
-        // Tick settle timer, return tilt toward zero
+        // Tick settle timer, return tilt toward zero with easing
         timer.remaining -= dt;
         let settle_progress = if config.settle_duration > f32::EPSILON {
             1.0 - (timer.remaining / config.settle_duration).clamp(0.0, 1.0)
         } else {
             1.0
         };
-        tilt.angle = tilt.settle_start_angle * (1.0 - settle_progress);
+        let eased = config.settle_tilt_ease.sample_clamped(settle_progress);
+        tilt.angle = tilt.settle_start_angle * (1.0 - eased);
 
         if timer.remaining <= 0.0 {
             *state = BreakerState::Idle;
@@ -130,7 +134,7 @@ fn handle_dashing(
     }
 }
 
-/// Braking: rapidly decelerate, then transition to Settling.
+/// Braking: rapidly decelerate with eased speed curve, then transition to Settling.
 fn handle_braking(
     config: &BreakerConfig,
     dt: f32,
@@ -138,12 +142,20 @@ fn handle_braking(
     velocity: &mut BreakerVelocity,
     tilt: &mut BreakerTilt,
 ) {
-    let brake_decel = config.deceleration * config.brake_decel_multiplier;
+    let base_decel = config.deceleration * config.brake_decel_multiplier;
+    let reference_speed = config.max_speed * config.dash_speed_multiplier;
+    let effective_decel = eased_decel(
+        base_decel,
+        velocity.x.abs(),
+        reference_speed,
+        config.decel_ease,
+        config.decel_ease_strength,
+    );
 
     if velocity.x > f32::EPSILON {
-        velocity.x = brake_decel.mul_add(-dt, velocity.x).max(0.0);
+        velocity.x = effective_decel.mul_add(-dt, velocity.x).max(0.0);
     } else if velocity.x < -f32::EPSILON {
-        velocity.x = brake_decel.mul_add(dt, velocity.x).min(0.0);
+        velocity.x = effective_decel.mul_add(dt, velocity.x).min(0.0);
     }
 
     // Speed near zero → transition to Settling
@@ -152,6 +164,25 @@ fn handle_braking(
         tilt.settle_start_angle = tilt.angle;
         *state = BreakerState::Settling;
     }
+}
+
+/// Computes effective deceleration scaled by an easing curve over speed ratio.
+///
+/// `effective_decel = base_decel * (1.0 + strength * ease(speed / reference_speed))`
+pub fn eased_decel(
+    base_decel: f32,
+    speed: f32,
+    reference_speed: f32,
+    ease: EaseFunction,
+    strength: f32,
+) -> f32 {
+    let speed_ratio = if reference_speed > f32::EPSILON {
+        (speed / reference_speed).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let factor = ease.sample_clamped(speed_ratio);
+    base_decel * strength.mul_add(factor, 1.0)
 }
 
 #[cfg(test)]
@@ -379,6 +410,42 @@ mod tests {
     }
 
     #[test]
+    fn settling_tilt_eased_not_linear() {
+        let mut app = test_app();
+        let entity = spawn_test_breaker(&mut app);
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let start_angle = 0.44;
+        *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Settling;
+        {
+            let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
+            tilt.angle = start_angle;
+            tilt.settle_start_angle = start_angle;
+        }
+        app.world_mut()
+            .get_mut::<BreakerStateTimer>(entity)
+            .unwrap()
+            .remaining = config.settle_duration;
+
+        // Advance to ~50% of settle duration
+        let dt = std::time::Duration::from_secs_f64(f64::from(config.settle_duration) * 0.5);
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .set_timestep(dt);
+        app.world_mut().resource_mut::<Time<Fixed>>().advance_by(dt);
+        app.update();
+
+        let angle = app.world().get::<BreakerTilt>(entity).unwrap().angle;
+        // With CubicOut at 50% progress, result is 0.875 (much further than linear 0.5)
+        // So angle should be well below 50% of start_angle (0.22)
+        let linear_50pct = start_angle * 0.5;
+        assert!(
+            angle < linear_50pct,
+            "CubicOut settle at 50% progress should be well below linear 50% ({linear_50pct}), got {angle}"
+        );
+    }
+
+    #[test]
     fn braking_transitions_to_settling() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
@@ -393,5 +460,49 @@ mod tests {
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Settling);
+    }
+
+    // ── eased_decel unit tests ────────────────────────────────────────
+
+    #[test]
+    fn eased_decel_stronger_at_high_speed() {
+        use bevy::math::curve::easing::EaseFunction;
+
+        let base = 1000.0;
+        let reference = 500.0;
+        let ease = EaseFunction::QuadraticIn;
+        let strength = 1.0;
+
+        let decel_low = eased_decel(base, 50.0, reference, ease, strength);
+        let decel_high = eased_decel(base, 450.0, reference, ease, strength);
+
+        assert!(
+            decel_high > decel_low,
+            "decel at high speed ({decel_high}) should exceed decel at low speed ({decel_low})"
+        );
+    }
+
+    #[test]
+    fn eased_decel_reaches_zero() {
+        use bevy::math::curve::easing::EaseFunction;
+
+        // At zero speed, QuadraticIn(0) = 0, so effective = base * (1 + 1 * 0) = base
+        let decel = eased_decel(1000.0, 0.0, 500.0, EaseFunction::QuadraticIn, 1.0);
+        assert!(
+            (decel - 1000.0).abs() < f32::EPSILON,
+            "at zero speed, decel should equal base, got {decel}"
+        );
+    }
+
+    #[test]
+    fn zero_strength_matches_constant_decel() {
+        use bevy::math::curve::easing::EaseFunction;
+
+        let base = 1000.0;
+        let decel = eased_decel(base, 400.0, 500.0, EaseFunction::QuadraticIn, 0.0);
+        assert!(
+            (decel - base).abs() < f32::EPSILON,
+            "zero strength should give constant base decel, got {decel}"
+        );
     }
 }

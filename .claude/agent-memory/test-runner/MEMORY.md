@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-12, main branch)
-- Format: clean
-- Clippy: clean (no warnings or errors)
-- Tests: 184 passed, 0 failed, 0 ignored
+**Last Validation: PASS** (2026-03-12, feature/bump-timing-rework)
+- Format: PASS (1 file auto-formatted: bump_visual.rs)
+- Clippy: PASS (no warnings or errors)
+- Tests: 200 passed, 0 failed, 0 ignored
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -30,7 +30,12 @@
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
 
 ## Validation History
-- **2026-03-12, main (current)**: PASS
+- **2026-03-12, feature/bump-timing-rework (current)**: PASS
+  - Format: PASS (1 file auto-formatted: bump_visual.rs)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: 200 passed, 0 failed, 0 ignored
+  - Change: multi-line spawn chain condensed to single line per rustfmt
+- **2026-03-12, main**: PASS
   - Format: PASS (1 file auto-formatted: tilt_visual.rs)
   - Clippy: PASS (no warnings or errors)
   - Tests: 184 passed, 0 failed, 0 ignored

@@ -5,16 +5,12 @@ use bevy::prelude::*;
 /// Grade of a bump timing relative to bolt contact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BumpGrade {
-    /// No bump attempted.
-    None,
-    /// Bump pressed too early.
+    /// Bump pressed before the perfect zone.
     Early,
     /// Bump timed within the perfect window.
     Perfect,
-    /// Bump pressed too late.
+    /// Bump pressed after the bolt hit.
     Late,
-    /// Bump window expired without bolt contact.
-    Timeout,
 }
 
 /// Sent when the breaker performs a bump.
@@ -33,21 +29,9 @@ mod tests {
 
     #[test]
     fn bump_grade_exhaustive_match() {
-        // Ensures all BumpGrade variants are covered — if a new variant is
-        // added, this match will fail to compile until updated.
-        for grade in [
-            BumpGrade::None,
-            BumpGrade::Early,
-            BumpGrade::Perfect,
-            BumpGrade::Late,
-            BumpGrade::Timeout,
-        ] {
+        for grade in [BumpGrade::Early, BumpGrade::Perfect, BumpGrade::Late] {
             match grade {
-                BumpGrade::None
-                | BumpGrade::Early
-                | BumpGrade::Perfect
-                | BumpGrade::Late
-                | BumpGrade::Timeout => {}
+                BumpGrade::Early | BumpGrade::Perfect | BumpGrade::Late => {}
             }
         }
     }

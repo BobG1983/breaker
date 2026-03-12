@@ -130,6 +130,17 @@ lto = "thin"
 - Clippy warning: `u32 as f32` cast triggers `cast_precision_loss` — use `Into::<f32>::into(progress)` instead
 - Sources: docs.rs/bevy_asset_loader/0.25.0, docs.rs/iyes_progress/0.16.0, github.com/IyesGames/iyes_progress v0.16.0 full.rs example
 
+## Easing API (verified v0.18.1)
+
+See [easing_api.md](easing_api.md) for full details. Key facts:
+- `EaseFunction`: 39 variants, implements `Curve<f32>` directly — `.sample_clamped(t)` works on it
+- Parametric variants: `Steps(usize, JumpAt)` and `Elastic(f32)`
+- Derives `Serialize + Deserialize` — RON-serializable
+- `EasingCurve::new(start, end, ease_fn)` — full typed animation curve for any `T: Ease + Clone`
+- `Ease` implemented for: all VectorSpace types (Vec2, Vec3, f32), Rot2, Quat, Dir2/3, Isometry2d/3d, tuples
+- No `Power(f32)` variant — use `.map(|v| v.powf(n))` on a `Curve<f32>` instead
+- Curve composition: `.chain()`, `.zip()`, `.map()`, `.reparametrize()`, `.repeat()`, `.ping_pong()` on `CurveExt`
+
 ## Bloom + Tonemapping (verified v0.18.0 from official bloom_2d.rs example)
 
 - Bloom canonical import: `bevy::post_process::bloom::Bloom` (NOT bevy::core_pipeline)
