@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-12, feature/grade-dependent-bump-cooldown)
-- Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
-- Clippy: 1 warning (missing_const_for_fn in cooldown_for_grade)
-- Tests: 208 passed, 0 failed, 0 ignored
+**Last Validation: PASS** (2026-03-12, feature/extract-entity-components)
+- Format: PASS (no files needed formatting)
+- Clippy: PASS (no warnings or errors)
+- Tests: PASS (219 passed, 0 failed, 0 ignored)
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -30,7 +30,13 @@
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
 
 ## Validation History
-- **2026-03-12, feature/grade-dependent-bump-cooldown (current)**: PASS
+- **2026-03-12, feature/extract-entity-components (current)**: PASS
+  - Format: PASS (no files needed formatting)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: PASS (219 passed, 0 failed, 0 ignored)
+  - Change: Refactored breaker/bolt components into separate modules, deleted src/breaker/components.rs, added src/breaker/components/ and init_breaker_params.rs
+  - Status: Branch is clean and ready to review or merge
+- **2026-03-12, feature/grade-dependent-bump-cooldown**: PASS
   - Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
   - Clippy: 1 warning (missing_const_for_fn in cooldown_for_grade)
   - Tests: 208 passed, 0 failed, 0 ignored

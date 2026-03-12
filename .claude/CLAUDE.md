@@ -18,7 +18,7 @@ Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast
 
 ## Architecture
 
-**Plugin-per-domain** with message-driven decoupling. Each domain plugin (breaker, bolt, cells, upgrades, run, physics, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. See `docs/architecture/` for full details, file tree, message table, and patterns.
+**Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, upgrades, run, physics, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. See `docs/architecture/` for full details, file tree, message table, and patterns.
 
 ## Terminology
 
