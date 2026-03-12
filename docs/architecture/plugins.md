@@ -12,12 +12,13 @@ src/
 ├── game.rs           # Game — PluginGroup that wires together all domain plugins
 ├── shared.rs         # Passive types: GameState, PlayingState, cleanup markers, constants
 ├── screen/           # Screen state registration, transitions, cleanup systems
+├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── upgrades/         # Amps, Augments, Overclocks system
 ├── run/              # Run state, seeded node sequencing, timer, difficulty scaling
-├── physics/          # Quadtree, collision detection, collision response
+├── physics/          # CCD collision detection, collision response, wall entities
 ├── audio/            # Event-driven audio, adaptive intensity
 ├── ui/               # HUD, menus, upgrade selection screen
 └── debug/            # bevy_egui debug console, overlays

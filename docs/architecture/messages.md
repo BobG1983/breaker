@@ -6,11 +6,12 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 
 | Message | Sent By | Consumed By |
 |---------|---------|-------------|
-| `BoltHitBreaker` | physics | audio, upgrades, UI |
+| `BoltHitBreaker` | physics | breaker (bump grading), audio, upgrades, UI |
 | `BoltHitCell` | physics | upgrades, cells, audio |
 | `CellDestroyed` | cells | run (progress tracking), upgrades (overclock triggers), audio |
-| `BoltLost` | physics | breaker (applies penalty per breaker trait) |
+| `BoltLost` | physics | bolt (lost text feedback), breaker (applies penalty per breaker trait) |
 | `NodeCleared` | run | state machine, UI |
 | `UpgradeSelected` | UI | upgrades (apply effects) |
-| `BumpPerformed { grade }` | breaker | audio, upgrades (overclock triggers) |
+| `BumpPerformed { grade }` | breaker | bolt (velocity multiplier), audio, upgrades (overclock triggers) |
+| `BumpWhiffed` | breaker | UI (whiff text feedback) |
 | `TimerExpired` | run | state machine |

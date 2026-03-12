@@ -75,7 +75,7 @@ For a 2D game of this scope, total asset size is small. Simplicity wins.
 
 In-game debug panel built on `bevy_egui` with:
 
-- **Overlay toggles**: hitboxes, velocity vectors, quadtree visualization, state labels, FPS
+- **Overlay toggles**: hitboxes, velocity vectors, state labels, FPS
 - **Live value tweaking**: physics constants, timing windows, speed values — immediate feedback without recompile
 - **State inspection**: current game state, active upgrades, breaker state machine, bolt velocity
 - **Registry browser**: view loaded Amp/Augment/Overclock definitions

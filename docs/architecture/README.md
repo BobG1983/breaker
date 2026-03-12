@@ -18,6 +18,7 @@ Technical decisions for how the game is built. See `../DESIGN.md` for *why* (gam
 | [messages.md](messages.md) | Inter-domain communication via Bevy messages |
 | [ordering.md](ordering.md) | System ordering, SystemSet conventions, ordering chain |
 | [state.md](state.md) | GameState, PlayingState, sub-states, run_if gating |
-| [physics.md](physics.md) | FixedUpdate physics, quadtree, bolt reflection model |
+| [physics.md](physics.md) | FixedUpdate physics, CCD collision, bolt reflection model |
 | [content.md](content.md) | Content identity (enum behaviors + RON instances), upgrade application, RON validation |
+| [data.md](data.md) | Data model — components vs resources, config pipeline, ownership rules, dimension conventions |
 | [standards.md](standards.md) | Code standards, error handling, testing (TDD), entity cleanup, asset loading, debug console |

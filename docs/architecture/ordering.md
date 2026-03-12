@@ -46,6 +46,7 @@ BreakerSystems::Move
         <- bolt_breaker_collision .after(bolt_cell_collision)
           PhysicsSystems::BreakerCollision
             <- apply_bump_velocity .after(PhysicsSystems::BreakerCollision)
+            <- grade_bump .after(PhysicsSystems::BreakerCollision)
             <- bolt_lost .after(bolt_breaker_collision)
 ```
 
