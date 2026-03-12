@@ -162,87 +162,23 @@ See [easing_api.md](easing_api.md) for full details. Key facts:
 
 ## Mesh2d + MeshMaterial2d + ColorMaterial (verified v0.18.1)
 
-- `Mesh2d` canonical path: `bevy_mesh::Mesh2d` — re-exported via `bevy::prelude::*`
-  - Tuple struct: `Mesh2d(pub Handle<Mesh>)`
-  - Spawn: `Mesh2d(meshes.add(Circle::new(50.0)))`
-- `MeshMaterial2d<M>` canonical path: `bevy_sprite_render::MeshMaterial2d` — re-exported via `bevy::prelude::*`
-  - Tuple struct: `MeshMaterial2d<M: Material2d>(pub Handle<M>)`
-  - Spawn: `MeshMaterial2d(materials.add(ColorMaterial::from_color(RED)))`
-- `ColorMaterial` canonical path: `bevy_sprite_render::ColorMaterial` — re-exported via `bevy::prelude::*`
-  - Fields: `color: Color`, `alpha_mode: AlphaMode2d`, `uv_transform: Affine2`, `texture: Option<Handle<Image>>`
-  - Constructor shortcut: `ColorMaterial::from_color(color)`
-  - HDR support: `color` field is `bevy::color::Color`; use `Color::srgb(7.5, 0.0, 7.5)` for HDR values > 1.0
-    (Color::srgb accepts f32 values > 1.0 — no clamping at assignment; used this way in official bloom_2d example)
-  - All three types are in `bevy::prelude` — `use bevy::prelude::*` is sufficient
-- Spawn pattern for colored 2D circle with optional bloom:
-  ```rust
-  use bevy::prelude::*;
-  commands.spawn((
-      Mesh2d(meshes.add(Circle::new(50.0))),
-      MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::srgb(7.5, 0.0, 7.5)))),
-      Transform::from_xyz(0.0, 0.0, 0.0),
-  ));
-  ```
-
-## Primitive Shapes (verified v0.18.1)
-
-- `Circle` in `bevy::prelude` (via bevy_math::primitives)
-  - Field: `radius: f32`
-  - Constructor: `Circle::new(radius: f32) -> Circle` (const fn)
-  - Default: `Circle::default()` — radius 0.5
-- `Rectangle` in `bevy::prelude` (via bevy_math::primitives)
-  - Field: `half_size: Vec2`
-  - Constructor: `Rectangle::new(width: f32, height: f32) -> Rectangle`
-  - Stores half-sizes internally
+All three in `bevy::prelude`. Spawn: `(Mesh2d(meshes.add(Circle::new(r))), MeshMaterial2d(materials.add(ColorMaterial::from_color(color))), Transform::from_xyz(x,y,z))`.
+- `ColorMaterial::from_color(color)` — shortcut; `color` field accepts HDR values >1.0 via `Color::srgb(7.5, 0.0, 7.5)`
+- `Circle::new(radius)` and `Rectangle::new(width, height)` — both in `bevy::prelude`; Rectangle stores half-sizes internally
 
 ## Testing Time<Fixed> / FixedUpdate Systems (verified v0.18.0 source)
 
-Two verified approaches — both confirmed from Bevy source tests:
-
-### Approach 1: Run system in Update schedule, inject delta via advance_by (recommended)
-Register system in `Update` in tests; call `app.world_mut().resource_mut::<Time<Fixed>>().advance_by(duration)` before `app.update()`. This directly sets `delta()` without touching overstep or the FixedUpdate scheduler.
-
-```rust
-app.world_mut()
-    .resource_mut::<Time<Fixed>>()
-    .advance_by(Duration::from_secs_f32(1.0 / 64.0));
-app.update();
-```
-
-### Approach 2: Force FixedUpdate to run via accumulate_overstep (Bevy-documented test helper)
-`accumulate_overstep` is explicitly documented as "provided for use in tests". Call it with at least one full timestep's worth of time, then call `app.update()` — the scheduler will see enough overstep and run FixedUpdate.
-
-```rust
-// Set a known timestep first (optional but makes assertions deterministic)
-app.world_mut()
-    .resource_mut::<Time<Fixed>>()
-    .set_timestep_hz(64.0);
-
-// Accumulate enough overstep to trigger one FixedUpdate run
-let timestep = app.world().resource::<Time<Fixed>>().timestep();
-app.world_mut()
-    .resource_mut::<Time<Fixed>>()
-    .accumulate_overstep(timestep);
-app.update(); // FixedUpdate will now run once
-```
-
-### Key facts
-- `advance_by(&mut self, delta: Duration)` — sets delta and elapsed directly on the clock
-- `accumulate_overstep(&mut self, delta: Duration)` — documented test helper; scheduler reads this to decide how many FixedUpdate ticks to run
-- `expend(&mut self) -> bool` — PRIVATE in user code; called internally by scheduler per tick
-- Default timestep: 64 Hz (15625 microseconds) — `Time::<Fixed>::DEFAULT_TIMESTEP`
-- `delta()` on `Time<Fixed>` always equals `timestep()` when a tick fires (not variable)
-- Both `Time<Fixed>` and `Time<Virtual>` must exist in the world; `MinimalPlugins` includes `TimePlugin` which inserts all three `Time<T>` variants
-- Sources: `crates/bevy_time/src/fixed.rs` v0.18.0, `crates/bevy_app/src/main_schedule.rs` v0.18.0
+See [fixed_update_testing.md](fixed_update_testing.md) for full details. Key facts:
+- Use `accumulate_overstep` (NOT `advance_by`) to trigger FixedUpdate ticks in tests
+- `advance_by` does NOT deposit into the overstep accumulator — FixedUpdate will silently skip
+- Register systems in `FixedUpdate` in tests, matching production — do NOT move to `Update` as workaround
+- Clear inputs in `FixedPostUpdate`, NOT `PreUpdate` — prevents input loss on frames FixedUpdate skips
 
 ## KeyboardInput (see keyboard_input.md for full details)
 
 - `KeyboardInput` is a `Message` (NOT Event) — use `MessageReader<KeyboardInput>`, never `EventReader`
-- Fields: `key_code: KeyCode`, `logical_key: Key`, `state: ButtonState`, `text: Option<SmolStr>`, `repeat: bool`, `window: Entity`
-- `text` field IS present — include `text: None` when constructing
-- System set is `InputSystems` (plural), NOT `InputSystem`
 - Send in tests: `app.world_mut().write_message(KeyboardInput { ... })` — NOT `send_event()`
-- `KeyboardInput`/`Key`/`ButtonState` NOT in prelude — import from `bevy::input::keyboard`
+- System set is `InputSystems` (plural), NOT `InputSystem`
 
 ## Sources
 

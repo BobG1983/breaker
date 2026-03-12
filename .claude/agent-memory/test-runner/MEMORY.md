@@ -30,12 +30,13 @@
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
 
 ## Validation History
-- **2026-03-12, feature/extract-entity-components (current)**: PASS
-  - Format: PASS (no files needed formatting)
+- **2026-03-12, main (current)**: PASS
+  - Format: PASS (8 files auto-formatted)
   - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (219 passed, 0 failed, 0 ignored)
-  - Change: Refactored breaker/bolt components into separate modules, deleted src/breaker/components.rs, added src/breaker/components/ and init_breaker_params.rs
-  - Status: Branch is clean and ready to review or merge
+  - Tests: PASS (220 passed, 0 failed, 0 ignored)
+  - Change: +1 test since extract-entity-components merge, debug plugin import reorganization
+  - Files formatted: defaults.breaker.ron, breaker/queries.rs, breaker/resources.rs, debug/plugin.rs, debug/resources.rs, debug/systems/breaker_state_ui.rs, debug/systems/debug_ui.rs, debug/systems/mod.rs
+  - Status: Main branch is clean and ready for development
 - **2026-03-12, feature/grade-dependent-bump-cooldown**: PASS
   - Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
   - Clippy: 1 warning (missing_const_for_fn in cooldown_for_grade)
