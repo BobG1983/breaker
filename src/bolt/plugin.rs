@@ -12,6 +12,7 @@ use crate::{
         },
     },
     breaker::BreakerSystems,
+    physics::PhysicsSystems,
     shared::{GameState, PlayingState},
 };
 
@@ -32,7 +33,7 @@ impl Plugin for BoltPlugin {
                 prepare_bolt_velocity
                     .after(BreakerSystems::Move)
                     .in_set(BoltSystems::PrepareVelocity),
-                apply_bump_velocity,
+                apply_bump_velocity.after(PhysicsSystems::BreakerCollision),
                 spawn_bolt_lost_text,
             )
                 .run_if(in_state(PlayingState::Active)),

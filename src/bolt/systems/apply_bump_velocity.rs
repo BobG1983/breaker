@@ -168,6 +168,83 @@ mod tests {
     }
 
     #[test]
+    fn bump_multiplier_survives_breaker_collision() {
+        use crate::{
+            breaker::components::{Breaker, BreakerTilt},
+            physics::{
+                messages::BoltHitBreaker, resources::PhysicsConfig, systems::bolt_breaker_collision,
+            },
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BoltConfig>();
+        app.init_resource::<BreakerConfig>();
+        app.init_resource::<PhysicsConfig>();
+        app.add_message::<BumpPerformed>();
+        app.add_message::<BoltHitBreaker>();
+
+        // Run collision first, then bump — matching production ordering.
+        app.add_systems(
+            Update,
+            (
+                enqueue_from_resource,
+                bolt_breaker_collision,
+                apply_bump_velocity.after(bolt_breaker_collision),
+            ),
+        );
+
+        let breaker_config = BreakerConfig::default();
+        let bolt_config = BoltConfig::default();
+
+        // Spawn breaker at default Y position
+        app.world_mut().spawn((
+            Breaker,
+            BreakerTilt::default(),
+            Transform::from_xyz(0.0, breaker_config.y_position, 0.0),
+        ));
+
+        // Place bolt just above breaker, moving downward — will collide this tick
+        let start_y =
+            breaker_config.y_position + breaker_config.half_height + bolt_config.radius + 3.0;
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, -bolt_config.base_speed),
+            Transform::from_xyz(0.0, start_y, 0.0),
+        ));
+
+        // Queue a perfect bump on the same tick
+        app.insert_resource(TestMessage(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+        })));
+
+        // Advance fixed time so CCD ray covers the distance
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(timestep);
+        app.update();
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+
+        // After collision, bolt reflects upward at ~base_speed.
+        // After bump, speed should be amplified by perfect_bump_multiplier.
+        assert!(vel.value.y > 0.0, "bolt should reflect upward");
+        let post_collision_speed = bolt_config.base_speed; // collision resets to at least base_speed
+        let expected_min = post_collision_speed * breaker_config.perfect_bump_multiplier * 0.9;
+        assert!(
+            vel.speed() >= expected_min,
+            "bump multiplier should survive collision — speed {:.0} should be >= {expected_min:.0}",
+            vel.speed(),
+        );
+    }
+
+    #[test]
     fn no_bump_preserves_velocity() {
         let mut app = test_app();
 

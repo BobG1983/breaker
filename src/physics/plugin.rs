@@ -31,7 +31,9 @@ impl Plugin for PhysicsPlugin {
             FixedUpdate,
             (
                 bolt_cell_collision.after(BoltSystems::PrepareVelocity),
-                bolt_breaker_collision.after(bolt_cell_collision),
+                bolt_breaker_collision
+                    .after(bolt_cell_collision)
+                    .in_set(super::PhysicsSystems::BreakerCollision),
                 bolt_lost.after(bolt_breaker_collision),
             )
                 .run_if(in_state(PlayingState::Active)),
