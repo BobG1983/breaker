@@ -8,9 +8,9 @@ use crate::{
         messages::BumpPerformed,
         resources::BreakerConfig,
         systems::{
-            animate_bump_visual, grade_bump, move_breaker, perfect_bump_dash_cancel, reset_breaker,
-            spawn_breaker, spawn_bump_grade_text, trigger_bump_visual, update_breaker_state,
-            update_bump,
+            animate_bump_visual, animate_tilt_visual, grade_bump, move_breaker,
+            perfect_bump_dash_cancel, reset_breaker, spawn_breaker, spawn_bump_grade_text,
+            trigger_bump_visual, update_breaker_state, update_bump,
         },
     },
     shared::{GameState, PlayingState},
@@ -46,6 +46,7 @@ impl Plugin for BreakerPlugin {
             (
                 trigger_bump_visual,
                 animate_bump_visual.after(trigger_bump_visual),
+                animate_tilt_visual,
             )
                 .run_if(in_state(PlayingState::Active)),
         );
