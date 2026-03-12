@@ -40,8 +40,13 @@ impl Plugin for BreakerPlugin {
                 grade_bump
                     .after(update_bump)
                     .after(PhysicsSystems::BreakerCollision),
-                (perfect_bump_dash_cancel, spawn_bump_grade_text).after(grade_bump),
-                (spawn_whiff_text, trigger_bump_visual).after(update_bump),
+                (
+                    perfect_bump_dash_cancel,
+                    spawn_bump_grade_text,
+                    spawn_whiff_text,
+                )
+                    .after(grade_bump),
+                trigger_bump_visual.after(update_bump),
             )
                 .run_if(in_state(PlayingState::Active)),
         );

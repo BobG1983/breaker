@@ -45,7 +45,8 @@ fn cooldown_for_grade(grade: BumpGrade, config: &BreakerConfig) -> f32 {
 
 /// Updates bump state: handles input, ticks timers, resolves retroactive bumps.
 ///
-/// Forward window expiry sends [`BumpWhiffed`] and sets whiff cooldown.
+/// Ticks the forward window timer but does not expire it — [`grade_bump`]
+/// handles expiry after processing any same-frame hits.
 /// Retroactive bumps grade and write immediately on press.
 pub fn update_bump(
     actions: Res<InputActions>,
@@ -53,7 +54,6 @@ pub fn update_bump(
     time: Res<Time<Fixed>>,
     mut query: Query<&mut BumpState, With<Breaker>>,
     mut writer: MessageWriter<BumpPerformed>,
-    mut whiff_writer: MessageWriter<BumpWhiffed>,
 ) {
     let dt = time.delta_secs();
 
@@ -68,15 +68,9 @@ pub fn update_bump(
             bump.post_hit_timer = (bump.post_hit_timer - dt).max(0.0);
         }
 
-        // Tick active timer — whiff on expiry
+        // Tick active timer — grade_bump handles expiry
         if bump.active {
             bump.timer -= dt;
-            if bump.timer <= 0.0 {
-                bump.active = false;
-                bump.timer = 0.0;
-                whiff_writer.write(BumpWhiffed);
-                bump.cooldown = config.weak_bump_cooldown;
-            }
         }
 
         // Bump input
@@ -104,11 +98,15 @@ pub fn update_bump(
 /// Must run after `PhysicsSystems::BreakerCollision` to ensure messages are available.
 /// If a forward bump is active, grades immediately. Otherwise, sets `post_hit_timer`
 /// for the retroactive path in `update_bump`.
+///
+/// Also expires the forward window when the timer runs out without a hit,
+/// sending [`BumpWhiffed`] and setting whiff cooldown.
 pub fn grade_bump(
     config: Res<BreakerConfig>,
     mut bump_query: Query<&mut BumpState, With<Breaker>>,
     mut hit_reader: MessageReader<BoltHitBreaker>,
     mut writer: MessageWriter<BumpPerformed>,
+    mut whiff_writer: MessageWriter<BumpWhiffed>,
 ) {
     let Ok(mut bump) = bump_query.single_mut() else {
         return;
@@ -125,6 +123,14 @@ pub fn grade_bump(
             // No active bump — open retroactive window for update_bump
             bump.post_hit_timer = config.perfect_window + config.late_window;
         }
+    }
+
+    // Forward window expired without a hit — whiff
+    if bump.active && bump.timer <= 0.0 {
+        bump.active = false;
+        bump.timer = 0.0;
+        whiff_writer.write(BumpWhiffed);
+        bump.cooldown = config.weak_bump_cooldown;
     }
 }
 
@@ -338,7 +344,7 @@ mod tests {
 
     #[test]
     fn forward_window_expiry_sends_whiff_and_sets_cooldown() {
-        let mut app = update_bump_test_app();
+        let mut app = combined_bump_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = app
@@ -489,6 +495,7 @@ mod tests {
         app.init_resource::<BreakerConfig>();
         app.add_message::<BoltHitBreaker>();
         app.add_message::<BumpPerformed>();
+        app.add_message::<BumpWhiffed>();
         app.init_resource::<CapturedBumps>();
         app.insert_resource(TestHitMessage(None));
         app.add_systems(
@@ -613,6 +620,84 @@ mod tests {
 
         let captured = app.world().resource::<CapturedBumps>();
         assert!(captured.0.is_empty());
+    }
+
+    // ── combined update_bump + grade_bump integration tests ─────────
+
+    /// App that runs both `update_bump` and `grade_bump` with production ordering,
+    /// plus a hit injector and message captures.
+    fn combined_bump_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<BreakerConfig>();
+        app.init_resource::<InputActions>();
+        app.add_message::<BoltHitBreaker>();
+        app.add_message::<BumpPerformed>();
+        app.add_message::<BumpWhiffed>();
+        app.init_resource::<CapturedBumps>();
+        app.init_resource::<CapturedWhiffs>();
+        app.insert_resource(TestInputActive(false));
+        app.insert_resource(TestHitMessage(None));
+        app.add_systems(
+            Update,
+            (
+                set_bump_action.before(update_bump),
+                enqueue_hit.before(grade_bump),
+                update_bump,
+                grade_bump.after(update_bump),
+                (capture_bumps, capture_whiffs).after(grade_bump),
+            ),
+        );
+        app
+    }
+
+    #[test]
+    fn same_frame_hit_and_expiry_grades_not_whiffs() {
+        let mut app = combined_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BumpState {
+                    active: true,
+                    timer: 0.001, // about to expire this tick
+                    ..Default::default()
+                },
+            ))
+            .id();
+
+        // Bolt hits the same frame the window would expire
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(!bump.active, "should deactivate");
+
+        // Should be graded as a forward bump (perfect — timer near 0 is within perfect_window)
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "should grade the hit, not whiff — got {} bumps",
+            captured.0.len()
+        );
+        assert_eq!(captured.0[0].grade, BumpGrade::Perfect);
+
+        // Should NOT whiff
+        let whiffs = app.world().resource::<CapturedWhiffs>();
+        assert_eq!(whiffs.0, 0, "should not whiff when hit arrives same frame");
+
+        // Cooldown should match grade, not whiff
+        assert!(
+            (bump.cooldown - config.perfect_bump_cooldown).abs() < f32::EPSILON,
+            "cooldown should be perfect_bump_cooldown ({}), got {}",
+            config.perfect_bump_cooldown,
+            bump.cooldown
+        );
     }
 
     // ── perfect_bump_dash_cancel tests ───────────────────────────────
