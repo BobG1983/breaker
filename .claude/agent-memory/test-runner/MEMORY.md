@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-12, feature/bump-timing-rework)
-- Format: PASS (1 file auto-formatted: bump_visual.rs)
-- Clippy: PASS (no warnings or errors)
-- Tests: 200 passed, 0 failed, 0 ignored
+**Last Validation: PASS** (2026-03-12, feature/grade-dependent-bump-cooldown)
+- Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
+- Clippy: 1 warning (missing_const_for_fn in cooldown_for_grade)
+- Tests: 208 passed, 0 failed, 0 ignored
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -30,7 +30,13 @@
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
 
 ## Validation History
-- **2026-03-12, feature/bump-timing-rework (current)**: PASS
+- **2026-03-12, feature/grade-dependent-bump-cooldown (current)**: PASS
+  - Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
+  - Clippy: 1 warning (missing_const_for_fn in cooldown_for_grade)
+  - Tests: 208 passed, 0 failed, 0 ignored
+  - Change: +8 tests (bump grade cooldown mechanics)
+  - Note: cooldown_for_grade in breaker/systems/bump.rs could be const; flagged by clippy nursery lint
+- **2026-03-12, feature/bump-timing-rework**: PASS
   - Format: PASS (1 file auto-formatted: bump_visual.rs)
   - Clippy: PASS (no warnings or errors)
   - Tests: 200 passed, 0 failed, 0 ignored
