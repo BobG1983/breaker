@@ -24,11 +24,10 @@ type BreakerQueryFilter = (With<Breaker>, Without<Bolt>);
 
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.
 ///
-/// The reflection model:
-/// - Direction is entirely overwritten (no incoming angle carryover)
-/// - Angle determined by hit position on breaker (left = left angle, right = right angle)
-/// - Breaker tilt modifies the effective surface angle
-/// - Minimum angle from horizontal is enforced
+/// Includes overlap resolution: if the breaker has moved into the bolt (e.g.,
+/// bump pop), the bolt is pushed above the breaker and reflected if moving
+/// downward. CCD alone cannot detect this case since it only sweeps bolt
+/// movement.
 pub fn bolt_breaker_collision(
     time: Res<Time<Fixed>>,
     bolt_config: Res<BoltConfig>,
@@ -48,9 +47,46 @@ pub fn bolt_breaker_collision(
         breaker_config.half_width + bolt_config.radius,
         breaker_config.half_height + bolt_config.radius,
     );
+    let above_y = breaker_pos.y + breaker_config.half_height + bolt_config.radius;
+
+    // Overwrites bolt velocity based on hit position on the breaker surface.
+    // Direction is entirely overwritten (no incoming angle carryover).
+    let reflect_top_hit = |hit_x: f32, bolt_velocity: &mut BoltVelocity| {
+        let hit_fraction = ((hit_x - breaker_pos.x) / breaker_config.half_width).clamp(-1.0, 1.0);
+        let base_angle = hit_fraction * physics_config.max_reflection_angle;
+        let total_angle = base_angle + breaker_tilt.angle;
+        let clamped_angle = total_angle.clamp(
+            -physics_config.max_reflection_angle,
+            physics_config.max_reflection_angle,
+        );
+        let new_speed = bolt_velocity.speed().max(bolt_config.base_speed);
+        bolt_velocity.value = Vec2::new(
+            new_speed * clamped_angle.sin(),
+            new_speed * clamped_angle.cos(),
+        );
+        bolt_velocity.enforce_min_angle(bolt_config.min_angle_from_horizontal);
+    };
 
     for (bolt_entity, mut bolt_transform, mut bolt_velocity) in &mut bolt_query {
         let bolt_pos = bolt_transform.translation.truncate();
+
+        // Overlap resolution: breaker may have moved into the bolt (e.g., bump pop).
+        // CCD can't detect this since it only sweeps bolt movement.
+        let inside = bolt_pos.x > breaker_pos.x - expanded_half.x
+            && bolt_pos.x < breaker_pos.x + expanded_half.x
+            && bolt_pos.y > breaker_pos.y - expanded_half.y
+            && bolt_pos.y < breaker_pos.y + expanded_half.y;
+
+        if inside {
+            bolt_transform.translation.y = above_y;
+
+            if bolt_velocity.value.y <= 0.0 {
+                reflect_top_hit(bolt_pos.x, &mut bolt_velocity);
+                writer.write(BoltHitBreaker { bolt: bolt_entity });
+            }
+            continue;
+        }
+
         let speed = bolt_velocity.value.length();
         if speed < f32::EPSILON {
             continue;
@@ -84,36 +120,11 @@ pub fn bolt_breaker_collision(
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
             let impact_pos = bolt_pos + direction * advance;
 
-            // Calculate hit position as fraction of breaker width (-1.0 to 1.0)
-            let hit_fraction =
-                ((impact_pos.x - breaker_pos.x) / breaker_config.half_width).clamp(-1.0, 1.0);
-
-            // Base angle from hit position (center = straight up, edges = angled)
-            let base_angle = hit_fraction * physics_config.max_reflection_angle;
-
-            // Add breaker tilt influence
-            let total_angle = base_angle + breaker_tilt.angle;
-
-            // Clamp to max reflection angle
-            let clamped_angle = total_angle.clamp(
-                -physics_config.max_reflection_angle,
-                physics_config.max_reflection_angle,
-            );
-
-            // Overwrite bolt direction entirely
-            let new_speed = bolt_velocity.speed().max(bolt_config.base_speed);
-            let new_vel_x = new_speed * clamped_angle.sin();
-            let new_vel_y = new_speed * clamped_angle.cos(); // Always positive (upward)
-
-            bolt_velocity.value = Vec2::new(new_vel_x, new_vel_y);
-
-            // Enforce minimum angle from horizontal
-            bolt_velocity.enforce_min_angle(bolt_config.min_angle_from_horizontal);
+            reflect_top_hit(impact_pos.x, &mut bolt_velocity);
 
             // Push bolt above breaker to prevent re-collision
             bolt_transform.translation.x = impact_pos.x;
-            bolt_transform.translation.y =
-                breaker_pos.y + breaker_config.half_height + bolt_config.radius;
+            bolt_transform.translation.y = above_y;
         }
 
         writer.write(BoltHitBreaker { bolt: bolt_entity });
@@ -336,6 +347,103 @@ mod tests {
         for msg in reader.read() {
             hits.0.push(msg.bolt);
         }
+    }
+
+    #[test]
+    fn overlap_resolved_when_bolt_inside_breaker() {
+        let mut app = test_app();
+        let bc = BreakerConfig::default();
+        let bolt_config = BoltConfig::default();
+        app.insert_resource(HitBreakers::default());
+        app.add_systems(Update, collect_breaker_hits.after(bolt_breaker_collision));
+
+        // Breaker popped up by 10 units (simulating bump visual)
+        let animated_y = bc.y_position + 10.0;
+        spawn_breaker_at(&mut app, 0.0, animated_y);
+
+        // Bolt inside the breaker's expanded AABB, moving downward.
+        // It's at the original breaker position — now inside the shifted breaker.
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(0.0, -400.0),
+                Transform::from_xyz(0.0, bc.y_position, 0.0),
+            ))
+            .id();
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "overlap should reflect bolt upward, got vy={:.1}",
+            vel.value.y
+        );
+
+        let tf = app.world().get::<Transform>(bolt_entity).unwrap();
+        let expected_y = animated_y + bc.half_height + bolt_config.radius;
+        assert!(
+            (tf.translation.y - expected_y).abs() < 1.0,
+            "bolt should be pushed above breaker, y={:.1} expected={expected_y:.1}",
+            tf.translation.y
+        );
+
+        let hits = app.world().resource::<HitBreakers>();
+        assert_eq!(
+            hits.0.len(),
+            1,
+            "overlap with downward bolt should send BoltHitBreaker"
+        );
+    }
+
+    #[test]
+    fn upward_bolt_inside_breaker_pushed_out_no_message() {
+        let mut app = test_app();
+        let bc = BreakerConfig::default();
+        let bolt_config = BoltConfig::default();
+        app.insert_resource(HitBreakers::default());
+        app.add_systems(Update, collect_breaker_hits.after(bolt_breaker_collision));
+
+        // Breaker popped up into the bolt
+        let animated_y = bc.y_position + 10.0;
+        spawn_breaker_at(&mut app, 0.0, animated_y);
+
+        // Bolt inside AABB but moving upward (already reflected)
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(50.0, 400.0),
+                Transform::from_xyz(0.0, animated_y, 0.0),
+            ))
+            .id();
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "upward bolt should keep moving up, got vy={:.1}",
+            vel.value.y
+        );
+        assert!(
+            (vel.value.x - 50.0).abs() < f32::EPSILON,
+            "velocity should be unchanged, got vx={:.1}",
+            vel.value.x
+        );
+
+        let tf = app.world().get::<Transform>(bolt_entity).unwrap();
+        let min_y = animated_y + bc.half_height + bolt_config.radius;
+        assert!(
+            tf.translation.y >= min_y - 1.0,
+            "bolt should be pushed above breaker, y={:.1} min={min_y:.1}",
+            tf.translation.y
+        );
+
+        let hits = app.world().resource::<HitBreakers>();
+        assert!(
+            hits.0.is_empty(),
+            "upward bolt overlap should NOT send BoltHitBreaker"
+        );
     }
 
     #[test]

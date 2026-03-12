@@ -6,7 +6,7 @@ use crate::{
     bolt::components::FadeOut,
     breaker::{
         components::Breaker,
-        messages::{BumpGrade, BumpPerformed},
+        messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     },
     shared::CleanupOnNodeExit,
 };
@@ -41,6 +41,37 @@ pub fn spawn_bump_grade_text(
             Text2d::new(text),
             TextColor(color),
             TextFont::from_font_size(font_size),
+            Transform::from_translation(pos),
+            FadeOut {
+                timer: FADE_DURATION,
+                duration: FADE_DURATION,
+            },
+            CleanupOnNodeExit,
+        ));
+    }
+}
+
+/// Spawns floating "WHIFF" text near the breaker when a bump window expires.
+pub fn spawn_whiff_text(
+    mut reader: MessageReader<BumpWhiffed>,
+    mut commands: Commands,
+    breaker_query: Query<&Transform, With<Breaker>>,
+) {
+    let Ok(breaker_tf) = breaker_query.single() else {
+        return;
+    };
+
+    for _whiff in reader.read() {
+        let pos = Vec3::new(
+            breaker_tf.translation.x,
+            breaker_tf.translation.y + 40.0,
+            10.0,
+        );
+
+        commands.spawn((
+            Text2d::new("WHIFF"),
+            TextColor(Color::srgb(0.5, 0.5, 0.5)),
+            TextFont::from_font_size(20.0),
             Transform::from_translation(pos),
             FadeOut {
                 timer: FADE_DURATION,
@@ -133,5 +164,35 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 1, "late bump should spawn feedback text");
+    }
+
+    #[derive(Resource)]
+    struct TestWhiffMsg(bool);
+
+    fn enqueue_whiff(msg_res: Res<TestWhiffMsg>, mut writer: MessageWriter<BumpWhiffed>) {
+        if msg_res.0 {
+            writer.write(BumpWhiffed);
+        }
+    }
+
+    #[test]
+    fn whiff_spawns_text() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<BumpWhiffed>();
+        app.insert_resource(TestWhiffMsg(true));
+        app.add_systems(
+            Update,
+            (enqueue_whiff.before(spawn_whiff_text), spawn_whiff_text),
+        );
+        spawn_breaker(&mut app);
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<FadeOut>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1, "whiff should spawn feedback text");
     }
 }

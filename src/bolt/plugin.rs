@@ -29,10 +29,11 @@ impl Plugin for BoltPlugin {
             FixedUpdate,
             (
                 launch_bolt,
-                hover_bolt.after(BreakerSystems::Move),
-                prepare_bolt_velocity
-                    .after(BreakerSystems::Move)
-                    .in_set(BoltSystems::PrepareVelocity),
+                (
+                    hover_bolt,
+                    prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity),
+                )
+                    .after(BreakerSystems::Move),
                 apply_bump_velocity.after(PhysicsSystems::BreakerCollision),
                 spawn_bolt_lost_text,
             )
