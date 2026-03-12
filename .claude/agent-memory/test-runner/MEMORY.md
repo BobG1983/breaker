@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-12, feature/extract-entity-components)
-- Format: PASS (no files needed formatting)
+**Last Validation: PASS** (2026-03-12, main)
+- Format: PASS (2 files auto-formatted)
 - Clippy: PASS (no warnings or errors)
-- Tests: PASS (219 passed, 0 failed, 0 ignored)
+- Tests: PASS (221 passed, 0 failed, 0 ignored)
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -20,7 +20,8 @@
 - Line wrap conditional expressions in assignments (bolt_breaker_collision.rs lines 43-44)
 - Avoid multi-line Color::srgb calls - use single line after assignment operator
 - Multi-line `assert!` with format args must be wrapped: condition, message, args on separate lines
-- Single-line method chains can exceed 80 chars; wrap at logical points when needed
+- Multi-line method chains: wrap at logical points when necessary
+- Long function call arguments: one argument per line when wrapping
 
 ## Key Patterns
 - Type aliases required for complex Query filters (CellQueryFilter, BreakerQueryFilter)
@@ -31,11 +32,10 @@
 
 ## Validation History
 - **2026-03-12, main (current)**: PASS
-  - Format: PASS (8 files auto-formatted)
+  - Format: PASS (2 files auto-formatted: bolt/components.rs, breaker/systems/dash.rs)
   - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (220 passed, 0 failed, 0 ignored)
-  - Change: +1 test since extract-entity-components merge, debug plugin import reorganization
-  - Files formatted: defaults.breaker.ron, breaker/queries.rs, breaker/resources.rs, debug/plugin.rs, debug/resources.rs, debug/systems/breaker_state_ui.rs, debug/systems/debug_ui.rs, debug/systems/mod.rs
+  - Tests: PASS (221 passed, 0 failed, 0 ignored)
+  - Change: +1 test since previous validation
   - Status: Main branch is clean and ready for development
 - **2026-03-12, feature/grade-dependent-bump-cooldown**: PASS
   - Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
