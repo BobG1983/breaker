@@ -198,8 +198,16 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<InputActions>();
-        app.add_systems(Update, trigger_bump_visual);
+        app.add_systems(FixedUpdate, trigger_bump_visual);
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     fn set_bump_action(app: &mut App) {
@@ -219,7 +227,7 @@ mod tests {
             .id();
 
         set_bump_action(&mut app);
-        app.update();
+        tick(&mut app);
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_some(),
@@ -237,7 +245,7 @@ mod tests {
             .id();
 
         // No Bump action set
-        app.update();
+        tick(&mut app);
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_none(),
@@ -262,7 +270,7 @@ mod tests {
             .id();
 
         set_bump_action(&mut app);
-        app.update();
+        tick(&mut app);
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_some(),
@@ -290,7 +298,7 @@ mod tests {
             .id();
 
         set_bump_action(&mut app);
-        app.update();
+        tick(&mut app);
 
         let visual = app
             .world()

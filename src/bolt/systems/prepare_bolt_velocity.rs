@@ -61,7 +61,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, prepare_bolt_velocity);
+        app.add_systems(FixedUpdate, prepare_bolt_velocity);
         // Spawn breaker with MinAngleFromHorizontal for the system to read
         let breaker_config = BreakerConfig::default();
         app.world_mut().spawn((
@@ -69,6 +69,14 @@ mod tests {
             MinAngleFromHorizontal(breaker_config.min_angle_from_horizontal),
         ));
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     #[test]
@@ -82,7 +90,7 @@ mod tests {
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
 
-        app.update();
+        tick(&mut app);
 
         let tf = app
             .world_mut()
@@ -112,7 +120,7 @@ mod tests {
             ))
             .id();
 
-        app.update();
+        tick(&mut app);
 
         let vel = app.world().get::<BoltVelocity>(entity).unwrap();
         assert!(
@@ -126,7 +134,7 @@ mod tests {
     fn no_breaker_leaves_velocity_unchanged() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, prepare_bolt_velocity);
+        app.add_systems(FixedUpdate, prepare_bolt_velocity);
         // No breaker entity spawned
 
         let entity = app
@@ -138,7 +146,7 @@ mod tests {
             ))
             .id();
 
-        app.update();
+        tick(&mut app);
 
         let vel = app.world().get::<BoltVelocity>(entity).unwrap();
         assert!(
@@ -159,7 +167,7 @@ mod tests {
             bolt_param_bundle(),
         ));
 
-        app.update();
+        tick(&mut app);
 
         let vel = app
             .world_mut()

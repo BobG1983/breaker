@@ -168,7 +168,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.add_message::<BoltHitBreaker>();
-        app.add_systems(Update, bolt_breaker_collision);
+        app.add_systems(FixedUpdate, bolt_breaker_collision);
         app
     }
 
@@ -212,12 +212,12 @@ mod tests {
         ));
     }
 
-    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    /// Accumulates one fixed timestep of overstep, then runs one update.
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
+            .accumulate_overstep(timestep);
         app.update();
     }
 
@@ -394,7 +394,10 @@ mod tests {
         let hh = default_breaker_height();
         let y_pos = -250.0;
         app.insert_resource(HitBreakers::default());
-        app.add_systems(Update, collect_breaker_hits.after(bolt_breaker_collision));
+        app.add_systems(
+            FixedUpdate,
+            collect_breaker_hits.after(bolt_breaker_collision),
+        );
 
         let animated_y = y_pos + 10.0;
         spawn_breaker_at(&mut app, 0.0, animated_y);
@@ -431,7 +434,10 @@ mod tests {
         let hh = default_breaker_height();
         let y_pos = -250.0;
         app.insert_resource(HitBreakers::default());
-        app.add_systems(Update, collect_breaker_hits.after(bolt_breaker_collision));
+        app.add_systems(
+            FixedUpdate,
+            collect_breaker_hits.after(bolt_breaker_collision),
+        );
 
         let animated_y = y_pos + 10.0;
         spawn_breaker_at(&mut app, 0.0, animated_y);
@@ -472,7 +478,10 @@ mod tests {
         let hh = default_breaker_height();
         let y_pos = -250.0;
         app.insert_resource(HitBreakers::default());
-        app.add_systems(Update, collect_breaker_hits.after(bolt_breaker_collision));
+        app.add_systems(
+            FixedUpdate,
+            collect_breaker_hits.after(bolt_breaker_collision),
+        );
         spawn_breaker_at(&mut app, 0.0, y_pos);
 
         let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;

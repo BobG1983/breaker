@@ -91,8 +91,16 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.add_message::<BumpPerformed>();
-        app.add_systems(Update, apply_bump_velocity);
+        app.add_systems(FixedUpdate, apply_bump_velocity);
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     #[test]
@@ -106,8 +114,11 @@ mod tests {
             grade: BumpGrade::Perfect,
         })));
 
-        app.add_systems(Update, enqueue_from_resource.before(apply_bump_velocity));
-        app.update();
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
 
         let vel = app
             .world_mut()
@@ -134,8 +145,11 @@ mod tests {
             grade: BumpGrade::Perfect,
         })));
 
-        app.add_systems(Update, enqueue_from_resource.before(apply_bump_velocity));
-        app.update();
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
 
         let vel = app
             .world_mut()
@@ -164,8 +178,11 @@ mod tests {
             grade: BumpGrade::Perfect,
         })));
 
-        app.add_systems(Update, enqueue_from_resource.before(apply_bump_velocity));
-        app.update();
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
 
         let speeds: Vec<f32> = app
             .world_mut()
@@ -203,7 +220,7 @@ mod tests {
         app.add_message::<BoltHitBreaker>();
 
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 enqueue_from_resource,
                 bolt_breaker_collision,
@@ -241,11 +258,7 @@ mod tests {
             grade: BumpGrade::Perfect,
         })));
 
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
-        app.update();
+        tick(&mut app);
 
         let vel = app
             .world_mut()
@@ -275,8 +288,11 @@ mod tests {
             grade: BumpGrade::Early,
         })));
 
-        app.add_systems(Update, enqueue_from_resource.before(apply_bump_velocity));
-        app.update();
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
 
         let vel = app
             .world_mut()

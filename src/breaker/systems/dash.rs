@@ -307,16 +307,16 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<BreakerConfig>();
         app.init_resource::<InputActions>();
-        app.add_systems(Update, update_breaker_state);
+        app.add_systems(FixedUpdate, update_breaker_state);
         app
     }
 
-    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    /// Accumulates one fixed timestep of overstep, then runs one update.
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
+            .accumulate_overstep(timestep);
         app.update();
     }
 
@@ -469,7 +469,7 @@ mod tests {
             app_60
                 .world_mut()
                 .resource_mut::<Time<Fixed>>()
-                .advance_by(dt_60);
+                .accumulate_overstep(dt_60);
             app_60.update();
         }
         let angle_60 = app_60.world().get::<BreakerTilt>(e60).unwrap().angle;
@@ -495,7 +495,7 @@ mod tests {
             app_240
                 .world_mut()
                 .resource_mut::<Time<Fixed>>()
-                .advance_by(dt_240);
+                .accumulate_overstep(dt_240);
             app_240.update();
         }
         let angle_240 = app_240.world().get::<BreakerTilt>(e240).unwrap().angle;
@@ -529,7 +529,9 @@ mod tests {
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
             .set_timestep(dt);
-        app.world_mut().resource_mut::<Time<Fixed>>().advance_by(dt);
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(dt);
         app.update();
 
         let angle = app.world().get::<BreakerTilt>(entity).unwrap().angle;

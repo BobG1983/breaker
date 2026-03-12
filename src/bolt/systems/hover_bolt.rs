@@ -36,6 +36,14 @@ mod tests {
         resources::BoltConfig,
     };
 
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
+    }
+
     #[test]
     fn hover_bolt_tracks_breaker_x() {
         let mut app = App::new();
@@ -56,8 +64,8 @@ mod tests {
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
 
-        app.add_systems(Update, hover_bolt);
-        app.update();
+        app.add_systems(FixedUpdate, hover_bolt);
+        tick(&mut app);
 
         let bolt_tf = app
             .world_mut()
@@ -92,8 +100,8 @@ mod tests {
             Transform::from_xyz(50.0, 50.0, 0.0),
         ));
 
-        app.add_systems(Update, hover_bolt);
-        app.update();
+        app.add_systems(FixedUpdate, hover_bolt);
+        tick(&mut app);
 
         let bolt_tf = app
             .world_mut()

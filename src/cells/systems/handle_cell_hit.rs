@@ -78,8 +78,16 @@ mod tests {
         app.init_resource::<Assets<ColorMaterial>>();
         app.add_message::<BoltHitCell>();
         app.add_message::<CellDestroyed>();
-        app.add_systems(Update, handle_cell_hit);
+        app.add_systems(FixedUpdate, handle_cell_hit);
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     fn default_damage_visuals() -> CellDamageVisuals {
@@ -123,8 +131,8 @@ mod tests {
             cell,
         })));
 
-        app.add_systems(Update, enqueue_from_resource.before(handle_cell_hit));
-        app.update();
+        app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
+        tick(&mut app);
 
         assert!(
             app.world().get_entity(cell).is_err(),
@@ -142,8 +150,8 @@ mod tests {
             cell,
         })));
 
-        app.add_systems(Update, enqueue_from_resource.before(handle_cell_hit));
-        app.update();
+        app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
+        tick(&mut app);
 
         assert!(
             app.world().get_entity(cell).is_ok(),

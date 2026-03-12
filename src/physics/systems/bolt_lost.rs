@@ -65,8 +65,16 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<PlayfieldConfig>();
         app.add_message::<BoltLost>();
-        app.add_systems(Update, bolt_lost);
+        app.add_systems(FixedUpdate, bolt_lost);
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     fn bolt_lost_bundle() -> (BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY) {
@@ -91,7 +99,7 @@ mod tests {
             bolt_lost_bundle(),
             Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
         ));
-        app.update();
+        tick(&mut app);
 
         let vel = app
             .world_mut()
@@ -117,7 +125,7 @@ mod tests {
             bolt_lost_bundle(),
             Transform::from_xyz(200.0, playfield.bottom() - 100.0, 0.0),
         ));
-        app.update();
+        tick(&mut app);
 
         let (vel, transform) = app
             .world_mut()
@@ -159,7 +167,7 @@ mod tests {
             bolt_lost_bundle(),
             Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
         ));
-        app.update();
+        tick(&mut app);
 
         let transform = app
             .world_mut()
@@ -189,7 +197,7 @@ mod tests {
             bolt_lost_bundle(),
             Transform::from_xyz(0.0, original_y, 0.0),
         ));
-        app.update();
+        tick(&mut app);
 
         let vel = app
             .world_mut()

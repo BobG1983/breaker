@@ -117,16 +117,16 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<PlayfieldConfig>();
         app.init_resource::<InputActions>();
-        app.add_systems(Update, move_breaker);
+        app.add_systems(FixedUpdate, move_breaker);
         app
     }
 
-    /// Advances `Time<Fixed>` by one default timestep, then runs one update.
+    /// Accumulates one fixed timestep of overstep, then runs one update.
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
         app.world_mut()
             .resource_mut::<Time<Fixed>>()
-            .advance_by(timestep);
+            .accumulate_overstep(timestep);
         app.update();
     }
 

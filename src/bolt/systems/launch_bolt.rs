@@ -47,8 +47,16 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<InputActions>();
-        app.add_systems(Update, launch_bolt);
+        app.add_systems(FixedUpdate, launch_bolt);
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     fn bolt_launch_bundle() -> (BoltBaseSpeed, BoltInitialAngle) {
@@ -74,7 +82,7 @@ mod tests {
             .resource_mut::<InputActions>()
             .0
             .push(GameAction::Bump);
-        app.update();
+        tick(&mut app);
 
         // BoltServing should be removed
         let serving_count = app
@@ -109,7 +117,7 @@ mod tests {
             bolt_launch_bundle(),
         ));
 
-        app.update();
+        tick(&mut app);
 
         let serving_count = app
             .world_mut()
@@ -149,7 +157,7 @@ mod tests {
             .resource_mut::<InputActions>()
             .0
             .push(GameAction::Bump);
-        app.update();
+        tick(&mut app);
 
         let velocity = app
             .world_mut()
@@ -184,7 +192,7 @@ mod tests {
             .resource_mut::<InputActions>()
             .0
             .push(GameAction::Bump);
-        app.update();
+        tick(&mut app);
 
         let velocity = app
             .world_mut()

@@ -101,13 +101,21 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.add_message::<BumpPerformed>();
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 enqueue_bump.before(spawn_bump_grade_text),
                 spawn_bump_grade_text,
             ),
         );
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     fn spawn_breaker(app: &mut App) {
@@ -122,7 +130,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
         })));
-        app.update();
+        tick(&mut app);
 
         let count = app
             .world_mut()
@@ -139,7 +147,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Early,
         })));
-        app.update();
+        tick(&mut app);
 
         let count = app
             .world_mut()
@@ -156,7 +164,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Late,
         })));
-        app.update();
+        tick(&mut app);
 
         let count = app
             .world_mut()
@@ -182,11 +190,11 @@ mod tests {
         app.add_message::<BumpWhiffed>();
         app.insert_resource(TestWhiffMsg(true));
         app.add_systems(
-            Update,
+            FixedUpdate,
             (enqueue_whiff.before(spawn_whiff_text), spawn_whiff_text),
         );
         spawn_breaker(&mut app);
-        app.update();
+        tick(&mut app);
 
         let count = app
             .world_mut()
