@@ -250,8 +250,7 @@ mod tests {
             (
                 set_bump_action.before(update_bump),
                 update_bump,
-                capture_bumps.after(update_bump),
-                capture_whiffs.after(update_bump),
+                (capture_bumps, capture_whiffs).after(update_bump),
             ),
         );
         app

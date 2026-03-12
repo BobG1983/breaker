@@ -15,6 +15,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - Consuming domains order with `.after(DomainSystems::Variant)`.
 - **Never reference bare system function names across domain boundaries** — always use SystemSet enums. This keeps cross-domain ordering stable even if the underlying system is renamed or split.
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
+- **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
 
 **Example:**
 
@@ -29,8 +30,8 @@ pub enum BreakerSystems {
 move_breaker.in_set(BreakerSystems::Move)
 
 // In bolt/plugin.rs — order against it
-hover_bolt.after(BreakerSystems::Move)
-prepare_bolt_velocity.after(BreakerSystems::Move)
+(hover_bolt, prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity))
+    .after(BreakerSystems::Move)
 ```
 
 ## Current Ordering Chain
@@ -39,8 +40,7 @@ The actual cross-domain ordering constraints in the codebase:
 
 ```
 BreakerSystems::Move
-  <- hover_bolt .after(BreakerSystems::Move)
-  <- prepare_bolt_velocity .after(BreakerSystems::Move)
+  <- (hover_bolt, prepare_bolt_velocity) .after(BreakerSystems::Move)
     BoltSystems::PrepareVelocity
       <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
         <- bolt_breaker_collision .after(bolt_cell_collision)
