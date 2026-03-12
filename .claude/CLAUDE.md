@@ -34,9 +34,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 
 **ALWAYS do**:
 - Write tests FIRST for new game logic (see `docs/architecture/standards.md` Testing — TDD)
-- Create a feature branch before starting work (`feature/*`, `fix/*`, `refactor/*` off the current branch)
-- Commit with conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) after tests pass
-- After merging a branch to main, delete it locally and from the remote
+- Follow the git workflow in @.claude/rules/git.md
 
 **Move freely on**:
 - Implementation within existing system boundaries
