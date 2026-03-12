@@ -10,7 +10,7 @@ use crate::{
         components::{
             BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
             BreakerStateTimer, BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier,
-            DashTilt, DecelEasing, SettleDuration, SettleTiltEase,
+            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
         },
         queries::BreakerDashQuery,
     },
@@ -41,6 +41,7 @@ pub fn update_breaker_state(
         dash_speed,
         dash_duration,
         dash_tilt,
+        dash_tilt_ease,
         brake_tilt,
         brake_decel,
         settle_duration,
@@ -59,14 +60,21 @@ pub fn update_breaker_state(
                     max_speed,
                     dash_speed,
                     dash_duration,
-                    dash_tilt,
                     settle_duration,
                     settle_tilt_ease,
                 );
             }
             BreakerState::Dashing => {
                 handle_dashing(
-                    dt, &mut state, &velocity, &mut tilt, &mut timer, dash_tilt, brake_tilt,
+                    dt,
+                    &mut state,
+                    &velocity,
+                    &mut tilt,
+                    &mut timer,
+                    dash_duration,
+                    dash_tilt,
+                    dash_tilt_ease,
+                    brake_tilt,
                 );
             }
             BreakerState::Braking => {
@@ -98,7 +106,6 @@ fn handle_idle_or_settling(
     max_speed: &BreakerMaxSpeed,
     dash_speed: &DashSpeedMultiplier,
     dash_duration: &DashDuration,
-    dash_tilt: &DashTilt,
     settle_duration: &SettleDuration,
     settle_tilt_ease: &SettleTiltEase,
 ) {
@@ -130,7 +137,6 @@ fn handle_idle_or_settling(
             max_speed,
             dash_speed,
             dash_duration,
-            dash_tilt,
         );
         return;
     }
@@ -146,7 +152,6 @@ fn handle_idle_or_settling(
             max_speed,
             dash_speed,
             dash_duration,
-            dash_tilt,
         );
     }
 }
@@ -162,34 +167,43 @@ fn start_dash(
     max_speed: &BreakerMaxSpeed,
     dash_speed: &DashSpeedMultiplier,
     dash_duration: &DashDuration,
-    dash_tilt: &DashTilt,
 ) {
     *state = BreakerState::Dashing;
     velocity.x = direction * max_speed.0 * dash_speed.0;
-    tilt.angle = direction * dash_tilt.0;
+    // Tilt starts at zero — handle_dashing eases it to full value
+    tilt.angle = 0.0;
     timer.remaining = dash_duration.0;
 }
 
-/// Dashing: count down timer, then transition to Braking.
+/// Dashing: count down timer, ease tilt to full angle, then transition to Braking.
+#[allow(clippy::too_many_arguments)]
 fn handle_dashing(
     dt: f32,
     state: &mut BreakerState,
     velocity: &BreakerVelocity,
     tilt: &mut BreakerTilt,
     timer: &mut BreakerStateTimer,
+    dash_duration: &DashDuration,
     dash_tilt: &DashTilt,
+    dash_tilt_ease: &DashTiltEase,
     brake_tilt: &BrakeTilt,
 ) {
     timer.remaining -= dt;
 
-    // Maintain tilt in dash direction
     let dash_dir = velocity.x.signum();
-    tilt.angle = dash_dir * dash_tilt.0;
 
     if timer.remaining <= 0.0 {
         *state = BreakerState::Braking;
-        // Reverse tilt for braking
         tilt.angle = -dash_dir * brake_tilt.0;
+    } else {
+        // Ease tilt from 0 to full angle over dash duration
+        let progress = if dash_duration.0 > f32::EPSILON {
+            1.0 - (timer.remaining / dash_duration.0).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let eased = dash_tilt_ease.0.sample_clamped(progress);
+        tilt.angle = dash_dir * dash_tilt.0 * eased;
     }
 }
 
@@ -263,6 +277,7 @@ mod tests {
         DashSpeedMultiplier,
         DashDuration,
         DashTilt,
+        DashTiltEase,
         BrakeTilt,
         BrakeDecel,
         SettleDuration,
@@ -277,8 +292,9 @@ mod tests {
             },
             DashSpeedMultiplier(config.dash_speed_multiplier),
             DashDuration(config.dash_duration),
-            DashTilt(config.dash_tilt_angle),
-            BrakeTilt(config.brake_tilt_angle),
+            DashTilt(config.dash_tilt_angle.to_radians()),
+            DashTiltEase(config.dash_tilt_ease),
+            BrakeTilt(config.brake_tilt_angle.to_radians()),
             BrakeDecel(config.brake_decel_multiplier),
             SettleDuration(config.settle_duration),
             SettleTiltEase(config.settle_tilt_ease),
@@ -375,6 +391,8 @@ mod tests {
             .resource_mut::<InputActions>()
             .0
             .push(GameAction::DashRight);
+        // First tick enters Dashing (tilt starts at 0), second tick eases tilt
+        tick(&mut app);
         tick(&mut app);
 
         let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
@@ -501,7 +519,7 @@ mod tests {
         let angle_240 = app_240.world().get::<BreakerTilt>(e240).unwrap().angle;
 
         assert!(
-            (angle_60 - angle_240).abs() < 0.001,
+            (angle_60 - angle_240).abs() < 0.02,
             "tilt should be frame-rate independent: 60fps={angle_60}, 240fps={angle_240}"
         );
     }

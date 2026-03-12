@@ -8,7 +8,8 @@ use crate::breaker::{
         BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
         BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow, BumpVisualParams,
         BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
-        DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
+        DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration,
+        SettleTiltEase,
     },
     resources::BreakerConfig,
 };
@@ -39,11 +40,12 @@ pub fn init_breaker_params(
                 },
                 DashSpeedMultiplier(config.dash_speed_multiplier),
                 DashDuration(config.dash_duration),
-                DashTilt(config.dash_tilt_angle),
-                BrakeTilt(config.brake_tilt_angle),
+                DashTilt(config.dash_tilt_angle.to_radians()),
+                DashTiltEase(config.dash_tilt_ease),
+                BrakeTilt(config.brake_tilt_angle.to_radians()),
                 BrakeDecel(config.brake_decel_multiplier),
-                MaxReflectionAngle(config.max_reflection_angle),
-                MinAngleFromHorizontal(config.min_angle_from_horizontal),
+                MaxReflectionAngle(config.max_reflection_angle.to_radians()),
+                MinAngleFromHorizontal(config.min_angle_from_horizontal.to_radians()),
             ))
             .insert((
                 SettleDuration(config.settle_duration),
@@ -105,6 +107,7 @@ mod tests {
         assert!(world.get::<DashSpeedMultiplier>(entity).is_some());
         assert!(world.get::<DashDuration>(entity).is_some());
         assert!(world.get::<DashTilt>(entity).is_some());
+        assert!(world.get::<DashTiltEase>(entity).is_some());
         assert!(world.get::<BrakeTilt>(entity).is_some());
         assert!(world.get::<BrakeDecel>(entity).is_some());
         assert!(world.get::<MaxReflectionAngle>(entity).is_some());
@@ -158,17 +161,18 @@ mod tests {
             "BreakerHeight should match config.height"
         );
         assert!(
-            (world.get::<MaxReflectionAngle>(entity).unwrap().0 - config.max_reflection_angle)
-                .abs()
-                < f32::EPSILON,
-            "MaxReflectionAngle should match config"
+            (world.get::<MaxReflectionAngle>(entity).unwrap().0
+                - config.max_reflection_angle.to_radians())
+            .abs()
+                < 1e-5,
+            "MaxReflectionAngle should match config (converted to radians)"
         );
         assert!(
             (world.get::<MinAngleFromHorizontal>(entity).unwrap().0
-                - config.min_angle_from_horizontal)
-                .abs()
-                < f32::EPSILON,
-            "MinAngleFromHorizontal should match config"
+                - config.min_angle_from_horizontal.to_radians())
+            .abs()
+                < 1e-5,
+            "MinAngleFromHorizontal should match config (converted to radians)"
         );
         let params = world.get::<BumpVisualParams>(entity).unwrap();
         assert!(

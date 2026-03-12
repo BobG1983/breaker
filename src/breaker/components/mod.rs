@@ -15,8 +15,8 @@ pub use bump::{
     BumpState, BumpVisual, BumpVisualParams, BumpWeakCooldown, BumpWeakMultiplier,
 };
 pub use dash::{
-    BrakeDecel, BrakeTilt, DashDuration, DashSpeedMultiplier, DashTilt, SettleDuration,
-    SettleTiltEase,
+    BrakeDecel, BrakeTilt, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase,
+    SettleDuration, SettleTiltEase,
 };
 pub use movement::{
     BreakerAcceleration, BreakerDeceleration, BreakerMaxSpeed, BreakerTilt, BreakerVelocity,

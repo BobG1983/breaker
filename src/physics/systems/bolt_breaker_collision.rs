@@ -185,11 +185,15 @@ mod tests {
     }
 
     fn default_max_reflection_angle() -> MaxReflectionAngle {
-        MaxReflectionAngle(BreakerConfig::default().max_reflection_angle)
+        MaxReflectionAngle(BreakerConfig::default().max_reflection_angle.to_radians())
     }
 
     fn default_min_angle() -> MinAngleFromHorizontal {
-        MinAngleFromHorizontal(BreakerConfig::default().min_angle_from_horizontal)
+        MinAngleFromHorizontal(
+            BreakerConfig::default()
+                .min_angle_from_horizontal
+                .to_radians(),
+        )
     }
 
     fn bolt_param_bundle() -> (BoltBaseSpeed, BoltRadius) {

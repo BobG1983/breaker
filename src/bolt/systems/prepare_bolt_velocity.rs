@@ -66,7 +66,7 @@ mod tests {
         let breaker_config = BreakerConfig::default();
         app.world_mut().spawn((
             Breaker,
-            MinAngleFromHorizontal(breaker_config.min_angle_from_horizontal),
+            MinAngleFromHorizontal(breaker_config.min_angle_from_horizontal.to_radians()),
         ));
         app
     }

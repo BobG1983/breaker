@@ -127,7 +127,11 @@ mod tests {
         use crate::breaker::resources::BreakerConfig;
         let mut vel = BoltVelocity::new(1.0, 5.0);
         let original = vel.value;
-        vel.enforce_min_angle(BreakerConfig::default().min_angle_from_horizontal);
+        vel.enforce_min_angle(
+            BreakerConfig::default()
+                .min_angle_from_horizontal
+                .to_radians(),
+        );
         assert!((vel.value.x - original.x).abs() < 1e-6);
         assert!((vel.value.y - original.y).abs() < 1e-6);
     }

@@ -6,7 +6,8 @@ use crate::breaker::components::{
     BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration, BreakerMaxSpeed,
     BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth, BumpEarlyWindow,
     BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpWeakCooldown,
-    DashDuration, DashSpeedMultiplier, DashTilt, DecelEasing, SettleDuration, SettleTiltEase,
+    DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
+    SettleTiltEase,
 };
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
@@ -33,6 +34,7 @@ pub type BreakerDashQuery = (
     &'static DashSpeedMultiplier,
     &'static DashDuration,
     &'static DashTilt,
+    &'static DashTiltEase,
     &'static BrakeTilt,
     &'static BrakeDecel,
     &'static SettleDuration,

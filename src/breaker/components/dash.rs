@@ -26,6 +26,10 @@ pub struct BrakeDecel(pub f32);
 #[derive(Component, Debug)]
 pub struct SettleDuration(pub f32);
 
+/// Easing for dash tilt ramp-up (fast in, slower settle).
+#[derive(Component, Debug)]
+pub struct DashTiltEase(pub EaseFunction);
+
 /// Easing for settle tilt return to zero.
 #[derive(Component, Debug)]
 pub struct SettleTiltEase(pub EaseFunction);
