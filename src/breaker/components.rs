@@ -45,10 +45,12 @@ pub struct BreakerTilt {
 /// Tracks the bump state for timing-grade calculations.
 #[derive(Component, Debug)]
 pub struct BumpState {
-    /// Whether a bump is currently active.
+    /// Whether a forward bump window is open (pressed, waiting for bolt).
     pub active: bool,
-    /// Time remaining in the bump window (seconds).
+    /// Countdown from (`early_window` + `perfect_window`) — forward window.
     pub timer: f32,
+    /// Countdown from (`perfect_window` + `late_window`) after bolt hit — retroactive window.
+    pub post_hit_timer: f32,
     /// Cooldown remaining before another bump can be triggered (seconds).
     pub cooldown: f32,
 }
@@ -76,6 +78,7 @@ impl Default for BumpState {
         Self {
             active: false,
             timer: 0.0,
+            post_hit_timer: 0.0,
             cooldown: 0.0,
         }
     }

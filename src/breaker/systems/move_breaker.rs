@@ -43,8 +43,15 @@ pub fn move_breaker(
                 velocity.x = (input_dir * config.acceleration).mul_add(dt, velocity.x);
                 velocity.x = velocity.x.clamp(-config.max_speed, config.max_speed);
             } else {
-                // Decelerate toward zero
-                apply_deceleration(&mut velocity.x, config.deceleration, dt);
+                // Decelerate toward zero with eased speed curve
+                let effective_decel = super::dash::eased_decel(
+                    config.deceleration,
+                    velocity.x.abs(),
+                    config.max_speed,
+                    config.decel_ease,
+                    config.decel_ease_strength,
+                );
+                apply_deceleration(&mut velocity.x, effective_decel, dt);
             }
         }
 

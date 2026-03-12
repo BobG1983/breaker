@@ -1,6 +1,6 @@
 //! Breaker domain resources.
 
-use bevy::prelude::*;
+use bevy::{math::curve::easing::EaseFunction, prelude::*};
 use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
@@ -32,26 +32,36 @@ pub struct BreakerDefaults {
     pub brake_tilt_angle: f32,
     /// Y position of the breaker.
     pub y_position: f32,
-    /// Duration of the bump active window in seconds.
-    pub bump_duration: f32,
     /// Cooldown between bumps in seconds.
     pub bump_cooldown: f32,
-    /// Perfect bump timing window (seconds).
-    pub perfect_bump_window: f32,
-    /// Early bump window (seconds).
-    pub early_bump_window: f32,
+    /// Perfect bump timing window (seconds, each side of T=0).
+    pub perfect_window: f32,
+    /// Early bump window (seconds, before perfect zone).
+    pub early_window: f32,
+    /// Late bump window (seconds, after perfect zone).
+    pub late_window: f32,
     /// Velocity multiplier for perfect bump.
     pub perfect_bump_multiplier: f32,
     /// Velocity multiplier for early/late bump.
     pub weak_bump_multiplier: f32,
-    /// Velocity multiplier for no bump.
-    pub no_bump_multiplier: f32,
     /// RGB values for the breaker HDR color.
     pub color_rgb: [f32; 3],
     /// Duration of the bump pop animation in seconds.
     pub bump_visual_duration: f32,
     /// Maximum Y offset at the peak of the bump pop animation (world units).
     pub bump_visual_peak: f32,
+    /// Fraction of bump pop duration spent rising (0.0–1.0).
+    pub bump_visual_peak_fraction: f32,
+    /// Easing for the rise phase of the bump pop.
+    pub bump_visual_rise_ease: EaseFunction,
+    /// Easing for the fall phase of the bump pop.
+    pub bump_visual_fall_ease: EaseFunction,
+    /// Easing for settle tilt return to zero.
+    pub settle_tilt_ease: EaseFunction,
+    /// Easing applied to deceleration based on speed ratio.
+    pub decel_ease: EaseFunction,
+    /// Strength of eased deceleration (0.0 = constant decel, higher = more speed-dependent).
+    pub decel_ease_strength: f32,
 }
 
 impl Default for BreakerDefaults {
@@ -69,16 +79,21 @@ impl Default for BreakerDefaults {
             dash_tilt_angle: 0.26,
             brake_tilt_angle: 0.44,
             y_position: -250.0,
-            bump_duration: 0.3,
             bump_cooldown: 0.3,
-            perfect_bump_window: 0.05,
-            early_bump_window: 0.15,
+            perfect_window: 0.05,
+            early_window: 0.15,
+            late_window: 0.15,
             perfect_bump_multiplier: 1.5,
             weak_bump_multiplier: 0.8,
-            no_bump_multiplier: 1.0,
             color_rgb: [0.2, 2.0, 3.0],
             bump_visual_duration: 0.15,
-            bump_visual_peak: 6.0,
+            bump_visual_peak: 12.0,
+            bump_visual_peak_fraction: 0.3,
+            bump_visual_rise_ease: EaseFunction::CubicOut,
+            bump_visual_fall_ease: EaseFunction::QuadraticIn,
+            settle_tilt_ease: EaseFunction::CubicOut,
+            decel_ease: EaseFunction::QuadraticIn,
+            decel_ease_strength: 1.0,
         }
     }
 }

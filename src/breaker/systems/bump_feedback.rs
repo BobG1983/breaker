@@ -26,8 +26,6 @@ pub fn spawn_bump_grade_text(
 
     for performed in reader.read() {
         let (text, font_size, color) = match performed.grade {
-            BumpGrade::None => continue,
-            BumpGrade::Timeout => ("BUMP TIMEOUT", 20.0, Color::srgb(0.5, 0.5, 0.5)),
             BumpGrade::Early => ("EARLY", 24.0, Color::srgb(1.0, 0.7, 0.2)),
             BumpGrade::Late => ("LATE", 24.0, Color::srgb(1.0, 0.7, 0.2)),
             BumpGrade::Perfect => ("PERFECT", 36.0, Color::linear_rgb(0.5, 4.0, 5.0)),
@@ -101,40 +99,6 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 1, "perfect bump should spawn feedback text");
-    }
-
-    #[test]
-    fn no_bump_does_not_spawn_text() {
-        let mut app = test_app();
-        spawn_breaker(&mut app);
-        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
-            grade: BumpGrade::None,
-        })));
-        app.update();
-
-        let count = app
-            .world_mut()
-            .query_filtered::<Entity, With<FadeOut>>()
-            .iter(app.world())
-            .count();
-        assert_eq!(count, 0, "BumpGrade::None should not spawn text");
-    }
-
-    #[test]
-    fn timeout_spawns_text() {
-        let mut app = test_app();
-        spawn_breaker(&mut app);
-        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
-            grade: BumpGrade::Timeout,
-        })));
-        app.update();
-
-        let count = app
-            .world_mut()
-            .query_filtered::<Entity, With<FadeOut>>()
-            .iter(app.world())
-            .count();
-        assert_eq!(count, 1, "timeout should spawn feedback text");
     }
 
     #[test]
