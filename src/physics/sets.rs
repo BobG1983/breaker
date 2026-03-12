@@ -1,3 +1,5 @@
+//! Physics domain system sets for cross-domain ordering.
+
 use bevy::prelude::*;
 
 /// System sets exported by the physics domain for cross-domain ordering.

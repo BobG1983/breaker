@@ -4,13 +4,11 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltServing, BoltVelocity},
-        resources::BoltConfig,
+        components::{BoltBaseSpeed, BoltInitialAngle, BoltServing, BoltVelocity},
+        filters::ServingBoltFilter,
     },
     input::resources::{GameAction, InputActions},
 };
-
-type LaunchBoltFilter = (With<Bolt>, With<BoltServing>);
 
 /// Launches the bolt when the player activates bump.
 ///
@@ -18,16 +16,21 @@ type LaunchBoltFilter = (With<Bolt>, With<BoltServing>);
 /// bolts that are currently serving.
 pub fn launch_bolt(
     actions: Res<InputActions>,
-    config: Res<BoltConfig>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut BoltVelocity), LaunchBoltFilter>,
+    mut query: Query<
+        (Entity, &mut BoltVelocity, &BoltBaseSpeed, &BoltInitialAngle),
+        ServingBoltFilter,
+    >,
 ) {
     if !actions.active(GameAction::Bump) {
         return;
     }
 
-    for (entity, mut velocity) in &mut query {
-        velocity.value = config.initial_velocity();
+    for (entity, mut velocity, base_speed, initial_angle) in &mut query {
+        velocity.value = Vec2::new(
+            base_speed.0 * initial_angle.0.sin(),
+            base_speed.0 * initial_angle.0.cos(),
+        );
         commands.entity(entity).remove::<BoltServing>();
     }
 }
@@ -35,22 +38,37 @@ pub fn launch_bolt(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bolt::{
+        components::{Bolt, BoltVelocity},
+        resources::BoltConfig,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
         app.init_resource::<InputActions>();
         app.add_systems(Update, launch_bolt);
         app
+    }
+
+    fn bolt_launch_bundle() -> (BoltBaseSpeed, BoltInitialAngle) {
+        let config = BoltConfig::default();
+        (
+            BoltBaseSpeed(config.base_speed),
+            BoltInitialAngle(config.initial_angle),
+        )
     }
 
     #[test]
     fn bump_launches_serving_bolt() {
         let mut app = test_app();
 
-        app.world_mut()
-            .spawn((Bolt, BoltServing, BoltVelocity::new(0.0, 0.0)));
+        app.world_mut().spawn((
+            Bolt,
+            BoltServing,
+            BoltVelocity::new(0.0, 0.0),
+            bolt_launch_bundle(),
+        ));
 
         app.world_mut()
             .resource_mut::<InputActions>()
@@ -84,8 +102,12 @@ mod tests {
     fn no_input_keeps_serving() {
         let mut app = test_app();
 
-        app.world_mut()
-            .spawn((Bolt, BoltServing, BoltVelocity::new(0.0, 0.0)));
+        app.world_mut().spawn((
+            Bolt,
+            BoltServing,
+            BoltVelocity::new(0.0, 0.0),
+            bolt_launch_bundle(),
+        ));
 
         app.update();
 
@@ -108,6 +130,45 @@ mod tests {
         assert!(
             velocity.speed() < f32::EPSILON,
             "serving bolt should have zero velocity"
+        );
+    }
+
+    #[test]
+    fn launch_velocity_matches_base_speed_and_angle() {
+        let mut app = test_app();
+        let config = BoltConfig::default();
+
+        app.world_mut().spawn((
+            Bolt,
+            BoltServing,
+            BoltVelocity::new(0.0, 0.0),
+            bolt_launch_bundle(),
+        ));
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        app.update();
+
+        let velocity = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have velocity");
+
+        let expect_x = config.base_speed * config.initial_angle.sin();
+        let expect_y = config.base_speed * config.initial_angle.cos();
+        assert!(
+            (velocity.value.x - expect_x).abs() < 1e-4,
+            "vx should be base_speed * sin(angle), got {} expected {expect_x}",
+            velocity.value.x
+        );
+        assert!(
+            (velocity.value.y - expect_y).abs() < 1e-4,
+            "vy should be base_speed * cos(angle), got {} expected {expect_y}",
+            velocity.value.y
         );
     }
 

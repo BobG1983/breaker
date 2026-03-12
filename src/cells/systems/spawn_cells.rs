@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        components::{Cell, CellHealth},
+        components::{Cell, CellDamageVisuals, CellHealth, CellHeight, CellWidth},
         resources::CellConfig,
     },
     shared::{CleanupOnNodeExit, PlayfieldConfig},
@@ -20,16 +20,16 @@ pub fn spawn_cells(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let cell_width = config.half_width * 2.0;
-    let cell_height = config.half_height * 2.0;
+    let cell_width = config.width;
+    let cell_height = config.height;
     let step_x = cell_width + config.padding_x;
     let step_y = cell_height + config.padding_y;
 
     // Center the grid horizontally
     #[allow(clippy::cast_precision_loss)]
-    let grid_width = step_x * config.grid_cols as f32 - config.padding_x;
-    let start_x = -grid_width / 2.0 + config.half_width;
-    let start_y = playfield.top() - config.grid_top_offset - config.half_height;
+    let grid_width = step_x.mul_add(config.grid_cols as f32, -config.padding_x);
+    let start_x = -grid_width / 2.0 + config.width / 2.0;
+    let start_y = playfield.top() - config.grid_top_offset - config.height / 2.0;
 
     let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
 
@@ -54,7 +54,15 @@ pub fn spawn_cells(
 
             commands.spawn((
                 Cell,
+                CellWidth(config.width),
+                CellHeight(config.height),
                 CellHealth::new(hp),
+                CellDamageVisuals {
+                    hdr_base: config.damage_hdr_base,
+                    green_min: config.damage_green_min,
+                    blue_range: config.damage_blue_range,
+                    blue_base: config.damage_blue_base,
+                },
                 Mesh2d(rect_mesh.clone()),
                 MeshMaterial2d(materials.add(ColorMaterial::from_color(color))),
                 Transform {
@@ -71,7 +79,7 @@ pub fn spawn_cells(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::components::{Cell, CellHealth};
+    use crate::cells::components::{Cell, CellHealth, CellHeight, CellWidth};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -134,12 +142,34 @@ mod tests {
             let x = transform.translation.x;
             let y = transform.translation.y;
             assert!(
-                x.abs() < playfield.right() + config.half_width,
+                x.abs() < playfield.right() + config.width / 2.0,
                 "cell x={x} out of bounds"
             );
             assert!(
-                y < playfield.top() + config.half_height,
+                y < playfield.top() + config.height / 2.0,
                 "cell y={y} above playfield"
+            );
+        }
+    }
+
+    #[test]
+    fn all_cells_have_dimensions() {
+        let mut app = test_app();
+        app.update();
+
+        let config = CellConfig::default();
+        for (cell_w, cell_h) in app
+            .world_mut()
+            .query::<(&CellWidth, &CellHeight)>()
+            .iter(app.world())
+        {
+            assert!(
+                (cell_w.0 - config.width).abs() < f32::EPSILON,
+                "CellWidth should match config"
+            );
+            assert!(
+                (cell_h.0 - config.height).abs() < f32::EPSILON,
+                "CellHeight should match config"
             );
         }
     }

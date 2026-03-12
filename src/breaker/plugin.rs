@@ -8,9 +8,10 @@ use crate::{
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
-            animate_bump_visual, animate_tilt_visual, grade_bump, move_breaker,
-            perfect_bump_dash_cancel, reset_breaker, spawn_breaker, spawn_bump_grade_text,
-            spawn_whiff_text, trigger_bump_visual, update_breaker_state, update_bump,
+            animate_bump_visual, animate_tilt_visual, grade_bump, init_breaker_params,
+            move_breaker, perfect_bump_dash_cancel, reset_breaker, spawn_breaker,
+            spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual, update_breaker_state,
+            update_bump,
         },
     },
     physics::PhysicsSystems,
@@ -29,7 +30,11 @@ impl Plugin for BreakerPlugin {
         app.init_resource::<BreakerConfig>();
         app.add_systems(
             OnEnter(GameState::Playing),
-            (spawn_breaker, reset_breaker.after(spawn_breaker)),
+            (
+                spawn_breaker,
+                init_breaker_params.after(spawn_breaker),
+                reset_breaker.after(init_breaker_params),
+            ),
         );
         app.add_systems(
             FixedUpdate,

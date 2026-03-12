@@ -8,10 +8,10 @@ use serde::Deserialize;
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "BreakerConfig")]
 pub struct BreakerDefaults {
-    /// Half-width of the breaker in world units.
-    pub half_width: f32,
-    /// Half-height of the breaker in world units.
-    pub half_height: f32,
+    /// Full width of the breaker in world units.
+    pub width: f32,
+    /// Full height of the breaker in world units.
+    pub height: f32,
     /// Maximum horizontal speed in world units per second.
     pub max_speed: f32,
     /// Horizontal acceleration in world units per second squared.
@@ -64,13 +64,17 @@ pub struct BreakerDefaults {
     pub decel_ease: EaseFunction,
     /// Strength of eased deceleration (0.0 = constant decel, higher = more speed-dependent).
     pub decel_ease_strength: f32,
+    /// Maximum reflection angle from vertical in radians.
+    pub max_reflection_angle: f32,
+    /// Minimum angle from horizontal in radians.
+    pub min_angle_from_horizontal: f32,
 }
 
 impl Default for BreakerDefaults {
     fn default() -> Self {
         Self {
-            half_width: 60.0,
-            half_height: 10.0,
+            width: 120.0,
+            height: 20.0,
             max_speed: 500.0,
             acceleration: 3000.0,
             deceleration: 2500.0,
@@ -97,6 +101,8 @@ impl Default for BreakerDefaults {
             settle_tilt_ease: EaseFunction::CubicOut,
             decel_ease: EaseFunction::QuadraticIn,
             decel_ease_strength: 1.0,
+            max_reflection_angle: 1.31,
+            min_angle_from_horizontal: 0.17,
         }
     }
 }
@@ -116,8 +122,8 @@ mod tests {
     #[test]
     fn default_config_has_positive_dimensions() {
         let config = BreakerConfig::default();
-        assert!(config.half_width > 0.0);
-        assert!(config.half_height > 0.0);
+        assert!(config.width > 0.0);
+        assert!(config.height > 0.0);
     }
 
     #[test]
@@ -144,6 +150,14 @@ mod tests {
     fn breaker_defaults_ron_parses() {
         let ron_str = include_str!("../../assets/config/defaults.breaker.ron");
         let result: BreakerDefaults = ron::de::from_str(ron_str).expect("breaker RON should parse");
-        assert!(result.half_width > 0.0);
+        assert!(result.width > 0.0);
+        assert!(
+            result.max_reflection_angle > 0.0,
+            "RON should include max_reflection_angle"
+        );
+        assert!(
+            result.min_angle_from_horizontal > 0.0,
+            "RON should include min_angle_from_horizontal"
+        );
     }
 }

@@ -6,6 +6,41 @@ use bevy::prelude::*;
 #[derive(Component, Debug)]
 pub struct Cell;
 
+/// Visual parameters for cell damage color feedback.
+#[derive(Component, Debug, Clone)]
+pub struct CellDamageVisuals {
+    /// HDR intensity multiplier at full health.
+    pub hdr_base: f32,
+    /// Minimum green channel value.
+    pub green_min: f32,
+    /// Blue channel range added based on health fraction.
+    pub blue_range: f32,
+    /// Base blue channel value.
+    pub blue_base: f32,
+}
+
+/// Full width of a cell in world units.
+#[derive(Component, Debug)]
+pub struct CellWidth(pub f32);
+
+impl CellWidth {
+    /// Returns half the cell width.
+    pub fn half_width(&self) -> f32 {
+        self.0 / 2.0
+    }
+}
+
+/// Full height of a cell in world units.
+#[derive(Component, Debug)]
+pub struct CellHeight(pub f32);
+
+impl CellHeight {
+    /// Returns half the cell height.
+    pub fn half_height(&self) -> f32 {
+        self.0 / 2.0
+    }
+}
+
 /// Health of a cell — number of hits remaining before destruction.
 #[derive(Component, Debug, Clone)]
 pub struct CellHealth {
@@ -51,6 +86,18 @@ impl CellHealth {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cell_width_half_width() {
+        let w = CellWidth(70.0);
+        assert!((w.half_width() - 35.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn cell_height_half_height() {
+        let h = CellHeight(24.0);
+        assert!((h.half_height() - 12.0).abs() < f32::EPSILON);
+    }
 
     #[test]
     fn cell_health_standard() {

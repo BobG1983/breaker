@@ -2,25 +2,7 @@
 
 use bevy::{input::keyboard::KeyboardInput, prelude::*};
 
-use crate::input::resources::{GameAction, InputActions, InputConfig};
-
-/// Tracks timestamps for double-tap dash detection.
-#[derive(Resource, Debug)]
-pub struct DoubleTapState {
-    /// Wall-clock time of the last left-direction press.
-    pub last_left_tap: f64,
-    /// Wall-clock time of the last right-direction press.
-    pub last_right_tap: f64,
-}
-
-impl Default for DoubleTapState {
-    fn default() -> Self {
-        Self {
-            last_left_tap: f64::NEG_INFINITY,
-            last_right_tap: f64::NEG_INFINITY,
-        }
-    }
-}
+use crate::input::resources::{DoubleTapState, GameAction, InputActions, InputConfig};
 
 /// Translates raw keyboard input into [`InputActions`].
 ///

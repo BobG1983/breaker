@@ -8,10 +8,10 @@ use serde::Deserialize;
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "CellConfig")]
 pub struct CellDefaults {
-    /// Half-width of a cell in world units.
-    pub half_width: f32,
-    /// Half-height of a cell in world units.
-    pub half_height: f32,
+    /// Full width of a cell in world units.
+    pub width: f32,
+    /// Full height of a cell in world units.
+    pub height: f32,
     /// Horizontal padding between cells.
     pub padding_x: f32,
     /// Vertical padding between cells.
@@ -45,8 +45,8 @@ pub struct CellDefaults {
 impl Default for CellDefaults {
     fn default() -> Self {
         Self {
-            half_width: 35.0,
-            half_height: 12.0,
+            width: 70.0,
+            height: 24.0,
             padding_x: 4.0,
             padding_y: 4.0,
             grid_cols: 10,

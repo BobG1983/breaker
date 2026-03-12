@@ -7,6 +7,7 @@ use crate::{
         components::{
             Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BumpState,
         },
+        queries::BreakerResetQuery,
         resources::BreakerConfig,
     },
     shared::{CleanupOnRunEnd, PlayfieldConfig},
@@ -38,7 +39,7 @@ pub fn spawn_breaker(
         MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
         Transform {
             translation: Vec3::new(0.0, config.y_position, 0.0),
-            scale: Vec3::new(config.half_width * 2.0, config.half_height * 2.0, 1.0),
+            scale: Vec3::new(config.width, config.height, 1.0),
             ..default()
         },
         CleanupOnRunEnd,
@@ -51,23 +52,13 @@ pub fn spawn_breaker(
 /// clears velocity/tilt/state. On the first node, `spawn_breaker` handles
 /// initialization — this system is a no-op if no breaker exists yet.
 pub fn reset_breaker(
-    config: Res<BreakerConfig>,
     playfield: Res<PlayfieldConfig>,
-    mut query: Query<
-        (
-            &mut Transform,
-            &mut BreakerState,
-            &mut BreakerVelocity,
-            &mut BreakerTilt,
-            &mut BreakerStateTimer,
-        ),
-        With<Breaker>,
-    >,
+    mut query: Query<BreakerResetQuery, With<Breaker>>,
 ) {
     let _ = &playfield; // future: use playfield for centering
-    for (mut transform, mut state, mut velocity, mut tilt, mut timer) in &mut query {
+    for (mut transform, mut state, mut velocity, mut tilt, mut timer, base_y) in &mut query {
         transform.translation.x = 0.0;
-        transform.translation.y = config.y_position;
+        transform.translation.y = base_y.0;
         *state = BreakerState::Idle;
         velocity.x = 0.0;
         tilt.angle = 0.0;
@@ -79,7 +70,7 @@ pub fn reset_breaker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::components::Breaker;
+    use crate::breaker::components::{Breaker, BreakerBaseY};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -177,6 +168,7 @@ mod tests {
                 settle_start_angle: 0.5,
             },
             BreakerStateTimer { remaining: 0.1 },
+            BreakerBaseY(config.y_position),
             BumpState::default(),
             Transform::from_xyz(100.0, config.y_position + 50.0, 0.0),
             CleanupOnRunEnd,

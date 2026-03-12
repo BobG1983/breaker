@@ -5,3 +5,4 @@ pub mod resources;
 mod systems;
 
 pub use plugin::InputPlugin;
+pub use resources::{InputConfig, InputDefaults};

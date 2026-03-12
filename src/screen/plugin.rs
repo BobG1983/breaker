@@ -17,7 +17,7 @@ use crate::{
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::CellDefaults,
-    physics::PhysicsDefaults,
+    input::InputDefaults,
     shared::{
         CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
         PlayingState,
@@ -46,7 +46,7 @@ impl Plugin for ScreenPlugin {
             RonAssetPlugin::<BoltDefaults>::new(&["bolt.ron"]),
             RonAssetPlugin::<BreakerDefaults>::new(&["breaker.ron"]),
             RonAssetPlugin::<CellDefaults>::new(&["cells.ron"]),
-            RonAssetPlugin::<PhysicsDefaults>::new(&["physics.ron"]),
+            RonAssetPlugin::<InputDefaults>::new(&["input.ron"]),
             RonAssetPlugin::<MainMenuDefaults>::new(&["mainmenu.ron"]),
         ));
 

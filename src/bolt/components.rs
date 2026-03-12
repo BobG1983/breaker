@@ -61,6 +61,34 @@ impl BoltVelocity {
     }
 }
 
+/// Base speed in world units per second.
+#[derive(Component, Debug)]
+pub struct BoltBaseSpeed(pub f32);
+
+/// Minimum speed cap.
+#[derive(Component, Debug)]
+pub struct BoltMinSpeed(pub f32);
+
+/// Maximum speed cap.
+#[derive(Component, Debug)]
+pub struct BoltMaxSpeed(pub f32);
+
+/// Bolt radius in world units.
+#[derive(Component, Debug)]
+pub struct BoltRadius(pub f32);
+
+/// Vertical offset above the breaker where the bolt spawns.
+#[derive(Component, Debug)]
+pub struct BoltSpawnOffsetY(pub f32);
+
+/// Vertical offset above the breaker for bolt respawn after loss.
+#[derive(Component, Debug)]
+pub struct BoltRespawnOffsetY(pub f32);
+
+/// Initial launch angle from vertical in radians.
+#[derive(Component, Debug)]
+pub struct BoltInitialAngle(pub f32);
+
 /// A fade-out animation timer. Entities with this component will have their
 /// alpha reduced over `duration` seconds and be despawned when finished.
 #[derive(Component, Debug)]
@@ -96,10 +124,10 @@ mod tests {
 
     #[test]
     fn enforce_min_angle_leaves_steep_unchanged() {
-        use crate::bolt::resources::BoltConfig;
+        use crate::breaker::resources::BreakerConfig;
         let mut vel = BoltVelocity::new(1.0, 5.0);
         let original = vel.value;
-        vel.enforce_min_angle(BoltConfig::default().min_angle_from_horizontal);
+        vel.enforce_min_angle(BreakerConfig::default().min_angle_from_horizontal);
         assert!((vel.value.x - original.x).abs() < 1e-6);
         assert!((vel.value.y - original.y).abs() < 1e-6);
     }

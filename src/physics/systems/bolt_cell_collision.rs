@@ -13,23 +13,17 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::{
-        BoltConfig,
-        components::{Bolt, BoltVelocity},
+        components::{BoltRadius, BoltVelocity},
         filters::ActiveBoltFilter,
     },
-    cells::{CellConfig, components::Cell},
+    cells::components::{CellHeight, CellWidth},
     physics::{
         ccd::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
-        components::{Wall, WallSize},
+        components::WallSize,
+        filters::{CellCollisionFilter, WallCollisionFilter},
         messages::BoltHitCell,
     },
 };
-
-/// Query filter for cell data.
-type CellFilter = (With<Cell>, Without<Bolt>, Without<Wall>);
-
-/// Query filter for wall data.
-type WallFilter = (With<Wall>, Without<Bolt>, Without<Cell>);
 
 /// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
 ///
@@ -40,20 +34,18 @@ type WallFilter = (With<Wall>, Without<Bolt>, Without<Cell>);
 /// messages for each cell hit. Wall hits reflect only.
 pub fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
-    bolt_config: Res<BoltConfig>,
-    cell_config: Res<CellConfig>,
-    mut bolt_query: Query<(Entity, &mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
-    cell_query: Query<(Entity, &Transform), CellFilter>,
-    wall_query: Query<(Entity, &Transform, &WallSize), WallFilter>,
+    mut bolt_query: Query<
+        (Entity, &mut Transform, &mut BoltVelocity, &BoltRadius),
+        ActiveBoltFilter,
+    >,
+    cell_query: Query<(Entity, &Transform, &CellWidth, &CellHeight), CellCollisionFilter>,
+    wall_query: Query<(Entity, &Transform, &WallSize), WallCollisionFilter>,
     mut hit_writer: MessageWriter<BoltHitCell>,
 ) {
     let dt = time.delta_secs();
-    let cell_half_extents = Vec2::new(
-        cell_config.half_width + bolt_config.radius,
-        cell_config.half_height + bolt_config.radius,
-    );
 
-    for (bolt_entity, mut bolt_tf, mut bolt_vel) in &mut bolt_query {
+    for (bolt_entity, mut bolt_tf, mut bolt_vel, bolt_radius) in &mut bolt_query {
+        let r = bolt_radius.0;
         let mut position = bolt_tf.translation.truncate();
         let mut velocity = bolt_vel.value;
         let mut remaining = velocity.length() * dt;
@@ -72,8 +64,10 @@ pub fn bolt_cell_collision(
             let mut best: Option<(Option<Entity>, crate::physics::ccd::RayHit)> = None;
 
             // Check cells
-            for (cell_entity, cell_tf) in &cell_query {
+            for (cell_entity, cell_tf, cell_w, cell_h) in &cell_query {
                 let cell_pos = cell_tf.translation.truncate();
+                let cell_half_extents =
+                    Vec2::new(cell_w.half_width() + r, cell_h.half_height() + r);
                 if let Some(hit) =
                     ray_vs_aabb(position, direction, remaining, cell_pos, cell_half_extents)
                     && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
@@ -85,10 +79,8 @@ pub fn bolt_cell_collision(
             // Check walls
             for (_wall_entity, wall_tf, wall_size) in &wall_query {
                 let wall_pos = wall_tf.translation.truncate();
-                let wall_half_extents = Vec2::new(
-                    wall_size.half_width + bolt_config.radius,
-                    wall_size.half_height + bolt_config.radius,
-                );
+                let wall_half_extents =
+                    Vec2::new(wall_size.half_width + r, wall_size.half_height + r);
                 if let Some(hit) =
                     ray_vs_aabb(position, direction, remaining, wall_pos, wall_half_extents)
                     && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
@@ -128,18 +120,32 @@ pub fn bolt_cell_collision(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::{Bolt, BoltServing};
+    use crate::{
+        bolt::{
+            components::{Bolt, BoltRadius, BoltServing},
+            resources::BoltConfig,
+        },
+        cells::{components::Cell, resources::CellConfig},
+        physics::components::{Wall, WallSize},
+    };
 
     // --- CCD system tests ---
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.init_resource::<CellConfig>();
         app.add_message::<BoltHitCell>();
         app.add_systems(Update, bolt_cell_collision);
         app
+    }
+
+    fn default_bolt_radius() -> BoltRadius {
+        BoltRadius(BoltConfig::default().radius)
+    }
+
+    fn default_cell_dims() -> (CellWidth, CellHeight) {
+        let cc = CellConfig::default();
+        (CellWidth(cc.width), CellHeight(cc.height))
     }
 
     /// Advances `Time<Fixed>` by one default timestep, then runs one update.
@@ -152,8 +158,9 @@ mod tests {
     }
 
     fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
+        let (cw, ch) = default_cell_dims();
         app.world_mut()
-            .spawn((Cell, Transform::from_xyz(x, y, 0.0)))
+            .spawn((Cell, cw, ch, Transform::from_xyz(x, y, 0.0)))
             .id()
     }
 
@@ -170,6 +177,7 @@ mod tests {
         let speed = 400.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, speed),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -200,9 +208,10 @@ mod tests {
         spawn_cell(&mut app, 0.0, cell_y);
 
         // Place bolt below the cell's expanded AABB, moving upward
-        let start_y = cell_y - cc.half_height - bc.radius - 5.0;
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -227,7 +236,7 @@ mod tests {
             .iter(app.world())
             .next()
             .unwrap();
-        let cell_bottom = cell_y - cc.half_height - bc.radius;
+        let cell_bottom = cell_y - cc.height / 2.0 - bc.radius;
         assert!(
             tf.translation.y < cell_bottom,
             "bolt should be below cell: y={:.2}, cell_bottom={cell_bottom:.2}",
@@ -245,9 +254,10 @@ mod tests {
         spawn_cell(&mut app, cell_x, 0.0);
 
         // Place bolt left of cell, moving right
-        let start_x = cell_x - cc.half_width - bc.radius - 5.0;
+        let start_x = cell_x - cc.width / 2.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(400.0, 0.1), // mostly horizontal
             Transform::from_xyz(start_x, 0.0, 0.0),
         ));
@@ -278,10 +288,11 @@ mod tests {
 
         // Place bolt just 1 unit below the expanded AABB bottom, moving up fast.
         // It will hit quickly and have most of its movement remaining.
-        let cell_bottom = cell_y - cc.half_height - bc.radius;
+        let cell_bottom = cell_y - cc.height / 2.0 - bc.radius;
         let start_y = cell_bottom - 1.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -320,9 +331,10 @@ mod tests {
         let near_cell = spawn_cell(&mut app, 0.0, near_y);
         spawn_cell(&mut app, 0.0, far_y);
 
-        let start_y = near_y - cc.half_height - bc.radius - 2.0;
+        let start_y = near_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -356,9 +368,10 @@ mod tests {
         let cell_y = 100.0;
         let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
-        let start_y = cell_y - cc.half_height - bc.radius - 2.0;
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -381,6 +394,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 300.0),
             Transform::from_xyz(0.0, -100.0, 0.0),
         ));
@@ -417,9 +431,10 @@ mod tests {
         spawn_cell(&mut app, 0.0, lower_y);
 
         // Bolt below the upper cell, moving up
-        let start_y = upper_y - cc.half_height - bc.radius - 2.0;
+        let start_y = upper_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -452,9 +467,10 @@ mod tests {
         spawn_cell(&mut app, right_x, cell_y);
 
         // Bolt left of right cell, moving right
-        let start_x = right_x - cc.half_width - bc.radius - 2.0;
+        let start_x = right_x - cc.width / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(400.0, 10.0),
             Transform::from_xyz(start_x, cell_y, 0.0),
         ));
@@ -491,9 +507,10 @@ mod tests {
             }
         }
 
-        let start_y = base_y - cc.half_height - bc.radius - 2.0;
+        let start_y = base_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(30.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -524,12 +541,13 @@ mod tests {
         // Two cells very close together creating a narrow channel.
         // Bolt bouncing between them could loop forever without the cap.
         let gap = bc.radius.mul_add(2.0, 2.0); // just wider than bolt diameter
-        spawn_cell(&mut app, 0.0, gap / 2.0 + cc.half_height + bc.radius);
-        spawn_cell(&mut app, 0.0, -(gap / 2.0 + cc.half_height + bc.radius));
+        spawn_cell(&mut app, 0.0, gap / 2.0 + cc.height / 2.0 + bc.radius);
+        spawn_cell(&mut app, 0.0, -(gap / 2.0 + cc.height / 2.0 + bc.radius));
 
         // Bolt in the channel, moving up very fast
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.1, 800.0),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
@@ -555,17 +573,19 @@ mod tests {
         let cell_a = spawn_cell(&mut app, -100.0, 100.0);
         let cell_b = spawn_cell(&mut app, 100.0, 100.0);
 
-        let start_y = 100.0 - cc.half_height - bc.radius - 2.0;
+        let start_y = 100.0 - cc.height / 2.0 - bc.radius - 2.0;
 
         // Bolt A near cell A
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(-100.0, start_y, 0.0),
         ));
         // Bolt B near cell B
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(100.0, start_y, 0.0),
         ));
@@ -582,8 +602,6 @@ mod tests {
     fn serving_bolt_is_not_advanced() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.init_resource::<CellConfig>();
         app.add_message::<BoltHitCell>();
         app.add_systems(Update, bolt_cell_collision);
 
@@ -592,6 +610,7 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
+                default_bolt_radius(),
                 BoltVelocity::new(0.0, 400.0),
                 Transform::from_xyz(0.0, 0.0, 0.0),
             ))
@@ -632,6 +651,7 @@ mod tests {
         let start_x = 200.0 - 50.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(400.0, 0.1),
             Transform::from_xyz(start_x, 0.0, 0.0),
         ));
@@ -663,6 +683,7 @@ mod tests {
         let start_x = 200.0 - 50.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(400.0, 0.1),
             Transform::from_xyz(start_x, 0.0, 0.0),
         ));
@@ -689,9 +710,10 @@ mod tests {
         let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
         spawn_wall(&mut app, 0.0, 200.0, 400.0, 50.0);
 
-        let start_y = cell_y - cc.half_height - bc.radius - 2.0;
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
+            default_bolt_radius(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));

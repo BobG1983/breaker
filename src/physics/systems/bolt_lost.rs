@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::{
-        BoltConfig,
-        components::{Bolt, BoltVelocity},
+        components::{Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY, BoltVelocity},
         filters::ActiveBoltFilter,
     },
     breaker::components::Breaker,
@@ -18,9 +17,17 @@ use crate::{
 /// Sends a [`BoltLost`] message. In Phase 2, the breaker plugin will
 /// apply penalties per breaker type.
 pub fn bolt_lost(
-    bolt_config: Res<BoltConfig>,
     playfield: Res<PlayfieldConfig>,
-    mut bolt_query: Query<(&mut Transform, &mut BoltVelocity), ActiveBoltFilter>,
+    mut bolt_query: Query<
+        (
+            &mut Transform,
+            &mut BoltVelocity,
+            &BoltBaseSpeed,
+            &BoltRadius,
+            &BoltRespawnOffsetY,
+        ),
+        ActiveBoltFilter,
+    >,
     breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
     mut writer: MessageWriter<BoltLost>,
 ) {
@@ -29,16 +36,18 @@ pub fn bolt_lost(
     };
     let breaker_pos = breaker_transform.translation;
 
-    for (mut bolt_transform, mut bolt_velocity) in &mut bolt_query {
-        if bolt_transform.translation.y < playfield.bottom() - bolt_config.radius {
+    for (mut bolt_transform, mut bolt_velocity, base_speed, radius, respawn_offset) in
+        &mut bolt_query
+    {
+        if bolt_transform.translation.y < playfield.bottom() - radius.0 {
             writer.write(BoltLost);
 
             // Respawn above breaker
             bolt_transform.translation.x = breaker_pos.x;
-            bolt_transform.translation.y = breaker_pos.y + bolt_config.respawn_offset_y;
+            bolt_transform.translation.y = breaker_pos.y + respawn_offset.0;
 
             // Relaunch straight up at base speed — losing position is penalty enough
-            bolt_velocity.value = Vec2::new(0.0, bolt_config.base_speed);
+            bolt_velocity.value = Vec2::new(0.0, base_speed.0);
         }
     }
 }
@@ -46,19 +55,27 @@ pub fn bolt_lost(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        bolt::components::{Bolt, BoltVelocity},
-        breaker::components::Breaker,
+    use crate::bolt::{
+        components::{Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY, BoltVelocity},
+        resources::BoltConfig,
     };
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
         app.init_resource::<PlayfieldConfig>();
         app.add_message::<BoltLost>();
         app.add_systems(Update, bolt_lost);
         app
+    }
+
+    fn bolt_lost_bundle() -> (BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY) {
+        let config = BoltConfig::default();
+        (
+            BoltBaseSpeed(config.base_speed),
+            BoltRadius(config.radius),
+            BoltRespawnOffsetY(config.respawn_offset_y),
+        )
     }
 
     #[test]
@@ -71,6 +88,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
             Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
         ));
         app.update();
@@ -96,6 +114,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(100.0, -400.0),
+            bolt_lost_bundle(),
             Transform::from_xyz(200.0, playfield.bottom() - 100.0, 0.0),
         ));
         app.update();
@@ -126,6 +145,38 @@ mod tests {
     }
 
     #[test]
+    fn respawn_y_uses_respawn_offset() {
+        let mut app = test_app();
+        let bolt_config = BoltConfig::default();
+        let playfield = PlayfieldConfig::default();
+        let breaker_y = -250.0;
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, breaker_y, 0.0)));
+
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
+            Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
+        ));
+        app.update();
+
+        let transform = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+
+        let expected_y = breaker_y + bolt_config.respawn_offset_y;
+        assert!(
+            (transform.translation.y - expected_y).abs() < f32::EPSILON,
+            "respawn Y should be breaker_y + respawn_offset_y ({expected_y}), got {}",
+            transform.translation.y,
+        );
+    }
+
+    #[test]
     fn bolt_above_floor_not_lost() {
         let mut app = test_app();
         app.world_mut()
@@ -135,6 +186,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(100.0, -200.0),
+            bolt_lost_bundle(),
             Transform::from_xyz(0.0, original_y, 0.0),
         ));
         app.update();

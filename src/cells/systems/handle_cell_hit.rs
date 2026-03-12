@@ -4,9 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        components::{Cell, CellHealth},
+        components::{Cell, CellDamageVisuals, CellHealth},
         messages::CellDestroyed,
-        resources::CellConfig,
     },
     physics::messages::BoltHitCell,
 };
@@ -17,14 +16,20 @@ use crate::{
 /// and despawns cells that reach zero HP. Sends [`CellDestroyed`] on destruction.
 pub fn handle_cell_hit(
     mut reader: MessageReader<BoltHitCell>,
-    mut cell_query: Query<(&mut CellHealth, &MeshMaterial2d<ColorMaterial>), With<Cell>>,
+    mut cell_query: Query<
+        (
+            &mut CellHealth,
+            &MeshMaterial2d<ColorMaterial>,
+            &CellDamageVisuals,
+        ),
+        With<Cell>,
+    >,
     mut commands: Commands,
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    cell_config: Res<CellConfig>,
 ) {
     for hit in reader.read() {
-        let Ok((mut health, material_handle)) = cell_query.get_mut(hit.cell) else {
+        let Ok((mut health, material_handle, visuals)) = cell_query.get_mut(hit.cell) else {
             continue;
         };
 
@@ -36,14 +41,12 @@ pub fn handle_cell_hit(
         } else {
             // Visual feedback — dim HDR intensity based on remaining health
             let frac = health.fraction();
-            let intensity = frac * cell_config.damage_hdr_base;
+            let intensity = frac * visuals.hdr_base;
             if let Some(material) = materials.get_mut(material_handle.id()) {
                 material.color = Color::srgb(
                     intensity,
-                    cell_config.damage_green_min * frac,
-                    cell_config
-                        .damage_blue_range
-                        .mul_add(1.0 - frac, cell_config.damage_blue_base),
+                    visuals.green_min * frac,
+                    visuals.blue_range.mul_add(1.0 - frac, visuals.blue_base),
                 );
             }
         }
@@ -53,7 +56,10 @@ pub fn handle_cell_hit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::components::{Cell, CellHealth};
+    use crate::cells::{
+        components::{Cell, CellDamageVisuals, CellHealth},
+        resources::CellConfig,
+    };
 
     #[derive(Resource)]
     struct TestMessage(Option<BoltHitCell>);
@@ -70,11 +76,20 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.init_resource::<Assets<Mesh>>();
         app.init_resource::<Assets<ColorMaterial>>();
-        app.init_resource::<CellConfig>();
         app.add_message::<BoltHitCell>();
         app.add_message::<CellDestroyed>();
         app.add_systems(Update, handle_cell_hit);
         app
+    }
+
+    fn default_damage_visuals() -> CellDamageVisuals {
+        let config = CellConfig::default();
+        CellDamageVisuals {
+            hdr_base: config.damage_hdr_base,
+            green_min: config.damage_green_min,
+            blue_range: config.damage_blue_range,
+            blue_base: config.damage_blue_base,
+        }
     }
 
     fn spawn_cell(app: &mut App, hp: u32) -> Entity {
@@ -90,6 +105,7 @@ mod tests {
             .spawn((
                 Cell,
                 CellHealth::new(hp),
+                default_damage_visuals(),
                 Mesh2d(mesh),
                 MeshMaterial2d(material),
                 Transform::from_xyz(0.0, 0.0, 0.0),

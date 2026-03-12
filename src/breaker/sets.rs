@@ -1,3 +1,5 @@
+//! Breaker domain system sets for cross-domain ordering.
+
 use bevy::prelude::*;
 
 /// System sets exported by the breaker domain for cross-domain ordering.

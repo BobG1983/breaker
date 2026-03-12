@@ -2,10 +2,9 @@
 
 use bevy::{input::InputSystems, prelude::*};
 
-use super::resources::InputActions;
 use crate::input::{
-    resources::InputConfig,
-    systems::{DoubleTapState, read_input_actions},
+    resources::{DoubleTapState, InputActions, InputConfig},
+    systems::read_input_actions,
 };
 
 /// Plugin for the input domain.

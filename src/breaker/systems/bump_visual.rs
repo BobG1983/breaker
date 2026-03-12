@@ -4,14 +4,11 @@ use bevy::{math::curve::Curve, prelude::*};
 
 use crate::{
     breaker::{
-        components::{Breaker, BumpVisual},
-        resources::BreakerConfig,
+        components::{Breaker, BreakerBaseY, BumpVisual, BumpVisualParams},
+        filters::BumpTriggerFilter,
     },
     input::resources::{GameAction, InputActions},
 };
-
-/// Query filter for breakers eligible for a new bump visual.
-type BumpTriggerFilter = (With<Breaker>, Without<BumpVisual>);
 
 /// Triggers a bump pop animation when the player presses bump.
 ///
@@ -20,18 +17,17 @@ type BumpTriggerFilter = (With<Breaker>, Without<BumpVisual>);
 /// filter in [`BumpTriggerFilter`] prevents duplicate triggers.
 pub fn trigger_bump_visual(
     mut commands: Commands,
-    config: Res<BreakerConfig>,
     actions: Res<InputActions>,
-    query: Query<Entity, BumpTriggerFilter>,
+    query: Query<(Entity, &BumpVisualParams), BumpTriggerFilter>,
 ) {
     if !actions.active(GameAction::Bump) {
         return;
     }
-    for entity in &query {
+    for (entity, params) in &query {
         commands.entity(entity).insert(BumpVisual {
-            timer: config.bump_visual_duration,
-            duration: config.bump_visual_duration,
-            peak_offset: config.bump_visual_peak,
+            timer: params.duration,
+            duration: params.duration,
+            peak_offset: params.peak,
         });
     }
 }
@@ -43,36 +39,44 @@ pub fn trigger_bump_visual(
 pub fn animate_bump_visual(
     mut commands: Commands,
     time: Res<Time>,
-    config: Res<BreakerConfig>,
-    mut query: Query<(Entity, &mut Transform, &mut BumpVisual), With<Breaker>>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut BumpVisual,
+            &BreakerBaseY,
+            &BumpVisualParams,
+        ),
+        With<Breaker>,
+    >,
 ) {
     let dt = time.delta_secs();
 
-    for (entity, mut transform, mut visual) in &mut query {
+    for (entity, mut transform, mut visual, base_y, params) in &mut query {
         // Remove previous frame's offset
-        let prev_offset = bump_offset(&visual, &config);
+        let prev_offset = bump_offset(&visual, params);
         transform.translation.y -= prev_offset;
 
         visual.timer -= dt;
 
         if visual.timer <= 0.0 {
             // Animation complete — snap to base position
-            transform.translation.y = config.y_position;
+            transform.translation.y = base_y.0;
             commands.entity(entity).remove::<BumpVisual>();
         } else {
             // Apply new eased offset
-            transform.translation.y += bump_offset(&visual, &config);
+            transform.translation.y += bump_offset(&visual, params);
         }
     }
 }
 
 /// Calculates the current Y offset for the bump animation.
 ///
-/// Piecewise two-phase curve: rise phase (0→peak) uses `bump_visual_rise_ease`,
-/// fall phase (peak→0) uses `bump_visual_fall_ease`. `bump_visual_peak_fraction`
+/// Piecewise two-phase curve: rise phase (0→peak) uses `rise_ease`,
+/// fall phase (peak→0) uses `fall_ease`. `peak_fraction`
 /// controls what fraction of the total duration is spent rising.
-fn bump_offset(visual: &BumpVisual, config: &BreakerConfig) -> f32 {
-    let peak_fraction = config.bump_visual_peak_fraction;
+fn bump_offset(visual: &BumpVisual, params: &BumpVisualParams) -> f32 {
+    let peak_fraction = params.peak_fraction;
     // progress: 0.0 at start → 1.0 at end
     let progress = 1.0 - (visual.timer / visual.duration).clamp(0.0, 1.0);
 
@@ -83,7 +87,7 @@ fn bump_offset(visual: &BumpVisual, config: &BreakerConfig) -> f32 {
         } else {
             1.0
         };
-        config.bump_visual_rise_ease.sample_clamped(rise_t) * visual.peak_offset
+        params.rise_ease.sample_clamped(rise_t) * visual.peak_offset
     } else {
         // Fall phase: peak_offset→0
         let fall_t = if (1.0 - peak_fraction) > f32::EPSILON {
@@ -91,22 +95,34 @@ fn bump_offset(visual: &BumpVisual, config: &BreakerConfig) -> f32 {
         } else {
             1.0
         };
-        (1.0 - config.bump_visual_fall_ease.sample_clamped(fall_t)) * visual.peak_offset
+        (1.0 - params.fall_ease.sample_clamped(fall_t)) * visual.peak_offset
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::breaker::resources::BreakerConfig;
+
+    fn default_bump_visual_params() -> BumpVisualParams {
+        let config = BreakerConfig::default();
+        BumpVisualParams {
+            duration: config.bump_visual_duration,
+            peak: config.bump_visual_peak,
+            peak_fraction: config.bump_visual_peak_fraction,
+            rise_ease: config.bump_visual_rise_ease,
+            fall_ease: config.bump_visual_fall_ease,
+        }
+    }
 
     fn test_bump_offset(timer_fraction: f32) -> f32 {
-        let config = BreakerConfig::default();
+        let params = default_bump_visual_params();
         let visual = BumpVisual {
-            timer: config.bump_visual_duration * timer_fraction,
-            duration: config.bump_visual_duration,
-            peak_offset: config.bump_visual_peak,
+            timer: params.duration * timer_fraction,
+            duration: params.duration,
+            peak_offset: params.peak,
         };
-        bump_offset(&visual, &config)
+        bump_offset(&visual, &params)
     }
 
     #[test]
@@ -129,49 +145,49 @@ mod tests {
 
     #[test]
     fn bump_offset_at_peak_fraction_equals_peak() {
-        let config = BreakerConfig::default();
-        let timer = config.bump_visual_duration * (1.0 - config.bump_visual_peak_fraction);
+        let params = default_bump_visual_params();
+        let timer = params.duration * (1.0 - params.peak_fraction);
         let visual = BumpVisual {
             timer,
-            duration: config.bump_visual_duration,
-            peak_offset: config.bump_visual_peak,
+            duration: params.duration,
+            peak_offset: params.peak,
         };
-        let offset = bump_offset(&visual, &config);
+        let offset = bump_offset(&visual, &params);
         assert!(
-            (offset - config.bump_visual_peak).abs() < 0.01,
+            (offset - params.peak).abs() < 0.01,
             "offset at peak_fraction should equal peak_offset, got {offset}"
         );
     }
 
     #[test]
     fn bump_offset_asymmetric_shape() {
-        let config = BreakerConfig::default();
+        let params = default_bump_visual_params();
         let rise_mid = bump_offset(
             &BumpVisual {
-                timer: config.bump_visual_duration * (1.0 - 0.15),
-                duration: config.bump_visual_duration,
-                peak_offset: config.bump_visual_peak,
+                timer: params.duration * (1.0 - 0.15),
+                duration: params.duration,
+                peak_offset: params.peak,
             },
-            &config,
+            &params,
         );
 
         let fall_mid = bump_offset(
             &BumpVisual {
-                timer: config.bump_visual_duration * (1.0 - 0.65),
-                duration: config.bump_visual_duration,
-                peak_offset: config.bump_visual_peak,
+                timer: params.duration * (1.0 - 0.65),
+                duration: params.duration,
+                peak_offset: params.peak,
             },
-            &config,
+            &params,
         );
 
         // With CubicOut rise (fast start) and QuadraticIn fall (lingers near peak),
         // both should be well above 50% of peak at their respective midpoints.
         assert!(
-            rise_mid > config.bump_visual_peak * 0.5,
+            rise_mid > params.peak * 0.5,
             "CubicOut rise at 50% should be above 50% of peak, got {rise_mid}"
         );
         assert!(
-            fall_mid > config.bump_visual_peak * 0.5,
+            fall_mid > params.peak * 0.5,
             "QuadraticIn fall at 50% should still be above 50% of peak (lingering), got {fall_mid}"
         );
     }
@@ -181,7 +197,6 @@ mod tests {
     fn trigger_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
         app.init_resource::<InputActions>();
         app.add_systems(Update, trigger_bump_visual);
         app
@@ -198,7 +213,10 @@ mod tests {
     fn trigger_inserts_bump_visual_on_bump_action() {
         let mut app = trigger_test_app();
 
-        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, BumpState::default(), default_bump_visual_params()))
+            .id();
 
         set_bump_action(&mut app);
         app.update();
@@ -213,7 +231,10 @@ mod tests {
     fn trigger_skips_without_bump_action() {
         let mut app = trigger_test_app();
 
-        let entity = app.world_mut().spawn((Breaker, BumpState::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, BumpState::default(), default_bump_visual_params()))
+            .id();
 
         // No Bump action set
         app.update();
@@ -236,6 +257,7 @@ mod tests {
                     cooldown: 0.5,
                     ..Default::default()
                 },
+                default_bump_visual_params(),
             ))
             .id();
 
@@ -251,17 +273,18 @@ mod tests {
     #[test]
     fn trigger_does_not_retrigger_while_animating() {
         let mut app = trigger_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
+        let params = default_bump_visual_params();
 
         let entity = app
             .world_mut()
             .spawn((
                 Breaker,
                 BumpState::default(),
+                params.clone(),
                 BumpVisual {
                     timer: 0.1,
-                    duration: config.bump_visual_duration,
-                    peak_offset: config.bump_visual_peak,
+                    duration: params.duration,
+                    peak_offset: params.peak,
                 },
             ))
             .id();
@@ -282,7 +305,6 @@ mod tests {
     fn animate_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
         app.add_systems(Update, animate_bump_visual);
         // Prime wall-clock time so the next update has a non-zero delta
         app.update();
@@ -292,15 +314,18 @@ mod tests {
     #[test]
     fn animate_applies_y_offset_during_animation() {
         let mut app = animate_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
+        let config = BreakerConfig::default();
+        let params = default_bump_visual_params();
 
         app.world_mut().spawn((
             Breaker,
+            BreakerBaseY(config.y_position),
+            params.clone(),
             Transform::from_xyz(0.0, config.y_position, 0.0),
             BumpVisual {
-                timer: config.bump_visual_duration,
-                duration: config.bump_visual_duration,
-                peak_offset: config.bump_visual_peak,
+                timer: params.duration,
+                duration: params.duration,
+                peak_offset: params.peak,
             },
         ));
 
@@ -324,18 +349,21 @@ mod tests {
     #[test]
     fn animate_removes_bump_visual_when_done() {
         let mut app = animate_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
+        let config = BreakerConfig::default();
+        let params = default_bump_visual_params();
 
         let entity = app
             .world_mut()
             .spawn((
                 Breaker,
+                BreakerBaseY(config.y_position),
+                params.clone(),
                 Transform::from_xyz(0.0, config.y_position, 0.0),
                 BumpVisual {
                     // Zero timer — will expire on next tick
                     timer: 0.0,
-                    duration: config.bump_visual_duration,
-                    peak_offset: config.bump_visual_peak,
+                    duration: params.duration,
+                    peak_offset: params.peak,
                 },
             ))
             .id();
@@ -358,17 +386,20 @@ mod tests {
     #[test]
     fn animate_snaps_to_base_after_expiry() {
         let mut app = animate_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
+        let config = BreakerConfig::default();
+        let params = default_bump_visual_params();
 
         // Start with an offset Y to verify the snap overrides it
         app.world_mut().spawn((
             Breaker,
+            BreakerBaseY(config.y_position),
+            params.clone(),
             Transform::from_xyz(0.0, config.y_position + 5.0, 0.0),
             BumpVisual {
                 // Near-expired timer — will complete within a few test updates
                 timer: 0.0001,
-                duration: config.bump_visual_duration,
-                peak_offset: config.bump_visual_peak,
+                duration: params.duration,
+                peak_offset: params.peak,
             },
         ));
 

@@ -6,7 +6,6 @@ use crate::{
     bolt::BoltSystems,
     physics::{
         messages::{BoltHitBreaker, BoltHitCell, BoltLost},
-        resources::PhysicsConfig,
         systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost, spawn_walls},
     },
     shared::{GameState, PlayingState},
@@ -20,7 +19,6 @@ pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PhysicsConfig>();
         app.add_message::<BoltHitBreaker>();
         app.add_message::<BoltHitCell>();
         app.add_message::<BoltLost>();

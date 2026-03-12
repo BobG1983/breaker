@@ -7,7 +7,7 @@ use crate::{
     bolt::{BoltConfig, BoltDefaults},
     breaker::{BreakerConfig, BreakerDefaults},
     cells::{CellConfig, CellDefaults},
-    physics::{PhysicsConfig, PhysicsDefaults},
+    input::{InputConfig, InputDefaults},
     screen::{
         components::{LoadingBarFill, LoadingProgressText, LoadingScreen},
         resources::{DefaultsCollection, MainMenuConfig, MainMenuDefaults},
@@ -28,7 +28,7 @@ pub fn seed_configs_from_defaults(
     bolt_assets: Res<Assets<BoltDefaults>>,
     breaker_assets: Res<Assets<BreakerDefaults>>,
     cell_assets: Res<Assets<CellDefaults>>,
-    physics_assets: Res<Assets<PhysicsDefaults>>,
+    input_assets: Res<Assets<InputDefaults>>,
     mainmenu_assets: Res<Assets<MainMenuDefaults>>,
     mut commands: Commands,
     mut seeded: Local<bool>,
@@ -54,7 +54,7 @@ pub fn seed_configs_from_defaults(
     let Some(cells) = cell_assets.get(&collection.cells) else {
         return Progress { done: 0, total: 1 };
     };
-    let Some(physics) = physics_assets.get(&collection.physics) else {
+    let Some(input) = input_assets.get(&collection.input) else {
         return Progress { done: 0, total: 1 };
     };
     let Some(mainmenu) = mainmenu_assets.get(&collection.mainmenu) else {
@@ -65,7 +65,7 @@ pub fn seed_configs_from_defaults(
     commands.insert_resource::<BoltConfig>(bolt.clone().into());
     commands.insert_resource::<BreakerConfig>(breaker.clone().into());
     commands.insert_resource::<CellConfig>(cells.clone().into());
-    commands.insert_resource::<PhysicsConfig>(physics.clone().into());
+    commands.insert_resource::<InputConfig>(input.clone().into());
     commands.insert_resource::<MainMenuConfig>(mainmenu.clone().into());
 
     *seeded = true;

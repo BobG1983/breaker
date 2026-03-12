@@ -4,6 +4,24 @@ use bevy::prelude::*;
 use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
+/// Tracks timestamps for double-tap dash detection.
+#[derive(Resource, Debug)]
+pub struct DoubleTapState {
+    /// Wall-clock time of the last left-direction press.
+    pub last_left_tap: f64,
+    /// Wall-clock time of the last right-direction press.
+    pub last_right_tap: f64,
+}
+
+impl Default for DoubleTapState {
+    fn default() -> Self {
+        Self {
+            last_left_tap: f64::NEG_INFINITY,
+            last_right_tap: f64::NEG_INFINITY,
+        }
+    }
+}
+
 /// All player actions the game understands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameAction {

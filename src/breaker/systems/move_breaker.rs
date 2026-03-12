@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{
-        components::{Breaker, BreakerState, BreakerVelocity},
-        resources::BreakerConfig,
+        components::{Breaker, BreakerState},
+        queries::BreakerMovementQuery,
     },
     input::resources::{GameAction, InputActions},
     shared::PlayfieldConfig,
@@ -18,14 +18,15 @@ use crate::{
 /// Clamps position to playfield bounds.
 pub fn move_breaker(
     actions: Res<InputActions>,
-    config: Res<BreakerConfig>,
     playfield: Res<PlayfieldConfig>,
     time: Res<Time<Fixed>>,
-    mut query: Query<(&mut Transform, &mut BreakerVelocity, &BreakerState), With<Breaker>>,
+    mut query: Query<BreakerMovementQuery, With<Breaker>>,
 ) {
     let dt = time.delta_secs();
 
-    for (mut transform, mut velocity, state) in &mut query {
+    for (mut transform, mut velocity, state, max_speed, accel, decel, easing, half_width) in
+        &mut query
+    {
         // Only allow direct input movement in Idle and Settling states
         let can_move = matches!(state, BreakerState::Idle | BreakerState::Settling);
 
@@ -40,16 +41,16 @@ pub fn move_breaker(
 
             if input_dir.abs() > f32::EPSILON {
                 // Accelerate toward input direction
-                velocity.x = (input_dir * config.acceleration).mul_add(dt, velocity.x);
-                velocity.x = velocity.x.clamp(-config.max_speed, config.max_speed);
+                velocity.x = (input_dir * accel.0).mul_add(dt, velocity.x);
+                velocity.x = velocity.x.clamp(-max_speed.0, max_speed.0);
             } else {
                 // Decelerate toward zero with eased speed curve
                 let effective_decel = super::dash::eased_decel(
-                    config.deceleration,
+                    decel.0,
                     velocity.x.abs(),
-                    config.max_speed,
-                    config.decel_ease,
-                    config.decel_ease_strength,
+                    max_speed.0,
+                    easing.ease,
+                    easing.strength,
                 );
                 apply_deceleration(&mut velocity.x, effective_decel, dt);
             }
@@ -59,8 +60,8 @@ pub fn move_breaker(
         transform.translation.x = velocity.x.mul_add(dt, transform.translation.x);
 
         // Clamp to playfield bounds (accounting for breaker half-width)
-        let min_x = playfield.left() + config.half_width;
-        let max_x = playfield.right() - config.half_width;
+        let min_x = playfield.left() + half_width.half_width();
+        let max_x = playfield.right() - half_width.half_width();
         transform.translation.x = transform.translation.x.clamp(min_x, max_x);
 
         // Stop velocity if hitting a wall
@@ -82,6 +83,13 @@ fn apply_deceleration(velocity: &mut f32, decel: f32, dt: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::breaker::{
+        components::{
+            BreakerAcceleration, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
+            BreakerVelocity, BreakerWidth, DecelEasing,
+        },
+        resources::BreakerConfig,
+    };
 
     #[test]
     fn deceleration_toward_zero_positive() {
@@ -107,7 +115,6 @@ mod tests {
     fn integration_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
         app.init_resource::<PlayfieldConfig>();
         app.init_resource::<InputActions>();
         app.add_systems(Update, move_breaker);
@@ -124,12 +131,20 @@ mod tests {
     }
 
     fn spawn_breaker(app: &mut App, state: BreakerState) -> Entity {
-        let config = app.world().resource::<BreakerConfig>().clone();
+        let config = BreakerConfig::default();
         app.world_mut()
             .spawn((
                 Breaker,
                 state,
                 BreakerVelocity { x: 0.0 },
+                BreakerMaxSpeed(config.max_speed),
+                BreakerAcceleration(config.acceleration),
+                BreakerDeceleration(config.deceleration),
+                DecelEasing {
+                    ease: config.decel_ease,
+                    strength: config.decel_ease_strength,
+                },
+                BreakerWidth(config.width),
                 Transform::from_xyz(0.0, config.y_position, 0.0),
             ))
             .id()
@@ -179,7 +194,11 @@ mod tests {
         let mut app = integration_app();
         let entity = spawn_breaker(&mut app, BreakerState::Idle);
         let playfield = app.world().resource::<PlayfieldConfig>().clone();
-        let config = app.world().resource::<BreakerConfig>().clone();
+        let half_width = app
+            .world()
+            .get::<BreakerWidth>(entity)
+            .unwrap()
+            .half_width();
 
         // Push breaker far past right boundary
         app.world_mut()
@@ -190,7 +209,7 @@ mod tests {
         tick(&mut app);
 
         let tf = app.world().get::<Transform>(entity).unwrap();
-        let max_x = playfield.right() - config.half_width;
+        let max_x = playfield.right() - half_width;
         assert!(
             tf.translation.x <= max_x + f32::EPSILON,
             "breaker should be clamped to playfield, got x={} max={}",

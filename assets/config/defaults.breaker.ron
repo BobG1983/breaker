@@ -1,7 +1,7 @@
 /* @[brickbreaker::breaker::resources::BreakerDefaults] */
 (
-    half_width: 60.0,
-    half_height: 10.0,
+    width: 120.0,
+    height: 20.0,
     max_speed: 500.0,
     acceleration: 3000.0,
     deceleration: 2500.0,
@@ -28,4 +28,6 @@
     settle_tilt_ease: CubicOut,
     decel_ease: QuadraticIn,
     decel_ease_strength: 1.0,
+    max_reflection_angle: 1.31,
+    min_angle_from_horizontal: 0.17,
 )

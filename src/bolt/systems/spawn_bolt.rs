@@ -7,16 +7,17 @@ use crate::{
         components::{Bolt, BoltServing, BoltVelocity},
         resources::BoltConfig,
     },
-    breaker::BreakerConfig,
+    breaker::{BreakerConfig, components::Breaker},
     run::RunState,
     shared::CleanupOnNodeExit,
 };
 
 /// Spawns the bolt entity above the breaker.
 ///
-/// Uses [`BreakerConfig::y_position`] for placement rather than querying
-/// the breaker entity — both systems run on `OnEnter(Playing)` and deferred
-/// commands mean the breaker entity may not exist yet.
+/// Reads the breaker's Y position from its [`Transform`] when available,
+/// falling back to [`BreakerConfig::y_position`] when the breaker entity
+/// does not exist yet (both systems run on `OnEnter(Playing)` and deferred
+/// commands mean the breaker entity may not exist yet).
 ///
 /// On the first node (`RunState.node_index == 0`), the bolt spawns with
 /// zero velocity and a [`BoltServing`] marker — it hovers until the player
@@ -28,8 +29,14 @@ pub fn spawn_bolt(
     run_state: Res<RunState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    breaker_query: Query<&Transform, With<Breaker>>,
 ) {
-    let spawn_pos = Vec3::new(0.0, breaker_config.y_position + config.spawn_offset_y, 1.0);
+    let breaker_y = breaker_query
+        .iter()
+        .next()
+        .map_or(breaker_config.y_position, |tf| tf.translation.y);
+
+    let spawn_pos = Vec3::new(0.0, breaker_y + config.spawn_offset_y, 1.0);
 
     let serving = run_state.node_index == 0;
 

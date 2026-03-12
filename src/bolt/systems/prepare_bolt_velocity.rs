@@ -5,25 +5,35 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::{components::BoltVelocity, filters::ActiveBoltFilter, resources::BoltConfig};
+use crate::{
+    bolt::{
+        components::{Bolt, BoltMaxSpeed, BoltMinSpeed, BoltVelocity},
+        filters::ActiveBoltFilter,
+    },
+    breaker::components::{Breaker, MinAngleFromHorizontal},
+};
 
 /// Prepares the bolt velocity for the current timestep.
 ///
 /// Enforces speed clamping (min/max) and minimum angle from horizontal.
 /// Position advancement is handled by the CCD collision system.
 pub fn prepare_bolt_velocity(
-    config: Res<BoltConfig>,
-    mut query: Query<&mut BoltVelocity, ActiveBoltFilter>,
+    mut query: Query<(&mut BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed), ActiveBoltFilter>,
+    breaker_query: Query<&MinAngleFromHorizontal, (With<Breaker>, Without<Bolt>)>,
 ) {
-    for mut velocity in &mut query {
+    let Ok(min_angle) = breaker_query.single() else {
+        return;
+    };
+
+    for (mut velocity, min_speed, max_speed) in &mut query {
         let speed = velocity.speed();
         if speed > f32::EPSILON {
-            let clamped_speed = speed.clamp(config.min_speed, config.max_speed);
+            let clamped_speed = speed.clamp(min_speed.0, max_speed.0);
             if (clamped_speed - speed).abs() > f32::EPSILON {
                 velocity.value = velocity.direction() * clamped_speed;
             }
 
-            velocity.enforce_min_angle(config.min_angle_from_horizontal);
+            velocity.enforce_min_angle(min_angle.0);
         }
     }
 }
@@ -31,13 +41,33 @@ pub fn prepare_bolt_velocity(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::{Bolt, BoltServing};
+    use crate::{
+        bolt::{
+            components::{Bolt, BoltBaseSpeed, BoltServing},
+            resources::BoltConfig,
+        },
+        breaker::resources::BreakerConfig,
+    };
+
+    fn bolt_param_bundle() -> (BoltBaseSpeed, BoltMinSpeed, BoltMaxSpeed) {
+        let bolt_config = BoltConfig::default();
+        (
+            BoltBaseSpeed(bolt_config.base_speed),
+            BoltMinSpeed(bolt_config.min_speed),
+            BoltMaxSpeed(bolt_config.max_speed),
+        )
+    }
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
         app.add_systems(Update, prepare_bolt_velocity);
+        // Spawn breaker with MinAngleFromHorizontal for the system to read
+        let breaker_config = BreakerConfig::default();
+        app.world_mut().spawn((
+            Breaker,
+            MinAngleFromHorizontal(breaker_config.min_angle_from_horizontal),
+        ));
         app
     }
 
@@ -48,6 +78,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(0.0, 400.0),
+            bolt_param_bundle(),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
 
@@ -77,6 +108,7 @@ mod tests {
                 Bolt,
                 BoltServing,
                 BoltVelocity::new(0.0, 1.0), // below min_speed
+                bolt_param_bundle(),
             ))
             .id();
 
@@ -91,13 +123,40 @@ mod tests {
     }
 
     #[test]
+    fn no_breaker_leaves_velocity_unchanged() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, prepare_bolt_velocity);
+        // No breaker entity spawned
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(0.0, 1.0), // below min, but no breaker → early return
+                bolt_param_bundle(),
+            ))
+            .id();
+
+        app.update();
+
+        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        assert!(
+            (vel.speed() - 1.0).abs() < f32::EPSILON,
+            "without breaker, velocity should be unchanged, got speed={}",
+            vel.speed()
+        );
+    }
+
+    #[test]
     fn speed_below_min_is_clamped_up() {
         let mut app = test_app();
-        let config = app.world().resource::<BoltConfig>().clone();
+        let config = BoltConfig::default();
 
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(0.0, 1.0), // far below min_speed
+            bolt_param_bundle(),
         ));
 
         app.update();

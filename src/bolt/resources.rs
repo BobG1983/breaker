@@ -14,8 +14,6 @@ pub struct BoltDefaults {
     pub min_speed: f32,
     /// Maximum speed cap.
     pub max_speed: f32,
-    /// Minimum angle from horizontal in radians.
-    pub min_angle_from_horizontal: f32,
     /// Bolt radius in world units.
     pub radius: f32,
     /// Vertical offset above the breaker where the bolt spawns.
@@ -34,7 +32,6 @@ impl Default for BoltDefaults {
             base_speed: 400.0,
             min_speed: 200.0,
             max_speed: 800.0,
-            min_angle_from_horizontal: 0.17,
             radius: 8.0,
             spawn_offset_y: 30.0,
             initial_angle: 0.26,
@@ -70,12 +67,6 @@ mod tests {
         let config = BoltConfig::default();
         assert!(config.base_speed >= config.min_speed);
         assert!(config.base_speed <= config.max_speed);
-    }
-
-    #[test]
-    fn min_angle_is_positive() {
-        let config = BoltConfig::default();
-        assert!(config.min_angle_from_horizontal > 0.0);
     }
 
     #[test]

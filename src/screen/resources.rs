@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use super::components::MenuItem;
 use crate::{
-    bolt::BoltDefaults, breaker::BreakerDefaults, cells::CellDefaults, physics::PhysicsDefaults,
+    bolt::BoltDefaults, breaker::BreakerDefaults, cells::CellDefaults, input::InputDefaults,
     shared::PlayfieldDefaults,
 };
 
@@ -27,9 +27,9 @@ pub struct DefaultsCollection {
     /// Handle for cells defaults.
     #[asset(path = "config/defaults.cells.ron")]
     pub cells: Handle<CellDefaults>,
-    /// Handle for physics defaults.
-    #[asset(path = "config/defaults.physics.ron")]
-    pub physics: Handle<PhysicsDefaults>,
+    /// Handle for input defaults.
+    #[asset(path = "config/defaults.input.ron")]
+    pub input: Handle<InputDefaults>,
     /// Handle for main menu defaults.
     #[asset(path = "config/defaults.mainmenu.ron")]
     pub mainmenu: Handle<MainMenuDefaults>,

@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltServing},
-        resources::BoltConfig,
+        components::{Bolt, BoltSpawnOffsetY},
+        filters::ServingBoltFilter,
     },
     breaker::components::Breaker,
 };
@@ -15,32 +15,33 @@ use crate::{
 /// Only affects bolts with the [`BoltServing`] marker. The bolt tracks
 /// the breaker's X position so the player can choose their opening angle.
 pub fn hover_bolt(
-    config: Res<BoltConfig>,
     breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
-    mut bolt_query: Query<&mut Transform, (With<Bolt>, With<BoltServing>)>,
+    mut bolt_query: Query<(&mut Transform, &BoltSpawnOffsetY), ServingBoltFilter>,
 ) {
     let Ok(breaker_tf) = breaker_query.single() else {
         return;
     };
 
-    for mut bolt_tf in &mut bolt_query {
+    for (mut bolt_tf, spawn_offset) in &mut bolt_query {
         bolt_tf.translation.x = breaker_tf.translation.x;
-        bolt_tf.translation.y = breaker_tf.translation.y + config.spawn_offset_y;
+        bolt_tf.translation.y = breaker_tf.translation.y + spawn_offset.0;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::BoltVelocity;
+    use crate::bolt::{
+        components::{BoltServing, BoltVelocity},
+        resources::BoltConfig,
+    };
 
     #[test]
     fn hover_bolt_tracks_breaker_x() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
 
-        let config = app.world().resource::<BoltConfig>().clone();
+        let config = BoltConfig::default();
 
         // Spawn breaker at x=100
         app.world_mut()
@@ -50,6 +51,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltServing,
+            BoltSpawnOffsetY(config.spawn_offset_y),
             BoltVelocity::new(0.0, 0.0),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
@@ -78,7 +80,6 @@ mod tests {
     fn hover_bolt_ignores_non_serving_bolt() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
 
         // Spawn breaker
         app.world_mut()
