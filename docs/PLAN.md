@@ -3,7 +3,7 @@
 ## Context
 Building a roguelite Arkanoid clone in Bevy (Rust). Solo dev, architecture-first approach validated through a vertical slice. Stylized shader-driven visuals, custom physics, hybrid data model (mechanics in code, content in data files), audio planned from the start.
 
-See `DESIGN.md` for core design principles, `ARCHITECTURE.md` for technical decisions, and `TERMINOLOGY.md` for game vocabulary.
+See `DESIGN.md` for core design principles, `architecture/` for technical decisions, and `TERMINOLOGY.md` for game vocabulary.
 
 ---
 

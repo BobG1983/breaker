@@ -1,6 +1,6 @@
 # Brickbreaker Roguelite
 
-Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/DESIGN.md` for design pillars, `docs/ARCHITECTURE.md` for technical decisions + code standards + testing approach, `docs/PLAN.md` for build roadmap, `docs/TERMINOLOGY.md` for game vocabulary.
+Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/DESIGN.md` for design pillars, `docs/architecture/` for technical decisions + code standards + testing approach, `docs/PLAN.md` for build roadmap, `docs/TERMINOLOGY.md` for game vocabulary.
 
 ## Build & Run
 
@@ -18,7 +18,7 @@ Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast
 
 ## Architecture
 
-**Plugin-per-domain** with message-driven decoupling. Each domain plugin (breaker, bolt, cells, upgrades, run, physics, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. See `docs/ARCHITECTURE.md` for full details, file tree, message table, and patterns.
+**Plugin-per-domain** with message-driven decoupling. Each domain plugin (breaker, bolt, cells, upgrades, run, physics, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. See `docs/architecture/` for full details, file tree, message table, and patterns.
 
 ## Terminology
 
@@ -33,7 +33,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Architectural changes or refactors affecting multiple systems
 
 **ALWAYS do**:
-- Write tests FIRST for new game logic (see `docs/ARCHITECTURE.md` Testing — TDD)
+- Write tests FIRST for new game logic (see `docs/architecture/standards.md` Testing — TDD)
 - Create a feature branch before starting work (`feature/*`, `fix/*`, `refactor/*` off the current branch)
 - Commit with conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) after tests pass
 - After merging a branch to main, delete it locally and from the remote
@@ -46,7 +46,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 
 ## Design Rules
 
-See `docs/DESIGN.md` for the full set of non-negotiable design pillars. The key mechanical rules are in `docs/ARCHITECTURE.md` (bolt reflection, breaker state machine, bump grades).
+See `docs/DESIGN.md` for the full set of non-negotiable design pillars. The key mechanical rules are in `docs/architecture/` (bolt reflection, breaker state machine, bump grades).
 
 ## Agent Workflow
 
