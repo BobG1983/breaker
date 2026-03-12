@@ -26,9 +26,11 @@ pub struct BreakerDefaults {
     pub brake_decel_multiplier: f32,
     /// Duration of the settle phase in seconds.
     pub settle_duration: f32,
-    /// Maximum tilt angle during dash in radians.
+    /// Maximum tilt angle during dash in degrees.
     pub dash_tilt_angle: f32,
-    /// Maximum tilt angle during brake in radians.
+    /// Easing for dash tilt ramp-up.
+    pub dash_tilt_ease: EaseFunction,
+    /// Maximum tilt angle during brake in degrees.
     pub brake_tilt_angle: f32,
     /// Y position of the breaker.
     pub y_position: f32,
@@ -64,9 +66,9 @@ pub struct BreakerDefaults {
     pub decel_ease: EaseFunction,
     /// Strength of eased deceleration (0.0 = constant decel, higher = more speed-dependent).
     pub decel_ease_strength: f32,
-    /// Maximum reflection angle from vertical in radians.
+    /// Maximum reflection angle from vertical in degrees.
     pub max_reflection_angle: f32,
-    /// Minimum angle from horizontal in radians.
+    /// Minimum angle from horizontal in degrees.
     pub min_angle_from_horizontal: f32,
 }
 
@@ -82,8 +84,9 @@ impl Default for BreakerDefaults {
             dash_duration: 0.15,
             brake_decel_multiplier: 4.0,
             settle_duration: 0.12,
-            dash_tilt_angle: 0.26,
-            brake_tilt_angle: 0.44,
+            dash_tilt_angle: 15.0,
+            dash_tilt_ease: EaseFunction::CubicOut,
+            brake_tilt_angle: 25.0,
             y_position: -250.0,
             perfect_bump_cooldown: 0.0,
             weak_bump_cooldown: 0.15,
@@ -94,15 +97,15 @@ impl Default for BreakerDefaults {
             weak_bump_multiplier: 0.8,
             color_rgb: [0.2, 2.0, 3.0],
             bump_visual_duration: 0.15,
-            bump_visual_peak: 12.0,
+            bump_visual_peak: 24.0,
             bump_visual_peak_fraction: 0.3,
             bump_visual_rise_ease: EaseFunction::CubicOut,
             bump_visual_fall_ease: EaseFunction::QuadraticIn,
             settle_tilt_ease: EaseFunction::CubicOut,
             decel_ease: EaseFunction::QuadraticIn,
             decel_ease_strength: 1.0,
-            max_reflection_angle: 1.31,
-            min_angle_from_horizontal: 0.17,
+            max_reflection_angle: 75.0,
+            min_angle_from_horizontal: 10.0,
         }
     }
 }
