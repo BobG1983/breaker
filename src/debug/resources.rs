@@ -18,7 +18,14 @@ pub struct DebugOverlays {
     pub show_bolt_info: bool,
     /// Show breaker state telemetry window.
     pub show_breaker_state: bool,
+    /// Show input actions debug window.
+    pub show_input_actions: bool,
 }
+
+/// Tracks the last bump outcome for debug display.
+#[cfg(feature = "dev")]
+#[derive(Resource, Default)]
+pub struct LastBumpResult(pub String);
 
 #[cfg(test)]
 mod tests {
@@ -33,5 +40,13 @@ mod tests {
         assert!(!overlays.show_state);
         assert!(!overlays.show_bolt_info);
         assert!(!overlays.show_breaker_state);
+        assert!(!overlays.show_input_actions);
+    }
+
+    #[cfg(feature = "dev")]
+    #[test]
+    fn last_bump_result_default_is_empty() {
+        let result = LastBumpResult::default();
+        assert!(result.0.is_empty());
     }
 }

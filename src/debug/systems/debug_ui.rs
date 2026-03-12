@@ -25,6 +25,7 @@ pub fn debug_ui_system(
             ui.checkbox(&mut overlays.show_state, "Game State");
             ui.checkbox(&mut overlays.show_bolt_info, "Bolt Info");
             ui.checkbox(&mut overlays.show_breaker_state, "Breaker State");
+            ui.checkbox(&mut overlays.show_input_actions, "Input Actions");
 
             ui.separator();
 

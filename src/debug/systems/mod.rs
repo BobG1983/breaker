@@ -10,6 +10,10 @@ mod debug_ui;
 mod draw_hitboxes;
 #[cfg(feature = "dev")]
 mod draw_velocity_vectors;
+#[cfg(feature = "dev")]
+mod input_actions_ui;
+#[cfg(feature = "dev")]
+mod track_bump_result;
 
 #[cfg(feature = "dev")]
 pub use bolt_info_ui::bolt_info_ui;
@@ -21,3 +25,7 @@ pub use debug_ui::debug_ui_system;
 pub use draw_hitboxes::draw_hitboxes;
 #[cfg(feature = "dev")]
 pub use draw_velocity_vectors::draw_velocity_vectors;
+#[cfg(feature = "dev")]
+pub use input_actions_ui::input_actions_ui;
+#[cfg(feature = "dev")]
+pub use track_bump_result::track_bump_result;

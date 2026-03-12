@@ -18,19 +18,35 @@ impl Plugin for DebugPlugin {
             use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
             use bevy_egui::EguiPlugin;
 
-            use super::systems::{
-                bolt_info_ui, breaker_state_ui, debug_ui_system, draw_hitboxes,
-                draw_velocity_vectors,
+            use super::{
+                resources::LastBumpResult,
+                systems::{
+                    bolt_info_ui, breaker_state_ui, debug_ui_system, draw_hitboxes,
+                    draw_velocity_vectors, input_actions_ui, track_bump_result,
+                },
             };
+            use crate::{physics::PhysicsSystems, shared::PlayingState};
 
             app.add_plugins(EguiPlugin::default());
             app.add_plugins(FrameTimeDiagnosticsPlugin::default());
             app.init_resource::<DebugOverlays>();
+            app.init_resource::<LastBumpResult>();
 
             app.add_systems(
                 bevy_egui::EguiPrimaryContextPass,
-                (debug_ui_system, bolt_info_ui, breaker_state_ui)
+                (
+                    debug_ui_system,
+                    bolt_info_ui,
+                    breaker_state_ui,
+                    input_actions_ui,
+                )
                     .run_if(resource_exists::<DebugOverlays>),
+            );
+            app.add_systems(
+                FixedUpdate,
+                track_bump_result
+                    .after(PhysicsSystems::BreakerCollision)
+                    .run_if(in_state(PlayingState::Active)),
             );
             app.add_systems(
                 Update,

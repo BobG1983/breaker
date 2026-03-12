@@ -87,7 +87,7 @@ impl Default for BreakerDefaults {
             y_position: -250.0,
             perfect_bump_cooldown: 0.0,
             weak_bump_cooldown: 0.15,
-            perfect_window: 0.05,
+            perfect_window: 0.10,
             early_window: 0.15,
             late_window: 0.15,
             perfect_bump_multiplier: 1.5,

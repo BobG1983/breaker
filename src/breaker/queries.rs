@@ -58,3 +58,15 @@ pub type BumpTimingQuery = (
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
 );
+
+/// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.
+#[cfg(feature = "dev")]
+pub type BreakerBumpTelemetryQuery = (
+    &'static BreakerState,
+    &'static BumpState,
+    &'static BreakerTilt,
+    &'static BreakerVelocity,
+    &'static BumpPerfectWindow,
+    &'static BumpEarlyWindow,
+    &'static BumpLateWindow,
+);
