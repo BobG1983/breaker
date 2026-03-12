@@ -3,6 +3,7 @@
 use bevy::{app::AppExit, prelude::*};
 
 use crate::{
+    input::resources::{GameAction, InputActions},
     screen::{
         components::{MENU_ITEMS, MenuItem},
         resources::MainMenuSelection,
@@ -12,7 +13,7 @@ use crate::{
 
 /// Handles keyboard and mouse input for the main menu.
 pub fn handle_main_menu_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    actions: Res<InputActions>,
     mut selection: ResMut<MainMenuSelection>,
     mut next_state: ResMut<NextState<GameState>>,
     mut exit_writer: MessageWriter<AppExit>,
@@ -33,13 +34,13 @@ pub fn handle_main_menu_input(
     }
 
     // Keyboard navigation
-    if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
+    if actions.active(GameAction::MenuDown) {
         let current = current_index(&selection);
         let next = (current + 1) % MENU_ITEMS.len();
         selection.selected = MENU_ITEMS[next];
     }
 
-    if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
+    if actions.active(GameAction::MenuUp) {
         let current = current_index(&selection);
         let next = if current == 0 {
             MENU_ITEMS.len() - 1
@@ -49,7 +50,7 @@ pub fn handle_main_menu_input(
         selection.selected = MENU_ITEMS[next];
     }
 
-    if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Space) {
+    if actions.active(GameAction::MenuConfirm) {
         confirm_selection(&selection, &mut next_state, &mut exit_writer);
     }
 }
@@ -86,7 +87,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<InputActions>();
         app.init_state::<GameState>();
         app.add_message::<AppExit>();
         app.insert_resource(MainMenuSelection {
@@ -100,8 +101,9 @@ mod tests {
     fn down_advances_selection() {
         let mut app = test_app();
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ArrowDown);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MenuDown);
         app.update();
 
         let selection = app.world().resource::<MainMenuSelection>();
@@ -112,8 +114,9 @@ mod tests {
     fn up_wraps_selection() {
         let mut app = test_app();
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::ArrowUp);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MenuUp);
         app.update();
 
         let selection = app.world().resource::<MainMenuSelection>();
@@ -124,8 +127,9 @@ mod tests {
     fn enter_on_play_transitions_to_playing() {
         let mut app = test_app();
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::Enter);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MenuConfirm);
         app.update();
 
         let next = app.world().resource::<NextState<GameState>>();
@@ -140,8 +144,9 @@ mod tests {
         let mut app = test_app();
         app.world_mut().resource_mut::<MainMenuSelection>().selected = MenuItem::Quit;
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::Enter);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MenuConfirm);
         app.update();
 
         let messages = app.world().resource::<Messages<AppExit>>();
@@ -158,8 +163,9 @@ mod tests {
         let mut app = test_app();
         app.world_mut().resource_mut::<MainMenuSelection>().selected = MenuItem::Settings;
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::Enter);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MenuConfirm);
         app.update();
 
         // No state transition

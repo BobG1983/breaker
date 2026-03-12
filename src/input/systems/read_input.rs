@@ -71,6 +71,17 @@ pub fn read_input_actions(
             }
         }
 
+        // Menu actions
+        if config.menu_up.contains(&key) && !actions.active(GameAction::MenuUp) {
+            actions.0.push(GameAction::MenuUp);
+        }
+        if config.menu_down.contains(&key) && !actions.active(GameAction::MenuDown) {
+            actions.0.push(GameAction::MenuDown);
+        }
+        if config.menu_confirm.contains(&key) && !actions.active(GameAction::MenuConfirm) {
+            actions.0.push(GameAction::MenuConfirm);
+        }
+
         // Double-tap right
         if config.move_right.contains(&key) {
             if now - double_tap.last_right_tap < f64::from(config.double_tap_window) {
@@ -225,6 +236,33 @@ mod tests {
         let actions = app.world().resource::<InputActions>();
         assert!(!actions.active(GameAction::DashLeft));
         assert!(!actions.active(GameAction::DashRight));
+    }
+
+    #[test]
+    fn menu_up_key_produces_menu_up_action() {
+        let mut app = test_app();
+        send_key_press(&mut app, KeyCode::ArrowUp);
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(actions.active(GameAction::MenuUp));
+    }
+
+    #[test]
+    fn menu_down_key_produces_menu_down_action() {
+        let mut app = test_app();
+        send_key_press(&mut app, KeyCode::ArrowDown);
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(actions.active(GameAction::MenuDown));
+    }
+
+    #[test]
+    fn menu_confirm_key_produces_menu_confirm_action() {
+        let mut app = test_app();
+        send_key_press(&mut app, KeyCode::Enter);
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(actions.active(GameAction::MenuConfirm));
     }
 
     #[test]
