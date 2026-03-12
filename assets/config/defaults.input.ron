@@ -3,5 +3,8 @@
     move_left: [ArrowLeft, KeyA],
     move_right: [ArrowRight, KeyD],
     bump: [ArrowUp, KeyW],
+    menu_up: [ArrowUp, KeyW],
+    menu_down: [ArrowDown, KeyS],
+    menu_confirm: [Enter, Space],
     double_tap_window: 0.25,
 )
