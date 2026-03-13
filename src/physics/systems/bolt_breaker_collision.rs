@@ -311,7 +311,8 @@ mod tests {
             Breaker,
             BreakerTilt {
                 angle: 0.3,
-                settle_start_angle: 0.0,
+                ease_start: 0.0,
+                ease_target: 0.0,
             },
             default_breaker_width(),
             default_breaker_height(),

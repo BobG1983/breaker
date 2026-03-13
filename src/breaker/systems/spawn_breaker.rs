@@ -62,7 +62,8 @@ pub fn reset_breaker(
         *state = BreakerState::Idle;
         velocity.x = 0.0;
         tilt.angle = 0.0;
-        tilt.settle_start_angle = 0.0;
+        tilt.ease_start = 0.0;
+        tilt.ease_target = 0.0;
         timer.remaining = 0.0;
     }
 }
@@ -165,7 +166,8 @@ mod tests {
             BreakerState::Dashing,
             BreakerTilt {
                 angle: 0.5,
-                settle_start_angle: 0.5,
+                ease_start: 0.5,
+                ease_target: 0.0,
             },
             BreakerStateTimer { remaining: 0.1 },
             BreakerBaseY(config.y_position),
@@ -193,7 +195,7 @@ mod tests {
         assert_eq!(*state, BreakerState::Idle);
         assert!(velocity.x.abs() < f32::EPSILON);
         assert!(tilt.angle.abs() < f32::EPSILON);
-        assert!(tilt.settle_start_angle.abs() < f32::EPSILON);
+        assert!(tilt.ease_start.abs() < f32::EPSILON);
         assert!(timer.remaining.abs() < f32::EPSILON);
         assert!((transform.translation.x).abs() < f32::EPSILON);
         assert!((transform.translation.y - config.y_position).abs() < f32::EPSILON);

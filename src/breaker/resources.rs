@@ -32,6 +32,10 @@ pub struct BreakerDefaults {
     pub dash_tilt_ease: EaseFunction,
     /// Maximum tilt angle during brake in degrees.
     pub brake_tilt_angle: f32,
+    /// Duration of the brake tilt ease in seconds.
+    pub brake_tilt_duration: f32,
+    /// Easing for brake tilt.
+    pub brake_tilt_ease: EaseFunction,
     /// Y position of the breaker.
     pub y_position: f32,
     /// Cooldown after a perfect bump in seconds.
@@ -80,13 +84,15 @@ impl Default for BreakerDefaults {
             max_speed: 500.0,
             acceleration: 3000.0,
             deceleration: 2500.0,
-            dash_speed_multiplier: 2.0,
+            dash_speed_multiplier: 4.0,
             dash_duration: 0.15,
-            brake_decel_multiplier: 4.0,
-            settle_duration: 0.12,
+            brake_decel_multiplier: 2.0,
+            settle_duration: 0.25,
             dash_tilt_angle: 15.0,
-            dash_tilt_ease: EaseFunction::CubicOut,
+            dash_tilt_ease: EaseFunction::QuadraticInOut,
             brake_tilt_angle: 25.0,
+            brake_tilt_duration: 0.2,
+            brake_tilt_ease: EaseFunction::CubicInOut,
             y_position: -250.0,
             perfect_bump_cooldown: 0.0,
             weak_bump_cooldown: 0.15,

@@ -17,8 +17,10 @@ pub struct BreakerVelocity {
 pub struct BreakerTilt {
     /// Current tilt angle in radians.
     pub angle: f32,
-    /// Angle captured when entering Settling, used for frame-rate-independent lerp.
-    pub settle_start_angle: f32,
+    /// Start angle for the current ease animation.
+    pub ease_start: f32,
+    /// Target angle for the current ease animation.
+    pub ease_target: f32,
 }
 
 /// Maximum horizontal speed in world units per second.
@@ -55,7 +57,8 @@ mod tests {
     #[test]
     fn breaker_tilt_default_is_zero() {
         let tilt = BreakerTilt::default();
-        assert!((tilt.angle - 0.0).abs() < f32::EPSILON);
-        assert!((tilt.settle_start_angle - 0.0).abs() < f32::EPSILON);
+        assert!((tilt.angle).abs() < f32::EPSILON);
+        assert!((tilt.ease_start).abs() < f32::EPSILON);
+        assert!((tilt.ease_target).abs() < f32::EPSILON);
     }
 }

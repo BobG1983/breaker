@@ -83,11 +83,14 @@ pub fn update_breaker_state(
                     &mut state,
                     &mut velocity,
                     &mut tilt,
+                    &mut timer,
                     max_speed,
                     decel,
                     easing,
                     dash_speed,
                     brake_decel,
+                    brake_tilt,
+                    settle_duration,
                 );
             }
         }
@@ -118,7 +121,7 @@ fn handle_idle_or_settling(
             1.0
         };
         let eased = settle_tilt_ease.0.sample_clamped(settle_progress);
-        tilt.angle = tilt.settle_start_angle * (1.0 - eased);
+        tilt.angle = (tilt.ease_target - tilt.ease_start).mul_add(eased, tilt.ease_start);
 
         if timer.remaining <= 0.0 {
             *state = BreakerState::Idle;
@@ -194,7 +197,9 @@ fn handle_dashing(
 
     if timer.remaining <= 0.0 {
         *state = BreakerState::Braking;
-        tilt.angle = -dash_dir * brake_tilt.0;
+        tilt.ease_start = tilt.angle;
+        tilt.ease_target = -dash_dir * brake_tilt.angle;
+        timer.remaining = brake_tilt.duration;
     } else {
         // Ease tilt from 0 to full angle over dash duration
         let progress = if dash_duration.0 > f32::EPSILON {
@@ -207,19 +212,35 @@ fn handle_dashing(
     }
 }
 
-/// Braking: rapidly decelerate with eased speed curve, then transition to Settling.
+/// Braking: ease tilt toward brake angle, decelerate, then transition to Settling.
 #[allow(clippy::too_many_arguments)]
 fn handle_braking(
     dt: f32,
     state: &mut BreakerState,
     velocity: &mut BreakerVelocity,
     tilt: &mut BreakerTilt,
+    timer: &mut BreakerStateTimer,
     max_speed: &BreakerMaxSpeed,
     decel: &BreakerDeceleration,
     easing: &DecelEasing,
     dash_speed: &DashSpeedMultiplier,
     brake_decel: &BrakeDecel,
+    brake_tilt: &BrakeTilt,
+    settle_duration: &SettleDuration,
 ) {
+    // Ease tilt toward brake angle
+    if timer.remaining > 0.0 {
+        timer.remaining -= dt;
+        let progress = if brake_tilt.duration > f32::EPSILON {
+            1.0 - (timer.remaining / brake_tilt.duration).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let eased = brake_tilt.ease.sample_clamped(progress);
+        tilt.angle = (tilt.ease_target - tilt.ease_start).mul_add(eased, tilt.ease_start);
+    }
+
+    // Decelerate
     let base_decel = decel.0 * brake_decel.0;
     let reference_speed = max_speed.0 * dash_speed.0;
     let effective_decel = eased_decel(
@@ -239,7 +260,9 @@ fn handle_braking(
     // Speed near zero → transition to Settling
     if velocity.x.abs() <= f32::EPSILON {
         velocity.x = 0.0;
-        tilt.settle_start_angle = tilt.angle;
+        tilt.ease_start = tilt.angle;
+        tilt.ease_target = 0.0;
+        timer.remaining = settle_duration.0;
         *state = BreakerState::Settling;
     }
 }
@@ -294,7 +317,11 @@ mod tests {
             DashDuration(config.dash_duration),
             DashTilt(config.dash_tilt_angle.to_radians()),
             DashTiltEase(config.dash_tilt_ease),
-            BrakeTilt(config.brake_tilt_angle.to_radians()),
+            BrakeTilt {
+                angle: config.brake_tilt_angle.to_radians(),
+                duration: config.brake_tilt_duration,
+                ease: config.brake_tilt_ease,
+            },
             BrakeDecel(config.brake_decel_multiplier),
             SettleDuration(config.settle_duration),
             SettleTiltEase(config.settle_tilt_ease),
@@ -308,10 +335,7 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 0.0 },
-                BreakerTilt {
-                    angle: 0.0,
-                    settle_start_angle: 0.0,
-                },
+                BreakerTilt::default(),
                 BreakerStateTimer { remaining: 0.0 },
                 breaker_param_bundle(&config),
             ))
@@ -429,7 +453,8 @@ mod tests {
         {
             let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
             tilt.angle = 0.3;
-            tilt.settle_start_angle = 0.3;
+            tilt.ease_start = 0.3;
+            tilt.ease_target = 0.0;
         }
         app.world_mut()
             .get_mut::<BreakerStateTimer>(entity)
@@ -472,7 +497,8 @@ mod tests {
         {
             let mut tilt = app_60.world_mut().get_mut::<BreakerTilt>(e60).unwrap();
             tilt.angle = start_angle;
-            tilt.settle_start_angle = start_angle;
+            tilt.ease_start = start_angle;
+            tilt.ease_target = 0.0;
         }
         app_60
             .world_mut()
@@ -498,7 +524,8 @@ mod tests {
         {
             let mut tilt = app_240.world_mut().get_mut::<BreakerTilt>(e240).unwrap();
             tilt.angle = start_angle;
-            tilt.settle_start_angle = start_angle;
+            tilt.ease_start = start_angle;
+            tilt.ease_target = 0.0;
         }
         app_240
             .world_mut()
@@ -535,7 +562,8 @@ mod tests {
         {
             let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
             tilt.angle = start_angle;
-            tilt.settle_start_angle = start_angle;
+            tilt.ease_start = start_angle;
+            tilt.ease_target = 0.0;
         }
         app.world_mut()
             .get_mut::<BreakerStateTimer>(entity)
@@ -577,6 +605,101 @@ mod tests {
 
         let state = app.world().get::<BreakerState>(entity).unwrap();
         assert_eq!(*state, BreakerState::Settling);
+    }
+
+    #[test]
+    fn brake_tilt_eases_not_snaps() {
+        let mut app = test_app();
+        let entity = spawn_test_breaker(&mut app);
+        let config = BreakerConfig::default();
+
+        let dash_tilt_angle = config.dash_tilt_angle.to_radians();
+        let brake_tilt_angle = config.brake_tilt_angle.to_radians();
+
+        // Set up mid-dash with tilt at full dash angle, timer about to expire
+        *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Dashing;
+        app.world_mut()
+            .get_mut::<BreakerVelocity>(entity)
+            .unwrap()
+            .x = config.max_speed * config.dash_speed_multiplier;
+        app.world_mut()
+            .get_mut::<BreakerTilt>(entity)
+            .unwrap()
+            .angle = dash_tilt_angle;
+        app.world_mut()
+            .get_mut::<BreakerStateTimer>(entity)
+            .unwrap()
+            .remaining = 0.0;
+
+        // Tick once: transitions Dashing → Braking (tilt unchanged)
+        tick(&mut app);
+        assert_eq!(
+            *app.world().get::<BreakerState>(entity).unwrap(),
+            BreakerState::Braking
+        );
+
+        // Tick again: first frame of brake tilt easing
+        tick(&mut app);
+        let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
+
+        // Tilt should NOT have snapped to the full brake angle
+        assert!(
+            (tilt.angle - (-brake_tilt_angle)).abs() > 0.01,
+            "brake tilt should ease gradually, not snap to full angle ({:.3}), got {:.3}",
+            -brake_tilt_angle,
+            tilt.angle
+        );
+        // Tilt should have started moving away from dash angle
+        assert!(
+            tilt.angle < dash_tilt_angle,
+            "tilt should have moved from dash angle ({dash_tilt_angle:.3}), got {:.3}",
+            tilt.angle
+        );
+    }
+
+    #[test]
+    fn settle_timer_initialized_on_braking_end() {
+        let mut app = test_app();
+        let entity = spawn_test_breaker(&mut app);
+        let config = BreakerConfig::default();
+
+        // Start in Braking with zero velocity (will immediately transition)
+        *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Braking;
+        app.world_mut()
+            .get_mut::<BreakerVelocity>(entity)
+            .unwrap()
+            .x = 0.0;
+
+        tick(&mut app);
+
+        let state = app.world().get::<BreakerState>(entity).unwrap();
+        assert_eq!(*state, BreakerState::Settling);
+
+        let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+        // Timer should have been initialized to settle_duration minus one dt
+        assert!(
+            timer.remaining > 0.0,
+            "settle timer should be initialized with positive remaining time, got {}",
+            timer.remaining
+        );
+
+        // Settling should NOT immediately transition to Idle
+        tick(&mut app);
+        let state = app.world().get::<BreakerState>(entity).unwrap();
+        assert_eq!(
+            *state,
+            BreakerState::Settling,
+            "settling should persist for multiple frames, not finish instantly"
+        );
+
+        // After enough time, should reach Idle
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let settle_frames = (config.settle_duration / (1.0 / 64.0)).ceil() as u32 + 2;
+        for _ in 0..settle_frames {
+            tick(&mut app);
+        }
+        let state = app.world().get::<BreakerState>(entity).unwrap();
+        assert_eq!(*state, BreakerState::Idle);
     }
 
     // ── eased_decel unit tests ────────────────────────────────────────

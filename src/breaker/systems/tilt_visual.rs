@@ -30,7 +30,8 @@ mod tests {
             Breaker,
             BreakerTilt {
                 angle,
-                settle_start_angle: 0.0,
+                ease_start: 0.0,
+                ease_target: 0.0,
             },
             Transform::default(),
         ));

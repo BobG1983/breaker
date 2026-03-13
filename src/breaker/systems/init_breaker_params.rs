@@ -42,7 +42,11 @@ pub fn init_breaker_params(
                 DashDuration(config.dash_duration),
                 DashTilt(config.dash_tilt_angle.to_radians()),
                 DashTiltEase(config.dash_tilt_ease),
-                BrakeTilt(config.brake_tilt_angle.to_radians()),
+                BrakeTilt {
+                    angle: config.brake_tilt_angle.to_radians(),
+                    duration: config.brake_tilt_duration,
+                    ease: config.brake_tilt_ease,
+                },
                 BrakeDecel(config.brake_decel_multiplier),
                 MaxReflectionAngle(config.max_reflection_angle.to_radians()),
                 MinAngleFromHorizontal(config.min_angle_from_horizontal.to_radians()),
