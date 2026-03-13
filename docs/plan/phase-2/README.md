@@ -9,7 +9,7 @@
 - [2c: Archetype System & Aegis](phase-2c-archetype-system.md) — Polymorphic bolt-lost dispatch, per-breaker RON config, Aegis as proof-of-concept
 - [2d: Screens & UI](phase-2d-screens-and-ui.md) — Breaker selection, placeholder upgrade screen, pause menu, stakes display
 - [2e: Chrono & Prism](phase-2e-chrono-and-prism.md) — Second and third breakers using the archetype system from 2c
-- [2f: Dev Tooling](phase-2f-dev-tooling.md) — CLI test-level spawning for fast iteration
+- [2f: Dev Tooling](phase-2f-dev-tooling.md) — RON hot-reload pipeline, CLI spawning, debug domain restructure
 
 ## Build Order Rationale
 

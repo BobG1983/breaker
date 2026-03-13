@@ -22,7 +22,7 @@ See `DESIGN.md` for core design principles, `architecture/` for technical decisi
   - [2c: Archetype System & Aegis](plan/phase-2/phase-2c-archetype-system.md)
   - [2d: Screens & UI](plan/phase-2/phase-2d-screens-and-ui.md)
   - [2e: Chrono & Prism](plan/phase-2/phase-2e-chrono-and-prism.md)
-  - [2f: Dev Tooling](plan/phase-2/phase-2f-dev-tooling.md)
+  - [2f: Dev Tooling](plan/phase-2/phase-2f-dev-tooling.md) — RON hot-reload, CLI spawning, debug restructure
 
 ### Upcoming
 - [Phase 3: Vertical Slice — Mini-Run](plan/phase-3-vertical-slice.md)

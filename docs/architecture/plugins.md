@@ -22,7 +22,7 @@ src/
 ├── physics/          # CCD collision detection, collision response
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 5)
 ├── ui/               # HUD, menus, upgrade selection screen (stub — Phase 2+)
-└── debug/            # bevy_egui debug console, overlays
+└── debug/            # Dev tooling: overlays, telemetry, hot-reload (sub-domains)
 assets/               # RON data files, shaders, textures, audio (project root, not inside src/)
 ```
 
@@ -39,3 +39,13 @@ assets/               # RON data files, shaders, textures, audio (project root, 
 - Communicates outward only through messages — no direct cross-module imports for data flow
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
+
+## Debug Domain — Cross-Domain Exception
+
+The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:
+
+- Hot-reload systems must write to `Res<*Config>` and insert/update entity components across all domains
+- Telemetry systems must read components and resources from every domain for display
+- All debug code is compiled out of release builds — it cannot introduce production coupling
+
+This exception does **not** extend to other domains. Production code still communicates through messages only.
