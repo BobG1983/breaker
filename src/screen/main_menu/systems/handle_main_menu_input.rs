@@ -3,14 +3,19 @@
 use bevy::{app::AppExit, prelude::*};
 
 use crate::{
-    input::resources::{GameAction, InputActions},
+    input::InputConfig,
     screen::main_menu::{MENU_ITEMS, MainMenuSelection, MenuItem},
     shared::GameState,
 };
 
 /// Handles keyboard and mouse input for the main menu.
+///
+/// Reads `ButtonInput<KeyCode>` directly instead of `InputActions` because the
+/// menu runs in `Update`, while `InputActions` is cleared in `FixedPostUpdate`
+/// (between `PreUpdate` and `Update`).
 pub fn handle_main_menu_input(
-    actions: Res<InputActions>,
+    keys: Res<ButtonInput<KeyCode>>,
+    config: Res<InputConfig>,
     mut selection: ResMut<MainMenuSelection>,
     mut next_state: ResMut<NextState<GameState>>,
     mut exit_writer: MessageWriter<AppExit>,
@@ -30,14 +35,14 @@ pub fn handle_main_menu_input(
         }
     }
 
-    // Keyboard navigation
-    if actions.active(GameAction::MenuDown) {
+    // Keyboard navigation — read raw key state, bypassing InputActions
+    if config.menu_down.iter().any(|k| keys.just_pressed(*k)) {
         let current = current_index(&selection);
         let next = (current + 1) % MENU_ITEMS.len();
         selection.selected = MENU_ITEMS[next];
     }
 
-    if actions.active(GameAction::MenuUp) {
+    if config.menu_up.iter().any(|k| keys.just_pressed(*k)) {
         let current = current_index(&selection);
         let next = if current == 0 {
             MENU_ITEMS.len() - 1
@@ -47,7 +52,7 @@ pub fn handle_main_menu_input(
         selection.selected = MENU_ITEMS[next];
     }
 
-    if actions.active(GameAction::MenuConfirm) {
+    if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
         confirm_selection(&selection, &mut next_state, &mut exit_writer);
     }
 }
@@ -84,7 +89,8 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<InputActions>();
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.insert_resource(InputConfig::default());
         app.init_state::<GameState>();
         app.add_message::<AppExit>();
         app.insert_resource(MainMenuSelection {
@@ -94,27 +100,28 @@ mod tests {
         app
     }
 
-    #[test]
-    fn down_advances_selection() {
-        let mut app = test_app();
+    /// Simulates a `just_pressed` key event by pressing the key then running
+    /// one update. No `InputPlugin` means no `PreUpdate` clear interference.
+    fn press_key(app: &mut App, key: KeyCode) {
         app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::MenuDown);
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
         app.update();
+    }
+
+    #[test]
+    fn single_down_press_advances_selection() {
+        let mut app = test_app();
+        press_key(&mut app, KeyCode::ArrowDown);
 
         let selection = app.world().resource::<MainMenuSelection>();
         assert_eq!(selection.selected, MenuItem::Settings);
     }
 
     #[test]
-    fn up_wraps_selection() {
+    fn single_up_press_wraps_selection() {
         let mut app = test_app();
-        app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::MenuUp);
-        app.update();
+        press_key(&mut app, KeyCode::ArrowUp);
 
         let selection = app.world().resource::<MainMenuSelection>();
         assert_eq!(selection.selected, MenuItem::Quit);
@@ -123,11 +130,7 @@ mod tests {
     #[test]
     fn enter_on_play_transitions_to_playing() {
         let mut app = test_app();
-        app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::MenuConfirm);
-        app.update();
+        press_key(&mut app, KeyCode::Enter);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
@@ -140,11 +143,7 @@ mod tests {
     fn enter_on_quit_sends_exit() {
         let mut app = test_app();
         app.world_mut().resource_mut::<MainMenuSelection>().selected = MenuItem::Quit;
-        app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::MenuConfirm);
-        app.update();
+        press_key(&mut app, KeyCode::Enter);
 
         let messages = app.world().resource::<Messages<AppExit>>();
         assert!(
@@ -159,11 +158,7 @@ mod tests {
     fn enter_on_settings_does_nothing() {
         let mut app = test_app();
         app.world_mut().resource_mut::<MainMenuSelection>().selected = MenuItem::Settings;
-        app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::MenuConfirm);
-        app.update();
+        press_key(&mut app, KeyCode::Enter);
 
         // No state transition
         let next = app.world().resource::<NextState<GameState>>();
