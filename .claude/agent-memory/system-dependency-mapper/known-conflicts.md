@@ -1,110 +1,114 @@
 ---
 name: known-conflicts
-description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-12)
+description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-13 full re-scan)
 type: reference
 ---
 
-# Conflict Analysis
+# Known Conflicts and Ordering Issues
 
-## Query Conflicts — FixedUpdate (PlayingState::Active)
+Last updated: 2026-03-13 (full re-scan, Bevy 0.18.1)
 
-### Transform Write Conflicts
+---
 
-Multiple systems in FixedUpdate write Transform on Bolt entities. They are correctly ordered:
+## CONFIRMED CONFLICT — apply_bump_velocity ordering
 
-1. `bolt_cell_collision` writes `Transform` (Bolt) — runs first via `.after(BoltSystems::PrepareVelocity)`
-2. `bolt_breaker_collision` writes `Transform` (Bolt) — runs `.after(bolt_cell_collision)`
-3. `bolt_lost` writes `Transform` (Bolt) — runs `.after(bolt_breaker_collision)`
+**File:** `src/bolt/plugin.rs`
 
-No conflict: chain is total.
+`apply_bump_velocity` is registered as:
+```rust
+apply_bump_velocity.after(PhysicsSystems::BreakerCollision)
+```
 
-Multiple systems write Transform on Breaker entities:
+This means it runs AFTER `bolt_breaker_collision`. But `bolt_lost` runs AFTER `bolt_breaker_collision` too, and there is no ordering between `apply_bump_velocity` and `bolt_lost`.
 
-1. `move_breaker` writes `Transform` (Breaker) — in_set(BreakerSystems::Move)
-2. `animate_bump_visual` writes `Transform` (Breaker) — in **Update**, not FixedUpdate
+The ordering chain is:
+```
+prepare_bolt_velocity (BoltSystems::PrepareVelocity)
+  → bolt_cell_collision (after PrepareVelocity)
+    → bolt_breaker_collision (after bolt_cell_collision, in_set BreakerCollision)
+      → bolt_lost (after bolt_breaker_collision)
+```
 
-No conflict: they are in different schedules.
+But `apply_bump_velocity` only says `.after(PhysicsSystems::BreakerCollision)`. This means it could run concurrently with `bolt_lost`. Both write to `BoltVelocity` on active bolts. If the bolt is lost and respawned in `bolt_lost` on the same tick as a bump, the velocity set by `apply_bump_velocity` and the respawn velocity in `bolt_lost` could conflict.
 
-### BoltVelocity Write Conflicts
+**Severity:** Low in practice (bolt lost and bump contact on the same tick is extremely unlikely), but is a formal Bevy ordering conflict on `BoltVelocity`.
 
-In FixedUpdate:
-1. `prepare_bolt_velocity` writes `BoltVelocity` — in_set(BoltSystems::PrepareVelocity)
-2. `bolt_cell_collision` writes `BoltVelocity` — .after(BoltSystems::PrepareVelocity)
-3. `bolt_breaker_collision` writes `BoltVelocity` — .after(bolt_cell_collision)
-4. `bolt_lost` writes `BoltVelocity` — .after(bolt_breaker_collision)
-5. `apply_bump_velocity` writes `BoltVelocity` — **NO ORDERING CONSTRAINT** ⚠️
+**Fix:** Add `.before(bolt_lost)` or `.after(bolt_lost)` to `apply_bump_velocity` in `BoltPlugin::build`. Most correct: `.after(bolt_lost)` so bump velocity is applied last to the (possibly respawned) bolt.
 
-**POTENTIAL CONFLICT**: `apply_bump_velocity` and `prepare_bolt_velocity`/`bolt_*_collision`/`bolt_lost` all write `BoltVelocity` on the same Bolt entities in the same FixedUpdate schedule with no ordering between them.
+---
 
-However, `apply_bump_velocity` only fires when there is a `BumpPerformed` message — and `BumpPerformed` is sent by:
-- `grade_bump` (which runs .after(update_breaker_state) in the same tick a BoltHitBreaker arrives)
-- `update_bump` (on timeout only)
+## CONFIRMED CONFLICT — animate_bump_visual and animate_tilt_visual both write Transform on Breaker in Update
 
-`BoltHitBreaker` is sent by `bolt_breaker_collision`, so in the same tick that generates a bump message, `bolt_breaker_collision` has already set BoltVelocity. The concern is: does `apply_bump_velocity` see the final or intermediate velocity from that tick?
+**Files:** `src/breaker/systems/bump_visual.rs`, `src/breaker/systems/tilt_visual.rs`
 
-In Bevy 0.18, messages from the current update are visible to readers in the same update. So on the tick where `bolt_breaker_collision` fires and sends `BoltHitBreaker`:
-- `grade_bump` (via BoltHitBreaker reader) sends `BumpPerformed`
-- `apply_bump_velocity` (via BumpPerformed reader) multiplies the velocity
+Both systems run in `Update`, both write `&mut Transform` on entities `With<Breaker>`. There is no ordering constraint between them.
 
-If `apply_bump_velocity` runs *before* `bolt_breaker_collision` in the same tick, it would multiply the old pre-reflection velocity and then `bolt_breaker_collision` would overwrite it — making the bump multiplier invisible that tick.
+- `animate_bump_visual` writes `transform.translation.y`
+- `animate_tilt_visual` writes `transform.rotation`
 
-If `apply_bump_velocity` runs *after* `bolt_breaker_collision` (due to arbitrary Bevy scheduling), it correctly amplifies the reflected velocity.
+**Severity:** Low — they write different fields of Transform (translation vs rotation). Bevy does not split Transform fields for conflict detection; both access `&mut Transform`. However since they actually modify different fields, there is no logical conflict, only a formal one. Bevy will serialize these (not run them in parallel) unless explicitly marked `ambiguous_with`.
 
-**VERDICT**: Non-deterministic ordering. The bump velocity amplification could be applied to pre-reflection or post-reflection velocity depending on scheduler order. Needs `.after(bolt_breaker_collision)` or `.after(BoltSystems::PrepareVelocity)` at minimum.
+**Note:** This is expected behavior for two visual-only Update systems on the same entity. No fix needed unless you want to suppress ambiguity warnings.
 
-### BreakerState Write Conflicts
+---
 
-In FixedUpdate:
-1. `update_breaker_state` writes `BreakerState` — .after(move_breaker)
-2. `perfect_bump_dash_cancel` writes `BreakerState` — .after(grade_bump) which is .after(update_breaker_state)
+## POTENTIAL: launch_bolt has no ordering relative to hover_bolt or prepare_bolt_velocity
 
-No conflict: fully ordered. `perfect_bump_dash_cancel` runs after `update_breaker_state`.
+**File:** `src/bolt/plugin.rs`
 
-### BumpState Write
+`launch_bolt` is registered with no ordering constraints. Both `hover_bolt` and `prepare_bolt_velocity` run `.after(BreakerSystems::Move)`. `launch_bolt` runs without any explicit ordering.
 
-Only `update_bump` writes `BumpState`. No conflict.
+On the frame the bolt is launched:
+- `launch_bolt` sets velocity and removes `BoltServing`
+- If `prepare_bolt_velocity` runs first, the serving bolt is skipped (filtered by `ActiveBoltFilter = Without<BoltServing>`) — no conflict
+- If `hover_bolt` runs after `launch_bolt`, the newly-launched bolt (now `Without<BoltServing>`) is skipped by `ServingBoltFilter` — no conflict
 
-### Assets<ColorMaterial> Write
+**Conclusion:** Not actually a conflict because the filter predicates (`ServingBoltFilter` / `ActiveBoltFilter`) make the queries disjoint. The bolt is either serving or active, never both. No fix needed.
 
-In FixedUpdate (PlayingState::Active):
-- `handle_cell_hit` writes `ResMut<Assets<ColorMaterial>>`
+---
 
-In OnEnter(GameState::Playing):
-- `spawn_breaker` writes `ResMut<Assets<ColorMaterial>>`
-- `spawn_bolt` writes `ResMut<Assets<ColorMaterial>>`
-- `spawn_cells` writes `ResMut<Assets<ColorMaterial>>`
+## CONFIRMED MISSING CONSUMER — CellDestroyed has no active receiver
 
-OnEnter and FixedUpdate don't overlap. No conflict.
+`handle_cell_hit` sends `CellDestroyed` on every cell destruction, but no system currently reads it. This is expected for Phase 0/1 — RunPlugin (node completion detection) and UpgradesPlugin will consume it in future phases.
 
-## Ordering Issues
+**Action required (future phase):** Wire RunPlugin to read CellDestroyed and send NodeCleared when all cells are gone.
 
-### `apply_bump_velocity` vs physics systems (CONFIRMED ISSUE)
+---
 
-`apply_bump_velocity` has no ordering relative to:
-- `prepare_bolt_velocity` (in_set BoltSystems::PrepareVelocity)
-- `bolt_cell_collision` (.after BoltSystems::PrepareVelocity)
-- `bolt_breaker_collision` (.after bolt_cell_collision)
-- `bolt_lost` (.after bolt_breaker_collision)
+## REGISTERED BUT UNUSED MESSAGES
 
-**Impact**: On any tick where a BumpPerformed message is present, the velocity multiplication may occur before the CCD physics step, making it get overwritten; or after, making it work correctly. Bevy will pick an order based on system graph ambiguity resolution (typically consistent per run but not guaranteed).
+These messages are registered but have neither senders nor receivers yet:
+- `NodeCleared` (RunPlugin)
+- `TimerExpired` (RunPlugin)
+- `UpgradeSelected` (UiPlugin)
 
-**Fix needed**: Add `.after(bolt_breaker_collision)` or `.after(BoltSystems::PrepareVelocity)` to `apply_bump_velocity` in BoltPlugin's registration.
+All expected. Will be wired in future phases.
 
-### `spawn_bump_grade_text` vs `grade_bump` (MINOR)
+---
 
-`spawn_bump_grade_text` is registered `.after(update_bump)` but reads BumpPerformed which is also sent by `grade_bump` (which runs much later, after update_breaker_state). Within the same tick, `spawn_bump_grade_text` will see BumpPerformed messages from the *previous* tick's `grade_bump` (if Bevy 0.18 double-buffers messages), or the current tick's `update_bump` only. This is the expected double-buffer behavior in Bevy 0.18 messages — readers see messages written in the previous update, not the same update. So in practice `spawn_bump_grade_text` will see `grade_bump`'s messages with a 1-tick delay. This is cosmetic-only (text feedback), so acceptable but worth noting.
+## ORDERING REFERENCE — Full FixedUpdate Chain (PlayingState::Active)
 
-## Missing Message Consumers (Future Work)
+Implicit ordering (no parallelism possible due to constraints):
+```
+update_bump  (BreakerPlugin, no ordering from anything)
+  → move_breaker (.after(update_bump), BreakerSystems::Move)
+    → update_breaker_state (.after(move_breaker))
+    → hover_bolt (.after(BreakerSystems::Move))
+    → prepare_bolt_velocity (.after(BreakerSystems::Move), BoltSystems::PrepareVelocity)
+      → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
+        → bolt_breaker_collision (.after(bolt_cell_collision), PhysicsSystems::BreakerCollision)
+          → bolt_lost (.after(bolt_breaker_collision))
+          → grade_bump (.after(update_bump) AND .after(PhysicsSystems::BreakerCollision))
+          → apply_bump_velocity (.after(PhysicsSystems::BreakerCollision))
+          → track_bump_result (.after(PhysicsSystems::BreakerCollision), dev only)
+            → perfect_bump_dash_cancel (.after(grade_bump))
+            → spawn_bump_grade_text (.after(grade_bump))
+            → spawn_whiff_text (.after(grade_bump))
+```
 
-These are intentional stubs, not bugs:
-
-| Message | Expected Future Consumer | Phase |
-|---------|--------------------------|-------|
-| `CellDestroyed` | run (node clear tracking), upgrades, audio | Phase 2+ |
-| `BoltLost` | breaker (penalty logic) | Phase 2+ |
-| `BoltHitBreaker` | audio, upgrades, UI | Phase 2+ |
-| `BoltHitCell` | upgrades, audio | Phase 2+ |
-| `BumpPerformed` | audio, upgrades | Phase 2+ |
-| `NodeCleared` | state machine, UI | Phase 2+ |
-| `TimerExpired` | state machine | Phase 2+ |
-| `UpgradeSelected` | upgrades plugin | Phase 3+ |
+Systems with NO explicit ordering (run in parallel with each other unless resource/component conflicts force serialization):
+- `launch_bolt` — reads InputActions (shared read with move_breaker, update_breaker_state), writes BoltVelocity on ServingBoltFilter
+- `spawn_bolt_lost_text` — reads BoltLost message only (written by bolt_lost)
+- `trigger_bump_visual` — reads InputActions, Commands only
+- `handle_cell_hit` — reads BoltHitCell message, no overlap with physics query
+```

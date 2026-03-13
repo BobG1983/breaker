@@ -30,7 +30,9 @@ impl Plugin for PhysicsPlugin {
                 bolt_breaker_collision
                     .after(bolt_cell_collision)
                     .in_set(super::PhysicsSystems::BreakerCollision),
-                bolt_lost.after(bolt_breaker_collision),
+                bolt_lost
+                    .after(bolt_breaker_collision)
+                    .in_set(super::PhysicsSystems::BoltLost),
             )
                 .run_if(in_state(PlayingState::Active)),
         );

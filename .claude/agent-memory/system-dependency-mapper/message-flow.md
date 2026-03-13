@@ -1,72 +1,109 @@
 ---
 name: message-flow
-description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-12)
+description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-13 full re-scan)
 type: reference
 ---
 
 # Message Flow Map
 
-## Messages Registered
+Last updated: 2026-03-13 (full re-scan, Bevy 0.18.1)
 
-| Message | Registered By | Senders | Active Receivers |
-|---------|--------------|---------|-----------------|
-| `KeyboardInput` (Bevy built-in) | InputPlugin | Bevy InputPlugin | `read_input_actions` |
-| `BumpPerformed` | BreakerPlugin | `update_bump`, `grade_bump` | `perfect_bump_dash_cancel`, `apply_bump_velocity`, `spawn_bump_grade_text` |
-| `BoltHitBreaker` | PhysicsPlugin | `bolt_breaker_collision` | `grade_bump` |
-| `BoltHitCell` | PhysicsPlugin | `bolt_cell_collision` | `handle_cell_hit` |
-| `BoltLost` | PhysicsPlugin | `bolt_lost` | `spawn_bolt_lost_text` |
-| `CellDestroyed` | CellsPlugin | `handle_cell_hit` | **NO ACTIVE RECEIVERS** ⚠️ |
-| `NodeCleared` | RunPlugin | **NO SENDERS** ⚠️ | **NO ACTIVE RECEIVERS** ⚠️ |
-| `TimerExpired` | RunPlugin | **NO SENDERS** ⚠️ | **NO ACTIVE RECEIVERS** ⚠️ |
-| `UpgradeSelected` | UiPlugin | **NO SENDERS** ⚠️ | **NO ACTIVE RECEIVERS** ⚠️ |
-| `AppExit` (Bevy built-in) | ScreenPlugin | `handle_main_menu_input` | Bevy runtime |
+## Registered Messages (by plugin)
 
-## Detailed Flow
+| Message | Registered by |
+|---------|--------------|
+| KeyboardInput | Bevy built-in (InputPlugin reads it) |
+| BumpPerformed | BreakerPlugin |
+| BumpWhiffed | BreakerPlugin |
+| BoltHitBreaker | PhysicsPlugin |
+| BoltHitCell | PhysicsPlugin |
+| BoltLost | PhysicsPlugin |
+| CellDestroyed | CellsPlugin |
+| NodeCleared | RunPlugin |
+| TimerExpired | RunPlugin |
+| UpgradeSelected | UiPlugin |
+| AppExit | Bevy built-in |
 
-### BumpPerformed
-```
-update_bump ──(BumpGrade::Timeout)──────────────────────────┐
-grade_bump  ──(BumpGrade::{Early,Perfect,Late,None})─────────┼──► perfect_bump_dash_cancel (breaker)
-                                                             ├──► apply_bump_velocity       (bolt)
-                                                             └──► spawn_bump_grade_text     (breaker)
-```
+---
 
-### BoltHitBreaker
-```
-bolt_breaker_collision (physics) ──► grade_bump (breaker)
-```
-NOTE: BoltHitBreaker comment says "consumed by audio, upgrades, UI" — but audio/upgrades/UI are stubs with no receivers.
+## Message Flow Detail
 
-### BoltHitCell
-```
-bolt_cell_collision (physics) ──► handle_cell_hit (cells)
-```
-NOTE: BoltHitCell comment says "consumed by upgrades, cells, and audio" — only cells receives it currently.
+### KeyboardInput (Bevy built-in)
+- Sender: Bevy input system
+- Receiver: `read_input_actions` (InputPlugin, PreUpdate)
 
-### BoltLost
-```
-bolt_lost (physics) ──► spawn_bolt_lost_text (bolt)
-```
-NOTE: BoltLost comment says "consumed by breaker (applies penalty per breaker type)" — penalty not yet implemented.
+### BumpPerformed (BreakerPlugin → cross-domain)
+- Senders: `update_bump` (retroactive path), `grade_bump` (forward/forward+hit path)
+- Receivers:
+  - `perfect_bump_dash_cancel` (BreakerPlugin) — cancels dash on Perfect grade
+  - `spawn_bump_grade_text` (BreakerPlugin) — spawns grade feedback text
+  - `apply_bump_velocity` (BoltPlugin) — amplifies bolt speed
+  - `track_bump_result` (DebugPlugin, dev only) — updates debug display
+- Missing consumers (future phases): AudioPlugin, UpgradesPlugin, UiPlugin (HUD)
 
-### CellDestroyed
-```
-handle_cell_hit (cells) ──► [NO RECEIVERS]
-```
-Comment says "consumed by run (progress tracking), upgrades (overclock triggers), audio" — these are future Phase 2+ systems.
+### BumpWhiffed (BreakerPlugin → cross-domain)
+- Sender: `grade_bump` (BreakerPlugin)
+- Receivers:
+  - `spawn_whiff_text` (BreakerPlugin) — spawns WHIFF text
+  - `track_bump_result` (DebugPlugin, dev only)
+- Missing consumers (future phases): AudioPlugin
 
-### NodeCleared / TimerExpired / UpgradeSelected
-These are future Phase 2+ messages. Registered but have no senders or receivers yet.
+### BoltHitBreaker (PhysicsPlugin → cross-domain)
+- Sender: `bolt_breaker_collision` (PhysicsPlugin)
+- Receivers:
+  - `grade_bump` (BreakerPlugin) — resolves bump timing
+- Missing consumers (future phases): AudioPlugin, UpgradesPlugin, UiPlugin
 
-## Cross-Plugin Message Boundaries
+### BoltHitCell (PhysicsPlugin → cross-domain)
+- Sender: `bolt_cell_collision` (PhysicsPlugin)
+- Receivers:
+  - `handle_cell_hit` (CellsPlugin) — deals damage, triggers despawn
+- Missing consumers (future phases): UpgradesPlugin, AudioPlugin
 
-These are the intentional cross-domain message flows:
+### BoltLost (PhysicsPlugin → cross-domain)
+- Sender: `bolt_lost` (PhysicsPlugin)
+- Receivers:
+  - `spawn_bolt_lost_text` (BoltPlugin) — spawns BOLT LOST feedback text
+- Missing consumers (future phases): BreakerPlugin (penalty by archetype), AudioPlugin, UiPlugin
 
-| From Domain | Message | To Domain |
+### CellDestroyed (CellsPlugin → cross-domain)
+- Sender: `handle_cell_hit` (CellsPlugin)
+- Receivers: NONE currently active
+- Missing consumers (future phases): RunPlugin (progress tracking, NodeCleared detection), UpgradesPlugin, AudioPlugin
+
+### NodeCleared (RunPlugin — registered, not yet used)
+- Sender: NONE
+- Receivers: NONE
+
+### TimerExpired (RunPlugin — registered, not yet used)
+- Sender: NONE
+- Receivers: NONE
+
+### UpgradeSelected (UiPlugin — registered, not yet used)
+- Sender: NONE
+- Receivers: NONE
+
+### AppExit (Bevy built-in)
+- Sender: `handle_main_menu_input` (ScreenPlugin) — on Quit selection
+- Receiver: Bevy app exit handler
+
+---
+
+## Cross-Plugin Boundary Summary
+
+| From Plugin | Message | To Plugin |
 |-------------|---------|-----------|
-| physics | BoltHitBreaker | breaker |
-| physics | BoltHitCell | cells |
-| physics | BoltLost | bolt |
-| breaker | BumpPerformed | bolt (apply_bump_velocity), breaker (perfect_bump_dash_cancel, spawn_bump_grade_text) |
-| cells | CellDestroyed | (future: run, upgrades, audio) |
-| screen | AppExit | Bevy runtime |
+| Bevy input | KeyboardInput | InputPlugin |
+| BreakerPlugin | BumpPerformed | BoltPlugin, DebugPlugin |
+| BreakerPlugin | BumpWhiffed | DebugPlugin |
+| PhysicsPlugin | BoltHitBreaker | BreakerPlugin |
+| PhysicsPlugin | BoltHitCell | CellsPlugin |
+| PhysicsPlugin | BoltLost | BoltPlugin |
+| CellsPlugin | CellDestroyed | (no active consumer) |
+
+---
+
+## Notes
+- All gameplay message flow is strictly one-way (no circular message chains)
+- CellDestroyed is the only actively-sent message with no current consumer
+- NodeCleared, TimerExpired, UpgradeSelected are registered but have no sender or receiver yet (future phases)
