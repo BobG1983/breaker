@@ -17,6 +17,7 @@
 - **Phase 2b audit 2026-03-13**: PASS with 1 structural issue (run/node/mod.rs routing-only violation)
 - screen/run_end/ sub-domain added (Phase 2b): follows loading/main_menu pattern, PASS
 - **Post-refactor audit 2026-03-13**: PASS — run/node/mod.rs routing-only violation RESOLVED (types extracted to resources.rs + sets.rs). No critical violations. One observation: run/node/ lacks its own plugin.rs (systems registered in parent run/plugin.rs).
+- **Phase 2c audit 2026-03-13**: PASS — BehaviorPlugin added as breaker sub-domain. Per-consequence file layout in `consequences/` directory. Bridge systems consume BoltLost + BumpPerformed messages. Internal dispatch via Bevy observers (Events), not messages. One accepted compromise: handle_life_lost writes ResMut<RunState>.
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -26,6 +27,8 @@
 - `screen/` has three sub-domains: `loading/`, `main_menu/`, `run_end/` (win/lose screen, cleanup on RunEnd exit)
 - `loading/` cross-references `main_menu::MainMenuDefaults` for config seeding — acceptable sibling-within-same-domain import
 - **Nested sub-domains allowed** (added 2026-03-13): a domain may contain child sub-domains with their own plugin, components, and systems. Same canonical layout. Parent plugin adds child plugins. Max one level of nesting. Sub-domains may import parent's shared components. See `docs/architecture/layout.md`.
+- **Per-consequence layout** (added 2026-03-13): Behavior sub-domains use per-consequence file organization in a `consequences/` directory grouping (NOT a sub-domain — no plugin.rs). Each consequence file owns its Event, Components, observer, and helpers. See `docs/architecture/layout.md` "Per-Consequence Layout" section.
+- **Bevy observers for intra-domain dispatch**: Consequence events use `#[derive(Event)]` + `commands.trigger()` + `app.add_observer()` for internal behavior dispatch within a domain. Messages (`#[derive(Message)]`) remain required for inter-domain communication.
 - Debug plugin gated behind `#[cfg(feature = "dev")]` inside `build()`, struct always compiled
 - lib.rs visibility correct: pub for app/game/shared, pub(crate) for all domain modules
 - proptest dev-dependency is present in Cargo.toml (planned, not yet used)
@@ -61,6 +64,8 @@ BreakerSystems::Move
               <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
             <- bolt_lost .after(bolt_breaker_collision)
               PhysicsSystems::BoltLost
+                <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
+            <- bridge_bump .after(PhysicsSystems::BreakerCollision)
 ```
 
 Breaker intra-domain: update_bump → move_breaker → update_breaker_state → grade_bump
@@ -73,8 +78,8 @@ See [message-inventory.md](message-inventory.md) for full table.
 Active messages (Phase 1, consumed in code):
 - BoltHitBreaker: physics → breaker (grade_bump)
 - BoltHitCell: physics → cells (handle_cell_hit)
-- BoltLost: physics → bolt (spawn_bolt_lost_text)
-- BumpPerformed: breaker → bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel)
+- BoltLost: physics → bolt (spawn_bolt_lost_text), breaker/behaviors (bridge_bolt_lost)
+- BumpPerformed: breaker → bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump)
 - BumpWhiffed: breaker → breaker (spawn_whiff_text)
 
 Active messages (Phase 2b):
@@ -101,6 +106,7 @@ Registered but no consumers yet: UpgradeSelected
 - UI domain reads run::node::NodeTimer (read-only, for timer display)
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only, for outcome display)
 - run/node/ lacks its own plugin.rs — systems registered in parent run/plugin.rs (acceptable, but doesn't follow the sub-domain pattern used by screen/ children)
+- breaker/behaviors handle_life_lost writes ResMut<RunState> (run domain) — same pattern as other accepted cross-domain writes; alternative would be a RunLost message for a single assignment
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. Hot-reload systems write to *Config resources and entity components across all domains. Telemetry reads from all domains. All gated behind `#[cfg(feature = "dev")]` — compiled out of release. Does NOT set precedent for production domains.
 
 ## Debug Domain Structure (planned, Phase 2f)

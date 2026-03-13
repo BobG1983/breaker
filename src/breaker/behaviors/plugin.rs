@@ -5,9 +5,11 @@ use bevy::prelude::*;
 use super::{
     active::ActiveBehaviors,
     bridges::{bridge_bolt_lost, bridge_bump},
+    consequences::life_lost::{
+        LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display,
+    },
     definition::Trigger,
     init::{apply_archetype_config_overrides, init_archetype},
-    life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
     registry::ArchetypeRegistry,
 };
 use crate::{

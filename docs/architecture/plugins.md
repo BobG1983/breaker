@@ -13,7 +13,7 @@ src/
 ├── shared.rs         # Passive types: GameState, PlayingState, cleanup markers, constants
 ├── screen/           # Screen state registration, transitions, cleanup systems
 ├── input/            # Raw keyboard input to GameAction translation
-├── breaker/          # Breaker mechanics, state machine, bump system
+├── breaker/          # Breaker mechanics, state machine, bump system, behaviors sub-domain
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)

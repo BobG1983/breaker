@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::definition::{BehaviorBinding, Consequence, Trigger};
-use crate::breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier};
+use crate::breaker::{
+    behaviors::definition::{BehaviorBinding, Consequence, Trigger},
+    components::{BumpPerfectMultiplier, BumpWeakMultiplier},
+};
 
 /// Applies `BoltSpeedBoost` consequences from behavior bindings as components
 /// on the breaker entity.

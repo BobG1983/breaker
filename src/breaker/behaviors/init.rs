@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveBehaviors, bolt_speed_boost::apply_bolt_speed_boosts, life_lost::LivesCount,
+    active::ActiveBehaviors,
+    consequences::{bolt_speed_boost::apply_bolt_speed_boosts, life_lost::LivesCount},
     registry::ArchetypeRegistry,
 };
 use crate::{

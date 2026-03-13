@@ -8,8 +8,8 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 |---------|---------|-------------|
 | `BoltHitBreaker` | physics | breaker (grade_bump) |
 | `BoltHitCell` | physics | cells (handle_cell_hit) |
-| `BoltLost` | physics | bolt (spawn_bolt_lost_text) |
-| `BumpPerformed { grade }` | breaker | bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel) |
+| `BoltLost` | physics | bolt (spawn_bolt_lost_text), breaker/behaviors (bridge_bolt_lost) |
+| `BumpPerformed { grade }` | breaker | bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text) |
 | `CellDestroyed` | cells | run (track_node_completion) |
 | `NodeCleared` | run (track_node_completion) | run (handle_node_cleared) |

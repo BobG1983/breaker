@@ -52,6 +52,8 @@ BreakerSystems::Move
               <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
             <- bolt_lost .after(bolt_breaker_collision)
               PhysicsSystems::BoltLost
+                <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
+            <- bridge_bump .after(PhysicsSystems::BreakerCollision)
 ```
 
 Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading and velocity application, then bolt-lost detection.

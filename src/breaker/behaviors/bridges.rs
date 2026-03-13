@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use super::{
     active::ActiveBehaviors,
+    consequences::life_lost::LoseLifeRequested,
     definition::{Consequence, Trigger},
-    life_lost::LoseLifeRequested,
 };
 use crate::{
     breaker::messages::{BumpGrade, BumpPerformed},
@@ -48,7 +48,7 @@ fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mu
                 commands.trigger(LoseLifeRequested);
             }
             Consequence::BoltSpeedBoost(_) => {
-                // Init-time only — handled by bolt_speed_boost::apply_bolt_speed_boosts
+                // Init-time only — handled by consequences::bolt_speed_boost
             }
         }
     }
@@ -89,7 +89,7 @@ mod tests {
 
         use super::*;
         use crate::{
-            breaker::behaviors::life_lost::LivesCount,
+            breaker::behaviors::consequences::life_lost::LivesCount,
             run::resources::{RunOutcome, RunState},
             shared::GameState,
         };
@@ -108,7 +108,7 @@ mod tests {
                 outcome: RunOutcome::InProgress,
             });
             app.insert_resource(SendBoltLost(false));
-            app.add_observer(crate::breaker::behaviors::life_lost::handle_life_lost);
+            app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
             app.add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
             app
         }
@@ -140,7 +140,7 @@ mod tests {
 
         use super::*;
         use crate::{
-            breaker::behaviors::life_lost::LivesCount,
+            breaker::behaviors::consequences::life_lost::LivesCount,
             run::resources::{RunOutcome, RunState},
             shared::GameState,
         };
@@ -160,7 +160,7 @@ mod tests {
                 outcome: RunOutcome::InProgress,
             });
             app.insert_resource(SendBump(None));
-            app.add_observer(crate::breaker::behaviors::life_lost::handle_life_lost);
+            app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
             app.add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
             app
         }
