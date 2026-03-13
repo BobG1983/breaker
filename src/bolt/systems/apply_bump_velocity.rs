@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::{Bolt, BoltMaxSpeed, BoltVelocity},
+    bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltVelocity},
     breaker::{
         components::{Breaker, BumpPerfectMultiplier, BumpWeakMultiplier},
         messages::{BumpGrade, BumpPerformed},
@@ -17,7 +17,7 @@ use crate::{
 /// breaker domain only grades the bump timing.
 pub fn apply_bump_velocity(
     mut reader: MessageReader<BumpPerformed>,
-    mut bolt_query: Query<(&mut BoltVelocity, &BoltMaxSpeed), With<Bolt>>,
+    mut bolt_query: Query<(&mut BoltVelocity, &BoltBaseSpeed, &BoltMaxSpeed), With<Bolt>>,
     breaker_query: Query<(&BumpPerfectMultiplier, &BumpWeakMultiplier), With<Breaker>>,
 ) {
     // Collect messages first — skip breaker query when there are none (common case).
@@ -36,8 +36,14 @@ pub fn apply_bump_velocity(
             BumpGrade::Early | BumpGrade::Late => weak_mult.0,
         };
 
-        for (mut bolt_velocity, max_speed) in &mut bolt_query {
+        for (mut bolt_velocity, base_speed, max_speed) in &mut bolt_query {
             bolt_velocity.value *= multiplier;
+
+            // Never drop below base speed
+            let speed = bolt_velocity.speed();
+            if speed < base_speed.0 {
+                bolt_velocity.value = bolt_velocity.direction() * base_speed.0;
+            }
 
             // Clamp to max speed
             let speed = bolt_velocity.speed();
@@ -83,6 +89,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(vx, vy),
+            BoltBaseSpeed(bolt_config.base_speed),
             BoltMaxSpeed(bolt_config.max_speed),
         ));
     }
@@ -281,8 +288,12 @@ mod tests {
     fn weak_bump_reduces_velocity() {
         let mut app = test_app();
         let config = BreakerConfig::default();
+        let bolt_config = BoltConfig::default();
         spawn_breaker(&mut app);
-        spawn_test_bolt(&mut app, 0.0, 400.0);
+        // Start above base speed so weak multiplier has room to reduce
+        let start_speed = 600.0;
+        assert!(start_speed * config.weak_bump_multiplier > bolt_config.base_speed);
+        spawn_test_bolt(&mut app, 0.0, start_speed);
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
@@ -300,10 +311,42 @@ mod tests {
             .iter(app.world())
             .next()
             .unwrap();
-        let expected = 400.0 * config.weak_bump_multiplier;
+        let expected = start_speed * config.weak_bump_multiplier;
         assert!(
             (vel.value.y - expected).abs() < 1.0,
             "early bump should apply weak multiplier"
+        );
+    }
+
+    #[test]
+    fn weak_bump_never_drops_below_base_speed() {
+        let mut app = test_app();
+        let bolt_config = BoltConfig::default();
+        spawn_breaker(&mut app);
+        // Bolt already at base speed
+        spawn_test_bolt(&mut app, 0.0, bolt_config.base_speed);
+
+        app.insert_resource(TestMessage(Some(BumpPerformed {
+            grade: BumpGrade::Early,
+        })));
+
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.speed() >= bolt_config.base_speed - f32::EPSILON,
+            "weak bump should not drop speed below base_speed ({:.0}), got {:.0}",
+            bolt_config.base_speed,
+            vel.speed()
         );
     }
 }
