@@ -28,6 +28,13 @@
 - Three control axes: position, tilt angle, bump timing
 - All gameplay parameters are data-driven (RON configs + Rust defaults)
 
+## Phase 2b Validation (2026-03-13, updated)
+- Run structure and node timer APPROVED
+- See `phase2b-review.md` for detailed findings
+- Timer UI thresholds at 33%/15% -- IMPLEMENTED, correct
+- Fortress retuned to 70s -- escalation now correct (HP/s: 0.57 -> 0.72 -> 1.0)
+- Run-end screen still has dead air (no auto-advance) and weak copy ("The clock ran out." / "All nodes cleared!")
+
 ## Data-Driven Config Status
 - bolt: RON + BoltDefaults + BoltConfig -- COMPLETE
 - breaker: RON + BreakerDefaults + BreakerConfig -- COMPLETE
@@ -35,8 +42,11 @@
 - physics: RON + PhysicsDefaults + PhysicsConfig -- COMPLETE
 - playfield: RON + PlayfieldDefaults + PlayfieldConfig -- COMPLETE
 - mainmenu: RON + MainMenuDefaults + MainMenuConfig -- COMPLETE
+- timerui: RON + TimerUiDefaults + TimerUiConfig -- COMPLETE
 
 ## Future Design Notes
 - Speed decay: recommend per-bounce/per-cell-hit decay, NOT passive time decay
 - Bolt-lost respawn: consider random angle on respawn to force reaction
 - Piercing Amps will need "one cell per tick" limit revisited
+- Phase 4: timer urgency should escalate to screen-level effects, not just text color
+- Phase 7: run rewards should differentiate on time remaining and nodes cleared

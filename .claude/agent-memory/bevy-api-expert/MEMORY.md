@@ -180,6 +180,16 @@ See [fixed_update_testing.md](fixed_update_testing.md) for full details. Key fac
 - Send in tests: `app.world_mut().write_message(KeyboardInput { ... })` — NOT `send_event()`
 - System set is `InputSystems` (plural), NOT `InputSystem`
 
+## System Output Discarding (verified v0.18.1 source)
+
+- `add_systems` requires `ScheduleSystem = BoxedSystem<(), ()>` — output MUST be `()`
+- `.map(drop)` on any system discards its return value: `my_system.map(drop)`
+- Method on `IntoSystem` trait: `fn map<T, F>(self, f: F) -> IntoAdapterSystem<F, Self>`
+  where `F: Send + Sync + 'static + FnMut(Out) -> T`
+- `drop` is `fn drop<T>(_: T)` — satisfies `FnMut(Progress) -> ()` exactly
+- Verified in source: `bevy_ecs-0.18.1/src/system/mod.rs:224` and the official doc example
+- No `ignore` helper exists — `.map(drop)` is the canonical pattern, shown in Bevy's own docs
+
 ## Sources
 
 - Feature flags: https://docs.rs/bevy/0.18.1/bevy/index.html#cargo-features
