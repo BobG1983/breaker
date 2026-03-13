@@ -5,7 +5,7 @@ use bevy_asset_loader::prelude::*;
 
 use crate::{
     bolt::BoltDefaults,
-    breaker::{behaviors::ArchetypeDefinition, BreakerDefaults},
+    breaker::{BreakerDefaults, behaviors::ArchetypeDefinition},
     cells::{CellDefaults, CellTypeDefinition},
     input::InputDefaults,
     run::NodeLayout,

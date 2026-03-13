@@ -90,7 +90,9 @@ mod tests {
     fn builds_registry_from_archetypes() {
         let mut app = test_app();
 
-        let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+        let mut assets = app
+            .world_mut()
+            .resource_mut::<Assets<ArchetypeDefinition>>();
         let h1 = assets.add(make_archetype("Aegis"));
         let h2 = assets.add(make_archetype("Flux"));
 
@@ -110,7 +112,9 @@ mod tests {
     fn panics_on_duplicate_name() {
         let mut app = test_app();
 
-        let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+        let mut assets = app
+            .world_mut()
+            .resource_mut::<Assets<ArchetypeDefinition>>();
         let h1 = assets.add(make_archetype("Aegis"));
         let h2 = assets.add(make_archetype("Aegis"));
 
