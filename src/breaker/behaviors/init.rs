@@ -1,0 +1,236 @@
+//! Archetype initialization systems — config overrides and component stamping.
+
+use bevy::prelude::*;
+
+use super::{
+    active::ActiveBehaviors, bolt_speed_boost::apply_bolt_speed_boosts, life_lost::LivesCount,
+    registry::ArchetypeRegistry,
+};
+use crate::{
+    breaker::{
+        components::Breaker,
+        resources::{BreakerConfig, BreakerDefaults},
+    },
+    shared::SelectedArchetype,
+};
+
+/// Resets `BreakerConfig` from defaults and applies archetype stat overrides.
+///
+/// Runs `OnEnter(GameState::Playing)` BEFORE `init_breaker_params` so that
+/// stamped components reflect the overridden config values.
+pub fn apply_archetype_config_overrides(
+    selected: Res<SelectedArchetype>,
+    registry: Res<ArchetypeRegistry>,
+    defaults: Res<Assets<BreakerDefaults>>,
+    mut config: ResMut<BreakerConfig>,
+) {
+    // Reset config from defaults
+    let base = BreakerDefaults::default();
+    *config = BreakerConfig::from(base);
+
+    // Apply archetype overrides
+    let Some(def) = registry.archetypes.get(&selected.0) else {
+        warn!("Archetype '{}' not found in registry", selected.0);
+        return;
+    };
+
+    let _ = &defaults; // reserved for hot-reload from asset
+
+    let overrides = &def.stat_overrides;
+    if let Some(width) = overrides.width {
+        config.width = width;
+    }
+    if let Some(height) = overrides.height {
+        config.height = height;
+    }
+    if let Some(max_speed) = overrides.max_speed {
+        config.max_speed = max_speed;
+    }
+    if let Some(acceleration) = overrides.acceleration {
+        config.acceleration = acceleration;
+    }
+    if let Some(deceleration) = overrides.deceleration {
+        config.deceleration = deceleration;
+    }
+}
+
+/// Stamps init-time behavior components and builds `ActiveBehaviors`.
+///
+/// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
+/// - Inserts `LivesCount` if any binding uses `LoseLife`
+/// - Applies `BoltSpeedBoost` bindings as multiplier components
+/// - Builds `ActiveBehaviors` with ALL bindings for runtime bridge dispatch
+pub fn init_archetype(
+    mut commands: Commands,
+    selected: Res<SelectedArchetype>,
+    registry: Res<ArchetypeRegistry>,
+    breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
+    mut active: ResMut<ActiveBehaviors>,
+) {
+    let Some(def) = registry.archetypes.get(&selected.0) else {
+        warn!("Archetype '{}' not found in registry", selected.0);
+        return;
+    };
+
+    // Stamp init-time components on breaker entity
+    for entity in &breaker_query {
+        // Lives
+        if let Some(life_pool) = def.life_pool {
+            commands.entity(entity).insert(LivesCount(life_pool));
+        }
+
+        // Bolt speed boosts → stamp multiplier components
+        apply_bolt_speed_boosts(&mut commands, entity, &def.behaviors);
+    }
+
+    // Build ActiveBehaviors — flatten multi-trigger bindings
+    let mut bindings = Vec::new();
+    for behavior in &def.behaviors {
+        for trigger in &behavior.triggers {
+            bindings.push((trigger.clone(), behavior.consequence.clone()));
+        }
+    }
+    *active = ActiveBehaviors(bindings);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::breaker::{
+        behaviors::definition::{
+            ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides, Consequence, Trigger,
+        },
+        components::{BumpPerfectMultiplier, BumpWeakMultiplier},
+    };
+
+    fn make_aegis() -> ArchetypeDefinition {
+        ArchetypeDefinition {
+            name: "Aegis".to_owned(),
+            stat_overrides: BreakerStatOverrides::default(),
+            life_pool: Some(3),
+            behaviors: vec![
+                BehaviorBinding {
+                    triggers: vec![Trigger::BoltLost],
+                    consequence: Consequence::LoseLife,
+                },
+                BehaviorBinding {
+                    triggers: vec![Trigger::PerfectBump],
+                    consequence: Consequence::BoltSpeedBoost(1.5),
+                },
+                BehaviorBinding {
+                    triggers: vec![Trigger::EarlyBump, Trigger::LateBump],
+                    consequence: Consequence::BoltSpeedBoost(0.8),
+                },
+            ],
+        }
+    }
+
+    fn test_app_with_archetype(def: ArchetypeDefinition) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let mut registry = ArchetypeRegistry::default();
+        registry.archetypes.insert(def.name.clone(), def);
+        app.insert_resource(registry);
+        app.insert_resource(SelectedArchetype("Aegis".to_owned()));
+        app.init_resource::<ActiveBehaviors>();
+        app.add_systems(Update, init_archetype);
+        app
+    }
+
+    #[test]
+    fn init_archetype_stamps_lives_count() {
+        let mut app = test_app_with_archetype(make_aegis());
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(lives.0, 3);
+    }
+
+    #[test]
+    fn init_archetype_stamps_bump_multipliers() {
+        let mut app = test_app_with_archetype(make_aegis());
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+
+        let perfect = app.world().get::<BumpPerfectMultiplier>(entity).unwrap();
+        assert!((perfect.0 - 1.5).abs() < f32::EPSILON);
+
+        let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
+        assert!((weak.0 - 0.8).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn init_archetype_builds_active_behaviors() {
+        let mut app = test_app_with_archetype(make_aegis());
+        app.world_mut().spawn(Breaker);
+        app.update();
+
+        let active = app.world().resource::<ActiveBehaviors>();
+        // 3 bindings: BoltLost, PerfectBump, EarlyBump, LateBump (multi-trigger expanded)
+        assert_eq!(active.0.len(), 4);
+        assert!(active.has_trigger(Trigger::BoltLost));
+        assert!(active.has_trigger(Trigger::PerfectBump));
+        assert!(active.has_trigger(Trigger::EarlyBump));
+        assert!(active.has_trigger(Trigger::LateBump));
+    }
+
+    #[test]
+    fn init_archetype_skips_already_initialized() {
+        let mut app = test_app_with_archetype(make_aegis());
+        // Entity already has LivesCount → should skip
+        let entity = app.world_mut().spawn((Breaker, LivesCount(99))).id();
+        app.update();
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(lives.0, 99, "should not overwrite existing LivesCount");
+    }
+
+    #[test]
+    fn apply_overrides_modifies_config() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
+        app.init_asset::<BreakerDefaults>();
+        app.init_resource::<BreakerConfig>();
+
+        let def = ArchetypeDefinition {
+            name: "Wide".to_owned(),
+            stat_overrides: BreakerStatOverrides {
+                width: Some(200.0),
+                ..default()
+            },
+            life_pool: None,
+            behaviors: vec![],
+        };
+
+        let mut registry = ArchetypeRegistry::default();
+        registry.archetypes.insert("Wide".to_owned(), def);
+        app.insert_resource(registry);
+        app.insert_resource(SelectedArchetype("Wide".to_owned()));
+
+        app.add_systems(Update, apply_archetype_config_overrides);
+        app.update();
+
+        let config = app.world().resource::<BreakerConfig>();
+        assert!((config.width - 200.0).abs() < f32::EPSILON);
+        // Other values should be defaults
+        let default_config = BreakerConfig::default();
+        assert!((config.max_speed - default_config.max_speed).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn no_life_pool_no_lives_count() {
+        let def = ArchetypeDefinition {
+            name: "Aegis".to_owned(),
+            stat_overrides: BreakerStatOverrides::default(),
+            life_pool: None,
+            behaviors: vec![],
+        };
+
+        let mut app = test_app_with_archetype(def);
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+
+        assert!(app.world().get::<LivesCount>(entity).is_none());
+    }
+}

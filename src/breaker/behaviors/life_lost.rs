@@ -217,7 +217,10 @@ mod tests {
         app.update();
 
         // Change lives
-        app.world_mut().get_mut::<LivesCount>(lives_entity).unwrap().0 = 1;
+        app.world_mut()
+            .get_mut::<LivesCount>(lives_entity)
+            .unwrap()
+            .0 = 1;
         app.update();
 
         let text = app

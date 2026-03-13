@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::{
     breaker::{
         BreakerSystems,
+        behaviors::BehaviorPlugin,
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
@@ -15,7 +16,7 @@ use crate::{
         },
     },
     physics::PhysicsSystems,
-    shared::{GameState, PlayingState},
+    shared::{GameState, PlayingState, SelectedArchetype},
 };
 
 /// Plugin for the breaker domain.
@@ -28,6 +29,8 @@ impl Plugin for BreakerPlugin {
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
             .init_resource::<BreakerConfig>()
+            .init_resource::<SelectedArchetype>()
+            .add_plugins(BehaviorPlugin)
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -71,6 +74,8 @@ mod tests {
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
+            .add_plugins(bevy::asset::AssetPlugin::default())
+            .init_asset::<crate::breaker::BreakerDefaults>()
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             .init_resource::<crate::shared::PlayfieldConfig>()
@@ -78,8 +83,9 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BreakerPlugin reads BoltHitBreaker messages from the physics domain
+            // BreakerPlugin reads BoltHitBreaker and BoltLost messages from the physics domain
             .add_message::<crate::physics::messages::BoltHitBreaker>()
+            .add_message::<crate::physics::messages::BoltLost>()
             .add_plugins(BreakerPlugin)
             .update();
     }

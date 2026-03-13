@@ -27,8 +27,7 @@ mod tests {
     fn insert_and_lookup() {
         let mut registry = ArchetypeRegistry::default();
         let ron_str = include_str!("../../../assets/archetypes/aegis.archetype.ron");
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("aegis RON should parse");
+        let def: ArchetypeDefinition = ron::de::from_str(ron_str).expect("aegis RON should parse");
         registry.archetypes.insert(def.name.clone(), def);
         assert!(registry.archetypes.contains_key("Aegis"));
     }

@@ -2,16 +2,19 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier};
-
 use super::definition::{BehaviorBinding, Consequence, Trigger};
+use crate::breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier};
 
 /// Applies `BoltSpeedBoost` consequences from behavior bindings as components
 /// on the breaker entity.
 ///
 /// Called by `init_archetype` at run start. Maps trigger+consequence pairs to
 /// existing bump multiplier components that the bolt domain already reads.
-pub fn apply_bolt_speed_boosts(commands: &mut Commands, entity: Entity, behaviors: &[BehaviorBinding]) {
+pub fn apply_bolt_speed_boosts(
+    commands: &mut Commands,
+    entity: Entity,
+    behaviors: &[BehaviorBinding],
+) {
     for binding in behaviors {
         if let Consequence::BoltSpeedBoost(multiplier) = binding.consequence {
             for trigger in &binding.triggers {
@@ -36,10 +39,7 @@ pub fn apply_bolt_speed_boosts(commands: &mut Commands, entity: Entity, behavior
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::{
-        behaviors::definition::BehaviorBinding,
-        components::Breaker,
-    };
+    use crate::breaker::{behaviors::definition::BehaviorBinding, components::Breaker};
 
     fn test_app() -> App {
         let mut app = App::new();
