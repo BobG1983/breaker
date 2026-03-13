@@ -6,6 +6,10 @@ use bevy::prelude::*;
 #[derive(Component, Debug)]
 pub struct Cell;
 
+/// Marker for cells that count toward node completion.
+#[derive(Component, Debug)]
+pub struct RequiredToClear;
+
 /// Visual parameters for cell damage color feedback.
 #[derive(Component, Debug, Clone)]
 pub struct CellDamageVisuals {

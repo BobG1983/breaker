@@ -19,23 +19,22 @@ pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<BoltHitBreaker>();
-        app.add_message::<BoltHitCell>();
-        app.add_message::<BoltLost>();
-
-        app.add_systems(
-            FixedUpdate,
-            (
-                bolt_cell_collision.after(BoltSystems::PrepareVelocity),
-                bolt_breaker_collision
-                    .after(bolt_cell_collision)
-                    .in_set(super::PhysicsSystems::BreakerCollision),
-                bolt_lost
-                    .after(bolt_breaker_collision)
-                    .in_set(super::PhysicsSystems::BoltLost),
-            )
-                .run_if(in_state(PlayingState::Active)),
-        );
+        app.add_message::<BoltHitBreaker>()
+            .add_message::<BoltHitCell>()
+            .add_message::<BoltLost>()
+            .add_systems(
+                FixedUpdate,
+                (
+                    bolt_cell_collision.after(BoltSystems::PrepareVelocity),
+                    bolt_breaker_collision
+                        .after(bolt_cell_collision)
+                        .in_set(super::PhysicsSystems::BreakerCollision),
+                    bolt_lost
+                        .after(bolt_breaker_collision)
+                        .in_set(super::PhysicsSystems::BoltLost),
+                )
+                    .run_if(in_state(PlayingState::Active)),
+            );
     }
 }
 

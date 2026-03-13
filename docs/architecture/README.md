@@ -4,7 +4,7 @@ Technical decisions for how the game is built. See `../DESIGN.md` for *why* (gam
 
 ## Engine & Stack
 
-- **Bevy 0.18.1** — 2D only (`default-features = false, features = ["2d"]`)
+- **Bevy 0.18.1** — 2D only (`default-features = false, features = ["2d", "serialize"]`)
 - **Custom physics** — No rapier. Breakout physics are specialized (angle overwrite, no perfect verticals). Full control needed.
 - **Data format** — Hybrid: type-safe mechanics in Rust, tweakable content in RON files
 - **Debug UI** — `bevy_egui` for in-game debug console (added Phase 0)

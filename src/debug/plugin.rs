@@ -27,31 +27,30 @@ impl Plugin for DebugPlugin {
             };
             use crate::{physics::PhysicsSystems, shared::PlayingState};
 
-            app.add_plugins(EguiPlugin::default());
-            app.add_plugins(FrameTimeDiagnosticsPlugin::default());
-            app.init_resource::<DebugOverlays>();
-            app.init_resource::<LastBumpResult>();
-
-            app.add_systems(
-                bevy_egui::EguiPrimaryContextPass,
-                (
-                    debug_ui_system,
-                    bolt_info_ui,
-                    breaker_state_ui,
-                    input_actions_ui,
+            app.add_plugins(EguiPlugin::default())
+                .add_plugins(FrameTimeDiagnosticsPlugin::default())
+                .init_resource::<DebugOverlays>()
+                .init_resource::<LastBumpResult>()
+                .add_systems(
+                    bevy_egui::EguiPrimaryContextPass,
+                    (
+                        debug_ui_system,
+                        bolt_info_ui,
+                        breaker_state_ui,
+                        input_actions_ui,
+                    )
+                        .run_if(resource_exists::<DebugOverlays>),
                 )
-                    .run_if(resource_exists::<DebugOverlays>),
-            );
-            app.add_systems(
-                FixedUpdate,
-                track_bump_result
-                    .after(PhysicsSystems::BreakerCollision)
-                    .run_if(in_state(PlayingState::Active)),
-            );
-            app.add_systems(
-                Update,
-                (draw_hitboxes, draw_velocity_vectors).run_if(resource_exists::<DebugOverlays>),
-            );
+                .add_systems(
+                    FixedUpdate,
+                    track_bump_result
+                        .after(PhysicsSystems::BreakerCollision)
+                        .run_if(in_state(PlayingState::Active)),
+                )
+                .add_systems(
+                    Update,
+                    (draw_hitboxes, draw_velocity_vectors).run_if(resource_exists::<DebugOverlays>),
+                );
         }
     }
 }

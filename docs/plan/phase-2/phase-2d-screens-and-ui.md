@@ -1,13 +1,14 @@
 # Phase 2d: Screens & UI
 
-**Goal**: The screens and UI that connect the game loop into a playable experience.
+**Goal**: The screens and UI that connect the game loop into a playable experience. Built after the archetype system (2c) so breaker selection UI is designed with a concrete archetype in hand.
 
 ---
 
 ## Breaker Selection Screen
 
-- **Pre-run screen**: Choose from the three breakers (Aegis, Chrono, Prism) before the run starts
+- **Pre-run screen**: Choose from available breakers before the run starts
 - **Display per breaker**: Callsign, brief description of bolt-lost behavior and triggered ability
+- **Initially one breaker (Aegis)**: Selection screen works with one, scales to three when 2e ships
 - **Validates the full flow**: Main menu → breaker select → run → (nodes) → run-end → main menu
 
 ---
@@ -20,6 +21,7 @@
   - "WIP" description text
   - Neon/cyberpunk-style box border
 - **Clicking a card advances to the next node** (no actual upgrade effect yet)
+- **Timer on selection screen**: Countdown to make a choice. Timer expires = you get nothing (skip). Maximum pressure, fits the design pillars.
 - **UI scaffold for Phase 3**: The real upgrade system (Amps/Augments/Overclocks) gets wired in later
 
 ---
@@ -34,15 +36,16 @@
 ## In-Game UI
 
 - **Node timer display**: Prominent countdown (built in 2b, may need refinement here)
-- **Bolt-loss stakes display**: Per-archetype visual — lives for Aegis, timer-penalty indicator for Chrono, active bolt count for Prism
+- **Bolt-loss stakes display**: Per-archetype visual — lives for Aegis (others added in 2e)
 - **Minimal beyond that**: No score counter, no node progress indicator yet
 
 ---
 
 ## Checklist
 
-- [ ] Breaker selection screen (3 breakers, descriptions, selection flow)
+- [ ] Breaker selection screen (works with 1 breaker, scales to 3)
 - [ ] Placeholder upgrade selection screen (3 cards, WIP, neon borders, clickable)
+- [ ] Upgrade selection timer (expires = skip, no upgrade)
 - [ ] Pause menu (pause, resume, quit to menu)
-- [ ] Bolt-loss stakes display per archetype
+- [ ] Bolt-loss stakes display (Aegis lives)
 - [ ] Full flow: menu → select breaker → run nodes → upgrade screens → run-end → menu

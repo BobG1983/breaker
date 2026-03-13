@@ -1,6 +1,6 @@
-# Phase 2a: Level Loading & Dev Tooling
+# Phase 2a: Level Loading
 
-**Goal**: Load levels from data and detect completion. Speed up dev iteration with CLI spawning.
+**Goal**: Load levels from data and detect completion.
 
 ---
 
@@ -21,14 +21,6 @@
 
 ---
 
-## Dev Tooling
-
-- **CLI test-level spawning** (dev/debug mode only): Command-line argument to skip menus and spawn directly into a specific test level layout
-- Lives in the debug domain alongside existing debug overlays
-- Speeds up iteration for all subsequent Phase 2 work
-
----
-
 ## Checklist
 
 - [ ] RON level layout format defined
@@ -36,4 +28,3 @@
 - [ ] Data-driven cell spawning from layouts
 - [ ] Node completion detection (all target cells cleared)
 - [ ] `NodeCleared` message
-- [ ] CLI test-level spawning (debug/dev mode)

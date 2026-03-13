@@ -46,11 +46,17 @@ BreakerSystems::Move
         <- bolt_breaker_collision .after(bolt_cell_collision)
           PhysicsSystems::BreakerCollision
             <- apply_bump_velocity .after(PhysicsSystems::BreakerCollision)
-            <- grade_bump .after(PhysicsSystems::BreakerCollision)
+                                   .before(PhysicsSystems::BoltLost)
+            <- grade_bump .after(update_bump)
+                          .after(PhysicsSystems::BreakerCollision)
+              <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
             <- bolt_lost .after(bolt_breaker_collision)
+              PhysicsSystems::BoltLost
 ```
 
-Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump velocity and bolt-lost detection.
+Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading and velocity application, then bolt-lost detection.
+
+**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` → `grade_bump`. The `trigger_bump_visual` system runs `.after(update_bump)` in the same FixedUpdate schedule.
 
 ## Schedule Placement
 

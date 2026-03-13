@@ -1,0 +1,12 @@
+/* @[brickbreaker::cells::resources::CellTypeDefinition] */
+(
+    id: "standard",
+    alias: 'S',
+    hp: 1,
+    color_rgb: (4.0, 0.2, 0.5),
+    required_to_clear: true,
+    damage_hdr_base: 4.0,
+    damage_green_min: 0.2,
+    damage_blue_range: 0.4,
+    damage_blue_base: 0.2,
+)

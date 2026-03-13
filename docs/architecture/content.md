@@ -1,5 +1,7 @@
 # Content Identity — Enum Behaviors + RON Instances
 
+> **Status: Not yet implemented.** This document describes the planned upgrade content system for Phase 3+. No upgrade types, registries, or RON content instances exist in the codebase yet. The `upgrades/` domain is a stub.
+
 **Behaviors** are Rust enums. **Content instances** are RON files that compose and tune those behaviors.
 
 ```rust

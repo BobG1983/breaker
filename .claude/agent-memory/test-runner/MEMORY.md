@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-12, main)
-- Format: PASS (2 files auto-formatted)
+**Last Validation: PASS** (2026-03-13, main)
+- Format: PASS (1 file auto-formatted: run/plugin.rs)
 - Clippy: PASS (no warnings or errors)
-- Tests: PASS (221 passed, 0 failed, 0 ignored)
+- Tests: PASS (244 passed, 0 failed, 0 ignored)
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -22,6 +22,7 @@
 - Multi-line `assert!` with format args must be wrapped: condition, message, args on separate lines
 - Multi-line method chains: wrap at logical points when necessary
 - Long function call arguments: one argument per line when wrapping
+- Import order: nested imports should be ordered (ClearRemainingCount, NodeSystems before systems)
 
 ## Key Patterns
 - Type aliases required for complex Query filters (CellQueryFilter, BreakerQueryFilter)
@@ -31,7 +32,18 @@
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
 
 ## Validation History
-- **2026-03-12, main (current)**: PASS
+- **2026-03-13, refactor/extract-wall-domain (current)**: PASS
+  - Format: PASS (no files needed formatting)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: PASS (244 passed, 0 failed, 0 ignored)
+  - Status: Wall domain extraction is complete and builds cleanly
+- **2026-03-13, main**: PASS
+  - Format: PASS (1 file auto-formatted: run/plugin.rs)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: PASS (244 passed, 0 failed, 0 ignored)
+  - Change: +23 tests since 2026-03-12 (added node clearing and cell handling tests)
+  - Status: Main branch is clean and ready for development
+- **2026-03-12, main**: PASS
   - Format: PASS (2 files auto-formatted: bolt/components.rs, breaker/systems/dash.rs)
   - Clippy: PASS (no warnings or errors)
   - Tests: PASS (221 passed, 0 failed, 0 ignored)

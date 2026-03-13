@@ -10,6 +10,8 @@ use bevy::prelude::*;
 pub struct CellDestroyed {
     /// The entity that was destroyed.
     pub entity: Entity,
+    /// Whether this cell counted toward node completion.
+    pub was_required_to_clear: bool,
 }
 
 #[cfg(test)]
@@ -20,6 +22,7 @@ mod tests {
     fn cell_destroyed_debug_format() {
         let msg = CellDestroyed {
             entity: Entity::PLACEHOLDER,
+            was_required_to_clear: true,
         };
         assert!(format!("{msg:?}").contains("CellDestroyed"));
     }

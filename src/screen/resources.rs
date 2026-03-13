@@ -7,7 +7,11 @@ use serde::Deserialize;
 
 use super::components::MenuItem;
 use crate::{
-    bolt::BoltDefaults, breaker::BreakerDefaults, cells::CellDefaults, input::InputDefaults,
+    bolt::BoltDefaults,
+    breaker::BreakerDefaults,
+    cells::{CellDefaults, CellTypeDefinition},
+    input::InputDefaults,
+    run::NodeLayout,
     shared::PlayfieldDefaults,
 };
 
@@ -33,6 +37,12 @@ pub struct DefaultsCollection {
     /// Handle for main menu defaults.
     #[asset(path = "config/defaults.mainmenu.ron")]
     pub mainmenu: Handle<MainMenuDefaults>,
+    /// All cell type definition handles.
+    #[asset(path = "cells", collection(typed))]
+    pub cell_types: Vec<Handle<CellTypeDefinition>>,
+    /// All node layout handles.
+    #[asset(path = "nodes", collection(typed))]
+    pub layouts: Vec<Handle<NodeLayout>>,
 }
 
 /// Tracks the currently selected menu item.

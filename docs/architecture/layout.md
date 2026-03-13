@@ -27,3 +27,31 @@ src/<domain>/
 - Any canonical file (e.g., `components.rs`) may be promoted to a **directory** with `mod.rs` + subfiles when the single file grows too large. The `mod.rs` follows the same routing-only rule.
 - A domain may have **shared math modules** (e.g., `physics/ccd.rs`) when multiple systems need the same pure functions. These should contain only pure functions and data types — no systems, no Bevy resources.
 - No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`. If it doesn't fit the categories above, it probably belongs in an existing file or a different domain.
+
+## Nested Sub-Domains
+
+A domain may contain **nested sub-domains** when a cohesive subset of functionality deserves its own plugin, components, and systems. Each sub-domain follows the same canonical layout as a top-level domain.
+
+```
+src/<domain>/
+├── mod.rs             # Re-exports shared types + sub-domain modules
+├── plugin.rs          # Parent plugin — adds sub-domain plugins via app.add_plugins()
+├── components.rs      # Shared components used across sub-domains
+├── systems/           # Shared systems
+└── <group>/           # Grouping directory (e.g., archetypes/)
+    ├── <sub>/         # Sub-domain — follows full canonical layout
+    │   ├── mod.rs
+    │   ├── plugin.rs  # Sub-domain plugin (added by parent)
+    │   ├── components.rs
+    │   └── systems/
+    └── <sub>/
+        └── ...
+```
+
+**Rules:**
+- Sub-domains follow the **same canonical layout** as top-level domains (mod.rs routing-only, plugin.rs for registration, etc.).
+- The **parent plugin adds child plugins** — `game.rs` only knows about top-level plugins.
+- Sub-domains may import the **parent's shared components** (e.g., `crate::breaker::components::Breaker`). This is not a boundary violation — they are part of the same domain.
+- Sub-domains communicate with **other domains** through messages, same as any domain. No special privileges.
+- The grouping directory (e.g., `archetypes/`) is optional — sub-domains can live directly under the parent if there's no natural grouping. The grouping directory has a routing-only `mod.rs`.
+- **Don't nest deeper than one level.** If a sub-domain needs its own sub-domains, the structure is too complex — reconsider the domain boundaries.

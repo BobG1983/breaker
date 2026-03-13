@@ -16,7 +16,7 @@ Entity components: BreakerWidth, BreakerHeight, MaxReflectionAngle, …
 move_breaker, bolt_breaker_collision, …
 ```
 
-**Config resources** (`Res<BreakerConfig>`, `Res<BoltConfig>`, `Res<CellConfig>`) are the bridge between RON data files and entity components. They exist so the asset pipeline has somewhere to deposit loaded values.
+**Config resources** (e.g., `Res<BreakerConfig>`, `Res<BoltConfig>`, `Res<CellConfig>`, `Res<PlayfieldConfig>`, etc.) are the bridge between RON data files and entity components. They exist so the asset pipeline has somewhere to deposit loaded values.
 
 **Only init and spawn systems read config resources.** Every other system reads entity components. This keeps production systems decoupled from the config pipeline — they don't care whether a value came from RON, was overridden by an upgrade, or was injected in a test.
 

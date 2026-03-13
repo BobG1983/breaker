@@ -1,0 +1,15 @@
+/* @[brickbreaker::cells::resources::NodeLayout] */
+(
+    name: "Fortress",
+    timer_secs: 90.0,
+    cols: 10,
+    rows: 5,
+    grid_top_offset: 50.0,
+    grid: [
+        ['T','T','T','T','T','T','T','T','T','T'],
+        ['S','S','S','S','S','S','S','S','S','S'],
+        ['S','S','S','S','S','S','S','S','S','S'],
+        ['S','S','S','S','S','S','S','S','S','S'],
+        ['S','S','S','S','S','S','S','S','S','S'],
+    ],
+)

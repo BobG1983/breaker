@@ -16,11 +16,12 @@ src/
 ├── breaker/          # Breaker mechanics, state machine, bump system
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
-├── upgrades/         # Amps, Augments, Overclocks system
-├── run/              # Run state, seeded node sequencing, timer, difficulty scaling
-├── physics/          # CCD collision detection, collision response, wall entities
-├── audio/            # Event-driven audio, adaptive intensity
-├── ui/               # HUD, menus, upgrade selection screen
+├── wall/             # Invisible boundary entities (left, right, ceiling)
+├── upgrades/         # Amps, Augments, Overclocks system (stub — Phase 3+)
+├── run/              # Run state, node sequencing, timer (stub — Phase 2+)
+├── physics/          # CCD collision detection, collision response
+├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 5)
+├── ui/               # HUD, menus, upgrade selection screen (stub — Phase 2+)
 └── debug/            # bevy_egui debug console, overlays
 assets/               # RON data files, shaders, textures, audio (project root, not inside src/)
 ```
@@ -37,4 +38,4 @@ assets/               # RON data files, shaders, textures, audio (project root, 
 - Owns its components and resources
 - Communicates outward only through messages — no direct cross-module imports for data flow
 
-See [layout.md](layout.md) for the canonical domain folder structure and per-file rules.
+**Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.

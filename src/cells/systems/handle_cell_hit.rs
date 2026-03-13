@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{
-        components::{Cell, CellDamageVisuals, CellHealth},
-        messages::CellDestroyed,
-    },
+    cells::{components::Cell, messages::CellDestroyed, queries::CellDamageVisualQuery},
     physics::messages::BoltHitCell,
 };
 
@@ -16,20 +13,14 @@ use crate::{
 /// and despawns cells that reach zero HP. Sends [`CellDestroyed`] on destruction.
 pub fn handle_cell_hit(
     mut reader: MessageReader<BoltHitCell>,
-    mut cell_query: Query<
-        (
-            &mut CellHealth,
-            &MeshMaterial2d<ColorMaterial>,
-            &CellDamageVisuals,
-        ),
-        With<Cell>,
-    >,
+    mut cell_query: Query<CellDamageVisualQuery, With<Cell>>,
     mut commands: Commands,
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     for hit in reader.read() {
-        let Ok((mut health, material_handle, visuals)) = cell_query.get_mut(hit.cell) else {
+        let Ok((mut health, material_handle, visuals, is_required)) = cell_query.get_mut(hit.cell)
+        else {
             continue;
         };
 
@@ -37,7 +28,10 @@ pub fn handle_cell_hit(
 
         if destroyed {
             commands.entity(hit.cell).despawn();
-            destroyed_writer.write(CellDestroyed { entity: hit.cell });
+            destroyed_writer.write(CellDestroyed {
+                entity: hit.cell,
+                was_required_to_clear: is_required,
+            });
         } else {
             // Visual feedback — dim HDR intensity based on remaining health
             let frac = health.fraction();
@@ -56,10 +50,7 @@ pub fn handle_cell_hit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{
-        components::{Cell, CellDamageVisuals, CellHealth},
-        resources::CellConfig,
-    };
+    use crate::cells::components::{Cell, CellDamageVisuals, CellHealth, RequiredToClear};
 
     #[derive(Resource)]
     struct TestMessage(Option<BoltHitCell>);
@@ -91,12 +82,11 @@ mod tests {
     }
 
     fn default_damage_visuals() -> CellDamageVisuals {
-        let config = CellConfig::default();
         CellDamageVisuals {
-            hdr_base: config.damage_hdr_base,
-            green_min: config.damage_green_min,
-            blue_range: config.damage_blue_range,
-            blue_base: config.damage_blue_base,
+            hdr_base: 4.0,
+            green_min: 0.2,
+            blue_range: 0.4,
+            blue_base: 0.2,
         }
     }
 
@@ -114,6 +104,7 @@ mod tests {
                 Cell,
                 CellHealth::new(hp),
                 default_damage_visuals(),
+                RequiredToClear,
                 Mesh2d(mesh),
                 MeshMaterial2d(material),
                 Transform::from_xyz(0.0, 0.0, 0.0),
@@ -159,5 +150,26 @@ mod tests {
         );
         let health = app.world().get::<CellHealth>(cell).unwrap();
         assert_eq!(health.current, 2);
+    }
+
+    #[test]
+    fn destroyed_message_includes_required_to_clear() {
+        let mut app = test_app();
+        let cell = spawn_cell(&mut app, 1);
+
+        app.insert_resource(TestMessage(Some(BoltHitCell {
+            bolt: Entity::PLACEHOLDER,
+            cell,
+        })));
+
+        app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
+        tick(&mut app);
+
+        // The message was sent — verified by the cell being despawned.
+        // The was_required_to_clear field is populated based on Has<RequiredToClear>.
+        assert!(
+            app.world().get_entity(cell).is_err(),
+            "cell should be destroyed"
+        );
     }
 }

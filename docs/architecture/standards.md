@@ -22,7 +22,7 @@
 Write tests FIRST for all game logic:
 
 - **Unit tests**: Physics calculations, collision math, state machine transitions, timing windows, upgrade stacking, breaker stats
-- **Property-based tests**: Edge cases in physics/collision (use `proptest` or `quickcheck`)
+- **Property-based tests**: Edge cases in physics/collision (use `proptest` — dependency present, planned for physics edge cases)
 - **Integration tests**: Use `MinimalPlugins` + headless app to test system interactions
 - **Do NOT test**: Rendering, visual output, shader correctness — manual playtesting only
 
@@ -35,21 +35,19 @@ Tests live next to the code they test (in-module `#[cfg(test)]` blocks).
 Entities are tagged with cleanup markers that indicate their lifecycle scope. `OnExit` systems query for markers and despawn.
 
 ```rust
-#[derive(Component)]
-pub struct CleanupOnNodeExit;
-
-#[derive(Component)]
-pub struct CleanupOnRunEnd;
-
-// Runs when leaving Playing state
-fn cleanup_node_entities(
+// Generic cleanup system — one instance per marker type
+pub fn cleanup_entities<T: Component>(
     mut commands: Commands,
-    query: Query<Entity, With<CleanupOnNodeExit>>,
+    query: Query<Entity, With<T>>,
 ) {
     for entity in &query {
         commands.entity(entity).despawn();
     }
 }
+
+// Registered for each state exit that needs cleanup
+app.add_systems(OnExit(GameState::Playing), cleanup_entities::<PlayingCleanup>);
+app.add_systems(OnExit(GameState::MainMenu), cleanup_entities::<MainMenuCleanup>);
 ```
 
 Explicit, predictable, easy to debug. Every spawned entity gets a cleanup marker — no entity leaks.
@@ -62,12 +60,12 @@ All assets (RON data, textures, audio) are loaded during a single loading screen
 
 For a 2D game of this scope, total asset size is small. Simplicity wins.
 
-**Boot sequence:**
-1. Load all RON definitions -> build registries (Amp, Augment, Overclock, Breaker, Cell)
-2. Load all textures and sprite atlases
-3. Load all audio clips
-4. Validate cross-references (RON files referencing each other)
-5. Transition to `MainMenu` state
+**Current boot sequence:**
+1. Load RON defaults (playfield, bolt, breaker, cells, input, mainmenu) via `bevy_asset_loader`
+2. Seed config resources from loaded defaults (`seed_configs_from_defaults`)
+3. Transition to `MainMenu` state
+
+Future phases will add: upgrade registries (Amp, Augment, Overclock), textures, sprite atlases, audio clips, and cross-reference validation.
 
 ---
 
@@ -75,9 +73,11 @@ For a 2D game of this scope, total asset size is small. Simplicity wins.
 
 In-game debug panel built on `bevy_egui` with:
 
-- **Overlay toggles**: hitboxes, velocity vectors, state labels, FPS
-- **Live value tweaking**: physics constants, timing windows, speed values — immediate feedback without recompile
-- **State inspection**: current game state, active upgrades, breaker state machine, bolt velocity
-- **Registry browser**: view loaded Amp/Augment/Overclock definitions
+- **Overlay toggles**: hitboxes, velocity vectors, FPS counter
+- **Telemetry windows**: bolt info (position, velocity, speed), breaker state (state machine, tilt, velocity, bump state), input actions
+- **Bump result tracking**: last bump grade and timing (dev-only FixedUpdate system)
+- **Game state label**: current GameState displayed in overlay
 
-Added in Phase 0. The debug console is a development tool, not a player feature — compiled out of release builds or hidden behind a flag.
+Added in Phase 0. The debug console is a development tool, not a player feature — gated behind `#[cfg(feature = "dev")]` in `DebugPlugin::build()`.
+
+Future: live value tweaking, registry browser (when upgrades exist).

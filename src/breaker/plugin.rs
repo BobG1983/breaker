@@ -25,40 +25,40 @@ pub struct BreakerPlugin;
 
 impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<BumpPerformed>();
-        app.add_message::<BumpWhiffed>();
-        app.init_resource::<BreakerConfig>();
-        app.add_systems(
-            OnEnter(GameState::Playing),
-            (
-                spawn_breaker,
-                init_breaker_params.after(spawn_breaker),
-                reset_breaker.after(init_breaker_params),
-            ),
-        );
-        app.add_systems(
-            FixedUpdate,
-            (
-                update_bump,
-                move_breaker.after(update_bump).in_set(BreakerSystems::Move),
-                update_breaker_state.after(move_breaker),
-                grade_bump
-                    .after(update_bump)
-                    .after(PhysicsSystems::BreakerCollision),
+        app.add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .init_resource::<BreakerConfig>()
+            .add_systems(
+                OnEnter(GameState::Playing),
                 (
-                    perfect_bump_dash_cancel,
-                    spawn_bump_grade_text,
-                    spawn_whiff_text,
-                )
-                    .after(grade_bump),
-                trigger_bump_visual.after(update_bump),
+                    spawn_breaker,
+                    init_breaker_params.after(spawn_breaker),
+                    reset_breaker.after(init_breaker_params),
+                ),
             )
-                .run_if(in_state(PlayingState::Active)),
-        );
-        app.add_systems(
-            Update,
-            (animate_bump_visual, animate_tilt_visual).run_if(in_state(PlayingState::Active)),
-        );
+            .add_systems(
+                FixedUpdate,
+                (
+                    update_bump,
+                    move_breaker.after(update_bump).in_set(BreakerSystems::Move),
+                    update_breaker_state.after(move_breaker),
+                    grade_bump
+                        .after(update_bump)
+                        .after(PhysicsSystems::BreakerCollision),
+                    (
+                        perfect_bump_dash_cancel,
+                        spawn_bump_grade_text,
+                        spawn_whiff_text,
+                    )
+                        .after(grade_bump),
+                    trigger_bump_visual.after(update_bump),
+                )
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            .add_systems(
+                Update,
+                (animate_bump_visual, animate_tilt_visual).run_if(in_state(PlayingState::Active)),
+            );
     }
 }
 
@@ -68,19 +68,19 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
-        app.init_state::<GameState>();
-        app.add_sub_state::<PlayingState>();
-        app.init_resource::<crate::shared::PlayfieldConfig>();
-        // InputPlugin owns InputActions — init resources it provides
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.add_message::<bevy::input::keyboard::KeyboardInput>();
-        app.add_plugins(crate::input::InputPlugin);
-        // BreakerPlugin reads BoltHitBreaker messages from the physics domain
-        app.add_message::<crate::physics::messages::BoltHitBreaker>();
-        app.add_plugins(BreakerPlugin);
-        app.update();
+        App::new()
+            .add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_sub_state::<PlayingState>()
+            .init_resource::<crate::shared::PlayfieldConfig>()
+            // InputPlugin owns InputActions — init resources it provides
+            .init_resource::<ButtonInput<KeyCode>>()
+            .add_message::<bevy::input::keyboard::KeyboardInput>()
+            .add_plugins(crate::input::InputPlugin)
+            // BreakerPlugin reads BoltHitBreaker messages from the physics domain
+            .add_message::<crate::physics::messages::BoltHitBreaker>()
+            .add_plugins(BreakerPlugin)
+            .update();
     }
 }

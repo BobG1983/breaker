@@ -1,0 +1,280 @@
+//! System to spawn cells from the active node layout.
+
+use bevy::prelude::*;
+
+use crate::{
+    cells::{
+        components::{Cell, CellDamageVisuals, CellHealth, CellHeight, CellWidth, RequiredToClear},
+        resources::{CellConfig, CellTypeRegistry},
+    },
+    run::node::ActiveNodeLayout,
+    shared::{CleanupOnNodeExit, PlayfieldConfig},
+};
+
+/// Spawns cells from the active node layout.
+///
+/// Runs once when entering [`GameState::Playing`], after [`set_active_layout`].
+/// Reads the grid from [`ActiveNodeLayout`] and looks up each alias in
+/// [`CellTypeRegistry`] to determine cell properties.
+pub fn spawn_cells_from_layout(
+    mut commands: Commands,
+    config: Res<CellConfig>,
+    playfield: Res<PlayfieldConfig>,
+    layout: Res<ActiveNodeLayout>,
+    registry: Res<CellTypeRegistry>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    let layout = &layout.0;
+    let cell_width = config.width;
+    let cell_height = config.height;
+    let step_x = cell_width + config.padding_x;
+    let step_y = cell_height + config.padding_y;
+
+    // Center the grid horizontally
+    #[allow(clippy::cast_precision_loss)]
+    let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
+    let start_x = -grid_width / 2.0 + cell_width / 2.0;
+    let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
+
+    let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
+
+    for (row_idx, row) in layout.grid.iter().enumerate() {
+        for (col_idx, &alias) in row.iter().enumerate() {
+            if alias == '.' {
+                continue;
+            }
+
+            let Some(def) = registry.types.get(&alias) else {
+                continue;
+            };
+
+            #[allow(clippy::cast_precision_loss)]
+            let x = (col_idx as f32).mul_add(step_x, start_x);
+            #[allow(clippy::cast_precision_loss)]
+            let y = (row_idx as f32).mul_add(-step_y, start_y);
+
+            let mut entity = commands.spawn((
+                Cell,
+                CellWidth(config.width),
+                CellHeight(config.height),
+                CellHealth::new(def.hp),
+                CellDamageVisuals {
+                    hdr_base: def.damage_hdr_base,
+                    green_min: def.damage_green_min,
+                    blue_range: def.damage_blue_range,
+                    blue_base: def.damage_blue_base,
+                },
+                Mesh2d(rect_mesh.clone()),
+                MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
+                Transform {
+                    translation: Vec3::new(x, y, 0.0),
+                    scale: Vec3::new(cell_width, cell_height, 1.0),
+                    ..default()
+                },
+                CleanupOnNodeExit,
+            ));
+
+            if def.required_to_clear {
+                entity.insert(RequiredToClear);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        cells::{
+            components::{Cell, CellHealth, CellHeight, CellWidth, RequiredToClear},
+            resources::{CellTypeDefinition, CellTypeRegistry},
+        },
+        run::node::{ActiveNodeLayout, NodeLayout},
+    };
+
+    fn test_registry() -> CellTypeRegistry {
+        let mut registry = CellTypeRegistry::default();
+        registry.types.insert(
+            'S',
+            CellTypeDefinition {
+                id: "standard".to_owned(),
+                alias: 'S',
+                hp: 1,
+                color_rgb: [4.0, 0.2, 0.5],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+            },
+        );
+        registry.types.insert(
+            'T',
+            CellTypeDefinition {
+                id: "tough".to_owned(),
+                alias: 'T',
+                hp: 3,
+                color_rgb: [2.5, 0.2, 4.0],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+            },
+        );
+        registry
+    }
+
+    /// A full 3x2 layout with no gaps.
+    fn full_layout() -> NodeLayout {
+        NodeLayout {
+            name: "full".to_owned(),
+            timer_secs: 60.0,
+            cols: 3,
+            rows: 2,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['T', 'S', 'S'], vec!['S', 'S', 'S']],
+        }
+    }
+
+    /// A 3x2 layout with gaps (dots).
+    fn sparse_layout() -> NodeLayout {
+        NodeLayout {
+            name: "sparse".to_owned(),
+            timer_secs: 60.0,
+            cols: 3,
+            rows: 2,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['.', 'S', '.'], vec!['T', '.', 'S']],
+        }
+    }
+
+    fn test_app(layout: NodeLayout) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CellConfig>();
+        app.init_resource::<PlayfieldConfig>();
+        app.init_resource::<Assets<Mesh>>();
+        app.init_resource::<Assets<ColorMaterial>>();
+        app.insert_resource(ActiveNodeLayout(layout));
+        app.insert_resource(test_registry());
+        app.add_systems(Startup, spawn_cells_from_layout);
+        app
+    }
+
+    #[test]
+    fn correct_cell_count_full_layout() {
+        let layout = full_layout();
+        let expected = layout.cell_count();
+        let mut app = test_app(layout);
+        app.update();
+
+        let count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        assert_eq!(count, expected);
+        assert_eq!(count, 6);
+    }
+
+    #[test]
+    fn dot_slots_produce_no_entities() {
+        let layout = sparse_layout();
+        let total_slots = (layout.cols * layout.rows) as usize;
+        let mut app = test_app(layout);
+        app.update();
+
+        let count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        assert_eq!(count, 3);
+        assert!(count < total_slots, "dots should not spawn cells");
+    }
+
+    #[test]
+    fn cells_get_hp_from_type_definition() {
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let mut found_standard = false;
+        let mut found_tough = false;
+        for health in app.world_mut().query::<&CellHealth>().iter(app.world()) {
+            if health.max == 1 {
+                found_standard = true;
+            }
+            if health.max == 3 {
+                found_tough = true;
+            }
+        }
+        assert!(found_standard, "should have standard cells (hp=1)");
+        assert!(found_tough, "should have tough cells (hp=3)");
+    }
+
+    #[test]
+    fn required_to_clear_present_when_true() {
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        let required_count = app
+            .world_mut()
+            .query::<(&Cell, &RequiredToClear)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(cell_count, required_count);
+    }
+
+    #[test]
+    fn all_cells_have_cleanup_marker() {
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        let marked_count = app
+            .world_mut()
+            .query::<(&Cell, &CleanupOnNodeExit)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(cell_count, marked_count);
+    }
+
+    #[test]
+    fn all_cells_within_playfield() {
+        let layout = full_layout();
+        let config = CellConfig::default();
+        let playfield = PlayfieldConfig::default();
+        let mut app = test_app(layout);
+        app.update();
+
+        for transform in app
+            .world_mut()
+            .query_filtered::<&Transform, With<Cell>>()
+            .iter(app.world())
+        {
+            let x = transform.translation.x;
+            let y = transform.translation.y;
+            assert!(
+                x.abs() < playfield.right() + config.width / 2.0,
+                "cell x={x} out of bounds"
+            );
+            assert!(
+                y < playfield.top() + config.height / 2.0,
+                "cell y={y} above playfield"
+            );
+        }
+    }
+
+    #[test]
+    fn all_cells_have_dimensions_and_damage_visuals() {
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        let with_dims = app
+            .world_mut()
+            .query::<(&Cell, &CellWidth, &CellHeight, &CellDamageVisuals)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(cell_count, with_dims);
+    }
+}
