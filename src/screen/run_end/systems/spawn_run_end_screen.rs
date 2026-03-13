@@ -11,7 +11,7 @@ use crate::{
 pub fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
     let (title, subtitle) = match run_state.outcome {
         RunOutcome::Won => ("RUN COMPLETE", "All nodes cleared!"),
-        RunOutcome::Lost => ("TIME'S UP", "Better luck next time."),
+        RunOutcome::Lost => ("TIME'S UP", "The clock ran out."),
         RunOutcome::InProgress => ("RUN ENDED", ""),
     };
 

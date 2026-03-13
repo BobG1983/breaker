@@ -4,6 +4,6 @@
     normal_color_rgb: (0.8, 0.8, 0.9),
     warning_color_rgb: (4.0, 3.0, 0.2),
     urgent_color_rgb: (5.0, 0.3, 0.2),
-    warning_threshold: 0.5,
-    urgent_threshold: 0.25,
+    warning_threshold: 0.33,
+    urgent_threshold: 0.15,
 )

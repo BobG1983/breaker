@@ -69,14 +69,14 @@ mod tests {
 
     #[test]
     fn warning_color_at_mid_fraction() {
-        let mut app = test_app(20.0, 60.0);
+        let mut app = test_app(15.0, 60.0);
         let config = TimerUiConfig::default();
         let entity = spawn_display(&mut app);
         app.update();
 
         let color = app.world().entity(entity).get::<TextColor>().unwrap();
-        // 20/60 = 0.333 — between urgent (0.25) and warning (0.5)
-        assert_eq!(color.0, config.color_for_fraction(20.0 / 60.0));
+        // 15/60 = 0.25 — between urgent (0.15) and warning (0.33)
+        assert_eq!(color.0, config.color_for_fraction(15.0 / 60.0));
     }
 
     #[test]
@@ -87,7 +87,7 @@ mod tests {
         app.update();
 
         let color = app.world().entity(entity).get::<TextColor>().unwrap();
-        // 5/60 = 0.083 — below urgent (0.25)
+        // 5/60 = 0.083 — below urgent (0.15)
         assert_eq!(color.0, config.color_for_fraction(5.0 / 60.0));
     }
 }
