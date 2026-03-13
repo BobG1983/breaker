@@ -48,10 +48,6 @@ pub struct BreakerDefaults {
     pub early_window: f32,
     /// Late bump window (seconds, after perfect zone).
     pub late_window: f32,
-    /// Velocity multiplier for perfect bump.
-    pub perfect_bump_multiplier: f32,
-    /// Velocity multiplier for early/late bump.
-    pub weak_bump_multiplier: f32,
     /// RGB values for the breaker HDR color.
     pub color_rgb: [f32; 3],
     /// Duration of the bump pop animation in seconds.
@@ -99,8 +95,6 @@ impl Default for BreakerDefaults {
             perfect_window: 0.15,
             early_window: 0.15,
             late_window: 0.15,
-            perfect_bump_multiplier: 1.5,
-            weak_bump_multiplier: 0.8,
             color_rgb: [0.2, 2.0, 3.0],
             bump_visual_duration: 0.15,
             bump_visual_peak: 24.0,
@@ -147,12 +141,6 @@ mod tests {
     fn dash_speed_exceeds_normal() {
         let config = BreakerConfig::default();
         assert!(config.dash_speed_multiplier > 1.0);
-    }
-
-    #[test]
-    fn perfect_bump_multiplier_exceeds_weak() {
-        let config = BreakerConfig::default();
-        assert!(config.perfect_bump_multiplier > config.weak_bump_multiplier);
     }
 
     #[test]

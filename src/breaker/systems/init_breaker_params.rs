@@ -6,10 +6,9 @@ use crate::breaker::{
     components::{
         BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
         BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-        BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow, BumpVisualParams,
-        BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
-        DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration,
-        SettleTiltEase,
+        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
+        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle,
+        MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
     },
     resources::BreakerConfig,
 };
@@ -59,8 +58,6 @@ pub fn init_breaker_params(
                 BumpLateWindow(config.late_window),
                 BumpPerfectCooldown(config.perfect_bump_cooldown),
                 BumpWeakCooldown(config.weak_bump_cooldown),
-                BumpPerfectMultiplier(config.perfect_bump_multiplier),
-                BumpWeakMultiplier(config.weak_bump_multiplier),
                 BumpVisualParams {
                     duration: config.bump_visual_duration,
                     peak: config.bump_visual_peak,
@@ -123,8 +120,6 @@ mod tests {
         assert!(world.get::<BumpLateWindow>(entity).is_some());
         assert!(world.get::<BumpPerfectCooldown>(entity).is_some());
         assert!(world.get::<BumpWeakCooldown>(entity).is_some());
-        assert!(world.get::<BumpPerfectMultiplier>(entity).is_some());
-        assert!(world.get::<BumpWeakMultiplier>(entity).is_some());
         assert!(world.get::<BumpVisualParams>(entity).is_some());
     }
 

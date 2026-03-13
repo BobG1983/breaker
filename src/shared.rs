@@ -123,6 +123,19 @@ pub struct CleanupOnNodeExit;
 #[derive(Component)]
 pub struct CleanupOnRunEnd;
 
+/// The archetype selected for the current run.
+///
+/// Set at run start; read by `init_archetype` to look up the archetype
+/// definition from the registry.
+#[derive(Resource, Debug, Clone)]
+pub struct SelectedArchetype(pub String);
+
+impl Default for SelectedArchetype {
+    fn default() -> Self {
+        Self("Aegis".to_owned())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
