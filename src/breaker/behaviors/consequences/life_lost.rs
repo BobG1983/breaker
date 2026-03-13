@@ -53,22 +53,28 @@ pub fn spawn_lives_display(
         return;
     };
 
-    commands.spawn((
-        LivesDisplay,
-        CleanupOnRunEnd,
-        Text::new(format_lives(lives.0)),
-        TextFont {
-            font_size: 28.0,
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(16.0),
-            right: Val::Px(24.0),
-            ..default()
-        },
-    ));
+    commands
+        .spawn((
+            CleanupOnRunEnd,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(16.0),
+                right: Val::Px(24.0),
+                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
+                border_radius: BorderRadius::all(Val::Px(6.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+        ))
+        .with_child((
+            LivesDisplay,
+            Text::new(format_lives(lives.0)),
+            TextFont {
+                font_size: 28.0,
+                ..default()
+            },
+            TextColor(Color::WHITE),
+        ));
 }
 
 /// Updates the lives display text to match the current `LivesCount`.
@@ -233,18 +239,29 @@ mod tests {
     }
 
     #[test]
-    fn lives_display_has_cleanup_marker() {
+    fn lives_display_parent_has_cleanup_marker() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.world_mut().spawn(LivesCount(3));
         app.add_systems(Startup, spawn_lives_display);
         app.update();
 
-        let count = app
+        // LivesDisplay is a child; CleanupOnRunEnd is on the parent wrapper
+        let display_entity = app
             .world_mut()
-            .query_filtered::<Entity, (With<LivesDisplay>, With<CleanupOnRunEnd>)>()
+            .query_filtered::<Entity, With<LivesDisplay>>()
             .iter(app.world())
-            .count();
-        assert_eq!(count, 1);
+            .next()
+            .expect("LivesDisplay should exist");
+        let parent = app
+            .world()
+            .get::<ChildOf>(display_entity)
+            .expect("LivesDisplay should have a parent");
+        assert!(
+            app.world()
+                .get::<CleanupOnRunEnd>(parent.parent())
+                .is_some(),
+            "parent wrapper should have CleanupOnRunEnd"
+        );
     }
 }

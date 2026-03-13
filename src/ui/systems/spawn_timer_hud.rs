@@ -19,23 +19,29 @@ pub fn spawn_timer_hud(
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let secs = timer.remaining.ceil().max(0.0) as u32;
 
-    commands.spawn((
-        NodeTimerDisplay,
-        CleanupOnNodeExit,
-        Text::new(format!("{secs}")),
-        TextFont {
-            font,
-            font_size: config.font_size,
-            ..default()
-        },
-        TextColor(config.color_for_fraction(1.0)),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(16.0),
-            left: Val::Percent(50.0),
-            ..default()
-        },
-    ));
+    commands
+        .spawn((
+            CleanupOnNodeExit,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(16.0),
+                left: Val::Percent(50.0),
+                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
+                border_radius: BorderRadius::all(Val::Px(6.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+        ))
+        .with_child((
+            NodeTimerDisplay,
+            Text::new(format!("{secs}")),
+            TextFont {
+                font,
+                font_size: config.font_size,
+                ..default()
+            },
+            TextColor(config.color_for_fraction(1.0)),
+        ));
 }
 
 #[cfg(test)]
@@ -69,16 +75,26 @@ mod tests {
     }
 
     #[test]
-    fn entity_has_cleanup_marker() {
+    fn parent_has_cleanup_marker() {
         let mut app = test_app();
         app.update();
 
-        let count = app
+        let display_entity = app
             .world_mut()
-            .query_filtered::<Entity, (With<NodeTimerDisplay>, With<CleanupOnNodeExit>)>()
+            .query_filtered::<Entity, With<NodeTimerDisplay>>()
             .iter(app.world())
-            .count();
-        assert_eq!(count, 1);
+            .next()
+            .expect("NodeTimerDisplay should exist");
+        let parent = app
+            .world()
+            .get::<ChildOf>(display_entity)
+            .expect("NodeTimerDisplay should have a parent");
+        assert!(
+            app.world()
+                .get::<CleanupOnNodeExit>(parent.parent())
+                .is_some(),
+            "parent wrapper should have CleanupOnNodeExit"
+        );
     }
 
     #[test]
