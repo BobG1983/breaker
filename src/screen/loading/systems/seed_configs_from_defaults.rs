@@ -1,4 +1,4 @@
-//! Loading state — asset collection, config seeding, and loading screen UI.
+//! Config seeding system — reads loaded defaults assets and inserts config resources.
 
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
@@ -10,8 +10,8 @@ use crate::{
     input::{InputConfig, InputDefaults},
     run::{NodeLayout, NodeLayoutRegistry},
     screen::{
-        components::{LoadingBarFill, LoadingProgressText, LoadingScreen},
-        resources::{DefaultsCollection, MainMenuConfig, MainMenuDefaults},
+        loading::resources::DefaultsCollection,
+        main_menu::{MainMenuConfig, MainMenuDefaults},
     },
     shared::{PlayfieldConfig, PlayfieldDefaults},
 };
@@ -20,9 +20,6 @@ use crate::{
 /// resources. Also builds `CellTypeRegistry` and `NodeLayoutRegistry` from
 /// loaded asset collections. Returns [`Progress`] to block the loading state
 /// transition until seeding is complete.
-// Each `Assets<*Defaults>` store is a required Bevy system param — no way
-// to reduce the count without a custom `SystemParam` that would add more
-// complexity than it removes.
 #[allow(clippy::too_many_arguments)]
 pub fn seed_configs_from_defaults(
     collection: Option<Res<DefaultsCollection>>,
@@ -108,83 +105,4 @@ pub fn seed_configs_from_defaults(
 
     *seeded = true;
     Progress { done: 1, total: 1 }
-}
-
-/// Width of the loading bar background in pixels.
-const LOADING_BAR_WIDTH: f32 = 400.0;
-
-/// Height of the loading bar in pixels.
-const LOADING_BAR_HEIGHT: f32 = 24.0;
-
-/// Spawns the loading screen UI.
-pub fn spawn_loading_screen(mut commands: Commands) {
-    commands
-        .spawn((
-            LoadingScreen,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                row_gap: Val::Px(16.0),
-                ..default()
-            },
-        ))
-        .with_children(|parent| {
-            // Progress text
-            parent.spawn((
-                LoadingProgressText,
-                Text::new("Loading..."),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-            ));
-
-            // Bar background
-            parent
-                .spawn(Node {
-                    width: Val::Px(LOADING_BAR_WIDTH),
-                    height: Val::Px(LOADING_BAR_HEIGHT),
-                    ..default()
-                })
-                .insert(BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.15)))
-                .with_children(|bar_bg| {
-                    // Bar fill
-                    bar_bg.spawn((
-                        LoadingBarFill,
-                        Node {
-                            width: Val::Percent(0.0),
-                            height: Val::Percent(100.0),
-                            ..default()
-                        },
-                        BackgroundColor(Color::srgb(0.3, 0.8, 1.0)),
-                    ));
-                });
-        });
-}
-
-/// Updates the loading bar width and text based on global progress.
-pub fn update_loading_bar(
-    progress: Res<ProgressTracker<crate::shared::GameState>>,
-    mut bar_query: Query<&mut Node, With<LoadingBarFill>>,
-    mut text_query: Query<&mut Text, With<LoadingProgressText>>,
-) {
-    let global = progress.get_global_progress();
-    #[allow(clippy::cast_precision_loss)]
-    let ratio = if global.total > 0 {
-        global.done as f32 / global.total as f32
-    } else {
-        0.0
-    };
-
-    for mut node in &mut bar_query {
-        node.width = Val::Percent(ratio * 100.0);
-    }
-
-    for mut text in &mut text_query {
-        **text = format!("Loading... {}/{}", global.done, global.total);
-    }
 }

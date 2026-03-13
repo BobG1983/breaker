@@ -1,12 +1,9 @@
-//! Main menu UI — spawn, visual updates, and cleanup.
+//! Spawns the main menu UI.
 
 use bevy::prelude::*;
 
 use crate::{
-    screen::{
-        components::{MENU_ITEMS, MainMenuScreen, MenuItem},
-        resources::{MainMenuConfig, MainMenuSelection},
-    },
+    screen::main_menu::{MENU_ITEMS, MainMenuConfig, MainMenuScreen, MainMenuSelection, MenuItem},
     shared::color_from_rgb,
 };
 
@@ -96,29 +93,6 @@ pub fn spawn_main_menu(
         });
 }
 
-/// Updates menu item colors based on the current selection.
-pub fn update_menu_colors(
-    config: Res<MainMenuConfig>,
-    selection: Res<MainMenuSelection>,
-    mut query: Query<(&MenuItem, &mut TextColor)>,
-) {
-    for (item, mut text_color) in &mut query {
-        let color = if *item == MenuItem::Settings {
-            color_from_rgb(config.disabled_color_rgb)
-        } else if *item == selection.selected {
-            color_from_rgb(config.selected_color_rgb)
-        } else {
-            color_from_rgb(config.normal_color_rgb)
-        };
-        *text_color = TextColor(color);
-    }
-}
-
-/// Removes the selection resource after main menu entity cleanup.
-pub fn cleanup_main_menu(mut commands: Commands) {
-    commands.remove_resource::<MainMenuSelection>();
-}
-
 #[cfg(test)]
 mod tests {
     use bevy::state::app::StatesPlugin;
@@ -200,8 +174,8 @@ mod tests {
         app.add_systems(
             OnExit(crate::shared::GameState::MainMenu),
             (
-                super::super::cleanup_entities::<MainMenuScreen>,
-                cleanup_main_menu,
+                crate::screen::systems::cleanup_entities::<MainMenuScreen>,
+                crate::screen::main_menu::systems::cleanup_main_menu,
             ),
         );
 

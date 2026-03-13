@@ -6,12 +6,9 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use iyes_progress::prelude::*;
 
 use super::{
-    components::{LoadingScreen, MainMenuScreen},
-    resources::{DefaultsCollection, MainMenuDefaults},
-    systems::{
-        cleanup_entities, cleanup_main_menu, handle_main_menu_input, seed_configs_from_defaults,
-        spawn_loading_screen, spawn_main_menu, update_loading_bar, update_menu_colors,
-    },
+    loading::{LoadingPlugin, resources::DefaultsCollection},
+    main_menu::{MainMenuDefaults, MainMenuPlugin},
+    systems::cleanup_entities,
 };
 use crate::{
     bolt::BoltDefaults,
@@ -59,35 +56,8 @@ impl Plugin for ScreenPlugin {
             .add_loading_state(
                 LoadingState::new(GameState::Loading).load_collection::<DefaultsCollection>(),
             )
-            // Seeding system — tracked as progress entry, blocks transition until done
-            .add_systems(
-                Update,
-                seed_configs_from_defaults
-                    .track_progress::<GameState>()
-                    .run_if(in_state(GameState::Loading)),
-            )
-            // Loading screen UI
-            .add_systems(OnEnter(GameState::Loading), spawn_loading_screen)
-            .add_systems(
-                Update,
-                update_loading_bar.run_if(in_state(GameState::Loading)),
-            )
-            .add_systems(
-                OnExit(GameState::Loading),
-                cleanup_entities::<LoadingScreen>,
-            )
-            // Main menu
-            .add_systems(OnEnter(GameState::MainMenu), spawn_main_menu)
-            .add_systems(
-                Update,
-                (handle_main_menu_input, update_menu_colors)
-                    .chain()
-                    .run_if(in_state(GameState::MainMenu)),
-            )
-            .add_systems(
-                OnExit(GameState::MainMenu),
-                (cleanup_entities::<MainMenuScreen>, cleanup_main_menu),
-            )
+            // Sub-domain plugins
+            .add_plugins((LoadingPlugin, MainMenuPlugin))
             // Cleanup
             .add_systems(
                 OnExit(GameState::Playing),
@@ -104,10 +74,6 @@ impl Plugin for ScreenPlugin {
 mod tests {
     use super::*;
 
-    // ScreenPlugin now requires AssetPlugin for RON loading,
-    // which is not available with MinimalPlugins.
-    // This test uses DefaultPlugins in headless mode.
-    // On macOS, event loop creation fails in parallel test threads.
     #[test]
     fn plugin_builds() {
         App::new()

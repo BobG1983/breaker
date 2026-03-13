@@ -1,49 +1,10 @@
-//! Screen domain resources.
+//! Main menu resources.
 
 use bevy::prelude::*;
-use bevy_asset_loader::prelude::*;
 use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
 use super::components::MenuItem;
-use crate::{
-    bolt::BoltDefaults,
-    breaker::BreakerDefaults,
-    cells::{CellDefaults, CellTypeDefinition},
-    input::InputDefaults,
-    run::NodeLayout,
-    shared::PlayfieldDefaults,
-};
-
-/// Asset collection for all defaults — automatically loaded during
-/// [`GameState::Loading`] by `bevy_asset_loader`.
-#[derive(AssetCollection, Resource)]
-pub struct DefaultsCollection {
-    /// Handle for playfield defaults.
-    #[asset(path = "config/defaults.playfield.ron")]
-    pub playfield: Handle<PlayfieldDefaults>,
-    /// Handle for bolt defaults.
-    #[asset(path = "config/defaults.bolt.ron")]
-    pub bolt: Handle<BoltDefaults>,
-    /// Handle for breaker defaults.
-    #[asset(path = "config/defaults.breaker.ron")]
-    pub breaker: Handle<BreakerDefaults>,
-    /// Handle for cells defaults.
-    #[asset(path = "config/defaults.cells.ron")]
-    pub cells: Handle<CellDefaults>,
-    /// Handle for input defaults.
-    #[asset(path = "config/defaults.input.ron")]
-    pub input: Handle<InputDefaults>,
-    /// Handle for main menu defaults.
-    #[asset(path = "config/defaults.mainmenu.ron")]
-    pub mainmenu: Handle<MainMenuDefaults>,
-    /// All cell type definition handles.
-    #[asset(path = "cells", collection(typed))]
-    pub cell_types: Vec<Handle<CellTypeDefinition>>,
-    /// All node layout handles.
-    #[asset(path = "nodes", collection(typed))]
-    pub layouts: Vec<Handle<NodeLayout>>,
-}
 
 /// Tracks the currently selected menu item.
 #[derive(Resource, Debug)]
@@ -101,7 +62,10 @@ mod tests {
 
     #[test]
     fn main_menu_defaults_ron_parses() {
-        let ron_str = include_str!("../../assets/config/defaults.mainmenu.ron");
+        let ron_str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/config/defaults.mainmenu.ron"
+        ));
         let result: MainMenuDefaults =
             ron::de::from_str(ron_str).expect("mainmenu RON should parse");
         assert!(result.title_font_size > 0.0);

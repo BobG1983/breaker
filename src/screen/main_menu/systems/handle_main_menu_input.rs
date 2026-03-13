@@ -4,10 +4,7 @@ use bevy::{app::AppExit, prelude::*};
 
 use crate::{
     input::resources::{GameAction, InputActions},
-    screen::{
-        components::{MENU_ITEMS, MenuItem},
-        resources::MainMenuSelection,
-    },
+    screen::main_menu::{MENU_ITEMS, MainMenuSelection, MenuItem},
     shared::GameState,
 };
 

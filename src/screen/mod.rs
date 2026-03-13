@@ -1,8 +1,8 @@
 //! Screen domain plugin — state registration, transitions, and cleanup.
 
-mod components;
+pub mod loading;
+pub mod main_menu;
 mod plugin;
-mod resources;
-mod systems;
+pub mod systems;
 
 pub use plugin::ScreenPlugin;
