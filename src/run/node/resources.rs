@@ -80,7 +80,7 @@ pub struct NodeLayoutRegistry {
 }
 
 /// Countdown timer for the current node.
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Default)]
 pub struct NodeTimer {
     /// Seconds remaining.
     pub remaining: f32,

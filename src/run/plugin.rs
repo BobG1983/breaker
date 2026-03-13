@@ -6,7 +6,7 @@ use crate::{
     run::{
         messages::{NodeCleared, TimerExpired},
         node::{
-            ClearRemainingCount, NodeSystems,
+            ClearRemainingCount, NodeSystems, NodeTimer,
             systems::{
                 init_clear_remaining, init_node_timer, set_active_layout, spawn_cells_from_layout,
                 tick_node_timer, track_node_completion,
@@ -27,6 +27,7 @@ impl Plugin for RunPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<RunState>()
             .init_resource::<ClearRemainingCount>()
+            .init_resource::<NodeTimer>()
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_systems(

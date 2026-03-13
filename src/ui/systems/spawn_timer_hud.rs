@@ -82,6 +82,24 @@ mod tests {
     }
 
     #[test]
+    fn spawn_with_default_node_timer_does_not_panic() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
+        app.init_asset::<Font>();
+        app.insert_resource(TimerUiConfig::default());
+        app.insert_resource(NodeTimer::default());
+        app.add_systems(Update, spawn_timer_hud);
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<NodeTimerDisplay>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
     fn text_shows_remaining_time() {
         let mut app = test_app();
         app.update();
