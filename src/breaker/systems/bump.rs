@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    bolt::components::BoltServing,
     breaker::{
         components::{
             Breaker, BreakerState, BreakerStateTimer, BumpLateWindow, BumpPerfectCooldown,
@@ -56,7 +57,9 @@ pub fn update_bump(
     time: Res<Time<Fixed>>,
     mut query: Query<BumpTimingQuery, With<Breaker>>,
     mut writer: MessageWriter<BumpPerformed>,
+    serving_query: Query<(), With<BoltServing>>,
 ) {
+    let bolt_serving = !serving_query.is_empty();
     let dt = time.delta_secs();
 
     for (mut bump, perfect_window, early_window, late_window, perfect_cooldown, weak_cooldown) in
@@ -77,8 +80,8 @@ pub fn update_bump(
             bump.timer -= dt;
         }
 
-        // Bump input
-        if actions.active(GameAction::Bump) && bump.cooldown <= 0.0 {
+        // Bump input — skip when bolt is still serving (launch_bolt handles that press)
+        if actions.active(GameAction::Bump) && bump.cooldown <= 0.0 && !bolt_serving {
             if bump.post_hit_timer > 0.0 {
                 // Retroactive path: bolt already hit, player pressing after
                 let time_since_hit = (perfect_window.0 + late_window.0) - bump.post_hit_timer;
@@ -753,6 +756,55 @@ mod tests {
             "cooldown should be perfect_bump_cooldown ({}), got {}",
             config.perfect_bump_cooldown,
             bump.cooldown
+        );
+    }
+
+    // ── BoltServing guard tests ────────────────────────────────────
+
+    #[test]
+    fn bump_while_serving_does_not_open_forward_window() {
+        use crate::bolt::components::BoltServing;
+
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+            .id();
+
+        // Spawn a serving bolt
+        app.world_mut().spawn(BoltServing);
+
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(
+            !bump.active,
+            "forward window should not open while bolt is serving"
+        );
+    }
+
+    #[test]
+    fn bump_without_serving_bolt_opens_forward_window() {
+        // Regression guard: normal bump still works when no BoltServing exists
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+            .id();
+
+        // No BoltServing entity
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(entity).unwrap();
+        assert!(
+            bump.active,
+            "forward window should open when no bolt is serving"
         );
     }
 
