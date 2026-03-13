@@ -6,13 +6,27 @@
 
 ## Breaker Archetypes
 
-- **Polymorphic bolt-lost response**: Each breaker defines its own consequence for losing the bolt
-  - **Guardian**: Lives-based (lose a life per bolt-lost, run ends at zero)
-  - **Chrono**: Time-penalty-based (bolt-lost costs time off the node timer)
-- **Third breaker with a triggered ability**: A third archetype that introduces the triggered ability system (fires automatically when a game condition is met — e.g. on perfect bump, on cell destroy, etc.)
-- **Bump and dash are universal**: All breakers share the core movement, bump, dash/brake/settle mechanics. Archetypes don't remove these — they layer on top.
-- **Per-breaker stats**: Each archetype has different base stats (speed, width, bump windows, etc.) loaded from per-breaker RON config
-- **Pre-run selection screen**: Basic breaker-pick screen before the run starts, showing the available archetypes
+Three breakers, each with a callsign, a unique bolt-lost response, and an archetype-exclusive triggered ability.
+
+### Aegis (lives-based)
+- **Bolt-lost**: Lose a life. Run ends at zero lives.
+- **Triggered ability**: Bump speed modification. Perfect bumps boost bolt speed, weak bumps reduce it (the current universal mechanic becomes Aegis-exclusive).
+- **Identity**: Durable, forgiving on bolt-loss but rewards precise bump timing with speed control.
+
+### Chrono (time-penalty)
+- **Bolt-lost**: Subtract time from the node timer. Bolt respawns immediately.
+- **Triggered ability**: Bump speed modification (same as Aegis). Perfect bumps boost, weak bumps reduce.
+- **Identity**: No life limit but every bolt-loss accelerates the timer toward game-over. Same speed-control reward loop as Aegis, different stakes.
+
+### Prism (multi-bolt)
+- **Bolt-lost**: Standard respawn (one bolt at a time as baseline — but banked bolts from the ability mean you often have spares).
+- **Triggered ability**: Perfect bump spawns an additional bolt immediately — multiple bolts active at the same time. No bump speed modification (bumps are speed-neutral).
+- **Identity**: Trades speed control for coverage. Rewards consistent perfect bumps with an escalating swarm of bolts. Harder to control but clears nodes fast.
+
+### Universal mechanics
+- **Bump and dash are universal**: All breakers share the core movement, bump, dash/brake/settle mechanics. Archetypes layer on top, never remove.
+- **Per-breaker stats**: Each archetype has different base stats (speed, width, bump windows, etc.) loaded from per-breaker RON config.
+- **Pre-run selection screen**: Basic breaker-pick screen before the run starts, showing the three archetypes.
 
 ---
 
@@ -29,9 +43,10 @@
 
 - **BoltLost dispatched as a message**: The physics domain detects bolt-lost and sends the message
 - **Breaker-specific response system**: Each archetype's plugin listens for BoltLost and handles its consequence
-  - Guardian: decrement lives, respawn bolt (or game over if zero)
+  - Aegis: decrement lives, respawn bolt (or game over if zero)
   - Chrono: subtract time from timer, respawn bolt
-- **Graphical representation per bolt-loss type**: Some visual indicator of the consequence (lives icons, time-penalty flash, etc.)
+  - Prism: respawn bolt (standard — multi-bolt ability provides its own safety net)
+- **Graphical representation per bolt-loss type**: Visual indicator of the consequence (lives icons for Aegis, time-penalty flash for Chrono, bolt count for Prism)
 
 ---
 
@@ -60,7 +75,7 @@
 ## UI
 
 - **Node timer display**: Countdown timer, prominent, with urgency color shift
-- **Bolt-loss stakes display**: Visual representation of the current breaker's bolt-loss resource (lives remaining for Guardian, timer penalty indicator for Chrono)
+- **Bolt-loss stakes display**: Visual representation of the current breaker's bolt-loss resource (lives for Aegis, timer penalty for Chrono, active bolt count for Prism)
 - **Minimal beyond that**: No score counter, no node progress indicator yet
 
 ---
@@ -82,9 +97,9 @@
 ## Summary Checklist
 
 - [ ] Breaker archetype system (polymorphic bolt-lost, per-breaker stats, per-breaker RON)
-- [ ] Guardian breaker (lives-based bolt-lost)
-- [ ] Chrono breaker (time-penalty bolt-lost)
-- [ ] Third breaker with triggered ability
+- [ ] Aegis breaker (lives-based bolt-lost, bump speed modification)
+- [ ] Chrono breaker (time-penalty bolt-lost, bump speed modification)
+- [ ] Prism breaker (multi-bolt on perfect bump, speed-neutral bumps)
 - [ ] Pre-run breaker selection screen
 - [ ] Node timer (countdown, game-over on expiry, urgency color)
 - [ ] Bolt-lost handling delegated to archetype

@@ -12,6 +12,9 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **Augment** | Passive breaker upgrade | `Augment`, `AugmentEffect` |
 | **Overclock** | Triggered ability | `Overclock`, `OverclockTrigger` |
 | **Bump** | Breaker's upward hit | `BumpGrade`, `BumpPerformed` |
+| **Aegis** | Lives-based breaker archetype | `Aegis`, `AegisPlugin` |
+| **Chrono** | Time-penalty breaker archetype | `Chrono`, `ChronoPlugin` |
+| **Prism** | Multi-bolt breaker archetype | `Prism`, `PrismPlugin` |
 | **Flux** | Meta-progression currency | `Flux`, `FluxReward` |
 
 **Do NOT use generic terms** like "paddle", "ball", "brick", "level", "powerup", or "upgrade" for type names, identifiers, or modules.
