@@ -5,7 +5,7 @@ use bevy_asset_loader::prelude::*;
 
 use crate::{
     bolt::BoltDefaults,
-    breaker::BreakerDefaults,
+    breaker::{behaviors::ArchetypeDefinition, BreakerDefaults},
     cells::{CellDefaults, CellTypeDefinition},
     input::InputDefaults,
     run::NodeLayout,
@@ -45,4 +45,7 @@ pub struct DefaultsCollection {
     /// All node layout handles.
     #[asset(path = "nodes", collection(typed))]
     pub layouts: Vec<Handle<NodeLayout>>,
+    /// All archetype definition handles.
+    #[asset(path = "archetypes", collection(typed))]
+    pub archetypes: Vec<Handle<ArchetypeDefinition>>,
 }

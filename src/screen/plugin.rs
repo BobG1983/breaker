@@ -13,7 +13,7 @@ use super::{
 };
 use crate::{
     bolt::BoltDefaults,
-    breaker::BreakerDefaults,
+    breaker::{behaviors::ArchetypeDefinition, BreakerDefaults},
     cells::{CellDefaults, CellTypeDefinition},
     input::InputDefaults,
     run::NodeLayout,
@@ -48,6 +48,7 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<CellTypeDefinition>::new(&["cell.ron"]),
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
+                RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.
             // Must be added BEFORE add_loading_state.

@@ -1,5 +1,6 @@
 //! Loading screen systems.
 
+mod seed_archetype_registry;
 mod seed_bolt_config;
 mod seed_breaker_config;
 mod seed_cell_config;
@@ -12,6 +13,7 @@ mod seed_timer_ui_config;
 mod spawn_loading_screen;
 mod update_loading_bar;
 
+pub use seed_archetype_registry::seed_archetype_registry;
 pub use seed_bolt_config::seed_bolt_config;
 pub use seed_breaker_config::seed_breaker_config;
 pub use seed_cell_config::seed_cell_config;

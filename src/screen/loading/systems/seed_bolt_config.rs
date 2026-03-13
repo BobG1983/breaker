@@ -69,6 +69,7 @@ mod tests {
             timerui: Handle::default(),
             cell_types: vec![],
             layouts: vec![],
+            archetypes: vec![],
         });
 
         app.update();

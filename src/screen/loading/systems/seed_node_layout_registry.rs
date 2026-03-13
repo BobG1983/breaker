@@ -117,6 +117,7 @@ mod tests {
             timerui: Handle::default(),
             cell_types: vec![],
             layouts: vec![handle],
+            archetypes: vec![],
         });
 
         app.update();
@@ -141,6 +142,7 @@ mod tests {
             timerui: Handle::default(),
             cell_types: vec![],
             layouts: vec![handle],
+            archetypes: vec![],
         });
         app.world_mut().insert_resource(make_registry());
 

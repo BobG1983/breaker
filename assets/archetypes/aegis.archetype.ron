@@ -1,0 +1,11 @@
+/* @[brickbreaker::breaker::behaviors::definition::ArchetypeDefinition] */
+(
+    name: "Aegis",
+    stat_overrides: (),
+    life_pool: Some(3),
+    behaviors: [
+        (triggers: [BoltLost], consequence: LoseLife),
+        (triggers: [PerfectBump], consequence: BoltSpeedBoost(1.5)),
+        (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(0.8)),
+    ],
+)

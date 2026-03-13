@@ -99,6 +99,7 @@ mod tests {
             timerui: Handle::default(),
             cell_types: vec![h1, h2],
             layouts: vec![],
+            archetypes: vec![],
         });
 
         app.update();
@@ -127,6 +128,7 @@ mod tests {
             timerui: Handle::default(),
             cell_types: vec![handle],
             layouts: vec![],
+            archetypes: vec![],
         });
 
         app.update();
@@ -151,6 +153,7 @@ mod tests {
             timerui: Handle::default(),
             cell_types: vec![h1, h2],
             layouts: vec![],
+            archetypes: vec![],
         });
 
         app.update();
