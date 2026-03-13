@@ -15,7 +15,11 @@ See `DESIGN.md` for core design principles, `architecture/` for technical decisi
 - [Phase 1d: Bump & Perfect Bump](plan/done/phase-1d-bump.md)
 
 ### Current
-- [Phase 2: Game Loop & Time Pressure](plan/phase-2-game-loop.md)
+- [Phase 2: Game Loop & Time Pressure](plan/phase-2/README.md)
+  - [2a: Level Loading & Dev Tooling](plan/phase-2/phase-2a-level-loading.md)
+  - [2b: Run Structure & Node Timer](plan/phase-2/phase-2b-run-and-timer.md)
+  - [2c: Breaker Archetypes](plan/phase-2/phase-2c-breaker-archetypes.md)
+  - [2d: Screens & UI](plan/phase-2/phase-2d-screens-and-ui.md)
 
 ### Upcoming
 - [Phase 3: Vertical Slice — Mini-Run](plan/phase-3-vertical-slice.md)
