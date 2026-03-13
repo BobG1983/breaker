@@ -25,9 +25,9 @@
 
 ## Checklist
 
-- [ ] Run state machine (node sequencing, win/lose tracking)
-- [ ] Node transition flow (NodeCleared → next node or run-won)
-- [ ] Node timer (countdown, per-node duration from layout data)
-- [ ] Timer expiry triggers game over
-- [ ] Timer UI with urgency color shift
-- [ ] Run-end screen (win/lose)
+- [x] Run state machine (node sequencing, win/lose tracking)
+- [x] Node transition flow (NodeCleared → next node or run-won)
+- [x] Node timer (countdown, per-node duration from layout data)
+- [x] Timer expiry triggers game over
+- [x] Timer UI with urgency color shift
+- [x] Run-end screen (win/lose)

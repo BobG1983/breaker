@@ -4,6 +4,7 @@ pub mod messages;
 pub mod node;
 mod plugin;
 pub mod resources;
+pub mod systems;
 
 pub use node::{NodeLayout, NodeLayoutRegistry};
 pub use plugin::RunPlugin;

@@ -11,6 +11,7 @@ use crate::{
     run::NodeLayout,
     screen::main_menu::MainMenuDefaults,
     shared::PlayfieldDefaults,
+    ui::TimerUiDefaults,
 };
 
 /// Asset collection for all defaults — automatically loaded during
@@ -35,6 +36,9 @@ pub struct DefaultsCollection {
     /// Handle for main menu defaults.
     #[asset(path = "config/defaults.mainmenu.ron")]
     pub mainmenu: Handle<MainMenuDefaults>,
+    /// Handle for timer UI defaults.
+    #[asset(path = "config/defaults.timerui.ron")]
+    pub timerui: Handle<TimerUiDefaults>,
     /// All cell type definition handles.
     #[asset(path = "cells", collection(typed))]
     pub cell_types: Vec<Handle<CellTypeDefinition>>,

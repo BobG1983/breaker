@@ -2,7 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::ui::messages::UpgradeSelected;
+use crate::{
+    shared::{GameState, PlayingState},
+    ui::{
+        messages::UpgradeSelected,
+        systems::{spawn_timer_hud, update_timer_display},
+    },
+};
 
 /// Plugin for the UI domain.
 ///
@@ -11,7 +17,12 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<UpgradeSelected>();
+        app.add_message::<UpgradeSelected>()
+            .add_systems(OnEnter(GameState::Playing), spawn_timer_hud)
+            .add_systems(
+                Update,
+                update_timer_display.run_if(in_state(PlayingState::Active)),
+            );
     }
 }
 
@@ -23,6 +34,9 @@ mod tests {
     fn plugin_builds() {
         App::new()
             .add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_sub_state::<PlayingState>()
             .add_plugins(UiPlugin)
             .update();
     }

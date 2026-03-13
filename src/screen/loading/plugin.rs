@@ -8,7 +8,7 @@ use super::{
     systems::{
         seed_bolt_config, seed_breaker_config, seed_cell_config, seed_cell_type_registry,
         seed_input_config, seed_main_menu_config, seed_node_layout_registry, seed_playfield_config,
-        spawn_loading_screen, update_loading_bar,
+        seed_timer_ui_config, spawn_loading_screen, update_loading_bar,
     },
 };
 use crate::shared::GameState;
@@ -29,6 +29,7 @@ impl Plugin for LoadingPlugin {
                 seed_main_menu_config.track_progress::<GameState>(),
                 seed_cell_type_registry.track_progress::<GameState>(),
                 seed_node_layout_registry.track_progress::<GameState>(),
+                seed_timer_ui_config.track_progress::<GameState>(),
             )
                 .run_if(in_state(GameState::Loading)),
         )

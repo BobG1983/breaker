@@ -8,11 +8,12 @@ use crate::{
         node::{
             ClearRemainingCount, NodeSystems,
             systems::{
-                init_clear_remaining, set_active_layout, spawn_cells_from_layout,
-                track_node_completion,
+                init_clear_remaining, init_node_timer, set_active_layout, spawn_cells_from_layout,
+                tick_node_timer, track_node_completion,
             },
         },
         resources::RunState,
+        systems::{advance_node, handle_node_cleared, handle_timer_expired, reset_run_state},
     },
     shared::{GameState, PlayingState},
 };
@@ -34,13 +35,22 @@ impl Plugin for RunPlugin {
                     set_active_layout,
                     spawn_cells_from_layout.in_set(NodeSystems::Spawn),
                     init_clear_remaining,
+                    init_node_timer,
                 )
                     .chain(),
             )
             .add_systems(
                 FixedUpdate,
-                track_node_completion.run_if(in_state(PlayingState::Active)),
-            );
+                (
+                    track_node_completion,
+                    handle_node_cleared,
+                    tick_node_timer,
+                    handle_timer_expired,
+                )
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            .add_systems(OnEnter(GameState::NodeTransition), advance_node)
+            .add_systems(OnExit(GameState::MainMenu), reset_run_state);
     }
 }
 

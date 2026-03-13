@@ -84,6 +84,8 @@ pub enum GameState {
     RunSetup,
     /// Active gameplay within a node. See [`PlayingState`] for sub-states.
     Playing,
+    /// Transient 1-frame state between nodes — exits `Playing` then re-enters it.
+    NodeTransition,
     /// Timed upgrade selection between nodes.
     UpgradeSelect,
     /// Run end screen — win or lose.

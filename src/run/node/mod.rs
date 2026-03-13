@@ -20,8 +20,7 @@ pub enum NodeSystems {
 pub struct NodeLayout {
     /// Display name.
     pub name: String,
-    /// Timer duration in seconds (consumed by Phase 2b).
-    #[allow(dead_code)]
+    /// Timer duration in seconds for this node.
     pub timer_secs: f32,
     /// Number of columns.
     pub cols: u32,
@@ -88,6 +87,15 @@ pub struct ActiveNodeLayout(pub NodeLayout);
 pub struct NodeLayoutRegistry {
     /// All loaded layouts, indexed by position.
     pub layouts: Vec<NodeLayout>,
+}
+
+/// Countdown timer for the current node.
+#[derive(Resource, Debug, Clone)]
+pub struct NodeTimer {
+    /// Seconds remaining.
+    pub remaining: f32,
+    /// Total seconds for this node (used for ratio calculations).
+    pub total: f32,
 }
 
 /// Tracks remaining cells that must be cleared for node completion.

@@ -66,6 +66,7 @@ mod tests {
             cells: Handle::default(),
             input: Handle::default(),
             mainmenu: Handle::default(),
+            timerui: Handle::default(),
             cell_types: vec![],
             layouts: vec![],
         });

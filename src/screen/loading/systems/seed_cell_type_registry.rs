@@ -96,6 +96,7 @@ mod tests {
             cells: Handle::default(),
             input: Handle::default(),
             mainmenu: Handle::default(),
+            timerui: Handle::default(),
             cell_types: vec![h1, h2],
             layouts: vec![],
         });
@@ -123,6 +124,7 @@ mod tests {
             cells: Handle::default(),
             input: Handle::default(),
             mainmenu: Handle::default(),
+            timerui: Handle::default(),
             cell_types: vec![handle],
             layouts: vec![],
         });
@@ -146,6 +148,7 @@ mod tests {
             cells: Handle::default(),
             input: Handle::default(),
             mainmenu: Handle::default(),
+            timerui: Handle::default(),
             cell_types: vec![h1, h2],
             layouts: vec![],
         });
