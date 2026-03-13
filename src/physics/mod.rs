@@ -1,7 +1,6 @@
-//! Physics domain plugin — CCD collision detection, collision response, wall entities.
+//! Physics domain plugin — CCD collision detection and collision response.
 
 pub mod ccd;
-pub mod components;
 pub mod filters;
 pub mod messages;
 mod plugin;

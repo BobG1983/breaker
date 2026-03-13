@@ -17,3 +17,4 @@ pub(crate) mod physics;
 pub(crate) mod run;
 pub(crate) mod ui;
 pub(crate) mod upgrades;
+pub(crate) mod wall;

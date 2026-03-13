@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::components::Bolt, breaker::components::Breaker, cells::components::Cell,
-    physics::components::Wall,
+    wall::components::Wall,
 };
 
 /// Breaker entities for collision queries (excludes bolt for query disjointness).

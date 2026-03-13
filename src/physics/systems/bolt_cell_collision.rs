@@ -19,10 +19,10 @@ use crate::{
     cells::components::{CellHeight, CellWidth},
     physics::{
         ccd::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
-        components::WallSize,
         filters::{CellCollisionFilter, WallCollisionFilter},
         messages::BoltHitCell,
     },
+    wall::components::WallSize,
 };
 
 /// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
@@ -126,7 +126,7 @@ mod tests {
             resources::BoltConfig,
         },
         cells::{components::Cell, resources::CellConfig},
-        physics::components::{Wall, WallSize},
+        wall::components::{Wall, WallSize},
     };
 
     // --- CCD system tests ---

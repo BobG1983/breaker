@@ -1,4 +1,4 @@
-//! Physics domain components.
+//! Wall domain components.
 
 use bevy::prelude::*;
 

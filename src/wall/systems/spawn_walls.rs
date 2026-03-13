@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    physics::components::{Wall, WallSize},
     shared::{CleanupOnNodeExit, PlayfieldConfig},
+    wall::components::{Wall, WallSize},
 };
 
 /// Generous half-thickness so the bolt never outruns a wall.
@@ -54,7 +54,7 @@ pub fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::components::{Wall, WallSize};
+    use crate::wall::components::{Wall, WallSize};
 
     fn test_app() -> App {
         let mut app = App::new();

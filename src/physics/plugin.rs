@@ -6,15 +6,15 @@ use crate::{
     bolt::BoltSystems,
     physics::{
         messages::{BoltHitBreaker, BoltHitCell, BoltLost},
-        systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost, spawn_walls},
+        systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost},
     },
-    shared::{GameState, PlayingState},
+    shared::PlayingState,
 };
 
 /// Plugin for the physics domain.
 ///
 /// Owns collision detection and collision response systems.
-/// Spawns wall entities on node entry and runs CCD collision in `FixedUpdate`.
+/// Runs CCD collision in `FixedUpdate`.
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
@@ -22,8 +22,6 @@ impl Plugin for PhysicsPlugin {
         app.add_message::<BoltHitBreaker>();
         app.add_message::<BoltHitCell>();
         app.add_message::<BoltLost>();
-
-        app.add_systems(OnEnter(GameState::Playing), spawn_walls);
 
         app.add_systems(
             FixedUpdate,
@@ -42,14 +40,12 @@ impl Plugin for PhysicsPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::GameState;
-
     #[test]
     fn plugin_builds() {
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
+            .init_state::<crate::shared::GameState>()
             .add_sub_state::<PlayingState>()
             .init_resource::<crate::shared::PlayfieldConfig>()
             .add_plugins(PhysicsPlugin)
