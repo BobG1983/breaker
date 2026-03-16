@@ -33,7 +33,7 @@ pub fn handle_chip_input(
     }
 
     // Navigate left
-    if config.move_left.iter().any(|k| keys.just_pressed(*k)) {
+    if config.menu_left.iter().any(|k| keys.just_pressed(*k)) {
         selection.index = if selection.index == 0 {
             card_count - 1
         } else {
@@ -42,7 +42,7 @@ pub fn handle_chip_input(
     }
 
     // Navigate right
-    if config.move_right.iter().any(|k| keys.just_pressed(*k)) {
+    if config.menu_right.iter().any(|k| keys.just_pressed(*k)) {
         selection.index = (selection.index + 1) % card_count;
     }
 

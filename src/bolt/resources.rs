@@ -22,6 +22,11 @@ pub struct BoltDefaults {
     pub initial_angle: f32,
     /// Vertical offset above the breaker for bolt respawn after loss.
     pub respawn_offset_y: f32,
+    /// Maximum respawn angle spread from vertical in radians.
+    ///
+    /// On bolt loss, the respawn direction is randomized within
+    /// `[-respawn_angle_spread, +respawn_angle_spread]` from straight up.
+    pub respawn_angle_spread: f32,
     /// RGB values for the bolt HDR color.
     pub color_rgb: [f32; 3],
 }
@@ -36,6 +41,7 @@ impl Default for BoltDefaults {
             spawn_offset_y: 30.0,
             initial_angle: 0.26,
             respawn_offset_y: 30.0,
+            respawn_angle_spread: 0.524, // ~30 degrees
             color_rgb: [6.0, 5.0, 0.5],
         }
     }

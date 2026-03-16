@@ -5,6 +5,8 @@
     bump: [ArrowUp, KeyW],
     menu_up: [ArrowUp, KeyW],
     menu_down: [ArrowDown, KeyS],
+    menu_left: [ArrowLeft, KeyA],
+    menu_right: [ArrowRight, KeyD],
     menu_confirm: [Enter, Space],
     double_tap_window: 0.25,
 )

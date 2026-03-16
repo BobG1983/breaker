@@ -85,6 +85,10 @@ pub struct BoltSpawnOffsetY(pub f32);
 #[derive(Component, Debug)]
 pub struct BoltRespawnOffsetY(pub f32);
 
+/// Maximum respawn angle spread from vertical in radians.
+#[derive(Component, Debug)]
+pub struct BoltRespawnAngleSpread(pub f32);
+
 /// Initial launch angle from vertical in radians.
 #[derive(Component, Debug)]
 pub struct BoltInitialAngle(pub f32);

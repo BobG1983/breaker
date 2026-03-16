@@ -1,15 +1,19 @@
 //! Bolt-lost detection — bolt falls below the playfield.
 
 use bevy::prelude::*;
+use rand::Rng;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY, BoltVelocity},
+        components::{
+            Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
+            BoltVelocity,
+        },
         filters::ActiveBoltFilter,
     },
     breaker::components::Breaker,
     physics::messages::BoltLost,
-    shared::PlayfieldConfig,
+    shared::{GameRng, PlayfieldConfig},
 };
 
 /// Detects when the bolt falls below the playfield and respawns it.
@@ -18,6 +22,7 @@ use crate::{
 /// apply penalties per breaker type.
 pub fn bolt_lost(
     playfield: Res<PlayfieldConfig>,
+    mut rng: ResMut<GameRng>,
     mut bolt_query: Query<
         (
             &mut Transform,
@@ -25,6 +30,7 @@ pub fn bolt_lost(
             &BoltBaseSpeed,
             &BoltRadius,
             &BoltRespawnOffsetY,
+            &BoltRespawnAngleSpread,
         ),
         ActiveBoltFilter,
     >,
@@ -36,7 +42,7 @@ pub fn bolt_lost(
     };
     let breaker_pos = breaker_transform.translation;
 
-    for (mut bolt_transform, mut bolt_velocity, base_speed, radius, respawn_offset) in
+    for (mut bolt_transform, mut bolt_velocity, base_speed, radius, respawn_offset, angle_spread) in
         &mut bolt_query
     {
         if bolt_transform.translation.y < playfield.bottom() - radius.0 {
@@ -46,8 +52,9 @@ pub fn bolt_lost(
             bolt_transform.translation.x = breaker_pos.x;
             bolt_transform.translation.y = breaker_pos.y + respawn_offset.0;
 
-            // Relaunch straight up at base speed — losing position is penalty enough
-            bolt_velocity.value = Vec2::new(0.0, base_speed.0);
+            // Relaunch at base speed with randomized angle from vertical
+            let angle = rng.0.random_range(-angle_spread.0..=angle_spread.0);
+            bolt_velocity.value = Vec2::new(base_speed.0 * angle.sin(), base_speed.0 * angle.cos());
         }
     }
 }
@@ -56,7 +63,10 @@ pub fn bolt_lost(
 mod tests {
     use super::*;
     use crate::bolt::{
-        components::{Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY, BoltVelocity},
+        components::{
+            Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
+            BoltVelocity,
+        },
         resources::BoltConfig,
     };
 
@@ -64,6 +74,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<PlayfieldConfig>();
+        app.init_resource::<GameRng>();
         app.add_message::<BoltLost>();
         app.add_systems(FixedUpdate, bolt_lost);
         app
@@ -77,12 +88,18 @@ mod tests {
         app.update();
     }
 
-    fn bolt_lost_bundle() -> (BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY) {
+    fn bolt_lost_bundle() -> (
+        BoltBaseSpeed,
+        BoltRadius,
+        BoltRespawnOffsetY,
+        BoltRespawnAngleSpread,
+    ) {
         let config = BoltConfig::default();
         (
             BoltBaseSpeed(config.base_speed),
             BoltRadius(config.radius),
             BoltRespawnOffsetY(config.respawn_offset_y),
+            BoltRespawnAngleSpread(config.respawn_angle_spread),
         )
     }
 
@@ -111,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn respawn_launches_straight_up() {
+    fn respawn_launches_within_angle_spread() {
         let mut app = test_app();
         let bolt_config = BoltConfig::default();
         let playfield = PlayfieldConfig::default();
@@ -134,21 +151,62 @@ mod tests {
             .next()
             .unwrap();
 
+        let speed = vel.value.length();
         assert!(
-            vel.value.x.abs() < f32::EPSILON,
-            "respawn should launch straight up (vx=0), got vx={:.3}",
-            vel.value.x,
-        );
-        assert!(
-            (vel.value.y - bolt_config.base_speed).abs() < 1.0,
-            "respawn vy should equal base_speed {:.0}, got {:.1}",
+            (speed - bolt_config.base_speed).abs() < 1.0,
+            "respawn speed should equal base_speed {:.0}, got {:.1}",
             bolt_config.base_speed,
-            vel.value.y,
+            speed,
         );
+
+        let angle = vel.value.x.atan2(vel.value.y).abs();
+        assert!(
+            angle <= bolt_config.respawn_angle_spread + f32::EPSILON,
+            "respawn angle {angle:.3} rad should be within spread {:.3} rad",
+            bolt_config.respawn_angle_spread,
+        );
+
+        assert!(vel.value.y > 0.0, "respawn should launch upward");
+
         assert!(
             (transform.translation.x - breaker_x).abs() < f32::EPSILON,
             "respawn X should match breaker X {breaker_x:.0}, got {:.1}",
             transform.translation.x,
+        );
+    }
+
+    #[test]
+    fn respawn_with_zero_spread_launches_straight_up() {
+        let mut app = test_app();
+        let bolt_config = BoltConfig::default();
+        let playfield = PlayfieldConfig::default();
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(100.0, -400.0),
+            (
+                BoltBaseSpeed(bolt_config.base_speed),
+                BoltRadius(bolt_config.radius),
+                BoltRespawnOffsetY(bolt_config.respawn_offset_y),
+                BoltRespawnAngleSpread(0.0),
+            ),
+            Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
+        ));
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+
+        assert!(
+            vel.value.x.abs() < f32::EPSILON,
+            "zero spread should launch straight up, got vx={:.3}",
+            vel.value.x,
         );
     }
 

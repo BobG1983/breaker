@@ -67,6 +67,12 @@ pub fn read_input_actions(
         if config.menu_down.contains(&key) && !actions.active(GameAction::MenuDown) {
             actions.0.push(GameAction::MenuDown);
         }
+        if config.menu_left.contains(&key) && !actions.active(GameAction::MenuLeft) {
+            actions.0.push(GameAction::MenuLeft);
+        }
+        if config.menu_right.contains(&key) && !actions.active(GameAction::MenuRight) {
+            actions.0.push(GameAction::MenuRight);
+        }
         if config.menu_confirm.contains(&key) && !actions.active(GameAction::MenuConfirm) {
             actions.0.push(GameAction::MenuConfirm);
         }
@@ -243,6 +249,24 @@ mod tests {
         app.update();
         let actions = app.world().resource::<InputActions>();
         assert!(actions.active(GameAction::MenuDown));
+    }
+
+    #[test]
+    fn menu_left_key_produces_menu_left_action() {
+        let mut app = test_app();
+        send_key_press(&mut app, KeyCode::ArrowLeft);
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(actions.active(GameAction::MenuLeft));
+    }
+
+    #[test]
+    fn menu_right_key_produces_menu_right_action() {
+        let mut app = test_app();
+        send_key_press(&mut app, KeyCode::ArrowRight);
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(actions.active(GameAction::MenuRight));
     }
 
     #[test]

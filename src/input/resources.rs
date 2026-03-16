@@ -39,6 +39,10 @@ pub enum GameAction {
     MenuUp,
     /// Menu navigate down.
     MenuDown,
+    /// Menu navigate left (horizontal menus).
+    MenuLeft,
+    /// Menu navigate right (horizontal menus).
+    MenuRight,
     /// Menu confirm selection.
     MenuConfirm,
 }
@@ -71,6 +75,10 @@ pub struct InputDefaults {
     pub menu_up: Vec<KeyCode>,
     /// Keys that navigate down in menus.
     pub menu_down: Vec<KeyCode>,
+    /// Keys that navigate left in horizontal menus.
+    pub menu_left: Vec<KeyCode>,
+    /// Keys that navigate right in horizontal menus.
+    pub menu_right: Vec<KeyCode>,
     /// Keys that confirm the current menu selection.
     pub menu_confirm: Vec<KeyCode>,
     /// Time window for double-tap dash detection (seconds).
@@ -85,6 +93,8 @@ impl Default for InputDefaults {
             bump: vec![KeyCode::ArrowUp, KeyCode::KeyW],
             menu_up: vec![KeyCode::ArrowUp, KeyCode::KeyW],
             menu_down: vec![KeyCode::ArrowDown, KeyCode::KeyS],
+            menu_left: vec![KeyCode::ArrowLeft, KeyCode::KeyA],
+            menu_right: vec![KeyCode::ArrowRight, KeyCode::KeyD],
             menu_confirm: vec![KeyCode::Enter, KeyCode::Space],
             double_tap_window: 0.25,
         }
@@ -129,6 +139,8 @@ mod tests {
         assert!(!config.bump.is_empty());
         assert!(!config.menu_up.is_empty());
         assert!(!config.menu_down.is_empty());
+        assert!(!config.menu_left.is_empty());
+        assert!(!config.menu_right.is_empty());
         assert!(!config.menu_confirm.is_empty());
         assert!(config.double_tap_window > 0.0);
     }

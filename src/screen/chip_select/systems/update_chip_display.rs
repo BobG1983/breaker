@@ -43,3 +43,90 @@ pub fn update_chip_display(
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_app(timer_remaining: f32, selection_index: usize) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ChipSelectConfig::default());
+        app.insert_resource(ChipSelectTimer {
+            remaining: timer_remaining,
+        });
+        app.insert_resource(ChipSelectSelection {
+            index: selection_index,
+        });
+        app.add_systems(Update, update_chip_display);
+        app
+    }
+
+    #[test]
+    fn timer_text_shows_ceiling_seconds() {
+        let mut app = test_app(7.3, 0);
+        let text_entity = app
+            .world_mut()
+            .spawn((ChipTimerText, Text::new("10"), TextColor(Color::WHITE)))
+            .id();
+        app.update();
+
+        let text = app.world().get::<Text>(text_entity).unwrap();
+        let s: &str = text;
+        assert_eq!(s, "8", "ceil(7.3) = 8");
+    }
+
+    #[test]
+    fn timer_text_clamps_at_zero() {
+        let mut app = test_app(-1.0, 0);
+        let text_entity = app
+            .world_mut()
+            .spawn((ChipTimerText, Text::new("10"), TextColor(Color::WHITE)))
+            .id();
+        app.update();
+
+        let text = app.world().get::<Text>(text_entity).unwrap();
+        let s: &str = text;
+        assert_eq!(s, "0");
+    }
+
+    #[test]
+    fn selected_card_gets_selected_border() {
+        let config = ChipSelectConfig::default();
+        let expected = Color::srgb(
+            config.selected_color_rgb[0],
+            config.selected_color_rgb[1],
+            config.selected_color_rgb[2],
+        );
+
+        let mut app = test_app(10.0, 1);
+        let card = app
+            .world_mut()
+            .spawn((ChipCard { index: 1 }, BorderColor::all(Color::BLACK)))
+            .id();
+        app.update();
+
+        let border = app.world().get::<BorderColor>(card).unwrap();
+        assert_eq!(*border, BorderColor::all(expected));
+    }
+
+    #[test]
+    fn unselected_card_gets_normal_border() {
+        let config = ChipSelectConfig::default();
+        let expected = Color::srgb(
+            config.normal_color_rgb[0],
+            config.normal_color_rgb[1],
+            config.normal_color_rgb[2],
+        );
+
+        let mut app = test_app(10.0, 0);
+        let card = app
+            .world_mut()
+            .spawn((ChipCard { index: 1 }, BorderColor::all(Color::BLACK)))
+            .id();
+        app.update();
+
+        let border = app.world().get::<BorderColor>(card).unwrap();
+        assert_eq!(*border, BorderColor::all(expected));
+    }
+}

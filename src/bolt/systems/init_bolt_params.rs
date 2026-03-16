@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::bolt::{
     components::{
         Bolt, BoltBaseSpeed, BoltInitialAngle, BoltMaxSpeed, BoltMinSpeed, BoltRadius,
-        BoltRespawnOffsetY, BoltSpawnOffsetY,
+        BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY,
     },
     resources::BoltConfig,
 };
@@ -27,6 +27,7 @@ pub fn init_bolt_params(
             BoltRadius(bolt_config.radius),
             BoltSpawnOffsetY(bolt_config.spawn_offset_y),
             BoltRespawnOffsetY(bolt_config.respawn_offset_y),
+            BoltRespawnAngleSpread(bolt_config.respawn_angle_spread),
             BoltInitialAngle(bolt_config.initial_angle),
         ));
     }
@@ -36,7 +37,8 @@ pub fn init_bolt_params(
 mod tests {
     use super::*;
     use crate::bolt::components::{
-        BoltInitialAngle, BoltRadius, BoltRespawnOffsetY, BoltSpawnOffsetY, BoltVelocity,
+        BoltInitialAngle, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY,
+        BoltVelocity,
     };
 
     fn test_app() -> App {
@@ -64,6 +66,7 @@ mod tests {
         assert!(world.get::<BoltRadius>(entity).is_some());
         assert!(world.get::<BoltSpawnOffsetY>(entity).is_some());
         assert!(world.get::<BoltRespawnOffsetY>(entity).is_some());
+        assert!(world.get::<BoltRespawnAngleSpread>(entity).is_some());
         assert!(world.get::<BoltInitialAngle>(entity).is_some());
     }
 
@@ -92,6 +95,12 @@ mod tests {
         );
         assert!(
             (world.get::<BoltRespawnOffsetY>(entity).unwrap().0 - bolt_config.respawn_offset_y)
+                .abs()
+                < f32::EPSILON
+        );
+        assert!(
+            (world.get::<BoltRespawnAngleSpread>(entity).unwrap().0
+                - bolt_config.respawn_angle_spread)
                 .abs()
                 < f32::EPSILON
         );

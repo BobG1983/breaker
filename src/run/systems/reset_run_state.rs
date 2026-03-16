@@ -1,12 +1,17 @@
 //! System to reset run state at the start of a new run.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 
-use crate::run::resources::RunState;
+use crate::{run::resources::RunState, shared::GameRng};
 
-/// Resets [`RunState`] to defaults when leaving the main menu (starting a run).
-pub fn reset_run_state(mut run_state: ResMut<RunState>) {
+/// Resets [`RunState`] to defaults and reseeds [`GameRng`] when leaving the
+/// main menu (starting a run).
+pub fn reset_run_state(mut run_state: ResMut<RunState>, mut rng: ResMut<GameRng>) {
     *run_state = RunState::default();
+    // Reseed with entropy — Phase 4 will add user-selectable seeds
+    rng.0 = ChaCha8Rng::from_os_rng();
 }
 
 #[cfg(test)]
@@ -22,6 +27,7 @@ mod tests {
             outcome: RunOutcome::Won,
             ..default()
         });
+        app.init_resource::<GameRng>();
         app.add_systems(Update, reset_run_state);
         app
     }

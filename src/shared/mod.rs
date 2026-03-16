@@ -7,6 +7,8 @@ pub mod math;
 
 use bevy::prelude::*;
 use brickbreaker_derive::GameConfig;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use serde::Deserialize;
 
 /// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
@@ -134,6 +136,28 @@ pub struct CleanupOnNodeExit;
 #[derive(Component)]
 pub struct CleanupOnRunEnd;
 
+/// Deterministic RNG for gameplay randomness.
+///
+/// Initialized at app start with a fixed seed (deterministic for tests).
+/// Reseeded with OS entropy at the start of each run by `reset_run_state`.
+/// Phase 4 will add user-selectable seeds for deterministic replays.
+#[derive(Resource)]
+pub struct GameRng(pub ChaCha8Rng);
+
+impl GameRng {
+    /// Creates a `GameRng` with a specific seed. Useful for tests.
+    #[must_use]
+    pub fn from_seed(seed: u64) -> Self {
+        Self(ChaCha8Rng::seed_from_u64(seed))
+    }
+}
+
+impl Default for GameRng {
+    fn default() -> Self {
+        Self::from_seed(0)
+    }
+}
+
 /// The archetype selected for the current run.
 ///
 /// Set at run start; read by `init_archetype` to look up the archetype
@@ -150,6 +174,16 @@ impl Default for SelectedArchetype {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn game_rng_from_seed_is_deterministic() {
+        use rand::Rng;
+        let mut rng1 = GameRng::from_seed(42);
+        let mut rng2 = GameRng::from_seed(42);
+        let v1: f32 = rng1.0.random();
+        let v2: f32 = rng2.0.random();
+        assert!((v1 - v2).abs() < f32::EPSILON);
+    }
 
     #[test]
     fn default_game_state_is_loading() {

@@ -68,7 +68,7 @@ fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &ChipSelec
 
 fn spawn_title(parent: &mut ChildSpawnerCommands<'_>) {
     parent.spawn((
-        Text::new("CHOOSE AN UPGRADE"),
+        Text::new("CHOOSE A CHIP"),
         TextFont {
             font_size: 48.0,
             ..default()
@@ -147,7 +147,7 @@ fn spawn_card_row(
 
 fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
     parent.spawn((
-        Text::new("Left/Right to select, Enter to confirm"),
+        Text::new("< > to select, Enter to confirm"),
         TextFont {
             font_size: 24.0,
             ..default()
