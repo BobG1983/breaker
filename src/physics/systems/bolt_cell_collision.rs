@@ -18,10 +18,10 @@ use crate::{
     },
     cells::components::{CellHeight, CellWidth},
     physics::{
-        ccd::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
         filters::{CellCollisionFilter, WallCollisionFilter},
         messages::BoltHitCell,
     },
+    shared::math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
     wall::components::WallSize,
 };
 
@@ -61,7 +61,7 @@ pub fn bolt_cell_collision(
             }
 
             // Find the nearest hit among all cells and walls
-            let mut best: Option<(Option<Entity>, crate::physics::ccd::RayHit)> = None;
+            let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
 
             // Check cells
             for (cell_entity, cell_tf, cell_w, cell_h) in &cell_query {

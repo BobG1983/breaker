@@ -3,6 +3,8 @@
 //! Contains passive types only: state enums, cleanup markers, and playfield
 //! configuration. No systems or plugins — those live in domain plugins.
 
+pub mod math;
+
 use bevy::prelude::*;
 use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
@@ -187,7 +189,7 @@ mod tests {
 
     #[test]
     fn playfield_defaults_ron_parses() {
-        let ron_str = include_str!("../assets/config/defaults.playfield.ron");
+        let ron_str = include_str!("../../assets/config/defaults.playfield.ron");
         let result: PlayfieldDefaults =
             ron::de::from_str(ron_str).expect("playfield RON should parse");
         assert!(result.width > 0.0);

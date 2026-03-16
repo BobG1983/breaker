@@ -1,6 +1,5 @@
 //! Physics domain plugin — CCD collision detection and collision response.
 
-pub mod ccd;
 pub mod filters;
 pub mod messages;
 mod plugin;

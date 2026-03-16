@@ -1,4 +1,4 @@
-//! Continuous collision detection helpers shared across physics systems.
+//! Shared math helpers used across physics systems.
 
 use bevy::prelude::*;
 
@@ -28,6 +28,7 @@ pub struct RayHit {
 ///
 /// Returns `None` if the ray misses, the origin is inside the AABB, or the
 /// hit is beyond `max_dist`.
+#[must_use]
 pub fn ray_vs_aabb(
     origin: Vec2,
     direction: Vec2,

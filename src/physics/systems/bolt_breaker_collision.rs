@@ -8,11 +8,9 @@ use crate::{
         BreakerHeight, BreakerTilt, BreakerWidth, MaxReflectionAngle, MinAngleFromHorizontal,
     },
     physics::{
-        ccd::{CCD_EPSILON, ray_vs_aabb},
-        filters::BreakerCollisionFilter,
-        messages::BoltHitBreaker,
-        queries::BoltPhysicsQuery,
+        filters::BreakerCollisionFilter, messages::BoltHitBreaker, queries::BoltPhysicsQuery,
     },
+    shared::math::{CCD_EPSILON, ray_vs_aabb},
 };
 
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.
