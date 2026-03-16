@@ -63,6 +63,10 @@ You're not pedantic for its own sake — every rule exists because this project 
 - Don't evaluate game design. That's game-design-guard's job. You care about whether the code is in the right place and talks to other code the right way.
 - Don't suggest over-engineering. If the current pattern works and is simple, defend it against unnecessary abstraction.
 
+## Parallel Execution
+
+Run simultaneously with **test-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
+
 ⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
 - `cargo dbuild` — build (dynamic linking)

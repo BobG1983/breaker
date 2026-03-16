@@ -1,12 +1,12 @@
 ---
 name: message-flow
-description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-13 full re-scan)
+description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-16 full re-scan)
 type: reference
 ---
 
 # Message Flow Map
 
-Last updated: 2026-03-13 (full re-scan, Bevy 0.18.1)
+Last updated: 2026-03-16 (full re-scan, Bevy 0.18.1)
 
 ## Registered Messages (by plugin)
 
@@ -33,7 +33,7 @@ Last updated: 2026-03-13 (full re-scan, Bevy 0.18.1)
 - Receiver: `read_input_actions` (InputPlugin, PreUpdate)
 
 ### BumpPerformed (BreakerPlugin → cross-domain)
-- Senders: `update_bump` (retroactive path), `grade_bump` (forward/forward+hit path)
+- Senders: `update_bump` (retroactive path), `grade_bump` (hit-grading path)
 - Receivers:
   - `perfect_bump_dash_cancel` (BreakerPlugin) — cancels dash on Perfect grade
   - `spawn_bump_grade_text` (BreakerPlugin) — spawns grade feedback text
@@ -67,17 +67,26 @@ Last updated: 2026-03-13 (full re-scan, Bevy 0.18.1)
 - Missing consumers (future phases): BreakerPlugin (penalty by archetype), AudioPlugin, UiPlugin
 
 ### CellDestroyed (CellsPlugin → cross-domain)
-- Sender: `handle_cell_hit` (CellsPlugin)
-- Receivers: NONE currently active
-- Missing consumers (future phases): RunPlugin (progress tracking, NodeCleared detection), UpgradesPlugin, AudioPlugin
+- Sender: `handle_cell_hit` (CellsPlugin, FixedUpdate, no ordering)
+- Receivers:
+  - `track_node_completion` (RunPlugin, FixedUpdate, no ordering) — decrements ClearRemainingCount, sends NodeCleared
+- Ordering concern: NO explicit ordering between sender and receiver in FixedUpdate.
+  Messages persist across frames so a one-tick delay is safe, but Bevy may run
+  track_node_completion before handle_cell_hit on the same tick, deferring detection by one tick.
 
-### NodeCleared (RunPlugin — registered, not yet used)
-- Sender: NONE
-- Receivers: NONE
+### NodeCleared (CellsPlugin→RunPlugin→RunPlugin internal)
+- Sender: `track_node_completion` (RunPlugin, FixedUpdate)
+- Receiver: `handle_node_cleared` (RunPlugin, FixedUpdate)
+- Ordering concern: Both in the same unordered group in RunPlugin::build. Same-tick message
+  from track_node_completion may not be read by handle_node_cleared until next tick.
+  This is a 1-tick delay on node transition, imperceptible in practice.
 
-### TimerExpired (RunPlugin — registered, not yet used)
-- Sender: NONE
-- Receivers: NONE
+### TimerExpired (RunPlugin internal)
+- Sender: `tick_node_timer` (RunPlugin, FixedUpdate)
+- Receiver: `handle_timer_expired` (RunPlugin, FixedUpdate)
+- Ordering concern: Same as NodeCleared — both in the same unordered group.
+  If tick_node_timer fires TimerExpired on tick N, handle_timer_expired may not
+  read it until tick N+1. One tick delay on timer loss, imperceptible in practice.
 
 ### UpgradeSelected (UiPlugin — registered, not yet used)
 - Sender: NONE
@@ -99,11 +108,14 @@ Last updated: 2026-03-13 (full re-scan, Bevy 0.18.1)
 | PhysicsPlugin | BoltHitBreaker | BreakerPlugin |
 | PhysicsPlugin | BoltHitCell | CellsPlugin |
 | PhysicsPlugin | BoltLost | BoltPlugin |
-| CellsPlugin | CellDestroyed | (no active consumer) |
+| CellsPlugin | CellDestroyed | RunPlugin |
+| RunPlugin | NodeCleared | RunPlugin (internal) |
+| RunPlugin | TimerExpired | RunPlugin (internal) |
 
 ---
 
 ## Notes
 - All gameplay message flow is strictly one-way (no circular message chains)
-- CellDestroyed is the only actively-sent message with no current consumer
-- NodeCleared, TimerExpired, UpgradeSelected are registered but have no sender or receiver yet (future phases)
+- CellDestroyed is now consumed by RunPlugin (was previously an orphan)
+- NodeCleared and TimerExpired are now both sent and received (wired in Phase 2)
+- UpgradeSelected remains registered but unused (future phases)

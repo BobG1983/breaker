@@ -40,6 +40,11 @@ lto = "thin"
 
 - No SpriteBundle/NodeBundle — use required components + tuples
 - `commands.spawn(Camera2d)` — not CameraBundle; Camera2d is a zero-sized marker component; required components (Camera, Projection, Frustum) auto-inserted
+- To override Camera2d's default projection, include `Projection::from(OrthographicProjection { scaling_mode: ScalingMode::AutoMin { min_width: 1920.0, min_height: 1080.0 }, ..OrthographicProjection::default_2d() })` in the spawn tuple
+- `OrthographicProjection` fields: `near: f32`, `far: f32`, `viewport_origin: Vec2`, `scaling_mode: ScalingMode`, `scale: f32`, `area: Rect`
+- `OrthographicProjection::default_2d()` — sets near to a negative value (enables z-layering with positive z coords)
+- `ScalingMode` variants: `WindowSize`, `Fixed { width, height }`, `AutoMin { min_width, min_height }`, `AutoMax { max_width, max_height }`, `FixedVertical { viewport_height }`, `FixedHorizontal { viewport_width }`
+- Import path: `bevy::camera::OrthographicProjection` and `bevy::camera::ScalingMode` (also in prelude)
 - `Sprite::from_image(handle)` or `Sprite::from_atlas_image(handle, atlas)`
 - `Sprite::from_color(color, Vec2)` — solid-color rectangle; requires NO image asset
 - Sprite fields: `image`, `texture_atlas`, `color`, `flip_x`, `flip_y`, `custom_size`, `rect`, `image_mode`
@@ -81,7 +86,11 @@ lto = "thin"
 
 ## Window Configuration (verified 0.18.1)
 
-- `Window` component has `title: String` and `resolution: WindowResolution` fields
+- `Window` component has `title: String`, `resolution: WindowResolution`, and `mode: WindowMode` fields
+- `WindowMode` variants: `Windowed` (default), `BorderlessFullscreen(MonitorSelection)`, `Fullscreen(MonitorSelection, VideoModeSelection)`
+- **There is NO `WindowMode::Maximized` variant** — use `Window::set_maximized(true)` method instead
+- `set_maximized(true)` sets `internal.maximize_request = Some(true)` — there is no `maximized: bool` field
+- To start maximized: set it in the primary_window config OR via a startup system querying `Query<&mut Window, With<PrimaryWindow>>`
 - Configure at startup via DefaultPlugins:
   ```rust
   DefaultPlugins.set(WindowPlugin {
@@ -189,6 +198,39 @@ See [fixed_update_testing.md](fixed_update_testing.md) for full details. Key fac
 - `drop` is `fn drop<T>(_: T)` — satisfies `FnMut(Progress) -> ()` exactly
 - Verified in source: `bevy_ecs-0.18.1/src/system/mod.rs:224` and the official doc example
 - No `ignore` helper exists — `.map(drop)` is the canonical pattern, shown in Bevy's own docs
+
+## Observers, Triggers, One-Shot Systems (verified v0.18.1)
+
+See [observers_and_oneshot.md](observers_and_oneshot.md) for full details. Key facts:
+- `#[derive(Event)]` + `commands.trigger(MyEvent{..})` — deferred (at cmd flush); `world.trigger()` — immediate
+- `#[derive(EntityEvent)]` — targets specific entities; use `commands.trigger_targets(e, entity)`
+- `app.add_observer(|e: On<MyEvent>, ...| {...})` — global; `commands.entity(id).observe(...)` — entity-local
+- `Observer::new(fn).with_entities([a,b])` — multi-entity observer, built BEFORE spawn; cannot retarget after
+- Observers run synchronously, outside the schedule, in registration order; can chain via `commands.trigger()`
+- `commands.trigger()` fires at next cmd flush; `world.trigger()` fires immediately (needs exclusive world)
+- `On<E>`: implements `Deref<Target=E>`, `e.observer()` returns observer entity, `e.propagate(bool)` for EntityEvent
+- Component hooks: `#[component(on_add = fn)]` — one hook per lifecycle, runs before observers
+- Built-in `On<Add, C>` / `On<Remove, C>` observers — multiple observers CAN watch same lifecycle
+- One-shot: `world.register_system(fn) -> SystemId`, `world.run_system(id)`, `world.run_system_with(id, input)`
+- `register_system_cached` / `run_system_cached` — for zero-sized fn pointers, no manual id storage needed
+- Dynamic schedule addition NOT recommended at runtime — use one-shot systems instead
+- `#[derive(Event)]` is for observer-triggered events ONLY; game messages use `#[derive(Message)]`
+
+## Hierarchy API (verified v0.18.1 source: bevy_ecs-0.18.1/src/hierarchy.rs)
+
+- The parent component is `ChildOf`, NOT `Parent` — `Parent` does not exist in 0.18.1
+- `ChildOf` is in `bevy::prelude`; `bevy_hierarchy` crate no longer exists (merged into `bevy_ecs`)
+- Definition: `pub struct ChildOf(#[entities] pub Entity);` — tuple struct wrapping the parent `Entity`
+- `#[doc(alias = "Parent")]` on `ChildOf` — confirms `Parent` was renamed to `ChildOf`
+- Method: `pub fn parent(&self) -> Entity` — returns the parent Entity
+- Direct field access also works: `child_of.0`
+- In queries: `Query<&ChildOf, With<MyMarker>>`; call `.parent()` on the result
+- `Children` component: lives on the PARENT, contains `Vec<Entity>` of child entity ids
+- Hierarchy is maintained automatically via component hooks — never manually mutate `Children`
+- `ChildOf` self-removes if parent is despawned or if entity tries to parent itself (hooks validate)
+- Spawn pattern: `world.spawn(ChildOf(parent_entity))` or via `commands.entity(parent).with_child(bundle)`
+- `with_child(bundle)` on `EntityCommands` spawns one child and inserts `ChildOf` automatically
+- `children![]` macro: `world.spawn((Name::new("Root"), children![Name::new("Child1")]))`
 
 ## Sources
 

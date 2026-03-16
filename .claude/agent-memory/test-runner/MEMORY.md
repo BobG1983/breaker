@@ -5,10 +5,10 @@
 
 # Build Validation Status
 
-**Last Validation: PASS** (2026-03-13, main)
-- Format: PASS (1 file auto-formatted: run/plugin.rs)
+**Last Validation: PASS** (2026-03-16, main, current session)
+- Format: PASS (no formatting issues)
 - Clippy: PASS (no warnings or errors)
-- Tests: PASS (244 passed, 0 failed, 0 ignored)
+- Tests: PASS (344 passed, 0 failed, 0 ignored)
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -32,12 +32,35 @@
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
 
 ## Validation History
-- **2026-03-13, refactor/extract-wall-domain (current)**: PASS
+- **2026-03-16, main (current session, latest)**: PASS
+  - Format: PASS (no formatting issues)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: PASS (344 passed, 0 failed, 0 ignored)
+  - Status: Main branch is clean and ready for development
+- **2026-03-16, main (earlier)**: FAIL
+  - Format: PASS (2 files auto-formatted: handle_cell_hit.rs, track_node_completion.rs)
+  - Clippy: Build failed (compilation error prevents linting)
+  - Tests: Build failed (compilation error prevents testing)
+  - Error: src/run/systems/handle_timer_expired.rs:32 — NextState<GameState>.get() method does not exist in Bevy 0.18.1
+  - Root cause: NextState API in Bevy 0.18.1 has no public read method; only .set() is available
+  - Status: Blocking issue requires developer fix
+- **2026-03-16, main (earlier)**: PASS
+  - Format: PASS (1 file auto-formatted: app.rs)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: PASS (341 passed, 0 failed, 0 ignored)
+  - Status: Main branch is clean and ready for development
+- **2026-03-13, main (previous)**: PASS
+  - Format: PASS (1 file auto-formatted: breaker/behaviors/active.rs)
+  - Clippy: PASS (no warnings or errors)
+  - Tests: PASS (339 passed, 0 failed, 0 ignored)
+  - Change: +95 tests since last main validation (2026-03-13) — significant test suite expansion
+  - Status: Main branch is clean and ready for development
+- **2026-03-13, refactor/extract-wall-domain**: PASS
   - Format: PASS (no files needed formatting)
   - Clippy: PASS (no warnings or errors)
   - Tests: PASS (244 passed, 0 failed, 0 ignored)
   - Status: Wall domain extraction is complete and builds cleanly
-- **2026-03-13, main**: PASS
+- **2026-03-13, main (previous)**: PASS
   - Format: PASS (1 file auto-formatted: run/plugin.rs)
   - Clippy: PASS (no warnings or errors)
   - Tests: PASS (244 passed, 0 failed, 0 ignored)

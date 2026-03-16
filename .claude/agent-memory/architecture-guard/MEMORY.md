@@ -18,6 +18,7 @@
 - screen/run_end/ sub-domain added (Phase 2b): follows loading/main_menu pattern, PASS
 - **Post-refactor audit 2026-03-13**: PASS — run/node/mod.rs routing-only violation RESOLVED (types extracted to resources.rs + sets.rs). No critical violations. One observation: run/node/ lacks its own plugin.rs (systems registered in parent run/plugin.rs).
 - **Phase 2c audit 2026-03-13**: PASS — BehaviorPlugin added as breaker sub-domain. Per-consequence file layout in `consequences/` directory. Bridge systems consume BoltLost + BumpPerformed messages. Internal dispatch via Bevy observers (Events), not messages. One accepted compromise: handle_life_lost writes ResMut<RunState>.
+- **Full codebase audit 2026-03-16**: PASS — 0 critical violations, 2 minor observations (SelectedArchetype placement in shared.rs, double init_resource in tests). All 11 review categories clean: folder structure, mod.rs routing-only, plugin boundaries, message discipline, cross-domain access, SystemSet ordering, schedule placement, entity cleanup, state management, config-to-entity pipeline, test structure.
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin

@@ -104,6 +104,10 @@ When something IS good, say so with equal conviction. Enthusiasm for great ideas
 - Don't evaluate in a vacuum. Always consider how the proposal interacts with existing systems.
 - Don't forget that the player is holding a controller with sweaty palms and a timer counting down. That's the context for every decision.
 
+## Parallel Execution
+
+Run simultaneously with **test-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, and **doc-guard** — all are independent. Launch at the same time as other post-implementation validators when a new mechanic is involved.
+
 ⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
 - `cargo dbuild` — build (dynamic linking)

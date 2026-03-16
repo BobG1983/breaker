@@ -35,6 +35,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 **ALWAYS do**:
 - Write tests FIRST for new game logic (see `docs/architecture/standards.md` Testing — TDD)
 - Follow the git workflow in @.claude/rules/git.md
+- Run command line tools individually, do not chain them with &&
 
 **Move freely on**:
 - Implementation within existing system boundaries
@@ -50,18 +51,46 @@ See `docs/DESIGN.md` for the full set of non-negotiable design pillars. The key 
 
 The main agent is the orchestrator. Invoke subagents automatically at these trigger points — do not wait to be asked.
 
+### Phase 1 — Before Writing Code (sequential)
+
 | Trigger | Agent | Why |
 |---------|-------|-----|
 | Unfamiliar Bevy 0.18 API or pattern | **bevy-api-expert** | Verify before using — Bevy APIs change between versions |
+
+### Phase 2 — After Implementation (launch in parallel)
+
+Launch all applicable agents simultaneously — they are independent:
+
+| Trigger | Agent | Why |
+|---------|-------|-----|
+| Always after implementation | **test-runner** | Full validation suite (fmt, clippy, tests) |
+| Always after implementation | **correctness-reviewer** | Logic bugs, ECS pitfalls, state machine holes, math |
+| Always after implementation | **quality-reviewer** | Idioms, vocabulary, test coverage, documentation |
+| Always after implementation | **bevy-api-reviewer** | Verify Bevy API usage is correct for this version |
 | New system, plugin, or module added | **architecture-guard** | Validate plugin boundaries and message discipline |
+| 3+ systems added, or cross-plugin data flow | **system-dependency-mapper** | Detect ordering issues and conflicts |
+| New components or systems touching many entities | **perf-guard** | Bevy-specific performance: queries, archetypes, scheduling |
 | New gameplay mechanic or upgrade designed | **game-design-guard** | Validate against design pillars |
+| Phase complete or significant structural change | **doc-guard** | Sync architecture docs, PLAN.md, TERMINOLOGY.md |
+
+### Phase 3 — On Build/Test Failure (sequential, reactive)
+
+| Trigger | Agent | Why |
+|---------|-------|-----|
 | Compiler errors that aren't obvious | **rust-error-decoder** | Translate diagnostics into actionable fixes |
-| 3+ systems added to a plugin, or cross-plugin data flow | **system-dependency-mapper** | Detect ordering issues and conflicts |
-| Feature complete, ready to commit | **test-runner** | Full validation suite (fmt, clippy, tests) |
+
+### Release (solo)
+
+| Trigger | Agent | Why |
+|---------|-------|-----|
+| Preparing a release or release infrastructure | **release** | Version bump, changelog, GitHub Actions, itch.io |
+
+---
 
 **Post-implementation checklist** (run before considering a task done):
-1. Run **test-runner**
-2. Run `/simplify` on changed code
-3. If new systems or plugins were added → run **architecture-guard**
-4. If new gameplay mechanics were added → run **game-design-guard**
-5. Commit to the feature branch with a conventional commit message
+1. Launch **test-runner** + **correctness-reviewer** + **quality-reviewer** + **bevy-api-reviewer** in parallel (always)
+2. If new systems/plugins added → also launch **architecture-guard** + **system-dependency-mapper** in the same parallel wave
+3. If new gameplay mechanic → also launch **game-design-guard** in the same parallel wave
+4. If phase complete or docs may have drifted → also launch **doc-guard** in the same parallel wave
+5. Run `/simplify` on changed code
+6. Commit to the feature branch with a conventional commit message

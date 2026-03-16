@@ -1,0 +1,94 @@
+# bevy-api-reviewer Memory
+
+## Bevy Version
+Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
+
+## Confirmed Correct Patterns for This Version
+
+### Hierarchy
+- `ChildOf` (not `Parent`) is the parent component — confirmed correct for 0.18.1
+- `child_of.parent()` method is correct
+- `commands.entity(e).with_child(bundle)` auto-inserts `ChildOf`
+
+### Despawn
+- `commands.entity(e).despawn()` is RECURSIVE in 0.18 (changed from 0.16 migration; `despawn_recursive` was removed)
+- The cleanup_entities pattern using `despawn()` is correct even for UI hierarchies
+
+### Query API
+- `query.single()` returns `Result<D, QuerySingleError>` in 0.18.1 — fallible
+- The `let Ok(...) = query.single() else { return; }` pattern throughout is correct
+- `query.single_mut()` also returns a Result
+
+### Messages
+- `#[derive(Message)]` + `MessageWriter<T>` + `MessageReader<T>` + `app.add_message::<M>()` — correct
+- `AppExit` implements `Message` in 0.18.1 — `MessageWriter<AppExit>` is valid
+- `KeyboardInput` is a `Message` (not Event) — `MessageReader<KeyboardInput>` is correct
+- `world.write_message(msg)` is how to send messages in tests
+
+### Spawn Patterns
+- `Mesh2d(meshes.add(...))` + `MeshMaterial2d(materials.add(...))` — correct (no bundles)
+- `Camera2d` as zero-size marker component with required components auto-inserted — correct
+- `Sprite::from_color()` / `ColorMaterial::from_color()` — correct
+- `Circle::new(r)` + `Rectangle::new(w, h)` in `bevy::prelude` — correct
+
+### UI (Bevy 0.18 - no bundles)
+- `Node { ... }` component directly (not `NodeBundle`) — correct
+- `Text::new("...")` for UI text — correct
+- `Text2d::new("...")` for 2D world text — correct
+- `TextFont { font_size, ..default() }` — correct
+- `TextFont::from_font_size(f32)` constructor — confirmed valid
+- `TextColor(Color::...)` — correct
+- `BackgroundColor(Color::...)`, `BorderColor::all(...)` — correct
+- `Button` as marker component (no `ButtonBundle`) — correct
+
+### Gizmos API
+- `gizmos.circle_2d(impl Into<Isometry2d>, radius, color)` — Vec2 implements Into<Isometry2d> via From<Vec2>
+- `gizmos.rect_2d(impl Into<Isometry2d>, Vec2, color)` — same, Vec2 arg is valid
+- `gizmos.arrow_2d(Vec2, Vec2, color)` — takes Vec2 directly (not Isometry2d)
+
+### State API
+- `#[derive(States)]`, `app.init_state::<S>()`, `in_state(S::Variant)` — correct
+- `#[derive(SubStates)]` with `#[source(ParentState = ParentState::Variant)]` — correct
+- `OnEnter(S::V)`, `OnExit(S::V)` schedule labels — correct
+
+### EguiPlugin
+- `app.add_plugins(EguiPlugin::default())` — correct for bevy_egui 0.39
+- Debug UI systems go in `bevy_egui::EguiPrimaryContextPass` schedule — correct
+
+### Fixed Update Testing
+- `accumulate_overstep(timestep)` triggers FixedUpdate in tests — correct (NOT advance_by)
+- `Time<Fixed>` with `accumulate_overstep` pattern throughout is correct
+
+### Easing
+- `EaseFunction::QuadraticIn` etc. in `bevy::math::curve::easing` — correct
+- `.sample_clamped(t)` on `EaseFunction` — correct (implements `Curve<f32>`)
+- Import: `use bevy::math::curve::{Curve, easing::EaseFunction}` — correct
+
+### Input
+- `Res<ButtonInput<KeyCode>>` with `.pressed()`, `.just_pressed()` — correct
+- `InputSystems` (plural) system set — correct
+
+### Camera
+- `Projection::from(OrthographicProjection { ... })` — correct
+- `OrthographicProjection::default_2d()` — correct
+- `ScalingMode::AutoMin { min_width, min_height }` — correct
+- `Tonemapping::AcesFitted` — safe variant (no LUT required) — correct
+
+### Window
+- `window.set_maximized(true)` — correct (no `WindowMode::Maximized`)
+
+### AssetPlugin
+- `bevy::asset::AssetPlugin { file_path: "assets".into(), ..default() }` — correct for tests
+
+## Deprecated Patterns Found
+(none found in this codebase)
+
+## Patterns That Look Wrong But Are Correct
+- `commands.entity(e).despawn()` on UI roots with children — CORRECT, despawn() is recursive in 0.18+
+- `gizmos.circle_2d(vec2, radius, color)` — CORRECT, Vec2 implements Into<Isometry2d>
+- `MessageWriter<AppExit>` — CORRECT, AppExit implements Message in 0.18.1
+
+## Reference
+- bevy-api-expert memory: `.claude/agent-memory/bevy-api-expert/` — already-verified facts; check here before looking up docs.rs
+- despawn recursive change: Bevy 0.15→0.16 migration — despawn() is now recursive
+- Gizmos: docs.rs/bevy/0.18.1/bevy/gizmos/gizmos/struct.Gizmos.html

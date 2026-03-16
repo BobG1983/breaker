@@ -1,39 +1,49 @@
 # Game Design Guard Memory
 
+## Full Codebase Review (2026-03-16)
+- See `full-review-2026-03-16.md` for comprehensive findings
+- Parameters have been rescaled to 1920x1080 canvas (all values differ from Phase 1 review)
+- Phase 1 core mechanics remain APPROVED
+- Phase 2b run structure APPROVED
+- Phase 2c archetype system APPROVED
+- 2 HIGH issues: run-end dead air, doc inconsistency on bump multipliers
+- 2 MEDIUM issues: bolt-lost respawn too safe, perfect window possibly too generous
+
 ## Phase 1 Validation (2026-03-11, updated)
-- Phase 1 core mechanics APPROVED against design pillars
-- See `phase1-review.md` for detailed findings
-- Bump grade detection NOW USES BoltHitBreaker messages (fixed since last review)
-- Perfect bump dash-cancel IS IMPLEMENTED -- schedule ordering VERIFIED CORRECT
+- See `phase1-review.md` for original detailed findings
+- SUPERSEDED by full review for parameter values (rescale changed all numbers)
 
-## Open Issues
-- apply_bump_velocity lacks explicit .after() ordering in bolt/plugin.rs -- works by accident, should fix
-- Bolt-lost respawn has no weight/penalty pre-Phase 2 -- deferred, acceptable
-- No bolt speed decay mechanism -- track for Phase 2 discussion
-- MIN_PHYSICS_FPS (30.0) hardcoded in bolt_cell_collision -- needs comment about max_speed dependency
+## Phase 2b Validation (2026-03-13, updated)
+- See `phase2b-review.md` for detailed findings
+- Run-end screen dead air issue STILL OPEN
 
-## Key Parameter Values (Phase 1)
-- Breaker: max_speed=500, dash_mult=2.0x, dash_dur=0.15s
-- Bolt: base=400, min=200, max=800, min_angle=~10deg
-- Bump: duration=0.3s, perfect_window=0.05s, early_window=0.15s
-- Bump multipliers: perfect=1.5x, early/late=0.8x (penalty!), none=1.0x
-- Tilt: dash=~15deg, brake=~25deg
-- Max reflection: ~75deg from vertical
-- Bolt speed floored to base_speed (400) on every breaker contact
+## Key Parameter Values (Post-Rescale, 2026-03-16)
+- Playfield: 1440w x 1080h
+- Breaker: width=216, height=36, max_speed=900, dash_mult=4.0x, dash_dur=0.15s
+- Bolt: base=720, min=360, max=1440, radius=14
+- Bump: perfect_window=0.15s, early=0.15s, late=0.15s
+- Bump multipliers (Aegis): perfect=1.5x, early/late=0.8x
+- Bump cooldowns: perfect=0.0, weak=0.15s
+- Tilt: dash=15deg, brake=25deg
+- Max reflection: 75deg from vertical
+- Dash covers 540 units = 37.5% of playfield width
 
 ## Design Principles Confirmed
-- Mistimed bumps (0.8x) are WORSE than no bump (1.0x) -- mashing is punished
-- Bolt reflection completely overwrites direction -- every breaker contact is skill expression
+- Mistimed bumps (0.8x) penalize above base speed, neutral at base speed
+- Bolt reflection completely overwrites direction -- every contact is skill expression
 - Dash requires directional commitment -- no stationary dashes
 - Three control axes: position, tilt angle, bump timing
 - All gameplay parameters are data-driven (RON configs + Rust defaults)
+- Timer has no grace period -- zero means you lose
+- Archetype behaviors are data-driven via RON trigger/consequence bindings
 
-## Phase 2b Validation (2026-03-13, updated)
-- Run structure and node timer APPROVED
-- See `phase2b-review.md` for detailed findings
-- Timer UI thresholds at 33%/15% -- IMPLEMENTED, correct
-- Fortress retuned to 70s -- escalation now correct (HP/s: 0.57 -> 0.72 -> 1.0)
-- Run-end screen still has dead air (no auto-advance) and weak copy ("The clock ran out." / "All nodes cleared!")
+## Open Issues (Ordered by Priority)
+1. Run-end screen dead air (no timer/auto-advance) -- HIGH
+2. PLAN.md/README say bump "all grades boost" but 0.8x is penalty -- HIGH (doc fix)
+3. Bolt-lost respawn straight up = no reaction required -- MEDIUM
+4. 150ms perfect window may be too generous post-rescale -- MEDIUM (validate Phase 4)
+5. Run-end subtitle copy is weak/passive -- LOW
+6. Main menu skips RunSetup state -- LOW (expected pre-2d)
 
 ## Data-Driven Config Status
 - bolt: RON + BoltDefaults + BoltConfig -- COMPLETE
@@ -43,10 +53,13 @@
 - playfield: RON + PlayfieldDefaults + PlayfieldConfig -- COMPLETE
 - mainmenu: RON + MainMenuDefaults + MainMenuConfig -- COMPLETE
 - timerui: RON + TimerUiDefaults + TimerUiConfig -- COMPLETE
+- archetype: RON + ArchetypeDefinition + ArchetypeRegistry -- COMPLETE
 
 ## Future Design Notes
 - Speed decay: recommend per-bounce/per-cell-hit decay, NOT passive time decay
-- Bolt-lost respawn: consider random angle on respawn to force reaction
+- Bolt-lost respawn: randomize angle within +/-30deg to force reaction
 - Piercing Amps will need "one cell per tick" limit revisited
 - Phase 4: timer urgency should escalate to screen-level effects, not just text color
+- Phase 7: introduce optional cells (not required_to_clear) for risk/reward with timer
 - Phase 7: run rewards should differentiate on time remaining and nodes cleared
+- If Phase 4 feels too easy: first knobs are perfect_window (toward 80-100ms) and dash_mult (toward 2.5-3x)
