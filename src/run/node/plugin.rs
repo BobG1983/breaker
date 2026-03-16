@@ -42,7 +42,9 @@ impl Plugin for NodePlugin {
                 (
                     track_node_completion.in_set(NodeSystems::TrackCompletion),
                     tick_node_timer.in_set(NodeSystems::TickTimer),
-                    apply_time_penalty.after(NodeSystems::TickTimer),
+                    apply_time_penalty
+                        .in_set(NodeSystems::ApplyTimePenalty)
+                        .after(NodeSystems::TickTimer),
                 )
                     .run_if(in_state(PlayingState::Active)),
             );

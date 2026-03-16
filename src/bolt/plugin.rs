@@ -42,7 +42,7 @@ impl Plugin for BoltPlugin {
                     apply_bump_velocity
                         .after(PhysicsSystems::BreakerCollision)
                         .before(PhysicsSystems::BoltLost),
-                    spawn_additional_bolt.after(PhysicsSystems::BreakerCollision),
+                    spawn_additional_bolt.after(BreakerSystems::BehaviorBridge),
                     spawn_bolt_lost_text,
                 )
                     .run_if(in_state(PlayingState::Active)),

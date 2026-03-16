@@ -15,7 +15,7 @@ use super::{
     registry::ArchetypeRegistry,
 };
 use crate::{
-    breaker::systems::init_breaker_params,
+    breaker::{BreakerSystems, systems::init_breaker_params},
     physics::PhysicsSystems,
     shared::{GameState, PlayingState},
     ui::systems::spawn_timer_hud,
@@ -55,9 +55,11 @@ impl Plugin for BehaviorPlugin {
                 (
                     bridge_bolt_lost
                         .after(PhysicsSystems::BoltLost)
+                        .in_set(BreakerSystems::BehaviorBridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BoltLost)),
                     bridge_bump
                         .after(PhysicsSystems::BreakerCollision)
+                        .in_set(BreakerSystems::BehaviorBridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger_any_bump()),
                 )
                     .run_if(in_state(PlayingState::Active)),

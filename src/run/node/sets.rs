@@ -12,4 +12,10 @@ pub enum NodeSystems {
     TrackCompletion,
     /// Tick the node countdown timer.
     TickTimer,
+    /// Apply time penalties from archetype consequences.
+    ///
+    /// Runs after `TickTimer`. Systems that read `TimerExpired` should
+    /// order `.after(NodeSystems::ApplyTimePenalty)` to see penalty-induced
+    /// expirations in the same tick.
+    ApplyTimePenalty,
 }
