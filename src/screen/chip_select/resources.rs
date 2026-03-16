@@ -1,15 +1,15 @@
-//! Upgrade selection screen resources.
+//! Chip selection screen resources.
 
 use bevy::prelude::*;
 use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
-use crate::upgrades::UpgradeDefinition;
+use crate::chips::ChipDefinition;
 
-/// Upgrade select defaults loaded from RON.
+/// Chip select defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "UpgradeSelectConfig")]
-pub struct UpgradeSelectDefaults {
+#[game_config(name = "ChipSelectConfig")]
+pub struct ChipSelectDefaults {
     /// Time in seconds for the selection countdown.
     pub timer_secs: f32,
     /// Font size for card title text.
@@ -26,7 +26,7 @@ pub struct UpgradeSelectDefaults {
     pub timer_color_rgb: [f32; 3],
 }
 
-impl Default for UpgradeSelectDefaults {
+impl Default for ChipSelectDefaults {
     fn default() -> Self {
         Self {
             timer_secs: 10.0,
@@ -40,26 +40,26 @@ impl Default for UpgradeSelectDefaults {
     }
 }
 
-/// Screen-local countdown timer for the upgrade selection screen.
+/// Screen-local countdown timer for the chip selection screen.
 #[derive(Resource, Debug)]
-pub struct UpgradeSelectTimer {
+pub struct ChipSelectTimer {
     /// Remaining time in seconds.
     pub remaining: f32,
 }
 
 /// Tracks which card is currently highlighted.
 #[derive(Resource, Debug)]
-pub struct UpgradeSelectSelection {
+pub struct ChipSelectSelection {
     /// Zero-based index of the selected card.
     pub index: usize,
 }
 
-/// The upgrade definitions offered this screen visit.
+/// The chip definitions offered this screen visit.
 ///
-/// Inserted by `spawn_upgrade_select`, read by `handle_upgrade_input`
-/// to resolve a selection index into upgrade identity.
+/// Inserted by `spawn_chip_select`, read by `handle_chip_input`
+/// to resolve a selection index into chip identity.
 #[derive(Resource, Debug)]
-pub struct UpgradeOffers(pub Vec<UpgradeDefinition>);
+pub struct ChipOffers(pub Vec<ChipDefinition>);
 
 #[cfg(test)]
 mod tests {
@@ -67,18 +67,18 @@ mod tests {
 
     #[test]
     fn default_config_has_positive_timer() {
-        let config = UpgradeSelectConfig::default();
+        let config = ChipSelectConfig::default();
         assert!(config.timer_secs > 0.0);
     }
 
     #[test]
-    fn upgrade_select_defaults_ron_parses() {
+    fn chip_select_defaults_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/config/defaults.upgradeselect.ron"
+            "/assets/config/defaults.chipselect.ron"
         ));
-        let result: UpgradeSelectDefaults =
-            ron::de::from_str(ron_str).expect("upgradeselect RON should parse");
+        let result: ChipSelectDefaults =
+            ron::de::from_str(ron_str).expect("chipselect RON should parse");
         assert!(result.timer_secs > 0.0);
     }
 }

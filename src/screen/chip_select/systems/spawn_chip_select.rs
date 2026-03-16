@@ -1,35 +1,35 @@
-//! System to spawn the upgrade selection screen UI.
+//! System to spawn the chip selection screen UI.
 
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
 use crate::{
-    screen::upgrade_select::{
-        UpgradeSelectConfig,
-        components::{UpgradeCard, UpgradeSelectScreen, UpgradeTimerText},
-        resources::{UpgradeOffers, UpgradeSelectSelection, UpgradeSelectTimer},
+    chips::ChipRegistry,
+    screen::chip_select::{
+        ChipSelectConfig,
+        components::{ChipCard, ChipSelectScreen, ChipTimerText},
+        resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
     },
-    upgrades::UpgradeRegistry,
 };
 
-/// Maximum number of upgrade cards to display.
+/// Maximum number of chip cards to display.
 const MAX_CARDS: usize = 3;
 
-/// Spawns the upgrade selection UI with cards from the registry and a countdown timer.
-pub fn spawn_upgrade_select(
+/// Spawns the chip selection UI with cards from the registry and a countdown timer.
+pub fn spawn_chip_select(
     mut commands: Commands,
-    config: Res<UpgradeSelectConfig>,
-    registry: Res<UpgradeRegistry>,
+    config: Res<ChipSelectConfig>,
+    registry: Res<ChipRegistry>,
 ) {
-    let offers: Vec<_> = registry.upgrades.iter().take(MAX_CARDS).cloned().collect();
+    let offers: Vec<_> = registry.chips.iter().take(MAX_CARDS).cloned().collect();
 
-    commands.insert_resource(UpgradeSelectTimer {
+    commands.insert_resource(ChipSelectTimer {
         remaining: config.timer_secs,
     });
-    commands.insert_resource(UpgradeSelectSelection { index: 0 });
+    commands.insert_resource(ChipSelectSelection { index: 0 });
 
     commands
         .spawn((
-            UpgradeSelectScreen,
+            ChipSelectScreen,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
@@ -47,12 +47,12 @@ pub fn spawn_upgrade_select(
             spawn_prompt(parent);
         });
 
-    commands.insert_resource(UpgradeOffers(offers));
+    commands.insert_resource(ChipOffers(offers));
 }
 
-fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSelectConfig) {
+fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &ChipSelectConfig) {
     parent.spawn((
-        UpgradeTimerText,
+        ChipTimerText,
         Text::new(format!("{:.0}", config.timer_secs)),
         TextFont {
             font_size: config.timer_font_size,
@@ -79,8 +79,8 @@ fn spawn_title(parent: &mut ChildSpawnerCommands<'_>) {
 
 fn spawn_card_row(
     parent: &mut ChildSpawnerCommands<'_>,
-    config: &UpgradeSelectConfig,
-    offers: &[crate::upgrades::UpgradeDefinition],
+    config: &ChipSelectConfig,
+    offers: &[crate::chips::ChipDefinition],
 ) {
     let selected_color = Color::srgb(
         config.selected_color_rgb[0],
@@ -102,11 +102,11 @@ fn spawn_card_row(
             ..default()
         })
         .with_children(|row| {
-            for (i, upgrade) in offers.iter().enumerate() {
+            for (i, chip) in offers.iter().enumerate() {
                 let border_color = if i == 0 { selected_color } else { normal_color };
 
                 row.spawn((
-                    UpgradeCard { index: i },
+                    ChipCard { index: i },
                     Button,
                     Node {
                         width: Val::Px(200.0),
@@ -124,7 +124,7 @@ fn spawn_card_row(
                 ))
                 .with_children(|card| {
                     card.spawn((
-                        Text::new(upgrade.name.clone()),
+                        Text::new(chip.name.clone()),
                         TextFont {
                             font_size: config.card_title_font_size,
                             ..default()
@@ -133,7 +133,7 @@ fn spawn_card_row(
                     ));
 
                     card.spawn((
-                        Text::new(upgrade.description.clone()),
+                        Text::new(chip.description.clone()),
                         TextFont {
                             font_size: config.card_description_font_size,
                             ..default()
@@ -159,35 +159,35 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::upgrades::{UpgradeDefinition, UpgradeKind};
+    use crate::chips::{ChipDefinition, ChipKind};
 
-    fn make_upgrade(name: &str, kind: UpgradeKind) -> UpgradeDefinition {
-        UpgradeDefinition {
+    fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
+        ChipDefinition {
             name: name.to_owned(),
             kind,
             description: format!("{name} description"),
         }
     }
 
-    fn make_registry(count: usize) -> UpgradeRegistry {
-        let upgrades = vec![
-            make_upgrade("Piercing Shot", UpgradeKind::Amp),
-            make_upgrade("Wide Breaker", UpgradeKind::Augment),
-            make_upgrade("Surge", UpgradeKind::Overclock),
-            make_upgrade("Ricochet", UpgradeKind::Amp),
-            make_upgrade("Quick Dash", UpgradeKind::Augment),
+    fn make_registry(count: usize) -> ChipRegistry {
+        let chips = vec![
+            make_chip("Piercing Shot", ChipKind::Amp),
+            make_chip("Wide Breaker", ChipKind::Augment),
+            make_chip("Surge", ChipKind::Overclock),
+            make_chip("Ricochet", ChipKind::Amp),
+            make_chip("Quick Dash", ChipKind::Augment),
         ];
-        UpgradeRegistry {
-            upgrades: upgrades.into_iter().take(count).collect(),
+        ChipRegistry {
+            chips: chips.into_iter().take(count).collect(),
         }
     }
 
-    fn test_app_with_registry(registry: UpgradeRegistry) -> App {
+    fn test_app_with_registry(registry: ChipRegistry) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.insert_resource(UpgradeSelectConfig::default());
+        app.insert_resource(ChipSelectConfig::default());
         app.insert_resource(registry);
-        app.add_systems(Update, spawn_upgrade_select);
+        app.add_systems(Update, spawn_chip_select);
         app
     }
 
@@ -198,7 +198,7 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query_filtered::<Entity, With<UpgradeSelectScreen>>()
+            .query_filtered::<Entity, With<ChipSelectScreen>>()
             .iter(app.world())
             .count();
         assert_eq!(count, 1);
@@ -211,7 +211,7 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query::<&UpgradeCard>()
+            .query::<&ChipCard>()
             .iter(app.world())
             .count();
         assert_eq!(count, 3);
@@ -224,7 +224,7 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query::<&UpgradeCard>()
+            .query::<&ChipCard>()
             .iter(app.world())
             .count();
         assert_eq!(count, 2);
@@ -237,7 +237,7 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query::<&UpgradeCard>()
+            .query::<&ChipCard>()
             .iter(app.world())
             .count();
         assert_eq!(count, 0);
@@ -248,7 +248,7 @@ mod tests {
         let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
-        let timer = app.world().resource::<UpgradeSelectTimer>();
+        let timer = app.world().resource::<ChipSelectTimer>();
         assert!((timer.remaining - 10.0).abs() < f32::EPSILON);
     }
 
@@ -257,7 +257,7 @@ mod tests {
         let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 0);
     }
 
@@ -266,7 +266,7 @@ mod tests {
         let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
-        let offers = app.world().resource::<UpgradeOffers>();
+        let offers = app.world().resource::<ChipOffers>();
         assert_eq!(offers.0.len(), 3);
         assert_eq!(offers.0[0].name, "Piercing Shot");
         assert_eq!(offers.0[1].name, "Wide Breaker");
@@ -280,14 +280,14 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query_filtered::<Entity, With<UpgradeTimerText>>()
+            .query_filtered::<Entity, With<ChipTimerText>>()
             .iter(app.world())
             .count();
         assert_eq!(count, 1);
     }
 
     #[test]
-    fn cards_display_real_upgrade_names() {
+    fn cards_display_real_chip_names() {
         let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
@@ -308,7 +308,7 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query_filtered::<Entity, With<UpgradeSelectScreen>>()
+            .query_filtered::<Entity, With<ChipSelectScreen>>()
             .iter(app.world())
             .count();
         assert_eq!(count, 1);
@@ -321,12 +321,12 @@ mod tests {
 
         let count = app
             .world_mut()
-            .query::<&UpgradeCard>()
+            .query::<&ChipCard>()
             .iter(app.world())
             .count();
         assert_eq!(count, 3, "should cap at MAX_CARDS even with 5 in registry");
 
-        let offers = app.world().resource::<UpgradeOffers>();
+        let offers = app.world().resource::<ChipOffers>();
         assert_eq!(offers.0.len(), 3);
     }
 }

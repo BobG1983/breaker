@@ -1,13 +1,13 @@
-//! Upgrades plugin registration.
+//! Chips plugin registration.
 
 use bevy::prelude::*;
 
-/// Plugin for the upgrades domain.
+/// Plugin for the chips domain.
 ///
-/// Owns upgrade application, stacking, and registry resources.
-pub struct UpgradesPlugin;
+/// Owns chip application, stacking, and registry resources.
+pub struct ChipsPlugin;
 
-impl Plugin for UpgradesPlugin {
+impl Plugin for ChipsPlugin {
     fn build(&self, _app: &mut App) {
         // Phase 0: stub — registries and systems added in later phases.
     }
@@ -21,7 +21,7 @@ mod tests {
     fn plugin_builds() {
         App::new()
             .add_plugins(MinimalPlugins)
-            .add_plugins(UpgradesPlugin)
+            .add_plugins(ChipsPlugin)
             .update();
     }
 }

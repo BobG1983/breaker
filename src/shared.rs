@@ -95,8 +95,8 @@ pub enum GameState {
     Playing,
     /// Transient 1-frame state between nodes — exits `Playing` then re-enters it.
     NodeTransition,
-    /// Timed upgrade selection between nodes.
-    UpgradeSelect,
+    /// Timed chip selection between nodes.
+    ChipSelect,
     /// Run end screen — win or lose.
     RunEnd,
     /// Between-run Flux spending and meta-progression.
@@ -140,7 +140,7 @@ pub struct CleanupOnNodeExit;
 
 /// Marker component for entities that should be despawned when a run ends.
 ///
-/// Added to breaker, run-scoped upgrades, and accumulated state.
+/// Added to breaker, run-scoped chips, and accumulated state.
 #[derive(Component)]
 pub struct CleanupOnRunEnd;
 

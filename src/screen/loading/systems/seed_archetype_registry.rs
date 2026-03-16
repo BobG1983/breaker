@@ -76,7 +76,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![],
             archetypes,
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
             amps: vec![],
             augments: vec![],
             overclocks: vec![],

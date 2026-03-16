@@ -1,17 +1,17 @@
-//! Seeds `UpgradeSelectConfig` from loaded `UpgradeSelectDefaults`.
+//! Seeds `ChipSelectConfig` from loaded `ChipSelectDefaults`.
 
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::screen::{
+    chip_select::{ChipSelectConfig, ChipSelectDefaults},
     loading::resources::DefaultsCollection,
-    upgrade_select::{UpgradeSelectConfig, UpgradeSelectDefaults},
 };
 
-/// Reads the loaded `UpgradeSelectDefaults` asset and inserts `UpgradeSelectConfig`.
-pub fn seed_upgrade_select_config(
+/// Reads the loaded `ChipSelectDefaults` asset and inserts `ChipSelectConfig`.
+pub fn seed_chip_select_config(
     collection: Option<Res<DefaultsCollection>>,
-    assets: Res<Assets<UpgradeSelectDefaults>>,
+    assets: Res<Assets<ChipSelectDefaults>>,
     mut commands: Commands,
     mut seeded: Local<bool>,
 ) -> Progress {
@@ -23,11 +23,11 @@ pub fn seed_upgrade_select_config(
         return Progress { done: 0, total: 1 };
     };
 
-    let Some(defaults) = assets.get(&collection.upgradeselect) else {
+    let Some(defaults) = assets.get(&collection.chipselect) else {
         return Progress { done: 0, total: 1 };
     };
 
-    commands.insert_resource::<UpgradeSelectConfig>(defaults.clone().into());
+    commands.insert_resource::<ChipSelectConfig>(defaults.clone().into());
     *seeded = true;
     Progress { done: 1, total: 1 }
 }
@@ -35,13 +35,13 @@ pub fn seed_upgrade_select_config(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::screen::upgrade_select::UpgradeSelectDefaults;
+    use crate::screen::chip_select::ChipSelectDefaults;
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<UpgradeSelectDefaults>();
-        app.add_systems(Update, seed_upgrade_select_config.map(drop));
+        app.init_asset::<ChipSelectDefaults>();
+        app.add_systems(Update, seed_chip_select_config.map(drop));
         app
     }
 
@@ -49,17 +49,15 @@ mod tests {
     fn returns_zero_progress_without_collection() {
         let mut app = test_app();
         app.update();
-        assert!(app.world().get_resource::<UpgradeSelectConfig>().is_none());
+        assert!(app.world().get_resource::<ChipSelectConfig>().is_none());
     }
 
     #[test]
     fn seeds_config_when_asset_loaded() {
         let mut app = test_app();
 
-        let defaults = UpgradeSelectDefaults::default();
-        let mut assets = app
-            .world_mut()
-            .resource_mut::<Assets<UpgradeSelectDefaults>>();
+        let defaults = ChipSelectDefaults::default();
+        let mut assets = app.world_mut().resource_mut::<Assets<ChipSelectDefaults>>();
         let handle = assets.add(defaults);
 
         app.world_mut().insert_resource(DefaultsCollection {
@@ -73,7 +71,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![],
             archetypes: vec![],
-            upgradeselect: handle,
+            chipselect: handle,
             amps: vec![],
             augments: vec![],
             overclocks: vec![],
@@ -81,6 +79,6 @@ mod tests {
 
         app.update();
 
-        assert!(app.world().get_resource::<UpgradeSelectConfig>().is_some());
+        assert!(app.world().get_resource::<ChipSelectConfig>().is_some());
     }
 }

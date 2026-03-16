@@ -6,18 +6,19 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use iyes_progress::prelude::*;
 
 use super::{
+    chip_select::{ChipSelectDefaults, ChipSelectPlugin},
     loading::{LoadingPlugin, resources::DefaultsCollection},
     main_menu::{MainMenuDefaults, MainMenuPlugin},
     pause_menu::PauseMenuPlugin,
     run_end::RunEndPlugin,
     run_setup::RunSetupPlugin,
     systems::cleanup_entities,
-    upgrade_select::{UpgradeSelectDefaults, UpgradeSelectPlugin},
 };
 use crate::{
     bolt::BoltDefaults,
     breaker::{BreakerDefaults, behaviors::ArchetypeDefinition},
     cells::{CellDefaults, CellTypeDefinition},
+    chips::ChipDefinition,
     input::InputDefaults,
     run::NodeLayout,
     shared::{
@@ -25,7 +26,6 @@ use crate::{
         PlayingState,
     },
     ui::TimerUiDefaults,
-    upgrades::UpgradeDefinition,
 };
 
 /// Plugin for screen state management.
@@ -53,12 +53,8 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
                 RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
-                RonAssetPlugin::<UpgradeSelectDefaults>::new(&["upgradeselect.ron"]),
-                RonAssetPlugin::<UpgradeDefinition>::new(&[
-                    "amp.ron",
-                    "augment.ron",
-                    "overclock.ron",
-                ]),
+                RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
+                RonAssetPlugin::<ChipDefinition>::new(&["amp.ron", "augment.ron", "overclock.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.
             // Must be added BEFORE add_loading_state.
@@ -76,7 +72,7 @@ impl Plugin for ScreenPlugin {
                 MainMenuPlugin,
                 RunSetupPlugin,
                 PauseMenuPlugin,
-                UpgradeSelectPlugin,
+                ChipSelectPlugin,
                 RunEndPlugin,
             ))
             // Cleanup

@@ -1,4 +1,4 @@
-//! UI domain plugin — HUD, menus, upgrade selection screen.
+//! UI domain plugin — HUD, menus, chip selection screen.
 
 pub mod components;
 pub mod messages;

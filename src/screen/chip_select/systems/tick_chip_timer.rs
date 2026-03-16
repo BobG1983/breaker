@@ -1,15 +1,15 @@
-//! System to tick the upgrade selection countdown timer.
+//! System to tick the chip selection countdown timer.
 
 use bevy::prelude::*;
 
-use crate::{screen::upgrade_select::resources::UpgradeSelectTimer, shared::GameState};
+use crate::{screen::chip_select::resources::ChipSelectTimer, shared::GameState};
 
-/// Ticks the upgrade selection timer and auto-advances on expiry.
+/// Ticks the chip selection timer and auto-advances on expiry.
 ///
-/// Timer expiry transitions to [`GameState::NodeTransition`] (skip, no upgrade).
-pub fn tick_upgrade_timer(
+/// Timer expiry transitions to [`GameState::NodeTransition`] (skip, no chip).
+pub fn tick_chip_timer(
     time: Res<Time>,
-    mut timer: ResMut<UpgradeSelectTimer>,
+    mut timer: ResMut<ChipSelectTimer>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     timer.remaining -= time.delta_secs();
@@ -30,8 +30,8 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_state::<GameState>();
-        app.insert_resource(UpgradeSelectTimer { remaining });
-        app.add_systems(Update, tick_upgrade_timer);
+        app.insert_resource(ChipSelectTimer { remaining });
+        app.add_systems(Update, tick_chip_timer);
         app
     }
 
@@ -43,7 +43,7 @@ mod tests {
         app.update();
         app.update();
 
-        let timer = app.world().resource::<UpgradeSelectTimer>();
+        let timer = app.world().resource::<ChipSelectTimer>();
         assert!(
             timer.remaining < 10.0,
             "expected timer to decrease, got: {}",
@@ -69,7 +69,7 @@ mod tests {
         let mut app = test_app(0.0);
         app.update();
 
-        let timer = app.world().resource::<UpgradeSelectTimer>();
+        let timer = app.world().resource::<ChipSelectTimer>();
         assert!(
             timer.remaining.abs() < f32::EPSILON,
             "expected 0.0, got: {}",

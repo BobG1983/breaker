@@ -7,10 +7,9 @@ use super::{
     components::LoadingScreen,
     systems::{
         seed_archetype_registry, seed_bolt_config, seed_breaker_config, seed_cell_config,
-        seed_cell_type_registry, seed_input_config, seed_main_menu_config,
-        seed_node_layout_registry, seed_playfield_config, seed_timer_ui_config,
-        seed_upgrade_registry, seed_upgrade_select_config, spawn_loading_screen,
-        update_loading_bar,
+        seed_cell_type_registry, seed_chip_registry, seed_chip_select_config, seed_input_config,
+        seed_main_menu_config, seed_node_layout_registry, seed_playfield_config,
+        seed_timer_ui_config, spawn_loading_screen, update_loading_bar,
     },
 };
 use crate::shared::GameState;
@@ -33,8 +32,8 @@ impl Plugin for LoadingPlugin {
                 seed_node_layout_registry.track_progress::<GameState>(),
                 seed_timer_ui_config.track_progress::<GameState>(),
                 seed_archetype_registry.track_progress::<GameState>(),
-                seed_upgrade_select_config.track_progress::<GameState>(),
-                seed_upgrade_registry.track_progress::<GameState>(),
+                seed_chip_select_config.track_progress::<GameState>(),
+                seed_chip_registry.track_progress::<GameState>(),
             )
                 .run_if(in_state(GameState::Loading)),
         )

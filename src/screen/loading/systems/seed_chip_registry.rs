@@ -1,18 +1,18 @@
-//! Seeds `UpgradeRegistry` from loaded `UpgradeDefinition` assets.
+//! Seeds `ChipRegistry` from loaded `ChipDefinition` assets.
 
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
+    chips::{ChipDefinition, ChipRegistry},
     screen::loading::resources::DefaultsCollection,
-    upgrades::{UpgradeDefinition, UpgradeRegistry},
 };
 
-/// Iterates loaded `UpgradeDefinition` assets from all three collections
-/// (amps, augments, overclocks) and builds the `UpgradeRegistry` resource.
-pub fn seed_upgrade_registry(
+/// Iterates loaded `ChipDefinition` assets from all three collections
+/// (amps, augments, overclocks) and builds the `ChipRegistry` resource.
+pub fn seed_chip_registry(
     collection: Option<Res<DefaultsCollection>>,
-    upgrade_assets: Res<Assets<UpgradeDefinition>>,
+    chip_assets: Res<Assets<ChipDefinition>>,
     mut commands: Commands,
     mut seeded: Local<bool>,
 ) -> Progress {
@@ -24,7 +24,7 @@ pub fn seed_upgrade_registry(
         return Progress { done: 0, total: 1 };
     };
 
-    let mut registry = UpgradeRegistry::default();
+    let mut registry = ChipRegistry::default();
 
     let all_handles = collection
         .amps
@@ -33,10 +33,10 @@ pub fn seed_upgrade_registry(
         .chain(collection.overclocks.iter());
 
     for handle in all_handles {
-        let Some(def) = upgrade_assets.get(handle) else {
+        let Some(def) = chip_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
-        registry.upgrades.push(def.clone());
+        registry.chips.push(def.clone());
     }
 
     commands.insert_resource(registry);
@@ -47,18 +47,18 @@ pub fn seed_upgrade_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::upgrades::UpgradeKind;
+    use crate::chips::ChipKind;
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<UpgradeDefinition>();
-        app.add_systems(Update, seed_upgrade_registry.map(drop));
+        app.init_asset::<ChipDefinition>();
+        app.add_systems(Update, seed_chip_registry.map(drop));
         app
     }
 
-    fn make_upgrade(name: &str, kind: UpgradeKind) -> UpgradeDefinition {
-        UpgradeDefinition {
+    fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
+        ChipDefinition {
             name: name.to_owned(),
             kind,
             description: format!("{name} description"),
@@ -66,9 +66,9 @@ mod tests {
     }
 
     fn make_collection(
-        amps: Vec<Handle<UpgradeDefinition>>,
-        augments: Vec<Handle<UpgradeDefinition>>,
-        overclocks: Vec<Handle<UpgradeDefinition>>,
+        amps: Vec<Handle<ChipDefinition>>,
+        augments: Vec<Handle<ChipDefinition>>,
+        overclocks: Vec<Handle<ChipDefinition>>,
     ) -> DefaultsCollection {
         DefaultsCollection {
             playfield: Handle::default(),
@@ -81,7 +81,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
             amps,
             augments,
             overclocks,
@@ -92,28 +92,28 @@ mod tests {
     fn returns_zero_progress_without_collection() {
         let mut app = test_app();
         app.update();
-        assert!(app.world().get_resource::<UpgradeRegistry>().is_none());
+        assert!(app.world().get_resource::<ChipRegistry>().is_none());
     }
 
     #[test]
     fn builds_registry_from_all_three_collections() {
         let mut app = test_app();
 
-        let mut assets = app.world_mut().resource_mut::<Assets<UpgradeDefinition>>();
-        let amp = assets.add(make_upgrade("Piercing Shot", UpgradeKind::Amp));
-        let augment = assets.add(make_upgrade("Wide Breaker", UpgradeKind::Augment));
-        let overclock = assets.add(make_upgrade("Surge", UpgradeKind::Overclock));
+        let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let amp = assets.add(make_chip("Piercing Shot", ChipKind::Amp));
+        let augment = assets.add(make_chip("Wide Breaker", ChipKind::Augment));
+        let overclock = assets.add(make_chip("Surge", ChipKind::Overclock));
 
         app.world_mut()
             .insert_resource(make_collection(vec![amp], vec![augment], vec![overclock]));
 
         app.update();
 
-        let registry = app.world().resource::<UpgradeRegistry>();
-        assert_eq!(registry.upgrades.len(), 3);
-        assert_eq!(registry.upgrades[0].kind, UpgradeKind::Amp);
-        assert_eq!(registry.upgrades[1].kind, UpgradeKind::Augment);
-        assert_eq!(registry.upgrades[2].kind, UpgradeKind::Overclock);
+        let registry = app.world().resource::<ChipRegistry>();
+        assert_eq!(registry.chips.len(), 3);
+        assert_eq!(registry.chips[0].kind, ChipKind::Amp);
+        assert_eq!(registry.chips[1].kind, ChipKind::Augment);
+        assert_eq!(registry.chips[2].kind, ChipKind::Overclock);
     }
 
     #[test]
@@ -125,8 +125,8 @@ mod tests {
 
         app.update();
 
-        let registry = app.world().resource::<UpgradeRegistry>();
-        assert!(registry.upgrades.is_empty());
+        let registry = app.world().resource::<ChipRegistry>();
+        assert!(registry.chips.is_empty());
     }
 
     #[test]
@@ -138,18 +138,18 @@ mod tests {
             .insert_resource(make_collection(vec![], vec![], vec![]));
         app.update();
 
-        // Add an upgrade AFTER seeding — if the guard works, it won't be picked up
-        let mut assets = app.world_mut().resource_mut::<Assets<UpgradeDefinition>>();
-        let handle = assets.add(make_upgrade("Late Addition", UpgradeKind::Amp));
+        // Add a chip AFTER seeding — if the guard works, it won't be picked up
+        let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let handle = assets.add(make_chip("Late Addition", ChipKind::Amp));
         app.world_mut()
             .insert_resource(make_collection(vec![handle], vec![], vec![]));
         app.update();
 
-        let registry = app.world().resource::<UpgradeRegistry>();
+        let registry = app.world().resource::<ChipRegistry>();
         assert!(
-            registry.upgrades.is_empty(),
-            "guard should prevent re-seeding; got {} upgrades",
-            registry.upgrades.len()
+            registry.chips.is_empty(),
+            "guard should prevent re-seeding; got {} chips",
+            registry.chips.len()
         );
     }
 }

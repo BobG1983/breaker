@@ -1,26 +1,26 @@
-//! Handles keyboard input on the upgrade selection screen.
+//! Handles keyboard input on the chip selection screen.
 
 use bevy::prelude::*;
 
 use crate::{
     input::InputConfig,
-    screen::upgrade_select::resources::{UpgradeOffers, UpgradeSelectSelection},
+    screen::chip_select::resources::{ChipOffers, ChipSelectSelection},
     shared::GameState,
-    ui::messages::UpgradeSelected,
+    ui::messages::ChipSelected,
 };
 
 /// Handles left/right card navigation and confirmation.
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as other menus).
-/// On confirm, sends `UpgradeSelected` with the chosen upgrade's identity
+/// On confirm, sends `ChipSelected` with the chosen chip's identity
 /// before transitioning to `NodeTransition`.
-pub fn handle_upgrade_input(
+pub fn handle_chip_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
-    offers: Res<UpgradeOffers>,
-    mut selection: ResMut<UpgradeSelectSelection>,
+    offers: Res<ChipOffers>,
+    mut selection: ResMut<ChipSelectSelection>,
     mut next_state: ResMut<NextState<GameState>>,
-    mut writer: MessageWriter<UpgradeSelected>,
+    mut writer: MessageWriter<ChipSelected>,
 ) {
     let card_count = offers.0.len();
 
@@ -48,10 +48,10 @@ pub fn handle_upgrade_input(
 
     // Confirm selection
     if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-        let upgrade = &offers.0[selection.index];
-        writer.write(UpgradeSelected {
-            name: upgrade.name.clone(),
-            kind: upgrade.kind,
+        let chip = &offers.0[selection.index];
+        writer.write(ChipSelected {
+            name: chip.name.clone(),
+            kind: chip.kind,
         });
         next_state.set(GameState::NodeTransition);
     }
@@ -62,56 +62,53 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::upgrades::{UpgradeDefinition, UpgradeKind};
+    use crate::chips::{ChipDefinition, ChipKind};
 
     #[derive(Resource, Default)]
-    struct ReceivedUpgrades(Vec<UpgradeSelected>);
+    struct ReceivedChips(Vec<ChipSelected>);
 
-    fn collect_upgrades(
-        mut reader: MessageReader<UpgradeSelected>,
-        mut received: ResMut<ReceivedUpgrades>,
-    ) {
+    fn collect_chips(mut reader: MessageReader<ChipSelected>, mut received: ResMut<ReceivedChips>) {
         for msg in reader.read() {
             received.0.push(msg.clone());
         }
     }
 
-    fn make_offers(count: usize) -> UpgradeOffers {
+    fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
-            UpgradeDefinition {
+            ChipDefinition {
                 name: "Piercing Shot".to_owned(),
-                kind: UpgradeKind::Amp,
+                kind: ChipKind::Amp,
                 description: "Bolt passes through".to_owned(),
             },
-            UpgradeDefinition {
+            ChipDefinition {
                 name: "Wide Breaker".to_owned(),
-                kind: UpgradeKind::Augment,
+                kind: ChipKind::Augment,
                 description: "Breaker width increased".to_owned(),
             },
-            UpgradeDefinition {
+            ChipDefinition {
                 name: "Surge".to_owned(),
-                kind: UpgradeKind::Overclock,
+                kind: ChipKind::Overclock,
                 description: "Shockwave damage".to_owned(),
             },
         ];
-        UpgradeOffers(all.into_iter().take(count).collect())
+        ChipOffers(all.into_iter().take(count).collect())
     }
 
     fn test_app() -> App {
         test_app_with_offers(make_offers(3))
     }
 
-    fn test_app_with_offers(offers: UpgradeOffers) -> App {
+    fn test_app_with_offers(offers: ChipOffers) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
         app.init_resource::<ButtonInput<KeyCode>>();
         app.insert_resource(InputConfig::default());
         app.init_state::<GameState>();
-        app.insert_resource(UpgradeSelectSelection { index: 0 });
+        app.insert_resource(ChipSelectSelection { index: 0 });
         app.insert_resource(offers);
-        app.init_resource::<ReceivedUpgrades>();
-        app.add_message::<UpgradeSelected>();
-        app.add_systems(Update, (handle_upgrade_input, collect_upgrades).chain());
+        app.init_resource::<ReceivedChips>();
+        app.add_message::<ChipSelected>();
+        app.add_systems(Update, (handle_chip_input, collect_chips).chain());
         app
     }
 
@@ -127,7 +124,7 @@ mod tests {
         let mut app = test_app();
         press_key(&mut app, KeyCode::ArrowRight);
 
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 1);
     }
 
@@ -136,7 +133,7 @@ mod tests {
         let mut app = test_app();
         press_key(&mut app, KeyCode::ArrowLeft);
 
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 2); // wraps from 0 to last (2)
     }
 
@@ -153,18 +150,18 @@ mod tests {
     }
 
     #[test]
-    fn confirm_sends_upgrade_selected_message() {
+    fn confirm_sends_chip_selected_message() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
-        let received = app.world().resource::<ReceivedUpgrades>();
+        let received = app.world().resource::<ReceivedChips>();
         assert_eq!(received.0.len(), 1);
         assert_eq!(received.0[0].name, "Piercing Shot");
-        assert_eq!(received.0[0].kind, UpgradeKind::Amp);
+        assert_eq!(received.0[0].kind, ChipKind::Amp);
     }
 
     #[test]
-    fn confirm_second_card_sends_correct_upgrade() {
+    fn confirm_second_card_sends_correct_chip() {
         let mut app = test_app();
         // Navigate right once to select index 1
         press_key(&mut app, KeyCode::ArrowRight);
@@ -177,10 +174,10 @@ mod tests {
 
         press_key(&mut app, KeyCode::Enter);
 
-        let received = app.world().resource::<ReceivedUpgrades>();
+        let received = app.world().resource::<ReceivedChips>();
         assert_eq!(received.0.len(), 1);
         assert_eq!(received.0[0].name, "Wide Breaker");
-        assert_eq!(received.0[0].kind, UpgradeKind::Augment);
+        assert_eq!(received.0[0].kind, ChipKind::Augment);
     }
 
     #[test]
@@ -197,7 +194,7 @@ mod tests {
                 .clear();
         }
 
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 0); // wraps back to 0
     }
 
@@ -206,7 +203,7 @@ mod tests {
         let mut app = test_app();
         app.update();
 
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 0);
 
         let next = app.world().resource::<NextState<GameState>>();
@@ -227,11 +224,8 @@ mod tests {
             "expected NodeTransition, got: {next:?}"
         );
 
-        let received = app.world().resource::<ReceivedUpgrades>();
-        assert!(
-            received.0.is_empty(),
-            "expected no UpgradeSelected messages"
-        );
+        let received = app.world().resource::<ReceivedChips>();
+        assert!(received.0.is_empty(), "expected no ChipSelected messages");
     }
 
     #[test]
@@ -240,7 +234,7 @@ mod tests {
 
         // Right once → index 1
         press_key(&mut app, KeyCode::ArrowRight);
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 1);
 
         // Right again → wraps to 0
@@ -251,7 +245,7 @@ mod tests {
             .resource_mut::<ButtonInput<KeyCode>>()
             .clear();
         press_key(&mut app, KeyCode::ArrowRight);
-        let selection = app.world().resource::<UpgradeSelectSelection>();
+        let selection = app.world().resource::<ChipSelectSelection>();
         assert_eq!(selection.index, 0);
     }
 }

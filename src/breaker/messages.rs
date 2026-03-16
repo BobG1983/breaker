@@ -15,7 +15,7 @@ pub enum BumpGrade {
 
 /// Sent when the breaker performs a bump.
 ///
-/// Consumed by audio, upgrades (overclock triggers), and UI.
+/// Consumed by audio, chips (overclock triggers), and UI.
 #[derive(Message, Clone, Debug)]
 #[allow(dead_code)]
 pub struct BumpPerformed {

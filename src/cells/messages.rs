@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// Sent when a cell is destroyed.
 ///
-/// Consumed by run (progress tracking), upgrades (overclock triggers), and audio.
+/// Consumed by run (progress tracking), chips (overclock triggers), and audio.
 #[derive(Message, Clone, Debug)]
 #[allow(dead_code)]
 pub struct CellDestroyed {
