@@ -17,17 +17,31 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
 - **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
 
+**Defined sets (as of Phase 2e):**
+
+| Set | Domain | Tags |
+|-----|--------|------|
+| `BreakerSystems::Move` | `breaker/sets.rs` | `move_breaker` |
+| `BreakerSystems::InitParams` | `breaker/sets.rs` | `init_breaker_params` |
+| `BoltSystems::PrepareVelocity` | `bolt/sets.rs` | `prepare_bolt_velocity` |
+| `PhysicsSystems::BreakerCollision` | `physics/sets.rs` | `bolt_breaker_collision` |
+| `PhysicsSystems::BoltLost` | `physics/sets.rs` | `bolt_lost` |
+| `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost` |
+| `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
+
 **Example:**
 
 ```rust
 // In breaker/sets.rs
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BreakerSystems {
-    Move,  // The move_breaker system
+    Move,        // The move_breaker system
+    InitParams,  // The init_breaker_params system
 }
 
 // In breaker/plugin.rs — tag the system
 move_breaker.in_set(BreakerSystems::Move)
+init_breaker_params.in_set(BreakerSystems::InitParams)
 
 // In bolt/plugin.rs — order against it
 (hover_bolt, prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity))
@@ -37,6 +51,24 @@ move_breaker.in_set(BreakerSystems::Move)
 ## Current Ordering Chain
 
 The actual cross-domain ordering constraints in the codebase:
+
+### OnEnter(GameState::Playing)
+
+```
+apply_archetype_config_overrides       [behaviors domain]
+  .before(BreakerSystems::InitParams)
+    BreakerSystems::InitParams
+    (init_breaker_params)              [breaker domain]
+      <- init_archetype .after(BreakerSystems::InitParams)   [behaviors domain]
+      <- UiSystems::SpawnTimerHud
+         (spawn_timer_hud)             [ui domain]
+           <- spawn_lives_display .after(init_archetype)
+                                  .after(UiSystems::SpawnTimerHud)  [behaviors domain]
+```
+
+Note: `spawn_breaker` runs before `BreakerSystems::InitParams` (intra-domain, breaker plugin), and `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin (`.chain()`), so `UiSystems::SpawnTimerHud` is the externally-visible anchor.
+
+### FixedUpdate
 
 ```
 BreakerSystems::Move

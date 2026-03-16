@@ -25,7 +25,7 @@
 - **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues (2 moderate, 1 minor). upgrades/ domain renamed to chips/. screen/loading seeds registry. screen/chip_select reads registry + writes ChipSelected. ui/messages.rs imports ChipKind from chips domain (acceptable vocabulary-type import).
 - **Compromise cleanup verification audit 2026-03-16**: PASS — all 5 compromises confirmed resolved. 0 critical violations. 3 doc drift items (messages.md missing RunLost + stale BumpPerformed, plugins.md missing fx domain, layout.md + physics.md stale ccd.rs references). 1 minor observation (RunLost sender-ownership deviation).
 - **Phase 2e audit 2026-03-16**: PASS — 0 critical violations, 0 moderate issues, 2 observations. Chrono archetype (TimePenalty consequence + ApplyTimePenalty message), Prism archetype (SpawnBolt consequence + SpawnAdditionalBolt message + ExtraBolt marker), interpolate/ domain (visual interpolation between FixedUpdate ticks). Consumer-owns message pattern now established for all consequence-to-target messages.
-- **behaviors/ domain extraction audit 2026-03-16**: PASS with 2 moderate issues. behaviors/ extracted from breaker/ to standalone top-level domain. BehaviorsPlugin in game.rs, BehaviorSystems::Bridge replaces BreakerSystems::BehaviorBridge. Per-consequence events replaced by ConsequenceFired(Consequence). No circular dependencies. All docs updated. M1: cross-domain bare fn ref ordering (init_breaker_params, spawn_timer_hud). M2: cross-domain BreakerConfig mutation (accepted compromise for init-time archetype config).
+- **behaviors/ domain extraction audit 2026-03-16**: PASS with 2 moderate issues. behaviors/ extracted from breaker/ to standalone top-level domain. BehaviorsPlugin in game.rs, BehaviorSystems::Bridge replaces BreakerSystems::BehaviorBridge. Per-consequence events replaced by ConsequenceFired(Consequence). No circular dependencies. All docs updated. M1: RESOLVED (bare fn refs replaced with BreakerSystems::InitParams + UiSystems::SpawnTimerHud). M2: cross-domain BreakerConfig mutation (accepted compromise for init-time archetype config).
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -84,6 +84,13 @@ BreakerSystems::Move
     <- apply_time_penalty .after(NodeSystems::TickTimer)
 ```
 
+OnEnter(Playing) init chain:
+  apply_archetype_config_overrides .before(BreakerSystems::InitParams)
+  init_breaker_params .in_set(BreakerSystems::InitParams)
+  init_archetype .after(BreakerSystems::InitParams)
+  spawn_timer_hud .in_set(UiSystems::SpawnTimerHud)
+  spawn_lives_display .after(init_archetype) .after(UiSystems::SpawnTimerHud)
+
 Breaker intra-domain: update_bump → move_breaker → update_breaker_state → grade_bump
 trigger_bump_visual .after(update_bump)
 Update schedule: animate_bump_visual, animate_tilt_visual
@@ -134,7 +141,7 @@ Registered but no consumers yet: ChipSelected
 - bolt/spawn_additional_bolt reads breaker Transform (read-only, for spawn positioning — same pattern as spawn_bolt, hover_bolt)
 - Other domains attach interpolate components (InterpolateTransform, PhysicsTranslation) at spawn — opt-in cross-domain composition, analogous to CleanupOnNodeExit
 - behaviors/init.rs writes ResMut<BreakerConfig> and inserts breaker-owned components (BumpPerfectMultiplier, BumpWeakMultiplier) at init time — accepted because behaviors domain exists to compose archetype-specific breaker configuration, and message indirection for one-shot OnEnter systems adds complexity without decoupling benefit
-- behaviors/plugin.rs uses bare fn refs from breaker (init_breaker_params) and UI (spawn_timer_hud) for OnEnter ordering — needs SystemSet extraction (moderate issue, tracked)
+- behaviors/plugin.rs orders against BreakerSystems::InitParams and UiSystems::SpawnTimerHud for OnEnter ordering (resolved from bare fn refs)
 - behaviors/consequences/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. Hot-reload systems write to *Config resources and entity components across all domains. Telemetry reads from all domains. All gated behind `#[cfg(feature = "dev")]` — compiled out of release. Does NOT set precedent for production domains.
 
@@ -144,6 +151,7 @@ Registered but no consumers yet: ChipSelected
 - ~~run/node/ lacks its own plugin.rs~~ → NodePlugin extracted
 - ~~handle_life_lost writes ResMut<RunState>~~ → sends RunLost message instead
 - ~~UI domain owns animate_fade_out~~ → moved to new fx domain
+- ~~behaviors/plugin.rs uses bare fn refs for cross-domain OnEnter ordering~~ → BreakerSystems::InitParams + UiSystems::SpawnTimerHud extracted
 
 ## Debug Domain Structure (planned, Phase 2f)
 - debug/ will be restructured into three sub-domains: overlays/ (gizmo drawing), telemetry/ (egui panels), hot_reload/ (RON watching + config/component propagation)

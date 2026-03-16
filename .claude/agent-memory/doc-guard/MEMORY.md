@@ -20,6 +20,9 @@
 - `behaviors/` is a top-level domain (not nested under `breaker/`). Plugin is `BehaviorsPlugin`. System set is `BehaviorSystems::Bridge` (in `behaviors/sets.rs`).
 - `ConsequenceFired(Consequence)` is a Bevy observer event (not a Message) — lives in `behaviors/definition.rs`. It replaces the old per-consequence events (`LoseLifeRequested`, `TimePenaltyRequested`, `SpawnBoltRequested`).
 - `handle_spawn_bolt` (in `behaviors/consequences/spawn_bolt.rs`) replaced `handle_spawn_bolt_requested`.
+- `BreakerSystems::InitParams` (in `breaker/sets.rs`) tags `init_breaker_params` — added alongside `BreakerSystems::Move`.
+- `UiSystems::SpawnTimerHud` (in `ui/sets.rs`) tags `spawn_timer_hud` — new set, new file.
+- OnEnter(Playing) ordering chain: `apply_archetype_config_overrides` → `BreakerSystems::InitParams` → `init_archetype` → `UiSystems::SpawnTimerHud` → `spawn_lives_display`. Documented in `docs/architecture/ordering.md` under "OnEnter(GameState::Playing)" subsection.
 
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete — check on each doc-guard pass
