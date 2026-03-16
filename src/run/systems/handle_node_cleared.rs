@@ -22,6 +22,11 @@ pub fn handle_node_cleared(
         return;
     }
 
+    if registry.layouts.is_empty() {
+        warn!("NodeCleared received but layout registry is empty — ignoring");
+        return;
+    }
+
     let final_index = registry.layouts.len().saturating_sub(1);
 
     run_state.transition_queued = true;
@@ -114,6 +119,22 @@ mod tests {
 
         let run_state = app.world().resource::<RunState>();
         assert_eq!(run_state.outcome, RunOutcome::Won);
+    }
+
+    #[test]
+    fn empty_registry_does_not_transition() {
+        let mut app = test_app(0, 0); // 0 layouts
+        app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
+        tick(&mut app);
+
+        let next = app.world().resource::<NextState<GameState>>();
+        let debug = format!("{next:?}");
+        assert!(
+            !debug.contains("NodeTransition") && !debug.contains("RunEnd"),
+            "empty registry should not trigger any transition, got: {next:?}"
+        );
+        let run_state = app.world().resource::<RunState>();
+        assert_eq!(run_state.outcome, RunOutcome::InProgress);
     }
 
     #[test]

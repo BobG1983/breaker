@@ -85,8 +85,16 @@ pub fn bolt_breaker_collision(
             bolt_transform.translation.y = above_y;
 
             if bolt_velocity.value.y <= 0.0 {
+                // Clamp hit X to the actual top-face width before computing the
+                // reflection angle. The overlap check uses expanded_half (which
+                // includes the bolt radius), so bolt_pos.x can sit slightly
+                // outside [breaker_pos.x ± half_w]. Clamping here matches the
+                // CCD path, which uses the exact ray-surface impact point.
+                let hit_x = bolt_pos
+                    .x
+                    .clamp(breaker_pos.x - half_w, breaker_pos.x + half_w);
                 reflect_top_hit(
-                    bolt_pos.x,
+                    hit_x,
                     &mut bolt_velocity,
                     base_speed.0,
                     max_angle.0,
