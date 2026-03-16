@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// Sent when the bolt collides with the breaker.
 ///
-/// Consumed by audio, upgrades, and UI.
+/// Consumed by audio, chips, and UI.
 #[derive(Message, Clone, Debug)]
 #[allow(dead_code)]
 pub struct BoltHitBreaker {
@@ -14,7 +14,7 @@ pub struct BoltHitBreaker {
 
 /// Sent when the bolt collides with a cell.
 ///
-/// Consumed by upgrades, cells, and audio.
+/// Consumed by chips, cells, and audio.
 #[derive(Message, Clone, Debug)]
 #[allow(dead_code)]
 pub struct BoltHitCell {

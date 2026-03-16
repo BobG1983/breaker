@@ -80,6 +80,24 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 ### AssetPlugin
 - `bevy::asset::AssetPlugin { file_path: "assets".into(), ..default() }` — correct for tests
 
+### bevy_common_assets 0.15 — RonAssetPlugin
+- `RonAssetPlugin::<T>::new(&[...])` accepts multiple extensions for one type — CONFIRMED
+- `RonAssetPlugin::<UpgradeDefinition>::new(&["amp.ron", "augment.ron", "overclock.ron"])` is valid; one plugin instance handles all three extensions for the same asset type
+
+### bevy_asset_loader 0.25 — Directory Collection
+- `#[asset(path = "amps", collection(typed))]` on `Vec<Handle<T>>` — correct for loading all assets in folder as typed handles
+- Pattern already used for `cells`, `nodes`, `archetypes` in this codebase — confirmed working
+- Same pattern applied to `amps`, `augments`, `overclocks` for `Vec<Handle<UpgradeDefinition>>` is correct
+
+### MessageWriter / MessageReader (confirmed from docs.rs)
+- `writer.write(msg)` — returns `MessageId<E>`; this is the correct method name (NOT `send`)
+- `reader.read()` — returns `MessageIterator` yielding `&'a M`; used with `for msg in reader.read()` pattern — CORRECT
+- `reader.read_with_id()` — yields `(&'a M, MessageId<M>)` pairs if id needed
+
+### Asset Derive Pattern (for RON assets without GameConfig)
+- `#[derive(Asset, TypePath, Deserialize, Clone, Debug)]` — correct for plain data assets
+- `app.init_asset::<T>()` in tests — correct way to register an asset type without RonAssetPlugin
+
 ## Deprecated Patterns Found
 (none found in this codebase)
 

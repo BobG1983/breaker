@@ -5,19 +5,19 @@ use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 use crate::{
     shared::{GameState, PlayingState},
     ui::{
-        messages::UpgradeSelected,
+        messages::ChipSelected,
         systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
     },
 };
 
 /// Plugin for the UI domain.
 ///
-/// Owns HUD rendering, menu screens, and upgrade selection.
+/// Owns HUD rendering, menu screens, and chip selection.
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<UpgradeSelected>()
+        app.add_message::<ChipSelected>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (spawn_side_panels, ApplyDeferred, spawn_timer_hud).chain(),

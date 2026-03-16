@@ -31,7 +31,7 @@ pub fn handle_node_cleared(
     run_state.transition_queued = true;
 
     if (run_state.node_index as usize) < final_index {
-        next_state.set(GameState::UpgradeSelect);
+        next_state.set(GameState::ChipSelect);
     } else {
         run_state.outcome = RunOutcome::Won;
         next_state.set(GameState::RunEnd);
@@ -92,15 +92,15 @@ mod tests {
     }
 
     #[test]
-    fn non_final_node_transitions_to_upgrade_select() {
+    fn non_final_node_transitions_to_chip_select() {
         let mut app = test_app(0, 3);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("UpgradeSelect"),
-            "expected UpgradeSelect, got: {next:?}"
+            format!("{next:?}").contains("ChipSelect"),
+            "expected ChipSelect, got: {next:?}"
         );
     }
 
@@ -129,7 +129,7 @@ mod tests {
         let next = app.world().resource::<NextState<GameState>>();
         let debug = format!("{next:?}");
         assert!(
-            !debug.contains("UpgradeSelect") && !debug.contains("RunEnd"),
+            !debug.contains("ChipSelect") && !debug.contains("RunEnd"),
             "empty registry should not trigger any transition, got: {next:?}"
         );
         let run_state = app.world().resource::<RunState>();
@@ -145,7 +145,7 @@ mod tests {
         let next = app.world().resource::<NextState<GameState>>();
         let debug = format!("{next:?}");
         assert!(
-            !debug.contains("UpgradeSelect") && !debug.contains("RunEnd"),
+            !debug.contains("ChipSelect") && !debug.contains("RunEnd"),
             "expected no state change, got: {next:?}"
         );
     }

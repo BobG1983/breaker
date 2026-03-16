@@ -22,12 +22,15 @@
 - `toggle_pause` is guarded by `run_if(in_state(GameState::Playing))` — it cannot fire in RunSetup, UpgradeSelect, or any other top-level state.
 - `RunSetupSelection` is inserted as a resource in `spawn_run_setup` (OnEnter) and cleaned up when `cleanup_entities::<RunSetupScreen>` runs on `OnExit(RunSetup)`. The resource is NOT explicitly removed — it persists in the world as a stale resource. However, `spawn_run_setup` calls `insert_resource` (not `init_resource`) so it will be overwritten on the next `OnEnter(RunSetup)`. This is correct for repeated run-setup visits.
 - `PauseMenuSelection` follows the same stale-resource pattern — re-inserted fresh on each `OnEnter(Paused)`. Correct.
-- `UpgradeSelectTimer` and `UpgradeSelectSelection` follow the same stale-resource pattern. Correct.
-- `transition_queued` in `RunState` is set to `true` by `handle_node_cleared` and is reset by `reset_run_state` (which runs `OnExit(MainMenu)`). It is NOT reset between nodes during a run. After the first UpgradeSelect transition, it stays `true` for all subsequent nodes. This means `handle_timer_expired` will always yield to `handle_node_cleared` on subsequent nodes. This is a known design choice — the timer-vs-clear tie-break always favors the clear on node 2+. The design intent (clear beats loss) is still upheld; only the first node needs the explicit flag to work correctly. Accepted behavior.
+- `UpgradeSelectTimer`, `UpgradeSelectSelection`, and `UpgradeOffers` follow the same stale-resource pattern — all re-inserted fresh by `spawn_upgrade_select` on each `OnEnter(UpgradeSelect)`. Correct.
+- `transition_queued` in `RunState`: fixed — `advance_node` now resets `transition_queued = false` on each node transition. The flag correctly tracks per-node clear vs timer-expired tie-breaking.
+- Bevy 0.18 sub-state `OnExit` fires when the parent state exits. `OnExit(PlayingState::Paused)` fires on `GameState` leaving `Playing`. No redundant cleanup needed for the pause menu quit path — the sub-state exit handler covers it automatically.
 
 ## Recurring Bug Categories
 - **Partial message drain**: `bridge_bolt_lost` uses `reader.read().next().is_none()` which only checks the first message. Multiple simultaneous BoltLost messages (future Prism archetype with multiple bolts) will have extras silently consumed without firing consequences. Harmless with one bolt.
-- **Stale screen resources**: `RunSetupSelection`, `PauseMenuSelection`, `UpgradeSelectTimer`, `UpgradeSelectSelection` are inserted by spawn systems on `OnEnter` but never explicitly removed. They persist as stale resources between visits. This is safe because `insert_resource` overwrites on re-entry. Do not flag as a bug unless a system reads them outside the guarded state.
+- **Stale screen resources**: `RunSetupSelection`, `PauseMenuSelection`, `UpgradeSelectTimer`, `UpgradeSelectSelection`, `UpgradeOffers` are inserted by spawn systems on `OnEnter` but never explicitly removed. They persist as stale resources between visits. This is safe because `insert_resource` overwrites on re-entry. Do not flag as a bug unless a system reads them outside the guarded state.
+- **Stale selection index with variable card count**: `UpgradeSelectSelection.index` persists across visits. On re-entry, `spawn_upgrade_select` resets it to 0 via `insert_resource`. Safe because it's always reset before `handle_upgrade_input` can run in the new visit.
+- **seed_upgrade_registry Local<bool> not reset across runs**: The `Local<bool>` seeded flag persists for the app lifetime. This is correct — Loading only runs once per app launch. Would be a bug if Loading could be re-entered, but it cannot (no transition back to Loading).
 
 ## State Machine Rules
 - Valid transitions: Loading→MainMenu, MainMenu→RunSetup, RunSetup→Playing, Playing→NodeTransition→Playing (node advance), Playing→UpgradeSelect→NodeTransition→Playing (after non-final node), Playing→RunEnd (win/timer expire), RunEnd→MainMenu
@@ -41,6 +44,8 @@
 ## ECS Pitfalls Found
 - `bridge_bolt_lost` partial drain (see Recurring Bug Categories)
 - `apply_bump_velocity` collects messages into a Vec before querying — correct pattern to avoid borrow conflicts between MessageReader and mutable Query
+- `UpgradeSelected` message has no consumer yet (upgrades plugin is a stub). Messages are sent by `handle_upgrade_input` but silently dropped. No ECS error; Bevy messages are fire-and-forget. Will need a consumer in a later phase.
+- `spawn_upgrade_select` takes `Res<UpgradeRegistry>` (not `Option<Res>`). If the registry is somehow absent at OnEnter(UpgradeSelect), Bevy will panic. Guaranteed safe in practice because Loading always completes before UpgradeSelect is reachable — but worth noting for future test harnesses.
 
 ## Math/Physics Notes
 - `enforce_min_angle` uses `atan2(|y|, |x|)` — result is always [0, π/2], correct for angle-from-horizontal

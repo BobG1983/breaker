@@ -70,7 +70,10 @@ mod tests {
             cell_types: vec![],
             layouts: vec![],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();

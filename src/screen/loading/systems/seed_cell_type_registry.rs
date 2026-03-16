@@ -100,7 +100,10 @@ mod tests {
             cell_types: vec![h1, h2],
             layouts: vec![],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();
@@ -130,7 +133,10 @@ mod tests {
             cell_types: vec![handle],
             layouts: vec![],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();
@@ -156,7 +162,10 @@ mod tests {
             cell_types: vec![h1, h2],
             layouts: vec![],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();

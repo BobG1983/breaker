@@ -7,9 +7,10 @@ use crate::{
     bolt::BoltDefaults,
     breaker::{BreakerDefaults, behaviors::ArchetypeDefinition},
     cells::{CellDefaults, CellTypeDefinition},
+    chips::ChipDefinition,
     input::InputDefaults,
     run::NodeLayout,
-    screen::{main_menu::MainMenuDefaults, upgrade_select::UpgradeSelectDefaults},
+    screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
     shared::PlayfieldDefaults,
     ui::TimerUiDefaults,
 };
@@ -48,7 +49,16 @@ pub struct DefaultsCollection {
     /// All archetype definition handles.
     #[asset(path = "archetypes", collection(typed))]
     pub archetypes: Vec<Handle<ArchetypeDefinition>>,
-    /// Handle for upgrade select defaults.
-    #[asset(path = "config/defaults.upgradeselect.ron")]
-    pub upgradeselect: Handle<UpgradeSelectDefaults>,
+    /// Handle for chip select defaults.
+    #[asset(path = "config/defaults.chipselect.ron")]
+    pub chipselect: Handle<ChipSelectDefaults>,
+    /// All amp chip definition handles.
+    #[asset(path = "amps", collection(typed))]
+    pub amps: Vec<Handle<ChipDefinition>>,
+    /// All augment chip definition handles.
+    #[asset(path = "augments", collection(typed))]
+    pub augments: Vec<Handle<ChipDefinition>>,
+    /// All overclock chip definition handles.
+    #[asset(path = "overclocks", collection(typed))]
+    pub overclocks: Vec<Handle<ChipDefinition>>,
 }

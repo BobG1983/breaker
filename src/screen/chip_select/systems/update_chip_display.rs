@@ -1,20 +1,20 @@
-//! Updates the upgrade selection screen display — timer text and card highlights.
+//! Updates the chip selection screen display — timer text and card highlights.
 
 use bevy::prelude::*;
 
-use crate::screen::upgrade_select::{
-    UpgradeSelectConfig,
-    components::{UpgradeCard, UpgradeTimerText},
-    resources::{UpgradeSelectSelection, UpgradeSelectTimer},
+use crate::screen::chip_select::{
+    ChipSelectConfig,
+    components::{ChipCard, ChipTimerText},
+    resources::{ChipSelectSelection, ChipSelectTimer},
 };
 
 /// Updates the timer display text and card border colors based on selection.
-pub fn update_upgrade_display(
-    config: Res<UpgradeSelectConfig>,
-    timer: Res<UpgradeSelectTimer>,
-    selection: Res<UpgradeSelectSelection>,
-    mut timer_text: Query<&mut Text, With<UpgradeTimerText>>,
-    mut cards: Query<(&UpgradeCard, &mut BorderColor)>,
+pub fn update_chip_display(
+    config: Res<ChipSelectConfig>,
+    timer: Res<ChipSelectTimer>,
+    selection: Res<ChipSelectSelection>,
+    mut timer_text: Query<&mut Text, With<ChipTimerText>>,
+    mut cards: Query<(&ChipCard, &mut BorderColor)>,
 ) {
     // Update timer text
     for mut text in &mut timer_text {

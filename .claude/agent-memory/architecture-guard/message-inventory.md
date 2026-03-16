@@ -10,4 +10,4 @@
 | `TimerExpired` | `run/messages.rs` | `RunPlugin` | run/node/tick_node_timer | run/handle_timer_expired |
 | `BumpPerformed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | bolt/apply_bump_velocity, breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, breaker/behaviors/bridge_bump |
 | `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text |
-| `UpgradeSelected` | `ui/messages.rs` | `UiPlugin` | (not yet) | (future: upgrades) |
+| `UpgradeSelected` | `ui/messages.rs` | `UiPlugin` | screen/upgrade_select/handle_upgrade_input | (future: upgrades) |

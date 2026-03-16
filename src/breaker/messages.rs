@@ -15,7 +15,7 @@ pub enum BumpGrade {
 
 /// Sent when the breaker performs a bump.
 ///
-/// Consumed by bolt (velocity multiplier), audio, upgrades (overclock
+/// Consumed by bolt (velocity multiplier), audio, chips (overclock
 /// triggers), and UI.
 #[derive(Message, Clone, Debug)]
 #[allow(dead_code)]

@@ -22,6 +22,7 @@
 - **fix/review-findings audit 2026-03-16**: PASS — animate_fade_out moved bolt→UI (correct: visual system serving multiple producers), FadeOut shared type correct, multiplier insert_if_new precedence correct via ordering chain.
 - **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains. 2 Resources defined in system files (need resources.rs), 1 Component defined in system file (needs move to components.rs). No boundary violations. No messages used (correct for screen sub-domains). Cleanup markers correct. State transitions properly owned.
 - **Architecture compromise cleanup 2026-03-16**: 5 compromises resolved — bump multiplier in message (bolt no longer reads breaker components), shared math module (ccd.rs moved to shared/math.rs), NodePlugin extracted (run/node/ now follows sub-domain pattern), RunLost message (handle_life_lost no longer writes RunState), fx domain (animate_fade_out moved from UI to fx). Terminology updated.
+- **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues (2 moderate, 1 minor). upgrades/ domain renamed to chips/. screen/loading seeds registry. screen/chip_select reads registry + writes ChipSelected. ui/messages.rs imports ChipKind from chips domain (acceptable vocabulary-type import).
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -92,7 +93,10 @@ Active messages (Phase 2b):
 - TimerExpired: run/node (tick_node_timer) → run (handle_timer_expired)
 - RunLost: breaker/behaviors (handle_life_lost) → run (handle_run_lost)
 
-Registered but no consumers yet: UpgradeSelected
+Active messages (upgrade infrastructure):
+- UpgradeSelected: screen/upgrade_select (handle_upgrade_input) → (future: upgrades domain)
+
+Registered but no consumers yet: UpgradeSelected (now written by handle_upgrade_input, still no consumer)
 
 ## Test Pattern
 - Every plugin has a `plugin_builds` headless test (except DebugPlugin)
@@ -110,7 +114,8 @@ Registered but no consumers yet: UpgradeSelected
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only, for outcome display)
 - screen/run_setup reads breaker/behaviors::ArchetypeRegistry (read-only, for card display)
 - screen/upgrade_select reads upgrades::UpgradeRegistry (read-only, for card display + offer generation)
-- All screen sub-domains (main_menu, run_setup, pause_menu, upgrade_select) read input::InputConfig (read-only, for key bindings)
+- All screen sub-domains (main_menu, run_setup, pause_menu, chip_select) read input::InputConfig (read-only, for key bindings)
+- ui/messages.rs imports chips::ChipKind (vocabulary type in ChipSelected message payload — acceptable)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. Hot-reload systems write to *Config resources and entity components across all domains. Telemetry reads from all domains. All gated behind `#[cfg(feature = "dev")]` — compiled out of release. Does NOT set precedent for production domains.
 
 ## Resolved Compromises (2026-03-16)

@@ -118,7 +118,10 @@ mod tests {
             cell_types: vec![],
             layouts: vec![handle],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();
@@ -144,7 +147,10 @@ mod tests {
             cell_types: vec![],
             layouts: vec![handle],
             archetypes: vec![],
-            upgradeselect: Handle::default(),
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
         app.world_mut().insert_resource(make_registry());
 
