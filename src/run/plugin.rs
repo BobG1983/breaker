@@ -44,9 +44,11 @@ impl Plugin for RunPlugin {
                 FixedUpdate,
                 (
                     track_node_completion,
-                    handle_node_cleared,
+                    handle_node_cleared.after(track_node_completion),
                     tick_node_timer,
-                    handle_timer_expired,
+                    handle_timer_expired
+                        .after(tick_node_timer)
+                        .after(handle_node_cleared),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

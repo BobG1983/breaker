@@ -23,9 +23,9 @@ pub fn apply_bump_velocity(
         With<Breaker>,
     >,
 ) {
-    // Collect messages first — skip breaker query when there are none (common case).
-    let messages: Vec<_> = reader.read().collect();
-    if messages.is_empty() {
+    // Skip the breaker query when there are no messages (common case).
+    let mut messages = reader.read().peekable();
+    if messages.peek().is_none() {
         return;
     }
 
@@ -33,26 +33,31 @@ pub fn apply_bump_velocity(
         return;
     };
 
-    for performed in &messages {
-        let multiplier = match performed.grade {
-            BumpGrade::Perfect => perfect_mult.map_or(1.0, |m| m.0),
-            BumpGrade::Early | BumpGrade::Late => weak_mult.map_or(1.0, |m| m.0),
-        };
+    // One BumpPerformed per tick is the invariant (one bump action per fixed step).
+    // Take the first grade and drain any extras to prevent compounded velocity
+    // multiplication if a duplicate is ever emitted in the same frame.
+    let Some(performed) = messages.next() else {
+        return;
+    };
 
-        for (mut bolt_velocity, base_speed, max_speed) in &mut bolt_query {
-            bolt_velocity.value *= multiplier;
+    let multiplier = match performed.grade {
+        BumpGrade::Perfect => perfect_mult.map_or(1.0, |m| m.0),
+        BumpGrade::Early | BumpGrade::Late => weak_mult.map_or(1.0, |m| m.0),
+    };
 
-            // Never drop below base speed
-            let speed = bolt_velocity.speed();
-            if speed < base_speed.0 {
-                bolt_velocity.value = bolt_velocity.direction() * base_speed.0;
-            }
+    for (mut bolt_velocity, base_speed, max_speed) in &mut bolt_query {
+        bolt_velocity.value *= multiplier;
 
-            // Clamp to max speed
-            let speed = bolt_velocity.speed();
-            if speed > max_speed.0 {
-                bolt_velocity.value = bolt_velocity.direction() * max_speed.0;
-            }
+        // Never drop below base speed
+        let speed = bolt_velocity.speed();
+        if speed < base_speed.0 {
+            bolt_velocity.value = bolt_velocity.direction() * base_speed.0;
+        }
+
+        // Clamp to max speed
+        let speed = bolt_velocity.speed();
+        if speed > max_speed.0 {
+            bolt_velocity.value = bolt_velocity.direction() * max_speed.0;
         }
     }
 }

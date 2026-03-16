@@ -13,12 +13,16 @@ use crate::{
 };
 
 /// Reads `BoltLost` messages and fires consequence events for that trigger.
+///
+/// Drains all messages (not just the first) so that extras from future multi-bolt
+/// archetypes don't leak into subsequent frames. Consequences fire once per
+/// bridge invocation regardless of how many bolts were lost in the same frame.
 pub fn bridge_bolt_lost(
     mut reader: MessageReader<BoltLost>,
     bindings: Res<ActiveBehaviors>,
     mut commands: Commands,
 ) {
-    if reader.read().next().is_none() {
+    if reader.read().count() == 0 {
         return;
     }
     fire_consequences(&bindings, Trigger::BoltLost, &mut commands);
@@ -41,6 +45,14 @@ pub fn bridge_bump(
     }
 }
 
+/// Dispatches consequences for the given trigger to ECS commands.
+///
+/// Iterates the active behavior bindings for `trigger` and translates each
+/// [`Consequence`] variant into the appropriate ECS command or observer trigger.
+///
+/// `BoltSpeedBoost` is intentionally a no-op here — it is applied once at
+/// init time by `consequences::bolt_speed_boost` when the archetype loads.
+/// Adding a runtime arm here for it would double-apply the multiplier.
 fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mut Commands) {
     for consequence in bindings.consequences_for(trigger) {
         match consequence {
@@ -106,6 +118,7 @@ mod tests {
             app.insert_resource(RunState {
                 node_index: 0,
                 outcome: RunOutcome::InProgress,
+                ..default()
             });
             app.insert_resource(SendBoltLost(false));
             app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
@@ -158,6 +171,7 @@ mod tests {
             app.insert_resource(RunState {
                 node_index: 0,
                 outcome: RunOutcome::InProgress,
+                ..default()
             });
             app.insert_resource(SendBump(None));
             app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);

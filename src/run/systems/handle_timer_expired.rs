@@ -11,6 +11,10 @@ use crate::{
 };
 
 /// When [`TimerExpired`] is received and the run is still in progress, end the run as lost.
+///
+/// Yields to any transition already queued this frame by `handle_node_cleared`
+/// (`run_state.transition_queued`). If the last cell was cleared on the same
+/// tick the timer fired, the player wins — clear beats loss.
 pub fn handle_timer_expired(
     mut reader: MessageReader<TimerExpired>,
     mut run_state: ResMut<RunState>,
@@ -21,6 +25,11 @@ pub fn handle_timer_expired(
     }
 
     if run_state.outcome != RunOutcome::InProgress {
+        return;
+    }
+
+    // Yield to handle_node_cleared if it already queued a transition this frame.
+    if run_state.transition_queued {
         return;
     }
 
@@ -51,6 +60,7 @@ mod tests {
         app.insert_resource(RunState {
             node_index: 0,
             outcome,
+            ..default()
         });
         app.insert_resource(SendTimerExpired(false));
         app.add_systems(FixedUpdate, (send_expired, handle_timer_expired).chain());

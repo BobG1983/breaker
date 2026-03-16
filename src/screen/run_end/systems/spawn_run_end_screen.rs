@@ -70,6 +70,7 @@ mod tests {
         app.insert_resource(RunState {
             node_index: 0,
             outcome,
+            ..default()
         });
         app.add_systems(Update, spawn_run_end_screen);
         app

@@ -56,6 +56,18 @@ mod tests {
         app.update();
     }
 
+    #[derive(Resource, Default)]
+    struct TimerExpiredCaptured(bool);
+
+    fn capture_timer_expired(
+        mut reader: MessageReader<TimerExpired>,
+        mut captured: ResMut<TimerExpiredCaptured>,
+    ) {
+        if reader.read().count() > 0 {
+            captured.0 = true;
+        }
+    }
+
     #[test]
     fn decrements_remaining() {
         let mut app = test_app(10.0);
@@ -68,11 +80,18 @@ mod tests {
     #[test]
     fn expired_sent_at_zero() {
         let mut app = test_app(0.001);
+        app.init_resource::<TimerExpiredCaptured>();
+        app.add_systems(FixedUpdate, capture_timer_expired.after(tick_node_timer));
         // Tick with enough time to expire
         tick_with_delta(&mut app, Duration::from_millis(100));
 
         let timer = app.world().resource::<NodeTimer>();
         assert!((timer.remaining - 0.0).abs() < f32::EPSILON);
+        let captured = app.world().resource::<TimerExpiredCaptured>();
+        assert!(
+            captured.0,
+            "TimerExpired message should be sent when timer reaches zero"
+        );
     }
 
     #[test]

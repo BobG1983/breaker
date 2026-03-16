@@ -18,11 +18,13 @@ pub fn handle_node_cleared(
     mut run_state: ResMut<RunState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if reader.read().next().is_none() {
+    if reader.read().count() == 0 {
         return;
     }
 
     let final_index = registry.layouts.len().saturating_sub(1);
+
+    run_state.transition_queued = true;
 
     if (run_state.node_index as usize) < final_index {
         next_state.set(GameState::NodeTransition);

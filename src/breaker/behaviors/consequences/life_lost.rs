@@ -91,6 +91,10 @@ pub fn update_lives_display(
     }
 }
 
+/// Returns the HUD display string for the current life count.
+///
+/// Format: `"Lives: {count}"`. Both `spawn_lives_display` and
+/// `update_lives_display` call this function — change the format here only.
 fn format_lives(count: u32) -> String {
     format!("Lives: {count}")
 }
@@ -108,6 +112,7 @@ mod tests {
         app.insert_resource(RunState {
             node_index: 0,
             outcome: RunOutcome::InProgress,
+            ..default()
         });
         app.add_observer(handle_life_lost);
         app

@@ -1,5 +1,7 @@
 //! System to handle cell damage when hit by the bolt.
 
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 
 use crate::{
@@ -11,6 +13,11 @@ use crate::{
 ///
 /// Decrements cell health, updates visual feedback via material color,
 /// and despawns cells that reach zero HP. Sends [`CellDestroyed`] on destruction.
+///
+/// Guards against the same cell appearing in multiple messages in one frame
+/// (e.g., two bolts hitting the same cell simultaneously): only the first hit
+/// that destroys the cell is processed; subsequent messages for an already-despawned
+/// cell are skipped to prevent duplicate [`CellDestroyed`] messages.
 pub fn handle_cell_hit(
     mut reader: MessageReader<BoltHitCell>,
     mut cell_query: Query<CellDamageVisualQuery, With<Cell>>,
@@ -18,7 +25,11 @@ pub fn handle_cell_hit(
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let mut despawned: HashSet<Entity> = HashSet::new();
     for hit in reader.read() {
+        if despawned.contains(&hit.cell) {
+            continue;
+        }
         let Ok((mut health, material_handle, visuals, is_required)) = cell_query.get_mut(hit.cell)
         else {
             continue;
@@ -32,6 +43,7 @@ pub fn handle_cell_hit(
                 entity: hit.cell,
                 was_required_to_clear: is_required,
             });
+            despawned.insert(hit.cell);
         } else {
             // Visual feedback — dim HDR intensity based on remaining health
             let frac = health.fraction();
@@ -55,10 +67,30 @@ mod tests {
     #[derive(Resource)]
     struct TestMessage(Option<BoltHitCell>);
 
-    /// Helper system to queue a message from a test resource.
+    #[derive(Resource, Default)]
+    struct TestMessages(Vec<BoltHitCell>);
+
+    #[derive(Resource, Default)]
+    struct CapturedDestroyed(Vec<CellDestroyed>);
+
     fn enqueue_from_resource(msg_res: Res<TestMessage>, mut writer: MessageWriter<BoltHitCell>) {
         if let Some(msg) = msg_res.0.clone() {
             writer.write(msg);
+        }
+    }
+
+    fn enqueue_all(msg_res: Res<TestMessages>, mut writer: MessageWriter<BoltHitCell>) {
+        for msg in &msg_res.0 {
+            writer.write(msg.clone());
+        }
+    }
+
+    fn capture_destroyed(
+        mut reader: MessageReader<CellDestroyed>,
+        mut captured: ResMut<CapturedDestroyed>,
+    ) {
+        for msg in reader.read() {
+            captured.0.push(msg.clone());
         }
     }
 
@@ -112,6 +144,29 @@ mod tests {
             .id()
     }
 
+    fn spawn_optional_cell(app: &mut App, hp: u32, required: bool) -> Entity {
+        let material = app
+            .world_mut()
+            .resource_mut::<Assets<ColorMaterial>>()
+            .add(ColorMaterial::from_color(Color::srgb(4.0, 0.2, 0.5)));
+        let mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(Rectangle::new(1.0, 1.0));
+        let mut entity = app.world_mut().spawn((
+            Cell,
+            CellHealth::new(hp),
+            default_damage_visuals(),
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+        if required {
+            entity.insert(RequiredToClear);
+        }
+        entity.id()
+    }
+
     #[test]
     fn standard_cell_destroyed_on_hit() {
         let mut app = test_app();
@@ -155,21 +210,96 @@ mod tests {
     #[test]
     fn destroyed_message_includes_required_to_clear() {
         let mut app = test_app();
-        let cell = spawn_cell(&mut app, 1);
+        let cell = spawn_optional_cell(&mut app, 1, true);
 
+        app.init_resource::<CapturedDestroyed>();
         app.insert_resource(TestMessage(Some(BoltHitCell {
             bolt: Entity::PLACEHOLDER,
             cell,
         })));
-
-        app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_from_resource.before(handle_cell_hit),
+                capture_destroyed.after(handle_cell_hit),
+            ),
+        );
         tick(&mut app);
 
-        // The message was sent — verified by the cell being despawned.
-        // The was_required_to_clear field is populated based on Has<RequiredToClear>.
+        let captured = app.world().resource::<CapturedDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "exactly one CellDestroyed should be sent"
+        );
         assert!(
-            app.world().get_entity(cell).is_err(),
-            "cell should be destroyed"
+            captured.0[0].was_required_to_clear,
+            "RequiredToClear cell should set was_required_to_clear = true"
+        );
+    }
+
+    #[test]
+    fn destroyed_message_false_for_non_required_cell() {
+        let mut app = test_app();
+        let cell = spawn_optional_cell(&mut app, 1, false);
+
+        app.init_resource::<CapturedDestroyed>();
+        app.insert_resource(TestMessage(Some(BoltHitCell {
+            bolt: Entity::PLACEHOLDER,
+            cell,
+        })));
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_from_resource.before(handle_cell_hit),
+                capture_destroyed.after(handle_cell_hit),
+            ),
+        );
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "exactly one CellDestroyed should be sent"
+        );
+        assert!(
+            !captured.0[0].was_required_to_clear,
+            "non-required cell should set was_required_to_clear = false"
+        );
+    }
+
+    #[test]
+    fn double_hit_same_cell_only_destroys_once() {
+        let mut app = test_app();
+        let cell = spawn_optional_cell(&mut app, 1, true);
+
+        app.init_resource::<CapturedDestroyed>();
+        app.init_resource::<TestMessages>();
+        app.world_mut().resource_mut::<TestMessages>().0 = vec![
+            BoltHitCell {
+                bolt: Entity::PLACEHOLDER,
+                cell,
+            },
+            BoltHitCell {
+                bolt: Entity::PLACEHOLDER,
+                cell,
+            },
+        ];
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_all.before(handle_cell_hit),
+                capture_destroyed.after(handle_cell_hit),
+            ),
+        );
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "two hits on the same 1-HP cell should produce exactly one CellDestroyed"
         );
     }
 }

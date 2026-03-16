@@ -20,6 +20,7 @@ mod tests {
         app.insert_resource(RunState {
             node_index: 5,
             outcome: RunOutcome::Won,
+            ..default()
         });
         app.add_systems(Update, reset_run_state);
         app

@@ -17,11 +17,11 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── upgrades/         # Amps, Augments, Overclocks system (stub — Phase 3+)
-├── run/              # Run state, node sequencing, timer (stub — Phase 2+)
+├── upgrades/         # Amps, Augments, Overclocks system (stub — Phase 8+)
+├── run/              # Run state, node sequencing, timer
 ├── physics/          # CCD collision detection, collision response
-├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 5)
-├── ui/               # HUD, menus, upgrade selection screen (stub — Phase 2+)
+├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
+├── ui/               # HUD, menus, upgrade selection screen
 └── debug/            # Dev tooling: overlays, telemetry, hot-reload (sub-domains)
 assets/               # RON data files, shaders, textures, audio (project root, not inside src/)
 ```

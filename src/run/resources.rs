@@ -21,6 +21,10 @@ pub struct RunState {
     pub node_index: u32,
     /// Current run outcome.
     pub outcome: RunOutcome,
+    /// Set to `true` when `handle_node_cleared` queues a state transition this
+    /// frame. Checked by `handle_timer_expired` to yield to the node-cleared
+    /// transition (player wins tie-frame: clear beats loss).
+    pub transition_queued: bool,
 }
 
 #[cfg(test)]

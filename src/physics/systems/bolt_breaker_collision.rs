@@ -465,8 +465,8 @@ mod tests {
         let tf = app.world().get::<Transform>(bolt_entity).unwrap();
         let min_y = animated_y + hh.half_height() + default_bolt_radius().0;
         assert!(
-            tf.translation.y >= min_y - 1.0,
-            "bolt should be pushed above breaker, y={:.1} min={min_y:.1}",
+            tf.translation.y >= min_y - 0.01,
+            "bolt should be pushed above breaker, y={:.3} min={min_y:.3}",
             tf.translation.y
         );
 
