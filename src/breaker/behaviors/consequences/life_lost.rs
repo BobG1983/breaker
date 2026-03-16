@@ -2,11 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    run::resources::{RunOutcome, RunState},
-    shared::GameState,
-    ui::components::StatusPanel,
-};
+use crate::{run::messages::RunLost, ui::components::StatusPanel};
 
 /// Consequence event triggered by bridge systems when a life should be lost.
 #[derive(Event)]
@@ -20,12 +16,12 @@ pub struct LivesCount(pub u32);
 #[derive(Component, Debug)]
 pub struct LivesDisplay;
 
-/// Observer that handles life loss — decrements `LivesCount`, ends run at zero.
+/// Observer that handles life loss — decrements `LivesCount`, sends [`RunLost`]
+/// when lives reach zero.
 pub fn handle_life_lost(
     _trigger: On<LoseLifeRequested>,
     mut lives_query: Query<&mut LivesCount>,
-    mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut writer: MessageWriter<RunLost>,
 ) {
     for mut lives in &mut lives_query {
         if lives.0 == 0 {
@@ -33,9 +29,8 @@ pub fn handle_life_lost(
         }
         lives.0 -= 1;
 
-        if lives.0 == 0 && run_state.outcome == RunOutcome::InProgress {
-            run_state.outcome = RunOutcome::Lost;
-            next_state.set(GameState::RunEnd);
+        if lives.0 == 0 {
+            writer.write(RunLost);
         }
     }
 }
@@ -105,22 +100,34 @@ fn format_lives(count: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
-
     use super::*;
     use crate::ui::components::StatusPanel;
 
+    #[derive(Resource, Default)]
+    struct CapturedRunLost(u32);
+
+    fn capture_run_lost(mut reader: MessageReader<RunLost>, mut captured: ResMut<CapturedRunLost>) {
+        for _msg in reader.read() {
+            captured.0 += 1;
+        }
+    }
+
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.insert_resource(RunState {
-            node_index: 0,
-            outcome: RunOutcome::InProgress,
-            ..default()
-        });
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<RunLost>();
+        app.init_resource::<CapturedRunLost>();
         app.add_observer(handle_life_lost);
+        app.add_systems(FixedUpdate, capture_run_lost);
         app
+    }
+
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
     }
 
     #[test]
@@ -136,33 +143,32 @@ mod tests {
     }
 
     #[test]
-    fn lose_last_life_ends_run() {
+    fn lose_last_life_sends_run_lost() {
         let mut app = test_app();
         app.world_mut().spawn(LivesCount(1));
 
         app.world_mut().commands().trigger(LoseLifeRequested);
         app.world_mut().flush();
+        tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Lost);
-
-        let next = app.world().resource::<NextState<GameState>>();
-        assert!(
-            format!("{next:?}").contains("RunEnd"),
-            "expected RunEnd, got: {next:?}"
-        );
+        let captured = app.world().resource::<CapturedRunLost>();
+        assert_eq!(captured.0, 1, "should send RunLost when lives reach zero");
     }
 
     #[test]
-    fn lose_life_at_zero_does_not_double_end() {
+    fn lose_life_at_zero_does_not_send_run_lost() {
         let mut app = test_app();
         app.world_mut().spawn(LivesCount(0));
 
         app.world_mut().commands().trigger(LoseLifeRequested);
         app.world_mut().flush();
+        tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::InProgress);
+        let captured = app.world().resource::<CapturedRunLost>();
+        assert_eq!(
+            captured.0, 0,
+            "should not send RunLost when already at zero"
+        );
     }
 
     #[test]
@@ -180,10 +186,12 @@ mod tests {
 
         app.world_mut().commands().trigger(LoseLifeRequested);
         app.world_mut().flush();
+        tick(&mut app);
+
         assert_eq!(app.world().get::<LivesCount>(entity).unwrap().0, 0);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Lost);
+        let captured = app.world().resource::<CapturedRunLost>();
+        assert_eq!(captured.0, 1, "should send exactly one RunLost");
     }
 
     #[test]

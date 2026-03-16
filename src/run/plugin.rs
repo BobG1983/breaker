@@ -4,9 +4,13 @@ use bevy::prelude::*;
 
 use crate::{
     run::{
+        messages::RunLost,
         node::{NodePlugin, NodeSystems},
         resources::RunState,
-        systems::{advance_node, handle_node_cleared, handle_timer_expired, reset_run_state},
+        systems::{
+            advance_node, handle_node_cleared, handle_run_lost, handle_timer_expired,
+            reset_run_state,
+        },
     },
     shared::{GameState, PlayingState},
 };
@@ -20,6 +24,7 @@ impl Plugin for RunPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<RunState>()
             .add_plugins(NodePlugin)
+            .add_message::<RunLost>()
             .add_systems(
                 FixedUpdate,
                 (
@@ -27,6 +32,7 @@ impl Plugin for RunPlugin {
                     handle_timer_expired
                         .after(NodeSystems::TickTimer)
                         .after(handle_node_cleared),
+                    handle_run_lost,
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

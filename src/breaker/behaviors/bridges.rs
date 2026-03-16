@@ -97,29 +97,20 @@ mod tests {
     }
 
     mod bolt_lost {
-        use bevy::state::app::StatesPlugin;
-
         use super::*;
         use crate::{
-            breaker::behaviors::consequences::life_lost::LivesCount,
-            run::resources::{RunOutcome, RunState},
-            shared::GameState,
+            breaker::behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
         };
 
         fn test_app() -> App {
             let mut app = App::new();
-            app.add_plugins((MinimalPlugins, StatesPlugin));
-            app.init_state::<GameState>();
+            app.add_plugins(MinimalPlugins);
             app.add_message::<BoltLost>();
+            app.add_message::<RunLost>();
             app.insert_resource(ActiveBehaviors(vec![(
                 Trigger::BoltLost,
                 Consequence::LoseLife,
             )]));
-            app.insert_resource(RunState {
-                node_index: 0,
-                outcome: RunOutcome::InProgress,
-                ..default()
-            });
             app.insert_resource(SendBoltLost(false));
             app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
             app.add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
@@ -149,30 +140,21 @@ mod tests {
     }
 
     mod bump {
-        use bevy::state::app::StatesPlugin;
-
         use super::*;
         use crate::{
-            breaker::behaviors::consequences::life_lost::LivesCount,
-            run::resources::{RunOutcome, RunState},
-            shared::GameState,
+            breaker::behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
         };
 
         fn test_app() -> App {
             let mut app = App::new();
-            app.add_plugins((MinimalPlugins, StatesPlugin));
-            app.init_state::<GameState>();
+            app.add_plugins(MinimalPlugins);
             app.add_message::<BumpPerformed>();
+            app.add_message::<RunLost>();
             // BumpWhiff triggers LoseLife (for testing bridge_bump dispatch)
             app.insert_resource(ActiveBehaviors(vec![
                 (Trigger::PerfectBump, Consequence::BoltSpeedBoost(1.5)),
                 (Trigger::EarlyBump, Consequence::LoseLife),
             ]));
-            app.insert_resource(RunState {
-                node_index: 0,
-                outcome: RunOutcome::InProgress,
-                ..default()
-            });
             app.insert_resource(SendBump(None));
             app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
             app.add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
