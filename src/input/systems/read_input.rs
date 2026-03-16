@@ -54,7 +54,7 @@ pub fn read_input_actions(
                 if !actions.active(GameAction::DashLeft) {
                     actions.0.push(GameAction::DashLeft);
                 }
-                double_tap.last_left_tap = 0.0; // consume
+                double_tap.last_left_tap = f64::NEG_INFINITY; // consume
             } else {
                 double_tap.last_left_tap = now;
             }
@@ -83,7 +83,7 @@ pub fn read_input_actions(
                 if !actions.active(GameAction::DashRight) {
                     actions.0.push(GameAction::DashRight);
                 }
-                double_tap.last_right_tap = 0.0; // consume
+                double_tap.last_right_tap = f64::NEG_INFINITY; // consume
             } else {
                 double_tap.last_right_tap = now;
             }
