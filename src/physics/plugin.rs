@@ -8,7 +8,7 @@ use crate::{
         messages::{BoltHitBreaker, BoltHitCell, BoltLost},
         systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost},
     },
-    shared::PlayingState,
+    shared::{GameRng, PlayingState},
 };
 
 /// Plugin for the physics domain.
@@ -19,7 +19,8 @@ pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<BoltHitBreaker>()
+        app.init_resource::<GameRng>()
+            .add_message::<BoltHitBreaker>()
             .add_message::<BoltHitCell>()
             .add_message::<BoltLost>()
             .add_systems(
