@@ -5,6 +5,7 @@ use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 use crate::{
     shared::{GameState, PlayingState},
     ui::{
+        UiSystems,
         messages::ChipSelected,
         systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
     },
@@ -20,7 +21,12 @@ impl Plugin for UiPlugin {
         app.add_message::<ChipSelected>()
             .add_systems(
                 OnEnter(GameState::Playing),
-                (spawn_side_panels, ApplyDeferred, spawn_timer_hud).chain(),
+                (
+                    spawn_side_panels,
+                    ApplyDeferred,
+                    spawn_timer_hud.in_set(UiSystems::SpawnTimerHud),
+                )
+                    .chain(),
             )
             .add_systems(
                 Update,

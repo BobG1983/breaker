@@ -16,10 +16,10 @@ use super::{
     sets::BehaviorSystems,
 };
 use crate::{
-    breaker::systems::init_breaker_params,
+    breaker::BreakerSystems,
     physics::PhysicsSystems,
     shared::{GameState, PlayingState},
-    ui::systems::spawn_timer_hud,
+    ui::UiSystems,
 };
 
 /// Plugin for the behavior system.
@@ -43,11 +43,11 @@ impl Plugin for BehaviorsPlugin {
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
-                    apply_archetype_config_overrides.before(init_breaker_params),
-                    init_archetype.after(init_breaker_params),
+                    apply_archetype_config_overrides.before(BreakerSystems::InitParams),
+                    init_archetype.after(BreakerSystems::InitParams),
                     spawn_lives_display
                         .after(init_archetype)
-                        .after(spawn_timer_hud),
+                        .after(UiSystems::SpawnTimerHud),
                 ),
             )
             // Bridge systems — each reads one message type, run in parallel

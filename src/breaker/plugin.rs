@@ -33,8 +33,10 @@ impl Plugin for BreakerPlugin {
                 OnEnter(GameState::Playing),
                 (
                     spawn_breaker,
-                    init_breaker_params.after(spawn_breaker),
-                    reset_breaker.after(init_breaker_params),
+                    init_breaker_params
+                        .after(spawn_breaker)
+                        .in_set(BreakerSystems::InitParams),
+                    reset_breaker.after(BreakerSystems::InitParams),
                 ),
             )
             .add_systems(
