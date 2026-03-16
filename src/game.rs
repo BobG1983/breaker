@@ -4,7 +4,7 @@ use bevy::{app::PluginGroupBuilder, prelude::*};
 
 use crate::{
     audio::AudioPlugin, bolt::BoltPlugin, breaker::BreakerPlugin, cells::CellsPlugin,
-    debug::DebugPlugin, input::InputPlugin, physics::PhysicsPlugin, run::RunPlugin,
+    debug::DebugPlugin, fx::FxPlugin, input::InputPlugin, physics::PhysicsPlugin, run::RunPlugin,
     screen::ScreenPlugin, ui::UiPlugin, upgrades::UpgradesPlugin, wall::WallPlugin,
 };
 
@@ -25,6 +25,7 @@ impl PluginGroup for Game {
             .add(BoltPlugin)
             .add(CellsPlugin)
             .add(UpgradesPlugin)
+            .add(FxPlugin)
             .add(RunPlugin)
             .add(AudioPlugin)
             .add(UiPlugin)

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::shared::FadeOut;
+use crate::fx::components::FadeOut;
 
 /// Ticks [`FadeOut`] timers and adjusts text alpha. Despawns when finished.
 ///

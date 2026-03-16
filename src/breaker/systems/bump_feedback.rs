@@ -7,7 +7,8 @@ use crate::{
         components::Breaker,
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     },
-    shared::{CleanupOnNodeExit, FadeOut},
+    fx::FadeOut,
+    shared::CleanupOnNodeExit,
 };
 
 /// Fade duration for bump grade text (seconds).
@@ -84,7 +85,7 @@ pub fn spawn_whiff_text(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::FadeOut;
+    use crate::fx::FadeOut;
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);

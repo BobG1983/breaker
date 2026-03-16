@@ -6,7 +6,7 @@ use crate::{
     shared::{GameState, PlayingState},
     ui::{
         messages::UpgradeSelected,
-        systems::{animate_fade_out, spawn_side_panels, spawn_timer_hud, update_timer_display},
+        systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
     },
 };
 
@@ -24,7 +24,7 @@ impl Plugin for UiPlugin {
             )
             .add_systems(
                 Update,
-                (update_timer_display, animate_fade_out).run_if(in_state(PlayingState::Active)),
+                update_timer_display.run_if(in_state(PlayingState::Active)),
             );
     }
 }

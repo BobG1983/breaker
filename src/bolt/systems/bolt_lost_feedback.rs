@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    physics::messages::BoltLost,
-    shared::{CleanupOnNodeExit, FadeOut},
-};
+use crate::{fx::FadeOut, physics::messages::BoltLost, shared::CleanupOnNodeExit};
 
 /// Duration of the "BOLT LOST" text fade in seconds.
 const FADE_DURATION: f32 = 1.5;
@@ -30,7 +27,7 @@ pub fn spawn_bolt_lost_text(mut reader: MessageReader<BoltLost>, mut commands: C
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::systems::animate_fade_out;
+    use crate::fx::systems::animate_fade_out;
 
     #[derive(Resource)]
     struct TriggerLost(bool);
