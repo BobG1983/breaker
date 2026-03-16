@@ -15,9 +15,11 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 | `NodeCleared` | run/node (track_node_completion) | run (handle_node_cleared) |
 | `TimerExpired` | run/node (tick_node_timer) | run (handle_timer_expired) |
 | `RunLost` | breaker/behaviors (handle_life_lost) | run (handle_run_lost) |
+| `ApplyTimePenalty { seconds }` | breaker/behaviors (handle_time_penalty) | run/node (apply_time_penalty) |
+| `SpawnAdditionalBolt` | breaker/behaviors (handle_spawn_bolt_requested) | bolt (spawn_additional_bolt) |
 
 ## Registered Messages (no consumers yet)
 
 | Message | Registered By | Planned Consumers |
 |---------|---------------|-------------------|
-| `UpgradeSelected` | UI | upgrades (apply effects) |
+| `UpgradeSelected` | UI | chips (apply effects) |

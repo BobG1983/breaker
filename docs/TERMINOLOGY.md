@@ -15,6 +15,7 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **Aegis** | Lives-based breaker archetype | `Aegis`, `AegisPlugin` |
 | **Chrono** | Time-penalty breaker archetype | `Chrono`, `ChronoPlugin` |
 | **Prism** | Multi-bolt breaker archetype | `Prism`, `PrismPlugin` |
+| **ExtraBolt** | Additional bolt spawned by the Prism archetype on a perfect bump; despawned on loss rather than respawned | `ExtraBolt` |
 | **Chip** | Any Amp, Augment, or Overclock (collective term) | `ChipDefinition`, `ChipRegistry`, `ChipSelected` |
 | **Rig** | The player's complete build (Breaker + Bolt + Chips + seed + score) | `Rig`, `RigSummary` |
 | **Flux** | Meta-progression currency | `Flux`, `FluxReward` |

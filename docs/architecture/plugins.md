@@ -17,10 +17,11 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── upgrades/         # Amps, Augments, Overclocks system (stub — Phase 8+)
+├── chips/            # Amps, Augments, Overclocks system (stub — Phase 8+)
 ├── fx/               # Cross-cutting visual effects (fade-out, flash, particles)
 ├── run/              # Run state, node sequencing (node/ sub-domain), timer
 ├── physics/          # CCD collision detection, collision response
+├── interpolate/      # Transform interpolation for smooth rendering between FixedUpdate ticks
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
 ├── ui/               # HUD, menus, upgrade selection screen
 └── debug/            # Dev tooling: overlays, telemetry, hot-reload (sub-domains)

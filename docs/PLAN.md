@@ -17,12 +17,12 @@ See `DESIGN.md` for core design principles, `architecture/` for technical decisi
 - Phase 2 (partial):
   - [2a: Level Loading](plan/done/phase-2/phase-2a-level-loading.md)
   - [2b: Run Structure & Node Timer](plan/done/phase-2/phase-2b-run-and-timer.md)
+  - [2e: Visual Polish & Additional Archetypes](plan/phase-2/phase-2e-chrono-and-prism.md)
 
 ### Current
 - [Phase 2: Game Loop & Time Pressure](plan/phase-2/README.md)
   - [2c: Archetype System & Aegis](plan/phase-2/phase-2c-archetype-system.md)
   - [2d: Screens](plan/phase-2/phase-2d-screens-and-ui.md)
-  - [2e: Visual Polish & Additional Archetypes](plan/phase-2/phase-2e-chrono-and-prism.md)
 
 ### Upcoming
 - [Phase 3: Dev Infrastructure](plan/phase-3/README.md)

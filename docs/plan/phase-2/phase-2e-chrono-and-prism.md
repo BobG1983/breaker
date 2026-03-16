@@ -38,11 +38,11 @@
 
 ## Checklist
 
-- [ ] Visual interpolation (smooth bolt/breaker between FixedUpdate ticks)
-- [ ] Chrono breaker (time penalty bolt-lost, bump speed triggered ability)
-- [ ] Chrono per-breaker RON config with unique base stats
-- [ ] Prism breaker (multi-bolt on perfect bump, speed-neutral)
-- [ ] Prism per-breaker RON config with unique base stats
+- [x] Visual interpolation (smooth bolt/breaker between FixedUpdate ticks)
+- [x] Chrono breaker (time penalty bolt-lost, bump speed triggered ability)
+- [x] Chrono per-breaker RON config with unique base stats
+- [x] Prism breaker (multi-bolt on perfect bump, speed-neutral)
+- [x] Prism per-breaker RON config with unique base stats
 - [ ] Bolt-loss visual indicator for Chrono
 - [ ] Bolt-loss visual indicator for Prism
 - [ ] All three breakers playable with distinct feel
