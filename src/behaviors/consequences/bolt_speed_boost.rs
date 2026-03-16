@@ -41,8 +41,7 @@ pub fn apply_bolt_speed_boosts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::BehaviorBinding;
-    use crate::breaker::components::Breaker;
+    use crate::{behaviors::definition::BehaviorBinding, breaker::components::Breaker};
 
     fn test_app() -> App {
         let mut app = App::new();

@@ -2,17 +2,19 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::messages::SpawnAdditionalBolt;
-
-/// Consequence event triggered by bridge systems when a new bolt should spawn.
-#[derive(Event)]
-pub struct SpawnBoltRequested;
+use crate::{
+    behaviors::definition::{Consequence, ConsequenceFired},
+    bolt::messages::SpawnAdditionalBolt,
+};
 
 /// Observer that handles spawn-bolt — writes [`SpawnAdditionalBolt`] message.
-pub fn handle_spawn_bolt_requested(
-    _trigger: On<SpawnBoltRequested>,
+pub fn handle_spawn_bolt(
+    trigger: On<ConsequenceFired>,
     mut writer: MessageWriter<SpawnAdditionalBolt>,
 ) {
+    let Consequence::SpawnBolt = trigger.event().0 else {
+        return;
+    };
     writer.write(SpawnAdditionalBolt);
 }
 
@@ -37,7 +39,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.add_message::<SpawnAdditionalBolt>();
         app.init_resource::<CapturedSpawnBolt>();
-        app.add_observer(handle_spawn_bolt_requested);
+        app.add_observer(handle_spawn_bolt);
         app.add_systems(FixedUpdate, capture_spawn);
         app
     }
@@ -54,7 +56,9 @@ mod tests {
     fn handle_spawn_bolt_sends_message() {
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(SpawnBoltRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::SpawnBolt));
         app.world_mut().flush();
         tick(&mut app);
 

@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 
-use crate::{run::messages::RunLost, ui::components::StatusPanel};
-
-/// Consequence event triggered by bridge systems when a life should be lost.
-#[derive(Event)]
-pub struct LoseLifeRequested;
+use crate::{
+    behaviors::definition::{Consequence, ConsequenceFired},
+    run::messages::RunLost,
+    ui::components::StatusPanel,
+};
 
 /// Number of remaining lives on the breaker entity.
 #[derive(Component, Debug, Clone, Copy)]
@@ -19,10 +19,13 @@ pub struct LivesDisplay;
 /// Observer that handles life loss — decrements `LivesCount`, sends [`RunLost`]
 /// when lives reach zero.
 pub fn handle_life_lost(
-    _trigger: On<LoseLifeRequested>,
+    trigger: On<ConsequenceFired>,
     mut lives_query: Query<&mut LivesCount>,
     mut writer: MessageWriter<RunLost>,
 ) {
+    let Consequence::LoseLife = trigger.event().0 else {
+        return;
+    };
     for mut lives in &mut lives_query {
         if lives.0 == 0 {
             continue;
@@ -135,7 +138,9 @@ mod tests {
         let mut app = test_app();
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
-        app.world_mut().commands().trigger(LoseLifeRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::LoseLife));
         app.world_mut().flush();
 
         let lives = app.world().get::<LivesCount>(entity).unwrap();
@@ -147,7 +152,9 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn(LivesCount(1));
 
-        app.world_mut().commands().trigger(LoseLifeRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::LoseLife));
         app.world_mut().flush();
         tick(&mut app);
 
@@ -160,7 +167,9 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn(LivesCount(0));
 
-        app.world_mut().commands().trigger(LoseLifeRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::LoseLife));
         app.world_mut().flush();
         tick(&mut app);
 
@@ -176,15 +185,21 @@ mod tests {
         let mut app = test_app();
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
-        app.world_mut().commands().trigger(LoseLifeRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::LoseLife));
         app.world_mut().flush();
         assert_eq!(app.world().get::<LivesCount>(entity).unwrap().0, 2);
 
-        app.world_mut().commands().trigger(LoseLifeRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::LoseLife));
         app.world_mut().flush();
         assert_eq!(app.world().get::<LivesCount>(entity).unwrap().0, 1);
 
-        app.world_mut().commands().trigger(LoseLifeRequested);
+        app.world_mut()
+            .commands()
+            .trigger(ConsequenceFired(Consequence::LoseLife));
         app.world_mut().flush();
         tick(&mut app);
 

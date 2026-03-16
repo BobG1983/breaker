@@ -4,11 +4,7 @@ use bevy::prelude::*;
 
 use super::{
     active::ActiveBehaviors,
-    consequences::{
-        life_lost::LoseLifeRequested, spawn_bolt::SpawnBoltRequested,
-        time_penalty::TimePenaltyRequested,
-    },
-    definition::{Consequence, Trigger},
+    definition::{Consequence, ConsequenceFired, Trigger},
 };
 use crate::{
     breaker::messages::{BumpGrade, BumpPerformed},
@@ -48,30 +44,19 @@ pub fn bridge_bump(
     }
 }
 
-/// Dispatches consequences for the given trigger to ECS commands.
+/// Dispatches consequences for the given trigger via [`ConsequenceFired`].
 ///
-/// Iterates the active behavior bindings for `trigger` and translates each
-/// [`Consequence`] variant into the appropriate ECS command or observer trigger.
+/// Each handler self-selects via pattern matching on the [`Consequence`] variant.
+/// Adding a new consequence never touches this function.
 ///
-/// `BoltSpeedBoost` is intentionally a no-op here — it is applied once at
-/// init time by `consequences::bolt_speed_boost` when the archetype loads.
-/// Adding a runtime arm here for it would double-apply the multiplier.
+/// `BoltSpeedBoost` is skipped — it is applied once at init time by
+/// `consequences::bolt_speed_boost` when the archetype loads.
 fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mut Commands) {
     for consequence in bindings.consequences_for(trigger) {
-        match consequence {
-            Consequence::LoseLife => {
-                commands.trigger(LoseLifeRequested);
-            }
-            Consequence::BoltSpeedBoost(_) => {
-                // Init-time only — handled by consequences::bolt_speed_boost
-            }
-            Consequence::TimePenalty(seconds) => {
-                commands.trigger(TimePenaltyRequested { seconds: *seconds });
-            }
-            Consequence::SpawnBolt => {
-                commands.trigger(SpawnBoltRequested);
-            }
+        if matches!(consequence, Consequence::BoltSpeedBoost(_)) {
+            continue; // Init-time only — no runtime handler
         }
+        commands.trigger(ConsequenceFired(consequence.clone()));
     }
 }
 
@@ -107,9 +92,7 @@ mod tests {
 
     mod bolt_lost {
         use super::*;
-        use crate::{
-            behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
-        };
+        use crate::{behaviors::consequences::life_lost::LivesCount, run::messages::RunLost};
 
         fn test_app() -> App {
             let mut app = App::new();
@@ -175,9 +158,7 @@ mod tests {
             )]));
             app.insert_resource(SendBoltLost(false));
             app.init_resource::<CapturedPenalties>();
-            app.add_observer(
-                crate::behaviors::consequences::time_penalty::handle_time_penalty,
-            );
+            app.add_observer(crate::behaviors::consequences::time_penalty::handle_time_penalty);
             app.add_systems(
                 FixedUpdate,
                 (send_bolt_lost, bridge_bolt_lost, capture_penalties).chain(),
@@ -237,9 +218,7 @@ mod tests {
             )]));
             app.insert_resource(SendBump(None));
             app.init_resource::<CapturedSpawnBolt>();
-            app.add_observer(
-                crate::behaviors::consequences::spawn_bolt::handle_spawn_bolt_requested,
-            );
+            app.add_observer(crate::behaviors::consequences::spawn_bolt::handle_spawn_bolt);
             app.add_systems(FixedUpdate, (send_bump, bridge_bump, capture_spawn).chain());
             app
         }
@@ -273,9 +252,7 @@ mod tests {
 
     mod bump {
         use super::*;
-        use crate::{
-            behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
-        };
+        use crate::{behaviors::consequences::life_lost::LivesCount, run::messages::RunLost};
 
         fn test_app() -> App {
             let mut app = App::new();

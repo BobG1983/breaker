@@ -96,10 +96,12 @@ pub fn init_archetype(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{
-        ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides, Consequence, Trigger,
+    use crate::{
+        behaviors::definition::{
+            ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides, Consequence, Trigger,
+        },
+        breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier},
     };
-    use crate::breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier};
 
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
 

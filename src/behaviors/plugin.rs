@@ -7,7 +7,7 @@ use super::{
     bridges::{bridge_bolt_lost, bridge_bump},
     consequences::{
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
-        spawn_bolt::handle_spawn_bolt_requested,
+        spawn_bolt::handle_spawn_bolt,
         time_penalty::handle_time_penalty,
     },
     definition::Trigger,
@@ -38,7 +38,7 @@ impl Plugin for BehaviorsPlugin {
             // Consequence observers
             .add_observer(handle_life_lost)
             .add_observer(handle_time_penalty)
-            .add_observer(handle_spawn_bolt_requested)
+            .add_observer(handle_spawn_bolt)
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),

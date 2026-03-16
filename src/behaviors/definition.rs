@@ -57,6 +57,13 @@ pub enum Consequence {
     SpawnBolt,
 }
 
+/// Generic consequence event — each handler self-selects via pattern matching.
+///
+/// Replaces per-consequence events (`LoseLifeRequested`, `TimePenaltyRequested`,
+/// `SpawnBoltRequested`). Adding a new consequence never touches `fire_consequences`.
+#[derive(Event, Clone, Debug)]
+pub struct ConsequenceFired(pub Consequence);
+
 /// Optional overrides for `BreakerDefaults` fields.
 ///
 /// Each `Some` field replaces the corresponding base value.

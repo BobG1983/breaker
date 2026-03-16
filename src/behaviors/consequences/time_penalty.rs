@@ -2,23 +2,20 @@
 
 use bevy::prelude::*;
 
-use crate::run::node::messages::ApplyTimePenalty;
-
-/// Consequence event triggered by bridge systems when time should be subtracted.
-#[derive(Event)]
-pub struct TimePenaltyRequested {
-    /// Seconds to subtract from the node timer.
-    pub seconds: f32,
-}
+use crate::{
+    behaviors::definition::{Consequence, ConsequenceFired},
+    run::node::messages::ApplyTimePenalty,
+};
 
 /// Observer that handles time penalty — writes [`ApplyTimePenalty`] message.
 pub fn handle_time_penalty(
-    trigger: On<TimePenaltyRequested>,
+    trigger: On<ConsequenceFired>,
     mut writer: MessageWriter<ApplyTimePenalty>,
 ) {
-    writer.write(ApplyTimePenalty {
-        seconds: trigger.event().seconds,
-    });
+    let Consequence::TimePenalty(seconds) = trigger.event().0 else {
+        return;
+    };
+    writer.write(ApplyTimePenalty { seconds });
 }
 
 #[cfg(test)]
@@ -61,7 +58,7 @@ mod tests {
 
         app.world_mut()
             .commands()
-            .trigger(TimePenaltyRequested { seconds: 5.0 });
+            .trigger(ConsequenceFired(Consequence::TimePenalty(5.0)));
         app.world_mut().flush();
         tick(&mut app);
 
@@ -76,7 +73,7 @@ mod tests {
 
         app.world_mut()
             .commands()
-            .trigger(TimePenaltyRequested { seconds: 12.5 });
+            .trigger(ConsequenceFired(Consequence::TimePenalty(12.5)));
         app.world_mut().flush();
         tick(&mut app);
 
