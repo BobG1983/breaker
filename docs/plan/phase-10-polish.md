@@ -1,4 +1,4 @@
-# Phase 9: Polish & Ship
+# Phase 10: Polish & Ship
 
 **Goal**: Make it a complete, shippable experience.
 

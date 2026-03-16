@@ -2,7 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::{shared::CleanupOnRunEnd, ui::components::SidePanels};
+use crate::{
+    shared::CleanupOnRunEnd,
+    ui::components::{SidePanels, StatusPanel},
+};
 
 /// Spawns the full-screen flex row with left and right side panels.
 pub fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePanels>>) {
@@ -63,11 +66,13 @@ pub fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePa
 
             // Right panel — Status
             root.spawn((
+                StatusPanel,
                 Node {
                     width: Val::Percent(12.5),
                     height: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
                     padding: UiRect::all(Val::Px(24.0)),
+                    row_gap: Val::Px(12.0),
                     border: UiRect::left(Val::Px(1.0)),
                     ..default()
                 },
@@ -85,4 +90,50 @@ pub fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePa
                 ));
             });
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, spawn_side_panels);
+        app
+    }
+
+    #[test]
+    fn spawns_side_panels_and_status_panel() {
+        let mut app = test_app();
+        app.update();
+
+        let side_count = app
+            .world_mut()
+            .query_filtered::<Entity, With<SidePanels>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(side_count, 1);
+
+        let status_count = app
+            .world_mut()
+            .query_filtered::<Entity, With<StatusPanel>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(status_count, 1);
+    }
+
+    #[test]
+    fn no_double_spawn() {
+        let mut app = test_app();
+        app.update();
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<SidePanels>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1, "should not double-spawn side panels");
+    }
 }

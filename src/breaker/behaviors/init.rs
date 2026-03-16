@@ -25,17 +25,16 @@ pub fn apply_archetype_config_overrides(
     defaults: Res<Assets<BreakerDefaults>>,
     mut config: ResMut<BreakerConfig>,
 ) {
-    // Reset config from defaults
-    let base = BreakerDefaults::default();
-    *config = BreakerConfig::from(base);
+    // Reset config from loaded RON defaults (not code defaults)
+    if let Some(loaded) = defaults.iter().next().map(|(_, d)| d) {
+        *config = BreakerConfig::from(loaded.clone());
+    }
 
     // Apply archetype overrides
     let Some(def) = registry.archetypes.get(&selected.0) else {
         warn!("Archetype '{}' not found in registry", selected.0);
         return;
     };
-
-    let _ = &defaults; // reserved for hot-reload from asset
 
     let overrides = &def.stat_overrides;
     if let Some(width) = overrides.width {
@@ -104,9 +103,11 @@ mod tests {
         components::{BumpPerfectMultiplier, BumpWeakMultiplier},
     };
 
-    fn make_aegis() -> ArchetypeDefinition {
+    const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
+
+    fn make_test_archetype() -> ArchetypeDefinition {
         ArchetypeDefinition {
-            name: "Aegis".to_owned(),
+            name: TEST_ARCHETYPE_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
             behaviors: vec![
@@ -120,7 +121,7 @@ mod tests {
                 },
                 BehaviorBinding {
                     triggers: vec![Trigger::EarlyBump, Trigger::LateBump],
-                    consequence: Consequence::BoltSpeedBoost(0.8),
+                    consequence: Consequence::BoltSpeedBoost(1.1),
                 },
             ],
         }
@@ -132,7 +133,7 @@ mod tests {
         let mut registry = ArchetypeRegistry::default();
         registry.archetypes.insert(def.name.clone(), def);
         app.insert_resource(registry);
-        app.insert_resource(SelectedArchetype("Aegis".to_owned()));
+        app.insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()));
         app.init_resource::<ActiveBehaviors>();
         app.add_systems(Update, init_archetype);
         app
@@ -140,7 +141,7 @@ mod tests {
 
     #[test]
     fn init_archetype_stamps_lives_count() {
-        let mut app = test_app_with_archetype(make_aegis());
+        let mut app = test_app_with_archetype(make_test_archetype());
         let entity = app.world_mut().spawn(Breaker).id();
         app.update();
 
@@ -150,7 +151,7 @@ mod tests {
 
     #[test]
     fn init_archetype_stamps_bump_multipliers() {
-        let mut app = test_app_with_archetype(make_aegis());
+        let mut app = test_app_with_archetype(make_test_archetype());
         let entity = app.world_mut().spawn(Breaker).id();
         app.update();
 
@@ -158,12 +159,12 @@ mod tests {
         assert!((perfect.0 - 1.5).abs() < f32::EPSILON);
 
         let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
-        assert!((weak.0 - 0.8).abs() < f32::EPSILON);
+        assert!((weak.0 - 1.1).abs() < f32::EPSILON);
     }
 
     #[test]
     fn init_archetype_builds_active_behaviors() {
-        let mut app = test_app_with_archetype(make_aegis());
+        let mut app = test_app_with_archetype(make_test_archetype());
         app.world_mut().spawn(Breaker);
         app.update();
 
@@ -178,7 +179,7 @@ mod tests {
 
     #[test]
     fn init_archetype_skips_already_initialized() {
-        let mut app = test_app_with_archetype(make_aegis());
+        let mut app = test_app_with_archetype(make_test_archetype());
         // Entity already has LivesCount → should skip
         let entity = app.world_mut().spawn((Breaker, LivesCount(99))).id();
         app.update();

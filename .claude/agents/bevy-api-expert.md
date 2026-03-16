@@ -92,13 +92,28 @@ If you cannot verify an API detail from the authoritative sources:
 
 ## Maintaining the Bevy Patterns Agent Doc
 
-The file `.claude/agent_docs/bevy-0.18.md` contains the project-wide Bevy API patterns that all agents reference for Bevy v0.18. When you detect that the Bevy version in `Cargo.toml` has changed (major or minor bump), you MUST:
+The file `.claude/agent_docs/bevy-0.18.md` contains the project-wide Bevy API patterns that all agents reference for Bevy v0.18. This is a **critical shared resource** — every agent and conversation uses it to avoid wrong Bevy API calls.
+
+### Keeping the Shared Doc Current
+
+After every API verification session, review `.claude/agent_docs/bevy-0.18.md` and promote any critical patterns from your MEMORY.md that other agents need. The shared doc should contain the most dangerous gotchas — the patterns where training data confidently says one thing but the actual API does another. Prioritize:
+
+1. **Breaking renames**: types/traits that changed names (e.g., `Parent` → `ChildOf`)
+2. **Removed APIs**: things that don't exist anymore (e.g., `*Bundle` structs, `EventReader` for messages)
+3. **Silent behavior changes**: APIs that compile but do the wrong thing (e.g., `advance_by` vs `accumulate_overstep`)
+4. **Test-critical patterns**: testing helpers that differ from what tutorials show
+
+Keep the shared doc concise (under 50 lines) — it's a quick-reference safety net, not a full API guide.
+
+### On Version Change
+
+When you detect that the Bevy version in `Cargo.toml` has changed (major or minor bump), you MUST:
 
 1. Research the new version's API changes (deprecations, new patterns, renamed types)
 2. Create a new `.claude/agent_docs/bevy-{VERSION}.md` with the updated patterns
 3. Flag any code in `src/` that uses patterns deprecated by the new version
 
-This is a critical responsibility — stale patterns cause every agent and conversation to produce wrong code.
+Stale patterns cause every agent and conversation to produce wrong code.
 
 ## Update your agent memory
 

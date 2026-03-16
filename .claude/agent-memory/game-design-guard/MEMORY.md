@@ -6,7 +6,7 @@
 - Phase 1 core mechanics remain APPROVED
 - Phase 2b run structure APPROVED
 - Phase 2c archetype system APPROVED
-- 2 HIGH issues: run-end dead air, doc inconsistency on bump multipliers
+- 2 HIGH issues: run-end dead air, bump multipliers (FIXED — 0.8x → 1.1x)
 - 2 MEDIUM issues: bolt-lost respawn too safe, perfect window possibly too generous
 
 ## Phase 1 Validation (2026-03-11, updated)
@@ -22,14 +22,14 @@
 - Breaker: width=216, height=36, max_speed=900, dash_mult=4.0x, dash_dur=0.15s
 - Bolt: base=720, min=360, max=1440, radius=14
 - Bump: perfect_window=0.15s, early=0.15s, late=0.15s
-- Bump multipliers (Aegis): perfect=1.5x, early/late=0.8x
+- Bump multipliers (Aegis): perfect=1.5x, early/late=1.1x
 - Bump cooldowns: perfect=0.0, weak=0.15s
 - Tilt: dash=15deg, brake=25deg
 - Max reflection: 75deg from vertical
 - Dash covers 540 units = 37.5% of playfield width
 
 ## Design Principles Confirmed
-- Mistimed bumps (0.8x) penalize above base speed, neutral at base speed
+- Mistimed bumps (1.1x) give small boost — all attempted bumps are rewarded
 - Bolt reflection completely overwrites direction -- every contact is skill expression
 - Dash requires directional commitment -- no stationary dashes
 - Three control axes: position, tilt angle, bump timing
@@ -39,7 +39,7 @@
 
 ## Open Issues (Ordered by Priority)
 1. Run-end screen dead air (no timer/auto-advance) -- HIGH
-2. PLAN.md/README say bump "all grades boost" but 0.8x is penalty -- HIGH (doc fix)
+2. ~~PLAN.md/README say bump "all grades boost" but 0.8x is penalty~~ FIXED — code updated to 1.1x
 3. Bolt-lost respawn straight up = no reaction required -- MEDIUM
 4. 150ms perfect window may be too generous post-rescale -- MEDIUM (validate Phase 4)
 5. Run-end subtitle copy is weak/passive -- LOW

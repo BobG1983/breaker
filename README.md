@@ -34,7 +34,7 @@ Dev aliases are defined in `.cargo/config.toml` and use `bevy/dynamic_linking` f
 
 ## Project Status
 
-**Phases 0-1 complete, Phase 2 next.** Scaffolding, plugin architecture, and core mechanics (breaker, bolt, cells, physics, bump system) are implemented. Next up: game loop (timer, bolt-lost penalties, level completion, level loading).
+**Phases 0–2b complete, Phase 2c–e in progress.** Core mechanics (breaker, bolt, cells, physics, bump system), level loading, run structure with node timer, main menu, run-end screen, side panel UI with timer HUD and lives display, and the Aegis breaker archetype are all implemented. Next up: remaining Phase 2 work (Chrono & Prism archetypes, screens polish) then Phase 3 dev infrastructure.
 
 ## License
 

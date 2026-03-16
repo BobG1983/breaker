@@ -48,6 +48,7 @@ pub type BreakerResetQuery = (
     &'static mut BreakerVelocity,
     &'static mut BreakerTilt,
     &'static mut BreakerStateTimer,
+    &'static mut BumpState,
     &'static BreakerBaseY,
 );
 

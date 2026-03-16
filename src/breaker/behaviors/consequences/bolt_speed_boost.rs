@@ -74,14 +74,14 @@ mod tests {
 
         let bindings = vec![BehaviorBinding {
             triggers: vec![Trigger::EarlyBump, Trigger::LateBump],
-            consequence: Consequence::BoltSpeedBoost(0.8),
+            consequence: Consequence::BoltSpeedBoost(1.1),
         }];
 
         apply_bolt_speed_boosts(&mut app.world_mut().commands(), entity, &bindings);
         app.world_mut().flush();
 
         let mult = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
-        assert!((mult.0 - 0.8).abs() < f32::EPSILON);
+        assert!((mult.0 - 1.1).abs() < f32::EPSILON);
         assert!(app.world().get::<BumpPerfectMultiplier>(entity).is_none());
     }
 
@@ -97,7 +97,7 @@ mod tests {
             },
             BehaviorBinding {
                 triggers: vec![Trigger::EarlyBump, Trigger::LateBump],
-                consequence: Consequence::BoltSpeedBoost(0.8),
+                consequence: Consequence::BoltSpeedBoost(1.1),
             },
         ];
 
@@ -108,7 +108,7 @@ mod tests {
         assert!((perfect.0 - 1.5).abs() < f32::EPSILON);
 
         let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
-        assert!((weak.0 - 0.8).abs() < f32::EPSILON);
+        assert!((weak.0 - 1.1).abs() < f32::EPSILON);
     }
 
     #[test]

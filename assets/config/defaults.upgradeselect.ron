@@ -1,0 +1,10 @@
+/* @[brickbreaker::screen::upgrade_select::resources::UpgradeSelectDefaults] */
+(
+    timer_secs: 10.0,
+    card_title_font_size: 36.0,
+    card_description_font_size: 20.0,
+    timer_font_size: 48.0,
+    selected_color_rgb: (0.4, 0.8, 1.0),
+    normal_color_rgb: (0.3, 0.3, 0.4),
+    timer_color_rgb: (1.0, 0.8, 0.2),
+)

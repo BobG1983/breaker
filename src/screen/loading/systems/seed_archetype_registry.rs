@@ -76,6 +76,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![],
             archetypes,
+            upgradeselect: Handle::default(),
         }
     }
 

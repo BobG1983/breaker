@@ -15,7 +15,7 @@ Phase 1 (core mechanics) + Phase 2a (level loading) + Phase 2b (run/timer) + Pha
 
 1. **HIGH -- Run-end screen dead air**: No timer, no auto-advance, static "Press Enter to continue." Violates Speed and Tension pillars. Location: screen/run_end/systems/spawn_run_end_screen.rs
 
-2. **HIGH -- Doc inconsistency on bump multipliers**: PLAN.md and Phase 2 README say "all grades boost" but Aegis early/late is 0.8x (penalty). Implementation is CORRECT, docs are WRONG.
+2. ~~**HIGH -- Doc inconsistency on bump multipliers**~~: FIXED — Aegis early/late changed from 0.8x to 1.1x to match "all grades boost" design intent.
 
 3. **MEDIUM -- Bolt-lost respawn too safe**: Straight up at base speed, zero reaction required. Should randomize respawn angle. Location: physics/systems/bolt_lost.rs
 
@@ -32,7 +32,7 @@ Phase 1 (core mechanics) + Phase 2a (level loading) + Phase 2b (run/timer) + Pha
 - Bolt: base=720, min=360, max=1440, radius=14
 - Bump: perfect_window=0.15s, early=0.15s, late=0.15s
 - Bump cooldowns: perfect=0.0, weak=0.15s
-- Bump multipliers (Aegis): perfect=1.5x, early/late=0.8x
+- Bump multipliers (Aegis): perfect=1.5x, early/late=1.1x
 - Tilt: dash=15deg, brake=25deg
 - Max reflection: 75deg from vertical
 

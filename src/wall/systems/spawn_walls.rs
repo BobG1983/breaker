@@ -7,24 +7,23 @@ use crate::{
     wall::components::{Wall, WallSize},
 };
 
-/// Generous half-thickness so the bolt never outruns a wall.
-const HALF_THICKNESS: f32 = 90.0;
-
 /// Spawns left, right, and ceiling wall entities.
 ///
 /// No floor wall — bolt-lost handles that case separately.
+/// Wall thickness is loaded from [`PlayfieldConfig::wall_half_thickness`].
 pub fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
     let half_width = playfield.width / 2.0;
     let half_height = playfield.height / 2.0;
+    let wall_ht = playfield.wall_half_thickness();
 
     // Left wall
     commands.spawn((
         Wall,
         WallSize {
-            half_width: HALF_THICKNESS,
+            half_width: wall_ht,
             half_height,
         },
-        Transform::from_xyz(playfield.left() - HALF_THICKNESS, 0.0, 0.0),
+        Transform::from_xyz(playfield.left() - wall_ht, 0.0, 0.0),
         CleanupOnNodeExit,
     ));
 
@@ -32,10 +31,10 @@ pub fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
     commands.spawn((
         Wall,
         WallSize {
-            half_width: HALF_THICKNESS,
+            half_width: wall_ht,
             half_height,
         },
-        Transform::from_xyz(playfield.right() + HALF_THICKNESS, 0.0, 0.0),
+        Transform::from_xyz(playfield.right() + wall_ht, 0.0, 0.0),
         CleanupOnNodeExit,
     ));
 
@@ -44,9 +43,9 @@ pub fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
         Wall,
         WallSize {
             half_width,
-            half_height: HALF_THICKNESS,
+            half_height: wall_ht,
         },
-        Transform::from_xyz(0.0, playfield.top() + HALF_THICKNESS, 0.0),
+        Transform::from_xyz(0.0, playfield.top() + wall_ht, 0.0),
         CleanupOnNodeExit,
     ));
 }

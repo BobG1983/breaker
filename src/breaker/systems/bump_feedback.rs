@@ -3,12 +3,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::FadeOut,
     breaker::{
         components::Breaker,
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     },
-    shared::CleanupOnNodeExit,
+    shared::{CleanupOnNodeExit, FadeOut},
 };
 
 /// Fade duration for bump grade text (seconds).
@@ -85,7 +84,7 @@ pub fn spawn_whiff_text(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::FadeOut;
+    use crate::shared::FadeOut;
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);

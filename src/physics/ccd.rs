@@ -179,3 +179,93 @@ mod tests {
         assert!(result.is_none(), "origin inside AABB should return None");
     }
 }
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    /// Generate a positive, finite float in a useful range.
+    fn positive_float() -> impl Strategy<Value = f32> {
+        1.0_f32..1000.0
+    }
+
+    /// Generate a finite float in a useful range.
+    fn bounded_float() -> impl Strategy<Value = f32> {
+        -500.0_f32..500.0
+    }
+
+    proptest! {
+        /// A hit distance must always be positive (ray starts outside AABB).
+        #[test]
+        fn hit_distance_is_positive(
+            ox in bounded_float(),
+            oy in -500.0_f32..-50.0,
+            hw in positive_float(),
+            hh in positive_float(),
+        ) {
+            let origin = Vec2::new(ox.clamp(-hw + 1.0, hw - 1.0), oy - hh);
+            let direction = Vec2::Y;
+            let max_dist = 2000.0;
+            let center = Vec2::ZERO;
+            let half = Vec2::new(hw, hh);
+
+            if let Some(hit) = ray_vs_aabb(origin, direction, max_dist, center, half) {
+                prop_assert!(hit.distance > 0.0, "hit distance must be positive, got {}", hit.distance);
+            }
+        }
+
+        /// Hit normal is always axis-aligned and unit length.
+        #[test]
+        fn hit_normal_is_unit_axis_aligned(
+            ox in bounded_float(),
+            oy in -500.0_f32..-50.0,
+            hw in positive_float(),
+            hh in positive_float(),
+        ) {
+            let origin = Vec2::new(ox.clamp(-hw + 1.0, hw - 1.0), oy - hh);
+            let direction = Vec2::Y;
+            let max_dist = 2000.0;
+            let center = Vec2::ZERO;
+            let half = Vec2::new(hw, hh);
+
+            if let Some(hit) = ray_vs_aabb(origin, direction, max_dist, center, half) {
+                let len = hit.normal.length();
+                prop_assert!(
+                    (len - 1.0).abs() < 1e-5,
+                    "normal should be unit length, got {len}"
+                );
+                // Must be axis-aligned: one component zero, one +-1
+                let is_axis = (hit.normal.x.abs() < f32::EPSILON && (hit.normal.y.abs() - 1.0).abs() < f32::EPSILON)
+                    || (hit.normal.y.abs() < f32::EPSILON && (hit.normal.x.abs() - 1.0).abs() < f32::EPSILON);
+                prop_assert!(is_axis, "normal must be axis-aligned, got {:?}", hit.normal);
+            }
+        }
+
+        /// Reflection off an AABB surface preserves speed (magnitude).
+        #[test]
+        fn reflection_preserves_speed(
+            vx in -500.0_f32..500.0,
+            vy in -500.0_f32..-10.0,
+            nx in prop_oneof![Just(0.0_f32), Just(1.0_f32), Just(-1.0_f32)],
+            ny in prop_oneof![Just(0.0_f32), Just(1.0_f32), Just(-1.0_f32)],
+        ) {
+            let normal = Vec2::new(nx, ny);
+            if normal.length() < 0.5 {
+                return Ok(());
+            }
+            let normal = normal.normalize();
+            let velocity = Vec2::new(vx, vy);
+            let speed_before = velocity.length();
+
+            let reflected = velocity - 2.0 * velocity.dot(normal) * normal;
+            let speed_after = reflected.length();
+
+            prop_assert!(
+                (speed_before - speed_after).abs() < 1e-3,
+                "reflection should preserve speed: {speed_before} vs {speed_after}"
+            );
+        }
+    }
+}

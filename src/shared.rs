@@ -24,6 +24,8 @@ pub struct PlayfieldDefaults {
     pub height: f32,
     /// RGB values for the background clear color.
     pub background_color_rgb: [f32; 3],
+    /// Thickness of boundary walls in world units.
+    pub wall_thickness: f32,
 }
 
 impl Default for PlayfieldDefaults {
@@ -32,6 +34,7 @@ impl Default for PlayfieldDefaults {
             width: 800.0,
             height: 600.0,
             background_color_rgb: [0.02, 0.01, 0.04],
+            wall_thickness: 180.0,
         }
     }
 }
@@ -59,6 +62,12 @@ impl PlayfieldConfig {
     #[must_use]
     pub fn top(&self) -> f32 {
         self.height / 2.0
+    }
+
+    /// Half the wall thickness.
+    #[must_use]
+    pub fn wall_half_thickness(&self) -> f32 {
+        self.wall_thickness / 2.0
     }
 
     /// Background clear color as a Bevy [`Color`].
@@ -106,6 +115,18 @@ pub enum PlayingState {
     Active,
     /// Game paused — all gameplay systems frozen.
     Paused,
+}
+
+/// A fade-out animation timer. Entities with this component will have their
+/// alpha reduced over `duration` seconds and be despawned when finished.
+///
+/// Used across domains (bolt-lost text, bump grade text) for floating feedback.
+#[derive(Component, Debug)]
+pub struct FadeOut {
+    /// Remaining time in the fade animation (seconds).
+    pub timer: f32,
+    /// Total duration of the fade animation (seconds).
+    pub duration: f32,
 }
 
 /// Marker component for entities that should be despawned when exiting a node.

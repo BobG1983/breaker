@@ -118,6 +118,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![handle],
             archetypes: vec![],
+            upgradeselect: Handle::default(),
         });
 
         app.update();
@@ -143,6 +144,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![handle],
             archetypes: vec![],
+            upgradeselect: Handle::default(),
         });
         app.world_mut().insert_resource(make_registry());
 

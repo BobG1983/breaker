@@ -89,16 +89,6 @@ pub struct BoltRespawnOffsetY(pub f32);
 #[derive(Component, Debug)]
 pub struct BoltInitialAngle(pub f32);
 
-/// A fade-out animation timer. Entities with this component will have their
-/// alpha reduced over `duration` seconds and be despawned when finished.
-#[derive(Component, Debug)]
-pub struct FadeOut {
-    /// Remaining time in the fade animation (seconds).
-    pub timer: f32,
-    /// Total duration of the fade animation (seconds).
-    pub duration: f32,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +167,68 @@ mod tests {
             angle >= FRAC_PI_4 - 1e-4,
             "angle should be at least min_angle"
         );
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        /// enforce_min_angle never changes the speed magnitude.
+        #[test]
+        fn enforce_min_angle_preserves_speed(
+            vx in -500.0_f32..500.0,
+            vy in -500.0_f32..500.0,
+            min_deg in 5.0_f32..45.0,
+        ) {
+            let mut vel = BoltVelocity::new(vx, vy);
+            let speed_before = vel.speed();
+            if speed_before < f32::EPSILON {
+                return Ok(());
+            }
+            vel.enforce_min_angle(min_deg.to_radians());
+            let speed_after = vel.speed();
+            prop_assert!(
+                (speed_before - speed_after).abs() < 0.1,
+                "speed should be preserved: {speed_before} vs {speed_after}"
+            );
+        }
+
+        /// enforce_min_angle never produces NaN or infinity.
+        #[test]
+        fn enforce_min_angle_never_nan(
+            vx in -1000.0_f32..1000.0,
+            vy in -1000.0_f32..1000.0,
+            min_deg in 1.0_f32..89.0,
+        ) {
+            let mut vel = BoltVelocity::new(vx, vy);
+            vel.enforce_min_angle(min_deg.to_radians());
+            prop_assert!(vel.value.x.is_finite(), "x should be finite: {}", vel.value.x);
+            prop_assert!(vel.value.y.is_finite(), "y should be finite: {}", vel.value.y);
+        }
+
+        /// After enforce_min_angle, the angle from horizontal is >= min_angle.
+        #[test]
+        fn enforce_min_angle_result_meets_minimum(
+            vx in -500.0_f32..500.0,
+            vy in -500.0_f32..500.0,
+            min_deg in 5.0_f32..45.0,
+        ) {
+            let mut vel = BoltVelocity::new(vx, vy);
+            if vel.speed() < f32::EPSILON {
+                return Ok(());
+            }
+            let min_rad = min_deg.to_radians();
+            vel.enforce_min_angle(min_rad);
+            let angle = vel.value.y.abs().atan2(vel.value.x.abs());
+            prop_assert!(
+                angle >= min_rad - 1e-4,
+                "angle {angle:.4} should be >= min {min_rad:.4}, vel=({}, {})",
+                vel.value.x, vel.value.y
+            );
+        }
     }
 }

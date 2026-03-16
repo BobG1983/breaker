@@ -1,4 +1,4 @@
-# Phase 6: Content & Variety
+# Phase 7: Content & Variety
 
 **Goal**: Expand from vertical slice to real content depth.
 

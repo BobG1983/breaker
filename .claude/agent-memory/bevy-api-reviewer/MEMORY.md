@@ -83,12 +83,37 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 ## Deprecated Patterns Found
 (none found in this codebase)
 
+### Schedule Ordering
+- `.after(fn_from_another_plugin)` for cross-plugin system ordering — CORRECT, function pointers implement IntoSystemSet via blanket impl
+- `.before(fn)` / `.after(fn)` work across plugin boundaries with no restriction
+
+### ApplyDeferred
+- `ApplyDeferred` exists in `bevy::ecs::schedule` — CORRECT import path is `bevy::ecs::schedule::ApplyDeferred`
+- Using `ApplyDeferred` as an element in a `.chain()` tuple IS effective — the warning "does nothing if called manually or wrapped in a PipeSystem" refers to `.pipe()` (PipeSystem, data-passing composition), NOT to `.chain()` (schedule ordering)
+- `.chain()` is `IntoSystemConfigs::chain()` — produces ordered schedule entries; ApplyDeferred placed there will be invoked by the executor at that point
+- `(system_a, ApplyDeferred, system_b).chain()` correctly flushes deferred commands (Commands etc.) between system_a and system_b
+
+### Node Fields
+- `Node::row_gap: Val` — CONFIRMED exists, type is `Val` (e.g., `row_gap: Val::Px(12.0)`)
+- `Node::column_gap: Val` — also exists; `Val::Auto` is invalid for gap fields, treated as zero
+
+### EntityCommands
+- `commands.entity(e).insert_if_new(bundle)` — CONFIRMED exists in 0.18.1; inserts bundle without overwriting existing components (leave-old semantics)
+- Tuple bundles work: `insert_if_new((ComponentA(v), ComponentB(v)))` — correct
+
+### f32::midpoint
+- `f32::midpoint(a, b)` — CONFIRMED stable since Rust 1.85.0 (released 2025-02-20); project uses edition = "2024" which requires 1.85.0+, so always available
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — CORRECT, despawn() is recursive in 0.18+
 - `gizmos.circle_2d(vec2, radius, color)` — CORRECT, Vec2 implements Into<Isometry2d>
 - `MessageWriter<AppExit>` — CORRECT, AppExit implements Message in 0.18.1
+- `(spawn_side_panels, ApplyDeferred, spawn_timer_hud).chain()` in OnEnter — CORRECT, ApplyDeferred flushes commands between chained systems; the "does nothing" warning only applies to .pipe()
+- `commands.entity(panel).with_children(|parent| { ... })` on an existing entity — CORRECT API for adding children to an already-spawned entity in 0.18
+- `spawn_lives_display.after(spawn_timer_hud)` where spawn_timer_hud is from ui plugin — CORRECT cross-plugin ordering
 
 ## Reference
 - bevy-api-expert memory: `.claude/agent-memory/bevy-api-expert/` — already-verified facts; check here before looking up docs.rs
 - despawn recursive change: Bevy 0.15→0.16 migration — despawn() is now recursive
 - Gizmos: docs.rs/bevy/0.18.1/bevy/gizmos/gizmos/struct.Gizmos.html
+- Full review of fix/review-findings branch: `review-fix-review-findings-2026-03-16.md`

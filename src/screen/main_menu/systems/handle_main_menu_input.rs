@@ -72,7 +72,7 @@ fn confirm_selection(
     exit_writer: &mut MessageWriter<AppExit>,
 ) {
     match selection.selected {
-        MenuItem::Play => next_state.set(GameState::Playing),
+        MenuItem::Play => next_state.set(GameState::RunSetup),
         MenuItem::Settings => {} // Not yet implemented
         MenuItem::Quit => {
             exit_writer.write(AppExit::Success);
@@ -128,14 +128,14 @@ mod tests {
     }
 
     #[test]
-    fn enter_on_play_transitions_to_playing() {
+    fn enter_on_play_transitions_to_run_setup() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("Playing"),
-            "expected NextState to contain Playing, got: {next:?}"
+            format!("{next:?}").contains("RunSetup"),
+            "expected NextState to contain RunSetup, got: {next:?}"
         );
     }
 
@@ -163,7 +163,7 @@ mod tests {
         // No state transition
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            !format!("{next:?}").contains("Playing"),
+            !format!("{next:?}").contains("RunSetup"),
             "expected no state transition, got: {next:?}"
         );
 

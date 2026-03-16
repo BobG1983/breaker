@@ -232,6 +232,20 @@ See [observers_and_oneshot.md](observers_and_oneshot.md) for full details. Key f
 - `with_child(bundle)` on `EntityCommands` spawns one child and inserts `ChildOf` automatically
 - `children![]` macro: `world.spawn((Name::new("Root"), children![Name::new("Child1")]))`
 
+### with_children closure parameter (verified v0.18.0 docs.rs)
+
+- `EntityCommands::with_children` signature:
+  `pub fn with_children(&mut self, func: impl FnOnce(&mut RelatedSpawnerCommands<'_, ChildOf>)) -> &mut EntityCommands<'a>`
+- `EntityWorldMut::with_children` signature:
+  `pub fn with_children(&mut self, func: impl FnOnce(&mut RelatedSpawner<'_, ChildOf>)) -> &mut EntityWorldMut<'w>`
+- **`ChildSpawner<'w>`** is a type alias: `pub type ChildSpawner<'w> = RelatedSpawner<'w, ChildOf>;`
+- **`ChildSpawnerCommands<'_>`** is a type alias: `pub type ChildSpawnerCommands<'_> = RelatedSpawnerCommands<'_, ChildOf>;`
+- Use `ChildSpawner` in function signatures taking the `EntityWorldMut::with_children` parent
+- Use `ChildSpawnerCommands` in function signatures taking the `EntityCommands::with_children` parent
+- Import: `bevy::ecs::hierarchy::{ChildSpawner, ChildSpawnerCommands}` (NOT in prelude)
+- `ChildBuilder` does NOT exist in 0.18 — that name is from Bevy 0.14 and earlier
+- Example function signature: `fn spawn_children(parent: &mut ChildSpawnerCommands<'_>) { parent.spawn(...); }`
+
 ## Sources
 
 - Feature flags: https://docs.rs/bevy/0.18.1/bevy/index.html#cargo-features

@@ -19,13 +19,15 @@
 - **Post-refactor audit 2026-03-13**: PASS — run/node/mod.rs routing-only violation RESOLVED (types extracted to resources.rs + sets.rs). No critical violations. One observation: run/node/ lacks its own plugin.rs (systems registered in parent run/plugin.rs).
 - **Phase 2c audit 2026-03-13**: PASS — BehaviorPlugin added as breaker sub-domain. Per-consequence file layout in `consequences/` directory. Bridge systems consume BoltLost + BumpPerformed messages. Internal dispatch via Bevy observers (Events), not messages. One accepted compromise: handle_life_lost writes ResMut<RunState>.
 - **Full codebase audit 2026-03-16**: PASS — 0 critical violations, 2 minor observations (SelectedArchetype placement in shared.rs, double init_resource in tests). All 11 review categories clean: folder structure, mod.rs routing-only, plugin boundaries, message discipline, cross-domain access, SystemSet ordering, schedule placement, entity cleanup, state management, config-to-entity pipeline, test structure.
+- **fix/review-findings audit 2026-03-16**: PASS — animate_fade_out moved bolt→UI (correct: visual system serving multiple producers), FadeOut shared type correct, multiplier insert_if_new precedence correct via ordering chain.
+- **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains. 2 Resources defined in system files (need resources.rs), 1 Component defined in system file (needs move to components.rs). No boundary violations. No messages used (correct for screen sub-domains). Cleanup markers correct. State transitions properly owned.
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
 - `shared.rs` has passive types only: GameState, PlayingState, cleanup markers, playfield constants
 - `game.rs` is the ONLY file that imports top-level plugin structs (sub-domain plugins are added by their parent)
 - `screen/` owns state registration (init_state, add_sub_state) and cleanup systems
-- `screen/` has three sub-domains: `loading/`, `main_menu/`, `run_end/` (win/lose screen, cleanup on RunEnd exit)
+- `screen/` has six sub-domains: `loading/`, `main_menu/`, `run_end/`, `run_setup/`, `pause_menu/`, `upgrade_select/`
 - `loading/` cross-references `main_menu::MainMenuDefaults` for config seeding — acceptable sibling-within-same-domain import
 - **Nested sub-domains allowed** (added 2026-03-13): a domain may contain child sub-domains with their own plugin, components, and systems. Same canonical layout. Parent plugin adds child plugins. Max one level of nesting. Sub-domains may import parent's shared components. See `docs/architecture/layout.md`.
 - **Per-consequence layout** (added 2026-03-13): Behavior sub-domains use per-consequence file organization in a `consequences/` directory grouping (NOT a sub-domain — no plugin.rs). Each consequence file owns its Event, Components, observer, and helpers. See `docs/architecture/layout.md` "Per-Consequence Layout" section.
@@ -106,8 +108,11 @@ Registered but no consumers yet: UpgradeSelected
 - physics/ccd.rs exists outside canonical layout (shared CCD math helpers for physics systems)
 - UI domain reads run::node::NodeTimer (read-only, for timer display)
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only, for outcome display)
+- screen/run_setup reads breaker/behaviors::ArchetypeRegistry (read-only, for card display)
+- screen/run_setup and pause_menu read input::InputConfig (read-only, for key bindings)
 - run/node/ lacks its own plugin.rs — systems registered in parent run/plugin.rs (acceptable, but doesn't follow the sub-domain pattern used by screen/ children)
 - breaker/behaviors handle_life_lost writes ResMut<RunState> (run domain) — same pattern as other accepted cross-domain writes; alternative would be a RunLost message for a single assignment
+- UI domain owns animate_fade_out system — operates on shared::FadeOut + TextColor entities spawned by bolt and breaker domains. Same pattern as cleanup_entities<T> — component-driven composition, no coupling.
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. Hot-reload systems write to *Config resources and entity components across all domains. Telemetry reads from all domains. All gated behind `#[cfg(feature = "dev")]` — compiled out of release. Does NOT set precedent for production domains.
 
 ## Debug Domain Structure (planned, Phase 2f)

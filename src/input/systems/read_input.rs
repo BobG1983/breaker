@@ -256,18 +256,26 @@ mod tests {
 
     #[test]
     fn slow_double_tap_does_not_dash() {
+        use bevy::time::TimeUpdateStrategy;
+
         let mut app = test_app();
         let config = app.world().resource::<InputConfig>().clone();
 
-        // First tap
+        // Use manual time advancement instead of thread::sleep
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(16),
+        ));
+
+        // First tap — records timestamp
         send_key_press(&mut app, KeyCode::ArrowLeft);
         app.update();
 
-        // Advance real time past the double-tap window
-        let wait = std::time::Duration::from_secs_f64(f64::from(config.double_tap_window) + 0.5);
-        std::thread::sleep(wait);
+        // Advance time past the double-tap window
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_secs_f64(f64::from(config.double_tap_window) + 0.5),
+        ));
 
-        // Second tap
+        // Second tap — outside window
         send_key_press(&mut app, KeyCode::ArrowLeft);
         app.update();
 

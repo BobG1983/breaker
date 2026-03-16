@@ -100,6 +100,7 @@ mod tests {
             cell_types: vec![h1, h2],
             layouts: vec![],
             archetypes: vec![],
+            upgradeselect: Handle::default(),
         });
 
         app.update();
@@ -129,6 +130,7 @@ mod tests {
             cell_types: vec![handle],
             layouts: vec![],
             archetypes: vec![],
+            upgradeselect: Handle::default(),
         });
 
         app.update();
@@ -154,6 +156,7 @@ mod tests {
             cell_types: vec![h1, h2],
             layouts: vec![],
             archetypes: vec![],
+            upgradeselect: Handle::default(),
         });
 
         app.update();

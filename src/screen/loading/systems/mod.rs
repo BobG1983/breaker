@@ -10,6 +10,7 @@ mod seed_main_menu_config;
 mod seed_node_layout_registry;
 mod seed_playfield_config;
 mod seed_timer_ui_config;
+mod seed_upgrade_select_config;
 mod spawn_loading_screen;
 mod update_loading_bar;
 
@@ -23,5 +24,6 @@ pub use seed_main_menu_config::seed_main_menu_config;
 pub use seed_node_layout_registry::seed_node_layout_registry;
 pub use seed_playfield_config::seed_playfield_config;
 pub use seed_timer_ui_config::seed_timer_ui_config;
+pub use seed_upgrade_select_config::seed_upgrade_select_config;
 pub use spawn_loading_screen::spawn_loading_screen;
 pub use update_loading_bar::update_loading_bar;

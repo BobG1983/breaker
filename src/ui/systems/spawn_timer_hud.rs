@@ -5,48 +5,61 @@ use bevy::prelude::*;
 use crate::{
     run::node::NodeTimer,
     shared::CleanupOnNodeExit,
-    ui::{components::NodeTimerDisplay, resources::TimerUiConfig},
+    ui::{
+        components::{NodeTimerDisplay, StatusPanel},
+        resources::TimerUiConfig,
+    },
 };
 
-/// Spawns the timer display UI at the top of the screen.
+/// Spawns the timer display as a child of the [`StatusPanel`].
 pub fn spawn_timer_hud(
     mut commands: Commands,
     config: Res<TimerUiConfig>,
     timer: Res<NodeTimer>,
     asset_server: Res<AssetServer>,
+    existing: Query<(), With<NodeTimerDisplay>>,
+    status_panel: Query<Entity, With<StatusPanel>>,
 ) {
+    if !existing.is_empty() {
+        return;
+    }
+
+    let Ok(panel) = status_panel.single() else {
+        return;
+    };
+
     let font: Handle<Font> = asset_server.load(&config.font_path);
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let secs = timer.remaining.ceil().max(0.0) as u32;
 
-    commands
-        .spawn((
-            CleanupOnNodeExit,
-            Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(120.0),
-                right: Val::Px(16.0),
-                padding: UiRect::axes(Val::Px(22.0), Val::Px(7.0)),
-                border_radius: BorderRadius::all(Val::Px(11.0)),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
-        ))
-        .with_child((
-            NodeTimerDisplay,
-            Text::new(format!("{secs}")),
-            TextFont {
-                font,
-                font_size: config.font_size,
-                ..default()
-            },
-            TextColor(config.color_for_fraction(1.0)),
-        ));
+    commands.entity(panel).with_children(|parent| {
+        parent
+            .spawn((
+                CleanupOnNodeExit,
+                Node {
+                    padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                    border_radius: BorderRadius::all(Val::Px(6.0)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+            ))
+            .with_child((
+                NodeTimerDisplay,
+                Text::new(format!("{secs}")),
+                TextFont {
+                    font,
+                    font_size: config.font_size,
+                    ..default()
+                },
+                TextColor(config.color_for_fraction(1.0)),
+            ));
+    });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui::components::StatusPanel;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -56,6 +69,10 @@ mod tests {
         app.insert_resource(NodeTimer {
             remaining: 60.0,
             total: 60.0,
+        });
+        // Spawn a StatusPanel for the HUD to parent under
+        app.add_systems(Startup, |mut commands: Commands| {
+            commands.spawn((StatusPanel, Node::default()));
         });
         app.add_systems(Update, spawn_timer_hud);
         app
@@ -98,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn spawn_with_default_node_timer_does_not_panic() {
+    fn no_status_panel_no_spawn() {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()));
         app.init_asset::<Font>();
@@ -112,7 +129,21 @@ mod tests {
             .query_filtered::<Entity, With<NodeTimerDisplay>>()
             .iter(app.world())
             .count();
-        assert_eq!(count, 1);
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn no_double_spawn() {
+        let mut app = test_app();
+        app.update();
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<NodeTimerDisplay>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1, "should not double-spawn timer HUD");
     }
 
     #[test]

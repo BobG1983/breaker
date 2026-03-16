@@ -51,6 +51,21 @@ See `docs/DESIGN.md` for the full set of non-negotiable design pillars. The key 
 
 The main agent is the orchestrator. Invoke subagents automatically at these trigger points — do not wait to be asked.
 
+### Delegated Implementation (test-writer + code-writer)
+
+For multi-domain work or context-heavy phases, delegate implementation to the **test-writer** → **code-writer** TDD pair. This preserves main context and prevents implementation bias through context isolation. See @.claude/rules/delegated-implementation.md for full spec-writing guidelines.
+
+**When to delegate**: 2+ independent domains in one phase, or single domain where spec is clear and context preservation matters.
+
+**When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions.
+
+**The flow**:
+1. Write behavioral spec → launch **test-writer** (parallel across domains)
+2. **Review tests** (mandatory checkpoint — verify they capture intent)
+3. Write implementation spec → launch **code-writer** (parallel across domains)
+4. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself
+5. Run the post-implementation checklist below
+
 ### Phase 1 — Before Writing Code (sequential)
 
 | Trigger | Agent | Why |

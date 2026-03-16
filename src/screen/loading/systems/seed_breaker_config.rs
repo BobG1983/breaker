@@ -70,6 +70,7 @@ mod tests {
             cell_types: vec![],
             layouts: vec![],
             archetypes: vec![],
+            upgradeselect: Handle::default(),
         });
 
         app.update();

@@ -1,5 +1,5 @@
 (
-    font_size: 86.0,
+    font_size: 24.0,
     font_path: "fonts/Rajdhani-Medium.ttf",
     normal_color_rgb: (0.8, 0.8, 0.9),
     warning_color_rgb: (4.0, 3.0, 0.2),

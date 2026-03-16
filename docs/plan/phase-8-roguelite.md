@@ -1,4 +1,4 @@
-# Phase 7: Roguelite Progression
+# Phase 8: Roguelite Progression
 
 **Goal**: The meta-layer that keeps players coming back.
 

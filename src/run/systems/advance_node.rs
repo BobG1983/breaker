@@ -4,11 +4,12 @@ use bevy::prelude::*;
 
 use crate::{run::resources::RunState, shared::GameState};
 
-/// Increments the node index and transitions back to [`GameState::Playing`].
+/// Increments the node index and transitions to [`GameState::Playing`].
 ///
 /// Runs on `OnEnter(GameState::NodeTransition)`.
 pub fn advance_node(mut run_state: ResMut<RunState>, mut next_state: ResMut<NextState<GameState>>) {
     run_state.node_index += 1;
+    run_state.transition_queued = false;
     next_state.set(GameState::Playing);
 }
 
@@ -24,6 +25,7 @@ mod tests {
         app.init_state::<GameState>();
         app.insert_resource(RunState {
             node_index: 1,
+            transition_queued: true,
             ..default()
         });
         app.add_systems(Update, advance_node);
@@ -37,6 +39,18 @@ mod tests {
 
         let run_state = app.world().resource::<RunState>();
         assert_eq!(run_state.node_index, 2);
+    }
+
+    #[test]
+    fn resets_transition_queued() {
+        let mut app = test_app();
+        app.update();
+
+        let run_state = app.world().resource::<RunState>();
+        assert!(
+            !run_state.transition_queued,
+            "transition_queued should be reset for the next node"
+        );
     }
 
     #[test]

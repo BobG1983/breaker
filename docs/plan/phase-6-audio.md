@@ -1,4 +1,4 @@
-# Phase 5: Audio Foundation
+# Phase 6: Audio Foundation
 
 **Goal**: Audio system architecture + placeholder sounds that establish the feel.
 

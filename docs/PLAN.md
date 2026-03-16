@@ -21,8 +21,8 @@ See `DESIGN.md` for core design principles, `architecture/` for technical decisi
 ### Current
 - [Phase 2: Game Loop & Time Pressure](plan/phase-2/README.md)
   - [2c: Archetype System & Aegis](plan/phase-2/phase-2c-archetype-system.md)
-  - [2d: Screens & UI](plan/phase-2/phase-2d-screens-and-ui.md)
-  - [2e: Chrono & Prism](plan/phase-2/phase-2e-chrono-and-prism.md)
+  - [2d: Screens](plan/phase-2/phase-2d-screens-and-ui.md)
+  - [2e: Visual Polish & Additional Archetypes](plan/phase-2/phase-2e-chrono-and-prism.md)
 
 ### Upcoming
 - [Phase 3: Dev Infrastructure](plan/phase-3/README.md)

@@ -9,7 +9,7 @@ use crate::{
     cells::{CellDefaults, CellTypeDefinition},
     input::InputDefaults,
     run::NodeLayout,
-    screen::main_menu::MainMenuDefaults,
+    screen::{main_menu::MainMenuDefaults, upgrade_select::UpgradeSelectDefaults},
     shared::PlayfieldDefaults,
     ui::TimerUiDefaults,
 };
@@ -48,4 +48,7 @@ pub struct DefaultsCollection {
     /// All archetype definition handles.
     #[asset(path = "archetypes", collection(typed))]
     pub archetypes: Vec<Handle<ArchetypeDefinition>>,
+    /// Handle for upgrade select defaults.
+    #[asset(path = "config/defaults.upgradeselect.ron")]
+    pub upgradeselect: Handle<UpgradeSelectDefaults>,
 }

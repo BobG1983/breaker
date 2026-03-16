@@ -7,8 +7,8 @@
 - [2a: Level Loading](phase-2a-level-loading.md) — Hand-authored RON layouts, node completion detection
 - [2b: Run Structure & Node Timer](phase-2b-run-and-timer.md) — 3-node sequential runs, countdown timer, game-over, run-end screen
 - [2c: Archetype System & Aegis](phase-2c-archetype-system.md) — Polymorphic bolt-lost dispatch, per-breaker RON config, Aegis as proof-of-concept
-- [2d: Screens & UI](phase-2d-screens-and-ui.md) — Breaker selection, placeholder upgrade screen, pause menu, stakes display
-- [2e: Chrono & Prism](phase-2e-chrono-and-prism.md) — Second and third breakers using the archetype system from 2c
+- [2d: Screens](phase-2d-screens-and-ui.md) — Breaker selection, placeholder upgrade screen, pause menu
+- [2e: Visual Polish & Additional Archetypes](phase-2e-chrono-and-prism.md) — Visual interpolation, Chrono, Prism
 
 ## Build Order Rationale
 

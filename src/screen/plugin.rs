@@ -8,8 +8,11 @@ use iyes_progress::prelude::*;
 use super::{
     loading::{LoadingPlugin, resources::DefaultsCollection},
     main_menu::{MainMenuDefaults, MainMenuPlugin},
+    pause_menu::PauseMenuPlugin,
     run_end::RunEndPlugin,
+    run_setup::RunSetupPlugin,
     systems::cleanup_entities,
+    upgrade_select::{UpgradeSelectDefaults, UpgradeSelectPlugin},
 };
 use crate::{
     bolt::BoltDefaults,
@@ -49,6 +52,7 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
                 RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
+                RonAssetPlugin::<UpgradeSelectDefaults>::new(&["upgradeselect.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.
             // Must be added BEFORE add_loading_state.
@@ -61,7 +65,14 @@ impl Plugin for ScreenPlugin {
                 LoadingState::new(GameState::Loading).load_collection::<DefaultsCollection>(),
             )
             // Sub-domain plugins
-            .add_plugins((LoadingPlugin, MainMenuPlugin, RunEndPlugin))
+            .add_plugins((
+                LoadingPlugin,
+                MainMenuPlugin,
+                RunSetupPlugin,
+                PauseMenuPlugin,
+                UpgradeSelectPlugin,
+                RunEndPlugin,
+            ))
             // Cleanup
             .add_systems(
                 OnExit(GameState::Playing),

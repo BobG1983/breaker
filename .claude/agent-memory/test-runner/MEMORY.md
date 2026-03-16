@@ -1,14 +1,23 @@
-## ⚠️ CRITICAL RULES
+## CRITICAL RULES
 **NEVER edit, remove, rename, or create source files (.rs, .ron, .toml, etc.).** Only report what needs fixing — never apply fixes. The only files you may write are memory files under `.claude/agent-memory/test-runner/`.
 
 **NEVER use bare cargo commands.** Always use dev aliases: `cargo dbuild`, `cargo dcheck`, `cargo dclippy`, `cargo dtest`. Only exception: `cargo fmt`.
 
-# Build Validation Status
+# Build Status
 
-**Last Validation: PASS** (2026-03-16, main, current session)
-- Format: PASS (no formatting issues)
-- Clippy: PASS (no warnings or errors)
-- Tests: PASS (344 passed, 0 failed, 0 ignored)
+**Last Validation: PASS** (2026-03-16 20:23 UTC, main branch)
+
+## Latest Validation Summary (2026-03-16 20:23 UTC)
+
+### Format: PASS
+- No files need formatting
+
+### Clippy: PASS
+- Zero warnings, zero errors
+
+### Tests: PASS
+- 407 passed, 0 failed, 0 ignored
+- All test suites pass cleanly
 
 ## Bevy 0.18.1 API Notes
 - MessageWriter uses `.write()` method, not `.send()`
@@ -30,61 +39,3 @@
 - Message struct fields marked with `#[allow(dead_code)]` if intentional API not yet consumed
 - Collapse nested `if let` with inner `if` condition into single `if let ... && ...` (collapsible_if lint)
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
-
-## Validation History
-- **2026-03-16, main (current session, latest)**: PASS
-  - Format: PASS (no formatting issues)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (344 passed, 0 failed, 0 ignored)
-  - Status: Main branch is clean and ready for development
-- **2026-03-16, main (earlier)**: FAIL
-  - Format: PASS (2 files auto-formatted: handle_cell_hit.rs, track_node_completion.rs)
-  - Clippy: Build failed (compilation error prevents linting)
-  - Tests: Build failed (compilation error prevents testing)
-  - Error: src/run/systems/handle_timer_expired.rs:32 — NextState<GameState>.get() method does not exist in Bevy 0.18.1
-  - Root cause: NextState API in Bevy 0.18.1 has no public read method; only .set() is available
-  - Status: Blocking issue requires developer fix
-- **2026-03-16, main (earlier)**: PASS
-  - Format: PASS (1 file auto-formatted: app.rs)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (341 passed, 0 failed, 0 ignored)
-  - Status: Main branch is clean and ready for development
-- **2026-03-13, main (previous)**: PASS
-  - Format: PASS (1 file auto-formatted: breaker/behaviors/active.rs)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (339 passed, 0 failed, 0 ignored)
-  - Change: +95 tests since last main validation (2026-03-13) — significant test suite expansion
-  - Status: Main branch is clean and ready for development
-- **2026-03-13, refactor/extract-wall-domain**: PASS
-  - Format: PASS (no files needed formatting)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (244 passed, 0 failed, 0 ignored)
-  - Status: Wall domain extraction is complete and builds cleanly
-- **2026-03-13, main (previous)**: PASS
-  - Format: PASS (1 file auto-formatted: run/plugin.rs)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (244 passed, 0 failed, 0 ignored)
-  - Change: +23 tests since 2026-03-12 (added node clearing and cell handling tests)
-  - Status: Main branch is clean and ready for development
-- **2026-03-12, main**: PASS
-  - Format: PASS (2 files auto-formatted: bolt/components.rs, breaker/systems/dash.rs)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: PASS (221 passed, 0 failed, 0 ignored)
-  - Change: +1 test since previous validation
-  - Status: Main branch is clean and ready for development
-- **2026-03-12, feature/grade-dependent-bump-cooldown**: PASS
-  - Format: PASS (1 file auto-formatted: bolt_breaker_collision.rs)
-  - Clippy: 1 warning (missing_const_for_fn in cooldown_for_grade)
-  - Tests: 208 passed, 0 failed, 0 ignored
-  - Change: +8 tests (bump grade cooldown mechanics)
-  - Note: cooldown_for_grade in breaker/systems/bump.rs could be const; flagged by clippy nursery lint
-- **2026-03-12, feature/bump-timing-rework**: PASS
-  - Format: PASS (1 file auto-formatted: bump_visual.rs)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: 200 passed, 0 failed, 0 ignored
-  - Change: multi-line spawn chain condensed to single line per rustfmt
-- **2026-03-12, main**: PASS
-  - Format: PASS (1 file auto-formatted: tilt_visual.rs)
-  - Clippy: PASS (no warnings or errors)
-  - Tests: 184 passed, 0 failed, 0 ignored
-  - Change: refactored tilt_visual tests to use parametrized helper function

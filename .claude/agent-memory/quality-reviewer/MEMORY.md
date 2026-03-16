@@ -2,8 +2,10 @@
 
 ## Intentional Patterns (Do Not Flag)
 
-- `existing.iter().next().is_some()` — used as a guard before spawning a singleton entity (breaker, lives HUD). This is the idiomatic Bevy pattern here; `.is_empty()` doesn't exist on `Query`, and `.iter().next().is_none()` / `.is_some()` is correct.
-- `let _ = &playfield;` in `spawn_breaker` and `let _ = &defaults;` in `apply_archetype_config_overrides` — intentional placeholder to keep unused parameters in the signature without compiler warnings. Both have comments noting the reserved use (future centering, hot-reload). Do not flag.
+- `existing.iter().next().is_some()` — used as a guard in `spawn_lives_display`. `Query::is_empty()` does exist in Bevy 0.18.1 (used in `spawn_side_panels`), so `.iter().next().is_some()` is a minor inconsistency but not wrong. Flag if seen in new code; prefer `.is_empty()` going forward.
+- `spawn_side_panels` uses `!existing.is_empty()` as its singleton guard — this is the preferred form in this codebase.
+- `let _ = &playfield;` in `spawn_breaker` was a future-centering placeholder — now removed; `reset_breaker` uses `f32::midpoint(playfield.left(), playfield.right())` for robust centering. Do not flag the midpoint usage.
+- `let _ = &defaults;` in `apply_archetype_config_overrides` — intentional placeholder to keep unused parameters in the signature without compiler warnings, noted for hot-reload. Do not flag.
 - `allow(clippy::missing_const_for_fn)` on simple tuple-struct getters like `BoltVelocity::new` — Bevy structs often can't be `const fn` due to trait bounds; suppress is legitimate.
 - `allow(clippy::cast_precision_loss)` on `col_idx as f32` / `row_idx as f32` — grid indices won't exceed f32 precision limits; suppress is reasonable.
 - `allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)` for timer display ceiling — `timer.remaining.ceil().max(0.0) as u32` is always safe given the `max(0.0)` guard.
@@ -31,3 +33,8 @@
 - Private helpers within systems often lack doc comments (accepted pattern when the function name is self-describing and a module doc covers intent).
 - Units are documented inline on component fields (e.g., "world units per second", "radians", "seconds") — this is established convention.
 - `#[must_use]` is applied to pure query methods and value-returning helpers. Follow this pattern for new `impl` blocks.
+
+## Recent Reviews
+
+- [review-fix-review-findings-2026-03-16.md](review-fix-review-findings-2026-03-16.md) — review of fix/review-findings branch: init_breaker_params, animate_fade_out migration to UI, spawn_breaker centering, handle_cell_hit Vec dedup, spawn_cells_from_layout position tests
+- [review-screen-domain-2026-03-16.md](review-screen-domain-2026-03-16.md) — review of run_setup, pause_menu, upgrade_select, loading/seed_upgrade_select_config, and screen plugin

@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     run::resources::{RunOutcome, RunState},
-    shared::{CleanupOnRunEnd, GameState},
+    shared::GameState,
+    ui::components::StatusPanel,
 };
 
 /// Consequence event triggered by bridge systems when a life should be lost.
@@ -39,13 +40,14 @@ pub fn handle_life_lost(
     }
 }
 
-/// Spawns the lives display HUD entity.
+/// Spawns the lives display as a child of the [`StatusPanel`].
 pub fn spawn_lives_display(
     mut commands: Commands,
     lives_query: Query<&LivesCount>,
-    existing: Query<Entity, With<LivesDisplay>>,
+    existing: Query<(), With<LivesDisplay>>,
+    status_panel: Query<Entity, With<StatusPanel>>,
 ) {
-    if existing.iter().next().is_some() {
+    if !existing.is_empty() {
         return;
     }
 
@@ -53,28 +55,30 @@ pub fn spawn_lives_display(
         return;
     };
 
-    commands
-        .spawn((
-            CleanupOnRunEnd,
-            Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(72.0),
-                right: Val::Px(16.0),
-                padding: UiRect::axes(Val::Px(22.0), Val::Px(7.0)),
-                border_radius: BorderRadius::all(Val::Px(11.0)),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
-        ))
-        .with_child((
-            LivesDisplay,
-            Text::new(format_lives(lives.0)),
-            TextFont {
-                font_size: 50.0,
-                ..default()
-            },
-            TextColor(Color::WHITE),
-        ));
+    let Ok(panel) = status_panel.single() else {
+        return;
+    };
+
+    commands.entity(panel).with_children(|parent| {
+        parent
+            .spawn((
+                Node {
+                    padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                    border_radius: BorderRadius::all(Val::Px(6.0)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+            ))
+            .with_child((
+                LivesDisplay,
+                Text::new(format_lives(lives.0)),
+                TextFont {
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+            ));
+    });
 }
 
 /// Updates the lives display text to match the current `LivesCount`.
@@ -104,6 +108,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::ui::components::StatusPanel;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -186,7 +191,8 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.world_mut().spawn(LivesCount(3));
-        app.add_systems(Startup, spawn_lives_display);
+        app.world_mut().spawn((StatusPanel, Node::default()));
+        app.add_systems(Update, spawn_lives_display);
         app.update();
 
         let count = app
@@ -201,7 +207,24 @@ mod tests {
     fn spawn_lives_display_no_lives_no_hud() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(Startup, spawn_lives_display);
+        app.world_mut().spawn((StatusPanel, Node::default()));
+        app.add_systems(Update, spawn_lives_display);
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<LivesDisplay>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn spawn_lives_display_no_panel_no_hud() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.world_mut().spawn(LivesCount(3));
+        app.add_systems(Update, spawn_lives_display);
         app.update();
 
         let count = app
@@ -244,29 +267,34 @@ mod tests {
     }
 
     #[test]
-    fn lives_display_parent_has_cleanup_marker() {
+    fn lives_display_is_child_of_status_panel() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.world_mut().spawn(LivesCount(3));
-        app.add_systems(Startup, spawn_lives_display);
+        let panel = app.world_mut().spawn((StatusPanel, Node::default())).id();
+        app.add_systems(Update, spawn_lives_display);
         app.update();
 
-        // LivesDisplay is a child; CleanupOnRunEnd is on the parent wrapper
         let display_entity = app
             .world_mut()
             .query_filtered::<Entity, With<LivesDisplay>>()
             .iter(app.world())
             .next()
             .expect("LivesDisplay should exist");
-        let parent = app
+
+        // LivesDisplay text → wrapper parent → StatusPanel grandparent
+        let wrapper = app
             .world()
             .get::<ChildOf>(display_entity)
             .expect("LivesDisplay should have a parent");
-        assert!(
-            app.world()
-                .get::<CleanupOnRunEnd>(parent.parent())
-                .is_some(),
-            "parent wrapper should have CleanupOnRunEnd"
+        let grandparent = app
+            .world()
+            .get::<ChildOf>(wrapper.parent())
+            .expect("wrapper should have a parent");
+        assert_eq!(
+            grandparent.parent(),
+            panel,
+            "lives wrapper should be a child of StatusPanel"
         );
     }
 }

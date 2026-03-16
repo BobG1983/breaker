@@ -1,4 +1,4 @@
-# Phase 8: Boss Nodes & Advanced Mechanics
+# Phase 9: Boss Nodes & Advanced Mechanics
 
 **Goal**: The endgame content that tests mastery.
 
