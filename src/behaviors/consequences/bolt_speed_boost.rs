@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::{
+use crate::{
     behaviors::definition::{BehaviorBinding, Consequence, Trigger},
-    components::{BumpPerfectMultiplier, BumpWeakMultiplier},
+    breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier},
 };
 
 /// Applies `BoltSpeedBoost` consequences from behavior bindings as components
@@ -41,7 +41,8 @@ pub fn apply_bolt_speed_boosts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::{behaviors::definition::BehaviorBinding, components::Breaker};
+    use crate::behaviors::definition::BehaviorBinding;
+    use crate::breaker::components::Breaker;
 
     fn test_app() -> App {
         let mut app = App::new();

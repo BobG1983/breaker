@@ -8,6 +8,7 @@ pub(crate) mod screen;
 pub mod shared;
 
 pub(crate) mod audio;
+pub(crate) mod behaviors;
 pub(crate) mod bolt;
 pub(crate) mod breaker;
 pub(crate) mod cells;

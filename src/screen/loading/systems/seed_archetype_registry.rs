@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    breaker::behaviors::{ArchetypeDefinition, ArchetypeRegistry},
+    behaviors::{ArchetypeDefinition, ArchetypeRegistry},
     screen::loading::resources::DefaultsCollection,
 };
 
@@ -55,7 +55,7 @@ mod tests {
     }
 
     fn make_archetype(name: &str) -> ArchetypeDefinition {
-        use crate::breaker::behaviors::definition::BreakerStatOverrides;
+        use crate::behaviors::definition::BreakerStatOverrides;
         ArchetypeDefinition {
             name: name.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),

@@ -108,7 +108,7 @@ mod tests {
     mod bolt_lost {
         use super::*;
         use crate::{
-            breaker::behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
+            behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
         };
 
         fn test_app() -> App {
@@ -121,7 +121,7 @@ mod tests {
                 Consequence::LoseLife,
             )]));
             app.insert_resource(SendBoltLost(false));
-            app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
+            app.add_observer(crate::behaviors::consequences::life_lost::handle_life_lost);
             app.add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
             app
         }
@@ -176,7 +176,7 @@ mod tests {
             app.insert_resource(SendBoltLost(false));
             app.init_resource::<CapturedPenalties>();
             app.add_observer(
-                crate::breaker::behaviors::consequences::time_penalty::handle_time_penalty,
+                crate::behaviors::consequences::time_penalty::handle_time_penalty,
             );
             app.add_systems(
                 FixedUpdate,
@@ -198,7 +198,7 @@ mod tests {
 
         #[test]
         fn time_penalty_does_not_lose_life() {
-            use crate::breaker::behaviors::consequences::life_lost::LivesCount;
+            use crate::behaviors::consequences::life_lost::LivesCount;
 
             let mut app = test_app();
             let entity = app.world_mut().spawn(LivesCount(3)).id();
@@ -238,7 +238,7 @@ mod tests {
             app.insert_resource(SendBump(None));
             app.init_resource::<CapturedSpawnBolt>();
             app.add_observer(
-                crate::breaker::behaviors::consequences::spawn_bolt::handle_spawn_bolt_requested,
+                crate::behaviors::consequences::spawn_bolt::handle_spawn_bolt_requested,
             );
             app.add_systems(FixedUpdate, (send_bump, bridge_bump, capture_spawn).chain());
             app
@@ -274,7 +274,7 @@ mod tests {
     mod bump {
         use super::*;
         use crate::{
-            breaker::behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
+            behaviors::consequences::life_lost::LivesCount, run::messages::RunLost,
         };
 
         fn test_app() -> App {
@@ -288,7 +288,7 @@ mod tests {
                 (Trigger::EarlyBump, Consequence::LoseLife),
             ]));
             app.insert_resource(SendBump(None));
-            app.add_observer(crate::breaker::behaviors::consequences::life_lost::handle_life_lost);
+            app.add_observer(crate::behaviors::consequences::life_lost::handle_life_lost);
             app.add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
             app
         }

@@ -1,4 +1,4 @@
-//! `BehaviorPlugin` — wires archetype init, bridge systems, and observers.
+//! `BehaviorsPlugin` — wires archetype init, bridge systems, and observers.
 
 use bevy::prelude::*;
 
@@ -13,24 +13,25 @@ use super::{
     definition::Trigger,
     init::{apply_archetype_config_overrides, init_archetype},
     registry::ArchetypeRegistry,
+    sets::BehaviorSystems,
 };
 use crate::{
-    breaker::{BreakerSystems, systems::init_breaker_params},
+    breaker::systems::init_breaker_params,
     physics::PhysicsSystems,
     shared::{GameState, PlayingState},
     ui::systems::spawn_timer_hud,
 };
 
-/// Plugin for the breaker archetype behavior system.
+/// Plugin for the behavior system.
 ///
 /// Registers:
 /// - Archetype init systems (config overrides, component stamping)
 /// - Per-trigger bridge systems (message → consequence event)
 /// - Consequence observers (event → game effect)
 /// - Lives HUD
-pub struct BehaviorPlugin;
+pub struct BehaviorsPlugin;
 
-impl Plugin for BehaviorPlugin {
+impl Plugin for BehaviorsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ArchetypeRegistry>()
             .init_resource::<ActiveBehaviors>()
@@ -55,11 +56,11 @@ impl Plugin for BehaviorPlugin {
                 (
                     bridge_bolt_lost
                         .after(PhysicsSystems::BoltLost)
-                        .in_set(BreakerSystems::BehaviorBridge)
+                        .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BoltLost)),
                     bridge_bump
                         .after(PhysicsSystems::BreakerCollision)
-                        .in_set(BreakerSystems::BehaviorBridge)
+                        .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger_any_bump()),
                 )
                     .run_if(in_state(PlayingState::Active)),

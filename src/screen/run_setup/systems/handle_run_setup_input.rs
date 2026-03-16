@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::behaviors::ArchetypeRegistry,
+    behaviors::ArchetypeRegistry,
     input::InputConfig,
     screen::run_setup::{components::BreakerCard, resources::RunSetupSelection},
     shared::{GameState, SelectedArchetype},
@@ -59,7 +59,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::breaker::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
 
     fn make_archetype(name: &str) -> ArchetypeDefinition {
         ArchetypeDefinition {

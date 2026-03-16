@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    behaviors::BehaviorSystems,
     bolt::{
         BoltSystems,
         messages::SpawnAdditionalBolt,
@@ -42,7 +43,7 @@ impl Plugin for BoltPlugin {
                     apply_bump_velocity
                         .after(PhysicsSystems::BreakerCollision)
                         .before(PhysicsSystems::BoltLost),
-                    spawn_additional_bolt.after(BreakerSystems::BehaviorBridge),
+                    spawn_additional_bolt.after(BehaviorSystems::Bridge),
                     spawn_bolt_lost_text,
                 )
                     .run_if(in_state(PlayingState::Active)),

@@ -4,8 +4,9 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 use crate::{
+    behaviors::ArchetypeDefinition,
     bolt::BoltDefaults,
-    breaker::{BreakerDefaults, behaviors::ArchetypeDefinition},
+    breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
     chips::ChipDefinition,
     input::InputDefaults,

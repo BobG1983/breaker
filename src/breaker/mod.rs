@@ -1,6 +1,5 @@
 //! Breaker domain plugin — breaker mechanics, state machine, bump system.
 
-pub mod behaviors;
 pub mod components;
 pub mod filters;
 pub mod messages;

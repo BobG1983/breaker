@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use crate::{
     breaker::{
         BreakerSystems,
-        behaviors::BehaviorPlugin,
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
@@ -30,7 +29,6 @@ impl Plugin for BreakerPlugin {
             .add_message::<BumpWhiffed>()
             .init_resource::<BreakerConfig>()
             .init_resource::<SelectedArchetype>()
-            .add_plugins(BehaviorPlugin)
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -83,9 +81,8 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BreakerPlugin reads BoltHitBreaker and BoltLost messages from the physics domain
+            // BreakerPlugin reads BoltHitBreaker from the physics domain
             .add_message::<crate::physics::messages::BoltHitBreaker>()
-            .add_message::<crate::physics::messages::BoltLost>()
             .add_plugins(BreakerPlugin)
             .update();
     }
