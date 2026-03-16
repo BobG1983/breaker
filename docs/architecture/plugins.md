@@ -13,7 +13,8 @@ src/
 ├── shared/           # Passive types: GameState, PlayingState, cleanup markers, shared math
 ├── screen/           # Screen state registration, transitions, cleanup systems
 ├── input/            # Raw keyboard input to GameAction translation
-├── breaker/          # Breaker mechanics, state machine, bump system, behaviors sub-domain
+├── breaker/          # Breaker mechanics, state machine, bump system
+├── behaviors/        # Archetype behavior system — trigger→consequence dispatch (top-level domain)
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)

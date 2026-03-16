@@ -17,7 +17,7 @@
 - **Phase 2b audit 2026-03-13**: PASS with 1 structural issue (run/node/mod.rs routing-only violation)
 - screen/run_end/ sub-domain added (Phase 2b): follows loading/main_menu pattern, PASS
 - **Post-refactor audit 2026-03-13**: PASS — run/node/mod.rs routing-only violation RESOLVED (types extracted to resources.rs + sets.rs). No critical violations. One observation: run/node/ lacks its own plugin.rs (systems registered in parent run/plugin.rs).
-- **Phase 2c audit 2026-03-13**: PASS — BehaviorPlugin added as breaker sub-domain. Per-consequence file layout in `consequences/` directory. Bridge systems consume BoltLost + BumpPerformed messages. Internal dispatch via Bevy observers (Events), not messages. One accepted compromise: handle_life_lost writes ResMut<RunState>.
+- **Phase 2c audit 2026-03-13**: PASS — BehaviorPlugin added as breaker sub-domain (later extracted to top-level behaviors/ domain 2026-03-16). Per-consequence file layout in `consequences/` directory. Bridge systems consume BoltLost + BumpPerformed messages. Internal dispatch via Bevy observers (Events), not messages.
 - **Full codebase audit 2026-03-16**: PASS — 0 critical violations, 2 minor observations (SelectedArchetype placement in shared.rs, double init_resource in tests). All 11 review categories clean: folder structure, mod.rs routing-only, plugin boundaries, message discipline, cross-domain access, SystemSet ordering, schedule placement, entity cleanup, state management, config-to-entity pipeline, test structure.
 - **fix/review-findings audit 2026-03-16**: PASS — animate_fade_out moved bolt→UI (correct: visual system serving multiple producers), FadeOut shared type correct, multiplier insert_if_new precedence correct via ordering chain.
 - **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains. 2 Resources defined in system files (need resources.rs), 1 Component defined in system file (needs move to components.rs). No boundary violations. No messages used (correct for screen sub-domains). Cleanup markers correct. State transitions properly owned.
@@ -25,6 +25,7 @@
 - **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues (2 moderate, 1 minor). upgrades/ domain renamed to chips/. screen/loading seeds registry. screen/chip_select reads registry + writes ChipSelected. ui/messages.rs imports ChipKind from chips domain (acceptable vocabulary-type import).
 - **Compromise cleanup verification audit 2026-03-16**: PASS — all 5 compromises confirmed resolved. 0 critical violations. 3 doc drift items (messages.md missing RunLost + stale BumpPerformed, plugins.md missing fx domain, layout.md + physics.md stale ccd.rs references). 1 minor observation (RunLost sender-ownership deviation).
 - **Phase 2e audit 2026-03-16**: PASS — 0 critical violations, 0 moderate issues, 2 observations. Chrono archetype (TimePenalty consequence + ApplyTimePenalty message), Prism archetype (SpawnBolt consequence + SpawnAdditionalBolt message + ExtraBolt marker), interpolate/ domain (visual interpolation between FixedUpdate ticks). Consumer-owns message pattern now established for all consequence-to-target messages.
+- **behaviors/ domain extraction audit 2026-03-16**: PASS with 2 moderate issues. behaviors/ extracted from breaker/ to standalone top-level domain. BehaviorsPlugin in game.rs, BehaviorSystems::Bridge replaces BreakerSystems::BehaviorBridge. Per-consequence events replaced by ConsequenceFired(Consequence). No circular dependencies. All docs updated. M1: cross-domain bare fn ref ordering (init_breaker_params, spawn_timer_hud). M2: cross-domain BreakerConfig mutation (accepted compromise for init-time archetype config).
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -34,9 +35,9 @@
 - `screen/` has six sub-domains: `loading/`, `main_menu/`, `run_end/`, `run_setup/`, `pause_menu/`, `upgrade_select/`
 - `loading/` cross-references `main_menu::MainMenuDefaults` for config seeding — acceptable sibling-within-same-domain import
 - **Nested sub-domains allowed** (added 2026-03-13): a domain may contain child sub-domains with their own plugin, components, and systems. Same canonical layout. Parent plugin adds child plugins. Max one level of nesting. Sub-domains may import parent's shared components. See `docs/architecture/layout.md`.
-- **Per-consequence layout** (added 2026-03-13): Behavior sub-domains use per-consequence file organization in a `consequences/` directory grouping (NOT a sub-domain — no plugin.rs). Each consequence file owns its Event, Components, observer, and helpers. See `docs/architecture/layout.md` "Per-Consequence Layout" section.
+- **Per-consequence layout** (updated 2026-03-16): The `behaviors/` top-level domain uses per-consequence file organization in a `consequences/` directory grouping (NOT a sub-domain — no plugin.rs). Each consequence file owns its Components, observer, and helpers. Generic `ConsequenceFired(Consequence)` event replaces per-consequence events. See `docs/architecture/layout.md` "Per-Consequence Layout" section.
 - **Bevy observers for intra-domain dispatch**: Consequence events use `#[derive(Event)]` + `commands.trigger()` + `app.add_observer()` for internal behavior dispatch within a domain. Messages (`#[derive(Message)]`) remain required for inter-domain communication.
-- **Consumer-owns message pattern** for consequence-to-target messages: RunLost, ApplyTimePenalty, SpawnAdditionalBolt all defined in consuming domain. Accepted because message semantically belongs to consumer vocabulary; breaker/behaviors is merely the trigger source.
+- **Consumer-owns message pattern** for consequence-to-target messages: RunLost, ApplyTimePenalty, SpawnAdditionalBolt all defined in consuming domain. Accepted because message semantically belongs to consumer vocabulary; behaviors domain is merely the trigger source.
 - interpolate/ domain: FixedFirst (restore_authoritative), FixedPostUpdate (store_authoritative), PostUpdate (interpolate_transform). Entities opt in via InterpolateTransform + PhysicsTranslation components. No messages, no resources.
 - Debug plugin gated behind `#[cfg(feature = "dev")]` inside `build()`, struct always compiled
 - lib.rs visibility correct: pub for app/game/shared, pub(crate) for all domain modules
@@ -58,7 +59,7 @@
 - bolt/apply_bump_velocity reads multiplier from BumpPerformed message (no longer queries breaker entity)
 - PhysicsConfig/PhysicsDefaults no longer exist (all fields moved to BreakerConfig)
 
-## Current Ordering Chain (verified 2026-03-13)
+## Current Ordering Chain (verified 2026-03-16)
 ```
 BreakerSystems::Move
   <- (hover_bolt, prepare_bolt_velocity) .after(BreakerSystems::Move)
@@ -74,8 +75,11 @@ BreakerSystems::Move
             <- bolt_lost .after(bolt_breaker_collision)
               PhysicsSystems::BoltLost
                 <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
+                   .in_set(BehaviorSystems::Bridge)
             <- bridge_bump .after(PhysicsSystems::BreakerCollision)
-              <- spawn_additional_bolt .after(PhysicsSystems::BreakerCollision)
+               .in_set(BehaviorSystems::Bridge)
+              BehaviorSystems::Bridge
+                <- spawn_additional_bolt .after(BehaviorSystems::Bridge)
   NodeSystems::TickTimer
     <- apply_time_penalty .after(NodeSystems::TickTimer)
 ```
@@ -90,19 +94,19 @@ See [message-inventory.md](message-inventory.md) for full table.
 Active messages (Phase 1, consumed in code):
 - BoltHitBreaker: physics → breaker (grade_bump)
 - BoltHitCell: physics → cells (handle_cell_hit)
-- BoltLost: physics → bolt (spawn_bolt_lost_text), breaker/behaviors (bridge_bolt_lost)
-- BumpPerformed { grade, multiplier }: breaker → bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump)
+- BoltLost: physics → bolt (spawn_bolt_lost_text), behaviors (bridge_bolt_lost)
+- BumpPerformed { grade, multiplier }: breaker → bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel), behaviors (bridge_bump)
 - BumpWhiffed: breaker → breaker (spawn_whiff_text)
 
 Active messages (Phase 2b/2c):
 - CellDestroyed: cells → run (track_node_completion)
 - NodeCleared: run/node (track_node_completion) → run (handle_node_cleared) [defined in run/node/messages.rs, registered by NodePlugin]
 - TimerExpired: run/node (tick_node_timer, apply_time_penalty) → run (handle_timer_expired) [defined in run/node/messages.rs, registered by NodePlugin]
-- RunLost: breaker/behaviors (handle_life_lost) → run (handle_run_lost) [defined in run/messages.rs — consumer-owns]
+- RunLost: behaviors (handle_life_lost) → run (handle_run_lost) [defined in run/messages.rs — consumer-owns]
 
 Active messages (Phase 2e):
-- ApplyTimePenalty { seconds }: breaker/behaviors/time_penalty (observer) → run/node/apply_time_penalty [defined in run/node/messages.rs — consumer-owns]
-- SpawnAdditionalBolt: breaker/behaviors/spawn_bolt (observer) → bolt/spawn_additional_bolt [defined in bolt/messages.rs — consumer-owns]
+- ApplyTimePenalty { seconds }: behaviors/time_penalty (observer) → run/node/apply_time_penalty [defined in run/node/messages.rs — consumer-owns]
+- SpawnAdditionalBolt: behaviors/spawn_bolt (observer) → bolt/spawn_additional_bolt [defined in bolt/messages.rs — consumer-owns]
 
 Active messages (upgrade infrastructure):
 - ChipSelected: screen/chip_select (handle_chip_input) → (future: chips domain)
@@ -123,12 +127,15 @@ Registered but no consumers yet: ChipSelected
 - physics/bolt_lost reads breaker Transform (read-only, for respawn position)
 - UI domain reads run::node::NodeTimer (read-only, for timer display)
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only, for outcome display)
-- screen/run_setup reads breaker/behaviors::ArchetypeRegistry (read-only, for card display)
+- screen/run_setup reads behaviors::ArchetypeRegistry (read-only, for card display)
 - screen/upgrade_select reads upgrades::UpgradeRegistry (read-only, for card display + offer generation)
 - All screen sub-domains (main_menu, run_setup, pause_menu, chip_select) read input::InputConfig (read-only, for key bindings)
 - ui/messages.rs imports chips::ChipKind (vocabulary type in ChipSelected message payload — acceptable)
 - bolt/spawn_additional_bolt reads breaker Transform (read-only, for spawn positioning — same pattern as spawn_bolt, hover_bolt)
 - Other domains attach interpolate components (InterpolateTransform, PhysicsTranslation) at spawn — opt-in cross-domain composition, analogous to CleanupOnNodeExit
+- behaviors/init.rs writes ResMut<BreakerConfig> and inserts breaker-owned components (BumpPerfectMultiplier, BumpWeakMultiplier) at init time — accepted because behaviors domain exists to compose archetype-specific breaker configuration, and message indirection for one-shot OnEnter systems adds complexity without decoupling benefit
+- behaviors/plugin.rs uses bare fn refs from breaker (init_breaker_params) and UI (spawn_timer_hud) for OnEnter ordering — needs SystemSet extraction (moderate issue, tracked)
+- behaviors/consequences/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. Hot-reload systems write to *Config resources and entity components across all domains. Telemetry reads from all domains. All gated behind `#[cfg(feature = "dev")]` — compiled out of release. Does NOT set precedent for production domains.
 
 ## Resolved Compromises (2026-03-16)

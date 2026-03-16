@@ -1,12 +1,12 @@
 ---
 name: known-conflicts
-description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-16, post-Phase-2e)
+description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-16, post-behaviors-extraction)
 type: reference
 ---
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-16 (Phase 2e — interpolation pipeline, apply_time_penalty, spawn_additional_bolt)
+Last updated: 2026-03-16 (behaviors domain extraction — BehaviorsPlugin standalone; spawn_additional_bolt now orders .after(BehaviorSystems::Bridge))
 
 ---
 
@@ -135,15 +135,17 @@ This is correct: the new bolt appears on the next tick, which is the intended be
 
 ---
 
-## POTENTIAL — spawn_additional_bolt vs apply_bump_velocity: no ordering between them
+## RESOLVED — spawn_additional_bolt now orders after BehaviorSystems::Bridge
 
-Both run `.after(PhysicsSystems::BreakerCollision)`.
-- `apply_bump_velocity`: writes `mut BoltVelocity` on existing With<Bolt> entities
-- `spawn_additional_bolt`: uses Commands to spawn new entities (deferred)
+`spawn_additional_bolt` previously ordered `.after(PhysicsSystems::BreakerCollision)`.
+It now orders `.after(BehaviorSystems::Bridge)` — which runs after BreakerCollision.
+This guarantees the SpawnAdditionalBolt message written by the bridge observer is readable
+in the same tick.
 
-Because `spawn_additional_bolt` only uses Commands (deferred), it cannot conflict with
-`apply_bump_velocity`'s direct component writes. The new entity does not exist in the world
-until commands flush, so `apply_bump_velocity`'s query cannot see it. No actual conflict.
+`apply_bump_velocity` orders `.after(BreakerCollision).before(BoltLost)`.
+`spawn_additional_bolt` orders `.after(BehaviorSystems::Bridge)`.
+No explicit ordering between them — but no conflict because spawn_additional_bolt uses
+only Commands (deferred). The spawned entity is not visible in the current tick.
 
 ---
 
@@ -162,16 +164,17 @@ FixedUpdate:
             → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
                 → bolt_breaker_collision (.after(bolt_cell_collision), BreakerCollision set)
                     → apply_bump_velocity (.after(BreakerCollision), .before(BoltLost))
-                    → spawn_additional_bolt (.after(BreakerCollision))  [Commands only, no ordering vs apply_bump_velocity]
                     → grade_bump (.after(update_bump) AND .after(BreakerCollision))
-                    → bridge_bump (.after(BreakerCollision), conditional)
+                    → bridge_bump (.after(BreakerCollision), BehaviorSystems::Bridge, conditional)
                         → [observer: handle_time_penalty] → ApplyTimePenalty message
-                        → [observer: handle_spawn_bolt_requested] → SpawnAdditionalBolt message
+                        → [observer: handle_spawn_bolt] → SpawnAdditionalBolt message
                     → track_bump_result (.after(BreakerCollision), dev only)
                     → bolt_lost (.after(bolt_breaker_collision), BoltLost set)
-                        → bridge_bolt_lost (.after(BoltLost), conditional)
+                        → bridge_bolt_lost (.after(BoltLost), BehaviorSystems::Bridge, conditional)
                             → [observer: handle_life_lost] → RunLost message
                             → [observer: handle_time_penalty] → ApplyTimePenalty message
+                    → spawn_additional_bolt (.after(BehaviorSystems::Bridge))
+                        [reads SpawnAdditionalBolt message written by bridge observer — Commands only]
               → grade_bump continuations: perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text (.after(grade_bump))
 
   [unordered floaters in same run_if group]:

@@ -1,12 +1,12 @@
 ---
 name: message-flow
-description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-16 post-Phase-2e)
+description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-16 post-behaviors-extraction)
 type: reference
 ---
 
 # Message Flow Map
 
-Last updated: 2026-03-16 (Phase 2e — ApplyTimePenalty, SpawnAdditionalBolt added)
+Last updated: 2026-03-16 (behaviors domain extraction — BehaviorsPlugin is now standalone; observers fire on ConsequenceFired trigger event, not named request events)
 
 ## Registered Messages (by plugin)
 
@@ -43,7 +43,7 @@ Last updated: 2026-03-16 (Phase 2e — ApplyTimePenalty, SpawnAdditionalBolt add
   - `perfect_bump_dash_cancel` (BreakerPlugin)
   - `spawn_bump_grade_text` (BreakerPlugin)
   - `apply_bump_velocity` (BoltPlugin)
-  - `bridge_bump` (BehaviorPlugin, conditional) — may trigger SpawnBoltRequested, TimePenaltyRequested
+  - `bridge_bump` (BehaviorsPlugin, conditional) — fires ConsequenceFired trigger → observers handle_time_penalty / handle_spawn_bolt
   - `track_bump_result` (DebugPlugin, dev only)
 
 ### BumpWhiffed (BreakerPlugin → cross-domain)
@@ -66,7 +66,7 @@ Last updated: 2026-03-16 (Phase 2e — ApplyTimePenalty, SpawnAdditionalBolt add
 - Sender: `bolt_lost` (PhysicsPlugin, PhysicsSystems::BoltLost) — fires for baseline AND ExtraBolt
 - Receivers:
   - `spawn_bolt_lost_text` (BoltPlugin)
-  - `bridge_bolt_lost` (BehaviorPlugin, conditional) — may trigger LoseLifeRequested or TimePenaltyRequested
+  - `bridge_bolt_lost` (BehaviorsPlugin, conditional) — fires ConsequenceFired trigger → observers handle_life_lost / handle_time_penalty
 
 ### CellDestroyed (CellsPlugin → RunPlugin/NodePlugin)
 - Sender: `handle_cell_hit` (CellsPlugin, FixedUpdate, no ordering vs receiver)
@@ -89,24 +89,25 @@ Last updated: 2026-03-16 (Phase 2e — ApplyTimePenalty, SpawnAdditionalBolt add
   apply_time_penalty is also .after(NodeSystems::TickTimer). No explicit ordering between
   apply_time_penalty and handle_timer_expired — potential 1-tick delay (see known-conflicts.md).
 
-### ApplyTimePenalty (BreakerPlugin/BehaviorPlugin → NodePlugin) — NEW cross-plugin message
+### ApplyTimePenalty (BehaviorsPlugin → NodePlugin) — cross-plugin message
 - Sender chain:
-  - `bridge_bolt_lost` or `bridge_bump` (BehaviorPlugin) → commands.trigger(TimePenaltyRequested)
+  - `bridge_bolt_lost` or `bridge_bump` (BehaviorsPlugin) → commands.trigger(ConsequenceFired(TimePenalty))
     → `handle_time_penalty` observer (immediate) → writes ApplyTimePenalty
 - Receiver: `apply_time_penalty` (NodePlugin, FixedUpdate, .after(NodeSystems::TickTimer))
-- Cross-plugin boundary: BehaviorPlugin (inside BreakerPlugin) → NodePlugin
+- Cross-plugin boundary: BehaviorsPlugin (standalone) → NodePlugin
 
-### SpawnAdditionalBolt (BreakerPlugin/BehaviorPlugin → BoltPlugin) — NEW cross-plugin message
+### SpawnAdditionalBolt (BehaviorsPlugin → BoltPlugin) — cross-plugin message
 - Sender chain:
-  - `bridge_bump` (BehaviorPlugin) → commands.trigger(SpawnBoltRequested)
-    → `handle_spawn_bolt_requested` observer (immediate) → writes SpawnAdditionalBolt
-- Receiver: `spawn_additional_bolt` (BoltPlugin, FixedUpdate, .after(PhysicsSystems::BreakerCollision))
-- Cross-plugin boundary: BehaviorPlugin (inside BreakerPlugin) → BoltPlugin
+  - `bridge_bump` (BehaviorsPlugin) → commands.trigger(ConsequenceFired(SpawnBolt))
+    → `handle_spawn_bolt` observer (immediate) → writes SpawnAdditionalBolt
+- Receiver: `spawn_additional_bolt` (BoltPlugin, FixedUpdate, .after(BehaviorSystems::Bridge))
+- Cross-plugin boundary: BehaviorsPlugin (standalone) → BoltPlugin
+- Ordering: spawn_additional_bolt runs AFTER BehaviorSystems::Bridge set — same-tick guarantee
 
-### RunLost (BehaviorPlugin → RunPlugin)
-- Sender: `handle_life_lost` observer (immediate on LoseLifeRequested)
+### RunLost (BehaviorsPlugin → RunPlugin)
+- Sender: `handle_life_lost` observer (immediate on ConsequenceFired(LoseLife))
 - Receiver: `handle_run_lost` (RunPlugin, .after(handle_node_cleared), .after(handle_timer_expired))
-- PREVIOUSLY UNORDERED — now fixed in run/plugin.rs.
+- Cross-plugin boundary: BehaviorsPlugin (standalone) → RunPlugin
 
 ### UpgradeSelected (UiPlugin — registered, not yet used)
 - Sender: NONE (future phases)
@@ -123,45 +124,49 @@ Last updated: 2026-03-16 (Phase 2e — ApplyTimePenalty, SpawnAdditionalBolt add
 | From Plugin | Message | To Plugin |
 |-------------|---------|-----------|
 | Bevy input | KeyboardInput | InputPlugin |
-| BreakerPlugin | BumpPerformed | BoltPlugin, BehaviorPlugin, DebugPlugin |
+| BreakerPlugin | BumpPerformed | BoltPlugin, BehaviorsPlugin, DebugPlugin |
 | BreakerPlugin | BumpWhiffed | DebugPlugin |
 | PhysicsPlugin | BoltHitBreaker | BreakerPlugin |
 | PhysicsPlugin | BoltHitCell | CellsPlugin |
-| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorPlugin |
+| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin |
 | CellsPlugin | CellDestroyed | NodePlugin |
 | NodePlugin | NodeCleared | RunPlugin |
 | NodePlugin | TimerExpired | RunPlugin |
-| BehaviorPlugin | ApplyTimePenalty | NodePlugin (NEW) |
-| BehaviorPlugin | SpawnAdditionalBolt | BoltPlugin (NEW) |
-| BehaviorPlugin | RunLost | RunPlugin |
+| BehaviorsPlugin | ApplyTimePenalty | NodePlugin |
+| BehaviorsPlugin | SpawnAdditionalBolt | BoltPlugin |
+| BehaviorsPlugin | RunLost | RunPlugin |
 
 ---
 
-## Observer → Message Chains (all in BehaviorPlugin)
+## Observer → Message Chains (all in BehaviorsPlugin)
 
 ```
 BoltLost message
-  → bridge_bolt_lost system (.after(BoltLost set), conditional)
-    → LoseLifeRequested observer trigger
-      → handle_life_lost observer (immediate)
+  → bridge_bolt_lost system (.after(BoltLost set), in_set(BehaviorSystems::Bridge), conditional)
+    → commands.trigger(ConsequenceFired(LoseLife))
+      → handle_life_lost observer (immediate, pattern-matches Consequence::LoseLife)
         → LivesCount decremented
         → RunLost message (when lives == 0)
-    → TimePenaltyRequested observer trigger
-      → handle_time_penalty observer (immediate)
+    → commands.trigger(ConsequenceFired(TimePenalty(seconds)))
+      → handle_time_penalty observer (immediate, pattern-matches Consequence::TimePenalty)
         → ApplyTimePenalty message
 
 BumpPerformed message
-  → bridge_bump system (.after(BreakerCollision), conditional)
-    → SpawnBoltRequested observer trigger
-      → handle_spawn_bolt_requested observer (immediate)
+  → bridge_bump system (.after(BreakerCollision), in_set(BehaviorSystems::Bridge), conditional)
+    → commands.trigger(ConsequenceFired(SpawnBolt))
+      → handle_spawn_bolt observer (immediate, pattern-matches Consequence::SpawnBolt)
         → SpawnAdditionalBolt message
-    → TimePenaltyRequested observer trigger
-      → handle_time_penalty observer (immediate)
+    → commands.trigger(ConsequenceFired(TimePenalty(seconds)))
+      → handle_time_penalty observer (immediate, pattern-matches Consequence::TimePenalty)
         → ApplyTimePenalty message
 ```
 
-All three observers (handle_life_lost, handle_time_penalty, handle_spawn_bolt_requested) run
-immediately when triggered — their messages are available in the same FixedUpdate tick.
+All three observers (handle_life_lost, handle_time_penalty, handle_spawn_bolt) run immediately
+when triggered via commands.trigger(ConsequenceFired). Messages written by observers are
+available to downstream systems that run .after(BehaviorSystems::Bridge).
+
+Consequence::BoltSpeedBoost is NEVER triggered at runtime — it is an init-time-only consequence
+handled by apply_bolt_speed_boosts() called from init_archetype. The bridge skips it explicitly.
 
 ---
 

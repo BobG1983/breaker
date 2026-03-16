@@ -12,9 +12,9 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **Augment** | Passive breaker upgrade | `Augment`, `AugmentEffect` |
 | **Overclock** | Triggered ability | `Overclock`, `OverclockTrigger` |
 | **Bump** | Breaker's upward hit | `BumpGrade`, `BumpPerformed` |
-| **Aegis** | Lives-based breaker archetype | `Aegis`, `AegisPlugin` |
-| **Chrono** | Time-penalty breaker archetype | `Chrono`, `ChronoPlugin` |
-| **Prism** | Multi-bolt breaker archetype | `Prism`, `PrismPlugin` |
+| **Aegis** | Lives-based breaker archetype | `aegis.archetype.ron`, `Consequence::LoseLife` |
+| **Chrono** | Time-penalty breaker archetype | `chrono.archetype.ron`, `Consequence::TimePenalty` |
+| **Prism** | Multi-bolt breaker archetype | `prism.archetype.ron`, `Consequence::SpawnBolt` |
 | **ExtraBolt** | Additional bolt spawned by the Prism archetype on a perfect bump; despawned on loss rather than respawned | `ExtraBolt` |
 | **Chip** | Any Amp, Augment, or Overclock (collective term) | `ChipDefinition`, `ChipRegistry`, `ChipSelected` |
 | **Rig** | The player's complete build (Breaker + Bolt + Chips + seed + score) | `Rig`, `RigSummary` |

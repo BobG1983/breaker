@@ -28,34 +28,36 @@ src/<domain>/
 - **Shared math modules** live in `shared/math.rs` when multiple domains need the same pure functions (e.g., `ray_vs_aabb` for CCD). These should contain only pure functions and data types — no systems, no Bevy resources.
 - No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`. If it doesn't fit the categories above, it probably belongs in an existing file or a different domain.
 
-## Per-Consequence Layout (Behavior Sub-Domains)
+## Per-Consequence Layout (Behaviors Domain)
 
-Behavior sub-domains that dispatch from triggers to consequences use a **per-consequence file** layout instead of the canonical category-based layout. Each consequence gets its own file containing the event type, related components, observer, and helper systems for that consequence. This keeps each consequence self-contained and scales cleanly as new consequences are added.
+The `behaviors/` domain dispatches from triggers to consequences using a **per-consequence file** layout instead of the canonical category-based layout. Each consequence gets its own file containing the relevant components, observer, and helper systems. This keeps each consequence self-contained and scales cleanly as new consequences are added.
 
 ```
-src/<domain>/behaviors/
+src/behaviors/
 ├── mod.rs                 # Re-exports + pub mod declarations
-├── plugin.rs              # BehaviorPlugin — wires init, bridges, observers
-├── definition.rs          # Asset type, trigger/consequence enums, stat overrides
+├── plugin.rs              # BehaviorsPlugin — wires init, bridges, observers
+├── sets.rs                # BehaviorSystems set (Bridge variant for cross-domain ordering)
+├── definition.rs          # Asset type, trigger/consequence enums, ConsequenceFired event
 ├── registry.rs            # Registry resource (name → definition lookup)
 ├── active.rs              # ActiveBehaviors resource (trigger → consequence runtime lookup)
 ├── init.rs                # Init systems (config overrides, component stamping)
-├── bridges.rs             # Per-trigger bridge systems (message → consequence event)
+├── bridges.rs             # Per-trigger bridge systems (message → ConsequenceFired event)
 └── consequences/          # Per-consequence handlers (NOT a sub-domain — no plugin.rs)
     ├── mod.rs             # Routing only
-    ├── <consequence_a>.rs # Event + components + observer + HUD for consequence A
+    ├── <consequence_a>.rs # Components + observer + HUD for consequence A
     └── <consequence_b>.rs # Init-time apply function for consequence B
 ```
 
 **Rules:**
-- One file per consequence type. The file owns the consequence's `Event`, any `Component`s it needs, and the observer or helper that handles it.
-- `consequences/` is a **directory grouping**, not a sub-domain — it has no `plugin.rs`. The parent `BehaviorPlugin` registers all observers and systems from consequence files.
-- `definition.rs` holds the RON-deserialized data types (`Asset`, trigger/consequence enums). These are content data types, not Bevy components or resources.
-- `bridges.rs` holds per-trigger bridge systems. Each reads ONE message type and fires consequence events via `commands.trigger()`.
+- One file per consequence type. The file owns any `Component`s the consequence needs and the observer or helper that handles it.
+- `consequences/` is a **directory grouping**, not a sub-domain — it has no `plugin.rs`. `BehaviorsPlugin` registers all observers and systems from consequence files.
+- `definition.rs` holds the RON-deserialized data types (`Asset`, trigger/consequence enums) and the `ConsequenceFired(Consequence)` event. These are content data types, not Bevy components or resources.
+- `bridges.rs` holds per-trigger bridge systems. Each reads ONE message type and fires `ConsequenceFired` events via `commands.trigger()`. Each consequence handler self-selects via pattern matching — adding a new consequence never touches `bridges.rs`.
 - `init.rs` holds systems that run at archetype init time (config overrides, component stamping).
-- Adding a new consequence = new file in `consequences/` + `mod.rs` entry + match arm in `bridges.rs` + `Consequence` enum variant in `definition.rs`.
+- Adding a new consequence = new file in `consequences/` + `mod.rs` entry + `Consequence` enum variant in `definition.rs` + observer registered in `plugin.rs`.
 - Adding a new archetype = new RON file only (if using existing triggers/consequences).
-- This layout applies **only** to behavior sub-domains that use the trigger→consequence dispatch pattern. Standard sub-domains use the canonical category-based layout.
+- This layout applies **only** to the `behaviors/` domain. Standard domains use the canonical category-based layout.
+- `behaviors/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.
 
 ## Nested Sub-Domains
 

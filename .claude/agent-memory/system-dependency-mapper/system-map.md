@@ -1,18 +1,21 @@
 ---
 name: system-map
-description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 post-Phase-2e)
+description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 post-behaviors-extraction)
 type: reference
 ---
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-16 (Phase 2e — interpolation pipeline, apply_time_penalty, spawn_additional_bolt, ExtraBolt support)
+Last updated: 2026-03-16 (behaviors domain extraction — BehaviorsPlugin moved from sub-plugin of BreakerPlugin to standalone domain in src/behaviors/)
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
-BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin → UiPlugin → DebugPlugin
+BehaviorsPlugin → BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin →
+UiPlugin → DebugPlugin
 
-Note: InterpolatePlugin is now explicitly registered BEFORE PhysicsPlugin (owns restore/store/interpolate).
+Note: InterpolatePlugin is registered BEFORE PhysicsPlugin.
+Note: BehaviorsPlugin is a STANDALONE domain, registered between BreakerPlugin and BoltPlugin.
+BreakerPlugin no longer contains any behavior sub-plugin.
 
 ---
 
@@ -178,41 +181,57 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 ### `animate_tilt_visual` — Update, run_if(PlayingState::Active)
 - Writes (query): Query<(&BreakerTilt, &mut Transform), With<Breaker>>
 
-### BehaviorPlugin (sub-plugin of BreakerPlugin)
+---
 
-#### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), before(init_breaker_params)
-- Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
+## BehaviorsPlugin (src/behaviors/ — standalone domain)
+
+Resources owned: ArchetypeRegistry, ActiveBehaviors
+System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
+
+### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), .before(init_breaker_params)
+- Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>, Res<Assets<BreakerDefaults>>
 - Writes: ResMut<BreakerConfig>
+- Cross-domain write: touches BreakerConfig (BreakerPlugin resource)
 
-#### `init_archetype` — OnEnter(GameState::Playing), after(init_breaker_params)
+### `init_archetype` — OnEnter(GameState::Playing), .after(init_breaker_params)
 - Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
-- Writes (query): Commands on Breaker entity
+- Reads (query): Query<Entity, (With<Breaker>, Without<LivesCount>)>
 - Writes: ResMut<ActiveBehaviors>
+- Commands: inserts LivesCount, BumpPerfectMultiplier, BumpWeakMultiplier on Breaker entity
+- Cross-domain: stamps components from breaker domain (BumpPerfectMultiplier, BumpWeakMultiplier)
 
-#### `spawn_lives_display` — OnEnter(GameState::Playing), after(init_archetype), after(spawn_timer_hud)
+### `spawn_lives_display` — OnEnter(GameState::Playing), .after(init_archetype), .after(spawn_timer_hud)
 - Reads (query): Query<&LivesCount>
 - Reads (query): Query<Entity, With<StatusPanel>>
-- Commands (spawn LivesDisplay as child of StatusPanel)
+- Reads (query): Query<(), With<LivesDisplay>> (existence guard)
+- Commands: spawns LivesDisplay as child of StatusPanel (UI entity)
 
-#### `bridge_bolt_lost` — FixedUpdate, after(PhysicsSystems::BoltLost), run_if(ActiveBehaviors has BoltLost trigger AND PlayingState::Active)
+### `bridge_bolt_lost` — FixedUpdate, .after(PhysicsSystems::BoltLost), .in_set(BehaviorSystems::Bridge)
+- run_if: ActiveBehaviors.has_trigger(Trigger::BoltLost) AND PlayingState::Active
 - Receives: MessageReader<BoltLost>
-- Commands (trigger consequences based on ActiveBehaviors — LoseLifeRequested, TimePenaltyRequested, SpawnBoltRequested)
+- Reads: Res<ActiveBehaviors>
+- Commands: commands.trigger(ConsequenceFired(_)) for each matching consequence
 
-#### `bridge_bump` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(ActiveBehaviors has any bump trigger AND PlayingState::Active)
+### `bridge_bump` — FixedUpdate, .after(PhysicsSystems::BreakerCollision), .in_set(BehaviorSystems::Bridge)
+- run_if: ActiveBehaviors.has_trigger_any_bump() AND PlayingState::Active
 - Receives: MessageReader<BumpPerformed>
-- Commands (trigger consequences based on ActiveBehaviors)
+- Reads: Res<ActiveBehaviors>
+- Commands: commands.trigger(ConsequenceFired(_)) for each matching consequence
 
-#### `handle_life_lost` — Observer on LoseLifeRequested (immediate, not a schedule system)
-- Writes (query): mut LivesCount
-- Sends: MessageWriter<RunLost> (when lives reach zero)
+### `handle_life_lost` — Observer on ConsequenceFired (immediate, runs in command flush)
+- Pattern-matches: Consequence::LoseLife only, ignores others
+- Writes (query): mut LivesCount (all entities with LivesCount)
+- Sends: MessageWriter<RunLost> (only when lives.0 reaches 0)
 
-#### `handle_time_penalty` — Observer on TimePenaltyRequested (immediate, not a schedule system)
+### `handle_time_penalty` — Observer on ConsequenceFired (immediate, runs in command flush)
+- Pattern-matches: Consequence::TimePenalty(seconds) only
 - Sends: MessageWriter<ApplyTimePenalty>
 
-#### `handle_spawn_bolt_requested` — Observer on SpawnBoltRequested (immediate, not a schedule system)
+### `handle_spawn_bolt` — Observer on ConsequenceFired (immediate, runs in command flush)
+- Pattern-matches: Consequence::SpawnBolt only
 - Sends: MessageWriter<SpawnAdditionalBolt>
 
-#### `update_lives_display` — Update, run_if(any_with_component::<LivesDisplay> AND PlayingState::Active)
+### `update_lives_display` — Update, run_if(any_with_component::<LivesDisplay> AND PlayingState::Active)
 - Reads (query): Query<&LivesCount>
 - Writes (query): mut Text (With<LivesDisplay>)
 
@@ -247,12 +266,12 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 - Receives: MessageReader<BumpPerformed>
 - Writes (query): mut BoltVelocity, read BoltBaseSpeed, BoltMaxSpeed (With<Bolt>)
 
-### `spawn_additional_bolt` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
+### `spawn_additional_bolt` — FixedUpdate, after(BehaviorSystems::Bridge), run_if(PlayingState::Active)
 - Receives: MessageReader<SpawnAdditionalBolt>
 - Reads: Res<BoltConfig>, ResMut<GameRng>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
 - Reads (query): Query<&Transform, With<Breaker>> (read-only)
 - Commands (spawn Bolt+ExtraBolt entity with InterpolateTransform, PhysicsTranslation, CleanupOnNodeExit)
-- NOTE: No ordering constraint vs apply_bump_velocity or PhysicsSystems::BoltLost
+- NOTE: Orders .after(BehaviorSystems::Bridge) to ensure bridge_bump observer has run and SpawnAdditionalBolt message is available in the same tick
 
 ### `spawn_bolt_lost_text` — FixedUpdate, run_if(PlayingState::Active) [NO ordering]
 - Receives: MessageReader<BoltLost>

@@ -12,13 +12,18 @@
 - All gameplay systems run in FixedUpdate (physics, breaker, bolt, cells, run) gated by `run_if(in_state(PlayingState::Active))`
 - Visual-only systems run in Update (animate_bump_visual, animate_tilt_visual, update_timer_display, debug overlays, update_lives_display, animate_fade_out)
 - InterpolatePlugin registered BEFORE PhysicsPlugin in game.rs
+- BehaviorsPlugin is a STANDALONE domain registered between BreakerPlugin and BoltPlugin in game.rs (NOT a sub-plugin of BreakerPlugin)
+- Plugin registration order: ...BreakerPlugin → BehaviorsPlugin → BoltPlugin...
 - Interpolation pipeline: `restore_authoritative` (FixedFirst) → [FixedUpdate physics] → `store_authoritative` (FixedPostUpdate) → `interpolate_transform` (PostUpdate)
 - Bolt entities (baseline + ExtraBolt) carry InterpolateTransform + PhysicsTranslation; bolt_lost inserts PhysicsTranslation on respawn to snap interpolation
 - Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` (BreakerCollision set) → `apply_bump_velocity` + `spawn_additional_bolt` → `bolt_lost` (BoltLost set)
 - apply_bump_velocity: `.after(BreakerCollision).before(BoltLost)` — correctly ordered
-- spawn_additional_bolt: `.after(BreakerCollision)` — Commands-only, no direct conflict with apply_bump_velocity
+- spawn_additional_bolt: `.after(BehaviorSystems::Bridge)` (was previously .after(BreakerCollision))
 - ExtraBolt: despawned permanently when lost (not respawned); still sends BoltLost message
-- New observer chain: bridge_bump/bridge_bolt_lost → SpawnBoltRequested observer → SpawnAdditionalBolt message; TimePenaltyRequested observer → ApplyTimePenalty message
+- Behavior observer chain: bridge_bump/bridge_bolt_lost fire commands.trigger(ConsequenceFired) → observers run immediately; messages written by observers available to downstream systems in same tick
+- bridge_bolt_lost: `.after(PhysicsSystems::BoltLost).in_set(BehaviorSystems::Bridge)`, conditional on ActiveBehaviors
+- bridge_bump: `.after(PhysicsSystems::BreakerCollision).in_set(BehaviorSystems::Bridge)`, conditional on ActiveBehaviors
+- BoltPlugin's spawn_additional_bolt orders `.after(BehaviorSystems::Bridge)` — ensuring bridge observers have fired and SpawnAdditionalBolt message is available
 - apply_time_penalty: `.after(NodeSystems::TickTimer)` — can also send TimerExpired when penalty drives timer to zero
 - handle_run_lost: `.after(handle_node_cleared).after(handle_timer_expired)` — FIXED, win takes priority
 - Breaker state chain: `update_bump` → `move_breaker` (BreakerSystems::Move) → `update_breaker_state` → `grade_bump` → post-grade systems

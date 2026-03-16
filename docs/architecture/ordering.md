@@ -53,10 +53,13 @@ BreakerSystems::Move
             <- bolt_lost .after(bolt_breaker_collision)
               PhysicsSystems::BoltLost
                 <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
+                   .in_set(BehaviorSystems::Bridge)          [behaviors domain]
             <- bridge_bump .after(PhysicsSystems::BreakerCollision)
+               .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                <- spawn_additional_bolt .after(BehaviorSystems::Bridge)  [bolt domain]
 ```
 
-Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading and velocity application, then bolt-lost detection.
+Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading and velocity application, then bolt-lost detection. Both behavior bridge systems run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
 
 **Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` → `grade_bump`. The `trigger_bump_visual` system runs `.after(update_bump)` in the same FixedUpdate schedule.
 

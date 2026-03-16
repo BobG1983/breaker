@@ -100,6 +100,7 @@ mod tests {
             .add_message::<crate::physics::messages::BoltHitBreaker>()
             .add_message::<crate::physics::messages::BoltLost>()
             .add_plugins(BreakerPlugin)
+            .add_plugins(BehaviorsPlugin)
             .update();
     }
 }

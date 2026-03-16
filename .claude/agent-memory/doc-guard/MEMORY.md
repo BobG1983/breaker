@@ -16,6 +16,10 @@
 ## Terminology Decisions
 - `BumpPerformed` consumers in breaker domain: system names are `spawn_bump_grade_text` and `perfect_bump_dash_cancel` (not `bump_feedback` which is only a module name)
 - Bolt lost feedback: system is `spawn_bolt_lost_text` in module `bolt/systems/bolt_lost_feedback.rs`
+- Archetypes (Aegis, Chrono, Prism) are purely data-driven via RON files — no `AegisPlugin`, `ChronoPlugin`, or `PrismPlugin` exist. Do not flag this as a gap.
+- `behaviors/` is a top-level domain (not nested under `breaker/`). Plugin is `BehaviorsPlugin`. System set is `BehaviorSystems::Bridge` (in `behaviors/sets.rs`).
+- `ConsequenceFired(Consequence)` is a Bevy observer event (not a Message) — lives in `behaviors/definition.rs`. It replaces the old per-consequence events (`LoseLifeRequested`, `TimePenaltyRequested`, `SpawnBoltRequested`).
+- `handle_spawn_bolt` (in `behaviors/consequences/spawn_bolt.rs`) replaced `handle_spawn_bolt_requested`.
 
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete — check on each doc-guard pass

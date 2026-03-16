@@ -16,7 +16,7 @@
 - Zero warnings, zero errors
 
 ### Tests: PASS
-- 449 passed, 0 failed, 0 ignored
+- 490 passed, 0 failed, 0 ignored
 - All test suites pass cleanly
 
 ## Bevy 0.18.1 API Notes
