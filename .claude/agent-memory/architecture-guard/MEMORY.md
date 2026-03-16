@@ -23,6 +23,7 @@
 - **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains. 2 Resources defined in system files (need resources.rs), 1 Component defined in system file (needs move to components.rs). No boundary violations. No messages used (correct for screen sub-domains). Cleanup markers correct. State transitions properly owned.
 - **Architecture compromise cleanup 2026-03-16**: 5 compromises resolved — bump multiplier in message (bolt no longer reads breaker components), shared math module (ccd.rs moved to shared/math.rs), NodePlugin extracted (run/node/ now follows sub-domain pattern), RunLost message (handle_life_lost no longer writes RunState), fx domain (animate_fade_out moved from UI to fx). Terminology updated.
 - **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues (2 moderate, 1 minor). upgrades/ domain renamed to chips/. screen/loading seeds registry. screen/chip_select reads registry + writes ChipSelected. ui/messages.rs imports ChipKind from chips domain (acceptable vocabulary-type import).
+- **Compromise cleanup verification audit 2026-03-16**: PASS — all 5 compromises confirmed resolved. 0 critical violations. 3 doc drift items (messages.md missing RunLost + stale BumpPerformed, plugins.md missing fx domain, layout.md + physics.md stale ccd.rs references). 1 minor observation (RunLost sender-ownership deviation).
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -36,7 +37,7 @@
 - **Bevy observers for intra-domain dispatch**: Consequence events use `#[derive(Event)]` + `commands.trigger()` + `app.add_observer()` for internal behavior dispatch within a domain. Messages (`#[derive(Message)]`) remain required for inter-domain communication.
 - Debug plugin gated behind `#[cfg(feature = "dev")]` inside `build()`, struct always compiled
 - lib.rs visibility correct: pub for app/game/shared, pub(crate) for all domain modules
-- proptest dev-dependency is present in Cargo.toml (planned, not yet used)
+- proptest dev-dependency is present in Cargo.toml and actively used in shared/math.rs (proptests for ray_vs_aabb)
 - Physics domain reads other domains' components (acceptable per ECS convention)
 - Physics owns collision detection + bolt reflection (collision response)
 - Cross-domain ordering MUST use SystemSet enums, never bare fn refs (docs/architecture/ordering.md)
@@ -84,14 +85,14 @@ Active messages (Phase 1, consumed in code):
 - BoltHitBreaker: physics → breaker (grade_bump)
 - BoltHitCell: physics → cells (handle_cell_hit)
 - BoltLost: physics → bolt (spawn_bolt_lost_text), breaker/behaviors (bridge_bolt_lost)
-- BumpPerformed: breaker → bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump)
+- BumpPerformed { grade, multiplier }: breaker → bolt (apply_bump_velocity), breaker (bump_feedback, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump)
 - BumpWhiffed: breaker → breaker (spawn_whiff_text)
 
-Active messages (Phase 2b):
+Active messages (Phase 2b/2c):
 - CellDestroyed: cells → run (track_node_completion)
-- NodeCleared: run/node (track_node_completion) → run (handle_node_cleared)
-- TimerExpired: run/node (tick_node_timer) → run (handle_timer_expired)
-- RunLost: breaker/behaviors (handle_life_lost) → run (handle_run_lost)
+- NodeCleared: run/node (track_node_completion) → run (handle_node_cleared) [defined in run/node/messages.rs, registered by NodePlugin]
+- TimerExpired: run/node (tick_node_timer) → run (handle_timer_expired) [defined in run/node/messages.rs, registered by NodePlugin]
+- RunLost: breaker/behaviors (handle_life_lost) → run (handle_run_lost) [defined in run/messages.rs — consumer-owns deviation, semantically correct]
 
 Active messages (upgrade infrastructure):
 - UpgradeSelected: screen/upgrade_select (handle_upgrade_input) → (future: upgrades domain)

@@ -1,33 +1,30 @@
 ---
 name: known-conflicts
-description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-16 full re-scan)
+description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-16, updated post-cleanup)
 type: reference
 ---
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-16 (full re-scan, Bevy 0.18.1)
+Last updated: 2026-03-16 (post-architecture-cleanup re-scan)
 
 ---
 
-## CONFIRMED CONFLICT — apply_bump_velocity has no ordering vs bolt_lost
+## RESOLVED — apply_bump_velocity now has correct ordering vs bolt_lost
 
-**File:** `src/bolt/plugin.rs`
+Previously `apply_bump_velocity` and `bolt_lost` were both `.after(BreakerCollision)` with no
+ordering between them, creating a `BoltVelocity` write race.
 
-`apply_bump_velocity` is registered as `.after(PhysicsSystems::BreakerCollision)`.
-`bolt_lost` runs `.after(bolt_breaker_collision)` = `.after(PhysicsSystems::BreakerCollision)`.
+**Current state (bolt/plugin.rs lines 40–42):**
+```rust
+apply_bump_velocity
+    .after(PhysicsSystems::BreakerCollision)
+    .before(PhysicsSystems::BoltLost),
+```
 
-Both are `.after(BreakerCollision)` with no ordering between them. Both write `BoltVelocity`
-on active bolt entities. On the rare tick a bolt is lost on the same tick as a bump, the
-respawn velocity from `bolt_lost` and the bump-amplified velocity from `apply_bump_velocity`
-race with each other on `BoltVelocity`.
-
-**Severity:** Low in practice (simultaneous bolt loss + bump contact is extremely rare).
-Formal Bevy ordering conflict on `BoltVelocity`.
-
-**Fix:** Add `.before(bolt_lost)` or `.after(bolt_lost)` to `apply_bump_velocity` in
-`BoltPlugin::build`. Most correct: `.after(bolt_lost)` so bump velocity is applied last to
-the (possibly respawned) bolt.
+`bolt_lost` is now in `PhysicsSystems::BoltLost` set. `apply_bump_velocity` runs
+`.before(PhysicsSystems::BoltLost)`, so it always completes before `bolt_lost` executes.
+The fix is in place and correct. No remaining conflict here.
 
 ---
 
@@ -46,62 +43,83 @@ behavior for two visual Update systems. No fix needed unless suppressing ambigui
 
 ---
 
-## NEW — RunPlugin FixedUpdate systems lack intra-group ordering
+## RESOLVED — RunPlugin FixedUpdate ordering
 
-**File:** `src/run/plugin.rs` (lines 43–52)
+Previous state: all four run systems in a flat unordered tuple.
 
-These four systems are registered in one tuple with only `.run_if()`, not `.chain()`:
-```
-track_node_completion
-handle_node_cleared
-tick_node_timer
-handle_timer_expired
-```
-
-Two message-chain dependencies exist within this group:
-
-**Pair 1:** `track_node_completion` sends `NodeCleared` → `handle_node_cleared` reads it.
-**Pair 2:** `tick_node_timer` sends `TimerExpired` → `handle_timer_expired` reads it.
-
-Since Bevy 0.18 messages persist across frames (they are NOT drained per-tick like Events),
-a one-tick delay is **acceptable** — the message sent on tick N is read on tick N+1 at worst.
-This means node transitions and timer loss will be delayed by at most one fixed-update tick
-(~16ms at 60Hz fixed rate), which is **imperceptible in gameplay**.
-
-Additionally, `track_node_completion` and `handle_node_cleared` both write to `RunState`
-(indirectly — `handle_node_cleared` writes it, `track_node_completion` does not). No write
-conflict. `tick_node_timer` and `handle_timer_expired` both write `ResMut<RunState>` — Bevy
-will serialize them automatically since they share a mutable resource.
-
-**Severity:** Low — one-tick delay on node transitions and timer expiry is unnoticeable.
-However, explicitly chaining these systems would make the intent clearer and guarantee
-same-tick propagation if that ever becomes desirable.
-
-**Fix (optional):** Change the registration to:
+**Current state (run/plugin.rs):**
 ```rust
-(track_node_completion, handle_node_cleared).chain(),
-(tick_node_timer, handle_timer_expired).chain(),
+handle_node_cleared.after(NodeSystems::TrackCompletion),
+handle_timer_expired
+    .after(NodeSystems::TickTimer)
+    .after(handle_node_cleared),
+handle_run_lost,
 ```
-Or use a single `.chain()` across all four in the order they logically depend.
+
+And in node/plugin.rs:
+```rust
+track_node_completion.in_set(NodeSystems::TrackCompletion),
+tick_node_timer.in_set(NodeSystems::TickTimer),
+```
+
+Result: `track_node_completion` → `handle_node_cleared` is now guaranteed same-tick.
+`tick_node_timer` → `handle_timer_expired` is now guaranteed same-tick.
+`handle_timer_expired` also runs `.after(handle_node_cleared)` — prevents both firing the
+same tick from interfering. No remaining ordering concern in the run group.
 
 ---
 
-## NEW — handle_cell_hit has no ordering vs track_node_completion
+## LOW SEVERITY — handle_cell_hit has no ordering vs track_node_completion
 
-**Files:** `src/cells/plugin.rs`, `src/run/plugin.rs`
+**Files:** `src/cells/plugin.rs`, `src/run/node/plugin.rs`
 
 `handle_cell_hit` (CellsPlugin, FixedUpdate) sends `CellDestroyed`.
-`track_node_completion` (RunPlugin, FixedUpdate) reads `CellDestroyed`.
+`track_node_completion` (NodePlugin, FixedUpdate, `NodeSystems::TrackCompletion`) reads it.
 
 No cross-plugin ordering constraint. Since messages persist across frames, a one-tick delay
-is safe — `track_node_completion` will read the message on tick N+1 if it runs before
+is safe — `track_node_completion` reads the message on tick N+1 if it runs before
 `handle_cell_hit` on tick N.
 
-**Severity:** Low — one-tick delay on cell destruction counting. Node clear will be detected
-one tick after the last required cell is destroyed. Completely imperceptible.
+**Severity:** Low — one-tick delay on cell destruction counting. Node clear detection delayed
+by at most one fixed-update tick (~16ms at 60Hz). Completely imperceptible.
 
-**Fix (optional):** If same-tick cell-to-completion detection is ever required, add
-`handle_cell_hit.before(track_node_completion)` in CellsPlugin or RunPlugin. Not currently needed.
+**Fix (optional):** Add `handle_cell_hit.before(NodeSystems::TrackCompletion)` in CellsPlugin.
+Not currently needed.
+
+---
+
+## NEW — handle_run_lost has no ordering vs handle_node_cleared / handle_timer_expired
+
+**File:** `src/run/plugin.rs`
+
+`handle_run_lost` is registered in the same `.run_if(in_state(PlayingState::Active))` tuple as
+`handle_node_cleared` and `handle_timer_expired`, but with no `.after()` constraints.
+
+All three write `ResMut<RunState>` and `ResMut<NextState<GameState>>`. Bevy will serialize
+them automatically on shared mutable resource access, but execution order is non-deterministic.
+
+**Practical concern:** If a `RunLost` and a `NodeCleared`/`TimerExpired` message arrive on the
+same tick (e.g., last bolt lost on the same tick as the last cell destroyed), the outcome
+depends on which system runs first:
+- `handle_node_cleared` first → `RunState::Won`, then `handle_run_lost` checks
+  `run_state.outcome == InProgress` → false, skips. Correct — win takes priority.
+- `handle_run_lost` first → `RunState::Lost`, then `handle_node_cleared` overwrites
+  `RunState::Won` and sets `GameState::NodeTransition`. Incorrect — loss then falsely wins.
+
+**Severity:** Low in practice — simultaneous last-cell-cleared + bolt-lost is an edge case.
+`handle_life_lost` is an observer (runs immediately on `LoseLifeRequested`) and writes
+`RunLost` as a message. `handle_cell_hit` sends `CellDestroyed`, which `track_node_completion`
+reads next tick, then `handle_node_cleared` reads `NodeCleared` the tick after. The
+multi-tick propagation delay makes the simultaneous scenario very unlikely.
+
+**Fix (recommended):** Add `.after(handle_node_cleared)` and `.after(handle_timer_expired)` to
+`handle_run_lost`, so a win always takes priority over a loss if both resolve on the same tick.
+In `run/plugin.rs`:
+```rust
+handle_run_lost
+    .after(handle_node_cleared)
+    .after(handle_timer_expired),
+```
 
 ---
 
@@ -112,18 +130,6 @@ one tick after the last required cell is destroyed. Completely imperceptible.
 `launch_bolt` has no ordering. Analysis shows this is NOT a real conflict because filter
 predicates (`ServingBoltFilter` / `ActiveBoltFilter`) make the queries disjoint on launch frame.
 No fix needed.
-
----
-
-## RESOLVED — CellDestroyed had no active receiver
-
-Previously flagged as an orphan message. Now consumed by `track_node_completion` (RunPlugin).
-
----
-
-## REGISTERED BUT UNUSED MESSAGES
-
-- `UpgradeSelected` (UiPlugin) — no sender or receiver yet. Expected. Future phases.
 
 ---
 
@@ -138,13 +144,28 @@ update_bump  (BreakerPlugin)
     → prepare_bolt_velocity (.after(BreakerSystems::Move), BoltSystems::PrepareVelocity)
       → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
         → bolt_breaker_collision (.after(bolt_cell_collision), PhysicsSystems::BreakerCollision)
-          → bolt_lost (.after(bolt_breaker_collision))
+          → apply_bump_velocity (.after(BreakerCollision), .before(BoltLost))  ← FIXED
           → grade_bump (.after(update_bump) AND .after(PhysicsSystems::BreakerCollision))
-          → apply_bump_velocity (.after(PhysicsSystems::BreakerCollision))  ← UNORDERED vs bolt_lost
+          → bridge_bump (.after(PhysicsSystems::BreakerCollision), conditional)
           → track_bump_result (.after(PhysicsSystems::BreakerCollision), dev only)
-            → perfect_bump_dash_cancel (.after(grade_bump))
-            → spawn_bump_grade_text (.after(grade_bump))
-            → spawn_whiff_text (.after(grade_bump))
+          → bolt_lost (.after(bolt_breaker_collision), PhysicsSystems::BoltLost)
+            → bridge_bolt_lost (.after(PhysicsSystems::BoltLost), conditional)
+              → [observer: handle_life_lost] (immediate on LoseLifeRequested trigger)
+                → sends RunLost message
+          → grade_bump continuations: perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text (.after(grade_bump))
+```
+
+NodePlugin FixedUpdate (ordered chains):
+```
+track_node_completion (NodeSystems::TrackCompletion)  ← handle_cell_hit unordered vs this
+  → [message: NodeCleared] → handle_node_cleared (.after(NodeSystems::TrackCompletion))
+tick_node_timer (NodeSystems::TickTimer)
+  → [message: TimerExpired] → handle_timer_expired (.after(NodeSystems::TickTimer), .after(handle_node_cleared))
+```
+
+RunPlugin FixedUpdate (unordered vs above node chain):
+```
+handle_run_lost  ← UNORDERED vs handle_node_cleared / handle_timer_expired (low severity)
 ```
 
 Parallel/unordered systems (run in indeterminate order each tick):
@@ -152,7 +173,3 @@ Parallel/unordered systems (run in indeterminate order each tick):
 - `spawn_bolt_lost_text` — reads BoltLost message only
 - `trigger_bump_visual` — reads InputActions, Commands only
 - `handle_cell_hit` — reads BoltHitCell, writes CellHealth, sends CellDestroyed
-- `track_node_completion` — reads CellDestroyed, writes ClearRemainingCount, sends NodeCleared
-- `handle_node_cleared` — reads NodeCleared, writes RunState
-- `tick_node_timer` — writes NodeTimer, sends TimerExpired
-- `handle_timer_expired` — reads TimerExpired, writes RunState

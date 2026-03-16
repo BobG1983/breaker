@@ -1,15 +1,18 @@
 ---
 name: system-map
-description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 full re-scan)
+description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 post-cleanup re-scan)
 type: reference
 ---
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-16 (full re-scan, Bevy 0.18.1)
+Last updated: 2026-03-16 (post-architecture-cleanup re-scan, Bevy 0.18.1)
 
 ## Plugin Registration Order (game.rs)
-InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin → BoltPlugin → CellsPlugin → UpgradesPlugin → RunPlugin → AudioPlugin → UiPlugin → DebugPlugin
+InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin → BoltPlugin →
+CellsPlugin → UpgradesPlugin → RunPlugin → AudioPlugin → FxPlugin → UiPlugin → DebugPlugin
+
+Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from BoltPlugin).
 
 ---
 
@@ -25,16 +28,16 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ---
 
-## ScreenPlugin (sub-plugins: LoadingPlugin, MainMenuPlugin, RunEndPlugin)
+## ScreenPlugin (sub-plugins: LoadingPlugin, MainMenuPlugin, RunEndPlugin, etc.)
 
 ### `spawn_loading_screen` — OnEnter(GameState::Loading)
 - Commands (spawn UI)
 
-### Seeding systems (x8) — Update, run_if(GameState::Loading), tracked as progress
+### Seeding systems (x10) — Update, run_if(GameState::Loading), tracked as progress
 - Each reads its own Res<Assets<*Defaults>> and Commands (insert_resource)
 - Systems: seed_playfield_config, seed_bolt_config, seed_breaker_config, seed_cell_config,
   seed_input_config, seed_main_menu_config, seed_timer_ui_config, seed_archetype_registry,
-  seed_cell_type_registry, seed_node_layout_registry
+  seed_cell_type_registry, seed_node_layout_registry, seed_upgrade_select_config
 
 ### `update_loading_bar` — Update, run_if(GameState::Loading)
 - Reads: Res<ProgressTracker<GameState>>
@@ -62,6 +65,23 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 ### `cleanup_entities::<CleanupOnNodeExit>` — OnExit(GameState::Playing)
 ### `cleanup_entities::<CleanupOnRunEnd>` — OnExit(GameState::RunEnd)
 
+### PauseMenuPlugin
+### `toggle_pause` — Update [NO condition]
+- Reads: Res<InputActions>; Writes: ResMut<NextState<PlayingState>>
+### `spawn_pause_menu` — OnEnter(PlayingState::Paused)
+### `handle_pause_input` — Update, run_if(PlayingState::Paused)
+- Reads: Res<InputActions>; Writes: ResMut<NextState<PlayingState>>
+
+### RunSetupPlugin
+### `spawn_run_setup` — OnEnter(GameState::RunSetup)
+### `handle_run_setup_input` + `update_run_setup_colors` — Update, run_if(RunSetup), chained
+
+### UpgradeSelectPlugin
+### `spawn_upgrade_select` — OnEnter(GameState::UpgradeSelect)
+### `handle_upgrade_input` — Update, run_if(UpgradeSelect)
+### `tick_upgrade_timer` — Update, run_if(UpgradeSelect)
+### `update_upgrade_display` — Update, run_if(UpgradeSelect)
+
 ---
 
 ## WallPlugin
@@ -87,16 +107,17 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ### `reset_breaker` — OnEnter(GameState::Playing), after(init_breaker_params)
 - Reads: Res<PlayfieldConfig>
-- Writes (query): mut Transform, BreakerState, BreakerVelocity, BreakerTilt, BreakerStateTimer; read BreakerBaseY
+- Writes (query): mut Transform, BreakerState, BreakerVelocity, BreakerTilt, BreakerStateTimer, BumpState; read BreakerBaseY
 
-### `update_bump` — FixedUpdate, run_if(PlayingState::Active)
+### `update_bump` — FixedUpdate, run_if(PlayingState::Active) [first in chain]
 - Reads: Res<InputActions>, Res<Time<Fixed>>
-- Writes (query): mut BumpState; read BumpPerfectWindow, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown
-- Sends: MessageWriter<BumpPerformed>
+- Writes (query): BumpTimingQuery (mut BumpState; read BumpPerfectWindow, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown, Option<BumpPerfectMultiplier>, Option<BumpWeakMultiplier>)
+- Reads (query): Query<(), With<BoltServing>> (serving guard)
+- Sends: MessageWriter<BumpPerformed> (retroactive path only)
 
 ### `move_breaker` — FixedUpdate, after(update_bump), in_set(BreakerSystems::Move), run_if(PlayingState::Active)
 - Reads: Res<InputActions>, Res<PlayfieldConfig>, Res<Time<Fixed>>
-- Writes (query): mut Transform, mut BreakerVelocity; read BreakerState, BreakerMaxSpeed, BreakerAcceleration, BreakerDeceleration, DecelEasing, BreakerWidth
+- Writes (query): BreakerMovementQuery (mut Transform, mut BreakerVelocity; read BreakerState, BreakerMaxSpeed, BreakerAcceleration, BreakerDeceleration, DecelEasing, BreakerWidth)
 
 ### `update_breaker_state` — FixedUpdate, after(move_breaker), run_if(PlayingState::Active)
 - Reads: Res<InputActions>, Res<Time<Fixed>>
@@ -105,11 +126,11 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 ### `grade_bump` — FixedUpdate, after(update_bump), after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
 - Receives: MessageReader<BoltHitBreaker>
 - Sends: MessageWriter<BumpPerformed>, MessageWriter<BumpWhiffed>
-- Writes (query): mut BumpState, read BumpPerfectWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown
+- Writes (query): BumpGradingQuery (mut BumpState; read BumpPerfectWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown, Option<BumpPerfectMultiplier>, Option<BumpWeakMultiplier>)
 
 ### `perfect_bump_dash_cancel` — FixedUpdate, after(grade_bump), run_if(PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>
-- Writes (query): mut BreakerState, mut BreakerStateTimer
+- Writes (query): mut BreakerState, mut BreakerStateTimer, read SettleDuration
 
 ### `spawn_bump_grade_text` — FixedUpdate, after(grade_bump), run_if(PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>
@@ -133,6 +154,38 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ### `animate_tilt_visual` — Update, run_if(PlayingState::Active)
 - Writes (query): Query<(&BreakerTilt, &mut Transform), With<Breaker>>
+
+### BehaviorPlugin (sub-plugin of BreakerPlugin)
+
+#### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), before(init_breaker_params)
+- Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
+- Writes: ResMut<BreakerConfig>
+
+#### `init_archetype` — OnEnter(GameState::Playing), after(init_breaker_params)
+- Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
+- Writes (query): Commands on Breaker entity
+- Writes: ResMut<ActiveBehaviors>
+
+#### `spawn_lives_display` — OnEnter(GameState::Playing), after(init_archetype), after(spawn_timer_hud)
+- Reads (query): Query<&LivesCount>
+- Reads (query): Query<Entity, With<StatusPanel>>
+- Commands (spawn LivesDisplay as child of StatusPanel)
+
+#### `bridge_bolt_lost` — FixedUpdate, after(PhysicsSystems::BoltLost), run_if(ActiveBehaviors has BoltLost trigger AND PlayingState::Active)
+- Receives: MessageReader<BoltLost>
+- Commands (trigger LoseLifeRequested)
+
+#### `bridge_bump` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(ActiveBehaviors has any bump trigger AND PlayingState::Active)
+- Receives: MessageReader<BumpPerformed>
+- Commands (trigger bump consequence events based on ActiveBehaviors)
+
+#### `handle_life_lost` — Observer on LoseLifeRequested (immediate, not a schedule system)
+- Writes (query): mut LivesCount
+- Sends: MessageWriter<RunLost> (when lives reach zero)
+
+#### `update_lives_display` — Update, run_if(any_with_component::<LivesDisplay> AND PlayingState::Active)
+- Reads (query): Query<&LivesCount>
+- Writes (query): mut Text (With<LivesDisplay>)
 
 ---
 
@@ -161,19 +214,23 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 - Writes (query): mut BoltVelocity, read BoltMinSpeed, BoltMaxSpeed (ActiveBoltFilter)
 - Reads (query): Query<&MinAngleFromHorizontal, (With<Breaker>, Without<Bolt>)>
 
-### `apply_bump_velocity` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
+### `apply_bump_velocity` — FixedUpdate, after(PhysicsSystems::BreakerCollision), before(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>
 - Writes (query): mut BoltVelocity, read BoltBaseSpeed, BoltMaxSpeed (With<Bolt>)
-- Reads (query): Query<(&BumpPerfectMultiplier, &BumpWeakMultiplier), With<Breaker>>
+- NOTE: No longer queries BreakerPlugin components. Multiplier now embedded in BumpPerformed message.
 
 ### `spawn_bolt_lost_text` — FixedUpdate, run_if(PlayingState::Active) [NO ordering]
 - Receives: MessageReader<BoltLost>
 - Commands (spawn FadeOut text)
 
+---
+
+## FxPlugin (NEW — animate_fade_out moved from BoltPlugin)
+
 ### `animate_fade_out` — Update, run_if(PlayingState::Active)
 - Reads: Res<Time>
-- Writes (query): mut FadeOut, mut TextColor (Any entity with FadeOut)
-- Commands (despawn)
+- Writes (query): mut FadeOut, mut TextColor (Any entity with FadeOut component)
+- Commands (despawn when FadeOut complete)
 
 ---
 
@@ -192,7 +249,7 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 - Reads (query): Transform+BreakerTilt+BreakerWidth+BreakerHeight+MaxReflectionAngle+MinAngleFromHorizontal (BreakerCollisionFilter)
 - Sends: MessageWriter<BoltHitBreaker>
 
-### `bolt_lost` — FixedUpdate, after(bolt_breaker_collision), run_if(PlayingState::Active)
+### `bolt_lost` — FixedUpdate, after(bolt_breaker_collision), in_set(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
 - Reads: Res<PlayfieldConfig>
 - Writes (query): mut Transform, mut BoltVelocity, read BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY (ActiveBoltFilter)
 - Reads (query): Query<&Transform, (With<Breaker>, Without<Bolt>)>
@@ -202,7 +259,7 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ## CellsPlugin
 
-### `handle_cell_hit` — FixedUpdate, run_if(PlayingState::Active) [NO ordering vs RunPlugin systems]
+### `handle_cell_hit` — FixedUpdate, run_if(PlayingState::Active) [NO ordering vs NodePlugin systems]
 - Receives: MessageReader<BoltHitCell>
 - Writes (query): mut CellHealth, read MeshMaterial2d<ColorMaterial>, CellDamageVisuals (With<Cell>)
 - Writes: ResMut<Assets<ColorMaterial>>
@@ -211,42 +268,35 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ---
 
-## RunPlugin
+## RunPlugin (parent) + NodePlugin (sub-plugin)
 
-### `set_active_layout` — OnEnter(GameState::Playing), step 1 of chained sequence
-- Reads: Res<RunState>, Res<NodeLayoutRegistry>
-- Commands (insert_resource ActiveNodeLayout)
+### NodePlugin — OnEnter(GameState::Playing) setup chain (4 steps, chained):
+1. `set_active_layout` — Reads: Res<RunState>, Res<NodeLayoutRegistry>; Commands (insert_resource ActiveNodeLayout)
+2. `spawn_cells_from_layout` — in_set(NodeSystems::Spawn); Reads: Res<CellConfig>, Res<PlayfieldConfig>, Res<ActiveNodeLayout>, Res<CellTypeRegistry>; Writes: ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>; Commands (spawn Cell entities)
+3. `init_clear_remaining` — Reads (query): Query<(), With<RequiredToClear>>; Commands (insert_resource ClearRemainingCount)
+4. `init_node_timer` — Reads: Res<ActiveNodeLayout>; Commands (insert_resource NodeTimer)
 
-### `spawn_cells_from_layout` — OnEnter(GameState::Playing), step 2, in_set(NodeSystems::Spawn)
-- Reads: Res<CellConfig>, Res<PlayfieldConfig>, Res<ActiveNodeLayout>, Res<CellTypeRegistry>
-- Writes: ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
-- Commands (spawn Cell entities with CleanupOnNodeExit)
-
-### `init_clear_remaining` — OnEnter(GameState::Playing), step 3
-- Reads (query): Query<(), With<RequiredToClear>>
-- Commands (insert_resource ClearRemainingCount)
-
-### `init_node_timer` — OnEnter(GameState::Playing), step 4
-- Reads: Res<ActiveNodeLayout>
-- Commands (insert_resource NodeTimer)
-
-### `track_node_completion` — FixedUpdate, run_if(PlayingState::Active) [NO ordering vs handle_cell_hit]
+### `track_node_completion` — FixedUpdate, in_set(NodeSystems::TrackCompletion), run_if(PlayingState::Active)
 - Receives: MessageReader<CellDestroyed>
 - Writes: ResMut<ClearRemainingCount>
 - Sends: MessageWriter<NodeCleared>
 
-### `handle_node_cleared` — FixedUpdate, run_if(PlayingState::Active) [NO ordering vs track_node_completion]
-- Receives: MessageReader<NodeCleared>
-- Reads: Res<NodeLayoutRegistry>
-- Writes: ResMut<RunState>, ResMut<NextState<GameState>>
-
-### `tick_node_timer` — FixedUpdate, run_if(PlayingState::Active) [NO ordering vs handle_timer_expired]
+### `tick_node_timer` — FixedUpdate, in_set(NodeSystems::TickTimer), run_if(PlayingState::Active)
 - Reads: Res<Time<Fixed>>
 - Writes: ResMut<NodeTimer>
 - Sends: MessageWriter<TimerExpired>
 
-### `handle_timer_expired` — FixedUpdate, run_if(PlayingState::Active) [NO ordering vs tick_node_timer]
+### `handle_node_cleared` — FixedUpdate, after(NodeSystems::TrackCompletion), run_if(PlayingState::Active)
+- Receives: MessageReader<NodeCleared>
+- Reads: Res<NodeLayoutRegistry>
+- Writes: ResMut<RunState>, ResMut<NextState<GameState>>
+
+### `handle_timer_expired` — FixedUpdate, after(NodeSystems::TickTimer), after(handle_node_cleared), run_if(PlayingState::Active)
 - Receives: MessageReader<TimerExpired>
+- Writes: ResMut<RunState>, ResMut<NextState<GameState>>
+
+### `handle_run_lost` — FixedUpdate, run_if(PlayingState::Active) [UNORDERED vs handle_node_cleared/handle_timer_expired]
+- Receives: MessageReader<RunLost>
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
 
 ### `advance_node` — OnEnter(GameState::NodeTransition)
@@ -257,7 +307,7 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ---
 
-## UiPlugin (now has active systems!)
+## UiPlugin
 
 ### `spawn_side_panels` — OnEnter(GameState::Playing) [unordered vs spawn_timer_hud]
 - Reads (query): Query<(), With<SidePanels>> (existence check)
@@ -290,7 +340,7 @@ InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin 
 
 ### `breaker_state_ui` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<DebugOverlays>, Res<LastBumpResult>, EguiContexts
-- Reads (query): BreakerState+BumpState+BreakerTilt+BreakerVelocity+BumpPerfectWindow+BumpEarlyWindow+BumpLateWindow
+- Reads (query): BreakerBumpTelemetryQuery (BreakerState+BumpState+BreakerTilt+BreakerVelocity+BumpPerfectWindow+BumpEarlyWindow+BumpLateWindow)
 
 ### `input_actions_ui` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<DebugOverlays>, Res<InputActions>, EguiContexts
