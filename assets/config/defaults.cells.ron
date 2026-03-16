@@ -1,7 +1,7 @@
 /* @[brickbreaker::cells::resources::CellDefaults] */
 (
-    width: 70.0,
-    height: 24.0,
-    padding_x: 4.0,
-    padding_y: 4.0,
+    width: 126.0,
+    height: 43.0,
+    padding_x: 7.0,
+    padding_y: 7.0,
 )

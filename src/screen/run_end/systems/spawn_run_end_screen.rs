@@ -24,7 +24,7 @@ pub fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
-                row_gap: Val::Px(24.0),
+                row_gap: Val::Px(43.0),
                 ..default()
             },
         ))
@@ -32,7 +32,7 @@ pub fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
             parent.spawn((
                 Text::new(title),
                 TextFont {
-                    font_size: 72.0,
+                    font_size: 130.0,
                     ..default()
                 },
                 TextColor(Color::WHITE),
@@ -42,7 +42,7 @@ pub fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
                 parent.spawn((
                     Text::new(subtitle),
                     TextFont {
-                        font_size: 28.0,
+                        font_size: 50.0,
                         ..default()
                     },
                     TextColor(Color::srgba(0.7, 0.7, 0.7, 1.0)),
@@ -52,7 +52,7 @@ pub fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
             parent.spawn((
                 Text::new("Press Enter to continue"),
                 TextFont {
-                    font_size: 24.0,
+                    font_size: 43.0,
                     ..default()
                 },
                 TextColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),

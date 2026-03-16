@@ -1,6 +1,6 @@
 /* @[brickbreaker::shared::PlayfieldDefaults] */
 (
-    width: 800.0,
-    height: 600.0,
+    width: 1440.0,
+    height: 1080.0,
     background_color_rgb: (0.02, 0.01, 0.04),
 )

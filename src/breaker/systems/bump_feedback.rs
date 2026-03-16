@@ -26,14 +26,14 @@ pub fn spawn_bump_grade_text(
 
     for performed in reader.read() {
         let (text, font_size, color) = match performed.grade {
-            BumpGrade::Early => ("EARLY", 24.0, Color::srgb(1.0, 0.7, 0.2)),
-            BumpGrade::Late => ("LATE", 24.0, Color::srgb(1.0, 0.7, 0.2)),
-            BumpGrade::Perfect => ("PERFECT", 36.0, Color::linear_rgb(0.5, 4.0, 5.0)),
+            BumpGrade::Early => ("EARLY", 43.0, Color::srgb(1.0, 0.7, 0.2)),
+            BumpGrade::Late => ("LATE", 43.0, Color::srgb(1.0, 0.7, 0.2)),
+            BumpGrade::Perfect => ("PERFECT", 65.0, Color::linear_rgb(0.5, 4.0, 5.0)),
         };
 
         let pos = Vec3::new(
             breaker_tf.translation.x,
-            breaker_tf.translation.y + 40.0,
+            breaker_tf.translation.y + 72.0,
             10.0,
         );
 
@@ -64,14 +64,14 @@ pub fn spawn_whiff_text(
     for _whiff in reader.read() {
         let pos = Vec3::new(
             breaker_tf.translation.x,
-            breaker_tf.translation.y + 40.0,
+            breaker_tf.translation.y + 72.0,
             10.0,
         );
 
         commands.spawn((
             Text2d::new("WHIFF"),
             TextColor(Color::srgb(0.5, 0.5, 0.5)),
-            TextFont::from_font_size(20.0),
+            TextFont::from_font_size(36.0),
             Transform::from_translation(pos),
             FadeOut {
                 timer: FADE_DURATION,
@@ -120,7 +120,7 @@ mod tests {
 
     fn spawn_breaker(app: &mut App) {
         app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+            .spawn((Breaker, Transform::from_xyz(0.0, -450.0, 0.0)));
     }
 
     #[test]

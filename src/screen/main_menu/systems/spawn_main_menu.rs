@@ -76,7 +76,7 @@ pub fn spawn_main_menu(
                             *item,
                             Button,
                             Node {
-                                padding: UiRect::axes(Val::Px(24.0), Val::Px(8.0)),
+                                padding: UiRect::axes(Val::Px(43.0), Val::Px(14.0)),
                                 ..default()
                             },
                             BackgroundColor(Color::NONE),

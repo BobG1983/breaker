@@ -24,10 +24,10 @@ pub fn spawn_timer_hud(
             CleanupOnNodeExit,
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(16.0),
-                left: Val::Percent(50.0),
-                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
-                border_radius: BorderRadius::all(Val::Px(6.0)),
+                top: Val::Px(120.0),
+                right: Val::Px(16.0),
+                padding: UiRect::axes(Val::Px(22.0), Val::Px(7.0)),
+                border_radius: BorderRadius::all(Val::Px(11.0)),
                 ..default()
             },
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),

@@ -13,7 +13,7 @@ pub fn spawn_bolt_lost_text(mut reader: MessageReader<BoltLost>, mut commands: C
         commands.spawn((
             Text2d::new("BOLT LOST"),
             TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
-            TextFont::from_font_size(48.0),
+            TextFont::from_font_size(86.0),
             Transform::from_xyz(0.0, 0.0, 10.0),
             FadeOut {
                 timer: FADE_DURATION,

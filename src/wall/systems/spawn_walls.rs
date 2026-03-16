@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Generous half-thickness so the bolt never outruns a wall.
-const HALF_THICKNESS: f32 = 50.0;
+const HALF_THICKNESS: f32 = 90.0;
 
 /// Spawns left, right, and ceiling wall entities.
 ///

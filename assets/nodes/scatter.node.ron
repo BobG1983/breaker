@@ -4,7 +4,7 @@
     timer_secs: 60.0,
     cols: 10,
     rows: 6,
-    grid_top_offset: 50.0,
+    grid_top_offset: 90.0,
     grid: [
         ['T','.','.','S','.','.','S','.','.','T'],
         ['.','.','S','.','.','S','.','.','S','.'],

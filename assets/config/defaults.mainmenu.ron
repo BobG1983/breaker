@@ -1,13 +1,13 @@
 /* @[brickbreaker::screen::resources::MainMenuDefaults] */
 (
-    title_font_size: 96.0,
-    menu_font_size: 36.0,
+    title_font_size: 173.0,
+    menu_font_size: 65.0,
     title_color_rgb: (2.0, 4.0, 5.0),
     selected_color_rgb: (0.4, 3.0, 4.0),
     normal_color_rgb: (0.6, 0.6, 0.7),
     disabled_color_rgb: (0.25, 0.25, 0.3),
-    title_bottom_margin: 48.0,
-    menu_item_gap: 12.0,
+    title_bottom_margin: 86.0,
+    menu_item_gap: 22.0,
     title_font_path: "fonts/Orbitron-Bold.ttf",
     menu_font_path: "fonts/Rajdhani-Medium.ttf",
 )

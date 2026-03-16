@@ -5,10 +5,10 @@ use bevy::prelude::*;
 use crate::screen::loading::components::{LoadingBarFill, LoadingProgressText, LoadingScreen};
 
 /// Width of the loading bar background in pixels.
-const LOADING_BAR_WIDTH: f32 = 400.0;
+const LOADING_BAR_WIDTH: f32 = 720.0;
 
 /// Height of the loading bar in pixels.
-const LOADING_BAR_HEIGHT: f32 = 24.0;
+const LOADING_BAR_HEIGHT: f32 = 43.0;
 
 /// Spawns the loading screen UI.
 pub fn spawn_loading_screen(mut commands: Commands) {
@@ -21,7 +21,7 @@ pub fn spawn_loading_screen(mut commands: Commands) {
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
-                row_gap: Val::Px(16.0),
+                row_gap: Val::Px(29.0),
                 ..default()
             },
         ))
@@ -31,7 +31,7 @@ pub fn spawn_loading_screen(mut commands: Commands) {
                 LoadingProgressText,
                 Text::new("Loading..."),
                 TextFont {
-                    font_size: 24.0,
+                    font_size: 43.0,
                     ..default()
                 },
                 TextColor(Color::WHITE),

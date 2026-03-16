@@ -58,10 +58,10 @@ pub fn spawn_lives_display(
             CleanupOnRunEnd,
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(16.0),
-                right: Val::Px(24.0),
-                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
-                border_radius: BorderRadius::all(Val::Px(6.0)),
+                top: Val::Px(72.0),
+                right: Val::Px(16.0),
+                padding: UiRect::axes(Val::Px(22.0), Val::Px(7.0)),
+                border_radius: BorderRadius::all(Val::Px(11.0)),
                 ..default()
             },
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
@@ -70,7 +70,7 @@ pub fn spawn_lives_display(
             LivesDisplay,
             Text::new(format_lives(lives.0)),
             TextFont {
-                font_size: 28.0,
+                font_size: 50.0,
                 ..default()
             },
             TextColor(Color::WHITE),

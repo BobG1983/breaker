@@ -1,6 +1,9 @@
 //! App construction — builds the Bevy [`App`] with all plugins.
 
-use bevy::{core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom, prelude::*};
+use bevy::{
+    camera::ScalingMode, core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom,
+    prelude::*, window::PrimaryWindow,
+};
 
 use crate::{game::Game, shared::PlayfieldConfig};
 
@@ -10,36 +13,42 @@ use crate::{game::Game, shared::PlayfieldConfig};
 pub fn build_app() -> App {
     let mut app = App::new();
 
-    let playfield = PlayfieldConfig::default();
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let window_width = playfield.width as u32;
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let window_height = playfield.height as u32;
-
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
             title: "Brickbreaker".into(),
-            resolution: bevy::window::WindowResolution::new(window_width, window_height),
             ..default()
         }),
         ..default()
     }));
 
-    app.insert_resource(ClearColor(playfield.background_color()));
+    app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()));
     app.add_plugins(Game);
-    app.add_systems(Startup, spawn_camera);
+    app.add_systems(Startup, (spawn_camera, maximize_window));
 
     app
 }
 
-/// Spawns the 2D camera centered on the playfield with HDR bloom.
+/// Spawns the 2D camera with a fixed 1920×1080 canvas and HDR bloom.
 fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
-        Camera::default(),
+        Projection::from(OrthographicProjection {
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 1920.0,
+                min_height: 1080.0,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
         Tonemapping::AcesFitted,
         Bloom::default(),
     ));
+}
+
+/// Maximizes the primary window on startup.
+fn maximize_window(mut query: Query<&mut Window, With<PrimaryWindow>>) {
+    if let Ok(mut window) = query.single_mut() {
+        window.set_maximized(true);
+    }
 }
 
 #[cfg(all(test, not(target_os = "macos")))]
