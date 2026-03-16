@@ -15,12 +15,15 @@ pub enum BumpGrade {
 
 /// Sent when the breaker performs a bump.
 ///
-/// Consumed by audio, upgrades (overclock triggers), and UI.
+/// Consumed by bolt (velocity multiplier), audio, upgrades (overclock
+/// triggers), and UI.
 #[derive(Message, Clone, Debug)]
 #[allow(dead_code)]
 pub struct BumpPerformed {
     /// The timing grade of the bump.
     pub grade: BumpGrade,
+    /// Velocity multiplier for this bump grade.
+    pub multiplier: f32,
 }
 
 /// Sent when a forward bump window expires without bolt contact.
@@ -46,6 +49,7 @@ mod tests {
     fn bump_performed_debug_format() {
         let msg = BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: 1.5,
         };
         assert!(format!("{msg:?}").contains("Perfect"));
     }

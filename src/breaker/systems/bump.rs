@@ -6,11 +6,11 @@ use crate::{
     bolt::components::BoltServing,
     breaker::{
         components::{
-            Breaker, BreakerState, BreakerStateTimer, BumpLateWindow, BumpPerfectCooldown,
-            BumpPerfectWindow, BumpState, BumpWeakCooldown, SettleDuration,
+            Breaker, BreakerState, BreakerStateTimer, BumpPerfectMultiplier, BumpWeakMultiplier,
+            SettleDuration,
         },
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
-        queries::BumpTimingQuery,
+        queries::{BumpGradingQuery, BumpTimingQuery},
     },
     input::resources::{GameAction, InputActions},
     physics::messages::BoltHitBreaker,
@@ -47,6 +47,18 @@ const fn cooldown_for_grade(grade: BumpGrade, perfect_cooldown: f32, weak_cooldo
     }
 }
 
+/// Returns the velocity multiplier for the given grade.
+fn multiplier_for_grade(
+    grade: BumpGrade,
+    perfect_mult: Option<&BumpPerfectMultiplier>,
+    weak_mult: Option<&BumpWeakMultiplier>,
+) -> f32 {
+    match grade {
+        BumpGrade::Perfect => perfect_mult.map_or(1.0, |m| m.0),
+        BumpGrade::Early | BumpGrade::Late => weak_mult.map_or(1.0, |m| m.0),
+    }
+}
+
 /// Updates bump state: handles input, ticks timers, resolves retroactive bumps.
 ///
 /// Ticks the forward window timer but does not expire it — [`grade_bump`]
@@ -62,8 +74,16 @@ pub fn update_bump(
     let bolt_serving = !serving_query.is_empty();
     let dt = time.delta_secs();
 
-    for (mut bump, perfect_window, early_window, late_window, perfect_cooldown, weak_cooldown) in
-        &mut query
+    for (
+        mut bump,
+        perfect_window,
+        early_window,
+        late_window,
+        perfect_cooldown,
+        weak_cooldown,
+        perfect_mult,
+        weak_mult,
+    ) in &mut query
     {
         // Tick cooldown
         if bump.cooldown > 0.0 {
@@ -86,7 +106,8 @@ pub fn update_bump(
                 // Retroactive path: bolt already hit, player pressing after
                 let time_since_hit = (perfect_window.0 + late_window.0) - bump.post_hit_timer;
                 let grade = retroactive_grade(time_since_hit, perfect_window.0);
-                writer.write(BumpPerformed { grade });
+                let multiplier = multiplier_for_grade(grade, perfect_mult, weak_mult);
+                writer.write(BumpPerformed { grade, multiplier });
                 bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
                 bump.post_hit_timer = 0.0;
                 bump.active = false;
@@ -108,22 +129,20 @@ pub fn update_bump(
 /// Also expires the forward window when the timer runs out without a hit,
 /// sending [`BumpWhiffed`] and setting whiff cooldown.
 pub fn grade_bump(
-    mut bump_query: Query<
-        (
-            &mut BumpState,
-            &BumpPerfectWindow,
-            &BumpLateWindow,
-            &BumpPerfectCooldown,
-            &BumpWeakCooldown,
-        ),
-        With<Breaker>,
-    >,
+    mut bump_query: Query<BumpGradingQuery, With<Breaker>>,
     mut hit_reader: MessageReader<BoltHitBreaker>,
     mut writer: MessageWriter<BumpPerformed>,
     mut whiff_writer: MessageWriter<BumpWhiffed>,
 ) {
-    let Ok((mut bump, perfect_window, late_window, perfect_cooldown, weak_cooldown)) =
-        bump_query.single_mut()
+    let Ok((
+        mut bump,
+        perfect_window,
+        late_window,
+        perfect_cooldown,
+        weak_cooldown,
+        perfect_mult,
+        weak_mult,
+    )) = bump_query.single_mut()
     else {
         return;
     };
@@ -132,7 +151,8 @@ pub fn grade_bump(
         if bump.active {
             // Forward path: grade based on timer position
             let grade = forward_grade(bump.timer, perfect_window.0);
-            writer.write(BumpPerformed { grade });
+            let multiplier = multiplier_for_grade(grade, perfect_mult, weak_mult);
+            writer.write(BumpPerformed { grade, multiplier });
             bump.active = false;
             bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
         } else {
@@ -175,7 +195,13 @@ pub fn perfect_bump_dash_cancel(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::{components::BumpEarlyWindow, resources::BreakerConfig};
+    use crate::breaker::{
+        components::{
+            BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+            BumpWeakCooldown,
+        },
+        resources::BreakerConfig,
+    };
 
     // ── Pure grade helper tests ──────────────────────────────────────
 
@@ -265,6 +291,8 @@ mod tests {
         BumpLateWindow,
         BumpPerfectCooldown,
         BumpWeakCooldown,
+        BumpPerfectMultiplier,
+        BumpWeakMultiplier,
         SettleDuration,
     ) {
         (
@@ -273,6 +301,8 @@ mod tests {
             BumpLateWindow(config.late_window),
             BumpPerfectCooldown(config.perfect_bump_cooldown),
             BumpWeakCooldown(config.weak_bump_cooldown),
+            BumpPerfectMultiplier(1.5),
+            BumpWeakMultiplier(0.8),
             SettleDuration(config.settle_duration),
         )
     }
@@ -900,6 +930,7 @@ mod tests {
 
         app.insert_resource(TestBumpMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: 1.5,
         })));
 
         app.add_systems(

@@ -5,9 +5,9 @@ use bevy::prelude::*;
 use crate::breaker::components::{
     BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration, BreakerMaxSpeed,
     BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth, BumpEarlyWindow,
-    BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpWeakCooldown,
-    DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
-    SettleTiltEase,
+    BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow, BumpState,
+    BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
+    DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
 };
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
@@ -52,7 +52,7 @@ pub type BreakerResetQuery = (
     &'static BreakerBaseY,
 );
 
-/// Bump timing window data — state and all timing/cooldown params.
+/// Bump timing window data — state, timing/cooldown params, and velocity multipliers.
 pub type BumpTimingQuery = (
     &'static mut BumpState,
     &'static BumpPerfectWindow,
@@ -60,6 +60,19 @@ pub type BumpTimingQuery = (
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
+    Option<&'static BumpPerfectMultiplier>,
+    Option<&'static BumpWeakMultiplier>,
+);
+
+/// Bump grading data — state, timing windows, cooldowns, and multipliers for `grade_bump`.
+pub type BumpGradingQuery = (
+    &'static mut BumpState,
+    &'static BumpPerfectWindow,
+    &'static BumpLateWindow,
+    &'static BumpPerfectCooldown,
+    &'static BumpWeakCooldown,
+    Option<&'static BumpPerfectMultiplier>,
+    Option<&'static BumpWeakMultiplier>,
 );
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.

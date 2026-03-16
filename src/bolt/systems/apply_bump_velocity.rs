@@ -4,46 +4,26 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltVelocity},
-    breaker::{
-        components::{Breaker, BumpPerfectMultiplier, BumpWeakMultiplier},
-        messages::{BumpGrade, BumpPerformed},
-    },
+    breaker::messages::BumpPerformed,
 };
 
-/// Reads [`BumpPerformed`] messages and applies the corresponding velocity
-/// multiplier to the bolt.
+/// Reads [`BumpPerformed`] messages and applies the velocity multiplier to the bolt.
 ///
-/// This keeps bolt velocity mutations within the bolt domain, while the
-/// breaker domain only grades the bump timing.
+/// The multiplier is included in the message by the breaker domain, eliminating
+/// the need for cross-domain component reads.
 pub fn apply_bump_velocity(
     mut reader: MessageReader<BumpPerformed>,
     mut bolt_query: Query<(&mut BoltVelocity, &BoltBaseSpeed, &BoltMaxSpeed), With<Bolt>>,
-    breaker_query: Query<
-        (Option<&BumpPerfectMultiplier>, Option<&BumpWeakMultiplier>),
-        With<Breaker>,
-    >,
 ) {
-    // Skip the breaker query when there are no messages (common case).
-    let mut messages = reader.read().peekable();
-    if messages.peek().is_none() {
-        return;
-    }
-
-    let Ok((perfect_mult, weak_mult)) = breaker_query.single() else {
-        return;
-    };
-
     // One BumpPerformed per tick is the invariant (one bump action per fixed step).
-    // Take the first grade and drain any extras to prevent compounded velocity
+    // Take the first message and drain any extras to prevent compounded velocity
     // multiplication if a duplicate is ever emitted in the same frame.
+    let mut messages = reader.read();
     let Some(performed) = messages.next() else {
         return;
     };
 
-    let multiplier = match performed.grade {
-        BumpGrade::Perfect => perfect_mult.map_or(1.0, |m| m.0),
-        BumpGrade::Early | BumpGrade::Late => weak_mult.map_or(1.0, |m| m.0),
-    };
+    let multiplier = performed.multiplier;
 
     for (mut bolt_velocity, base_speed, max_speed) in &mut bolt_query {
         bolt_velocity.value *= multiplier;
@@ -70,7 +50,7 @@ mod tests {
             BoltConfig,
             components::{Bolt, BoltBaseSpeed, BoltRadius, BoltVelocity},
         },
-        breaker::BreakerConfig,
+        breaker::messages::BumpGrade,
     };
 
     #[derive(Resource)]
@@ -85,14 +65,6 @@ mod tests {
 
     const TEST_PERFECT_MULT: f32 = 1.5;
     const TEST_WEAK_MULT: f32 = 0.8;
-
-    fn spawn_breaker(app: &mut App) {
-        app.world_mut().spawn((
-            Breaker,
-            BumpPerfectMultiplier(TEST_PERFECT_MULT),
-            BumpWeakMultiplier(TEST_WEAK_MULT),
-        ));
-    }
 
     fn spawn_test_bolt(app: &mut App, vx: f32, vy: f32) {
         let bolt_config = BoltConfig::default();
@@ -123,11 +95,11 @@ mod tests {
     #[test]
     fn perfect_bump_amplifies_velocity() {
         let mut app = test_app();
-        spawn_breaker(&mut app);
         spawn_test_bolt(&mut app, 0.0, 400.0);
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: TEST_PERFECT_MULT,
         })));
 
         app.add_systems(
@@ -153,11 +125,11 @@ mod tests {
     fn perfect_bump_on_max_speed_bolt_is_clamped() {
         let mut app = test_app();
         let bolt_config = BoltConfig::default();
-        spawn_breaker(&mut app);
         spawn_test_bolt(&mut app, 0.0, bolt_config.max_speed);
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: TEST_PERFECT_MULT,
         })));
 
         app.add_systems(
@@ -184,12 +156,12 @@ mod tests {
     #[test]
     fn multiple_bolts_each_get_bump_velocity() {
         let mut app = test_app();
-        spawn_breaker(&mut app);
         spawn_test_bolt(&mut app, 0.0, 300.0);
         spawn_test_bolt(&mut app, 200.0, 200.0);
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: TEST_PERFECT_MULT,
         })));
 
         app.add_systems(
@@ -242,7 +214,7 @@ mod tests {
             ),
         );
 
-        let breaker_config = BreakerConfig::default();
+        let breaker_config = crate::breaker::BreakerConfig::default();
         let bolt_config = BoltConfig::default();
 
         app.world_mut().spawn((
@@ -252,8 +224,6 @@ mod tests {
             BreakerHeight(breaker_config.height),
             MaxReflectionAngle(breaker_config.max_reflection_angle.to_radians()),
             MinAngleFromHorizontal(breaker_config.min_angle_from_horizontal.to_radians()),
-            BumpPerfectMultiplier(TEST_PERFECT_MULT),
-            BumpWeakMultiplier(TEST_WEAK_MULT),
             Transform::from_xyz(0.0, breaker_config.y_position, 0.0),
         ));
 
@@ -270,6 +240,7 @@ mod tests {
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: TEST_PERFECT_MULT,
         })));
 
         tick(&mut app);
@@ -295,7 +266,6 @@ mod tests {
     fn weak_bump_reduces_velocity() {
         let mut app = test_app();
         let bolt_config = BoltConfig::default();
-        spawn_breaker(&mut app);
         // Start above base speed so weak multiplier has room to reduce
         let start_speed = 600.0;
         assert!(start_speed * TEST_WEAK_MULT > bolt_config.base_speed);
@@ -303,6 +273,7 @@ mod tests {
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
+            multiplier: TEST_WEAK_MULT,
         })));
 
         app.add_systems(
@@ -325,14 +296,13 @@ mod tests {
     }
 
     #[test]
-    fn no_multiplier_components_defaults_to_identity() {
+    fn identity_multiplier_leaves_velocity_unchanged() {
         let mut app = test_app();
-        // Spawn breaker WITHOUT multiplier components
-        app.world_mut().spawn(Breaker);
         spawn_test_bolt(&mut app, 0.0, 400.0);
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
+            multiplier: 1.0,
         })));
 
         app.add_systems(
@@ -349,7 +319,7 @@ mod tests {
             .unwrap();
         assert!(
             (vel.value.y - 400.0).abs() < 1.0,
-            "without multiplier components, velocity should be unchanged"
+            "identity multiplier should leave velocity unchanged"
         );
     }
 
@@ -357,12 +327,12 @@ mod tests {
     fn weak_bump_never_drops_below_base_speed() {
         let mut app = test_app();
         let bolt_config = BoltConfig::default();
-        spawn_breaker(&mut app);
         // Bolt already at base speed
         spawn_test_bolt(&mut app, 0.0, bolt_config.base_speed);
 
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
+            multiplier: TEST_WEAK_MULT,
         })));
 
         app.add_systems(
