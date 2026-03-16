@@ -25,7 +25,15 @@ This project targets:
 
 ## Release Process
 
-### Step 1: Version Bump
+### Step 1: Start Release Branch
+
+```bash
+git flow release start <version>
+```
+
+This creates a `release/<version>` branch from `develop`.
+
+### Step 2: Version Bump
 
 - Read the current version from `Cargo.toml`
 - Determine the next version based on changes since the last tag:
@@ -35,7 +43,7 @@ This project targets:
 - **ALWAYS confirm the proposed version with the user before editing `Cargo.toml`**
 - After confirmation, update the `version` field in `Cargo.toml`
 
-### Step 2: Changelog
+### Step 3: Changelog
 
 - Parse `git log` since the last tag, filtering conventional commits
 - Organize by section:
@@ -47,7 +55,29 @@ This project targets:
 - Date format: YYYY-MM-DD
 - **Show the user the changelog section before writing it**
 
-### Step 3: GitHub Actions Workflow
+### Step 4: Commit Release Changes
+
+Commit the `Cargo.toml`, `CHANGELOG.md`, and any CI/CD changes on the release branch.
+
+### Step 5: Finish Release
+
+```bash
+git flow release finish --tag
+```
+
+This automatically:
+- Merges the release branch into `main`
+- Creates a version tag
+- Merges `main` back into `develop`
+- Deletes the release branch
+
+### Step 6: Push
+
+```bash
+git push --all --tags
+```
+
+### GitHub Actions Workflow
 
 If `.github/workflows/release.yml` does not exist, create it. The workflow must:
 
@@ -98,7 +128,7 @@ on:
 - Their itch.io username
 - The itch.io game slug (e.g., `brickbreaker`)
 
-### Step 4: itch.io Prerequisites Checklist
+### itch.io Prerequisites Checklist
 
 Provide this checklist for the user to complete before the first release:
 - [ ] Create a game page on itch.io (or confirm it exists)
@@ -125,18 +155,30 @@ Cargo.toml: {OLD} → {NEW}
 [checklist items, checked or unchecked]
 
 ### Next Steps
-[What the user needs to do manually before tagging — secrets, itch.io setup, etc.]
-[Then: git add Cargo.toml CHANGELOG.md .github/ → commit → git tag v{VERSION} → git push --tags]
+[What the user needs to do manually — secrets, itch.io setup, etc.]
+[Release branch has been finished via git-flow: merged to main, tagged, merged to develop, branch deleted]
+[Pushed with: git push --all --tags]
 ```
 
 ## Rules
 
 - You MAY edit: `Cargo.toml`, `CHANGELOG.md`, any file under `.github/`
-- You MAY NOT: run `git push`, `git tag`, or any destructive git operation — prepare the changes and let the user commit and tag
-- You MAY NOT: commit on behalf of the user
+- You MAY run: `git flow release start`, `git flow release finish --tag`, `git flow hotfix start`, `git flow hotfix finish --tag`, `git commit`, `git push --all --tags`
+- You MAY NOT: run destructive git operations (`git reset --hard`, `git push --force`, `git branch -D`)
 - ALWAYS confirm the version number before bumping
 - ALWAYS show the changelog content before writing it
 - NEVER skip the itch.io prerequisite checklist on the first release
+
+## Hotfixes
+
+For urgent production fixes:
+
+```bash
+git flow hotfix start <name>        # Branch from main
+# ... fix, commit ...
+git flow hotfix finish --tag        # Merge to main, tag, merge to develop, delete branch
+git push --all --tags
+```
 
 ⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS IN DEVELOPMENT** ⚠️
 When running local cargo commands (check, test, etc.), always use dev aliases.

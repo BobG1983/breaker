@@ -1,2 +1,31 @@
 {
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Bash(cargo dev:*)",
+      "Bash(cargo dbuild:*)",
+      "Bash(cargo dcheck:*)",
+      "Bash(cargo dclippy:*)",
+      "Bash(cargo dtest:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo doc:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash(git flow:*)",
+      "Bash(git tag:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(git stash:*)",
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:bevyengine.org)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
 }
