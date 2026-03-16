@@ -130,6 +130,23 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 - `commands.entity(panel).with_children(|parent| { ... })` on an existing entity — CORRECT API for adding children to an already-spawned entity in 0.18
 - `spawn_lives_display.after(spawn_timer_hud)` where spawn_timer_hud is from ui plugin — CORRECT cross-plugin ordering
 
+### ResMut<GameRng> as system parameter
+- `ResMut<GameRng>` is valid — `GameRng` has `#[derive(Resource)]` and is a normal Bevy resource
+- `init_resource::<GameRng>()` in test `test_app()` is the correct setup (no special plugin needed)
+- `bolt_lost` takes `ResMut<GameRng>` — no conflict because no other system in the same system set also accesses it mutably
+- `reset_run_state` takes `ResMut<GameRng>` alongside `ResMut<RunState>` — valid, different resource types, no conflict
+- `PhysicsPlugin` does NOT register `GameRng` — it relies on `RunPlugin` (which calls `init_resource::<GameRng>()`) to be registered first; this is a cross-plugin resource dependency, not a Bevy API issue, but a wiring concern
+
+### Query tuple component limits
+- Bevy 0.18.1 supports Query data tuples up to 15 elements (QueryData derive on tuples via macro)
+- `bolt_lost` uses a 6-component data tuple: `(&mut Transform, &mut BoltVelocity, &BoltBaseSpeed, &BoltRadius, &BoltRespawnOffsetY, &BoltRespawnAngleSpread)` — well within limits
+- `ActiveBoltFilter = (With<Bolt>, Without<BoltServing>)` as the filter is a 2-tuple — also within limits
+
+### MinimalPlugins + init_resource in tests
+- `MinimalPlugins` + `app.init_resource::<T>()` is the correct test setup for non-asset resources
+- `app.add_message::<M>()` needed explicitly when the plugin under test sends/reads that message
+- This pattern is used correctly in both `bolt_lost` tests and `reset_run_state` tests
+
 ## Reference
 - bevy-api-expert memory: `.claude/agent-memory/bevy-api-expert/` — already-verified facts; check here before looking up docs.rs
 - despawn recursive change: Bevy 0.15→0.16 migration — despawn() is now recursive

@@ -42,3 +42,4 @@
 - [review-fix-review-findings-2026-03-16.md](review-fix-review-findings-2026-03-16.md) — review of fix/review-findings branch: init_breaker_params, animate_fade_out migration to UI, spawn_breaker centering, handle_cell_hit Vec dedup, spawn_cells_from_layout position tests
 - [review-screen-domain-2026-03-16.md](review-screen-domain-2026-03-16.md) — review of run_setup, pause_menu, upgrade_select, loading/seed_upgrade_select_config, and screen plugin
 - [review-upgrade-infrastructure-2026-03-16.md](review-upgrade-infrastructure-2026-03-16.md) — review of feature/upgrade-infrastructure: definition/registry/seed_upgrade_registry/spawn_upgrade_select/handle_upgrade_input
+- [review-feature-review-fixes-2-2026-03-16.md](review-feature-review-fixes-2-2026-03-16.md) — review of feature/review-fixes-2: chip_select screen, chips domain, seed_chip_registry/select_config, vocabulary rename complete
