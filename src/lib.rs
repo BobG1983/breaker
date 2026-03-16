@@ -15,6 +15,7 @@ pub(crate) mod chips;
 pub(crate) mod debug;
 pub(crate) mod fx;
 pub(crate) mod input;
+pub(crate) mod interpolate;
 pub(crate) mod physics;
 pub(crate) mod run;
 pub(crate) mod ui;

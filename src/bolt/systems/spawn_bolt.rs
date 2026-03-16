@@ -8,6 +8,7 @@ use crate::{
         resources::BoltConfig,
     },
     breaker::{BreakerConfig, components::Breaker},
+    interpolate::components::{InterpolateTransform, PhysicsTranslation},
     run::RunState,
     shared::CleanupOnNodeExit,
 };
@@ -50,6 +51,8 @@ pub fn spawn_bolt(
     let mut entity = commands.spawn((
         Bolt,
         velocity,
+        InterpolateTransform,
+        PhysicsTranslation::new(spawn_pos),
         Mesh2d(meshes.add(Circle::new(1.0))),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
         Transform {

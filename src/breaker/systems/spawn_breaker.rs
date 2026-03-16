@@ -10,6 +10,7 @@ use crate::{
         queries::BreakerResetQuery,
         resources::BreakerConfig,
     },
+    interpolate::components::{InterpolateTransform, PhysicsTranslation},
     shared::{CleanupOnRunEnd, PlayfieldConfig},
 };
 
@@ -28,6 +29,7 @@ pub fn spawn_breaker(
         return;
     }
 
+    let spawn_pos = Vec3::new(0.0, config.y_position, 0.0);
     commands.spawn((
         Breaker,
         BreakerVelocity::default(),
@@ -35,10 +37,12 @@ pub fn spawn_breaker(
         BreakerTilt::default(),
         BumpState::default(),
         BreakerStateTimer::default(),
+        InterpolateTransform,
+        PhysicsTranslation::new(spawn_pos),
         Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
         Transform {
-            translation: Vec3::new(0.0, config.y_position, 0.0),
+            translation: spawn_pos,
             scale: Vec3::new(config.width, config.height, 1.0),
             ..default()
         },
@@ -57,7 +61,7 @@ pub fn reset_breaker(
 ) {
     // Robust if PlayfieldConfig is ever offset from world origin
     let center_x = f32::midpoint(playfield.left(), playfield.right());
-    for (mut transform, mut state, mut velocity, mut tilt, mut timer, mut bump, base_y) in
+    for (mut transform, mut state, mut velocity, mut tilt, mut timer, mut bump, base_y, physics) in
         &mut query
     {
         transform.translation.x = center_x;
@@ -72,6 +76,11 @@ pub fn reset_breaker(
         bump.timer = 0.0;
         bump.post_hit_timer = 0.0;
         bump.cooldown = 0.0;
+        // Snap interpolation to avoid lerping through teleport
+        if let Some(mut pt) = physics {
+            let pos = Vec3::new(center_x, base_y.0, transform.translation.z);
+            *pt = PhysicsTranslation::new(pos);
+        }
     }
 }
 

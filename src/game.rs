@@ -5,7 +5,8 @@ use bevy::{app::PluginGroupBuilder, prelude::*};
 use crate::{
     audio::AudioPlugin, bolt::BoltPlugin, breaker::BreakerPlugin, cells::CellsPlugin,
     chips::ChipsPlugin, debug::DebugPlugin, fx::FxPlugin, input::InputPlugin,
-    physics::PhysicsPlugin, run::RunPlugin, screen::ScreenPlugin, ui::UiPlugin, wall::WallPlugin,
+    interpolate::InterpolatePlugin, physics::PhysicsPlugin, run::RunPlugin, screen::ScreenPlugin,
+    ui::UiPlugin, wall::WallPlugin,
 };
 
 /// Plugin group that assembles all game domain plugins.
@@ -19,6 +20,7 @@ impl PluginGroup for Game {
         PluginGroupBuilder::start::<Self>()
             .add(InputPlugin)
             .add(ScreenPlugin)
+            .add(InterpolatePlugin)
             .add(PhysicsPlugin)
             .add(WallPlugin)
             .add(BreakerPlugin)

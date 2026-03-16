@@ -12,6 +12,7 @@ use crate::{
         filters::ActiveBoltFilter,
     },
     breaker::components::Breaker,
+    interpolate::components::PhysicsTranslation,
     physics::messages::BoltLost,
     shared::{GameRng, PlayfieldConfig},
 };
@@ -73,11 +74,14 @@ pub fn bolt_lost(
             // Respawn above breaker
             let angle = rng.0.random_range(-angle_spread..=angle_spread);
             let new_velocity = Vec2::new(base_speed * angle.sin(), base_speed * angle.cos());
+            let new_pos = Vec3::new(breaker_pos.x, breaker_pos.y + respawn_offset, 1.0);
             commands.entity(entity).insert((
-                Transform::from_xyz(breaker_pos.x, breaker_pos.y + respawn_offset, 1.0),
+                Transform::from_xyz(new_pos.x, new_pos.y, new_pos.z),
                 BoltVelocity {
                     value: new_velocity,
                 },
+                // Snap interpolation to avoid lerping through teleport
+                PhysicsTranslation::new(new_pos),
             ));
         }
     }

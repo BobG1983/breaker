@@ -2,12 +2,15 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::components::{
-    BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration, BreakerMaxSpeed,
-    BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth, BumpEarlyWindow,
-    BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow, BumpState,
-    BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
-    DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+use crate::{
+    breaker::components::{
+        BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+        BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity,
+        BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier,
+        BumpPerfectWindow, BumpState, BumpWeakCooldown, BumpWeakMultiplier, DashDuration,
+        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+    },
+    interpolate::components::PhysicsTranslation,
 };
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
@@ -50,6 +53,7 @@ pub type BreakerResetQuery = (
     &'static mut BreakerStateTimer,
     &'static mut BumpState,
     &'static BreakerBaseY,
+    Option<&'static mut PhysicsTranslation>,
 );
 
 /// Bump timing window data — state, timing/cooldown params, and velocity multipliers.
