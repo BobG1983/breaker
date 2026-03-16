@@ -1,5 +1,6 @@
 //! Node subdomain systems.
 
+mod apply_time_penalty;
 mod init_clear_remaining;
 mod init_node_timer;
 mod set_active_layout;
@@ -7,6 +8,7 @@ mod spawn_cells_from_layout;
 mod tick_node_timer;
 mod track_node_completion;
 
+pub use apply_time_penalty::apply_time_penalty;
 pub use init_clear_remaining::init_clear_remaining;
 pub use init_node_timer::init_node_timer;
 pub use set_active_layout::set_active_layout;

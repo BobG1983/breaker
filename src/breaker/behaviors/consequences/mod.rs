@@ -2,3 +2,4 @@
 
 pub mod bolt_speed_boost;
 pub mod life_lost;
+pub mod time_penalty;

@@ -14,6 +14,15 @@ pub struct NodeCleared;
 #[derive(Message, Clone, Debug)]
 pub struct TimerExpired;
 
+/// Sent by the breaker behavior system to subtract time from the node timer.
+///
+/// Consumed by `apply_time_penalty` in the node subdomain.
+#[derive(Message, Clone, Debug)]
+pub struct ApplyTimePenalty {
+    /// Seconds to subtract from the node timer.
+    pub seconds: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -25,5 +34,8 @@ mod tests {
 
         let b = TimerExpired;
         assert!(format!("{b:?}").contains("TimerExpired"));
+
+        let c = ApplyTimePenalty { seconds: 5.0 };
+        assert!(format!("{c:?}").contains("ApplyTimePenalty"));
     }
 }

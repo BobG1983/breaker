@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{
     active::ActiveBehaviors,
-    consequences::life_lost::LoseLifeRequested,
+    consequences::{life_lost::LoseLifeRequested, time_penalty::TimePenaltyRequested},
     definition::{Consequence, Trigger},
 };
 use crate::{
@@ -61,6 +61,9 @@ fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mu
             }
             Consequence::BoltSpeedBoost(_) => {
                 // Init-time only — handled by consequences::bolt_speed_boost
+            }
+            Consequence::TimePenalty(seconds) => {
+                commands.trigger(TimePenaltyRequested { seconds: *seconds });
             }
         }
     }
@@ -136,6 +139,68 @@ mod tests {
 
             let lives = app.world().get::<LivesCount>(entity).unwrap();
             assert_eq!(lives.0, 3);
+        }
+    }
+
+    mod bolt_lost_time_penalty {
+        use super::*;
+        use crate::run::node::messages::ApplyTimePenalty;
+
+        #[derive(Resource, Default)]
+        struct CapturedPenalties(Vec<f32>);
+
+        fn capture_penalties(
+            mut reader: MessageReader<ApplyTimePenalty>,
+            mut captured: ResMut<CapturedPenalties>,
+        ) {
+            for msg in reader.read() {
+                captured.0.push(msg.seconds);
+            }
+        }
+
+        fn test_app() -> App {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins);
+            app.add_message::<BoltLost>();
+            app.add_message::<ApplyTimePenalty>();
+            app.insert_resource(ActiveBehaviors(vec![(
+                Trigger::BoltLost,
+                Consequence::TimePenalty(5.0),
+            )]));
+            app.insert_resource(SendBoltLost(false));
+            app.init_resource::<CapturedPenalties>();
+            app.add_observer(
+                crate::breaker::behaviors::consequences::time_penalty::handle_time_penalty,
+            );
+            app.add_systems(
+                FixedUpdate,
+                (send_bolt_lost, bridge_bolt_lost, capture_penalties).chain(),
+            );
+            app
+        }
+
+        #[test]
+        fn bolt_lost_triggers_time_penalty() {
+            let mut app = test_app();
+            app.world_mut().resource_mut::<SendBoltLost>().0 = true;
+            tick(&mut app);
+
+            let captured = app.world().resource::<CapturedPenalties>();
+            assert_eq!(captured.0.len(), 1);
+            assert!((captured.0[0] - 5.0).abs() < f32::EPSILON);
+        }
+
+        #[test]
+        fn time_penalty_does_not_lose_life() {
+            use crate::breaker::behaviors::consequences::life_lost::LivesCount;
+
+            let mut app = test_app();
+            let entity = app.world_mut().spawn(LivesCount(3)).id();
+            app.world_mut().resource_mut::<SendBoltLost>().0 = true;
+            tick(&mut app);
+
+            let lives = app.world().get::<LivesCount>(entity).unwrap();
+            assert_eq!(lives.0, 3, "TimePenalty should not affect lives");
         }
     }
 

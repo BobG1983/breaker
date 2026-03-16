@@ -51,6 +51,8 @@ pub enum Consequence {
     LoseLife,
     /// Multiply bolt speed (applied at init time via components).
     BoltSpeedBoost(f32),
+    /// Subtract seconds from the node timer.
+    TimePenalty(f32),
 }
 
 /// Optional overrides for `BreakerDefaults` fields.
@@ -85,6 +87,20 @@ mod tests {
     }
 
     #[test]
+    fn chrono_ron_file_parses() {
+        let ron_str = include_str!("../../../assets/archetypes/chrono.archetype.ron");
+        let def: ArchetypeDefinition =
+            ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
+        assert_eq!(def.name, "Chrono");
+        assert!(def.life_pool.is_none());
+        assert_eq!(def.behaviors.len(), 3);
+        assert!(matches!(
+            def.behaviors[0].consequence,
+            Consequence::TimePenalty(t) if (t - 5.0).abs() < f32::EPSILON
+        ));
+    }
+
+    #[test]
     fn trigger_equality() {
         assert_eq!(Trigger::BoltLost, Trigger::BoltLost);
         assert_ne!(Trigger::BoltLost, Trigger::PerfectBump);
@@ -98,6 +114,31 @@ mod tests {
         assert!(overrides.max_speed.is_none());
         assert!(overrides.acceleration.is_none());
         assert!(overrides.deceleration.is_none());
+    }
+
+    #[test]
+    fn chrono_ron_parses() {
+        let ron_str = r#"
+        (
+            name: "Chrono",
+            stat_overrides: (),
+            life_pool: None,
+            behaviors: [
+                (triggers: [BoltLost], consequence: TimePenalty(5.0)),
+                (triggers: [PerfectBump], consequence: BoltSpeedBoost(1.5)),
+                (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(1.1)),
+            ],
+        )
+        "#;
+        let def: ArchetypeDefinition =
+            ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
+        assert_eq!(def.name, "Chrono");
+        assert!(def.life_pool.is_none());
+        assert_eq!(def.behaviors.len(), 3);
+        assert!(matches!(
+            def.behaviors[0].consequence,
+            Consequence::TimePenalty(t) if (t - 5.0).abs() < f32::EPSILON
+        ));
     }
 
     #[test]

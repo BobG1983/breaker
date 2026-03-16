@@ -1,0 +1,11 @@
+/* @[brickbreaker::breaker::behaviors::definition::ArchetypeDefinition] */
+(
+    name: "Chrono",
+    stat_overrides: (),
+    life_pool: None,
+    behaviors: [
+        (triggers: [BoltLost], consequence: TimePenalty(5.0)),
+        (triggers: [PerfectBump], consequence: BoltSpeedBoost(1.5)),
+        (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(1.1)),
+    ],
+)
