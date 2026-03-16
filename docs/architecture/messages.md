@@ -9,11 +9,12 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 | `BoltHitBreaker` | physics | breaker (grade_bump) |
 | `BoltHitCell` | physics | cells (handle_cell_hit) |
 | `BoltLost` | physics | bolt (spawn_bolt_lost_text), breaker/behaviors (bridge_bolt_lost) |
-| `BumpPerformed { grade }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump) |
+| `BumpPerformed { grade, multiplier }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), breaker/behaviors (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text) |
 | `CellDestroyed` | cells | run (track_node_completion) |
-| `NodeCleared` | run (track_node_completion) | run (handle_node_cleared) |
-| `TimerExpired` | run (tick_node_timer) | run (handle_timer_expired) |
+| `NodeCleared` | run/node (track_node_completion) | run (handle_node_cleared) |
+| `TimerExpired` | run/node (tick_node_timer) | run (handle_timer_expired) |
+| `RunLost` | breaker/behaviors (handle_life_lost) | run (handle_run_lost) |
 
 ## Registered Messages (no consumers yet)
 

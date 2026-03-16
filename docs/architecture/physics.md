@@ -8,7 +8,7 @@ All physics runs in `FixedUpdate` for deterministic behavior. This is required f
 
 Continuous collision detection via ray-vs-expanded-AABB intersection. The bolt's path is traced as a ray each frame; cell and wall AABBs are Minkowski-expanded by the bolt radius so a point-ray test is equivalent to a circle-vs-rectangle test.
 
-- `ray_vs_aabb` in `physics/ccd.rs` — shared math used by both `bolt_cell_collision` and `bolt_breaker_collision`
+- `ray_vs_aabb` in `shared/math.rs` — shared math used by both `bolt_cell_collision` and `bolt_breaker_collision`
 - `MAX_BOUNCES` cap prevents infinite loops in degenerate geometries (e.g., bolt trapped between two cells)
 - `CCD_EPSILON` separation gap placed after each collision to prevent floating-point re-contact
 - On each hit, the bolt is placed just before the impact point, velocity is reflected, and tracing continues with remaining movement distance

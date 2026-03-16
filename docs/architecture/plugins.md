@@ -10,7 +10,7 @@ src/
 ├── main.rs           # Binary entry point: calls lib to build and run
 ├── app.rs            # App — constructs the Bevy App with DefaultPlugins + Game
 ├── game.rs           # Game — PluginGroup that wires together all domain plugins
-├── shared.rs         # Passive types: GameState, PlayingState, cleanup markers, constants
+├── shared/           # Passive types: GameState, PlayingState, cleanup markers, shared math
 ├── screen/           # Screen state registration, transitions, cleanup systems
 ├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system, behaviors sub-domain
@@ -18,7 +18,8 @@ src/
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
 ├── upgrades/         # Amps, Augments, Overclocks system (stub — Phase 8+)
-├── run/              # Run state, node sequencing, timer
+├── fx/               # Cross-cutting visual effects (fade-out, flash, particles)
+├── run/              # Run state, node sequencing (node/ sub-domain), timer
 ├── physics/          # CCD collision detection, collision response
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
 ├── ui/               # HUD, menus, upgrade selection screen
