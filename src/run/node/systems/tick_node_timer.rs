@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::run::{messages::TimerExpired, node::NodeTimer};
+use crate::run::node::{NodeTimer, messages::TimerExpired};
 
 /// Decrements [`NodeTimer::remaining`] each fixed tick.
 /// Sends [`TimerExpired`] when the timer reaches zero.

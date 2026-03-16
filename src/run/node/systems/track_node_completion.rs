@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::messages::CellDestroyed,
-    run::{messages::NodeCleared, node::ClearRemainingCount},
+    run::node::{ClearRemainingCount, messages::NodeCleared},
 };
 
 /// Reads [`CellDestroyed`] messages and decrements [`ClearRemainingCount`].

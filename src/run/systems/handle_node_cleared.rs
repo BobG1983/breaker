@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     run::{
-        messages::NodeCleared,
-        node::NodeLayoutRegistry,
+        node::{NodeLayoutRegistry, messages::NodeCleared},
         resources::{RunOutcome, RunState},
     },
     shared::GameState,

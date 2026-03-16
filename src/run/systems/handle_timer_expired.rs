@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     run::{
-        messages::TimerExpired,
+        node::messages::TimerExpired,
         resources::{RunOutcome, RunState},
     },
     shared::GameState,
