@@ -40,7 +40,7 @@
 ## Open Issues (Ordered by Priority)
 1. Run-end screen dead air (no timer/auto-advance) -- HIGH
 2. ~~PLAN.md/README say bump "all grades boost" but 0.8x is penalty~~ FIXED — code updated to 1.1x
-3. Bolt-lost respawn straight up = no reaction required -- MEDIUM
+3. ~~Bolt-lost respawn straight up = no reaction required~~ FIXED — randomized within ±30° via GameRng + BoltRespawnAngleSpread
 4. 150ms perfect window may be too generous post-rescale -- MEDIUM (validate Phase 4)
 5. Run-end subtitle copy is weak/passive -- LOW
 6. Main menu skips RunSetup state -- LOW (expected pre-2d)

@@ -6,7 +6,7 @@
 - `handle_cell_hit` replaces HashSet with `Vec + peek()` early exit — correct; `despawned.contains()` O(n) is safe at MAX_BOUNCES=4 bound.
 - `animate_fade_out` moved from bolt domain to UI domain — `Update` schedule, `run_if(in_state(PlayingState::Active))` guard unchanged. FadeOut entities have `CleanupOnNodeExit` so no accumulation across nodes.
 - `spawn_bolt_lost_text` test imports `animate_fade_out` from `crate::ui::systems` after the move — correct, no stale import.
-- `bolt_lost` immediately respawns the bolt with straight-up velocity — intentional per design ("losing position is penalty enough")
+- `bolt_lost` respawns the bolt with randomized angle within `BoltRespawnAngleSpread` (±30° default) — forces player reaction on respawn
 - `set_active_layout` wraps `node_index % registry.layouts.len()` — deliberate, not a bug
 - `handle_main_menu_input` reads `ButtonInput<KeyCode>` directly rather than `InputActions` — intentional; InputActions is cleared in FixedPostUpdate which is between PreUpdate and Update
 - `spawn_bolt` adds `BoltServing` only on first node; subsequent nodes launch immediately — correct and tested
@@ -27,7 +27,7 @@
 - Bevy 0.18 sub-state `OnExit` fires when the parent state exits. `OnExit(PlayingState::Paused)` fires on `GameState` leaving `Playing`. No redundant cleanup needed for the pause menu quit path — the sub-state exit handler covers it automatically.
 
 ## Recurring Bug Categories
-- **Partial message drain**: `bridge_bolt_lost` uses `reader.read().next().is_none()` which only checks the first message. Multiple simultaneous BoltLost messages (future Prism archetype with multiple bolts) will have extras silently consumed without firing consequences. Harmless with one bolt.
+- ~~**Partial message drain**~~: RESOLVED — `bridge_bolt_lost` now uses `reader.read().count() == 0` which drains all messages.
 - **Stale screen resources**: `RunSetupSelection`, `PauseMenuSelection`, `UpgradeSelectTimer`, `UpgradeSelectSelection`, `UpgradeOffers` are inserted by spawn systems on `OnEnter` but never explicitly removed. They persist as stale resources between visits. This is safe because `insert_resource` overwrites on re-entry. Do not flag as a bug unless a system reads them outside the guarded state.
 - **Stale selection index with variable card count**: `UpgradeSelectSelection.index` persists across visits. On re-entry, `spawn_upgrade_select` resets it to 0 via `insert_resource`. Safe because it's always reset before `handle_upgrade_input` can run in the new visit.
 - **seed_upgrade_registry Local<bool> not reset across runs**: The `Local<bool>` seeded flag persists for the app lifetime. This is correct — Loading only runs once per app launch. Would be a bug if Loading could be re-entered, but it cannot (no transition back to Loading).
@@ -42,7 +42,7 @@
 - `CleanupOnNodeExit` fires on `OnExit(GameState::Playing)` — this means it fires on Playing→UpgradeSelect as well as Playing→RunEnd and Playing→NodeTransition. The UpgradeSelect screen has its own `cleanup_entities::<UpgradeSelectScreen>` on `OnExit(UpgradeSelect)`. Node entities (bolt, cells) are correctly despawned before UpgradeSelect.
 
 ## ECS Pitfalls Found
-- `bridge_bolt_lost` partial drain (see Recurring Bug Categories)
+- ~~`bridge_bolt_lost` partial drain~~ RESOLVED — uses `.count() == 0` now
 - `apply_bump_velocity` collects messages into a Vec before querying — correct pattern to avoid borrow conflicts between MessageReader and mutable Query
 - `UpgradeSelected` message has no consumer yet (upgrades plugin is a stub). Messages are sent by `handle_upgrade_input` but silently dropped. No ECS error; Bevy messages are fire-and-forget. Will need a consumer in a later phase.
 - `spawn_upgrade_select` takes `Res<UpgradeRegistry>` (not `Option<Res>`). If the registry is somehow absent at OnEnter(UpgradeSelect), Bevy will panic. Guaranteed safe in practice because Loading always completes before UpgradeSelect is reachable — but worth noting for future test harnesses.

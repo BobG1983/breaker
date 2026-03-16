@@ -15,8 +15,8 @@ type: project
 - `description_for()` in `spawn_run_setup.rs` — hardcoded archetype descriptions intentional placeholder for Phase 7 content.
 - `unwrap_or(0)` in `current_index()` helpers in `handle_main_menu_input.rs` and `handle_pause_input.rs` — pre-existing pattern; the fallback is a safe default (selection is always in the array). Not a new violation.
 
-### Issues Found
-- `update_run_setup_colors.rs` — no tests. Only system in the new screens with zero test coverage.
-- `update_upgrade_display.rs` — no tests. Timer display and border color updates go untested.
-- `spawn_upgrade_select.rs` — user-facing strings "CHOOSE AN UPGRADE", "UPGRADE A/B/C", "Placeholder upgrade effect" use the banned term "upgrade" instead of "Amp". Placeholder content — document with a TODO referencing Phase 7.
-- `handle_upgrade_input.rs` — uses `config.move_left`/`config.move_right` for card navigation (gameplay movement keys). Main menu and pause menu use `menu_up`/`menu_down`. This is a divergence — left/right navigation is intentional for horizontal card layout, but no comment explains the decision.
+### Issues Found (all resolved 2026-03-16)
+- ~~`update_run_setup_colors.rs` — no tests~~ FIXED — 4 tests added (selected/unselected color, selection change, alphabetical sort)
+- ~~`update_chip_display.rs` — no tests~~ FIXED — 4 tests added (timer ceiling, zero clamp, selected/unselected border)
+- ~~`spawn_chip_select.rs` — user-facing strings used "upgrade"~~ FIXED — renamed to "CHOOSE A CHIP" + chip terminology throughout
+- ~~`handle_chip_input.rs` — uses gameplay movement keys~~ FIXED — new `menu_left`/`menu_right` bindings added to InputConfig
