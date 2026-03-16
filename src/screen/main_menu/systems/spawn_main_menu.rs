@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn cleanup_removes_entities_and_resource() {
+    fn cleanup_removes_entities() {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()));
         app.init_asset::<Font>();
@@ -173,10 +173,7 @@ mod tests {
         app.add_systems(OnEnter(crate::shared::GameState::MainMenu), spawn_main_menu);
         app.add_systems(
             OnExit(crate::shared::GameState::MainMenu),
-            (
-                crate::screen::systems::cleanup_entities::<MainMenuScreen>,
-                crate::screen::main_menu::systems::cleanup_main_menu,
-            ),
+            crate::screen::systems::cleanup_entities::<MainMenuScreen>,
         );
 
         // Enter MainMenu state
@@ -185,7 +182,7 @@ mod tests {
             .set(crate::shared::GameState::MainMenu);
         app.update();
 
-        // Verify entities exist
+        // Verify entities exist and selection resource was inserted
         let screen_count = app
             .world_mut()
             .query_filtered::<Entity, With<MainMenuScreen>>()
@@ -200,7 +197,7 @@ mod tests {
             .set(crate::shared::GameState::Loading);
         app.update();
 
-        // Verify cleanup ran
+        // Verify entities cleaned up; selection resource persists (reset on re-entry)
         let screen_count = app
             .world_mut()
             .query_filtered::<Entity, With<MainMenuScreen>>()
@@ -214,7 +211,5 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(item_count, 0);
-
-        assert!(app.world().get_resource::<MainMenuSelection>().is_none());
     }
 }

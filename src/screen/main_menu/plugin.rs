@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{
     MainMenuScreen,
-    systems::{cleanup_main_menu, handle_main_menu_input, spawn_main_menu, update_menu_colors},
+    systems::{handle_main_menu_input, spawn_main_menu, update_menu_colors},
 };
 use crate::shared::GameState;
 
@@ -22,10 +22,7 @@ impl Plugin for MainMenuPlugin {
             )
             .add_systems(
                 OnExit(GameState::MainMenu),
-                (
-                    crate::screen::systems::cleanup_entities::<MainMenuScreen>,
-                    cleanup_main_menu,
-                ),
+                crate::screen::systems::cleanup_entities::<MainMenuScreen>,
             );
     }
 }
