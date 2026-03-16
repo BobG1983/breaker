@@ -7,7 +7,7 @@ use crate::{
     bolt::{
         components::{
             Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-            BoltVelocity,
+            BoltVelocity, ExtraBolt,
         },
         filters::ActiveBoltFilter,
     },
@@ -16,21 +16,26 @@ use crate::{
     shared::{GameRng, PlayfieldConfig},
 };
 
-/// Detects when the bolt falls below the playfield and respawns it.
+/// Detects when the bolt falls below the playfield.
 ///
-/// Sends a [`BoltLost`] message. In Phase 2, the breaker plugin will
-/// apply penalties per breaker type.
+/// Baseline bolts (without [`ExtraBolt`]) are respawned above the breaker.
+/// Extra bolts (with [`ExtraBolt`]) are despawned permanently.
+/// Sends a [`BoltLost`] message in both cases.
+#[allow(clippy::type_complexity)]
 pub fn bolt_lost(
+    mut commands: Commands,
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
-    mut bolt_query: Query<
+    bolt_query: Query<
         (
-            &mut Transform,
-            &mut BoltVelocity,
+            Entity,
+            &Transform,
+            &BoltVelocity,
             &BoltBaseSpeed,
             &BoltRadius,
             &BoltRespawnOffsetY,
             &BoltRespawnAngleSpread,
+            Has<ExtraBolt>,
         ),
         ActiveBoltFilter,
     >,
@@ -42,19 +47,38 @@ pub fn bolt_lost(
     };
     let breaker_pos = breaker_transform.translation;
 
-    for (mut bolt_transform, mut bolt_velocity, base_speed, radius, respawn_offset, angle_spread) in
-        &mut bolt_query
-    {
-        if bolt_transform.translation.y < playfield.bottom() - radius.0 {
-            writer.write(BoltLost);
+    // Collect lost bolts to avoid mutable borrow conflicts with despawn
+    let lost_bolts: Vec<_> = bolt_query
+        .iter()
+        .filter(|(_, tf, _, _, radius, ..)| tf.translation.y < playfield.bottom() - radius.0)
+        .map(
+            |(entity, _, _, base_speed, _, respawn_offset, angle_spread, is_extra)| {
+                (
+                    entity,
+                    base_speed.0,
+                    respawn_offset.0,
+                    angle_spread.0,
+                    is_extra,
+                )
+            },
+        )
+        .collect();
 
+    for (entity, base_speed, respawn_offset, angle_spread, is_extra) in lost_bolts {
+        writer.write(BoltLost);
+
+        if is_extra {
+            commands.entity(entity).despawn();
+        } else {
             // Respawn above breaker
-            bolt_transform.translation.x = breaker_pos.x;
-            bolt_transform.translation.y = breaker_pos.y + respawn_offset.0;
-
-            // Relaunch at base speed with randomized angle from vertical
-            let angle = rng.0.random_range(-angle_spread.0..=angle_spread.0);
-            bolt_velocity.value = Vec2::new(base_speed.0 * angle.sin(), base_speed.0 * angle.cos());
+            let angle = rng.0.random_range(-angle_spread..=angle_spread);
+            let new_velocity = Vec2::new(base_speed * angle.sin(), base_speed * angle.cos());
+            commands.entity(entity).insert((
+                Transform::from_xyz(breaker_pos.x, breaker_pos.y + respawn_offset, 1.0),
+                BoltVelocity {
+                    value: new_velocity,
+                },
+            ));
         }
     }
 }
@@ -240,6 +264,104 @@ mod tests {
             "respawn Y should be breaker_y + respawn_offset_y ({expected_y}), got {}",
             transform.translation.y,
         );
+    }
+
+    #[test]
+    fn extra_bolt_below_floor_is_despawned() {
+        let mut app = test_app();
+        let playfield = PlayfieldConfig::default();
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                ExtraBolt,
+                BoltVelocity::new(0.0, -400.0),
+                bolt_lost_bundle(),
+                Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
+            ))
+            .id();
+        tick(&mut app);
+
+        assert!(
+            app.world().get_entity(entity).is_err(),
+            "extra bolt should be despawned when lost"
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct BoltLostCount(u32);
+
+    fn count_bolt_lost(mut reader: MessageReader<BoltLost>, mut count: ResMut<BoltLostCount>) {
+        for _msg in reader.read() {
+            count.0 += 1;
+        }
+    }
+
+    #[test]
+    fn extra_bolt_sends_bolt_lost_on_despawn() {
+        let mut app = test_app();
+        let playfield = PlayfieldConfig::default();
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+
+        app.init_resource::<BoltLostCount>();
+        app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
+
+        app.world_mut().spawn((
+            Bolt,
+            ExtraBolt,
+            BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
+            Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
+        ));
+        tick(&mut app);
+
+        let count = app.world().resource::<BoltLostCount>();
+        assert_eq!(count.0, 1, "BoltLost message should be sent for extra bolt");
+    }
+
+    #[test]
+    fn baseline_bolt_still_respawns_with_extra_present() {
+        let mut app = test_app();
+        let playfield = PlayfieldConfig::default();
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+
+        // Baseline bolt (no ExtraBolt)
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
+            Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
+        ));
+        // Extra bolt
+        app.world_mut().spawn((
+            Bolt,
+            ExtraBolt,
+            BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
+            Transform::from_xyz(50.0, playfield.bottom() - 100.0, 0.0),
+        ));
+        tick(&mut app);
+
+        // Baseline bolt should still exist (respawned)
+        let bolt_count = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(bolt_count, 1, "only baseline bolt should remain");
+
+        // Verify it's the baseline (no ExtraBolt)
+        let extra_count = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(extra_count, 0, "extra bolt should be gone");
     }
 
     #[test]

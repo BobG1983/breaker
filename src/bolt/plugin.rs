@@ -5,10 +5,11 @@ use bevy::prelude::*;
 use crate::{
     bolt::{
         BoltSystems,
+        messages::SpawnAdditionalBolt,
         resources::BoltConfig,
         systems::{
             apply_bump_velocity, hover_bolt, init_bolt_params, launch_bolt, prepare_bolt_velocity,
-            spawn_bolt, spawn_bolt_lost_text,
+            spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text,
         },
     },
     breaker::BreakerSystems,
@@ -24,6 +25,7 @@ pub struct BoltPlugin;
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BoltConfig>()
+            .add_message::<SpawnAdditionalBolt>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (spawn_bolt, init_bolt_params.after(spawn_bolt)),
@@ -40,6 +42,7 @@ impl Plugin for BoltPlugin {
                     apply_bump_velocity
                         .after(PhysicsSystems::BreakerCollision)
                         .before(PhysicsSystems::BoltLost),
+                    spawn_additional_bolt.after(PhysicsSystems::BreakerCollision),
                     spawn_bolt_lost_text,
                 )
                     .run_if(in_state(PlayingState::Active)),

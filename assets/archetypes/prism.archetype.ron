@@ -1,0 +1,9 @@
+/* @[brickbreaker::breaker::behaviors::definition::ArchetypeDefinition] */
+(
+    name: "Prism",
+    stat_overrides: (),
+    life_pool: None,
+    behaviors: [
+        (triggers: [PerfectBump], consequence: SpawnBolt),
+    ],
+)

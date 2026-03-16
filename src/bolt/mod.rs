@@ -2,6 +2,7 @@
 
 pub mod components;
 pub mod filters;
+pub mod messages;
 mod plugin;
 pub mod resources;
 pub mod sets;

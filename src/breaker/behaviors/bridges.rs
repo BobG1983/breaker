@@ -4,7 +4,10 @@ use bevy::prelude::*;
 
 use super::{
     active::ActiveBehaviors,
-    consequences::{life_lost::LoseLifeRequested, time_penalty::TimePenaltyRequested},
+    consequences::{
+        life_lost::LoseLifeRequested, spawn_bolt::SpawnBoltRequested,
+        time_penalty::TimePenaltyRequested,
+    },
     definition::{Consequence, Trigger},
 };
 use crate::{
@@ -64,6 +67,9 @@ fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mu
             }
             Consequence::TimePenalty(seconds) => {
                 commands.trigger(TimePenaltyRequested { seconds: *seconds });
+            }
+            Consequence::SpawnBolt => {
+                commands.trigger(SpawnBoltRequested);
             }
         }
     }
@@ -201,6 +207,67 @@ mod tests {
 
             let lives = app.world().get::<LivesCount>(entity).unwrap();
             assert_eq!(lives.0, 3, "TimePenalty should not affect lives");
+        }
+    }
+
+    mod bump_spawn_bolt {
+        use super::*;
+        use crate::bolt::messages::SpawnAdditionalBolt;
+
+        #[derive(Resource, Default)]
+        struct CapturedSpawnBolt(u32);
+
+        fn capture_spawn(
+            mut reader: MessageReader<SpawnAdditionalBolt>,
+            mut captured: ResMut<CapturedSpawnBolt>,
+        ) {
+            for _msg in reader.read() {
+                captured.0 += 1;
+            }
+        }
+
+        fn test_app() -> App {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins);
+            app.add_message::<BumpPerformed>();
+            app.add_message::<SpawnAdditionalBolt>();
+            app.insert_resource(ActiveBehaviors(vec![(
+                Trigger::PerfectBump,
+                Consequence::SpawnBolt,
+            )]));
+            app.insert_resource(SendBump(None));
+            app.init_resource::<CapturedSpawnBolt>();
+            app.add_observer(
+                crate::breaker::behaviors::consequences::spawn_bolt::handle_spawn_bolt_requested,
+            );
+            app.add_systems(FixedUpdate, (send_bump, bridge_bump, capture_spawn).chain());
+            app
+        }
+
+        #[test]
+        fn perfect_bump_triggers_spawn_bolt() {
+            let mut app = test_app();
+            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+                grade: BumpGrade::Perfect,
+                multiplier: 1.5,
+            });
+            tick(&mut app);
+
+            let captured = app.world().resource::<CapturedSpawnBolt>();
+            assert_eq!(captured.0, 1, "perfect bump should trigger SpawnBolt");
+        }
+
+        #[test]
+        fn early_bump_does_not_trigger_spawn_bolt() {
+            let mut app = test_app();
+            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+                grade: BumpGrade::Early,
+                multiplier: 0.8,
+            });
+            tick(&mut app);
+
+            let captured = app.world().resource::<CapturedSpawnBolt>();
+            assert_eq!(captured.0, 0, "early bump should not trigger SpawnBolt");
         }
     }
 

@@ -93,6 +93,13 @@ pub struct BoltRespawnAngleSpread(pub f32);
 #[derive(Component, Debug)]
 pub struct BoltInitialAngle(pub f32);
 
+/// Marker for extra bolts spawned by archetype consequences (e.g. Prism).
+///
+/// Extra bolts are despawned on loss rather than respawned. Only the
+/// baseline bolt (without this marker) respawns.
+#[derive(Component, Debug)]
+pub struct ExtraBolt;
+
 #[cfg(test)]
 mod tests {
     use super::*;

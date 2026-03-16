@@ -53,6 +53,8 @@ pub enum Consequence {
     BoltSpeedBoost(f32),
     /// Subtract seconds from the node timer.
     TimePenalty(f32),
+    /// Spawn an additional bolt.
+    SpawnBolt,
 }
 
 /// Optional overrides for `BreakerDefaults` fields.
@@ -97,6 +99,43 @@ mod tests {
         assert!(matches!(
             def.behaviors[0].consequence,
             Consequence::TimePenalty(t) if (t - 5.0).abs() < f32::EPSILON
+        ));
+    }
+
+    #[test]
+    fn prism_ron_file_parses() {
+        let ron_str = include_str!("../../../assets/archetypes/prism.archetype.ron");
+        let def: ArchetypeDefinition =
+            ron::de::from_str(ron_str).expect("prism archetype RON should parse");
+        assert_eq!(def.name, "Prism");
+        assert!(def.life_pool.is_none());
+        assert_eq!(def.behaviors.len(), 1);
+        assert!(matches!(
+            def.behaviors[0].consequence,
+            Consequence::SpawnBolt
+        ));
+    }
+
+    #[test]
+    fn prism_ron_parses() {
+        let ron_str = r#"
+        (
+            name: "Prism",
+            stat_overrides: (),
+            life_pool: None,
+            behaviors: [
+                (triggers: [PerfectBump], consequence: SpawnBolt),
+            ],
+        )
+        "#;
+        let def: ArchetypeDefinition =
+            ron::de::from_str(ron_str).expect("prism archetype RON should parse");
+        assert_eq!(def.name, "Prism");
+        assert!(def.life_pool.is_none());
+        assert_eq!(def.behaviors.len(), 1);
+        assert!(matches!(
+            def.behaviors[0].consequence,
+            Consequence::SpawnBolt
         ));
     }
 
