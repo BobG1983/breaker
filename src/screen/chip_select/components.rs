@@ -6,7 +6,7 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct ChipSelectScreen;
 
-/// Identifies an chip card by its index (0, 1, 2).
+/// Identifies a chip card by its index (0, 1, 2).
 #[derive(Component, Debug, Clone, Copy)]
 pub struct ChipCard {
     /// Zero-based index of this card.

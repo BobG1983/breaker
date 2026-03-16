@@ -81,4 +81,43 @@ mod tests {
 
         assert!(app.world().get_resource::<ChipSelectConfig>().is_some());
     }
+
+    #[test]
+    fn only_seeds_once() {
+        let mut app = test_app();
+
+        let defaults = ChipSelectDefaults::default();
+        let mut assets = app.world_mut().resource_mut::<Assets<ChipSelectDefaults>>();
+        let handle = assets.add(defaults);
+
+        app.world_mut().insert_resource(DefaultsCollection {
+            playfield: Handle::default(),
+            bolt: Handle::default(),
+            breaker: Handle::default(),
+            cells: Handle::default(),
+            input: Handle::default(),
+            mainmenu: Handle::default(),
+            timerui: Handle::default(),
+            cell_types: vec![],
+            layouts: vec![],
+            archetypes: vec![],
+            chipselect: handle,
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
+        });
+
+        // First update seeds the config
+        app.update();
+        assert!(app.world().get_resource::<ChipSelectConfig>().is_some());
+
+        // Remove the resource — if the system re-seeds, it would reappear
+        app.world_mut().remove_resource::<ChipSelectConfig>();
+        app.update();
+
+        assert!(
+            app.world().get_resource::<ChipSelectConfig>().is_none(),
+            "system should not re-seed after the first successful seed"
+        );
+    }
 }
