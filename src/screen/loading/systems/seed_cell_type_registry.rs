@@ -101,6 +101,9 @@ mod tests {
             layouts: vec![],
             archetypes: vec![],
             upgradeselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();
@@ -131,6 +134,9 @@ mod tests {
             layouts: vec![],
             archetypes: vec![],
             upgradeselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();
@@ -157,6 +163,9 @@ mod tests {
             layouts: vec![],
             archetypes: vec![],
             upgradeselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();

@@ -74,6 +74,9 @@ mod tests {
             layouts: vec![],
             archetypes: vec![],
             upgradeselect: handle,
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         });
 
         app.update();

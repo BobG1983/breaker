@@ -4,6 +4,8 @@ use bevy::prelude::*;
 use brickbreaker_derive::GameConfig;
 use serde::Deserialize;
 
+use crate::upgrades::UpgradeDefinition;
+
 /// Upgrade select defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "UpgradeSelectConfig")]
@@ -51,6 +53,13 @@ pub struct UpgradeSelectSelection {
     /// Zero-based index of the selected card.
     pub index: usize,
 }
+
+/// The upgrade definitions offered this screen visit.
+///
+/// Inserted by `spawn_upgrade_select`, read by `handle_upgrade_input`
+/// to resolve a selection index into upgrade identity.
+#[derive(Resource, Debug)]
+pub struct UpgradeOffers(pub Vec<UpgradeDefinition>);
 
 #[cfg(test)]
 mod tests {

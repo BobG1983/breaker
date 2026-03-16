@@ -21,6 +21,7 @@
 - **Full codebase audit 2026-03-16**: PASS — 0 critical violations, 2 minor observations (SelectedArchetype placement in shared.rs, double init_resource in tests). All 11 review categories clean: folder structure, mod.rs routing-only, plugin boundaries, message discipline, cross-domain access, SystemSet ordering, schedule placement, entity cleanup, state management, config-to-entity pipeline, test structure.
 - **fix/review-findings audit 2026-03-16**: PASS — animate_fade_out moved bolt→UI (correct: visual system serving multiple producers), FadeOut shared type correct, multiplier insert_if_new precedence correct via ordering chain.
 - **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains. 2 Resources defined in system files (need resources.rs), 1 Component defined in system file (needs move to components.rs). No boundary violations. No messages used (correct for screen sub-domains). Cleanup markers correct. State transitions properly owned.
+- **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues (2 moderate, 1 minor). upgrades/ domain gains definition.rs (UpgradeKind, UpgradeDefinition) and registry.rs (UpgradeRegistry). screen/loading seeds registry. screen/upgrade_select reads registry + writes UpgradeSelected. ui/messages.rs imports UpgradeKind from upgrades domain (acceptable vocabulary-type import). Issues: pub mod visibility too broad in upgrades/mod.rs, registry.rs should be resources.rs, import paths should use re-exports.
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -90,7 +91,10 @@ Active messages (Phase 2b):
 - NodeCleared: run (track_node_completion) → run (handle_node_cleared)
 - TimerExpired: run (tick_node_timer) → run (handle_timer_expired)
 
-Registered but no consumers yet: UpgradeSelected
+Active messages (upgrade infrastructure):
+- UpgradeSelected: screen/upgrade_select (handle_upgrade_input) → (future: upgrades domain)
+
+Registered but no consumers yet: UpgradeSelected (now written by handle_upgrade_input, still no consumer)
 
 ## Test Pattern
 - Every plugin has a `plugin_builds` headless test (except DebugPlugin)
@@ -109,6 +113,8 @@ Registered but no consumers yet: UpgradeSelected
 - UI domain reads run::node::NodeTimer (read-only, for timer display)
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only, for outcome display)
 - screen/run_setup reads breaker/behaviors::ArchetypeRegistry (read-only, for card display)
+- screen/upgrade_select reads upgrades::UpgradeRegistry (read-only, for card display + offer generation)
+- ui/messages.rs imports upgrades::UpgradeKind (vocabulary type in UpgradeSelected message payload — acceptable)
 - screen/run_setup and pause_menu read input::InputConfig (read-only, for key bindings)
 - run/node/ lacks its own plugin.rs — systems registered in parent run/plugin.rs (acceptable, but doesn't follow the sub-domain pattern used by screen/ children)
 - breaker/behaviors handle_life_lost writes ResMut<RunState> (run domain) — same pattern as other accepted cross-domain writes; alternative would be a RunLost message for a single assignment

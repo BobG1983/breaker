@@ -77,6 +77,9 @@ mod tests {
             layouts: vec![],
             archetypes,
             upgradeselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
         }
     }
 

@@ -34,7 +34,11 @@
 - Units are documented inline on component fields (e.g., "world units per second", "radians", "seconds") — this is established convention.
 - `#[must_use]` is applied to pure query methods and value-returning helpers. Follow this pattern for new `impl` blocks.
 
+## Vocabulary Decisions (continued)
+- `upgrade` module name, `UpgradeKind`, `UpgradeDefinition`, `UpgradeRegistry`, `UpgradeOffers`, `UpgradeSelected`, `UpgradeCard` — infrastructure wrappers around Amp/Augment/Overclock concepts; these names are acceptable. Only player-facing UI strings must avoid "power-up", "upgrade", etc.
+
 ## Recent Reviews
 
 - [review-fix-review-findings-2026-03-16.md](review-fix-review-findings-2026-03-16.md) — review of fix/review-findings branch: init_breaker_params, animate_fade_out migration to UI, spawn_breaker centering, handle_cell_hit Vec dedup, spawn_cells_from_layout position tests
 - [review-screen-domain-2026-03-16.md](review-screen-domain-2026-03-16.md) — review of run_setup, pause_menu, upgrade_select, loading/seed_upgrade_select_config, and screen plugin
+- [review-upgrade-infrastructure-2026-03-16.md](review-upgrade-infrastructure-2026-03-16.md) — review of feature/upgrade-infrastructure: definition/registry/seed_upgrade_registry/spawn_upgrade_select/handle_upgrade_input

@@ -13,9 +13,6 @@ pub struct UpgradeCard {
     pub index: usize,
 }
 
-/// The number of placeholder upgrade cards displayed.
-pub const CARD_COUNT: usize = 3;
-
 /// Marker on the timer text entity so `update_upgrade_display` can find it.
 #[derive(Component)]
 pub struct UpgradeTimerText;

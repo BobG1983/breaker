@@ -25,6 +25,7 @@ use crate::{
         PlayingState,
     },
     ui::TimerUiDefaults,
+    upgrades::UpgradeDefinition,
 };
 
 /// Plugin for screen state management.
@@ -53,6 +54,11 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
                 RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
                 RonAssetPlugin::<UpgradeSelectDefaults>::new(&["upgradeselect.ron"]),
+                RonAssetPlugin::<UpgradeDefinition>::new(&[
+                    "amp.ron",
+                    "augment.ron",
+                    "overclock.ron",
+                ]),
             ))
             // Progress plugin drives Loading → MainMenu transition.
             // Must be added BEFORE add_loading_state.

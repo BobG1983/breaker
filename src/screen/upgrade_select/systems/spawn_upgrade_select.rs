@@ -2,14 +2,26 @@
 
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
-use crate::screen::upgrade_select::{
-    UpgradeSelectConfig,
-    components::{UpgradeCard, UpgradeSelectScreen, UpgradeTimerText},
-    resources::{UpgradeSelectSelection, UpgradeSelectTimer},
+use crate::{
+    screen::upgrade_select::{
+        UpgradeSelectConfig,
+        components::{UpgradeCard, UpgradeSelectScreen, UpgradeTimerText},
+        resources::{UpgradeOffers, UpgradeSelectSelection, UpgradeSelectTimer},
+    },
+    upgrades::UpgradeRegistry,
 };
 
-/// Spawns the upgrade selection UI with 3 placeholder cards and a countdown timer.
-pub fn spawn_upgrade_select(mut commands: Commands, config: Res<UpgradeSelectConfig>) {
+/// Maximum number of upgrade cards to display.
+const MAX_CARDS: usize = 3;
+
+/// Spawns the upgrade selection UI with cards from the registry and a countdown timer.
+pub fn spawn_upgrade_select(
+    mut commands: Commands,
+    config: Res<UpgradeSelectConfig>,
+    registry: Res<UpgradeRegistry>,
+) {
+    let offers: Vec<_> = registry.upgrades.iter().take(MAX_CARDS).cloned().collect();
+
     commands.insert_resource(UpgradeSelectTimer {
         remaining: config.timer_secs,
     });
@@ -31,9 +43,11 @@ pub fn spawn_upgrade_select(mut commands: Commands, config: Res<UpgradeSelectCon
         .with_children(|parent| {
             spawn_timer_display(parent, &config);
             spawn_title(parent);
-            spawn_card_row(parent, &config);
+            spawn_card_row(parent, &config, &offers);
             spawn_prompt(parent);
         });
+
+    commands.insert_resource(UpgradeOffers(offers));
 }
 
 fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSelectConfig) {
@@ -54,8 +68,7 @@ fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSe
 
 fn spawn_title(parent: &mut ChildSpawnerCommands<'_>) {
     parent.spawn((
-        // TODO(phase-7): replace with Amp/Augment/Overclock category
-        Text::new("CHOOSE A POWER-UP"),
+        Text::new("CHOOSE AN UPGRADE"),
         TextFont {
             font_size: 48.0,
             ..default()
@@ -64,10 +77,11 @@ fn spawn_title(parent: &mut ChildSpawnerCommands<'_>) {
     ));
 }
 
-fn spawn_card_row(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSelectConfig) {
-    // TODO(phase-7): replace with real Amp names from data
-    let card_titles = ["AMP A", "AMP B", "AMP C"];
-
+fn spawn_card_row(
+    parent: &mut ChildSpawnerCommands<'_>,
+    config: &UpgradeSelectConfig,
+    offers: &[crate::upgrades::UpgradeDefinition],
+) {
     let selected_color = Color::srgb(
         config.selected_color_rgb[0],
         config.selected_color_rgb[1],
@@ -88,7 +102,7 @@ fn spawn_card_row(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSelectC
             ..default()
         })
         .with_children(|row| {
-            for (i, title) in card_titles.iter().enumerate() {
+            for (i, upgrade) in offers.iter().enumerate() {
                 let border_color = if i == 0 { selected_color } else { normal_color };
 
                 row.spawn((
@@ -110,7 +124,7 @@ fn spawn_card_row(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSelectC
                 ))
                 .with_children(|card| {
                     card.spawn((
-                        Text::new(*title),
+                        Text::new(upgrade.name.clone()),
                         TextFont {
                             font_size: config.card_title_font_size,
                             ..default()
@@ -119,7 +133,7 @@ fn spawn_card_row(parent: &mut ChildSpawnerCommands<'_>, config: &UpgradeSelectC
                     ));
 
                     card.spawn((
-                        Text::new("Placeholder Amp effect"),
+                        Text::new(upgrade.description.clone()),
                         TextFont {
                             font_size: config.card_description_font_size,
                             ..default()
@@ -145,18 +159,41 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::upgrades::{UpgradeDefinition, UpgradeKind};
 
-    fn test_app() -> App {
+    fn make_upgrade(name: &str, kind: UpgradeKind) -> UpgradeDefinition {
+        UpgradeDefinition {
+            name: name.to_owned(),
+            kind,
+            description: format!("{name} description"),
+        }
+    }
+
+    fn make_registry(count: usize) -> UpgradeRegistry {
+        let upgrades = vec![
+            make_upgrade("Piercing Shot", UpgradeKind::Amp),
+            make_upgrade("Wide Breaker", UpgradeKind::Augment),
+            make_upgrade("Surge", UpgradeKind::Overclock),
+            make_upgrade("Ricochet", UpgradeKind::Amp),
+            make_upgrade("Quick Dash", UpgradeKind::Augment),
+        ];
+        UpgradeRegistry {
+            upgrades: upgrades.into_iter().take(count).collect(),
+        }
+    }
+
+    fn test_app_with_registry(registry: UpgradeRegistry) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.insert_resource(UpgradeSelectConfig::default());
+        app.insert_resource(registry);
         app.add_systems(Update, spawn_upgrade_select);
         app
     }
 
     #[test]
     fn spawn_creates_screen_entity() {
-        let mut app = test_app();
+        let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
         let count = app
@@ -168,8 +205,8 @@ mod tests {
     }
 
     #[test]
-    fn spawn_creates_three_cards() {
-        let mut app = test_app();
+    fn spawn_creates_three_cards_from_registry() {
+        let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
         let count = app
@@ -181,8 +218,34 @@ mod tests {
     }
 
     #[test]
+    fn spawn_creates_cards_matching_registry_size() {
+        let mut app = test_app_with_registry(make_registry(2));
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query::<&UpgradeCard>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn empty_registry_creates_no_cards() {
+        let mut app = test_app_with_registry(make_registry(0));
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query::<&UpgradeCard>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
     fn spawn_inserts_timer_resource() {
-        let mut app = test_app();
+        let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
         let timer = app.world().resource::<UpgradeSelectTimer>();
@@ -191,7 +254,7 @@ mod tests {
 
     #[test]
     fn spawn_inserts_selection_resource() {
-        let mut app = test_app();
+        let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
         let selection = app.world().resource::<UpgradeSelectSelection>();
@@ -199,8 +262,20 @@ mod tests {
     }
 
     #[test]
+    fn spawn_inserts_offers_resource() {
+        let mut app = test_app_with_registry(make_registry(3));
+        app.update();
+
+        let offers = app.world().resource::<UpgradeOffers>();
+        assert_eq!(offers.0.len(), 3);
+        assert_eq!(offers.0[0].name, "Piercing Shot");
+        assert_eq!(offers.0[1].name, "Wide Breaker");
+        assert_eq!(offers.0[2].name, "Surge");
+    }
+
+    #[test]
     fn spawn_creates_timer_text() {
-        let mut app = test_app();
+        let mut app = test_app_with_registry(make_registry(3));
         app.update();
 
         let count = app
@@ -209,5 +284,49 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn cards_display_real_upgrade_names() {
+        let mut app = test_app_with_registry(make_registry(3));
+        app.update();
+
+        let mut found_names: Vec<String> = Vec::new();
+        for text in app.world_mut().query::<&Text>().iter(app.world()) {
+            let s: &str = text;
+            if s == "Piercing Shot" || s == "Wide Breaker" || s == "Surge" {
+                found_names.push(s.to_owned());
+            }
+        }
+        assert_eq!(found_names.len(), 3);
+    }
+
+    #[test]
+    fn empty_registry_still_creates_screen() {
+        let mut app = test_app_with_registry(make_registry(0));
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query_filtered::<Entity, With<UpgradeSelectScreen>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn large_registry_caps_at_max_cards() {
+        let mut app = test_app_with_registry(make_registry(5));
+        app.update();
+
+        let count = app
+            .world_mut()
+            .query::<&UpgradeCard>()
+            .iter(app.world())
+            .count();
+        assert_eq!(count, 3, "should cap at MAX_CARDS even with 5 in registry");
+
+        let offers = app.world().resource::<UpgradeOffers>();
+        assert_eq!(offers.0.len(), 3);
     }
 }

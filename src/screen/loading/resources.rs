@@ -12,6 +12,7 @@ use crate::{
     screen::{main_menu::MainMenuDefaults, upgrade_select::UpgradeSelectDefaults},
     shared::PlayfieldDefaults,
     ui::TimerUiDefaults,
+    upgrades::UpgradeDefinition,
 };
 
 /// Asset collection for all defaults — automatically loaded during
@@ -51,4 +52,13 @@ pub struct DefaultsCollection {
     /// Handle for upgrade select defaults.
     #[asset(path = "config/defaults.upgradeselect.ron")]
     pub upgradeselect: Handle<UpgradeSelectDefaults>,
+    /// All amp upgrade definition handles.
+    #[asset(path = "amps", collection(typed))]
+    pub amps: Vec<Handle<UpgradeDefinition>>,
+    /// All augment upgrade definition handles.
+    #[asset(path = "augments", collection(typed))]
+    pub augments: Vec<Handle<UpgradeDefinition>>,
+    /// All overclock upgrade definition handles.
+    #[asset(path = "overclocks", collection(typed))]
+    pub overclocks: Vec<Handle<UpgradeDefinition>>,
 }
