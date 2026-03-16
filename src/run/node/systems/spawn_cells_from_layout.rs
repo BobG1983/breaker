@@ -277,4 +277,177 @@ mod tests {
             .count();
         assert_eq!(cell_count, with_dims);
     }
+
+    #[test]
+    fn unrecognized_alias_produces_no_entity() {
+        let layout = NodeLayout {
+            name: "unknown".to_owned(),
+            timer_secs: 60.0,
+            cols: 3,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'X', 'S']], // 'X' not in registry
+        };
+        let mut app = test_app(layout);
+        app.update();
+
+        let count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        assert_eq!(
+            count, 2,
+            "unrecognized alias 'X' should be silently skipped, only 2 cells spawned"
+        );
+    }
+
+    // --- Cell position tests ---
+
+    #[test]
+    fn grid_is_horizontally_centered() {
+        let layout = full_layout();
+        let config = CellConfig::default();
+        let step_x = config.width + config.padding_x;
+        let mut app = test_app(layout.clone());
+        app.update();
+
+        // Grid should be centered: sum of all x positions per row should be ~0
+        // With 3 columns the positions should be symmetric around 0
+        #[allow(clippy::cast_precision_loss)]
+        let cols_f = layout.cols as f32;
+        let grid_width = step_x.mul_add(cols_f, -config.padding_x);
+        let expected_start = -grid_width / 2.0 + config.width / 2.0;
+        let expected_end = step_x.mul_add(cols_f - 1.0, expected_start);
+        let center = f32::midpoint(expected_start, expected_end);
+
+        assert!(
+            center.abs() < 1.0,
+            "grid center should be near 0, got {center:.2}"
+        );
+    }
+
+    #[test]
+    fn cell_positions_match_grid_coordinates() {
+        let layout = full_layout();
+        let config = CellConfig::default();
+        let playfield = PlayfieldConfig::default();
+        let step_x = config.width + config.padding_x;
+        let step_y = config.height + config.padding_y;
+        let mut app = test_app(layout.clone());
+        app.update();
+
+        #[allow(clippy::cast_precision_loss)]
+        let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
+        let start_x = -grid_width / 2.0 + config.width / 2.0;
+        let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
+
+        let mut positions: Vec<(f32, f32)> = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Cell>>()
+            .iter(app.world())
+            .map(|tf| (tf.translation.x, tf.translation.y))
+            .collect();
+        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+
+        // full_layout: row 0 = [T, S, S], row 1 = [S, S, S]
+        let expected: Vec<(f32, f32)> = vec![
+            // Row 0
+            (start_x, start_y),
+            (start_x + step_x, start_y),
+            (step_x.mul_add(2.0, start_x), start_y),
+            // Row 1
+            (start_x, start_y - step_y),
+            (start_x + step_x, start_y - step_y),
+            (step_x.mul_add(2.0, start_x), start_y - step_y),
+        ];
+
+        assert_eq!(positions.len(), expected.len());
+        for (i, ((ax, ay), (ex, ey))) in positions.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (ax - ex).abs() < 0.01,
+                "cell {i} x: expected {ex:.2}, got {ax:.2}"
+            );
+            assert!(
+                (ay - ey).abs() < 0.01,
+                "cell {i} y: expected {ey:.2}, got {ay:.2}"
+            );
+        }
+    }
+
+    #[test]
+    fn sparse_layout_positions_skip_dots() {
+        let layout = sparse_layout();
+        let config = CellConfig::default();
+        let playfield = PlayfieldConfig::default();
+        let step_x = config.width + config.padding_x;
+        let step_y = config.height + config.padding_y;
+        let mut app = test_app(layout.clone());
+        app.update();
+
+        #[allow(clippy::cast_precision_loss)]
+        let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
+        let start_x = -grid_width / 2.0 + config.width / 2.0;
+        let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
+
+        let mut positions: Vec<(f32, f32)> = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Cell>>()
+            .iter(app.world())
+            .map(|tf| (tf.translation.x, tf.translation.y))
+            .collect();
+        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+
+        // sparse_layout: row 0 = [., S, .], row 1 = [T, ., S]
+        let expected: Vec<(f32, f32)> = vec![
+            (start_x + step_x, start_y),                      // row 0, col 1
+            (start_x, start_y - step_y),                      // row 1, col 0
+            (step_x.mul_add(2.0, start_x), start_y - step_y), // row 1, col 2
+        ];
+
+        assert_eq!(positions.len(), expected.len());
+        for (i, ((ax, ay), (ex, ey))) in positions.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (ax - ex).abs() < 0.01,
+                "cell {i} x: expected {ex:.2}, got {ax:.2}"
+            );
+            assert!(
+                (ay - ey).abs() < 0.01,
+                "cell {i} y: expected {ey:.2}, got {ay:.2}"
+            );
+        }
+    }
+
+    #[test]
+    fn cell_spacing_matches_config() {
+        let layout = full_layout();
+        let config = CellConfig::default();
+        let step_x = config.width + config.padding_x;
+        let step_y = config.height + config.padding_y;
+        let mut app = test_app(layout);
+        app.update();
+
+        let mut positions: Vec<(f32, f32)> = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Cell>>()
+            .iter(app.world())
+            .map(|tf| (tf.translation.x, tf.translation.y))
+            .collect();
+        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+
+        // Check horizontal spacing within row 0 (first 3 cells)
+        let dx_01 = positions[1].0 - positions[0].0;
+        assert!(
+            (dx_01 - step_x).abs() < 0.01,
+            "horizontal spacing should be {step_x}, got {dx_01}"
+        );
+        let dx_12 = positions[2].0 - positions[1].0;
+        assert!(
+            (dx_12 - step_x).abs() < 0.01,
+            "horizontal spacing should be {step_x}, got {dx_12}"
+        );
+
+        // Check vertical spacing between row 0 and row 1 (same column)
+        let dy = positions[0].1 - positions[3].1;
+        assert!(
+            (dy - step_y).abs() < 0.01,
+            "vertical spacing should be {step_y}, got {dy}"
+        );
+    }
 }

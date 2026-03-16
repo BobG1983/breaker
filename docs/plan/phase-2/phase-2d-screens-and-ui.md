@@ -37,6 +37,7 @@
 
 - **Node timer display**: Prominent countdown (built in 2b, may need refinement here)
 - **Bolt-loss stakes display**: Per-archetype visual — lives for Aegis (others added in 2e)
+- **Visual interpolation**: Transform interpolation between FixedUpdate ticks for bolt and breaker. Without this, movement appears jerky at 64Hz fixed vs 60Hz+ display. Critical for the "speed, juice, adrenaline" identity.
 - **Minimal beyond that**: No score counter, no node progress indicator yet
 
 ---
@@ -48,4 +49,5 @@
 - [ ] Upgrade selection timer (expires = skip, no upgrade)
 - [ ] Pause menu (pause, resume, quit to menu)
 - [ ] Bolt-loss stakes display (Aegis lives)
+- [ ] Visual interpolation (smooth bolt/breaker between FixedUpdate ticks)
 - [ ] Full flow: menu → select breaker → run nodes → upgrade screens → run-end → menu

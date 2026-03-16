@@ -16,7 +16,7 @@ Bevy `States` for top-level game state. `SubStates` where a state only exists wi
 ## Playing sub-states (`PlayingState`)
 
 - `Active` — normal gameplay (default when entering `Playing`)
-- `Paused` — all gameplay frozen
+- `Paused` — all gameplay frozen **(stub — no transition or pause menu implemented yet; planned for Phase 2d)**
 
 `PlayingState` only exists when `GameState::Playing` is active — it is automatically created and destroyed by Bevy's sub-state lifecycle. Pausing is modeled as a sub-state (not top-level) because you can only pause from active gameplay. This constraint is encoded in the type system.
 

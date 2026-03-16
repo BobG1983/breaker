@@ -7,8 +7,8 @@ use crate::{
         BoltSystems,
         resources::BoltConfig,
         systems::{
-            animate_fade_out, apply_bump_velocity, hover_bolt, init_bolt_params, launch_bolt,
-            prepare_bolt_velocity, spawn_bolt, spawn_bolt_lost_text,
+            apply_bump_velocity, hover_bolt, init_bolt_params, launch_bolt, prepare_bolt_velocity,
+            spawn_bolt, spawn_bolt_lost_text,
         },
     },
     breaker::BreakerSystems,
@@ -43,10 +43,6 @@ impl Plugin for BoltPlugin {
                     spawn_bolt_lost_text,
                 )
                     .run_if(in_state(PlayingState::Active)),
-            )
-            .add_systems(
-                Update,
-                animate_fade_out.run_if(in_state(PlayingState::Active)),
             );
     }
 }

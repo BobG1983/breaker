@@ -9,7 +9,7 @@ mod prepare_bolt_velocity;
 mod spawn_bolt;
 
 pub use apply_bump_velocity::apply_bump_velocity;
-pub use bolt_lost_feedback::{animate_fade_out, spawn_bolt_lost_text};
+pub use bolt_lost_feedback::spawn_bolt_lost_text;
 pub use hover_bolt::hover_bolt;
 pub use init_bolt_params::init_bolt_params;
 pub use launch_bolt::launch_bolt;

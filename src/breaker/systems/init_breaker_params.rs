@@ -6,9 +6,10 @@ use crate::breaker::{
     components::{
         BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
         BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
-        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle,
-        MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
+        BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow, BumpVisualParams,
+        BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
+        DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration,
+        SettleTiltEase,
     },
     resources::BreakerConfig,
 };
@@ -65,14 +66,20 @@ pub fn init_breaker_params(
                     rise_ease: config.bump_visual_rise_ease,
                     fall_ease: config.bump_visual_fall_ease,
                 },
-            ));
+            ))
+            // Default bump multipliers — identity (1.0) unless overridden by
+            // init_archetype's apply_bolt_speed_boosts. Inserted separately so
+            // archetype-stamped values take precedence via last-write-wins.
+            .insert_if_new((BumpPerfectMultiplier(1.0), BumpWeakMultiplier(1.0)));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::components::{BreakerState, BreakerVelocity, BumpState};
+    use crate::breaker::components::{
+        BreakerState, BreakerVelocity, BumpPerfectMultiplier, BumpState, BumpWeakMultiplier,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -121,6 +128,8 @@ mod tests {
         assert!(world.get::<BumpPerfectCooldown>(entity).is_some());
         assert!(world.get::<BumpWeakCooldown>(entity).is_some());
         assert!(world.get::<BumpVisualParams>(entity).is_some());
+        assert!(world.get::<BumpPerfectMultiplier>(entity).is_some());
+        assert!(world.get::<BumpWeakMultiplier>(entity).is_some());
     }
 
     #[test]
@@ -181,6 +190,62 @@ mod tests {
         assert!(
             (params.peak - config.bump_visual_peak).abs() < f32::EPSILON,
             "BumpVisualParams.peak should match config"
+        );
+    }
+
+    #[test]
+    fn default_bump_multipliers_are_identity() {
+        let mut app = test_app();
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BreakerState::default(),
+                BreakerVelocity::default(),
+                BumpState::default(),
+            ))
+            .id();
+
+        app.update();
+
+        let perfect = app.world().get::<BumpPerfectMultiplier>(entity).unwrap();
+        assert!(
+            (perfect.0 - 1.0).abs() < f32::EPSILON,
+            "default perfect multiplier should be 1.0"
+        );
+        let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
+        assert!(
+            (weak.0 - 1.0).abs() < f32::EPSILON,
+            "default weak multiplier should be 1.0"
+        );
+    }
+
+    #[test]
+    fn archetype_multipliers_not_overwritten() {
+        let mut app = test_app();
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BreakerState::default(),
+                BreakerVelocity::default(),
+                BumpState::default(),
+                BumpPerfectMultiplier(1.5),
+                BumpWeakMultiplier(0.8),
+            ))
+            .id();
+
+        app.update();
+
+        let perfect = app.world().get::<BumpPerfectMultiplier>(entity).unwrap();
+        assert!(
+            (perfect.0 - 1.5).abs() < f32::EPSILON,
+            "archetype-stamped perfect multiplier should be preserved"
+        );
+        let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
+        assert!(
+            (weak.0 - 0.8).abs() < f32::EPSILON,
+            "archetype-stamped weak multiplier should be preserved"
         );
     }
 

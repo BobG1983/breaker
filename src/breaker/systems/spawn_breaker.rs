@@ -55,9 +55,12 @@ pub fn reset_breaker(
     playfield: Res<PlayfieldConfig>,
     mut query: Query<BreakerResetQuery, With<Breaker>>,
 ) {
-    let _ = &playfield; // future: use playfield for centering
-    for (mut transform, mut state, mut velocity, mut tilt, mut timer, base_y) in &mut query {
-        transform.translation.x = 0.0;
+    // Robust if PlayfieldConfig is ever offset from world origin
+    let center_x = f32::midpoint(playfield.left(), playfield.right());
+    for (mut transform, mut state, mut velocity, mut tilt, mut timer, mut bump, base_y) in
+        &mut query
+    {
+        transform.translation.x = center_x;
         transform.translation.y = base_y.0;
         *state = BreakerState::Idle;
         velocity.x = 0.0;
@@ -65,6 +68,10 @@ pub fn reset_breaker(
         tilt.ease_start = 0.0;
         tilt.ease_target = 0.0;
         timer.remaining = 0.0;
+        bump.active = false;
+        bump.timer = 0.0;
+        bump.post_hit_timer = 0.0;
+        bump.cooldown = 0.0;
     }
 }
 
@@ -158,7 +165,7 @@ mod tests {
         app.init_resource::<Assets<Mesh>>();
         app.init_resource::<Assets<ColorMaterial>>();
 
-        // Spawn breaker with modified state
+        // Spawn breaker with modified state (including active bump window)
         let config = BreakerConfig::default();
         app.world_mut().spawn((
             Breaker,
@@ -171,7 +178,12 @@ mod tests {
             },
             BreakerStateTimer { remaining: 0.1 },
             BreakerBaseY(config.y_position),
-            BumpState::default(),
+            BumpState {
+                active: true,
+                timer: 0.1,
+                post_hit_timer: 0.05,
+                cooldown: 0.2,
+            },
             Transform::from_xyz(100.0, config.y_position + 50.0, 0.0),
             CleanupOnRunEnd,
         ));
@@ -179,7 +191,7 @@ mod tests {
         app.add_systems(Update, reset_breaker);
         app.update();
 
-        let (transform, state, velocity, tilt, timer) = app
+        let (transform, state, velocity, tilt, timer, bump) = app
             .world_mut()
             .query::<(
                 &Transform,
@@ -187,6 +199,7 @@ mod tests {
                 &BreakerVelocity,
                 &BreakerTilt,
                 &BreakerStateTimer,
+                &BumpState,
             )>()
             .iter(app.world())
             .next()
@@ -197,6 +210,19 @@ mod tests {
         assert!(tilt.angle.abs() < f32::EPSILON);
         assert!(tilt.ease_start.abs() < f32::EPSILON);
         assert!(timer.remaining.abs() < f32::EPSILON);
+        assert!(!bump.active, "bump should be inactive after reset");
+        assert!(
+            bump.timer.abs() < f32::EPSILON,
+            "bump timer should be cleared"
+        );
+        assert!(
+            bump.post_hit_timer.abs() < f32::EPSILON,
+            "post_hit_timer should be cleared"
+        );
+        assert!(
+            bump.cooldown.abs() < f32::EPSILON,
+            "cooldown should be cleared"
+        );
         assert!((transform.translation.x).abs() < f32::EPSILON);
         assert!((transform.translation.y - config.y_position).abs() < f32::EPSILON);
     }

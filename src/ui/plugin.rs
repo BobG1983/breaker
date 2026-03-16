@@ -1,12 +1,12 @@
 //! UI plugin registration.
 
-use bevy::prelude::*;
+use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
 use crate::{
     shared::{GameState, PlayingState},
     ui::{
         messages::UpgradeSelected,
-        systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
+        systems::{animate_fade_out, spawn_side_panels, spawn_timer_hud, update_timer_display},
     },
 };
 
@@ -20,11 +20,11 @@ impl Plugin for UiPlugin {
         app.add_message::<UpgradeSelected>()
             .add_systems(
                 OnEnter(GameState::Playing),
-                (spawn_side_panels, spawn_timer_hud),
+                (spawn_side_panels, ApplyDeferred, spawn_timer_hud).chain(),
             )
             .add_systems(
                 Update,
-                update_timer_display.run_if(in_state(PlayingState::Active)),
+                (update_timer_display, animate_fade_out).run_if(in_state(PlayingState::Active)),
             );
     }
 }

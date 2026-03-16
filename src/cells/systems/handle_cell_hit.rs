@@ -1,7 +1,5 @@
 //! System to handle cell damage when hit by the bolt.
 
-use std::collections::HashSet;
-
 use bevy::prelude::*;
 
 use crate::{
@@ -25,8 +23,14 @@ pub fn handle_cell_hit(
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mut despawned: HashSet<Entity> = HashSet::new();
-    for hit in reader.read() {
+    let mut messages = reader.read().peekable();
+    if messages.peek().is_none() {
+        return;
+    }
+
+    // Small vec suffices — MAX_BOUNCES = 4 limits hits per frame
+    let mut despawned = Vec::<Entity>::new();
+    for hit in messages {
         if despawned.contains(&hit.cell) {
             continue;
         }
@@ -43,7 +47,7 @@ pub fn handle_cell_hit(
                 entity: hit.cell,
                 was_required_to_clear: is_required,
             });
-            despawned.insert(hit.cell);
+            despawned.push(hit.cell);
         } else {
             // Visual feedback — dim HDR intensity based on remaining health
             let frac = health.fraction();
