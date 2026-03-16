@@ -246,13 +246,11 @@ See [observers_and_oneshot.md](observers_and_oneshot.md) for full details. Key f
 - `ChildBuilder` does NOT exist in 0.18 — that name is from Bevy 0.14 and earlier
 - Example function signature: `fn spawn_children(parent: &mut ChildSpawnerCommands<'_>) { parent.spawn(...); }`
 
-## Sources
+## Transform Interpolation / FixedUpdate Visual Smoothing (verified v0.18.1)
 
-- Feature flags: https://docs.rs/bevy/0.18.1/bevy/index.html#cargo-features
-- Raw Cargo.toml: https://raw.githubusercontent.com/bevyengine/bevy/v0.18.0/Cargo.toml
-- Fast compile guide: https://bevy.org/learn/quick-start/getting-started/setup/
-- Message API: https://docs.rs/bevy_ecs/0.18.1/bevy_ecs/message/index.html
-- States API: https://docs.rs/bevy/0.18.1/bevy/state/app/trait.AppExtStates.html
-- PluginGroupBuilder: https://docs.rs/bevy/0.18.1/bevy/app/struct.PluginGroupBuilder.html
-- WindowPlugin: https://docs.rs/bevy/0.18.1/bevy/window/struct.WindowPlugin.html
-- bevy_egui: https://docs.rs/bevy_egui/latest/bevy_egui/index.html
+See [transform_interpolation.md](transform_interpolation.md) for full details. Key facts:
+- **NO built-in TransformInterpolation or TransformSmoothing in Bevy 0.18.1** — not in bevy_transform crate
+- Manual pattern: two components (`PhysicalTranslation`, `PreviousPhysicalTranslation`) + system in `AfterFixedMainLoop` using `time.overstep_fraction()` to lerp into visual `Transform`
+- Correct schedule slot: `RunFixedMainLoop` + `.in_set(RunFixedMainLoopSystems::AfterFixedMainLoop)` (or `PostUpdate`)
+- `RunFixedMainLoopSystems` variants: `BeforeFixedMainLoop`, `FixedMainLoop`, `AfterFixedMainLoop`
+- Third-party option: `bevy_transform_interpolation` crate — supports Bevy `^0.18.0`; add `TranslationInterpolation` marker component + `TransformInterpolationPlugin`

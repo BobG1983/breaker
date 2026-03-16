@@ -1,18 +1,41 @@
 ---
 name: system-map
-description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 post-cleanup re-scan)
+description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 post-Phase-2e)
 type: reference
 ---
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-16 (post-architecture-cleanup re-scan, Bevy 0.18.1)
+Last updated: 2026-03-16 (Phase 2e — interpolation pipeline, apply_time_penalty, spawn_additional_bolt, ExtraBolt support)
 
 ## Plugin Registration Order (game.rs)
-InputPlugin → ScreenPlugin → PhysicsPlugin → WallPlugin → BreakerPlugin → BoltPlugin →
-CellsPlugin → UpgradesPlugin → RunPlugin → AudioPlugin → FxPlugin → UiPlugin → DebugPlugin
+InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
+BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin → UiPlugin → DebugPlugin
 
-Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from BoltPlugin).
+Note: InterpolatePlugin is now explicitly registered BEFORE PhysicsPlugin (owns restore/store/interpolate).
+
+---
+
+## InterpolatePlugin
+
+### `restore_authoritative` — FixedFirst [NO ordering constraints]
+- Writes (query): mut Transform, mut PhysicsTranslation (With<InterpolateTransform>)
+- Runs before ALL FixedUpdate systems by schedule position
+- Effect: shifts PhysicsTranslation.previous = current; restores Transform.translation = current
+
+### `store_authoritative` — FixedPostUpdate [NO ordering constraints]
+- Reads (query): &Transform (With<InterpolateTransform>)
+- Writes (query): mut PhysicsTranslation (With<InterpolateTransform>)
+- Runs after ALL FixedUpdate systems complete
+- Effect: captures post-physics Transform.translation into PhysicsTranslation.current
+
+### `interpolate_transform` — PostUpdate [NO ordering constraints]
+- Reads: Res<Time<Fixed>>
+- Reads (query): &PhysicsTranslation (With<InterpolateTransform>)
+- Writes (query): mut Transform (With<InterpolateTransform>)
+- Effect: lerps Transform.translation between previous and current using overstep_fraction
+
+Entities with interpolation: Bolt (baseline + ExtraBolt) — both get InterpolateTransform + PhysicsTranslation at spawn
 
 ---
 
@@ -33,7 +56,7 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 ### `spawn_loading_screen` — OnEnter(GameState::Loading)
 - Commands (spawn UI)
 
-### Seeding systems (x10) — Update, run_if(GameState::Loading), tracked as progress
+### Seeding systems (x11) — Update, run_if(GameState::Loading), tracked as progress
 - Each reads its own Res<Assets<*Defaults>> and Commands (insert_resource)
 - Systems: seed_playfield_config, seed_bolt_config, seed_breaker_config, seed_cell_config,
   seed_input_config, seed_main_menu_config, seed_timer_ui_config, seed_archetype_registry,
@@ -173,15 +196,21 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 
 #### `bridge_bolt_lost` — FixedUpdate, after(PhysicsSystems::BoltLost), run_if(ActiveBehaviors has BoltLost trigger AND PlayingState::Active)
 - Receives: MessageReader<BoltLost>
-- Commands (trigger LoseLifeRequested)
+- Commands (trigger consequences based on ActiveBehaviors — LoseLifeRequested, TimePenaltyRequested, SpawnBoltRequested)
 
 #### `bridge_bump` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(ActiveBehaviors has any bump trigger AND PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>
-- Commands (trigger bump consequence events based on ActiveBehaviors)
+- Commands (trigger consequences based on ActiveBehaviors)
 
 #### `handle_life_lost` — Observer on LoseLifeRequested (immediate, not a schedule system)
 - Writes (query): mut LivesCount
 - Sends: MessageWriter<RunLost> (when lives reach zero)
+
+#### `handle_time_penalty` — Observer on TimePenaltyRequested (immediate, not a schedule system)
+- Sends: MessageWriter<ApplyTimePenalty>
+
+#### `handle_spawn_bolt_requested` — Observer on SpawnBoltRequested (immediate, not a schedule system)
+- Sends: MessageWriter<SpawnAdditionalBolt>
 
 #### `update_lives_display` — Update, run_if(any_with_component::<LivesDisplay> AND PlayingState::Active)
 - Reads (query): Query<&LivesCount>
@@ -195,7 +224,7 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 - Reads: Res<BoltConfig>, Res<BreakerConfig>, Res<RunState>
 - Writes: ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
 - Reads (query): Query<&Transform, With<Breaker>>
-- Commands (spawn Bolt entity with CleanupOnNodeExit)
+- Commands (spawn Bolt entity with CleanupOnNodeExit, InterpolateTransform, PhysicsTranslation)
 
 ### `init_bolt_params` — OnEnter(GameState::Playing), after(spawn_bolt)
 - Reads: Res<BoltConfig>
@@ -217,7 +246,13 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 ### `apply_bump_velocity` — FixedUpdate, after(PhysicsSystems::BreakerCollision), before(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>
 - Writes (query): mut BoltVelocity, read BoltBaseSpeed, BoltMaxSpeed (With<Bolt>)
-- NOTE: No longer queries BreakerPlugin components. Multiplier now embedded in BumpPerformed message.
+
+### `spawn_additional_bolt` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
+- Receives: MessageReader<SpawnAdditionalBolt>
+- Reads: Res<BoltConfig>, ResMut<GameRng>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
+- Reads (query): Query<&Transform, With<Breaker>> (read-only)
+- Commands (spawn Bolt+ExtraBolt entity with InterpolateTransform, PhysicsTranslation, CleanupOnNodeExit)
+- NOTE: No ordering constraint vs apply_bump_velocity or PhysicsSystems::BoltLost
 
 ### `spawn_bolt_lost_text` — FixedUpdate, run_if(PlayingState::Active) [NO ordering]
 - Receives: MessageReader<BoltLost>
@@ -225,7 +260,7 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 
 ---
 
-## FxPlugin (NEW — animate_fade_out moved from BoltPlugin)
+## FxPlugin
 
 ### `animate_fade_out` — Update, run_if(PlayingState::Active)
 - Reads: Res<Time>
@@ -250,10 +285,13 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 - Sends: MessageWriter<BoltHitBreaker>
 
 ### `bolt_lost` — FixedUpdate, after(bolt_breaker_collision), in_set(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
-- Reads: Res<PlayfieldConfig>
-- Writes (query): mut Transform, mut BoltVelocity, read BoltBaseSpeed, BoltRadius, BoltRespawnOffsetY (ActiveBoltFilter)
+- Reads: Res<PlayfieldConfig>, ResMut<GameRng>
+- Writes (query): mut Transform, mut BoltVelocity + inserts PhysicsTranslation on respawn (baseline bolt)
+  OR despawns entity (ExtraBolt)
+- Reads (query): Has<ExtraBolt> as part of bolt_query (ActiveBoltFilter)
 - Reads (query): Query<&Transform, (With<Breaker>, Without<Bolt>)>
-- Sends: MessageWriter<BoltLost>
+- Sends: MessageWriter<BoltLost> (once per lost bolt, including ExtraBolt)
+- Commands (despawn ExtraBolt OR insert respawn components on baseline)
 
 ---
 
@@ -286,6 +324,13 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 - Writes: ResMut<NodeTimer>
 - Sends: MessageWriter<TimerExpired>
 
+### `apply_time_penalty` — FixedUpdate, after(NodeSystems::TickTimer), run_if(PlayingState::Active)
+- Receives: MessageReader<ApplyTimePenalty>
+- Writes: ResMut<NodeTimer>
+- Sends: MessageWriter<TimerExpired> (when penalty drives timer to zero)
+- NOTE: Runs AFTER tick_node_timer (ordering constraint in place)
+- NOTE: Runs WITHOUT ordering vs handle_timer_expired (handle_timer_expired reads the message next)
+
 ### `handle_node_cleared` — FixedUpdate, after(NodeSystems::TrackCompletion), run_if(PlayingState::Active)
 - Receives: MessageReader<NodeCleared>
 - Reads: Res<NodeLayoutRegistry>
@@ -294,10 +339,13 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 ### `handle_timer_expired` — FixedUpdate, after(NodeSystems::TickTimer), after(handle_node_cleared), run_if(PlayingState::Active)
 - Receives: MessageReader<TimerExpired>
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
+- Guards: checks run_state.outcome != InProgress and run_state.transition_queued before acting
+- NOTE: Reads TimerExpired messages from BOTH tick_node_timer AND apply_time_penalty
 
-### `handle_run_lost` — FixedUpdate, run_if(PlayingState::Active) [UNORDERED vs handle_node_cleared/handle_timer_expired]
+### `handle_run_lost` — FixedUpdate, after(handle_node_cleared), after(handle_timer_expired), run_if(PlayingState::Active)
 - Receives: MessageReader<RunLost>
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
+- NOTE: Previously unordered vs handle_node_cleared/handle_timer_expired — NOW FIXED
 
 ### `advance_node` — OnEnter(GameState::NodeTransition)
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
@@ -340,7 +388,7 @@ Note: FxPlugin is now explicitly registered (owns animate_fade_out, moved from B
 
 ### `breaker_state_ui` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<DebugOverlays>, Res<LastBumpResult>, EguiContexts
-- Reads (query): BreakerBumpTelemetryQuery (BreakerState+BumpState+BreakerTilt+BreakerVelocity+BumpPerfectWindow+BumpEarlyWindow+BumpLateWindow)
+- Reads (query): BreakerBumpTelemetryQuery
 
 ### `input_actions_ui` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<DebugOverlays>, Res<InputActions>, EguiContexts

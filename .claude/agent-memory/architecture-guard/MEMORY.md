@@ -24,6 +24,7 @@
 - **Architecture compromise cleanup 2026-03-16**: 5 compromises resolved — bump multiplier in message (bolt no longer reads breaker components), shared math module (ccd.rs moved to shared/math.rs), NodePlugin extracted (run/node/ now follows sub-domain pattern), RunLost message (handle_life_lost no longer writes RunState), fx domain (animate_fade_out moved from UI to fx). Terminology updated.
 - **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues (2 moderate, 1 minor). upgrades/ domain renamed to chips/. screen/loading seeds registry. screen/chip_select reads registry + writes ChipSelected. ui/messages.rs imports ChipKind from chips domain (acceptable vocabulary-type import).
 - **Compromise cleanup verification audit 2026-03-16**: PASS — all 5 compromises confirmed resolved. 0 critical violations. 3 doc drift items (messages.md missing RunLost + stale BumpPerformed, plugins.md missing fx domain, layout.md + physics.md stale ccd.rs references). 1 minor observation (RunLost sender-ownership deviation).
+- **Phase 2e audit 2026-03-16**: PASS — 0 critical violations, 0 moderate issues, 2 observations. Chrono archetype (TimePenalty consequence + ApplyTimePenalty message), Prism archetype (SpawnBolt consequence + SpawnAdditionalBolt message + ExtraBolt marker), interpolate/ domain (visual interpolation between FixedUpdate ticks). Consumer-owns message pattern now established for all consequence-to-target messages.
 
 ## Key Patterns Confirmed
 - Messages defined in sending domain's `messages.rs`, registered via `app.add_message::<T>()` in owning plugin
@@ -35,6 +36,8 @@
 - **Nested sub-domains allowed** (added 2026-03-13): a domain may contain child sub-domains with their own plugin, components, and systems. Same canonical layout. Parent plugin adds child plugins. Max one level of nesting. Sub-domains may import parent's shared components. See `docs/architecture/layout.md`.
 - **Per-consequence layout** (added 2026-03-13): Behavior sub-domains use per-consequence file organization in a `consequences/` directory grouping (NOT a sub-domain — no plugin.rs). Each consequence file owns its Event, Components, observer, and helpers. See `docs/architecture/layout.md` "Per-Consequence Layout" section.
 - **Bevy observers for intra-domain dispatch**: Consequence events use `#[derive(Event)]` + `commands.trigger()` + `app.add_observer()` for internal behavior dispatch within a domain. Messages (`#[derive(Message)]`) remain required for inter-domain communication.
+- **Consumer-owns message pattern** for consequence-to-target messages: RunLost, ApplyTimePenalty, SpawnAdditionalBolt all defined in consuming domain. Accepted because message semantically belongs to consumer vocabulary; breaker/behaviors is merely the trigger source.
+- interpolate/ domain: FixedFirst (restore_authoritative), FixedPostUpdate (store_authoritative), PostUpdate (interpolate_transform). Entities opt in via InterpolateTransform + PhysicsTranslation components. No messages, no resources.
 - Debug plugin gated behind `#[cfg(feature = "dev")]` inside `build()`, struct always compiled
 - lib.rs visibility correct: pub for app/game/shared, pub(crate) for all domain modules
 - proptest dev-dependency is present in Cargo.toml and actively used in shared/math.rs (proptests for ray_vs_aabb)
@@ -72,6 +75,9 @@ BreakerSystems::Move
               PhysicsSystems::BoltLost
                 <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
             <- bridge_bump .after(PhysicsSystems::BreakerCollision)
+              <- spawn_additional_bolt .after(PhysicsSystems::BreakerCollision)
+  NodeSystems::TickTimer
+    <- apply_time_penalty .after(NodeSystems::TickTimer)
 ```
 
 Breaker intra-domain: update_bump → move_breaker → update_breaker_state → grade_bump
@@ -91,13 +97,17 @@ Active messages (Phase 1, consumed in code):
 Active messages (Phase 2b/2c):
 - CellDestroyed: cells → run (track_node_completion)
 - NodeCleared: run/node (track_node_completion) → run (handle_node_cleared) [defined in run/node/messages.rs, registered by NodePlugin]
-- TimerExpired: run/node (tick_node_timer) → run (handle_timer_expired) [defined in run/node/messages.rs, registered by NodePlugin]
-- RunLost: breaker/behaviors (handle_life_lost) → run (handle_run_lost) [defined in run/messages.rs — consumer-owns deviation, semantically correct]
+- TimerExpired: run/node (tick_node_timer, apply_time_penalty) → run (handle_timer_expired) [defined in run/node/messages.rs, registered by NodePlugin]
+- RunLost: breaker/behaviors (handle_life_lost) → run (handle_run_lost) [defined in run/messages.rs — consumer-owns]
+
+Active messages (Phase 2e):
+- ApplyTimePenalty { seconds }: breaker/behaviors/time_penalty (observer) → run/node/apply_time_penalty [defined in run/node/messages.rs — consumer-owns]
+- SpawnAdditionalBolt: breaker/behaviors/spawn_bolt (observer) → bolt/spawn_additional_bolt [defined in bolt/messages.rs — consumer-owns]
 
 Active messages (upgrade infrastructure):
-- UpgradeSelected: screen/upgrade_select (handle_upgrade_input) → (future: upgrades domain)
+- ChipSelected: screen/chip_select (handle_chip_input) → (future: chips domain)
 
-Registered but no consumers yet: UpgradeSelected (now written by handle_upgrade_input, still no consumer)
+Registered but no consumers yet: ChipSelected
 
 ## Test Pattern
 - Every plugin has a `plugin_builds` headless test (except DebugPlugin)
@@ -117,6 +127,8 @@ Registered but no consumers yet: UpgradeSelected (now written by handle_upgrade_
 - screen/upgrade_select reads upgrades::UpgradeRegistry (read-only, for card display + offer generation)
 - All screen sub-domains (main_menu, run_setup, pause_menu, chip_select) read input::InputConfig (read-only, for key bindings)
 - ui/messages.rs imports chips::ChipKind (vocabulary type in ChipSelected message payload — acceptable)
+- bolt/spawn_additional_bolt reads breaker Transform (read-only, for spawn positioning — same pattern as spawn_bolt, hover_bolt)
+- Other domains attach interpolate components (InterpolateTransform, PhysicsTranslation) at spawn — opt-in cross-domain composition, analogous to CleanupOnNodeExit
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. Hot-reload systems write to *Config resources and entity components across all domains. Telemetry reads from all domains. All gated behind `#[cfg(feature = "dev")]` — compiled out of release. Does NOT set precedent for production domains.
 
 ## Resolved Compromises (2026-03-16)

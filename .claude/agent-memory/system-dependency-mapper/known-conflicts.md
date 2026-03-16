@@ -1,175 +1,199 @@
 ---
 name: known-conflicts
-description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-16, updated post-cleanup)
+description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-16, post-Phase-2e)
 type: reference
 ---
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-16 (post-architecture-cleanup re-scan)
+Last updated: 2026-03-16 (Phase 2e — interpolation pipeline, apply_time_penalty, spawn_additional_bolt)
 
 ---
 
-## RESOLVED — apply_bump_velocity now has correct ordering vs bolt_lost
+## RESOLVED — apply_bump_velocity ordering vs bolt_lost
 
-Previously `apply_bump_velocity` and `bolt_lost` were both `.after(BreakerCollision)` with no
-ordering between them, creating a `BoltVelocity` write race.
-
-**Current state (bolt/plugin.rs lines 40–42):**
-```rust
-apply_bump_velocity
-    .after(PhysicsSystems::BreakerCollision)
-    .before(PhysicsSystems::BoltLost),
-```
-
-`bolt_lost` is now in `PhysicsSystems::BoltLost` set. `apply_bump_velocity` runs
-`.before(PhysicsSystems::BoltLost)`, so it always completes before `bolt_lost` executes.
-The fix is in place and correct. No remaining conflict here.
+`apply_bump_velocity` runs `.after(BreakerCollision).before(BoltLost)`. Correct and confirmed.
 
 ---
 
-## CONFIRMED CONFLICT — animate_bump_visual and animate_tilt_visual write Transform on Breaker in Update
+## RESOLVED — handle_run_lost ordering vs handle_node_cleared / handle_timer_expired
 
-**Files:** `src/breaker/systems/bump_visual.rs`, `src/breaker/systems/tilt_visual.rs`
-
-Both run in `Update`, both write `&mut Transform` on `With<Breaker>`. No ordering constraint.
-
-- `animate_bump_visual` writes `transform.translation.y`
-- `animate_tilt_visual` writes `transform.rotation`
-
-**Severity:** Low — they write different fields (translation vs rotation). No logical conflict.
-Bevy will serialize these (no parallel execution) unless marked `ambiguous_with`. Expected
-behavior for two visual Update systems. No fix needed unless suppressing ambiguity warnings.
-
----
-
-## RESOLVED — RunPlugin FixedUpdate ordering
-
-Previous state: all four run systems in a flat unordered tuple.
-
-**Current state (run/plugin.rs):**
-```rust
-handle_node_cleared.after(NodeSystems::TrackCompletion),
-handle_timer_expired
-    .after(NodeSystems::TickTimer)
-    .after(handle_node_cleared),
-handle_run_lost,
-```
-
-And in node/plugin.rs:
-```rust
-track_node_completion.in_set(NodeSystems::TrackCompletion),
-tick_node_timer.in_set(NodeSystems::TickTimer),
-```
-
-Result: `track_node_completion` → `handle_node_cleared` is now guaranteed same-tick.
-`tick_node_timer` → `handle_timer_expired` is now guaranteed same-tick.
-`handle_timer_expired` also runs `.after(handle_node_cleared)` — prevents both firing the
-same tick from interfering. No remaining ordering concern in the run group.
-
----
-
-## LOW SEVERITY — handle_cell_hit has no ordering vs track_node_completion
-
-**Files:** `src/cells/plugin.rs`, `src/run/node/plugin.rs`
-
-`handle_cell_hit` (CellsPlugin, FixedUpdate) sends `CellDestroyed`.
-`track_node_completion` (NodePlugin, FixedUpdate, `NodeSystems::TrackCompletion`) reads it.
-
-No cross-plugin ordering constraint. Since messages persist across frames, a one-tick delay
-is safe — `track_node_completion` reads the message on tick N+1 if it runs before
-`handle_cell_hit` on tick N.
-
-**Severity:** Low — one-tick delay on cell destruction counting. Node clear detection delayed
-by at most one fixed-update tick (~16ms at 60Hz). Completely imperceptible.
-
-**Fix (optional):** Add `handle_cell_hit.before(NodeSystems::TrackCompletion)` in CellsPlugin.
-Not currently needed.
-
----
-
-## NEW — handle_run_lost has no ordering vs handle_node_cleared / handle_timer_expired
-
-**File:** `src/run/plugin.rs`
-
-`handle_run_lost` is registered in the same `.run_if(in_state(PlayingState::Active))` tuple as
-`handle_node_cleared` and `handle_timer_expired`, but with no `.after()` constraints.
-
-All three write `ResMut<RunState>` and `ResMut<NextState<GameState>>`. Bevy will serialize
-them automatically on shared mutable resource access, but execution order is non-deterministic.
-
-**Practical concern:** If a `RunLost` and a `NodeCleared`/`TimerExpired` message arrive on the
-same tick (e.g., last bolt lost on the same tick as the last cell destroyed), the outcome
-depends on which system runs first:
-- `handle_node_cleared` first → `RunState::Won`, then `handle_run_lost` checks
-  `run_state.outcome == InProgress` → false, skips. Correct — win takes priority.
-- `handle_run_lost` first → `RunState::Lost`, then `handle_node_cleared` overwrites
-  `RunState::Won` and sets `GameState::NodeTransition`. Incorrect — loss then falsely wins.
-
-**Severity:** Low in practice — simultaneous last-cell-cleared + bolt-lost is an edge case.
-`handle_life_lost` is an observer (runs immediately on `LoseLifeRequested`) and writes
-`RunLost` as a message. `handle_cell_hit` sends `CellDestroyed`, which `track_node_completion`
-reads next tick, then `handle_node_cleared` reads `NodeCleared` the tick after. The
-multi-tick propagation delay makes the simultaneous scenario very unlikely.
-
-**Fix (recommended):** Add `.after(handle_node_cleared)` and `.after(handle_timer_expired)` to
-`handle_run_lost`, so a win always takes priority over a loss if both resolve on the same tick.
-In `run/plugin.rs`:
+**run/plugin.rs current registration:**
 ```rust
 handle_run_lost
     .after(handle_node_cleared)
     .after(handle_timer_expired),
 ```
+The previously-flagged ordering gap is now fixed. Win (node cleared) takes priority over loss.
 
 ---
 
-## POTENTIAL: launch_bolt has no ordering vs hover_bolt / prepare_bolt_velocity
+## CONFIRMED — animate_bump_visual and animate_tilt_visual write Transform on Breaker in Update
 
-**File:** `src/bolt/plugin.rs`
+Both run in Update, both write `&mut Transform` on `With<Breaker>`. No ordering constraint.
+- `animate_bump_visual` writes `transform.translation.y`
+- `animate_tilt_visual` writes `transform.rotation`
 
-`launch_bolt` has no ordering. Analysis shows this is NOT a real conflict because filter
-predicates (`ServingBoltFilter` / `ActiveBoltFilter`) make the queries disjoint on launch frame.
-No fix needed.
+**Severity:** Low. Different fields. Bevy serializes them. No logical conflict.
+
+---
+
+## LOW SEVERITY — handle_cell_hit has no ordering vs track_node_completion
+
+`handle_cell_hit` (CellsPlugin) sends `CellDestroyed`. `track_node_completion` reads it.
+No cross-plugin ordering constraint. One-tick delay acceptable — messages persist.
+
+---
+
+## NEW LOW SEVERITY — apply_time_penalty and handle_timer_expired are unordered
+
+**Files:** `src/run/node/plugin.rs`, `src/run/plugin.rs`
+
+`apply_time_penalty` is registered `.after(NodeSystems::TickTimer)`.
+`handle_timer_expired` is registered `.after(NodeSystems::TickTimer).after(handle_node_cleared)`.
+
+Both depend on `NodeSystems::TickTimer` completing, but neither is ordered relative to the other.
+When `apply_time_penalty` sends a `TimerExpired` message (penalty drives timer to zero), that
+message may not be read by `handle_timer_expired` until the next tick if `handle_timer_expired`
+runs before `apply_time_penalty` in the same tick.
+
+**Practical consequence:** A time-penalty-driven timer expiry may be delayed by one fixed tick
+(~16ms at 60Hz). This is imperceptible in gameplay — `tick_node_timer` will catch any remaining
+time on the next tick anyway.
+
+**Severity:** Low. One-tick delay on time-penalty-induced timer expiry.
+
+**Fix (optional):** Add `apply_time_penalty.before(handle_timer_expired)` constraint in NodePlugin,
+OR restructure so `apply_time_penalty` is in its own system set that `handle_timer_expired` is ordered after. For example in node/plugin.rs:
+```rust
+apply_time_penalty
+    .after(NodeSystems::TickTimer)
+    .before(handle_timer_expired),  // ensure same-tick propagation
+```
+But `handle_timer_expired` is in run/plugin.rs, so the cross-plugin ordering would need to be
+established from NodePlugin's side referencing the RunPlugin system function directly — which
+breaks plugin encapsulation. The 1-tick delay is the correct trade-off to preserve encapsulation.
+
+---
+
+## NO CONFLICT — interpolation pipeline schedule ordering
+
+`restore_authoritative` (FixedFirst) runs before ALL FixedUpdate systems by schedule.
+`store_authoritative` (FixedPostUpdate) runs after ALL FixedUpdate systems by schedule.
+`interpolate_transform` (PostUpdate) runs after ALL Update systems by schedule.
+
+These are distinct schedules with no overlap. No ordering constraint needed — the schedule
+hierarchy itself enforces the correct pipeline:
+```
+FixedFirst:        restore_authoritative     ← restores Transform = physics.current
+FixedUpdate:       [all physics/gameplay]    ← moves bolts via Transform
+FixedPostUpdate:   store_authoritative       ← captures Transform → physics.current
+                   clear_input_actions
+PostUpdate:        interpolate_transform     ← lerps Transform between previous/current
+```
+
+---
+
+## NO CONFLICT — interpolate_transform (PostUpdate) vs animate_bump_visual / animate_tilt_visual (Update)
+
+`interpolate_transform` writes `Transform.translation.x/y` on Bolt entities (With<InterpolateTransform>).
+`animate_bump_visual` writes `Transform.translation.y` on Breaker entities (With<Breaker>).
+`animate_tilt_visual` writes `Transform.rotation` on Breaker entities (With<Breaker>).
+
+Bolt and Breaker are different entities. No archetype overlap. No conflict.
+
+---
+
+## NO CONFLICT — restore_authoritative (FixedFirst) vs physics mutation systems
+
+`restore_authoritative` runs in FixedFirst and completes before any FixedUpdate system starts.
+All physics systems (bolt_cell_collision, bolt_breaker_collision, bolt_lost, hover_bolt, etc.)
+run in FixedUpdate. They see the restored authoritative position, not the interpolated one.
+This is exactly the correct invariant. No conflict.
+
+---
+
+## NO CONFLICT — store_authoritative (FixedPostUpdate) vs clear_input_actions
+
+`store_authoritative` reads `&Transform` and writes `PhysicsTranslation`.
+`clear_input_actions` writes `ResMut<InputActions>`.
+Completely disjoint data access. Both run in FixedPostUpdate with no ordering needed.
+
+---
+
+## NO CONFLICT — spawn_additional_bolt query vs physics bolt queries
+
+`spawn_additional_bolt` reads `Query<&Transform, With<Breaker>>` (read-only).
+Physics systems read `Query<&Transform, (With<Breaker>, Without<Bolt>)>` (same — read-only).
+
+Both are read-only on Breaker Transform. Bevy allows multiple simultaneous readers.
+No conflict even if run in parallel.
+
+`spawn_additional_bolt` spawns new entities via Commands — deferred, applied after FixedUpdate.
+The spawned ExtraBolt entities will not be visible to physics queries in the same tick.
+This is correct: the new bolt appears on the next tick, which is the intended behavior.
+
+---
+
+## POTENTIAL — spawn_additional_bolt vs apply_bump_velocity: no ordering between them
+
+Both run `.after(PhysicsSystems::BreakerCollision)`.
+- `apply_bump_velocity`: writes `mut BoltVelocity` on existing With<Bolt> entities
+- `spawn_additional_bolt`: uses Commands to spawn new entities (deferred)
+
+Because `spawn_additional_bolt` only uses Commands (deferred), it cannot conflict with
+`apply_bump_velocity`'s direct component writes. The new entity does not exist in the world
+until commands flush, so `apply_bump_velocity`'s query cannot see it. No actual conflict.
 
 ---
 
 ## ORDERING REFERENCE — Full FixedUpdate Chain (PlayingState::Active)
 
-Fully constrained chain (serial):
 ```
-update_bump  (BreakerPlugin)
-  → move_breaker (.after(update_bump), BreakerSystems::Move)
-    → update_breaker_state (.after(move_breaker))
-    → hover_bolt (.after(BreakerSystems::Move))
-    → prepare_bolt_velocity (.after(BreakerSystems::Move), BoltSystems::PrepareVelocity)
-      → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
-        → bolt_breaker_collision (.after(bolt_cell_collision), PhysicsSystems::BreakerCollision)
-          → apply_bump_velocity (.after(BreakerCollision), .before(BoltLost))  ← FIXED
-          → grade_bump (.after(update_bump) AND .after(PhysicsSystems::BreakerCollision))
-          → bridge_bump (.after(PhysicsSystems::BreakerCollision), conditional)
-          → track_bump_result (.after(PhysicsSystems::BreakerCollision), dev only)
-          → bolt_lost (.after(bolt_breaker_collision), PhysicsSystems::BoltLost)
-            → bridge_bolt_lost (.after(PhysicsSystems::BoltLost), conditional)
-              → [observer: handle_life_lost] (immediate on LoseLifeRequested trigger)
-                → sends RunLost message
-          → grade_bump continuations: perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text (.after(grade_bump))
-```
+FixedFirst:
+  restore_authoritative  [InterpolatePlugin]
 
-NodePlugin FixedUpdate (ordered chains):
-```
-track_node_completion (NodeSystems::TrackCompletion)  ← handle_cell_hit unordered vs this
-  → [message: NodeCleared] → handle_node_cleared (.after(NodeSystems::TrackCompletion))
-tick_node_timer (NodeSystems::TickTimer)
-  → [message: TimerExpired] → handle_timer_expired (.after(NodeSystems::TickTimer), .after(handle_node_cleared))
-```
+FixedUpdate:
+  update_bump  (BreakerPlugin)
+    → move_breaker (.after(update_bump), BreakerSystems::Move)
+        → update_breaker_state (.after(move_breaker))
+        → hover_bolt (.after(BreakerSystems::Move))
+        → prepare_bolt_velocity (.after(BreakerSystems::Move), BoltSystems::PrepareVelocity)
+            → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
+                → bolt_breaker_collision (.after(bolt_cell_collision), BreakerCollision set)
+                    → apply_bump_velocity (.after(BreakerCollision), .before(BoltLost))
+                    → spawn_additional_bolt (.after(BreakerCollision))  [Commands only, no ordering vs apply_bump_velocity]
+                    → grade_bump (.after(update_bump) AND .after(BreakerCollision))
+                    → bridge_bump (.after(BreakerCollision), conditional)
+                        → [observer: handle_time_penalty] → ApplyTimePenalty message
+                        → [observer: handle_spawn_bolt_requested] → SpawnAdditionalBolt message
+                    → track_bump_result (.after(BreakerCollision), dev only)
+                    → bolt_lost (.after(bolt_breaker_collision), BoltLost set)
+                        → bridge_bolt_lost (.after(BoltLost), conditional)
+                            → [observer: handle_life_lost] → RunLost message
+                            → [observer: handle_time_penalty] → ApplyTimePenalty message
+              → grade_bump continuations: perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text (.after(grade_bump))
 
-RunPlugin FixedUpdate (unordered vs above node chain):
-```
-handle_run_lost  ← UNORDERED vs handle_node_cleared / handle_timer_expired (low severity)
-```
+  [unordered floaters in same run_if group]:
+    launch_bolt  — ServingBoltFilter (disjoint)
+    spawn_bolt_lost_text  — reads BoltLost message
+    trigger_bump_visual  — reads InputActions, Commands
+    handle_cell_hit  — reads BoltHitCell, sends CellDestroyed
 
-Parallel/unordered systems (run in indeterminate order each tick):
-- `launch_bolt` — writes BoltVelocity on ServingBoltFilter (disjoint from physics chain)
-- `spawn_bolt_lost_text` — reads BoltLost message only
-- `trigger_bump_visual` — reads InputActions, Commands only
-- `handle_cell_hit` — reads BoltHitCell, writes CellHealth, sends CellDestroyed
+  [NodePlugin ordered chain]:
+    track_node_completion (NodeSystems::TrackCompletion)  [unordered vs handle_cell_hit]
+    tick_node_timer (NodeSystems::TickTimer)
+    apply_time_penalty (.after(NodeSystems::TickTimer))  [unordered vs handle_timer_expired — 1-tick delay acceptable]
+
+  [RunPlugin ordered chain]:
+    handle_node_cleared (.after(NodeSystems::TrackCompletion))
+    handle_timer_expired (.after(NodeSystems::TickTimer), .after(handle_node_cleared))
+    handle_run_lost (.after(handle_node_cleared), .after(handle_timer_expired))
+
+FixedPostUpdate:
+  store_authoritative  [InterpolatePlugin]
+  clear_input_actions  [InputPlugin]
+
+PostUpdate:
+  interpolate_transform  [InterpolatePlugin]
+```

@@ -5,13 +5,13 @@
 - `docs/plan/phase-2/phase-2c-archetype-system.md` — checklist still has `[ ]` items but some are partially implemented (ArchetypeDefinition, Aegis, behaviors). File is in `plan/phase-2/` (not done/) so it is intentionally in-progress.
 
 ## Known Gaps (Accepted for Now)
-- `docs/architecture/plugins.md` folder listing marks `run/` and `ui/` as `(stub — Phase 2+)` — these domains are now active. Should be cleaned up.
-- `docs/architecture/plugins.md` marks `upgrades/` as `(stub — Phase 3+)` — Phase 3 is now Dev Infrastructure; upgrades are Phase 8. Phase number is wrong.
+- Phase 2e checklist: Bolt-loss visual indicators for Chrono and Prism not yet confirmed built — left unchecked in plan file pending code confirmation.
 
 ## Phase Completion Log
 - 2026-03-16: Phase 2a (Level Loading) confirmed complete — file at `docs/plan/done/phase-2/phase-2a-level-loading.md`
 - 2026-03-16: Phase 2b (Run Structure & Node Timer) confirmed complete — file at `docs/plan/done/phase-2/phase-2b-run-and-timer.md`
-- PLAN.md links for 2a/2b are broken (still point to old `plan/phase-2/` path) — fix pending
+- 2026-03-16: Phase 2e (Visual Polish & Additional Archetypes) core implementation confirmed complete — interpolate domain, Chrono/Prism archetypes, RON files. Visual indicators and playability items still open.
+- PLAN.md: 2e moved to Done section; 2a/2b links resolve correctly to `plan/done/phase-2/`
 
 ## Terminology Decisions
 - `BumpPerformed` consumers in breaker domain: system names are `spawn_bump_grade_text` and `perfect_bump_dash_cancel` (not `bump_feedback` which is only a module name)

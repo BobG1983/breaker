@@ -11,22 +11,27 @@
 ## Key Architectural Facts
 - All gameplay systems run in FixedUpdate (physics, breaker, bolt, cells, run) gated by `run_if(in_state(PlayingState::Active))`
 - Visual-only systems run in Update (animate_bump_visual, animate_tilt_visual, update_timer_display, debug overlays, update_lives_display, animate_fade_out)
-- Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` (BreakerCollision set) → `apply_bump_velocity` → `bolt_lost` (BoltLost set)
-- apply_bump_velocity: `.after(BreakerCollision).before(BoltLost)` — correctly ordered, conflict resolved
+- InterpolatePlugin registered BEFORE PhysicsPlugin in game.rs
+- Interpolation pipeline: `restore_authoritative` (FixedFirst) → [FixedUpdate physics] → `store_authoritative` (FixedPostUpdate) → `interpolate_transform` (PostUpdate)
+- Bolt entities (baseline + ExtraBolt) carry InterpolateTransform + PhysicsTranslation; bolt_lost inserts PhysicsTranslation on respawn to snap interpolation
+- Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` (BreakerCollision set) → `apply_bump_velocity` + `spawn_additional_bolt` → `bolt_lost` (BoltLost set)
+- apply_bump_velocity: `.after(BreakerCollision).before(BoltLost)` — correctly ordered
+- spawn_additional_bolt: `.after(BreakerCollision)` — Commands-only, no direct conflict with apply_bump_velocity
+- ExtraBolt: despawned permanently when lost (not respawned); still sends BoltLost message
+- New observer chain: bridge_bump/bridge_bolt_lost → SpawnBoltRequested observer → SpawnAdditionalBolt message; TimePenaltyRequested observer → ApplyTimePenalty message
+- apply_time_penalty: `.after(NodeSystems::TickTimer)` — can also send TimerExpired when penalty drives timer to zero
+- handle_run_lost: `.after(handle_node_cleared).after(handle_timer_expired)` — FIXED, win takes priority
 - Breaker state chain: `update_bump` → `move_breaker` (BreakerSystems::Move) → `update_breaker_state` → `grade_bump` → post-grade systems
-- BumpPerformed multiplier embedded in message — grade_bump/update_bump use BumpGradingQuery/BumpTimingQuery (Optional multipliers on Breaker); apply_bump_velocity reads only bolt components
-- RunPlugin ordering: `track_node_completion` (NodeSystems::TrackCompletion) → `handle_node_cleared`; `tick_node_timer` (NodeSystems::TickTimer) → `handle_timer_expired` (also .after(handle_node_cleared)); same-tick propagation
-- RunLost message: sent by `handle_life_lost` observer (BehaviorPlugin) via bridge_bolt_lost → received by `handle_run_lost` (RunPlugin FixedUpdate)
-- FxPlugin: owns `animate_fade_out` — moved from BoltPlugin. Now a first-class plugin in game.rs
 - Input: `read_input_actions` in PreUpdate (after InputSystems) writes InputActions resource consumed by FixedUpdate gameplay systems
 - NodePlugin OnEnter chain: `set_active_layout` → `spawn_cells_from_layout` (NodeSystems::Spawn) → `init_clear_remaining` → `init_node_timer` (all chained)
 
 ## Active Conflicts (Action Required)
-1. `handle_run_lost` (RunPlugin, FixedUpdate) is UNORDERED vs `handle_node_cleared` and `handle_timer_expired`. All three write ResMut<RunState> + ResMut<NextState<GameState>>. Race: if RunLost and NodeCleared arrive same tick, order is non-deterministic. Fix: add `.after(handle_node_cleared).after(handle_timer_expired)` to `handle_run_lost` in `run/plugin.rs`.
+None. All previously-flagged ordering gaps are resolved.
 
 ## Low-Severity Issues (Optional Fixes)
-2. `animate_bump_visual` and `animate_tilt_visual` both write `Transform` on Breaker in Update. Different fields (translation vs rotation), no logical conflict.
-3. `handle_cell_hit` and `track_node_completion` are unordered across plugins. 1-tick delay on cell-to-completion counting is imperceptible.
+1. `animate_bump_visual` and `animate_tilt_visual` both write `Transform` on Breaker in Update. Different fields (translation vs rotation), no logical conflict.
+2. `handle_cell_hit` and `track_node_completion` are unordered across plugins. 1-tick delay on cell-to-completion counting is imperceptible.
+3. `apply_time_penalty` and `handle_timer_expired` are unordered. 1-tick delay on penalty-induced timer expiry. Cross-plugin ordering would break encapsulation — acceptable trade-off.
 
 ## Still Stub (No Systems)
 AudioPlugin, UpgradesPlugin — registered but contain no game systems
