@@ -32,7 +32,9 @@ impl Plugin for RunPlugin {
                     handle_timer_expired
                         .after(NodeSystems::TickTimer)
                         .after(handle_node_cleared),
-                    handle_run_lost,
+                    handle_run_lost
+                        .after(handle_node_cleared)
+                        .after(handle_timer_expired),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
