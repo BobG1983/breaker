@@ -2,5 +2,5 @@
 
 /// Entry point.
 fn main() {
-    brickbreaker::app::build_app().run();
+    breaker::app::build_app().run();
 }

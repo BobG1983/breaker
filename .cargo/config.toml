@@ -1,6 +1,6 @@
 [alias]
-dev = "run -p brickbreaker --features bevy/dynamic_linking"
-dbuild = "build -p brickbreaker --features bevy/dynamic_linking"
-dtest = "test -p brickbreaker --features bevy/dynamic_linking"
-dcheck = "check -p brickbreaker --features bevy/dynamic_linking"
-dclippy = "clippy -p brickbreaker --all-targets --features bevy/dynamic_linking"
+dev = "run -p breaker --features bevy/dynamic_linking"
+dbuild = "build -p breaker --features bevy/dynamic_linking"
+dtest = "test -p breaker --features bevy/dynamic_linking"
+dcheck = "check -p breaker --features bevy/dynamic_linking"
+dclippy = "clippy -p breaker --all-targets --features bevy/dynamic_linking"

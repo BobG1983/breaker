@@ -6,7 +6,7 @@
 pub mod math;
 
 use bevy::prelude::*;
-use brickbreaker_derive::GameConfig;
+use breaker_derive::GameConfig;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::Deserialize;
