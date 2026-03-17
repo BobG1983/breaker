@@ -1,0 +1,12 @@
+(
+    breaker: "Chrono",
+    layout: "Fortress",
+    input: Chaos((
+        seed: 44,
+        action_prob: 0.3,
+    )),
+    max_frames: 10000,
+    invariants: [BoltInBounds, BreakerInBounds, NoEntityLeaks, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+)
