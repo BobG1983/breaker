@@ -41,15 +41,6 @@ All systems dev-only (`#[cfg(feature = "dev")]`), centralized in `debug/hot_relo
 
 ---
 
-## CLI Level Spawning
-
-- `--level <name>` on the game binary (dev builds only): skip menus, spawn directly into a specific level
-- `CliLevelOverride` resource parsed from `std::env::args()`
-- `set_active_layout` respects override when present
-- `OnEnter(GameState::MainMenu)` system auto-skips to `GameState::Playing` when override exists
-
----
-
 ## Upgrade-Aware Config Propagation
 
 Rather than a generic modifier stack (premature — chips aren't implemented yet), reuse the existing init pipeline:
