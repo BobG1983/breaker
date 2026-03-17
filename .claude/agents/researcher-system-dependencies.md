@@ -102,16 +102,9 @@ If changes are needed, **describe** the exact changes in your report — but do 
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/researcher-system-dependencies/` (relative to the project root). Its contents persist across conversations.
-Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md` (MEMORY.md is always loaded; lines after 200 are truncated).
 
 As you work, consult your memory files to build on previous experience. When you map the system architecture, record it so future analyses can build incrementally rather than re-scanning everything.
-
-Guidelines:
-- `MEMORY.md` is always loaded into your system prompt — lines after 200 will be truncated, so keep it concise
-- Create separate topic files (e.g., `system-map.md`, `message-flow.md`, `known-conflicts.md`) for detailed notes and link to them from MEMORY.md
-- Update or remove memories that turn out to be wrong or outdated
-- Organize memory semantically by topic, not chronologically
-- Use the Write and Edit tools to update your memory files
 
 What to save:
 - The current system inventory (systems, their plugins, schedules, ordering)

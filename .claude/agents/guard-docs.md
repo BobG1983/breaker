@@ -108,16 +108,9 @@ The only exception is `cargo fmt`.
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/guard-docs/` (relative to the project root). Its contents persist across conversations.
-Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md` (MEMORY.md is always loaded; lines after 200 are truncated).
 
 Build up knowledge about this project's documentation state, known gaps that are intentional (forward-looking docs), and drift patterns that recur.
-
-Guidelines:
-- `MEMORY.md` is always loaded into your system prompt — lines after 200 will be truncated, so keep it concise
-- Create separate topic files for detailed notes and link to them from MEMORY.md
-- Update or remove memories that turn out to be wrong or outdated
-- Organize memory semantically by topic, not chronologically
-- Use the Write and Edit tools to update your memory files
 
 What to save:
 - Intentional forward-looking doc sections (so you don't flag them as drift repeatedly)

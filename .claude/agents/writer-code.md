@@ -40,7 +40,7 @@ You receive an **implementation spec** from the orchestrating agent that identif
 1. **Read the failing tests first.** Understand what each test expects before writing any code.
 2. **Implement the minimum code to pass each test.** Don't over-engineer, don't add features beyond what the tests require.
 3. **Follow existing patterns.** Read neighboring files in the domain — match the style, structure, and conventions.
-4. **Run tests after each significant change.** Don't write everything then test once — iterate.
+4. **Work incrementally** — implement one test's worth of code at a time, read the test carefully before writing its implementation.
 
 ## What You Must NOT Do
 
@@ -72,14 +72,13 @@ src/<domain>/
 
 ## Verification
 
-Do NOT run any cargo commands. Parallel writer-code agents share a build target directory —
-concurrent cargo invocations corrupt each other's artifacts.
+⚠️ **DO NOT RUN CARGO — This means zero cargo commands of any kind** ⚠️
 
-Verification is handled by the orchestrator after all writer-codes complete:
-- runner-linting runs `cargo fmt` and `cargo dclippy`
-- runner-tests runs `cargo dtest` and `cargo dstest`
+You MUST NOT run `cargo dcheck`, `cargo dclippy`, `cargo dtest`, `cargo fmt`, or any other cargo command.
 
-If runner-tests reports a failure in your domain, the orchestrator will send you a Fix spec.
+**Why:** Multiple writer-code agents run in parallel and share the build target directory. Concurrent cargo invocations corrupt each other's artifacts and cause spurious build failures.
+
+**Who verifies instead:** The orchestrator launches runner-linting (`cargo fmt` + `cargo dclippy`) and runner-tests (`cargo dtest` + `cargo dstest`) after ALL writer-codes complete. If runner-tests finds a failure in your domain, the orchestrator will send you a Fix spec.
 
 ## Output Format
 
@@ -116,10 +115,6 @@ All identifiers MUST use project vocabulary:
 | `powerup`, `item` | `Amp` / `Augment` / `Overclock` |
 | `hit`, `strike` | `Bump` |
 | `currency`, `score` | `Flux` |
-
-## Dev Aliases
-
-**NEVER** run any cargo commands. writer-code must not invoke cargo — verification runs in the orchestrator's post-implementation wave via runner-linting and runner-tests.
 
 ## Code Standards
 

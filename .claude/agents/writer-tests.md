@@ -97,16 +97,8 @@ mod tests {
 ```
 
 ### Message Capture Pattern
-```rust
-#[derive(Resource, Default)]
-struct CapturedMessages(Vec<MyMessage>);
 
-fn collect_messages(mut reader: MessageReader<MyMessage>, mut captured: ResMut<CapturedMessages>) {
-    for msg in reader.read() {
-        captured.0.push(msg.clone());
-    }
-}
-```
+See agent memory: `pattern_message_capture.md`. The pattern captures messages into a `Resource` for assertion.
 
 ## Verification — You MUST Do This
 
@@ -151,31 +143,13 @@ Return a structured summary:
 
 ## Handling Bug Regression Specs
 
-A regression spec says "this behavior is currently wrong" rather than "implement this new behavior." The approach differs slightly:
+A regression spec signals that a behavior is currently wrong ("bug:", "regression:", "currently broken:"). The RED phase requirement is the same — the test MUST fail against current code.
 
-### Recognition
+**Placement:** Code-level bug → existing `#[cfg(test)] mod tests` in the system file that owns the behavior. Scenario-level bug → `scenarios/regressions/<name>.scenario.ron`.
 
-The spec will include language like "bug:", "currently broken:", "regression:", or "this behavior is wrong." Treat this as a signal that the test must pin the *correct* behavior so it fails against the current broken code — not pass against it.
+**Naming:** Encode the correct behavior, not the bug: `bolt_does_not_escape_bounds_on_shallow_wall_reflect` ✓, not `test_reflect_bug` ✗.
 
-### Test Placement
-
-- **Code-level bug** → test goes in the existing `#[cfg(test)] mod tests` block of the system file that owns the broken behavior. Do NOT create a new file.
-- **Scenario-level bug** → `.scenario.ron` file in `scenarios/regressions/`, named after the bug (e.g., `bolt_escape_shallow_angle.scenario.ron`).
-
-### Test Naming
-
-Encode the expected correct behavior, not the bug:
-- `bolt_does_not_escape_bounds_on_shallow_wall_reflect` ✓
-- `test_reflect_bug` ✗
-- `bolt_stays_in_bounds` ✓ (if more specific name is awkward)
-
-### Verification
-
-Same RED phase requirement as feature tests: the test MUST fail against current code. A regression test that passes immediately means either the bug is already fixed or the test is wrong — investigate and flag in your output.
-
-### Do Not Fix
-
-If you can see the fix while writing the test, note it in your report under `### Observations` but do NOT apply it. Your role is the RED phase only.
+**Do not fix:** If you can see the fix, note it under `### Observations` but do NOT apply it. Your role is the RED phase only.
 
 ## Game Vocabulary
 
@@ -193,9 +167,7 @@ All test names and identifiers MUST use project vocabulary:
 
 ## Dev Aliases
 
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`.
-- `cargo dbuild` / `cargo dcheck` / `cargo dclippy` / `cargo dtest`
-- Exception: `cargo fmt` (no dev alias)
+Always use `cargo dcheck` and `cargo dtest` (not bare cargo commands). `cargo fmt` has no dev alias.
 
 ## Domain Boundaries
 
