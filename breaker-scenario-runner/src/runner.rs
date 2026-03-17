@@ -112,6 +112,33 @@ fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
         .ok()
 }
 
+/// Determines whether a scenario passed given its results and definition.
+///
+/// When `expected_violations` is `None`, the scenario passes only if there are no
+/// violations and no captured logs.
+///
+/// When `expected_violations` is `Some(expected)`, the scenario passes only if:
+/// - every listed invariant fired at least once
+/// - no unlisted invariants fired
+/// - no unexpected logs were captured
+fn evaluate_pass(
+    violations: &[crate::invariants::ViolationEntry],
+    logs: &[crate::log_capture::LogEntry],
+    definition: Option<&ScenarioDefinition>,
+) -> bool {
+    definition
+        .and_then(|d| d.expected_violations.as_deref())
+        .map_or(violations.is_empty() && logs.is_empty(), |expected| {
+            let all_expected_fired = expected
+                .iter()
+                .all(|ev| violations.iter().any(|v| &v.invariant == ev));
+            let no_unexpected = violations
+                .iter()
+                .all(|v| expected.iter().any(|ev| ev == &v.invariant));
+            all_expected_fired && no_unexpected && logs.is_empty()
+        })
+}
+
 /// Builds and runs one scenario app. Returns `true` if passed, `false` if failed.
 fn run_scenario(path: &Path, headless: bool) -> bool {
     let scenario_name = path
@@ -155,8 +182,12 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
         .get_resource::<CapturedLogs>()
         .map(|l| l.0.clone())
         .unwrap_or_default();
+    let definition = app
+        .world()
+        .get_resource::<ScenarioConfig>()
+        .map(|c| c.definition.clone());
 
-    let passed = violations.is_empty() && logs.is_empty();
+    let passed = evaluate_pass(&violations, &logs, definition.as_ref());
 
     if passed {
         println!("PASS [{scenario_name}]");
