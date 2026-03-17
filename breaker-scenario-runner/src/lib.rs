@@ -5,6 +5,7 @@
 pub mod input;
 pub mod invariants;
 pub mod lifecycle;
+pub mod log_capture;
 pub mod types;
 
 pub use lifecycle::{ScenarioConfig, ScenarioLifecycle};
