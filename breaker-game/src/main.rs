@@ -2,5 +2,10 @@
 
 /// Entry point.
 fn main() {
-    breaker::app::build_app().run();
+    let mut app = breaker::app::build_app();
+
+    #[cfg(feature = "dev")]
+    breaker::app::apply_dev_flags(&mut app);
+
+    app.run();
 }

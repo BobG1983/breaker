@@ -19,8 +19,11 @@ impl Plugin for DebugPlugin {
             use bevy_egui::EguiPlugin;
 
             use super::{
-                hot_reload::plugin::HotReloadPlugin, overlays::plugin::OverlaysPlugin,
-                resources::LastBumpResult, telemetry::plugin::TelemetryPlugin,
+                hot_reload::plugin::HotReloadPlugin,
+                overlays::plugin::OverlaysPlugin,
+                recording::{RecordingConfig, RecordingPlugin},
+                resources::LastBumpResult,
+                telemetry::plugin::TelemetryPlugin,
             };
 
             app.add_plugins(EguiPlugin::default())
@@ -28,8 +31,10 @@ impl Plugin for DebugPlugin {
                 .add_plugins(OverlaysPlugin)
                 .add_plugins(TelemetryPlugin)
                 .add_plugins(HotReloadPlugin)
+                .add_plugins(RecordingPlugin)
                 .init_resource::<DebugOverlays>()
-                .init_resource::<LastBumpResult>();
+                .init_resource::<LastBumpResult>()
+                .init_resource::<RecordingConfig>();
         }
     }
 }

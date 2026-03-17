@@ -7,6 +7,27 @@ use bevy::{
 
 use crate::{game::Game, shared::PlayfieldConfig};
 
+/// Applies dev-only CLI flags parsed from `std::env::args()`.
+///
+/// Currently supports `--record [<layout_name>]` which enables input recording.
+/// Called from `main.rs` after `build_app`, before `app.run()`.
+/// Intentionally separate from `build_app` so the binary controls opt-in.
+#[cfg(feature = "dev")]
+pub fn apply_dev_flags(app: &mut App) {
+    use crate::debug::recording::RecordingConfig;
+
+    let args: Vec<String> = std::env::args().collect();
+    let record_idx = args.iter().position(|a| a == "--record");
+
+    if let Some(idx) = record_idx {
+        let level_filter = args.get(idx + 1).filter(|a| !a.starts_with('-')).cloned();
+        app.insert_resource(RecordingConfig {
+            enabled: true,
+            level_filter,
+        });
+    }
+}
+
 /// Constructs and returns the configured Bevy [`App`].
 ///
 /// Sets up the window, camera, and all game plugins via [`Game`].
