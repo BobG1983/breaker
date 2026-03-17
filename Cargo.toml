@@ -1,5 +1,5 @@
 [workspace]
-members = ["breaker-game", "breaker-derive"]
+members = ["breaker-game", "breaker-derive", "breaker-scenario-runner"]
 resolver = "3"
 
 [workspace.lints.rust]
