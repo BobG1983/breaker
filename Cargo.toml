@@ -18,6 +18,7 @@ nursery = { level = "warn", priority = -1 }
 # Pedantic overrides — suppress noisy lints that don't add value
 needless_pass_by_value = "allow"          # Bevy systems take ownership by convention
 module_name_repetitions = "allow"         # BreakerState in breaker/ is fine
+wildcard_imports = "allow"               # Prefer globs when 4+ items from the same path
 
 [profile.dev]
 opt-level = 1

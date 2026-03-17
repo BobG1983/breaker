@@ -27,6 +27,8 @@ Read `CLAUDE.md` and `docs/TERMINOLOGY.md`. Vocabulary compliance cannot be eval
 - `match` on a `bool` that should be `if`/`else`
 - Redundant `return` at the end of a function
 - `Default::default()` where `..Default::default()` struct update syntax would be cleaner
+- `use crate::some_module::{A, B, C, D}` with 4+ items from the same path — should be `use crate::some_module::*`
+- When a domain has a `prelude` sub-module, explicit item lists should use `use crate::domain::prelude::*` instead
 
 ### Game Vocabulary
 

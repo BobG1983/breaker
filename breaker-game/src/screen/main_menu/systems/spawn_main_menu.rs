@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    screen::main_menu::{MENU_ITEMS, MainMenuConfig, MainMenuScreen, MainMenuSelection, MenuItem},
-    shared::color_from_rgb,
-};
+use crate::{screen::main_menu::*, shared::color_from_rgb};
 
 /// Spawns the main menu UI.
 pub fn spawn_main_menu(

@@ -6,10 +6,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{
-        components::{Bolt, BoltMaxSpeed, BoltMinSpeed, BoltVelocity},
-        filters::ActiveBoltFilter,
-    },
+    bolt::{components::*, filters::ActiveBoltFilter},
     breaker::components::{Breaker, MinAngleFromHorizontal},
 };
 

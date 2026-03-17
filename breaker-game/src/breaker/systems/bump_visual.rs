@@ -3,10 +3,7 @@
 use bevy::{math::curve::Curve, prelude::*};
 
 use crate::{
-    breaker::{
-        components::{Breaker, BreakerBaseY, BumpVisual, BumpVisualParams},
-        filters::BumpTriggerFilter,
-    },
+    breaker::{components::*, filters::BumpTriggerFilter},
     input::resources::{GameAction, InputActions},
 };
 
