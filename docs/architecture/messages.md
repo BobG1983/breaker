@@ -30,4 +30,4 @@ These are Bevy observer events (`#[derive(Event)]` + `commands.trigger()`), not 
 
 | Message | Registered By | Planned Consumers |
 |---------|---------------|-------------------|
-| `UpgradeSelected` | UI | chips (apply effects) |
+| `ChipSelected { name, kind }` | UI | chips (apply effects) |

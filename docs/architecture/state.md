@@ -9,14 +9,14 @@ Bevy `States` for top-level game state. `SubStates` where a state only exists wi
 - `RunSetup` — breaker/seed selection
 - `Playing` — active node (see sub-states below)
 - `NodeTransition` — transient 1-frame state between nodes (exits `Playing`, then re-enters it)
-- `UpgradeSelect` — timed upgrade selection
+- `ChipSelect` — timed chip selection between nodes
 - `RunEnd` — win/lose screen
 - `MetaProgression` — between-run Flux spending
 
 ## Playing sub-states (`PlayingState`)
 
 - `Active` — normal gameplay (default when entering `Playing`)
-- `Paused` — all gameplay frozen **(stub — no transition or pause menu implemented yet; planned for Phase 2d)**
+- `Paused` — all gameplay frozen (pause menu implemented; Escape key toggles Active ↔ Paused)
 
 `PlayingState` only exists when `GameState::Playing` is active — it is automatically created and destroyed by Bevy's sub-state lifecycle. Pausing is modeled as a sub-state (not top-level) because you can only pause from active gameplay. This constraint is encoded in the type system.
 
@@ -24,7 +24,9 @@ Systems that should freeze during pause use `run_if(in_state(PlayingState::Activ
 
 ## NodeTransition
 
-Bevy doesn't fire `OnExit`/`OnEnter` when transitioning to the same state. Since node spawn/cleanup relies on `OnEnter(Playing)` / `OnExit(Playing)`, advancing between nodes requires leaving and re-entering `Playing`. `NodeTransition` is a transient 1-frame intermediate: `Playing → NodeTransition → Playing`. The `advance_node` system runs on `OnEnter(NodeTransition)`, increments the node index, and immediately sets `NextState(Playing)`.
+Bevy doesn't fire `OnExit`/`OnEnter` when transitioning to the same state. Since node spawn/cleanup relies on `OnEnter(Playing)` / `OnExit(Playing)`, advancing between nodes requires leaving and re-entering `Playing`.
+
+The full inter-node flow is: `Playing → ChipSelect → NodeTransition → Playing`. On `NodeCleared`, `handle_node_cleared` transitions to `ChipSelect`. When the player confirms a chip selection (or the timer expires), the chip select screen transitions to `NodeTransition`. `NodeTransition` is a transient 1-frame intermediate: the `advance_node` system runs on `OnEnter(NodeTransition)`, increments the node index, and immediately sets `NextState(Playing)`.
 
 ## Passive types vs. active logic
 

@@ -24,7 +24,7 @@ src/
 ├── physics/          # CCD collision detection, collision response
 ├── interpolate/      # Transform interpolation for smooth rendering between FixedUpdate ticks
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
-├── ui/               # HUD, menus, upgrade selection screen
+├── ui/               # HUD, menus, chip selection screen
 └── debug/            # Dev tooling: overlays, telemetry, hot-reload (sub-domains)
 assets/               # RON data files, shaders, textures, audio (project root, not inside src/)
 ```

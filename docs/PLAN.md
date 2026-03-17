@@ -14,22 +14,21 @@ See `DESIGN.md` for core design principles, `architecture/` for technical decisi
   - [1b: Bolt](plan/done/phase-1/phase-1b-bolt.md)
   - [1c: Cells](plan/done/phase-1/phase-1c-cells.md)
   - [1d: Bump & Perfect Bump](plan/done/phase-1/phase-1d-bump.md)
-- Phase 2 (partial):
+- [Phase 2: Game Loop & Time Pressure](plan/phase-2/README.md)
   - [2a: Level Loading](plan/done/phase-2/phase-2a-level-loading.md)
   - [2b: Run Structure & Node Timer](plan/done/phase-2/phase-2b-run-and-timer.md)
-  - [2e: Visual Polish & Additional Archetypes](plan/phase-2/phase-2e-chrono-and-prism.md)
+  - [2c: Archetype System & Aegis](plan/done/phase-2/phase-2c-archetype-system.md)
+  - [2d: Screens](plan/done/phase-2/phase-2d-screens-and-ui.md)
+  - [2e: Visual Polish & Additional Archetypes](plan/done/phase-2/phase-2e-chrono-and-prism.md)
 
 ### Current
-- [Phase 2: Game Loop & Time Pressure](plan/phase-2/README.md)
-  - [2c: Archetype System & Aegis](plan/phase-2/phase-2c-archetype-system.md)
-  - [2d: Screens](plan/phase-2/phase-2d-screens-and-ui.md)
-
-### Upcoming
 - [Phase 3: Dev Infrastructure](plan/phase-3/README.md)
   - [3a: Workspace Restructure](plan/phase-3/phase-3a-workspace-restructure.md)
   - [3b: Debug Domain Restructure](plan/phase-3/phase-3b-debug-restructure.md)
   - [3c: RON Hot-Reload](plan/phase-3/phase-3c-hot-reload.md)
   - [3d: Scenario Runner](plan/phase-3/phase-3d-scenario-runner.md)
+
+### Upcoming
 - [Phase 4: Vertical Slice — Mini-Run](plan/phase-4-vertical-slice.md)
 - [Phase 5: Visual Identity](plan/phase-5-visual-identity.md)
 - [Phase 6: Audio Foundation](plan/phase-6-audio.md)
@@ -45,7 +44,7 @@ The plan front-loads **feel** (Phases 1-2) because if the breaker-bolt-cell inte
 ## Resolved Design Decisions
 - **Upgrade stacking**: Per-effect caps (set high). No literal uncapped multiplicative stacking.
 - **Bump multipliers**: All grades boost — early/late = small, perfect = large, no bump = neutral.
-- **Upgrade timeout**: Timer expires = skip (no upgrade). Maximum pressure.
+- **Chip timeout**: Timer expires = skip (no chip). Maximum pressure.
 - **Seeded determinism**: Phase 4 (vertical slice). Accept retrofit cost; seeds meaningless with 3 layouts.
 - **Breaker archetypes**: Proof-of-concept for the system, not final designs. Broader differentiation (base stats + abilities). Upgrade affinities deferred to Phase 7+.
 - **Workspace structure**: Axum-style — game/, derive/, scenario-runner/ as peer directories at root.
