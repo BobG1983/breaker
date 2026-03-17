@@ -13,23 +13,59 @@ use crate::{game::Game, shared::PlayfieldConfig};
 
 /// Applies dev-only CLI flags parsed from `std::env::args()`.
 ///
-/// Currently supports `--record [<layout_name>]` which enables input recording.
+/// Supported flags (all dev-only, not shown in any `--help` output):
+/// - `--record [<layout_name>]` — enable input recording, optional layout filter
+///
+/// `--log` and `--log-level` are parsed inside [`build_app`] because they must
+/// configure `LogPlugin` before it is registered.
+///
 /// Called from `main.rs` after `build_app`, before `app.run()`.
-/// Intentionally separate from `build_app` so the binary controls opt-in.
 #[cfg(feature = "dev")]
 pub fn apply_dev_flags(app: &mut App) {
     use crate::debug::recording::RecordingConfig;
 
     let args: Vec<String> = std::env::args().collect();
-    let record_idx = args.iter().position(|a| a == "--record");
 
-    if let Some(idx) = record_idx {
+    // --record [<layout_name>]
+    if let Some(idx) = args.iter().position(|a| a == "--record") {
         let level_filter = args.get(idx + 1).filter(|a| !a.starts_with('-')).cloned();
         app.insert_resource(RecordingConfig {
             enabled: true,
             level_filter,
         });
     }
+}
+
+/// Reads `--log` and `--log-level` dev flags from process args.
+///
+/// Returns `(filter_string, file_logging_enabled)`.
+/// In non-dev builds (or when no flags are present) returns the provided default.
+fn dev_log_config(default_filter: &str) -> (String, bool) {
+    #[cfg(feature = "dev")]
+    {
+        let args: Vec<String> = std::env::args().collect();
+
+        // --log false  →  disable file logging
+        let file_enabled = args
+            .iter()
+            .position(|a| a == "--log")
+            .and_then(|i| args.get(i + 1))
+            .is_none_or(|v| v != "false");
+
+        // --log-level <level>  →  override filter
+        let filter = args
+            .iter()
+            .position(|a| a == "--log-level")
+            .and_then(|i| args.get(i + 1))
+            .map_or_else(|| default_filter.to_owned(), |level| {
+                format!("breaker={level},bevy=warn")
+            });
+
+        (filter, file_enabled)
+    }
+
+    #[cfg(not(feature = "dev"))]
+    (default_filter.to_owned(), true)
 }
 
 /// `LogPlugin::custom_layer` factory — attaches a daily rolling file appender.
@@ -53,14 +89,22 @@ fn file_log_layer(_app: &mut App) -> Option<BoxedLayer> {
 /// Constructs and returns the configured Bevy [`App`].
 ///
 /// Sets up the window, camera, and all game plugins via [`Game`].
+///
+/// In dev builds, also reads `--log <true|false>` and `--log-level <level>`
+/// from `std::env::args()` to configure `LogPlugin` before it is registered.
 pub fn build_app() -> App {
     let mut app = App::new();
 
-    let log_filter = if cfg!(debug_assertions) {
+    let default_filter = if cfg!(debug_assertions) {
         "breaker=debug,bevy=warn"
     } else {
         "breaker=warn,bevy=error"
     };
+
+    let (log_filter, use_file_log) = dev_log_config(default_filter);
+
+    let custom_layer: fn(&mut App) -> Option<BoxedLayer> =
+        if use_file_log { file_log_layer } else { |_| None };
 
     app.add_plugins(
         DefaultPlugins
@@ -72,8 +116,8 @@ pub fn build_app() -> App {
                 ..default()
             })
             .set(LogPlugin {
-                filter: log_filter.to_owned(),
-                custom_layer: file_log_layer,
+                filter: log_filter,
+                custom_layer,
                 ..default()
             }),
     );
