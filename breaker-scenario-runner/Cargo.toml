@@ -8,6 +8,7 @@ name = "breaker_scenario_runner"
 path = "src/main.rs"
 
 [dependencies]
+bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 breaker = { path = "../breaker-game" }
 argh = "0.1"
 tracing = "0.1"
