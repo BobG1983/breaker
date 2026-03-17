@@ -9,8 +9,8 @@ use std::{
 };
 
 use bevy::{
-    app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*, window::ExitCondition,
-    winit::WinitPlugin,
+    app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*, time::TimeUpdateStrategy,
+    window::ExitCondition, winit::WinitPlugin,
 };
 use breaker::game::Game;
 use tracing::{debug, info, warn};
@@ -245,12 +245,26 @@ fn build_app(headless: bool) -> App {
                     custom_layer: scenario_log_layer_factory,
                     ..default()
                 })
+                .set(bevy::asset::AssetPlugin {
+                    // Point to the game crate's assets directory so scenarios
+                    // load real RON config files rather than code defaults.
+                    file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets")
+                        .to_owned(),
+                    ..default()
+                })
                 .disable::<WinitPlugin>(),
         )
-        // Duration::ZERO = spin as fast as possible (no real-time throttle).
-        // Time<Fixed> accumulates overstep independently, so all fixed ticks
-        // still execute — scenarios complete in seconds instead of real time.
+        // No sleep between Update ticks — run as fast as possible.
         .add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
+
+        // Advance simulated time by exactly one fixed timestep per Update tick.
+        // Without this, Time<Fixed> accumulates based on real wall-clock elapsed
+        // time, so a 20k-frame scenario would take ~5 minutes. With ManualDuration,
+        // each Update tick instantly advances virtual time by 1/64 s, and all
+        // Fixed ticks execute in sequence at CPU speed.
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+            1.0 / 64.0,
+        )));
     } else {
         app.add_plugins(
             DefaultPlugins
