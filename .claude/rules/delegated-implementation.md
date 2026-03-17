@@ -4,17 +4,16 @@ Guidelines for using the **test-writer** and **code-writer** agent pair to imple
 
 ## When to Use
 
-Use delegated implementation when:
-- **2+ independent domains** need implementation in the same phase
-- **Domain boundaries are clearly defined** in architecture docs
-- **The behavioral spec can be written in ~10-20 lines per domain** without ambiguity
-- **The work is self-contained** within a single domain directory
+Use delegated implementation for **anything non-trivial** — single domain or multi-domain:
+- **The behavioral spec can be written clearly** (concrete values, defined behaviors)
+- **The work is self-contained** within domain directory/directories
+- **New system, component, or mechanic** with at least 2 behaviors to test
 
 Do NOT use delegated implementation when:
 - **Cross-cutting changes** touch multiple domains or shared files (`lib.rs`, `game.rs`, `shared.rs`)
 - **Exploratory work** where the API shape isn't proven yet
 - **New domain creation** that requires wiring in `lib.rs`/`game.rs` (do the wiring yourself, then delegate the internals)
-- **Single system additions** where spec-writing overhead exceeds just writing the code
+- **Trivial additions** — a single pure function, a one-liner config change, a rename
 - **Complex Bevy API uncertainty** — use bevy-api-expert first to resolve, then delegate
 
 ## The Flow (RED → GREEN → REFACTOR)
@@ -199,14 +198,3 @@ When implementing multiple domains simultaneously:
 - If two domains need a new shared type, the main agent creates it before launching agents
 - If a domain needs a message from another domain, the main agent ensures the message type exists before launching agents
 
-## Model Override
-
-Both agents default to Sonnet. Override to Opus via the Agent tool's `model` parameter when:
-
-| Situation | Override? |
-|-----------|-----------|
-| Standard domain implementation | No — Sonnet is sufficient |
-| Complex state machines with many transitions | Consider Opus for test-writer |
-| Physics/math with subtle edge cases | Consider Opus for test-writer |
-| Novel Bevy patterns not seen elsewhere in codebase | Consider Opus for code-writer |
-| Simple CRUD-like systems or config loading | No — Sonnet is sufficient |

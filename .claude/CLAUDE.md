@@ -61,9 +61,9 @@ See @.claude/rules/agent-flow.md for the full flow reference: hint formats, fail
 
 For multi-domain work or context-heavy phases, delegate implementation to the **test-writer** → **code-writer** TDD pair. This preserves main context and prevents implementation bias through context isolation. See @.claude/rules/delegated-implementation.md for full spec-writing guidelines.
 
-**When to delegate**: 2+ independent domains in one phase, or single domain where spec is clear and context preservation matters.
+**When to delegate**: Anything non-trivial — single domain or multi-domain. If it has 2+ behaviors to test and the spec can be written clearly, delegate it.
 
-**When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions.
+**When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions (single function, one-liner config, rename).
 
 **The flow** (RED → GREEN → REFACTOR):
 1. Write behavioral spec → launch **test-writer** (parallel across domains) — produces RED (failing) tests
