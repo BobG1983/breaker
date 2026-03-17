@@ -53,7 +53,7 @@ pub struct ChaosParams {
 }
 
 /// Parameters for the [`InputStrategy::Scripted`] variant.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ScriptedParams {
     /// Ordered list of frame-action pairs.
     pub actions: Vec<ScriptedFrame>,
