@@ -1,5 +1,6 @@
 //! Hot-reload systems — propagate RON file changes to live game state.
 
+pub mod propagate_archetype_changes;
 pub mod propagate_bolt_config;
 pub mod propagate_bolt_defaults;
 pub mod propagate_breaker_config;
@@ -13,6 +14,7 @@ pub mod propagate_cell_type_changes;
 pub mod propagate_node_layout_changes;
 pub mod propagate_timer_ui_defaults;
 
+pub use propagate_archetype_changes::propagate_archetype_changes;
 pub use propagate_bolt_config::propagate_bolt_config;
 pub use propagate_bolt_defaults::propagate_bolt_defaults;
 pub use propagate_breaker_config::propagate_breaker_config;
