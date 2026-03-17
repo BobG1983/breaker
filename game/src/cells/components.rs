@@ -10,6 +10,11 @@ pub struct Cell;
 #[derive(Component, Debug)]
 pub struct RequiredToClear;
 
+/// Tracks which cell type definition alias spawned this cell.
+/// Used by hot-reload to update live cells when their type definition changes.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CellTypeAlias(pub char);
+
 /// Visual parameters for cell damage color feedback.
 #[derive(Component, Debug, Clone)]
 pub struct CellDamageVisuals {

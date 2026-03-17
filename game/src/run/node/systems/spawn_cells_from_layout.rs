@@ -4,7 +4,10 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        components::{Cell, CellDamageVisuals, CellHealth, CellHeight, CellWidth, RequiredToClear},
+        components::{
+            Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth,
+            RequiredToClear,
+        },
         resources::{CellConfig, CellTypeRegistry},
     },
     run::node::ActiveNodeLayout,
@@ -56,6 +59,7 @@ pub fn spawn_cells_from_layout(
 
             let mut entity = commands.spawn((
                 Cell,
+                CellTypeAlias(alias),
                 CellWidth(config.width),
                 CellHeight(config.height),
                 CellHealth::new(def.hp),
@@ -87,7 +91,7 @@ mod tests {
     use super::*;
     use crate::{
         cells::{
-            components::{Cell, CellHealth, CellHeight, CellWidth, RequiredToClear},
+            components::{Cell, CellHealth, CellHeight, CellTypeAlias, CellWidth, RequiredToClear},
             resources::{CellTypeDefinition, CellTypeRegistry},
         },
         run::node::{ActiveNodeLayout, NodeLayout},
@@ -412,6 +416,41 @@ mod tests {
                 "cell {i} y: expected {ey:.2}, got {ay:.2}"
             );
         }
+    }
+
+    #[test]
+    fn all_cells_have_cell_type_alias() {
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        let alias_count = app
+            .world_mut()
+            .query::<(&Cell, &CellTypeAlias)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(cell_count, alias_count, "every cell should have a CellTypeAlias");
+    }
+
+    #[test]
+    fn cell_type_alias_matches_grid_char() {
+        // full_layout: row 0 = [T, S, S], row 1 = [S, S, S] → 1 T, 5 S
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let mut t_count = 0;
+        let mut s_count = 0;
+        for alias in app.world_mut().query::<&CellTypeAlias>().iter(app.world()) {
+            match alias.0 {
+                'T' => t_count += 1,
+                'S' => s_count += 1,
+                other => panic!("unexpected alias '{other}'"),
+            }
+        }
+        assert_eq!(t_count, 1, "should have 1 tough cell");
+        assert_eq!(s_count, 5, "should have 5 standard cells");
     }
 
     #[test]
