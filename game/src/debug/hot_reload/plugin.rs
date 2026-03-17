@@ -45,7 +45,7 @@ impl Plugin for HotReloadPlugin {
                 propagate_timer_ui_defaults,
                 propagate_main_menu_defaults,
                 propagate_chip_select_defaults,
-                propagate_cell_type_changes,
+                propagate_cell_type_changes.before(propagate_node_layout_changes),
                 propagate_node_layout_changes,
                 propagate_archetype_changes,
             )
