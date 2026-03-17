@@ -17,9 +17,15 @@
 
 ---
 
-## Testing — TDD
+## Testing — TDD (RED → GREEN → REFACTOR)
 
-Write tests FIRST for all game logic:
+Write tests FIRST for all game logic. The full cycle is mandatory:
+
+1. **RED** — Write the failing test(s) that describe the desired behavior. Run them — they **must fail** before you write any implementation code. If the test passes immediately, the test is wrong.
+2. **GREEN** — Write the minimum code to make the tests pass. No more, no less.
+3. **REFACTOR** — Clean up names, eliminate duplication, improve structure. Tests must still pass after refactoring.
+
+**No implementation before failing tests. No exceptions.**
 
 - **Unit tests**: Physics calculations, collision math, state machine transitions, timing windows, upgrade stacking, breaker stats
 - **Property-based tests**: Edge cases in physics/collision (use `proptest` — dependency present, planned for physics edge cases)
