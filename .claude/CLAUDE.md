@@ -42,6 +42,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Follow the RED → GREEN → REFACTOR cycle for new game logic: write **failing** tests first (RED), implement minimum code to pass (GREEN), then refactor (REFACTOR). Tests **must fail** before writing any implementation. See `docs/architecture/standards.md` Testing — TDD.
 - Follow the git workflow in @.claude/rules/git.md
 - Run command line tools individually, do not chain them with &&
+- Fix lint errors in code — **never** suppress them with `#[allow(...)]` attributes or by adding new overrides to `[workspace.lints]` in `Cargo.toml`. The three existing `allow` overrides in `Cargo.toml` are intentional and must not be removed or added to.
 
 **Move freely on**:
 - Implementation within existing system boundaries
