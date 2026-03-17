@@ -1,6 +1,7 @@
 //! System to track node completion by counting destroyed required cells.
 
 use bevy::prelude::*;
+use tracing::info;
 
 use crate::{
     cells::messages::CellDestroyed,

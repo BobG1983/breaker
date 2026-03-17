@@ -1,6 +1,7 @@
 //! System to spawn the run-end screen UI.
 
 use bevy::prelude::*;
+use tracing::info;
 
 use crate::{
     run::resources::{RunOutcome, RunState},

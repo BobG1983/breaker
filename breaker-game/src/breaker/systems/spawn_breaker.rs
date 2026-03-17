@@ -1,6 +1,7 @@
 //! System to spawn the breaker entity.
 
 use bevy::prelude::*;
+use tracing::debug;
 
 use crate::{
     breaker::{

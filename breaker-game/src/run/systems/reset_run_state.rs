@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use tracing::info;
 
 use crate::{
     run::resources::RunState,
