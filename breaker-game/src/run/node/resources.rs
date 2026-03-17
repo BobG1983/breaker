@@ -72,6 +72,14 @@ impl NodeLayout {
 #[derive(Resource, Debug, Clone)]
 pub struct ActiveNodeLayout(pub NodeLayout);
 
+impl NodeLayoutRegistry {
+    /// Returns the first layout whose name matches `name`, or `None` if not found.
+    #[must_use]
+    pub fn get_by_name(&self, name: &str) -> Option<&NodeLayout> {
+        self.layouts.iter().find(|l| l.name == name)
+    }
+}
+
 /// Registry of all loaded node layouts.
 #[derive(Resource, Debug, Default, Clone)]
 pub struct NodeLayoutRegistry {
@@ -99,6 +107,17 @@ pub struct ClearRemainingCount {
 mod tests {
     use super::*;
     use crate::cells::CellTypeDefinition;
+
+    fn make_layout(name: &str) -> NodeLayout {
+        NodeLayout {
+            name: name.to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['.', '.']],
+        }
+    }
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
@@ -187,6 +206,30 @@ mod tests {
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
+    }
+
+    #[test]
+    fn get_by_name_returns_layout_with_matching_name() {
+        let registry = NodeLayoutRegistry {
+            layouts: vec![make_layout("corridor"), make_layout("open")],
+        };
+        let result = registry.get_by_name("corridor");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().name, "corridor");
+    }
+
+    #[test]
+    fn get_by_name_returns_none_for_missing_name() {
+        let registry = NodeLayoutRegistry {
+            layouts: vec![make_layout("corridor")],
+        };
+        assert!(registry.get_by_name("missing").is_none());
+    }
+
+    #[test]
+    fn get_by_name_on_empty_registry_returns_none() {
+        let registry = NodeLayoutRegistry { layouts: vec![] };
+        assert!(registry.get_by_name("anything").is_none());
     }
 
     #[test]
