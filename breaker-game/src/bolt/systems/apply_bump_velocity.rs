@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltVelocity},
-    breaker::messages::BumpPerformed,
-};
+use crate::{bolt::components::*, breaker::messages::BumpPerformed};
 
 /// Reads [`BumpPerformed`] messages and applies the velocity multiplier to the bolt.
 ///

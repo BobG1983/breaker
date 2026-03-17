@@ -163,6 +163,7 @@ All identifiers MUST use project vocabulary:
 - **Error handling**: Dev builds (`cfg(debug_assertions)`) panic aggressively. Release builds warn for non-critical issues.
 - **Cleanup markers**: Every spawned entity gets a cleanup marker component.
 - **Message-driven communication**: Domains talk through `#[derive(Message)]` + `MessageWriter<T>` / `MessageReader<T>`. No direct cross-domain imports for data flow.
+- **Import style**: When importing 4+ items from the same `crate::` path, use a glob — `use crate::cells::components::*` not `use crate::cells::components::{A, B, C, D}`. When a domain has a `prelude` module, prefer `use crate::domain::prelude::*`.
 
 # Persistent Agent Memory
 

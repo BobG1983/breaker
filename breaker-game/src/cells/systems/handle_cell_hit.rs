@@ -66,7 +66,7 @@ pub fn handle_cell_hit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::components::{Cell, CellDamageVisuals, CellHealth, RequiredToClear};
+    use crate::cells::components::*;
 
     #[derive(Resource)]
     struct TestMessage(Option<BoltHitCell>);

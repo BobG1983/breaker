@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        components::{Cell, CellDamageVisuals, CellHealth, CellTypeAlias},
+        components::*,
         resources::{CellTypeDefinition, CellTypeRegistry},
     },
     screen::loading::resources::DefaultsCollection,

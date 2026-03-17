@@ -4,9 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::{components::BoltVelocity, filters::ActiveBoltFilter},
-    breaker::components::{
-        BreakerHeight, BreakerTilt, BreakerWidth, MaxReflectionAngle, MinAngleFromHorizontal,
-    },
+    breaker::components::*,
     physics::{
         filters::BreakerCollisionFilter, messages::BoltHitBreaker, queries::BoltPhysicsQuery,
     },

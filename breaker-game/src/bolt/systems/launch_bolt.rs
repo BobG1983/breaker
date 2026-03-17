@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{
-        components::{BoltBaseSpeed, BoltInitialAngle, BoltServing, BoltVelocity},
-        filters::ServingBoltFilter,
-    },
+    bolt::{components::*, filters::ServingBoltFilter},
     input::resources::{GameAction, InputActions},
 };
 

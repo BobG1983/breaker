@@ -2,7 +2,7 @@
 
 use bevy::{input::keyboard::KeyboardInput, prelude::*};
 
-use crate::input::resources::{DoubleTapState, GameAction, InputActions, InputConfig};
+use crate::input::resources::*;
 
 /// Clears [`InputActions`] at the start of each fixed tick.
 ///
