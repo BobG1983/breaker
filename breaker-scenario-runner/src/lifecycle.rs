@@ -16,8 +16,9 @@ use breaker::{
 use crate::{
     invariants::{
         EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen,
-        ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_in_bounds,
-        check_breaker_in_bounds, check_no_entity_leaks, check_no_nan,
+        ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_count_reasonable,
+        check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
+        check_no_entity_leaks, check_no_nan, check_timer_non_negative,
         check_valid_state_transitions,
     },
     types::ScenarioDefinition,
@@ -52,8 +53,11 @@ impl Plugin for ScenarioLifecycle {
                 (
                     (tick_scenario_frame, check_frame_limit).chain(),
                     check_bolt_in_bounds,
+                    check_bolt_speed_in_range,
+                    check_bolt_count_reasonable,
                     check_breaker_in_bounds,
                     check_no_nan,
+                    check_timer_non_negative,
                     check_valid_state_transitions,
                     check_no_entity_leaks,
                     enforce_frozen_positions,
@@ -197,6 +201,7 @@ mod tests {
             invariants: vec![InvariantKind::BoltInBounds],
             expected_violations: None,
             debug_setup: None,
+            invariant_params: Default::default(),
         }
     }
 
@@ -211,6 +216,7 @@ mod tests {
             invariants: vec![],
             expected_violations: None,
             debug_setup: None,
+            invariant_params: Default::default(),
         }
     }
 
@@ -428,6 +434,7 @@ mod tests {
                 breaker_position: None,
                 disable_physics: false,
             }),
+            invariant_params: Default::default(),
         };
 
         let mut app = debug_setup_app(definition);
@@ -485,6 +492,7 @@ mod tests {
                 breaker_position: None,
                 disable_physics: true,
             }),
+            invariant_params: Default::default(),
         };
 
         let mut app = debug_setup_app(definition);

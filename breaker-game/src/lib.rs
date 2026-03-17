@@ -18,6 +18,6 @@ pub(crate) mod fx;
 pub(crate) mod input;
 pub(crate) mod interpolate;
 pub(crate) mod physics;
-pub(crate) mod run;
+pub mod run;
 pub(crate) mod ui;
 pub(crate) mod wall;

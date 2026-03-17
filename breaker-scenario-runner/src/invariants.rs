@@ -5,9 +5,13 @@
 //! all violations for end-of-run reporting.
 
 use bevy::prelude::*;
-use breaker::shared::{GameState, PlayfieldConfig};
+use breaker::{
+    bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity},
+    run::node::resources::NodeTimer,
+    shared::{GameState, PlayfieldConfig},
+};
 
-use crate::types::InvariantKind;
+use crate::{lifecycle::ScenarioConfig, types::InvariantKind};
 
 /// Query filter that matches entities tagged for invariant checking.
 type TaggedTransformQuery<'w, 's> = Query<
@@ -219,6 +223,82 @@ pub fn check_no_entity_leaks(
                 "NoEntityLeaks FAIL frame={} count={count} baseline={base} (>{} threshold)",
                 frame.0,
                 base * 2,
+            ),
+        });
+    }
+}
+
+/// Checks that bolt speed stays within configured min/max bounds.
+///
+/// Skips bolts with zero speed (serving or dead bolts).
+pub fn check_bolt_speed_in_range(
+    bolts: Query<
+        (Entity, &BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed),
+        With<ScenarioTagBolt>,
+    >,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    for (entity, velocity, min_speed, max_speed) in &bolts {
+        let speed = velocity.speed();
+        if speed < f32::EPSILON {
+            continue;
+        }
+        if speed < min_speed.0 || speed > max_speed.0 {
+            log.0.push(ViolationEntry {
+                frame: frame.0,
+                invariant: InvariantKind::BoltSpeedInRange,
+                entity: Some(entity),
+                message: format!(
+                    "BoltSpeedInRange FAIL frame={} entity={entity:?} speed={speed:.1} bounds=[{:.1}, {:.1}]",
+                    frame.0, min_speed.0, max_speed.0,
+                ),
+            });
+        }
+    }
+}
+
+/// Checks that [`NodeTimer::remaining`] never goes negative.
+///
+/// Only runs when the `NodeTimer` resource exists (Chrono archetype).
+pub fn check_timer_non_negative(
+    timer: Option<Res<NodeTimer>>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let Some(timer) = timer else { return };
+    if timer.remaining < 0.0 {
+        log.0.push(ViolationEntry {
+            frame: frame.0,
+            invariant: InvariantKind::TimerNonNegative,
+            entity: None,
+            message: format!(
+                "TimerNonNegative FAIL frame={} remaining={:.3}",
+                frame.0, timer.remaining,
+            ),
+        });
+    }
+}
+
+/// Checks that the bolt count stays within `invariant_params.max_bolt_count`.
+///
+/// Catches bolt accumulation leaks (e.g. Prism bolts not despawned on loss).
+pub fn check_bolt_count_reasonable(
+    bolts: Query<Entity, With<ScenarioTagBolt>>,
+    config: Res<ScenarioConfig>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let max = config.definition.invariant_params.max_bolt_count;
+    let count = bolts.iter().count();
+    if count > max {
+        log.0.push(ViolationEntry {
+            frame: frame.0,
+            invariant: InvariantKind::BoltCountReasonable,
+            entity: None,
+            message: format!(
+                "BoltCountReasonable FAIL frame={} count={count}",
+                frame.0,
             ),
         });
     }
@@ -735,5 +815,196 @@ mod tests {
             log.0.is_empty(),
             "expected no NoEntityLeaks violation when count <= baseline"
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // BoltSpeedInRange
+    // -------------------------------------------------------------------------
+
+    fn test_app_bolt_speed() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.add_systems(FixedUpdate, check_bolt_speed_in_range);
+        app
+    }
+
+    #[test]
+    fn bolt_speed_in_range_fires_when_above_max() {
+        let mut app = test_app_bolt_speed();
+
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            BoltVelocity::new(0.0, 1000.0),
+            BoltMinSpeed(200.0),
+            BoltMaxSpeed(800.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(log.0.len(), 1);
+        assert_eq!(log.0[0].invariant, InvariantKind::BoltSpeedInRange);
+    }
+
+    #[test]
+    fn bolt_speed_in_range_does_not_fire_when_within_bounds() {
+        let mut app = test_app_bolt_speed();
+
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            BoltVelocity::new(0.0, 400.0),
+            BoltMinSpeed(200.0),
+            BoltMaxSpeed(800.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty());
+    }
+
+    #[test]
+    fn bolt_speed_in_range_skips_zero_speed() {
+        let mut app = test_app_bolt_speed();
+
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            BoltVelocity::new(0.0, 0.0),
+            BoltMinSpeed(200.0),
+            BoltMaxSpeed(800.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty(), "zero speed should be skipped");
+    }
+
+    // -------------------------------------------------------------------------
+    // TimerNonNegative
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn timer_non_negative_fires_when_remaining_is_negative() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.insert_resource(NodeTimer {
+            remaining: -1.0,
+            total: 60.0,
+        });
+        app.add_systems(FixedUpdate, check_timer_non_negative);
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(log.0.len(), 1);
+        assert_eq!(log.0[0].invariant, InvariantKind::TimerNonNegative);
+    }
+
+    #[test]
+    fn timer_non_negative_does_not_fire_when_remaining_is_zero() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.insert_resource(NodeTimer {
+            remaining: 0.0,
+            total: 60.0,
+        });
+        app.add_systems(FixedUpdate, check_timer_non_negative);
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty());
+    }
+
+    #[test]
+    fn timer_non_negative_skips_when_no_resource() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        // NodeTimer not inserted
+        app.add_systems(FixedUpdate, check_timer_non_negative);
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty());
+    }
+
+    // -------------------------------------------------------------------------
+    // BoltCountReasonable
+    // -------------------------------------------------------------------------
+
+    fn bolt_count_test_app(max_bolt_count: usize) -> App {
+        use crate::types::{InputStrategy, ScenarioDefinition, ScriptedParams, InvariantParams};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.insert_resource(ScenarioConfig {
+            definition: ScenarioDefinition {
+                breaker: "Aegis".to_owned(),
+                layout: "Corridor".to_owned(),
+                input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+                max_frames: 1000,
+                invariants: vec![],
+                expected_violations: None,
+                debug_setup: None,
+                invariant_params: InvariantParams { max_bolt_count },
+            },
+        });
+        app.add_systems(FixedUpdate, check_bolt_count_reasonable);
+        app
+    }
+
+    #[test]
+    fn bolt_count_reasonable_fires_when_count_exceeds_max() {
+        let mut app = bolt_count_test_app(8);
+
+        for _ in 0..9 {
+            app.world_mut().spawn(ScenarioTagBolt);
+        }
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(log.0.len(), 1);
+        assert_eq!(log.0[0].invariant, InvariantKind::BoltCountReasonable);
+    }
+
+    #[test]
+    fn bolt_count_reasonable_does_not_fire_at_max() {
+        let mut app = bolt_count_test_app(8);
+
+        for _ in 0..8 {
+            app.world_mut().spawn(ScenarioTagBolt);
+        }
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty());
+    }
+
+    #[test]
+    fn bolt_count_reasonable_uses_scenario_params() {
+        let mut app = bolt_count_test_app(12);
+
+        for _ in 0..10 {
+            app.world_mut().spawn(ScenarioTagBolt);
+        }
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty(), "10 bolts should be OK with max_bolt_count=12");
     }
 }
