@@ -1,14 +1,17 @@
 //! System that serialises the recording buffer to a RON file on `AppExit`.
 
-use std::fmt::Write as _;
-use std::io::Write as IoWrite;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    fmt::Write as _,
+    io::Write as IoWrite,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-use bevy::ecs::message::Messages;
-use bevy::prelude::*;
+use bevy::{ecs::message::Messages, prelude::*};
 
-use crate::input::resources::GameAction;
-use crate::debug::recording::resources::{RecordedFrame, RecordingBuffer, RecordingConfig};
+use crate::{
+    debug::recording::resources::{RecordedFrame, RecordingBuffer, RecordingConfig},
+    input::resources::GameAction,
+};
 
 /// Writes the recording buffer to `recordings/recording_<unix_secs>.scripted.ron`.
 ///
@@ -19,7 +22,11 @@ pub fn write_recording_on_exit(
     buffer: Res<RecordingBuffer>,
     exit_messages: Res<Messages<AppExit>>,
 ) {
-    if exit_messages.iter_current_update_messages().next().is_none() {
+    if exit_messages
+        .iter_current_update_messages()
+        .next()
+        .is_none()
+    {
         return;
     }
 
@@ -45,7 +52,11 @@ pub fn write_recording_on_exit(
             if let Err(e) = file.write_all(ron_str.as_bytes()) {
                 warn!("RecordingPlugin: failed to write recording: {e}");
             } else {
-                info!("RecordingPlugin: saved {} frames to {}", buffer.0.len(), path.display());
+                info!(
+                    "RecordingPlugin: saved {} frames to {}",
+                    buffer.0.len(),
+                    path.display()
+                );
             }
         }
         Err(e) => {
@@ -90,8 +101,14 @@ mod tests {
     #[test]
     fn serialise_buffer_produces_scripted_input_ron_format() {
         let frames = vec![
-            RecordedFrame { frame: 42, actions: vec![GameAction::MoveLeft] },
-            RecordedFrame { frame: 43, actions: vec![GameAction::MoveLeft, GameAction::Bump] },
+            RecordedFrame {
+                frame: 42,
+                actions: vec![GameAction::MoveLeft],
+            },
+            RecordedFrame {
+                frame: 43,
+                actions: vec![GameAction::MoveLeft, GameAction::Bump],
+            },
         ];
         let ron = serialise_buffer(&frames);
         assert!(ron.starts_with("Scripted(actions: ["));
@@ -109,8 +126,14 @@ mod tests {
     #[test]
     fn serialised_output_has_correct_variant_and_field_structure() {
         let frames = vec![
-            RecordedFrame { frame: 10, actions: vec![GameAction::Bump] },
-            RecordedFrame { frame: 20, actions: vec![GameAction::MoveRight] },
+            RecordedFrame {
+                frame: 10,
+                actions: vec![GameAction::Bump],
+            },
+            RecordedFrame {
+                frame: 20,
+                actions: vec![GameAction::MoveRight],
+            },
         ];
         let ron = serialise_buffer(&frames);
 

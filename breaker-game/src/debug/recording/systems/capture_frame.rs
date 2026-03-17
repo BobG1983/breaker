@@ -2,10 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::input::resources::InputActions;
-use crate::run::node::ActiveNodeLayout;
-
-use crate::debug::recording::resources::{RecordedFrame, RecordingBuffer, RecordingConfig, RecordingFrame};
+use crate::{
+    debug::recording::resources::{
+        RecordedFrame, RecordingBuffer, RecordingConfig, RecordingFrame,
+    },
+    input::resources::InputActions,
+    run::node::ActiveNodeLayout,
+};
 
 /// Captures the current frame's [`InputActions`] into the [`RecordingBuffer`].
 ///
@@ -44,11 +47,13 @@ pub fn capture_frame(
 
 #[cfg(test)]
 mod tests {
+    use bevy::{app::App, ecs::schedule::ScheduleLabel};
+
     use super::*;
-    use bevy::app::App;
-    use bevy::ecs::schedule::ScheduleLabel;
-    use crate::input::resources::GameAction;
-    use crate::run::node::resources::{NodeLayout, ActiveNodeLayout};
+    use crate::{
+        input::resources::GameAction,
+        run::node::resources::{ActiveNodeLayout, NodeLayout},
+    };
 
     #[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
     struct TestSchedule;
@@ -78,7 +83,10 @@ mod tests {
 
         let buffer = app.world().resource::<RecordingBuffer>();
         assert_eq!(buffer.0.len(), 1);
-        assert_eq!(buffer.0[0].actions, vec![GameAction::MoveLeft, GameAction::Bump]);
+        assert_eq!(
+            buffer.0[0].actions,
+            vec![GameAction::MoveLeft, GameAction::Bump]
+        );
     }
 
     #[test]
@@ -103,14 +111,15 @@ mod tests {
     fn capture_frame_skips_when_level_filter_does_not_match() {
         let mut app = test_app_with_config(true, Some("corridor"));
         // Insert wrong layout
-        app.world_mut().insert_resource(ActiveNodeLayout(NodeLayout {
-            name: "open".to_owned(),
-            timer_secs: 60.0,
-            cols: 10,
-            rows: 5,
-            grid_top_offset: 0.0,
-            grid: vec![],
-        }));
+        app.world_mut()
+            .insert_resource(ActiveNodeLayout(NodeLayout {
+                name: "open".to_owned(),
+                timer_secs: 60.0,
+                cols: 10,
+                rows: 5,
+                grid_top_offset: 0.0,
+                grid: vec![],
+            }));
         run_with_actions(&mut app, vec![GameAction::MoveRight]);
 
         let buffer = app.world().resource::<RecordingBuffer>();
@@ -120,14 +129,15 @@ mod tests {
     #[test]
     fn capture_frame_records_when_level_filter_matches() {
         let mut app = test_app_with_config(true, Some("corridor"));
-        app.world_mut().insert_resource(ActiveNodeLayout(NodeLayout {
-            name: "corridor".to_owned(),
-            timer_secs: 60.0,
-            cols: 10,
-            rows: 5,
-            grid_top_offset: 0.0,
-            grid: vec![],
-        }));
+        app.world_mut()
+            .insert_resource(ActiveNodeLayout(NodeLayout {
+                name: "corridor".to_owned(),
+                timer_secs: 60.0,
+                cols: 10,
+                rows: 5,
+                grid_top_offset: 0.0,
+                grid: vec![],
+            }));
         run_with_actions(&mut app, vec![GameAction::DashLeft]);
 
         let buffer = app.world().resource::<RecordingBuffer>();

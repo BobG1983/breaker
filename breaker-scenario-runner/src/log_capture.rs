@@ -6,12 +6,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::log::{BoxedLayer, Level};
-use bevy::prelude::*;
+use bevy::{
+    log::{BoxedLayer, Level},
+    prelude::*,
+};
 use tracing::Subscriber;
-use tracing_subscriber::Layer;
-use tracing_subscriber::layer::Context;
-use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 
 /// A single captured log entry.
 #[derive(Debug, Clone)]
@@ -43,7 +43,9 @@ pub struct LogBuffer(pub Arc<Mutex<Vec<(Level, String, String)>>>);
 pub fn build_log_layer() -> (BoxedLayer, LogBuffer) {
     let buffer = LogBuffer::default();
     let buffer_clone = buffer.clone();
-    let layer = ScenarioLogLayer { buffer: buffer_clone };
+    let layer = ScenarioLogLayer {
+        buffer: buffer_clone,
+    };
     (Box::new(layer), buffer)
 }
 
@@ -84,11 +86,7 @@ impl<S> Layer<S> for ScenarioLogLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    fn on_event(
-        &self,
-        event: &tracing::Event<'_>,
-        _ctx: Context<'_, S>,
-    ) {
+    fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         let meta = event.metadata();
         let level = *meta.level();
 

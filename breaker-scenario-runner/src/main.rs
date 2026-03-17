@@ -34,4 +34,3 @@ pub struct Args {
     #[argh(switch)]
     pub headless: bool,
 }
-

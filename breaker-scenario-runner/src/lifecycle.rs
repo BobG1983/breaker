@@ -9,8 +9,10 @@
 use bevy::prelude::*;
 use breaker::shared::{GameState, ScenarioLayoutOverride, SelectedArchetype};
 
-use crate::invariants::{ScenarioFrame, ViolationLog};
-use crate::types::ScenarioDefinition;
+use crate::{
+    invariants::{ScenarioFrame, ViolationLog},
+    types::ScenarioDefinition,
+};
 
 /// Loaded scenario configuration, inserted before the app runs.
 #[derive(Resource)]

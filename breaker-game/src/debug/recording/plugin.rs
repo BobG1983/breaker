@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::resources::{RecordingBuffer, RecordingFrame};
-use super::systems::{capture_frame, write_recording_on_exit};
+use super::{
+    resources::{RecordingBuffer, RecordingFrame},
+    systems::{capture_frame, write_recording_on_exit},
+};
 
 /// Dev-only plugin that records input actions to a RON file.
 ///

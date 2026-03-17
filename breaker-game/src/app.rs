@@ -57,9 +57,10 @@ fn dev_log_config(default_filter: &str) -> (String, bool) {
             .iter()
             .position(|a| a == "--log-level")
             .and_then(|i| args.get(i + 1))
-            .map_or_else(|| default_filter.to_owned(), |level| {
-                format!("breaker={level},bevy=warn")
-            });
+            .map_or_else(
+                || default_filter.to_owned(),
+                |level| format!("breaker={level},bevy=warn"),
+            );
 
         (filter, file_enabled)
     }
@@ -103,8 +104,11 @@ pub fn build_app() -> App {
 
     let (log_filter, use_file_log) = dev_log_config(default_filter);
 
-    let custom_layer: fn(&mut App) -> Option<BoxedLayer> =
-        if use_file_log { file_log_layer } else { |_| None };
+    let custom_layer: fn(&mut App) -> Option<BoxedLayer> = if use_file_log {
+        file_log_layer
+    } else {
+        |_| None
+    };
 
     app.add_plugins(
         DefaultPlugins
