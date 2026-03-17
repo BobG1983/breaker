@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use brickbreaker_derive::GameConfig;
+use breaker_derive::GameConfig;
 use serde::Deserialize;
 
 /// Cell defaults loaded from RON — shared grid layout properties only.

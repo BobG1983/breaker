@@ -16,6 +16,10 @@ cargo fmt --check            # Format check
 
 Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast compiles.
 
+## Workspace
+
+Cargo workspace with `breaker-<name>` crate directories at root: `breaker-game/` (main game), `breaker-derive/` (proc macros). New crates follow this convention.
+
 ## Architecture
 
 **Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, upgrades, run, physics, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. See `docs/architecture/` for full details, file tree, message table, and patterns.

@@ -1,8 +1,30 @@
 # Plugin Architecture
 
+## Workspace Layout
+
+Cargo workspace with peer crates at the repository root. Directory names follow `breaker-<name>` convention.
+
+```
+brickbreaker/                 # Repository root (workspace)
+├── Cargo.toml                # Workspace manifest — members, shared lints, profiles
+├── .cargo/config.toml        # Dev aliases (cargo dev, cargo dtest, etc.)
+├── breaker-game/             # Main game crate (binary + library)
+│   ├── Cargo.toml            # Package: brickbreaker
+│   ├── src/                  # Game source (see Domain Layout below)
+│   └── assets/               # RON data files, shaders, textures, audio
+├── breaker-derive/           # Proc-macro crate
+│   ├── Cargo.toml            # Package: brickbreaker_derive
+│   └── src/lib.rs            # GameConfig derive macro
+└── docs/                     # Design docs, architecture, build plan
+```
+
+**Naming convention:** Root-level crate directories are named `breaker-<name>`. Cargo package names use underscores (`brickbreaker`, `brickbreaker_derive`). New crates (e.g., scenario-runner) follow this pattern: `breaker-scenario-runner/`.
+
+## Domain Layout
+
 One Bevy plugin per **game domain** (breaker, bolt, cells, etc.) — not one per Bevy system function. Each domain plugin encapsulates all the Bevy systems, components, resources, and messages related to that domain.
 
-Everything lives inside a single `brickbreaker` crate:
+Inside `breaker-game/`:
 
 ```
 src/
@@ -26,7 +48,6 @@ src/
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
 ├── ui/               # HUD, menus, chip selection screen
 └── debug/            # Dev tooling: overlays, telemetry, hot-reload (sub-domains)
-assets/               # RON data files, shaders, textures, audio (project root, not inside src/)
 ```
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.

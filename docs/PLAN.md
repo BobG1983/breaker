@@ -47,7 +47,7 @@ The plan front-loads **feel** (Phases 1-2) because if the breaker-bolt-cell inte
 - **Chip timeout**: Timer expires = skip (no chip). Maximum pressure.
 - **Seeded determinism**: Phase 4 (vertical slice). Accept retrofit cost; seeds meaningless with 3 layouts.
 - **Breaker archetypes**: Proof-of-concept for the system, not final designs. Broader differentiation (base stats + abilities). Upgrade affinities deferred to Phase 7+.
-- **Workspace structure**: Axum-style — game/, derive/, scenario-runner/ as peer directories at root.
+- **Workspace structure**: Axum-style — `breaker-game/`, `breaker-derive/`, `breaker-scenario-runner/` as peer directories at root. Convention: `breaker-<name>`.
 - **Scenario runner**: Separate crate with argh CLI. Visual + headless modes. RON scenario files crate-local.
 
 ## Open Questions

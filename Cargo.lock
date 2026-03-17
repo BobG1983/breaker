@@ -1822,14 +1822,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "brickbreaker"
+name = "breaker"
 version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_asset_loader",
  "bevy_common_assets",
  "bevy_egui",
- "brickbreaker_derive",
+ "breaker_derive",
  "iyes_progress",
  "proptest",
  "rand",
@@ -1839,7 +1839,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "brickbreaker_derive"
+name = "breaker_derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",

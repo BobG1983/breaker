@@ -1,7 +1,7 @@
 //! Bolt domain resources.
 
 use bevy::prelude::*;
-use brickbreaker_derive::GameConfig;
+use breaker_derive::GameConfig;
 use serde::Deserialize;
 
 /// Bolt defaults loaded from RON.

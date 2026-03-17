@@ -1,7 +1,7 @@
 //! Main menu resources.
 
 use bevy::prelude::*;
-use brickbreaker_derive::GameConfig;
+use breaker_derive::GameConfig;
 use serde::Deserialize;
 
 use super::components::MenuItem;
