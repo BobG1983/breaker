@@ -149,6 +149,34 @@ Return a structured summary:
 - path/to/file.rs (N tests added)
 ```
 
+## Handling Bug Regression Specs
+
+A regression spec says "this behavior is currently wrong" rather than "implement this new behavior." The approach differs slightly:
+
+### Recognition
+
+The spec will include language like "bug:", "currently broken:", "regression:", or "this behavior is wrong." Treat this as a signal that the test must pin the *correct* behavior so it fails against the current broken code — not pass against it.
+
+### Test Placement
+
+- **Code-level bug** → test goes in the existing `#[cfg(test)] mod tests` block of the system file that owns the broken behavior. Do NOT create a new file.
+- **Scenario-level bug** → `.scenario.ron` file in `scenarios/regressions/`, named after the bug (e.g., `bolt_escape_shallow_angle.scenario.ron`).
+
+### Test Naming
+
+Encode the expected correct behavior, not the bug:
+- `bolt_does_not_escape_bounds_on_shallow_wall_reflect` ✓
+- `test_reflect_bug` ✗
+- `bolt_stays_in_bounds` ✓ (if more specific name is awkward)
+
+### Verification
+
+Same RED phase requirement as feature tests: the test MUST fail against current code. A regression test that passes immediately means either the bug is already fixed or the test is wrong — investigate and flag in your output.
+
+### Do Not Fix
+
+If you can see the fix while writing the test, note it in your report under `### Observations` but do NOT apply it. Your role is the RED phase only.
+
 ## Game Vocabulary
 
 All test names and identifiers MUST use project vocabulary:

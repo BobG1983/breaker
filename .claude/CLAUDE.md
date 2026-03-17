@@ -95,9 +95,13 @@ Launch all applicable agents simultaneously — they are independent:
 
 ### Phase 3 — On Build/Test Failure (sequential, reactive)
 
-| Trigger | Agent | Why |
-|---------|-------|-----|
-| Compiler errors that aren't obvious | **rust-error-decoder** | Translate diagnostics into actionable fixes |
+| Trigger | Flow | Notes |
+|---------|------|-------|
+| Compiler errors that aren't obvious | **rust-error-decoder** → describe fix | Sequential |
+| scenario-runner FAIL, high-confidence diagnosis | scenario-runner hint → **test-writer** (regression spec) → **code-writer** | test-writer writes scenario RON or unit test |
+| scenario-runner FAIL, low-confidence diagnosis | Main agent investigates → writes spec → **test-writer** → **code-writer** | Main agent reads src first |
+| test-runner FAIL, existing test broke | test-runner hint → **code-writer** (fix spec) | test-writer skipped — test already exists |
+| test-runner FAIL, no test for the broken behavior | test-runner hint → **test-writer** (regression spec) → **code-writer** | Rare — usually means a gap in coverage |
 
 ### Release (solo)
 

@@ -49,6 +49,26 @@ cargo dtest 2>&1
 - For each failure: test name, file location if identifiable, and the assertion/panic message.
 - If compilation fails before tests run, report it as a build failure (not test failure).
 
+For each failing test, append a `**Fix spec hint:**` block:
+
+```
+**Fix spec hint:**
+- Failing test: `path/to/file.rs::tests::test_name`
+- Expected: [from assertion — what the test requires]
+- Got: [from assertion — what actually happened]
+- System under test: likely `path/to/system.rs` (inferred from test file location)
+- Delegate: code-writer can fix directly from this — no test-writer needed (test already exists)
+```
+
+For build-level failures (missing impl, wrong type, compile error — not a test assertion failure), use this hint instead:
+
+```
+**Fix spec hint:**
+- Build failure: [error summary]
+- Suspected location: `path/to/file.rs:line`
+- Delegate: rust-error-decoder first, then code-writer
+```
+
 ## Output Format
 
 ```
