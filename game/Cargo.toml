@@ -5,7 +5,7 @@ edition = "2024"
 
 [features]
 default = ["dev"]
-dev = ["dep:bevy_egui"]
+dev = ["dep:bevy_egui", "bevy/file_watcher"]
 
 [dependencies]
 bevy = { version = "0.18.1", default-features = false, features = ["2d", "serialize"] }
