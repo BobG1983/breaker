@@ -1,8 +1,12 @@
 //! App construction — builds the Bevy [`App`] with all plugins.
 
 use bevy::{
-    camera::ScalingMode, core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom,
-    prelude::*, window::PrimaryWindow,
+    camera::ScalingMode,
+    core_pipeline::tonemapping::Tonemapping,
+    log::{BoxedLayer, LogPlugin},
+    post_process::bloom::Bloom,
+    prelude::*,
+    window::PrimaryWindow,
 };
 
 use crate::{game::Game, shared::PlayfieldConfig};
@@ -28,19 +32,51 @@ pub fn apply_dev_flags(app: &mut App) {
     }
 }
 
+/// `LogPlugin::custom_layer` factory — attaches a daily rolling file appender.
+///
+/// Writes to `logs/breaker.log` (rolling daily). Returns `None` if the `logs/`
+/// directory cannot be created (non-fatal — falls back to console logging only).
+fn file_log_layer(_app: &mut App) -> Option<BoxedLayer> {
+    use tracing_appender::rolling;
+    use tracing_subscriber::Layer;
+
+    std::fs::create_dir_all("logs").ok()?;
+    let file_appender = rolling::daily("logs", "breaker.log");
+    Some(
+        tracing_subscriber::fmt::layer()
+            .with_writer(file_appender)
+            .with_ansi(false)
+            .boxed(),
+    )
+}
+
 /// Constructs and returns the configured Bevy [`App`].
 ///
 /// Sets up the window, camera, and all game plugins via [`Game`].
 pub fn build_app() -> App {
     let mut app = App::new();
 
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Brickbreaker".into(),
-            ..default()
-        }),
-        ..default()
-    }));
+    let log_filter = if cfg!(debug_assertions) {
+        "breaker=debug,bevy=warn"
+    } else {
+        "breaker=warn,bevy=error"
+    };
+
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Brickbreaker".into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(LogPlugin {
+                filter: log_filter.to_owned(),
+                custom_layer: file_log_layer,
+                ..default()
+            }),
+    );
 
     app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()));
     app.add_plugins(Game);
