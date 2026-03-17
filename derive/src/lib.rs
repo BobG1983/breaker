@@ -11,7 +11,12 @@ use syn::{DeriveInput, Fields, Meta, parse_macro_input};
 /// 2. `impl From<*Defaults> for *Config` (field-by-field copy)
 /// 3. `impl Default for *Config` delegating to `Defaults::default().into()`
 ///
-/// Usage:
+/// # Panics
+///
+/// Panics if the struct is missing `#[game_config(name = "...")]` or uses
+/// unnamed fields.
+///
+/// # Usage
 /// ```ignore
 /// #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 /// #[game_config(name = "BreakerConfig")]
