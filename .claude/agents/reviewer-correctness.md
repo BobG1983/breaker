@@ -53,6 +53,11 @@ Read `CLAUDE.md` and `docs/TERMINOLOGY.md`, then the specific files under review
 - Timer arithmetic that doesn't handle overflow or wrap-around
 - Floating-point equality comparisons where epsilon checks are needed
 
+### Lint Suppression
+
+- Any `#[allow(clippy::...)]` attribute — **flag and reject**. Clippy suppressions are never acceptable; the underlying issue must be fixed.
+- Any `#[allow(dead_code)]` attribute — **flag and reject**. Dead code must be commented out until it is needed, not silenced. If it will never be needed, delete it.
+
 ### Test Correctness
 
 - Tests that assert on the wrong value (off-by-one in expected, wrong entity)
@@ -76,6 +81,9 @@ Read `CLAUDE.md` and `docs/TERMINOLOGY.md`, then the specific files under review
 
 ### Physics & Math [N issues / Clean]
 [file:line] — [description]
+
+### Lint Suppression [N issues / Clean]
+[file:line] — [attribute found] → [required action: fix the code / comment out the dead code]
 
 ### Test Correctness [N issues / Clean]
 [file:line] — [description]
