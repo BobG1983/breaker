@@ -1,0 +1,22 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [
+            (frame: 10, actions: [Bump]),
+            (frame: 20, actions: [Bump]),
+            (frame: 30, actions: [Bump]),
+            (frame: 40, actions: [Bump]),
+            (frame: 50, actions: [Bump]),
+            (frame: 60, actions: [Bump]),
+            (frame: 70, actions: [Bump]),
+            (frame: 80, actions: [Bump]),
+            (frame: 90, actions: [Bump]),
+            (frame: 100, actions: [Bump]),
+        ],
+    )),
+    max_frames: 10000,
+    invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+)

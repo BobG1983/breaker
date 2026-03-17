@@ -1,0 +1,12 @@
+(
+    breaker: "Chrono",
+    layout: "Corridor",
+    input: Chaos((
+        seed: 55,
+        action_prob: 0.05,
+    )),
+    max_frames: 10000,
+    invariants: [TimerNonNegative, BoltInBounds, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+)
