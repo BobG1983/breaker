@@ -108,13 +108,7 @@ If confidence is low (multiple possible root causes), omit the "Delegate" line a
 
 The "Correct behavior" line maps directly to a Given/When/Then test case for writer-tests.
 
-⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
-- `cargo dbuild` — build (dynamic linking)
-- `cargo dcheck` — type check (dynamic linking)
-- `cargo dclippy` — lint (dynamic linking)
-- `cargo dtest` — test (dynamic linking)
-The only exception is `cargo fmt` which has no dev alias.
+⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:

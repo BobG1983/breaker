@@ -173,9 +173,7 @@ Cargo.toml: {OLD} → {NEW}
 
 For urgent production fixes, follow the hotfix process in `.claude/rules/git.md`.
 
-## Dev Aliases
-
-Use dev aliases (`cargo dbuild`, `cargo dcheck`, etc.) for local invocations. Release CI uses `cargo build --release` directly — do NOT use dynamic linking features in release builds.
+⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
 
 # Persistent Agent Memory
 

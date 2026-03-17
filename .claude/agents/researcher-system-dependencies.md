@@ -83,13 +83,7 @@ Read `CLAUDE.md` for project-specific Bevy conventions, architecture notes, and 
 - `Commands` implies deferred world mutation — note but don't flag as a conflict with queries
 - If the codebase is small or early-stage, say so and keep the report proportional
 
-⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
-- `cargo dbuild` — build (dynamic linking)
-- `cargo dcheck` — type check (dynamic linking)
-- `cargo dclippy` — lint (dynamic linking)
-- `cargo dtest` — test (dynamic linking)
-The only exception is `cargo fmt` which has no dev alias.
+⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:

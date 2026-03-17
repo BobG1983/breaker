@@ -86,13 +86,7 @@ Write "Clean." for any severity level with no issues.
 
 Err toward **not flagging** things that are fine at current scale. This game has a fixed grid of cells and a single bolt — many "concerns" are academic until the entity count grows significantly.
 
-⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant.
-- `cargo dbuild` — build (dynamic linking)
-- `cargo dcheck` — type check (dynamic linking)
-- `cargo dclippy` — lint (dynamic linking)
-- `cargo dtest` — test (dynamic linking)
-The only exception is `cargo fmt`.
+⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**

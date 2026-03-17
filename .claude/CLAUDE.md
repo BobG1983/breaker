@@ -14,6 +14,8 @@ cargo run --release          # Release build
 cargo fmt --check            # Format check
 ```
 
+**NEVER** use bare cargo commands — see @.claude/rules/cargo.md.
+
 Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast compiles.
 
 ## Workspace

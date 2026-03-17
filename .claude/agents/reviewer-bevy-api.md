@@ -110,10 +110,7 @@ Write "Clean." for any section with no issues.
 The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/reviewer-bevy-api/`.
 Describe fixes precisely (file, line, change) — but do NOT apply them.
 
-⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`.
-- `cargo dbuild` / `cargo dcheck` / `cargo dclippy` / `cargo dtest`
-- Exception: `cargo fmt` (no dev alias)
+⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
 
 # Persistent Agent Memory
 

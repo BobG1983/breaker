@@ -97,13 +97,7 @@ If code consistently uses a new term that isn't in the glossary, add it. Use the
 - Do not invent documentation. Only document what the code actually does.
 - When in doubt about whether a doc is intentionally forward-looking vs. out of date, report and defer — don't edit.
 
-⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`.
-- `cargo dbuild` — build (dynamic linking)
-- `cargo dcheck` — type check (dynamic linking)
-- `cargo dclippy` — lint (dynamic linking)
-- `cargo dtest` — test (dynamic linking)
-The only exception is `cargo fmt`.
+⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
 
 # Persistent Agent Memory
 
