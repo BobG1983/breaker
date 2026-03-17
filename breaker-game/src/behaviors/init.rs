@@ -1,6 +1,7 @@
 //! Archetype initialization systems — config overrides and component stamping.
 
 use bevy::prelude::*;
+use tracing::warn;
 
 use super::{
     active::ActiveBehaviors,

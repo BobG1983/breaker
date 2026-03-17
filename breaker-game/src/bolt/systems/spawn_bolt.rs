@@ -1,6 +1,7 @@
 //! System to spawn the bolt entity.
 
 use bevy::prelude::*;
+use tracing::debug;
 
 use crate::{
     bolt::{

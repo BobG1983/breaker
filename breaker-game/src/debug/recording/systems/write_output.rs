@@ -7,6 +7,7 @@ use std::{
 };
 
 use bevy::{ecs::message::Messages, prelude::*};
+use tracing::{info, warn};
 
 use crate::{
     debug::recording::resources::{RecordedFrame, RecordingBuffer, RecordingConfig},

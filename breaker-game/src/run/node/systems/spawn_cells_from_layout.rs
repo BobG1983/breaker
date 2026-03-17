@@ -1,6 +1,7 @@
 //! System to spawn cells from the active node layout.
 
 use bevy::prelude::*;
+use tracing::debug;
 
 use crate::{
     cells::{
