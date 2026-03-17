@@ -70,6 +70,9 @@ jobs:
       - name: Run tests
         run: cargo test --workspace
 
+      - name: Build scenario runner
+        run: cargo build -p breaker_scenario_runner
+
   scenarios:
     name: Scenarios
     runs-on: ubuntu-latest

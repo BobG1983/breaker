@@ -7,18 +7,22 @@ Cargo workspace with peer crates at the repository root. Directory names follow 
 ```
 brickbreaker/                 # Repository root (workspace)
 ├── Cargo.toml                # Workspace manifest — members, shared lints, profiles
-├── .cargo/config.toml        # Dev aliases (cargo dev, cargo dtest, etc.)
+├── .cargo/config.toml        # Dev aliases (cargo dev, cargo dtest, cargo dscenario, etc.)
 ├── breaker-game/             # Main game crate (binary + library)
-│   ├── Cargo.toml            # Package: brickbreaker
+│   ├── Cargo.toml            # Package: breaker (lib) / brickbreaker (bin)
 │   ├── src/                  # Game source (see Domain Layout below)
 │   └── assets/               # RON data files, shaders, textures, audio
 ├── breaker-derive/           # Proc-macro crate
 │   ├── Cargo.toml            # Package: brickbreaker_derive
 │   └── src/lib.rs            # GameConfig derive macro
+├── breaker-scenario-runner/  # Automated gameplay testing tool (dev-only binary)
+│   ├── Cargo.toml            # Package: breaker_scenario_runner
+│   ├── src/                  # Runner source (types, lifecycle, invariants, input, log_capture)
+│   └── scenarios/            # RON scenario files (crate-local, never shipped)
 └── docs/                     # Design docs, architecture, build plan
 ```
 
-**Naming convention:** Root-level crate directories are named `breaker-<name>`. Cargo package names use underscores (`brickbreaker`, `brickbreaker_derive`). New crates (e.g., scenario-runner) follow this pattern: `breaker-scenario-runner/`.
+**Naming convention:** Root-level crate directories are named `breaker-<name>`. Cargo package names use underscores (`brickbreaker`, `brickbreaker_derive`, `breaker_scenario_runner`). New crates follow this pattern.
 
 ## Domain Layout
 
@@ -47,7 +51,7 @@ src/
 ├── interpolate/      # Transform interpolation for smooth rendering between FixedUpdate ticks
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
 ├── ui/               # HUD, menus, chip selection screen
-└── debug/            # Dev tooling: overlays, telemetry, hot-reload (sub-domains)
+└── debug/            # Dev tooling: overlays, telemetry, hot-reload, recording (sub-domains)
 ```
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
@@ -72,6 +76,7 @@ The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domai
 
 - Hot-reload systems must write to `Res<*Config>` and insert/update entity components across all domains
 - Telemetry systems must read components and resources from every domain for display
+- Recording systems capture `GameAction` inputs for later scripted playback
 - All debug code is compiled out of release builds — it cannot introduce production coupling
 
 This exception does **not** extend to other domains. Production code still communicates through messages only.

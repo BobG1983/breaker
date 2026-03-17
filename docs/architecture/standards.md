@@ -75,6 +75,23 @@ Future phases will add: upgrade registries (Amp, Augment, Overclock), textures, 
 
 ---
 
+## Scenario Runner — breaker-scenario-runner
+
+Automated gameplay testing tool in `breaker-scenario-runner/`. A separate workspace crate that is never shipped in release builds.
+
+- **CLI**: `cargo dscenario -- -s <name>` (visual), `cargo dscenario -- --all --headless` (CI)
+- **Scenario files**: RON-defined runs (`breaker`, `layout`, `input`, `max_frames`, `invariants`) stored in `breaker-scenario-runner/scenarios/`
+- **Input strategies**: `Chaos` (seeded random), `Scripted` (deterministic frame-action pairs), `Hybrid` (scripted then chaos)
+- **Invariants checked each frame**: `BoltInBounds`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `ValidStateTransitions`
+- **Log capture**: custom `tracing::Layer` fails the scenario on any WARN/ERROR from `breaker` targets
+- **Self-test scenarios**: scenarios in `scenarios/self_tests/` use `expected_violations` to verify the invariant checker itself
+
+The scenario runner uses `ScenarioLayoutOverride` (a resource in `shared/`) to bypass the run-setup screen and inject the specified layout and archetype directly.
+
+CI runs all scenarios headless on Linux via `.github/workflows/ci.yml` (`scenarios` job).
+
+---
+
 ## Debug Console — bevy_egui
 
 In-game debug panel built on `bevy_egui` with:
