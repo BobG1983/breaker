@@ -1,16 +1,11 @@
-# Phase 3: Dev Infrastructure
+# Phase 3: Dev Infrastructure — COMPLETE
 
-**Goal**: Restructure the project for multi-crate growth, add live-reload tooling, and build an automated scenario runner to catch runtime failures before the vertical slice.
+> Phase 3 is done. Canonical docs moved to [`docs/plan/done/phase-3/`](../done/phase-3/README.md).
 
-## Subphases
+## Subphases (all complete)
 
-- [3a: Workspace Restructure](phase-3a-workspace-restructure.md) — Axum-style workspace: game/, derive/, scenario-runner/ as peer directories
-- [3b: Debug Domain Restructure](phase-3b-debug-restructure.md) — Split debug into overlays/, telemetry/, hot_reload/ sub-domains
-- [3c: RON Hot-Reload](phase-3c-hot-reload.md) — File watching → defaults → config → components propagation pipeline
-- [3d: Scenario Runner](phase-3d-scenario-runner.md) — Automated gameplay testing with argh CLI, chaos monkey, invariant checking
-
-## Build Order Rationale
-
-3a (workspace restructure) is a prerequisite for 3d (scenario runner needs its own crate). 3b (debug restructure) creates the sub-domain homes for 3c (hot-reload systems). Do the structural work first, then fill in the systems.
-
-Dev infrastructure before the vertical slice means Phase 4 benefits from hot-reload (tune RON values live) and scenario testing (catch regressions automatically).
+- [3a: Workspace Restructure](../done/phase-3/phase-3a-workspace-restructure.md)
+- [3b: Debug Domain Restructure](../done/phase-3/phase-3b-debug-restructure.md)
+- [3c: RON Hot-Reload](../done/phase-3/phase-3c-hot-reload.md)
+- [3d: Scenario Runner](../done/phase-3/phase-3d-scenario-runner.md)
+- [3e: Structured Logging](../done/phase-3/phase-3e-structured-logging.md)

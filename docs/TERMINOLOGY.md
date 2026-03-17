@@ -19,7 +19,6 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **Chip** | Any Amp, Augment, or Overclock (collective term) | `ChipDefinition`, `ChipRegistry`, `ChipSelected` |
 | **Rig** | The player's complete build (Breaker + Bolt + Chips + seed + score) | `Rig`, `RigSummary` |
 | **Flux** | Meta-progression currency | `Flux`, `FluxReward` |
-
 | **Scenario** | A named automated test run defined in a `.scenario.ron` file — specifies breaker, layout, input strategy, frame limit, and invariants | `ScenarioDefinition`, `ScenarioConfig`, `ScenarioLifecycle` |
 | **Invariant** | A runtime assertion checked every frame during a scenario run; any violation fails the run | `InvariantKind`, `ViolationLog`, `ViolationEntry` |
 | **Chaos** | Input strategy that injects random game actions each frame using a seeded RNG | `InputStrategy::Chaos`, `ChaosParams` |

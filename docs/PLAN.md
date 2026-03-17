@@ -20,16 +20,17 @@ See `DESIGN.md` for core design principles, `architecture/` for technical decisi
   - [2c: Archetype System & Aegis](plan/done/phase-2/phase-2c-archetype-system.md)
   - [2d: Screens](plan/done/phase-2/phase-2d-screens-and-ui.md)
   - [2e: Visual Polish & Additional Archetypes](plan/done/phase-2/phase-2e-chrono-and-prism.md)
+- [Phase 3: Dev Infrastructure](plan/done/phase-3/README.md)
+  - [3a: Workspace Restructure](plan/done/phase-3/phase-3a-workspace-restructure.md)
+  - [3b: Debug Domain Restructure](plan/done/phase-3/phase-3b-debug-restructure.md)
+  - [3c: RON Hot-Reload](plan/done/phase-3/phase-3c-hot-reload.md)
+  - [3d: Scenario Runner](plan/done/phase-3/phase-3d-scenario-runner.md)
+  - [3e: Structured Logging](plan/done/phase-3/phase-3e-structured-logging.md)
 
 ### Current
-- [Phase 3: Dev Infrastructure](plan/phase-3/README.md)
-  - [3a: Workspace Restructure](plan/phase-3/phase-3a-workspace-restructure.md)
-  - [3b: Debug Domain Restructure](plan/phase-3/phase-3b-debug-restructure.md)
-  - [3c: RON Hot-Reload](plan/phase-3/phase-3c-hot-reload.md)
-  - [3d: Scenario Runner](plan/phase-3/phase-3d-scenario-runner.md)
+- [Phase 4: Vertical Slice — Mini-Run](plan/phase-4-vertical-slice.md)
 
 ### Upcoming
-- [Phase 4: Vertical Slice — Mini-Run](plan/phase-4-vertical-slice.md)
 - [Phase 5: Visual Identity](plan/phase-5-visual-identity.md)
 - [Phase 6: Audio Foundation](plan/phase-6-audio.md)
 - [Phase 7: Content & Variety](plan/phase-7-content.md)
