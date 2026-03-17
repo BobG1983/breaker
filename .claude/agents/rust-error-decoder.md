@@ -88,6 +88,7 @@ If changes are needed, **describe** the exact changes (file, line, what to chang
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/rust-error-decoder/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 As you work, consult your memory files to build on previous experience. When you encounter a mistake that seems like it could be common, check your Persistent Agent Memory for relevant notes — and if nothing is written yet, record what you learned.
 

@@ -127,6 +127,7 @@ If changes are needed, **describe** the exact changes in your report — but do 
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/game-design-guard/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 As you work, consult your memory files to build on previous experience. When design decisions are made, record them so you can reference them in future evaluations — the design evolves and you need to track that evolution.
 

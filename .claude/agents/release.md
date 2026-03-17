@@ -189,6 +189,7 @@ When running local cargo commands (check, test, etc.), always use dev aliases.
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/release/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 Build up knowledge about the project's release history, itch.io setup, and CI/CD configuration.
 

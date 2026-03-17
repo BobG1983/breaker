@@ -103,6 +103,7 @@ Describe fixes precisely (file, line, change) — but do NOT apply them.
 # Persistent Agent Memory
 
 Memory directory: `.claude/agent-memory/quality-reviewer/` (persists across conversations).
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 What to save:
 - Intentional patterns that look like idiom violations but are correct for this codebase

@@ -106,6 +106,7 @@ If changes are needed, **describe** the exact changes in your report — but do 
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/system-dependency-mapper/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 As you work, consult your memory files to build on previous experience. When you map the system architecture, record it so future analyses can build incrementally rather than re-scanning everything.
 

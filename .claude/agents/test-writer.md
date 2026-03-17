@@ -204,6 +204,7 @@ You MUST only write tests in files within the domain specified in the spec. Do n
 # Persistent Agent Memory
 
 Memory directory: `.claude/agent-memory/test-writer/` (persists across conversations).
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 What to save:
 - Test patterns that work well for specific Bevy patterns (e.g., how to test observers, state transitions)

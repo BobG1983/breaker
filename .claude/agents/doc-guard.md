@@ -112,6 +112,7 @@ The only exception is `cargo fmt`.
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/doc-guard/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 Build up knowledge about this project's documentation state, known gaps that are intentional (forward-looking docs), and drift patterns that recur.
 

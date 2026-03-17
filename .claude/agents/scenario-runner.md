@@ -116,6 +116,7 @@ Describe the suspected fix precisely (file, line, what to change) — but do NOT
 # Persistent Agent Memory
 
 Memory directory: `.claude/agent-memory/scenario-runner/` (persists across conversations).
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 What to save:
 - Recurring scenario failures and their confirmed root causes

@@ -86,6 +86,7 @@ If changes are needed, **describe** the exact changes (file, line, what to chang
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/architecture-guard/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 As you work, consult your memory files to build on previous experience. When architectural decisions are made, record them so you can reference them in future evaluations — the architecture evolves and you need to track that evolution.
 

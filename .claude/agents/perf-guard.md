@@ -109,6 +109,7 @@ If changes are needed, **describe** the exact change (file, line, what to change
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/perf-guard/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 Build up knowledge about this project's entity scale, established performance patterns, and known hotspots.
 

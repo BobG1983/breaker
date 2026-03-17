@@ -122,6 +122,7 @@ Describe fixes precisely (file, line, change) — but do NOT apply them.
 # Persistent Agent Memory
 
 Memory directory: `.claude/agent-memory/bevy-api-reviewer/` (persists across conversations).
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 What to save:
 - Confirmed correct API patterns for this Bevy version (so you don't need to look them up again)

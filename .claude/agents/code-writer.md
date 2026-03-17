@@ -168,6 +168,7 @@ All identifiers MUST use project vocabulary:
 # Persistent Agent Memory
 
 Memory directory: `.claude/agent-memory/code-writer/` (persists across conversations).
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 What to save:
 - Implementation patterns that work well for specific Bevy constructs

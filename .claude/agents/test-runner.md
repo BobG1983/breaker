@@ -112,6 +112,7 @@ If changes are needed for the build to pass, **describe** the exact changes need
 # Persistent Agent Memory
 
 You have a persistent agent memory directory at `.claude/agent-memory/test-runner/` (relative to the project root). Its contents persist across conversations.
+Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md`.
 
 As you work, consult your memory files to build on previous experience. When you encounter recurring build issues or patterns, record them.
 
