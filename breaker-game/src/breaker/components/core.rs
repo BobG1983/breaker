@@ -12,6 +12,7 @@ pub struct BreakerWidth(pub f32);
 
 impl BreakerWidth {
     /// Returns half the breaker width.
+    #[must_use]
     pub fn half_width(&self) -> f32 {
         self.0 / 2.0
     }
@@ -23,6 +24,7 @@ pub struct BreakerHeight(pub f32);
 
 impl BreakerHeight {
     /// Returns half the breaker height.
+    #[must_use]
     pub fn half_height(&self) -> f32 {
         self.0 / 2.0
     }

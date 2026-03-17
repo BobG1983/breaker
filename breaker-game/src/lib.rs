@@ -9,8 +9,8 @@ pub mod shared;
 
 pub(crate) mod audio;
 pub(crate) mod behaviors;
-pub(crate) mod bolt;
-pub(crate) mod breaker;
+pub mod bolt;
+pub mod breaker;
 pub(crate) mod cells;
 pub(crate) mod chips;
 pub(crate) mod debug;

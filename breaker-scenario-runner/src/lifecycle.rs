@@ -7,10 +7,17 @@
 //! - Exits when `max_frames` is reached or the run ends naturally
 
 use bevy::prelude::*;
-use breaker::shared::{GameState, ScenarioLayoutOverride, SelectedArchetype};
+use breaker::{
+    bolt::components::Bolt,
+    breaker::components::Breaker,
+    shared::{GameState, ScenarioLayoutOverride, SelectedArchetype},
+};
 
 use crate::{
-    invariants::{ScenarioFrame, ViolationLog},
+    invariants::{
+        ScenarioFrame, ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker, ViolationLog,
+        check_bolt_in_bounds, check_no_nan,
+    },
     types::ScenarioDefinition,
 };
 
@@ -31,8 +38,19 @@ impl Plugin for ScenarioLifecycle {
             .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
             .add_systems(OnEnter(GameState::ChipSelect), auto_skip_chip_select)
             .add_systems(
+                OnEnter(GameState::Playing),
+                (tag_game_entities, apply_debug_setup)
+                    .chain()
+                    .after(breaker::bolt::systems::init_bolt_params),
+            )
+            .add_systems(
                 FixedUpdate,
-                (tick_scenario_frame, check_frame_limit).chain(),
+                (
+                    (tick_scenario_frame, check_frame_limit).chain(),
+                    check_bolt_in_bounds,
+                    check_no_nan,
+                    enforce_frozen_positions,
+                ),
             )
             .add_systems(OnEnter(GameState::RunEnd), exit_on_run_end);
     }
@@ -81,10 +99,76 @@ fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
     exits.write(AppExit::Success);
 }
 
+/// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
+///
+/// For each entity tagged with [`ScenarioTagBolt`], applies the `bolt_position`
+/// teleport from [`crate::types::DebugSetup`] (z coordinate is preserved). When
+/// `disable_physics` is true, also inserts [`ScenarioPhysicsFrozen`] with the
+/// post-teleport position as the frozen target.
+pub fn apply_debug_setup(
+    config: Res<ScenarioConfig>,
+    mut bolt_query: Query<(Entity, &mut Transform), With<ScenarioTagBolt>>,
+    mut commands: Commands,
+) {
+    let Some(setup) = config.definition.debug_setup.as_ref() else {
+        return;
+    };
+
+    for (entity, mut transform) in &mut bolt_query {
+        if let Some((x, y)) = setup.bolt_position {
+            transform.translation.x = x;
+            transform.translation.y = y;
+        }
+
+        if setup.disable_physics {
+            commands.entity(entity).insert(ScenarioPhysicsFrozen {
+                target: transform.translation,
+            });
+        }
+    }
+}
+
+/// Resets each entity with [`ScenarioPhysicsFrozen`] back to its pinned `target` every tick.
+///
+/// Prevents physics systems from moving entities that should be stationary during
+/// a self-test scenario. Runs after physics in `FixedUpdate`.
+pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Transform)>) {
+    for (pinned, mut transform) in &mut frozen {
+        transform.translation = pinned.target;
+    }
+}
+
+/// Tags game entities with scenario marker components for invariant checking.
+///
+/// Finds all untagged [`Bolt`] entities and inserts [`ScenarioTagBolt`].
+/// Finds all untagged [`Breaker`] entities and inserts [`ScenarioTagBreaker`].
+/// Runs in `OnEnter(GameState::Playing)` before [`apply_debug_setup`].
+pub fn tag_game_entities(
+    bolt_query: Query<Entity, (With<Bolt>, Without<ScenarioTagBolt>)>,
+    breaker_query: Query<Entity, (With<Breaker>, Without<ScenarioTagBreaker>)>,
+    mut commands: Commands,
+) {
+    for entity in &bolt_query {
+        commands.entity(entity).insert(ScenarioTagBolt);
+    }
+    for entity in &breaker_query {
+        commands.entity(entity).insert(ScenarioTagBreaker);
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use bevy::state::app::StatesPlugin;
+    use breaker::{bolt::components::Bolt, breaker::components::Breaker, shared::PlayfieldConfig};
+
     use super::*;
-    use crate::types::{ChaosParams, InputStrategy, InvariantKind, ScenarioDefinition};
+    use crate::{
+        invariants::{ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker},
+        types::{
+            ChaosParams, DebugSetup, InputStrategy, InvariantKind, ScenarioDefinition,
+            ScriptedParams,
+        },
+    };
 
     fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         ScenarioDefinition {
@@ -99,6 +183,51 @@ mod tests {
             expected_violations: None,
             debug_setup: None,
         }
+    }
+
+    /// Scenario for lifecycle plugin integration tests — uses `Scripted` input
+    /// so no randomisation is involved.
+    fn make_lifecycle_test_scenario() -> ScenarioDefinition {
+        ScenarioDefinition {
+            breaker: "Aegis".to_owned(),
+            layout: "Corridor".to_owned(),
+            input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+            max_frames: 1000,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: None,
+        }
+    }
+
+    /// Builds a test app that uses [`ScenarioLifecycle`] as a plugin, with the
+    /// minimal state wiring needed to exercise invariant registration.
+    fn lifecycle_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(StatesPlugin);
+        app.init_state::<GameState>();
+        app.insert_resource(ScenarioConfig {
+            definition: make_lifecycle_test_scenario(),
+        });
+        app.insert_resource(PlayfieldConfig {
+            width: 800.0,
+            height: 700.0,
+            background_color_rgb: [0.0, 0.0, 0.0],
+            wall_thickness: 180.0,
+        });
+        // Resources required by bypass_menu_to_playing
+        app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()));
+        app.insert_resource(breaker::shared::ScenarioLayoutOverride(None));
+        app.add_plugins(ScenarioLifecycle);
+        app
+    }
+
+    /// Build a minimal app for testing `apply_debug_setup` in isolation.
+    fn debug_setup_app(definition: ScenarioDefinition) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ScenarioConfig { definition });
+        app
     }
 
     fn tick(app: &mut App) {
@@ -184,6 +313,310 @@ mod tests {
         assert!(
             !app.world().resource::<ExitReceived>().0,
             "expected no AppExit when frame < max_frames"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ScenarioLifecycle — invariant system registration
+    // -------------------------------------------------------------------------
+
+    /// `check_bolt_in_bounds` is defined in `invariants.rs` but must be registered
+    /// by [`ScenarioLifecycle`]. A bolt entity at y = -500.0 is below the bottom
+    /// bound of a 700-unit-tall playfield (bottom = -350.0). After one tick the
+    /// [`ViolationLog`] must contain exactly one entry with
+    /// [`InvariantKind::BoltInBounds`].
+    ///
+    /// This test FAILS until `check_bolt_in_bounds` is added to
+    /// `ScenarioLifecycle::build()`.
+    #[test]
+    fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
+        let mut app = lifecycle_test_app();
+
+        // Override playfield so bottom() = -350.0
+        app.world_mut().insert_resource(PlayfieldConfig {
+            width: 800.0,
+            height: 700.0,
+            background_color_rgb: [0.0, 0.0, 0.0],
+            wall_thickness: 180.0,
+        });
+
+        // Spawn bolt well below the bottom bound
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            Transform::from_translation(Vec3::new(0.0, -500.0, 0.0)),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0.len(),
+            1,
+            "expected 1 BoltInBounds violation from ScenarioLifecycle, got {}",
+            log.0.len()
+        );
+        assert_eq!(
+            log.0[0].invariant,
+            InvariantKind::BoltInBounds,
+            "expected BoltInBounds invariant kind"
+        );
+    }
+
+    /// `check_no_nan` is defined in `invariants.rs` but must be registered by
+    /// [`ScenarioLifecycle`]. A bolt entity with `f32::NAN` in its x translation
+    /// must produce a [`ViolationEntry`] with [`InvariantKind::NoNaN`] after one tick.
+    ///
+    /// This test FAILS until `check_no_nan` is added to `ScenarioLifecycle::build()`.
+    #[test]
+    fn check_no_nan_is_registered_in_scenario_lifecycle() {
+        let mut app = lifecycle_test_app();
+
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            Transform::from_translation(Vec3::new(f32::NAN, 0.0, 0.0)),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            !log.0.is_empty(),
+            "expected at least one NoNaN violation from ScenarioLifecycle, got none"
+        );
+        assert_eq!(
+            log.0[0].invariant,
+            InvariantKind::NoNaN,
+            "expected NoNaN invariant kind"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // apply_debug_setup — teleport to bolt_position (z preserved)
+    // -------------------------------------------------------------------------
+
+    /// When `debug_setup` has `bolt_position: Some((0.0, -500.0))` and
+    /// `disable_physics: false`, `apply_debug_setup` must move the
+    /// [`ScenarioTagBolt`] entity to `(0.0, -500.0)` while preserving z = 1.0.
+    ///
+    /// This test FAILS until `apply_debug_setup` is implemented.
+    #[test]
+    fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
+        let definition = ScenarioDefinition {
+            breaker: "Aegis".to_owned(),
+            layout: "Corridor".to_owned(),
+            input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+            max_frames: 1000,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: Some(DebugSetup {
+                bolt_position: Some((0.0, -500.0)),
+                disable_physics: false,
+            }),
+        };
+
+        let mut app = debug_setup_app(definition);
+        app.add_systems(Update, apply_debug_setup);
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)))
+            .id();
+
+        // First update: system runs and enqueues commands
+        app.update();
+        // Second update: commands are flushed
+        app.update();
+
+        let transform = app
+            .world()
+            .entity(entity)
+            .get::<Transform>()
+            .expect("entity must still have Transform");
+
+        assert!(
+            (transform.translation.y - (-500.0_f32)).abs() < f32::EPSILON,
+            "expected y = -500.0 after teleport, got {}",
+            transform.translation.y
+        );
+        assert!(
+            (transform.translation.z - 1.0_f32).abs() < f32::EPSILON,
+            "expected z = 1.0 preserved, got {}",
+            transform.translation.z
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // apply_debug_setup — inserts ScenarioPhysicsFrozen + disables physics
+    // -------------------------------------------------------------------------
+
+    /// When `disable_physics: true`, `apply_debug_setup` must insert
+    /// [`ScenarioPhysicsFrozen`] with `target = Vec3::new(0.0, -400.0, 1.0)`.
+    ///
+    /// The entity's z coordinate (1.0) is baked into the frozen target.
+    ///
+    /// This test FAILS until `apply_debug_setup` is implemented.
+    #[test]
+    fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true() {
+        let definition = ScenarioDefinition {
+            breaker: "Aegis".to_owned(),
+            layout: "Corridor".to_owned(),
+            input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+            max_frames: 1000,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: Some(DebugSetup {
+                bolt_position: Some((0.0, -400.0)),
+                disable_physics: true,
+            }),
+        };
+
+        let mut app = debug_setup_app(definition);
+        app.add_systems(Update, apply_debug_setup);
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)))
+            .id();
+
+        // First update: system runs
+        app.update();
+        // Second update: commands are flushed
+        app.update();
+
+        let frozen = app
+            .world()
+            .entity(entity)
+            .get::<ScenarioPhysicsFrozen>()
+            .expect("entity must have ScenarioPhysicsFrozen when disable_physics is true");
+
+        assert_eq!(
+            frozen.target,
+            Vec3::new(0.0, -400.0, 1.0),
+            "ScenarioPhysicsFrozen.target must be (0.0, -400.0, 1.0)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // enforce_frozen_positions — resets entity to frozen target each tick
+    // -------------------------------------------------------------------------
+
+    /// Each fixed-update tick, `enforce_frozen_positions` must set the entity's
+    /// `Transform.translation` exactly to `ScenarioPhysicsFrozen.target`, regardless
+    /// of where physics moved it.
+    ///
+    /// Given target = `(0.0, -500.0, 0.0)` and current position `(100.0, 200.0, 0.0)`,
+    /// after one tick the position must be exactly `(0.0, -500.0, 0.0)`.
+    ///
+    /// This test FAILS until `enforce_frozen_positions` is implemented.
+    #[test]
+    fn enforce_frozen_positions_resets_entity_to_frozen_target_each_tick() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(FixedUpdate, enforce_frozen_positions);
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                ScenarioPhysicsFrozen {
+                    target: Vec3::new(0.0, -500.0, 0.0),
+                },
+                Transform::from_xyz(100.0, 200.0, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let transform = app
+            .world()
+            .entity(entity)
+            .get::<Transform>()
+            .expect("entity must still have Transform");
+
+        assert_eq!(
+            transform.translation,
+            Vec3::new(0.0, -500.0, 0.0),
+            "expected position to be reset to frozen target (0.0, -500.0, 0.0), got {:?}",
+            transform.translation
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // tag_game_entities — tags Bolt entities with ScenarioTagBolt
+    // -------------------------------------------------------------------------
+
+    /// `tag_game_entities` must find all [`Bolt`] entities that lack
+    /// [`ScenarioTagBolt`] and insert the marker. After two updates (system
+    /// runs + commands flush), the entity must have [`ScenarioTagBolt`] and its
+    /// transform must be unchanged.
+    ///
+    /// This test FAILS until `tag_game_entities` is implemented.
+    #[test]
+    fn tag_game_entities_tags_bolt_entity_with_scenario_tag_bolt() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, tag_game_entities);
+
+        let entity = app
+            .world_mut()
+            .spawn((Bolt, Transform::from_xyz(50.0, 50.0, 1.0)))
+            .id();
+
+        // First update: system runs and enqueues insert(ScenarioTagBolt)
+        app.update();
+        // Second update: commands are flushed
+        app.update();
+
+        assert!(
+            app.world()
+                .entity(entity)
+                .get::<ScenarioTagBolt>()
+                .is_some(),
+            "expected ScenarioTagBolt to be added to Bolt entity"
+        );
+
+        // Transform must be unchanged — tagging should not move the entity.
+        let transform = app
+            .world()
+            .entity(entity)
+            .get::<Transform>()
+            .expect("entity must still have Transform");
+        assert_eq!(
+            transform.translation,
+            Vec3::new(50.0, 50.0, 1.0),
+            "expected transform unchanged after tagging, got {:?}",
+            transform.translation
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // tag_game_entities — tags Breaker entities with ScenarioTagBreaker
+    // -------------------------------------------------------------------------
+
+    /// `tag_game_entities` must find all [`Breaker`] entities that lack
+    /// [`ScenarioTagBreaker`] and insert the marker. After two updates the
+    /// entity must have [`ScenarioTagBreaker`].
+    ///
+    /// This test FAILS until `tag_game_entities` is implemented.
+    #[test]
+    fn tag_game_entities_tags_breaker_entity_with_scenario_tag_breaker() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, tag_game_entities);
+
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)))
+            .id();
+
+        app.update();
+        app.update();
+
+        assert!(
+            app.world()
+                .entity(entity)
+                .get::<ScenarioTagBreaker>()
+                .is_some(),
+            "expected ScenarioTagBreaker to be added to Breaker entity"
         );
     }
 }

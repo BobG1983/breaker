@@ -46,6 +46,17 @@ pub struct ViolationEntry {
 #[derive(Resource, Default)]
 pub struct ViolationLog(pub Vec<ViolationEntry>);
 
+/// Stores the frozen world-space position for an entity with `disable_physics: true`.
+///
+/// When `ScenarioPhysicsFrozen` is present on an entity, `enforce_frozen_positions`
+/// resets the entity's `Transform` to `target` every tick, preventing physics from
+/// moving it.
+#[derive(Component)]
+pub struct ScenarioPhysicsFrozen {
+    /// The world-space position this entity is pinned to each tick.
+    pub target: Vec3,
+}
+
 /// Checks that all [`ScenarioTagBolt`] entities remain within playfield bounds.
 ///
 /// Appends a [`ViolationEntry`] to [`ViolationLog`] for every bolt whose
