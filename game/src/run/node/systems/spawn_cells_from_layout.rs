@@ -10,37 +10,34 @@ use crate::{
         },
         resources::{CellConfig, CellTypeRegistry},
     },
-    run::node::ActiveNodeLayout,
+    run::node::{ActiveNodeLayout, NodeLayout},
     shared::{CleanupOnNodeExit, PlayfieldConfig},
 };
 
-/// Spawns cells from the active node layout.
+/// Spawns cells from a grid layout. Returns the count of `RequiredToClear` cells.
 ///
-/// Runs once when entering [`GameState::Playing`], after [`set_active_layout`].
-/// Reads the grid from [`ActiveNodeLayout`] and looks up each alias in
-/// [`CellTypeRegistry`] to determine cell properties.
-pub fn spawn_cells_from_layout(
-    mut commands: Commands,
-    config: Res<CellConfig>,
-    playfield: Res<PlayfieldConfig>,
-    layout: Res<ActiveNodeLayout>,
-    registry: Res<CellTypeRegistry>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let layout = &layout.0;
+/// Shared between the `OnEnter(Playing)` system and hot-reload respawn.
+pub fn spawn_cells_from_grid(
+    commands: &mut Commands,
+    config: &CellConfig,
+    playfield: &PlayfieldConfig,
+    layout: &NodeLayout,
+    registry: &CellTypeRegistry,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+) -> u32 {
     let cell_width = config.width;
     let cell_height = config.height;
     let step_x = cell_width + config.padding_x;
     let step_y = cell_height + config.padding_y;
 
-    // Center the grid horizontally
     #[allow(clippy::cast_precision_loss)]
     let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
     let start_x = -grid_width / 2.0 + cell_width / 2.0;
     let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
 
     let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
+    let mut required_count = 0u32;
 
     for (row_idx, row) in layout.grid.iter().enumerate() {
         for (col_idx, &alias) in row.iter().enumerate() {
@@ -81,9 +78,36 @@ pub fn spawn_cells_from_layout(
 
             if def.required_to_clear {
                 entity.insert(RequiredToClear);
+                required_count += 1;
             }
         }
     }
+    required_count
+}
+
+/// Spawns cells from the active node layout.
+///
+/// Runs once when entering [`GameState::Playing`], after [`set_active_layout`].
+/// Reads the grid from [`ActiveNodeLayout`] and looks up each alias in
+/// [`CellTypeRegistry`] to determine cell properties.
+pub fn spawn_cells_from_layout(
+    mut commands: Commands,
+    config: Res<CellConfig>,
+    playfield: Res<PlayfieldConfig>,
+    layout: Res<ActiveNodeLayout>,
+    registry: Res<CellTypeRegistry>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    spawn_cells_from_grid(
+        &mut commands,
+        &config,
+        &playfield,
+        &layout.0,
+        &registry,
+        &mut meshes,
+        &mut materials,
+    );
 }
 
 #[cfg(test)]
@@ -430,7 +454,10 @@ mod tests {
             .query::<(&Cell, &CellTypeAlias)>()
             .iter(app.world())
             .count();
-        assert_eq!(cell_count, alias_count, "every cell should have a CellTypeAlias");
+        assert_eq!(
+            cell_count, alias_count,
+            "every cell should have a CellTypeAlias"
+        );
     }
 
     #[test]

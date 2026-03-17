@@ -12,6 +12,6 @@ pub use apply_time_penalty::apply_time_penalty;
 pub use init_clear_remaining::init_clear_remaining;
 pub use init_node_timer::init_node_timer;
 pub use set_active_layout::set_active_layout;
-pub use spawn_cells_from_layout::spawn_cells_from_layout;
+pub use spawn_cells_from_layout::{spawn_cells_from_grid, spawn_cells_from_layout};
 pub use tick_node_timer::tick_node_timer;
 pub use track_node_completion::track_node_completion;

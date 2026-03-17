@@ -92,14 +92,7 @@ pub fn init_archetype(
         apply_bolt_speed_boosts(&mut commands, entity, &def.behaviors);
     }
 
-    // Build ActiveBehaviors — flatten multi-trigger bindings
-    let mut bindings = Vec::new();
-    for behavior in &def.behaviors {
-        for trigger in &behavior.triggers {
-            bindings.push((trigger.clone(), behavior.consequence.clone()));
-        }
-    }
-    *active = ActiveBehaviors(bindings);
+    *active = ActiveBehaviors::from_bindings(&def.behaviors);
 }
 
 #[cfg(test)]

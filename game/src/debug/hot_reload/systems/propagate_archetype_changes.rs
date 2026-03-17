@@ -77,14 +77,7 @@ pub fn propagate_archetype_changes(
         }
     }
 
-    // Rebuild ActiveBehaviors
-    let mut bindings = Vec::new();
-    for behavior in &def.behaviors {
-        for trigger in &behavior.triggers {
-            bindings.push((trigger.clone(), behavior.consequence.clone()));
-        }
-    }
-    *active = ActiveBehaviors(bindings);
+    *active = ActiveBehaviors::from_bindings(&def.behaviors);
 }
 
 #[cfg(test)]

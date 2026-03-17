@@ -4,15 +4,15 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        components::{
-            Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth,
-            RequiredToClear,
-        },
+        components::Cell,
         resources::{CellConfig, CellTypeRegistry},
     },
-    run::node::{ActiveNodeLayout, ClearRemainingCount, NodeLayout, NodeLayoutRegistry},
+    run::node::{
+        ActiveNodeLayout, ClearRemainingCount, NodeLayout, NodeLayoutRegistry,
+        systems::spawn_cells_from_grid,
+    },
     screen::loading::resources::DefaultsCollection,
-    shared::{CleanupOnNodeExit, PlayfieldConfig},
+    shared::PlayfieldConfig,
 };
 
 /// Detects `AssetEvent::Modified` on any `NodeLayout`, rebuilds
@@ -82,63 +82,16 @@ pub fn propagate_node_layout_changes(
         commands.entity(entity).despawn();
     }
 
-    // Respawn cells from updated layout (mirrors spawn_cells_from_layout)
-    let cell_width = cell_config.width;
-    let cell_height = cell_config.height;
-    let step_x = cell_width + cell_config.padding_x;
-    let step_y = cell_height + cell_config.padding_y;
-
-    #[allow(clippy::cast_precision_loss)]
-    let grid_width = step_x.mul_add(layout.cols as f32, -cell_config.padding_x);
-    let start_x = -grid_width / 2.0 + cell_width / 2.0;
-    let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
-
-    let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
-
-    let mut required_count = 0u32;
-    for (row_idx, row) in layout.grid.iter().enumerate() {
-        for (col_idx, &alias) in row.iter().enumerate() {
-            if alias == '.' {
-                continue;
-            }
-
-            let Some(def) = cell_type_registry.types.get(&alias) else {
-                continue;
-            };
-
-            #[allow(clippy::cast_precision_loss)]
-            let x = (col_idx as f32).mul_add(step_x, start_x);
-            #[allow(clippy::cast_precision_loss)]
-            let y = (row_idx as f32).mul_add(-step_y, start_y);
-
-            let mut entity = commands.spawn((
-                Cell,
-                CellTypeAlias(alias),
-                CellWidth(cell_config.width),
-                CellHeight(cell_config.height),
-                CellHealth::new(def.hp),
-                CellDamageVisuals {
-                    hdr_base: def.damage_hdr_base,
-                    green_min: def.damage_green_min,
-                    blue_range: def.damage_blue_range,
-                    blue_base: def.damage_blue_base,
-                },
-                Mesh2d(rect_mesh.clone()),
-                MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
-                Transform {
-                    translation: Vec3::new(x, y, 0.0),
-                    scale: Vec3::new(cell_width, cell_height, 1.0),
-                    ..default()
-                },
-                CleanupOnNodeExit,
-            ));
-
-            if def.required_to_clear {
-                entity.insert(RequiredToClear);
-                required_count += 1;
-            }
-        }
-    }
+    // Respawn cells from updated layout
+    let required_count = spawn_cells_from_grid(
+        &mut commands,
+        &cell_config,
+        &playfield,
+        &layout,
+        &cell_type_registry,
+        &mut meshes,
+        &mut materials,
+    );
 
     // Update active layout and clear remaining count
     commands.insert_resource(ActiveNodeLayout(layout));
@@ -150,7 +103,7 @@ pub fn propagate_node_layout_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::resources::CellTypeDefinition;
+    use crate::cells::{components::CellTypeAlias, resources::CellTypeDefinition};
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();

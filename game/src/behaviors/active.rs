@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::definition::{Consequence, Trigger};
+use super::definition::{BehaviorBinding, Consequence, Trigger};
 
 /// Flattened trigger→consequence bindings built at run start from the archetype.
 ///
@@ -10,6 +10,21 @@ use super::definition::{Consequence, Trigger};
 /// for a given trigger.
 #[derive(Resource, Debug, Default)]
 pub struct ActiveBehaviors(pub Vec<(Trigger, Consequence)>);
+
+impl ActiveBehaviors {
+    /// Builds `ActiveBehaviors` by flattening multi-trigger bindings.
+    ///
+    /// Each binding with N triggers produces N `(trigger, consequence)` pairs.
+    pub fn from_bindings(behaviors: &[BehaviorBinding]) -> Self {
+        let mut bindings = Vec::new();
+        for behavior in behaviors {
+            for trigger in &behavior.triggers {
+                bindings.push((trigger.clone(), behavior.consequence.clone()));
+            }
+        }
+        Self(bindings)
+    }
+}
 
 impl ActiveBehaviors {
     /// Returns all consequences bound to a given trigger.
