@@ -5,7 +5,7 @@
 //! all violations for end-of-run reporting.
 
 use bevy::prelude::*;
-use breaker::shared::PlayfieldConfig;
+use breaker::shared::{GameState, PlayfieldConfig};
 
 use crate::types::InvariantKind;
 
@@ -107,6 +107,120 @@ pub fn check_no_nan(
                 ),
             });
         }
+    }
+}
+
+/// Checks that all [`ScenarioTagBreaker`] entities remain within playfield bounds.
+///
+/// Appends a [`ViolationEntry`] for every breaker whose `Transform` translation x
+/// is outside `PlayfieldConfig::left()` or `PlayfieldConfig::right()` (with 50.0 margin).
+pub fn check_breaker_in_bounds(
+    breakers: Query<(Entity, &Transform), With<ScenarioTagBreaker>>,
+    playfield: Res<PlayfieldConfig>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let margin = 50.0;
+    let left = playfield.left() - margin;
+    let right = playfield.right() + margin;
+    for (entity, transform) in &breakers {
+        let x = transform.translation.x;
+        if x < left || x > right {
+            log.0.push(ViolationEntry {
+                frame: frame.0,
+                invariant: InvariantKind::BreakerInBounds,
+                entity: Some(entity),
+                message: format!(
+                    "BreakerInBounds FAIL frame={} entity={entity:?} x={x:.1} bounds=[{left:.1}, {right:.1}]",
+                    frame.0,
+                ),
+            });
+        }
+    }
+}
+
+/// Tracks the previous [`GameState`] for transition validation.
+#[derive(Resource, Default)]
+pub struct PreviousGameState(pub Option<GameState>);
+
+/// Checks that [`GameState`] transitions follow valid paths.
+///
+/// Forbidden transitions:
+/// - `Loading → Playing` (must go through MainMenu)
+/// - `Loading → RunEnd`
+/// - `Playing → Loading`
+/// - `RunEnd → Playing` (must go through MainMenu)
+pub fn check_valid_state_transitions(
+    state: Res<State<GameState>>,
+    mut previous: ResMut<PreviousGameState>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let current = **state;
+    if let Some(prev) = previous.0 {
+        if prev != current {
+            let forbidden = matches!(
+                (prev, current),
+                (GameState::Loading, GameState::Playing)
+                    | (GameState::Loading, GameState::RunEnd)
+                    | (GameState::Playing, GameState::Loading)
+                    | (GameState::RunEnd, GameState::Playing)
+            );
+            if forbidden {
+                log.0.push(ViolationEntry {
+                    frame: frame.0,
+                    invariant: InvariantKind::ValidStateTransitions,
+                    entity: None,
+                    message: format!(
+                        "ValidStateTransitions FAIL frame={} {prev:?} → {current:?}",
+                        frame.0,
+                    ),
+                });
+            }
+        }
+    }
+    previous.0 = Some(current);
+}
+
+/// Baseline entity count for leak detection.
+#[derive(Resource, Default)]
+pub struct EntityLeakBaseline {
+    /// Entity count sampled at frame 60.
+    pub baseline: Option<usize>,
+}
+
+/// Checks for unexpected entity accumulation over time.
+///
+/// Samples entity count at frame 60 as baseline. Every 120 frames after that,
+/// checks if count exceeds 2× baseline.
+pub fn check_no_entity_leaks(
+    all_entities: Query<Entity>,
+    frame: Res<ScenarioFrame>,
+    mut baseline: ResMut<EntityLeakBaseline>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let count = all_entities.iter().count();
+
+    if frame.0 == 60 {
+        baseline.baseline = Some(count);
+        return;
+    }
+
+    let Some(base) = baseline.baseline else {
+        return;
+    };
+
+    if frame.0 > 60 && frame.0 % 120 == 0 && count > base * 2 {
+        log.0.push(ViolationEntry {
+            frame: frame.0,
+            invariant: InvariantKind::NoEntityLeaks,
+            entity: None,
+            message: format!(
+                "NoEntityLeaks FAIL frame={} count={count} baseline={base} (>{} threshold)",
+                frame.0,
+                base * 2,
+            ),
+        });
     }
 }
 
@@ -463,5 +577,163 @@ mod tests {
             "expected NoNaN violation for transform with NaN rotation"
         );
         assert_eq!(log.0[0].invariant, InvariantKind::NoNaN);
+    }
+
+    // -------------------------------------------------------------------------
+    // BreakerInBounds — violation when breaker is outside playfield
+    // -------------------------------------------------------------------------
+
+    fn test_app_breaker_in_bounds() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(PlayfieldConfig::default());
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.add_systems(FixedUpdate, check_breaker_in_bounds);
+        app
+    }
+
+    #[test]
+    fn breaker_in_bounds_fires_when_breaker_far_outside_right() {
+        let mut app = test_app_breaker_in_bounds();
+
+        app.world_mut().spawn((
+            ScenarioTagBreaker,
+            Transform::from_translation(Vec3::new(1000.0, 0.0, 0.0)),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(log.0.len(), 1);
+        assert_eq!(log.0[0].invariant, InvariantKind::BreakerInBounds);
+    }
+
+    #[test]
+    fn breaker_in_bounds_does_not_fire_when_breaker_centered() {
+        let mut app = test_app_breaker_in_bounds();
+
+        app.world_mut().spawn((
+            ScenarioTagBreaker,
+            Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(log.0.is_empty());
+    }
+
+    // -------------------------------------------------------------------------
+    // ValidStateTransitions — forbidden transition fires violation
+    // -------------------------------------------------------------------------
+
+    fn test_app_valid_transitions() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.init_state::<GameState>();
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.init_resource::<PreviousGameState>();
+        app.add_systems(FixedUpdate, check_valid_state_transitions);
+        app
+    }
+
+    #[test]
+    fn valid_state_transitions_fires_on_loading_to_playing() {
+        let mut app = test_app_valid_transitions();
+        // Set previous to Loading (the default initial state)
+        app.world_mut()
+            .insert_resource(PreviousGameState(Some(GameState::Loading)));
+        // Transition to Playing (forbidden: skips MainMenu)
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update(); // process state transition
+        tick(&mut app); // run checker in FixedUpdate
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0
+                .iter()
+                .any(|v| v.invariant == InvariantKind::ValidStateTransitions),
+            "expected ValidStateTransitions violation for Loading→Playing"
+        );
+    }
+
+    #[test]
+    fn valid_state_transitions_does_not_fire_on_loading_to_main_menu() {
+        let mut app = test_app_valid_transitions();
+        app.world_mut()
+            .insert_resource(PreviousGameState(Some(GameState::Loading)));
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::MainMenu);
+        app.update();
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        let violations: Vec<_> = log
+            .0
+            .iter()
+            .filter(|v| v.invariant == InvariantKind::ValidStateTransitions)
+            .collect();
+        assert!(
+            violations.is_empty(),
+            "Loading→MainMenu should be valid, got: {:?}",
+            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // NoEntityLeaks — violation when entity count explodes
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn no_entity_leaks_fires_when_count_exceeds_double_baseline() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame(120));
+        app.insert_resource(EntityLeakBaseline {
+            baseline: Some(5),
+        });
+        app.add_systems(FixedUpdate, check_no_entity_leaks);
+
+        // Spawn enough entities to exceed 2×5 = 10
+        for _ in 0..15 {
+            app.world_mut().spawn(Transform::default());
+        }
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0
+                .iter()
+                .any(|v| v.invariant == InvariantKind::NoEntityLeaks),
+            "expected NoEntityLeaks violation when count >> baseline"
+        );
+    }
+
+    #[test]
+    fn no_entity_leaks_does_not_fire_when_count_is_normal() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame(120));
+        app.insert_resource(EntityLeakBaseline {
+            baseline: Some(100),
+        });
+        app.add_systems(FixedUpdate, check_no_entity_leaks);
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no NoEntityLeaks violation when count <= baseline"
+        );
     }
 }

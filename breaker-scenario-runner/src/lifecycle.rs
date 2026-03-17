@@ -15,8 +15,10 @@ use breaker::{
 
 use crate::{
     invariants::{
-        ScenarioFrame, ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker, ViolationLog,
-        check_bolt_in_bounds, check_no_nan,
+        EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen,
+        ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_in_bounds,
+        check_breaker_in_bounds, check_no_entity_leaks, check_no_nan,
+        check_valid_state_transitions,
     },
     types::ScenarioDefinition,
 };
@@ -35,6 +37,8 @@ impl Plugin for ScenarioLifecycle {
     fn build(&self, app: &mut App) {
         app.init_resource::<ScenarioFrame>()
             .init_resource::<ViolationLog>()
+            .init_resource::<PreviousGameState>()
+            .init_resource::<EntityLeakBaseline>()
             .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
             .add_systems(OnEnter(GameState::ChipSelect), auto_skip_chip_select)
             .add_systems(
@@ -48,7 +52,10 @@ impl Plugin for ScenarioLifecycle {
                 (
                     (tick_scenario_frame, check_frame_limit).chain(),
                     check_bolt_in_bounds,
+                    check_breaker_in_bounds,
                     check_no_nan,
+                    check_valid_state_transitions,
+                    check_no_entity_leaks,
                     enforce_frozen_positions,
                 ),
             )
@@ -108,6 +115,7 @@ fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
 pub fn apply_debug_setup(
     config: Res<ScenarioConfig>,
     mut bolt_query: Query<(Entity, &mut Transform), With<ScenarioTagBolt>>,
+    mut breaker_query: Query<&mut Transform, (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>)>,
     mut commands: Commands,
 ) {
     let Some(setup) = config.definition.debug_setup.as_ref() else {
@@ -124,6 +132,13 @@ pub fn apply_debug_setup(
             commands.entity(entity).insert(ScenarioPhysicsFrozen {
                 target: transform.translation,
             });
+        }
+    }
+
+    if let Some((x, y)) = setup.breaker_position {
+        for mut transform in &mut breaker_query {
+            transform.translation.x = x;
+            transform.translation.y = y;
         }
     }
 }
@@ -410,6 +425,7 @@ mod tests {
             expected_violations: None,
             debug_setup: Some(DebugSetup {
                 bolt_position: Some((0.0, -500.0)),
+                breaker_position: None,
                 disable_physics: false,
             }),
         };
@@ -466,6 +482,7 @@ mod tests {
             expected_violations: None,
             debug_setup: Some(DebugSetup {
                 bolt_position: Some((0.0, -400.0)),
+                breaker_position: None,
                 disable_physics: true,
             }),
         };

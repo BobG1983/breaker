@@ -103,6 +103,9 @@ pub enum InvariantKind {
 pub struct DebugSetup {
     /// Place bolt at this `(x, y)` world-space position instead of the default spawn.
     pub bolt_position: Option<(f32, f32)>,
+    /// Place breaker at this `(x, y)` world-space position instead of the default spawn.
+    #[serde(default)]
+    pub breaker_position: Option<(f32, f32)>,
     /// When `true`, freeze physics so the bolt stays at the injected position.
     #[serde(default)]
     pub disable_physics: bool,
