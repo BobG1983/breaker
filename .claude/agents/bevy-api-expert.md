@@ -62,10 +62,6 @@ Read `CLAUDE.md` for project-specific Bevy conventions (message patterns, spawn 
 - Never provide partial signatures — always give the complete, accurate type information
 - Never assume backwards compatibility — Bevy is known for breaking changes between versions
 
-## Parallel Execution
-
-This agent runs **before** code is written (API lookup phase), not after. Run it first, then launch the implementation. Post-implementation agents (test-runner, code-reviewer, architecture-guard, etc.) run after code is written — these are separate phases and do not overlap with bevy-api-expert.
-
 ⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant and cause slow rebuilds for the entire team.
 - `cargo dbuild` — build (dynamic linking)

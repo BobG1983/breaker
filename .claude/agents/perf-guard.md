@@ -86,10 +86,6 @@ Write "Clean." for any severity level with no issues.
 
 Err toward **not flagging** things that are fine at current scale. This game has a fixed grid of cells and a single bolt — many "concerns" are academic until the entity count grows significantly.
 
-## Parallel Execution
-
-Run simultaneously with **test-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
-
 ⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`. These produce non-dynamic build artifacts that stomp on the dynamic-linked variant.
 - `cargo dbuild` — build (dynamic linking)

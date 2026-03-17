@@ -62,10 +62,6 @@ For build-level failures (missing impl, wrong type, compile error — not a test
 [one-line overall status: all clear, or what needs attention first]
 ```
 
-## Parallel Execution
-
-Run simultaneously with **lint-runner**, **scenario-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
-
 ## Rules
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️

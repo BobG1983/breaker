@@ -99,10 +99,6 @@ If confidence is low (multiple possible causes), omit the "Delegate" line and re
 
 If all scenarios pass, the report should be brief — just the results table and "All scenarios passed."
 
-## Parallel Execution
-
-Run simultaneously with **test-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The cargo workspace lock will serialize the build if another cargo process is running; this agent will wait automatically.
-
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**
 - Do NOT fix code — not even "obvious" fixes

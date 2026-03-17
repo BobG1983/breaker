@@ -86,10 +86,6 @@ Also flag: vague names (`data`, `info`, `value`, `temp`, `flag`, `result` outsid
 
 Write "Clean." for any section with no issues.
 
-## Parallel Execution
-
-Run simultaneously with **correctness-reviewer**, **bevy-api-reviewer**, **test-runner**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent.
-
 ⚠️ **ABSOLUTE RULE — USE DEV ALIASES FOR ALL CARGO COMMANDS** ⚠️
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`.
 - `cargo dbuild` / `cargo dcheck` / `cargo dclippy` / `cargo dtest`

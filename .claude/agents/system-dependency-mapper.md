@@ -74,10 +74,6 @@ Read `CLAUDE.md` for project-specific Bevy conventions, architecture notes, and 
 - Plugin-per-system architecture with event-driven decoupling
 - Game terminology: Breaker (paddle), Bolt (ball), Node (level), Amp (passive bolt upgrade), Augment (passive breaker upgrade), Overclock (triggered ability), Bump (paddle upward hit)
 
-## Parallel Execution
-
-Run simultaneously with **test-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
-
 ## Rules
 
 - Be thorough in scanning — check all `.rs` files under `src/`

@@ -105,10 +105,6 @@ Do NOT rely on training data alone for API details — Bevy changes frequently.
 
 Write "Clean." for any section with no issues.
 
-## Parallel Execution
-
-Run simultaneously with **correctness-reviewer**, **quality-reviewer**, **test-runner**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent.
-
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**
 The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/bevy-api-reviewer/`.

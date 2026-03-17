@@ -57,10 +57,6 @@ Structure your response as:
 [brief list if any]
 ```
 
-## Parallel Execution
-
-This agent is **reactive** — it runs sequentially after a build or test failure, not as part of the normal post-implementation parallel wave. Do not launch it alongside test-runner; launch it only when test-runner (or another agent) reports a build failure.
-
 ## Rules
 
 - Never guess. If the error output is ambiguous or incomplete, say exactly what additional information you need (e.g., "I need to see the type definition at src/bolt/mod.rs line 42").

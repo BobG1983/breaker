@@ -67,10 +67,6 @@ Warnings are reported in the list but do not get hint blocks — they are inform
 [one-line overall status: all clear, or what needs attention]
 ```
 
-## Parallel Execution
-
-Run simultaneously with **test-runner**, **scenario-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
-
 ## Rules
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️

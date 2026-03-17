@@ -89,10 +89,6 @@ If code consistently uses a new term that isn't in the glossary, add it. Use the
 [discrepancies that could go either way — code vs. doc — where you didn't edit]
 ```
 
-## Parallel Execution
-
-Run simultaneously with **test-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, and **game-design-guard** — all are independent. Doc-guard is typically most useful AFTER a feature is confirmed working, to capture what was actually built.
-
 ## Rules
 
 - You MAY edit: any file under `docs/`, `README.md`, `CHANGELOG.md`
