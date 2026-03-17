@@ -3,21 +3,24 @@
 //! Builds either a visual or headless [`App`] for each scenario and runs it to
 //! completion, then prints a structured summary and returns the exit code.
 
-use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
-use bevy::app::ScheduleRunnerPlugin;
-use bevy::log::LogPlugin;
-use bevy::prelude::*;
-use bevy::winit::WinitPlugin;
-use bevy::window::ExitCondition;
-
+use bevy::{
+    app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*, window::ExitCondition,
+    winit::WinitPlugin,
+};
 use breaker::game::Game;
+use tracing::{debug, info, warn};
 
-use crate::log_capture::{CapturedLogs, poll_log_buffer, scenario_log_layer_factory};
-use crate::invariants::ViolationLog;
-use crate::lifecycle::{ScenarioConfig, ScenarioLifecycle};
-use crate::types::ScenarioDefinition;
+use crate::{
+    invariants::ViolationLog,
+    lifecycle::{ScenarioConfig, ScenarioLifecycle},
+    log_capture::{CapturedLogs, poll_log_buffer, scenario_log_layer_factory},
+    types::ScenarioDefinition,
+};
 
 /// Entry point called by `main`. Returns process exit code (0 = all pass, 1 = any fail).
 #[must_use]
@@ -127,6 +130,11 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
         "Running [{scenario_name}] breaker={} layout={}",
         definition.breaker, definition.layout
     );
+    info!(
+        target: "breaker_scenario_runner",
+        "scenario start name={scenario_name} breaker={} layout={}",
+        definition.breaker, definition.layout
+    );
 
     let mut app = build_app(headless);
     app.insert_resource(ScenarioConfig { definition });
@@ -152,15 +160,26 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
 
     if passed {
         println!("PASS [{scenario_name}]");
+        info!(target: "breaker_scenario_runner", "scenario pass name={scenario_name}");
     } else {
         println!(
             "FAIL [{scenario_name}]: {} violations, {} captured logs",
             violations.len(),
             logs.len()
         );
+        warn!(
+            target: "breaker_scenario_runner",
+            "scenario fail name={scenario_name} violations={} logs={}",
+            violations.len(), logs.len()
+        );
         for v in &violations {
             println!(
                 "  VIOLATION frame={} {:?} entity={:?}: {}",
+                v.frame, v.invariant, v.entity, v.message
+            );
+            debug!(
+                target: "breaker_scenario_runner",
+                "violation frame={} invariant={:?} entity={:?}: {}",
                 v.frame, v.invariant, v.entity, v.message
             );
         }
