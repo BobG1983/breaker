@@ -55,8 +55,8 @@ Read `CLAUDE.md` and `docs/TERMINOLOGY.md`, then the specific files under review
 
 ### Lint Suppression
 
-- Any `#[allow(clippy::...)]` attribute — **flag and reject**. Clippy suppressions are never acceptable; the underlying issue must be fixed.
-- Any `#[allow(dead_code)]` attribute — **flag and reject**. Dead code must be commented out until it is needed, not silenced. If it will never be needed, delete it.
+- Any `#[allow(...)]` attribute — **flag and reject**. Suppressing warnings is never acceptable; the underlying issue must always be fixed.
+- The one specific case of `#[allow(dead_code)]`: dead code must be commented out until needed, or deleted if it will never be needed — not silenced.
 
 ### Test Correctness
 
