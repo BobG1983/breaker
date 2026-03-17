@@ -94,11 +94,16 @@ cargo dclippy 2>&1
 Fix any clippy warnings in your code. Do NOT add `#[allow(...)]` suppressions unless there's a genuine false positive — explain it in your output.
 
 ### 4. Tests
-```
-cargo dtest 2>&1
-```
 
-**All tests in the domain must pass** — both the new failing tests and all pre-existing tests. If a pre-existing test breaks, your implementation has a regression — fix it.
+Run only the tests in your domain — not the full suite. Use a module path filter:
+```
+cargo dtest <domain>:: 2>&1
+```
+For example, if your domain is `bolt`: `cargo dtest bolt::`
+
+**CRITICAL: never run bare `cargo test`** — it compiles without dynamic linking, invalidates the dylib build artifacts, and forces a full recompile for everyone. Always use `cargo dtest`.
+
+**All tests in the domain must pass** — both the new failing tests and all pre-existing tests in the domain. If a pre-existing test breaks, your implementation has a regression — fix it.
 
 ### Iteration
 
@@ -106,8 +111,8 @@ If tests fail after your first implementation attempt:
 1. Read the failure output carefully
 2. Understand what the test expected vs what happened
 3. Fix the implementation (NOT the test)
-4. Re-run tests
-5. Repeat until all tests pass
+4. Re-run the filtered test command
+5. Repeat until all domain tests pass
 
 ## Output Format
 
@@ -154,7 +159,8 @@ All identifiers MUST use project vocabulary:
 ## Dev Aliases
 
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`.
-- `cargo dbuild` / `cargo dcheck` / `cargo dclippy` / `cargo dtest`
+Using `cargo test` instead of `cargo dtest` compiles without dynamic linking and **invalidates the dylib build cache** — this causes a full recompile for all subsequent builds.
+- `cargo dbuild` / `cargo dcheck` / `cargo dclippy` / `cargo dtest <filter>`
 - Exception: `cargo fmt` (no dev alias)
 
 ## Code Standards
