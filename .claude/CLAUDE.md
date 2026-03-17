@@ -84,7 +84,8 @@ Launch all applicable agents simultaneously — they are independent:
 
 | Trigger | Agent | Why |
 |---------|-------|-----|
-| Always after implementation | **test-runner** | Full validation suite (fmt, clippy, tests) |
+| Always after implementation | **lint-runner** | Auto-fmt and clippy; errors → code-writer |
+| Always after implementation | **test-runner** | Run tests; failures → code-writer or test-writer |
 | Always after implementation | **scenario-runner** | Run all gameplay scenarios headlessly and diagnose failures |
 | Always after implementation | **correctness-reviewer** | Logic bugs, ECS pitfalls, state machine holes, math |
 | Always after implementation | **quality-reviewer** | Idioms, vocabulary, test coverage, documentation |
@@ -100,6 +101,7 @@ Launch all applicable agents simultaneously — they are independent:
 | Trigger | Flow | Notes |
 |---------|------|-------|
 | Compiler errors that aren't obvious | **rust-error-decoder** → describe fix | Sequential |
+| lint-runner FAIL, clippy errors | lint-runner hint → **code-writer** | No test-writer needed |
 | scenario-runner FAIL, high-confidence diagnosis | scenario-runner hint → **test-writer** (regression spec) → **code-writer** | test-writer writes scenario RON or unit test |
 | scenario-runner FAIL, low-confidence diagnosis | Main agent investigates → writes spec → **test-writer** → **code-writer** | Main agent reads src first |
 | test-runner FAIL, existing test broke | test-runner hint → **code-writer** (fix spec) | test-writer skipped — test already exists |
@@ -114,7 +116,7 @@ Launch all applicable agents simultaneously — they are independent:
 ---
 
 **Post-implementation checklist** (run before considering a task done):
-1. Launch **test-runner** + **scenario-runner** + **correctness-reviewer** + **quality-reviewer** + **bevy-api-reviewer** in parallel (always)
+1. Launch **lint-runner** + **test-runner** + **scenario-runner** + **correctness-reviewer** + **quality-reviewer** + **bevy-api-reviewer** in parallel (always)
 2. If new systems/plugins added → also launch **architecture-guard** + **system-dependency-mapper** in the same parallel wave
 3. If new gameplay mechanic → also launch **game-design-guard** in the same parallel wave
 4. If phase complete or docs may have drifted → also launch **doc-guard** in the same parallel wave

@@ -14,7 +14,8 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 
 ### Always launch
 
-- **test-runner** — fmt, clippy, tests
+- **lint-runner** — fmt (auto-formats in place) and clippy; Fix spec hints for clippy errors → code-writer
+- **test-runner** — cargo dtest; Fix spec hints for failures → code-writer or test-writer
 - **scenario-runner** — gameplay invariant validation
 - **correctness-reviewer** — logic bugs, ECS pitfalls, state machine holes, math
 - **quality-reviewer** — idioms, vocabulary, test coverage, documentation
@@ -33,6 +34,23 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 ## Phase 3 — Failure Routing (sequential, reactive)
 
 React to output from Phase 2. Each failure type routes differently.
+
+### lint-runner failures
+
+Each clippy error includes a **Fix spec hint** block:
+
+```
+**Fix spec hint:**
+- Lint: `path/to/file.rs:line` — `clippy::lint_name`
+- Issue: [what the code does wrong]
+- Fix: [specific change]
+- Delegate: code-writer can apply directly
+```
+
+| Failure type | Route |
+|---|---|
+| Clippy errors | hint → **code-writer** (no test-writer needed) |
+| Format failures | lint-runner auto-formats — no further routing needed |
 
 ### test-runner failures
 
