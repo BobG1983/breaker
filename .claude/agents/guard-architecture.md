@@ -3,7 +3,7 @@ name: guard-architecture
 description: "Use this agent when proposing or reviewing technical structure: new plugins, inter-domain communication, entity spawning patterns, system ordering, state management, content identity patterns, or module organization. This agent validates that code fits the architecture defined in docs/architecture/.\n\nExamples:\n\n- User: \"I'm adding a new particles module\"\n  Assistant: \"Let me use the guard-architecture agent to check whether this fits the plugin architecture.\"\n\n- After implementing a new domain plugin:\n  Assistant: \"Let me use the guard-architecture agent to verify the plugin boundaries and message patterns are correct.\"\n\n- When adding communication between two systems:\n  Assistant: \"Let me use the guard-architecture agent to verify this uses messages, not direct coupling.\"\n\n- When spawning new entity types:\n  Assistant: \"Let me use the guard-architecture agent to check cleanup markers and component patterns.\"\n\n- User: \"Should this be a resource or a component?\"\n  Assistant: \"Let me use the guard-architecture agent to evaluate where this data belongs architecturally.\""
 tools: Read, Glob, Grep, WebSearch, WebFetch, ToolSearch
 model: opus
-color: cyan
+color: teal
 memory: project
 ---
 

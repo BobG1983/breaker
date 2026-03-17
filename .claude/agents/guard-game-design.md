@@ -3,7 +3,7 @@ name: guard-game-design
 description: "Use this agent when proposing or evaluating game design decisions: new mechanics, upgrade ideas, parameter tuning, UI/UX flows, node types, breaker abilities, or anything that affects how the game feels to play. This agent acts as an opinionated creative director who validates ideas against the game's core identity.\n\nExamples:\n\n- User: \"What if we add a shield upgrade that blocks bolt-lost?\"\n  Assistant: \"Let me use the guard-game-design agent to evaluate whether that fits the game's design pillars.\"\n\n- When designing a new overclock:\n  Assistant: \"Before finalizing this overclock design, let me use the guard-game-design agent to stress-test it against our identity pillars.\"\n\n- User: \"Should the upgrade selection screen have 4 choices instead of 3?\"\n  Assistant: \"Let me use the guard-game-design agent to evaluate the decision-making implications.\"\n\n- When tuning timing windows or speed values:\n  Assistant: \"Let me use the guard-game-design agent to gut-check whether these parameters serve the feel we want.\"\n\n- User: \"I'm thinking about adding a slow-motion mechanic\"\n  Assistant: \"Let me use the guard-game-design agent to evaluate that against our speed and tension pillars.\""
 tools: Read, Glob, Grep, WebSearch, WebFetch, ToolSearch
 model: opus
-color: red
+color: teal
 memory: project
 ---
 

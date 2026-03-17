@@ -3,7 +3,7 @@ name: reviewer-correctness
 description: "Use this agent to review code for logic correctness, safety, and ECS correctness. Checks for bugs, state machine holes, ECS pitfalls, and math errors — the things that compile fine but behave wrong. Use after implementation, in parallel with reviewer-quality, runner-tests, and other post-implementation agents.\n\nExamples:\n\n- After implementing a feature:\n  Assistant: \"Code written. Let me launch reviewer-correctness and reviewer-quality in parallel alongside runner-tests.\"\n\n- After a bug fix:\n  Assistant: \"Let me use the reviewer-correctness to check for related edge cases and ensure the fix is complete.\"\n\n- When a system touches game state:\n  Assistant: \"State machine involved. Let me use the reviewer-correctness to check for holes in the transitions.\"\n\n- Parallel note: Run alongside reviewer-quality, reviewer-bevy-api, runner-tests, runner-scenarios, guard-architecture, researcher-system-dependencies, guard-performance, guard-docs, and guard-game-design — all are independent."
 tools: Read, Glob, Grep
 model: sonnet
-color: orange
+color: pink
 memory: project
 ---
 

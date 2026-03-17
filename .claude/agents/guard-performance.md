@@ -3,7 +3,7 @@ name: guard-performance
 description: "Use this agent to review code for Bevy-specific performance issues: archetype fragmentation, inefficient query patterns, hot-path allocations, and scheduling inefficiencies. Focuses on Bevy ECS performance patterns, not general Rust optimization.\n\nExamples:\n\n- After adding new components or systems touching many entities:\n  Assistant: \"Let me use the guard-performance agent to check for archetype fragmentation and query efficiency.\"\n\n- Before completing a phase:\n  Assistant: \"Phase implementation complete. Let me run guard-performance in parallel with runner-tests and code-reviewer.\"\n\n- When adding a system that iterates many entities:\n  Assistant: \"This system queries all cells. Let me use guard-performance to verify the query pattern is efficient.\"\n\n- Parallel note: Run alongside runner-tests, code-reviewer, guard-architecture, and researcher-system-dependencies — all are independent."
 tools: Read, Glob, Grep
 model: sonnet
-color: purple
+color: teal
 memory: project
 ---
 

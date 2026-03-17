@@ -3,7 +3,7 @@ name: researcher-system-dependencies
 description: "Use this agent to analyze Bevy ECS system dependencies: which systems read/write which components and resources, detect potential query conflicts, verify message flow between plugins, and map system ordering. Use when adding new systems, debugging unexpected behavior, or before refactors that touch system scheduling.\n\nExamples:\n\n- Before adding a new system that queries Transform:\n  Assistant: \"Let me use the researcher-system-dependencies agent to check what other systems access Transform and whether there could be conflicts.\"\n\n- When debugging a system ordering issue:\n  Assistant: \"Let me use the researcher-system-dependencies agent to trace the data flow and ordering between these systems.\"\n\n- After adding a new plugin:\n  Assistant: \"Let me use the researcher-system-dependencies agent to verify the new plugin's systems don't conflict with existing ones.\"\n\n- When reviewing message flow:\n  Assistant: \"Let me use the researcher-system-dependencies agent to map which systems send and receive each message type.\""
 tools: Bash, Read, Glob, Grep
 model: sonnet
-color: magenta
+color: blue
 memory: project
 ---
 

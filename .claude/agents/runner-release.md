@@ -3,7 +3,7 @@ name: runner-release
 description: "Use this agent to execute the release process: bump the version in Cargo.toml, generate a changelog from conventional commits, create or update GitHub Actions cross-compilation workflows for macOS (Apple Silicon)/Windows/Linux, and guide itch.io distribution via butler. Also sets up release infrastructure if it doesn't exist yet.\n\nExamples:\n\n- When preparing a release:\n  Assistant: \"Ready to cut a release. Let me use the release agent to bump the version and generate the changelog.\"\n\n- When setting up release infrastructure:\n  Assistant: \"Let me use the release agent to create the GitHub Actions workflow for cross-platform builds and itch.io uploads.\"\n\n- When checking what changed since last release:\n  Assistant: \"Let me use the release agent to review commits since the last tag and draft the changelog.\"\n\n- Sequential note: Run alone — this agent modifies Cargo.toml, CHANGELOG.md, and .github/workflows/ which should not be concurrently modified by other agents."
 tools: Bash, Read, Glob, Grep, Write, Edit
 model: sonnet
-color: gray
+color: yellow
 memory: project
 ---
 
