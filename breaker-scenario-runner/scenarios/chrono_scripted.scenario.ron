@@ -1,6 +1,6 @@
 (
-    breaker: "chrono",
-    layout: "corridor",
+    breaker: "Chrono",
+    layout: "Corridor",
     input: Scripted((
         actions: [
             (frame: 10, actions: [Bump]),

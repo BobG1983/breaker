@@ -1,6 +1,6 @@
 (
-    breaker: "aegis",
-    layout: "corridor",
+    breaker: "Aegis",
+    layout: "Corridor",
     input: Scripted((
         actions: [],
     )),

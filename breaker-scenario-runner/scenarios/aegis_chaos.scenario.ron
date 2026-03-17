@@ -1,6 +1,6 @@
 (
-    breaker: "aegis",
-    layout: "corridor",
+    breaker: "Aegis",
+    layout: "Corridor",
     input: Chaos((
         seed: 42,
         action_prob: 0.3,
