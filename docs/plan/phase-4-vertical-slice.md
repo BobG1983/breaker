@@ -42,6 +42,10 @@ The first concrete overclock implementation, proving the trigger/effect architec
 - **Damage**: any cell within range takes 1 damage
 - **Trigger chain**: `OnPerfectBump` → mark surging → `OnImpact` if surging → fire shockwave at impact point
 
+### Hot-Reload Support
+
+Chip definitions (Amps, Augments, Overclocks) in RON need hot-reload propagation — add to the `HotReloadPlugin` chain established in Phase 3c. When a chip RON file changes: rebuild the chip registry, and if any active chips were modified, re-apply their effects to live entities.
+
 ### Upgrade Definitions in RON
 
 ```ron
