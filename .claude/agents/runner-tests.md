@@ -1,6 +1,6 @@
 ---
 name: runner-tests
-description: "Run `cargo dtest` and report pass/fail with Fix spec hints that writer-code and writer-tests can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-tests agent to validate tests pass.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-tests agent to verify nothing broke.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-tests agent to confirm the build is clean.\""
+description: "Run `cargo dtest` (game crate) and `cargo dstest` (scenario runner crate) and report pass/fail with Fix spec hints that writer-code and writer-tests can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-tests agent to validate tests pass.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-tests agent to verify nothing broke.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-tests agent to confirm the build is clean.\""
 tools: Bash, Read, Glob, Grep
 model: haiku
 color: yellow
@@ -20,13 +20,21 @@ Do NOT assume a Bevy version. If build errors appear to be Bevy-related, check `
 
 ## Process
 
-### Tests
+### Game Crate Tests
 ```
 cargo dtest 2>&1
 ```
 - Report: total tests run, passed, failed, ignored.
 - For each failure: test name, file location if identifiable, and the assertion/panic message.
 - If compilation fails before tests run, report it as a build failure (not test failure).
+
+### Scenario Runner Tests
+```
+cargo dstest 2>&1
+```
+- Report separately from game crate tests (different crate, different alias).
+- Same format: total run, passed, failed, ignored.
+- Same fix spec hint format for failures.
 
 For each failing test, append a `**Fix spec hint:**` block:
 

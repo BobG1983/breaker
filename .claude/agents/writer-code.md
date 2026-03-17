@@ -70,49 +70,16 @@ src/<domain>/
 
 **`mod.rs` is routing only** — `pub mod` and `pub use` statements, no logic.
 
-## Verification — You MUST Do This
+## Verification
 
-After implementation, run the full validation sequence:
+Do NOT run any cargo commands. Parallel writer-code agents share a build target directory —
+concurrent cargo invocations corrupt each other's artifacts.
 
-### 1. Format
-```
-cargo fmt 2>&1
-```
+Verification is handled by the orchestrator after all writer-codes complete:
+- runner-linting runs `cargo fmt` and `cargo dclippy`
+- runner-tests runs `cargo dtest` and `cargo dstest`
 
-### 2. Check
-```
-cargo dcheck 2>&1
-```
-
-Fix any compilation errors. If compilation requires changes outside your domain, describe what's needed in your output.
-
-### 3. Clippy
-```
-cargo dclippy 2>&1
-```
-
-Fix any clippy warnings in your code. Do NOT add `#[allow(...)]` suppressions unless there's a genuine false positive — explain it in your output.
-
-### 4. Tests
-
-Run only the tests in your domain — not the full suite. Use a module path filter:
-```
-cargo dtest <domain>:: 2>&1
-```
-For example, if your domain is `bolt`: `cargo dtest bolt::`
-
-**CRITICAL: never run bare `cargo test`** — it compiles without dynamic linking, invalidates the dylib build artifacts, and forces a full recompile for everyone. Always use `cargo dtest`.
-
-**All tests in the domain must pass** — both the new failing tests and all pre-existing tests in the domain. If a pre-existing test breaks, your implementation has a regression — fix it.
-
-### Iteration
-
-If tests fail after your first implementation attempt:
-1. Read the failure output carefully
-2. Understand what the test expected vs what happened
-3. Fix the implementation (NOT the test)
-4. Re-run the filtered test command
-5. Repeat until all domain tests pass
+If runner-tests reports a failure in your domain, the orchestrator will send you a Fix spec.
 
 ## Output Format
 
@@ -120,9 +87,6 @@ Return a structured summary:
 
 ```
 ## Code Writer Report
-
-### Tests: PASS (N passed, N total) / FAIL (N passed, N failed)
-[details for any failures — what failed and why]
 
 ### Files Created
 - path/to/file.rs — what it contains
@@ -134,9 +98,6 @@ Return a structured summary:
 - [any changes needed in lib.rs, game.rs, shared.rs, or other domains]
 - [any new plugins that need to be added to the Game plugin group]
 - [any new message types that need registration in other domains' plugins]
-
-### Clippy: PASS / N warnings
-[details for any warnings]
 
 ### Notes
 [anything the main agent should know — edge cases, assumptions, concerns]
@@ -158,10 +119,7 @@ All identifiers MUST use project vocabulary:
 
 ## Dev Aliases
 
-**NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test`.
-Using `cargo test` instead of `cargo dtest` compiles without dynamic linking and **invalidates the dylib build cache** — this causes a full recompile for all subsequent builds.
-- `cargo dbuild` / `cargo dcheck` / `cargo dclippy` / `cargo dtest <filter>`
-- Exception: `cargo fmt` (no dev alias)
+**NEVER** run any cargo commands. writer-code must not invoke cargo — verification runs in the orchestrator's post-implementation wave via runner-linting and runner-tests.
 
 ## Code Standards
 

@@ -69,7 +69,7 @@ For multi-domain work or context-heavy phases, delegate implementation to the **
 1. Write ALL specs upfront (behavioral spec for writer-tests + implementation spec for writer-code, one pair per domain)
 2. Launch ALL **writer-tests** as background agents (parallel across domains) — RED phase
 3. As each writer-tests completes: review its output, immediately launch its paired **writer-code** — don't wait for other writer-tests
-4. After ALL writer-codes complete: run the post-implementation checklist below
+4. After ALL writer-codes complete (code only — no self-verification): run the post-implementation checklist below (runner-linting + runner-tests verify)
 5. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself — REFACTOR as needed
 
 ### Phase 1 — Before Writing Code (sequential)

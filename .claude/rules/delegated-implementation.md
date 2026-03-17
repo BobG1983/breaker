@@ -189,7 +189,7 @@ When implementing multiple domains simultaneously:
 1. Write ALL specs upfront (test spec + implementation spec for each domain)
 2. Launch ALL writer-tests in parallel **as background agents** (`run_in_background: true`)
 3. When each writer-tests completes (notified automatically): review its output, then immediately launch its writer-code — do NOT wait for other writer-tests still running
-4. When ALL writer-codes have completed: launch post-implementation agents in parallel
+4. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation agents in parallel
 5. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 
 ### Safety Requirements for Parallel Execution
