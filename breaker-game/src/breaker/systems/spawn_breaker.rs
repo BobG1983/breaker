@@ -30,7 +30,7 @@ pub fn spawn_breaker(
     }
 
     let spawn_pos = Vec3::new(0.0, config.y_position, 0.0);
-    commands.spawn((
+    let entity = commands.spawn((
         Breaker,
         BreakerVelocity::default(),
         BreakerState::default(),
@@ -48,6 +48,7 @@ pub fn spawn_breaker(
         },
         CleanupOnRunEnd,
     ));
+    debug!("breaker spawned entity={:?}", entity.id());
 }
 
 /// Resets breaker state at the start of each node.

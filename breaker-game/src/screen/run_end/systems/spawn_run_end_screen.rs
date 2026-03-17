@@ -9,6 +9,7 @@ use crate::{
 
 /// Spawns the run-end UI showing the run outcome.
 pub fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
+    info!("run ended");
     let (title, subtitle) = match run_state.outcome {
         RunOutcome::Won => ("RUN COMPLETE", "All nodes cleared!"),
         RunOutcome::Lost => ("TIME'S UP", "The clock ran out."),

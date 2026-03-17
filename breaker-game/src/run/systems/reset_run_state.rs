@@ -4,14 +4,23 @@ use bevy::prelude::*;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use crate::{run::resources::RunState, shared::GameRng};
+use crate::{
+    run::resources::RunState,
+    shared::{GameRng, SelectedArchetype},
+};
 
 /// Resets [`RunState`] to defaults and reseeds [`GameRng`] when leaving the
 /// main menu (starting a run).
-pub fn reset_run_state(mut run_state: ResMut<RunState>, mut rng: ResMut<GameRng>) {
+pub fn reset_run_state(
+    mut run_state: ResMut<RunState>,
+    mut rng: ResMut<GameRng>,
+    archetype: Option<Res<SelectedArchetype>>,
+) {
     *run_state = RunState::default();
     // Reseed with entropy — Phase 4 will add user-selectable seeds
     rng.0 = ChaCha8Rng::from_os_rng();
+    let archetype_name = archetype.as_deref().map_or("none", |a| a.0.as_str());
+    info!("run started archetype={}", archetype_name);
 }
 
 #[cfg(test)]

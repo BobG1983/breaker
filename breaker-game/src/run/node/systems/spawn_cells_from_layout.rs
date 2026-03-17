@@ -99,7 +99,7 @@ pub fn spawn_cells_from_layout(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    spawn_cells_from_grid(
+    let count = spawn_cells_from_grid(
         &mut commands,
         &config,
         &playfield,
@@ -108,6 +108,7 @@ pub fn spawn_cells_from_layout(
         &mut meshes,
         &mut materials,
     );
+    debug!("cells spawned count={}", count);
 }
 
 #[cfg(test)]

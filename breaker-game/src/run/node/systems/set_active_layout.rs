@@ -28,6 +28,7 @@ pub fn set_active_layout(
 
     if let Some(name) = &override_res.0 {
         if let Some(layout) = registry.get_by_name(name) {
+            info!("node layout: {}", layout.name);
             commands.insert_resource(ActiveNodeLayout(layout.clone()));
             return;
         }
@@ -39,6 +40,7 @@ pub fn set_active_layout(
 
     let index = run_state.node_index as usize % registry.layouts.len();
     let layout = registry.layouts[index].clone();
+    info!("node layout: {}", layout.name);
     commands.insert_resource(ActiveNodeLayout(layout));
 }
 

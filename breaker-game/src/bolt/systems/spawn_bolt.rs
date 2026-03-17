@@ -62,6 +62,7 @@ pub fn spawn_bolt(
         },
         CleanupOnNodeExit,
     ));
+    debug!("bolt spawned entity={:?}", entity.id());
 
     if serving {
         entity.insert(BoltServing);
