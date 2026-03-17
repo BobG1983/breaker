@@ -1,6 +1,6 @@
 (
-    breaker: "prism",
-    layout: "corridor",
+    breaker: "Prism",
+    layout: "Corridor",
     input: Chaos((
         seed: 99,
         action_prob: 0.7,
