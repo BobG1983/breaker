@@ -20,13 +20,25 @@ pub fn propagate_bolt_config(
     config: Res<BoltConfig>,
     query: Query<Entity, With<Bolt>>,
 ) {
-    let _ = (commands, config, query);
+    for entity in &query {
+        commands.entity(entity).insert((
+            BoltBaseSpeed(config.base_speed),
+            BoltMinSpeed(config.min_speed),
+            BoltMaxSpeed(config.max_speed),
+            BoltRadius(config.radius),
+            BoltSpawnOffsetY(config.spawn_offset_y),
+            BoltRespawnOffsetY(config.respawn_offset_y),
+            BoltRespawnAngleSpread(config.respawn_angle_spread),
+            BoltInitialAngle(config.initial_angle),
+        ));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::prelude::*;
+
+    use super::*;
 
     fn test_app() -> App {
         let mut app = App::new();

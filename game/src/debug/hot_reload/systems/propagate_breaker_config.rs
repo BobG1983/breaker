@@ -3,9 +3,17 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::{consequences::bolt_speed_boost::apply_bolt_speed_boosts, registry::ArchetypeRegistry},
+    behaviors::{
+        consequences::bolt_speed_boost::apply_bolt_speed_boosts, registry::ArchetypeRegistry,
+    },
     breaker::{
-        components::{Breaker, BreakerMaxSpeed},
+        components::{
+            BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+            BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
+            BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown,
+            DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing,
+            MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
+        },
         resources::BreakerConfig,
     },
     shared::SelectedArchetype,
@@ -26,7 +34,54 @@ pub fn propagate_breaker_config(
     registry: Res<ArchetypeRegistry>,
     query: Query<Entity, With<Breaker>>,
 ) {
-    let _ = (commands, config, selected, registry, query);
+    for entity in &query {
+        commands
+            .entity(entity)
+            .insert((
+                BreakerWidth(config.width),
+                BreakerHeight(config.height),
+                BreakerBaseY(config.y_position),
+                BreakerMaxSpeed(config.max_speed),
+                BreakerAcceleration(config.acceleration),
+                BreakerDeceleration(config.deceleration),
+                DecelEasing {
+                    ease: config.decel_ease,
+                    strength: config.decel_ease_strength,
+                },
+                DashSpeedMultiplier(config.dash_speed_multiplier),
+                DashDuration(config.dash_duration),
+                DashTilt(config.dash_tilt_angle.to_radians()),
+                DashTiltEase(config.dash_tilt_ease),
+                BrakeTilt {
+                    angle: config.brake_tilt_angle.to_radians(),
+                    duration: config.brake_tilt_duration,
+                    ease: config.brake_tilt_ease,
+                },
+                BrakeDecel(config.brake_decel_multiplier),
+                MaxReflectionAngle(config.max_reflection_angle.to_radians()),
+                MinAngleFromHorizontal(config.min_angle_from_horizontal.to_radians()),
+            ))
+            .insert((
+                SettleDuration(config.settle_duration),
+                SettleTiltEase(config.settle_tilt_ease),
+                BumpPerfectWindow(config.perfect_window),
+                BumpEarlyWindow(config.early_window),
+                BumpLateWindow(config.late_window),
+                BumpPerfectCooldown(config.perfect_bump_cooldown),
+                BumpWeakCooldown(config.weak_bump_cooldown),
+                BumpVisualParams {
+                    duration: config.bump_visual_duration,
+                    peak: config.bump_visual_peak,
+                    peak_fraction: config.bump_visual_peak_fraction,
+                    rise_ease: config.bump_visual_rise_ease,
+                    fall_ease: config.bump_visual_fall_ease,
+                },
+            ));
+
+        if let Some(def) = registry.archetypes.get(&selected.0) {
+            apply_bolt_speed_boosts(&mut commands, entity, &def.behaviors);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -34,7 +89,10 @@ mod tests {
     use super::*;
     use crate::{
         behaviors::{
-            definition::{ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides, Consequence, Trigger},
+            consequences::life_lost::LivesCount,
+            definition::{
+                ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides, Consequence, Trigger,
+            },
             registry::ArchetypeRegistry,
         },
         breaker::{
@@ -42,13 +100,12 @@ mod tests {
                 BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
                 BreakerDeceleration, BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow,
                 BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow,
-                BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
-                DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal,
-                SettleDuration, SettleTiltEase, BumpVisualParams,
+                BumpVisualParams, BumpWeakCooldown, BumpWeakMultiplier, DashDuration,
+                DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle,
+                MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
             },
             resources::BreakerConfig,
         },
-        behaviors::consequences::life_lost::LivesCount,
         shared::SelectedArchetype,
     };
 
