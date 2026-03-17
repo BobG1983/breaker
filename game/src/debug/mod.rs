@@ -1,8 +1,12 @@
 //! Debug domain plugin — `bevy_egui` debug console and overlays.
 
-mod plugin;
-mod resources;
 #[cfg(feature = "dev")]
-mod systems;
+mod hot_reload;
+#[cfg(feature = "dev")]
+mod overlays;
+mod plugin;
+pub mod resources;
+#[cfg(feature = "dev")]
+mod telemetry;
 
 pub use plugin::DebugPlugin;

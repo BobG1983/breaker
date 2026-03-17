@@ -1,44 +1,11 @@
 [workspace]
-members = [".", "brickbreaker_derive"]
+members = ["game", "derive"]
+resolver = "3"
 
-[package]
-name = "brickbreaker"
-version = "0.1.0"
-edition = "2024"
-
-[features]
-default = ["dev"]
-dev = ["dep:bevy_egui"]
-
-[dependencies]
-bevy = { version = "0.18.1", default-features = false, features = ["2d", "serialize"] }
-bevy_egui = { version = "0.39", optional = true }
-brickbreaker_derive = { path = "brickbreaker_derive" }
-serde = { version = "1", features = ["derive"] }
-ron = "0.11"
-bevy_common_assets = { version = "0.15", features = ["ron"] }
-bevy_asset_loader = { version = "0.25", features = ["progress_tracking"] }
-iyes_progress = "0.16"
-rand = "0.9"
-rand_chacha = "0.9"
-
-[dev-dependencies]
-proptest = "1"
-
-[profile.dev]
-opt-level = 1
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.release]
-codegen-units = 1
-lto = "thin"
-
-[lints.rust]
+[workspace.lints.rust]
 missing_docs = "deny"
 
-[lints.clippy]
+[workspace.lints.clippy]
 # Correctness & suspicious code
 all = { level = "deny", priority = -1 }
 correctness = { level = "deny", priority = -1 }
@@ -51,3 +18,13 @@ nursery = { level = "warn", priority = -1 }
 # Pedantic overrides — suppress noisy lints that don't add value
 needless_pass_by_value = "allow"          # Bevy systems take ownership by convention
 module_name_repetitions = "allow"         # BreakerState in breaker/ is fine
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
