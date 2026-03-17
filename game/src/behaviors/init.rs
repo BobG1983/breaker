@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use super::{
     active::ActiveBehaviors,
     consequences::{bolt_speed_boost::apply_bolt_speed_boosts, life_lost::LivesCount},
+    definition::BreakerStatOverrides,
     registry::ArchetypeRegistry,
 };
 use crate::{
@@ -14,6 +15,29 @@ use crate::{
     },
     shared::SelectedArchetype,
 };
+
+/// Applies optional stat overrides to a `BreakerConfig`.
+///
+/// Each `Some` field in `overrides` replaces the corresponding field in `config`.
+/// Used by both `apply_archetype_config_overrides` (at init) and hot-reload
+/// propagation (at runtime).
+pub fn apply_stat_overrides(config: &mut BreakerConfig, overrides: &BreakerStatOverrides) {
+    if let Some(width) = overrides.width {
+        config.width = width;
+    }
+    if let Some(height) = overrides.height {
+        config.height = height;
+    }
+    if let Some(max_speed) = overrides.max_speed {
+        config.max_speed = max_speed;
+    }
+    if let Some(acceleration) = overrides.acceleration {
+        config.acceleration = acceleration;
+    }
+    if let Some(deceleration) = overrides.deceleration {
+        config.deceleration = deceleration;
+    }
+}
 
 /// Resets `BreakerConfig` from defaults and applies archetype stat overrides.
 ///
@@ -36,22 +60,7 @@ pub fn apply_archetype_config_overrides(
         return;
     };
 
-    let overrides = &def.stat_overrides;
-    if let Some(width) = overrides.width {
-        config.width = width;
-    }
-    if let Some(height) = overrides.height {
-        config.height = height;
-    }
-    if let Some(max_speed) = overrides.max_speed {
-        config.max_speed = max_speed;
-    }
-    if let Some(acceleration) = overrides.acceleration {
-        config.acceleration = acceleration;
-    }
-    if let Some(deceleration) = overrides.deceleration {
-        config.deceleration = deceleration;
-    }
+    apply_stat_overrides(&mut config, &def.stat_overrides);
 }
 
 /// Stamps init-time behavior components and builds `ActiveBehaviors`.
@@ -186,6 +195,65 @@ mod tests {
 
         let lives = app.world().get::<LivesCount>(entity).unwrap();
         assert_eq!(lives.0, 99, "should not overwrite existing LivesCount");
+    }
+
+    #[test]
+    fn apply_stat_overrides_partial() {
+        let mut config = BreakerConfig::default();
+        let original_max_speed = config.max_speed;
+        let original_accel = config.acceleration;
+
+        let overrides = BreakerStatOverrides {
+            width: Some(200.0),
+            height: Some(30.0),
+            ..default()
+        };
+
+        apply_stat_overrides(&mut config, &overrides);
+
+        assert!((config.width - 200.0).abs() < f32::EPSILON);
+        assert!((config.height - 30.0).abs() < f32::EPSILON);
+        assert!(
+            (config.max_speed - original_max_speed).abs() < f32::EPSILON,
+            "unset fields should remain unchanged"
+        );
+        assert!(
+            (config.acceleration - original_accel).abs() < f32::EPSILON,
+            "unset fields should remain unchanged"
+        );
+    }
+
+    #[test]
+    fn apply_stat_overrides_all_fields() {
+        let mut config = BreakerConfig::default();
+        let overrides = BreakerStatOverrides {
+            width: Some(100.0),
+            height: Some(20.0),
+            max_speed: Some(500.0),
+            acceleration: Some(1000.0),
+            deceleration: Some(2000.0),
+        };
+
+        apply_stat_overrides(&mut config, &overrides);
+
+        assert!((config.width - 100.0).abs() < f32::EPSILON);
+        assert!((config.height - 20.0).abs() < f32::EPSILON);
+        assert!((config.max_speed - 500.0).abs() < f32::EPSILON);
+        assert!((config.acceleration - 1000.0).abs() < f32::EPSILON);
+        assert!((config.deceleration - 2000.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn apply_stat_overrides_empty_is_noop() {
+        let original = BreakerConfig::default();
+        let mut config = BreakerConfig::default();
+        let overrides = BreakerStatOverrides::default();
+
+        apply_stat_overrides(&mut config, &overrides);
+
+        assert!((config.width - original.width).abs() < f32::EPSILON);
+        assert!((config.height - original.height).abs() < f32::EPSILON);
+        assert!((config.max_speed - original.max_speed).abs() < f32::EPSILON);
     }
 
     #[test]
