@@ -10,6 +10,12 @@ git flow config add topic refactor develop --prefix=refactor/
 git flow config edit topic bugfix --prefix=fix/
 ```
 
+Also set the local merge strategy to always create merge commits (preserves full branch topology in git UIs):
+
+```bash
+git config --local merge.ff false
+```
+
 This establishes:
 - **Base branches**: `main` (production), `develop` (integration)
 - **Topic types**: `feature/*`, `fix/*`, `refactor/*`, `release/*`, `hotfix/*`
@@ -87,8 +93,24 @@ git flow hotfix finish --tag         # Merge to main, tag, merge to develop, del
 git push --all --tags                # Push everything
 ```
 
+## Staying Current
+
+While on a feature/fix/refactor branch, pull changes from `develop` before finishing:
+
+```bash
+git flow update       # merges develop into current branch (preserves branch history)
+```
+
+Run this before `git flow <type> finish` to prevent merge conflicts at finish time.
+If `finish` fails and leaves a stale state, clear it with:
+
+```bash
+rm .git/gitflow/state/merge.json
+```
+
 ## History Hygiene
 
+- `merge.ff = false` is set locally — all merges create merge commits, preserving full branch topology in git UIs
 - Never rewrite shared history without explicit approval
 - Keep `main` and `develop` always clean and passing (fmt, clippy, tests)
 - If a pre-commit hook fails, fix the issue and create a NEW commit (don't amend)
