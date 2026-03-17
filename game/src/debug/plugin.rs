@@ -19,38 +19,17 @@ impl Plugin for DebugPlugin {
             use bevy_egui::EguiPlugin;
 
             use super::{
-                resources::LastBumpResult,
-                systems::{
-                    bolt_info_ui, breaker_state_ui, debug_ui_system, draw_hitboxes,
-                    draw_velocity_vectors, input_actions_ui, track_bump_result,
-                },
+                hot_reload::plugin::HotReloadPlugin, overlays::plugin::OverlaysPlugin,
+                resources::LastBumpResult, telemetry::plugin::TelemetryPlugin,
             };
-            use crate::{physics::PhysicsSystems, shared::PlayingState};
 
             app.add_plugins(EguiPlugin::default())
                 .add_plugins(FrameTimeDiagnosticsPlugin::default())
+                .add_plugins(OverlaysPlugin)
+                .add_plugins(TelemetryPlugin)
+                .add_plugins(HotReloadPlugin)
                 .init_resource::<DebugOverlays>()
-                .init_resource::<LastBumpResult>()
-                .add_systems(
-                    bevy_egui::EguiPrimaryContextPass,
-                    (
-                        debug_ui_system,
-                        bolt_info_ui,
-                        breaker_state_ui,
-                        input_actions_ui,
-                    )
-                        .run_if(resource_exists::<DebugOverlays>),
-                )
-                .add_systems(
-                    FixedUpdate,
-                    track_bump_result
-                        .after(PhysicsSystems::BreakerCollision)
-                        .run_if(in_state(PlayingState::Active)),
-                )
-                .add_systems(
-                    Update,
-                    (draw_hitboxes, draw_velocity_vectors).run_if(resource_exists::<DebugOverlays>),
-                );
+                .init_resource::<LastBumpResult>();
         }
     }
 }
