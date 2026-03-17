@@ -58,13 +58,13 @@ When chips arrive in Phase 4, they add one more step at the end of this chain.
 
 ## Checklist
 
-- [ ] Add `CellTypeAlias` component to track which cell type definition spawned each cell
-- [ ] Enable Bevy `file_watcher` feature in dev builds
-- [ ] Hot-reload module structure + system sets (`HotReloadSystems`)
-- [ ] Extract `apply_stat_overrides` helper from `apply_archetype_config_overrides`
-- [ ] Defaults → Config propagation systems (8 systems)
-- [ ] Config → Component propagation systems (bolt + breaker)
-- [ ] Cell type definition hot-reload
-- [ ] Node layout hot-reload (despawn + re-spawn cells on change)
-- [ ] Archetype hot-reload
-- [ ] `--level` CLI flag for dev play-testing
+- [x] Add `CellTypeAlias` component to track which cell type definition spawned each cell
+- [x] Enable Bevy `file_watcher` feature in dev builds
+- [x] Hot-reload module structure + system sets (`HotReloadSystems`)
+- [x] Extract `apply_stat_overrides` helper from `apply_archetype_config_overrides`
+- [x] Defaults → Config propagation systems (8 systems)
+- [x] Config → Component propagation systems (bolt + breaker)
+- [x] Cell type definition hot-reload
+- [x] Node layout hot-reload (despawn + re-spawn cells on change)
+- [x] Archetype hot-reload
+- [ ] `--level` CLI flag for dev play-testing — **removed from scope** (replaced by scenario runner's layout override)

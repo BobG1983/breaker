@@ -6,20 +6,30 @@
 
 ## Architecture
 
-Separate workspace member (`scenario-runner/`) with its own RON scenario files. Uses `argh` for CLI.
+Separate workspace member (`breaker-scenario-runner/`) with its own RON scenario files. Uses `argh` for CLI.
 
 ```
-scenario-runner/
-├── Cargo.toml          # depends on brickbreaker, argh
+breaker-scenario-runner/
+├── Cargo.toml          # depends on breaker (game lib), argh, ron, serde, rand
 ├── src/
 │   ├── main.rs         # CLI entry point
-│   ├── lib.rs          # scenario types, runner lifecycle
-│   ├── invariants.rs   # assertion systems
-│   └── input.rs        # chaos monkey, scripted sequences
+│   ├── lib.rs          # module declarations + re-exports
+│   ├── types.rs        # ScenarioDefinition, InputStrategy, InvariantKind, etc.
+│   ├── lifecycle.rs    # ScenarioLifecycle plugin, ScenarioConfig, frame counter
+│   ├── invariants.rs   # assertion systems, ViolationLog
+│   ├── input.rs        # ChaosMonkey, ScriptedInput strategies
+│   ├── log_capture.rs  # tracing Layer for WARN/ERROR capture
+│   └── runner.rs       # App construction, multi-scenario execution, evaluate_pass
 └── scenarios/          # RON scenario files (crate-local, never shipped)
     ├── aegis_chaos.scenario.ron
+    ├── aegis_bolt_stress.scenario.ron
+    ├── chrono_scripted.scenario.ron
     ├── prism_stress.scenario.ron
-    └── ...
+    ├── self_tests/
+    │   ├── bolt_oob_detection.scenario.ron
+    │   ├── breaker_oob_detection.scenario.ron
+    │   └── nan_detection.scenario.ron
+    └── regressions/    # empty — populated as regressions are caught
 ```
 
 ---
@@ -139,15 +149,20 @@ No GPU needed (`backends: None`). No display server needed (winit disabled).
 
 ## Checklist
 
-- [ ] Create `scenario-runner/` workspace member with argh dependency
-- [ ] `cargo dscenario` alias in `.cargo/config.toml`
-- [ ] Scenario RON format (breaker, layout, input strategy, max_frames, invariants)
-- [ ] ScenarioPlugin: loader, lifecycle, auto-navigation
-- [ ] Visual mode (full window)
-- [ ] Headless mode (no winit, backends: None, ScheduleRunnerPlugin)
-- [ ] Chaos monkey input strategy (seeded, state-aware)
-- [ ] Scripted input strategy
-- [ ] Invariant systems (bolt bounds, entity leaks, NaN, state transitions)
-- [ ] Custom tracing Layer for WARN/ERROR capture
-- [ ] Frame-limited exit with pass/fail exit code
-- [ ] 3+ initial scenario RON files
+- [x] Create `breaker-scenario-runner/` workspace member with argh dependency
+- [x] `cargo dscenario` alias in `.cargo/config.toml`
+- [x] Scenario RON format (breaker, layout, input strategy, max_frames, invariants, expected_violations, debug_setup)
+- [x] ScenarioLifecycle plugin: loader, lifecycle, auto-navigation, frame counter
+- [x] Visual mode (full window)
+- [x] Headless mode (no winit, ScheduleRunnerPlugin)
+- [x] Chaos monkey input strategy (seeded, state-aware)
+- [x] Scripted input strategy
+- [x] Hybrid input strategy (scripted then chaos)
+- [x] Invariant systems (bolt bounds, breaker bounds, entity leaks, NaN, state transitions)
+- [x] Custom tracing Layer for WARN/ERROR capture
+- [x] Frame-limited exit with pass/fail exit code
+- [x] 4 stress scenario RON files + 3 self-test scenarios
+- [x] CI workflow (`.github/workflows/ci.yml`) with test (3 platforms) + scenarios (headless) jobs
+- [x] `NodeLayoutRegistry::get_by_name()` + `ScenarioLayoutOverride` resource added to main crate
+- [x] `expected_violations` field for self-test scenarios that intentionally trigger invariants
+- [x] Input recording sub-domain (`debug/recording/`) + `--record` CLI flag for capturing scripted inputs
