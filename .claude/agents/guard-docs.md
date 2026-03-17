@@ -97,7 +97,7 @@ If code consistently uses a new term that isn't in the glossary, add it. Use the
 - Do not invent documentation. Only document what the code actually does.
 - When in doubt about whether a doc is intentionally forward-looking vs. out of date, report and defer — don't edit.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 # Persistent Agent Memory
 

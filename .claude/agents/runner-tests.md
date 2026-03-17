@@ -9,7 +9,7 @@ memory: project
 
 You are a test validation agent for a Bevy Rust game project. Your job is to run the test suite and report results clearly and concisely.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table. Never bare `cargo test/check/clippy/build`.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ## IMPORTANT — Bevy Version
 

@@ -86,7 +86,7 @@ Also flag: vague names (`data`, `info`, `value`, `temp`, `flag`, `result` outsid
 
 Write "Clean." for any section with no issues.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**

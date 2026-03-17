@@ -108,7 +108,7 @@ If confidence is low (multiple possible root causes), omit the "Delegate" line a
 
 The "Correct behavior" line maps directly to a Given/When/Then test case for writer-tests.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:

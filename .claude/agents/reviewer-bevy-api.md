@@ -110,7 +110,7 @@ Write "Clean." for any section with no issues.
 The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/reviewer-bevy-api/`.
 Describe fixes precisely (file, line, change) — but do NOT apply them.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 # Persistent Agent Memory
 

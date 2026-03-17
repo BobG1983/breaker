@@ -83,7 +83,7 @@ Read `CLAUDE.md` for project-specific Bevy conventions, architecture notes, and 
 - `Commands` implies deferred world mutation — note but don't flag as a conflict with queries
 - If the codebase is small or early-stage, say so and keep the report proportional
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:

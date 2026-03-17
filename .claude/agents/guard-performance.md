@@ -86,7 +86,7 @@ Write "Clean." for any severity level with no issues.
 
 Err toward **not flagging** things that are fine at current scale. This game has a fixed grid of cells and a single bolt — many "concerns" are academic until the entity count grows significantly.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**

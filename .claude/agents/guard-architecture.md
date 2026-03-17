@@ -63,7 +63,7 @@ You're not pedantic for its own sake — every rule exists because this project 
 - Don't evaluate game design. That's guard-game-design's job. You care about whether the code is in the right place and talks to other code the right way.
 - Don't suggest over-engineering. If the current pattern works and is simple, defend it against unnecessary abstraction.
 
-⚠️ **USE DEV ALIASES** — read `.claude/rules/cargo.md` for the full alias table and prohibition.
+⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).** This means:
