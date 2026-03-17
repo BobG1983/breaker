@@ -57,18 +57,18 @@ The main agent is the orchestrator. Invoke subagents automatically at these trig
 
 See @.claude/rules/agent-flow.md for the full flow reference: hint formats, failure routing, and parallel-launch requirements.
 
-### Delegated Implementation (test-writer + code-writer)
+### Delegated Implementation (writer-tests + writer-code)
 
-For multi-domain work or context-heavy phases, delegate implementation to the **test-writer** → **code-writer** TDD pair. This preserves main context and prevents implementation bias through context isolation. See @.claude/rules/delegated-implementation.md for full spec-writing guidelines.
+For multi-domain work or context-heavy phases, delegate implementation to the **writer-tests** → **writer-code** TDD pair. This preserves main context and prevents implementation bias through context isolation. See @.claude/rules/delegated-implementation.md for full spec-writing guidelines.
 
 **When to delegate**: Anything non-trivial — single domain or multi-domain. If it has 2+ behaviors to test and the spec can be written clearly, delegate it.
 
 **When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions (single function, one-liner config, rename).
 
 **The flow** (RED → GREEN → REFACTOR):
-1. Write behavioral spec → launch **test-writer** (parallel across domains) — produces RED (failing) tests
+1. Write behavioral spec → launch **writer-tests** (parallel across domains) — produces RED (failing) tests
 2. **Review tests** (mandatory checkpoint — verify they capture intent AND actually fail)
-3. Write implementation spec → launch **code-writer** (parallel across domains) — GREEN phase
+3. Write implementation spec → launch **writer-code** (parallel across domains) — GREEN phase
 4. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself — REFACTOR as needed
 5. Run the post-implementation checklist below
 
@@ -76,7 +76,7 @@ For multi-domain work or context-heavy phases, delegate implementation to the **
 
 | Trigger | Agent | Why |
 |---------|-------|-----|
-| Unfamiliar Bevy 0.18 API or pattern | **bevy-api-expert** | Verify before using — Bevy APIs change between versions |
+| Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** | Verify before using — Bevy APIs change between versions |
 
 ### Phase 2 — After Implementation (launch in parallel)
 
@@ -84,41 +84,41 @@ Launch all applicable agents simultaneously — they are independent:
 
 | Trigger | Agent | Why |
 |---------|-------|-----|
-| Always after implementation | **lint-runner** | Auto-fmt and clippy; errors → code-writer |
-| Always after implementation | **test-runner** | Run tests; failures → code-writer or test-writer |
-| Always after implementation | **scenario-runner** | Run all gameplay scenarios headlessly and diagnose failures |
-| Always after implementation | **correctness-reviewer** | Logic bugs, ECS pitfalls, state machine holes, math |
-| Always after implementation | **quality-reviewer** | Idioms, vocabulary, test coverage, documentation |
-| Always after implementation | **bevy-api-reviewer** | Verify Bevy API usage is correct for this version |
-| New system, plugin, or module added | **architecture-guard** | Validate plugin boundaries and message discipline |
-| 3+ systems added, or cross-plugin data flow | **system-dependency-mapper** | Detect ordering issues and conflicts |
-| New components or systems touching many entities | **perf-guard** | Bevy-specific performance: queries, archetypes, scheduling |
-| New gameplay mechanic or upgrade designed | **game-design-guard** | Validate against design pillars |
-| Phase complete or significant structural change | **doc-guard** | Sync architecture docs, PLAN.md, TERMINOLOGY.md |
+| Always after implementation | **runner-linting** | Auto-fmt and clippy; errors → writer-code |
+| Always after implementation | **runner-tests** | Run tests; failures → writer-code or writer-tests |
+| Always after implementation | **runner-scenarios** | Run all gameplay scenarios headlessly and diagnose failures |
+| Always after implementation | **reviewer-correctness** | Logic bugs, ECS pitfalls, state machine holes, math |
+| Always after implementation | **reviewer-quality** | Idioms, vocabulary, test coverage, documentation |
+| Always after implementation | **reviewer-bevy-api** | Verify Bevy API usage is correct for this version |
+| New system, plugin, or module added | **guard-architecture** | Validate plugin boundaries and message discipline |
+| 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** | Detect ordering issues and conflicts |
+| New components or systems touching many entities | **guard-performance** | Bevy-specific performance: queries, archetypes, scheduling |
+| New gameplay mechanic or upgrade designed | **guard-game-design** | Validate against design pillars |
+| Phase complete or significant structural change | **guard-docs** | Sync architecture docs, PLAN.md, TERMINOLOGY.md |
 
 ### Phase 3 — On Build/Test Failure (sequential, reactive)
 
 | Trigger | Flow | Notes |
 |---------|------|-------|
-| Compiler errors that aren't obvious | **rust-error-decoder** → describe fix | Sequential |
-| lint-runner FAIL, clippy errors | lint-runner hint → **code-writer** | No test-writer needed |
-| scenario-runner FAIL, high-confidence diagnosis | scenario-runner hint → **test-writer** (regression spec) → **code-writer** | test-writer writes scenario RON or unit test |
-| scenario-runner FAIL, low-confidence diagnosis | Main agent investigates → writes spec → **test-writer** → **code-writer** | Main agent reads src first |
-| test-runner FAIL, existing test broke | test-runner hint → **code-writer** (fix spec) | test-writer skipped — test already exists |
-| test-runner FAIL, no test for the broken behavior | test-runner hint → **test-writer** (regression spec) → **code-writer** | Rare — usually means a gap in coverage |
+| Compiler errors that aren't obvious | **researcher-rust-errors** → describe fix | Sequential |
+| runner-linting FAIL, clippy errors | runner-linting hint → **writer-code** | No writer-tests needed |
+| runner-scenarios FAIL, high-confidence diagnosis | runner-scenarios hint → **writer-tests** (regression spec) → **writer-code** | writer-tests writes scenario RON or unit test |
+| runner-scenarios FAIL, low-confidence diagnosis | Main agent investigates → writes spec → **writer-tests** → **writer-code** | Main agent reads src first |
+| runner-tests FAIL, existing test broke | runner-tests hint → **writer-code** (fix spec) | writer-tests skipped — test already exists |
+| runner-tests FAIL, no test for the broken behavior | runner-tests hint → **writer-tests** (regression spec) → **writer-code** | Rare — usually means a gap in coverage |
 
 ### Release (solo)
 
 | Trigger | Agent | Why |
 |---------|-------|-----|
-| Preparing a release or release infrastructure | **release** | Version bump, changelog, GitHub Actions, itch.io |
+| Preparing a release or release infrastructure | **runner-release** | Version bump, changelog, GitHub Actions, itch.io |
 
 ---
 
 **Post-implementation checklist** (run before considering a task done):
-1. Launch **lint-runner** + **test-runner** + **scenario-runner** + **correctness-reviewer** + **quality-reviewer** + **bevy-api-reviewer** in parallel (always)
-2. If new systems/plugins added → also launch **architecture-guard** + **system-dependency-mapper** in the same parallel wave
-3. If new gameplay mechanic → also launch **game-design-guard** in the same parallel wave
-4. If phase complete or docs may have drifted → also launch **doc-guard** in the same parallel wave
+1. Launch **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** in parallel (always)
+2. If new systems/plugins added → also launch **guard-architecture** + **researcher-system-dependencies** in the same parallel wave
+3. If new gameplay mechanic → also launch **guard-game-design** in the same parallel wave
+4. If phase complete or docs may have drifted → also launch **guard-docs** in the same parallel wave
 5. Run `/simplify` on changed code
 6. Commit to the feature branch with a conventional commit message

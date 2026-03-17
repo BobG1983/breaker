@@ -1,6 +1,6 @@
 # Delegated Implementation
 
-Guidelines for using the **test-writer** and **code-writer** agent pair to implement features with TDD-enforced quality and context isolation.
+Guidelines for using the **writer-tests** and **writer-code** agent pair to implement features with TDD-enforced quality and context isolation.
 
 ## When to Use
 
@@ -14,34 +14,34 @@ Do NOT use delegated implementation when:
 - **Exploratory work** where the API shape isn't proven yet
 - **New domain creation** that requires wiring in `lib.rs`/`game.rs` (do the wiring yourself, then delegate the internals)
 - **Trivial additions** — a single pure function, a one-liner config change, a rename
-- **Complex Bevy API uncertainty** — use bevy-api-expert first to resolve, then delegate
+- **Complex Bevy API uncertainty** — use researcher-bevy-api first to resolve, then delegate
 
 ## The Flow (RED → GREEN → REFACTOR)
 
 ```
-1. Main agent writes behavioral spec (test-writer)
-2. Main agent writes implementation spec (code-writer)
-3. Launch test-writer(s) — parallel if multiple domains  [RED phase: tests must fail]
+1. Main agent writes behavioral spec (writer-tests)
+2. Main agent writes implementation spec (writer-code)
+3. Launch writer-tests(s) — parallel if multiple domains  [RED phase: tests must fail]
 4. Main agent REVIEWS test output (mandatory checkpoint — verify tests fail)
-5. Launch code-writer(s) — parallel if multiple domains  [GREEN phase: minimum code to pass]
-6. Launch post-implementation agents (test-runner, correctness-reviewer, etc.)  [REFACTOR check]
+5. Launch writer-code(s) — parallel if multiple domains  [GREEN phase: minimum code to pass]
+6. Launch post-implementation agents (runner-tests, reviewer-correctness, etc.)  [REFACTOR check]
 7. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 ```
 
-**RED phase requirement**: Before launching code-writers, confirm that the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
+**RED phase requirement**: Before launching writer-codes, confirm that the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
 
 ### The Checkpoint Is Mandatory
 
-Between steps 4 and 5, the main agent MUST review the test-writer's output:
+Between steps 4 and 5, the main agent MUST review the writer-tests's output:
 - Do the tests capture the intended behavior?
 - Are concrete values correct?
 - Are edge cases covered?
-- Are there ambiguities the test-writer flagged?
+- Are there ambiguities the writer-tests flagged?
 - **Do the tests fail?** (if any pass immediately, investigate why)
 
-If tests are wrong, fix them or re-spec before launching the code-writer. Bad tests produce bad implementations.
+If tests are wrong, fix them or re-spec before launching the writer-code. Bad tests produce bad implementations.
 
-## Writing a Test Spec (for test-writer)
+## Writing a Test Spec (for writer-tests)
 
 ### Format
 
@@ -83,9 +83,9 @@ src/[domain]/
 
 1. **Use concrete values, not descriptions.** "Bolt at position (0.0, 50.0) with velocity (0.0, 400.0)" — not "a bolt moving upward."
 2. **One behavior per numbered item.** Don't combine multiple behaviors into one description.
-3. **Include the edge case inline.** Don't leave edge cases for the test-writer to discover.
+3. **Include the edge case inline.** Don't leave edge cases for the writer-tests to discover.
 4. **Name the types.** If new components or messages are needed, name them and describe their fields.
-5. **Point to reference files.** The test-writer needs existing patterns to match.
+5. **Point to reference files.** The writer-tests needs existing patterns to match.
 6. **Scope explicitly.** State what's in scope and what's out of scope.
 
 ### Example: Good Test Spec
@@ -137,7 +137,7 @@ Use the existing bolt components.
 
 Problems: no concrete values, no explicit behaviors, no edge cases, no file references, no scope.
 
-## Writing an Implementation Spec (for code-writer)
+## Writing an Implementation Spec (for writer-code)
 
 ### Format
 
@@ -173,9 +173,9 @@ src/[domain]/
 
 ### Rules for Good Implementation Specs
 
-1. **Point to the failing tests.** The code-writer reads them first.
+1. **Point to the failing tests.** The writer-code reads them first.
 2. **Name what to implement.** System names, component names, resource names.
-3. **Point to reference patterns.** The code-writer should match existing code.
+3. **Point to reference patterns.** The writer-code should match existing code.
 4. **Specify schedule placement.** FixedUpdate vs Update vs OnEnter.
 5. **Specify ordering.** After which system sets, before which.
 6. **State what's off-limits.** Especially shared files and other domains.
@@ -185,10 +185,10 @@ src/[domain]/
 When implementing multiple domains simultaneously:
 
 1. Write ALL test specs first (one per domain)
-2. Launch ALL test-writers in parallel (each gets its own spec)
+2. Launch ALL writer-testss in parallel (each gets its own spec)
 3. Review ALL test outputs (checkpoint)
 4. Write ALL implementation specs (one per domain, now informed by the actual tests)
-5. Launch ALL code-writers in parallel
+5. Launch ALL writer-codes in parallel
 6. Launch post-implementation agents
 
 ### Safety Requirements for Parallel Execution

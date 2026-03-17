@@ -1,12 +1,12 @@
 # Sub-Agent Development Flow
 
-When to launch which agents, how to interpret their output, and how failures chain to fixes. For the test-writer → code-writer delegation pair specifically, see @.claude/rules/delegated-implementation.md.
+When to launch which agents, how to interpret their output, and how failures chain to fixes. For the writer-tests → writer-code delegation pair specifically, see @.claude/rules/delegated-implementation.md.
 
 ## Phase 1 — Before Writing Code (sequential, blocks implementation)
 
 | Trigger | Agent |
 |---------|-------|
-| Unfamiliar Bevy 0.18 API or pattern | **bevy-api-expert** |
+| Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** |
 
 ## Phase 2 — Post-Implementation (single parallel wave)
 
@@ -14,28 +14,28 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 
 ### Always launch
 
-- **lint-runner** — fmt (auto-formats in place) and clippy; Fix spec hints for clippy errors → code-writer
-- **test-runner** — cargo dtest; Fix spec hints for failures → code-writer or test-writer
-- **scenario-runner** — gameplay invariant validation
-- **correctness-reviewer** — logic bugs, ECS pitfalls, state machine holes, math
-- **quality-reviewer** — idioms, vocabulary, test coverage, documentation
-- **bevy-api-reviewer** — Bevy API correctness for exact version
+- **runner-linting** — fmt (auto-formats in place) and clippy; Fix spec hints for clippy errors → writer-code
+- **runner-tests** — cargo dtest; Fix spec hints for failures → writer-code or writer-tests
+- **runner-scenarios** — gameplay invariant validation
+- **reviewer-correctness** — logic bugs, ECS pitfalls, state machine holes, math
+- **reviewer-quality** — idioms, vocabulary, test coverage, documentation
+- **reviewer-bevy-api** — Bevy API correctness for exact version
 
 ### Launch conditionally (add to the same single message)
 
 | Condition | Agent |
 |-----------|-------|
-| New system, plugin, or module added | **architecture-guard** |
-| 3+ systems added, or cross-plugin data flow | **system-dependency-mapper** |
-| New components or systems touching many entities | **perf-guard** |
-| New gameplay mechanic or upgrade designed | **game-design-guard** |
-| Phase complete or significant structural change | **doc-guard** |
+| New system, plugin, or module added | **guard-architecture** |
+| 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** |
+| New components or systems touching many entities | **guard-performance** |
+| New gameplay mechanic or upgrade designed | **guard-game-design** |
+| Phase complete or significant structural change | **guard-docs** |
 
 ## Phase 3 — Failure Routing (sequential, reactive)
 
 React to output from Phase 2. Each failure type routes differently.
 
-### lint-runner failures
+### runner-linting failures
 
 Each clippy error includes a **Fix spec hint** block:
 
@@ -44,15 +44,15 @@ Each clippy error includes a **Fix spec hint** block:
 - Lint: `path/to/file.rs:line` — `clippy::lint_name`
 - Issue: [what the code does wrong]
 - Fix: [specific change]
-- Delegate: code-writer can apply directly
+- Delegate: writer-code can apply directly
 ```
 
 | Failure type | Route |
 |---|---|
-| Clippy errors | hint → **code-writer** (no test-writer needed) |
-| Format failures | lint-runner auto-formats — no further routing needed |
+| Clippy errors | hint → **writer-code** (no writer-tests needed) |
+| Format failures | runner-linting auto-formats — no further routing needed |
 
-### test-runner failures
+### runner-tests failures
 
 Each failing test includes a **Fix spec hint** block:
 
@@ -62,16 +62,16 @@ Each failing test includes a **Fix spec hint** block:
 - Expected: [what the test requires]
 - Got: [what actually happened]
 - System under test: likely `path/to/system.rs`
-- Delegate: code-writer can fix directly from this — no test-writer needed (test already exists)
+- Delegate: writer-code can fix directly from this — no writer-tests needed (test already exists)
 ```
 
 | Failure type | Route |
 |---|---|
-| Existing test broke | hint → **code-writer** (test exists, skip test-writer) |
-| Build failure (compiler error) | hint → **rust-error-decoder** → **code-writer** |
-| No test exists for broken behavior | hint → **test-writer** (regression spec) → **code-writer** |
+| Existing test broke | hint → **writer-code** (test exists, skip writer-tests) |
+| Build failure (compiler error) | hint → **researcher-rust-errors** → **writer-code** |
+| No test exists for broken behavior | hint → **writer-tests** (regression spec) → **writer-code** |
 
-### scenario-runner failures
+### runner-scenarios failures
 
 Each failing scenario includes a **Regression spec hint** block:
 
@@ -82,15 +82,15 @@ Each failing scenario includes a **Regression spec hint** block:
 - Suspected location: `path/to/file.rs:line` (confidence: high/medium/low)
 - Test type: unit | scenario
 - Test file: `path/to/file.rs` or `scenarios/regressions/<name>.scenario.ron`
-- Delegate: main agent can hand this directly to test-writer if confidence is high
+- Delegate: main agent can hand this directly to writer-tests if confidence is high
 ```
 
 | Confidence | Route |
 |---|---|
-| High | hint → **test-writer** (regression spec) → **code-writer** |
-| Low | Main agent reads src first → writes spec → **test-writer** → **code-writer** |
+| High | hint → **writer-tests** (regression spec) → **writer-code** |
+| Low | Main agent reads src first → writes spec → **writer-tests** → **writer-code** |
 
-### correctness-reviewer bugs
+### reviewer-correctness bugs
 
 Each confirmed bug includes a **Regression spec hint** block:
 
@@ -102,20 +102,20 @@ Each confirmed bug includes a **Regression spec hint** block:
 - Concrete values: [inputs/state that expose the bug]
 - Test type: unit | integration
 - Test file: `path/to/system_file.rs`
-- Delegate: main agent can hand this directly to test-writer if confidence is high
+- Delegate: main agent can hand this directly to writer-tests if confidence is high
 ```
 
 | Confidence | Route |
 |---|---|
-| High | hint → **test-writer** (regression spec) → **code-writer** |
-| Low | Main agent investigates further → writes spec → **test-writer** → **code-writer** |
+| High | hint → **writer-tests** (regression spec) → **writer-code** |
+| Low | Main agent investigates further → writes spec → **writer-tests** → **writer-code** |
 
-### quality-reviewer and bevy-api-reviewer findings
+### reviewer-quality and reviewer-bevy-api findings
 
-These agents describe fixes but never produce test-writer specs.
+These agents describe fixes but never produce writer-tests specs.
 
 | Finding type | Route |
 |---|---|
-| Style/idiom issue (quality-reviewer) | Main agent fixes inline — low risk, no test needed |
-| Deprecated API (bevy-api-reviewer) | Main agent fixes inline — follow stated replacement pattern |
+| Style/idiom issue (reviewer-quality) | Main agent fixes inline — low risk, no test needed |
+| Deprecated API (reviewer-bevy-api) | Main agent fixes inline — follow stated replacement pattern |
 | Logic-adjacent issue (wrong query filter, etc.) | Treat as correctness issue — write regression spec if behavior is testable |
