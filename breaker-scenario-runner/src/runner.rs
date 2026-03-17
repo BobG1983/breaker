@@ -247,9 +247,10 @@ fn build_app(headless: bool) -> App {
                 })
                 .disable::<WinitPlugin>(),
         )
-        .add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-            1.0 / 64.0,
-        )));
+        // Duration::ZERO = spin as fast as possible (no real-time throttle).
+        // Time<Fixed> accumulates overstep independently, so all fixed ticks
+        // still execute — scenarios complete in seconds instead of real time.
+        .add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
     } else {
         app.add_plugins(
             DefaultPlugins
