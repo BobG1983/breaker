@@ -19,20 +19,20 @@ Do NOT use delegated implementation when:
 ## The Flow (RED → GREEN → REFACTOR)
 
 ```
-1. Main agent writes behavioral spec (writer-tests)
-2. Main agent writes implementation spec (writer-code)
-3. Launch writer-tests(s) — parallel if multiple domains  [RED phase: tests must fail]
-4. Main agent REVIEWS test output (mandatory checkpoint — verify tests fail)
-5. Launch writer-code(s) — parallel if multiple domains  [GREEN phase: minimum code to pass]
-6. Launch post-implementation agents (runner-tests, reviewer-correctness, etc.)  [REFACTOR check]
-7. Main agent handles wiring (lib.rs, game.rs, shared.rs)
+1. Main agent writes ALL behavioral specs (for writer-tests)
+2. Main agent writes ALL implementation specs (for writer-code)
+3. Launch ALL writer-tests in parallel  [RED phase: tests must fail]
+4. As each writer-tests completes: review its output, then immediately launch its writer-code
+   — do NOT wait for other writer-tests to finish before launching a code writer
+5. After ALL writer-codes complete: launch post-implementation agents in parallel  [REFACTOR check]
+6. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 ```
 
-**RED phase requirement**: Before launching writer-codes, confirm that the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
+**RED phase requirement**: Before launching each writer-code, review the corresponding writer-tests output and confirm the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
 
-### The Checkpoint Is Mandatory
+### The Checkpoint Is Per-Domain
 
-Between steps 4 and 5, the main agent MUST review the writer-tests's output:
+When each writer-tests completes, the main agent MUST review its output before launching its paired writer-code:
 - Do the tests capture the intended behavior?
 - Are concrete values correct?
 - Are edge cases covered?
@@ -40,6 +40,8 @@ Between steps 4 and 5, the main agent MUST review the writer-tests's output:
 - **Do the tests fail?** (if any pass immediately, investigate why)
 
 If tests are wrong, fix them or re-spec before launching the writer-code. Bad tests produce bad implementations.
+
+Writing both specs upfront (steps 1–2) enables immediate writer-code launch on each writer-tests completion — no global barrier between the RED and GREEN phases.
 
 ## Writing a Test Spec (for writer-tests)
 
@@ -184,12 +186,11 @@ src/[domain]/
 
 When implementing multiple domains simultaneously:
 
-1. Write ALL test specs first (one per domain)
-2. Launch ALL writer-testss in parallel (each gets its own spec)
-3. Review ALL test outputs (checkpoint)
-4. Write ALL implementation specs (one per domain, now informed by the actual tests)
-5. Launch ALL writer-codes in parallel
-6. Launch post-implementation agents
+1. Write ALL specs upfront (test spec + implementation spec for each domain)
+2. Launch ALL writer-tests in parallel **as background agents** (`run_in_background: true`)
+3. When each writer-tests completes (notified automatically): review its output, then immediately launch its writer-code — do NOT wait for other writer-tests still running
+4. When ALL writer-codes have completed: launch post-implementation agents in parallel
+5. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 
 ### Safety Requirements for Parallel Execution
 

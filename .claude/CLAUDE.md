@@ -66,11 +66,11 @@ For multi-domain work or context-heavy phases, delegate implementation to the **
 **When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions (single function, one-liner config, rename).
 
 **The flow** (RED → GREEN → REFACTOR):
-1. Write behavioral spec → launch **writer-tests** (parallel across domains) — produces RED (failing) tests
-2. **Review tests** (mandatory checkpoint — verify they capture intent AND actually fail)
-3. Write implementation spec → launch **writer-code** (parallel across domains) — GREEN phase
-4. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself — REFACTOR as needed
-5. Run the post-implementation checklist below
+1. Write ALL specs upfront (behavioral spec for writer-tests + implementation spec for writer-code, one pair per domain)
+2. Launch ALL **writer-tests** as background agents (parallel across domains) — RED phase
+3. As each writer-tests completes: review its output, immediately launch its paired **writer-code** — don't wait for other writer-tests
+4. After ALL writer-codes complete: run the post-implementation checklist below
+5. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself — REFACTOR as needed
 
 ### Phase 1 — Before Writing Code (sequential)
 
