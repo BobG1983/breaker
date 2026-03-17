@@ -21,7 +21,7 @@ use crate::{
 /// Each `Some` field in `overrides` replaces the corresponding field in `config`.
 /// Used by both `apply_archetype_config_overrides` (at init) and hot-reload
 /// propagation (at runtime).
-pub fn apply_stat_overrides(config: &mut BreakerConfig, overrides: &BreakerStatOverrides) {
+pub const fn apply_stat_overrides(config: &mut BreakerConfig, overrides: &BreakerStatOverrides) {
     if let Some(width) = overrides.width {
         config.width = width;
     }

@@ -37,7 +37,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Architectural changes or refactors affecting multiple systems
 
 **ALWAYS do**:
-- Write tests FIRST for new game logic (see `docs/architecture/standards.md` Testing — TDD)
+- Follow the RED → GREEN → REFACTOR cycle for new game logic: write **failing** tests first (RED), implement minimum code to pass (GREEN), then refactor (REFACTOR). Tests **must fail** before writing any implementation. See `docs/architecture/standards.md` Testing — TDD.
 - Follow the git workflow in @.claude/rules/git.md
 - Run command line tools individually, do not chain them with &&
 
@@ -63,11 +63,11 @@ For multi-domain work or context-heavy phases, delegate implementation to the **
 
 **When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions.
 
-**The flow**:
-1. Write behavioral spec → launch **test-writer** (parallel across domains)
-2. **Review tests** (mandatory checkpoint — verify they capture intent)
-3. Write implementation spec → launch **code-writer** (parallel across domains)
-4. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself
+**The flow** (RED → GREEN → REFACTOR):
+1. Write behavioral spec → launch **test-writer** (parallel across domains) — produces RED (failing) tests
+2. **Review tests** (mandatory checkpoint — verify they capture intent AND actually fail)
+3. Write implementation spec → launch **code-writer** (parallel across domains) — GREEN phase
+4. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself — REFACTOR as needed
 5. Run the post-implementation checklist below
 
 ### Phase 1 — Before Writing Code (sequential)

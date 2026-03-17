@@ -1,6 +1,13 @@
 [alias]
+# breaker-game (dynamic linking for fast iteration)
 dev = "run -p breaker --features bevy/dynamic_linking"
 dbuild = "build -p breaker --features bevy/dynamic_linking"
 dtest = "test -p breaker --features bevy/dynamic_linking"
 dcheck = "check -p breaker --features bevy/dynamic_linking"
 dclippy = "clippy -p breaker --all-targets --features bevy/dynamic_linking"
+
+# scenario runner (no dynamic linking — test tool, not hot-iteration target)
+dscenario = "run -p breaker_scenario_runner"
+dstest = "test -p breaker_scenario_runner"
+dsclippy = "clippy -p breaker_scenario_runner --all-targets"
+dscheck = "check -p breaker_scenario_runner"

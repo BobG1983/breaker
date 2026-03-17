@@ -1,0 +1,104 @@
+# Continuous Integration for Brickbreaker
+#
+# Runs on pushes to develop and PRs targeting develop or main.
+# Two parallel jobs:
+#   - test: fmt + clippy + tests across Linux/macOS/Windows
+#   - scenarios: headless scenario runner on Linux
+#
+# Does NOT use bevy/dynamic_linking — static linking is simpler and
+# avoids dylib resolution issues in CI environments.
+
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  CARGO_TERM_COLOR: always
+  # Disable incremental compilation — it bloats caches and is unreliable in CI.
+  CARGO_INCREMENTAL: 0
+  # Strip debug info from test/dev profiles to reduce cache size.
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libudev-dev \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Each OS in the matrix gets its own cache automatically via
+          # the add-job-id-key default. Shared prefix groups them for
+          # easy identification.
+          shared-key: "ci-${{ matrix.os }}"
+          # Save cache only on develop pushes to avoid PR cache churn.
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Lint with Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test --workspace
+
+      - name: Build scenario runner
+        run: cargo build -p breaker_scenario_runner
+
+  scenarios:
+    name: Scenarios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libudev-dev \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "ci-scenarios"
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
+
+      - name: Run scenario runner
+        run: cargo run -p breaker_scenario_runner -- --all --headless

@@ -46,12 +46,14 @@ brickbreaker/
 
 ## Checklist
 
-- [ ] Create `game/` directory, move `src/` and `assets/` into it
-- [ ] Create `game/Cargo.toml` with game's [package] + [dependencies]
-- [ ] Rename `brickbreaker_derive/` to `derive/`
-- [ ] Root `Cargo.toml` becomes workspace-only
-- [ ] Update `.cargo/config.toml` aliases
-- [ ] Update `CLAUDE.md`
-- [ ] Update architecture docs (plugins.md, standards.md)
-- [ ] Verify all tests pass (`cargo dtest`)
-- [ ] Verify `cargo dev` still works
+- [x] Create `breaker-game/` directory, move `src/` and `assets/` into it
+- [x] Create `breaker-game/Cargo.toml` with game's [package] + [dependencies]
+- [x] Rename `brickbreaker_derive/` to `breaker-derive/`
+- [x] Root `Cargo.toml` becomes workspace-only
+- [x] Update `.cargo/config.toml` aliases
+- [x] Update `CLAUDE.md`
+- [x] Update architecture docs (plugins.md, standards.md)
+- [x] Verify all tests pass (`cargo dtest`)
+- [x] Verify `cargo dev` still works
+
+> **Note**: Final directory names follow the `breaker-<name>` convention (`breaker-game/`, `breaker-derive/`) rather than the original plan's `game/`, `derive/`.

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     run::node::{
         messages::{ApplyTimePenalty, NodeCleared, TimerExpired},
-        resources::{ClearRemainingCount, NodeTimer},
+        resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
         sets::NodeSystems,
         systems::{
             apply_time_penalty, init_clear_remaining, init_node_timer, set_active_layout,
@@ -24,6 +24,7 @@ impl Plugin for NodePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ClearRemainingCount>()
             .init_resource::<NodeTimer>()
+            .init_resource::<ScenarioLayoutOverride>()
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_message::<ApplyTimePenalty>()

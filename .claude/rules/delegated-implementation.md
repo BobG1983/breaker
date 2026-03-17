@@ -17,17 +17,19 @@ Do NOT use delegated implementation when:
 - **Single system additions** where spec-writing overhead exceeds just writing the code
 - **Complex Bevy API uncertainty** — use bevy-api-expert first to resolve, then delegate
 
-## The Flow
+## The Flow (RED → GREEN → REFACTOR)
 
 ```
 1. Main agent writes behavioral spec (test-writer)
 2. Main agent writes implementation spec (code-writer)
-3. Launch test-writer(s) — parallel if multiple domains
-4. Main agent REVIEWS test output (mandatory checkpoint)
-5. Launch code-writer(s) — parallel if multiple domains
-6. Launch post-implementation agents (test-runner, correctness-reviewer, etc.)
+3. Launch test-writer(s) — parallel if multiple domains  [RED phase: tests must fail]
+4. Main agent REVIEWS test output (mandatory checkpoint — verify tests fail)
+5. Launch code-writer(s) — parallel if multiple domains  [GREEN phase: minimum code to pass]
+6. Launch post-implementation agents (test-runner, correctness-reviewer, etc.)  [REFACTOR check]
 7. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 ```
+
+**RED phase requirement**: Before launching code-writers, confirm that the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
 
 ### The Checkpoint Is Mandatory
 
@@ -36,6 +38,7 @@ Between steps 4 and 5, the main agent MUST review the test-writer's output:
 - Are concrete values correct?
 - Are edge cases covered?
 - Are there ambiguities the test-writer flagged?
+- **Do the tests fail?** (if any pass immediately, investigate why)
 
 If tests are wrong, fix them or re-spec before launching the code-writer. Bad tests produce bad implementations.
 

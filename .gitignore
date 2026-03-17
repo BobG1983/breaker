@@ -1,2 +1,4 @@
 /target
 .claude/agent-memory/
+/logs/
+/recordings/

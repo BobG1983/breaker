@@ -1,0 +1,16 @@
+(
+    breaker: "chrono",
+    layout: "corridor",
+    input: Scripted((
+        actions: [
+            (frame: 10, actions: [Bump]),
+            (frame: 60, actions: [MoveRight]),
+            (frame: 120, actions: [MoveLeft]),
+            (frame: 180, actions: [Bump]),
+        ],
+    )),
+    max_frames: 30000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+)

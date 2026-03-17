@@ -23,6 +23,7 @@ pub fn track_node_completion(
     }
 
     if remaining.remaining == 0 && decremented {
+        info!("node cleared");
         writer.write(NodeCleared);
     }
 }

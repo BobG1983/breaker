@@ -37,9 +37,11 @@ game/src/debug/
 
 ## Checklist
 
-- [ ] Create `overlays/` sub-domain with OverlaysPlugin
-- [ ] Create `telemetry/` sub-domain with TelemetryPlugin
-- [ ] Create `hot_reload/` sub-domain with stub HotReloadPlugin
-- [ ] Move existing systems into appropriate sub-domains
-- [ ] DebugPlugin adds child plugins
-- [ ] All tests pass, `cargo dev` debug UI unchanged
+- [x] Create `overlays/` sub-domain with OverlaysPlugin
+- [x] Create `telemetry/` sub-domain with TelemetryPlugin
+- [x] Create `hot_reload/` sub-domain with stub HotReloadPlugin
+- [x] Move existing systems into appropriate sub-domains
+- [x] DebugPlugin adds child plugins
+- [x] All tests pass, `cargo dev` debug UI unchanged
+
+> **Addition**: A `recording/` sub-domain was also created (captures live inputs to `.scripted.ron` for scenario playback). Added alongside 3d/3e.

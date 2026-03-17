@@ -1,0 +1,12 @@
+(
+    breaker: "prism",
+    layout: "corridor",
+    input: Chaos((
+        seed: 99,
+        action_prob: 0.7,
+    )),
+    max_frames: 10000,
+    invariants: [BoltInBounds, BreakerInBounds, NoEntityLeaks, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+)
