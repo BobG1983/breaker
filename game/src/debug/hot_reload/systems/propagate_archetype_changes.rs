@@ -24,6 +24,7 @@ use crate::{
 /// 2. Re-stamps consequence components (bolt speed multipliers)
 /// 3. Resets `LivesCount` if archetype has `life_pool`
 /// 4. Rebuilds `ActiveBehaviors`
+#[allow(clippy::too_many_arguments)]
 pub fn propagate_archetype_changes(
     mut events: MessageReader<AssetEvent<ArchetypeDefinition>>,
     collection: Res<DefaultsCollection>,
@@ -36,9 +37,12 @@ pub fn propagate_archetype_changes(
     breaker_query: Query<Entity, With<Breaker>>,
     mut commands: Commands,
 ) {
-    let any_modified = events
-        .read()
-        .any(|event| collection.archetypes.iter().any(|h| event.is_modified(h.id())));
+    let any_modified = events.read().any(|event| {
+        collection
+            .archetypes
+            .iter()
+            .any(|h| event.is_modified(h.id()))
+    });
 
     if !any_modified {
         return;
@@ -86,8 +90,10 @@ pub fn propagate_archetype_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{BehaviorBinding, BreakerStatOverrides, Consequence, Trigger};
-    use crate::breaker::components::BumpPerfectMultiplier;
+    use crate::{
+        behaviors::definition::{BehaviorBinding, BreakerStatOverrides, Consequence, Trigger},
+        breaker::components::BumpPerfectMultiplier,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -103,17 +109,6 @@ mod tests {
     }
 
     fn make_collection(archetypes: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults,
-            breaker::BreakerDefaults,
-            cells::CellDefaults,
-            chips::ChipDefinition,
-            input::InputDefaults,
-            run::NodeLayout,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -143,7 +138,9 @@ mod tests {
             behaviors: vec![],
         };
         let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             assets.add(def)
         };
 
@@ -157,7 +154,9 @@ mod tests {
 
         // Modify the archetype
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.life_pool = Some(5);
         }
@@ -184,7 +183,9 @@ mod tests {
             behaviors: vec![],
         };
         let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             assets.add(def)
         };
 
@@ -201,7 +202,9 @@ mod tests {
 
         // Modify archetype override to 250
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.stat_overrides.width = Some(250.0);
         }
@@ -231,7 +234,9 @@ mod tests {
             }],
         };
         let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             assets.add(def)
         };
 
@@ -245,7 +250,9 @@ mod tests {
 
         // Modify behaviors
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.behaviors = vec![
                 BehaviorBinding {
@@ -263,7 +270,11 @@ mod tests {
         app.update();
 
         let active = app.world().resource::<ActiveBehaviors>();
-        assert_eq!(active.0.len(), 3, "should have 3 flattened bindings (1 + 2 multi-trigger)");
+        assert_eq!(
+            active.0.len(),
+            3,
+            "should have 3 flattened bindings (1 + 2 multi-trigger)"
+        );
         assert!(active.has_trigger(Trigger::BoltLost));
         assert!(active.has_trigger(Trigger::EarlyBump));
         assert!(active.has_trigger(Trigger::LateBump));
@@ -280,7 +291,9 @@ mod tests {
             behaviors: vec![],
         };
         let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             assets.add(def)
         };
 
@@ -290,17 +303,16 @@ mod tests {
             .insert_resource(make_collection(vec![handle.clone()]));
 
         // Spawn breaker with 1 life remaining (took damage)
-        let entity = app
-            .world_mut()
-            .spawn((Breaker, LivesCount(1)))
-            .id();
+        let entity = app.world_mut().spawn((Breaker, LivesCount(1))).id();
 
         app.update();
         app.update();
 
         // Modify archetype to 5 lives
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.life_pool = Some(5);
         }
@@ -309,7 +321,10 @@ mod tests {
         app.update();
 
         let lives = app.world().get::<LivesCount>(entity).unwrap();
-        assert_eq!(lives.0, 5, "LivesCount should be reset to new life_pool value");
+        assert_eq!(
+            lives.0, 5,
+            "LivesCount should be reset to new life_pool value"
+        );
     }
 
     #[test]
@@ -326,7 +341,9 @@ mod tests {
             }],
         };
         let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             assets.add(def)
         };
 
@@ -345,7 +362,9 @@ mod tests {
 
         // Modify multiplier
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app
+                .world_mut()
+                .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.behaviors = vec![BehaviorBinding {
                 triggers: vec![Trigger::PerfectBump],

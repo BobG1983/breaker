@@ -38,14 +38,6 @@ mod tests {
     }
 
     fn make_collection(cells: Handle<CellDefaults>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults,
-            breaker::BreakerDefaults,
-            input::InputDefaults,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -64,7 +56,7 @@ mod tests {
         }
     }
 
-    /// After an Added event only (no Modified), CellConfig should not change.
+    /// After an Added event only (no Modified), `CellConfig` should not change.
     #[test]
     fn config_unchanged_when_no_modified_event() {
         let mut app = test_app();
@@ -86,15 +78,17 @@ mod tests {
         );
     }
 
-    /// When the cell defaults asset is mutated, CellConfig must be re-seeded
+    /// When the cell defaults asset is mutated, `CellConfig` must be re-seeded
     /// with the new values.
     #[test]
     fn config_updated_when_modified_event_fires() {
         let mut app = test_app();
 
         let new_width = 80.0_f32;
-        let mut defaults = CellDefaults::default();
-        defaults.width = new_width;
+        let defaults = CellDefaults {
+            width: new_width,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<CellDefaults>>();

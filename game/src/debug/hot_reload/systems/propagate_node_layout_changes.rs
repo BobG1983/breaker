@@ -21,6 +21,7 @@ use crate::{
 ///
 /// Also triggers on `CellConfig` changes (grid positioning depends on
 /// cell dimensions/padding).
+#[allow(clippy::too_many_arguments)]
 pub fn propagate_node_layout_changes(
     mut events: MessageReader<AssetEvent<NodeLayout>>,
     collection: Res<DefaultsCollection>,
@@ -185,8 +186,12 @@ mod tests {
     }
 
     fn make_layout(name: &str, grid: Vec<Vec<char>>) -> NodeLayout {
-        let rows = grid.len() as u32;
-        let cols = if grid.is_empty() { 0 } else { grid[0].len() as u32 };
+        let rows = u32::try_from(grid.len()).unwrap();
+        let cols = if grid.is_empty() {
+            0
+        } else {
+            u32::try_from(grid[0].len()).unwrap()
+        };
         NodeLayout {
             name: name.to_owned(),
             timer_secs: 60.0,
@@ -198,17 +203,6 @@ mod tests {
     }
 
     fn make_collection(layouts: Vec<Handle<NodeLayout>>) -> DefaultsCollection {
-        use crate::{
-            behaviors::ArchetypeDefinition,
-            bolt::BoltDefaults,
-            breaker::BreakerDefaults,
-            cells::CellDefaults,
-            chips::ChipDefinition,
-            input::InputDefaults,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -263,11 +257,7 @@ mod tests {
         app.update();
 
         // Count cells after initial state (no cells spawned — no Modified yet)
-        let cell_count = app
-            .world_mut()
-            .query::<&Cell>()
-            .iter(app.world())
-            .count();
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
         assert_eq!(cell_count, 0, "no cells until layout is modified");
 
         // Modify layout: now 3 cells
@@ -283,11 +273,7 @@ mod tests {
         app.update();
         app.update();
 
-        let cell_count = app
-            .world_mut()
-            .query::<&Cell>()
-            .iter(app.world())
-            .count();
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
         assert_eq!(cell_count, 3, "should have 3 cells after layout change");
     }
 
@@ -301,8 +287,7 @@ mod tests {
             assets.add(layout.clone())
         };
 
-        app.world_mut()
-            .insert_resource(ActiveNodeLayout(layout));
+        app.world_mut().insert_resource(ActiveNodeLayout(layout));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
         app.insert_resource(ClearRemainingCount { remaining: 99 });
@@ -339,8 +324,7 @@ mod tests {
             assets.add(layout.clone())
         };
 
-        app.world_mut()
-            .insert_resource(ActiveNodeLayout(layout));
+        app.world_mut().insert_resource(ActiveNodeLayout(layout));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
@@ -363,11 +347,7 @@ mod tests {
         // Need another update for despawn commands to flush
         app.update();
 
-        let cell_count = app
-            .world_mut()
-            .query::<&Cell>()
-            .iter(app.world())
-            .count();
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
         assert_eq!(
             cell_count, 1,
             "old cells should be despawned, only new cells present"

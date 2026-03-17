@@ -38,14 +38,6 @@ mod tests {
     }
 
     fn make_collection(timerui: Handle<TimerUiDefaults>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults,
-            breaker::BreakerDefaults,
-            cells::CellDefaults,
-            input::InputDefaults,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -64,7 +56,7 @@ mod tests {
         }
     }
 
-    /// After an Added event only (no Modified), TimerUiConfig should not change.
+    /// After an Added event only (no Modified), `TimerUiConfig` should not change.
     #[test]
     fn config_unchanged_when_no_modified_event() {
         let mut app = test_app();
@@ -86,15 +78,17 @@ mod tests {
         );
     }
 
-    /// When the timer UI defaults asset is mutated, TimerUiConfig must be
+    /// When the timer UI defaults asset is mutated, `TimerUiConfig` must be
     /// re-seeded with the new values.
     #[test]
     fn config_updated_when_modified_event_fires() {
         let mut app = test_app();
 
         let new_font_size = 64.0_f32;
-        let mut defaults = TimerUiDefaults::default();
-        defaults.font_size = new_font_size;
+        let defaults = TimerUiDefaults {
+            font_size: new_font_size,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<TimerUiDefaults>>();

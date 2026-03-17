@@ -20,15 +20,23 @@ pub fn propagate_cell_type_changes(
     assets: Res<Assets<CellTypeDefinition>>,
     mut registry: ResMut<CellTypeRegistry>,
     mut query: Query<
-        (&CellTypeAlias, &mut CellHealth, &mut CellDamageVisuals, &MeshMaterial2d<ColorMaterial>),
+        (
+            &CellTypeAlias,
+            &mut CellHealth,
+            &mut CellDamageVisuals,
+            &MeshMaterial2d<ColorMaterial>,
+        ),
         With<Cell>,
     >,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Check if any cell type definition was modified
-    let any_modified = events
-        .read()
-        .any(|event| collection.cell_types.iter().any(|h| event.is_modified(h.id())));
+    let any_modified = events.read().any(|event| {
+        collection
+            .cell_types
+            .iter()
+            .any(|h| event.is_modified(h.id()))
+    });
 
     if !any_modified {
         return;
@@ -106,18 +114,6 @@ mod tests {
     }
 
     fn make_collection(cell_types: Vec<Handle<CellTypeDefinition>>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults,
-            breaker::BreakerDefaults,
-            cells::CellDefaults,
-            chips::ChipDefinition,
-            input::InputDefaults,
-            run::NodeLayout,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-            behaviors::ArchetypeDefinition,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),

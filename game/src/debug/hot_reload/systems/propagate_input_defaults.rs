@@ -38,14 +38,6 @@ mod tests {
     }
 
     fn make_collection(input: Handle<InputDefaults>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults,
-            breaker::BreakerDefaults,
-            cells::CellDefaults,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -64,7 +56,7 @@ mod tests {
         }
     }
 
-    /// After an Added event only (no Modified), InputConfig should not change.
+    /// After an Added event only (no Modified), `InputConfig` should not change.
     #[test]
     fn config_unchanged_when_no_modified_event() {
         let mut app = test_app();
@@ -86,15 +78,17 @@ mod tests {
         );
     }
 
-    /// When the input defaults asset is mutated, InputConfig must be re-seeded
+    /// When the input defaults asset is mutated, `InputConfig` must be re-seeded
     /// with the new values.
     #[test]
     fn config_updated_when_modified_event_fires() {
         let mut app = test_app();
 
         let new_window = 0.5_f32;
-        let mut defaults = InputDefaults::default();
-        defaults.double_tap_window = new_window;
+        let defaults = InputDefaults {
+            double_tap_window: new_window,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<InputDefaults>>();

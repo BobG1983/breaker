@@ -38,11 +38,6 @@ mod tests {
     }
 
     fn make_collection(chipselect: Handle<ChipSelectDefaults>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults, breaker::BreakerDefaults, cells::CellDefaults,
-            input::InputDefaults, screen::main_menu::MainMenuDefaults, shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -61,7 +56,7 @@ mod tests {
         }
     }
 
-    /// After an Added event only (no Modified), ChipSelectConfig should not change.
+    /// After an Added event only (no Modified), `ChipSelectConfig` should not change.
     #[test]
     fn config_unchanged_when_no_modified_event() {
         let mut app = test_app();
@@ -83,15 +78,17 @@ mod tests {
         );
     }
 
-    /// When the chip select defaults asset is mutated, ChipSelectConfig must be
+    /// When the chip select defaults asset is mutated, `ChipSelectConfig` must be
     /// re-seeded with the new values.
     #[test]
     fn config_updated_when_modified_event_fires() {
         let mut app = test_app();
 
         let new_timer = 20.0_f32;
-        let mut defaults = ChipSelectDefaults::default();
-        defaults.timer_secs = new_timer;
+        let defaults = ChipSelectDefaults {
+            timer_secs: new_timer,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<ChipSelectDefaults>>();

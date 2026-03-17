@@ -38,14 +38,6 @@ mod tests {
     }
 
     fn make_collection(bolt: Handle<BoltDefaults>) -> DefaultsCollection {
-        use crate::{
-            breaker::BreakerDefaults,
-            cells::CellDefaults,
-            input::InputDefaults,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt,
             breaker: Handle::default(),
@@ -71,8 +63,10 @@ mod tests {
         let mut app = test_app();
 
         let initial_speed = 400.0_f32;
-        let mut defaults = BoltDefaults::default();
-        defaults.base_speed = initial_speed;
+        let defaults = BoltDefaults {
+            base_speed: initial_speed,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BoltDefaults>>();
@@ -94,14 +88,16 @@ mod tests {
     }
 
     /// When the bolt defaults asset is mutated (triggering Modified), the
-    /// propagation system must re-seed BoltConfig with the new values.
+    /// propagation system must re-seed `BoltConfig` with the new values.
     #[test]
     fn config_updated_when_modified_event_fires() {
         let mut app = test_app();
 
         let new_speed = 500.0_f32;
-        let mut defaults = BoltDefaults::default();
-        defaults.base_speed = new_speed;
+        let defaults = BoltDefaults {
+            base_speed: new_speed,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BoltDefaults>>();
@@ -135,8 +131,8 @@ mod tests {
         );
     }
 
-    /// A Modified event for a different asset ID (not the one in DefaultsCollection)
-    /// must not update BoltConfig.
+    /// A Modified event for a different asset ID (not the one in `DefaultsCollection`)
+    /// must not update `BoltConfig`.
     #[test]
     fn config_unchanged_when_modified_event_is_for_different_handle() {
         let mut app = test_app();
@@ -148,8 +144,10 @@ mod tests {
 
         // A second, unregistered handle with a different base_speed.
         let unregistered_handle = {
-            let mut defaults = BoltDefaults::default();
-            defaults.base_speed = 999.0;
+            let defaults = BoltDefaults {
+                base_speed: 999.0,
+                ..Default::default()
+            };
             let mut assets = app.world_mut().resource_mut::<Assets<BoltDefaults>>();
             assets.add(defaults)
         };

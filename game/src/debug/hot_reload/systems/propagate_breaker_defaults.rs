@@ -36,9 +36,7 @@ pub fn propagate_breaker_defaults(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{
-        ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides,
-    };
+    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -52,14 +50,6 @@ mod tests {
     }
 
     fn make_collection(breaker: Handle<BreakerDefaults>) -> DefaultsCollection {
-        use crate::{
-            bolt::BoltDefaults,
-            cells::CellDefaults,
-            input::InputDefaults,
-            screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
-            shared::PlayfieldDefaults,
-            ui::TimerUiDefaults,
-        };
         DefaultsCollection {
             bolt: Handle::default(),
             breaker,
@@ -78,7 +68,7 @@ mod tests {
         }
     }
 
-    /// After an Added event only (no Modified), BreakerConfig should not change.
+    /// After an Added event only (no Modified), `BreakerConfig` should not change.
     #[test]
     fn config_unchanged_when_no_modified_event() {
         let mut app = test_app();
@@ -100,15 +90,17 @@ mod tests {
         );
     }
 
-    /// When breaker defaults are modified, BreakerConfig is re-seeded from the
+    /// When breaker defaults are modified, `BreakerConfig` is re-seeded from the
     /// new asset values.
     #[test]
     fn config_updated_when_modified_event_fires() {
         let mut app = test_app();
 
         let new_width = 200.0_f32;
-        let mut defaults = BreakerDefaults::default();
-        defaults.width = new_width;
+        let defaults = BreakerDefaults {
+            width: new_width,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefaults>>();
@@ -145,10 +137,10 @@ mod tests {
     /// must be re-applied on top of the base config values.
     #[test]
     fn archetype_overrides_re_applied_after_defaults_modified() {
-        let mut app = test_app();
-
         const ARCHETYPE_NAME: &str = "TestArch";
         const OVERRIDE_WIDTH: f32 = 250.0;
+
+        let mut app = test_app();
 
         let def = ArchetypeDefinition {
             name: ARCHETYPE_NAME.to_owned(),
@@ -167,8 +159,10 @@ mod tests {
             .insert_resource(SelectedArchetype(ARCHETYPE_NAME.to_owned()));
 
         // Defaults have base width of 120.0; override will make it 250.0.
-        let mut defaults = BreakerDefaults::default();
-        defaults.width = 120.0;
+        let defaults = BreakerDefaults {
+            width: 120.0,
+            ..Default::default()
+        };
 
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefaults>>();
@@ -219,8 +213,10 @@ mod tests {
         app.world_mut()
             .insert_resource(SelectedArchetype("Plain".to_owned()));
 
-        let mut defaults = BreakerDefaults::default();
-        defaults.width = new_base_width;
+        let defaults = BreakerDefaults {
+            width: new_base_width,
+            ..Default::default()
+        };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefaults>>();
             assets.add(defaults)

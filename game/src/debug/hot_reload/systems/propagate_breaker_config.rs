@@ -168,7 +168,7 @@ mod tests {
         entity
     }
 
-    /// When BreakerConfig changes, BreakerMaxSpeed on the entity must be
+    /// When `BreakerConfig` changes, `BreakerMaxSpeed` on the entity must be
     /// force-overwritten with the new config value.
     #[test]
     fn force_overwrites_max_speed_when_config_changes() {
@@ -176,8 +176,8 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Deliberately stamp an old value then change config.
@@ -197,15 +197,15 @@ mod tests {
         );
     }
 
-    /// BreakerWidth must also be overwritten (spot-check another component).
+    /// `BreakerWidth` must also be overwritten (spot-check another component).
     #[test]
     fn force_overwrites_width_when_config_changes() {
         let mut app = test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         app.world_mut().resource_mut::<BreakerConfig>().width = 200.0;
@@ -219,7 +219,7 @@ mod tests {
         );
     }
 
-    /// DashTilt must be stored in radians, converted from BreakerConfig.dash_tilt_angle (degrees).
+    /// `DashTilt` must be stored in radians, converted from `BreakerConfig.dash_tilt_angle` (degrees).
     /// To verify the conversion happens in the system, start with a deliberately wrong radian
     /// value (999.0) and confirm the system overwrites it with the correct radians.
     #[test]
@@ -228,8 +228,8 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Stamp a wrong value to ensure the system actually writes.
@@ -252,7 +252,7 @@ mod tests {
         );
     }
 
-    /// MaxReflectionAngle and MinAngleFromHorizontal must also convert degrees → radians.
+    /// `MaxReflectionAngle` and `MinAngleFromHorizontal` must also convert degrees → radians.
     /// Start with wrong values to ensure the system actively overwrites them.
     #[test]
     fn angle_components_converted_to_radians() {
@@ -260,8 +260,8 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Stamp wrong values.
@@ -308,8 +308,8 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Stamp a wrong angle to verify overwrite happens.
@@ -330,15 +330,15 @@ mod tests {
         );
     }
 
-    /// BumpPerfectWindow spot-check (config-derived bump window component).
+    /// `BumpPerfectWindow` spot-check (config-derived bump window component).
     #[test]
     fn bump_perfect_window_overwritten_from_config() {
         let mut app = test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         app.world_mut()
@@ -355,7 +355,7 @@ mod tests {
     }
 
     /// After a config change, archetype bolt speed multipliers are re-stamped.
-    /// A PerfectBump BoltSpeedBoost(1.5) in the archetype → BumpPerfectMultiplier(1.5).
+    /// A `PerfectBump` `BoltSpeedBoost(1.5)` in the archetype → `BumpPerfectMultiplier(1.5)`.
     #[test]
     fn re_stamps_archetype_bolt_speed_multipliers() {
         const ARCHETYPE_NAME: &str = "Test";
@@ -382,8 +382,8 @@ mod tests {
 
         let config = app.world().resource::<BreakerConfig>().clone();
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Trigger a config change.
@@ -398,20 +398,20 @@ mod tests {
         );
     }
 
-    /// LivesCount must NOT be touched when BreakerConfig changes — it tracks
+    /// `LivesCount` must NOT be touched when `BreakerConfig` changes — it tracks
     /// runtime state (current lives remaining), not config values.
     ///
     /// To make this test fail on a stub (and thus actually verify something),
-    /// also stamp a wrong BreakerMaxSpeed and verify the system overwrites it.
-    /// This confirms the system ran AND that it correctly skipped LivesCount.
+    /// also stamp a wrong `BreakerMaxSpeed` and verify the system overwrites it.
+    /// This confirms the system ran AND that it correctly skipped `LivesCount`.
     #[test]
     fn does_not_reset_lives_count_on_config_change() {
         let mut app = test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Simulate breaker having taken damage: 2 lives remaining.
@@ -453,12 +453,12 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let e1 = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
         let e2 = {
-            let mut world = app.world_mut();
-            spawn_breaker_with_config(&mut world, &config)
+            let world = app.world_mut();
+            spawn_breaker_with_config(world, &config)
         };
 
         // Give each entity a stale value.

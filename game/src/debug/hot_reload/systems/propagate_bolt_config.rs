@@ -48,8 +48,8 @@ mod tests {
         app
     }
 
-    /// When BoltConfig changes (is_changed returns true on first frame after insert),
-    /// the system should overwrite BoltBaseSpeed with the config value even if it
+    /// When `BoltConfig` changes (`is_changed` returns true on first frame after insert),
+    /// the system should overwrite `BoltBaseSpeed` with the config value even if it
     /// was previously stamped with a different value.
     #[test]
     fn force_overwrites_base_speed_when_config_changes() {
@@ -84,7 +84,7 @@ mod tests {
         );
     }
 
-    /// The system must overwrite ALL 8 bolt components, not just BoltBaseSpeed.
+    /// The system must overwrite ALL 8 bolt components, not just `BoltBaseSpeed`.
     #[test]
     fn overwrites_all_eight_bolt_components() {
         let mut app = test_app();
