@@ -194,6 +194,13 @@ See [headless_app.md](headless_app.md) for full details. Key facts:
 - `LogPlugin::custom_layer` is `fn(&mut App) -> Option<BoxedLayer>` (fn pointer, not closure field)
 - `BoxedLayer = Box<dyn Layer<Registry> + Send + Sync + 'static>` where Registry = tracing_subscriber::Registry
 
+## Entities Counting API (verified v0.18.1)
+
+- `world.entities().count_spawned() -> u32` — count of live spawned entities; O(n), for diagnostics/tests only
+- `world.entities().len() -> u32` — count of allocated slots (includes reserved but unspawned); WRONG for entity counting
+- `total_count()` does NOT exist on `Entities` in 0.18.1
+- `&World` is valid as a readonly `SystemParam` alongside `Res<>` and `ResMut<>` params
+
 ## Session History
 
 See [ephemeral/](ephemeral/) — not committed.

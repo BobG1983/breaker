@@ -232,10 +232,7 @@ pub fn check_no_entity_leaks(
 ///
 /// Skips bolts with zero speed (serving or dead bolts).
 pub fn check_bolt_speed_in_range(
-    bolts: Query<
-        (Entity, &BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed),
-        With<ScenarioTagBolt>,
-    >,
+    bolts: Query<(Entity, &BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed), With<ScenarioTagBolt>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
 ) {
@@ -296,10 +293,7 @@ pub fn check_bolt_count_reasonable(
             frame: frame.0,
             invariant: InvariantKind::BoltCountReasonable,
             entity: None,
-            message: format!(
-                "BoltCountReasonable FAIL frame={} count={count}",
-                frame.0,
-            ),
+            message: format!("BoltCountReasonable FAIL frame={} count={count}", frame.0,),
         });
     }
 }
@@ -776,9 +770,7 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.insert_resource(ViolationLog::default());
         app.insert_resource(ScenarioFrame(120));
-        app.insert_resource(EntityLeakBaseline {
-            baseline: Some(5),
-        });
+        app.insert_resource(EntityLeakBaseline { baseline: Some(5) });
         app.add_systems(FixedUpdate, check_no_entity_leaks);
 
         // Spawn enough entities to exceed 2×5 = 10
@@ -943,7 +935,7 @@ mod tests {
     // -------------------------------------------------------------------------
 
     fn bolt_count_test_app(max_bolt_count: usize) -> App {
-        use crate::types::{InputStrategy, ScenarioDefinition, ScriptedParams, InvariantParams};
+        use crate::types::{InputStrategy, InvariantParams, ScenarioDefinition, ScriptedParams};
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
@@ -1005,6 +997,9 @@ mod tests {
         tick(&mut app);
 
         let log = app.world().resource::<ViolationLog>();
-        assert!(log.0.is_empty(), "10 bolts should be OK with max_bolt_count=12");
+        assert!(
+            log.0.is_empty(),
+            "10 bolts should be OK with max_bolt_count=12"
+        );
     }
 }
