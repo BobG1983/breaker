@@ -83,6 +83,7 @@ Launch all applicable agents simultaneously — they are independent:
 | Trigger | Agent | Why |
 |---------|-------|-----|
 | Always after implementation | **test-runner** | Full validation suite (fmt, clippy, tests) |
+| Always after implementation | **scenario-runner** | Run all gameplay scenarios headlessly and diagnose failures |
 | Always after implementation | **correctness-reviewer** | Logic bugs, ECS pitfalls, state machine holes, math |
 | Always after implementation | **quality-reviewer** | Idioms, vocabulary, test coverage, documentation |
 | Always after implementation | **bevy-api-reviewer** | Verify Bevy API usage is correct for this version |
@@ -107,7 +108,7 @@ Launch all applicable agents simultaneously — they are independent:
 ---
 
 **Post-implementation checklist** (run before considering a task done):
-1. Launch **test-runner** + **correctness-reviewer** + **quality-reviewer** + **bevy-api-reviewer** in parallel (always)
+1. Launch **test-runner** + **scenario-runner** + **correctness-reviewer** + **quality-reviewer** + **bevy-api-reviewer** in parallel (always)
 2. If new systems/plugins added → also launch **architecture-guard** + **system-dependency-mapper** in the same parallel wave
 3. If new gameplay mechanic → also launch **game-design-guard** in the same parallel wave
 4. If phase complete or docs may have drifted → also launch **doc-guard** in the same parallel wave

@@ -49,14 +49,6 @@ cargo dtest 2>&1
 - For each failure: test name, file location if identifiable, and the assertion/panic message.
 - If compilation fails before tests run, report it as a build failure (not test failure).
 
-### 4. Scenarios
-```
-cargo dscenario -- --all --headless 2>&1
-```
-- Run all scenario files headless. Headless mode spins without real-time throttle so this completes in seconds.
-- Report: each scenario PASS/FAIL, total violations, any captured logs.
-- For each FAIL: scenario name, violation frame, invariant, message.
-
 ## Output Format
 
 ```
@@ -71,16 +63,13 @@ cargo dscenario -- --all --headless 2>&1
 ### Tests: PASS (N passed, N ignored) / FAIL (N passed, N failed, N ignored)
 [details for each failure]
 
-### Scenarios: PASS (N/N passed) / FAIL (N/N passed)
-[details for each failing scenario — name, violations, captured logs]
-
 ### Summary
 [one-line overall status: all clear, or what needs attention first]
 ```
 
 ## Parallel Execution
 
-Run simultaneously with **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
+Run simultaneously with **scenario-runner**, **correctness-reviewer**, **quality-reviewer**, **bevy-api-reviewer**, **architecture-guard**, **system-dependency-mapper**, **perf-guard**, **doc-guard**, and **game-design-guard** — all are independent. The orchestrator should launch all applicable agents at once after implementation is complete.
 
 ## Rules
 
