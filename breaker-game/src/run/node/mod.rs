@@ -9,5 +9,6 @@ pub mod systems;
 pub use plugin::NodePlugin;
 pub use resources::{
     ActiveNodeLayout, ClearRemainingCount, NodeLayout, NodeLayoutRegistry, NodeTimer,
+    ScenarioLayoutOverride,
 };
 pub use sets::NodeSystems;

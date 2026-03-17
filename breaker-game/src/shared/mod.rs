@@ -165,6 +165,10 @@ impl Default for GameRng {
 #[derive(Resource, Debug, Clone)]
 pub struct SelectedArchetype(pub String);
 
+// Re-export run/node types needed by the scenario runner.
+// `run` is pub(crate) but these specific types need external visibility.
+pub use crate::run::node::{ActiveNodeLayout, NodeLayoutRegistry, ScenarioLayoutOverride};
+
 impl Default for SelectedArchetype {
     fn default() -> Self {
         Self("Aegis".to_owned())

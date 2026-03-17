@@ -1,11 +1,13 @@
 //! Scenario runner library — automated gameplay testing.
 //!
-//! Provides the [`ScenarioPlugin`] and the CLI entry point [`run`].
+//! Provides the [`ScenarioLifecycle`] plugin and the CLI entry point [`run`].
 
 pub mod input;
 pub mod invariants;
 pub mod lifecycle;
 pub mod types;
+
+pub use lifecycle::{ScenarioConfig, ScenarioLifecycle};
 
 /// CLI entry point. Parses arguments and runs the requested scenario(s).
 pub fn run() {

@@ -96,6 +96,14 @@ pub struct NodeTimer {
     pub total: f32,
 }
 
+/// When set, overrides normal index-based layout selection in `set_active_layout`.
+///
+/// Set `Some(name)` before entering `GameState::Playing` to force a specific
+/// named layout. Used by the scenario runner to drive deterministic test runs.
+/// `None` (the default) restores normal index-based selection.
+#[derive(Resource, Debug, Default, Clone)]
+pub struct ScenarioLayoutOverride(pub Option<String>);
+
 /// Tracks remaining cells that must be cleared for node completion.
 #[derive(Resource, Debug, Default)]
 pub struct ClearRemainingCount {

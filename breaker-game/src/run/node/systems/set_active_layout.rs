@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::run::{
-    node::{ActiveNodeLayout, NodeLayoutRegistry},
+    node::{ActiveNodeLayout, NodeLayoutRegistry, ScenarioLayoutOverride},
     resources::RunState,
 };
 
@@ -11,14 +11,30 @@ use crate::run::{
 ///
 /// Runs on `OnEnter(GameState::Playing)`, before `spawn_cells_from_layout`.
 /// Wraps around if `node_index` exceeds the number of layouts.
+///
+/// If [`ScenarioLayoutOverride`] is `Some(name)`, that named layout is used
+/// instead of the index-based selection. Falls back to index selection if the
+/// named layout is not found.
 pub fn set_active_layout(
     run_state: Res<RunState>,
     registry: Res<NodeLayoutRegistry>,
+    override_res: Res<ScenarioLayoutOverride>,
     mut commands: Commands,
 ) {
     if registry.layouts.is_empty() {
         warn!("NodeLayoutRegistry is empty — no layout to set");
         return;
+    }
+
+    if let Some(name) = &override_res.0 {
+        if let Some(layout) = registry.get_by_name(name) {
+            commands.insert_resource(ActiveNodeLayout(layout.clone()));
+            return;
+        }
+        warn!(
+            "ScenarioLayoutOverride: layout '{}' not found, falling back to index selection",
+            name
+        );
     }
 
     let index = run_state.node_index as usize % registry.layouts.len();
@@ -29,7 +45,7 @@ pub fn set_active_layout(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::node::NodeLayout;
+    use crate::run::node::{NodeLayout, ScenarioLayoutOverride};
 
     fn make_layout(name: &str) -> NodeLayout {
         NodeLayout {
@@ -50,8 +66,45 @@ mod tests {
             ..default()
         });
         app.insert_resource(NodeLayoutRegistry { layouts });
+        app.insert_resource(ScenarioLayoutOverride::default());
         app.add_systems(Startup, set_active_layout);
         app
+    }
+
+    #[test]
+    fn override_selects_named_layout_ignoring_node_index() {
+        let layouts = vec![make_layout("corridor"), make_layout("open")];
+        let mut app = test_app(0, layouts);
+        app.world_mut()
+            .insert_resource(ScenarioLayoutOverride(Some("open".to_owned())));
+        app.update();
+
+        let active = app.world().resource::<ActiveNodeLayout>();
+        assert_eq!(active.0.name, "open");
+    }
+
+    #[test]
+    fn override_none_falls_through_to_index_selection() {
+        let layouts = vec![make_layout("corridor"), make_layout("open")];
+        let mut app = test_app(0, layouts);
+        // ScenarioLayoutOverride::default() is None — index 0 = "corridor"
+        app.update();
+
+        let active = app.world().resource::<ActiveNodeLayout>();
+        assert_eq!(active.0.name, "corridor");
+    }
+
+    #[test]
+    fn override_unknown_name_falls_back_to_index_selection() {
+        let layouts = vec![make_layout("corridor"), make_layout("open")];
+        let mut app = test_app(1, layouts);
+        app.world_mut()
+            .insert_resource(ScenarioLayoutOverride(Some("missing".to_owned())));
+        app.update();
+
+        // Falls back to index 1 = "open"
+        let active = app.world().resource::<ActiveNodeLayout>();
+        assert_eq!(active.0.name, "open");
     }
 
     #[test]
