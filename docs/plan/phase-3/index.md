@@ -1,6 +1,6 @@
 # Phase 3: Dev Infrastructure — COMPLETE
 
-> Phase 3 is done. Canonical docs moved to [`docs/plan/done/phase-3/`](../done/phase-3/README.md).
+> Phase 3 is done. Canonical docs moved to [`docs/plan/done/phase-3/`](../done/phase-3/index.md).
 
 ## Subphases (all complete)
 

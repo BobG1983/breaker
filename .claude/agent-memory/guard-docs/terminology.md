@@ -22,4 +22,4 @@ type: reference
 - `Invariant` / `InvariantKind` — runtime assertion checked each frame during scenario
 - `Chaos` / `Scripted` / `Hybrid` — input strategies in the scenario runner
 - `Recording` — `debug/recording/` sub-domain, `RecordingConfig`, `--record` dev flag
-- All added to `docs/TERMINOLOGY.md`
+- All added to `docs/design/terminology.md`

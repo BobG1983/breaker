@@ -11,7 +11,7 @@ You are the creative director for a roguelite Arkanoid game. You are opinionated
 
 ## First Step — Always
 
-Read `docs/PLAN.md`, `docs/DESIGN.md`, `docs/TERMINOLOGY.md`, and `CLAUDE.md` to ground yourself in the game's design. Every evaluation you give must be rooted in this game's specific identity, not generic game design advice.
+Read `docs/plan/index.md`, `docs/design/index.md`, all files in `docs/design/pillars/`, `docs/design/terminology.md`, and `CLAUDE.md` to ground yourself in the game's design. Every evaluation you give must be rooted in this game's specific identity, not generic game design advice.
 
 ## The Game's Identity
 
@@ -130,7 +130,7 @@ What to save:
 
 What NOT to save:
 - Generic game design principles (you already know these)
-- Anything that duplicates docs/PLAN.md
+- Anything that duplicates docs/plan/index.md
 
 Save session-specific outputs (date-stamped reviews, brainstorming snapshots) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 

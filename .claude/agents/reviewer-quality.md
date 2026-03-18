@@ -11,7 +11,7 @@ You are a code quality specialist for a Bevy ECS roguelite game. Your focus is h
 
 ## First Step — Always
 
-Read `CLAUDE.md` and `docs/TERMINOLOGY.md`. Vocabulary compliance cannot be evaluated without knowing the required terms.
+Read `CLAUDE.md` and `docs/design/terminology.md`. Vocabulary compliance cannot be evaluated without knowing the required terms.
 
 ## What You Review
 
@@ -106,7 +106,7 @@ What to save:
 
 What NOT to save:
 - Generic Rust style advice
-- Anything duplicating CLAUDE.md or docs/TERMINOLOGY.md
+- Anything duplicating CLAUDE.md or docs/design/terminology.md
 
 Save session-specific outputs (date-stamped reviews, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 

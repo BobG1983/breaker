@@ -1,6 +1,6 @@
 # Architecture
 
-Technical decisions for how the game is built. See `../DESIGN.md` for *why* (game feel), `../PLAN.md` for *when* (build phases), `../TERMINOLOGY.md` for vocabulary.
+Technical decisions for how the game is built. See `../design/` for *why* (game feel), `../plan/` for *when* (build phases), `../design/terminology.md` for vocabulary.
 
 ## Engine & Stack
 

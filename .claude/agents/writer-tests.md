@@ -14,7 +14,7 @@ You receive a **behavioral spec** from the orchestrating agent. You produce **fa
 ## First Step — Always
 
 1. Read `CLAUDE.md` for project conventions
-2. Read `docs/TERMINOLOGY.md` for required vocabulary
+2. Read `docs/design/terminology.md` for required vocabulary
 3. Read `docs/architecture/layout.md` for domain structure
 4. Read `docs/architecture/standards.md` for testing conventions
 5. Read the specific domain files mentioned in the spec to understand existing patterns

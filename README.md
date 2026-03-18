@@ -21,10 +21,10 @@ Dev aliases are defined in `.cargo/config.toml` and use `bevy/dynamic_linking` f
 
 | Document | Contents |
 |----------|----------|
-| [Design Principles](docs/DESIGN.md) | Core design pillars, identity, and non-negotiable rules |
+| [Design Principles](docs/design/) | Core design pillars, identity, and design decisions |
 | [Architecture](docs/architecture/) | Plugin structure, code standards, message table, patterns |
-| [Build Plan](docs/PLAN.md) | Phased roadmap from scaffolding through polish |
-| [Terminology](docs/TERMINOLOGY.md) | Game vocabulary used in all code and docs |
+| [Build Plan](docs/plan/) | Phased roadmap from scaffolding through polish |
+| [Terminology](docs/design/terminology.md) | Game vocabulary used in all code and docs |
 
 ## Tech Stack
 

@@ -1,6 +1,6 @@
 # Brickbreaker Roguelite
 
-Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/DESIGN.md` for design pillars, `docs/architecture/` for technical decisions + code standards + testing approach, `docs/PLAN.md` for build roadmap, `docs/TERMINOLOGY.md` for game vocabulary.
+Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/design/` for design pillars and decisions, `docs/architecture/` for technical decisions + code standards + testing approach, `docs/plan/` for build roadmap, `docs/design/terminology.md` for game vocabulary.
 
 ## Build & Run
 
@@ -29,14 +29,14 @@ Cargo workspace with `breaker-<name>` crate directories at root: `breaker-game/`
 
 ## Terminology
 
-All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, Augment, Overclock, Bump, Flux). No generic terms. See `docs/TERMINOLOGY.md`.
+All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, Augment, Overclock, Bump, Flux). No generic terms. See `docs/design/terminology.md`.
 
 ## Decision Making
 
 **ALWAYS ask before**:
 - Creating new plugins, systems, or modules not in the architecture
 - Choosing between component vs resource vs message for new data
-- Any design decision not covered in `docs/PLAN.md`
+- Any design decision not covered in `docs/plan/`
 - Architectural changes or refactors affecting multiple systems
 
 **ALWAYS do**:
@@ -53,7 +53,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 
 ## Design Rules
 
-See `docs/DESIGN.md` for the full set of non-negotiable design pillars. The key mechanical rules are in `docs/architecture/` (bolt reflection, breaker state machine, bump grades).
+See `docs/design/` for the full set of non-negotiable design pillars. The key mechanical rules are in `docs/architecture/` (bolt reflection, breaker state machine, bump grades).
 
 ## Agent Workflow
 
@@ -98,7 +98,7 @@ Launch all applicable agents simultaneously — they are independent:
 | 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** | Detect ordering issues and conflicts |
 | New components or systems touching many entities | **guard-performance** | Bevy-specific performance: queries, archetypes, scheduling |
 | New gameplay mechanic or upgrade designed | **guard-game-design** | Validate against design pillars |
-| Phase complete or significant structural change | **guard-docs** | Sync architecture docs, PLAN.md, TERMINOLOGY.md |
+| Phase complete or significant structural change | **guard-docs** | Sync architecture docs, plan/, design/terminology.md |
 
 ### Phase 3 — On Build/Test Failure (sequential, reactive)
 
