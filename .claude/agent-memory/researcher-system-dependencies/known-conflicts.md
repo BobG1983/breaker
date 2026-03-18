@@ -6,7 +6,7 @@ type: reference
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-17 (feature/scenario-coverage-expansion — scenario runner ordering conflict RESOLVED; upward-bolt guard logic change noted; TogglePause routing change noted)
+Last updated: 2026-03-17 (feature/scenario-coverage-expansion — deep scan: 9 new invariant systems catalogued; enforce_frozen_positions ordering gap confirmed LOW severity; check_valid_state_transitions uses ResMut<PreviousGameState> not Local — no conflict; new scenarios use only new InvariantKind variants, no data access conflicts)
 
 ---
 

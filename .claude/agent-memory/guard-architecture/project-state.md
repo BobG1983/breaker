@@ -32,7 +32,7 @@ type: reference
 - **Compromise cleanup verification audit 2026-03-16**: PASS — all 5 compromises confirmed resolved. 3 doc drift items.
 - **Phase 2e audit 2026-03-16**: PASS — 0 critical violations. Chrono archetype, Prism archetype, interpolate/ domain.
 - **behaviors/ domain extraction audit 2026-03-16**: PASS with 2 moderate issues (resolved).
-- **Scenario coverage expansion audit 2026-03-17**: PASS with 2 observations (0 critical). 10 new scenario RON files, 6 new invariant checkers.
+- **Scenario coverage expansion audit 2026-03-17**: PASS — 0 critical violations, 1 observation. 10 new scenario RON files, 6 new invariant checkers (BoltSpeedInRange, BoltCountReasonable, ValidBreakerState, TimerMonotonicallyDecreasing, BreakerPositionClamped, PhysicsFrozenDuringPause). New bolt/queries.rs follows canonical layout. Visibility narrowing (pub→pub(crate)) across 12 domains, correctly preserving pub on types needed by scenario runner. InvariantParams resource + ScenarioStats resource added. DebugSetup.breaker_position field added.
 
 ## Debug Domain Structure (Phase 2f — audited 2026-03-17)
 - debug/ restructured into three sub-domains: overlays/, telemetry/, hot_reload/

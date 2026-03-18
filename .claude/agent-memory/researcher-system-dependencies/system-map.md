@@ -6,7 +6,7 @@ type: reference
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-17 (feature/scenario-coverage-expansion — physics guard, TogglePause action, BoltHitCell bolt field removed, DebugOverlays refactored, SystemParam extractions, bolt/queries.rs added)
+Last updated: 2026-03-17 (feature/scenario-coverage-expansion — scenario-coverage-expansion deep scan: 9 new invariant systems, 3 new self-test scenarios, 10+ new mechanic/stress scenarios, pub→pub(crate) visibility normalization, DebugOverlays enum refactor, SystemParam extractions for propagate_archetype_changes/propagate_node_layout_changes, DashParams local struct in dash.rs, BoltHitCell.bolt field removed, BoltLostQuery type alias in queries.rs, upward-bolt guard moved to top, TogglePause routed through InputActions, #[allow] attributes removed and replaced with real fixes)
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
@@ -434,3 +434,52 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 
 ### `spawn_camera` — Startup
 - Commands (spawn Camera2d)
+
+---
+
+## SCENARIO RUNNER — ScenarioLifecycle FixedUpdate systems
+
+These systems run in `FixedUpdate` alongside gameplay systems (but are in `breaker-scenario-runner`, not `breaker-game`).
+
+### Lifecycle group (chained, .before(BreakerSystems::Move)):
+```
+tick_scenario_frame → inject_scenario_input → check_frame_limit   [.chain()]
+```
+- `tick_scenario_frame`: writes ResMut<ScenarioFrame>, Option<ResMut<ScenarioStats>>
+- `inject_scenario_input`: reads Option<ResMut<ScenarioInputDriver>>, Res<ScenarioFrame>; writes ResMut<InputActions>, Option<ResMut<ScenarioStats>>
+- `check_frame_limit`: reads Res<ScenarioFrame>, Res<ScenarioConfig>; sends MessageWriter<AppExit>
+
+### 12 Invariant check systems (unordered, all read-only on game state):
+
+| System | Reads | Writes |
+|--------|-------|--------|
+| `check_bolt_in_bounds` | Query(Entity+&Transform+ScenarioTagBolt), Res<PlayfieldConfig>, Res<ScenarioFrame> | ResMut<ViolationLog>, Option<ResMut<ScenarioStats>> |
+| `check_bolt_speed_in_range` | Query(Entity+&BoltVelocity+&BoltMinSpeed+&BoltMaxSpeed+ScenarioTagBolt), Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_bolt_count_reasonable` | Query(Entity+ScenarioTagBolt), Res<ScenarioConfig>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_breaker_in_bounds` | Query(Entity+&Transform+ScenarioTagBreaker), Res<PlayfieldConfig>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_no_nan` | TaggedTransformQuery (Or<ScenarioTagBolt|ScenarioTagBreaker>), Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_timer_non_negative` | Option<Res<NodeTimer>>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_valid_state_transitions` | Res<State<GameState>>, Res<ScenarioFrame> | ResMut<ViolationLog>, ResMut<PreviousGameState> |
+| `check_valid_breaker_state` | Query(&BreakerState+ScenarioTagBreaker), Local<Option<BreakerState>>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_timer_monotonically_decreasing` | Option<Res<NodeTimer>>, Local<Option<f32>>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_breaker_position_clamped` | Query(Entity+&Transform+&BreakerWidth+ScenarioTagBreaker), Res<PlayfieldConfig>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_physics_frozen_during_pause` | Query(Entity+&Transform+ScenarioTagBolt), Option<Res<State<PlayingState>>>, Local<HashMap>, Res<ScenarioFrame> | ResMut<ViolationLog> |
+| `check_no_entity_leaks` | Query<Entity>, Res<ScenarioFrame> | ResMut<ViolationLog>, ResMut<EntityLeakBaseline> |
+
+### 2 Mutator systems:
+- `enforce_frozen_positions` — writes &mut Transform on With<ScenarioPhysicsFrozen>; NO ordering vs physics (see known-conflicts.md)
+- `tag_game_entities` — reads untagged Bolt+Breaker queries (read-only); Commands (insert tag components); writes Option<ResMut<ScenarioStats>>
+
+### OnEnter(GameState::Playing) chain (after init_bolt_params):
+```
+init_scenario_input → tag_game_entities → apply_debug_setup   [.chain()]
+```
+- `init_scenario_input`: reads Res<ScenarioConfig>; Commands (insert_resource ScenarioInputDriver)
+- `apply_debug_setup`: reads Res<ScenarioConfig>; writes &mut Transform; Commands (insert ScenarioPhysicsFrozen)
+
+### Also registered (OnEnter/OnEnter):
+- `bypass_menu_to_playing` (OnEnter(MainMenu)): writes ResMut<SelectedArchetype>, ResMut<ScenarioLayoutOverride>, ResMut<NextState<GameState>>
+- `auto_skip_chip_select` (OnEnter(ChipSelect)): writes ResMut<NextState<GameState>>
+- `exit_on_run_end` (OnEnter(RunEnd)): sends MessageWriter<AppExit>
+
+### tag_game_entities runs in BOTH OnEnter(Playing) AND FixedUpdate — idempotent (Without<ScenarioTagBolt> filter prevents double-tagging).

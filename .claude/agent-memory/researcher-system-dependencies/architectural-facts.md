@@ -37,12 +37,21 @@ type: reference
 - `propagate_breaker_defaults` and `propagate_archetype_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
 
 ## Scenario Runner (breaker-scenario-runner)
-- 14 systems in FixedUpdate, 1 group in OnEnter(GameState::Playing)
-- Lifecycle chain: `tick_scenario_frame → inject_scenario_input → check_frame_limit` before BreakerSystems::Move
-- 12 invariant checkers (unordered, read-only)
-- 2 mutators: enforce_frozen_positions, tag_game_entities
-- OnEnter chain: `init_scenario_input → tag_game_entities → apply_debug_setup` after init_bolt_params
+- 15 systems in FixedUpdate (lifecycle chain + 12 invariant checkers + enforce_frozen_positions + tag_game_entities), 1 OnEnter group
+- Lifecycle chain: `tick_scenario_frame → inject_scenario_input → check_frame_limit` .chain() .before(BreakerSystems::Move)
+- 12 invariant checkers (unordered, all read-only on game world): check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable, check_breaker_in_bounds, check_no_nan, check_timer_non_negative, check_valid_state_transitions, check_valid_breaker_state, check_timer_monotonically_decreasing, check_breaker_position_clamped, check_physics_frozen_during_pause, check_no_entity_leaks
+- 2 mutators: enforce_frozen_positions (writes &mut Transform on ScenarioPhysicsFrozen entities), tag_game_entities (Commands insert marker components)
+- OnEnter chain: `init_scenario_input → tag_game_entities → apply_debug_setup` .chain() .after(init_bolt_params)
 - InputStrategy: Chaos, Scripted, Hybrid
+- ScenarioStats: tracks actions_injected, invariant_checks, max_frame, entered_playing, bolts_tagged, breakers_tagged
+- ScenarioPhysicsFrozen: component holding frozen Vec3 target — entity Transform pinned each tick by enforce_frozen_positions
+- DebugSetup: RON field, supports bolt_position, breaker_position, disable_physics
+- InvariantParams: RON field, supports max_bolt_count (default 8)
+- check_valid_state_transitions uses ResMut<PreviousGameState> (not Local) — stored in world, survives ticks
+- check_valid_breaker_state uses Local<Option<BreakerState>> — not in world, per-system state
+- All new invariant checkers imported from breaker:: — uses pub bolt, breaker, run modules (lib.rs visibility change)
+- 12 InvariantKind variants: BoltInBounds, BoltSpeedInRange, BoltCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN, TimerNonNegative, ValidStateTransitions, ValidBreakerState, TimerMonotonicallyDecreasing, BreakerPositionClamped, PhysicsFrozenDuringPause
+- New scenario categories: mechanic/ (11 scenarios), stress/ (13 scenarios), self_tests/ (3 scenarios)
 
 ## Still Stub (No Systems)
 AudioPlugin, UpgradesPlugin
