@@ -76,6 +76,11 @@ src/[domain]/
 - `src/[domain]/systems/existing_system.rs` — follow this test pattern
 - `src/[domain]/components.rs` — existing types to use
 
+### Scenario Coverage
+- New invariants: [InvariantKind variants to add, or "none — existing invariants cover this"]
+- New scenarios: [scenario RON files to add, or "none — existing scenarios exercise this"]
+- Layout updates: [existing layouts to update with new cell types / features, or "none"]
+
 ### Constraints
 - Tests go in: [specific file path]
 - Do NOT test: [anything explicitly out of scope]
@@ -89,6 +94,7 @@ src/[domain]/
 4. **Name the types.** If new components or messages are needed, name them and describe their fields.
 5. **Point to reference files.** The writer-tests needs existing patterns to match.
 6. **Scope explicitly.** State what's in scope and what's out of scope.
+7. **Consider scenario coverage.** State whether existing invariants cover the feature, whether new invariants are needed, and whether new scenario RON files should be added for chaos/stress testing.
 
 ### Example: Good Test Spec
 
@@ -122,6 +128,11 @@ src/bolt/
 
 ### Reference Files
 - `src/bolt/components.rs` — existing unit tests for BoltVelocity methods
+
+### Scenario Coverage
+- New invariants: `BoltSpeedInRange` already exists — covers this
+- New scenarios: none — existing chaos scenarios exercise speed clamping
+- Layout updates: none
 
 ### Constraints
 - Tests go in: `src/bolt/systems/clamp_bolt_speed.rs` (new file, system + tests)

@@ -73,6 +73,15 @@ Examples of synergistic chips (concrete designs TBD):
 
 The pool should include at least 1-2 "build-around" chips per rarity tier — chips weak alone but powerful with specific other chips.
 
+## Scenario Coverage
+
+### New Invariants
+- **`ChipStacksInRange`** (from 4b) — covers stacking caps across the full pool.
+
+### New Scenarios
+- `stress/full_chip_pool.scenario.ron` — Long chaos run that exercises the full chip pool. Verifies all 16-20 chips can be applied without crashes, entity leaks, or NaN. Uses a scripted chip selection strategy that picks different chips each node.
+- All RON chip files must parse — covered by the "all RONs parse" compile-time test.
+
 ## Acceptance Criteria
 
 1. 16-20 chip RON files exist and parse

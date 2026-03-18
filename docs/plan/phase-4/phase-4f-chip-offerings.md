@@ -46,6 +46,16 @@ Both mechanisms are tracked in `ChipInventory`.
 - Offerings are generated deterministically from `GameRng`
 - The chip select screen displays rarity visually (card border color/glow per rarity tier)
 
+## Scenario Coverage
+
+### New Invariants
+- **`OfferingNoDuplicates`** — no two chips in a single offering share the same name. Checked when entering ChipSelect state.
+- **`MaxedChipNeverOffered`** — chips at max stacks never appear in offerings. Checked when entering ChipSelect state.
+
+### New Scenarios
+- `mechanic/chip_offering_seeded.scenario.ron` — Fixed seed, scripted input that always selects the first chip. Verifies deterministic offerings and pool depletion over multiple nodes.
+- `stress/chip_pool_exhaustion.scenario.ron` — Long run with scripted chip selection to intentionally max out multiple chips. Verifies pool doesn't empty to fewer than 3 (or handles gracefully), no crashes, `OfferingNoDuplicates` holds.
+
 ## Acceptance Criteria
 
 1. Same seed + same player choices = same offerings every time

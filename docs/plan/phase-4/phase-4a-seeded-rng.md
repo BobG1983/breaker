@@ -28,6 +28,12 @@
 - Scenarios can specify a seed in RON: `seed: Some(42)`
 - Default: deterministic test seed (0)
 
+## Scenario Coverage
+
+- **New invariant**: `DeterministicSeed` — run two identical scenarios (same seed, same scripted input) and verify identical frame-by-frame state. This is a meta-invariant: rather than checking per-frame, it compares two runs post-hoc. Consider implementing as a scenario runner feature rather than a per-frame invariant.
+- **Existing scenarios**: All existing chaos scenarios should be updated to use explicit seeds (instead of default 0) to verify seeded RNG propagation works.
+- **New scenario**: `mechanic/seeded_determinism.scenario.ron` — scripted input, fixed seed, verifies the run produces expected state at key frames.
+
 ## Acceptance Criteria
 
 1. Same seed + same breaker + same inputs = identical run (node sequence, chip offerings, everything)

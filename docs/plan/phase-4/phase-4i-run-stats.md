@@ -86,6 +86,16 @@ Simple formula for the vertical slice (will be refined):
 
 Flux is *earned and displayed* but not *spendable* until Phase 8 (Roguelite Progression).
 
+## Scenario Coverage
+
+### New Invariants
+- **`RunStatsMonotonic`** — counters in `RunStats` (nodes_cleared, cells_destroyed, bumps_performed) never decrease. Checked every frame during `Playing`.
+- **`FluxNonNegative`** — calculated Flux is always >= 0. Checked on run end.
+
+### New Scenarios
+- `mechanic/run_stats_accumulation.scenario.ron` — Scripted multi-node run that clears nodes, loses bolts, performs bumps. At run end, verify `RunStats` counters match expected values (known inputs → known outputs).
+- Existing multinode stress scenarios should verify `RunStatsMonotonic` as an additional invariant.
+
 ## Acceptance Criteria
 
 1. RunStats accumulates throughout the run via message observation

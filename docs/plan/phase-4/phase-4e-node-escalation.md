@@ -104,6 +104,22 @@ Three node types with distinct gameplay:
 
 Each type has its own pool of RON layouts.
 
+## Scenario Coverage
+
+### New Invariants
+- **`CellHealthNonNegative`** — cell HP never goes below 0 (especially important with Regen cells that modify HP). Checked every frame.
+- **`LockCellDamageBlocked`** — Lock cells with active locks never take damage. Ensures the lock mechanic is correctly enforced under chaos input.
+- **`TierProgressionMonotonic`** — current tier index never decreases during a run. Sanity check on the node sequence system.
+
+### New Scenarios
+- `mechanic/lock_cell_targeting.scenario.ron` — Layout with Lock cells surrounded by standard cells. Scripted input to clear adjacents first, then chaos. Verifies `LockCellDamageBlocked` during locked phase, then cells become damageable.
+- `mechanic/regen_cell_timer.scenario.ron` — Layout with Regen cells. Chaos input over extended frames. Verifies `CellHealthNonNegative`, cells regenerate as expected, and node can still be cleared.
+- `stress/multinode_escalation.scenario.ron` — Long chaos run (2000+ frames) through multiple tiers. Verifies `NoEntityLeaks` across node transitions, `TimerNonNegative` with timer scaling, `ValidStateTransitions` across tier boundaries.
+- `mechanic/boss_node_clear.scenario.ron` — Scripted input to clear a boss node. Verifies boss HP scaling, evolution reward trigger, and state transition to ChipSelect/EvolutionReward.
+
+### Layout Pool Scenarios
+- At least 1 scenario per node pool (passive, active, boss) to verify layouts parse and play correctly.
+
 ## Acceptance Criteria
 
 1. Same seed produces identical node sequence

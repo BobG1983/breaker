@@ -27,12 +27,27 @@ Write tests FIRST for all game logic. The full cycle is mandatory:
 
 **No implementation before failing tests. No exceptions.**
 
+### Test Types
+
 - **Unit tests**: Physics calculations, collision math, state machine transitions, timing windows, upgrade stacking, breaker stats
 - **Property-based tests**: Edge cases in physics/collision (use `proptest` — dependency present, planned for physics edge cases)
 - **Integration tests**: Use `MinimalPlugins` + headless app to test system interactions
 - **Do NOT test**: Rendering, visual output, shader correctness — manual playtesting only
 
 Tests live next to the code they test (in-module `#[cfg(test)]` blocks).
+
+### Scenario Coverage
+
+Every new gameplay mechanic or system must also be evaluated for **scenario runner coverage**. The scenario runner (`breaker-scenario-runner/`) validates gameplay invariants under automated input (chaos, scripted, hybrid) across hundreds of frames.
+
+When implementing a new feature, ask:
+1. **Can existing invariants catch regressions?** If so, ensure existing scenarios exercise the new code path (e.g., a new cell type should appear in at least one scenario layout).
+2. **Does this feature introduce a new invariant?** Properties that must always hold (e.g., "chip stack count never exceeds max_stacks", "bolt count never exceeds configured max") should become new `InvariantKind` variants checked every frame.
+3. **Does this feature need a dedicated scenario?** New mechanics that interact with physics, timing, or state machines benefit from chaos-input stress testing that unit tests cannot replicate.
+
+Existing invariant kinds: `BoltInBounds`, `BoltSpeedInRange`, `BoltCountReasonable`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidStateTransitions`, `ValidBreakerState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`, `PhysicsFrozenDuringPause`.
+
+Scenarios live in `breaker-scenario-runner/scenarios/` organized by category (`mechanic/`, `stress/`, `self_tests/`).
 
 ---
 

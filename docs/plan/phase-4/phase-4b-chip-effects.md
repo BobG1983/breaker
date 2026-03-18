@@ -88,6 +88,20 @@ Modify existing systems to check for chip effect components. Each domain modific
 
 Hot-reload can be implemented during either sub-stage or as a follow-up within Session 2.
 
+## Scenario Coverage
+
+### New Invariants
+- **`ChipStacksInRange`** — chip stack counts never exceed `max_stacks` for any chip. Checked every frame during `Playing`.
+- **`NoNaN`** — existing, but must now also cover new effect component values (bolt radius after SizeBoost, breaker width after WidthBoost).
+
+### New Scenarios
+- `mechanic/piercing_chaos.scenario.ron` — Chaos input with Piercing effect pre-applied. Verifies bolt doesn't get stuck, bounds are respected, and cells are destroyed. Uses a layout dense enough to trigger frequent piercing.
+- `mechanic/wide_breaker_bounds.scenario.ron` — WidthBoost applied at max stacks. Verifies breaker still fits within playfield bounds (`BreakerInBounds`, `BreakerPositionClamped`).
+- `stress/chip_stacking_stress.scenario.ron` — Scripted input that rapidly applies multiple chip effects. Verifies `NoEntityLeaks`, `NoNaN`, `ChipStacksInRange`.
+
+### Existing Scenario Updates
+- All existing stress scenarios should still pass with chip effect components present on entities (even if no chips are active — zero-value defaults must be safe).
+
 ## Acceptance Criteria
 
 1. Selecting "Piercing Shot" adds a `Piercing(1)` component to the bolt

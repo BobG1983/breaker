@@ -64,6 +64,15 @@ Specific recipes designed during implementation alongside the chip pool.
 - Indexed by ingredient pair for fast lookup
 - Hot-reloadable
 
+## Scenario Coverage
+
+### New Invariants
+- **`EvolutionConsumesIngredients`** — after evolution, both ingredient chips are removed from `ChipInventory` and the evolved chip is present. Checked on state transition out of evolution reward screen.
+
+### New Scenarios
+- `mechanic/evolution_boss_reward.scenario.ron` — Scripted run that accumulates specific chips to min stacks, then clears a boss. Verifies evolution is offered, ingredients consumed, evolved chip applied.
+- `stress/evolution_with_effects.scenario.ron` — Chaos input after evolution. Verifies evolved chip effects work under stress, no entity leaks, no NaN from evolved effect values.
+
 ## Acceptance Criteria
 
 1. Beating a boss with qualifying chips offers evolution

@@ -86,6 +86,19 @@ The first concrete effect, proving the leaf-effect execution path:
 
 Overclock RON changes → rebuild trigger chains → re-evaluate active overclocks.
 
+## Scenario Coverage
+
+### New Invariants
+- **`TriggerChainDepthBounded`** — active trigger chains never exceed a configurable max depth (prevents infinite recursion if a trigger chain accidentally references itself). Checked every frame.
+- **`ShockwaveRadiusBounded`** — shockwave range never exceeds playfield dimensions (sanity check on RON-configured values).
+
+### New Scenarios
+- `mechanic/surge_overclock.scenario.ron` — Chaos input with Surge overclock active. High-frequency perfect bumps (scripted initial sequence to trigger surging state, then chaos). Verifies `BoltInBounds`, `NoNaN`, `NoEntityLeaks` (shockwave entities must despawn).
+- `stress/overclock_chain_stress.scenario.ron` — Multiple overclocks active simultaneously under chaos input. Verifies no entity leaks from VFX, no NaN from stacked effects, and trigger chains resolve cleanly.
+
+### Existing Scenario Updates
+- Existing prism scenarios (which already test multi-bolt) should pass with overclock components present but inactive.
+
 ## Acceptance Criteria
 
 1. Surge overclock works end-to-end: perfect bump → impact → shockwave → cells damaged

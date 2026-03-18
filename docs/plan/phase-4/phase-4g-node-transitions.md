@@ -52,6 +52,16 @@ Transitions must be **quick** to maintain the game's pace. Target:
 - Load transition: 0.3-0.5 seconds
 - Total node-to-node gap (including chip select): should feel snappy, not sluggish
 
+## Scenario Coverage
+
+### Existing Invariants
+- `NoEntityLeaks` — transition VFX entities must despawn after transition completes.
+- `ValidStateTransitions` — game state transitions through TransitionOut/ChipSelect/TransitionIn must be legal.
+
+### New Scenarios
+- `stress/rapid_node_transitions.scenario.ron` — Fast chaos run that clears nodes quickly. Verifies transitions don't leak entities, state machine remains valid, and game doesn't stall between nodes.
+- Existing multinode scenarios (aegis_multinode, etc.) already exercise node transitions — they should continue passing.
+
 ## Acceptance Criteria
 
 1. Node clear plays a visible animated transition
