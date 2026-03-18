@@ -33,6 +33,15 @@ type: reference
 - `TimeUpdateStrategy::ManualDuration(10.0/64.0)` in visual mode: Winit respects this, advances virtual time 10 fixed steps per rendered frame. Achieves ~10x speedup. Correct.
 - `allow_early_end` defaults to `true` via `#[serde(default = "ScenarioDefinition::default_allow_early_end")]` — existing RON files without the field get the old behavior (exit on RunEnd). Correct.
 
+## Compact/Verbose Output + Dedup Refactor
+- `Hash` derive added to `InvariantKind` — all unit variants; derived Hash is consistent with Eq. Correct.
+- `group_violations` or_insert_with initializes `(0, v.frame, v.frame)` then increments entry.0 immediately — count starts at 0 and becomes 1 on first insert. Correct.
+- `group_logs` key is `(format!("{:?}", l.level), l.message.clone())` — same level+message pairs correctly group; insertion_order uses moved original key; filter_map lookup uses insertion_order key. Correct.
+- `is_health_check_reason` classifies "expected violation X never fired" as a health-check reason (not a violation or log reason) — prints it in compact mode under health checks. Intentional and complete.
+- `is_invariant_fail_reason` uses exact string equality against all `fail_reason()` static strings — no overlap with "captured" prefix or "expected violation" prefix. Correct.
+- verbose=false path calls `print_compact_failures`, verbose=true calls `print_verbose_failures` — wiring through run_with_args → run_scenario → collect_and_evaluate is complete. Correct.
+- Cross-scenario summary: `i32::from(failed_count > 0)` returns 0 for all-pass, 1 for any-fail. Correct.
+
 ## ScenarioVerdict Refactor (refactor/scenario-verdict)
 - `evaluate()` clears `reasons` before building from scratch — correct, not a bug.
 - `None | Some([])` slice pattern on `as_deref()` result is valid Rust — correctly matches both absent and empty expected_violations.

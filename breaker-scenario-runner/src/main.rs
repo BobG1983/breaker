@@ -31,6 +31,7 @@ fn main() {
         args.scenario.as_deref(),
         args.all,
         headless,
+        args.verbose,
     );
     process::exit(exit_code);
 }
@@ -49,4 +50,8 @@ pub struct Args {
     /// run with a window at normal speed for visual debugging (single scenario only)
     #[argh(switch)]
     pub visual: bool,
+
+    /// print all violations and logs verbatim (default: grouped compact output)
+    #[argh(switch, short = 'v')]
+    pub verbose: bool,
 }

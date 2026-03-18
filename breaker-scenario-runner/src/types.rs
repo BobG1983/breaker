@@ -86,7 +86,7 @@ pub enum InputStrategy {
 }
 
 /// Invariant kinds the runner can check during a scenario run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
 pub enum InvariantKind {
     /// Bolt position stays within playfield bounds.
     BoltInBounds,
@@ -115,6 +115,26 @@ pub enum InvariantKind {
 }
 
 impl InvariantKind {
+    /// All variants of [`InvariantKind`], for exhaustive iteration.
+    ///
+    /// Keep in sync when adding new variants — the
+    /// `all_variants_covered_by_invariant_kind_all` test enforces this via
+    /// the `fail_reason()` exhaustive match.
+    pub const ALL: &[Self] = &[
+        Self::BoltInBounds,
+        Self::BoltSpeedInRange,
+        Self::BoltCountReasonable,
+        Self::BreakerInBounds,
+        Self::NoEntityLeaks,
+        Self::NoNaN,
+        Self::TimerNonNegative,
+        Self::ValidStateTransitions,
+        Self::ValidBreakerState,
+        Self::TimerMonotonicallyDecreasing,
+        Self::BreakerPositionClamped,
+        Self::PhysicsFrozenDuringPause,
+    ];
+
     /// Standard human-readable fail reason for this invariant violation.
     ///
     /// Used by [`crate::verdict::ScenarioVerdict`] to build structured failure reasons
@@ -452,22 +472,7 @@ mod tests {
 
     #[test]
     fn fail_reason_returns_non_empty_string_for_every_variant() {
-        let variants = [
-            InvariantKind::BoltInBounds,
-            InvariantKind::BoltSpeedInRange,
-            InvariantKind::BoltCountReasonable,
-            InvariantKind::BreakerInBounds,
-            InvariantKind::NoEntityLeaks,
-            InvariantKind::NoNaN,
-            InvariantKind::TimerNonNegative,
-            InvariantKind::ValidStateTransitions,
-            InvariantKind::ValidBreakerState,
-            InvariantKind::TimerMonotonicallyDecreasing,
-            InvariantKind::BreakerPositionClamped,
-            InvariantKind::PhysicsFrozenDuringPause,
-        ];
-
-        for variant in &variants {
+        for variant in InvariantKind::ALL {
             let reason = variant.fail_reason();
             assert!(
                 !reason.is_empty(),
@@ -478,27 +483,28 @@ mod tests {
 
     #[test]
     fn fail_reason_returns_distinct_strings_for_each_variant() {
-        let variants = [
-            InvariantKind::BoltInBounds,
-            InvariantKind::BoltSpeedInRange,
-            InvariantKind::BoltCountReasonable,
-            InvariantKind::BreakerInBounds,
-            InvariantKind::NoEntityLeaks,
-            InvariantKind::NoNaN,
-            InvariantKind::TimerNonNegative,
-            InvariantKind::ValidStateTransitions,
-            InvariantKind::ValidBreakerState,
-            InvariantKind::TimerMonotonicallyDecreasing,
-            InvariantKind::BreakerPositionClamped,
-            InvariantKind::PhysicsFrozenDuringPause,
-        ];
-
-        let reasons: Vec<&str> = variants.iter().map(InvariantKind::fail_reason).collect();
+        let reasons: Vec<&str> = InvariantKind::ALL
+            .iter()
+            .map(InvariantKind::fail_reason)
+            .collect();
         let unique: std::collections::HashSet<&str> = reasons.iter().copied().collect();
         assert_eq!(
             reasons.len(),
             unique.len(),
             "fail_reason() must return distinct strings — found duplicates in: {reasons:?}"
+        );
+    }
+
+    #[test]
+    fn all_variants_covered_by_invariant_kind_all() {
+        // If a new variant is added to InvariantKind, fail_reason()'s exhaustive
+        // match forces a compile error. This test ensures ALL has the right count.
+        let unique: std::collections::HashSet<InvariantKind> =
+            InvariantKind::ALL.iter().copied().collect();
+        assert_eq!(
+            InvariantKind::ALL.len(),
+            unique.len(),
+            "InvariantKind::ALL must not contain duplicates"
         );
     }
 }

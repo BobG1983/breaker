@@ -23,16 +23,16 @@ use breaker::game::Game;
 use tracing::{debug, info, warn};
 
 use crate::{
-    invariants::{ScenarioFrame, ScenarioStats, ViolationLog},
+    invariants::{ScenarioFrame, ScenarioStats, ViolationEntry, ViolationLog},
     lifecycle::{ScenarioConfig, ScenarioLifecycle},
     log_capture::{CapturedLogs, LogBuffer, LogEntry, poll_log_buffer, scenario_log_layer_factory},
-    types::ScenarioDefinition,
+    types::{InvariantKind, ScenarioDefinition},
     verdict::ScenarioVerdict,
 };
 
 /// Entry point called by `main`. Returns process exit code (0 = all pass, 1 = any fail).
 #[must_use]
-pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool) -> i32 {
+pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool, verbose: bool) -> i32 {
     let scenario_paths = collect_scenario_paths(scenario, all);
 
     if scenario_paths.is_empty() {
@@ -40,15 +40,36 @@ pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool) -> i32 {
         return 1;
     }
 
-    let mut any_failed = false;
+    let mut results: Vec<(String, bool)> = Vec::new();
     let mut shared_log_buffer: Option<LogBuffer> = None;
 
     for path in &scenario_paths {
-        let result = run_scenario(path, headless, &mut shared_log_buffer);
-        any_failed = any_failed || !result;
+        let name = scenario_name(path);
+        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+        results.push((name, passed));
     }
 
-    i32::from(any_failed)
+    // Cross-scenario summary.
+    let passed_count = results.iter().filter(|(_, p)| *p).count();
+    let failed_count = results.len() - passed_count;
+    let failures: Vec<&str> = results
+        .iter()
+        .filter(|(_, p)| !*p)
+        .map(|(name, _)| name.as_str())
+        .collect();
+
+    println!("\n---");
+    if failures.is_empty() {
+        println!("scenario result: ok. {passed_count} passed; {failed_count} failed");
+    } else {
+        println!("scenario result: FAIL. {passed_count} passed; {failed_count} failed");
+        println!("\nfailures:");
+        for name in &failures {
+            println!("  {name}");
+        }
+    }
+
+    i32::from(failed_count > 0)
 }
 
 /// Returns the path to the `scenarios/` directory relative to this crate's manifest.
@@ -112,6 +133,14 @@ fn find_scenario_by_name(dir: &Path, name: &str) -> Option<PathBuf> {
     })
 }
 
+fn scenario_name(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown")
+        .trim_end_matches(".scenario")
+        .to_owned()
+}
+
 fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| eprintln!("Failed to read {}: {e}", path.display()))
@@ -126,26 +155,26 @@ fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
 /// The `shared_log_buffer` persists across scenarios so the global tracing
 /// subscriber (installed once) always writes to the same buffer that each app's
 /// `poll_log_buffer` system reads from.
-fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogBuffer>) -> bool {
-    let scenario_name = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("unknown")
-        .trim_end_matches(".scenario")
-        .to_owned();
+fn run_scenario(
+    path: &Path,
+    headless: bool,
+    verbose: bool,
+    shared_log_buffer: &mut Option<LogBuffer>,
+) -> bool {
+    let sname = scenario_name(path);
 
     let Some(definition) = load_scenario(path) else {
-        eprintln!("FAIL [{scenario_name}]: could not load scenario file");
+        eprintln!("FAIL [{sname}]: could not load scenario file");
         return false;
     };
 
     println!(
-        "Running [{scenario_name}] breaker={} layout={}",
+        "Running [{sname}] breaker={} layout={}",
         definition.breaker, definition.layout
     );
     info!(
         target: "breaker_scenario_runner",
-        "scenario start name={scenario_name} breaker={} layout={}",
+        "scenario start name={sname} breaker={} layout={}",
         definition.breaker, definition.layout
     );
 
@@ -182,7 +211,7 @@ fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogB
             match guarded_update(&mut app) {
                 Ok(()) => {}
                 Err(msg) => {
-                    eprintln!("FAIL [{scenario_name}]: system panic: {msg}");
+                    eprintln!("FAIL [{sname}]: system panic: {msg}");
                     break;
                 }
             }
@@ -195,7 +224,7 @@ fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogB
                     .get_resource::<ScenarioFrame>()
                     .map_or(0, |f| f.0);
                 eprintln!(
-                    "FAIL [{scenario_name}]: wall-clock timeout ({timeout:?}) at frame {frame}"
+                    "FAIL [{sname}]: wall-clock timeout ({timeout:?}) at frame {frame}"
                 );
                 break;
             }
@@ -207,18 +236,18 @@ fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogB
         // Visual mode — Winit needs app.run() for the event loop.
         // Results cannot be read after run(); visual mode is for debugging only.
         app.run();
-        println!("  [{scenario_name}] visual mode — pass/fail not evaluated");
+        println!("  [{sname}] visual mode — pass/fail not evaluated");
         return true;
     }
 
-    collect_and_evaluate(&app, &scenario_name)
+    collect_and_evaluate(&app, &sname, verbose)
 }
 
 /// Extracts results from the app world and evaluates pass/fail using [`ScenarioVerdict`].
 ///
 /// Returns `false` if any expected resource is missing, any health check fails,
 /// any invariant violation is unexpected, or any log was captured.
-fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
+fn collect_and_evaluate(app: &App, scenario_name: &str, verbose: bool) -> bool {
     let mut verdict = ScenarioVerdict::default();
 
     let vl = app.world().get_resource::<ViolationLog>();
@@ -264,34 +293,196 @@ fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
         info!(target: "breaker_scenario_runner", "scenario pass name={scenario_name}");
     } else {
         let reason_count = verdict.reasons.len();
-        println!("FAIL [{scenario_name}]: {reason_count} reason(s)");
+        println!("FAIL [{scenario_name}]: {reason_count} failure(s)");
         warn!(
             target: "breaker_scenario_runner",
             "scenario fail name={scenario_name} reasons={reason_count}",
         );
-        for reason in &verdict.reasons {
-            println!("  REASON [{scenario_name}]: {reason}");
-        }
-        for v in &violations {
-            println!(
-                "  VIOLATION frame={} {:?} entity={:?}: {}",
-                v.frame, v.invariant, v.entity, v.message
-            );
-            debug!(
-                target: "breaker_scenario_runner",
-                "violation frame={} invariant={:?} entity={:?}: {}",
-                v.frame, v.invariant, v.entity, v.message
-            );
-        }
-        for l in &logs {
-            println!(
-                "  LOG frame={} {:?} target={}: {}",
-                l.frame, l.level, l.target, l.message
-            );
+
+        if verbose {
+            print_verbose_failures(scenario_name, &verdict, &violations, &logs);
+        } else {
+            print_compact_failures(&verdict, &violations, &logs);
         }
     }
 
     verdict.passed()
+}
+
+// ---------------------------------------------------------------------------
+// Verbose output (old behavior)
+// ---------------------------------------------------------------------------
+
+fn print_verbose_failures(
+    scenario_name: &str,
+    verdict: &ScenarioVerdict,
+    violations: &[ViolationEntry],
+    logs: &[LogEntry],
+) {
+    for reason in &verdict.reasons {
+        println!("  REASON [{scenario_name}]: {reason}");
+    }
+    for v in violations {
+        println!(
+            "  VIOLATION frame={} {:?} entity={:?}: {}",
+            v.frame, v.invariant, v.entity, v.message
+        );
+        debug!(
+            target: "breaker_scenario_runner",
+            "violation frame={} invariant={:?} entity={:?}: {}",
+            v.frame, v.invariant, v.entity, v.message
+        );
+    }
+    for l in logs {
+        println!(
+            "  LOG frame={} {:?} target={}: {}",
+            l.frame, l.level, l.target, l.message
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Compact output (default)
+// ---------------------------------------------------------------------------
+
+fn print_compact_failures(
+    verdict: &ScenarioVerdict,
+    violations: &[ViolationEntry],
+    logs: &[LogEntry],
+) {
+    // Grouped violations.
+    let violation_groups = group_violations(violations);
+    for g in &violation_groups {
+        println!(
+            "  {:30} x{:<5} {}",
+            format!("{:?}", g.invariant),
+            g.count,
+            format_frame_range(g.count, g.first_frame, g.last_frame)
+        );
+    }
+
+    // Grouped logs.
+    let log_groups = group_logs(logs);
+    for g in &log_groups {
+        println!(
+            "  {:30} x{:<5} {}",
+            format!("captured {:?} log", g.level),
+            g.count,
+            format_frame_range(g.count, g.first_frame, g.last_frame)
+        );
+        if g.count == 1 {
+            println!("    {}", g.message);
+        }
+    }
+
+    // Health-check reasons (those not covered by violations or logs).
+    for reason in &verdict.reasons {
+        if is_health_check_reason(reason) {
+            println!("  {reason}");
+        }
+    }
+}
+
+fn format_frame_range(count: u32, first: u32, last: u32) -> String {
+    if count == 1 {
+        format!("frame {first}")
+    } else {
+        format!("frames {first}..{last}")
+    }
+}
+
+/// Returns `true` if the reason is a health-check (not a violation or log reason).
+fn is_health_check_reason(reason: &str) -> bool {
+    // Violation reasons come from InvariantKind::fail_reason() and log reasons
+    // start with "captured". Health checks are everything else.
+    !reason.starts_with("captured ") && !is_invariant_fail_reason(reason)
+}
+
+/// Returns `true` if the reason matches any `InvariantKind::fail_reason()`.
+fn is_invariant_fail_reason(reason: &str) -> bool {
+    InvariantKind::ALL.iter().any(|v| v.fail_reason() == reason)
+}
+
+// ---------------------------------------------------------------------------
+// Grouping types and functions
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, PartialEq)]
+struct ViolationGroup {
+    invariant: InvariantKind,
+    count: u32,
+    first_frame: u32,
+    last_frame: u32,
+}
+
+#[derive(Debug, PartialEq)]
+struct LogGroup {
+    level: bevy::log::Level,
+    message: String,
+    count: u32,
+    first_frame: u32,
+    last_frame: u32,
+}
+
+fn group_violations(violations: &[ViolationEntry]) -> Vec<ViolationGroup> {
+    use std::collections::HashMap;
+
+    let mut map: HashMap<InvariantKind, (u32, u32, u32)> = HashMap::new();
+    let mut insertion_order: Vec<InvariantKind> = Vec::new();
+
+    for v in violations {
+        let entry = map.entry(v.invariant).or_insert_with(|| {
+            insertion_order.push(v.invariant);
+            (0, v.frame, v.frame)
+        });
+        entry.0 += 1;
+        entry.1 = entry.1.min(v.frame);
+        entry.2 = entry.2.max(v.frame);
+    }
+
+    insertion_order
+        .into_iter()
+        .filter_map(|kind| {
+            map.get(&kind).map(|&(count, first, last)| ViolationGroup {
+                invariant: kind,
+                count,
+                first_frame: first,
+                last_frame: last,
+            })
+        })
+        .collect()
+}
+
+fn group_logs(logs: &[LogEntry]) -> Vec<LogGroup> {
+    use std::collections::HashMap;
+
+    type Key = (bevy::log::Level, String);
+    let mut map: HashMap<Key, (u32, u32, u32)> = HashMap::new();
+    let mut insertion_order: Vec<Key> = Vec::new();
+
+    for l in logs {
+        let key: Key = (l.level, l.message.clone());
+        let entry = map.entry(key.clone()).or_insert_with(|| {
+            insertion_order.push(key);
+            (0, l.frame, l.frame)
+        });
+        entry.0 += 1;
+        entry.1 = entry.1.min(l.frame);
+        entry.2 = entry.2.max(l.frame);
+    }
+
+    insertion_order
+        .into_iter()
+        .filter_map(|key| {
+            map.get(&key).map(|&(count, first, last)| LogGroup {
+                level: key.0,
+                message: key.1,
+                count,
+                first_frame: first,
+                last_frame: last,
+            })
+        })
+        .collect()
 }
 
 /// Bevy's default fixed timestep frequency (Hz).
@@ -335,7 +526,11 @@ fn build_app(headless: bool, first_run: bool) -> App {
 
     if first_run {
         defaults = defaults.set(LogPlugin {
-            filter: "warn,bevy_egui=error,breaker=info".to_owned(),
+            // bevy_render::extract_resource and bevy_render::texture warn when
+            // backends: None skips GPU init — harmless in headless mode, cannot
+            // be fixed without disabling RenderPlugin (which breaks game systems).
+            level: bevy::log::Level::WARN,
+            filter: "warn,bevy_egui=error,bevy_render::extract_resource=off,bevy_render::texture=off".to_owned(),
             custom_layer: scenario_log_layer_factory,
             ..default()
         });
@@ -347,6 +542,8 @@ fn build_app(headless: bool, first_run: bool) -> App {
         // Disable Winit (no display server) and GPU initialization (no GPU
         // on CI runners). Setting backends: None causes RenderPlugin to skip
         // adapter creation entirely, avoiding the "Unable to find a GPU" panic.
+        // GizmoPlugin is also disabled since gizmos serve no purpose headless
+        // and its render sub-plugin warns when RenderApp is absent.
         defaults = defaults
             .set(RenderPlugin {
                 render_creation: RenderCreation::Automatic(WgpuSettings {
@@ -355,7 +552,9 @@ fn build_app(headless: bool, first_run: bool) -> App {
                 }),
                 ..default()
             })
-            .disable::<WinitPlugin>();
+            .disable::<WinitPlugin>()
+            .disable::<bevy::gizmos::GizmoPlugin>()
+            .disable::<bevy::gizmos_render::GizmoRenderPlugin>();
     }
 
     app.add_plugins(defaults);
@@ -597,6 +796,173 @@ mod tests {
         assert!(
             result.is_ok(),
             "expected guarded_update to return Ok when update completes normally, got: {result:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // group_violations — groups by invariant kind
+    // -------------------------------------------------------------------------
+
+    fn make_violation(invariant: InvariantKind, frame: u32) -> ViolationEntry {
+        ViolationEntry {
+            frame,
+            invariant,
+            entity: None,
+            message: format!("test: {invariant:?}"),
+        }
+    }
+
+    #[test]
+    fn group_violations_groups_by_invariant_kind() {
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds, 100),
+            make_violation(InvariantKind::BoltInBounds, 101),
+            make_violation(InvariantKind::BoltInBounds, 105),
+        ];
+
+        let groups = group_violations(&violations);
+
+        assert_eq!(
+            groups.len(),
+            1,
+            "3 same-kind violations must produce 1 group"
+        );
+        assert_eq!(groups[0].invariant, InvariantKind::BoltInBounds);
+        assert_eq!(groups[0].count, 3);
+        assert_eq!(groups[0].first_frame, 100);
+        assert_eq!(groups[0].last_frame, 105);
+    }
+
+    #[test]
+    fn group_violations_separates_different_invariant_kinds() {
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds, 10),
+            make_violation(InvariantKind::NoNaN, 20),
+            make_violation(InvariantKind::BoltInBounds, 30),
+        ];
+
+        let groups = group_violations(&violations);
+
+        assert_eq!(
+            groups.len(),
+            2,
+            "BoltInBounds + NoNaN must produce 2 groups"
+        );
+        let bolt = groups
+            .iter()
+            .find(|g| g.invariant == InvariantKind::BoltInBounds)
+            .unwrap();
+        let nan = groups
+            .iter()
+            .find(|g| g.invariant == InvariantKind::NoNaN)
+            .unwrap();
+        assert_eq!(bolt.count, 2);
+        assert_eq!(bolt.first_frame, 10);
+        assert_eq!(bolt.last_frame, 30);
+        assert_eq!(nan.count, 1);
+        assert_eq!(nan.first_frame, 20);
+        assert_eq!(nan.last_frame, 20);
+    }
+
+    #[test]
+    fn group_violations_single_entry_has_matching_first_last_frame() {
+        let violations = vec![make_violation(InvariantKind::NoNaN, 42)];
+
+        let groups = group_violations(&violations);
+
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].first_frame, 42);
+        assert_eq!(groups[0].last_frame, 42);
+        assert_eq!(groups[0].count, 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // group_logs — groups by level + message
+    // -------------------------------------------------------------------------
+
+    fn make_log(level: bevy::log::Level, message: &str, frame: u32) -> LogEntry {
+        LogEntry {
+            level,
+            target: "breaker::test".to_owned(),
+            message: message.to_owned(),
+            frame,
+        }
+    }
+
+    #[test]
+    fn group_logs_groups_by_level_and_message() {
+        let logs = vec![
+            make_log(bevy::log::Level::WARN, "bad thing", 100),
+            make_log(bevy::log::Level::WARN, "bad thing", 200),
+            make_log(bevy::log::Level::WARN, "bad thing", 300),
+        ];
+
+        let groups = group_logs(&logs);
+
+        assert_eq!(groups.len(), 1, "3 identical logs must produce 1 group");
+        assert_eq!(groups[0].count, 3);
+        assert_eq!(groups[0].first_frame, 100);
+        assert_eq!(groups[0].last_frame, 300);
+        assert_eq!(groups[0].message, "bad thing");
+    }
+
+    #[test]
+    fn group_logs_separates_different_messages() {
+        let logs = vec![
+            make_log(bevy::log::Level::WARN, "msg a", 10),
+            make_log(bevy::log::Level::WARN, "msg b", 20),
+        ];
+
+        let groups = group_logs(&logs);
+
+        assert_eq!(
+            groups.len(),
+            2,
+            "2 different messages must produce 2 groups"
+        );
+    }
+
+    #[test]
+    fn group_logs_separates_different_levels_same_message() {
+        let logs = vec![
+            make_log(bevy::log::Level::WARN, "same msg", 10),
+            make_log(bevy::log::Level::ERROR, "same msg", 20),
+        ];
+
+        let groups = group_logs(&logs);
+
+        assert_eq!(
+            groups.len(),
+            2,
+            "WARN + ERROR with same message must produce 2 groups"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // is_invariant_fail_reason — matches all InvariantKind fail reasons
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn is_invariant_fail_reason_returns_true_for_all_invariant_kinds() {
+        for variant in InvariantKind::ALL {
+            assert!(
+                is_invariant_fail_reason(variant.fail_reason()),
+                "is_invariant_fail_reason must return true for {:?} fail_reason: {:?}",
+                variant,
+                variant.fail_reason()
+            );
+        }
+    }
+
+    #[test]
+    fn is_invariant_fail_reason_returns_false_for_health_check_strings() {
+        assert!(
+            !is_invariant_fail_reason("no actions were injected during scenario run"),
+            "health check string must not match as invariant fail reason"
+        );
+        assert!(
+            !is_invariant_fail_reason("scenario never entered Playing state"),
+            "health check string must not match as invariant fail reason"
         );
     }
 }

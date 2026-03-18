@@ -54,6 +54,11 @@ impl PluginGroup for Game {
 
         if !self.headless {
             builder = builder.add(RenderSetupPlugin);
+        } else {
+            // DebugPlugin depends on GizmoConfigStore (from GizmoPlugin in
+            // DefaultPlugins). In headless mode GizmoPlugin may be disabled,
+            // and debug overlays serve no purpose without a window anyway.
+            builder = builder.disable::<DebugPlugin>();
         }
 
         builder

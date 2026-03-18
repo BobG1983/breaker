@@ -4,12 +4,14 @@
 //! capture, and health warnings. Defaults to `Fail` so any gap in the
 //! evaluation pipeline produces a safe failure.
 
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 
 use crate::{
     invariants::{ScenarioStats, ViolationEntry},
     log_capture::LogEntry,
-    types::{InputStrategy, ScenarioDefinition, ScriptedParams},
+    types::{InputStrategy, InvariantKind, ScenarioDefinition, ScriptedParams},
 };
 
 /// Whether a scenario run passed or failed evaluation.
@@ -58,9 +60,12 @@ impl ScenarioVerdict {
         // Check violations against expected_violations.
         match definition.expected_violations.as_deref() {
             None | Some([]) => {
-                // No expected violations: any violation is a failure.
+                // No expected violations: any violation is a failure (one reason per kind).
+                let mut seen = HashSet::<InvariantKind>::new();
                 for v in violations {
-                    self.add_fail_reason(v.invariant.fail_reason().to_owned());
+                    if seen.insert(v.invariant) {
+                        self.add_fail_reason(v.invariant.fail_reason().to_owned());
+                    }
                 }
             }
             Some(expected) => {
@@ -70,8 +75,9 @@ impl ScenarioVerdict {
                         self.add_fail_reason(format!("expected violation {ev:?} never fired"));
                     }
                 }
+                let mut seen = HashSet::<InvariantKind>::new();
                 for v in violations {
-                    if !expected.iter().any(|ev| ev == &v.invariant) {
+                    if !expected.iter().any(|ev| ev == &v.invariant) && seen.insert(v.invariant) {
                         self.add_fail_reason(v.invariant.fail_reason().to_owned());
                     }
                 }
@@ -689,6 +695,97 @@ mod tests {
             verdict.reasons.contains(&"late failure".to_owned()),
             "appended reason must be present, got: {:?}",
             verdict.reasons
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Behavior 19: Duplicate violations produce a single reason
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn duplicate_violations_produce_single_reason() {
+        let mut verdict = ScenarioVerdict::default();
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds),
+            make_violation(InvariantKind::BoltInBounds),
+            make_violation(InvariantKind::BoltInBounds),
+        ];
+        let stats = make_healthy_stats();
+        let definition = make_chaos_definition();
+
+        verdict.evaluate(&violations, &[], &stats, &definition);
+
+        let bolt_reasons: Vec<_> = verdict
+            .reasons
+            .iter()
+            .filter(|r| r.contains("bolt position outside playfield bounds"))
+            .collect();
+        assert_eq!(
+            bolt_reasons.len(),
+            1,
+            "3 identical BoltInBounds violations must produce exactly 1 reason, got {}",
+            bolt_reasons.len()
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Behavior 20: Multiple distinct violations produce multiple reasons
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn multiple_distinct_violations_produce_multiple_reasons() {
+        let mut verdict = ScenarioVerdict::default();
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds),
+            make_violation(InvariantKind::NoNaN),
+        ];
+        let stats = make_healthy_stats();
+        let definition = make_chaos_definition();
+
+        verdict.evaluate(&violations, &[], &stats, &definition);
+
+        assert!(
+            verdict
+                .reasons
+                .iter()
+                .any(|r| r.contains("bolt position outside playfield bounds")),
+            "must contain BoltInBounds reason"
+        );
+        assert!(
+            verdict.reasons.iter().any(|r| r.contains("NaN detected")),
+            "must contain NoNaN reason"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Behavior 21: Duplicate unexpected violations with expected list produce single reason
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn duplicate_unexpected_with_expected_list_produce_single_reason() {
+        let mut verdict = ScenarioVerdict::default();
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds),
+            make_violation(InvariantKind::NoNaN),
+            make_violation(InvariantKind::NoNaN),
+            make_violation(InvariantKind::NoNaN),
+        ];
+        let stats = make_healthy_stats();
+        let mut definition = make_chaos_definition();
+        definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+
+        verdict.evaluate(&violations, &[], &stats, &definition);
+
+        let nan_reasons: Vec<_> = verdict
+            .reasons
+            .iter()
+            .filter(|r| r.contains("NaN detected"))
+            .collect();
+        assert_eq!(
+            nan_reasons.len(),
+            1,
+            "3 identical unexpected NoNaN violations must produce exactly 1 reason, got {}",
+            nan_reasons.len()
         );
     }
 }
