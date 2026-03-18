@@ -111,11 +111,11 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<SelectedArchetype>();
-        app.init_resource::<ArchetypeRegistry>();
-        app.add_systems(Update, propagate_breaker_config);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<SelectedArchetype>()
+            .init_resource::<ArchetypeRegistry>()
+            .add_systems(Update, propagate_breaker_config);
         app
     }
 

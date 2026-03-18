@@ -39,9 +39,9 @@ mod tests {
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(TimeUpdateStrategy::ManualDuration(dt));
-        app.add_systems(Update, animate_fade_out);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(TimeUpdateStrategy::ManualDuration(dt))
+            .add_systems(Update, animate_fade_out);
         app
     }
 

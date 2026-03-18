@@ -531,11 +531,11 @@ mod tests {
     /// required resources pre-inserted.
     fn test_app_bolt_in_bounds() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(PlayfieldConfig::default());
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_bolt_in_bounds);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(PlayfieldConfig::default())
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_bolt_in_bounds);
         app
     }
 
@@ -543,10 +543,10 @@ mod tests {
     /// required resources pre-inserted.
     fn test_app_no_nan() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_no_nan);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_no_nan);
         app
     }
 
@@ -880,11 +880,11 @@ mod tests {
 
     fn test_app_breaker_in_bounds() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(PlayfieldConfig::default());
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_breaker_in_bounds);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(PlayfieldConfig::default())
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_breaker_in_bounds);
         app
     }
 
@@ -925,13 +925,13 @@ mod tests {
 
     fn test_app_valid_transitions() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
-        app.init_state::<GameState>();
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.init_resource::<PreviousGameState>();
-        app.add_systems(FixedUpdate, check_valid_state_transitions);
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .init_resource::<PreviousGameState>()
+            .add_systems(FixedUpdate, check_valid_state_transitions);
         app
     }
 
@@ -988,11 +988,11 @@ mod tests {
     #[test]
     fn no_entity_leaks_fires_when_count_exceeds_double_baseline() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame(120));
-        app.insert_resource(EntityLeakBaseline { baseline: Some(5) });
-        app.add_systems(FixedUpdate, check_no_entity_leaks);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame(120))
+            .insert_resource(EntityLeakBaseline { baseline: Some(5) })
+            .add_systems(FixedUpdate, check_no_entity_leaks);
 
         // Spawn enough entities to exceed 2×5 = 10
         for _ in 0..15 {
@@ -1013,13 +1013,13 @@ mod tests {
     #[test]
     fn no_entity_leaks_does_not_fire_when_count_is_normal() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame(120));
-        app.insert_resource(EntityLeakBaseline {
-            baseline: Some(100),
-        });
-        app.add_systems(FixedUpdate, check_no_entity_leaks);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame(120))
+            .insert_resource(EntityLeakBaseline {
+                baseline: Some(100),
+            })
+            .add_systems(FixedUpdate, check_no_entity_leaks);
 
         tick(&mut app);
 
@@ -1036,10 +1036,10 @@ mod tests {
 
     fn test_app_bolt_speed() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_bolt_speed_in_range);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_bolt_speed_in_range);
         app
     }
 
@@ -1102,14 +1102,14 @@ mod tests {
     #[test]
     fn timer_non_negative_fires_when_remaining_is_negative() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.insert_resource(NodeTimer {
-            remaining: -1.0,
-            total: 60.0,
-        });
-        app.add_systems(FixedUpdate, check_timer_non_negative);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .insert_resource(NodeTimer {
+                remaining: -1.0,
+                total: 60.0,
+            })
+            .add_systems(FixedUpdate, check_timer_non_negative);
 
         tick(&mut app);
 
@@ -1121,14 +1121,14 @@ mod tests {
     #[test]
     fn timer_non_negative_does_not_fire_when_remaining_is_zero() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.insert_resource(NodeTimer {
-            remaining: 0.0,
-            total: 60.0,
-        });
-        app.add_systems(FixedUpdate, check_timer_non_negative);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .insert_resource(NodeTimer {
+                remaining: 0.0,
+                total: 60.0,
+            })
+            .add_systems(FixedUpdate, check_timer_non_negative);
 
         tick(&mut app);
 
@@ -1139,9 +1139,9 @@ mod tests {
     #[test]
     fn timer_non_negative_skips_when_no_resource() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default());
         // NodeTimer not inserted
         app.add_systems(FixedUpdate, check_timer_non_negative);
 
@@ -1159,23 +1159,23 @@ mod tests {
         use crate::types::{InputStrategy, InvariantParams, ScenarioDefinition, ScriptedParams};
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.insert_resource(ScenarioConfig {
-            definition: ScenarioDefinition {
-                breaker: "Aegis".to_owned(),
-                layout: "Corridor".to_owned(),
-                input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
-                max_frames: 1000,
-                invariants: vec![],
-                expected_violations: None,
-                debug_setup: None,
-                invariant_params: InvariantParams { max_bolt_count },
-                allow_early_end: true,
-            },
-        });
-        app.add_systems(FixedUpdate, check_bolt_count_reasonable);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .insert_resource(ScenarioConfig {
+                definition: ScenarioDefinition {
+                    breaker: "Aegis".to_owned(),
+                    layout: "Corridor".to_owned(),
+                    input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+                    max_frames: 1000,
+                    invariants: vec![],
+                    expected_violations: None,
+                    debug_setup: None,
+                    invariant_params: InvariantParams { max_bolt_count },
+                    allow_early_end: true,
+                },
+            })
+            .add_systems(FixedUpdate, check_bolt_count_reasonable);
         app
     }
 
@@ -1231,10 +1231,10 @@ mod tests {
 
     fn test_app_valid_breaker_state() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_valid_breaker_state);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_valid_breaker_state);
         app
     }
 
@@ -1449,10 +1449,10 @@ mod tests {
 
     fn test_app_timer_monotonic() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_timer_monotonically_decreasing);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_timer_monotonically_decreasing);
         app
     }
 
@@ -1602,16 +1602,16 @@ mod tests {
 
     fn test_app_breaker_position_clamped() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.insert_resource(PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
-            background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-        });
-        app.add_systems(FixedUpdate, check_breaker_position_clamped);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .insert_resource(PlayfieldConfig {
+                width: 800.0,
+                height: 700.0,
+                background_color_rgb: [0.0, 0.0, 0.0],
+                wall_thickness: 180.0,
+            })
+            .add_systems(FixedUpdate, check_breaker_position_clamped);
         app
     }
 
@@ -1700,13 +1700,13 @@ mod tests {
 
     fn test_app_physics_frozen() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
-        app.init_state::<GameState>();
-        app.add_sub_state::<PlayingState>();
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.add_systems(FixedUpdate, check_physics_frozen_during_pause);
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_sub_state::<PlayingState>()
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .add_systems(FixedUpdate, check_physics_frozen_during_pause);
         app
     }
 

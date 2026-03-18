@@ -181,14 +181,14 @@ mod tests {
 
     fn test_app(layout: NodeLayout) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<CellConfig>();
-        app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
-        app.insert_resource(ActiveNodeLayout(layout));
-        app.insert_resource(test_registry());
-        app.add_systems(Startup, spawn_cells_from_layout);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<CellConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(test_registry())
+            .add_systems(Startup, spawn_cells_from_layout);
         app
     }
 

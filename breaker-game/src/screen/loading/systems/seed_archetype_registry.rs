@@ -48,9 +48,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<ArchetypeDefinition>();
-        app.add_systems(Update, seed_archetype_registry.map(drop));
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<ArchetypeDefinition>()
+            .add_systems(Update, seed_archetype_registry.map(drop));
         app
     }
 

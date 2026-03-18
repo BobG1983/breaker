@@ -195,16 +195,16 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<NodeLayout>();
-        app.init_asset::<ColorMaterial>();
-        app.init_resource::<CellConfig>();
-        app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
-        app.init_resource::<NodeLayoutRegistry>();
-        app.insert_resource(test_registry());
-        app.add_systems(Update, propagate_node_layout_changes);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<NodeLayout>()
+            .init_asset::<ColorMaterial>()
+            .init_resource::<CellConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .init_resource::<NodeLayoutRegistry>()
+            .insert_resource(test_registry())
+            .add_systems(Update, propagate_node_layout_changes);
         app
     }
 

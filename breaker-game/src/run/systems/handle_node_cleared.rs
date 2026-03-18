@@ -68,19 +68,19 @@ mod tests {
 
     fn test_app(node_index: u32, layout_count: usize) -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.add_message::<NodeCleared>();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .add_message::<NodeCleared>();
         let layouts: Vec<NodeLayout> = (0..layout_count)
             .map(|i| make_layout(&format!("node_{i}")))
             .collect();
-        app.insert_resource(NodeLayoutRegistry { layouts });
-        app.insert_resource(RunState {
-            node_index,
-            ..default()
-        });
-        app.insert_resource(SendNodeCleared(false));
-        app.add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
+        app.insert_resource(NodeLayoutRegistry { layouts })
+            .insert_resource(RunState {
+                node_index,
+                ..default()
+            })
+            .insert_resource(SendNodeCleared(false))
+            .add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
         app
     }
 

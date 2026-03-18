@@ -58,9 +58,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<NodeLayout>();
-        app.add_systems(Update, seed_node_layout_registry.map(drop));
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<NodeLayout>()
+            .add_systems(Update, seed_node_layout_registry.map(drop));
         app
     }
 

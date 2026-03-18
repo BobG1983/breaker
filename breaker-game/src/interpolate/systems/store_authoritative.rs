@@ -30,9 +30,9 @@ mod tests {
     #[test]
     fn current_captures_physics_output() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, move_entity);
-        app.add_systems(FixedPostUpdate, store_authoritative);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(FixedUpdate, move_entity)
+            .add_systems(FixedPostUpdate, store_authoritative);
 
         app.world_mut().spawn((
             InterpolateTransform,

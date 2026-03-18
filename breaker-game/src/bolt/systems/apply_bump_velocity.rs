@@ -75,9 +75,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BumpPerformed>();
-        app.add_systems(FixedUpdate, apply_bump_velocity);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .add_systems(FixedUpdate, apply_bump_velocity);
         app
     }
 
@@ -198,9 +198,9 @@ mod tests {
         };
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BumpPerformed>();
-        app.add_message::<BoltHitBreaker>();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .add_message::<BoltHitBreaker>();
 
         app.add_systems(
             FixedUpdate,

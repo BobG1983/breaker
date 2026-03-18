@@ -88,15 +88,15 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.insert_resource(InputConfig::default());
-        app.init_state::<GameState>();
-        app.add_message::<AppExit>();
-        app.insert_resource(MainMenuSelection {
-            selected: MenuItem::Play,
-        });
-        app.add_systems(Update, handle_main_menu_input);
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(InputConfig::default())
+            .init_state::<GameState>()
+            .add_message::<AppExit>()
+            .insert_resource(MainMenuSelection {
+                selected: MenuItem::Play,
+            })
+            .add_systems(Update, handle_main_menu_input);
         app
     }
 

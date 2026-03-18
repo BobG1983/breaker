@@ -113,10 +113,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()));
-        app.init_asset::<Font>();
-        app.insert_resource(test_config());
-        app.add_systems(Update, spawn_main_menu);
+        app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()))
+            .init_asset::<Font>()
+            .insert_resource(test_config())
+            .add_systems(Update, spawn_main_menu);
         app
     }
 
@@ -163,15 +163,15 @@ mod tests {
     #[test]
     fn cleanup_removes_entities() {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()));
-        app.init_asset::<Font>();
-        app.insert_resource(test_config());
-        app.init_state::<crate::shared::GameState>();
-        app.add_systems(OnEnter(crate::shared::GameState::MainMenu), spawn_main_menu);
-        app.add_systems(
-            OnExit(crate::shared::GameState::MainMenu),
-            crate::screen::systems::cleanup_entities::<MainMenuScreen>,
-        );
+        app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()))
+            .init_asset::<Font>()
+            .insert_resource(test_config())
+            .init_state::<crate::shared::GameState>()
+            .add_systems(OnEnter(crate::shared::GameState::MainMenu), spawn_main_menu)
+            .add_systems(
+                OnExit(crate::shared::GameState::MainMenu),
+                crate::screen::systems::cleanup_entities::<MainMenuScreen>,
+            );
 
         // Enter MainMenu state
         app.world_mut()

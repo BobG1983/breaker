@@ -49,14 +49,23 @@ type: reference
 - Headless `first_run=false`: LogPlugin is simply not added (nothing to disable — MinimalPlugins has no LogPlugin). Asymmetry with visual branch's `else { disable::<LogPlugin>() }` is intentional and correct.
 - `ScheduleRunnerPlugin` in MinimalPlugins is harmless in headless mode — its runner is only invoked by `app.run()`, which is never called; manual loop uses `app.update()` directly.
 - `TimeUpdateStrategy::ManualDuration` overwrites `Automatic` (initialized by TimePlugin in MinimalPlugins) — supported pattern, verified from Bevy source.
-- `app.init_asset::<ColorMaterial>()` correctly registers `Assets<ColorMaterial>` without render deps. Requires `AssetPlugin` to be present first (which it is).
-- `bevy::text::TextPlugin` path confirmed valid (`bevy_internal` re-exports `bevy_text as text`). No RenderApp dependency. Registers Font asset + loader, CPU resources only.
 - `bevy::mesh::MeshPlugin` path confirmed valid. Does `init_asset::<Mesh>()` which requires live `AssetServer` (AssetPlugin added first — correct ordering).
 - `Mesh2d` has `#[require(Transform)]` — Transform has a default impl, no plugin required. MeshMaterial2d has no required components.
 - `SpriteRenderPlugin` (which calls `register_required_components::<Sprite, SyncToRenderWorld>()`) is NOT added in headless — correct, avoids render world sync dependency.
 - Game domain UiPlugin works without Bevy engine UiPlugin — UI layout systems don't run in headless but component types are available. Game tests confirm this.
 - Simplified log filter `"warn,bevy_egui=error"` is correct — no render-related warnings fire because RenderPlugin is not loaded at all.
 - `LogBuffer` sharing: first run extracts buffer from app world (inserted by scenario_log_layer_factory via LogPlugin); subsequent runs receive it via `insert_resource(buf.clone())`. Same Arc<Mutex<...>> writes to the global tracing subscriber. Correct.
+
+## HeadlessAssetsPlugin refactor (feature/scenario-runner-dedup-summary continued)
+
+- `HeadlessAssetsPlugin` added to `Game::headless()` PluginGroupBuilder after all domain plugins.
+- `HeadlessAssetsPlugin::build()` calls `app.init_asset::<ColorMaterial>()` and `app.add_plugins(bevy::text::TextPlugin)`.
+- Plugin build order: when runner.rs adds `AssetPlugin` before `Game::headless()`, AssetPlugin is fully built before HeadlessAssetsPlugin executes — correct. init_asset::<ColorMaterial>() requires a live AssetServer which is present.
+- `bevy::text::TextPlugin` path confirmed valid. No RenderApp dependency. Registers Font asset + loader, CPU resources only.
+- `HeadlessAssetsPlugin` added last in PluginGroupBuilder — domain plugins only schedule systems at build time; asset types registered by HeadlessAssetsPlugin are available before any system runs. No ordering hazard.
+- `PluginGroupBuilder::disable::<T>()` panics if T is NOT in the plugins map (verified from Bevy 0.18.1 source, plugin_group.rs:502-508). However, it does NOT panic if T is already disabled (just sets enabled=false again). Double-disable in game.rs test_app(Game::headless()) is benign.
+- `scenario_log_plugin()` returns `LogPlugin`. Used as `app.add_plugins(LogPlugin)` in headless mode (correct — Plugin implements Plugins). Used as `defaults.set(LogPlugin)` in visual mode (correct — LogPlugin is in DefaultPlugins so set() won't panic).
+- `PluginGroupBuilder::set()` panics if the plugin type is absent from the group. DefaultPlugins always includes LogPlugin, so `defaults.set(scenario_log_plugin())` is safe.
 
 ## ScenarioVerdict Refactor (refactor/scenario-verdict)
 - `evaluate()` clears `reasons` before building from scratch — correct, not a bug.

@@ -63,14 +63,14 @@ mod tests {
 
     fn test_app(node_index: u32, layouts: Vec<NodeLayout>) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(RunState {
-            node_index,
-            ..default()
-        });
-        app.insert_resource(NodeLayoutRegistry { layouts });
-        app.insert_resource(ScenarioLayoutOverride::default());
-        app.add_systems(Startup, set_active_layout);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(RunState {
+                node_index,
+                ..default()
+            })
+            .insert_resource(NodeLayoutRegistry { layouts })
+            .insert_resource(ScenarioLayoutOverride::default())
+            .add_systems(Startup, set_active_layout);
         app
     }
 

@@ -183,10 +183,10 @@ fn run_scenario(
         app.insert_resource(buf.clone());
     }
 
-    app.insert_resource(ScenarioConfig { definition });
-    app.add_plugins(ScenarioLifecycle);
-    app.init_resource::<CapturedLogs>();
-    app.add_systems(FixedUpdate, poll_log_buffer);
+    app.insert_resource(ScenarioConfig { definition })
+        .add_plugins(ScenarioLifecycle)
+        .init_resource::<CapturedLogs>()
+        .add_systems(FixedUpdate, poll_log_buffer);
 
     if headless {
         // Run manually so we retain access to the World after exit.
@@ -496,7 +496,7 @@ const VISUAL_SPEED_MULTIPLIER: f64 = 10.0;
 /// plugins the game needs (states, assets, input). This avoids pulling in the
 /// full render pipeline, winit event loop, and GPU initialization — none of
 /// which are needed when running scenarios at CPU speed on CI. Asset types
-/// for headless spawn systems (Mesh, ColorMaterial, Font) are registered by
+/// for headless spawn systems (`Mesh`, `ColorMaterial`, `Font`) are registered by
 /// [`Game::headless()`].
 ///
 /// In visual mode, uses [`DefaultPlugins`] for full windowed rendering.
@@ -538,9 +538,8 @@ fn build_app(headless: bool, first_run: bool) -> App {
         // Fixed ticks execute in sequence at CPU speed.
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
             1.0 / FIXED_TIMESTEP_HZ,
-        )));
-
-        app.add_plugins(Game::headless());
+        )))
+        .add_plugins(Game::headless());
     } else {
         // Visual mode — full DefaultPlugins for windowed rendering.
         let mut defaults = DefaultPlugins
@@ -562,15 +561,14 @@ fn build_app(headless: bool, first_run: bool) -> App {
             defaults = defaults.disable::<LogPlugin>();
         }
 
-        app.add_plugins(defaults);
-
-        // Visual mode runs at 10x speed to avoid 5+ minute waits for
-        // 20,000-frame scenarios. Each Update tick advances virtual time
-        // by 10 fixed timesteps (10/64 s).
-        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
-            VISUAL_SPEED_MULTIPLIER / FIXED_TIMESTEP_HZ,
-        )));
-        app.add_plugins(Game::default());
+        app.add_plugins(defaults)
+            // Visual mode runs at 10x speed to avoid 5+ minute waits for
+            // 20,000-frame scenarios. Each Update tick advances virtual time
+            // by 10 fixed timesteps (10/64 s).
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+                VISUAL_SPEED_MULTIPLIER / FIXED_TIMESTEP_HZ,
+            )))
+            .add_plugins(Game::default());
     }
 
     app
@@ -716,9 +714,9 @@ mod tests {
             ),
         ];
         let log_buffer = LogBuffer(Arc::new(Mutex::new(buffer_entries)));
-        app.insert_resource(log_buffer);
-        app.insert_resource(CapturedLogs::default());
-        app.insert_resource(ScenarioFrame(42));
+        app.insert_resource(log_buffer)
+            .insert_resource(CapturedLogs::default())
+            .insert_resource(ScenarioFrame(42));
 
         drain_remaining_logs(&mut app);
 
@@ -757,8 +755,8 @@ mod tests {
         }
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, panicking_system);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, panicking_system);
 
         let result = guarded_update(&mut app);
 

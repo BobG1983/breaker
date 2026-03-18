@@ -22,16 +22,16 @@ mod tests {
 
     fn test_app(timer_secs: f32) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ActiveNodeLayout(NodeLayout {
-            name: "test".to_owned(),
-            timer_secs,
-            cols: 2,
-            rows: 1,
-            grid_top_offset: 50.0,
-            grid: vec![vec!['S', 'S']],
-        }));
-        app.add_systems(Startup, init_node_timer);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ActiveNodeLayout(NodeLayout {
+                name: "test".to_owned(),
+                timer_secs,
+                cols: 2,
+                rows: 1,
+                grid_top_offset: 50.0,
+                grid: vec![vec!['S', 'S']],
+            }))
+            .add_systems(Startup, init_node_timer);
         app
     }
 

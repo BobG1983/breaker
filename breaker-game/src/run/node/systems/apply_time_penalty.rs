@@ -57,19 +57,19 @@ mod tests {
 
     fn test_app_with_send(remaining: f32) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<ApplyTimePenalty>();
-        app.add_message::<TimerExpired>();
-        app.insert_resource(NodeTimer {
-            remaining,
-            total: remaining,
-        });
-        app.insert_resource(SendPenalty(None));
-        app.init_resource::<TimerExpiredCaptured>();
-        app.add_systems(
-            FixedUpdate,
-            (send_penalty, apply_time_penalty, capture_timer_expired).chain(),
-        );
+        app.add_plugins(MinimalPlugins)
+            .add_message::<ApplyTimePenalty>()
+            .add_message::<TimerExpired>()
+            .insert_resource(NodeTimer {
+                remaining,
+                total: remaining,
+            })
+            .insert_resource(SendPenalty(None))
+            .init_resource::<TimerExpiredCaptured>()
+            .add_systems(
+                FixedUpdate,
+                (send_penalty, apply_time_penalty, capture_timer_expired).chain(),
+            );
         app
     }
 

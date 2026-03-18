@@ -36,11 +36,11 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<ApplyTimePenalty>();
-        app.init_resource::<CapturedApplyTimePenalty>();
-        app.add_observer(handle_time_penalty);
-        app.add_systems(FixedUpdate, capture_apply);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<ApplyTimePenalty>()
+            .init_resource::<CapturedApplyTimePenalty>()
+            .add_observer(handle_time_penalty)
+            .add_systems(FixedUpdate, capture_apply);
         app
     }
 

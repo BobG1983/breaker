@@ -94,14 +94,14 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.init_resource::<GameRng>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
-        app.add_message::<SpawnAdditionalBolt>();
-        app.insert_resource(SendSpawn(0));
-        app.add_systems(FixedUpdate, (send_spawn, spawn_additional_bolt).chain());
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BoltConfig>()
+            .init_resource::<GameRng>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_message::<SpawnAdditionalBolt>()
+            .insert_resource(SendSpawn(0))
+            .add_systems(FixedUpdate, (send_spawn, spawn_additional_bolt).chain());
         app
     }
 

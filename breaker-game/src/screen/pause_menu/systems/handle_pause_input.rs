@@ -67,15 +67,15 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.insert_resource(InputConfig::default());
-        app.init_state::<GameState>();
-        app.add_sub_state::<PlayingState>();
-        app.insert_resource(PauseMenuSelection {
-            selected: PauseMenuItem::Resume,
-        });
-        app.add_systems(Update, handle_pause_input);
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(InputConfig::default())
+            .init_state::<GameState>()
+            .add_sub_state::<PlayingState>()
+            .insert_resource(PauseMenuSelection {
+                selected: PauseMenuItem::Resume,
+            })
+            .add_systems(Update, handle_pause_input);
         app
     }
 

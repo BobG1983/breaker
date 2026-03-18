@@ -138,10 +138,10 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         let mut registry = ArchetypeRegistry::default();
         registry.archetypes.insert(def.name.clone(), def);
-        app.insert_resource(registry);
-        app.insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()));
-        app.init_resource::<ActiveBehaviors>();
-        app.add_systems(Update, init_archetype);
+        app.insert_resource(registry)
+            .insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()))
+            .init_resource::<ActiveBehaviors>()
+            .add_systems(Update, init_archetype);
         app
     }
 
@@ -256,9 +256,9 @@ mod tests {
     #[test]
     fn apply_overrides_modifies_config() {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<BreakerDefaults>();
-        app.init_resource::<BreakerConfig>();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<BreakerDefaults>()
+            .init_resource::<BreakerConfig>();
 
         let def = ArchetypeDefinition {
             name: "Wide".to_owned(),
@@ -272,10 +272,9 @@ mod tests {
 
         let mut registry = ArchetypeRegistry::default();
         registry.archetypes.insert("Wide".to_owned(), def);
-        app.insert_resource(registry);
-        app.insert_resource(SelectedArchetype("Wide".to_owned()));
-
-        app.add_systems(Update, apply_archetype_config_overrides);
+        app.insert_resource(registry)
+            .insert_resource(SelectedArchetype("Wide".to_owned()))
+            .add_systems(Update, apply_archetype_config_overrides);
         app.update();
 
         let config = app.world().resource::<BreakerConfig>();

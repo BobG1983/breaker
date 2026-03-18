@@ -106,13 +106,13 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<InputActions>();
-        app.init_resource::<InputConfig>();
-        app.init_resource::<DoubleTapState>();
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.add_message::<KeyboardInput>();
-        app.add_systems(Update, read_input_actions);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<InputActions>()
+            .init_resource::<InputConfig>()
+            .init_resource::<DoubleTapState>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .add_message::<KeyboardInput>()
+            .add_systems(Update, read_input_actions);
         app
     }
 

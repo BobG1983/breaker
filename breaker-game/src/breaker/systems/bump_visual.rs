@@ -193,9 +193,9 @@ mod tests {
 
     fn trigger_test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<InputActions>();
-        app.add_systems(FixedUpdate, trigger_bump_visual);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<InputActions>()
+            .add_systems(FixedUpdate, trigger_bump_visual);
         app
     }
 
@@ -309,8 +309,8 @@ mod tests {
 
     fn animate_test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, animate_bump_visual);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(FixedUpdate, animate_bump_visual);
         app
     }
 

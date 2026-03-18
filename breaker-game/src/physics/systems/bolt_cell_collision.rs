@@ -134,9 +134,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BoltHitCell>();
-        app.add_systems(FixedUpdate, bolt_cell_collision);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitCell>()
+            .add_systems(FixedUpdate, bolt_cell_collision);
         app
     }
 
@@ -323,8 +323,8 @@ mod tests {
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
 
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         // Two cells vertically, bolt path crosses both
         let near_y = 50.0;
@@ -363,8 +363,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         let cell_y = 100.0;
         let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
@@ -423,8 +423,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         let upper_y = 100.0;
         let lower_y = upper_y - GRID_STEP_Y;
@@ -458,8 +458,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         let left_x = 0.0;
         let right_x = left_x + GRID_STEP_X;
@@ -493,8 +493,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         // 3×2 mini-grid at real spacing
         let base_y = 100.0;
@@ -534,8 +534,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         // Two cells very close together creating a narrow channel.
         // Bolt bouncing between them could loop forever without the cap.
@@ -566,8 +566,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         let cell_a = spawn_cell(&mut app, -100.0, 100.0);
         let cell_b = spawn_cell(&mut app, 100.0, 100.0);
@@ -600,9 +600,9 @@ mod tests {
     #[test]
     fn serving_bolt_is_not_advanced() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BoltHitCell>();
-        app.add_systems(FixedUpdate, bolt_cell_collision);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitCell>()
+            .add_systems(FixedUpdate, bolt_cell_collision);
 
         let entity = app
             .world_mut()
@@ -674,8 +674,8 @@ mod tests {
     fn wall_hit_does_not_emit_cell_message() {
         let mut app = test_app();
         let bc = BoltConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
 
@@ -701,8 +701,8 @@ mod tests {
         let mut app = test_app();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
-        app.insert_resource(HitCells::default());
-        app.add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         // Cell closer than wall
         let cell_y = 50.0;

@@ -83,9 +83,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.add_systems(Update, init_breaker_params);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .add_systems(Update, init_breaker_params);
         app
     }
 

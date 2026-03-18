@@ -57,9 +57,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<PlayfieldConfig>();
-        app.add_systems(Update, spawn_walls);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PlayfieldConfig>()
+            .add_systems(Update, spawn_walls);
         app
     }
 

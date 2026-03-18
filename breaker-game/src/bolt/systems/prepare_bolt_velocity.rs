@@ -57,8 +57,8 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, prepare_bolt_velocity);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(FixedUpdate, prepare_bolt_velocity);
         // Spawn breaker with MinAngleFromHorizontal for the system to read
         let breaker_config = BreakerConfig::default();
         app.world_mut().spawn((
@@ -130,8 +130,8 @@ mod tests {
     #[test]
     fn no_breaker_leaves_velocity_unchanged() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, prepare_bolt_velocity);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(FixedUpdate, prepare_bolt_velocity);
         // No breaker entity spawned
 
         let entity = app

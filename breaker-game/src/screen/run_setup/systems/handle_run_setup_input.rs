@@ -82,15 +82,15 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.insert_resource(InputConfig::default());
-        app.init_state::<GameState>();
-        app.insert_resource(SelectedArchetype::default());
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(InputConfig::default())
+            .init_state::<GameState>()
+            .insert_resource(SelectedArchetype::default());
 
         let registry = test_registry(&["Aegis", "Chrono"]);
-        app.insert_resource(registry);
-        app.insert_resource(RunSetupSelection { index: 0 });
+        app.insert_resource(registry)
+            .insert_resource(RunSetupSelection { index: 0 });
 
         // Spawn cards matching registry
         app.world_mut().spawn(BreakerCard {

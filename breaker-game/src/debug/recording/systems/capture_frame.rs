@@ -63,11 +63,11 @@ mod tests {
         app.insert_resource(RecordingConfig {
             enabled,
             level_filter: filter.map(str::to_owned),
-        });
-        app.insert_resource(InputActions::default());
-        app.init_resource::<RecordingBuffer>();
-        app.init_resource::<RecordingFrame>();
-        app.add_systems(TestSchedule, capture_frame);
+        })
+        .insert_resource(InputActions::default())
+        .init_resource::<RecordingBuffer>()
+        .init_resource::<RecordingFrame>()
+        .add_systems(TestSchedule, capture_frame);
         app
     }
 

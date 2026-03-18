@@ -370,32 +370,32 @@ mod tests {
     /// minimal state wiring needed to exercise invariant registration.
     fn lifecycle_test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(StatesPlugin);
-        app.init_state::<GameState>();
-        app.insert_resource(ScenarioConfig {
-            definition: make_lifecycle_test_scenario(),
-        });
-        app.insert_resource(PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
-            background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-        });
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(StatesPlugin)
+            .init_state::<GameState>()
+            .insert_resource(ScenarioConfig {
+                definition: make_lifecycle_test_scenario(),
+            })
+            .insert_resource(PlayfieldConfig {
+                width: 800.0,
+                height: 700.0,
+                background_color_rgb: [0.0, 0.0, 0.0],
+                wall_thickness: 180.0,
+            });
         // Resources required by bypass_menu_to_playing
-        app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()));
-        app.insert_resource(breaker::shared::ScenarioLayoutOverride(None));
+        app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()))
+            .insert_resource(breaker::shared::ScenarioLayoutOverride(None));
         // Resources required by inject_scenario_input
-        app.init_resource::<InputActions>();
-        app.add_plugins(ScenarioLifecycle);
+        app.init_resource::<InputActions>()
+            .add_plugins(ScenarioLifecycle);
         app
     }
 
     /// Build a minimal app for testing `apply_debug_setup` in isolation.
     fn debug_setup_app(definition: ScenarioDefinition) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ScenarioConfig { definition });
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ScenarioConfig { definition });
         app
     }
 
@@ -415,9 +415,9 @@ mod tests {
     #[test]
     fn tick_scenario_frame_increments_by_one_per_tick() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ScenarioFrame(0));
-        app.add_systems(FixedUpdate, tick_scenario_frame);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ScenarioFrame(0))
+            .add_systems(FixedUpdate, tick_scenario_frame);
 
         tick(&mut app);
         assert_eq!(app.world().resource::<ScenarioFrame>().0, 1);
@@ -441,14 +441,14 @@ mod tests {
 
     fn exit_test_app(current_frame: u32, max_frames: u32) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<AppExit>();
-        app.insert_resource(ScenarioFrame(current_frame));
-        app.insert_resource(ScenarioConfig {
-            definition: make_scenario(max_frames),
-        });
-        app.init_resource::<ExitReceived>();
-        app.add_systems(FixedUpdate, (check_frame_limit, capture_exit).chain());
+        app.add_plugins(MinimalPlugins)
+            .add_message::<AppExit>()
+            .insert_resource(ScenarioFrame(current_frame))
+            .insert_resource(ScenarioConfig {
+                definition: make_scenario(max_frames),
+            })
+            .init_resource::<ExitReceived>()
+            .add_systems(FixedUpdate, (check_frame_limit, capture_exit).chain());
         app
     }
 
@@ -750,8 +750,8 @@ mod tests {
     #[test]
     fn enforce_frozen_positions_resets_entity_to_frozen_target_each_tick() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, enforce_frozen_positions);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(FixedUpdate, enforce_frozen_positions);
 
         let entity = app
             .world_mut()
@@ -792,8 +792,8 @@ mod tests {
     #[test]
     fn tag_game_entities_tags_bolt_entity_with_scenario_tag_bolt() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, tag_game_entities);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, tag_game_entities);
 
         let entity = app
             .world_mut()
@@ -839,8 +839,8 @@ mod tests {
     #[test]
     fn tag_game_entities_tags_breaker_entity_with_scenario_tag_breaker() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, tag_game_entities);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, tag_game_entities);
 
         let entity = app
             .world_mut()
@@ -889,10 +889,10 @@ mod tests {
                 actions: vec![ScenarioGameAction::Bump],
             }],
         });
-        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)));
-        app.insert_resource(ScenarioFrame(10));
-        app.insert_resource(InputActions::default());
-        app.add_systems(Update, inject_scenario_input);
+        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)))
+            .insert_resource(ScenarioFrame(10))
+            .insert_resource(InputActions::default())
+            .add_systems(Update, inject_scenario_input);
 
         app.update();
 
@@ -931,10 +931,10 @@ mod tests {
                 actions: vec![ScenarioGameAction::Bump],
             }],
         });
-        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)));
-        app.insert_resource(ScenarioFrame(5));
-        app.insert_resource(InputActions::default());
-        app.add_systems(Update, inject_scenario_input);
+        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)))
+            .insert_resource(ScenarioFrame(5))
+            .insert_resource(InputActions::default())
+            .add_systems(Update, inject_scenario_input);
 
         app.update();
 
@@ -1021,11 +1021,11 @@ mod tests {
                 actions: vec![ScenarioGameAction::Bump],
             }],
         });
-        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)));
-        app.insert_resource(ScenarioFrame(5));
-        app.insert_resource(InputActions::default());
-        app.init_resource::<ScenarioStats>();
-        app.add_systems(Update, inject_scenario_input);
+        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)))
+            .insert_resource(ScenarioFrame(5))
+            .insert_resource(InputActions::default())
+            .init_resource::<ScenarioStats>()
+            .add_systems(Update, inject_scenario_input);
 
         app.update();
 
@@ -1049,12 +1049,12 @@ mod tests {
         use crate::invariants::{ScenarioStats, ScenarioTagBolt, check_bolt_in_bounds};
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ViolationLog::default());
-        app.insert_resource(ScenarioFrame::default());
-        app.insert_resource(breaker::shared::PlayfieldConfig::default());
-        app.init_resource::<ScenarioStats>();
-        app.add_systems(FixedUpdate, check_bolt_in_bounds);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog::default())
+            .insert_resource(ScenarioFrame::default())
+            .insert_resource(breaker::shared::PlayfieldConfig::default())
+            .init_resource::<ScenarioStats>()
+            .add_systems(FixedUpdate, check_bolt_in_bounds);
 
         app.world_mut().spawn((
             ScenarioTagBolt,
@@ -1082,10 +1082,10 @@ mod tests {
         use crate::invariants::ScenarioStats;
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ScenarioFrame(0));
-        app.init_resource::<ScenarioStats>();
-        app.add_systems(FixedUpdate, tick_scenario_frame);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ScenarioFrame(0))
+            .init_resource::<ScenarioStats>()
+            .add_systems(FixedUpdate, tick_scenario_frame);
 
         for _ in 0..10 {
             tick(&mut app);
@@ -1110,9 +1110,9 @@ mod tests {
         use crate::invariants::ScenarioStats;
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<ScenarioStats>();
-        app.add_systems(Update, tag_game_entities);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<ScenarioStats>()
+            .add_systems(Update, tag_game_entities);
 
         // Run the system (simulates entering Playing)
         app.update();
@@ -1133,10 +1133,10 @@ mod tests {
     #[test]
     fn restart_run_on_end_transitions_to_main_menu() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(StatesPlugin);
-        app.init_state::<GameState>();
-        app.add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(StatesPlugin)
+            .init_state::<GameState>()
+            .add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
 
         // Drive into RunEnd
         app.world_mut()

@@ -114,10 +114,10 @@ mod tests {
 
     fn integration_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<InputActions>();
-        app.add_systems(FixedUpdate, move_breaker);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<InputActions>()
+            .add_systems(FixedUpdate, move_breaker);
         app
     }
 

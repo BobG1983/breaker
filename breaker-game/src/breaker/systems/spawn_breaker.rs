@@ -93,12 +93,12 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
-        app.add_systems(Startup, spawn_breaker);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_systems(Startup, spawn_breaker);
         app
     }
 
@@ -170,11 +170,11 @@ mod tests {
     #[test]
     fn reset_breaker_restores_state() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>();
 
         // Spawn breaker with modified state (including active bump window)
         let config = BreakerConfig::default();

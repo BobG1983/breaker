@@ -58,8 +58,7 @@ impl PluginGroup for Game {
             // DebugPlugin depends on GizmoConfigStore (from GizmoPlugin in
             // DefaultPlugins). In headless mode GizmoPlugin may be disabled,
             // and debug overlays serve no purpose without a window anyway.
-            builder = builder.disable::<DebugPlugin>();
-            builder = builder.add(HeadlessAssetsPlugin);
+            builder = builder.disable::<DebugPlugin>().add(HeadlessAssetsPlugin);
         } else {
             builder = builder.add(RenderSetupPlugin);
         }
@@ -78,9 +77,9 @@ struct HeadlessAssetsPlugin;
 
 impl Plugin for HeadlessAssetsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(bevy::mesh::MeshPlugin);
-        app.init_asset::<ColorMaterial>();
-        app.add_plugins(bevy::text::TextPlugin);
+        app.add_plugins(bevy::mesh::MeshPlugin)
+            .init_asset::<ColorMaterial>()
+            .add_plugins(bevy::text::TextPlugin);
     }
 }
 
@@ -91,8 +90,8 @@ struct RenderSetupPlugin;
 
 impl Plugin for RenderSetupPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()));
-        app.add_systems(Startup, spawn_camera);
+        app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()))
+            .add_systems(Startup, spawn_camera);
     }
 }
 
@@ -122,8 +121,8 @@ mod tests {
             bevy::state::app::StatesPlugin,
             bevy::asset::AssetPlugin::default(),
             bevy::input::InputPlugin,
-        ));
-        app.add_plugins(game.build().disable::<DebugPlugin>());
+        ))
+        .add_plugins(game.build().disable::<DebugPlugin>());
         app
     }
 

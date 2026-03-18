@@ -77,12 +77,12 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<RunState>();
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BoltConfig>()
+            .init_resource::<BreakerConfig>()
+            .init_resource::<RunState>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>();
         app
     }
 

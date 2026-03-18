@@ -104,12 +104,12 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<CellTypeDefinition>();
-        app.init_asset::<ColorMaterial>();
-        app.init_resource::<CellTypeRegistry>();
-        app.init_resource::<Assets<ColorMaterial>>();
-        app.add_systems(Update, propagate_cell_type_changes);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<CellTypeDefinition>()
+            .init_asset::<ColorMaterial>()
+            .init_resource::<CellTypeRegistry>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_systems(Update, propagate_cell_type_changes);
         app
     }
 

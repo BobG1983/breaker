@@ -42,11 +42,11 @@ mod tests {
 
     fn test_app(selection_index: usize) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(RunSetupSelection {
-            index: selection_index,
-        });
-        app.add_systems(Update, update_run_setup_colors);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(RunSetupSelection {
+                index: selection_index,
+            })
+            .add_systems(Update, update_run_setup_colors);
         app
     }
 

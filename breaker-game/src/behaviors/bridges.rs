@@ -96,16 +96,16 @@ mod tests {
 
         fn test_app() -> App {
             let mut app = App::new();
-            app.add_plugins(MinimalPlugins);
-            app.add_message::<BoltLost>();
-            app.add_message::<RunLost>();
-            app.insert_resource(ActiveBehaviors(vec![(
-                Trigger::BoltLost,
-                Consequence::LoseLife,
-            )]));
-            app.insert_resource(SendBoltLost(false));
-            app.add_observer(crate::behaviors::consequences::life_lost::handle_life_lost);
-            app.add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BoltLost>()
+                .add_message::<RunLost>()
+                .insert_resource(ActiveBehaviors(vec![(
+                    Trigger::BoltLost,
+                    Consequence::LoseLife,
+                )]))
+                .insert_resource(SendBoltLost(false))
+                .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
+                .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
             app
         }
 
@@ -149,20 +149,20 @@ mod tests {
 
         fn test_app() -> App {
             let mut app = App::new();
-            app.add_plugins(MinimalPlugins);
-            app.add_message::<BoltLost>();
-            app.add_message::<ApplyTimePenalty>();
-            app.insert_resource(ActiveBehaviors(vec![(
-                Trigger::BoltLost,
-                Consequence::TimePenalty(5.0),
-            )]));
-            app.insert_resource(SendBoltLost(false));
-            app.init_resource::<CapturedPenalties>();
-            app.add_observer(crate::behaviors::consequences::time_penalty::handle_time_penalty);
-            app.add_systems(
-                FixedUpdate,
-                (send_bolt_lost, bridge_bolt_lost, capture_penalties).chain(),
-            );
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BoltLost>()
+                .add_message::<ApplyTimePenalty>()
+                .insert_resource(ActiveBehaviors(vec![(
+                    Trigger::BoltLost,
+                    Consequence::TimePenalty(5.0),
+                )]))
+                .insert_resource(SendBoltLost(false))
+                .init_resource::<CapturedPenalties>()
+                .add_observer(crate::behaviors::consequences::time_penalty::handle_time_penalty)
+                .add_systems(
+                    FixedUpdate,
+                    (send_bolt_lost, bridge_bolt_lost, capture_penalties).chain(),
+                );
             app
         }
 
@@ -209,17 +209,17 @@ mod tests {
 
         fn test_app() -> App {
             let mut app = App::new();
-            app.add_plugins(MinimalPlugins);
-            app.add_message::<BumpPerformed>();
-            app.add_message::<SpawnAdditionalBolt>();
-            app.insert_resource(ActiveBehaviors(vec![(
-                Trigger::PerfectBump,
-                Consequence::SpawnBolt,
-            )]));
-            app.insert_resource(SendBump(None));
-            app.init_resource::<CapturedSpawnBolt>();
-            app.add_observer(crate::behaviors::consequences::spawn_bolt::handle_spawn_bolt);
-            app.add_systems(FixedUpdate, (send_bump, bridge_bump, capture_spawn).chain());
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BumpPerformed>()
+                .add_message::<SpawnAdditionalBolt>()
+                .insert_resource(ActiveBehaviors(vec![(
+                    Trigger::PerfectBump,
+                    Consequence::SpawnBolt,
+                )]))
+                .insert_resource(SendBump(None))
+                .init_resource::<CapturedSpawnBolt>()
+                .add_observer(crate::behaviors::consequences::spawn_bolt::handle_spawn_bolt)
+                .add_systems(FixedUpdate, (send_bump, bridge_bump, capture_spawn).chain());
             app
         }
 
@@ -256,17 +256,17 @@ mod tests {
 
         fn test_app() -> App {
             let mut app = App::new();
-            app.add_plugins(MinimalPlugins);
-            app.add_message::<BumpPerformed>();
-            app.add_message::<RunLost>();
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BumpPerformed>()
+                .add_message::<RunLost>();
             // BumpWhiff triggers LoseLife (for testing bridge_bump dispatch)
             app.insert_resource(ActiveBehaviors(vec![
                 (Trigger::PerfectBump, Consequence::BoltSpeedBoost(1.5)),
                 (Trigger::EarlyBump, Consequence::LoseLife),
-            ]));
-            app.insert_resource(SendBump(None));
-            app.add_observer(crate::behaviors::consequences::life_lost::handle_life_lost);
-            app.add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
+            ]))
+            .insert_resource(SendBump(None))
+            .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
+            .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
             app
         }
 

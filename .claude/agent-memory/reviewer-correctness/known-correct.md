@@ -41,4 +41,7 @@ type: reference
 - `app.rs` `headless_app()` test helper uses `Game::default()` (headless=false, includes RenderSetupPlugin) — intentional; `camera_spawns` test verifies camera spawning.
 - `runner.rs` `build_app(headless=true)` correctly uses `Game::headless()`, `build_app(headless=false)` correctly uses `Game::default()`.
 - `RenderSetupPlugin` is added last in the PluginGroupBuilder chain — correct; Startup ordering does not matter here.
-- `build_app(headless=true)` in runner.rs uses `MinimalPlugins + StatesPlugin + AssetPlugin + InputPlugin + MeshPlugin + init_asset::<ColorMaterial>() + TextPlugin + TimeUpdateStrategy::ManualDuration + Game::headless()` — reviewed 2026-03-18, confirmed correct. No missing plugins, no spurious render hacks needed.
+- `build_app(headless=true)` in runner.rs uses `MinimalPlugins + StatesPlugin + AssetPlugin + InputPlugin + MeshPlugin + TimeUpdateStrategy::ManualDuration + Game::headless()` — reviewed 2026-03-18. `init_asset::<ColorMaterial>()` and `TextPlugin` moved into `HeadlessAssetsPlugin` inside `Game::headless()`. Confirmed correct. No missing plugins, no spurious render hacks needed.
+- `HeadlessAssetsPlugin` in game.rs added at end of PluginGroupBuilder — ordering safe because asset types are registered during plugin build (before any update tick). AssetPlugin is always added before Game in runner.rs. Correct.
+- `scenario_log_plugin()` return type `LogPlugin` works for both `app.add_plugins()` (headless) and `defaults.set()` (visual with DefaultPlugins). Correct.
+- Double-disable of DebugPlugin in game.rs test_app(Game::headless()): Game::headless().build() disables it; test calls disable() again. Bevy 0.18.1 disable() only panics if plugin absent, not if already disabled. Benign.
