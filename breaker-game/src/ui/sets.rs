@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// System sets exported by the UI domain for cross-domain ordering.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum UiSystems {
+pub(crate) enum UiSystems {
     /// The `spawn_timer_hud` system — spawns the timer display on node entry.
     SpawnTimerHud,
 }

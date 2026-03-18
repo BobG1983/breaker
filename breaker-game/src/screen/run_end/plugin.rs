@@ -9,7 +9,7 @@ use super::{
 use crate::shared::GameState;
 
 /// Plugin for the run-end screen.
-pub struct RunEndPlugin;
+pub(crate) struct RunEndPlugin;
 
 impl Plugin for RunEndPlugin {
     fn build(&self, app: &mut App) {

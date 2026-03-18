@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Returns to the main menu when the player confirms on the run-end screen.
-pub fn handle_run_end_input(
+pub(crate) fn handle_run_end_input(
     actions: Res<InputActions>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {

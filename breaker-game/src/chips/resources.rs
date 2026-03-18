@@ -9,7 +9,7 @@ use super::definition::ChipDefinition;
 /// The selection screen picks from this pool. Populated during loading
 /// by `seed_chip_registry`.
 #[derive(Resource, Debug, Default)]
-pub struct ChipRegistry {
+pub(crate) struct ChipRegistry {
     /// All available chips (amps + augments + overclocks combined).
     pub chips: Vec<ChipDefinition>,
 }

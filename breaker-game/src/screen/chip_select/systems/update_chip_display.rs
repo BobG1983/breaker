@@ -9,7 +9,7 @@ use crate::screen::chip_select::{
 };
 
 /// Updates the timer display text and card border colors based on selection.
-pub fn update_chip_display(
+pub(crate) fn update_chip_display(
     config: Res<ChipSelectConfig>,
     timer: Res<ChipSelectTimer>,
     selection: Res<ChipSelectSelection>,
@@ -18,9 +18,8 @@ pub fn update_chip_display(
 ) {
     // Update timer text
     for mut text in &mut timer_text {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let display_secs = timer.remaining.ceil().max(0.0) as u32;
-        **text = format!("{display_secs}");
+        let display_secs = timer.remaining.ceil().max(0.0);
+        **text = format!("{display_secs:.0}");
     }
 
     // Update card border colors

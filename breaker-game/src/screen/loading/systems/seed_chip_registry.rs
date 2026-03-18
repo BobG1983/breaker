@@ -10,7 +10,7 @@ use crate::{
 
 /// Iterates loaded `ChipDefinition` assets from all three collections
 /// (amps, augments, overclocks) and builds the `ChipRegistry` resource.
-pub fn seed_chip_registry(
+pub(crate) fn seed_chip_registry(
     collection: Option<Res<DefaultsCollection>>,
     chip_assets: Res<Assets<ChipDefinition>>,
     mut commands: Commands,

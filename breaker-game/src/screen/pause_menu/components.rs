@@ -4,11 +4,11 @@ use bevy::prelude::*;
 
 /// Marker component on the root pause menu UI entity.
 #[derive(Component)]
-pub struct PauseMenuScreen;
+pub(crate) struct PauseMenuScreen;
 
 /// Identifies a pause menu item and its action.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum PauseMenuItem {
+pub(crate) enum PauseMenuItem {
     /// Resume gameplay.
     Resume,
     /// Quit to main menu.
@@ -16,4 +16,5 @@ pub enum PauseMenuItem {
 }
 
 /// All pause menu items in display order.
-pub const PAUSE_MENU_ITEMS: [PauseMenuItem; 2] = [PauseMenuItem::Resume, PauseMenuItem::Quit];
+pub(super) const PAUSE_MENU_ITEMS: [PauseMenuItem; 2] =
+    [PauseMenuItem::Resume, PauseMenuItem::Quit];

@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 
 /// Generic cleanup system — despawns all entities with the given marker component.
-pub fn cleanup_entities<T: Component>(mut commands: Commands, query: Query<Entity, With<T>>) {
+pub(crate) fn cleanup_entities<T: Component>(
+    mut commands: Commands,
+    query: Query<Entity, With<T>>,
+) {
     for entity in &query {
         commands.entity(entity).despawn();
     }

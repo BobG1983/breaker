@@ -8,5 +8,5 @@ mod plugin;
 mod resources;
 mod systems;
 
-pub use plugin::RecordingPlugin;
-pub use resources::RecordingConfig;
+pub(crate) use plugin::RecordingPlugin;
+pub(crate) use resources::RecordingConfig;

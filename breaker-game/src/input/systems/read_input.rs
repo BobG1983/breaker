@@ -33,7 +33,9 @@ pub fn read_input_actions(
         actions.0.push(GameAction::MoveRight);
     }
 
-    // One-shot key presses via messages (FixedUpdate-safe, double-buffered)
+    // One-shot key presses via messages (FixedUpdate-safe, double-buffered).
+    // Wall-clock time (Time<Real>) for double-tap detection — players expect the
+    // tap window to track real time, not simulation time.
     let now = time.elapsed_secs_f64();
 
     for event in key_events.read() {
@@ -58,6 +60,11 @@ pub fn read_input_actions(
             } else {
                 double_tap.last_left_tap = now;
             }
+        }
+
+        // Pause toggle
+        if key == KeyCode::Escape && !actions.active(GameAction::TogglePause) {
+            actions.0.push(GameAction::TogglePause);
         }
 
         // Menu actions
@@ -276,6 +283,18 @@ mod tests {
         app.update();
         let actions = app.world().resource::<InputActions>();
         assert!(actions.active(GameAction::MenuConfirm));
+    }
+
+    #[test]
+    fn escape_key_produces_toggle_pause_action() {
+        let mut app = test_app();
+        send_key_press(&mut app, KeyCode::Escape);
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(
+            actions.active(GameAction::TogglePause),
+            "Escape key should produce GameAction::TogglePause"
+        );
     }
 
     #[test]

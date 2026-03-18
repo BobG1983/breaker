@@ -5,6 +5,10 @@ use breaker_derive::GameConfig;
 use serde::Deserialize;
 
 /// Tracks timestamps for double-tap dash detection.
+///
+/// Uses wall-clock time (`Time<Real>`) rather than fixed-update time because
+/// double-tap is a UI-feel mechanic: players expect the tap window to track
+/// real time regardless of fixed-timestep cadence or pause state.
 #[derive(Resource, Debug)]
 pub struct DoubleTapState {
     /// Wall-clock time of the last left-direction press.
@@ -45,6 +49,8 @@ pub enum GameAction {
     MenuRight,
     /// Menu confirm selection.
     MenuConfirm,
+    /// Toggle pause state.
+    TogglePause,
 }
 
 /// Active actions for the current frame.

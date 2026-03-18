@@ -9,7 +9,7 @@ use crate::{
 
 /// Watches for `AssetEvent::Modified` on the playfield defaults asset and
 /// re-seeds `PlayfieldConfig` from the updated asset data.
-pub fn propagate_playfield_defaults(
+pub(crate) fn propagate_playfield_defaults(
     mut events: MessageReader<AssetEvent<PlayfieldDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<PlayfieldDefaults>>,

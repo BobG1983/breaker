@@ -13,8 +13,7 @@ use serde::Deserialize;
 
 /// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
 #[must_use]
-#[allow(clippy::missing_const_for_fn)]
-pub fn color_from_rgb(rgb: [f32; 3]) -> Color {
+pub const fn color_from_rgb(rgb: [f32; 3]) -> Color {
     Color::srgb(rgb[0], rgb[1], rgb[2])
 }
 
@@ -76,7 +75,7 @@ impl PlayfieldConfig {
 
     /// Background clear color as a Bevy [`Color`].
     #[must_use]
-    pub fn background_color(&self) -> Color {
+    pub const fn background_color(&self) -> Color {
         color_from_rgb(self.background_color_rgb)
     }
 }

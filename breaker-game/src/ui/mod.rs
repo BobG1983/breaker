@@ -1,12 +1,12 @@
 //! UI domain plugin — HUD, menus, chip selection screen.
 
-pub mod components;
-pub mod messages;
+pub(crate) mod components;
+pub(crate) mod messages;
 mod plugin;
-pub mod resources;
-pub mod sets;
-pub mod systems;
+pub(crate) mod resources;
+pub(crate) mod sets;
+pub(crate) mod systems;
 
-pub use plugin::UiPlugin;
-pub use resources::{TimerUiConfig, TimerUiDefaults};
-pub use sets::UiSystems;
+pub(crate) use plugin::UiPlugin;
+pub(crate) use resources::{TimerUiConfig, TimerUiDefaults};
+pub(crate) use sets::UiSystems;

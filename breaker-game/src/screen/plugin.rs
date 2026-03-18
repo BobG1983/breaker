@@ -33,7 +33,7 @@ use crate::{
 ///
 /// Registers the game state machine, sub-states, asset loading pipeline,
 /// and cleanup systems that run on state transitions.
-pub struct ScreenPlugin;
+pub(crate) struct ScreenPlugin;
 
 impl Plugin for ScreenPlugin {
     fn build(&self, app: &mut App) {

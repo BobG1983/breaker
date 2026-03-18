@@ -8,15 +8,14 @@ use crate::{
 };
 
 /// Updates the timer display text and color based on remaining time.
-pub fn update_timer_display(
+pub(crate) fn update_timer_display(
     timer: Res<NodeTimer>,
     config: Res<TimerUiConfig>,
     mut query: Query<(&mut Text, &mut TextColor), With<NodeTimerDisplay>>,
 ) {
     for (mut text, mut color) in &mut query {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let secs = timer.remaining.ceil().max(0.0) as u32;
-        text.0 = format!("{secs}");
+        let display_secs = timer.remaining.ceil().max(0.0);
+        text.0 = format!("{display_secs:.0}");
 
         let fraction = if timer.total > 0.0 {
             timer.remaining / timer.total

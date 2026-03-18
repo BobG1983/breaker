@@ -9,7 +9,7 @@ use crate::interpolate::components::{InterpolateTransform, PhysicsTranslation};
 /// Runs in `PostUpdate` (every render frame). Uses `Time<Fixed>::overstep_fraction()`
 /// as the alpha value to lerp between previous and current authoritative positions.
 /// Preserves the z-coordinate to avoid disrupting render ordering.
-pub fn interpolate_transform(
+pub(crate) fn interpolate_transform(
     time: Res<Time<Fixed>>,
     mut query: Query<(&mut Transform, &PhysicsTranslation), With<InterpolateTransform>>,
 ) {

@@ -9,7 +9,7 @@ use crate::{
 
 /// Watches for `AssetEvent::Modified` on the timer UI defaults asset and
 /// re-seeds `TimerUiConfig` from the updated asset data.
-pub fn propagate_timer_ui_defaults(
+pub(crate) fn propagate_timer_ui_defaults(
     mut events: MessageReader<AssetEvent<TimerUiDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<TimerUiDefaults>>,

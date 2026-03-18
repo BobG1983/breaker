@@ -9,7 +9,7 @@ use super::{
 use crate::shared::{GameState, PlayingState};
 
 /// Plugin for the pause menu overlay.
-pub struct PauseMenuPlugin;
+pub(crate) struct PauseMenuPlugin;
 
 impl Plugin for PauseMenuPlugin {
     fn build(&self, app: &mut App) {

@@ -1,11 +1,11 @@
 //! Physics domain plugin — CCD collision detection and collision response.
 
-pub mod filters;
-pub mod messages;
+pub(crate) mod filters;
+pub(crate) mod messages;
 mod plugin;
-pub mod queries;
-pub mod sets;
-pub mod systems;
+pub(crate) mod queries;
+pub(crate) mod sets;
+pub(crate) mod systems;
 
-pub use plugin::PhysicsPlugin;
-pub use sets::PhysicsSystems;
+pub(crate) use plugin::PhysicsPlugin;
+pub(crate) use sets::PhysicsSystems;

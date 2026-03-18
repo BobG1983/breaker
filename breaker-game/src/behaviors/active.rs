@@ -9,13 +9,13 @@ use super::definition::{BehaviorBinding, Consequence, Trigger};
 /// Bridge systems query this resource to look up which consequences to fire
 /// for a given trigger.
 #[derive(Resource, Debug, Default)]
-pub struct ActiveBehaviors(pub Vec<(Trigger, Consequence)>);
+pub(crate) struct ActiveBehaviors(pub Vec<(Trigger, Consequence)>);
 
 impl ActiveBehaviors {
     /// Builds `ActiveBehaviors` by flattening multi-trigger bindings.
     ///
     /// Each binding with N triggers produces N `(trigger, consequence)` pairs.
-    pub fn from_bindings(behaviors: &[BehaviorBinding]) -> Self {
+    pub(crate) fn from_bindings(behaviors: &[BehaviorBinding]) -> Self {
         let mut bindings = Vec::new();
         for behavior in behaviors {
             for trigger in &behavior.triggers {
@@ -28,7 +28,7 @@ impl ActiveBehaviors {
 
 impl ActiveBehaviors {
     /// Returns all consequences bound to a given trigger.
-    pub fn consequences_for(&self, trigger: Trigger) -> impl Iterator<Item = &Consequence> {
+    pub(crate) fn consequences_for(&self, trigger: Trigger) -> impl Iterator<Item = &Consequence> {
         self.0
             .iter()
             .filter(move |(t, _)| *t == trigger)
@@ -37,13 +37,13 @@ impl ActiveBehaviors {
 
     /// Whether any behaviors are bound to a given trigger.
     #[must_use]
-    pub fn has_trigger(&self, trigger: Trigger) -> bool {
+    pub(crate) fn has_trigger(&self, trigger: Trigger) -> bool {
         self.0.iter().any(|(t, _)| *t == trigger)
     }
 
     /// Whether any bump-related triggers are bound.
     #[must_use]
-    pub fn has_trigger_any_bump(&self) -> bool {
+    pub(crate) fn has_trigger_any_bump(&self) -> bool {
         self.0.iter().any(|(t, _)| {
             matches!(
                 t,

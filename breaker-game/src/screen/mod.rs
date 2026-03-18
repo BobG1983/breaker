@@ -1,12 +1,12 @@
 //! Screen domain plugin — state registration, transitions, and cleanup.
 
-pub mod chip_select;
-pub mod loading;
-pub mod main_menu;
-pub mod pause_menu;
+pub(crate) mod chip_select;
+pub(crate) mod loading;
+pub(crate) mod main_menu;
+pub(crate) mod pause_menu;
 mod plugin;
-pub mod run_end;
-pub mod run_setup;
-pub mod systems;
+pub(crate) mod run_end;
+pub(crate) mod run_setup;
+pub(crate) mod systems;
 
-pub use plugin::ScreenPlugin;
+pub(crate) use plugin::ScreenPlugin;

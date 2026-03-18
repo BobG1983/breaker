@@ -8,7 +8,7 @@ use crate::{shared::GameState, wall::systems::spawn_walls};
 ///
 /// Owns wall entities (left, right, ceiling boundaries).
 /// Spawns walls on node entry.
-pub struct WallPlugin;
+pub(crate) struct WallPlugin;
 
 impl Plugin for WallPlugin {
     fn build(&self, app: &mut App) {

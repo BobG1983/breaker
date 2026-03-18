@@ -8,11 +8,13 @@ use super::resources::DebugOverlays;
 ///
 /// Provides an in-game debug panel with overlay toggles, state inspection,
 /// and FPS display. Only active when the `dev` feature is enabled.
-pub struct DebugPlugin;
+pub(crate) struct DebugPlugin;
 
 impl Plugin for DebugPlugin {
-    #[allow(unused_variables)]
     fn build(&self, app: &mut App) {
+        // Silence unused_variables when `dev` feature is disabled (non-default builds)
+        let _ = &app;
+
         #[cfg(feature = "dev")]
         {
             use bevy::diagnostic::FrameTimeDiagnosticsPlugin;

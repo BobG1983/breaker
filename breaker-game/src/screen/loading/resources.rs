@@ -19,7 +19,7 @@ use crate::{
 /// Asset collection for all defaults — automatically loaded during
 /// [`GameState::Loading`] by `bevy_asset_loader`.
 #[derive(AssetCollection, Resource)]
-pub struct DefaultsCollection {
+pub(crate) struct DefaultsCollection {
     /// Handle for playfield defaults.
     #[asset(path = "config/defaults.playfield.ron")]
     pub playfield: Handle<PlayfieldDefaults>,

@@ -8,7 +8,7 @@ use crate::interpolate::components::{InterpolateTransform, PhysicsTranslation};
 ///
 /// Runs in `FixedPostUpdate` — after all `FixedUpdate` systems complete.
 /// Stores the new `transform.translation` into `physics.current`.
-pub fn store_authoritative(
+pub(crate) fn store_authoritative(
     mut query: Query<(&Transform, &mut PhysicsTranslation), With<InterpolateTransform>>,
 ) {
     for (transform, mut physics) in &mut query {

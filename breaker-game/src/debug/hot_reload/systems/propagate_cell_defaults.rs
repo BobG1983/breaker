@@ -9,7 +9,7 @@ use crate::{
 
 /// Watches for `AssetEvent::Modified` on the cells defaults asset and
 /// re-seeds `CellConfig` from the updated asset data.
-pub fn propagate_cell_defaults(
+pub(crate) fn propagate_cell_defaults(
     mut events: MessageReader<AssetEvent<CellDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<CellDefaults>>,

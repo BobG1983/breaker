@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Reads the loaded `TimerUiDefaults` asset and inserts `TimerUiConfig`.
-pub fn seed_timer_ui_config(
+pub(crate) fn seed_timer_ui_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<TimerUiDefaults>>,
     mut commands: Commands,

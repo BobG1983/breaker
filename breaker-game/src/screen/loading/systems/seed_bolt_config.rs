@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Reads the loaded `BoltDefaults` asset and inserts `BoltConfig`.
-pub fn seed_bolt_config(
+pub(crate) fn seed_bolt_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<BoltDefaults>>,
     mut commands: Commands,

@@ -15,7 +15,7 @@ use crate::{
 ///
 /// Owns collision detection and collision response systems.
 /// Runs CCD collision in `FixedUpdate`.
-pub struct PhysicsPlugin;
+pub(crate) struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {

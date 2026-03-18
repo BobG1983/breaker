@@ -11,7 +11,7 @@ use crate::{
 ///
 /// No floor wall — bolt-lost handles that case separately.
 /// Wall thickness is loaded from [`PlayfieldConfig::wall_half_thickness`].
-pub fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
+pub(crate) fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
     let half_width = playfield.width / 2.0;
     let half_height = playfield.height / 2.0;
     let wall_ht = playfield.wall_half_thickness();

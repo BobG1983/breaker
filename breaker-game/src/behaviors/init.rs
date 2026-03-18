@@ -22,7 +22,10 @@ use crate::{
 /// Each `Some` field in `overrides` replaces the corresponding field in `config`.
 /// Used by both `apply_archetype_config_overrides` (at init) and hot-reload
 /// propagation (at runtime).
-pub const fn apply_stat_overrides(config: &mut BreakerConfig, overrides: &BreakerStatOverrides) {
+pub(crate) const fn apply_stat_overrides(
+    config: &mut BreakerConfig,
+    overrides: &BreakerStatOverrides,
+) {
     if let Some(width) = overrides.width {
         config.width = width;
     }
@@ -44,7 +47,7 @@ pub const fn apply_stat_overrides(config: &mut BreakerConfig, overrides: &Breake
 ///
 /// Runs `OnEnter(GameState::Playing)` BEFORE `init_breaker_params` so that
 /// stamped components reflect the overridden config values.
-pub fn apply_archetype_config_overrides(
+pub(crate) fn apply_archetype_config_overrides(
     selected: Res<SelectedArchetype>,
     registry: Res<ArchetypeRegistry>,
     defaults: Res<Assets<BreakerDefaults>>,
@@ -70,7 +73,7 @@ pub fn apply_archetype_config_overrides(
 /// - Inserts `LivesCount` if any binding uses `LoseLife`
 /// - Applies `BoltSpeedBoost` bindings as multiplier components
 /// - Builds `ActiveBehaviors` with ALL bindings for runtime bridge dispatch
-pub fn init_archetype(
+pub(crate) fn init_archetype(
     mut commands: Commands,
     selected: Res<SelectedArchetype>,
     registry: Res<ArchetypeRegistry>,

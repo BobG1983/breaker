@@ -15,7 +15,7 @@ use super::{
 use crate::shared::GameState;
 
 /// Plugin for the loading screen — UI and config seeding.
-pub struct LoadingPlugin;
+pub(crate) struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {

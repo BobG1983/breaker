@@ -20,9 +20,8 @@ pub struct BoltVelocity {
 
 impl BoltVelocity {
     /// Creates a new bolt velocity.
-    #[allow(clippy::missing_const_for_fn)]
     #[must_use]
-    pub fn new(x: f32, y: f32) -> Self {
+    pub const fn new(x: f32, y: f32) -> Self {
         Self {
             value: Vec2::new(x, y),
         }

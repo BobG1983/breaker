@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 /// The category of a chip.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ChipKind {
+pub(crate) enum ChipKind {
     /// Passive bolt chip.
     Amp,
     /// Passive breaker chip.
@@ -16,7 +16,7 @@ pub enum ChipKind {
 
 /// A single chip definition loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub struct ChipDefinition {
+pub(crate) struct ChipDefinition {
     /// Display name shown on the chip card.
     pub name: String,
     /// Category discriminator.

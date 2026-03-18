@@ -9,7 +9,7 @@ use crate::screen::{
 
 /// Watches for `AssetEvent::Modified` on the main menu defaults asset and
 /// re-seeds `MainMenuConfig` from the updated asset data.
-pub fn propagate_main_menu_defaults(
+pub(crate) fn propagate_main_menu_defaults(
     mut events: MessageReader<AssetEvent<MainMenuDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<MainMenuDefaults>>,

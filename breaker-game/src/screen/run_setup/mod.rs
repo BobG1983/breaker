@@ -2,8 +2,8 @@
 
 mod components;
 mod plugin;
-pub mod resources;
+pub(crate) mod resources;
 mod systems;
 
-pub use components::RunSetupScreen;
-pub use plugin::RunSetupPlugin;
+pub(crate) use components::RunSetupScreen;
+pub(crate) use plugin::RunSetupPlugin;

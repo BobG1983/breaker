@@ -29,8 +29,10 @@ pub fn spawn_cells_from_grid(
     let step_x = cell_width + config.padding_x;
     let step_y = cell_height + config.padding_y;
 
-    #[allow(clippy::cast_precision_loss)]
-    let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
+    let grid_width = step_x.mul_add(
+        f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
+        -config.padding_x,
+    );
     let start_x = -grid_width / 2.0 + cell_width / 2.0;
     let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
 
@@ -47,10 +49,10 @@ pub fn spawn_cells_from_grid(
                 continue;
             };
 
-            #[allow(clippy::cast_precision_loss)]
-            let x = (col_idx as f32).mul_add(step_x, start_x);
-            #[allow(clippy::cast_precision_loss)]
-            let y = (row_idx as f32).mul_add(-step_y, start_y);
+            let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
+            let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
+            let x = col_f.mul_add(step_x, start_x);
+            let y = row_f.mul_add(-step_y, start_y);
 
             let mut entity = commands.spawn((
                 Cell,
@@ -337,8 +339,7 @@ mod tests {
 
         // Grid should be centered: sum of all x positions per row should be ~0
         // With 3 columns the positions should be symmetric around 0
-        #[allow(clippy::cast_precision_loss)]
-        let cols_f = layout.cols as f32;
+        let cols_f = f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX));
         let grid_width = step_x.mul_add(cols_f, -config.padding_x);
         let expected_start = -grid_width / 2.0 + config.width / 2.0;
         let expected_end = step_x.mul_add(cols_f - 1.0, expected_start);
@@ -360,8 +361,10 @@ mod tests {
         let mut app = test_app(layout.clone());
         app.update();
 
-        #[allow(clippy::cast_precision_loss)]
-        let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
+        let grid_width = step_x.mul_add(
+            f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
+            -config.padding_x,
+        );
         let start_x = -grid_width / 2.0 + config.width / 2.0;
         let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
 
@@ -408,8 +411,10 @@ mod tests {
         let mut app = test_app(layout.clone());
         app.update();
 
-        #[allow(clippy::cast_precision_loss)]
-        let grid_width = step_x.mul_add(layout.cols as f32, -config.padding_x);
+        let grid_width = step_x.mul_add(
+            f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
+            -config.padding_x,
+        );
         let start_x = -grid_width / 2.0 + config.width / 2.0;
         let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
 

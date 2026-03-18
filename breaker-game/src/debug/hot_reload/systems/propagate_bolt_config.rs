@@ -15,7 +15,7 @@ use crate::bolt::{
 /// Runs in `Update` in the `HotReloadSystems::PropagateConfig` system set,
 /// conditioned on `resource_changed::<BoltConfig>`. Unlike `init_bolt_params`,
 /// this system has no `Without<BoltBaseSpeed>` filter — it always overwrites.
-pub fn propagate_bolt_config(
+pub(crate) fn propagate_bolt_config(
     mut commands: Commands,
     config: Res<BoltConfig>,
     query: Query<Entity, With<Bolt>>,

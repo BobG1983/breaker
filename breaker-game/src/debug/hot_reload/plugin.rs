@@ -19,7 +19,7 @@ use crate::{bolt::BoltConfig, breaker::BreakerConfig, shared::GameState};
 /// Propagation runs in two ordered layers during `Update` while `GameState::Playing`:
 /// 1. `PropagateDefaults` — asset changes re-seed Config resources
 /// 2. `PropagateConfig` — Config changes force-overwrite entity components
-pub struct HotReloadPlugin;
+pub(crate) struct HotReloadPlugin;
 
 impl Plugin for HotReloadPlugin {
     fn build(&self, app: &mut App) {

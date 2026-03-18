@@ -15,7 +15,7 @@ use crate::{
 const MAX_CARDS: usize = 3;
 
 /// Spawns the chip selection UI with cards from the registry and a countdown timer.
-pub fn spawn_chip_select(
+pub(crate) fn spawn_chip_select(
     mut commands: Commands,
     config: Res<ChipSelectConfig>,
     registry: Res<ChipRegistry>,

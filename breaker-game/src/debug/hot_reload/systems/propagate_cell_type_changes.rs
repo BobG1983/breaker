@@ -14,7 +14,7 @@ use crate::{
 /// `CellTypeRegistry`, and updates matching live cell entities.
 ///
 /// Updated per-cell: `CellHealth.max` (clamped), `CellDamageVisuals`, material color.
-pub fn propagate_cell_type_changes(
+pub(crate) fn propagate_cell_type_changes(
     mut events: MessageReader<AssetEvent<CellTypeDefinition>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<CellTypeDefinition>>,

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 /// Plugin for the chips domain.
 ///
 /// Owns chip application, stacking, and registry resources.
-pub struct ChipsPlugin;
+pub(crate) struct ChipsPlugin;
 
 impl Plugin for ChipsPlugin {
     fn build(&self, _app: &mut App) {

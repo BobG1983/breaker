@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Reads the loaded `InputDefaults` asset and inserts `InputConfig`.
-pub fn seed_input_config(
+pub(crate) fn seed_input_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<InputDefaults>>,
     mut commands: Commands,

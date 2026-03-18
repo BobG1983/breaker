@@ -9,7 +9,7 @@ use serde::Deserialize;
 /// Adding a new archetype = new RON file. Adding a new behavior type =
 /// new trigger/consequence variant + handler.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub struct ArchetypeDefinition {
+pub(crate) struct ArchetypeDefinition {
     /// Display name of the archetype.
     pub name: String,
     /// Optional stat overrides applied on top of `BreakerDefaults`.
@@ -22,7 +22,7 @@ pub struct ArchetypeDefinition {
 
 /// A single trigger→consequence binding within an archetype.
 #[derive(Deserialize, Clone, Debug)]
-pub struct BehaviorBinding {
+pub(crate) struct BehaviorBinding {
     /// One or more triggers that activate this consequence.
     pub triggers: Vec<Trigger>,
     /// The consequence to fire when any of the triggers occur.
@@ -31,7 +31,7 @@ pub struct BehaviorBinding {
 
 /// Events that can trigger a behavior consequence.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Trigger {
+pub(crate) enum Trigger {
     /// Bolt fell below the breaker.
     BoltLost,
     /// Bump timed within the perfect window.
@@ -46,7 +46,7 @@ pub enum Trigger {
 
 /// Actions that occur when a trigger fires.
 #[derive(Deserialize, Clone, Debug)]
-pub enum Consequence {
+pub(crate) enum Consequence {
     /// Lose one life from the life pool.
     LoseLife,
     /// Multiply bolt speed (applied at init time via components).
@@ -62,13 +62,13 @@ pub enum Consequence {
 /// Replaces per-consequence events (`LoseLifeRequested`, `TimePenaltyRequested`,
 /// `SpawnBoltRequested`). Adding a new consequence never touches `fire_consequences`.
 #[derive(Event, Clone, Debug)]
-pub struct ConsequenceFired(pub Consequence);
+pub(crate) struct ConsequenceFired(pub Consequence);
 
 /// Optional overrides for `BreakerDefaults` fields.
 ///
 /// Each `Some` field replaces the corresponding base value.
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct BreakerStatOverrides {
+pub(crate) struct BreakerStatOverrides {
     /// Override breaker width.
     pub width: Option<f32>,
     /// Override breaker height.

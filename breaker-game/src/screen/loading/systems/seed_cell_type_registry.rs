@@ -10,7 +10,7 @@ use crate::{
 
 /// Iterates loaded `CellTypeDefinition` assets, validates aliases,
 /// and builds the `CellTypeRegistry` resource.
-pub fn seed_cell_type_registry(
+pub(crate) fn seed_cell_type_registry(
     collection: Option<Res<DefaultsCollection>>,
     cell_type_assets: Res<Assets<CellTypeDefinition>>,
     mut commands: Commands,

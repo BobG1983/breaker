@@ -57,7 +57,7 @@ pub struct CellTypeDefinition {
 impl CellTypeDefinition {
     /// Cell color as a Bevy [`Color`].
     #[must_use]
-    pub fn color(&self) -> Color {
+    pub const fn color(&self) -> Color {
         crate::shared::color_from_rgb(self.color_rgb)
     }
 }

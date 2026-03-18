@@ -11,7 +11,7 @@ const LOADING_BAR_WIDTH: f32 = 720.0;
 const LOADING_BAR_HEIGHT: f32 = 43.0;
 
 /// Spawns the loading screen UI.
-pub fn spawn_loading_screen(mut commands: Commands) {
+pub(crate) fn spawn_loading_screen(mut commands: Commands) {
     commands
         .spawn((
             LoadingScreen,

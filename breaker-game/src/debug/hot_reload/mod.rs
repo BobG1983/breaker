@@ -1,5 +1,5 @@
 //! Hot-reload sub-domain — live RON file watching and propagation.
 
-pub mod plugin;
-pub mod sets;
-pub mod systems;
+pub(super) mod plugin;
+pub(super) mod sets;
+pub(super) mod systems;

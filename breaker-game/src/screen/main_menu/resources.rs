@@ -8,7 +8,7 @@ use super::components::MenuItem;
 
 /// Tracks the currently selected menu item.
 #[derive(Resource, Debug)]
-pub struct MainMenuSelection {
+pub(crate) struct MainMenuSelection {
     /// The currently highlighted menu item.
     pub selected: MenuItem,
 }
@@ -16,7 +16,7 @@ pub struct MainMenuSelection {
 /// Main menu defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "MainMenuConfig")]
-pub struct MainMenuDefaults {
+pub(crate) struct MainMenuDefaults {
     /// Font size for the title text.
     pub title_font_size: f32,
     /// Font size for menu item text.

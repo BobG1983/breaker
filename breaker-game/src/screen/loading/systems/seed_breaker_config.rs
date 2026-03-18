@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Reads the loaded `BreakerDefaults` asset and inserts `BreakerConfig`.
-pub fn seed_breaker_config(
+pub(crate) fn seed_breaker_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<BreakerDefaults>>,
     mut commands: Commands,

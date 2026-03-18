@@ -9,7 +9,7 @@ use super::{
 use crate::shared::GameState;
 
 /// Plugin for the main menu screen.
-pub struct MainMenuPlugin;
+pub(crate) struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {

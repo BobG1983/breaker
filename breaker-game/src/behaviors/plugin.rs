@@ -29,7 +29,7 @@ use crate::{
 /// - Per-trigger bridge systems (message → consequence event)
 /// - Consequence observers (event → game effect)
 /// - Lives HUD
-pub struct BehaviorsPlugin;
+pub(crate) struct BehaviorsPlugin;
 
 impl Plugin for BehaviorsPlugin {
     fn build(&self, app: &mut App) {

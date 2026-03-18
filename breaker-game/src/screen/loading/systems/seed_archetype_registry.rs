@@ -10,7 +10,7 @@ use crate::{
 
 /// Iterates loaded `ArchetypeDefinition` assets, validates names,
 /// and builds the `ArchetypeRegistry` resource.
-pub fn seed_archetype_registry(
+pub(crate) fn seed_archetype_registry(
     collection: Option<Res<DefaultsCollection>>,
     archetype_assets: Res<Assets<ArchetypeDefinition>>,
     mut commands: Commands,

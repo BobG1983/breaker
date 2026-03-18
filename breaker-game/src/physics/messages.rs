@@ -6,7 +6,6 @@ use bevy::prelude::*;
 ///
 /// Consumed by audio, chips, and UI.
 #[derive(Message, Clone, Debug)]
-#[allow(dead_code)]
 pub struct BoltHitBreaker {
     /// The bolt entity involved in the collision.
     pub bolt: Entity,
@@ -16,10 +15,7 @@ pub struct BoltHitBreaker {
 ///
 /// Consumed by chips, cells, and audio.
 #[derive(Message, Clone, Debug)]
-#[allow(dead_code)]
-pub struct BoltHitCell {
-    /// The bolt entity involved in the collision.
-    pub bolt: Entity,
+pub(crate) struct BoltHitCell {
     /// The cell entity that was hit.
     pub cell: Entity,
 }
@@ -42,7 +38,6 @@ mod tests {
         assert!(format!("{a:?}").contains("BoltHitBreaker"));
 
         let b = BoltHitCell {
-            bolt: Entity::PLACEHOLDER,
             cell: Entity::PLACEHOLDER,
         };
         assert!(format!("{b:?}").contains("BoltHitCell"));

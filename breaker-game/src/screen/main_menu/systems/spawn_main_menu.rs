@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{screen::main_menu::*, shared::color_from_rgb};
 
 /// Spawns the main menu UI.
-pub fn spawn_main_menu(
+pub(crate) fn spawn_main_menu(
     mut commands: Commands,
     config: Res<MainMenuConfig>,
     asset_server: Res<AssetServer>,

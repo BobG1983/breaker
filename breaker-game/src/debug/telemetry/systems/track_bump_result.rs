@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Updates [`LastBumpResult`] from bump messages.
-pub fn track_bump_result(
+pub(crate) fn track_bump_result(
     mut result: ResMut<LastBumpResult>,
     mut performed: MessageReader<BumpPerformed>,
     mut whiffed: MessageReader<BumpWhiffed>,

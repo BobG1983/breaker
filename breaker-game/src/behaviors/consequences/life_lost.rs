@@ -10,15 +10,15 @@ use crate::{
 
 /// Number of remaining lives on the breaker entity.
 #[derive(Component, Debug, Clone, Copy)]
-pub struct LivesCount(pub u32);
+pub(crate) struct LivesCount(pub u32);
 
 /// Marker for the lives HUD display entity.
 #[derive(Component, Debug)]
-pub struct LivesDisplay;
+pub(crate) struct LivesDisplay;
 
 /// Observer that handles life loss — decrements `LivesCount`, sends [`RunLost`]
 /// when lives reach zero.
-pub fn handle_life_lost(
+pub(crate) fn handle_life_lost(
     trigger: On<ConsequenceFired>,
     mut lives_query: Query<&mut LivesCount>,
     mut writer: MessageWriter<RunLost>,
@@ -39,7 +39,7 @@ pub fn handle_life_lost(
 }
 
 /// Spawns the lives display as a child of the [`StatusPanel`].
-pub fn spawn_lives_display(
+pub(crate) fn spawn_lives_display(
     mut commands: Commands,
     lives_query: Query<&LivesCount>,
     existing: Query<(), With<LivesDisplay>>,
@@ -80,7 +80,7 @@ pub fn spawn_lives_display(
 }
 
 /// Updates the lives display text to match the current `LivesCount`.
-pub fn update_lives_display(
+pub(crate) fn update_lives_display(
     lives_query: Query<&LivesCount>,
     mut display_query: Query<&mut Text, With<LivesDisplay>>,
 ) {

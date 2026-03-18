@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Observer that handles time penalty — writes [`ApplyTimePenalty`] message.
-pub fn handle_time_penalty(
+pub(crate) fn handle_time_penalty(
     trigger: On<ConsequenceFired>,
     mut writer: MessageWriter<ApplyTimePenalty>,
 ) {

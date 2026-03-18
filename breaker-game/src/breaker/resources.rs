@@ -113,7 +113,7 @@ impl Default for BreakerDefaults {
 impl BreakerConfig {
     /// Breaker color as a Bevy [`Color`].
     #[must_use]
-    pub fn color(&self) -> Color {
+    pub const fn color(&self) -> Color {
         crate::shared::color_from_rgb(self.color_rgb)
     }
 }

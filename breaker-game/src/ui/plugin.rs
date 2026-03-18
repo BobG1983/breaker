@@ -14,7 +14,7 @@ use crate::{
 /// Plugin for the UI domain.
 ///
 /// Owns HUD rendering, menu screens, and chip selection.
-pub struct UiPlugin;
+pub(crate) struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {

@@ -6,15 +6,15 @@ use iyes_progress::prelude::*;
 use crate::screen::loading::components::{LoadingBarFill, LoadingProgressText};
 
 /// Updates the loading bar width and text based on global progress.
-pub fn update_loading_bar(
+pub(crate) fn update_loading_bar(
     progress: Res<ProgressTracker<crate::shared::GameState>>,
     mut bar_query: Query<&mut Node, With<LoadingBarFill>>,
     mut text_query: Query<&mut Text, With<LoadingProgressText>>,
 ) {
     let global = progress.get_global_progress();
-    #[allow(clippy::cast_precision_loss)]
     let ratio = if global.total > 0 {
-        global.done as f32 / global.total as f32
+        f32::from(u16::try_from(global.done).unwrap_or(u16::MAX))
+            / f32::from(u16::try_from(global.total).unwrap_or(u16::MAX))
     } else {
         0.0
     };

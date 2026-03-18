@@ -1,15 +1,15 @@
 //! Behavior system — data-driven trigger→consequence dispatch.
 
-pub mod active;
-pub mod bridges;
-pub mod consequences;
-pub mod definition;
-pub mod init;
+pub(crate) mod active;
+pub(crate) mod bridges;
+pub(crate) mod consequences;
+pub(crate) mod definition;
+pub(crate) mod init;
 mod plugin;
-pub mod registry;
-pub mod sets;
+pub(crate) mod registry;
+pub(crate) mod sets;
 
-pub use definition::ArchetypeDefinition;
-pub use plugin::BehaviorsPlugin;
-pub use registry::ArchetypeRegistry;
-pub use sets::BehaviorSystems;
+pub(crate) use definition::ArchetypeDefinition;
+pub(crate) use plugin::BehaviorsPlugin;
+pub(crate) use registry::ArchetypeRegistry;
+pub(crate) use sets::BehaviorSystems;

@@ -10,7 +10,7 @@ use crate::{
 /// Plugin for the cells domain.
 ///
 /// Owns cell components, damage handling, and destruction logic.
-pub struct CellsPlugin;
+pub(crate) struct CellsPlugin;
 
 impl Plugin for CellsPlugin {
     fn build(&self, app: &mut App) {

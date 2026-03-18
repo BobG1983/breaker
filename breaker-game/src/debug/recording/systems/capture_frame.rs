@@ -14,7 +14,7 @@ use crate::{
 ///
 /// Skips frames with no actions. If `RecordingConfig::level_filter` is set,
 /// also skips frames where the active layout name does not match.
-pub fn capture_frame(
+pub(crate) fn capture_frame(
     config: Res<RecordingConfig>,
     actions: Res<InputActions>,
     layout: Option<Res<ActiveNodeLayout>>,

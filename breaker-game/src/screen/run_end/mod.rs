@@ -4,5 +4,5 @@ mod components;
 mod plugin;
 mod systems;
 
-pub use components::RunEndScreen;
-pub use plugin::RunEndPlugin;
+pub(crate) use components::RunEndScreen;
+pub(crate) use plugin::RunEndPlugin;

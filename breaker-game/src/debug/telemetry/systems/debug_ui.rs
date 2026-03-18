@@ -6,30 +6,39 @@ use bevy::{
 };
 use bevy_egui::EguiContexts;
 
-use crate::{debug::resources::DebugOverlays, shared::GameState};
+use crate::{
+    debug::resources::{DebugOverlays, Overlay},
+    shared::GameState,
+};
 
 /// Renders the debug UI panel using egui.
-pub fn debug_ui_system(
+pub(crate) fn debug_ui_system(
     mut contexts: EguiContexts,
     mut overlays: ResMut<DebugOverlays>,
     state: Res<State<GameState>>,
     diagnostics: Res<DiagnosticsStore>,
 ) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     bevy_egui::egui::Window::new("Debug")
         .default_open(true)
-        .show(contexts.ctx_mut().expect("primary egui context"), |ui| {
+        .show(ctx, |ui| {
             ui.heading("Overlays");
-            ui.checkbox(&mut overlays.show_fps, "FPS");
-            ui.checkbox(&mut overlays.show_hitboxes, "Hitboxes");
-            ui.checkbox(&mut overlays.show_velocity_vectors, "Velocity Vectors");
-            ui.checkbox(&mut overlays.show_state, "Game State");
-            ui.checkbox(&mut overlays.show_bolt_info, "Bolt Info");
-            ui.checkbox(&mut overlays.show_breaker_state, "Breaker State");
-            ui.checkbox(&mut overlays.show_input_actions, "Input Actions");
+            ui.checkbox(overlays.flag_mut(Overlay::Fps), "FPS");
+            ui.checkbox(overlays.flag_mut(Overlay::Hitboxes), "Hitboxes");
+            ui.checkbox(
+                overlays.flag_mut(Overlay::VelocityVectors),
+                "Velocity Vectors",
+            );
+            ui.checkbox(overlays.flag_mut(Overlay::State), "Game State");
+            ui.checkbox(overlays.flag_mut(Overlay::BoltInfo), "Bolt Info");
+            ui.checkbox(overlays.flag_mut(Overlay::BreakerState), "Breaker State");
+            ui.checkbox(overlays.flag_mut(Overlay::InputActions), "Input Actions");
 
             ui.separator();
 
-            if overlays.show_fps {
+            if overlays.is_active(Overlay::Fps) {
                 if let Some(fps) = diagnostics
                     .get(&FrameTimeDiagnosticsPlugin::FPS)
                     .and_then(bevy::diagnostic::Diagnostic::smoothed)
@@ -40,7 +49,7 @@ pub fn debug_ui_system(
                 }
             }
 
-            if overlays.show_state {
+            if overlays.is_active(Overlay::State) {
                 ui.label(format!("State: {:?}", state.get()));
             }
         });

@@ -17,7 +17,7 @@ use crate::{
 /// bump pop), the bolt is pushed above the breaker and reflected if moving
 /// downward. CCD alone cannot detect this case since it only sweeps bolt
 /// movement.
-pub fn bolt_breaker_collision(
+pub(crate) fn bolt_breaker_collision(
     time: Res<Time<Fixed>>,
     mut bolt_query: Query<BoltPhysicsQuery, ActiveBoltFilter>,
     breaker_query: Query<
@@ -114,6 +114,11 @@ pub fn bolt_breaker_collision(
             continue;
         };
 
+        // Only reflect downward-moving bolts; upward bolts pass through on all faces
+        if bolt_velocity.value.y > 0.0 {
+            continue;
+        }
+
         // Determine if this is a side hit or top hit based on the normal
         if hit.normal.x.abs() > hit.normal.y.abs() {
             // Side hit — reflect X only, preserve Y velocity
@@ -125,10 +130,7 @@ pub fn bolt_breaker_collision(
             bolt_transform.translation.x = new_pos.x;
             bolt_transform.translation.y = new_pos.y;
         } else {
-            // Top/bottom hit — only reflect if bolt is moving downward
-            if bolt_velocity.value.y > 0.0 {
-                continue;
-            }
+            // Top/bottom hit
 
             // Move to impact point
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
@@ -478,6 +480,84 @@ mod tests {
         assert!(
             hits.0.is_empty(),
             "upward bolt overlap should NOT send BoltHitBreaker"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Side-hit direction guard tests
+    //
+    // BoltConfig::default().radius = 8.0 (Rust default, not RON)
+    // BreakerWidth(120.0).half_width() = 60.0
+    // expanded_half.x = 60.0 + 8.0 = 68.0  →  left edge at x = -68.0
+    //
+    // At speed 360.5 and dt=1/64, max_dist ≈ 5.63.
+    // Bolt at x = -70.0 is 2.0 outside the left edge.
+    // CCD ray hits left face at t = 2.0 / (200/360.5) ≈ 3.6 < 5.63 ✓
+    // ---------------------------------------------------------------------------
+
+    /// Bolt moving up-right clips the breaker's left edge via CCD.
+    /// The expected behavior (not yet implemented) is that upward side hits are
+    /// NOT reflected — the guard should skip the reflection entirely.
+    #[test]
+    fn upward_bolt_side_hit_is_not_reflected() {
+        let mut app = test_app();
+        let breaker_y = -250.0;
+        app.insert_resource(HitBreakers::default());
+        app.add_systems(
+            FixedUpdate,
+            collect_breaker_hits.after(bolt_breaker_collision),
+        );
+        spawn_breaker_at(&mut app, 0.0, breaker_y);
+
+        // expanded_half.x = half_w(60) + r(8) = 68. Left edge at x = -68.
+        // Bolt at x = -70 is 2.0 units outside. CCD ray (200, 300) hits at
+        // t ≈ 3.6 which is within max_dist ≈ 5.63 (speed=360.5, dt=1/64).
+        let bolt_entity = spawn_bolt(&mut app, -70.0, breaker_y, 200.0, 300.0);
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.x > 0.0,
+            "upward side hit should NOT flip X velocity (guard should skip), got vx={:.1}",
+            vel.value.x
+        );
+        assert!(
+            vel.value.y > 0.0,
+            "upward side hit should NOT flip Y velocity, got vy={:.1}",
+            vel.value.y
+        );
+
+        let hits = app.world().resource::<HitBreakers>();
+        assert!(
+            hits.0.is_empty(),
+            "upward side hit should NOT send BoltHitBreaker, got {} messages",
+            hits.0.len()
+        );
+    }
+
+    /// Bolt moving down-right clips the breaker's left edge via CCD.
+    /// Downward side hits SHOULD still be reflected (existing behavior preserved).
+    #[test]
+    fn downward_bolt_side_hit_is_reflected() {
+        let mut app = test_app();
+        let breaker_y = -250.0;
+        app.insert_resource(HitBreakers::default());
+        app.add_systems(
+            FixedUpdate,
+            collect_breaker_hits.after(bolt_breaker_collision),
+        );
+        spawn_breaker_at(&mut app, 0.0, breaker_y);
+
+        // Same positioning as upward test, but with negative Y velocity.
+        // expanded_half.x = 68. Bolt at x = -70 is 2.0 outside left edge.
+        let bolt_entity = spawn_bolt(&mut app, -70.0, breaker_y, 200.0, -300.0);
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.x < 0.0,
+            "downward side hit SHOULD flip X velocity, got vx={:.1}",
+            vel.value.x
         );
     }
 

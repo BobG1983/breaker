@@ -17,6 +17,21 @@ use crate::{
     input::resources::{GameAction, InputActions},
 };
 
+/// Read-only dash configuration components, bundled to reduce argument count.
+struct DashParams<'a> {
+    max_speed: &'a BreakerMaxSpeed,
+    decel: &'a BreakerDeceleration,
+    easing: &'a DecelEasing,
+    dash_speed: &'a DashSpeedMultiplier,
+    dash_duration: &'a DashDuration,
+    dash_tilt: &'a DashTilt,
+    dash_tilt_ease: &'a DashTiltEase,
+    brake_tilt: &'a BrakeTilt,
+    brake_decel: &'a BrakeDecel,
+    settle_duration: &'a SettleDuration,
+    settle_tilt_ease: &'a SettleTiltEase,
+}
+
 /// Handles dash input and the Dashing → Braking → Settling → Idle state machine.
 ///
 /// - Dash input (`DashLeft`/`DashRight` from input domain): triggers dash from Idle or Settling
@@ -48,6 +63,20 @@ pub fn update_breaker_state(
         settle_tilt_ease,
     ) in &mut query
     {
+        let params = DashParams {
+            max_speed,
+            decel,
+            easing,
+            dash_speed,
+            dash_duration,
+            dash_tilt,
+            dash_tilt_ease,
+            brake_tilt,
+            brake_decel,
+            settle_duration,
+            settle_tilt_ease,
+        };
+
         match *state {
             BreakerState::Idle | BreakerState::Settling => {
                 handle_idle_or_settling(
@@ -57,25 +86,11 @@ pub fn update_breaker_state(
                     &mut velocity,
                     &mut tilt,
                     &mut timer,
-                    max_speed,
-                    dash_speed,
-                    dash_duration,
-                    settle_duration,
-                    settle_tilt_ease,
+                    &params,
                 );
             }
             BreakerState::Dashing => {
-                handle_dashing(
-                    dt,
-                    &mut state,
-                    &velocity,
-                    &mut tilt,
-                    &mut timer,
-                    dash_duration,
-                    dash_tilt,
-                    dash_tilt_ease,
-                    brake_tilt,
-                );
+                handle_dashing(dt, &mut state, &velocity, &mut tilt, &mut timer, &params);
             }
             BreakerState::Braking => {
                 handle_braking(
@@ -84,13 +99,7 @@ pub fn update_breaker_state(
                     &mut velocity,
                     &mut tilt,
                     &mut timer,
-                    max_speed,
-                    decel,
-                    easing,
-                    dash_speed,
-                    brake_decel,
-                    brake_tilt,
-                    settle_duration,
+                    &params,
                 );
             }
         }
@@ -98,7 +107,6 @@ pub fn update_breaker_state(
 }
 
 /// In Idle or Settling: check for dash actions from the input domain.
-#[allow(clippy::too_many_arguments)]
 fn handle_idle_or_settling(
     actions: &InputActions,
     dt: f32,
@@ -106,21 +114,17 @@ fn handle_idle_or_settling(
     velocity: &mut BreakerVelocity,
     tilt: &mut BreakerTilt,
     timer: &mut BreakerStateTimer,
-    max_speed: &BreakerMaxSpeed,
-    dash_speed: &DashSpeedMultiplier,
-    dash_duration: &DashDuration,
-    settle_duration: &SettleDuration,
-    settle_tilt_ease: &SettleTiltEase,
+    p: &DashParams,
 ) {
     if *state == BreakerState::Settling {
         // Tick settle timer, return tilt toward zero with easing
         timer.remaining -= dt;
-        let settle_progress = if settle_duration.0 > f32::EPSILON {
-            1.0 - (timer.remaining / settle_duration.0).clamp(0.0, 1.0)
+        let settle_progress = if p.settle_duration.0 > f32::EPSILON {
+            1.0 - (timer.remaining / p.settle_duration.0).clamp(0.0, 1.0)
         } else {
             1.0
         };
-        let eased = settle_tilt_ease.0.sample_clamped(settle_progress);
+        let eased = p.settle_tilt_ease.0.sample_clamped(settle_progress);
         tilt.angle = (tilt.ease_target - tilt.ease_start).mul_add(eased, tilt.ease_start);
 
         if timer.remaining <= 0.0 {
@@ -131,65 +135,40 @@ fn handle_idle_or_settling(
 
     // Dash left
     if actions.active(GameAction::DashLeft) {
-        start_dash(
-            -1.0,
-            state,
-            velocity,
-            tilt,
-            timer,
-            max_speed,
-            dash_speed,
-            dash_duration,
-        );
+        start_dash(-1.0, state, velocity, tilt, timer, p);
         return;
     }
 
     // Dash right
     if actions.active(GameAction::DashRight) {
-        start_dash(
-            1.0,
-            state,
-            velocity,
-            tilt,
-            timer,
-            max_speed,
-            dash_speed,
-            dash_duration,
-        );
+        start_dash(1.0, state, velocity, tilt, timer, p);
     }
 }
 
 /// Enters the Dashing state in the given direction.
-#[allow(clippy::too_many_arguments)]
 fn start_dash(
     direction: f32,
     state: &mut BreakerState,
     velocity: &mut BreakerVelocity,
     tilt: &mut BreakerTilt,
     timer: &mut BreakerStateTimer,
-    max_speed: &BreakerMaxSpeed,
-    dash_speed: &DashSpeedMultiplier,
-    dash_duration: &DashDuration,
+    p: &DashParams,
 ) {
     *state = BreakerState::Dashing;
-    velocity.x = direction * max_speed.0 * dash_speed.0;
+    velocity.x = direction * p.max_speed.0 * p.dash_speed.0;
     // Tilt starts at zero — handle_dashing eases it to full value
     tilt.angle = 0.0;
-    timer.remaining = dash_duration.0;
+    timer.remaining = p.dash_duration.0;
 }
 
 /// Dashing: count down timer, ease tilt to full angle, then transition to Braking.
-#[allow(clippy::too_many_arguments)]
 fn handle_dashing(
     dt: f32,
     state: &mut BreakerState,
     velocity: &BreakerVelocity,
     tilt: &mut BreakerTilt,
     timer: &mut BreakerStateTimer,
-    dash_duration: &DashDuration,
-    dash_tilt: &DashTilt,
-    dash_tilt_ease: &DashTiltEase,
-    brake_tilt: &BrakeTilt,
+    p: &DashParams,
 ) {
     timer.remaining -= dt;
 
@@ -198,57 +177,50 @@ fn handle_dashing(
     if timer.remaining <= 0.0 {
         *state = BreakerState::Braking;
         tilt.ease_start = tilt.angle;
-        tilt.ease_target = -dash_dir * brake_tilt.angle;
-        timer.remaining = brake_tilt.duration;
+        tilt.ease_target = -dash_dir * p.brake_tilt.angle;
+        timer.remaining = p.brake_tilt.duration;
     } else {
         // Ease tilt from 0 to full angle over dash duration
-        let progress = if dash_duration.0 > f32::EPSILON {
-            1.0 - (timer.remaining / dash_duration.0).clamp(0.0, 1.0)
+        let progress = if p.dash_duration.0 > f32::EPSILON {
+            1.0 - (timer.remaining / p.dash_duration.0).clamp(0.0, 1.0)
         } else {
             1.0
         };
-        let eased = dash_tilt_ease.0.sample_clamped(progress);
-        tilt.angle = dash_dir * dash_tilt.0 * eased;
+        let eased = p.dash_tilt_ease.0.sample_clamped(progress);
+        tilt.angle = dash_dir * p.dash_tilt.0 * eased;
     }
 }
 
 /// Braking: ease tilt toward brake angle, decelerate, then transition to Settling.
-#[allow(clippy::too_many_arguments)]
 fn handle_braking(
     dt: f32,
     state: &mut BreakerState,
     velocity: &mut BreakerVelocity,
     tilt: &mut BreakerTilt,
     timer: &mut BreakerStateTimer,
-    max_speed: &BreakerMaxSpeed,
-    decel: &BreakerDeceleration,
-    easing: &DecelEasing,
-    dash_speed: &DashSpeedMultiplier,
-    brake_decel: &BrakeDecel,
-    brake_tilt: &BrakeTilt,
-    settle_duration: &SettleDuration,
+    p: &DashParams,
 ) {
     // Ease tilt toward brake angle
     if timer.remaining > 0.0 {
         timer.remaining -= dt;
-        let progress = if brake_tilt.duration > f32::EPSILON {
-            1.0 - (timer.remaining / brake_tilt.duration).clamp(0.0, 1.0)
+        let progress = if p.brake_tilt.duration > f32::EPSILON {
+            1.0 - (timer.remaining / p.brake_tilt.duration).clamp(0.0, 1.0)
         } else {
             1.0
         };
-        let eased = brake_tilt.ease.sample_clamped(progress);
+        let eased = p.brake_tilt.ease.sample_clamped(progress);
         tilt.angle = (tilt.ease_target - tilt.ease_start).mul_add(eased, tilt.ease_start);
     }
 
     // Decelerate
-    let base_decel = decel.0 * brake_decel.0;
-    let reference_speed = max_speed.0 * dash_speed.0;
+    let base_decel = p.decel.0 * p.brake_decel.0;
+    let reference_speed = p.max_speed.0 * p.dash_speed.0;
     let effective_decel = eased_decel(
         base_decel,
         velocity.x.abs(),
         reference_speed,
-        easing.ease,
-        easing.strength,
+        p.easing.ease,
+        p.easing.strength,
     );
 
     if velocity.x > f32::EPSILON {
@@ -262,7 +234,7 @@ fn handle_braking(
         velocity.x = 0.0;
         tilt.ease_start = tilt.angle;
         tilt.ease_target = 0.0;
-        timer.remaining = settle_duration.0;
+        timer.remaining = p.settle_duration.0;
         *state = BreakerState::Settling;
     }
 }
@@ -270,7 +242,7 @@ fn handle_braking(
 /// Computes effective deceleration scaled by an easing curve over speed ratio.
 ///
 /// `effective_decel = base_decel * (1.0 + strength * ease(speed / reference_speed))`
-pub fn eased_decel(
+pub(super) fn eased_decel(
     base_decel: f32,
     speed: f32,
     reference_speed: f32,
@@ -661,7 +633,6 @@ mod tests {
     fn settle_timer_initialized_on_braking_end() {
         let mut app = test_app();
         let entity = spawn_test_breaker(&mut app);
-        let config = BreakerConfig::default();
 
         // Start in Braking with zero velocity (will immediately transition)
         *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Braking;
@@ -693,9 +664,8 @@ mod tests {
         );
 
         // After enough time, should reach Idle
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let settle_frames = (config.settle_duration / (1.0 / 64.0)).ceil() as u32 + 2;
-        for _ in 0..settle_frames {
+        // Tick well past the settle duration to ensure state reaches Idle
+        for _ in 0..100 {
             tick(&mut app);
         }
         let state = app.world().get::<BreakerState>(entity).unwrap();

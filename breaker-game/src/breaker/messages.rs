@@ -18,7 +18,6 @@ pub enum BumpGrade {
 /// Consumed by bolt (velocity multiplier), audio, chips (overclock
 /// triggers), and UI.
 #[derive(Message, Clone, Debug)]
-#[allow(dead_code)]
 pub struct BumpPerformed {
     /// The timing grade of the bump.
     pub grade: BumpGrade,
