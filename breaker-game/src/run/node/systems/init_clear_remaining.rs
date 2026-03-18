@@ -8,8 +8,7 @@ use crate::{cells::components::RequiredToClear, run::node::ClearRemainingCount};
 ///
 /// Runs on `OnEnter(GameState::Playing)`, after `CellsSystems::Spawn`.
 pub fn init_clear_remaining(query: Query<(), With<RequiredToClear>>, mut commands: Commands) {
-    #[allow(clippy::cast_possible_truncation)]
-    let remaining = query.iter().count() as u32;
+    let remaining = u32::try_from(query.iter().count()).unwrap_or(0);
     commands.insert_resource(ClearRemainingCount { remaining });
 }
 

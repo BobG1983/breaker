@@ -1,0 +1,12 @@
+(
+    breaker: "Chrono",
+    layout: "Scatter",
+    input: Chaos((
+        seed: 900,
+        action_prob: 0.8,
+    )),
+    max_frames: 15000,
+    invariants: [TimerNonNegative, TimerMonotonicallyDecreasing, ValidStateTransitions, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+)

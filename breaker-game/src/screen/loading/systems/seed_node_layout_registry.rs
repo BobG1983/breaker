@@ -15,7 +15,7 @@ use crate::{
 
 /// Validates loaded `NodeLayout` assets against the `CellTypeRegistry`
 /// and builds the `NodeLayoutRegistry` resource.
-pub fn seed_node_layout_registry(
+pub(crate) fn seed_node_layout_registry(
     collection: Option<Res<DefaultsCollection>>,
     cell_type_registry: Option<Res<CellTypeRegistry>>,
     node_layout_assets: Res<Assets<NodeLayout>>,
@@ -40,7 +40,8 @@ pub fn seed_node_layout_registry(
             return Progress { done: 0, total: 1 };
         };
         if let Err(e) = layout.validate(&registry) {
-            panic!("invalid node layout: {e}");
+            error!("invalid node layout: {e}");
+            return Progress { done: 0, total: 1 };
         }
         node_layout_registry.layouts.push(layout.clone());
     }

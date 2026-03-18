@@ -9,7 +9,7 @@ use super::{
 use crate::shared::GameState;
 
 /// Plugin for the between-node chip selection screen.
-pub struct ChipSelectPlugin;
+pub(crate) struct ChipSelectPlugin;
 
 impl Plugin for ChipSelectPlugin {
     fn build(&self, app: &mut App) {

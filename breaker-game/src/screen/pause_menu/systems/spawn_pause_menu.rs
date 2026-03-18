@@ -8,7 +8,7 @@ use crate::screen::pause_menu::{
 };
 
 /// Spawns the pause menu overlay.
-pub fn spawn_pause_menu(mut commands: Commands) {
+pub(crate) fn spawn_pause_menu(mut commands: Commands) {
     commands.insert_resource(PauseMenuSelection {
         selected: PauseMenuItem::Resume,
     });

@@ -13,7 +13,7 @@ use crate::{
 /// Spawns the breaker selection UI.
 ///
 /// Reads [`ArchetypeRegistry`] to display one card per available breaker.
-pub fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeRegistry>) {
+pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeRegistry>) {
     let mut names: Vec<&String> = registry.archetypes.keys().collect();
     names.sort();
 

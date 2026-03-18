@@ -1,6 +1,6 @@
 //! System to propagate `NodeLayout` asset changes — despawn and respawn cells.
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     cells::{
@@ -15,33 +15,52 @@ use crate::{
     shared::PlayfieldConfig,
 };
 
+/// Bundled system parameters for the layout change propagation system.
+#[derive(SystemParam)]
+pub(crate) struct LayoutChangeContext<'w, 's> {
+    /// Asset event source for node layouts.
+    collection: Res<'w, DefaultsCollection>,
+    /// Loaded node layout assets.
+    layout_assets: Res<'w, Assets<NodeLayout>>,
+    /// Cell dimensions and padding configuration.
+    cell_config: Res<'w, CellConfig>,
+    /// Playfield boundaries.
+    playfield: Res<'w, PlayfieldConfig>,
+    /// Currently active layout (if any).
+    active_layout: Option<Res<'w, ActiveNodeLayout>>,
+    /// Mutable registry of available node layouts.
+    registry: ResMut<'w, NodeLayoutRegistry>,
+    /// Cell type definitions for spawning.
+    cell_type_registry: Res<'w, CellTypeRegistry>,
+    /// Existing cell entities to despawn on layout change.
+    cell_query: Query<'w, 's, Entity, With<Cell>>,
+    /// Command buffer for entity spawn/despawn.
+    commands: Commands<'w, 's>,
+    /// Mesh asset storage.
+    meshes: ResMut<'w, Assets<Mesh>>,
+    /// Material asset storage.
+    materials: ResMut<'w, Assets<ColorMaterial>>,
+}
+
 /// Detects `AssetEvent::Modified` on any `NodeLayout`, rebuilds
 /// `NodeLayoutRegistry`, and if the active layout was modified,
 /// despawns all cells and respawns from the updated layout.
 ///
 /// Also triggers on `CellConfig` changes (grid positioning depends on
 /// cell dimensions/padding).
-#[allow(clippy::too_many_arguments)]
-pub fn propagate_node_layout_changes(
+pub(crate) fn propagate_node_layout_changes(
     mut events: MessageReader<AssetEvent<NodeLayout>>,
-    collection: Res<DefaultsCollection>,
-    layout_assets: Res<Assets<NodeLayout>>,
-    cell_config: Res<CellConfig>,
-    playfield: Res<PlayfieldConfig>,
-    active_layout: Option<Res<ActiveNodeLayout>>,
-    mut registry: ResMut<NodeLayoutRegistry>,
-    cell_type_registry: Res<CellTypeRegistry>,
-    cell_query: Query<Entity, With<Cell>>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut ctx: LayoutChangeContext,
 ) {
     // Check for any modified layout
-    let any_layout_modified = events
-        .read()
-        .any(|event| collection.layouts.iter().any(|h| event.is_modified(h.id())));
+    let any_layout_modified = events.read().any(|event| {
+        ctx.collection
+            .layouts
+            .iter()
+            .any(|h| event.is_modified(h.id()))
+    });
 
-    let cell_config_changed = cell_config.is_changed() && !cell_config.is_added();
+    let cell_config_changed = ctx.cell_config.is_changed() && !ctx.cell_config.is_added();
 
     if !any_layout_modified && !cell_config_changed {
         return;
@@ -49,21 +68,21 @@ pub fn propagate_node_layout_changes(
 
     // Rebuild layout registry
     if any_layout_modified {
-        registry.layouts.clear();
-        for handle in &collection.layouts {
-            if let Some(layout) = layout_assets.get(handle.id()) {
-                registry.layouts.push(layout.clone());
+        ctx.registry.layouts.clear();
+        for handle in &ctx.collection.layouts {
+            if let Some(layout) = ctx.layout_assets.get(handle.id()) {
+                ctx.registry.layouts.push(layout.clone());
             }
         }
     }
 
     // If we have an active layout, check if it was modified (by name match)
-    let Some(active) = &active_layout else {
+    let Some(active) = &ctx.active_layout else {
         return;
     };
 
     let updated_layout = if any_layout_modified {
-        registry
+        ctx.registry
             .layouts
             .iter()
             .find(|l| l.name == active.0.name)
@@ -78,24 +97,24 @@ pub fn propagate_node_layout_changes(
     };
 
     // Despawn all existing cells directly (avoid destruction pipeline)
-    for entity in &cell_query {
-        commands.entity(entity).despawn();
+    for entity in &ctx.cell_query {
+        ctx.commands.entity(entity).despawn();
     }
 
     // Respawn cells from updated layout
     let required_count = spawn_cells_from_grid(
-        &mut commands,
-        &cell_config,
-        &playfield,
+        &mut ctx.commands,
+        &ctx.cell_config,
+        &ctx.playfield,
         &layout,
-        &cell_type_registry,
-        &mut meshes,
-        &mut materials,
+        &ctx.cell_type_registry,
+        &mut ctx.meshes,
+        &mut ctx.materials,
     );
 
     // Update active layout and clear remaining count
-    commands.insert_resource(ActiveNodeLayout(layout));
-    commands.insert_resource(ClearRemainingCount {
+    ctx.commands.insert_resource(ActiveNodeLayout(layout));
+    ctx.commands.insert_resource(ClearRemainingCount {
         remaining: required_count,
     });
 }

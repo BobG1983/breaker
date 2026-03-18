@@ -12,7 +12,7 @@ use super::{
 /// Add this plugin when `--record` is passed on the CLI. It captures each
 /// frame's [`crate::input::resources::InputActions`] and writes a
 /// `recordings/recording_<timestamp>.scripted.ron` file on exit.
-pub struct RecordingPlugin;
+pub(crate) struct RecordingPlugin;
 
 impl Plugin for RecordingPlugin {
     fn build(&self, app: &mut App) {

@@ -9,7 +9,7 @@ use super::{
 use crate::shared::GameState;
 
 /// Plugin for the breaker selection screen.
-pub struct RunSetupPlugin;
+pub(crate) struct RunSetupPlugin;
 
 impl Plugin for RunSetupPlugin {
     fn build(&self, app: &mut App) {

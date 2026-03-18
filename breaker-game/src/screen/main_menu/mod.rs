@@ -5,6 +5,6 @@ mod plugin;
 mod resources;
 mod systems;
 
-pub use components::{MENU_ITEMS, MainMenuScreen, MenuItem};
-pub use plugin::MainMenuPlugin;
-pub use resources::{MainMenuConfig, MainMenuDefaults, MainMenuSelection};
+pub(crate) use components::{MENU_ITEMS, MainMenuScreen, MenuItem};
+pub(crate) use plugin::MainMenuPlugin;
+pub(crate) use resources::{MainMenuConfig, MainMenuDefaults, MainMenuSelection};

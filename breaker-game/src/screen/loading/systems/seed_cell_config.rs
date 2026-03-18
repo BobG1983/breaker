@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Reads the loaded `CellDefaults` asset and inserts `CellConfig`.
-pub fn seed_cell_config(
+pub(crate) fn seed_cell_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<CellDefaults>>,
     mut commands: Commands,

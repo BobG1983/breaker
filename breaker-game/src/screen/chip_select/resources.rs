@@ -9,7 +9,7 @@ use crate::chips::ChipDefinition;
 /// Chip select defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "ChipSelectConfig")]
-pub struct ChipSelectDefaults {
+pub(crate) struct ChipSelectDefaults {
     /// Time in seconds for the selection countdown.
     pub timer_secs: f32,
     /// Font size for card title text.
@@ -42,14 +42,14 @@ impl Default for ChipSelectDefaults {
 
 /// Screen-local countdown timer for the chip selection screen.
 #[derive(Resource, Debug)]
-pub struct ChipSelectTimer {
+pub(super) struct ChipSelectTimer {
     /// Remaining time in seconds.
     pub remaining: f32,
 }
 
 /// Tracks which card is currently highlighted.
 #[derive(Resource, Debug)]
-pub struct ChipSelectSelection {
+pub(super) struct ChipSelectSelection {
     /// Zero-based index of the selected card.
     pub index: usize,
 }
@@ -59,7 +59,7 @@ pub struct ChipSelectSelection {
 /// Inserted by `spawn_chip_select`, read by `handle_chip_input`
 /// to resolve a selection index into chip identity.
 #[derive(Resource, Debug)]
-pub struct ChipOffers(pub Vec<ChipDefinition>);
+pub(super) struct ChipOffers(pub Vec<ChipDefinition>);
 
 #[cfg(test)]
 mod tests {

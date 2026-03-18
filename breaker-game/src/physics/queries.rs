@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::bolt::components::{BoltBaseSpeed, BoltRadius, BoltVelocity};
 
 /// Bolt entity data needed by physics collision systems.
-pub type BoltPhysicsQuery = (
+pub(crate) type BoltPhysicsQuery = (
     Entity,
     &'static mut Transform,
     &'static mut BoltVelocity,

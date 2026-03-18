@@ -1,6 +1,6 @@
 //! System to propagate `ArchetypeDefinition` asset changes to live game state.
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     behaviors::{
@@ -18,27 +18,41 @@ use crate::{
     shared::SelectedArchetype,
 };
 
+/// Bundled system parameters for the archetype change propagation system.
+#[derive(SystemParam)]
+pub(crate) struct ArchetypeChangeContext<'w, 's> {
+    /// Asset collection handles.
+    collection: Res<'w, DefaultsCollection>,
+    /// Loaded archetype definition assets.
+    assets: Res<'w, Assets<ArchetypeDefinition>>,
+    /// Loaded breaker defaults assets.
+    defaults_assets: Res<'w, Assets<BreakerDefaults>>,
+    /// Currently selected archetype name.
+    selected: Res<'w, SelectedArchetype>,
+    /// Mutable archetype registry.
+    registry: ResMut<'w, ArchetypeRegistry>,
+    /// Mutable breaker configuration.
+    config: ResMut<'w, BreakerConfig>,
+    /// Mutable active behaviors set.
+    active: ResMut<'w, ActiveBehaviors>,
+    /// Breaker entities for re-stamping components.
+    breaker_query: Query<'w, 's, Entity, With<Breaker>>,
+    /// Command buffer for entity modifications.
+    commands: Commands<'w, 's>,
+}
+
 /// Detects `AssetEvent::Modified` on any `ArchetypeDefinition`, rebuilds
 /// `ArchetypeRegistry`, and if the selected archetype was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
 /// 2. Re-stamps consequence components (bolt speed multipliers)
 /// 3. Resets `LivesCount` if archetype has `life_pool`
 /// 4. Rebuilds `ActiveBehaviors`
-#[allow(clippy::too_many_arguments)]
-pub fn propagate_archetype_changes(
+pub(crate) fn propagate_archetype_changes(
     mut events: MessageReader<AssetEvent<ArchetypeDefinition>>,
-    collection: Res<DefaultsCollection>,
-    assets: Res<Assets<ArchetypeDefinition>>,
-    defaults_assets: Res<Assets<BreakerDefaults>>,
-    selected: Res<SelectedArchetype>,
-    mut registry: ResMut<ArchetypeRegistry>,
-    mut config: ResMut<BreakerConfig>,
-    mut active: ResMut<ActiveBehaviors>,
-    breaker_query: Query<Entity, With<Breaker>>,
-    mut commands: Commands,
+    mut ctx: ArchetypeChangeContext,
 ) {
     let any_modified = events.read().any(|event| {
-        collection
+        ctx.collection
             .archetypes
             .iter()
             .any(|h| event.is_modified(h.id()))
@@ -49,35 +63,37 @@ pub fn propagate_archetype_changes(
     }
 
     // Rebuild registry
-    registry.archetypes.clear();
-    for handle in &collection.archetypes {
-        if let Some(def) = assets.get(handle.id()) {
-            registry.archetypes.insert(def.name.clone(), def.clone());
+    ctx.registry.archetypes.clear();
+    for handle in &ctx.collection.archetypes {
+        if let Some(def) = ctx.assets.get(handle.id()) {
+            ctx.registry
+                .archetypes
+                .insert(def.name.clone(), def.clone());
         }
     }
 
     // Check if the selected archetype was modified
-    let Some(def) = registry.archetypes.get(&selected.0) else {
+    let Some(def) = ctx.registry.archetypes.get(&ctx.selected.0) else {
         return;
     };
     let def = def.clone();
 
     // Reset BreakerConfig from defaults + re-apply stat overrides
-    if let Some(loaded) = defaults_assets.iter().next().map(|(_, d)| d) {
-        *config = BreakerConfig::from(loaded.clone());
+    if let Some(loaded) = ctx.defaults_assets.iter().next().map(|(_, d)| d) {
+        *ctx.config = BreakerConfig::from(loaded.clone());
     }
-    apply_stat_overrides(&mut config, &def.stat_overrides);
+    apply_stat_overrides(&mut ctx.config, &def.stat_overrides);
 
     // Re-stamp consequence components and lives on breaker entities
-    for entity in &breaker_query {
-        apply_bolt_speed_boosts(&mut commands, entity, &def.behaviors);
+    for entity in &ctx.breaker_query {
+        apply_bolt_speed_boosts(&mut ctx.commands, entity, &def.behaviors);
 
         if let Some(life_pool) = def.life_pool {
-            commands.entity(entity).insert(LivesCount(life_pool));
+            ctx.commands.entity(entity).insert(LivesCount(life_pool));
         }
     }
 
-    *active = ActiveBehaviors::from_bindings(&def.behaviors);
+    *ctx.active = ActiveBehaviors::from_bindings(&def.behaviors);
 }
 
 #[cfg(test)]

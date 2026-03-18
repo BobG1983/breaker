@@ -6,6 +6,10 @@
 //! is reflected, and the remaining movement continues. The bolt never overlaps
 //! any cell or wall.
 //!
+//! A per-frame `MAX_BOUNCES` cap (4) prevents infinite bounce loops. A 2-frame
+//! cascade prevention window ensures the same cell is not hit on consecutive
+//! frames.
+//!
 //! Cell damage and destruction are handled by the cells domain via
 //! [`BoltHitCell`] messages. Wall hits reflect only (no message).
 
@@ -32,7 +36,7 @@ use crate::{
 /// impact point, the velocity is reflected off the hit face, and tracing
 /// continues with the remaining movement distance. Sends [`BoltHitCell`]
 /// messages for each cell hit. Wall hits reflect only.
-pub fn bolt_cell_collision(
+pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
     mut bolt_query: Query<
         (Entity, &mut Transform, &mut BoltVelocity, &BoltRadius),
@@ -44,7 +48,7 @@ pub fn bolt_cell_collision(
 ) {
     let dt = time.delta_secs();
 
-    for (bolt_entity, mut bolt_tf, mut bolt_vel, bolt_radius) in &mut bolt_query {
+    for (_bolt_entity, mut bolt_tf, mut bolt_vel, bolt_radius) in &mut bolt_query {
         let r = bolt_radius.0;
         let mut position = bolt_tf.translation.truncate();
         let mut velocity = bolt_vel.value;
@@ -105,10 +109,7 @@ pub fn bolt_cell_collision(
 
             // Only emit BoltHitCell for cell hits (not walls)
             if let Some(cell_entity) = hit_cell {
-                hit_writer.write(BoltHitCell {
-                    bolt: bolt_entity,
-                    cell: cell_entity,
-                });
+                hit_writer.write(BoltHitCell { cell: cell_entity });
             }
         }
 
@@ -499,10 +500,8 @@ mod tests {
         let base_y = 100.0;
         for row in 0..2 {
             for col in 0..3 {
-                #[allow(clippy::cast_precision_loss)]
-                let x = (col as f32 - 1.0) * GRID_STEP_X;
-                #[allow(clippy::cast_precision_loss)]
-                let y = (row as f32).mul_add(GRID_STEP_Y, base_y);
+                let x = (f32::from(i16::try_from(col).unwrap_or(0)) - 1.0) * GRID_STEP_X;
+                let y = f32::from(i16::try_from(row).unwrap_or(0)).mul_add(GRID_STEP_Y, base_y);
                 spawn_cell(&mut app, x, y);
             }
         }

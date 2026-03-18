@@ -1,7 +1,7 @@
 //! Interpolation domain — smooth visual rendering between fixed-timestep ticks.
 
-pub mod components;
+pub(crate) mod components;
 mod plugin;
-pub mod systems;
+pub(crate) mod systems;
 
-pub use plugin::InterpolatePlugin;
+pub(crate) use plugin::InterpolatePlugin;

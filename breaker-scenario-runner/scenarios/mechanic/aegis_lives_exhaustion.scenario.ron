@@ -1,0 +1,12 @@
+(
+    breaker: "Aegis",
+    layout: "Fortress",
+    input: Chaos((
+        seed: 500,
+        action_prob: 0.01,
+    )),
+    max_frames: 20000,
+    invariants: [ValidStateTransitions, NoEntityLeaks, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+)

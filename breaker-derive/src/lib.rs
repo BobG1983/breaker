@@ -1,5 +1,11 @@
 //! Derive macro for generating Config structs from Defaults structs.
 
+#![allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "proc macros require panic for error handling"
+)]
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Fields, Meta, parse_macro_input};

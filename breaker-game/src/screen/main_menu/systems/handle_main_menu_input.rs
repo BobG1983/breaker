@@ -13,7 +13,7 @@ use crate::{
 /// Reads `ButtonInput<KeyCode>` directly instead of `InputActions` because the
 /// menu runs in `Update`, while `InputActions` is cleared in `FixedPostUpdate`
 /// (between `PreUpdate` and `Update`).
-pub fn handle_main_menu_input(
+pub(crate) fn handle_main_menu_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     mut selection: ResMut<MainMenuSelection>,

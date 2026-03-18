@@ -1,4 +1,4 @@
 //! Telemetry sub-domain — egui debug panels and message tracking.
 
-pub mod plugin;
+pub(super) mod plugin;
 mod systems;

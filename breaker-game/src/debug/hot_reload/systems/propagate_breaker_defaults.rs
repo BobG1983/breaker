@@ -13,7 +13,7 @@ use crate::{
 /// Watches for `AssetEvent::Modified` on the breaker defaults asset,
 /// re-seeds `BreakerConfig` from the updated asset data, then re-applies
 /// the selected archetype's stat overrides.
-pub fn propagate_breaker_defaults(
+pub(crate) fn propagate_breaker_defaults(
     mut events: MessageReader<AssetEvent<BreakerDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<BreakerDefaults>>,

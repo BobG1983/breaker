@@ -6,9 +6,9 @@ mod hot_reload;
 mod overlays;
 mod plugin;
 #[cfg(feature = "dev")]
-pub mod recording;
-pub mod resources;
+pub(crate) mod recording;
+pub(crate) mod resources;
 #[cfg(feature = "dev")]
 mod telemetry;
 
-pub use plugin::DebugPlugin;
+pub(crate) use plugin::DebugPlugin;

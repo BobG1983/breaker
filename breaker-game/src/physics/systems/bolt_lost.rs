@@ -5,11 +5,9 @@ use rand::Rng;
 
 use crate::{
     bolt::{
-        components::{
-            Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-            BoltVelocity, ExtraBolt,
-        },
+        components::{Bolt, BoltVelocity},
         filters::ActiveBoltFilter,
+        queries::BoltLostQuery,
     },
     breaker::components::Breaker,
     interpolate::components::PhysicsTranslation,
@@ -22,24 +20,11 @@ use crate::{
 /// Baseline bolts (without [`ExtraBolt`]) are respawned above the breaker.
 /// Extra bolts (with [`ExtraBolt`]) are despawned permanently.
 /// Sends a [`BoltLost`] message in both cases.
-#[allow(clippy::type_complexity)]
-pub fn bolt_lost(
+pub(crate) fn bolt_lost(
     mut commands: Commands,
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
-    bolt_query: Query<
-        (
-            Entity,
-            &Transform,
-            &BoltVelocity,
-            &BoltBaseSpeed,
-            &BoltRadius,
-            &BoltRespawnOffsetY,
-            &BoltRespawnAngleSpread,
-            Has<ExtraBolt>,
-        ),
-        ActiveBoltFilter,
-    >,
+    bolt_query: Query<BoltLostQuery, ActiveBoltFilter>,
     breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
     mut writer: MessageWriter<BoltLost>,
 ) {
@@ -93,7 +78,7 @@ mod tests {
     use crate::bolt::{
         components::{
             Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-            BoltVelocity,
+            BoltVelocity, ExtraBolt,
         },
         resources::BoltConfig,
     };

@@ -9,7 +9,7 @@ use crate::screen::{
 };
 
 /// Reads the loaded `ChipSelectDefaults` asset and inserts `ChipSelectConfig`.
-pub fn seed_chip_select_config(
+pub(crate) fn seed_chip_select_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<ChipSelectDefaults>>,
     mut commands: Commands,

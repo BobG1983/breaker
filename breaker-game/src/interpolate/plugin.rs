@@ -11,7 +11,7 @@ use super::systems::{interpolate_transform, restore_authoritative, store_authori
 ///
 /// Entities opt in by adding [`InterpolateTransform`] and [`PhysicsTranslation`]
 /// components.
-pub struct InterpolatePlugin;
+pub(crate) struct InterpolatePlugin;
 
 impl Plugin for InterpolatePlugin {
     fn build(&self, app: &mut App) {

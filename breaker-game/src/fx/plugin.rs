@@ -8,7 +8,7 @@ use crate::{fx::systems::animate_fade_out, shared::PlayingState};
 ///
 /// Owns cross-cutting visual effects: fade-out animations, and (future) flash,
 /// screen shake, and particles.
-pub struct FxPlugin;
+pub(crate) struct FxPlugin;
 
 impl Plugin for FxPlugin {
     fn build(&self, app: &mut App) {

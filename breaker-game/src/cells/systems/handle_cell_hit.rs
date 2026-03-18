@@ -16,21 +16,16 @@ use crate::{
 /// (e.g., two bolts hitting the same cell simultaneously): only the first hit
 /// that destroys the cell is processed; subsequent messages for an already-despawned
 /// cell are skipped to prevent duplicate [`CellDestroyed`] messages.
-pub fn handle_cell_hit(
+pub(crate) fn handle_cell_hit(
     mut reader: MessageReader<BoltHitCell>,
     mut cell_query: Query<CellDamageVisualQuery, With<Cell>>,
     mut commands: Commands,
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mut messages = reader.read().peekable();
-    if messages.peek().is_none() {
-        return;
-    }
-
     // Small vec suffices — MAX_BOUNCES = 4 limits hits per frame
     let mut despawned = Vec::<Entity>::new();
-    for hit in messages {
+    for hit in reader.read() {
         if despawned.contains(&hit.cell) {
             continue;
         }
@@ -176,10 +171,7 @@ mod tests {
         let mut app = test_app();
         let cell = spawn_cell(&mut app, 1);
 
-        app.insert_resource(TestMessage(Some(BoltHitCell {
-            bolt: Entity::PLACEHOLDER,
-            cell,
-        })));
+        app.insert_resource(TestMessage(Some(BoltHitCell { cell })));
 
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
         tick(&mut app);
@@ -195,10 +187,7 @@ mod tests {
         let mut app = test_app();
         let cell = spawn_cell(&mut app, 3);
 
-        app.insert_resource(TestMessage(Some(BoltHitCell {
-            bolt: Entity::PLACEHOLDER,
-            cell,
-        })));
+        app.insert_resource(TestMessage(Some(BoltHitCell { cell })));
 
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
         tick(&mut app);
@@ -217,10 +206,7 @@ mod tests {
         let cell = spawn_optional_cell(&mut app, 1, true);
 
         app.init_resource::<CapturedDestroyed>();
-        app.insert_resource(TestMessage(Some(BoltHitCell {
-            bolt: Entity::PLACEHOLDER,
-            cell,
-        })));
+        app.insert_resource(TestMessage(Some(BoltHitCell { cell })));
         app.add_systems(
             FixedUpdate,
             (
@@ -248,10 +234,7 @@ mod tests {
         let cell = spawn_optional_cell(&mut app, 1, false);
 
         app.init_resource::<CapturedDestroyed>();
-        app.insert_resource(TestMessage(Some(BoltHitCell {
-            bolt: Entity::PLACEHOLDER,
-            cell,
-        })));
+        app.insert_resource(TestMessage(Some(BoltHitCell { cell })));
         app.add_systems(
             FixedUpdate,
             (
@@ -280,16 +263,8 @@ mod tests {
 
         app.init_resource::<CapturedDestroyed>();
         app.init_resource::<TestMessages>();
-        app.world_mut().resource_mut::<TestMessages>().0 = vec![
-            BoltHitCell {
-                bolt: Entity::PLACEHOLDER,
-                cell,
-            },
-            BoltHitCell {
-                bolt: Entity::PLACEHOLDER,
-                cell,
-            },
-        ];
+        app.world_mut().resource_mut::<TestMessages>().0 =
+            vec![BoltHitCell { cell }, BoltHitCell { cell }];
         app.add_systems(
             FixedUpdate,
             (

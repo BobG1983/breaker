@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Updates menu item colors based on the current selection.
-pub fn update_menu_colors(
+pub(crate) fn update_menu_colors(
     config: Res<MainMenuConfig>,
     selection: Res<MainMenuSelection>,
     mut query: Query<(&MenuItem, &mut TextColor)>,

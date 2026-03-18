@@ -12,7 +12,7 @@ use crate::{
 ///
 /// Called by `init_archetype` at run start. Maps trigger+consequence pairs to
 /// existing bump multiplier components that the bolt domain already reads.
-pub fn apply_bolt_speed_boosts(
+pub(crate) fn apply_bolt_speed_boosts(
     commands: &mut Commands,
     entity: Entity,
     behaviors: &[BehaviorBinding],

@@ -20,7 +20,7 @@ use crate::{
 ///
 /// Called when the bolt hits while a forward bump is active.
 /// Timer counts down from `early_window + perfect_window`.
-pub fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
+pub(super) fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
     if timer <= perfect_window {
         BumpGrade::Perfect
     } else {
@@ -31,7 +31,7 @@ pub fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
 /// Determines the retroactive grade based on time elapsed since hit.
 ///
 /// Called when the player presses bump after the bolt has already hit.
-pub fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> BumpGrade {
+pub(super) fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> BumpGrade {
     if time_since_hit <= perfect_window {
         BumpGrade::Perfect
     } else {

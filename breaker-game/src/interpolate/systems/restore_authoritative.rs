@@ -12,7 +12,7 @@ use crate::interpolate::components::{InterpolateTransform, PhysicsTranslation};
 ///
 /// This ensures physics systems always see the true authoritative position,
 /// not the interpolated visual position from the previous render frame.
-pub fn restore_authoritative(
+pub(crate) fn restore_authoritative(
     mut query: Query<(&mut Transform, &mut PhysicsTranslation), With<InterpolateTransform>>,
 ) {
     for (mut transform, mut physics) in &mut query {

@@ -11,10 +11,10 @@ use crate::{
 };
 
 /// Breaker entities for collision queries (excludes bolt for query disjointness).
-pub type BreakerCollisionFilter = (With<Breaker>, Without<Bolt>);
+pub(crate) type BreakerCollisionFilter = (With<Breaker>, Without<Bolt>);
 
 /// Cell entities for collision queries (excludes bolt and wall for query disjointness).
-pub type CellCollisionFilter = (With<Cell>, Without<Bolt>, Without<Wall>);
+pub(crate) type CellCollisionFilter = (With<Cell>, Without<Bolt>, Without<Wall>);
 
 /// Wall entities for collision queries (excludes bolt and cell for query disjointness).
-pub type WallCollisionFilter = (With<Wall>, Without<Bolt>, Without<Cell>);
+pub(crate) type WallCollisionFilter = (With<Wall>, Without<Bolt>, Without<Cell>);

@@ -16,7 +16,7 @@ use breaker::game::Game;
 use tracing::{debug, info, warn};
 
 use crate::{
-    invariants::ViolationLog,
+    invariants::{ScenarioStats, ViolationLog},
     lifecycle::{ScenarioConfig, ScenarioLifecycle},
     log_capture::{CapturedLogs, poll_log_buffer, scenario_log_layer_factory},
     types::ScenarioDefinition,
@@ -121,6 +121,9 @@ fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
 /// - every listed invariant fired at least once
 /// - no unlisted invariants fired
 /// - no unexpected logs were captured
+///
+/// `Some([])` (empty expected list) means "expect no violations of any kind" —
+/// semantically identical to `None`, but explicit about the expectation.
 fn evaluate_pass(
     violations: &[crate::invariants::ViolationEntry],
     logs: &[crate::log_capture::LogEntry],
@@ -137,6 +140,56 @@ fn evaluate_pass(
                 .all(|v| expected.iter().any(|ev| ev == &v.invariant));
             all_expected_fired && no_unexpected && logs.is_empty()
         })
+}
+
+/// Produces human-readable health warning strings for a completed scenario run.
+///
+/// Returns warnings about suspicious-but-not-failing conditions:
+/// - When `stats.actions_injected == 0` and the input strategy is not an empty
+///   `Scripted` list, warns that "no actions were injected".
+///
+/// Returns an empty `Vec` when no warnings apply.
+#[must_use]
+pub fn scenario_health_warnings(
+    stats: &crate::invariants::ScenarioStats,
+    definition: &ScenarioDefinition,
+) -> Vec<String> {
+    use crate::types::{InputStrategy, ScriptedParams};
+
+    let mut warnings = Vec::new();
+
+    let is_empty_scripted = matches!(
+        &definition.input,
+        InputStrategy::Scripted(ScriptedParams { actions }) if actions.is_empty()
+    );
+
+    if stats.actions_injected == 0 && !is_empty_scripted {
+        warnings.push(format!(
+            "no actions were injected during scenario run (input strategy: {:?})",
+            definition.input
+        ));
+    }
+
+    if !stats.entered_playing {
+        warnings.push("scenario never entered Playing state".to_owned());
+    }
+
+    if stats.bolts_tagged == 0 {
+        warnings.push("no bolts were tagged — bolt invariants are vacuous".to_owned());
+    }
+
+    if stats.breakers_tagged == 0 {
+        warnings.push("no breakers were tagged — breaker invariants are vacuous".to_owned());
+    }
+
+    if stats.max_frame < 10 {
+        warnings.push(format!(
+            "scenario exited very early (max_frame={})",
+            stats.max_frame
+        ));
+    }
+
+    warnings
 }
 
 /// Builds and runs one scenario app. Returns `true` if passed, `false` if failed.
@@ -188,6 +241,29 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
         .map(|c| c.definition.clone());
 
     let passed = evaluate_pass(&violations, &logs, definition.as_ref());
+
+    // Print health warnings (non-fatal) and scenario summary
+    let stats = app
+        .world()
+        .get_resource::<ScenarioStats>()
+        .cloned()
+        .unwrap_or_default();
+    if let Some(ref def) = definition {
+        let warnings = scenario_health_warnings(&stats, def);
+        for w in &warnings {
+            println!("  WARN [{scenario_name}]: {w}");
+        }
+        println!(
+            "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
+            stats.max_frame,
+            stats.actions_injected,
+            violations.len(),
+            logs.len(),
+            stats.bolts_tagged,
+            stats.breakers_tagged,
+            stats.entered_playing
+        );
+    }
 
     if passed {
         println!("PASS [{scenario_name}]");
@@ -285,4 +361,65 @@ fn build_app(headless: bool) -> App {
 
     app.add_plugins(Game);
     app
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        invariants::ScenarioStats,
+        types::{ChaosParams, InputStrategy, InvariantParams},
+    };
+
+    fn make_chaos_definition() -> ScenarioDefinition {
+        ScenarioDefinition {
+            breaker: "aegis".to_owned(),
+            layout: "corridor".to_owned(),
+            input: InputStrategy::Chaos(ChaosParams {
+                seed: 0,
+                action_prob: 0.3,
+            }),
+            max_frames: 1000,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: None,
+            invariant_params: InvariantParams::default(),
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // scenario_health_warnings — warns when no actions injected with Chaos input
+    // -------------------------------------------------------------------------
+
+    /// When `stats.actions_injected == 0` and the input strategy is `Chaos`
+    /// (which should produce actions), `scenario_health_warnings` must return
+    /// at least one warning containing "no actions were injected".
+    #[test]
+    fn scenario_health_warnings_warns_when_no_actions_injected_with_chaos_input() {
+        let stats = ScenarioStats {
+            actions_injected: 0,
+            invariant_checks: 100,
+            max_frame: 1000,
+            entered_playing: true,
+            bolts_tagged: 1,
+            breakers_tagged: 1,
+        };
+        let definition = make_chaos_definition();
+
+        let warnings = scenario_health_warnings(&stats, &definition);
+
+        assert!(
+            !warnings.is_empty(),
+            "expected at least one health warning when no actions were injected with Chaos input"
+        );
+
+        let has_no_actions_warning = warnings
+            .iter()
+            .any(|w| w.to_lowercase().contains("no actions were injected"));
+
+        assert!(
+            has_no_actions_warning,
+            "expected warning containing 'no actions were injected', got: {warnings:?}"
+        );
+    }
 }

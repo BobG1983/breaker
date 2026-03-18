@@ -8,7 +8,7 @@ const SELECTED_COLOR: Color = Color::srgb(0.4, 0.8, 1.0);
 const NORMAL_COLOR: Color = Color::srgb(0.6, 0.6, 0.7);
 
 /// Updates breaker card text colors based on the current selection index.
-pub fn update_run_setup_colors(
+pub(crate) fn update_run_setup_colors(
     selection: Res<RunSetupSelection>,
     cards: Query<(Entity, &BreakerCard)>,
     children_query: Query<&Children>,

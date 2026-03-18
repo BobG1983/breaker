@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// Spawns the timer display as a child of the [`StatusPanel`].
-pub fn spawn_timer_hud(
+pub(crate) fn spawn_timer_hud(
     mut commands: Commands,
     config: Res<TimerUiConfig>,
     timer: Res<NodeTimer>,
@@ -29,8 +29,7 @@ pub fn spawn_timer_hud(
     };
 
     let font: Handle<Font> = asset_server.load(&config.font_path);
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let secs = timer.remaining.ceil().max(0.0) as u32;
+    let display_secs = timer.remaining.ceil().max(0.0);
 
     commands.entity(panel).with_children(|parent| {
         parent
@@ -45,7 +44,7 @@ pub fn spawn_timer_hud(
             ))
             .with_child((
                 NodeTimerDisplay,
-                Text::new(format!("{secs}")),
+                Text::new(format!("{display_secs:.0}")),
                 TextFont {
                     font,
                     font_size: config.font_size,

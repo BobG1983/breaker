@@ -14,7 +14,7 @@ use crate::{
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as other menus).
 /// On confirm, sends `ChipSelected` with the chosen chip's identity
 /// before transitioning to `NodeTransition`.
-pub fn handle_chip_input(
+pub(crate) fn handle_chip_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     offers: Res<ChipOffers>,

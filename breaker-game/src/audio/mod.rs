@@ -2,4 +2,4 @@
 
 mod plugin;
 
-pub use plugin::AudioPlugin;
+pub(crate) use plugin::AudioPlugin;

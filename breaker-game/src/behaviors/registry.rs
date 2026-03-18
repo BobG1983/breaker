@@ -8,7 +8,7 @@ use super::definition::ArchetypeDefinition;
 
 /// Registry of all loaded archetype definitions, keyed by name.
 #[derive(Resource, Debug, Default)]
-pub struct ArchetypeRegistry {
+pub(crate) struct ArchetypeRegistry {
     /// Map from archetype name to its definition.
     pub archetypes: HashMap<String, ArchetypeDefinition>,
 }

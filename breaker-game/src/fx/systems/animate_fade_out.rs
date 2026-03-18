@@ -8,7 +8,7 @@ use crate::fx::components::FadeOut;
 ///
 /// Operates on all entities with `FadeOut + TextColor` — used by bolt-lost
 /// text, bump grade text, and whiff text.
-pub fn animate_fade_out(
+pub(crate) fn animate_fade_out(
     time: Res<Time>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut FadeOut, &mut TextColor)>,

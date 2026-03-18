@@ -5,6 +5,6 @@ mod plugin;
 mod resources;
 mod systems;
 
-pub use components::ChipSelectScreen;
-pub use plugin::ChipSelectPlugin;
-pub use resources::{ChipSelectConfig, ChipSelectDefaults};
+pub(crate) use components::ChipSelectScreen;
+pub(crate) use plugin::ChipSelectPlugin;
+pub(crate) use resources::{ChipSelectConfig, ChipSelectDefaults};

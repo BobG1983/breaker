@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Spawns the full-screen flex row with left and right side panels.
-pub fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePanels>>) {
+pub(crate) fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePanels>>) {
     if !existing.is_empty() {
         return;
     }

@@ -9,7 +9,7 @@ use crate::shared::color_from_rgb;
 /// Timer UI defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "TimerUiConfig")]
-pub struct TimerUiDefaults {
+pub(crate) struct TimerUiDefaults {
     /// Font size for the timer display.
     pub font_size: f32,
     /// Asset path for the timer font.
@@ -43,7 +43,7 @@ impl Default for TimerUiDefaults {
 impl TimerUiConfig {
     /// Returns the appropriate color for the given time fraction.
     #[must_use]
-    pub fn color_for_fraction(&self, fraction: f32) -> Color {
+    pub(crate) fn color_for_fraction(&self, fraction: f32) -> Color {
         if fraction <= self.urgent_threshold {
             color_from_rgb(self.urgent_color_rgb)
         } else if fraction <= self.warning_threshold {

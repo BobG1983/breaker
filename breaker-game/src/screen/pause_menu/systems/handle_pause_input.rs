@@ -14,7 +14,7 @@ use crate::{
 /// Handles keyboard navigation and confirmation on the pause menu.
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as main menu).
-pub fn handle_pause_input(
+pub(crate) fn handle_pause_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     mut selection: ResMut<PauseMenuSelection>,

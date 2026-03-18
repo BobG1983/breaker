@@ -1,4 +1,4 @@
 /target
-.claude/agent-memory/
+.claude/agent-memory/**/ephemeral/
 /logs/
 /recordings/

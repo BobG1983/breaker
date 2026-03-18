@@ -2,4 +2,4 @@
 
 mod cleanup;
 
-pub use cleanup::cleanup_entities;
+pub(crate) use cleanup::cleanup_entities;

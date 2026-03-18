@@ -6,7 +6,7 @@ use crate::{
     bolt::components::{Bolt, BoltRadius},
     breaker::components::{Breaker, BreakerHeight, BreakerWidth},
     cells::components::{Cell, CellHeight, CellWidth},
-    debug::resources::DebugOverlays,
+    debug::resources::{DebugOverlays, Overlay},
 };
 
 const BOLT_HITBOX_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);
@@ -14,14 +14,14 @@ const CELL_HITBOX_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const BREAKER_HITBOX_COLOR: Color = Color::srgb(0.0, 0.5, 1.0);
 
 /// Draws gizmo outlines around bolt, cell, and breaker hitboxes.
-pub fn draw_hitboxes(
+pub(crate) fn draw_hitboxes(
     overlays: Res<DebugOverlays>,
     mut gizmos: Gizmos,
     bolt_query: Query<(&Transform, &BoltRadius), With<Bolt>>,
     breaker_query: Query<(&Transform, &BreakerWidth, &BreakerHeight), With<Breaker>>,
     cell_query: Query<(&Transform, &CellWidth, &CellHeight), With<Cell>>,
 ) {
-    if !overlays.show_hitboxes {
+    if !overlays.is_active(Overlay::Hitboxes) {
         return;
     }
 

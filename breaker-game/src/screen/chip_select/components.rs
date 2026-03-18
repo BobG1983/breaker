@@ -4,15 +4,15 @@ use bevy::prelude::*;
 
 /// Marker component on the root chip-select UI entity.
 #[derive(Component)]
-pub struct ChipSelectScreen;
+pub(crate) struct ChipSelectScreen;
 
 /// Identifies a chip card by its index (0, 1, 2).
 #[derive(Component, Debug, Clone, Copy)]
-pub struct ChipCard {
+pub(super) struct ChipCard {
     /// Zero-based index of this card.
     pub index: usize,
 }
 
 /// Marker on the timer text entity so `update_chip_display` can find it.
 #[derive(Component)]
-pub struct ChipTimerText;
+pub(super) struct ChipTimerText;

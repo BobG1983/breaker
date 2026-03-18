@@ -18,7 +18,7 @@ use crate::{
 ///
 /// Runs in the `Last` schedule every frame, but only writes when an [`AppExit`]
 /// message is present and the buffer is non-empty.
-pub fn write_recording_on_exit(
+pub(crate) fn write_recording_on_exit(
     config: Res<RecordingConfig>,
     buffer: Res<RecordingBuffer>,
     exit_messages: Res<Messages<AppExit>>,
@@ -68,7 +68,7 @@ pub fn write_recording_on_exit(
 
 /// Serialises the buffer into a `ScriptedInput`-compatible RON string.
 #[must_use]
-pub fn serialise_buffer(frames: &[RecordedFrame]) -> String {
+pub(super) fn serialise_buffer(frames: &[RecordedFrame]) -> String {
     let mut out = String::from("Scripted(actions: [\n");
     for entry in frames {
         let _ = write!(out, "    (frame: {}, actions: [", entry.frame);
@@ -92,6 +92,7 @@ const fn action_name(action: GameAction) -> &'static str {
         GameAction::MenuLeft => "MenuLeft",
         GameAction::MenuRight => "MenuRight",
         GameAction::MenuConfirm => "MenuConfirm",
+        GameAction::TogglePause => "TogglePause",
     }
 }
 

@@ -20,19 +20,21 @@ pub struct BoltVelocity {
 
 impl BoltVelocity {
     /// Creates a new bolt velocity.
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(x: f32, y: f32) -> Self {
+    #[must_use]
+    pub const fn new(x: f32, y: f32) -> Self {
         Self {
             value: Vec2::new(x, y),
         }
     }
 
     /// Returns the current speed (magnitude of velocity).
+    #[must_use]
     pub fn speed(&self) -> f32 {
         self.value.length()
     }
 
     /// Returns the normalized direction vector.
+    #[must_use]
     pub fn direction(&self) -> Vec2 {
         self.value.normalize_or_zero()
     }

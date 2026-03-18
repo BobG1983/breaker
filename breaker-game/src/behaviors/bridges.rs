@@ -16,7 +16,7 @@ use crate::{
 /// Drains all messages (not just the first) so that extras from future multi-bolt
 /// archetypes don't leak into subsequent frames. Consequences fire once per
 /// bridge invocation regardless of how many bolts were lost in the same frame.
-pub fn bridge_bolt_lost(
+pub(crate) fn bridge_bolt_lost(
     mut reader: MessageReader<BoltLost>,
     bindings: Res<ActiveBehaviors>,
     mut commands: Commands,
@@ -29,7 +29,7 @@ pub fn bridge_bolt_lost(
 
 /// Reads `BumpPerformed` messages and fires consequence events for the
 /// corresponding bump trigger.
-pub fn bridge_bump(
+pub(crate) fn bridge_bump(
     mut reader: MessageReader<BumpPerformed>,
     bindings: Res<ActiveBehaviors>,
     mut commands: Commands,

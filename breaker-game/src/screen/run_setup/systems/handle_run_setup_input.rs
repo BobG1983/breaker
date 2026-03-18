@@ -13,7 +13,7 @@ use crate::{
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as main menu) because
 /// this screen runs in `Update` while `InputActions` clears in `FixedPostUpdate`.
-pub fn handle_run_setup_input(
+pub(crate) fn handle_run_setup_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     registry: Res<ArchetypeRegistry>,

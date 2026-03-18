@@ -7,7 +7,7 @@ use bevy::prelude::*;
 ///
 /// Used across domains (bolt-lost text, bump grade text) for floating feedback.
 #[derive(Component, Debug)]
-pub struct FadeOut {
+pub(crate) struct FadeOut {
     /// Remaining time in the fade animation (seconds).
     pub timer: f32,
     /// Total duration of the fade animation (seconds).

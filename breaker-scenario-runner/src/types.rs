@@ -32,6 +32,8 @@ pub enum GameAction {
     MenuRight,
     /// Menu confirm selection.
     MenuConfirm,
+    /// Toggle pause state.
+    TogglePause,
 }
 
 /// A single scripted frame entry — a frame index and the actions to inject.
@@ -88,14 +90,28 @@ pub enum InputStrategy {
 pub enum InvariantKind {
     /// Bolt position stays within playfield bounds.
     BoltInBounds,
+    /// Bolt speed stays within configured min/max bounds.
+    BoltSpeedInRange,
+    /// Bolt count stays within `invariant_params.max_bolt_count`.
+    BoltCountReasonable,
     /// Breaker position stays within playfield bounds.
     BreakerInBounds,
     /// No unexpected entity accumulation over time.
     NoEntityLeaks,
     /// No NaN values in transform/velocity components.
     NoNaN,
+    /// Node timer never goes negative.
+    TimerNonNegative,
     /// Breaker state machine only takes valid transitions.
     ValidStateTransitions,
+    /// Breaker movement state machine only takes legal transitions.
+    ValidBreakerState,
+    /// Node timer decreases monotonically (never increases mid-node).
+    TimerMonotonicallyDecreasing,
+    /// Breaker x position stays within playfield bounds minus half-width.
+    BreakerPositionClamped,
+    /// Physics entities do not move while game is paused.
+    PhysicsFrozenDuringPause,
 }
 
 /// Optional debug overrides applied after entity spawn (used in self-test scenarios).
@@ -103,9 +119,37 @@ pub enum InvariantKind {
 pub struct DebugSetup {
     /// Place bolt at this `(x, y)` world-space position instead of the default spawn.
     pub bolt_position: Option<(f32, f32)>,
+    /// Place breaker at this `(x, y)` world-space position instead of the default spawn.
+    #[serde(default)]
+    pub breaker_position: Option<(f32, f32)>,
     /// When `true`, freeze physics so the bolt stays at the injected position.
     #[serde(default)]
     pub disable_physics: bool,
+}
+
+/// Tunable parameters for invariant checkers.
+///
+/// All fields have sensible defaults and can be overridden per-scenario
+/// in the RON file via `invariant_params: (max_bolt_count: 12)`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct InvariantParams {
+    /// Maximum bolt count before [`InvariantKind::BoltCountReasonable`] fires.
+    #[serde(default = "InvariantParams::default_max_bolt_count")]
+    pub max_bolt_count: usize,
+}
+
+impl InvariantParams {
+    const fn default_max_bolt_count() -> usize {
+        8
+    }
+}
+
+impl Default for InvariantParams {
+    fn default() -> Self {
+        Self {
+            max_bolt_count: Self::default_max_bolt_count(),
+        }
+    }
 }
 
 /// Full scenario definition loaded from a `.scenario.ron` file.
@@ -126,6 +170,9 @@ pub struct ScenarioDefinition {
     pub expected_violations: Option<Vec<InvariantKind>>,
     /// Optional debug overrides for self-test scenarios.
     pub debug_setup: Option<DebugSetup>,
+    /// Tunable thresholds for invariant checkers.
+    #[serde(default)]
+    pub invariant_params: InvariantParams,
 }
 
 #[cfg(test)]

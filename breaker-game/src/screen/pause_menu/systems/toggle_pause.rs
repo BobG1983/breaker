@@ -2,17 +2,20 @@
 
 use bevy::prelude::*;
 
-use crate::shared::PlayingState;
+use crate::{
+    input::resources::{GameAction, InputActions},
+    shared::PlayingState,
+};
 
-/// Toggles between [`PlayingState::Active`] and [`PlayingState::Paused`] on Escape.
+/// Toggles between [`PlayingState::Active`] and [`PlayingState::Paused`] on `TogglePause`.
 ///
-/// Reads `ButtonInput<KeyCode>` directly for the Escape key.
-pub fn toggle_pause(
-    keys: Res<ButtonInput<KeyCode>>,
+/// Reads [`InputActions`] for the [`GameAction::TogglePause`] action.
+pub(crate) fn toggle_pause(
+    actions: Res<InputActions>,
     current_state: Res<State<PlayingState>>,
     mut next_state: ResMut<NextState<PlayingState>>,
 ) {
-    if !keys.just_pressed(KeyCode::Escape) {
+    if !actions.active(GameAction::TogglePause) {
         return;
     }
 
@@ -27,11 +30,12 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::shared::GameState;
+    use crate::{input::resources::*, shared::GameState};
 
     fn test_app(initial_playing_state: PlayingState) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin));
+        app.init_resource::<InputActions>();
         app.init_resource::<ButtonInput<KeyCode>>();
         app.init_state::<GameState>();
         app.add_sub_state::<PlayingState>();
@@ -54,17 +58,18 @@ mod tests {
         app
     }
 
-    fn press_escape(app: &mut App) {
+    fn inject_toggle_pause(app: &mut App) {
         app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::Escape);
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::TogglePause);
         app.update();
     }
 
     #[test]
     fn escape_toggles_active_to_paused() {
         let mut app = test_app(PlayingState::Active);
-        press_escape(&mut app);
+        inject_toggle_pause(&mut app);
 
         let next = app.world().resource::<NextState<PlayingState>>();
         assert!(
@@ -76,7 +81,7 @@ mod tests {
     #[test]
     fn escape_toggles_paused_to_active() {
         let mut app = test_app(PlayingState::Paused);
-        press_escape(&mut app);
+        inject_toggle_pause(&mut app);
 
         let next = app.world().resource::<NextState<PlayingState>>();
         assert!(

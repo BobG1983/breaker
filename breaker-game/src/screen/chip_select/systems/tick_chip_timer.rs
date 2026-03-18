@@ -7,7 +7,7 @@ use crate::{screen::chip_select::resources::ChipSelectTimer, shared::GameState};
 /// Ticks the chip selection timer and auto-advances on expiry.
 ///
 /// Timer expiry transitions to [`GameState::NodeTransition`] (skip, no chip).
-pub fn tick_chip_timer(
+pub(crate) fn tick_chip_timer(
     time: Res<Time>,
     mut timer: ResMut<ChipSelectTimer>,
     mut next_state: ResMut<NextState<GameState>>,

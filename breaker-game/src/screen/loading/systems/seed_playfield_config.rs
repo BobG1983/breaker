@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Reads the loaded `PlayfieldDefaults` asset and inserts `PlayfieldConfig`.
-pub fn seed_playfield_config(
+pub(crate) fn seed_playfield_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<PlayfieldDefaults>>,
     mut commands: Commands,

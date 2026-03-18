@@ -9,7 +9,7 @@ use crate::{
 
 /// Watches for `AssetEvent::Modified` on the bolt defaults asset and
 /// re-seeds `BoltConfig` from the updated asset data.
-pub fn propagate_bolt_defaults(
+pub(crate) fn propagate_bolt_defaults(
     mut events: MessageReader<AssetEvent<BoltDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<BoltDefaults>>,

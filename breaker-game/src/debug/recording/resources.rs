@@ -6,7 +6,7 @@ use crate::input::resources::GameAction;
 
 /// Configuration inserted by `main.rs` when `--record` is passed.
 #[derive(Resource, Debug, Default)]
-pub struct RecordingConfig {
+pub(crate) struct RecordingConfig {
     /// Whether recording is active.
     pub enabled: bool,
     /// If set, only record while `ActiveNodeLayout.name` equals this string.
@@ -15,7 +15,7 @@ pub struct RecordingConfig {
 
 /// A single recorded frame — frame index and the actions that were active.
 #[derive(Debug, Clone)]
-pub struct RecordedFrame {
+pub(super) struct RecordedFrame {
     /// Fixed-update frame index.
     pub frame: u32,
     /// Actions that were active on this frame.
@@ -24,11 +24,11 @@ pub struct RecordedFrame {
 
 /// Accumulates recorded frames during the run.
 #[derive(Resource, Default)]
-pub struct RecordingBuffer(pub Vec<RecordedFrame>);
+pub(super) struct RecordingBuffer(pub Vec<RecordedFrame>);
 
 /// Monotonic fixed-update frame counter for recording.
 #[derive(Resource, Default)]
-pub struct RecordingFrame(pub u32);
+pub(super) struct RecordingFrame(pub u32);
 
 #[cfg(test)]
 mod tests {

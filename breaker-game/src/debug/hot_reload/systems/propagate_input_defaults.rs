@@ -9,7 +9,7 @@ use crate::{
 
 /// Watches for `AssetEvent::Modified` on the input defaults asset and
 /// re-seeds `InputConfig` from the updated asset data.
-pub fn propagate_input_defaults(
+pub(crate) fn propagate_input_defaults(
     mut events: MessageReader<AssetEvent<InputDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<InputDefaults>>,

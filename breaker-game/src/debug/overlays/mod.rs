@@ -1,4 +1,4 @@
 //! Gizmo overlay sub-domain — hitbox and velocity vector drawing.
 
-pub mod plugin;
+pub(super) mod plugin;
 mod systems;

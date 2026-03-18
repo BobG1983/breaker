@@ -2,7 +2,7 @@
 
 mod components;
 mod plugin;
-pub mod resources;
+pub(crate) mod resources;
 mod systems;
 
-pub use plugin::LoadingPlugin;
+pub(crate) use plugin::LoadingPlugin;

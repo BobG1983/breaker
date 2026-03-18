@@ -25,6 +25,11 @@ pub struct NodeLayout {
 impl NodeLayout {
     /// Validates that grid dimensions match declared cols/rows and all non-'.'
     /// chars exist in the given registry.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if row/column counts don't match the declared
+    /// dimensions or if the grid contains an alias not found in the registry.
     pub fn validate(&self, registry: &CellTypeRegistry) -> Result<(), String> {
         if self.grid.len() != self.rows as usize {
             return Err(format!(

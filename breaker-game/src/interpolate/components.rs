@@ -5,7 +5,7 @@ use bevy::prelude::*;
 /// Marker component — entities with this get visual interpolation between
 /// fixed-timestep ticks.
 #[derive(Component, Debug)]
-pub struct InterpolateTransform;
+pub(crate) struct InterpolateTransform;
 
 /// Stores the authoritative physics positions from the last two `FixedUpdate` ticks.
 ///

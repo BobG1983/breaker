@@ -9,6 +9,7 @@
     expected_violations: Some([BreakerInBounds]),
     debug_setup: Some((
         bolt_position: None,
+        breaker_position: Some((2000.0, 0.0)),
         disable_physics: true,
     )),
 )

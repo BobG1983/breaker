@@ -1,0 +1,13 @@
+(
+    breaker: "Prism",
+    layout: "Scatter",
+    input: Chaos((
+        seed: 700,
+        action_prob: 0.7,
+    )),
+    max_frames: 15000,
+    invariants: [BoltInBounds, NoNaN, BoltCountReasonable, NoEntityLeaks, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 12),
+)

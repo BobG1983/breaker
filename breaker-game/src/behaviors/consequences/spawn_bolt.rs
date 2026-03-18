@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Observer that handles spawn-bolt — writes [`SpawnAdditionalBolt`] message.
-pub fn handle_spawn_bolt(
+pub(crate) fn handle_spawn_bolt(
     trigger: On<ConsequenceFired>,
     mut writer: MessageWriter<SpawnAdditionalBolt>,
 ) {

@@ -9,7 +9,7 @@ use crate::screen::{
 };
 
 /// Reads the loaded `MainMenuDefaults` asset and inserts `MainMenuConfig`.
-pub fn seed_main_menu_config(
+pub(crate) fn seed_main_menu_config(
     collection: Option<Res<DefaultsCollection>>,
     assets: Res<Assets<MainMenuDefaults>>,
     mut commands: Commands,

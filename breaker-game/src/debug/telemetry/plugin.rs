@@ -8,7 +8,7 @@ use super::systems::{
 use crate::{debug::resources::DebugOverlays, physics::PhysicsSystems, shared::PlayingState};
 
 /// Registers egui telemetry panels and bump result tracking.
-pub struct TelemetryPlugin;
+pub(crate) struct TelemetryPlugin;
 
 impl Plugin for TelemetryPlugin {
     fn build(&self, app: &mut App) {

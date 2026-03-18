@@ -27,7 +27,7 @@ use crate::{
 ///
 /// After stamping config-derived components, re-applies archetype bolt speed
 /// multipliers via `apply_bolt_speed_boosts`.
-pub fn propagate_breaker_config(
+pub(crate) fn propagate_breaker_config(
     mut commands: Commands,
     config: Res<BreakerConfig>,
     selected: Res<SelectedArchetype>,

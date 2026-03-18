@@ -4,6 +4,6 @@ mod definition;
 mod plugin;
 mod resources;
 
-pub use definition::{ChipDefinition, ChipKind};
-pub use plugin::ChipsPlugin;
-pub use resources::ChipRegistry;
+pub(crate) use definition::{ChipDefinition, ChipKind};
+pub(crate) use plugin::ChipsPlugin;
+pub(crate) use resources::ChipRegistry;

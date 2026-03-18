@@ -2,30 +2,67 @@
 
 use bevy::prelude::*;
 
+/// Identifies a specific debug overlay.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum Overlay {
+    /// Frames-per-second counter.
+    Fps,
+    /// Entity hitbox outlines.
+    Hitboxes,
+    /// Velocity vector arrows on moving entities.
+    VelocityVectors,
+    /// Current game state label.
+    State,
+    /// Bolt telemetry window.
+    BoltInfo,
+    /// Breaker state telemetry window.
+    BreakerState,
+    /// Input actions debug window.
+    InputActions,
+}
+
+impl Overlay {
+    /// Total number of overlay variants.
+    const COUNT: usize = 7;
+}
+
 /// Resource controlling which debug overlays are visible.
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Resource, Default)]
-pub struct DebugOverlays {
-    /// Show frames-per-second counter.
-    pub show_fps: bool,
-    /// Show entity hitbox outlines.
-    pub show_hitboxes: bool,
-    /// Show velocity vector arrows on moving entities.
-    pub show_velocity_vectors: bool,
-    /// Show current game state label.
-    pub show_state: bool,
-    /// Show bolt telemetry window.
-    pub show_bolt_info: bool,
-    /// Show breaker state telemetry window.
-    pub show_breaker_state: bool,
-    /// Show input actions debug window.
-    pub show_input_actions: bool,
+///
+/// Uses an enum-indexed array instead of individual bool fields to avoid
+/// `clippy::struct_excessive_bools`.
+#[derive(Resource)]
+pub(crate) struct DebugOverlays {
+    /// Visibility flags indexed by [`Overlay`] variant.
+    flags: [bool; Overlay::COUNT],
+}
+
+impl Default for DebugOverlays {
+    fn default() -> Self {
+        Self {
+            flags: [false; Overlay::COUNT],
+        }
+    }
+}
+
+impl DebugOverlays {
+    /// Returns a mutable reference to the flag for the given overlay.
+    ///
+    /// Compatible with `egui::Ui::checkbox(&mut bool, label)`.
+    pub(crate) const fn flag_mut(&mut self, overlay: Overlay) -> &mut bool {
+        &mut self.flags[overlay as usize]
+    }
+
+    /// Returns whether the given overlay is active.
+    #[must_use]
+    pub(crate) const fn is_active(&self, overlay: Overlay) -> bool {
+        self.flags[overlay as usize]
+    }
 }
 
 /// Tracks the last bump outcome for debug display.
 #[cfg(feature = "dev")]
 #[derive(Resource, Default)]
-pub struct LastBumpResult(pub String);
+pub(crate) struct LastBumpResult(pub String);
 
 #[cfg(test)]
 mod tests {
@@ -34,13 +71,13 @@ mod tests {
     #[test]
     fn debug_overlays_default_all_off() {
         let overlays = DebugOverlays::default();
-        assert!(!overlays.show_fps);
-        assert!(!overlays.show_hitboxes);
-        assert!(!overlays.show_velocity_vectors);
-        assert!(!overlays.show_state);
-        assert!(!overlays.show_bolt_info);
-        assert!(!overlays.show_breaker_state);
-        assert!(!overlays.show_input_actions);
+        assert!(!overlays.is_active(Overlay::Fps));
+        assert!(!overlays.is_active(Overlay::Hitboxes));
+        assert!(!overlays.is_active(Overlay::VelocityVectors));
+        assert!(!overlays.is_active(Overlay::State));
+        assert!(!overlays.is_active(Overlay::BoltInfo));
+        assert!(!overlays.is_active(Overlay::BreakerState));
+        assert!(!overlays.is_active(Overlay::InputActions));
     }
 
     #[cfg(feature = "dev")]

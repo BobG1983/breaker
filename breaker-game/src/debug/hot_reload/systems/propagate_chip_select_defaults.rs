@@ -9,7 +9,7 @@ use crate::screen::{
 
 /// Watches for `AssetEvent::Modified` on the chip select defaults asset and
 /// re-seeds `ChipSelectConfig` from the updated asset data.
-pub fn propagate_chip_select_defaults(
+pub(crate) fn propagate_chip_select_defaults(
     mut events: MessageReader<AssetEvent<ChipSelectDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<ChipSelectDefaults>>,

@@ -6,7 +6,7 @@ use super::systems::{draw_hitboxes, draw_velocity_vectors};
 use crate::debug::resources::DebugOverlays;
 
 /// Registers gizmo overlay systems.
-pub struct OverlaysPlugin;
+pub(crate) struct OverlaysPlugin;
 
 impl Plugin for OverlaysPlugin {
     fn build(&self, app: &mut App) {

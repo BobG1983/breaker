@@ -4,11 +4,11 @@ use bevy::prelude::*;
 
 /// Marker component on the root main menu UI entity.
 #[derive(Component)]
-pub struct MainMenuScreen;
+pub(crate) struct MainMenuScreen;
 
 /// Identifies a menu item and its action.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MenuItem {
+pub(crate) enum MenuItem {
     /// Start a new run.
     Play,
     /// Open settings (not yet implemented).
@@ -18,4 +18,4 @@ pub enum MenuItem {
 }
 
 /// All menu items in display order.
-pub const MENU_ITEMS: [MenuItem; 3] = [MenuItem::Play, MenuItem::Settings, MenuItem::Quit];
+pub(crate) const MENU_ITEMS: [MenuItem; 3] = [MenuItem::Play, MenuItem::Settings, MenuItem::Quit];

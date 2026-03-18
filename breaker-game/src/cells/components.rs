@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// Marker component identifying a cell entity.
 #[derive(Component, Debug)]
-pub struct Cell;
+pub(crate) struct Cell;
 
 /// Marker for cells that count toward node completion.
 #[derive(Component, Debug)]
@@ -13,11 +13,11 @@ pub struct RequiredToClear;
 /// Tracks which cell type definition alias spawned this cell.
 /// Used by hot-reload to update live cells when their type definition changes.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CellTypeAlias(pub char);
+pub(crate) struct CellTypeAlias(pub char);
 
 /// Visual parameters for cell damage color feedback.
 #[derive(Component, Debug, Clone)]
-pub struct CellDamageVisuals {
+pub(crate) struct CellDamageVisuals {
     /// HDR intensity multiplier at full health.
     pub hdr_base: f32,
     /// Minimum green channel value.
@@ -30,29 +30,29 @@ pub struct CellDamageVisuals {
 
 /// Full width of a cell in world units.
 #[derive(Component, Debug)]
-pub struct CellWidth(pub f32);
+pub(crate) struct CellWidth(pub f32);
 
 impl CellWidth {
     /// Returns half the cell width.
-    pub fn half_width(&self) -> f32 {
+    pub(crate) fn half_width(&self) -> f32 {
         self.0 / 2.0
     }
 }
 
 /// Full height of a cell in world units.
 #[derive(Component, Debug)]
-pub struct CellHeight(pub f32);
+pub(crate) struct CellHeight(pub f32);
 
 impl CellHeight {
     /// Returns half the cell height.
-    pub fn half_height(&self) -> f32 {
+    pub(crate) fn half_height(&self) -> f32 {
         self.0 / 2.0
     }
 }
 
 /// Health of a cell — number of hits remaining before destruction.
 #[derive(Component, Debug, Clone)]
-pub struct CellHealth {
+pub(crate) struct CellHealth {
     /// Current hit points.
     pub current: u32,
     /// Maximum hit points (used for visual damage feedback).
@@ -61,8 +61,7 @@ pub struct CellHealth {
 
 impl CellHealth {
     /// Creates a new cell health with the given max HP.
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(hp: u32) -> Self {
+    pub(crate) const fn new(hp: u32) -> Self {
         Self {
             current: hp,
             max: hp,
@@ -70,25 +69,23 @@ impl CellHealth {
     }
 
     /// Returns true if the cell has been destroyed (0 HP).
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn is_destroyed(&self) -> bool {
+    pub(crate) const fn is_destroyed(&self) -> bool {
         self.current == 0
     }
 
     /// Applies one hit of damage. Returns true if the cell was destroyed.
-    pub fn take_hit(&mut self) -> bool {
+    pub(crate) const fn take_hit(&mut self) -> bool {
         self.current = self.current.saturating_sub(1);
         self.is_destroyed()
     }
 
     /// Returns the health fraction (0.0 to 1.0) for visual feedback.
-    pub fn fraction(&self) -> f32 {
+    pub(crate) fn fraction(&self) -> f32 {
         if self.max == 0 {
             return 0.0;
         }
-        #[allow(clippy::cast_precision_loss)]
-        let frac = self.current as f32 / self.max as f32;
-        frac
+        f32::from(u16::try_from(self.current).unwrap_or(u16::MAX))
+            / f32::from(u16::try_from(self.max).unwrap_or(u16::MAX))
     }
 }
 
