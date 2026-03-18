@@ -568,6 +568,69 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
+    // apply_debug_setup — teleport breaker to breaker_position (z preserved)
+    // -------------------------------------------------------------------------
+
+    /// When `debug_setup` has `breaker_position: Some((100.0, -50.0))`,
+    /// `apply_debug_setup` must move the [`ScenarioTagBreaker`] entity to
+    /// `(100.0, -50.0)` while preserving the original z coordinate.
+    ///
+    /// This test covers the `breaker_position` code path, which is distinct from
+    /// the existing `bolt_position` tests.
+    #[test]
+    fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
+        let definition = ScenarioDefinition {
+            breaker: "Aegis".to_owned(),
+            layout: "Corridor".to_owned(),
+            input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+            max_frames: 1000,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: Some(DebugSetup {
+                bolt_position: None,
+                breaker_position: Some((100.0, -50.0)),
+                disable_physics: false,
+            }),
+            invariant_params: InvariantParams::default(),
+        };
+
+        let mut app = debug_setup_app(definition);
+        app.add_systems(Update, apply_debug_setup);
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBreaker, Transform::from_xyz(0.0, 0.0, 2.0)))
+            .id();
+
+        // First update: system runs and mutates transform directly (no commands needed)
+        app.update();
+        // Second update: flush any pending commands
+        app.update();
+
+        let transform = app
+            .world()
+            .entity(entity)
+            .get::<Transform>()
+            .expect("breaker entity must still have Transform");
+
+        assert!(
+            (transform.translation.x - 100.0_f32).abs() < f32::EPSILON,
+            "expected x = 100.0 after breaker_position teleport, got {}",
+            transform.translation.x
+        );
+        assert!(
+            (transform.translation.y - (-50.0_f32)).abs() < f32::EPSILON,
+            "expected y = -50.0 after breaker_position teleport, got {}",
+            transform.translation.y
+        );
+        assert!(
+            (transform.translation.z - 2.0_f32).abs() < f32::EPSILON,
+            "expected z = 2.0 preserved, got {}",
+            transform.translation.z
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // apply_debug_setup — inserts ScenarioPhysicsFrozen + disables physics
     // -------------------------------------------------------------------------
 

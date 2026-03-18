@@ -97,8 +97,9 @@ impl ScriptedInput {
 /// Hybrid input strategy: scripted for the first `scripted_frames` frames, then chaos.
 ///
 /// Frames `0..scripted_frames` always return an empty `Vec` (no scripted entries are
-/// stored — the scripted phase acts as a silent warmup). Frames at and beyond
-/// `scripted_frames` delegate to the inner [`ChaosDriver`].
+/// stored — the scripted phase acts as a silent warmup). Frame `scripted_frames` is
+/// the first frame in the chaos phase; all subsequent frames also delegate to the
+/// inner [`ChaosDriver`].
 pub struct HybridInput {
     /// Number of frames in the scripted (silent) phase.
     pub scripted_frames: u32,
@@ -163,7 +164,7 @@ impl InputDriver {
     /// always fire at their configured frames.
     pub fn actions_for_frame(&mut self, frame: u32, is_active: bool) -> Vec<GameAction> {
         match self {
-            Self::Chaos(monkey) => monkey.actions_for_frame(frame, is_active),
+            Self::Chaos(driver) => driver.actions_for_frame(frame, is_active),
             Self::Scripted(scripted) => scripted.actions_for_frame(frame),
             Self::Hybrid(hybrid) => hybrid.actions_for_frame(frame, is_active),
         }
@@ -184,15 +185,15 @@ mod tests {
     /// With seed 0 and 1000 frames, the count of non-empty frames must fall
     /// between 230 and 370 (30% ± 10%).
     #[test]
-    fn chaos_monkey_fires_at_correct_statistical_probability() {
+    fn chaos_driver_fires_at_correct_statistical_probability() {
         let params = ChaosParams {
             seed: 0,
             action_prob: 0.3,
         };
-        let mut monkey = ChaosDriver::new(&params);
+        let mut driver = ChaosDriver::new(&params);
 
         let fired_count = (0_u32..1000)
-            .filter(|&frame| !monkey.actions_for_frame(frame, true).is_empty())
+            .filter(|&frame| !driver.actions_for_frame(frame, true).is_empty())
             .count();
 
         assert!(
@@ -207,19 +208,19 @@ mod tests {
 
     /// Two `ChaosDriver` instances seeded identically produce identical output sequences.
     #[test]
-    fn chaos_monkey_produces_reproducible_output_for_same_seed() {
+    fn chaos_driver_produces_reproducible_output_for_same_seed() {
         let params = ChaosParams {
             seed: 42,
             action_prob: 0.5,
         };
 
-        let mut monkey_a = ChaosDriver::new(&params);
-        let mut monkey_b = ChaosDriver::new(&params);
+        let mut driver_a = ChaosDriver::new(&params);
+        let mut driver_b = ChaosDriver::new(&params);
 
-        let frame0_a = monkey_a.actions_for_frame(0, true);
-        let frame1_a = monkey_a.actions_for_frame(1, true);
-        let frame0_b = monkey_b.actions_for_frame(0, true);
-        let frame1_b = monkey_b.actions_for_frame(1, true);
+        let frame0_a = driver_a.actions_for_frame(0, true);
+        let frame1_a = driver_a.actions_for_frame(1, true);
+        let frame0_b = driver_b.actions_for_frame(0, true);
+        let frame1_b = driver_b.actions_for_frame(1, true);
 
         assert_eq!(
             frame0_a, frame0_b,
@@ -238,14 +239,14 @@ mod tests {
     /// `ChaosDriver` with `action_prob` 1.0 (always fires when active) returns
     /// empty `Vec` when `is_active` is false.
     #[test]
-    fn chaos_monkey_does_not_fire_when_inactive() {
+    fn chaos_driver_does_not_fire_when_inactive() {
         let params = ChaosParams {
             seed: 0,
             action_prob: 1.0,
         };
-        let mut monkey = ChaosDriver::new(&params);
+        let mut driver = ChaosDriver::new(&params);
 
-        let result = monkey.actions_for_frame(0, false);
+        let result = driver.actions_for_frame(0, false);
 
         assert!(
             result.is_empty(),
@@ -262,12 +263,12 @@ mod tests {
     /// Over 200 frames with `action_prob` 1.0, every returned action must be one
     /// of `[MoveLeft, MoveRight, Bump, DashLeft, DashRight]`.
     #[test]
-    fn chaos_monkey_only_picks_gameplay_actions() {
+    fn chaos_driver_only_picks_gameplay_actions() {
         let params = ChaosParams {
             seed: 1,
             action_prob: 1.0,
         };
-        let mut monkey = ChaosDriver::new(&params);
+        let mut driver = ChaosDriver::new(&params);
 
         let menu_actions = [
             GameAction::MenuUp,
@@ -278,7 +279,7 @@ mod tests {
         ];
 
         for frame in 0_u32..200 {
-            let actions = monkey.actions_for_frame(frame, true);
+            let actions = driver.actions_for_frame(frame, true);
             for action in &actions {
                 assert!(
                     !menu_actions.contains(action),

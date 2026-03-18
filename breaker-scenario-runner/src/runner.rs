@@ -36,7 +36,7 @@ pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool) -> i32 {
 
     for path in &scenario_paths {
         let result = run_scenario(path, headless);
-        any_failed |= !result;
+        any_failed = any_failed || !result;
     }
 
     i32::from(any_failed)
@@ -114,16 +114,18 @@ fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
 
 /// Determines whether a scenario passed given its results and definition.
 ///
+/// Captured logs always count as a failure regardless of `expected_violations`.
+///
 /// When `expected_violations` is `None`, the scenario passes only if there are no
 /// violations and no captured logs.
 ///
 /// When `expected_violations` is `Some(expected)`, the scenario passes only if:
 /// - every listed invariant fired at least once
 /// - no unlisted invariants fired
-/// - no unexpected logs were captured
+/// - no captured logs
 ///
-/// `Some([])` (empty expected list) means "expect no violations of any kind" —
-/// semantically identical to `None`, but explicit about the expectation.
+/// `Some([])` (empty expected list) produces the same result as `None`, but makes
+/// the expectation explicit in the RON file.
 fn evaluate_pass(
     violations: &[crate::invariants::ViolationEntry],
     logs: &[crate::log_capture::LogEntry],
@@ -366,10 +368,34 @@ fn build_app(headless: bool) -> App {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::log::Level;
     use crate::{
-        invariants::ScenarioStats,
-        types::{ChaosParams, InputStrategy, InvariantParams},
+        invariants::{ScenarioStats, ViolationEntry},
+        log_capture::LogEntry,
+        types::{ChaosParams, InputStrategy, InvariantKind, InvariantParams},
     };
+
+    // -------------------------------------------------------------------------
+    // Helpers for constructing test data
+    // -------------------------------------------------------------------------
+
+    fn make_violation(invariant: InvariantKind) -> ViolationEntry {
+        ViolationEntry {
+            frame: 42,
+            invariant,
+            entity: None,
+            message: format!("test violation: {invariant:?}"),
+        }
+    }
+
+    fn make_log_entry() -> LogEntry {
+        LogEntry {
+            level: Level::WARN,
+            target: "breaker::bolt::systems".to_owned(),
+            message: "unexpected condition".to_owned(),
+            frame: 10,
+        }
+    }
 
     fn make_chaos_definition() -> ScenarioDefinition {
         ScenarioDefinition {
@@ -420,6 +446,273 @@ mod tests {
         assert!(
             has_no_actions_warning,
             "expected warning containing 'no actions were injected', got: {warnings:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // scenario_health_warnings — warns when scenario never entered Playing
+    // -------------------------------------------------------------------------
+
+    /// When `stats.entered_playing == false`, `scenario_health_warnings` must
+    /// return at least one warning containing "never entered Playing".
+    #[test]
+    fn scenario_health_warnings_warns_when_never_entered_playing() {
+        let stats = ScenarioStats {
+            actions_injected: 50,
+            invariant_checks: 100,
+            max_frame: 1000,
+            entered_playing: false,
+            bolts_tagged: 1,
+            breakers_tagged: 1,
+        };
+        let definition = make_chaos_definition();
+
+        let warnings = scenario_health_warnings(&stats, &definition);
+
+        let has_playing_warning = warnings
+            .iter()
+            .any(|w| w.to_lowercase().contains("never entered playing"));
+
+        assert!(
+            has_playing_warning,
+            "expected warning containing 'never entered Playing', got: {warnings:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // scenario_health_warnings — warns when no bolts tagged
+    // -------------------------------------------------------------------------
+
+    /// When `stats.bolts_tagged == 0`, `scenario_health_warnings` must return
+    /// at least one warning containing "no bolts were tagged".
+    #[test]
+    fn scenario_health_warnings_warns_when_no_bolts_tagged() {
+        let stats = ScenarioStats {
+            actions_injected: 50,
+            invariant_checks: 100,
+            max_frame: 1000,
+            entered_playing: true,
+            bolts_tagged: 0,
+            breakers_tagged: 1,
+        };
+        let definition = make_chaos_definition();
+
+        let warnings = scenario_health_warnings(&stats, &definition);
+
+        let has_bolt_warning = warnings
+            .iter()
+            .any(|w| w.to_lowercase().contains("no bolts were tagged"));
+
+        assert!(
+            has_bolt_warning,
+            "expected warning containing 'no bolts were tagged', got: {warnings:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // scenario_health_warnings — warns when no breakers tagged
+    // -------------------------------------------------------------------------
+
+    /// When `stats.breakers_tagged == 0`, `scenario_health_warnings` must return
+    /// at least one warning containing "no breakers were tagged".
+    #[test]
+    fn scenario_health_warnings_warns_when_no_breakers_tagged() {
+        let stats = ScenarioStats {
+            actions_injected: 50,
+            invariant_checks: 100,
+            max_frame: 1000,
+            entered_playing: true,
+            bolts_tagged: 1,
+            breakers_tagged: 0,
+        };
+        let definition = make_chaos_definition();
+
+        let warnings = scenario_health_warnings(&stats, &definition);
+
+        let has_breaker_warning = warnings
+            .iter()
+            .any(|w| w.to_lowercase().contains("no breakers were tagged"));
+
+        assert!(
+            has_breaker_warning,
+            "expected warning containing 'no breakers were tagged', got: {warnings:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // scenario_health_warnings — warns when scenario exits very early
+    // -------------------------------------------------------------------------
+
+    /// When `stats.max_frame == 5` (below the early-exit threshold of 10),
+    /// `scenario_health_warnings` must return at least one warning containing
+    /// "exited" or "very early".
+    #[test]
+    fn scenario_health_warnings_warns_when_scenario_exits_very_early() {
+        let stats = ScenarioStats {
+            actions_injected: 50,
+            invariant_checks: 10,
+            max_frame: 5,
+            entered_playing: true,
+            bolts_tagged: 1,
+            breakers_tagged: 1,
+        };
+        let definition = make_chaos_definition();
+
+        let warnings = scenario_health_warnings(&stats, &definition);
+
+        let has_early_exit_warning = warnings.iter().any(|w| {
+            let lower = w.to_lowercase();
+            lower.contains("exited") || lower.contains("very early")
+        });
+
+        assert!(
+            has_early_exit_warning,
+            "expected warning containing 'exited' or 'very early' for max_frame=5, got: {warnings:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // scenario_health_warnings — no warnings for healthy scenario
+    // -------------------------------------------------------------------------
+
+    /// A healthy scenario (entered Playing, bolts tagged, breakers tagged,
+    /// `max_frame`=100, `actions_injected`=50, Chaos input) must produce no warnings.
+    #[test]
+    fn scenario_health_warnings_no_warnings_for_healthy_scenario() {
+        let stats = ScenarioStats {
+            actions_injected: 50,
+            invariant_checks: 100,
+            max_frame: 100,
+            entered_playing: true,
+            bolts_tagged: 1,
+            breakers_tagged: 1,
+        };
+        let definition = make_chaos_definition();
+
+        let warnings = scenario_health_warnings(&stats, &definition);
+
+        assert!(
+            warnings.is_empty(),
+            "expected no health warnings for a healthy scenario, got: {warnings:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — clean pass with no definition
+    // -------------------------------------------------------------------------
+
+    /// Empty violations, no logs, no definition: scenario passes.
+    #[test]
+    fn evaluate_pass_returns_true_with_no_violations_no_logs_no_definition() {
+        let result = evaluate_pass(&[], &[], None);
+        assert!(result, "expected pass when violations=[], logs=[], definition=None");
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — violations without definition cause failure
+    // -------------------------------------------------------------------------
+
+    /// A [`ViolationEntry`] with no definition present causes failure.
+    #[test]
+    fn evaluate_pass_returns_false_when_violations_present_and_no_definition() {
+        let violations = vec![make_violation(InvariantKind::BoltInBounds)];
+        let result = evaluate_pass(&violations, &[], None);
+        assert!(!result, "expected fail when violations=[BoltInBounds], definition=None");
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — captured logs cause failure even with no violations
+    // -------------------------------------------------------------------------
+
+    /// Logs alone (no violations, no definition) cause the scenario to fail.
+    #[test]
+    fn evaluate_pass_returns_false_when_logs_present_and_no_violations_no_definition() {
+        let logs = vec![make_log_entry()];
+        let result = evaluate_pass(&[], &logs, None);
+        assert!(!result, "expected fail when logs=[one entry], violations=[], definition=None");
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — expected violations match exactly
+    // -------------------------------------------------------------------------
+
+    /// When `expected_violations` matches fired violations exactly, scenario passes.
+    #[test]
+    fn evaluate_pass_returns_true_when_expected_violations_match_exactly() {
+        let violations = vec![make_violation(InvariantKind::BoltInBounds)];
+        let mut definition = make_chaos_definition();
+        definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+        let result = evaluate_pass(&violations, &[], Some(&definition));
+        assert!(
+            result,
+            "expected pass when violations=[BoltInBounds] and expected=[BoltInBounds]"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — expected violation not fired causes failure
+    // -------------------------------------------------------------------------
+
+    /// When an expected invariant never fires, the scenario fails.
+    #[test]
+    fn evaluate_pass_returns_false_when_expected_violation_not_fired() {
+        let mut definition = make_chaos_definition();
+        definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+        let result = evaluate_pass(&[], &[], Some(&definition));
+        assert!(
+            !result,
+            "expected fail when expected=[BoltInBounds] but violations=[]"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — unexpected violation causes failure
+    // -------------------------------------------------------------------------
+
+    /// When a fired violation is not in the expected list, the scenario fails.
+    #[test]
+    fn evaluate_pass_returns_false_when_unexpected_violation_fires() {
+        let violations = vec![make_violation(InvariantKind::NoNaN)];
+        let mut definition = make_chaos_definition();
+        definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+        let result = evaluate_pass(&violations, &[], Some(&definition));
+        assert!(
+            !result,
+            "expected fail when violations=[NoNaN] but expected=[BoltInBounds]"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — empty expected list with no violations passes
+    // -------------------------------------------------------------------------
+
+    /// Some([]) with no violations and no logs is treated as a pass.
+    #[test]
+    fn evaluate_pass_returns_true_when_expected_violations_empty_and_none_fired() {
+        let mut definition = make_chaos_definition();
+        definition.expected_violations = Some(vec![]);
+        let result = evaluate_pass(&[], &[], Some(&definition));
+        assert!(
+            result,
+            "expected pass when expected=Some([]) and violations=[], logs=[]"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // evaluate_pass — logs cause failure even when expected violations match
+    // -------------------------------------------------------------------------
+
+    /// Even when violations match expected exactly, captured logs still cause failure.
+    #[test]
+    fn evaluate_pass_returns_false_when_logs_present_even_though_expected_violations_match() {
+        let violations = vec![make_violation(InvariantKind::BoltInBounds)];
+        let logs = vec![make_log_entry()];
+        let mut definition = make_chaos_definition();
+        definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+        let result = evaluate_pass(&violations, &logs, Some(&definition));
+        assert!(
+            !result,
+            "expected fail when logs=[one entry] even though violations match expected"
         );
     }
 }

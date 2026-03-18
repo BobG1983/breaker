@@ -1277,6 +1277,84 @@ mod tests {
         );
     }
 
+    /// `Idle → Dashing` is a legal transition per the state machine.
+    ///
+    /// Tick 1 seeds `Local` with `Idle`. Tick 2 sees `Dashing`. No
+    /// [`ViolationEntry`] with [`InvariantKind::ValidBreakerState`] should fire.
+    #[test]
+    fn check_valid_breaker_state_legal_idle_to_dashing_produces_no_violation() {
+        let mut app = test_app_valid_breaker_state();
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Idle))
+            .id();
+
+        // Tick 1: seeds Local with Idle — no previous, no violation
+        tick(&mut app);
+
+        // Transition to Dashing (legal)
+        *app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<BreakerState>()
+            .unwrap() = BreakerState::Dashing;
+
+        // Tick 2: Idle → Dashing is legal, log must remain empty
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no ValidBreakerState violation for Idle→Dashing (legal), got: {:?}",
+            log.0.iter().map(|e| &e.message).collect::<Vec<_>>()
+        );
+    }
+
+    /// `Idle → Braking` skips the required `Dashing` intermediate state.
+    ///
+    /// Tick 1 seeds `Local` with `Idle`. Tick 2 sees `Braking`. The
+    /// [`ViolationLog`] must contain exactly 1 entry with
+    /// [`InvariantKind::ValidBreakerState`].
+    #[test]
+    fn check_valid_breaker_state_illegal_idle_to_braking_produces_violation() {
+        let mut app = test_app_valid_breaker_state();
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Idle))
+            .id();
+
+        // Tick 1: seeds Local with Idle
+        tick(&mut app);
+
+        assert!(
+            app.world().resource::<ViolationLog>().0.is_empty(),
+            "no violation expected on first tick (no previous state)"
+        );
+
+        // Transition to Braking (illegal: skips Dashing)
+        *app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<BreakerState>()
+            .unwrap() = BreakerState::Braking;
+
+        // Tick 2: must fire ValidBreakerState violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0.len(),
+            1,
+            "expected exactly 1 ValidBreakerState violation for Idle→Braking, got {}",
+            log.0.len()
+        );
+        assert_eq!(
+            log.0[0].invariant,
+            InvariantKind::ValidBreakerState,
+            "expected invariant kind ValidBreakerState"
+        );
+    }
+
     // -------------------------------------------------------------------------
     // ValidBreakerState — same state does not fire
     // -------------------------------------------------------------------------
