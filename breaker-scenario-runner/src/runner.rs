@@ -5,6 +5,7 @@
 
 use std::{
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -183,14 +184,16 @@ fn run_scenario(
         app.insert_resource(buf.clone());
     }
 
+    let eval_buffer = SharedEvalBuffer(Arc::new(Mutex::new(None)));
+
     app.insert_resource(ScenarioConfig { definition })
         .add_plugins(ScenarioLifecycle)
         .init_resource::<CapturedLogs>()
-        .add_systems(FixedUpdate, poll_log_buffer);
+        .insert_resource(eval_buffer.clone())
+        .add_systems(FixedUpdate, poll_log_buffer)
+        .add_systems(Last, snapshot_eval_data);
 
     if headless {
-        // Run manually so we retain access to the World after exit.
-        // App::run() replaces self with App::empty(), losing all resources.
         app.finish();
         app.cleanup();
 
@@ -218,52 +221,41 @@ fn run_scenario(
             }
         }
 
-        // Drain any logs emitted after the last FixedUpdate tick
+        // Drain any logs emitted after the last FixedUpdate tick.
+        // Run one more snapshot to capture the drained logs.
         drain_remaining_logs(&mut app);
+        snapshot_eval_data_from_world(app.world(), &eval_buffer);
     } else {
         // Visual mode — Winit needs app.run() for the event loop.
-        // Results cannot be read after run(); visual mode is for debugging only.
+        // App::run() replaces self with App::empty(), losing all resources.
+        // The Last-schedule snapshot_eval_data captures results each frame,
+        // so the shared buffer holds the final state when run() returns.
         app.run();
-        println!("  [{sname}] visual mode — pass/fail not evaluated");
-        return true;
     }
 
-    collect_and_evaluate(&app, &sname, verbose)
+    collect_and_evaluate(&eval_buffer, &sname, verbose)
 }
 
-/// Extracts results from the app world and evaluates pass/fail using [`ScenarioVerdict`].
+/// Evaluates pass/fail from the shared eval buffer populated by [`snapshot_eval_data`].
 ///
-/// Returns `false` if any expected resource is missing, any health check fails,
-/// any invariant violation is unexpected, or any log was captured.
-fn collect_and_evaluate(app: &App, scenario_name: &str, verbose: bool) -> bool {
+/// Returns `false` if the buffer is empty (no snapshot captured), any health
+/// check fails, any invariant violation is unexpected, or any log was captured.
+fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose: bool) -> bool {
     let mut verdict = ScenarioVerdict::default();
 
-    let vl = app.world().get_resource::<ViolationLog>();
-    let cl = app.world().get_resource::<CapturedLogs>();
-    let cfg = app.world().get_resource::<ScenarioConfig>();
-    let st = app.world().get_resource::<ScenarioStats>();
+    let snapshot = shared
+        .0
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .take();
 
-    if let (Some(vl), Some(cl), Some(cfg), Some(st)) = (vl, cl, cfg, st) {
-        verdict.evaluate(&vl.0, &cl.0, st, &cfg.definition);
+    let (violations, logs, stats) = if let Some(snap) = snapshot {
+        verdict.evaluate(&snap.violations, &snap.logs, &snap.stats, &snap.definition);
+        (snap.violations, snap.logs, snap.stats)
     } else {
-        if vl.is_none() {
-            verdict.add_fail_reason("ViolationLog resource missing after run".into());
-        }
-        if cl.is_none() {
-            verdict.add_fail_reason("CapturedLogs resource missing after run".into());
-        }
-        if cfg.is_none() {
-            verdict.add_fail_reason("ScenarioConfig resource missing after run".into());
-        }
-        if st.is_none() {
-            verdict.add_fail_reason("ScenarioStats resource missing after run".into());
-        }
-    }
-
-    // Clone data for printing (resources are borrowed from world above).
-    let violations = vl.map(|v| v.0.clone()).unwrap_or_default();
-    let logs = cl.map(|c| c.0.clone()).unwrap_or_default();
-    let stats = st.cloned().unwrap_or_default();
+        verdict.add_fail_reason("No evaluation data captured during run".into());
+        (vec![], vec![], ScenarioStats::default())
+    };
 
     println!(
         "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
@@ -475,6 +467,70 @@ fn group_logs(logs: &[LogEntry]) -> Vec<LogGroup> {
 
 /// Bevy's default fixed timestep frequency (Hz).
 const FIXED_TIMESTEP_HZ: f64 = 64.0;
+
+// ---------------------------------------------------------------------------
+// Visual-mode result capture
+// ---------------------------------------------------------------------------
+
+/// Cloned snapshot of evaluation data, captured by a `Last` system so results
+/// survive `App::run()` (which replaces self with `App::empty()`).
+struct EvalSnapshot {
+    violations: Vec<ViolationEntry>,
+    logs: Vec<LogEntry>,
+    stats: ScenarioStats,
+    definition: ScenarioDefinition,
+}
+
+/// Shared buffer inserted as a resource so the snapshot system can write to it
+/// and the caller can read it after `app.run()` returns.
+#[derive(Resource, Clone)]
+struct SharedEvalBuffer(Arc<Mutex<Option<EvalSnapshot>>>);
+
+/// Snapshots evaluation data every frame into the shared buffer.
+///
+/// Runs in `Last` so it captures the final state even on the exit frame.
+fn snapshot_eval_data(
+    vl: Option<Res<ViolationLog>>,
+    cl: Option<Res<CapturedLogs>>,
+    stats: Option<Res<ScenarioStats>>,
+    config: Option<Res<ScenarioConfig>>,
+    shared: Res<SharedEvalBuffer>,
+) {
+    let (Some(vl), Some(cl), Some(stats), Some(config)) = (vl, cl, stats, config) else {
+        return;
+    };
+    if let Ok(mut guard) = shared.0.lock() {
+        *guard = Some(EvalSnapshot {
+            violations: vl.0.clone(),
+            logs: cl.0.clone(),
+            stats: stats.clone(),
+            definition: config.definition.clone(),
+        });
+    }
+}
+
+/// Non-system version of [`snapshot_eval_data`] for direct world access.
+///
+/// Called after `drain_remaining_logs` in headless mode to capture the final
+/// state including any logs drained after the last `FixedUpdate` tick.
+fn snapshot_eval_data_from_world(world: &World, shared: &SharedEvalBuffer) {
+    let (Some(vl), Some(cl), Some(stats), Some(config)) = (
+        world.get_resource::<ViolationLog>(),
+        world.get_resource::<CapturedLogs>(),
+        world.get_resource::<ScenarioStats>(),
+        world.get_resource::<ScenarioConfig>(),
+    ) else {
+        return;
+    };
+    if let Ok(mut guard) = shared.0.lock() {
+        *guard = Some(EvalSnapshot {
+            violations: vl.0.clone(),
+            logs: cl.0.clone(),
+            stats: stats.clone(),
+            definition: config.definition.clone(),
+        });
+    }
+}
 
 /// Scenario runner log plugin — captures `WARN`-and-above logs via [`scenario_log_layer_factory`].
 fn scenario_log_plugin() -> LogPlugin {
@@ -955,5 +1011,71 @@ mod tests {
             !is_invariant_fail_reason("scenario never entered Playing state"),
             "health check string must not match as invariant fail reason"
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // snapshot_eval_data — captures results into shared buffer
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn snapshot_eval_data_captures_results_into_shared_buffer() {
+        use crate::types::{InputStrategy, InvariantParams, ScriptedParams};
+
+        let shared = SharedEvalBuffer(Arc::new(Mutex::new(None)));
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog(vec![ViolationEntry {
+                frame: 42,
+                invariant: InvariantKind::BoltInBounds,
+                entity: None,
+                message: "test violation".into(),
+            }]))
+            .insert_resource(CapturedLogs::default())
+            .insert_resource(ScenarioStats {
+                actions_injected: 100,
+                invariant_checks: 50,
+                max_frame: 500,
+                entered_playing: true,
+                bolts_tagged: 1,
+                breakers_tagged: 1,
+            })
+            .insert_resource(ScenarioConfig {
+                definition: ScenarioDefinition {
+                    breaker: "Aegis".to_owned(),
+                    layout: "Corridor".to_owned(),
+                    input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+                    max_frames: 1000,
+                    invariants: vec![],
+                    expected_violations: None,
+                    debug_setup: None,
+                    invariant_params: InvariantParams { max_bolt_count: 8 },
+                    allow_early_end: true,
+                },
+            })
+            .insert_resource(shared.clone())
+            .add_systems(Last, snapshot_eval_data);
+
+        // Before tick: buffer is None
+        assert!(shared.0.lock().unwrap().is_none());
+
+        // Tick once to run the Last system
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
+
+        // After tick: buffer has the snapshot
+        let snapshot = shared
+            .0
+            .lock()
+            .unwrap()
+            .take()
+            .expect("snapshot should be Some after tick");
+        assert_eq!(snapshot.violations.len(), 1);
+        assert_eq!(snapshot.violations[0].frame, 42);
+        assert_eq!(snapshot.stats.max_frame, 500);
+        assert_eq!(snapshot.stats.actions_injected, 100);
     }
 }
