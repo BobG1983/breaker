@@ -14,12 +14,13 @@
 
 ## Scenario runner (`breaker-scenario-runner`)
 
-| Task | Alias |
-|------|-------|
-| Run | `cargo dscenario` |
-| Type check | `cargo dscheck` |
-| Lint | `cargo dsclippy` |
-| Test | `cargo dstest` |
+| Task | Alias | When |
+|------|-------|------|
+| Run scenarios | `cargo scenario` | Normal use — release build, fast and quiet |
+| Run scenarios (dev) | `cargo dscenario` | Developing/debugging the runner itself |
+| Type check | `cargo dscheck` | |
+| Lint | `cargo dsclippy` | |
+| Test | `cargo dstest` | |
 
 ## Exceptions
 

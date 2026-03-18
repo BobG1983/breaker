@@ -16,7 +16,7 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 
 - **runner-linting** — fmt (auto-formats in place) and clippy; Fix spec hints for clippy errors → writer-code
 - **runner-tests** — cargo dtest; Fix spec hints for failures → writer-code or writer-tests
-- **runner-scenarios** — gameplay invariant validation
+- **runner-scenarios** — gameplay invariant validation (release build via `cargo scenario`)
 - **reviewer-correctness** — logic bugs, ECS pitfalls, state machine holes, math
 - **reviewer-quality** — idioms, vocabulary, test coverage, documentation
 - **reviewer-bevy-api** — Bevy API correctness for exact version

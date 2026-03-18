@@ -1,12 +1,12 @@
 //! Scenario runner — automated gameplay testing tool.
 //!
 //! Runs headless by default (no GPU required). Pass `--visual` to open a window
-//! with full graphics at normal speed for debugging a single scenario.
+//! with full graphics at 10x speed for debugging a single scenario.
 //!
 //! Usage:
-//!   `cargo dscenario -- -s aegis_chaos`
-//!   `cargo dscenario -- --all`
-//!   `cargo dscenario -- --visual -s aegis_chaos`
+//!   `cargo scenario -- -s aegis_chaos`
+//!   `cargo scenario -- --all`
+//!   `cargo scenario -- --visual -s aegis_chaos`
 
 use std::process;
 

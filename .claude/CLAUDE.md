@@ -10,6 +10,7 @@ cargo dtest                  # Run all tests (dynamic linking)
 cargo dcheck                 # Type check (dynamic linking)
 cargo dclippy                # Lint (dynamic linking)
 cargo dbuild                 # Dev build without running (dynamic linking)
+cargo scenario -- --all      # Run all scenarios (release build)
 cargo run --release          # Release build
 cargo fmt --check            # Format check
 ```
