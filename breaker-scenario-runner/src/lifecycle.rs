@@ -4,7 +4,8 @@
 //! - Bypasses menus: `OnEnter(GameState::MainMenu)` → immediately enters `Playing`
 //! - Auto-skips chip selection: `OnEnter(GameState::ChipSelect)` → `NodeTransition`
 //! - Counts fixed-update frames via [`ScenarioFrame`]
-//! - Exits when `max_frames` is reached or the run ends naturally
+//! - Exits when `max_frames` is reached; optionally exits when the run ends
+//!   naturally (controlled by [`ScenarioDefinition::allow_early_end`])
 
 use bevy::prelude::*;
 use breaker::{
@@ -110,6 +111,12 @@ pub struct ScenarioLifecycle;
 
 impl Plugin for ScenarioLifecycle {
     fn build(&self, app: &mut App) {
+        let allow_early_end = app
+            .world()
+            .resource::<ScenarioConfig>()
+            .definition
+            .allow_early_end;
+
         app.init_resource::<ScenarioFrame>()
             .init_resource::<ViolationLog>()
             .init_resource::<PreviousGameState>()
@@ -123,14 +130,14 @@ impl Plugin for ScenarioLifecycle {
                     .chain()
                     .after(breaker::bolt::systems::init_bolt_params),
             )
+            // Input injection runs in FixedPreUpdate so it executes after
+            // clear_input_actions (FixedPostUpdate of previous tick) and before
+            // all FixedUpdate game systems that read InputActions.
+            .add_systems(FixedPreUpdate, inject_scenario_input)
             .add_systems(
                 FixedUpdate,
                 (
-                    (
-                        tick_scenario_frame,
-                        inject_scenario_input,
-                        check_frame_limit,
-                    )
+                    (tick_scenario_frame, check_frame_limit)
                         .chain()
                         .before(breaker::breaker::sets::BreakerSystems::Move),
                     // Invariant checkers and frozen position enforcement must run
@@ -155,8 +162,17 @@ impl Plugin for ScenarioLifecycle {
                         .before(breaker::physics::PhysicsSystems::BoltLost),
                     tag_game_entities,
                 ),
-            )
-            .add_systems(OnEnter(GameState::RunEnd), exit_on_run_end);
+            );
+
+        if allow_early_end {
+            // Normal: exit when run ends naturally.
+            // Runs every frame while in RunEnd to avoid one-shot timing issues
+            // where Winit misses a single AppExit message.
+            app.add_systems(Update, exit_on_run_end.run_if(in_state(GameState::RunEnd)));
+        } else {
+            // Stress: restart when run ends, only max_frames triggers exit.
+            app.add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
+        }
     }
 }
 
@@ -204,8 +220,18 @@ fn check_frame_limit(
 }
 
 /// Sends [`AppExit::Success`] when the run ends naturally.
+///
+/// Runs every frame while in `RunEnd` (not as a one-shot `OnEnter`) so that
+/// the Winit event loop reliably sees the exit message on macOS.
 fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
     exits.write(AppExit::Success);
+}
+
+/// Redirects `RunEnd` back to `MainMenu` (which `bypass_menu_to_playing`
+/// sends to `Playing`). Used when `allow_early_end` is false so the
+/// scenario runs for the full `max_frames` frame budget.
+fn restart_run_on_end(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::MainMenu);
 }
 
 /// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
@@ -320,6 +346,7 @@ mod tests {
             expected_violations: None,
             debug_setup: None,
             invariant_params: InvariantParams::default(),
+            allow_early_end: true,
         }
     }
 
@@ -335,6 +362,7 @@ mod tests {
             expected_violations: None,
             debug_setup: None,
             invariant_params: InvariantParams::default(),
+            allow_early_end: true,
         }
     }
 
@@ -555,6 +583,7 @@ mod tests {
                 disable_physics: false,
             }),
             invariant_params: InvariantParams::default(),
+            allow_early_end: true,
         };
 
         let mut app = debug_setup_app(definition);
@@ -613,6 +642,7 @@ mod tests {
                 disable_physics: false,
             }),
             invariant_params: InvariantParams::default(),
+            allow_early_end: true,
         };
 
         let mut app = debug_setup_app(definition);
@@ -676,6 +706,7 @@ mod tests {
                 disable_physics: true,
             }),
             invariant_params: InvariantParams::default(),
+            allow_early_end: true,
         };
 
         let mut app = debug_setup_app(definition);
@@ -948,6 +979,7 @@ mod tests {
                 expected_violations: None,
                 debug_setup: None,
                 invariant_params: InvariantParams::default(),
+                allow_early_end: true,
             },
         });
         app.add_systems(Update, init_scenario_input);
@@ -1089,6 +1121,38 @@ mod tests {
         assert!(
             stats.entered_playing,
             "expected entered_playing == true after tag_game_entities ran"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // restart_run_on_end — transitions from RunEnd to MainMenu
+    // -------------------------------------------------------------------------
+
+    /// `restart_run_on_end` must set the next state to `MainMenu` so
+    /// `bypass_menu_to_playing` can restart the run.
+    #[test]
+    fn restart_run_on_end_transitions_to_main_menu() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(StatesPlugin);
+        app.init_state::<GameState>();
+        app.add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
+
+        // Drive into RunEnd
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::RunEnd);
+        app.update();
+
+        // OnEnter(RunEnd) fires and sets next state to MainMenu.
+        // One more update applies the transition.
+        app.update();
+
+        let state = app.world().resource::<State<GameState>>();
+        assert_eq!(
+            **state,
+            GameState::MainMenu,
+            "expected restart_run_on_end to transition to MainMenu"
         );
     }
 }

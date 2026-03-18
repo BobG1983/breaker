@@ -194,6 +194,7 @@ mod tests {
             expected_violations: None,
             debug_setup: None,
             invariant_params: InvariantParams::default(),
+            allow_early_end: true,
         }
     }
 

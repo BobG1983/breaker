@@ -4,10 +4,10 @@ use bevy::{input::keyboard::KeyboardInput, prelude::*};
 
 use crate::input::resources::*;
 
-/// Clears [`InputActions`] at the start of each fixed tick.
+/// Clears [`InputActions`] at the end of each fixed tick.
 ///
-/// Runs in `FixedPreUpdate` so one-shot actions persist across frames until
-/// `FixedUpdate` has a chance to consume them.
+/// Runs in `FixedPostUpdate` so actions injected in `FixedPreUpdate` or
+/// `PreUpdate` persist through `FixedUpdate` before being cleared.
 pub fn clear_input_actions(mut actions: ResMut<InputActions>) {
     actions.0.clear();
 }
@@ -16,7 +16,7 @@ pub fn clear_input_actions(mut actions: ResMut<InputActions>) {
 ///
 /// Runs in `PreUpdate` after `InputSystems`. Reads held keys for movement
 /// and `MessageReader<KeyboardInput>` for one-shot presses (bump, dash).
-/// Does not clear — [`clear_input_actions`] handles that in `FixedPreUpdate`.
+/// Does not clear — [`clear_input_actions`] handles that in `FixedPostUpdate`.
 pub fn read_input_actions(
     keyboard: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,

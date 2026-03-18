@@ -10,4 +10,5 @@
     expected_violations: None,
     debug_setup: None,
     invariant_params: (max_bolt_count: 8),
+    allow_early_end: false,
 )

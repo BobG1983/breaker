@@ -141,6 +141,23 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 ## StatesPlugin
 - `bevy::state::app::StatesPlugin` — correct import for adding state machine support in minimal test apps
 
+## FixedPreUpdate Schedule
+- `FixedPreUpdate` is a valid schedule label in Bevy 0.18.1 (`pub struct FixedPreUpdate`)
+- Runs before `FixedUpdate` within the `FixedMain` group
+- `.add_systems(FixedPreUpdate, my_system)` — correct
+- Appropriate for input injection that must arrive before FixedUpdate game systems read it
+
+## NextState API
+- `NextState<S>` is an **enum** (not a struct) in Bevy 0.18.1
+- Variants: `Unchanged`, `Pending(S)`, `PendingIfNeq(S)`
+- `next_state.set(S::Variant)` — correct; triggers `OnEnter`/`OnExit` schedules
+- `next_state.set_if_neq(S::Variant)` — skips transition schedules if same state
+- Used as `ResMut<NextState<S>>` system parameter — correct
+
+## in_state run condition
+- `in_state(S::Variant)` — valid run condition for any schedule including `Update`
+- `.add_systems(Update, my_system.run_if(in_state(GameState::RunEnd)))` — correct
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

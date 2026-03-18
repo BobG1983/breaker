@@ -9,4 +9,5 @@
     invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions, NoEntityLeaks, ValidBreakerState],
     expected_violations: None,
     debug_setup: None,
+    allow_early_end: false,
 )

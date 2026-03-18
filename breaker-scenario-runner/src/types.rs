@@ -197,6 +197,17 @@ pub struct ScenarioDefinition {
     /// Tunable thresholds for invariant checkers.
     #[serde(default)]
     pub invariant_params: InvariantParams,
+    /// When `true` (default), the scenario exits when the game naturally reaches
+    /// `RunEnd` (timer, lives, node cleared). When `false`, `RunEnd` is
+    /// intercepted and the run restarts — only `max_frames` triggers exit.
+    #[serde(default = "ScenarioDefinition::default_allow_early_end")]
+    pub allow_early_end: bool,
+}
+
+impl ScenarioDefinition {
+    const fn default_allow_early_end() -> bool {
+        true
+    }
 }
 
 #[cfg(test)]
@@ -410,6 +421,29 @@ mod tests {
         );
         assert!(result.expected_violations.is_none());
         assert!(result.debug_setup.is_none());
+    }
+
+    // -------------------------------------------------------------------------
+    // ScenarioDefinition — allow_early_end defaults to true
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn scenario_definition_allow_early_end_defaults_to_true() {
+        let ron = r#"(
+            breaker: "aegis",
+            layout: "corridor",
+            input: Chaos((seed: 1, action_prob: 0.1)),
+            max_frames: 1000,
+            invariants: [],
+            expected_violations: None,
+            debug_setup: None,
+        )"#;
+        let result: ScenarioDefinition =
+            ron::de::from_str(ron).expect("ScenarioDefinition without allow_early_end should parse");
+        assert!(
+            result.allow_early_end,
+            "allow_early_end must default to true when omitted"
+        );
     }
 
     // -------------------------------------------------------------------------
