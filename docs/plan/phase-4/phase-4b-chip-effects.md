@@ -2,6 +2,8 @@
 
 **Goal**: Chips do things. ChipSelected message -> gameplay effect applied to bolt/breaker entities.
 
+**Wave**: 1 (foundation, no dependencies) — parallel with 4a
+
 ## What Exists
 
 - `ChipDefinition` with name/kind/description
@@ -9,9 +11,13 @@
 - `ChipSelected` message sent by chip select screen
 - 3 placeholder RON files (piercing.amp.ron, wide_breaker.augment.ron, surge.overclock.ron)
 
-## What to Build
+## Sub-Stages
 
-### Chip Effect Types
+This stage is too large for a single implementation pass. It touches the chips domain (types + handler) and 4 other domains (effect consumption). Split into two sub-stages that run in separate sessions.
+
+### 4b.1: Effect Types, Handler, and Stacking (Session 1)
+
+**Domain**: chips/
 
 Extend `ChipDefinition` with effect data. Component markers with values:
 
@@ -34,28 +40,13 @@ enum AugmentEffect {
 }
 ```
 
-### Effect Application System
+**What to build**:
+- AmpEffect and AugmentEffect enums with Deserialize
+- Effect application system: listen for ChipSelected, look up in registry, apply as component
+- Stacking: if component exists, increment value (flat per-stack addition)
+- Updated RON format with rarity, max_stacks, effect fields
 
-- Listen for `ChipSelected` message
-- Look up the chip in the registry
-- Apply the effect as a component on the appropriate entity (bolt for Amps, breaker for Augments)
-- Stacking: if the component already exists, increment its value (flat per-stack addition)
-
-### Effect Consumption Systems
-
-Modify existing systems to check for chip effect components:
-- **Piercing**: `bolt_cell_collision` checks for `Piercing(n)` — if present, skip despawn for first N cells
-- **Wide Breaker**: breaker spawn/update checks for `WidthBoost(f32)` — modifies breaker width
-- Other effects: stub systems that read the component but may not have full gameplay impact yet
-
-### Hot-Reload Propagation
-
-- When a chip RON file changes: rebuild the chip registry
-- If any active chips were modified: re-apply their effects to live entities
-- Extend the `HotReloadPlugin` chain established in Phase 3c
-
-### RON Format Update
-
+**RON format**:
 ```ron
 // assets/amps/piercing.amp.ron
 (
@@ -67,6 +58,35 @@ Modify existing systems to check for chip effect components:
     effect: Piercing(1),
 )
 ```
+
+**Delegatable**: Yes — writer-tests → writer-code, scoped to chips/ domain.
+
+### 4b.2: Per-Domain Effect Consumption (Session 2)
+
+**Domains**: physics/, cells/, bolt/, breaker/
+
+Modify existing systems to check for chip effect components. Each domain modification is independent and can parallelize:
+
+| Effect | Domain | System to Modify | Change |
+|--------|--------|-------------------|--------|
+| Piercing | physics/ | bolt_cell_collision | Skip despawn for first N cells when `Piercing(n)` present |
+| DamageBoost | cells/ | handle_cell_hit | Apply extra damage when `DamageBoost(f32)` present on bolt |
+| SpeedBoost (bolt) | bolt/ | prepare_bolt_velocity | Increase speed when `BoltSpeedBoost(f32)` present |
+| SizeBoost | bolt/ | init_bolt_params or spawn | Increase radius when `SizeBoost(f32)` present |
+| WidthBoost | breaker/ | init_breaker_params or spawn | Increase width when `WidthBoost(f32)` present |
+| SpeedBoost (breaker) | breaker/ | move_breaker | Increase max speed when `BreakerSpeedBoost(f32)` present |
+| BumpStrength | breaker/ | grade_bump | Modify multiplier when `BumpStrength(f32)` present |
+| DashDistance | breaker/ | update_breaker_state | Modify dash distance when `DashDistance(f32)` present |
+
+**Delegatable**: Yes — one writer-tests → writer-code pair per domain (up to 4 parallel).
+
+### Hot-Reload Propagation
+
+- When a chip RON file changes: rebuild the chip registry
+- If any active chips were modified: re-apply their effects to live entities
+- Extend the `HotReloadPlugin` chain established in Phase 3c
+
+Hot-reload can be implemented during either sub-stage or as a follow-up within Session 2.
 
 ## Acceptance Criteria
 

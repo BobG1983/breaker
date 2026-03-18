@@ -2,6 +2,8 @@
 
 **Goal**: Weighted random chip offerings with rarity, pool depletion, and seeded determinism.
 
+**Wave**: 3 (integration) — parallel with 4g. **Session 7.**
+
 ## Dependencies
 
 - 4a (Seeded RNG) — offerings must be deterministic

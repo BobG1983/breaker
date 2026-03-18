@@ -2,6 +2,8 @@
 
 **Goal**: Every source of randomness in the game flows through a seeded, deterministic RNG. User-selectable seed on the RunSetup screen.
 
+**Wave**: 1 (foundation, no dependencies) — parallel with 4b. **Session 1.**
+
 ## What Exists
 
 - `GameRng` resource with `ChaCha8Rng` in `shared/mod.rs`

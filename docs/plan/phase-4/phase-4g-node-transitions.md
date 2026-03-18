@@ -2,6 +2,8 @@
 
 **Goal**: Animated transitions between nodes — on clear and on load. Multiple transition styles, randomly selected per seed.
 
+**Wave**: 3 (integration) — parallel with 4f. **Session 7.**
+
 ## Dependencies
 
 - 4e (Node Escalation) — need something to transition between

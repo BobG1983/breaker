@@ -2,6 +2,8 @@
 
 **Goal**: Track run statistics and display a full summary on the run-end screen.
 
+**Wave**: 4 (capstone) — parallel with 4h. **Session 8.**
+
 ## Dependencies
 
 - 4e (Node Escalation) — need multi-node runs to track

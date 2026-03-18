@@ -2,16 +2,42 @@
 
 **Goal**: Recursive RON-defined trigger chains for overclocks. Bolt behaviors domain. Surge overclock as proof-of-concept.
 
+**Wave**: 2 (after 4b) — parallel with 4c and 4e. **Highest-risk stage in Phase 4.**
+
 ## Dependencies
 
 - 4b (Chip Effect System) — need the effect application mechanism
 
-## What to Build
+## Pre-Implementation
 
-### RON Trigger Syntax
+Use **researcher-bevy-api** to verify the observer/event pattern needed for trigger chain evaluation before writing any code. This stage introduces an architecturally novel pattern (recursive trigger evaluation with intermediate state) that doesn't exist anywhere else in the codebase.
 
-Recursive enum — arbitrary nesting depth:
+## Sub-Stages
 
+### 4d.1: TriggerChain Types + RON Parsing (Session 5)
+
+**Domain**: chips/ or shared (types only)
+
+Define the recursive enum and verify RON round-trips:
+
+```rust
+/// A trigger chain that evaluates conditions and fires an effect.
+#[derive(Deserialize, Clone, Debug)]
+enum TriggerChain {
+    // Leaf — fire this effect when all parent triggers are satisfied
+    Shockwave { range: f32 },
+    MultiBolt { count: u32 },
+    Shield { duration: f32 },
+
+    // Triggers — each wraps another TriggerChain
+    OnPerfectBump(Box<TriggerChain>),
+    OnImpact(Box<TriggerChain>),
+    OnCellDestroyed(Box<TriggerChain>),
+    OnBoltLost(Box<TriggerChain>),
+}
+```
+
+**RON examples**:
 ```ron
 // Simple: trigger -> effect
 OnCellDestroyed(Shockwave(range: 64.0))
@@ -23,50 +49,46 @@ OnPerfectBump(OnImpact(Shockwave(range: 64.0)))
 OnPerfectBump(OnImpact(OnCellDestroyed(MultiBolt(count: 2))))
 ```
 
-### Rust Types
+**Delegatable**: Yes — pure types + parsing tests.
 
-```rust
-/// A trigger chain that evaluates conditions and fires an effect.
-#[derive(Deserialize, Clone, Debug)]
-enum TriggerChain {
-    // Leaf — fire this effect when all parent triggers are satisfied
-    Shockwave { range: f32 },
-    MultiBolt { count: u32 },
-    Shield { duration: f32 },
-    // ... more effects
+### 4d.2: Bolt Behaviors Module + Intermediate State (Session 5)
 
-    // Triggers — each wraps another TriggerChain
-    OnPerfectBump(Box<TriggerChain>),
-    OnImpact(Box<TriggerChain>),
-    OnCellDestroyed(Box<TriggerChain>),
-    OnBoltLost(Box<TriggerChain>),
-    // ... more triggers
-}
-```
-
-### Bolt Behaviors Domain
+**Domain**: bolt/
 
 New `src/bolt/behaviors/` module (mirrors `src/breaker/behaviors/`):
 - Bolt behavior definitions loaded from RON
 - Trigger evaluation system that reads bolt state + game messages
-- Intermediate state tracking: when a trigger fires but the chain continues, a marker component is added to the bolt (e.g., `Surging`) to track that the chain is partially evaluated
-- Effect execution systems (shockwave, multi-bolt, shield, etc.)
+- Intermediate state tracking: marker components (e.g., `Surging`) added to bolt when a trigger fires but the chain continues
 
-### Shockwave Effect (Surge Overclock)
+**Delegatable**: Yes — writer-tests → writer-code, scoped to bolt/ domain.
 
-The first concrete overclock, proving the architecture:
-- **Trigger chain**: `OnPerfectBump(OnImpact(Shockwave(range: 64.0)))`
-- **Flow**: Perfect bump -> mark bolt as "surging" -> on next impact -> fire shockwave at impact point
+### 4d.3: Shockwave Effect Implementation (Session 6)
+
+**Domain**: bolt/ or physics/
+
+The first concrete effect, proving the leaf-effect execution path:
 - **Shockwave**: expanding ring VFX, any cell within range takes 1 damage
 - **Range parameter**: RON-configurable, upgradeable via stacking
+- Shockwave queries all Cell entities within range of impact point
+
+**Delegatable**: Yes — scoped system + VFX.
+
+### 4d.4: Surge Overclock End-to-End (Session 6)
+
+**Integration task** — likely manual (main agent):
+
+- **Trigger chain**: `OnPerfectBump(OnImpact(Shockwave(range: 64.0)))`
+- **Flow**: Perfect bump → mark bolt "surging" → on next impact → fire shockwave at impact point
+- Wires together 4d.1 (types), 4d.2 (trigger evaluation), 4d.3 (shockwave)
+- Validates the architecture works end-to-end
 
 ### Hot-Reload Support
 
-Overclock RON changes -> rebuild trigger chains -> re-evaluate active overclocks
+Overclock RON changes → rebuild trigger chains → re-evaluate active overclocks.
 
 ## Acceptance Criteria
 
-1. Surge overclock works end-to-end: perfect bump -> impact -> shockwave -> cells damaged
+1. Surge overclock works end-to-end: perfect bump → impact → shockwave → cells damaged
 2. Trigger chains parse from RON with arbitrary nesting
 3. Intermediate state (surging marker) is properly set and consumed
 4. Shockwave visual effect plays at impact point

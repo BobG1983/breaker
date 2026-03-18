@@ -2,6 +2,8 @@
 
 **Goal**: Boss nodes offer evolution rewards. Two chips at minimum stacks + boss kill = evolved chip.
 
+**Wave**: 4 (capstone) — parallel with 4i. **Session 8.**
+
 ## Dependencies
 
 - 4c (Chip Pool) — need ingredient chips with stacking
