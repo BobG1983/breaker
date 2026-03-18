@@ -33,9 +33,10 @@ pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool) -> i32 {
     }
 
     let mut any_failed = false;
+    let mut shared_log_buffer: Option<LogBuffer> = None;
 
     for path in &scenario_paths {
-        let result = run_scenario(path, headless);
+        let result = run_scenario(path, headless, &mut shared_log_buffer);
         any_failed = any_failed || !result;
     }
 
@@ -113,7 +114,11 @@ fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
 }
 
 /// Builds and runs one scenario app. Returns `true` if passed, `false` if failed.
-fn run_scenario(path: &Path, headless: bool) -> bool {
+///
+/// The `shared_log_buffer` persists across scenarios so the global tracing
+/// subscriber (installed once) always writes to the same buffer that each app's
+/// `poll_log_buffer` system reads from.
+fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogBuffer>) -> bool {
     let scenario_name = path
         .file_stem()
         .and_then(|s| s.to_str())
@@ -136,7 +141,21 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
         definition.breaker, definition.layout
     );
 
-    let mut app = build_app(headless);
+    let first_run = shared_log_buffer.is_none();
+    let mut app = build_app(headless, first_run);
+
+    if first_run {
+        // Extract the buffer that LogPlugin's factory created so we can reuse it.
+        *shared_log_buffer = app.world().get_resource::<LogBuffer>().cloned();
+    } else if let Some(buf) = shared_log_buffer {
+        // Clear leftover entries and insert the shared buffer so poll_log_buffer
+        // reads from the same Arc the global ScenarioLogLayer writes to.
+        if let Ok(mut guard) = buf.0.lock() {
+            guard.clear();
+        }
+        app.insert_resource(buf.clone());
+    }
+
     app.insert_resource(ScenarioConfig { definition });
     app.add_plugins(ScenarioLifecycle);
     app.init_resource::<CapturedLogs>();
@@ -270,8 +289,10 @@ fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
 /// Builds a Bevy app configured for scenario running.
 ///
 /// In headless mode, disables winit so the app runs without a display server.
-/// In visual mode, uses normal `DefaultPlugins`.
-fn build_app(headless: bool) -> App {
+/// On the first run, installs `LogPlugin` with a custom tracing layer.
+/// On subsequent runs, disables `LogPlugin` to avoid the "global logger already
+/// set" error — the shared `LogBuffer` is inserted by `run_scenario` instead.
+fn build_app(headless: bool, first_run: bool) -> App {
     let mut app = App::new();
 
     let window = if headless {
@@ -292,17 +313,20 @@ fn build_app(headless: bool) -> App {
 
     // Point to the game crate's assets directory so scenarios
     // load real RON config files rather than code defaults.
-    let mut defaults = DefaultPlugins
-        .set(window)
-        .set(LogPlugin {
-            filter: "warn,breaker=info".to_owned(),
+    let mut defaults = DefaultPlugins.set(window).set(bevy::asset::AssetPlugin {
+        file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned(),
+        ..default()
+    });
+
+    if first_run {
+        defaults = defaults.set(LogPlugin {
+            filter: "warn,bevy_egui=error,breaker=info".to_owned(),
             custom_layer: scenario_log_layer_factory,
             ..default()
-        })
-        .set(bevy::asset::AssetPlugin {
-            file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned(),
-            ..default()
         });
+    } else {
+        defaults = defaults.disable::<LogPlugin>();
+    }
 
     if headless {
         defaults = defaults.disable::<WinitPlugin>();
