@@ -9,7 +9,15 @@ use std::{
 };
 
 use bevy::{
-    log::LogPlugin, prelude::*, time::TimeUpdateStrategy, window::ExitCondition, winit::WinitPlugin,
+    log::LogPlugin,
+    prelude::*,
+    render::{
+        RenderPlugin,
+        settings::{RenderCreation, WgpuSettings},
+    },
+    time::TimeUpdateStrategy,
+    window::ExitCondition,
+    winit::WinitPlugin,
 };
 use breaker::game::Game;
 use tracing::{debug, info, warn};
@@ -336,7 +344,18 @@ fn build_app(headless: bool, first_run: bool) -> App {
     }
 
     if headless {
-        defaults = defaults.disable::<WinitPlugin>();
+        // Disable Winit (no display server) and GPU initialization (no GPU
+        // on CI runners). Setting backends: None causes RenderPlugin to skip
+        // adapter creation entirely, avoiding the "Unable to find a GPU" panic.
+        defaults = defaults
+            .set(RenderPlugin {
+                render_creation: RenderCreation::Automatic(WgpuSettings {
+                    backends: None,
+                    ..default()
+                }),
+                ..default()
+            })
+            .disable::<WinitPlugin>();
     }
 
     app.add_plugins(defaults);
