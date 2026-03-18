@@ -9,16 +9,9 @@ use std::{
 };
 
 use bevy::{
-    camera::ScalingMode,
-    core_pipeline::tonemapping::Tonemapping,
-    log::LogPlugin,
-    post_process::bloom::Bloom,
-    prelude::*,
-    time::TimeUpdateStrategy,
-    window::ExitCondition,
-    winit::WinitPlugin,
+    log::LogPlugin, prelude::*, time::TimeUpdateStrategy, window::ExitCondition, winit::WinitPlugin,
 };
-use breaker::{game::Game, shared::PlayfieldConfig};
+use breaker::game::Game;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -281,29 +274,43 @@ fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
 fn build_app(headless: bool) -> App {
     let mut app = App::new();
 
-    if headless {
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: None,
-                    exit_condition: ExitCondition::DontExit,
-                    ..default()
-                })
-                .set(LogPlugin {
-                    filter: "warn,breaker=info".to_owned(),
-                    custom_layer: scenario_log_layer_factory,
-                    ..default()
-                })
-                .set(bevy::asset::AssetPlugin {
-                    // Point to the game crate's assets directory so scenarios
-                    // load real RON config files rather than code defaults.
-                    file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets")
-                        .to_owned(),
-                    ..default()
-                })
-                .disable::<WinitPlugin>(),
-        );
+    let window = if headless {
+        WindowPlugin {
+            primary_window: None,
+            exit_condition: ExitCondition::DontExit,
+            ..default()
+        }
+    } else {
+        WindowPlugin {
+            primary_window: Some(Window {
+                title: "Scenario Runner".into(),
+                ..default()
+            }),
+            ..default()
+        }
+    };
 
+    // Point to the game crate's assets directory so scenarios
+    // load real RON config files rather than code defaults.
+    let mut defaults = DefaultPlugins
+        .set(window)
+        .set(LogPlugin {
+            filter: "warn,breaker=info".to_owned(),
+            custom_layer: scenario_log_layer_factory,
+            ..default()
+        })
+        .set(bevy::asset::AssetPlugin {
+            file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned(),
+            ..default()
+        });
+
+    if headless {
+        defaults = defaults.disable::<WinitPlugin>();
+    }
+
+    app.add_plugins(defaults);
+
+    if headless {
         // Advance simulated time by exactly one fixed timestep per Update tick.
         // Without this, Time<Fixed> accumulates based on real wall-clock elapsed
         // time, so a 20k-frame scenario would take ~5 minutes. With ManualDuration,
@@ -312,53 +319,13 @@ fn build_app(headless: bool) -> App {
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
             1.0 / 64.0,
         )));
-    } else {
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "Scenario Runner".into(),
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(LogPlugin {
-                    filter: "warn,breaker=info".to_owned(),
-                    custom_layer: scenario_log_layer_factory,
-                    ..default()
-                })
-                .set(bevy::asset::AssetPlugin {
-                    file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets")
-                        .to_owned(),
-                    ..default()
-                }),
-        );
 
-        // Visual mode needs the same camera and clear color as the real game.
-        app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()));
-        app.add_systems(Startup, spawn_scenario_camera);
+        app.add_plugins(Game::headless());
+    } else {
+        app.add_plugins(Game::default());
     }
 
-    app.add_plugins(Game);
     app
-}
-
-/// Spawns the 2D camera matching the game's visual setup.
-///
-/// Only used in visual mode — headless mode has no renderer.
-fn spawn_scenario_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        Projection::from(OrthographicProjection {
-            scaling_mode: ScalingMode::AutoMin {
-                min_width: 1920.0,
-                min_height: 1080.0,
-            },
-            ..OrthographicProjection::default_2d()
-        }),
-        Tonemapping::AcesFitted,
-        Bloom::default(),
-    ));
 }
 
 /// Returns `true` if `start` elapsed longer ago than `timeout`.

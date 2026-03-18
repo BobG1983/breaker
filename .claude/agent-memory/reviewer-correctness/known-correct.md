@@ -36,3 +36,8 @@ type: reference
 - `HybridInput::actions_for_frame` returns empty during scripted phase without advancing chaos RNG — correct, RNG state only advances when chaos phase is active.
 - `#![cfg_attr(test, allow(...))]` in lib.rs is the approved conditional form, not a bare `#[allow(...)]` — do not re-flag.
 - `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.
+- `RenderSetupPlugin` inserts `ClearColor(PlayfieldConfig::default().background_color())` at plugin-build time using compile-time defaults — intentional; RON default matches Rust default `[0.02, 0.01, 0.04]`.
+- `Game` uses `#[derive(Default)]` for `headless: false` — correct; bool defaults to false, identical to removed manual impl.
+- `app.rs` `headless_app()` test helper uses `Game::default()` (headless=false, includes RenderSetupPlugin) — intentional; `camera_spawns` test verifies camera spawning.
+- `runner.rs` `build_app(headless=true)` correctly uses `Game::headless()`, `build_app(headless=false)` correctly uses `Game::default()`.
+- `RenderSetupPlugin` is added last in the PluginGroupBuilder chain — correct; Startup ordering does not matter here.
