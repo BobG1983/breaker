@@ -95,7 +95,10 @@ pub fn check_timer_monotonically_decreasing(
         return;
     };
     let current = timer.remaining;
+    // When prev is 0.0 (NodeTimer default before init), an increase to the real
+    // timer value is initialization, not a violation.
     if let Some(prev) = *previous
+        && prev > 0.0
         && current > prev
     {
         log.0.push(ViolationEntry {

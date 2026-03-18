@@ -8,4 +8,4 @@ pub(crate) mod sets;
 pub(crate) mod systems;
 
 pub(crate) use plugin::PhysicsPlugin;
-pub(crate) use sets::PhysicsSystems;
+pub use sets::PhysicsSystems;
