@@ -319,6 +319,11 @@ fn build_app(headless: bool) -> App {
                     filter: "warn,breaker=info".to_owned(),
                     custom_layer: scenario_log_layer_factory,
                     ..default()
+                })
+                .set(bevy::asset::AssetPlugin {
+                    file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets")
+                        .to_owned(),
+                    ..default()
                 }),
         );
     }
