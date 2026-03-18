@@ -6,7 +6,7 @@ type: reference
 
 # Message Flow Map
 
-Last updated: 2026-03-17 (feature/scenario-coverage-expansion — BoltHitCell.bolt field removed; TogglePause added to GameAction and mapped in scenario runner)
+Last updated: 2026-03-17 (post-merge verification: UpgradeSelected → ChipSelected rename; ChipSelected is pub(crate); no sender/receiver yet)
 
 ## Registered Messages (by plugin)
 
@@ -21,10 +21,10 @@ Last updated: 2026-03-17 (feature/scenario-coverage-expansion — BoltHitCell.bo
 | CellDestroyed | CellsPlugin |
 | NodeCleared | NodePlugin (RunPlugin sub-plugin) |
 | TimerExpired | NodePlugin (RunPlugin sub-plugin) |
-| ApplyTimePenalty | NodePlugin (RunPlugin sub-plugin) — NEW |
-| SpawnAdditionalBolt | BoltPlugin — NEW |
+| ApplyTimePenalty | NodePlugin (RunPlugin sub-plugin) |
+| SpawnAdditionalBolt | BoltPlugin |
 | RunLost | RunPlugin |
-| UpgradeSelected | UiPlugin |
+| ChipSelected | UiPlugin |
 | AppExit | Bevy built-in |
 
 ---
@@ -110,9 +110,11 @@ Last updated: 2026-03-17 (feature/scenario-coverage-expansion — BoltHitCell.bo
 - Receiver: `handle_run_lost` (RunPlugin, .after(handle_node_cleared), .after(handle_timer_expired))
 - Cross-plugin boundary: BehaviorsPlugin (standalone) → RunPlugin
 
-### UpgradeSelected (UiPlugin — registered, not yet used)
-- Sender: NONE (future phases)
-- Receivers: NONE
+### ChipSelected (UiPlugin — registered, sender exists, no gameplay receiver yet)
+- Sender: `handle_chip_input` (ChipSelectPlugin/ScreenPlugin, Update, run_if(GameState::ChipSelect)) — sent on confirm keypress with chip name + kind
+- Receivers: NONE active (chips domain stub — no system reads ChipSelected yet)
+- NOTE: Previously called UpgradeSelected; renamed to ChipSelected to match game vocabulary.
+- NOTE: handle_chip_input reads ButtonInput<KeyCode> directly (not InputActions). This is intentional — same pattern as main menu.
 
 ### AppExit (Bevy built-in)
 - Sender: `handle_main_menu_input` (ScreenPlugin)
@@ -177,4 +179,4 @@ handled by apply_bolt_speed_boosts() called from init_archetype. The bridge skip
 - handle_timer_expired reads both sources transparently (single MessageReader)
 - ApplyTimePenalty and SpawnAdditionalBolt are new cross-plugin boundaries, both
   routed through observer → message pattern (same as RunLost)
-- UpgradeSelected remains registered but unused (future phases)
+- ChipSelected (renamed from UpgradeSelected) remains registered but has no active gameplay receivers (future phases)

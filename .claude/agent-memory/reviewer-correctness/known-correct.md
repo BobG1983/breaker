@@ -29,3 +29,10 @@ type: reference
 - `GameRng::default()` seeds from 0. `reset_run_state` reseeds via `ChaCha8Rng::from_os_rng()`.
 - `MenuLeft`/`MenuRight` share keys with `MoveLeft`/`MoveRight` — harmless, different state contexts.
 - `update_run_setup_colors` sorts cards alphabetically, matching `handle_run_setup_input`.
+- `apply_debug_setup` uses post-teleport `transform.translation` for `ScenarioPhysicsFrozen.target` — correct because mutation happens before the insert call.
+- `check_timer_monotonically_decreasing` resets Local to None when NodeTimer absent (node transition) — correct; no false positive on new node start.
+- `check_bolt_count_reasonable` queries `With<ScenarioTagBolt>` — one-frame tolerance on newly spawned extra bolts is acceptable.
+- `evaluate_pass` with `expected_violations: Some([])` → requires `violations.is_empty() && logs.is_empty()` — correct (vacuously all-fired AND all-in-list).
+- `HybridInput::actions_for_frame` returns empty during scripted phase without advancing chaos RNG — correct, RNG state only advances when chaos phase is active.
+- `#![cfg_attr(test, allow(...))]` in lib.rs is the approved conditional form, not a bare `#[allow(...)]` — do not re-flag.
+- `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.

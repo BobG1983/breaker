@@ -21,6 +21,7 @@ type: reference
 - Breaker state chain: `update_bump` → `move_breaker` → `update_breaker_state` → `grade_bump`
 - Input: `read_input_actions` in PreUpdate writes InputActions consumed by FixedUpdate
 - NodePlugin OnEnter chain: `set_active_layout` → `spawn_cells_from_layout` → `init_clear_remaining` → `init_node_timer`
+- UiPlugin OnEnter chain: `spawn_side_panels` → ApplyDeferred → `spawn_timer_hud` (in_set(UiSystems::SpawnTimerHud)); ApplyDeferred ensures StatusPanel entity is committed before spawn_timer_hud queries it
 - toggle_pause reads InputActions/GameAction::TogglePause
 - bolt_breaker_collision: upward-bolt guard at top of bolt loop
 - BoltHitCell message no longer carries bolt Entity field
@@ -57,4 +58,4 @@ type: reference
 AudioPlugin, UpgradesPlugin
 
 ## Orphan Messages
-- `UpgradeSelected` (UiPlugin) — no sender or receiver. Expected for future phases.
+- `ChipSelected` (UiPlugin, formerly UpgradeSelected) — registered but no active gameplay receiver. Expected for future phases.
