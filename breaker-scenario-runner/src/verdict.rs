@@ -44,6 +44,8 @@ impl Default for ScenarioVerdict {
 impl ScenarioVerdict {
     /// Runs combined evaluation over violations, captured logs, stats, and
     /// scenario definition, updating `status` and `reasons` in place.
+    ///
+    /// Clears any prior failure reasons before re-evaluating.
     pub fn evaluate(
         &mut self,
         violations: &[ViolationEntry],
@@ -137,6 +139,9 @@ impl ScenarioVerdict {
     }
 
     /// Appends a failure reason and ensures `status` is [`VerdictStatus::Fail`].
+    ///
+    /// Reverts a [`VerdictStatus::Pass`] to [`VerdictStatus::Fail`] if called
+    /// after a successful [`evaluate`](Self::evaluate).
     pub fn add_fail_reason(&mut self, reason: String) {
         self.status = VerdictStatus::Fail;
         self.reasons.push(reason);
