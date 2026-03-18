@@ -6,7 +6,7 @@ type: reference
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-17 (feature/scenario-coverage-expansion — deep scan: 9 new invariant systems catalogued; enforce_frozen_positions ordering gap confirmed LOW severity; check_valid_state_transitions uses ResMut<PreviousGameState> not Local — no conflict; new scenarios use only new InvariantKind variants, no data access conflicts)
+Last updated: 2026-03-17 (post-merge verification: UiPlugin OnEnter chain resolved — spawn_side_panels→ApplyDeferred→spawn_timer_hud is ordered; no new conflicts found)
 
 ---
 
@@ -422,6 +422,22 @@ and correct. The scenario runner also maps `TogglePause` correctly in the action
 ChaosMonkey in the scenario runner now includes `TogglePause` in its `GAMEPLAY_ACTIONS` pool.
 This means chaos scenarios can inject random pause/unpause events. The `check_physics_frozen_during_pause`
 invariant validates that physics stops during pause — this is now exercised by chaos scenarios.
+
+---
+
+## NO CONFLICT — spawn_side_panels → spawn_timer_hud ordering in UiPlugin OnEnter
+
+`spawn_side_panels` must run before `spawn_timer_hud` because `spawn_timer_hud` queries for the
+`StatusPanel` entity (spawned by `spawn_side_panels`) and exits early if it doesn't exist.
+
+**Resolution:** The systems are chained with `ApplyDeferred` between them in OnEnter(Playing):
+```rust
+(spawn_side_panels, ApplyDeferred, spawn_timer_hud.in_set(UiSystems::SpawnTimerHud)).chain()
+```
+`ApplyDeferred` flushes the command buffer (commits StatusPanel entity) before `spawn_timer_hud`
+runs. This guarantees `StatusPanel` is queryable when `spawn_timer_hud` calls `status_panel.single()`.
+
+**Verdict:** Fully resolved. No ordering concern remains.
 
 ---
 

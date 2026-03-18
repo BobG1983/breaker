@@ -20,4 +20,5 @@ type: reference
 - `format_lives` in `life_lost.rs` — "lives" is correct game vocabulary (count of `LivesCount`).
 - `fire_consequences` in `bridges.rs` — "consequence" used in its precise game-system sense.
 - `upgrade` module/type names — infrastructure wrappers around Amp/Augment/Overclock; acceptable.
-- `ChaosMonkey` — borderline; preferred rename is `ChaosDriver`. Not yet resolved.
+- `ChaosDriver` — renamed from `ChaosMonkey` in feature/scenario-coverage-expansion. Rename is complete in production code (`src/input.rs`). Test bodies still use `monkey` as local variable names (`let mut monkey = ChaosDriver::new(...)`) — acceptable in test-only code.
+- `HybridInput` scripted phase boundary: doc says `0..scripted_frames` exclusive, implementation uses `frame < scripted_frames` (correct). The edge-case test probes frame 99 (not frame 100); comment in test says "last scripted frame". This is correct — 99 is inside scripted phase when scripted_frames=100.

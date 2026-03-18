@@ -102,6 +102,34 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 ## Query tuple limits
 - Up to 15 elements (QueryData derive on tuples via macro)
 
+## World::get_entity
+- `world.get_entity(e)` returns `Result<EntityRef, Entity>` in 0.18
+- `.is_ok()` / `.is_err()` are correct ways to test existence in tests
+
+## Has<T> in queries
+- `Has<T>` as a query element returns `bool` — correct QueryData for 0.18
+- Used in type alias query tuples: `(Entity, &Component, Has<Marker>)` — confirmed correct
+- Lives in `bevy::ecs::query::Has`
+
+## cfg_attr(test, allow(...)) with reason
+- `#[cfg_attr(test, allow(clippy::unwrap_used, ..., reason = "..."))]` in lib.rs — correct
+- This is a conditional allow (only in test builds) with a reason; satisfies `allow_attributes_without_reason`
+- NOT a bare `#[allow]` — this pattern is project-approved for test assertions in lib.rs
+
+## Option<ResMut<T>> system parameter
+- `Option<ResMut<T>>` is a valid system parameter — `None` when resource not yet inserted
+- Used safely in scenario runner for optional resource presence
+
+## Time<Real>
+- `Res<Time<Real>>` is valid; `.elapsed_secs_f64()` method confirmed correct
+
+## TimeUpdateStrategy
+- `app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(16)))` — confirmed correct for test time control
+- `bevy::time::TimeUpdateStrategy` import path correct
+
+## StatesPlugin
+- `bevy::state::app::StatesPlugin` — correct import for adding state machine support in minimal test apps
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>
@@ -109,3 +137,5 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 - `(spawn_side_panels, ApplyDeferred, spawn_timer_hud).chain()` — ApplyDeferred works in .chain()
 - `commands.entity(panel).with_children(...)` on existing entity — correct
 - Cross-plugin ordering with `.after(fn_name)` — correct
+- `Has<RequiredToClear>` in query tuple — correct, yields bool
+- `world.get_entity(e).is_err()` after `commands.entity(e).despawn()` + tick — valid existence test in 0.18

@@ -6,7 +6,7 @@ type: reference
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-17 (feature/scenario-coverage-expansion — scenario-coverage-expansion deep scan: 9 new invariant systems, 3 new self-test scenarios, 10+ new mechanic/stress scenarios, pub→pub(crate) visibility normalization, DebugOverlays enum refactor, SystemParam extractions for propagate_archetype_changes/propagate_node_layout_changes, DashParams local struct in dash.rs, BoltHitCell.bolt field removed, BoltLostQuery type alias in queries.rs, upward-bolt guard moved to top, TogglePause routed through InputActions, #[allow] attributes removed and replaced with real fixes)
+Last updated: 2026-03-17 (post-merge verification: ChipSelected message (not UpgradeSelected); spawn_side_panels→ApplyDeferred→spawn_timer_hud chained in OnEnter(Playing); update_timer_display run_if PlayingState::Active; UiSystems::SpawnTimerHud set added)
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
@@ -379,21 +379,20 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 
 ## UiPlugin
 
-### `spawn_side_panels` — OnEnter(GameState::Playing) [unordered vs spawn_timer_hud]
-- Reads (query): Query<(), With<SidePanels>> (existence check)
-- Commands (spawn SidePanels with CleanupOnRunEnd)
+### OnEnter(GameState::Playing) — CHAINED: spawn_side_panels → ApplyDeferred → spawn_timer_hud
+- `spawn_side_panels`: Reads (query): Query<(), With<SidePanels>> (existence check); Commands (spawn SidePanels with CleanupOnRunEnd)
+- `spawn_timer_hud` — in_set(UiSystems::SpawnTimerHud): Reads: Res<TimerUiConfig>, Res<NodeTimer>, Res<AssetServer>; Reads (query): Query<(), With<NodeTimerDisplay>> (existence guard), Query<Entity, With<StatusPanel>>; Commands (spawn NodeTimerDisplay as child of StatusPanel, with CleanupOnNodeExit)
+- NOTE: ApplyDeferred between them ensures SidePanels entity is committed before spawn_timer_hud queries for StatusPanel.
+- NOTE: spawn_timer_hud guards are checked AFTER chaining: if no StatusPanel exists (single() fails), it returns early.
 
-### `spawn_timer_hud` — OnEnter(GameState::Playing) [unordered vs spawn_side_panels]
-- Reads: Res<TimerUiConfig>, Res<NodeTimer>, Res<AssetServer>
-- Commands (spawn NodeTimerDisplay with CleanupOnNodeExit)
-
-### `update_timer_display` — Update, run_if(PlayingState::Active)
+### `update_timer_display` — Update, run_if(in_state(PlayingState::Active))
 - Reads: Res<NodeTimer>, Res<TimerUiConfig>
 - Writes (query): mut Text, mut TextColor (With<NodeTimerDisplay>)
 
 ---
 
 ## AudioPlugin — no systems (stub)
+## ChipsPlugin — no systems (stub beyond chip_select screen)
 ## UpgradesPlugin — no systems (stub)
 
 ---

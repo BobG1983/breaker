@@ -12,7 +12,7 @@ type: reference
 - **Node completion**: All branches (required, non-required, zero, remaining).
 - **Run end paths**: All three outcomes (node-transition, win, no-op).
 - **Scenario invariants**: Very high. All checkers have happy-path, sad-path, and edge-case tests including physics_frozen_during_pause.
-- **Scenario runner**: `evaluate_pass` has 0 of 3 branches tested. `scenario_health_warnings` has 1 of 5. Known gap as of 2026-03-17.
+- **Scenario runner**: `evaluate_pass` has 0 of 3 branches tested (None/no-violations, Some([]/empty-expected, Some([...]/partial-match branches all untested). `scenario_health_warnings` has 1 of 5 warnings tested (no_actions_with_chaos tested; entered_playing=false, bolts_tagged=0, breakers_tagged=0, early-exit all untested). Known gap as of 2026-03-17 (feature/scenario-coverage-expansion review).
 - **bolt/queries.rs**: Module doc misleading (says "clippy type_complexity lint" when real reason is convention). Flag if seen.
 - **update_timer_display.rs**: `total == 0.0` divide-by-zero path untested. Flag this gap.
 - **read_input.rs**: `repeat: true` key event filter path untested.
