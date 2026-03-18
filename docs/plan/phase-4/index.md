@@ -121,6 +121,10 @@ These are independent and can parallelize.
 - **All of Wave 2 at once** — 4c + 4d + 4e together exceeds reasonable context. Start with structural pieces, then implement logic.
 - **4b as a monolith** — touches 4+ domains, must split effect types from effect consumption.
 
+## Scenario Coverage
+
+Each stage includes a **Scenario Coverage** section listing suggested invariants and scenario RON files. These are starting points, not exhaustive lists. If implementation reveals new properties that should always hold, new edge cases worth stress-testing, or new chaos-input failure modes — add invariants and scenarios as needed. The suggestions exist to prompt thinking about runtime validation, not to cap it.
+
 ## Cross-Cutting Work (Main Agent Only)
 
 These tasks span multiple domains and cannot be delegated:
