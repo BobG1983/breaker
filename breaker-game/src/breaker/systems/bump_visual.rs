@@ -310,9 +310,7 @@ mod tests {
     fn animate_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, animate_bump_visual);
-        // Prime wall-clock time so the next update has a non-zero delta
-        app.update();
+        app.add_systems(FixedUpdate, animate_bump_visual);
         app
     }
 
@@ -334,7 +332,7 @@ mod tests {
             },
         ));
 
-        app.update();
+        tick(&mut app);
 
         let tf = app
             .world_mut()
@@ -373,7 +371,7 @@ mod tests {
             ))
             .id();
 
-        app.update();
+        tick(&mut app);
 
         assert!(
             app.world().get::<BumpVisual>(entity).is_none(),
@@ -410,7 +408,7 @@ mod tests {
 
         // A few ticks to let the timer expire and commands flush
         for _ in 0..5 {
-            app.update();
+            tick(&mut app);
         }
 
         let tf = app
