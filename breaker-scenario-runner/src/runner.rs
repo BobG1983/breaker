@@ -9,7 +9,7 @@ use std::{
 };
 
 use bevy::{
-    app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*, time::TimeUpdateStrategy,
+    log::LogPlugin, prelude::*, time::TimeUpdateStrategy,
     window::ExitCondition, winit::WinitPlugin,
 };
 use breaker::game::Game;
@@ -230,51 +230,76 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
     app.init_resource::<CapturedLogs>();
     app.add_systems(FixedUpdate, poll_log_buffer);
 
-    app.run();
-
-    // Collect results
-    let violations = app
-        .world()
-        .get_resource::<ViolationLog>()
-        .map(|v| v.0.clone())
-        .unwrap_or_default();
-    let logs = app
-        .world()
-        .get_resource::<CapturedLogs>()
-        .map(|l| l.0.clone())
-        .unwrap_or_default();
-    let definition = app
-        .world()
-        .get_resource::<ScenarioConfig>()
-        .map(|c| c.definition.clone());
-
-    let mut passed = evaluate_pass(&violations, &logs, definition.as_ref());
-
-    // Health checks — any issue causes failure
-    let stats = app
-        .world()
-        .get_resource::<ScenarioStats>()
-        .cloned()
-        .unwrap_or_default();
-    if let Some(ref def) = definition {
-        let health_issues = scenario_health_warnings(&stats, def);
-        for issue in &health_issues {
-            println!("  HEALTH FAIL [{scenario_name}]: {issue}");
+    if headless {
+        // Run manually so we retain access to the World after exit.
+        // App::run() replaces self with App::empty(), losing all resources.
+        app.finish();
+        app.cleanup();
+        loop {
+            app.update();
+            if app.should_exit().is_some() {
+                break;
+            }
         }
-        if !health_issues.is_empty() {
-            passed = false;
-        }
-        println!(
-            "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
-            stats.max_frame,
-            stats.actions_injected,
-            violations.len(),
-            logs.len(),
-            stats.bolts_tagged,
-            stats.breakers_tagged,
-            stats.entered_playing
-        );
+    } else {
+        // Visual mode — Winit needs app.run() for the event loop.
+        // Results cannot be read after run(); visual mode is for debugging only.
+        app.run();
+        println!("  [{scenario_name}] visual mode — pass/fail not evaluated");
+        return true;
     }
+
+    collect_and_evaluate(&app, &scenario_name)
+}
+
+/// Extracts results from the app world and evaluates pass/fail.
+///
+/// Returns `false` if any expected resource is missing, any health check fails,
+/// any invariant violation is unexpected, or any log was captured.
+fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
+    let Some(violation_log) = app.world().get_resource::<ViolationLog>() else {
+        eprintln!("FAIL [{scenario_name}]: ViolationLog resource missing after run");
+        return false;
+    };
+    let violations = violation_log.0.clone();
+
+    let Some(captured_logs) = app.world().get_resource::<CapturedLogs>() else {
+        eprintln!("FAIL [{scenario_name}]: CapturedLogs resource missing after run");
+        return false;
+    };
+    let logs = captured_logs.0.clone();
+
+    let Some(config) = app.world().get_resource::<ScenarioConfig>() else {
+        eprintln!("FAIL [{scenario_name}]: ScenarioConfig resource missing after run");
+        return false;
+    };
+    let definition = config.definition.clone();
+
+    let Some(stats) = app.world().get_resource::<ScenarioStats>().cloned() else {
+        eprintln!("FAIL [{scenario_name}]: ScenarioStats resource missing after run");
+        return false;
+    };
+
+    let mut passed = evaluate_pass(&violations, &logs, Some(&definition));
+
+    let health_issues = scenario_health_warnings(&stats, &definition);
+    for issue in &health_issues {
+        println!("  HEALTH FAIL [{scenario_name}]: {issue}");
+    }
+    if !health_issues.is_empty() {
+        passed = false;
+    }
+
+    println!(
+        "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
+        stats.max_frame,
+        stats.actions_injected,
+        violations.len(),
+        logs.len(),
+        stats.bolts_tagged,
+        stats.breakers_tagged,
+        stats.entered_playing
+    );
 
     if passed {
         println!("PASS [{scenario_name}]");
@@ -314,8 +339,8 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
 
 /// Builds a Bevy app configured for scenario running.
 ///
-/// In headless mode, disables winit and uses `ScheduleRunnerPlugin` to drive
-/// the app without a display server. In visual mode, uses normal `DefaultPlugins`.
+/// In headless mode, disables winit so the app runs without a display server.
+/// In visual mode, uses normal `DefaultPlugins`.
 fn build_app(headless: bool) -> App {
     let mut app = App::new();
 
@@ -340,9 +365,7 @@ fn build_app(headless: bool) -> App {
                     ..default()
                 })
                 .disable::<WinitPlugin>(),
-        )
-        // No sleep between Update ticks — run as fast as possible.
-        .add_plugins(ScheduleRunnerPlugin::run_loop(Duration::ZERO));
+        );
 
         // Advance simulated time by exactly one fixed timestep per Update tick.
         // Without this, Time<Fixed> accumulates based on real wall-clock elapsed

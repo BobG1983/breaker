@@ -27,6 +27,10 @@ use crate::{
     types::{GameAction as ScenarioGameAction, ScenarioDefinition},
 };
 
+/// Query alias for breaker entities in [`apply_debug_setup`].
+type BreakerDebugQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static mut Transform), (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>)>;
+
 /// Loaded scenario configuration, inserted before the app runs.
 #[derive(Resource)]
 pub struct ScenarioConfig {
@@ -125,19 +129,25 @@ impl Plugin for ScenarioLifecycle {
                     )
                         .chain()
                         .before(breaker::breaker::sets::BreakerSystems::Move),
-                    check_bolt_in_bounds,
-                    check_bolt_speed_in_range,
-                    check_bolt_count_reasonable,
-                    check_breaker_in_bounds,
-                    check_no_nan,
-                    check_timer_non_negative,
-                    check_valid_state_transitions,
-                    check_valid_breaker_state,
-                    check_timer_monotonically_decreasing,
-                    check_breaker_position_clamped,
-                    check_physics_frozen_during_pause,
-                    check_no_entity_leaks,
-                    enforce_frozen_positions,
+                    // Invariant checkers and frozen position enforcement must run
+                    // BEFORE physics systems. Otherwise bolt_lost respawns OOB
+                    // bolts before invariants can detect them.
+                    (
+                        enforce_frozen_positions,
+                        check_bolt_in_bounds,
+                        check_bolt_speed_in_range,
+                        check_bolt_count_reasonable,
+                        check_breaker_in_bounds,
+                        check_no_nan,
+                        check_timer_non_negative,
+                        check_valid_state_transitions,
+                        check_valid_breaker_state,
+                        check_timer_monotonically_decreasing,
+                        check_breaker_position_clamped,
+                        check_physics_frozen_during_pause,
+                        check_no_entity_leaks,
+                    )
+                        .before(breaker::physics::PhysicsSystems::BoltLost),
                     tag_game_entities,
                 ),
             )
@@ -195,14 +205,14 @@ fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
 
 /// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
 ///
-/// For each entity tagged with [`ScenarioTagBolt`], applies the `bolt_position`
-/// teleport from [`crate::types::DebugSetup`] (z coordinate is preserved). When
-/// `disable_physics` is true, also inserts [`ScenarioPhysicsFrozen`] with the
-/// post-teleport position as the frozen target.
+/// For each entity tagged with [`ScenarioTagBolt`] or [`ScenarioTagBreaker`],
+/// applies position teleports from [`crate::types::DebugSetup`] (z coordinate is
+/// preserved). When `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`]
+/// on both bolts and breakers with the post-teleport position as the frozen target.
 pub fn apply_debug_setup(
     config: Res<ScenarioConfig>,
     mut bolt_query: Query<(Entity, &mut Transform), With<ScenarioTagBolt>>,
-    mut breaker_query: Query<&mut Transform, (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>)>,
+    mut breaker_query: BreakerDebugQuery,
     mut commands: Commands,
 ) {
     let Some(setup) = config.definition.debug_setup.as_ref() else {
@@ -222,10 +232,16 @@ pub fn apply_debug_setup(
         }
     }
 
-    if let Some((x, y)) = setup.breaker_position {
-        for mut transform in &mut breaker_query {
+    for (entity, mut transform) in &mut breaker_query {
+        if let Some((x, y)) = setup.breaker_position {
             transform.translation.x = x;
             transform.translation.y = y;
+        }
+
+        if setup.disable_physics {
+            commands.entity(entity).insert(ScenarioPhysicsFrozen {
+                target: transform.translation,
+            });
         }
     }
 }
