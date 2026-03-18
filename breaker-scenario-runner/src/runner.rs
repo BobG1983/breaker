@@ -144,13 +144,13 @@ fn evaluate_pass(
         })
 }
 
-/// Produces human-readable health warning strings for a completed scenario run.
+/// Produces human-readable health failure strings for a completed scenario run.
 ///
-/// Returns warnings about suspicious-but-not-failing conditions:
-/// - When `stats.actions_injected == 0` and the input strategy is not an empty
-///   `Scripted` list, warns that "no actions were injected".
+/// Any non-empty result causes the scenario to fail. This catches runs that
+/// "pass" vacuously because the game never actually started or exercised the
+/// systems under test.
 ///
-/// Returns an empty `Vec` when no warnings apply.
+/// Returns an empty `Vec` when no health issues are detected.
 #[must_use]
 pub fn scenario_health_warnings(
     stats: &crate::invariants::ScenarioStats,
@@ -189,6 +189,12 @@ pub fn scenario_health_warnings(
             "scenario exited very early (max_frame={})",
             stats.max_frame
         ));
+    }
+
+    if stats.invariant_checks == 0 {
+        warnings.push(
+            "no invariant checks ran — game loop may not have executed".to_owned(),
+        );
     }
 
     warnings
@@ -242,18 +248,21 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
         .get_resource::<ScenarioConfig>()
         .map(|c| c.definition.clone());
 
-    let passed = evaluate_pass(&violations, &logs, definition.as_ref());
+    let mut passed = evaluate_pass(&violations, &logs, definition.as_ref());
 
-    // Print health warnings (non-fatal) and scenario summary
+    // Health checks — any issue causes failure
     let stats = app
         .world()
         .get_resource::<ScenarioStats>()
         .cloned()
         .unwrap_or_default();
     if let Some(ref def) = definition {
-        let warnings = scenario_health_warnings(&stats, def);
-        for w in &warnings {
-            println!("  WARN [{scenario_name}]: {w}");
+        let health_issues = scenario_health_warnings(&stats, def);
+        for issue in &health_issues {
+            println!("  HEALTH FAIL [{scenario_name}]: {issue}");
+        }
+        if !health_issues.is_empty() {
+            passed = false;
         }
         println!(
             "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
