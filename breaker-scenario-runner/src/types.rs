@@ -114,6 +114,30 @@ pub enum InvariantKind {
     PhysicsFrozenDuringPause,
 }
 
+impl InvariantKind {
+    /// Standard human-readable fail reason for this invariant violation.
+    ///
+    /// Used by [`crate::verdict::ScenarioVerdict`] to build structured failure reasons
+    /// without string construction at evaluation time.
+    #[must_use]
+    pub const fn fail_reason(&self) -> &'static str {
+        match self {
+            Self::BoltInBounds => "bolt position outside playfield bounds",
+            Self::BoltSpeedInRange => "bolt speed outside configured min/max",
+            Self::BoltCountReasonable => "bolt count exceeds maximum",
+            Self::BreakerInBounds => "breaker position outside playfield bounds",
+            Self::NoEntityLeaks => "unexpected entity accumulation detected",
+            Self::NoNaN => "NaN detected in transform or velocity",
+            Self::TimerNonNegative => "node timer went negative",
+            Self::ValidStateTransitions => "invalid game state transition",
+            Self::ValidBreakerState => "invalid breaker movement state transition",
+            Self::TimerMonotonicallyDecreasing => "node timer increased mid-node",
+            Self::BreakerPositionClamped => "breaker position not clamped to playfield",
+            Self::PhysicsFrozenDuringPause => "physics entity moved while paused",
+        }
+    }
+}
+
 /// Optional debug overrides applied after entity spawn (used in self-test scenarios).
 #[derive(Debug, Clone, PartialEq, Deserialize, Default)]
 pub struct DebugSetup {
@@ -386,5 +410,61 @@ mod tests {
         );
         assert!(result.expected_violations.is_none());
         assert!(result.debug_setup.is_none());
+    }
+
+    // -------------------------------------------------------------------------
+    // InvariantKind::fail_reason — each variant returns non-empty string
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn fail_reason_returns_non_empty_string_for_every_variant() {
+        let variants = [
+            InvariantKind::BoltInBounds,
+            InvariantKind::BoltSpeedInRange,
+            InvariantKind::BoltCountReasonable,
+            InvariantKind::BreakerInBounds,
+            InvariantKind::NoEntityLeaks,
+            InvariantKind::NoNaN,
+            InvariantKind::TimerNonNegative,
+            InvariantKind::ValidStateTransitions,
+            InvariantKind::ValidBreakerState,
+            InvariantKind::TimerMonotonicallyDecreasing,
+            InvariantKind::BreakerPositionClamped,
+            InvariantKind::PhysicsFrozenDuringPause,
+        ];
+
+        for variant in &variants {
+            let reason = variant.fail_reason();
+            assert!(
+                !reason.is_empty(),
+                "fail_reason() for {variant:?} must not be empty"
+            );
+        }
+    }
+
+    #[test]
+    fn fail_reason_returns_distinct_strings_for_each_variant() {
+        let variants = [
+            InvariantKind::BoltInBounds,
+            InvariantKind::BoltSpeedInRange,
+            InvariantKind::BoltCountReasonable,
+            InvariantKind::BreakerInBounds,
+            InvariantKind::NoEntityLeaks,
+            InvariantKind::NoNaN,
+            InvariantKind::TimerNonNegative,
+            InvariantKind::ValidStateTransitions,
+            InvariantKind::ValidBreakerState,
+            InvariantKind::TimerMonotonicallyDecreasing,
+            InvariantKind::BreakerPositionClamped,
+            InvariantKind::PhysicsFrozenDuringPause,
+        ];
+
+        let reasons: Vec<&str> = variants.iter().map(InvariantKind::fail_reason).collect();
+        let unique: std::collections::HashSet<&str> = reasons.iter().copied().collect();
+        assert_eq!(
+            reasons.len(),
+            unique.len(),
+            "fail_reason() must return distinct strings — found duplicates in: {reasons:?}"
+        );
     }
 }

@@ -1,9 +1,12 @@
 //! Scenario runner — automated gameplay testing tool.
 //!
+//! Runs headless by default (no GPU required). Pass `--visual` to open a window
+//! with full graphics at normal speed for debugging.
+//!
 //! Usage:
 //!   `cargo dscenario -- -s aegis_chaos`
-//!   `cargo dscenario -- --headless -s aegis_chaos`
-//!   `cargo dscenario -- --all --headless`
+//!   `cargo dscenario -- --all`
+//!   `cargo dscenario -- --visual -s aegis_chaos`
 
 use std::process;
 
@@ -11,10 +14,11 @@ use argh::FromArgs;
 
 fn main() {
     let args: Args = argh::from_env();
+    let headless = !args.visual;
     let exit_code = breaker_scenario_runner::runner::run_with_args(
         args.scenario.as_deref(),
         args.all,
-        args.headless,
+        headless,
     );
     process::exit(exit_code);
 }
@@ -30,7 +34,7 @@ pub struct Args {
     #[argh(switch)]
     pub all: bool,
 
-    /// run without a window (headless mode — no GPU required)
+    /// run with a window at normal speed (for visual debugging)
     #[argh(switch)]
-    pub headless: bool,
+    pub visual: bool,
 }

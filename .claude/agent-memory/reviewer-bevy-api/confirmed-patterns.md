@@ -120,6 +120,17 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 - `Option<ResMut<T>>` is a valid system parameter — `None` when resource not yet inserted
 - Used safely in scenario runner for optional resource presence
 
+## World resource access (post-run, outside systems)
+- `app.world().get_resource::<T>()` → `Option<&T>` — correct for Bevy 0.18
+- `app.world_mut().get_resource_mut::<T>()` → `Option<Mut<T>>` — correct for Bevy 0.18
+- Both patterns are used in scenario runner's `collect_and_evaluate` and `drain_remaining_logs`
+- `app.world().resource::<T>()` → `&T` (panics if missing) — also correct, used in tests
+
+## init_resource with manual Default
+- `app.init_resource::<T>()` requires `T: Resource + Default`
+- Manual `impl Default` satisfies this — does not require `#[derive(Default)]`
+- Confirmed: `ScenarioVerdict` uses manual `Default` impl, `init_resource` is valid
+
 ## Time<Real>
 - `Res<Time<Real>>` is valid; `.elapsed_secs_f64()` method confirmed correct
 

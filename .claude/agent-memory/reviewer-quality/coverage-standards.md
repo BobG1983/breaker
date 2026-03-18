@@ -12,7 +12,7 @@ type: reference
 - **Node completion**: All branches (required, non-required, zero, remaining).
 - **Run end paths**: All three outcomes (node-transition, win, no-op).
 - **Scenario invariants**: Very high. All checkers have happy-path, sad-path, and edge-case tests including physics_frozen_during_pause.
-- **Scenario runner**: `evaluate_pass` has 0 of 3 branches tested (None/no-violations, Some([]/empty-expected, Some([...]/partial-match branches all untested). `scenario_health_warnings` has 1 of 5 warnings tested (no_actions_with_chaos tested; entered_playing=false, bolts_tagged=0, breakers_tagged=0, early-exit all untested). Known gap as of 2026-03-17 (feature/scenario-coverage-expansion review).
+- **ScenarioVerdict (verdict.rs)**: Very high as of 2026-03-18. All 6 health checks tested (no_actions_injected, never_entered_playing, no_bolts_tagged, no_breakers_tagged, early_exit, no_invariant_checks). All 3 expected_violations branches tested (None/no-violations → Pass, Some([]) → Pass, expected matches → Pass, expected not fired → Fail, unexpected violation → Fail). Logs cause failure. add_fail_reason semantics (appends, keeps Fail, reverts Pass to Fail). Default verdict is Fail with sentinel reason. Known gap: `collect_and_evaluate` in runner.rs has no unit test for the missing-resource path (the 4-way match arm that adds individual resource-missing reasons).
 - **bolt/queries.rs**: Module doc misleading (says "clippy type_complexity lint" when real reason is convention). Flag if seen.
 - **update_timer_display.rs**: `total == 0.0` divide-by-zero path untested. Flag this gap.
 - **read_input.rs**: `repeat: true` key event filter path untested.

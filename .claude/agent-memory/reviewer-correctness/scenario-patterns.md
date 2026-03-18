@@ -22,3 +22,10 @@ type: reference
 - `bypass_menu_to_playing` goes MainMenu → Playing directly — not forbidden by `check_valid_state_transitions`.
 - New mechanic scenarios (aegis_dash_wall, aegis_pause_stress, aegis_state_machine, aegis_speed_bounce, aegis_lives_exhaustion) and stress scenarios (aegis_multinode, prism_bolt_stabilization, prism_concurrent_hits, chrono_clear_race, chrono_penalty_stress) use standard invariant sets.
 - `check_physics_frozen_during_pause` stores position every tick (active and paused), violations fire only when paused and bolt moved since last tick.
+
+## ScenarioVerdict Refactor (refactor/scenario-verdict)
+- `evaluate()` clears `reasons` before building from scratch — correct, not a bug.
+- `None | Some([])` slice pattern on `as_deref()` result is valid Rust — correctly matches both absent and empty expected_violations.
+- `init_resource::<ScenarioVerdict>()` in lifecycle.rs registers a resource that `collect_and_evaluate` does not read from the world — `collect_and_evaluate` constructs its own local `ScenarioVerdict::default()`. This is intentional: the resource exists for the default-fail safety net pattern (any run that never calls evaluate() is still a safe fail), even though collect_and_evaluate doesn't read the world resource.
+- `add_fail_reason` on a default verdict accumulates on top of the default reason — not a bug, just noisy output in the unreachable missing-resource path.
+- `is_empty_scripted` macro pattern `if actions.is_empty()` guard works correctly because `actions` binds as `&Vec<ScriptedFrame>` and `.is_empty()` auto-derefs. Correct.
