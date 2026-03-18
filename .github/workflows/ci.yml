@@ -1,9 +1,10 @@
 # Continuous Integration for Brickbreaker
 #
 # Runs on pushes to develop and PRs targeting develop or main.
-# Two parallel jobs:
-#   - test: fmt + clippy + tests across Linux/macOS/Windows
-#   - scenarios: headless scenario runner on Linux
+# Three jobs:
+#   - test-game: fmt + clippy + tests across Linux/macOS/Windows
+#   - test-scenarios: clippy + tests for the scenario runner on Linux
+#   - run-scenarios: headless scenario run, gated on both test jobs passing
 #
 # Does NOT use bevy/dynamic_linking — static linking is simpler and
 # avoids dylib resolution issues in CI environments.
@@ -25,8 +26,8 @@ env:
   CARGO_PROFILE_DEV_DEBUG: 0
 
 jobs:
-  test:
-    name: Test (${{ matrix.os }})
+  test-game:
+    name: Test Game (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -70,8 +71,8 @@ jobs:
       - name: Run tests (game + derive)
         run: cargo test -p breaker -p breaker_derive
 
-  scenarios:
-    name: Scenarios
+  test-scenarios:
+    name: Test Scenarios
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -102,6 +103,32 @@ jobs:
 
       - name: Test scenario runner
         run: cargo test -p breaker_scenario_runner
+
+  run-scenarios:
+    name: Run Scenarios
+    needs: [test-game, test-scenarios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libudev-dev \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "ci-scenarios"
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
 
       - name: Run scenarios
         run: cargo run --release -p breaker_scenario_runner -- --all
