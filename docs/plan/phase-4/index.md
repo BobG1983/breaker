@@ -16,6 +16,7 @@
 | [4h](phase-4h-chip-evolution.md) | Chip Evolution | 4c, 4d, 4e | Medium | Low |
 | [4i](phase-4i-run-stats.md) | Run Stats & Summary | 4e, 4f | Medium | Low |
 | [4j](phase-4j-release-infrastructure.md) | Release Infrastructure | — | Small | Low |
+| 4k | Render Plugin Separation | Phase 4 complete | Medium | Low — refactor only |
 
 ## Dependency Graph
 
@@ -105,6 +106,17 @@ These are independent and can parallelize.
 All three are independent and can parallelize.
 
 **Session 8**: 4h + 4i + 4j in parallel
+
+### Post-Wave 4 — Render Separation Refactor (optional, after Phase 4)
+
+- **4k (Render Plugin Separation)** (no gameplay dependencies) — Extract all visual-only concerns from gameplay plugins into a centralized render domain. Currently, spawn systems (bolt, breaker, cells) mix gameplay components with visual components (`Mesh2d`, `MeshMaterial2d`, `TextFont`), and screen spawn systems are entirely visual. This refactor would:
+  - Split gameplay spawn systems into "spawn entity" + "attach visuals" (via `Added<T>` observers)
+  - Move screen spawn systems (`spawn_main_menu`, `spawn_timer_hud`, etc.) into a render plugin
+  - Move feedback systems (`bump_feedback`, `bolt_lost_feedback`) into a render plugin
+  - Eliminate `HeadlessAssetsPlugin` — headless mode simply omits the render plugin
+  - Enable future alternative visual modes (debug wireframe, replay viewer)
+  - **Trigger**: Do this when Phase 5 (Visual Identity) adds enough new visual systems that the separation pays for itself. Not worth doing before then.
+  - **Scope**: ~14 spawn/feedback systems to split, plus screen plugin restructuring.
 
 ## Session Summary
 

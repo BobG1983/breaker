@@ -41,3 +41,4 @@ type: reference
 - `app.rs` `headless_app()` test helper uses `Game::default()` (headless=false, includes RenderSetupPlugin) — intentional; `camera_spawns` test verifies camera spawning.
 - `runner.rs` `build_app(headless=true)` correctly uses `Game::headless()`, `build_app(headless=false)` correctly uses `Game::default()`.
 - `RenderSetupPlugin` is added last in the PluginGroupBuilder chain — correct; Startup ordering does not matter here.
+- `build_app(headless=true)` in runner.rs uses `MinimalPlugins + StatesPlugin + AssetPlugin + InputPlugin + MeshPlugin + init_asset::<ColorMaterial>() + TextPlugin + TimeUpdateStrategy::ManualDuration + Game::headless()` — reviewed 2026-03-18, confirmed correct. No missing plugins, no spurious render hacks needed.

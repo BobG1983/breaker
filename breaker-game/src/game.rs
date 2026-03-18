@@ -18,7 +18,9 @@ use crate::{
 /// Added to the Bevy [`App`] in [`crate::app::build_app`].
 ///
 /// When `headless` is `false` (the default), includes [`RenderSetupPlugin`]
-/// which spawns the camera and inserts [`ClearColor`].
+/// which spawns the camera and inserts [`ClearColor`]. When `headless` is
+/// `true`, includes [`HeadlessAssetsPlugin`] which registers asset types
+/// that render-pipeline plugins would normally provide.
 #[derive(Default)]
 pub struct Game {
     /// When `true`, skips [`RenderSetupPlugin`] (no camera or clear color).
@@ -52,16 +54,31 @@ impl PluginGroup for Game {
             .add(UiPlugin)
             .add(DebugPlugin);
 
-        if !self.headless {
-            builder = builder.add(RenderSetupPlugin);
-        } else {
+        if self.headless {
             // DebugPlugin depends on GizmoConfigStore (from GizmoPlugin in
             // DefaultPlugins). In headless mode GizmoPlugin may be disabled,
             // and debug overlays serve no purpose without a window anyway.
             builder = builder.disable::<DebugPlugin>();
+            builder = builder.add(HeadlessAssetsPlugin);
+        } else {
+            builder = builder.add(RenderSetupPlugin);
         }
 
         builder
+    }
+}
+
+/// Registers asset types normally provided by render-pipeline plugins
+/// (`ColorMaterialPlugin`, `SpritePlugin`, etc.). In headless mode those
+/// plugins are absent, but gameplay spawn systems still need the asset storage.
+///
+/// Included by [`Game`] only in headless mode.
+struct HeadlessAssetsPlugin;
+
+impl Plugin for HeadlessAssetsPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_asset::<ColorMaterial>();
+        app.add_plugins(bevy::text::TextPlugin);
     }
 }
 

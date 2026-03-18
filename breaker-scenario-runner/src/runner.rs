@@ -8,17 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bevy::{
-    log::LogPlugin,
-    prelude::*,
-    render::{
-        RenderPlugin,
-        settings::{RenderCreation, WgpuSettings},
-    },
-    time::TimeUpdateStrategy,
-    window::ExitCondition,
-    winit::WinitPlugin,
-};
+use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
 use breaker::game::Game;
 use tracing::{debug, info, warn};
 
@@ -223,9 +213,7 @@ fn run_scenario(
                     .world()
                     .get_resource::<ScenarioFrame>()
                     .map_or(0, |f| f.0);
-                eprintln!(
-                    "FAIL [{sname}]: wall-clock timeout ({timeout:?}) at frame {frame}"
-                );
+                eprintln!("FAIL [{sname}]: wall-clock timeout ({timeout:?}) at frame {frame}");
                 break;
             }
         }
@@ -310,7 +298,7 @@ fn collect_and_evaluate(app: &App, scenario_name: &str, verbose: bool) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// Verbose output (old behavior)
+// Verbose output (--verbose flag)
 // ---------------------------------------------------------------------------
 
 fn print_verbose_failures(
@@ -488,78 +476,56 @@ fn group_logs(logs: &[LogEntry]) -> Vec<LogGroup> {
 /// Bevy's default fixed timestep frequency (Hz).
 const FIXED_TIMESTEP_HZ: f64 = 64.0;
 
+/// Scenario runner log plugin — captures warnings via [`scenario_log_layer_factory`].
+fn scenario_log_plugin() -> LogPlugin {
+    LogPlugin {
+        level: bevy::log::Level::WARN,
+        filter: "warn,bevy_egui=error".to_owned(),
+        custom_layer: scenario_log_layer_factory,
+        ..default()
+    }
+}
+
 /// Speed multiplier for visual mode — each rendered frame advances virtual
 /// time by this many fixed timesteps.
 const VISUAL_SPEED_MULTIPLIER: f64 = 10.0;
 
 /// Builds a Bevy app configured for scenario running.
 ///
-/// In headless mode, disables winit so the app runs without a display server.
+/// In headless mode, uses [`MinimalPlugins`] with only the specific plugins
+/// game systems need (states, assets, input, mesh). This avoids pulling in the
+/// full render pipeline, winit event loop, and GPU initialization — none of
+/// which are needed when running scenarios at CPU speed on CI.
+///
+/// In visual mode, uses [`DefaultPlugins`] for full windowed rendering.
+///
 /// On the first run, installs `LogPlugin` with a custom tracing layer.
-/// On subsequent runs, disables `LogPlugin` to avoid the "global logger already
+/// On subsequent runs, skips `LogPlugin` to avoid the "global logger already
 /// set" error — the shared `LogBuffer` is inserted by `run_scenario` instead.
 fn build_app(headless: bool, first_run: bool) -> App {
     let mut app = App::new();
 
-    let window = if headless {
-        WindowPlugin {
-            primary_window: None,
-            exit_condition: ExitCondition::DontExit,
-            ..default()
-        }
-    } else {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: "Scenario Runner".into(),
-                ..default()
-            }),
-            ..default()
-        }
-    };
-
     // Point to the game crate's assets directory so scenarios
     // load real RON config files rather than code defaults.
-    let mut defaults = DefaultPlugins.set(window).set(bevy::asset::AssetPlugin {
-        file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned(),
-        ..default()
-    });
-
-    if first_run {
-        defaults = defaults.set(LogPlugin {
-            // bevy_render::extract_resource and bevy_render::texture warn when
-            // backends: None skips GPU init — harmless in headless mode, cannot
-            // be fixed without disabling RenderPlugin (which breaks game systems).
-            level: bevy::log::Level::WARN,
-            filter: "warn,bevy_egui=error,bevy_render::extract_resource=off,bevy_render::texture=off".to_owned(),
-            custom_layer: scenario_log_layer_factory,
-            ..default()
-        });
-    } else {
-        defaults = defaults.disable::<LogPlugin>();
-    }
+    let game_asset_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned();
 
     if headless {
-        // Disable Winit (no display server) and GPU initialization (no GPU
-        // on CI runners). Setting backends: None causes RenderPlugin to skip
-        // adapter creation entirely, avoiding the "Unable to find a GPU" panic.
-        // GizmoPlugin is also disabled since gizmos serve no purpose headless
-        // and its render sub-plugin warns when RenderApp is absent.
-        defaults = defaults
-            .set(RenderPlugin {
-                render_creation: RenderCreation::Automatic(WgpuSettings {
-                    backends: None,
-                    ..default()
-                }),
+        // Minimal plugin set — no render pipeline, no window, no GPU.
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::state::app::StatesPlugin,
+            bevy::asset::AssetPlugin {
+                file_path: game_asset_path,
                 ..default()
-            })
-            .disable::<WinitPlugin>()
-            .disable::<bevy::gizmos::GizmoPlugin>()
-            .disable::<bevy::gizmos_render::GizmoRenderPlugin>();
-    }
+            },
+            bevy::input::InputPlugin,
+            bevy::mesh::MeshPlugin,
+        ));
 
-    app.add_plugins(defaults);
+        if first_run {
+            app.add_plugins(scenario_log_plugin());
+        }
 
-    if headless {
         // Advance simulated time by exactly one fixed timestep per Update tick.
         // Without this, Time<Fixed> accumulates based on real wall-clock elapsed
         // time, so a 20k-frame scenario would take ~5 minutes. With ManualDuration,
@@ -571,6 +537,28 @@ fn build_app(headless: bool, first_run: bool) -> App {
 
         app.add_plugins(Game::headless());
     } else {
+        // Visual mode — full DefaultPlugins for windowed rendering.
+        let mut defaults = DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Scenario Runner".into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(bevy::asset::AssetPlugin {
+                file_path: game_asset_path,
+                ..default()
+            });
+
+        if first_run {
+            defaults = defaults.set(scenario_log_plugin());
+        } else {
+            defaults = defaults.disable::<LogPlugin>();
+        }
+
+        app.add_plugins(defaults);
+
         // Visual mode runs at 10x speed to avoid 5+ minute waits for
         // 20,000-frame scenarios. Each Update tick advances virtual time
         // by 10 fixed timesteps (10/64 s).

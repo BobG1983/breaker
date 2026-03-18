@@ -42,6 +42,22 @@ type: reference
 - verbose=false path calls `print_compact_failures`, verbose=true calls `print_verbose_failures` — wiring through run_with_args → run_scenario → collect_and_evaluate is complete. Correct.
 - Cross-scenario summary: `i32::from(failed_count > 0)` returns 0 for all-pass, 1 for any-fail. Correct.
 
+## feature/scenario-runner-dedup-summary — MinimalPlugins headless refactor
+
+- `build_app(headless=true)` uses `MinimalPlugins + StatesPlugin + AssetPlugin + InputPlugin + MeshPlugin` — correct. MinimalPlugins does NOT include LogPlugin, StatesPlugin, AssetPlugin, InputPlugin, or MeshPlugin.
+- `MinimalPlugins` content verified from Bevy 0.18.1 source: only `TaskPoolPlugin + FrameCountPlugin + TimePlugin + ScheduleRunnerPlugin`.
+- Headless `first_run=false`: LogPlugin is simply not added (nothing to disable — MinimalPlugins has no LogPlugin). Asymmetry with visual branch's `else { disable::<LogPlugin>() }` is intentional and correct.
+- `ScheduleRunnerPlugin` in MinimalPlugins is harmless in headless mode — its runner is only invoked by `app.run()`, which is never called; manual loop uses `app.update()` directly.
+- `TimeUpdateStrategy::ManualDuration` overwrites `Automatic` (initialized by TimePlugin in MinimalPlugins) — supported pattern, verified from Bevy source.
+- `app.init_asset::<ColorMaterial>()` correctly registers `Assets<ColorMaterial>` without render deps. Requires `AssetPlugin` to be present first (which it is).
+- `bevy::text::TextPlugin` path confirmed valid (`bevy_internal` re-exports `bevy_text as text`). No RenderApp dependency. Registers Font asset + loader, CPU resources only.
+- `bevy::mesh::MeshPlugin` path confirmed valid. Does `init_asset::<Mesh>()` which requires live `AssetServer` (AssetPlugin added first — correct ordering).
+- `Mesh2d` has `#[require(Transform)]` — Transform has a default impl, no plugin required. MeshMaterial2d has no required components.
+- `SpriteRenderPlugin` (which calls `register_required_components::<Sprite, SyncToRenderWorld>()`) is NOT added in headless — correct, avoids render world sync dependency.
+- Game domain UiPlugin works without Bevy engine UiPlugin — UI layout systems don't run in headless but component types are available. Game tests confirm this.
+- Simplified log filter `"warn,bevy_egui=error"` is correct — no render-related warnings fire because RenderPlugin is not loaded at all.
+- `LogBuffer` sharing: first run extracts buffer from app world (inserted by scenario_log_layer_factory via LogPlugin); subsequent runs receive it via `insert_resource(buf.clone())`. Same Arc<Mutex<...>> writes to the global tracing subscriber. Correct.
+
 ## ScenarioVerdict Refactor (refactor/scenario-verdict)
 - `evaluate()` clears `reasons` before building from scratch — correct, not a bug.
 - `None | Some([])` slice pattern on `as_deref()` result is valid Rust — correctly matches both absent and empty expected_violations.

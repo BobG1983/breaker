@@ -1,5 +1,6 @@
 ## Stable
 - [project-setup.md](project-setup.md) — Feature flags, fast compile, dynamic_linking pattern
+- [mesh_input_plugins.md](mesh_input_plugins.md) — MeshPlugin and InputPlugin: paths, what they register, init_asset vs init_resource
 - [core-api.md](core-api.md) — Spawn patterns, messages, states, UI, camera, assets, queries
 - [easing_api.md](easing_api.md) — EaseFunction variants, Curve trait, EasingCurve usage
 - [fixed_update_testing.md](fixed_update_testing.md) — accumulate_overstep pattern, NOT advance_by

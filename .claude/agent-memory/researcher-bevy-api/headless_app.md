@@ -212,3 +212,203 @@ App::new()
     // No WindowPlugin, no RenderPlugin
     .run();
 ```
+
+## Headless Warnings with backends: None (Bevy 0.18, "2d" feature)
+
+When using `backends: None` (no GPU), three spurious messages appear. All are **harmless** — they do not indicate broken behavior.
+
+### Warning 1: extract_resource for ClearColor
+
+```
+bevy_render::extract_resource: Render app did not exist when trying to add extract_resource for ClearColor
+```
+
+**Source:** `ExtractResourcePlugin::<ClearColor>::build()` in `bevy_render/src/extract_resource.rs`
+**Level:** `error!` wrapped in `once!()` — fires exactly once, not repeated
+**Cause:** `ClearColor` uses `ExtractResource`. With `backends: None`, `initialize_render_app()` is skipped,
+so `RenderApp` sub-app never exists. `ExtractResourcePlugin` finds no `RenderApp` and emits this.
+**Safe to ignore:** Yes. ClearColor extraction is a no-op in headless — nothing renders.
+**Silence via LogPlugin filter:** Add `bevy_render::extract_resource=off` to the filter string.
+
+### Warning 2: GizmoRenderPlugin RenderApp not detected
+
+```
+bevy_gizmos_render: bevy_render feature is enabled but RenderApp was not detected. Are you sure you loaded GizmoPlugin after RenderPlugin?
+```
+
+**Source:** `GizmoRenderPlugin::build()` in `bevy_gizmos_render/src/lib.rs`
+**Level:** `warn!`
+**Cause:** The `"2d"` feature enables `bevy_gizmos_render` (via `2d_bevy_render` → `bevy_gizmos_render`).
+`GizmoRenderPlugin` checks `app.get_sub_app_mut(RenderApp)` and finds nothing (because `backends: None`
+skips `initialize_render_app()`), so it emits this warning.
+**Safe to ignore:** Yes. Gizmo rendering is entirely irrelevant in headless.
+**Options:**
+1. Silence via LogPlugin filter: `bevy_gizmos_render=off` (recommended — lowest friction)
+2. Disable BOTH plugins separately — they are independent entries in `DefaultPlugins`:
+   ```rust
+   .disable::<bevy::gizmos::GizmoPlugin>()
+   .disable::<bevy_gizmos_render::GizmoRenderPlugin>()
+   ```
+   **IMPORTANT (verified from `crates/bevy_internal/src/default_plugins.rs`):**
+   `GizmoPlugin` (#[cfg(feature = "bevy_gizmos")]) and `GizmoRenderPlugin`
+   (#[cfg(feature = "bevy_gizmos_render")]) are SEPARATE entries in DefaultPlugins.
+   Disabling `GizmoPlugin` alone does NOT remove `GizmoRenderPlugin` — the warning persists.
+   Both must be disabled if you want the structural fix.
+
+### Warning 3: CompressedImageFormatSupport not found
+
+```
+bevy_render::texture: CompressedImageFormatSupport resource not found
+```
+
+**Source:** `TexturePlugin::finish()` in `bevy_render/src/texture/mod.rs`
+**Level:** `warn!`
+**Cause:** `TexturePlugin` is added by `RenderPlugin`. In its `finish()` phase, it checks for
+`CompressedImageFormatSupport` (normally inserted during GPU init). With `backends: None`, GPU
+init is skipped, so the resource is missing. `TexturePlugin` falls back to
+`CompressedImageFormats::NONE` — a safe default for headless.
+**Safe to ignore:** Yes. Image format detection is only relevant when actually decoding GPU-compressed textures.
+**Silence via LogPlugin filter:** Add `bevy_render::texture=off` to the filter string.
+
+### Recommended: Silence all three via LogPlugin filter
+
+```rust
+LogPlugin {
+    filter: "warn,bevy_egui=error,breaker=info,\
+             bevy_render::extract_resource=off,\
+             bevy_gizmos_render=off,\
+             bevy_render::texture=off".to_owned(),
+    ..default()
+}
+```
+
+This is the **lowest-risk approach** — no structural changes, no disabled plugins,
+just log-level silencing of verified-harmless messages.
+
+### Alternative: Disable both gizmo plugins to eliminate warning 2 structurally
+
+```rust
+defaults = defaults
+    .set(RenderPlugin { render_creation: RenderCreation::Automatic(WgpuSettings { backends: None, ..default() }), ..default() })
+    .disable::<WinitPlugin>()
+    .disable::<bevy::gizmos::GizmoPlugin>()
+    .disable::<bevy_gizmos_render::GizmoRenderPlugin>();
+```
+
+BOTH must be disabled. `GizmoPlugin` (#[cfg(bevy_gizmos)]) and `GizmoRenderPlugin`
+(#[cfg(bevy_gizmos_render)]) are independent entries in DefaultPlugins — disabling one
+does NOT remove the other. Disabling only GizmoPlugin leaves GizmoRenderPlugin running,
+which is the source of the warning. Warnings 1 and 3 still require filter silencing.
+
+### Can you .disable::<RenderPlugin>() entirely?
+
+**Not recommended** for this project. With the `"2d"` feature, `RenderPlugin` is the parent of:
+- `TexturePlugin` (image asset loading hooks)
+- `CameraPlugin` (camera component registration)
+- `MeshRenderAssetPlugin`
+- and more
+
+**However**, `MeshPlugin` is listed **separately** in `DefaultPlugins` under `#[cfg(feature = "bevy_mesh")]`
+and does NOT depend on `RenderPlugin`. So `Mesh` as an asset type survives `RenderPlugin` being disabled.
+
+**Color** types (`Color`, `LinearRgba`, etc.) are in `bevy_color` — no render dependency.
+
+**Sprite** as an ECS component (`bevy_sprite`) has CPU-side bounds systems that survive without a GPU.
+
+**The risk** is that disabling `RenderPlugin` entirely may break plugins in the game crate that add
+render-specific systems (e.g., `Camera2d`, material handles, extract systems). Use `backends: None`
++ log filter silencing instead — it is the safer, verified pattern.
+
+## Plugin-by-plugin RenderApp dependency analysis (verified from 0.18.1 source)
+
+Which plugins in DefaultPlugins (with `"2d"` feature) use `get_sub_app_mut(RenderApp)` vs panic if absent:
+
+| Plugin | RenderApp behavior | Safe without GPU? |
+|---|---|---|
+| `TextPlugin` | No RenderApp access at all | YES — pure CPU (cosmic_text, font atlas, asset loading) |
+| `SpritePlugin` (bevy_sprite) | No RenderApp access | YES — CPU-side bounds/AABB systems only |
+| `SpriteRenderPlugin` (bevy_sprite_render) | `if let Some(render_app) = ...` — graceful skip | YES — skips render setup if no RenderApp |
+| `CorePipelinePlugin` | `let Some(render_app) = ... else { return; }` — graceful skip | YES — skips FullscreenShader init |
+| `CameraPlugin` (bevy_camera) | No RenderApp access at all | YES — registers components and systems |
+| `ImagePlugin` (bevy_image) | No RenderApp access | YES — asset registration only |
+| `RenderPlugin` itself | `backends: None` → skips ALL GPU init including `initialize_render_app()` | YES with `backends: None` |
+| `WinitPlugin` | Panics without display server | MUST `.disable::<WinitPlugin>()` |
+
+## TextPlugin — verified: NO RenderApp dependency (0.18.1)
+
+`TextPlugin::build()` (from `bevy_text-0.18.1/src/lib.rs`) does exactly:
+1. `app.init_asset::<Font>()` — asset registration
+2. `app.init_asset_loader::<FontLoader>()` — asset loader
+3. `app.init_resource::<FontAtlasSet>()` — CPU resource
+4. `app.init_resource::<TextPipeline>()` — CPU resource
+5. `app.init_resource::<CosmicFontSystem>()` — CPU resource (wraps cosmic_text::FontSystem)
+6. `app.init_resource::<SwashCache>()` — CPU resource (wraps cosmic_text::SwashCache)
+7. `app.init_resource::<TextIterScratch>()` — CPU resource
+8. Adds `free_unused_font_atlases_system` to PostUpdate
+9. Adds `trim_cosmic_cache` to Last
+
+**Zero RenderApp access.** TextPlugin is completely safe to load without RenderPlugin/GPU.
+
+## CosmicFontSystem and SwashCache — verified: NO GPU dependency
+
+Both are pure CPU resources:
+- `CosmicFontSystem` wraps `cosmic_text::FontSystem` — font database + locale, initialized from system locale/empty DB, no GPU
+- `SwashCache` wraps `cosmic_text::SwashCache::new()` — CPU glyph rasterizer, no GPU
+
+Neither struct has any wgpu/GPU-related field or initialization.
+
+## bevy::hierarchy::HierarchyPlugin — does NOT exist in 0.18.1
+
+**Verified**: There is no `HierarchyPlugin` type anywhere in `bevy_ecs-0.18.1` or any other 0.18.1 crate.
+
+The hierarchy module (`bevy_ecs::hierarchy`) is a plain module containing `ChildOf`, `Children`, `ChildSpawner`,
+`ChildSpawnerCommands` — no plugin struct. Hierarchy is registered as part of `bevy_ecs` itself (built in),
+not through a separate plugin.
+
+Path for hierarchy types: `bevy::ecs::hierarchy::ChildOf` or via `bevy::prelude::*`.
+There is no `bevy::hierarchy` module path — `bevy_ecs` is re-exported as `bevy::ecs`, not `bevy::hierarchy`.
+
+## bevy::transform::TransformPlugin — exists, correct path
+
+**Verified** from `bevy_transform-0.18.1/src/plugins.rs`:
+```rust
+pub struct TransformPlugin;
+impl Plugin for TransformPlugin { ... }
+```
+
+Module path: `bevy::transform::TransformPlugin`
+(because `bevy_internal` re-exports `bevy_transform as transform`, no feature gate — always present)
+
+Also in prelude: `bevy_transform::prelude::TransformPlugin` re-exports it.
+
+`TransformPlugin::build()` only adds CPU-side systems — no RenderApp access.
+
+## Which DefaultPlugins plugins PANIC if RenderPlugin is completely absent (not loaded at all)
+
+With the `"2d"` feature, if you `.disable::<RenderPlugin>()` entirely (i.e., no RenderPlugin loaded,
+not even with `backends: None`):
+
+**Will panic or error:**
+- `WindowRenderPlugin`, `ViewPlugin`, `MeshRenderAssetPlugin`, `TexturePlugin`, `SyncWorldPlugin`, etc.
+  — these are added by `RenderPlugin::build()` UNCONDITIONALLY even with `backends: None`.
+  If RenderPlugin itself is not loaded, these sub-plugins don't run. But other plugins that were compiled
+  expecting those resources/types may panic at runtime.
+
+**More precisely**: With the `"2d"` feature, `SpriteRenderPlugin` uses
+`bevy_render::sync_world::SyncToRenderWorld` in `app.register_required_components`. This type comes
+from `bevy_render`. The plugin compiles against it regardless. If `RenderPlugin` is not loaded,
+`SyncToRenderWorld` as a required component registration may fail at runtime since the render world
+sync infrastructure was never set up.
+
+**The safest verified approach remains**: Keep `RenderPlugin` present with `backends: None`.
+This avoids all runtime panics while skipping GPU initialization entirely.
+
+**Plugins that are definitely safe even with `.disable::<RenderPlugin>()`** (pure CPU, no render dep):
+- `TextPlugin` — verified, no render dep
+- `TransformPlugin` — verified, no render dep
+- `InputPlugin` — pure CPU
+- `TimePlugin` — pure CPU
+- `AssetPlugin` — file I/O
+- `StatesPlugin` — pure ECS
+- `LogPlugin` — tracing only
+- `CameraPlugin` (bevy_camera) — verified, no RenderApp access in its own build()
