@@ -9,9 +9,16 @@ use std::{
 };
 
 use bevy::{
-    log::LogPlugin, prelude::*, time::TimeUpdateStrategy, window::ExitCondition, winit::WinitPlugin,
+    camera::ScalingMode,
+    core_pipeline::tonemapping::Tonemapping,
+    log::LogPlugin,
+    post_process::bloom::Bloom,
+    prelude::*,
+    time::TimeUpdateStrategy,
+    window::ExitCondition,
+    winit::WinitPlugin,
 };
-use breaker::game::Game;
+use breaker::{game::Game, shared::PlayfieldConfig};
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -326,10 +333,32 @@ fn build_app(headless: bool) -> App {
                     ..default()
                 }),
         );
+
+        // Visual mode needs the same camera and clear color as the real game.
+        app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()));
+        app.add_systems(Startup, spawn_scenario_camera);
     }
 
     app.add_plugins(Game);
     app
+}
+
+/// Spawns the 2D camera matching the game's visual setup.
+///
+/// Only used in visual mode — headless mode has no renderer.
+fn spawn_scenario_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d,
+        Projection::from(OrthographicProjection {
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 1920.0,
+                min_height: 1080.0,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+        Tonemapping::AcesFitted,
+        Bloom::default(),
+    ));
 }
 
 /// Returns `true` if `start` elapsed longer ago than `timeout`.
