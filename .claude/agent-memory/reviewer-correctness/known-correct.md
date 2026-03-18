@@ -30,7 +30,9 @@ type: reference
 - `MenuLeft`/`MenuRight` share keys with `MoveLeft`/`MoveRight` — harmless, different state contexts.
 - `update_run_setup_colors` sorts cards alphabetically, matching `handle_run_setup_input`.
 - `apply_debug_setup` uses post-teleport `transform.translation` for `ScenarioPhysicsFrozen.target` — correct because mutation happens before the insert call.
-- `check_timer_monotonically_decreasing` resets Local to None when NodeTimer absent (node transition) — correct; no false positive on new node start.
+- `check_timer_monotonically_decreasing` resets Local to None when NodeTimer absent (node transition) — correct; no false positive on new node start. Now uses `(remaining, total)` tuple — total comparison uses `f32::EPSILON` safely because total is set once and not mutated intra-node.
+- `check_valid_breaker_state` `retain(|e, _| breakers.contains(*e))` runs after the per-entity insert loop — correct ordering; Bevy generational IDs ensure recycled entity IDs are distinct. Do not re-flag.
+- `check_bolt_in_bounds` margin `bolt_radius.map_or(0.0, |r| r.0 + 1.0)` applied to all four walls — correct. Missing BoltRadius degrades to 0.0 (no false positives). Violation message does not show effective bound (cosmetic, not a logic bug).
 - `check_bolt_count_reasonable` queries `With<ScenarioTagBolt>` — one-frame tolerance on newly spawned extra bolts is acceptable.
 - `evaluate_pass` with `expected_violations: Some([])` → requires `violations.is_empty() && logs.is_empty()` — correct (vacuously all-fired AND all-in-list).
 - `HybridInput::actions_for_frame` returns empty during scripted phase without advancing chaos RNG — correct, RNG state only advances when chaos phase is active.

@@ -17,3 +17,4 @@ type: reference
 - Use `.mul_add()` for floating point operations to satisfy suboptimal_flops lint
 - Collapse nested `if let` with inner `if` condition into single `if let ... && ...` (collapsible_if lint)
 - Keep test helper structs and functions at module level, not inside test functions (items_after_statements)
+- Doc comments: wrap Rust identifiers and types in backticks (e.g., `HashMap`, `BreakerState`) for doc_markdown lint

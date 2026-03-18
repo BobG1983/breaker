@@ -67,6 +67,13 @@ type: reference
 - `scenario_log_plugin()` returns `LogPlugin`. Used as `app.add_plugins(LogPlugin)` in headless mode (correct — Plugin implements Plugins). Used as `defaults.set(LogPlugin)` in visual mode (correct — LogPlugin is in DefaultPlugins so set() won't panic).
 - `PluginGroupBuilder::set()` panics if the plugin type is absent from the group. DefaultPlugins always includes LogPlugin, so `defaults.set(scenario_log_plugin())` is safe.
 
+## feature/scenario-runner-dedup-summary — invariant checker bug fixes (2026-03-18)
+
+- `check_valid_breaker_state` `retain` at end of loop: runs after insert, correctly removes stale entries after live entities are updated. Bevy's generational IDs ensure a recycled entity has a different `Entity` value so old entries are pruned. Confirmed correct.
+- `check_bolt_speed_in_range` `SPEED_TOLERANCE = 1.0`: widens both bounds symmetrically. Zero-speed guard still skips serving bolts. Edge case where `min_speed < 1.0` would make lower bound negative — acceptable for an invariant checker. Confirmed correct.
+- `check_timer_monotonically_decreasing` `(remaining, total)` tracking: `f32::EPSILON` threshold on total is safe because `total` is set once and never mutated during a node (only `remaining` changes). Same-total consecutive nodes are handled by the resource removal/re-insertion between nodes (which resets `previous` to `None`). Confirmed correct.
+- `check_bolt_in_bounds` margin `r.0 + 1.0`: applied correctly in all four directions. Fallback to 0.0 when `BoltRadius` absent is safe — no false positives. Violation message shows `bottom_bound=...` without the margin offset — not a logic bug, just slightly less informative for debugging. Confirmed correct.
+
 ## ScenarioVerdict Refactor (refactor/scenario-verdict)
 - `evaluate()` clears `reasons` before building from scratch — correct, not a bug.
 - `None | Some([])` slice pattern on `as_deref()` result is valid Rust — correctly matches both absent and empty expected_violations.

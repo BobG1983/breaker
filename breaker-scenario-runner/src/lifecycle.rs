@@ -490,18 +490,15 @@ mod tests {
     // -------------------------------------------------------------------------
 
     /// `check_bolt_in_bounds` is defined in `invariants.rs` but must be registered
-    /// by [`ScenarioLifecycle`]. A bolt entity at y = -500.0 is below the bottom
-    /// bound of a 700-unit-tall playfield (bottom = -350.0). After one tick the
+    /// by [`ScenarioLifecycle`]. A bolt entity at y = 500.0 is above the top
+    /// bound of a 700-unit-tall playfield (top = 350.0). After one tick the
     /// [`ViolationLog`] must contain exactly one entry with
     /// [`InvariantKind::BoltInBounds`].
-    ///
-    /// This test FAILS until `check_bolt_in_bounds` is added to
-    /// `ScenarioLifecycle::build()`.
     #[test]
     fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
         let mut app = lifecycle_test_app();
 
-        // Override playfield so bottom() = -350.0
+        // Override playfield so top() = 350.0
         app.world_mut().insert_resource(PlayfieldConfig {
             width: 800.0,
             height: 700.0,
@@ -509,10 +506,10 @@ mod tests {
             wall_thickness: 180.0,
         });
 
-        // Spawn bolt well below the bottom bound
+        // Spawn bolt well above the top bound
         app.world_mut().spawn((
             ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, -500.0, 0.0)),
+            Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
         ));
 
         tick(&mut app);
