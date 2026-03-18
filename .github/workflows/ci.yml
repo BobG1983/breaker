@@ -101,4 +101,4 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/develop' }}
 
       - name: Run scenario runner
-        run: cargo run -p breaker_scenario_runner -- --all --headless
+        run: cargo run -p breaker_scenario_runner -- --all

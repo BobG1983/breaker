@@ -438,8 +438,8 @@ mod tests {
             expected_violations: None,
             debug_setup: None,
         )"#;
-        let result: ScenarioDefinition =
-            ron::de::from_str(ron).expect("ScenarioDefinition without allow_early_end should parse");
+        let result: ScenarioDefinition = ron::de::from_str(ron)
+            .expect("ScenarioDefinition without allow_early_end should parse");
         assert!(
             result.allow_early_end,
             "allow_early_end must default to true when omitted"
