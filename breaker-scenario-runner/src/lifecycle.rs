@@ -25,6 +25,7 @@ use crate::{
         check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
     },
     types::{GameAction as ScenarioGameAction, ScenarioDefinition},
+    verdict::ScenarioVerdict,
 };
 
 /// Query alias for breaker entities in [`apply_debug_setup`].
@@ -112,6 +113,7 @@ impl Plugin for ScenarioLifecycle {
     fn build(&self, app: &mut App) {
         app.init_resource::<ScenarioFrame>()
             .init_resource::<ViolationLog>()
+            .init_resource::<ScenarioVerdict>()
             .init_resource::<PreviousGameState>()
             .init_resource::<EntityLeakBaseline>()
             .init_resource::<ScenarioStats>()

@@ -18,5 +18,6 @@ pub mod lifecycle;
 pub mod log_capture;
 pub mod runner;
 pub mod types;
+pub mod verdict;
 
 pub use lifecycle::{ScenarioConfig, ScenarioLifecycle};
