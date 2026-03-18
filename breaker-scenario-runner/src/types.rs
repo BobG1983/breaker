@@ -32,6 +32,8 @@ pub enum GameAction {
     MenuRight,
     /// Menu confirm selection.
     MenuConfirm,
+    /// Toggle pause state.
+    TogglePause,
 }
 
 /// A single scripted frame entry — a frame index and the actions to inject.
@@ -102,6 +104,14 @@ pub enum InvariantKind {
     TimerNonNegative,
     /// Breaker state machine only takes valid transitions.
     ValidStateTransitions,
+    /// Breaker movement state machine only takes legal transitions.
+    ValidBreakerState,
+    /// Node timer decreases monotonically (never increases mid-node).
+    TimerMonotonicallyDecreasing,
+    /// Breaker x position stays within playfield bounds minus half-width.
+    BreakerPositionClamped,
+    /// Physics entities do not move while game is paused.
+    PhysicsFrozenDuringPause,
 }
 
 /// Optional debug overrides applied after entity spawn (used in self-test scenarios).
@@ -121,7 +131,7 @@ pub struct DebugSetup {
 ///
 /// All fields have sensible defaults and can be overridden per-scenario
 /// in the RON file via `invariant_params: (max_bolt_count: 12)`.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct InvariantParams {
     /// Maximum bolt count before [`InvariantKind::BoltCountReasonable`] fires.
     #[serde(default = "InvariantParams::default_max_bolt_count")]
@@ -129,7 +139,7 @@ pub struct InvariantParams {
 }
 
 impl InvariantParams {
-    fn default_max_bolt_count() -> usize {
+    const fn default_max_bolt_count() -> usize {
         8
     }
 }

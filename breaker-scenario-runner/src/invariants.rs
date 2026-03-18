@@ -4,14 +4,189 @@
 //! and append to a [`ViolationLog`] resource. They never panic — they collect
 //! all violations for end-of-run reporting.
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use breaker::{
     bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity},
+    breaker::components::{BreakerState, BreakerWidth},
     run::node::resources::NodeTimer,
-    shared::{GameState, PlayfieldConfig},
+    shared::{GameState, PlayfieldConfig, PlayingState},
 };
 
 use crate::{lifecycle::ScenarioConfig, types::InvariantKind};
+
+/// Statistics collected during a scenario run.
+///
+/// Inserted by [`ScenarioLifecycle`] at run start. Updated by various systems.
+#[derive(Resource, Default, Clone)]
+pub struct ScenarioStats {
+    /// Total number of actions injected via [`inject_scenario_input`].
+    pub actions_injected: u32,
+    /// Total number of invariant check evaluations performed.
+    pub invariant_checks: u32,
+    /// Highest [`ScenarioFrame`] value reached.
+    pub max_frame: u32,
+    /// Whether [`GameState::Playing`] was entered at least once.
+    pub entered_playing: bool,
+    /// Number of bolt entities that were tagged with [`ScenarioTagBolt`].
+    pub bolts_tagged: u32,
+    /// Number of breaker entities that were tagged with [`ScenarioTagBreaker`].
+    pub breakers_tagged: u32,
+}
+
+/// Checks that [`BreakerState`] transitions on the tagged breaker follow the legal path.
+///
+/// Legal transitions: `Idle → Dashing`, `Dashing → Braking`, `Braking → Settling`,
+/// `Settling → Idle`. Any other change fires a [`ViolationEntry`] with
+/// [`InvariantKind::ValidBreakerState`].
+///
+/// Skips the first frame (no previous state stored yet).
+pub fn check_valid_breaker_state(
+    breakers: Query<&BreakerState, With<ScenarioTagBreaker>>,
+    mut previous: Local<Option<BreakerState>>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    for &current in &breakers {
+        if let Some(prev) = *previous
+            && prev != current
+        {
+            let legal = matches!(
+                (prev, current),
+                (
+                    BreakerState::Idle | BreakerState::Settling,
+                    BreakerState::Dashing
+                ) | (BreakerState::Dashing, BreakerState::Braking)
+                    | (BreakerState::Braking, BreakerState::Settling)
+                    | (BreakerState::Settling, BreakerState::Idle)
+            );
+            if !legal {
+                log.0.push(ViolationEntry {
+                    frame: frame.0,
+                    invariant: InvariantKind::ValidBreakerState,
+                    entity: None,
+                    message: format!(
+                        "ValidBreakerState FAIL frame={} {prev:?} → {current:?}",
+                        frame.0,
+                    ),
+                });
+            }
+        }
+        *previous = Some(current);
+    }
+}
+
+/// Checks that [`NodeTimer::remaining`] never increases between ticks.
+///
+/// Stores the previous `remaining` value in a `Local`. If the current value is
+/// greater than the previous (by more than floating-point noise), appends a
+/// [`ViolationEntry`] with [`InvariantKind::TimerMonotonicallyDecreasing`].
+///
+/// Skips and resets when [`NodeTimer`] is absent.
+pub fn check_timer_monotonically_decreasing(
+    timer: Option<Res<NodeTimer>>,
+    mut previous: Local<Option<f32>>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let Some(timer) = timer else {
+        *previous = None;
+        return;
+    };
+    let current = timer.remaining;
+    if let Some(prev) = *previous
+        && current > prev
+    {
+        log.0.push(ViolationEntry {
+            frame: frame.0,
+            invariant: InvariantKind::TimerMonotonicallyDecreasing,
+            entity: None,
+            message: format!(
+                "TimerMonotonicallyDecreasing FAIL frame={} remaining increased {prev:.3} → {current:.3}",
+                frame.0,
+            ),
+        });
+    }
+    *previous = Some(current);
+}
+
+/// Checks that the tagged breaker's x position stays within `playfield.right() - half_width`.
+///
+/// Appends a [`ViolationEntry`] with [`InvariantKind::BreakerPositionClamped`] when the
+/// breaker is outside the tight clamping bounds (with 1px tolerance).
+pub fn check_breaker_position_clamped(
+    breakers: Query<(Entity, &Transform, &BreakerWidth), With<ScenarioTagBreaker>>,
+    playfield: Res<PlayfieldConfig>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let tolerance = 1.0_f32;
+    for (entity, transform, width) in &breakers {
+        let half_width = width.half_width();
+        let max_x = playfield.right() - half_width;
+        let min_x = playfield.left() + half_width;
+        let x = transform.translation.x;
+        if x > max_x + tolerance || x < min_x - tolerance {
+            log.0.push(ViolationEntry {
+                frame: frame.0,
+                invariant: InvariantKind::BreakerPositionClamped,
+                entity: Some(entity),
+                message: format!(
+                    "BreakerPositionClamped FAIL frame={} entity={entity:?} x={x:.1} bounds=[{min_x:.1}, {max_x:.1}]",
+                    frame.0,
+                ),
+            });
+        }
+    }
+}
+
+/// Per-entity previous position map for pause-freeze checking.
+///
+/// Stored in a [`Local`] to track bolt positions between fixed-update ticks.
+type PreviousBoltPositions = HashMap<Entity, Vec3>;
+
+/// Checks that physics entities do not move while the game is paused.
+///
+/// Stores the previous `Transform` for each tagged bolt each tick. When
+/// [`PlayingState`] is [`PlayingState::Paused`] and a bolt has moved since
+/// last tick, appends a [`ViolationEntry`] with
+/// [`InvariantKind::PhysicsFrozenDuringPause`].
+///
+/// Clears local state when [`PlayingState`] is absent (game is not in `Playing`).
+pub fn check_physics_frozen_during_pause(
+    bolts: Query<(Entity, &Transform), With<ScenarioTagBolt>>,
+    playing_state: Option<Res<State<PlayingState>>>,
+    mut previous_positions: Local<PreviousBoltPositions>,
+    frame: Res<ScenarioFrame>,
+    mut log: ResMut<ViolationLog>,
+) {
+    let Some(state) = playing_state else {
+        previous_positions.clear();
+        return;
+    };
+
+    let is_paused = **state == PlayingState::Paused;
+
+    for (entity, transform) in &bolts {
+        let current_pos = transform.translation;
+        if is_paused
+            && let Some(&prev_pos) = previous_positions.get(&entity)
+            && current_pos != prev_pos
+        {
+            log.0.push(ViolationEntry {
+                frame: frame.0,
+                invariant: InvariantKind::PhysicsFrozenDuringPause,
+                entity: Some(entity),
+                message: format!(
+                    "PhysicsFrozenDuringPause FAIL frame={} entity={entity:?} moved from {prev_pos:?} to {current_pos:?}",
+                    frame.0,
+                ),
+            });
+        }
+        previous_positions.insert(entity, current_pos);
+    }
+}
 
 /// Query filter that matches entities tagged for invariant checking.
 type TaggedTransformQuery<'w, 's> = Query<
@@ -65,14 +240,19 @@ pub struct ScenarioPhysicsFrozen {
 ///
 /// Appends a [`ViolationEntry`] to [`ViolationLog`] for every bolt whose
 /// `Transform` translation y is below `PlayfieldConfig::bottom()`.
+///
+/// Increments [`ScenarioStats::invariant_checks`] by the number of bolts checked.
 pub fn check_bolt_in_bounds(
     bolts: Query<(Entity, &Transform), With<ScenarioTagBolt>>,
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
     let bottom = playfield.bottom();
+    let mut checks = 0u32;
     for (entity, transform) in &bolts {
+        checks += 1;
         let y = transform.translation.y;
         if y < bottom {
             log.0.push(ViolationEntry {
@@ -85,6 +265,9 @@ pub fn check_bolt_in_bounds(
                 ),
             });
         }
+    }
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += checks;
     }
 }
 
@@ -150,10 +333,10 @@ pub struct PreviousGameState(pub Option<GameState>);
 /// Checks that [`GameState`] transitions follow valid paths.
 ///
 /// Forbidden transitions:
-/// - `Loading → Playing` (must go through MainMenu)
+/// - `Loading → Playing` (must go through `MainMenu`)
 /// - `Loading → RunEnd`
 /// - `Playing → Loading`
-/// - `RunEnd → Playing` (must go through MainMenu)
+/// - `RunEnd → Playing` (must go through `MainMenu`)
 pub fn check_valid_state_transitions(
     state: Res<State<GameState>>,
     mut previous: ResMut<PreviousGameState>,
@@ -161,26 +344,25 @@ pub fn check_valid_state_transitions(
     mut log: ResMut<ViolationLog>,
 ) {
     let current = **state;
-    if let Some(prev) = previous.0 {
-        if prev != current {
-            let forbidden = matches!(
-                (prev, current),
-                (GameState::Loading, GameState::Playing)
-                    | (GameState::Loading, GameState::RunEnd)
-                    | (GameState::Playing, GameState::Loading)
-                    | (GameState::RunEnd, GameState::Playing)
-            );
-            if forbidden {
-                log.0.push(ViolationEntry {
-                    frame: frame.0,
-                    invariant: InvariantKind::ValidStateTransitions,
-                    entity: None,
-                    message: format!(
-                        "ValidStateTransitions FAIL frame={} {prev:?} → {current:?}",
-                        frame.0,
-                    ),
-                });
-            }
+    if let Some(prev) = previous.0
+        && prev != current
+    {
+        let forbidden = matches!(
+            (prev, current),
+            (GameState::Loading | GameState::RunEnd, GameState::Playing)
+                | (GameState::Loading, GameState::RunEnd)
+                | (GameState::Playing, GameState::Loading)
+        );
+        if forbidden {
+            log.0.push(ViolationEntry {
+                frame: frame.0,
+                invariant: InvariantKind::ValidStateTransitions,
+                entity: None,
+                message: format!(
+                    "ValidStateTransitions FAIL frame={} {prev:?} → {current:?}",
+                    frame.0,
+                ),
+            });
         }
     }
     previous.0 = Some(current);
@@ -214,7 +396,7 @@ pub fn check_no_entity_leaks(
         return;
     };
 
-    if frame.0 > 60 && frame.0 % 120 == 0 && count > base * 2 {
+    if frame.0 > 60 && frame.0.is_multiple_of(120) && count > base * 2 {
         log.0.push(ViolationEntry {
             frame: frame.0,
             invariant: InvariantKind::NoEntityLeaks,
@@ -293,7 +475,7 @@ pub fn check_bolt_count_reasonable(
             frame: frame.0,
             invariant: InvariantKind::BoltCountReasonable,
             entity: None,
-            message: format!("BoltCountReasonable FAIL frame={} count={count}", frame.0,),
+            message: format!("BoltCountReasonable FAIL frame={} count={count}", frame.0),
         });
     }
 }
@@ -1000,6 +1182,539 @@ mod tests {
         assert!(
             log.0.is_empty(),
             "10 bolts should be OK with max_bolt_count=12"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // check_valid_breaker_state helpers
+    // -------------------------------------------------------------------------
+
+    fn test_app_valid_breaker_state() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.add_systems(FixedUpdate, check_valid_breaker_state);
+        app
+    }
+
+    // -------------------------------------------------------------------------
+    // ValidBreakerState — illegal transition fires violation
+    // -------------------------------------------------------------------------
+
+    /// `Idle → Braking` is illegal (must go through `Dashing`). The system must
+    /// append a [`ViolationEntry`] with [`InvariantKind::ValidBreakerState`].
+    ///
+    /// Tick 1 seeds `Local` with `Idle`. Tick 2 sees `Braking` → violation.
+    #[test]
+    fn valid_breaker_state_fires_on_idle_to_braking() {
+        let mut app = test_app_valid_breaker_state();
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Idle))
+            .id();
+
+        // Tick 1: system stores Idle in Local, no previous to compare → no violation
+        tick(&mut app);
+
+        let log_after_tick1 = app.world().resource::<ViolationLog>();
+        assert!(
+            log_after_tick1.0.is_empty(),
+            "no violation expected on first tick (no previous state)"
+        );
+
+        // Mutate to Braking (illegal: Idle → Braking)
+        *app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<BreakerState>()
+            .unwrap() = BreakerState::Braking;
+
+        // Tick 2: system compares Braking vs previous Idle → should fire
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0.len(),
+            1,
+            "expected exactly one ValidBreakerState violation, got {}",
+            log.0.len()
+        );
+        assert_eq!(log.0[0].invariant, InvariantKind::ValidBreakerState);
+    }
+
+    // -------------------------------------------------------------------------
+    // ValidBreakerState — legal transition does not fire
+    // -------------------------------------------------------------------------
+
+    /// `Idle → Dashing` is a legal transition. No violation should be recorded.
+    #[test]
+    fn valid_breaker_state_does_not_fire_on_idle_to_dashing() {
+        let mut app = test_app_valid_breaker_state();
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Idle))
+            .id();
+
+        // Tick 1: seeds Local with Idle
+        tick(&mut app);
+
+        // Change to Dashing (legal: Idle → Dashing)
+        *app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<BreakerState>()
+            .unwrap() = BreakerState::Dashing;
+
+        // Tick 2: should NOT fire
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation for Idle→Dashing (legal), got: {:?}",
+            log.0.iter().map(|e| &e.message).collect::<Vec<_>>()
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ValidBreakerState — same state does not fire
+    // -------------------------------------------------------------------------
+
+    /// When the state does not change (`Idle → Idle`), no violation should fire.
+    #[test]
+    fn valid_breaker_state_does_not_fire_on_no_state_change() {
+        let mut app = test_app_valid_breaker_state();
+
+        app.world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Idle));
+
+        // Tick 1: seeds Local
+        tick(&mut app);
+        // Tick 2: same state
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when state does not change"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ValidBreakerState — first frame (no previous) skipped
+    // -------------------------------------------------------------------------
+
+    /// On the very first tick (no previous state stored in `Local`), the system must
+    /// not fire even for `Dashing` — there is no prior state to compare.
+    #[test]
+    fn valid_breaker_state_skips_first_frame_with_no_previous() {
+        let mut app = test_app_valid_breaker_state();
+
+        // Start directly in Dashing (would be illegal from Idle, but first frame only)
+        app.world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Dashing));
+
+        // Only one tick — Local starts empty, no comparison possible
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation on first frame (Local has no previous)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // check_timer_monotonically_decreasing helpers
+    // -------------------------------------------------------------------------
+
+    fn test_app_timer_monotonic() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.add_systems(FixedUpdate, check_timer_monotonically_decreasing);
+        app
+    }
+
+    // -------------------------------------------------------------------------
+    // TimerMonotonicallyDecreasing — fires when timer increases
+    // -------------------------------------------------------------------------
+
+    /// Timer increases from 50.0 to 55.0 — a violation must be recorded.
+    ///
+    /// Tick 1: insert `NodeTimer { remaining: 50.0, total: 60.0 }` → seeds `Local(50.0)`.
+    /// Tick 2: update to `remaining: 55.0` → fires violation.
+    #[test]
+    fn timer_monotonically_decreasing_fires_when_timer_increases() {
+        let mut app = test_app_timer_monotonic();
+
+        app.insert_resource(NodeTimer {
+            remaining: 50.0,
+            total: 60.0,
+        });
+
+        // Tick 1: seeds Local with 50.0
+        tick(&mut app);
+
+        assert!(
+            app.world().resource::<ViolationLog>().0.is_empty(),
+            "no violation expected after seeding tick"
+        );
+
+        // Update timer to a higher value (illegal increase)
+        app.world_mut().resource_mut::<NodeTimer>().remaining = 55.0;
+
+        // Tick 2: 55.0 > 50.0 → violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0.len(),
+            1,
+            "expected exactly one TimerMonotonicallyDecreasing violation, got {}",
+            log.0.len()
+        );
+        assert_eq!(
+            log.0[0].invariant,
+            InvariantKind::TimerMonotonicallyDecreasing
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TimerMonotonicallyDecreasing — allows decrease
+    // -------------------------------------------------------------------------
+
+    /// Timer decreasing from 50.0 to 49.0 is correct. No violation should fire.
+    #[test]
+    fn timer_monotonically_decreasing_does_not_fire_when_timer_decreases() {
+        let mut app = test_app_timer_monotonic();
+
+        app.insert_resource(NodeTimer {
+            remaining: 50.0,
+            total: 60.0,
+        });
+
+        // Tick 1: seeds Local with 50.0
+        tick(&mut app);
+
+        // Decrease timer (correct behavior)
+        app.world_mut().resource_mut::<NodeTimer>().remaining = 49.0;
+
+        // Tick 2: 49.0 < 50.0 → no violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when timer decreases from 50.0 to 49.0"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TimerMonotonicallyDecreasing — skips when no NodeTimer resource
+    // -------------------------------------------------------------------------
+
+    /// When [`NodeTimer`] is not present, the system must do nothing.
+    #[test]
+    fn timer_monotonically_decreasing_skips_when_no_node_timer() {
+        let mut app = test_app_timer_monotonic();
+        // No NodeTimer inserted
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when NodeTimer is absent"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TimerMonotonicallyDecreasing — resets Local when NodeTimer removed
+    // -------------------------------------------------------------------------
+
+    /// When [`NodeTimer`] disappears and then reappears at 60.0, Local must have
+    /// been reset so no spurious violation fires.
+    #[test]
+    fn timer_monotonically_decreasing_resets_local_when_timer_removed() {
+        let mut app = test_app_timer_monotonic();
+
+        // Start with NodeTimer present
+        app.insert_resource(NodeTimer {
+            remaining: 50.0,
+            total: 60.0,
+        });
+
+        // Tick 1: seeds Local with 50.0
+        tick(&mut app);
+
+        // Remove NodeTimer → system should reset Local
+        app.world_mut().remove_resource::<NodeTimer>();
+
+        // Tick 2: NodeTimer absent → no violation, Local reset
+        tick(&mut app);
+
+        let log_after_removal = app.world().resource::<ViolationLog>();
+        assert!(
+            log_after_removal.0.is_empty(),
+            "expected no violation when NodeTimer is absent"
+        );
+
+        // Reinsert NodeTimer at 60.0 (higher than old 50.0, but Local was reset)
+        app.insert_resource(NodeTimer {
+            remaining: 60.0,
+            total: 60.0,
+        });
+
+        // Tick 3: 60.0 appears fresh — no previous value → no violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when NodeTimer reappears after reset (Local was cleared)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // check_breaker_position_clamped helpers
+    // -------------------------------------------------------------------------
+
+    fn test_app_breaker_position_clamped() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.insert_resource(PlayfieldConfig {
+            width: 800.0,
+            height: 700.0,
+            background_color_rgb: [0.0, 0.0, 0.0],
+            wall_thickness: 180.0,
+        });
+        app.add_systems(FixedUpdate, check_breaker_position_clamped);
+        app
+    }
+
+    // -------------------------------------------------------------------------
+    // BreakerPositionClamped — fires when outside tight bounds
+    // -------------------------------------------------------------------------
+
+    /// Breaker at x=1000.0 is well outside `right() - half_width` (400.0 - 60.0 = 340.0).
+    /// A [`ViolationEntry`] with [`InvariantKind::BreakerPositionClamped`] must fire.
+    #[test]
+    fn breaker_position_clamped_fires_when_outside_bounds() {
+        let mut app = test_app_breaker_position_clamped();
+
+        // BreakerWidth(120.0) → half_width = 60.0; right() = 400.0 → clamped max = 340.0
+        app.world_mut().spawn((
+            ScenarioTagBreaker,
+            Transform::from_translation(Vec3::new(1000.0, -250.0, 0.0)),
+            BreakerWidth(120.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0.len(),
+            1,
+            "expected exactly one BreakerPositionClamped violation, got {}",
+            log.0.len()
+        );
+        assert_eq!(log.0[0].invariant, InvariantKind::BreakerPositionClamped);
+    }
+
+    // -------------------------------------------------------------------------
+    // BreakerPositionClamped — allows within tight bounds
+    // -------------------------------------------------------------------------
+
+    /// Breaker at x=0.0 is well within bounds. No violation should fire.
+    #[test]
+    fn breaker_position_clamped_does_not_fire_when_within_bounds() {
+        let mut app = test_app_breaker_position_clamped();
+
+        app.world_mut().spawn((
+            ScenarioTagBreaker,
+            Transform::from_translation(Vec3::new(0.0, -250.0, 0.0)),
+            BreakerWidth(120.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation for breaker at x=0.0"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // BreakerPositionClamped — allows at exact boundary (within 1px tolerance)
+    // -------------------------------------------------------------------------
+
+    /// Breaker at x = 340.0 (exactly `right() - half_width = 400.0 - 60.0`)
+    /// is within tolerance. No violation should fire.
+    #[test]
+    fn breaker_position_clamped_does_not_fire_at_exact_boundary() {
+        let mut app = test_app_breaker_position_clamped();
+
+        // Exact boundary: right() - half_width = 400.0 - 60.0 = 340.0
+        app.world_mut().spawn((
+            ScenarioTagBreaker,
+            Transform::from_translation(Vec3::new(340.0, -250.0, 0.0)),
+            BreakerWidth(120.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when breaker is exactly at clamped boundary (340.0)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // check_physics_frozen_during_pause helpers
+    // -------------------------------------------------------------------------
+
+    fn test_app_physics_frozen() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.init_state::<GameState>();
+        app.add_sub_state::<PlayingState>();
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.add_systems(FixedUpdate, check_physics_frozen_during_pause);
+        app
+    }
+
+    // -------------------------------------------------------------------------
+    // PhysicsFrozenDuringPause — fires when position changes during pause
+    // -------------------------------------------------------------------------
+
+    /// When [`PlayingState`] is `Paused` and a tagged bolt moves between ticks,
+    /// a [`ViolationEntry`] with [`InvariantKind::PhysicsFrozenDuringPause`] fires.
+    ///
+    /// Tick 1 (Active): seeds Local with position (100.0, 200.0, 0.0).
+    /// Then transition to Paused.
+    /// Tick 2 (Paused): bolt moved to (105.0, 200.0, 0.0) → violation.
+    #[test]
+    fn physics_frozen_during_pause_fires_when_bolt_moves_during_pause() {
+        let mut app = test_app_physics_frozen();
+
+        // Enter Playing (needed for PlayingState to be active)
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update(); // process state transition
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                ScenarioTagBolt,
+                Transform::from_translation(Vec3::new(100.0, 200.0, 0.0)),
+            ))
+            .id();
+
+        // Tick 1 in Active: system stores (100.0, 200.0, 0.0) in Local
+        tick(&mut app);
+
+        // Transition to Paused
+        app.world_mut()
+            .resource_mut::<NextState<PlayingState>>()
+            .set(PlayingState::Paused);
+        app.update(); // process sub-state transition
+
+        // Move the bolt while paused
+        app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<Transform>()
+            .unwrap()
+            .translation = Vec3::new(105.0, 200.0, 0.0);
+
+        // Tick 2: game is paused and bolt moved → violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0.len(),
+            1,
+            "expected exactly one PhysicsFrozenDuringPause violation, got {}",
+            log.0.len()
+        );
+        assert_eq!(log.0[0].invariant, InvariantKind::PhysicsFrozenDuringPause);
+    }
+
+    // -------------------------------------------------------------------------
+    // PhysicsFrozenDuringPause — allows movement during Active
+    // -------------------------------------------------------------------------
+
+    /// When [`PlayingState`] is `Active`, bolt movement is expected. No violation should fire.
+    #[test]
+    fn physics_frozen_during_pause_does_not_fire_when_active() {
+        let mut app = test_app_physics_frozen();
+
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Playing);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                ScenarioTagBolt,
+                Transform::from_translation(Vec3::new(100.0, 200.0, 0.0)),
+            ))
+            .id();
+
+        // Tick 1: seeds Local with position
+        tick(&mut app);
+
+        // Move bolt (game is Active — movement is legal)
+        app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<Transform>()
+            .unwrap()
+            .translation = Vec3::new(200.0, 200.0, 0.0);
+
+        // Tick 2: Active state → no violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when bolt moves during Active state"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // PhysicsFrozenDuringPause — clears when PlayingState absent
+    // -------------------------------------------------------------------------
+
+    /// When [`PlayingState`] is absent (game not in `Playing`), the system must
+    /// do nothing and not panic.
+    #[test]
+    fn physics_frozen_during_pause_clears_when_playing_state_absent() {
+        let mut app = test_app_physics_frozen();
+
+        // Do NOT enter Playing — PlayingState is absent
+
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            Transform::from_translation(Vec3::new(100.0, 200.0, 0.0)),
+        ));
+
+        // Tick with no PlayingState in world → should not panic, no violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation when PlayingState is absent"
         );
     }
 }

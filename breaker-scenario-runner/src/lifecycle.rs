@@ -10,18 +10,21 @@ use bevy::prelude::*;
 use breaker::{
     bolt::components::Bolt,
     breaker::components::Breaker,
+    input::resources::InputActions,
     shared::{GameState, ScenarioLayoutOverride, SelectedArchetype},
 };
 
 use crate::{
+    input::InputDriver,
     invariants::{
-        EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen,
+        EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats,
         ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_count_reasonable,
         check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
-        check_no_entity_leaks, check_no_nan, check_timer_non_negative,
-        check_valid_state_transitions,
+        check_breaker_position_clamped, check_no_entity_leaks, check_no_nan,
+        check_physics_frozen_during_pause, check_timer_monotonically_decreasing,
+        check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
     },
-    types::ScenarioDefinition,
+    types::{GameAction as ScenarioGameAction, ScenarioDefinition},
 };
 
 /// Loaded scenario configuration, inserted before the app runs.
@@ -29,6 +32,69 @@ use crate::{
 pub struct ScenarioConfig {
     /// The full scenario definition loaded from RON.
     pub definition: ScenarioDefinition,
+}
+
+/// Bevy resource wrapping an [`InputDriver`] for the current scenario run.
+///
+/// Inserted by [`init_scenario_input`] when the scenario starts.
+/// Queried each fixed-update tick by [`inject_scenario_input`].
+#[derive(Resource)]
+pub struct ScenarioInputDriver(pub InputDriver);
+
+/// Reads [`ScenarioConfig`] and inserts a [`ScenarioInputDriver`] into the world.
+///
+/// Runs once at scenario startup.
+pub fn init_scenario_input(config: Res<ScenarioConfig>, mut commands: Commands) {
+    let driver = InputDriver::from_strategy(&config.definition.input);
+    commands.insert_resource(ScenarioInputDriver(driver));
+}
+
+/// Maps a scenario-crate [`ScenarioGameAction`] to the game-crate
+/// [`breaker::input::resources::GameAction`].
+const fn map_action(action: ScenarioGameAction) -> breaker::input::resources::GameAction {
+    match action {
+        ScenarioGameAction::MoveLeft => breaker::input::resources::GameAction::MoveLeft,
+        ScenarioGameAction::MoveRight => breaker::input::resources::GameAction::MoveRight,
+        ScenarioGameAction::Bump => breaker::input::resources::GameAction::Bump,
+        ScenarioGameAction::DashLeft => breaker::input::resources::GameAction::DashLeft,
+        ScenarioGameAction::DashRight => breaker::input::resources::GameAction::DashRight,
+        ScenarioGameAction::MenuUp => breaker::input::resources::GameAction::MenuUp,
+        ScenarioGameAction::MenuDown => breaker::input::resources::GameAction::MenuDown,
+        ScenarioGameAction::MenuLeft => breaker::input::resources::GameAction::MenuLeft,
+        ScenarioGameAction::MenuRight => breaker::input::resources::GameAction::MenuRight,
+        ScenarioGameAction::MenuConfirm => breaker::input::resources::GameAction::MenuConfirm,
+        ScenarioGameAction::TogglePause => breaker::input::resources::GameAction::TogglePause,
+    }
+}
+
+/// Injects scenario-controlled actions into [`InputActions`] each fixed-update tick.
+///
+/// Reads [`ScenarioInputDriver`], queries the current [`ScenarioFrame`], maps the
+/// scenario-crate [`crate::types::GameAction`] values to the game crate's
+/// [`breaker::input::resources::GameAction`], and writes to [`InputActions`].
+///
+/// Uses `Option<ResMut<ScenarioInputDriver>>` so it does not panic if the resource
+/// has not yet been inserted.
+pub fn inject_scenario_input(
+    mut driver: Option<ResMut<ScenarioInputDriver>>,
+    frame: Res<ScenarioFrame>,
+    mut actions: ResMut<InputActions>,
+    mut stats: Option<ResMut<ScenarioStats>>,
+) {
+    let Some(ref mut driver) = driver else {
+        return;
+    };
+
+    let scenario_actions = driver.0.actions_for_frame(frame.0, true);
+    let action_count = u32::try_from(scenario_actions.len()).unwrap_or(u32::MAX);
+
+    for action in scenario_actions {
+        actions.0.push(map_action(action));
+    }
+
+    if let Some(ref mut s) = stats {
+        s.actions_injected += action_count;
+    }
 }
 
 /// Plugin that drives the scenario lifecycle.
@@ -40,18 +106,25 @@ impl Plugin for ScenarioLifecycle {
             .init_resource::<ViolationLog>()
             .init_resource::<PreviousGameState>()
             .init_resource::<EntityLeakBaseline>()
+            .init_resource::<ScenarioStats>()
             .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
             .add_systems(OnEnter(GameState::ChipSelect), auto_skip_chip_select)
             .add_systems(
                 OnEnter(GameState::Playing),
-                (tag_game_entities, apply_debug_setup)
+                (init_scenario_input, tag_game_entities, apply_debug_setup)
                     .chain()
                     .after(breaker::bolt::systems::init_bolt_params),
             )
             .add_systems(
                 FixedUpdate,
                 (
-                    (tick_scenario_frame, check_frame_limit).chain(),
+                    (
+                        tick_scenario_frame,
+                        inject_scenario_input,
+                        check_frame_limit,
+                    )
+                        .chain()
+                        .before(breaker::breaker::sets::BreakerSystems::Move),
                     check_bolt_in_bounds,
                     check_bolt_speed_in_range,
                     check_bolt_count_reasonable,
@@ -59,8 +132,13 @@ impl Plugin for ScenarioLifecycle {
                     check_no_nan,
                     check_timer_non_negative,
                     check_valid_state_transitions,
+                    check_valid_breaker_state,
+                    check_timer_monotonically_decreasing,
+                    check_breaker_position_clamped,
+                    check_physics_frozen_during_pause,
                     check_no_entity_leaks,
                     enforce_frozen_positions,
+                    tag_game_entities,
                 ),
             )
             .add_systems(OnEnter(GameState::RunEnd), exit_on_run_end);
@@ -90,8 +168,13 @@ fn auto_skip_chip_select(mut next_state: ResMut<NextState<GameState>>) {
 }
 
 /// Increments [`ScenarioFrame`] by 1 each fixed-update tick.
-fn tick_scenario_frame(mut frame: ResMut<ScenarioFrame>) {
+///
+/// Also updates [`ScenarioStats::max_frame`] when the stats resource is present.
+fn tick_scenario_frame(mut frame: ResMut<ScenarioFrame>, mut stats: Option<ResMut<ScenarioStats>>) {
     frame.0 += 1;
+    if let Some(ref mut s) = stats {
+        s.max_frame = frame.0;
+    }
 }
 
 /// Sends [`AppExit::Success`] when [`ScenarioFrame`] reaches `max_frames`.
@@ -162,16 +245,30 @@ pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut 
 /// Finds all untagged [`Bolt`] entities and inserts [`ScenarioTagBolt`].
 /// Finds all untagged [`Breaker`] entities and inserts [`ScenarioTagBreaker`].
 /// Runs in `OnEnter(GameState::Playing)` before [`apply_debug_setup`].
+///
+/// Also sets [`ScenarioStats::entered_playing`] to `true` when the stats resource is present.
 pub fn tag_game_entities(
     bolt_query: Query<Entity, (With<Bolt>, Without<ScenarioTagBolt>)>,
     breaker_query: Query<Entity, (With<Breaker>, Without<ScenarioTagBreaker>)>,
     mut commands: Commands,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    let mut bolts_tagged = 0u32;
+    let mut breakers_tagged = 0u32;
+
     for entity in &bolt_query {
         commands.entity(entity).insert(ScenarioTagBolt);
+        bolts_tagged += 1;
     }
     for entity in &breaker_query {
         commands.entity(entity).insert(ScenarioTagBreaker);
+        breakers_tagged += 1;
+    }
+
+    if let Some(ref mut s) = stats {
+        s.entered_playing = true;
+        s.bolts_tagged += bolts_tagged;
+        s.breakers_tagged += breakers_tagged;
     }
 }
 
@@ -184,8 +281,8 @@ mod tests {
     use crate::{
         invariants::{ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker},
         types::{
-            ChaosParams, DebugSetup, InputStrategy, InvariantKind, ScenarioDefinition,
-            ScriptedParams,
+            ChaosParams, DebugSetup, InputStrategy, InvariantKind, InvariantParams,
+            ScenarioDefinition, ScriptedParams,
         },
     };
 
@@ -201,7 +298,7 @@ mod tests {
             invariants: vec![InvariantKind::BoltInBounds],
             expected_violations: None,
             debug_setup: None,
-            invariant_params: Default::default(),
+            invariant_params: InvariantParams::default(),
         }
     }
 
@@ -216,7 +313,7 @@ mod tests {
             invariants: vec![],
             expected_violations: None,
             debug_setup: None,
-            invariant_params: Default::default(),
+            invariant_params: InvariantParams::default(),
         }
     }
 
@@ -239,6 +336,8 @@ mod tests {
         // Resources required by bypass_menu_to_playing
         app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()));
         app.insert_resource(breaker::shared::ScenarioLayoutOverride(None));
+        // Resources required by inject_scenario_input
+        app.init_resource::<InputActions>();
         app.add_plugins(ScenarioLifecycle);
         app
     }
@@ -434,7 +533,7 @@ mod tests {
                 breaker_position: None,
                 disable_physics: false,
             }),
-            invariant_params: Default::default(),
+            invariant_params: InvariantParams::default(),
         };
 
         let mut app = debug_setup_app(definition);
@@ -492,7 +591,7 @@ mod tests {
                 breaker_position: None,
                 disable_physics: true,
             }),
-            invariant_params: Default::default(),
+            invariant_params: InvariantParams::default(),
         };
 
         let mut app = debug_setup_app(definition);
@@ -642,6 +741,270 @@ mod tests {
                 .get::<ScenarioTagBreaker>()
                 .is_some(),
             "expected ScenarioTagBreaker to be added to Breaker entity"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // inject_scenario_input — writes Bump for scripted frame
+    // -------------------------------------------------------------------------
+
+    /// `inject_scenario_input` must translate `crate::types::GameAction::Bump` from
+    /// the scripted driver to `breaker::input::resources::GameAction::Bump` and write
+    /// it into [`InputActions`] when the current frame matches.
+    ///
+    /// Given: [`ScenarioInputDriver`] with `Scripted` input that has `Bump` at frame 10,
+    /// [`ScenarioFrame`] = 10, and empty [`InputActions`].
+    ///
+    /// After the system runs, `InputActions` must contain `GameAction::Bump`.
+    #[test]
+    fn inject_scenario_input_writes_bump_for_scripted_frame() {
+        use breaker::input::resources::{GameAction as BreakerGameAction, InputActions};
+
+        use crate::{
+            input::{InputDriver, ScriptedInput},
+            types::{GameAction as ScenarioGameAction, ScriptedFrame, ScriptedParams},
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let scripted = ScriptedInput::new(&ScriptedParams {
+            actions: vec![ScriptedFrame {
+                frame: 10,
+                actions: vec![ScenarioGameAction::Bump],
+            }],
+        });
+        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)));
+        app.insert_resource(ScenarioFrame(10));
+        app.insert_resource(InputActions::default());
+        app.add_systems(Update, inject_scenario_input);
+
+        app.update();
+
+        let actions = app.world().resource::<InputActions>();
+        assert!(
+            actions.active(BreakerGameAction::Bump),
+            "expected InputActions to contain Bump after inject_scenario_input at frame 10"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // inject_scenario_input — empty for unmatched frame
+    // -------------------------------------------------------------------------
+
+    /// `inject_scenario_input` must leave [`InputActions`] empty when the current
+    /// frame does not match any scripted entry.
+    ///
+    /// Given: Scripted driver with `Bump` at frame 10, [`ScenarioFrame`] = 5.
+    ///
+    /// After the system runs, `InputActions` must remain empty.
+    #[test]
+    fn inject_scenario_input_empty_for_unmatched_frame() {
+        use breaker::input::resources::{GameAction as BreakerGameAction, InputActions};
+
+        use crate::{
+            input::{InputDriver, ScriptedInput},
+            types::{GameAction as ScenarioGameAction, ScriptedFrame, ScriptedParams},
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let scripted = ScriptedInput::new(&ScriptedParams {
+            actions: vec![ScriptedFrame {
+                frame: 10,
+                actions: vec![ScenarioGameAction::Bump],
+            }],
+        });
+        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)));
+        app.insert_resource(ScenarioFrame(5));
+        app.insert_resource(InputActions::default());
+        app.add_systems(Update, inject_scenario_input);
+
+        app.update();
+
+        let actions = app.world().resource::<InputActions>();
+        assert!(
+            !actions.active(BreakerGameAction::Bump),
+            "expected InputActions to NOT contain Bump at frame 5 (no scripted entry)"
+        );
+        assert!(
+            actions.0.is_empty(),
+            "expected InputActions to be empty at unmatched frame 5, got {:?}",
+            actions.0
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // init_scenario_input — creates driver resource
+    // -------------------------------------------------------------------------
+
+    /// `init_scenario_input` must read [`ScenarioConfig`] and insert a
+    /// [`ScenarioInputDriver`] resource into the world.
+    ///
+    /// Given: A Bevy app with [`ScenarioConfig`] containing `Chaos` input strategy.
+    /// After the system runs, the world must contain [`ScenarioInputDriver`].
+    #[test]
+    fn init_scenario_input_creates_driver_resource() {
+        use crate::types::{ChaosParams, InputStrategy};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        app.insert_resource(ScenarioConfig {
+            definition: ScenarioDefinition {
+                breaker: "aegis".to_owned(),
+                layout: "corridor".to_owned(),
+                input: InputStrategy::Chaos(ChaosParams {
+                    seed: 42,
+                    action_prob: 0.3,
+                }),
+                max_frames: 1000,
+                invariants: vec![],
+                expected_violations: None,
+                debug_setup: None,
+                invariant_params: InvariantParams::default(),
+            },
+        });
+        app.add_systems(Update, init_scenario_input);
+
+        app.update();
+
+        assert!(
+            app.world().get_resource::<ScenarioInputDriver>().is_some(),
+            "expected ScenarioInputDriver resource to exist after init_scenario_input ran"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ScenarioStats — actions_injected incremented by inject_scenario_input
+    // -------------------------------------------------------------------------
+
+    /// When `inject_scenario_input` writes an action, `ScenarioStats::actions_injected`
+    /// must be incremented.
+    ///
+    /// Given: Scripted driver with `Bump` at frame 5, [`ScenarioFrame`] = 5,
+    /// and [`ScenarioStats`] with `actions_injected = 0`.
+    /// After the system runs, `stats.actions_injected == 1`.
+    #[test]
+    fn scenario_stats_actions_injected_incremented_by_inject_scenario_input() {
+        use breaker::input::resources::InputActions;
+
+        use crate::{
+            input::{InputDriver, ScriptedInput},
+            invariants::ScenarioStats,
+            types::{GameAction as ScenarioGameAction, ScriptedFrame, ScriptedParams},
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let scripted = ScriptedInput::new(&ScriptedParams {
+            actions: vec![ScriptedFrame {
+                frame: 5,
+                actions: vec![ScenarioGameAction::Bump],
+            }],
+        });
+        app.insert_resource(ScenarioInputDriver(InputDriver::Scripted(scripted)));
+        app.insert_resource(ScenarioFrame(5));
+        app.insert_resource(InputActions::default());
+        app.init_resource::<ScenarioStats>();
+        app.add_systems(Update, inject_scenario_input);
+
+        app.update();
+
+        let stats = app.world().resource::<ScenarioStats>();
+        assert_eq!(
+            stats.actions_injected, 1,
+            "expected actions_injected == 1 after one action was injected, got {}",
+            stats.actions_injected
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ScenarioStats — invariant_checks incremented by invariant system
+    // -------------------------------------------------------------------------
+
+    /// After one tick with a tagged bolt present, `ScenarioStats::invariant_checks`
+    /// must be greater than zero. The `check_bolt_in_bounds` system must increment
+    /// the counter when it runs.
+    #[test]
+    fn scenario_stats_invariant_checks_incremented_after_one_tick() {
+        use crate::invariants::{ScenarioStats, ScenarioTagBolt, check_bolt_in_bounds};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ViolationLog::default());
+        app.insert_resource(ScenarioFrame::default());
+        app.insert_resource(breaker::shared::PlayfieldConfig::default());
+        app.init_resource::<ScenarioStats>();
+        app.add_systems(FixedUpdate, check_bolt_in_bounds);
+
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+        ));
+
+        tick(&mut app);
+
+        let stats = app.world().resource::<ScenarioStats>();
+        assert!(
+            stats.invariant_checks > 0,
+            "expected invariant_checks > 0 after one tick with bolt entity, got {}",
+            stats.invariant_checks
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ScenarioStats — max_frame tracked by tick_scenario_frame
+    // -------------------------------------------------------------------------
+
+    /// After 10 ticks, `ScenarioStats::max_frame` must equal 10.
+    /// `tick_scenario_frame` must update both [`ScenarioFrame`] and `stats.max_frame`.
+    #[test]
+    fn scenario_stats_max_frame_tracked_by_tick_scenario_frame() {
+        use crate::invariants::ScenarioStats;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(ScenarioFrame(0));
+        app.init_resource::<ScenarioStats>();
+        app.add_systems(FixedUpdate, tick_scenario_frame);
+
+        for _ in 0..10 {
+            tick(&mut app);
+        }
+
+        let stats = app.world().resource::<ScenarioStats>();
+        assert_eq!(
+            stats.max_frame, 10,
+            "expected max_frame == 10 after 10 ticks, got {}",
+            stats.max_frame
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ScenarioStats — entered_playing set by tag_game_entities
+    // -------------------------------------------------------------------------
+
+    /// When `tag_game_entities` runs (which happens in `OnEnter(GameState::Playing)`),
+    /// `ScenarioStats::entered_playing` must be set to `true`.
+    #[test]
+    fn scenario_stats_entered_playing_set_by_tag_game_entities() {
+        use crate::invariants::ScenarioStats;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<ScenarioStats>();
+        app.add_systems(Update, tag_game_entities);
+
+        // Run the system (simulates entering Playing)
+        app.update();
+
+        let stats = app.world().resource::<ScenarioStats>();
+        assert!(
+            stats.entered_playing,
+            "expected entered_playing == true after tag_game_entities ran"
         );
     }
 }
