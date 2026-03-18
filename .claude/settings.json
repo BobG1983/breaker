@@ -9,6 +9,7 @@
       "Bash(cargo dclippy:*)",
       "Bash(cargo dtest:*)",
       "Bash(cargo dscenario:*)",
+      "Bash(cargo scenario:*)",
       "Bash(cargo dstest:*)",
       "Bash(cargo dsclippy:*)",
       "Bash(cargo dscheck:*)",
