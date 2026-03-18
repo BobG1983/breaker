@@ -1,10 +1,11 @@
 # Continuous Integration for Brickbreaker
 #
 # Runs on pushes to develop and PRs targeting develop or main.
-# Three jobs:
-#   - test-game: fmt + clippy + tests across Linux/macOS/Windows
+# Four jobs:
+#   - test-game: fmt + clippy + tests on Linux (gates scenario run)
+#   - test-game-cross-platform: clippy + tests on macOS/Windows (informational)
 #   - test-scenarios: clippy + tests for the scenario runner on Linux
-#   - run-scenarios: headless scenario run, gated on both test jobs passing
+#   - run-scenarios: headless scenario run, gated on Linux test jobs only
 #
 # Does NOT use bevy/dynamic_linking — static linking is simpler and
 # avoids dylib resolution issues in CI environments.
@@ -27,15 +28,11 @@ env:
 
 jobs:
   test-game:
-    name: Test Game (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Test Game (Linux)
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -43,7 +40,6 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -55,15 +51,39 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          # Each OS in the matrix gets its own cache automatically via
-          # the add-job-id-key default. Shared prefix groups them for
-          # easy identification.
-          shared-key: "ci-${{ matrix.os }}"
-          # Save cache only on develop pushes to avoid PR cache churn.
+          shared-key: "ci-ubuntu-latest"
           save-if: ${{ github.ref == 'refs/heads/develop' }}
 
       - name: Check formatting
         run: cargo fmt --check
+
+      - name: Lint with Clippy (game + derive)
+        run: cargo clippy -p breaker -p breaker_derive --all-targets -- -D warnings
+
+      - name: Run tests (game + derive)
+        run: cargo test -p breaker -p breaker_derive
+
+  test-game-cross-platform:
+    name: Test Game (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "ci-${{ matrix.os }}"
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
 
       - name: Lint with Clippy (game + derive)
         run: cargo clippy -p breaker -p breaker_derive --all-targets -- -D warnings
@@ -76,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -110,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
