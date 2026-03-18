@@ -1172,6 +1172,7 @@ mod tests {
                 expected_violations: None,
                 debug_setup: None,
                 invariant_params: InvariantParams { max_bolt_count },
+                allow_early_end: true,
             },
         });
         app.add_systems(FixedUpdate, check_bolt_count_reasonable);

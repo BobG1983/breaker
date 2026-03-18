@@ -17,8 +17,9 @@ type: reference
 - **update_timer_display.rs**: `total == 0.0` divide-by-zero path untested. Flag this gap.
 - **read_input.rs**: `repeat: true` key event filter path untested.
 
-## Lifecycle Tests (2026-03-17)
+## Lifecycle Tests (2026-03-17, updated 2026-03-18)
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
+Known gap (as of 2026-03-18): `allow_early_end: false` path (`restart_run_on_end` system) has no unit test. The branch is covered only by the 13 stress scenario RON files running in integration. A unit test should exercise the `OnEnter(GameState::RunEnd)` → `GameState::MainMenu` transition directly.
 
 ## Documentation Conventions
 - Module-level `//!` doc comments on all `.rs` files.

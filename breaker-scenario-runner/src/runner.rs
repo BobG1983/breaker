@@ -286,6 +286,13 @@ fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
     verdict.passed()
 }
 
+/// Bevy's default fixed timestep frequency (Hz).
+const FIXED_TIMESTEP_HZ: f64 = 64.0;
+
+/// Speed multiplier for visual mode — each rendered frame advances virtual
+/// time by this many fixed timesteps.
+const VISUAL_SPEED_MULTIPLIER: f64 = 10.0;
+
 /// Builds a Bevy app configured for scenario running.
 ///
 /// In headless mode, disables winit so the app runs without a display server.
@@ -341,11 +348,17 @@ fn build_app(headless: bool, first_run: bool) -> App {
         // each Update tick instantly advances virtual time by 1/64 s, and all
         // Fixed ticks execute in sequence at CPU speed.
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
-            1.0 / 64.0,
+            1.0 / FIXED_TIMESTEP_HZ,
         )));
 
         app.add_plugins(Game::headless());
     } else {
+        // Visual mode runs at 10x speed to avoid 5+ minute waits for
+        // 20,000-frame scenarios. Each Update tick advances virtual time
+        // by 10 fixed timesteps (10/64 s).
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+            VISUAL_SPEED_MULTIPLIER / FIXED_TIMESTEP_HZ,
+        )));
         app.add_plugins(Game::default());
     }
 
