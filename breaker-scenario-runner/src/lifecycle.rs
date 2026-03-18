@@ -28,8 +28,12 @@ use crate::{
 };
 
 /// Query alias for breaker entities in [`apply_debug_setup`].
-type BreakerDebugQuery<'w, 's> =
-    Query<'w, 's, (Entity, &'static mut Transform), (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>)>;
+type BreakerDebugQuery<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static mut Transform),
+    (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>),
+>;
 
 /// Loaded scenario configuration, inserted before the app runs.
 #[derive(Resource)]
@@ -147,6 +151,7 @@ impl Plugin for ScenarioLifecycle {
                         check_physics_frozen_during_pause,
                         check_no_entity_leaks,
                     )
+                        .after(tag_game_entities)
                         .before(breaker::physics::PhysicsSystems::BoltLost),
                     tag_game_entities,
                 ),

@@ -5,20 +5,19 @@
 
 use std::{
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use bevy::{
-    log::LogPlugin, prelude::*, time::TimeUpdateStrategy,
-    window::ExitCondition, winit::WinitPlugin,
+    log::LogPlugin, prelude::*, time::TimeUpdateStrategy, window::ExitCondition, winit::WinitPlugin,
 };
 use breaker::game::Game;
 use tracing::{debug, info, warn};
 
 use crate::{
-    invariants::{ScenarioStats, ViolationLog},
+    invariants::{ScenarioFrame, ScenarioStats, ViolationLog},
     lifecycle::{ScenarioConfig, ScenarioLifecycle},
-    log_capture::{CapturedLogs, poll_log_buffer, scenario_log_layer_factory},
+    log_capture::{CapturedLogs, LogBuffer, LogEntry, poll_log_buffer, scenario_log_layer_factory},
     types::ScenarioDefinition,
 };
 
@@ -192,9 +191,7 @@ pub fn scenario_health_warnings(
     }
 
     if stats.invariant_checks == 0 {
-        warnings.push(
-            "no invariant checks ran — game loop may not have executed".to_owned(),
-        );
+        warnings.push("no invariant checks ran — game loop may not have executed".to_owned());
     }
 
     warnings
@@ -235,12 +232,35 @@ fn run_scenario(path: &Path, headless: bool) -> bool {
         // App::run() replaces self with App::empty(), losing all resources.
         app.finish();
         app.cleanup();
+
+        let wall_clock = Instant::now();
+        let timeout = Duration::from_mins(2);
+
         loop {
-            app.update();
+            match guarded_update(&mut app) {
+                Ok(()) => {}
+                Err(msg) => {
+                    eprintln!("FAIL [{scenario_name}]: system panic: {msg}");
+                    break;
+                }
+            }
             if app.should_exit().is_some() {
                 break;
             }
+            if is_timed_out(wall_clock, timeout) {
+                let frame = app
+                    .world()
+                    .get_resource::<ScenarioFrame>()
+                    .map_or(0, |f| f.0);
+                eprintln!(
+                    "FAIL [{scenario_name}]: wall-clock timeout ({timeout:?}) at frame {frame}"
+                );
+                break;
+            }
         }
+
+        // Drain any logs emitted after the last FixedUpdate tick
+        drain_remaining_logs(&mut app);
     } else {
         // Visual mode — Winit needs app.run() for the event loop.
         // Results cannot be read after run(); visual mode is for debugging only.
@@ -397,13 +417,81 @@ fn build_app(headless: bool) -> App {
     app
 }
 
+/// Returns `true` if `start` elapsed longer ago than `timeout`.
+///
+/// Used by the run loop to detect wall-clock timeouts without blocking.
+#[must_use]
+pub fn is_timed_out(start: Instant, timeout: Duration) -> bool {
+    start.elapsed() > timeout
+}
+
+/// Drains any buffered log entries from [`LogBuffer`] into [`CapturedLogs`].
+///
+/// Called after the run loop exits to ensure entries captured after the last
+/// `poll_log_buffer` tick are not silently discarded.
+pub fn drain_remaining_logs(app: &mut App) {
+    // Extract buffer entries into a local vec first — cannot hold &World and &mut World
+    // simultaneously, so we must release the immutable borrow before writing CapturedLogs.
+    let buffered: Vec<(bevy::log::Level, String, String)> = app
+        .world()
+        .get_resource::<LogBuffer>()
+        .map(|buf| {
+            buf.0
+                .lock()
+                .map(|mut guard| guard.drain(..).collect())
+                .unwrap_or_default()
+        })
+        .unwrap_or_default();
+
+    if buffered.is_empty() {
+        return;
+    }
+
+    let frame = app
+        .world()
+        .get_resource::<ScenarioFrame>()
+        .map_or(0, |f| f.0);
+
+    if let Some(mut logs) = app.world_mut().get_resource_mut::<CapturedLogs>() {
+        for (level, target, message) in buffered {
+            logs.0.push(LogEntry {
+                level,
+                target,
+                message,
+                frame,
+            });
+        }
+    }
+}
+
+/// Runs a single `app.update()` call, catching any panics and returning them as `Err`.
+///
+/// Returns `Ok(())` on a clean update, or `Err(message)` if the update panicked.
+///
+/// # Errors
+///
+/// Returns the panic message as a `String` if any system panics during the update.
+pub fn guarded_update(app: &mut App) -> Result<(), String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        app.update();
+    }))
+    .map_err(|payload| {
+        payload
+            .downcast_ref::<&str>()
+            .map(|s| (*s).to_owned())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "unknown panic".to_owned())
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::log::Level;
+
+    use super::*;
     use crate::{
-        invariants::{ScenarioStats, ViolationEntry},
-        log_capture::LogEntry,
+        invariants::{ScenarioFrame, ScenarioStats, ViolationEntry},
+        log_capture::{LogBuffer, LogEntry},
         types::{ChaosParams, InputStrategy, InvariantKind, InvariantParams},
     };
 
@@ -637,7 +725,10 @@ mod tests {
     #[test]
     fn evaluate_pass_returns_true_with_no_violations_no_logs_no_definition() {
         let result = evaluate_pass(&[], &[], None);
-        assert!(result, "expected pass when violations=[], logs=[], definition=None");
+        assert!(
+            result,
+            "expected pass when violations=[], logs=[], definition=None"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -649,7 +740,10 @@ mod tests {
     fn evaluate_pass_returns_false_when_violations_present_and_no_definition() {
         let violations = vec![make_violation(InvariantKind::BoltInBounds)];
         let result = evaluate_pass(&violations, &[], None);
-        assert!(!result, "expected fail when violations=[BoltInBounds], definition=None");
+        assert!(
+            !result,
+            "expected fail when violations=[BoltInBounds], definition=None"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -661,7 +755,10 @@ mod tests {
     fn evaluate_pass_returns_false_when_logs_present_and_no_violations_no_definition() {
         let logs = vec![make_log_entry()];
         let result = evaluate_pass(&[], &logs, None);
-        assert!(!result, "expected fail when logs=[one entry], violations=[], definition=None");
+        assert!(
+            !result,
+            "expected fail when logs=[one entry], violations=[], definition=None"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -745,6 +842,150 @@ mod tests {
         assert!(
             !result,
             "expected fail when logs=[one entry] even though violations match expected"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // is_timed_out — returns true when start is in the past beyond timeout
+    // -------------------------------------------------------------------------
+
+    /// A start `Instant` 5 seconds in the past with a 1-second timeout must
+    /// return `true` from `is_timed_out`.
+    #[test]
+    fn is_timed_out_returns_true_when_timeout_exceeded() {
+        let start = Instant::now()
+            .checked_sub(Duration::from_secs(5))
+            .expect("5s subtraction must succeed");
+        let timeout = Duration::from_secs(1);
+
+        let result = is_timed_out(start, timeout);
+
+        assert!(
+            result,
+            "expected is_timed_out to return true when 5s elapsed against a 1s timeout"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // is_timed_out — returns false when timeout has not yet elapsed
+    // -------------------------------------------------------------------------
+
+    /// A start `Instant::now()` with a 60-second timeout must return `false`
+    /// from `is_timed_out` immediately.
+    #[test]
+    fn is_timed_out_returns_false_when_timeout_not_exceeded() {
+        let start = Instant::now();
+        let timeout = Duration::from_mins(1);
+
+        let result = is_timed_out(start, timeout);
+
+        assert!(
+            !result,
+            "expected is_timed_out to return false when called immediately after start with a 60s timeout"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // drain_remaining_logs — transfers buffered entries into CapturedLogs
+    // -------------------------------------------------------------------------
+
+    /// `drain_remaining_logs` must move all entries from `LogBuffer` into
+    /// `CapturedLogs` with the frame number from `ScenarioFrame`, and leave
+    /// the buffer empty afterward.
+    #[test]
+    fn drain_remaining_logs_transfers_buffered_entries_to_captured_logs() {
+        use std::sync::{Arc, Mutex};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        // Populate the LogBuffer with 2 entries before inserting as resource.
+        let buffer_entries: Vec<(bevy::log::Level, String, String)> = vec![
+            (
+                bevy::log::Level::WARN,
+                "breaker::test".to_owned(),
+                "msg1".to_owned(),
+            ),
+            (
+                bevy::log::Level::ERROR,
+                "breaker::test".to_owned(),
+                "msg2".to_owned(),
+            ),
+        ];
+        let log_buffer = LogBuffer(Arc::new(Mutex::new(buffer_entries)));
+        app.insert_resource(log_buffer);
+        app.insert_resource(CapturedLogs::default());
+        app.insert_resource(ScenarioFrame(42));
+
+        drain_remaining_logs(&mut app);
+
+        let captured = app.world().resource::<CapturedLogs>();
+        assert_eq!(
+            captured.0.len(),
+            2,
+            "expected 2 captured log entries after drain, got {}",
+            captured.0.len()
+        );
+        assert_eq!(captured.0[0].frame, 42, "expected frame=42 on first entry");
+        assert_eq!(captured.0[0].message, "msg1");
+        assert_eq!(captured.0[1].message, "msg2");
+
+        let buffer = app.world().resource::<LogBuffer>();
+        assert!(
+            buffer
+                .0
+                .lock()
+                .expect("lock must not be poisoned")
+                .is_empty(),
+            "expected LogBuffer to be empty after drain"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // guarded_update — returns Err when a system panics
+    // -------------------------------------------------------------------------
+
+    /// `guarded_update` must return `Err` containing the panic message when a
+    /// registered system calls `panic!("test panic")`.
+    #[test]
+    fn guarded_update_returns_err_when_system_panics() {
+        fn panicking_system() {
+            panic!("test panic");
+        }
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, panicking_system);
+
+        let result = guarded_update(&mut app);
+
+        assert!(
+            result.is_err(),
+            "expected guarded_update to return Err when a system panics"
+        );
+        let err_msg = result.unwrap_err();
+        assert!(
+            err_msg.contains("test panic"),
+            "expected error message to contain 'test panic', got: {err_msg:?}"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // guarded_update — returns Ok when update succeeds
+    // -------------------------------------------------------------------------
+
+    /// `guarded_update` must return `Ok(())` when `app.update()` completes
+    /// without a panic.
+    #[test]
+    fn guarded_update_returns_ok_when_update_succeeds() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let result = guarded_update(&mut app);
+
+        assert!(
+            result.is_ok(),
+            "expected guarded_update to return Ok when update completes normally, got: {result:?}"
         );
     }
 }
