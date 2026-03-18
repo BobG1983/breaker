@@ -476,7 +476,7 @@ fn group_logs(logs: &[LogEntry]) -> Vec<LogGroup> {
 /// Bevy's default fixed timestep frequency (Hz).
 const FIXED_TIMESTEP_HZ: f64 = 64.0;
 
-/// Scenario runner log plugin — captures warnings via [`scenario_log_layer_factory`].
+/// Scenario runner log plugin — captures `WARN`-and-above logs via [`scenario_log_layer_factory`].
 fn scenario_log_plugin() -> LogPlugin {
     LogPlugin {
         level: bevy::log::Level::WARN,
@@ -492,16 +492,20 @@ const VISUAL_SPEED_MULTIPLIER: f64 = 10.0;
 
 /// Builds a Bevy app configured for scenario running.
 ///
-/// In headless mode, uses [`MinimalPlugins`] with only the specific plugins
-/// game systems need (states, assets, input, mesh). This avoids pulling in the
+/// In headless mode, uses [`MinimalPlugins`] with only the specific Bevy
+/// plugins the game needs (states, assets, input). This avoids pulling in the
 /// full render pipeline, winit event loop, and GPU initialization — none of
-/// which are needed when running scenarios at CPU speed on CI.
+/// which are needed when running scenarios at CPU speed on CI. Asset types
+/// for headless spawn systems (Mesh, ColorMaterial, Font) are registered by
+/// [`Game::headless()`].
 ///
 /// In visual mode, uses [`DefaultPlugins`] for full windowed rendering.
 ///
-/// On the first run, installs `LogPlugin` with a custom tracing layer.
-/// On subsequent runs, skips `LogPlugin` to avoid the "global logger already
-/// set" error — the shared `LogBuffer` is inserted by `run_scenario` instead.
+/// On the first run (headless or visual), installs `LogPlugin` with a custom
+/// tracing layer. On subsequent runs, skips `LogPlugin` (headless: omits it;
+/// visual: disables it from `DefaultPlugins`) to avoid the "global logger
+/// already set" error — the shared `LogBuffer` is inserted by `run_scenario`
+/// instead.
 fn build_app(headless: bool, first_run: bool) -> App {
     let mut app = App::new();
 
@@ -511,6 +515,8 @@ fn build_app(headless: bool, first_run: bool) -> App {
 
     if headless {
         // Minimal plugin set — no render pipeline, no window, no GPU.
+        // Asset types needed by game spawn systems (Mesh, ColorMaterial, Font)
+        // are registered by HeadlessAssetsPlugin inside Game::headless().
         app.add_plugins((
             MinimalPlugins,
             bevy::state::app::StatesPlugin,
@@ -519,7 +525,6 @@ fn build_app(headless: bool, first_run: bool) -> App {
                 ..default()
             },
             bevy::input::InputPlugin,
-            bevy::mesh::MeshPlugin,
         ));
 
         if first_run {

@@ -17,10 +17,10 @@ use crate::{
 /// This is the single place that knows about all plugins.
 /// Added to the Bevy [`App`] in [`crate::app::build_app`].
 ///
-/// When `headless` is `false` (the default), includes [`RenderSetupPlugin`]
-/// which spawns the camera and inserts [`ClearColor`]. When `headless` is
-/// `true`, includes [`HeadlessAssetsPlugin`] which registers asset types
-/// that render-pipeline plugins would normally provide.
+/// Use [`Game::default()`] for normal rendering (includes [`RenderSetupPlugin`]
+/// which spawns the camera and inserts [`ClearColor`]). Use [`Game::headless()`]
+/// for headless mode (includes [`HeadlessAssetsPlugin`] which registers asset
+/// types that render-pipeline plugins would normally provide).
 #[derive(Default)]
 pub struct Game {
     /// When `true`, skips [`RenderSetupPlugin`] (no camera or clear color).
@@ -68,15 +68,17 @@ impl PluginGroup for Game {
     }
 }
 
-/// Registers asset types normally provided by render-pipeline plugins
-/// (`ColorMaterialPlugin`, `SpritePlugin`, etc.). In headless mode those
-/// plugins are absent, but gameplay spawn systems still need the asset storage.
+/// Registers plugins and asset types normally provided by render-pipeline
+/// plugins (`MeshPlugin`, `ColorMaterialPlugin`, `TextPlugin`, etc.). In
+/// headless mode those plugins are absent, but gameplay spawn systems still
+/// need the asset storage.
 ///
 /// Included by [`Game`] only in headless mode.
 struct HeadlessAssetsPlugin;
 
 impl Plugin for HeadlessAssetsPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(bevy::mesh::MeshPlugin);
         app.init_asset::<ColorMaterial>();
         app.add_plugins(bevy::text::TextPlugin);
     }
@@ -142,5 +144,26 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 0, "headless game should not spawn a camera");
+    }
+
+    #[test]
+    fn headless_game_registers_headless_assets() {
+        let mut app = test_app(Game::headless());
+        app.update();
+
+        assert!(
+            app.world().get_resource::<Assets<Mesh>>().is_some(),
+            "headless game must register Assets<Mesh> via MeshPlugin"
+        );
+        assert!(
+            app.world()
+                .get_resource::<Assets<ColorMaterial>>()
+                .is_some(),
+            "headless game must register Assets<ColorMaterial>"
+        );
+        assert!(
+            app.world().get_resource::<Assets<Font>>().is_some(),
+            "headless game must register Assets<Font> via TextPlugin"
+        );
     }
 }
