@@ -1,7 +1,7 @@
 //! Scenario runner — automated gameplay testing tool.
 //!
 //! Runs headless by default (no GPU required). Pass `--visual` to open a window
-//! with full graphics at normal speed for debugging.
+//! with full graphics at normal speed for debugging a single scenario.
 //!
 //! Usage:
 //!   `cargo dscenario -- -s aegis_chaos`
@@ -14,6 +14,18 @@ use argh::FromArgs;
 
 fn main() {
     let args: Args = argh::from_env();
+
+    if args.visual && args.all {
+        eprintln!("--visual cannot be combined with --all (the event loop can only run once)");
+        eprintln!("Use --visual -s <scenario_name> to debug a single scenario.");
+        process::exit(1);
+    }
+
+    if args.visual && args.scenario.is_none() {
+        eprintln!("--visual requires -s <scenario_name>");
+        process::exit(1);
+    }
+
     let headless = !args.visual;
     let exit_code = breaker_scenario_runner::runner::run_with_args(
         args.scenario.as_deref(),
@@ -34,7 +46,7 @@ pub struct Args {
     #[argh(switch)]
     pub all: bool,
 
-    /// run with a window at normal speed (for visual debugging)
+    /// run with a window at normal speed for visual debugging (single scenario only)
     #[argh(switch)]
     pub visual: bool,
 }
