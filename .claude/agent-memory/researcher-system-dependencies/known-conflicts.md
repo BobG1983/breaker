@@ -6,7 +6,7 @@ type: reference
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-17 (hot_reload domain added — HotReloadPlugin with 13 systems in two ordered sets)
+Last updated: 2026-03-17 (feature/scenario-coverage-expansion — scenario runner ordering conflict RESOLVED; upward-bolt guard logic change noted; TogglePause routing change noted)
 
 ---
 
@@ -348,3 +348,91 @@ FixedPostUpdate:
 PostUpdate:
   interpolate_transform  [InterpolatePlugin]
 ```
+
+---
+
+## SCENARIO RUNNER — ScenarioLifecycle FixedUpdate systems (added 2026-03-17)
+
+These systems run in `FixedUpdate` alongside gameplay systems (but are in `breaker-scenario-runner`, not `breaker-game`).
+
+### Lifecycle group (chained, unordered vs gameplay):
+```
+tick_scenario_frame → inject_scenario_input → check_frame_limit   [.chain()]
+```
+
+### Invariant check systems (unordered, run independently):
+- check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable
+- check_breaker_in_bounds, check_no_nan, check_timer_non_negative
+- check_valid_state_transitions, check_valid_breaker_state
+- check_timer_monotonically_decreasing, check_breaker_position_clamped
+- check_physics_frozen_during_pause, check_no_entity_leaks
+- enforce_frozen_positions, tag_game_entities
+
+### tag_game_entities also runs in OnEnter(GameState::Playing) — no conflict (different schedule).
+
+---
+
+## RESOLVED — inject_scenario_input now orders .before(BreakerSystems::Move)
+
+**Status: RESOLVED** (fixed in feature/scenario-coverage-expansion)
+
+`inject_scenario_input` writes `ResMut<InputActions>` in `FixedUpdate`.
+`move_breaker` and `update_bump` read `Res<InputActions>` in `FixedUpdate`.
+
+The lifecycle chain now has the correct constraint:
+```rust
+(tick_scenario_frame, inject_scenario_input, check_frame_limit)
+    .chain()
+    .before(breaker::breaker::sets::BreakerSystems::Move),
+```
+Injected input is guaranteed to be written before `move_breaker` and `update_bump` consume it in the same tick.
+
+---
+
+## NEW NOTE — bolt_breaker_collision upward-bolt guard moved to top of function
+
+**Status: No conflict — behavioral change to track**
+
+Previously the guard "only reflect if bolt is moving downward" was INSIDE the top/bottom hit branch.
+Now it is at the TOP of the per-bolt loop body (before any face-type check). Side hits by upward-moving
+bolts are now also skipped — previously they were reflected.
+
+This is an intentional physics correctness fix: a bolt moving upward that clips the breaker's side
+should not be deflected (it is on its way up from a bump). The new tests `upward_bolt_side_hit_is_not_reflected`
+and `downward_bolt_side_hit_is_reflected` document this behavior in `bolt_breaker_collision.rs`.
+
+No ordering issue. No ECS conflict. Data flow unchanged (BoltHitBreaker message still sent only on
+reflection). Just document so future analysis does not flag the changed guard logic as a regression.
+
+---
+
+## NEW NOTE — toggle_pause now routes through InputActions
+
+**Status: No conflict — routing change to track**
+
+`toggle_pause` (PauseMenuPlugin, Update) previously read `Res<ButtonInput<KeyCode>>` directly for
+the Escape key. It now reads `Res<InputActions>` and checks `GameAction::TogglePause`.
+
+`GameAction::TogglePause` is produced by `read_input_actions` (InputPlugin, PreUpdate) when Escape
+is pressed. `toggle_pause` reads the populated `InputActions` in Update.
+
+The execution order is: PreUpdate (`read_input_actions`) → Update (`toggle_pause`) — unchanged
+and correct. The scenario runner also maps `TogglePause` correctly in the action table.
+
+ChaosMonkey in the scenario runner now includes `TogglePause` in its `GAMEPLAY_ACTIONS` pool.
+This means chaos scenarios can inject random pause/unpause events. The `check_physics_frozen_during_pause`
+invariant validates that physics stops during pause — this is now exercised by chaos scenarios.
+
+---
+
+## LOW — enforce_frozen_positions needs explicit .after(PhysicsSystems::BoltLost)
+
+**Status: Low — functionally correct by accident, implicit ordering**
+
+`enforce_frozen_positions` writes `&mut Transform` on entities with `ScenarioPhysicsFrozen`.
+Physics systems write `&mut Transform` on bolt entities.
+When `ScenarioPhysicsFrozen` is present it is on a bolt entity (same archetype as `Bolt`).
+Bevy serializes these. The correct execution order is physics first, then pin-reset.
+No explicit `.after(PhysicsSystems::BoltLost)` constraint is declared.
+
+**Fix (optional):** Add `enforce_frozen_positions.after(PhysicsSystems::BoltLost)` in `lifecycle.rs:140`.

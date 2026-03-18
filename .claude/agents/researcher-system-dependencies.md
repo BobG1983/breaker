@@ -107,10 +107,11 @@ What to save:
 - Architectural patterns established in the codebase (e.g., "all physics systems run in FixedUpdate")
 
 What NOT to save:
-- Session-specific analysis requests
 - Speculative conflicts that turned out to be non-issues
 - Anything that duplicates CLAUDE.md instructions
 
+Save session-specific outputs (date-stamped dependency maps, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
+
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

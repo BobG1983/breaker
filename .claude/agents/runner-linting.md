@@ -100,14 +100,13 @@ As you work, consult your memory files to build on previous experience. When you
 What to save:
 - Recurring clippy lint patterns and their correct fixes in this codebase
 - Fmt quirks specific to this project's code style
-- Clippy lints that have been explicitly allowed/suppressed and why
-
 What NOT to save:
 - Generic Rust style advice
 - Anything already documented in CLAUDE.md
 - One-off lint failures that were immediately fixed
-- Session-specific context
+
+Save session-specific outputs (date-stamped lint results, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

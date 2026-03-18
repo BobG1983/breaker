@@ -6,7 +6,7 @@ type: reference
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-16 (behaviors domain extraction — BehaviorsPlugin moved from sub-plugin of BreakerPlugin to standalone domain in src/behaviors/)
+Last updated: 2026-03-17 (feature/scenario-coverage-expansion — physics guard, TogglePause action, BoltHitCell bolt field removed, DebugOverlays refactored, SystemParam extractions, bolt/queries.rs added)
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
@@ -93,7 +93,8 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 
 ### PauseMenuPlugin
 ### `toggle_pause` — Update [NO condition]
-- Reads: Res<InputActions>; Writes: ResMut<NextState<PlayingState>>
+- Reads: Res<InputActions> (checks GameAction::TogglePause); Writes: ResMut<NextState<PlayingState>>
+- NOTE: Previously read ButtonInput<KeyCode> directly (Escape key). Now reads InputActions via GameAction::TogglePause — routed through InputPlugin's read_input_actions in PreUpdate.
 ### `spawn_pause_menu` — OnEnter(PlayingState::Paused)
 ### `handle_pause_input` — Update, run_if(PlayingState::Paused)
 - Reads: Res<InputActions>; Writes: ResMut<NextState<PlayingState>>
@@ -296,12 +297,14 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 - Reads (query): Entity+Transform+CellWidth+CellHeight (CellCollisionFilter)
 - Reads (query): Entity+Transform+WallSize (WallCollisionFilter)
 - Sends: MessageWriter<BoltHitCell>
+- NOTE: BoltHitCell no longer carries a bolt Entity field (removed in feature/scenario-coverage-expansion)
 
 ### `bolt_breaker_collision` — FixedUpdate, after(bolt_cell_collision), in_set(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
 - Reads: Res<Time<Fixed>>
 - Writes (query): mut Transform, mut BoltVelocity, read BoltBaseSpeed, BoltRadius
 - Reads (query): Transform+BreakerTilt+BreakerWidth+BreakerHeight+MaxReflectionAngle+MinAngleFromHorizontal (BreakerCollisionFilter)
 - Sends: MessageWriter<BoltHitBreaker>
+- NOTE: New upward-bolt guard added: bolts moving upward (vel.y > 0) are now skipped for ALL face types (previously only top-hit path had this guard; side hits were unguarded). This means upward-moving bolts pass through the breaker entirely.
 
 ### `bolt_lost` — FixedUpdate, after(bolt_breaker_collision), in_set(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
 - Reads: Res<PlayfieldConfig>, ResMut<GameRng>
@@ -399,7 +402,8 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 
 ### `debug_ui_system` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<State<GameState>>, Res<DiagnosticsStore>
-- Writes: ResMut<DebugOverlays>, EguiContexts
+- Writes: ResMut<DebugOverlays> (via flag_mut()), EguiContexts
+- NOTE: DebugOverlays now uses enum-indexed bool array (Overlay enum) instead of individual bool fields. API change: `overlays.show_foo` → `overlays.is_active(Overlay::Foo)` and `overlays.flag_mut(Overlay::Foo)`.
 
 ### `bolt_info_ui` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<DebugOverlays>, EguiContexts

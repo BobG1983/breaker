@@ -6,7 +6,7 @@ type: reference
 
 # Message Flow Map
 
-Last updated: 2026-03-16 (behaviors domain extraction — BehaviorsPlugin is now standalone; observers fire on ConsequenceFired trigger event, not named request events)
+Last updated: 2026-03-17 (feature/scenario-coverage-expansion — BoltHitCell.bolt field removed; TogglePause added to GameAction and mapped in scenario runner)
 
 ## Registered Messages (by plugin)
 
@@ -61,6 +61,7 @@ Last updated: 2026-03-16 (behaviors domain extraction — BehaviorsPlugin is now
 - Sender: `bolt_cell_collision` (PhysicsPlugin)
 - Receivers:
   - `handle_cell_hit` (CellsPlugin)
+- NOTE: `BoltHitCell` now carries only `cell: Entity` — the `bolt: Entity` field was removed in feature/scenario-coverage-expansion. Any system reading BoltHitCell.bolt will fail to compile.
 
 ### BoltLost (PhysicsPlugin → cross-domain)
 - Sender: `bolt_lost` (PhysicsPlugin, PhysicsSystems::BoltLost) — fires for baseline AND ExtraBolt

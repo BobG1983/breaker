@@ -89,10 +89,11 @@ What to save:
 - Solutions to recurring problems and debugging insights
 
 What NOT to save:
-- Session-specific context (current task details, in-progress work, temporary state)
 - Information that might be incomplete — verify against project docs before writing
 - Anything that duplicates or contradicts existing CLAUDE.md instructions
 - Speculative or unverified conclusions from reading a single file
+
+Save session-specific outputs (date-stamped error analyses, one-off diagnostics) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
 Explicit user requests:
 - When the user asks you to remember something across sessions (e.g., "always use bun", "never auto-commit"), save it — no need to wait for multiple interactions
@@ -110,4 +111,4 @@ Grep with pattern="<search term>" path=".claude/agent-memory/researcher-rust-err
 
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

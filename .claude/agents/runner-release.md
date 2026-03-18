@@ -187,10 +187,11 @@ What to save:
 - Release process quirks specific to this project
 
 What NOT to save:
-- Session-specific context
 - Generic release engineering advice
 - Git commit details (use `git log` for that)
 
+Save session-specific outputs (date-stamped release notes, one-off changelogs) to the `ephemeral/` subdirectory (gitignored), not the memory root.
+
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

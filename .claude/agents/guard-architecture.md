@@ -89,9 +89,10 @@ What to save:
 - Edge cases in domain ownership (where something could live in two places)
 
 What NOT to save:
-- Session-specific context or in-progress implementation
 - Generic Bevy patterns (you can look these up)
 - Anything that duplicates `docs/architecture/`
+
+Save session-specific outputs (date-stamped reviews, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
 Explicit user requests:
 - When the user asks you to remember something across sessions, save it immediately
@@ -109,4 +110,4 @@ Grep with pattern="<search term>" path=".claude/agent-memory/guard-architecture/
 
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

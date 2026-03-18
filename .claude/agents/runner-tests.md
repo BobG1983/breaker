@@ -97,9 +97,10 @@ What to save:
 
 What NOT to save:
 - One-off build failures that were immediately fixed
-- Session-specific context
 - Anything that duplicates CLAUDE.md instructions
+
+Save session-specific outputs (date-stamped test results, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

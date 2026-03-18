@@ -49,6 +49,35 @@ code, and the crate's module-level code uses Bevy types:
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 ```
 
+## Testing PlayingState (SubState) in Integration Tests
+
+`PlayingState` is a `SubState` of `GameState::Playing`. To use it in tests:
+
+```rust
+fn test_app() -> App {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.init_state::<GameState>();
+    app.add_sub_state::<PlayingState>();  // Required — SubStates must be explicitly registered
+    // ...
+    app
+}
+```
+
+Then to enter Playing and then transition to Paused:
+```rust
+app.world_mut().resource_mut::<NextState<GameState>>().set(GameState::Playing);
+app.update(); // process state transition — PlayingState::Active becomes active
+// ... spawn entities, tick once to seed Locals ...
+app.world_mut().resource_mut::<NextState<PlayingState>>().set(PlayingState::Paused);
+app.update(); // process sub-state transition
+// ... now test behavior under Paused ...
+tick(&mut app);
+```
+
+`Option<Res<State<PlayingState>>>` returns `None` when not in `GameState::Playing`.
+
 ## Pre-existing Lint Errors in Other Files
 
 When clippy `pedantic` is deny-level, pre-existing errors in sibling files (like `input.rs`) will

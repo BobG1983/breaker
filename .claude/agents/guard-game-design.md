@@ -129,9 +129,10 @@ What to save:
 - Design tensions identified (trade-offs the game is navigating)
 
 What NOT to save:
-- Session-specific context or in-progress brainstorming
 - Generic game design principles (you already know these)
 - Anything that duplicates docs/PLAN.md
+
+Save session-specific outputs (date-stamped reviews, brainstorming snapshots) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
 Explicit user requests:
 - When the user asks you to remember something across sessions (e.g., "always use bun", "never auto-commit"), save it — no need to wait for multiple interactions
@@ -149,4 +150,4 @@ Grep with pattern="<search term>" path=".claude/agent-memory/guard-game-design/"
 
 ## MEMORY.md
 
-Anything in MEMORY.md will be included in your system prompt next time.
+MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.
