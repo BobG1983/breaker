@@ -2,6 +2,16 @@
 //!
 //! Library crate containing all game logic, organized as domain plugins.
 
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        reason = "test assertions use unwrap/expect/panic"
+    )
+)]
+
 pub mod app;
 pub mod game;
 pub(crate) mod screen;
@@ -15,7 +25,7 @@ pub(crate) mod cells;
 pub(crate) mod chips;
 pub(crate) mod debug;
 pub(crate) mod fx;
-pub(crate) mod input;
+pub mod input;
 pub(crate) mod interpolate;
 pub(crate) mod physics;
 pub mod run;
