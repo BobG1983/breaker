@@ -1,15 +1,12 @@
 //! App construction — builds the Bevy [`App`] with all plugins.
 
 use bevy::{
-    camera::ScalingMode,
-    core_pipeline::tonemapping::Tonemapping,
     log::{BoxedLayer, LogPlugin},
-    post_process::bloom::Bloom,
     prelude::*,
     window::PrimaryWindow,
 };
 
-use crate::{game::Game, shared::PlayfieldConfig};
+use crate::game::Game;
 
 /// Applies dev-only CLI flags parsed from `std::env::args()`.
 ///
@@ -89,7 +86,7 @@ fn file_log_layer(_app: &mut App) -> Option<BoxedLayer> {
 
 /// Constructs and returns the configured Bevy [`App`].
 ///
-/// Sets up the window, camera, and all game plugins via [`Game`].
+/// Sets up the window and all game plugins via [`Game`].
 ///
 /// In dev builds, also reads `--log <true|false>` and `--log-level <level>`
 /// from `std::env::args()` to configure `LogPlugin` before it is registered.
@@ -126,27 +123,10 @@ pub fn build_app() -> App {
             }),
     );
 
-    app.insert_resource(ClearColor(PlayfieldConfig::default().background_color()));
-    app.add_plugins(Game);
-    app.add_systems(Startup, (spawn_camera, maximize_window));
+    app.add_plugins(Game::default());
+    app.add_systems(Startup, maximize_window);
 
     app
-}
-
-/// Spawns the 2D camera with a fixed 1920×1080 canvas and HDR bloom.
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        Projection::from(OrthographicProjection {
-            scaling_mode: ScalingMode::AutoMin {
-                min_width: 1920.0,
-                min_height: 1080.0,
-            },
-            ..OrthographicProjection::default_2d()
-        }),
-        Tonemapping::AcesFitted,
-        Bloom::default(),
-    ));
 }
 
 /// Maximizes the primary window on startup.
@@ -159,7 +139,6 @@ fn maximize_window(mut query: Query<&mut Window, With<PrimaryWindow>>) {
 #[cfg(all(test, not(target_os = "macos")))]
 mod tests {
     use super::*;
-    use crate::game::Game;
 
     fn headless_app() -> App {
         let mut app = App::new();
@@ -174,8 +153,11 @@ mod tests {
                     ..default()
                 }),
         );
-        app.add_plugins(Game.build().disable::<crate::debug::DebugPlugin>());
-        app.add_systems(Startup, spawn_camera);
+        app.add_plugins(
+            Game::default()
+                .build()
+                .disable::<crate::debug::DebugPlugin>(),
+        );
         app
     }
 
