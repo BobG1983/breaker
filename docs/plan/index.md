@@ -42,6 +42,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - **Wave 4 — Capstones** (Session 8)
     - [4h: Chip Evolution](phase-4/phase-4h-chip-evolution.md)
     - [4i: Run Stats & Summary](phase-4/phase-4i-run-stats.md)
+    - [4j: Release Infrastructure](phase-4/phase-4j-release-infrastructure.md)
 
 ### Upcoming
 - [Phase 5: Visual Identity](phase-5-visual-identity.md)

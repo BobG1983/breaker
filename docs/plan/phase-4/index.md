@@ -15,6 +15,7 @@
 | [4g](phase-4g-node-transitions.md) | Node Transitions & VFX | 4e | Medium | Low |
 | [4h](phase-4h-chip-evolution.md) | Chip Evolution | 4c, 4d, 4e | Medium | Low |
 | [4i](phase-4i-run-stats.md) | Run Stats & Summary | 4e, 4f | Medium | Low |
+| [4j](phase-4j-release-infrastructure.md) | Release Infrastructure | — | Small | Low |
 
 ## Dependency Graph
 
@@ -28,6 +29,8 @@
                     └── 4d (Trigger/Effect) ────────┘
                                                     │
                                                     └── 4i (Run Stats)
+
+4j (Release Infrastructure) ── no gameplay dependencies, runs in Wave 4
 ```
 
 ## Critical Paths
@@ -97,10 +100,11 @@ These are independent and can parallelize.
 
 - **4h (Chip Evolution)** (needs 4c + 4d + 4e) — evolution recipes, boss reward screen, evolution registry.
 - **4i (Run Stats)** (needs 4e + 4f) — purely observational systems, no mutation.
+- **4j (Release Infrastructure)** (no gameplay dependencies) — GitHub Actions cross-compilation, itch.io butler, version bumping, changelog. Uses the **runner-release** agent.
 
-These are independent and can parallelize.
+All three are independent and can parallelize.
 
-**Session 8**: 4h + 4i in parallel
+**Session 8**: 4h + 4i + 4j in parallel
 
 ## Session Summary
 
@@ -113,7 +117,7 @@ These are independent and can parallelize.
 | **5** | 4d.1 + 4d.2 | TriggerChain types + bolt behaviors module | bolt, chips |
 | **6** | 4d.3 + 4d.4 + 4c.2 | Shockwave + Surge POC + chip RON authoring | bolt, physics, assets |
 | **7** | 4f + 4g | Chip offerings + node transitions (parallel) | chips, screen, fx |
-| **8** | 4h + 4i | Evolution + run stats (parallel capstones) | chips, run, ui |
+| **8** | 4h + 4i + 4j | Evolution + run stats + release infra (parallel capstones) | chips, run, ui, CI |
 
 ## What NOT to Combine
 

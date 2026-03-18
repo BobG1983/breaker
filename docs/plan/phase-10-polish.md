@@ -40,7 +40,8 @@ Features that extend game span by making runs shareable:
 
 ## Distribution
 
-- Build pipeline for target platform(s)
-- GitHub Actions cross-compilation (macOS/Windows/Linux)
-- itch.io distribution via butler
-- Steam if warranted by reception
+Core release infrastructure (GitHub Actions cross-compilation, itch.io butler, version bumping, changelog) is built in [Phase 4j](phase-4/phase-4j-release-infrastructure.md). This phase refines it:
+
+- Steam integration if warranted by reception
+- Platform-specific packaging (DMG, MSI, AppImage)
+- Auto-update mechanism if distributing outside Steam
