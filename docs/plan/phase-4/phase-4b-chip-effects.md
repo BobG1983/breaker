@@ -24,21 +24,34 @@ Extend `ChipDefinition` with effect data. Component markers with values:
 ```rust
 // Amp effects — applied as components on the bolt entity
 enum AmpEffect {
-    Piercing(u32),      // pierce through N cells
-    DamageBoost(f32),   // extra damage per hit
-    SpeedBoost(f32),    // bolt speed increase
-    Ricochet(u32),      // extra bounces off walls
+    Piercing(u32),      // bolt passes through N cells before stopping
+    DamageBoost(f32),   // extra damage per hit (additive)
+    SpeedBoost(f32),    // bolt base speed increase
+    ChainHit(u32),      // on cell destroy, damage jumps to N adjacent cells
     SizeBoost(f32),     // bolt radius increase
 }
 
 // Augment effects — applied as components on the breaker entity
 enum AugmentEffect {
-    WidthBoost(f32),    // breaker width increase
-    SpeedBoost(f32),    // breaker movement speed increase
-    BumpStrength(f32),  // bump multiplier increase
-    DashDistance(f32),   // dash distance increase
+    WidthBoost(f32),        // breaker width increase
+    SpeedBoost(f32),        // breaker max movement speed increase
+    BumpForce(f32),         // bump velocity multiplier increase (both perfect and weak)
+    TiltControl(f32),       // increase max reflection angle (degrees) — more precise bolt aiming
 }
 ```
+
+**Amp design rationale**:
+- **Piercing** — foundational bolt amp, creates pierce-through gameplay
+- **DamageBoost** — straightforward stat increase, scales with hit frequency
+- **SpeedBoost** — faster bolt = harder to react to but clears faster. Risk/reward.
+- **ChainHit** — on cell destroy, damage jumps to N adjacent cells. Creates chain reactions. Synergizes with Piercing (pierce through a cell, destroy it, chain to neighbors) and DamageBoost (chain damage inherits bonus)
+- **SizeBoost** — bigger bolt = easier to hit cells, bigger collision surface on breaker. Subtle but impactful.
+
+**Augment design rationale** — all modify properties every archetype has:
+- **WidthBoost** — wider breaker = easier to catch bolt, changes reflection positioning
+- **SpeedBoost** — faster movement = more aggressive positioning, better recovery
+- **BumpForce** — modifies `BumpPerfectMultiplier` and `BumpWeakMultiplier`. More velocity per bump = faster clears, but bolt becomes harder to track
+- **TiltControl** — modifies `MaxReflectionAngle`. More extreme angles = precision aiming for skilled players. High skill-ceiling augment (Pillar 3: "master player uses this differently than novice")
 
 **What to build**:
 - AmpEffect and AugmentEffect enums with Deserialize
@@ -69,14 +82,15 @@ Modify existing systems to check for chip effect components. Each domain modific
 
 | Effect | Domain | System to Modify | Change |
 |--------|--------|-------------------|--------|
-| Piercing | physics/ | bolt_cell_collision | Skip despawn for first N cells when `Piercing(n)` present |
-| DamageBoost | cells/ | handle_cell_hit | Apply extra damage when `DamageBoost(f32)` present on bolt |
-| SpeedBoost (bolt) | bolt/ | prepare_bolt_velocity | Increase speed when `BoltSpeedBoost(f32)` present |
-| SizeBoost | bolt/ | init_bolt_params or spawn | Increase radius when `SizeBoost(f32)` present |
-| WidthBoost | breaker/ | init_breaker_params or spawn | Increase width when `WidthBoost(f32)` present |
-| SpeedBoost (breaker) | breaker/ | move_breaker | Increase max speed when `BreakerSpeedBoost(f32)` present |
-| BumpStrength | breaker/ | grade_bump | Modify multiplier when `BumpStrength(f32)` present |
-| DashDistance | breaker/ | update_breaker_state | Modify dash distance when `DashDistance(f32)` present |
+| Piercing | physics/ | bolt_cell_collision | Skip reflection for first N cells, continue tracing. Decrement counter per pierce. |
+| DamageBoost | cells/ | handle_cell_hit | Apply `1 + DamageBoost` damage instead of 1 when component present on bolt |
+| ChainHit | cells/ or physics/ | handle_cell_hit or new system | On `CellDestroyed`, query adjacent cells within range, deal 1 damage to N nearest |
+| SpeedBoost (bolt) | bolt/ | prepare_bolt_velocity | Add to `BoltBaseSpeed` when `BoltSpeedBoost(f32)` present |
+| SizeBoost | bolt/ | init_bolt_params or spawn | Add to `BoltRadius` when `SizeBoost(f32)` present |
+| WidthBoost | breaker/ | init_breaker_params or spawn | Add to `BreakerWidth` when `WidthBoost(f32)` present |
+| SpeedBoost (breaker) | breaker/ | move_breaker | Add to `BreakerMaxSpeed` when `BreakerSpeedBoost(f32)` present |
+| BumpForce | breaker/ | grade_bump | Add to `BumpPerfectMultiplier` and `BumpWeakMultiplier` when present |
+| TiltControl | breaker/ | init_breaker_params or spawn | Add to `MaxReflectionAngle` when `TiltControl(f32)` present |
 
 **Delegatable**: Yes — one writer-tests → writer-code pair per domain (up to 4 parallel).
 
