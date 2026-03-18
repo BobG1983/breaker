@@ -7,6 +7,7 @@
 - [hierarchy.md](hierarchy.md) — ChildOf (not Parent), with_child, ChildSpawnerCommands
 - [keyboard_input.md](keyboard_input.md) — KeyboardInput is Message (not Event), InputSystems set
 - [observers_and_oneshot.md](observers_and_oneshot.md) — Observers, triggers, one-shot systems
+- [text_input.md](text_input.md) — Text input via KeyboardInput.text, repeat handling, focus, bevy_simple_text_input 0.14.1
 - [third_party_crates.md](third_party_crates.md) — bevy_egui, bevy_common_assets, bevy_asset_loader, iyes_progress
 - [transform_interpolation.md](transform_interpolation.md) — No built-in support; manual or crate
 

@@ -121,23 +121,87 @@ LogPlugin {
 Note: LogPlugin can only be registered ONCE globally per process. If running multiple
 apps in tests, disable it on all but the first: `.disable::<LogPlugin>()`.
 
-## WgpuSettings / RenderCreation (for reference)
+## WgpuSettings / RenderCreation — No-GPU Headless (verified from Bevy 0.18 source)
 
-If you DO need to disable rendering entirely (not just the window):
+To disable GPU initialization entirely (for CI servers with no GPU):
+
 ```rust
-use bevy::render::{RenderPlugin, settings::{RenderCreation, WgpuSettings, Backends}};
+use bevy::render::{RenderPlugin, settings::{RenderCreation, WgpuSettings}};
 
 RenderPlugin {
     render_creation: RenderCreation::Automatic(WgpuSettings {
-        backends: None,  // no GPU backend = no rendering
+        backends: None,  // skips initialize_renderer() entirely — no GPU adapter request
         ..default()
     }),
     ..default()
 }
 ```
 
-But the official headless_renderer example does NOT do this — it leaves rendering on
-and just removes the window/winit layer.
+**Verified from `crates/bevy_render/src/lib.rs` source (v0.18.0):**
+- `RenderPlugin::build()` has: `if let Some(backends) = render_creation.backends { ... }`
+- When `backends` is `None`, the ENTIRE block is skipped: no `FutureRenderResources`, no `initialize_renderer()`, no `initialize_render_app()`
+- `RenderPlugin::finish()` checks `if let Some(future) = app.world_mut().remove_resource::<FutureRenderResources>()` — returns `None`, so no GPU resources inserted
+- `PipelinedRenderingPlugin::build()` checks `if app.get_sub_app(RenderApp).is_none() { return; }` — gracefully exits
+- Result: NO "Unable to find a GPU" panic, no GPU access attempted at all
+
+**WgpuSettings::default() has backends = Some(Backends::all())** — this is why not configuring RenderPlugin causes the panic.
+
+The official headless_renderer example does NOT use `backends: None` because it DOES need a GPU (renders to texture). That example is about windowless rendering, not no-GPU rendering.
+
+**The "Unable to find a GPU" panic** originates in `crates/bevy_render/src/renderer/mod.rs`:
+```rust
+let adapter = selected_adapter.expect(GPU_NOT_FOUND_ERROR_MESSAGE);
+```
+This is inside `initialize_renderer()`, which is only called when `backends` is `Some`.
+
+## Complete No-GPU, No-Display Pattern (CI server with no GPU, no display server)
+
+This is the correct pattern when you need AssetPlugin + StatesPlugin + TimePlugin + LogPlugin
+but have NO GPU and NO display server (e.g., a CI runner):
+
+```rust
+use bevy::{
+    prelude::*,
+    render::{RenderPlugin, settings::{RenderCreation, WgpuSettings}},
+    winit::WinitPlugin,
+    window::ExitCondition,
+};
+use bevy::app::ScheduleRunnerPlugin;
+
+let mut defaults = DefaultPlugins
+    .set(WindowPlugin {
+        primary_window: None,
+        exit_condition: ExitCondition::DontExit,
+        ..default()
+    })
+    .set(RenderPlugin {
+        render_creation: RenderCreation::Automatic(WgpuSettings {
+            backends: None,  // skip GPU init entirely
+            ..default()
+        }),
+        ..default()
+    })
+    .disable::<WinitPlugin>();
+
+app.add_plugins(defaults)
+   .add_plugins(ScheduleRunnerPlugin::run_loop(...));
+```
+
+**Why two changes are needed:**
+1. `.disable::<WinitPlugin>()` — prevents winit from panicking without a display server
+2. `.set(RenderPlugin { backends: None })` — prevents wgpu from panicking without a GPU
+   (disabling WinitPlugin alone does NOT stop RenderPlugin from trying to find a GPU)
+
+**What you keep** (all still work with backends=None):
+- `AssetPlugin` — file I/O only, no GPU required
+- `StatesPlugin` — pure ECS, no GPU required
+- `TimePlugin` — tick-based, no GPU required
+- `LogPlugin` — tracing only, no GPU required
+- `TransformPlugin`, `InputPlugin`, etc. — all CPU-side
+
+**What breaks** (don't use these without a GPU):
+- Any sprite/mesh rendering, materials, cameras that actually render
+- `bevy_egui` rendering (egui logic still works, render does not)
 
 ## MinimalPlugins for Pure Logic Tests
 
