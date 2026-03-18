@@ -87,23 +87,18 @@ fn spawn_camera(mut commands: Commands) {
     ));
 }
 
-#[cfg(all(test, not(target_os = "macos")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     fn test_app(game: Game) -> App {
         let mut app = App::new();
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: None,
-                    ..default()
-                })
-                .set(bevy::asset::AssetPlugin {
-                    file_path: "assets".into(),
-                    ..default()
-                }),
-        );
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::state::app::StatesPlugin,
+            bevy::asset::AssetPlugin::default(),
+            bevy::input::InputPlugin,
+        ));
         app.add_plugins(game.build().disable::<DebugPlugin>());
         app
     }

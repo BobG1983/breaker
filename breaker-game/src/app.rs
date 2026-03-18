@@ -136,23 +136,18 @@ fn maximize_window(mut query: Query<&mut Window, With<PrimaryWindow>>) {
     }
 }
 
-#[cfg(all(test, not(target_os = "macos")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     fn headless_app() -> App {
         let mut app = App::new();
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: None,
-                    ..default()
-                })
-                .set(bevy::asset::AssetPlugin {
-                    file_path: "assets".into(),
-                    ..default()
-                }),
-        );
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::state::app::StatesPlugin,
+            bevy::asset::AssetPlugin::default(),
+            bevy::input::InputPlugin,
+        ));
         app.add_plugins(
             Game::default()
                 .build()

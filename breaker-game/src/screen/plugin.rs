@@ -88,24 +88,18 @@ impl Plugin for ScreenPlugin {
     }
 }
 
-#[cfg(all(test, not(target_os = "macos")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn plugin_builds() {
         App::new()
-            .add_plugins(
-                DefaultPlugins
-                    .set(WindowPlugin {
-                        primary_window: None,
-                        ..default()
-                    })
-                    .set(bevy::asset::AssetPlugin {
-                        file_path: "assets".into(),
-                        ..default()
-                    }),
-            )
+            .add_plugins((
+                MinimalPlugins,
+                bevy::state::app::StatesPlugin,
+                bevy::asset::AssetPlugin::default(),
+            ))
             .add_plugins(ScreenPlugin)
             .update();
     }
