@@ -18,3 +18,6 @@ type: reference
 - `apply_bump_velocity` collects messages into Vec before querying — correct pattern for borrow conflicts.
 - `ChipSelected` message has no consumer yet. Fire-and-forget, no ECS error.
 - `spawn_chip_select` takes `Res<ChipRegistry>` (not Option) — guaranteed safe because Loading completes first.
+
+## Phase 4 Wave 1 Confirmed Bugs (2026-03-19)
+- `stack_u32` (apply_chip_effect.rs:204): `*current / per_stack` panics with integer division by zero when `per_stack=0`. No guard. Current RON files are safe (non-zero values), but future chips with `Piercing(0)` or `ChainHit(0)` would panic at stack-2 selection time.

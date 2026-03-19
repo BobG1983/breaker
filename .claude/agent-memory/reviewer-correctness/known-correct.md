@@ -80,3 +80,9 @@ type: reference
 - `apply_bolt_speed_boosts` last-write-wins for multiple bindings with same trigger: if two `BoltSpeedBoost` bindings both have `PerfectBump`, the last one wins. This is intentional data-driven behavior.
 - `handle_life_lost` observer iterates all LivesCount entities — correct; if multiple entities have LivesCount (edge case), all are decremented. Intentional by design.
 - Full-tree review 2026-03-19: no confirmed logic bugs found beyond z=1.0 hardcode in bolt_lost (cosmetic concern for multi-layer games but functionally correct for current single-layer setup).
+- Phase 4 Wave 1 (2026-03-19): `handle_run_setup_input` uses `Option<Res<SeedEntry>>` — always Some at runtime because `spawn_run_setup` (OnEnter) fires before Update. Defensive Option is correct, not a bug.
+- Phase 4 Wave 1 (2026-03-19): `reset_run_state` uses `Option<Res<SelectedArchetype>>` — for logging only; if absent logs "none". Correct.
+- Phase 4 Wave 1 (2026-03-19): `bypass_menu_to_playing` always sets `RunSeed(Some(n))` — intentional; scenarios always use deterministic seed.
+- Phase 4 Wave 1 (2026-03-19): `stack_u32` and `stack_f32` cap check `current / per_stack < max_stacks` — correct because current is always `n * per_stack` (exact integer/float multiple), so division is exact and gives stack count directly.
+- Phase 4 Wave 1 (2026-03-19): Enter key always confirms in run setup even when seed field is focused — intentional; Tab toggles focus, Enter confirms.
+- Phase 4 Wave 1 (2026-03-19): `MAX_SEED_CHARS=18` — 18 ASCII digits is at most 999_999_999_999_999_999 < u64::MAX (18_446_744_073_709_551_615), so parse always succeeds for filtered digit-only input. `unwrap_or(0)` is defensive for programmatic injection only.
