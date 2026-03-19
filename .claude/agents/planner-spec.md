@@ -2,7 +2,7 @@
 name: planner-spec
 description: "Use this agent to translate a feature description into behavioral specs (for writer-tests) and implementation specs (for writer-code). The planner-spec reads design docs, architecture, and existing domain code to produce specs in the exact formats documented in delegated-implementation.md. Use this instead of writing specs directly in the main agent's context.\n\nExamples:\n\n- When starting a new feature from the roadmap:\n  Assistant: \"Let me use the planner-spec agent to produce the test and implementation specs for this feature.\"\n\n- When a feature touches multiple domains:\n  Assistant: \"Launching planner-spec to produce specs for bolt and cells domains from this feature description.\"\n\n- When the main agent has a plain-language feature description:\n  Assistant: \"Feature scoped. Let me use the planner-spec to turn this into concrete specs before launching writers.\""
 tools: Read, Glob, Grep, WebSearch, WebFetch, ToolSearch
-model: sonnet
+model: opus
 color: green
 memory: project
 ---
