@@ -1,49 +1,26 @@
 # Delegated Implementation
 
-Guidelines for using the **writer-tests** and **writer-code** agent pair to implement features with TDD-enforced quality and context isolation.
-
-## When to Use
-
-Use delegated implementation for **anything non-trivial** — single domain or multi-domain:
-- **The behavioral spec can be written clearly** (concrete values, defined behaviors)
-- **The work is self-contained** within domain directory/directories
-- **New system, component, or mechanic** with at least 2 behaviors to test
-
-Do NOT use delegated implementation when:
-- **Cross-cutting changes** touch multiple domains or shared files (`lib.rs`, `game.rs`, `shared.rs`)
-- **Exploratory work** where the API shape isn't proven yet
-- **New domain creation** that requires wiring in `lib.rs`/`game.rs` (do the wiring yourself, then delegate the internals)
-- **Trivial additions** — a single pure function, a one-liner config change, a rename
-- **Complex Bevy API uncertainty** — use researcher-bevy-api first to resolve, then delegate
+All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, routes failures, and handles shared wiring. The **planner-spec** → **planner-review** → **writer-tests** → **writer-code** pipeline produces the code.
 
 ## The Flow (RED → GREEN → REFACTOR)
 
 ```
-1. Main agent writes ALL behavioral specs (for writer-tests)
-2. Main agent writes ALL implementation specs (for writer-code)
-3. Launch ALL writer-tests in parallel  [RED phase: tests must fail]
-4. As each writer-tests completes: review its output, then immediately launch its writer-code
-   — do NOT wait for other writer-tests to finish before launching a code writer
-5. After ALL writer-codes complete: launch post-implementation agents in parallel  [REFACTOR check]
-6. Main agent handles wiring (lib.rs, game.rs, shared.rs)
+1. Main agent describes the feature in plain language
+2. Launch planner-spec to produce all specs (behavioral + implementation, per domain)
+3. Launch planner-review to pressure-test specs
+4. Main agent reviews final specs, creates shared prerequisites
+5. Launch ALL writer-tests in parallel  [RED phase: tests must fail]
+6. As each writer-tests completes: review, launch its writer-code — GREEN phase
+7. After ALL writer-codes complete: launch post-implementation verification
+8. Main agent handles wiring (lib.rs, game.rs, shared.rs) — REFACTOR
+9. Update session-state.md
 ```
 
 **RED phase requirement**: Before launching each writer-code, review the corresponding writer-tests output and confirm the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
 
-### The Checkpoint Is Per-Domain
-
-When each writer-tests completes, the main agent MUST review its output before launching its paired writer-code:
-- Do the tests capture the intended behavior?
-- Are concrete values correct?
-- Are edge cases covered?
-- Are there ambiguities the writer-tests flagged?
-- **Do the tests fail?** (if any pass immediately, investigate why)
-
-If tests are wrong, fix them or re-spec before launching the writer-code. Bad tests produce bad implementations.
-
-Writing both specs upfront (steps 1–2) enables immediate writer-code launch on each writer-tests completion — no global barrier between the RED and GREEN phases.
-
 ## Writing a Test Spec (for writer-tests)
+
+These formats are consumed by planner-spec (which writes them) and writer-tests (which reads them).
 
 ### Format
 
@@ -197,10 +174,10 @@ src/[domain]/
 
 When implementing multiple domains simultaneously:
 
-1. Write ALL specs upfront (test spec + implementation spec for each domain)
+1. planner-spec produces ALL specs upfront (test spec + implementation spec for each domain)
 2. Launch ALL writer-tests in parallel **as background agents** (`run_in_background: true`)
 3. When each writer-tests completes (notified automatically): review its output, then immediately launch its writer-code — do NOT wait for other writer-tests still running
-4. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation agents in parallel
+4. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation verification per tier
 5. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 
 ### Safety Requirements for Parallel Execution
@@ -209,4 +186,3 @@ When implementing multiple domains simultaneously:
 - The main agent handles all shared file modifications (`lib.rs`, `game.rs`, `shared.rs`, `mod.rs` at crate root)
 - If two domains need a new shared type, the main agent creates it before launching agents
 - If a domain needs a message from another domain, the main agent ensures the message type exists before launching agents
-

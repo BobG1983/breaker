@@ -114,3 +114,5 @@ rm .git/gitflow/state/merge.json
 - Never rewrite shared history without explicit approval
 - Keep `main` and `develop` always clean and passing (fmt, clippy, tests)
 - If a pre-commit hook fails, fix the issue and create a NEW commit (don't amend)
+- Verify clean working tree (`git status`) before `git flow <type> finish` — background agents may leave dirty files
+- Never merge to `main` manually — only the release agent updates `main` via `git flow release finish`

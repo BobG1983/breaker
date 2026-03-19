@@ -1,6 +1,10 @@
 # Sub-Agent Development Flow
 
-When to launch which agents, how to interpret their output, and how failures chain to fixes. For the writer-tests → writer-code delegation pair specifically, see @.claude/rules/delegated-implementation.md.
+When to launch which agents, how to interpret their output, and how failures chain to fixes.
+
+See @.claude/rules/delegated-implementation.md for the planner-spec → planner-review → writer-tests → writer-code pipeline.
+See @.claude/rules/orchestration.md for session state, verification tiers, circuit breaking, and context pruning.
+See @.claude/rules/hint-formats.md for the standardized hint block formats that Phase 2 agents produce.
 
 ## Phase 1 — Before Writing Code (sequential, blocks implementation)
 
@@ -8,23 +12,16 @@ When to launch which agents, how to interpret their output, and how failures cha
 |---------|-------|
 | Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** |
 | Choosing between Rust idiom alternatives | **researcher-rust-idioms** |
+| Feature ready for spec writing | **planner-spec** |
+| Specs produced — novel mechanic, cross-domain, or uncertain scope | **planner-review** |
 
 ## Phase 2 — Post-Implementation (single parallel wave)
 
-Launch all applicable agents in a **single message** with multiple Agent tool calls. They are independent and must run in parallel — separate messages make them sequential.
+Launch per verification tier — see @.claude/rules/orchestration.md for Standard vs Full tier definitions.
 
-### Always launch
+All agents in a tier launch in a **single message** with multiple Agent tool calls. They are independent and must run in parallel — separate messages make them sequential.
 
-- **runner-linting** — fmt (auto-formats in place) and clippy; Fix spec hints for clippy errors → writer-code
-- **runner-tests** — cargo dtest; Fix spec hints for failures → writer-code or writer-tests
-- **runner-scenarios** — gameplay invariant validation (release build via `cargo scenario`)
-- **reviewer-correctness** — logic bugs, ECS pitfalls, state machine holes, math
-- **reviewer-quality** — idioms, vocabulary, test coverage, documentation
-- **reviewer-bevy-api** — Bevy API correctness for exact version
-- **reviewer-architecture** — plugin boundaries, message discipline, folder structure, ordering
-- **reviewer-performance** — Bevy-specific performance: queries, archetypes, scheduling
-
-### Launch conditionally (add to the same single message)
+### Conditional agents (add to the same single message)
 
 | Condition | Agent |
 |-----------|-------|
@@ -37,105 +34,46 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 
 ## Phase 3 — Failure Routing (sequential, reactive)
 
-React to output from Phase 2. Each failure type routes differently.
+React to output from Phase 2. Each failure type routes differently. See orchestration.md for circuit breaking and context pruning rules. See hint-formats.md for the exact block formats agents emit.
 
 ### runner-linting failures
 
-Each clippy error includes a **Fix spec hint** block:
-
-```
-**Fix spec hint:**
-- Lint: `path/to/file.rs:line` — `clippy::lint_name`
-- Issue: [what the code does wrong]
-- Fix: [specific change]
-- Delegate: writer-code can apply directly
-```
-
 | Failure type | Route |
 |---|---|
-| Clippy errors | hint → **writer-code** (no writer-tests needed) |
+| Clippy errors | Fix spec hint → **writer-code** (no writer-tests needed) |
 | Format failures | runner-linting auto-formats — no further routing needed |
 
 ### runner-tests failures
 
-Each failing test includes a **Fix spec hint** block:
-
-```
-**Fix spec hint:**
-- Failing test: `path/to/file.rs::tests::test_name`
-- Expected: [what the test requires]
-- Got: [what actually happened]
-- System under test: likely `path/to/system.rs`
-- Delegate: writer-code can fix directly from this — no writer-tests needed (test already exists)
-```
-
 | Failure type | Route |
 |---|---|
-| Existing test broke | hint → **writer-code** (test exists, skip writer-tests) |
+| Existing test broke | Fix spec hint → **writer-code** (test exists, skip writer-tests) |
 | Build failure (compiler error) | hint → **researcher-rust-errors** → **writer-code** |
 | No test exists for broken behavior | hint → **writer-tests** (regression spec) → **writer-code** |
 
 ### runner-scenarios failures
 
-Each failing scenario includes a **Regression spec hint** block:
-
-```
-**Regression spec hint:**
-- Broken behavior: [what should happen that doesn't]
-- Concrete values: [position, velocity, frame, entity — from violation message]
-- Suspected location: `path/to/file.rs:line` (confidence: high/medium/low)
-- Test type: unit | scenario
-- Test file: `path/to/file.rs` or `scenarios/regressions/<name>.scenario.ron`
-- Delegate: main agent can hand this directly to writer-tests if confidence is high
-```
-
 | Confidence | Route |
 |---|---|
-| High | hint → **writer-tests** (regression spec) → **writer-code** |
+| High | Regression spec hint → **writer-tests** → **writer-code** |
 | Low | Main agent reads src first → writes spec → **writer-tests** → **writer-code** |
 
 ### reviewer-correctness bugs
 
-Each confirmed bug includes a **Regression spec hint** block:
-
-```
-**Regression spec hint:**
-- Broken behavior: [what the code does wrong vs. what it should do]
-- Location: `path/to/file.rs:line` (confidence: high/medium/low)
-- Correct behavior: Given [state], When [trigger], Then [expected outcome]
-- Concrete values: [inputs/state that expose the bug]
-- Test type: unit | integration
-- Test file: `path/to/system_file.rs`
-- Delegate: main agent can hand this directly to writer-tests if confidence is high
-```
-
 | Confidence | Route |
 |---|---|
-| High | hint → **writer-tests** (regression spec) → **writer-code** |
-| Low | Main agent investigates further → writes spec → **writer-tests** → **writer-code** |
+| High | Regression spec hint → **writer-tests** → **writer-code** |
+| Low | Main agent investigates → writes spec → **writer-tests** → **writer-code** |
 
 ### reviewer-quality and reviewer-bevy-api findings
-
-These agents describe fixes but never produce writer-tests specs.
 
 | Finding type | Route |
 |---|---|
 | Style/idiom issue (reviewer-quality) | Main agent fixes inline — low risk, no test needed |
 | Deprecated API (reviewer-bevy-api) | Main agent fixes inline — follow stated replacement pattern |
-| Logic-adjacent issue (wrong query filter, etc.) | Treat as correctness issue — write regression spec if behavior is testable |
+| Logic-adjacent issue (wrong query filter, etc.) | Treat as correctness issue — write regression spec if testable |
 
 ### guard-security findings
-
-Each finding includes a severity-tagged block:
-
-```
-**Security finding:**
-- Severity: critical | warning | info
-- Location: `path/to/file.rs:line`
-- Issue: [what the security concern is]
-- Fix: [specific remediation]
-- Delegate: main agent fixes inline (warning/info) or writer-code (critical with test coverage)
-```
 
 | Severity | Route |
 |---|---|
@@ -144,17 +82,6 @@ Each finding includes a severity-tagged block:
 | Info (observation for future phases) | Note and move on |
 
 ### guard-dependencies findings
-
-Each finding includes an actionable block:
-
-```
-**Dependency finding:**
-- Category: unused | outdated | duplicate | license | feature-flag
-- Crate: [crate name and version]
-- Issue: [what's wrong]
-- Fix: [specific Cargo.toml change]
-- Delegate: main agent applies Cargo.toml changes directly
-```
 
 | Category | Route |
 |---|---|
@@ -166,10 +93,8 @@ Each finding includes an actionable block:
 
 ### writer-scenarios output
 
-Writer-scenarios produces files directly (like writer-tests/writer-code). Its output is verified by runner-scenarios.
-
 | Result | Route |
 |---|---|
-| Scenarios created, all pass | Done — scenarios are committed with the feature |
+| Scenarios created, all pass | Done — committed with the feature |
 | Scenarios created, some fail | Investigate — may indicate a real bug (route to writer-tests → writer-code) |
 | Compilation failure | Fix scenario code — may need **researcher-rust-errors** |
