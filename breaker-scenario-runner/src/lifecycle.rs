@@ -12,6 +12,7 @@ use breaker::{
     bolt::components::Bolt,
     breaker::components::Breaker,
     input::resources::InputActions,
+    run::node::messages::SpawnNodeComplete,
     shared::{GameState, ScenarioLayoutOverride, SelectedArchetype},
 };
 
@@ -122,6 +123,7 @@ impl Plugin for ScenarioLifecycle {
             .init_resource::<PreviousGameState>()
             .init_resource::<EntityLeakBaseline>()
             .init_resource::<ScenarioStats>()
+            .add_message::<SpawnNodeComplete>()
             .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
             .add_systems(OnEnter(GameState::ChipSelect), auto_skip_chip_select)
             .add_systems(

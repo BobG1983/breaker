@@ -8,6 +8,7 @@ use crate::{
         components::{
             Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BumpState,
         },
+        messages::BreakerSpawned,
         queries::BreakerResetQuery,
         resources::BreakerConfig,
     },
@@ -25,8 +26,10 @@ pub fn spawn_breaker(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     existing: Query<Entity, With<Breaker>>,
+    mut breaker_spawned: MessageWriter<BreakerSpawned>,
 ) {
-    if existing.iter().next().is_some() {
+    if !existing.is_empty() {
+        breaker_spawned.write(BreakerSpawned);
         return;
     }
 
@@ -50,6 +53,7 @@ pub fn spawn_breaker(
         CleanupOnRunEnd,
     ));
     debug!("breaker spawned entity={:?}", entity.id());
+    breaker_spawned.write(BreakerSpawned);
 }
 
 /// Resets breaker state at the start of each node.
@@ -94,6 +98,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_message::<BreakerSpawned>()
             .init_resource::<BreakerConfig>()
             .init_resource::<PlayfieldConfig>()
             .init_resource::<Assets<Mesh>>()
@@ -151,6 +156,18 @@ mod tests {
     }
 
     #[test]
+    fn spawn_breaker_sends_breaker_spawned_message() {
+        let mut app = test_app();
+        app.update();
+
+        let messages = app.world().resource::<Messages<BreakerSpawned>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "spawn_breaker must send BreakerSpawned message"
+        );
+    }
+
+    #[test]
     fn no_double_spawn() {
         let mut app = test_app();
         app.update();
@@ -165,6 +182,22 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 1, "should not double-spawn breaker");
+    }
+
+    #[test]
+    fn existing_breaker_still_sends_breaker_spawned() {
+        let mut app = test_app();
+        app.update(); // First spawn
+
+        // Run spawn_breaker again — breaker already exists
+        app.add_systems(Update, spawn_breaker);
+        app.update();
+
+        let messages = app.world().resource::<Messages<BreakerSpawned>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "spawn_breaker must send BreakerSpawned even when breaker already exists"
+        );
     }
 
     #[test]

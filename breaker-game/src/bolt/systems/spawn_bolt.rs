@@ -6,6 +6,7 @@ use tracing::debug;
 use crate::{
     bolt::{
         components::{Bolt, BoltServing, BoltVelocity},
+        messages::BoltSpawned,
         resources::BoltConfig,
     },
     breaker::{BreakerConfig, components::Breaker},
@@ -29,9 +30,10 @@ pub fn spawn_bolt(
     config: Res<BoltConfig>,
     breaker_config: Res<BreakerConfig>,
     run_state: Res<RunState>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    // Bundled as a tuple to stay within clippy's 7-argument limit.
+    mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
     breaker_query: Query<&Transform, With<Breaker>>,
+    mut bolt_spawned: MessageWriter<BoltSpawned>,
 ) {
     let breaker_y = breaker_query
         .iter()
@@ -54,8 +56,12 @@ pub fn spawn_bolt(
         velocity,
         InterpolateTransform,
         PhysicsTranslation::new(spawn_pos),
-        Mesh2d(meshes.add(Circle::new(1.0))),
-        MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
+        Mesh2d(render_assets.0.add(Circle::new(1.0))),
+        MeshMaterial2d(
+            render_assets
+                .1
+                .add(ColorMaterial::from_color(config.color())),
+        ),
         Transform {
             translation: spawn_pos,
             scale: Vec3::new(config.radius, config.radius, 1.0),
@@ -68,6 +74,8 @@ pub fn spawn_bolt(
     if serving {
         entity.insert(BoltServing);
     }
+
+    bolt_spawned.write(BoltSpawned);
 }
 
 #[cfg(test)]
@@ -78,6 +86,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_message::<BoltSpawned>()
             .init_resource::<BoltConfig>()
             .init_resource::<BreakerConfig>()
             .init_resource::<RunState>()
@@ -183,6 +192,19 @@ mod tests {
     }
 
     #[test]
+    fn spawn_bolt_sends_bolt_spawned_message() {
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let messages = app.world().resource::<Messages<BoltSpawned>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "spawn_bolt must send BoltSpawned message"
+        );
+    }
+
+    #[test]
     fn spawn_does_not_depend_on_breaker_entity() {
         let mut app = test_app();
         // No breaker entity spawned — bolt should still spawn using config
@@ -191,5 +213,30 @@ mod tests {
 
         let count = app.world_mut().query::<&Bolt>().iter(app.world()).count();
         assert_eq!(count, 1, "bolt should spawn even without a breaker entity");
+    }
+
+    #[test]
+    fn bolt_spawns_above_moved_breaker() {
+        let moved_y = -100.0;
+        let mut app = test_app();
+        // Spawn a breaker at a non-default Y position before bolt spawns
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(50.0, moved_y, 0.0)));
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let config = BoltConfig::default();
+        let bolt_transform = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        let expected_y = moved_y + config.spawn_offset_y;
+        assert!(
+            (bolt_transform.translation.y - expected_y).abs() < f32::EPSILON,
+            "bolt should spawn relative to moved breaker y={moved_y}, expected y={expected_y}, got y={}",
+            bolt_transform.translation.y
+        );
     }
 }

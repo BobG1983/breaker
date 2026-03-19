@@ -8,7 +8,7 @@ use crate::{
         components::*,
         resources::{CellConfig, CellTypeRegistry},
     },
-    run::node::{ActiveNodeLayout, NodeLayout},
+    run::node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
     shared::{CleanupOnNodeExit, PlayfieldConfig},
 };
 
@@ -96,8 +96,9 @@ pub fn spawn_cells_from_layout(
     playfield: Res<PlayfieldConfig>,
     layout: Res<ActiveNodeLayout>,
     registry: Res<CellTypeRegistry>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    // Bundled as a tuple to stay within clippy's 7-argument limit.
+    mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
+    mut cells_spawned: MessageWriter<CellsSpawned>,
 ) {
     let count = spawn_cells_from_grid(
         &mut commands,
@@ -105,10 +106,11 @@ pub fn spawn_cells_from_layout(
         &playfield,
         &layout.0,
         &registry,
-        &mut meshes,
-        &mut materials,
+        &mut render_assets.0,
+        &mut render_assets.1,
     );
     debug!("cells spawned count={}", count);
+    cells_spawned.write(CellsSpawned);
 }
 
 #[cfg(test)]
@@ -182,6 +184,7 @@ mod tests {
     fn test_app(layout: NodeLayout) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
             .init_resource::<CellConfig>()
             .init_resource::<PlayfieldConfig>()
             .init_resource::<Assets<Mesh>>()
@@ -249,6 +252,18 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(cell_count, required_count);
+    }
+
+    #[test]
+    fn spawn_cells_sends_cells_spawned_message() {
+        let mut app = test_app(full_layout());
+        app.update();
+
+        let messages = app.world().resource::<Messages<CellsSpawned>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "spawn_cells_from_layout must send CellsSpawned message"
+        );
     }
 
     #[test]
