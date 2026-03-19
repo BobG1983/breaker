@@ -18,7 +18,7 @@ pub fn handle_node_cleared(
     mut run_state: ResMut<RunState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if reader.read().count() == 0 {
+    if reader.read().next().is_none() {
         return;
     }
 
@@ -103,6 +103,8 @@ mod tests {
             format!("{next:?}").contains("ChipSelect"),
             "expected ChipSelect, got: {next:?}"
         );
+        let run_state = app.world().resource::<RunState>();
+        assert!(run_state.transition_queued);
     }
 
     #[test]
@@ -119,6 +121,7 @@ mod tests {
 
         let run_state = app.world().resource::<RunState>();
         assert_eq!(run_state.outcome, RunOutcome::Won);
+        assert!(run_state.transition_queued);
     }
 
     #[test]

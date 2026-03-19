@@ -98,7 +98,7 @@ mod tests {
             .world_mut()
             .resource_mut::<Assets<ArchetypeDefinition>>();
         let h1 = assets.add(make_archetype("Aegis"));
-        let h2 = assets.add(make_archetype("Flux"));
+        let h2 = assets.add(make_archetype("Vortex"));
 
         app.world_mut()
             .insert_resource(make_collection(vec![h1, h2]));
@@ -108,7 +108,7 @@ mod tests {
         let registry = app.world().resource::<ArchetypeRegistry>();
         assert_eq!(registry.archetypes.len(), 2);
         assert!(registry.archetypes.contains_key("Aegis"));
-        assert!(registry.archetypes.contains_key("Flux"));
+        assert!(registry.archetypes.contains_key("Vortex"));
     }
 
     #[test]

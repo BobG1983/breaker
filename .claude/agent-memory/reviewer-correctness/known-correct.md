@@ -47,3 +47,17 @@ type: reference
 - `HeadlessAssetsPlugin` in game.rs added at end of PluginGroupBuilder — ordering safe because asset types are registered during plugin build (before any update tick). AssetPlugin is always added before Game in runner.rs. Correct.
 - `scenario_log_plugin()` return type `LogPlugin` works for both `app.add_plugins()` (headless) and `defaults.set()` (visual with DefaultPlugins). Correct.
 - Double-disable of DebugPlugin in game.rs test_app(Game::headless()): Game::headless().build() disables it; test calls disable() again. Bevy 0.18.1 disable() only panics if plugin absent, not if already disabled. Benign.
+- `tick_node_timer` + `apply_time_penalty` dual `TimerExpired` sends: ordering is TickTimer→ApplyTimePenalty. After `tick_node_timer` brings remaining to 0 and fires, `apply_time_penalty`'s `if remaining <= 0 { continue; }` guard prevents re-fire. Only one TimerExpired fires per tick. Correct.
+- `handle_timer_expired` uses `reader.read().next().is_none()` (drains only first message) — correct; if both tick+penalty fire TimerExpired simultaneously, the second unconsumed message is harmless since `handle_timer_expired` already acted.
+- `handle_node_cleared` empty-registry early return does NOT set `transition_queued` — correct, no transition happened so no yield needed.
+- `run/plugin.rs` ordering: `handle_timer_expired.after(handle_node_cleared)` — confirmed. Simultaneous clear+expiry produces win (clear beats loss). Correct.
+- `animate_fade_out` uses `Time` (variable-rate Update) — correct for visual FX, not gameplay.
+- `check_spawn_complete` uses Local<SpawnChecklist> bitfield — resets after firing, persists across frames for multi-frame arrival. Correct.
+- `update_loading_bar` ratio guard `if global.total > 0` prevents div-by-zero. Correct.
+- `ScriptedInput.actions_for_frame` uses `find()` — O(n) but scripted actions list is short. Correct.
+- `ChaosDriver.actions_for_frame` `roll >= action_prob` → no action: roll in [0,1), so `action_prob=1.0` always fires, `action_prob=0.0` never fires. Correct.
+- `lifecycle/mod.rs` `inject_scenario_input` passes `is_active: true` always — documented intentional for pause-toggle testing in chaos scenarios.
+- `tag_game_entities` runs both in OnEnter(Playing) AND FixedUpdate to tag entities spawned mid-play (e.g. ExtraBolt from Prism). Without<ScenarioTagBolt> filter ensures idempotency. Correct.
+- `apply_debug_setup` uses post-teleport `transform.translation` as ScenarioPhysicsFrozen target — mutation happens before insert, correct.
+- `collect_scenarios_recursive` uses `.extension()` + `.ends_with(".scenario.ron")` double-check — correct; the extension check alone would pass `foo.ron` without `.scenario.` prefix.
+- `run_all_parallel` output order: printed in batch-spawn order, not original run-list order. Acceptable since batches are chunks of original order.

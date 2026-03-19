@@ -20,14 +20,14 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 - **reviewer-correctness** — logic bugs, ECS pitfalls, state machine holes, math
 - **reviewer-quality** — idioms, vocabulary, test coverage, documentation
 - **reviewer-bevy-api** — Bevy API correctness for exact version
+- **reviewer-architecture** — plugin boundaries, message discipline, folder structure, ordering
+- **reviewer-performance** — Bevy-specific performance: queries, archetypes, scheduling
 
 ### Launch conditionally (add to the same single message)
 
 | Condition | Agent |
 |-----------|-------|
-| New system, plugin, or module added | **guard-architecture** |
 | 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** |
-| New components or systems touching many entities | **guard-performance** |
 | New gameplay mechanic or upgrade designed | **guard-game-design** |
 | Phase complete or significant structural change | **guard-docs** |
 

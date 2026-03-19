@@ -84,9 +84,9 @@ Launch all applicable agents simultaneously — they are independent:
 | Always after implementation | **reviewer-correctness** | Logic bugs, ECS pitfalls, state machine holes, math |
 | Always after implementation | **reviewer-quality** | Idioms, vocabulary, test coverage, documentation |
 | Always after implementation | **reviewer-bevy-api** | Verify Bevy API usage is correct for this version |
-| New system, plugin, or module added | **guard-architecture** | Validate plugin boundaries and message discipline |
+| Always after implementation | **reviewer-architecture** | Validate plugin boundaries and message discipline |
+| Always after implementation | **reviewer-performance** | Bevy-specific performance: queries, archetypes, scheduling |
 | 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** | Detect ordering issues and conflicts |
-| New components or systems touching many entities | **guard-performance** | Bevy-specific performance: queries, archetypes, scheduling |
 | New gameplay mechanic or upgrade designed | **guard-game-design** | Validate against design pillars |
 | Phase complete or significant structural change | **guard-docs** | Sync architecture docs, plan/, design/terminology.md |
 
@@ -110,8 +110,8 @@ Launch all applicable agents simultaneously — they are independent:
 ---
 
 **Post-implementation checklist** (run before considering a task done):
-1. Launch **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** in parallel (always)
-2. If new systems/plugins added → also launch **guard-architecture** + **researcher-system-dependencies** in the same parallel wave
+1. Launch **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance** in parallel (always)
+2. If 3+ systems added or cross-plugin data flow → also launch **researcher-system-dependencies** in the same parallel wave
 3. If new gameplay mechanic → also launch **guard-game-design** in the same parallel wave
 4. If phase complete or docs may have drifted → also launch **guard-docs** in the same parallel wave
 5. Run `/simplify` on changed code

@@ -1,6 +1,6 @@
 ---
-name: guard-performance
-description: "Use this agent to review code for Bevy-specific performance issues: archetype fragmentation, inefficient query patterns, hot-path allocations, and scheduling inefficiencies. Focuses on Bevy ECS performance patterns, not general Rust optimization.\n\nExamples:\n\n- After adding new components or systems touching many entities:\n  Assistant: \"Let me use the guard-performance agent to check for archetype fragmentation and query efficiency.\"\n\n- Before completing a phase:\n  Assistant: \"Phase implementation complete. Let me run guard-performance in parallel with runner-tests and code-reviewer.\"\n\n- When adding a system that iterates many entities:\n  Assistant: \"This system queries all cells. Let me use guard-performance to verify the query pattern is efficient.\"\n\n- Parallel note: Run alongside runner-tests, code-reviewer, guard-architecture, and researcher-system-dependencies — all are independent."
+name: reviewer-performance
+description: "Use this agent to review code for Bevy-specific performance issues: archetype fragmentation, inefficient query patterns, hot-path allocations, and scheduling inefficiencies. Focuses on Bevy ECS performance patterns, not general Rust optimization.\n\nExamples:\n\n- After adding new components or systems touching many entities:\n  Assistant: \"Let me use the reviewer-performance agent to check for archetype fragmentation and query efficiency.\"\n\n- Before completing a phase:\n  Assistant: \"Phase implementation complete. Let me run reviewer-performance in parallel with runner-tests and code-reviewer.\"\n\n- When adding a system that iterates many entities:\n  Assistant: \"This system queries all cells. Let me use reviewer-performance to verify the query pattern is efficient.\"\n\n- Parallel note: Run alongside runner-tests, code-reviewer, reviewer-architecture, and researcher-system-dependencies — all are independent."
 tools: Read, Glob, Grep
 model: sonnet
 color: teal
@@ -92,13 +92,13 @@ Err toward **not flagging** things that are fine at current scale. This game has
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/guard-performance/`
+- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/reviewer-performance/`
 
 If changes are needed, **describe** the exact change (file, line, what to change and to what) in your report — but do NOT apply them.
 
 # Persistent Agent Memory
 
-You have a persistent agent memory directory at `.claude/agent-memory/guard-performance/` (relative to the project root). Its contents persist across conversations.
+You have a persistent agent memory directory at `.claude/agent-memory/reviewer-performance/` (relative to the project root). Its contents persist across conversations.
 Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md` (MEMORY.md is always loaded; lines after 200 are truncated).
 
 Build up knowledge about this project's entity scale, established performance patterns, and known hotspots.

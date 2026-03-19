@@ -18,13 +18,13 @@ type: reference
 - **game.rs (as of 2026-03-18, feature/scenario-runner-dedup-summary)**: `game_plugin_group_builds` tests the non-headless path. `headless_game_spawns_no_camera` tests the headless path (no Camera2d spawned). `HeadlessAssetsPlugin` is private — it is implicitly exercised by `headless_game_spawns_no_camera` (the app.update() would fail asset init if the plugin were broken). No standalone `headless_assets_plugin_builds` test exists; acceptable for a private plugin covered transitively.
 - **spawn signal systems (as of 2026-03-18, feature/scenario-runner-dedup-summary)**: New tests added for spawn_bolt, spawn_breaker, spawn_walls, spawn_cells_from_layout, and check_spawn_complete. All cover entity count, message emission, position, and cleanup marker. Known gaps: (1) check_spawn_complete does not test each individual missing signal — only tests 2-of-4 missing. (2) spawn_breaker `no_double_spawn` test checks entity count but not that BreakerSpawned is still sent when a breaker already exists (that path is critical for the coordinator). (3) check_no_entity_leaks (EntityLeakBaseline) has no test for baseline reset on a second SpawnNodeComplete (node transition). (4) message debug format tests in messages.rs files are low-value (derive coverage) but not a gap.
 - **render_assets tuple pattern**: `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` used in spawn_bolt and spawn_cells_from_layout — intentional Bevy workaround for multiple ResMut borrows. Do not flag.
-- **bolt/queries.rs**: Module doc misleading (says "clippy type_complexity lint" when real reason is convention). Flag if seen.
+- **bolt/queries.rs**: Module doc misleading (says "clippy type_complexity lint" when real reason is convention). Flagged in 2026-03-18 full-codebase review — still unresolved.
 - **update_timer_display.rs**: `total == 0.0` divide-by-zero path untested.
 - **read_input.rs**: `repeat: true` key event filter path untested.
 
 ## Lifecycle Tests (2026-03-17, updated 2026-03-18)
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
-Known gap (as of 2026-03-18): `allow_early_end: false` path (`restart_run_on_end` system) has no unit test. The branch is covered only by the 13 stress scenario RON files running in integration. A unit test should exercise the `OnEnter(GameState::RunEnd)` → `GameState::MainMenu` transition directly.
+`restart_run_on_end` gap was closed — `restart_run_on_end_transitions_to_main_menu` test exists at `breaker-scenario-runner/src/lifecycle/tests.rs:808`. No longer a gap.
 
 ## Documentation Conventions
 - Module-level `//!` doc comments on all `.rs` files.
