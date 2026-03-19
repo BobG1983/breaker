@@ -280,6 +280,10 @@ pub(super) fn run_scenario(
 ///
 /// Returns `false` if the buffer is empty (no snapshot captured), any health
 /// check fails, any invariant violation is unexpected, or any log was captured.
+///
+/// Poison recovery on the mutex lock is intentional: if the snapshot writer
+/// panicked, we still evaluate whatever partial data was captured (or report
+/// the missing-snapshot failure) rather than propagating the panic.
 fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose: bool) -> bool {
     let mut verdict = ScenarioVerdict::default();
 
@@ -394,4 +398,51 @@ pub fn guarded_update(app: &mut App) -> Result<(), String> {
             .or_else(|| payload.downcast_ref::<String>().cloned())
             .unwrap_or_else(|| "unknown panic".to_owned())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{InputStrategy, ScriptedParams};
+
+    #[test]
+    fn collect_and_evaluate_fails_when_no_snapshot() {
+        let buffer = SharedEvalBuffer(Arc::new(Mutex::new(None)));
+        let passed = collect_and_evaluate(&buffer, "test_scenario", false);
+        assert!(!passed, "should fail when no snapshot was captured");
+    }
+
+    #[test]
+    fn collect_and_evaluate_passes_with_clean_snapshot() {
+        let definition = ScenarioDefinition {
+            breaker: "test".into(),
+            layout: "test".into(),
+            input: InputStrategy::Scripted(ScriptedParams {
+                actions: vec![],
+            }),
+            max_frames: 100,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: None,
+            invariant_params: default(),
+            allow_early_end: true,
+        };
+        let stats = ScenarioStats {
+            actions_injected: 0,
+            invariant_checks: 10,
+            max_frame: 50,
+            entered_playing: true,
+            bolts_tagged: 1,
+            breakers_tagged: 1,
+        };
+        let snapshot = EvalSnapshot {
+            violations: vec![],
+            logs: vec![],
+            stats,
+            definition,
+        };
+        let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
+        let passed = collect_and_evaluate(&buffer, "test_scenario", false);
+        assert!(passed, "should pass with clean snapshot and empty scripted actions");
+    }
 }

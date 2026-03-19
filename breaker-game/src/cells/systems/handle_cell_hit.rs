@@ -22,9 +22,11 @@ pub(crate) fn handle_cell_hit(
     mut commands: Commands,
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut despawned: Local<Vec<Entity>>,
 ) {
-    // Small vec suffices — MAX_BOUNCES = 4 limits hits per frame
-    let mut despawned = Vec::<Entity>::new();
+    // Local<Vec> reuses its heap allocation across frames — zero allocs after warmup.
+    // Bounded by MAX_BOUNCES hits per frame.
+    despawned.clear();
     for hit in reader.read() {
         if despawned.contains(&hit.cell) {
             continue;
@@ -253,6 +255,24 @@ mod tests {
         assert!(
             !captured.0[0].was_required_to_clear,
             "non-required cell should set was_required_to_clear = false"
+        );
+    }
+
+    #[test]
+    fn double_hit_multi_hp_cell_decrements_twice() {
+        let mut app = test_app();
+        let cell = spawn_cell(&mut app, 3);
+
+        app.init_resource::<TestMessages>();
+        app.world_mut().resource_mut::<TestMessages>().0 =
+            vec![BoltHitCell { cell }, BoltHitCell { cell }];
+        app.add_systems(FixedUpdate, enqueue_all.before(handle_cell_hit));
+        tick(&mut app);
+
+        let health = app.world().get::<CellHealth>(cell).unwrap();
+        assert_eq!(
+            health.current, 1,
+            "two hits on a 3-HP cell should leave 1 HP"
         );
     }
 

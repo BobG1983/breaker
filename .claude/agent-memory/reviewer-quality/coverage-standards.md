@@ -19,7 +19,9 @@ type: reference
 - **spawn signal systems (as of 2026-03-18, feature/scenario-runner-dedup-summary)**: New tests added for spawn_bolt, spawn_breaker, spawn_walls, spawn_cells_from_layout, and check_spawn_complete. All cover entity count, message emission, position, and cleanup marker. Known gaps: (1) check_spawn_complete does not test each individual missing signal — only tests 2-of-4 missing. (2) spawn_breaker `no_double_spawn` test checks entity count but not that BreakerSpawned is still sent when a breaker already exists (that path is critical for the coordinator). (3) check_no_entity_leaks (EntityLeakBaseline) has no test for baseline reset on a second SpawnNodeComplete (node transition). (4) message debug format tests in messages.rs files are low-value (derive coverage) but not a gap.
 - **render_assets tuple pattern**: `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` used in spawn_bolt and spawn_cells_from_layout — intentional Bevy workaround for multiple ResMut borrows. Do not flag.
 - **bolt/queries.rs**: Module doc misleading (says "clippy type_complexity lint" when real reason is convention). Flagged in 2026-03-18 full-codebase review — still unresolved.
-- **update_timer_display.rs**: `total == 0.0` divide-by-zero path untested.
+- **update_timer_display.rs**: `total == 0.0` divide-by-zero path — CLOSED in 2026-03-19 Local<Vec> perf fix PR (`total_zero_does_not_divide_by_zero` test added).
+- **valid_breaker_state.rs (Settling→Dashing)**: Legal `Settling → Dashing` transition untested — CLOSED in 2026-03-19 PR (`valid_breaker_state_does_not_fire_on_settling_to_dashing` test added). Braking→Settling also added in same PR.
+- **runner/app.rs `collect_and_evaluate` empty-buffer path**: CLOSED in 2026-03-19 PR (`collect_and_evaluate_fails_when_no_snapshot` test added). Remaining gap: happy-path where a snapshot IS present and passes/fails is still not unit-tested (tested only via full integration runs).
 - **read_input.rs**: `repeat: true` key event filter path untested.
 
 ## Lifecycle Tests (2026-03-17, updated 2026-03-18)

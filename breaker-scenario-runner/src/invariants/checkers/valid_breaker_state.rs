@@ -383,6 +383,37 @@ mod tests {
         );
     }
 
+    /// `Braking → Settling` is the natural deceleration completion. It should be
+    /// legal and produce no violation.
+    #[test]
+    fn valid_breaker_state_does_not_fire_on_braking_to_settling() {
+        let mut app = test_app_valid_breaker_state();
+
+        let entity = app
+            .world_mut()
+            .spawn((ScenarioTagBreaker, BreakerState::Braking))
+            .id();
+
+        // Tick 1: seeds Local with Braking
+        tick(&mut app);
+
+        // Transition to Settling (legal: Braking → Settling)
+        *app.world_mut()
+            .entity_mut(entity)
+            .get_mut::<BreakerState>()
+            .unwrap() = BreakerState::Settling;
+
+        // Tick 2: Braking → Settling should be legal
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            log.0.is_empty(),
+            "expected no violation for Braking→Settling (legal), got: {:?}",
+            log.0.iter().map(|e| &e.message).collect::<Vec<_>>()
+        );
+    }
+
     /// `Dashing → Settling` is the dash-cancel transition triggered by a perfect
     /// bump. It should be legal and produce no violation.
     #[test]
