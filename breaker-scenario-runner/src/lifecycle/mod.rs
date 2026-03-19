@@ -12,10 +12,10 @@ mod tests;
 
 use bevy::prelude::*;
 use breaker::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
+    bolt::{BoltSystems, components::Bolt},
+    breaker::{BreakerSystems, components::Breaker},
     input::resources::InputActions,
-    run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete},
+    run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
     shared::{GameState, SelectedArchetype},
 };
 
@@ -131,9 +131,16 @@ impl Plugin for ScenarioLifecycle {
             .add_systems(OnEnter(GameState::ChipSelect), auto_skip_chip_select)
             .add_systems(
                 OnEnter(GameState::Playing),
-                (init_scenario_input, tag_game_entities, apply_debug_setup)
+                (
+                    init_scenario_input,
+                    ApplyDeferred,
+                    tag_game_entities,
+                    apply_debug_setup,
+                )
                     .chain()
-                    .after(breaker::bolt::systems::init_bolt_params),
+                    .after(BoltSystems::InitParams)
+                    .after(BreakerSystems::Reset)
+                    .after(NodeSystems::InitTimer),
             )
             // Input injection runs in FixedPreUpdate so it executes after
             // clear_input_actions (FixedPostUpdate of previous tick) and before

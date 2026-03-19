@@ -38,7 +38,9 @@ impl Plugin for BreakerPlugin {
                     init_breaker_params
                         .after(spawn_breaker)
                         .in_set(BreakerSystems::InitParams),
-                    reset_breaker.after(BreakerSystems::InitParams),
+                    reset_breaker
+                        .after(BreakerSystems::InitParams)
+                        .in_set(BreakerSystems::Reset),
                 ),
             )
             .add_systems(

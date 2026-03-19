@@ -11,11 +11,14 @@
 //!   `cargo scenario -- --all -p 4`
 //!   `cargo scenario -- --all --serial`
 //!   `cargo scenario -- --all --loop 3`
+//!   `cargo scenario -- -s prism_scatter -p 10`        (stress test: 10 parallel copies)
+//!   `cargo scenario -- -s prism_scatter -p 10 -l 3`   (30 total: 3 rounds of 10)
 
 use std::process;
 
 use breaker_scenario_runner::runner::{
-    Parallelism, build_run_list, parse_parallelism, run_all_parallel, run_all_serial, run_with_args,
+    Parallelism, build_run_list, parse_parallelism, replicate_run_list, run_all_parallel,
+    run_all_serial, run_with_args,
 };
 use clap::Parser;
 
@@ -41,13 +44,27 @@ fn main() {
     let loop_count = args.loops.unwrap_or(1);
     let headless = !args.visual;
 
-    // Fast path: single scenario, no loop → in-process, no subprocess overhead.
-    if args.scenario.is_some() && !args.all && loop_count == 1 && !args.execution.serial {
+    // Fast path: single scenario, no parallelism flag, no loop → in-process, no subprocess overhead.
+    if args.scenario.is_some()
+        && !args.all
+        && loop_count == 1
+        && !args.execution.serial
+        && args.execution.parallel.is_none()
+    {
         let exit_code = run_with_args(args.scenario.as_deref(), headless, args.verbose);
         process::exit(exit_code);
     }
 
-    let runs = build_run_list(args.scenario.as_deref(), args.all);
+    // -s <name> -p <n>: replicate scenario n times for stress testing.
+    let copies = if !args.all && args.scenario.is_some() && args.execution.parallel.is_some() {
+        match &parallelism {
+            Parallelism::Count(n) => *n,
+            Parallelism::All => 1,
+        }
+    } else {
+        1
+    };
+    let runs = replicate_run_list(build_run_list(args.scenario.as_deref(), args.all), copies);
     if runs.is_empty() {
         eprintln!("No scenarios found. Use -s <name> or --all.");
         process::exit(1);

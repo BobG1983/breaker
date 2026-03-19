@@ -35,6 +35,8 @@ cargo scenario -- --all -p all       # All scenarios, unlimited parallelism
 cargo scenario -- --all --serial     # All scenarios, in-process sequential
 cargo scenario -- --all --loop 10    # All scenarios 10 times
 cargo scenario -- -s aegis_chaos     # Single scenario, in-process
+cargo scenario -- -s prism_scatter -p 10      # Stress test: 10 parallel copies
+cargo scenario -- -s prism_scatter -p 10 -l 3 # 30 total: 3 rounds of 10
 ```
 
 `--serial` and `--parallel` are mutually exclusive.

@@ -36,7 +36,7 @@ impl Plugin for NodePlugin {
                     set_active_layout,
                     spawn_cells_from_layout.in_set(NodeSystems::Spawn),
                     init_clear_remaining,
-                    init_node_timer,
+                    init_node_timer.in_set(NodeSystems::InitTimer),
                 )
                     .chain(),
             )

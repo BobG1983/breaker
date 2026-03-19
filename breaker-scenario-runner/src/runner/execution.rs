@@ -76,6 +76,22 @@ pub fn build_run_list(scenario: Option<&str>, all: bool) -> Vec<(String, PathBuf
         .collect()
 }
 
+/// Replicates a run list `copies` times for stress-testing a single scenario.
+///
+/// When `copies <= 1`, returns the original list unchanged. `copies == 0` is
+/// treated the same as `copies == 1` — the original list is returned rather
+/// than an empty `Vec`, matching the caller's invariant that the list always
+/// contains at least one run.
+///
+/// Used by `-s <name> -p <n>` to run the same scenario `n` times in parallel.
+#[must_use]
+pub fn replicate_run_list(runs: Vec<(String, PathBuf)>, copies: usize) -> Vec<(String, PathBuf)> {
+    if copies <= 1 {
+        return runs;
+    }
+    (0..copies).flat_map(|_| runs.iter().cloned()).collect()
+}
+
 /// Runs a single scenario in-process. Returns process exit code (0 = pass, 1 = fail).
 #[must_use]
 pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i32 {

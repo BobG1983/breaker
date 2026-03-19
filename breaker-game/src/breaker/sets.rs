@@ -9,6 +9,8 @@ pub enum BreakerSystems {
     Move,
     /// The `init_breaker_params` system — stamps config-derived components on the breaker entity.
     InitParams,
+    /// The `reset_breaker` system — resets breaker position and state on node entry.
+    Reset,
 }
 
 #[cfg(test)]

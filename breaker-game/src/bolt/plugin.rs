@@ -31,7 +31,12 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltSpawned>()
             .add_systems(
                 OnEnter(GameState::Playing),
-                (spawn_bolt, init_bolt_params.after(spawn_bolt)),
+                (
+                    spawn_bolt,
+                    init_bolt_params
+                        .after(spawn_bolt)
+                        .in_set(BoltSystems::InitParams),
+                ),
             )
             .add_systems(
                 FixedUpdate,

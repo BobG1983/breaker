@@ -9,7 +9,9 @@ use super::{
     app::{
         SharedEvalBuffer, drain_remaining_logs, guarded_update, is_timed_out, snapshot_eval_data,
     },
-    execution::{Parallelism, build_run_list, parse_parallelism, print_summary},
+    execution::{
+        Parallelism, build_run_list, parse_parallelism, print_summary, replicate_run_list,
+    },
     output::{group_logs, group_violations, is_invariant_fail_reason},
 };
 use crate::{
@@ -519,4 +521,57 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
     assert_eq!(snapshot.violations[0].frame, 42);
     assert_eq!(snapshot.stats.max_frame, 500);
     assert_eq!(snapshot.stats.actions_injected, 100);
+}
+
+// -------------------------------------------------------------------------
+// replicate_run_list — stress-testing a single scenario with -s + -p
+// -------------------------------------------------------------------------
+
+#[test]
+fn replicate_run_list_with_copies_returns_n_copies() {
+    let runs = vec![(
+        "test_scenario".to_owned(),
+        std::path::PathBuf::from("scenarios/test.scenario.ron"),
+    )];
+    let replicated = replicate_run_list(runs, 5);
+    assert_eq!(
+        replicated.len(),
+        5,
+        "replicate_run_list with copies=5 should return 5 entries, got {}",
+        replicated.len()
+    );
+    for (i, (name, _)) in replicated.iter().enumerate() {
+        assert_eq!(
+            name, "test_scenario",
+            "entry {i} should have the original name"
+        );
+    }
+}
+
+#[test]
+fn replicate_run_list_with_one_copy_returns_original() {
+    let runs = vec![("a".to_owned(), std::path::PathBuf::from("a.ron"))];
+    let replicated = replicate_run_list(runs, 1);
+    assert_eq!(replicated.len(), 1);
+    assert_eq!(replicated[0].0, "a");
+}
+
+#[test]
+fn replicate_run_list_with_zero_copies_returns_original() {
+    let runs = vec![("a".to_owned(), std::path::PathBuf::from("a.ron"))];
+    let replicated = replicate_run_list(runs, 0);
+    assert_eq!(replicated.len(), 1);
+    assert_eq!(replicated[0].0, "a");
+}
+
+#[test]
+fn replicate_run_list_multi_entry_with_copies_preserves_order() {
+    let runs = vec![
+        ("a".to_owned(), std::path::PathBuf::from("a.ron")),
+        ("b".to_owned(), std::path::PathBuf::from("b.ron")),
+    ];
+    let replicated = replicate_run_list(runs, 3);
+    assert_eq!(replicated.len(), 6, "2 entries × 3 copies = 6");
+    let names: Vec<&str> = replicated.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(names, vec!["a", "b", "a", "b", "a", "b"]);
 }

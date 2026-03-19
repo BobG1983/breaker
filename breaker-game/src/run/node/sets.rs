@@ -18,4 +18,6 @@ pub enum NodeSystems {
     /// order `.after(NodeSystems::ApplyTimePenalty)` to see penalty-induced
     /// expirations in the same tick.
     ApplyTimePenalty,
+    /// The `init_node_timer` system — initializes the node countdown timer.
+    InitTimer,
 }

@@ -78,6 +78,20 @@ impl PlayfieldConfig {
     pub const fn background_color(&self) -> Color {
         color_from_rgb(self.background_color_rgb)
     }
+
+    /// Clamps a bolt position to within playfield bounds minus bolt radius.
+    ///
+    /// The bottom is intentionally open (no floor wall) so the bolt can exit
+    /// through the bottom during life-loss. Only left, right, and top are clamped.
+    #[must_use]
+    pub fn clamp_bolt_position(&self, position: Vec2, radius: f32) -> Vec2 {
+        Vec2::new(
+            position
+                .x
+                .clamp(self.left() + radius, self.right() - radius),
+            position.y.min(self.top() - radius),
+        )
+    }
 }
 
 /// Top-level game state machine.
@@ -206,6 +220,66 @@ mod tests {
         let config = PlayfieldConfig::default();
         assert!((config.right() - config.left() - config.width).abs() < f32::EPSILON);
         assert!((config.top() - config.bottom() - config.height).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn clamp_bolt_position_clamps_past_right_wall() {
+        let config = PlayfieldConfig::default();
+        let radius = 8.0;
+        let clamped = config.clamp_bolt_position(Vec2::new(500.0, 0.0), radius);
+        assert!(
+            (clamped.x - (config.right() - radius)).abs() < f32::EPSILON,
+            "x should be clamped to right - radius, got {}",
+            clamped.x
+        );
+    }
+
+    #[test]
+    fn clamp_bolt_position_clamps_past_left_wall() {
+        let config = PlayfieldConfig::default();
+        let radius = 8.0;
+        let clamped = config.clamp_bolt_position(Vec2::new(-500.0, 0.0), radius);
+        assert!(
+            (clamped.x - (config.left() + radius)).abs() < f32::EPSILON,
+            "x should be clamped to left + radius, got {}",
+            clamped.x
+        );
+    }
+
+    #[test]
+    fn clamp_bolt_position_clamps_past_top_wall() {
+        let config = PlayfieldConfig::default();
+        let radius = 8.0;
+        let clamped = config.clamp_bolt_position(Vec2::new(0.0, 500.0), radius);
+        assert!(
+            (clamped.y - (config.top() - radius)).abs() < f32::EPSILON,
+            "y should be clamped to top - radius, got {}",
+            clamped.y
+        );
+    }
+
+    #[test]
+    fn clamp_bolt_position_does_not_clamp_bottom() {
+        let config = PlayfieldConfig::default();
+        let radius = 8.0;
+        let clamped = config.clamp_bolt_position(Vec2::new(0.0, -1000.0), radius);
+        assert!(
+            (clamped.y - (-1000.0)).abs() < f32::EPSILON,
+            "y should NOT be clamped at bottom (open floor), got {}",
+            clamped.y
+        );
+    }
+
+    #[test]
+    fn clamp_bolt_position_within_bounds_unchanged() {
+        let config = PlayfieldConfig::default();
+        let radius = 8.0;
+        let pos = Vec2::new(100.0, 50.0);
+        let clamped = config.clamp_bolt_position(pos, radius);
+        assert!(
+            (clamped - pos).length() < f32::EPSILON,
+            "position within bounds should be unchanged"
+        );
     }
 
     #[test]
