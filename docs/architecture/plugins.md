@@ -72,6 +72,16 @@ src/
 
 **Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `PhysicsSystems` (`physics/sets.rs`), `BehaviorSystems` (`behaviors/sets.rs`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). See [ordering.md](ordering.md) for the full table and usage rules.
 
+## Chip Effect — Justified Cross-Domain Component Reads
+
+Chip effect components (defined in `chips/components.rs`) are stamped onto bolt and breaker entities and read by production systems in other domains. This is an accepted pattern, not a violation:
+
+- **physics** reads `Piercing`, `PiercingRemaining`, and `DamageBoost` from bolt entities in `bolt_cell_collision` — needed for pierce lookahead (comparing effective damage against `CellHealth` to decide whether the bolt passes through or reflects). Physics also reads `CellHealth` from cells domain entities for this same pierce lookahead.
+- **cells** reads `DamageBoost` from bolt entities in `handle_cell_hit` — computes `BASE_BOLT_DAMAGE * (1.0 + boost)` damage per hit.
+- **breaker** reads `WidthBoost`, `TiltControlBoost`, `BreakerSpeedBoost`, and `BumpForceBoost` from breaker entities — these components are on the same entity the breaker domain already owns.
+
+These are **read-only cross-entity queries** (normal ECS) — the chips domain still owns the components and stamps them; other domains only read. No domain writes to another domain's canonical components. The `debug/` domain exception (read AND write across all domains) is separate and more permissive.
+
 ## Debug Domain — Cross-Domain Exception
 
 The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:

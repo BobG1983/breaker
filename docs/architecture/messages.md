@@ -7,7 +7,7 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 | Message | Sent By | Consumed By |
 |---------|---------|-------------|
 | `BoltHitBreaker { bolt }` | physics | breaker (grade_bump) |
-| `BoltHitCell { cell }` | physics | cells (handle_cell_hit) |
+| `BoltHitCell { cell, bolt }` | physics | cells (handle_cell_hit) |
 | `BoltLost` | physics | bolt (spawn_bolt_lost_text), behaviors (bridge_bolt_lost) |
 | `BumpPerformed { grade, multiplier }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), behaviors (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text) |

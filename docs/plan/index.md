@@ -31,7 +31,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
 - [Phase 4: Vertical Slice — Mini-Run](phase-4/index.md) — 4 waves, 8 sessions
   - **Wave 1 — Foundations** (Sessions 1-2)
     - [~~4a: Seeded RNG & Run Seed~~](done/phase-4/phase-4a-seeded-rng.md) — **Done**
-    - [4b: Chip Effect System](phase-4/phase-4b-chip-effects.md) (~~4b.1 types/stacking~~ **Done**, 4b.2 per-domain effects remains)
+    - [~~4b: Chip Effect System~~](phase-4/phase-4b-chip-effects.md) — **Done** (~~4b.1 types/stacking~~, ~~4b.2 per-domain effects~~)
   - **Wave 2 — Core Systems** (Sessions 3-6)
     - [4c: Chip Pool & Rarity](phase-4/phase-4c-chip-pool.md) (4c.1 rarity/inventory, 4c.2 RON authoring, 4c.3 synergy review)
     - [4d: Trigger/Effect Architecture](phase-4/phase-4d-trigger-effect.md) (4d.1 types, 4d.2 bolt behaviors, 4d.3 shockwave, 4d.4 Surge POC)
