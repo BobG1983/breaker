@@ -82,7 +82,7 @@ pub(crate) struct ChipDefinition {
 #[cfg(test)]
 impl ChipDefinition {
     /// Build a test chip with full control over effect and stacking.
-    pub fn test(name: &str, kind: ChipKind, effect: ChipEffect, max_stacks: u32) -> Self {
+    pub(crate) fn test(name: &str, kind: ChipKind, effect: ChipEffect, max_stacks: u32) -> Self {
         Self {
             name: name.to_owned(),
             kind,
@@ -94,7 +94,7 @@ impl ChipDefinition {
     }
 
     /// Build a simple test chip with `Overclock` effect and `max_stacks` = 1.
-    pub fn test_simple(name: &str, kind: ChipKind) -> Self {
+    pub(crate) fn test_simple(name: &str, kind: ChipKind) -> Self {
         Self::test(name, kind, ChipEffect::Overclock, 1)
     }
 }

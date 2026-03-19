@@ -14,7 +14,6 @@ mod tilt_control_boost;
 mod width_boost;
 
 use bevy::prelude::*;
-
 pub(crate) use bolt_size_boost::handle_bolt_size_boost;
 pub(crate) use bolt_speed_boost::handle_bolt_speed_boost;
 pub(crate) use breaker_speed_boost::handle_breaker_speed_boost;
