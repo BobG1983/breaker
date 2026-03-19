@@ -20,7 +20,7 @@ pub fn reset_run_state(
 ) {
     *run_state = RunState::default();
     if let Some(s) = seed.0 {
-        rng.0 = ChaCha8Rng::seed_from_u64(s);
+        *rng = GameRng::from_seed(s);
         info!("run started seed={s}");
     } else {
         rng.0 = ChaCha8Rng::from_os_rng();

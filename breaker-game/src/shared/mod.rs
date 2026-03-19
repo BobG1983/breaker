@@ -138,8 +138,8 @@ pub struct CleanupOnRunEnd;
 /// Deterministic RNG for gameplay randomness.
 ///
 /// Initialized at app start with a fixed seed (deterministic for tests).
-/// Reseeded with OS entropy at the start of each run by `reset_run_state`.
-/// Phase 4 will add user-selectable seeds for deterministic replays.
+/// Reseeded at run start by `reset_run_state` using [`RunSeed`]
+/// (user-controlled) or OS entropy when no seed is set.
 #[derive(Resource)]
 pub struct GameRng(pub ChaCha8Rng);
 
