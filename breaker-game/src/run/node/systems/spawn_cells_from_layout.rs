@@ -118,8 +118,9 @@ mod tests {
     use super::*;
     use crate::{
         cells::{
+            CellTypeDefinition,
             components::{Cell, CellHealth, CellHeight, CellTypeAlias, CellWidth, RequiredToClear},
-            resources::{CellTypeDefinition, CellTypeRegistry},
+            resources::CellTypeRegistry,
         },
         run::node::{ActiveNodeLayout, NodeLayout},
     };
@@ -131,7 +132,7 @@ mod tests {
             CellTypeDefinition {
                 id: "standard".to_owned(),
                 alias: 'S',
-                hp: 1,
+                hp: 1.0,
                 color_rgb: [4.0, 0.2, 0.5],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,
@@ -145,7 +146,7 @@ mod tests {
             CellTypeDefinition {
                 id: "tough".to_owned(),
                 alias: 'T',
-                hp: 3,
+                hp: 3.0,
                 color_rgb: [2.5, 0.2, 4.0],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,
@@ -228,15 +229,15 @@ mod tests {
         let mut found_standard = false;
         let mut found_tough = false;
         for health in app.world_mut().query::<&CellHealth>().iter(app.world()) {
-            if health.max == 1 {
+            if (health.max - 1.0).abs() < f32::EPSILON {
                 found_standard = true;
             }
-            if health.max == 3 {
+            if (health.max - 3.0).abs() < f32::EPSILON {
                 found_tough = true;
             }
         }
-        assert!(found_standard, "should have standard cells (hp=1)");
-        assert!(found_tough, "should have tough cells (hp=3)");
+        assert!(found_standard, "should have standard cells (hp=1.0)");
+        assert!(found_tough, "should have tough cells (hp=3.0)");
     }
 
     #[test]

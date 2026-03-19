@@ -64,7 +64,7 @@ mod tests {
         CellTypeDefinition {
             id: id.to_owned(),
             alias,
-            hp: 1,
+            hp: 1.0,
             color_rgb: [1.0, 1.0, 1.0],
             required_to_clear: true,
             damage_hdr_base: 1.0,

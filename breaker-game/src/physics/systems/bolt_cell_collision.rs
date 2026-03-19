@@ -63,12 +63,7 @@ pub(crate) fn bolt_cell_collision(
         let mut remaining = velocity.length() * dt;
 
         // Effective damage for pierce lookahead (compared against cell HP).
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "BASE_BOLT_DAMAGE is 10 — exact in f32"
-        )]
-        let effective_damage =
-            (BASE_BOLT_DAMAGE as f32 * (1.0 + damage_boost.map_or(0.0, |b| b.0))).round();
+        let effective_damage = BASE_BOLT_DAMAGE * (1.0 + damage_boost.map_or(0.0, |b| b.0));
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
@@ -135,9 +130,7 @@ pub(crate) fn bolt_cell_collision(
                     .ok()
                     .and_then(|(_, _, _, _, health)| health)
                     .map(|h| h.current);
-                let would_destroy = cell_hp.is_some_and(|hp| {
-                    f32::from(u16::try_from(hp).unwrap_or(u16::MAX)) <= effective_damage
-                });
+                let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
 
                 if can_pierce && would_destroy {
                     // PIERCE: do NOT reflect; decrement remaining pierces
@@ -842,7 +835,7 @@ mod tests {
     // --- Piercing chip effect tests ---
 
     /// Spawns a cell with explicit [`CellHealth`] for piercing lookahead tests.
-    fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: u32) -> Entity {
+    fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
         let (cw, ch) = default_cell_dims();
         app.world_mut()
             .spawn((
@@ -867,7 +860,7 @@ mod tests {
 
         let cell_y = 100.0;
         // CellHealth(30) — bolt deals base 10, survives.
-        spawn_cell_with_health(&mut app, 0.0, cell_y, 30);
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
 
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
@@ -909,7 +902,7 @@ mod tests {
             .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
         let cell_y = 100.0;
-        spawn_cell_with_health(&mut app, 0.0, cell_y, 10);
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
 
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         let bolt_entity = app
@@ -962,7 +955,7 @@ mod tests {
         let cc = CellConfig::default();
 
         let cell_y = 100.0;
-        spawn_cell_with_health(&mut app, 0.0, cell_y, 30);
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
 
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         let bolt_entity = app
@@ -1009,7 +1002,7 @@ mod tests {
         let cc = CellConfig::default();
 
         let cell_y = 100.0;
-        spawn_cell_with_health(&mut app, 0.0, cell_y, 12);
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 12.0);
 
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         let bolt_entity = app
@@ -1060,8 +1053,8 @@ mod tests {
         // Place bolt below both cells, moving upward at high speed
         let near_cell_y = 60.0;
         let far_cell_y = 90.0;
-        spawn_cell_with_health(&mut app, 0.0, near_cell_y, 10);
-        spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10);
+        spawn_cell_with_health(&mut app, 0.0, near_cell_y, 10.0);
+        spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10.0);
 
         let start_y = near_cell_y - bc.radius - 25.0; // well below cell A
         let bolt_entity = app
@@ -1104,8 +1097,8 @@ mod tests {
 
         let left_cell_y = 100.0;
         let right_cell_y = 100.0;
-        spawn_cell_with_health(&mut app, -100.0, left_cell_y, 10);
-        spawn_cell_with_health(&mut app, 100.0, right_cell_y, 10);
+        spawn_cell_with_health(&mut app, -100.0, left_cell_y, 10.0);
+        spawn_cell_with_health(&mut app, 100.0, right_cell_y, 10.0);
 
         let start_y = left_cell_y - cc.height / 2.0 - bc.radius - 2.0;
 

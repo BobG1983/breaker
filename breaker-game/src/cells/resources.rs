@@ -6,6 +6,8 @@ use bevy::prelude::*;
 use breaker_derive::GameConfig;
 use serde::Deserialize;
 
+use super::definition::CellTypeDefinition;
+
 /// Cell defaults loaded from RON — shared grid layout properties only.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "CellConfig")]
@@ -28,37 +30,6 @@ impl Default for CellDefaults {
             padding_x: 4.0,
             padding_y: 4.0,
         }
-    }
-}
-
-/// A cell type definition loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub struct CellTypeDefinition {
-    /// Unique identifier.
-    pub id: String,
-    /// Single-char alias used in node layout grids.
-    pub alias: char,
-    /// Hit points for this cell type.
-    pub hp: u32,
-    /// HDR RGB color.
-    pub color_rgb: [f32; 3],
-    /// Whether this cell counts toward node completion.
-    pub required_to_clear: bool,
-    /// HDR intensity multiplier for damaged cells at full health.
-    pub damage_hdr_base: f32,
-    /// Minimum green channel value for damage color feedback.
-    pub damage_green_min: f32,
-    /// Blue channel range added based on health fraction.
-    pub damage_blue_range: f32,
-    /// Base blue channel value for damage color feedback.
-    pub damage_blue_base: f32,
-}
-
-impl CellTypeDefinition {
-    /// Cell color as a Bevy [`Color`].
-    #[must_use]
-    pub const fn color(&self) -> Color {
-        crate::shared::color_from_rgb(self.color_rgb)
     }
 }
 
@@ -108,7 +79,7 @@ mod tests {
                     "{}: alias must not be '.'",
                     path.display()
                 );
-                assert!(def.hp > 0, "{}: hp must be > 0", path.display());
+                assert!(def.hp > 0.0, "{}: hp must be > 0.0", path.display());
             }
         }
     }
@@ -118,7 +89,7 @@ mod tests {
         let def_a = CellTypeDefinition {
             id: "a".to_owned(),
             alias: 'S',
-            hp: 1,
+            hp: 1.0,
             color_rgb: [1.0, 0.0, 0.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -129,7 +100,7 @@ mod tests {
         let def_b = CellTypeDefinition {
             id: "b".to_owned(),
             alias: 'S',
-            hp: 2,
+            hp: 2.0,
             color_rgb: [0.0, 1.0, 0.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,

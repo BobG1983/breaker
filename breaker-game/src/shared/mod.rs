@@ -12,7 +12,7 @@ use rand_chacha::ChaCha8Rng;
 use serde::Deserialize;
 
 /// Base damage dealt by a bolt hit. Fixed game-design constant.
-pub const BASE_BOLT_DAMAGE: u32 = 10;
+pub const BASE_BOLT_DAMAGE: f32 = 10.0;
 
 /// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
 #[must_use]
@@ -240,6 +240,6 @@ mod tests {
 
     #[test]
     fn base_bolt_damage_equals_10() {
-        assert_eq!(BASE_BOLT_DAMAGE, 10);
+        assert!((BASE_BOLT_DAMAGE - 10.0_f32).abs() < f32::EPSILON);
     }
 }

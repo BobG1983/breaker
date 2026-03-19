@@ -40,14 +40,7 @@ pub(crate) fn handle_cell_hit(
         };
 
         let boost = bolt_query.get(hit.bolt).map_or(0.0_f32, |b| b.0);
-        #[expect(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            clippy::cast_precision_loss,
-            reason = "BASE_BOLT_DAMAGE is 10 — exact in f32; result is small positive, fits u32"
-        )]
-        let destroyed =
-            health.take_damage((BASE_BOLT_DAMAGE as f32 * (1.0 + boost)).round() as u32);
+        let destroyed = health.take_damage(BASE_BOLT_DAMAGE * (1.0 + boost));
 
         if destroyed {
             commands.entity(hit.cell).despawn();
@@ -134,7 +127,7 @@ mod tests {
         }
     }
 
-    fn spawn_cell(app: &mut App, hp: u32) -> Entity {
+    fn spawn_cell(app: &mut App, hp: f32) -> Entity {
         let material = app
             .world_mut()
             .resource_mut::<Assets<ColorMaterial>>()
@@ -156,7 +149,7 @@ mod tests {
             .id()
     }
 
-    fn spawn_optional_cell(app: &mut App, hp: u32, required: bool) -> Entity {
+    fn spawn_optional_cell(app: &mut App, hp: f32, required: bool) -> Entity {
         let material = app
             .world_mut()
             .resource_mut::<Assets<ColorMaterial>>()
@@ -182,7 +175,7 @@ mod tests {
     #[test]
     fn standard_cell_destroyed_on_hit() {
         let mut app = test_app();
-        let cell = spawn_cell(&mut app, 10);
+        let cell = spawn_cell(&mut app, 10.0);
 
         app.insert_resource(TestMessage(Some(BoltHitCell {
             cell,
@@ -201,7 +194,7 @@ mod tests {
     #[test]
     fn tough_cell_survives_one_hit() {
         let mut app = test_app();
-        let cell = spawn_cell(&mut app, 30);
+        let cell = spawn_cell(&mut app, 30.0);
 
         app.insert_resource(TestMessage(Some(BoltHitCell {
             cell,
@@ -216,13 +209,17 @@ mod tests {
             "tough cell should survive one hit"
         );
         let health = app.world().get::<CellHealth>(cell).unwrap();
-        assert_eq!(health.current, 20);
+        assert!(
+            (health.current - 20.0).abs() < f32::EPSILON,
+            "30.0-HP cell after 10 damage should have 20.0 HP, got {}",
+            health.current
+        );
     }
 
     #[test]
     fn destroyed_message_includes_required_to_clear() {
         let mut app = test_app();
-        let cell = spawn_optional_cell(&mut app, 10, true);
+        let cell = spawn_optional_cell(&mut app, 10.0, true);
 
         app.init_resource::<CapturedDestroyed>();
         app.insert_resource(TestMessage(Some(BoltHitCell {
@@ -253,7 +250,7 @@ mod tests {
     #[test]
     fn destroyed_message_false_for_non_required_cell() {
         let mut app = test_app();
-        let cell = spawn_optional_cell(&mut app, 10, false);
+        let cell = spawn_optional_cell(&mut app, 10.0, false);
 
         app.init_resource::<CapturedDestroyed>();
         app.insert_resource(TestMessage(Some(BoltHitCell {
@@ -284,7 +281,7 @@ mod tests {
     #[test]
     fn double_hit_multi_hp_cell_decrements_twice() {
         let mut app = test_app();
-        let cell = spawn_cell(&mut app, 30);
+        let cell = spawn_cell(&mut app, 30.0);
 
         app.init_resource::<TestMessages>();
         app.world_mut().resource_mut::<TestMessages>().0 = vec![
@@ -301,16 +298,17 @@ mod tests {
         tick(&mut app);
 
         let health = app.world().get::<CellHealth>(cell).unwrap();
-        assert_eq!(
-            health.current, 10,
-            "two hits on a 30-HP cell should leave 10 HP"
+        assert!(
+            (health.current - 10.0).abs() < f32::EPSILON,
+            "two hits on a 30.0-HP cell should leave 10.0 HP, got {}",
+            health.current
         );
     }
 
     #[test]
     fn double_hit_same_cell_only_destroys_once() {
         let mut app = test_app();
-        let cell = spawn_optional_cell(&mut app, 10, true);
+        let cell = spawn_optional_cell(&mut app, 10.0, true);
 
         app.init_resource::<CapturedDestroyed>();
         app.init_resource::<TestMessages>();
@@ -353,11 +351,11 @@ mod tests {
 
     #[test]
     fn no_damage_boost_deals_base_bolt_damage_10() {
-        // Bolt with NO DamageBoost component hits a 10-HP cell — cell is destroyed.
+        // Bolt with NO DamageBoost component hits a 10.0-HP cell — cell is destroyed.
         // Verifies fallback path: system reads BASE_BOLT_DAMAGE (10) when no DamageBoost.
         let mut app = test_app();
         let bolt = spawn_bolt_no_boost(&mut app);
-        let cell = spawn_cell(&mut app, 10);
+        let cell = spawn_cell(&mut app, 10.0);
 
         app.init_resource::<CapturedDestroyed>();
         app.insert_resource(TestMessage(Some(BoltHitCell { cell, bolt })));
@@ -384,10 +382,10 @@ mod tests {
 
     #[test]
     fn damage_boost_0_5_deals_15_damage_destroys_15hp_cell() {
-        // DamageBoost(0.5) → damage = 10 * (1.0 + 0.5) = 15. Destroys a 15-HP cell.
+        // DamageBoost(0.5) → damage = 10 * (1.0 + 0.5) = 15. Destroys a 15.0-HP cell.
         let mut app = test_app();
         let bolt = spawn_bolt_with_boost(&mut app, 0.5);
-        let cell = spawn_cell(&mut app, 15);
+        let cell = spawn_cell(&mut app, 15.0);
 
         app.init_resource::<CapturedDestroyed>();
         app.insert_resource(TestMessage(Some(BoltHitCell { cell, bolt })));
@@ -414,10 +412,10 @@ mod tests {
 
     #[test]
     fn damage_boost_0_5_does_not_destroy_16hp_cell() {
-        // Edge case: DamageBoost(0.5) → 15 damage. A 16-HP cell survives with 1 HP.
+        // Edge case: DamageBoost(0.5) → 15 damage. A 16.0-HP cell survives with 1.0 HP.
         let mut app = test_app();
         let bolt = spawn_bolt_with_boost(&mut app, 0.5);
-        let cell = spawn_cell(&mut app, 16);
+        let cell = spawn_cell(&mut app, 16.0);
 
         app.insert_resource(TestMessage(Some(BoltHitCell { cell, bolt })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -425,21 +423,22 @@ mod tests {
 
         assert!(
             app.world().get_entity(cell).is_ok(),
-            "DamageBoost(0.5) deals 15 damage — 16-HP cell must survive"
+            "DamageBoost(0.5) deals 15 damage — 16.0-HP cell must survive"
         );
         let health = app.world().get::<CellHealth>(cell).unwrap();
-        assert_eq!(
-            health.current, 1,
-            "16-HP cell with 15 damage should have 1 HP remaining"
+        assert!(
+            (health.current - 1.0).abs() < f32::EPSILON,
+            "16.0-HP cell with 15 damage should have 1.0 HP remaining, got {}",
+            health.current
         );
     }
 
     #[test]
     fn damage_boost_1_0_deals_20_damage_destroys_20hp_cell() {
-        // DamageBoost(1.0) → damage = 10 * (1.0 + 1.0) = 20. Destroys a 20-HP cell.
+        // DamageBoost(1.0) → damage = 10 * (1.0 + 1.0) = 20. Destroys a 20.0-HP cell.
         let mut app = test_app();
         let bolt = spawn_bolt_with_boost(&mut app, 1.0);
-        let cell = spawn_cell(&mut app, 20);
+        let cell = spawn_cell(&mut app, 20.0);
 
         app.init_resource::<CapturedDestroyed>();
         app.insert_resource(TestMessage(Some(BoltHitCell { cell, bolt })));
@@ -472,8 +471,8 @@ mod tests {
         let mut app = test_app();
         let bolt_a = spawn_bolt_with_boost(&mut app, 1.0);
         let bolt_b = spawn_bolt_no_boost(&mut app);
-        let cell_a = spawn_cell(&mut app, 30);
-        let cell_b = spawn_cell(&mut app, 30);
+        let cell_a = spawn_cell(&mut app, 30.0);
+        let cell_b = spawn_cell(&mut app, 30.0);
 
         app.init_resource::<TestMessages>();
         app.world_mut().resource_mut::<TestMessages>().0 = vec![
@@ -490,15 +489,17 @@ mod tests {
         tick(&mut app);
 
         let health_a = app.world().get::<CellHealth>(cell_a).unwrap();
-        assert_eq!(
-            health_a.current, 10,
-            "cell A hit by bolt with DamageBoost(1.0): 30 - 20 = 10 HP"
+        assert!(
+            (health_a.current - 10.0).abs() < f32::EPSILON,
+            "cell A hit by bolt with DamageBoost(1.0): 30.0 - 20 = 10.0 HP, got {}",
+            health_a.current
         );
 
         let health_b = app.world().get::<CellHealth>(cell_b).unwrap();
-        assert_eq!(
-            health_b.current, 20,
-            "cell B hit by bolt with no DamageBoost: 30 - 10 = 20 HP"
+        assert!(
+            (health_b.current - 20.0).abs() < f32::EPSILON,
+            "cell B hit by bolt with no DamageBoost: 30.0 - 10 = 20.0 HP, got {}",
+            health_b.current
         );
     }
 
@@ -514,7 +515,7 @@ mod tests {
         // Additionally, exactly 1 CellDestroyed must be sent across both ticks.
         let mut app = test_app();
         let bolt = spawn_bolt_with_boost(&mut app, 0.5);
-        let cell = spawn_optional_cell(&mut app, 15, true);
+        let cell = spawn_optional_cell(&mut app, 15.0, true);
 
         app.init_resource::<CapturedDestroyed>();
         // Tick 1: send first BoltHitCell

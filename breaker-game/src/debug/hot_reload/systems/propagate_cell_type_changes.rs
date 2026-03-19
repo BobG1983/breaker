@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{
-        components::*,
-        resources::{CellTypeDefinition, CellTypeRegistry},
-    },
+    cells::{CellTypeDefinition, components::*, resources::CellTypeRegistry},
     screen::loading::resources::DefaultsCollection,
 };
 
@@ -78,7 +75,7 @@ mod tests {
         CellTypeDefinition {
             id: "standard".to_owned(),
             alias: 'S',
-            hp: 1,
+            hp: 1.0,
             color_rgb: [4.0, 0.2, 0.5],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -92,7 +89,7 @@ mod tests {
         CellTypeDefinition {
             id: "tough".to_owned(),
             alias: 'T',
-            hp: 3,
+            hp: 3.0,
             color_rgb: [2.5, 0.2, 4.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -159,7 +156,7 @@ mod tests {
             .spawn((
                 Cell,
                 CellTypeAlias('S'),
-                CellHealth::new(1),
+                CellHealth::new(1.0),
                 CellDamageVisuals {
                     hdr_base: 4.0,
                     green_min: 0.2,
@@ -181,7 +178,7 @@ mod tests {
         {
             let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.hp = 5;
+            asset.hp = 5.0;
             asset.damage_hdr_base = 8.0;
         }
 
@@ -190,10 +187,13 @@ mod tests {
         app.update();
 
         let health = app.world().get::<CellHealth>(entity).unwrap();
-        assert_eq!(health.max, 5, "CellHealth.max should be updated to 5");
-        assert_eq!(
-            health.current, 1,
-            "CellHealth.current should be clamped to new max (but was already <= 5)"
+        assert!(
+            (health.max - 5.0).abs() < f32::EPSILON,
+            "CellHealth.max should be updated to 5.0"
+        );
+        assert!(
+            (health.current - 1.0).abs() < f32::EPSILON,
+            "CellHealth.current should be clamped to new max (but was already <= 5.0)"
         );
 
         let visuals = app.world().get::<CellDamageVisuals>(entity).unwrap();
@@ -235,7 +235,7 @@ mod tests {
             .spawn((
                 Cell,
                 CellTypeAlias('T'),
-                CellHealth::new(3),
+                CellHealth::new(3.0),
                 CellDamageVisuals {
                     hdr_base: 4.0,
                     green_min: 0.2,
@@ -256,7 +256,7 @@ mod tests {
         {
             let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
             let asset = assets.get_mut(s_handle.id()).expect("asset should exist");
-            asset.hp = 10;
+            asset.hp = 10.0;
         }
 
         app.update();
@@ -264,9 +264,9 @@ mod tests {
 
         // 'T' cell should be unchanged
         let health = app.world().get::<CellHealth>(t_entity).unwrap();
-        assert_eq!(
-            health.max, 3,
-            "Tough cell max HP should remain 3 since only standard was modified"
+        assert!(
+            (health.max - 3.0).abs() < f32::EPSILON,
+            "Tough cell max HP should remain 3.0 since only standard was modified"
         );
     }
 
@@ -290,13 +290,16 @@ mod tests {
             mats.add(ColorMaterial::from_color(Color::WHITE))
         };
 
-        // Spawn cell with current=3, max=3
+        // Spawn cell with current=3.0, max=3.0
         let entity = app
             .world_mut()
             .spawn((
                 Cell,
                 CellTypeAlias('T'),
-                CellHealth { current: 3, max: 3 },
+                CellHealth {
+                    current: 3.0,
+                    max: 3.0,
+                },
                 CellDamageVisuals {
                     hdr_base: 4.0,
                     green_min: 0.2,
@@ -313,20 +316,20 @@ mod tests {
         app.update();
         app.update();
 
-        // Reduce HP from 3 to 1 — current should clamp
+        // Reduce HP from 3.0 to 1.0 — current should clamp
         {
             let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.hp = 1;
+            asset.hp = 1.0;
         }
 
         app.update();
         app.update();
 
         let health = app.world().get::<CellHealth>(entity).unwrap();
-        assert_eq!(health.max, 1);
-        assert_eq!(
-            health.current, 1,
+        assert!((health.max - 1.0).abs() < f32::EPSILON);
+        assert!(
+            (health.current - 1.0).abs() < f32::EPSILON,
             "current health should be clamped to new max"
         );
     }

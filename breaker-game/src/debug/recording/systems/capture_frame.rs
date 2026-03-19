@@ -52,7 +52,7 @@ mod tests {
     use super::*;
     use crate::{
         input::resources::GameAction,
-        run::node::resources::{ActiveNodeLayout, NodeLayout},
+        run::node::{ActiveNodeLayout, NodeLayout},
     };
 
     #[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
