@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{
         components::{Bolt, BoltSpawnOffsetY},
-        filters::ServingBoltFilter,
+        filters::ServingFilter,
     },
     breaker::components::Breaker,
 };
@@ -16,7 +16,7 @@ use crate::{
 /// the breaker's X position so the player can choose their opening angle.
 pub fn hover_bolt(
     breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
-    mut bolt_query: Query<(&mut Transform, &BoltSpawnOffsetY), ServingBoltFilter>,
+    mut bolt_query: Query<(&mut Transform, &BoltSpawnOffsetY), ServingFilter>,
 ) {
     let Ok(breaker_tf) = breaker_query.single() else {
         return;

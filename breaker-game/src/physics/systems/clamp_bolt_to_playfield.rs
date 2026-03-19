@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{
         components::{BoltRadius, BoltVelocity},
-        filters::ActiveBoltFilter,
+        filters::ActiveFilter,
     },
     shared::{PlayfieldConfig, math::CCD_EPSILON},
 };
@@ -21,7 +21,7 @@ use crate::{
 /// playfield are handled by [`bolt_lost`].
 pub(crate) fn clamp_bolt_to_playfield(
     playfield: Res<PlayfieldConfig>,
-    mut bolt_query: Query<(&mut Transform, &mut BoltVelocity, &BoltRadius), ActiveBoltFilter>,
+    mut bolt_query: Query<(&mut Transform, &mut BoltVelocity, &BoltRadius), ActiveFilter>,
 ) {
     for (mut tf, mut vel, radius) in &mut bolt_query {
         let r = radius.0;

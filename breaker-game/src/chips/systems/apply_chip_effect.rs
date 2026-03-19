@@ -10,29 +10,11 @@ use crate::{
     chips::{
         components::*,
         definition::{AmpEffect, AugmentEffect, ChipEffect},
+        queries::{EffectQueryBolt, EffectQueryBreaker},
         resources::ChipRegistry,
     },
     ui::messages::ChipSelected,
 };
-
-/// Data tuple for bolt entities — entity plus all Amp effect components (optional).
-type BoltEffectData = (
-    Entity,
-    Option<&'static mut Piercing>,
-    Option<&'static mut DamageBoost>,
-    Option<&'static mut BoltSpeedBoost>,
-    Option<&'static mut ChainHit>,
-    Option<&'static mut BoltSizeBoost>,
-);
-
-/// Data tuple for breaker entities — entity plus all Augment effect components (optional).
-type BreakerEffectData = (
-    Entity,
-    Option<&'static mut WidthBoost>,
-    Option<&'static mut BreakerSpeedBoost>,
-    Option<&'static mut BumpForceBoost>,
-    Option<&'static mut TiltControlBoost>,
-);
 
 /// Reads [`ChipSelected`] messages, looks up the chip definition in the
 /// [`ChipRegistry`], and inserts or updates effect components on the
@@ -45,8 +27,8 @@ type BreakerEffectData = (
 pub(crate) fn apply_chip_effect(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
-    mut bolt_query: Query<BoltEffectData, With<Bolt>>,
-    mut breaker_query: Query<BreakerEffectData, With<Breaker>>,
+    mut bolt_query: Query<EffectQueryBolt, With<Bolt>>,
+    mut breaker_query: Query<EffectQueryBreaker, With<Breaker>>,
     mut commands: Commands,
 ) {
     let Some(registry) = registry else {

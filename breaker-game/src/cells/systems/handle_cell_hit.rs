@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{components::Cell, messages::CellDestroyed, queries::CellDamageVisualQuery},
+    cells::{components::Cell, messages::CellDestroyed, queries::DamageVisualQuery},
     physics::messages::BoltHitCell,
 };
 
@@ -18,7 +18,7 @@ use crate::{
 /// cell are skipped to prevent duplicate [`CellDestroyed`] messages.
 pub(crate) fn handle_cell_hit(
     mut reader: MessageReader<BoltHitCell>,
-    mut cell_query: Query<CellDamageVisualQuery, With<Cell>>,
+    mut cell_query: Query<DamageVisualQuery, With<Cell>>,
     mut commands: Commands,
     mut destroyed_writer: MessageWriter<CellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,

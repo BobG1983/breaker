@@ -9,7 +9,7 @@ use crate::{
             Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BumpState,
         },
         messages::BreakerSpawned,
-        queries::BreakerResetQuery,
+        queries::ResetQuery,
         resources::BreakerConfig,
     },
     interpolate::components::{InterpolateTransform, PhysicsTranslation},
@@ -61,10 +61,7 @@ pub fn spawn_breaker(
 /// Runs when entering [`GameState::Playing`]. Returns breaker to center,
 /// clears velocity/tilt/state. On the first node, `spawn_breaker` handles
 /// initialization — this system is a no-op if no breaker exists yet.
-pub fn reset_breaker(
-    playfield: Res<PlayfieldConfig>,
-    mut query: Query<BreakerResetQuery, With<Breaker>>,
-) {
+pub fn reset_breaker(playfield: Res<PlayfieldConfig>, mut query: Query<ResetQuery, With<Breaker>>) {
     // Robust if PlayfieldConfig is ever offset from world origin
     let center_x = f32::midpoint(playfield.left(), playfield.right());
     for (mut transform, mut state, mut velocity, mut tilt, mut timer, mut bump, base_y, physics) in

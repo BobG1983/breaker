@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
-pub type BreakerMovementQuery = (
+pub type MovementQuery = (
     &'static mut Transform,
     &'static mut BreakerVelocity,
     &'static BreakerState,
@@ -26,7 +26,7 @@ pub type BreakerMovementQuery = (
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
-pub type BreakerDashQuery = (
+pub type DashQuery = (
     &'static mut BreakerState,
     &'static mut BreakerVelocity,
     &'static mut BreakerTilt,
@@ -45,7 +45,7 @@ pub type BreakerDashQuery = (
 );
 
 /// Breaker reset data — mutable state cleared at node start.
-pub type BreakerResetQuery = (
+pub type ResetQuery = (
     &'static mut Transform,
     &'static mut BreakerState,
     &'static mut BreakerVelocity,
@@ -81,7 +81,7 @@ pub type BumpGradingQuery = (
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.
 #[cfg(feature = "dev")]
-pub type BreakerBumpTelemetryQuery = (
+pub type BumpTelemetryQuery = (
     &'static BreakerState,
     &'static BumpState,
     &'static BreakerTilt,

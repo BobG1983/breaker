@@ -16,14 +16,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{
-        components::{BoltRadius, BoltVelocity},
-        filters::ActiveBoltFilter,
-    },
-    cells::components::{CellHeight, CellWidth},
+    bolt::filters::ActiveFilter,
     physics::{
-        filters::{CellCollisionFilter, WallCollisionFilter},
+        filters::{CollisionFilterCell, CollisionFilterWall},
         messages::BoltHitCell,
+        queries::{CollisionQueryBolt, CollisionQueryCell},
     },
     shared::math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
     wall::components::WallSize,
@@ -38,17 +35,14 @@ use crate::{
 /// messages for each cell hit. Wall hits reflect only.
 pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
-    mut bolt_query: Query<
-        (Entity, &mut Transform, &mut BoltVelocity, &BoltRadius),
-        ActiveBoltFilter,
-    >,
-    cell_query: Query<(Entity, &Transform, &CellWidth, &CellHeight), CellCollisionFilter>,
-    wall_query: Query<(Entity, &Transform, &WallSize), WallCollisionFilter>,
+    mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
+    cell_query: Query<CollisionQueryCell, CollisionFilterCell>,
+    wall_query: Query<(Entity, &Transform, &WallSize), CollisionFilterWall>,
     mut hit_writer: MessageWriter<BoltHitCell>,
 ) {
     let dt = time.delta_secs();
 
-    for (_bolt_entity, mut bolt_tf, mut bolt_vel, bolt_radius) in &mut bolt_query {
+    for (_bolt_entity, mut bolt_tf, mut bolt_vel, _, bolt_radius) in &mut bolt_query {
         let r = bolt_radius.0;
         let mut position = bolt_tf.translation.truncate();
         let mut velocity = bolt_vel.value;
@@ -123,10 +117,13 @@ mod tests {
     use super::*;
     use crate::{
         bolt::{
-            components::{Bolt, BoltRadius, BoltServing},
+            components::{Bolt, BoltBaseSpeed, BoltRadius, BoltServing, BoltVelocity},
             resources::BoltConfig,
         },
-        cells::{components::Cell, resources::CellConfig},
+        cells::{
+            components::{Cell, CellHeight, CellWidth},
+            resources::CellConfig,
+        },
         wall::components::{Wall, WallSize},
     };
 
@@ -140,8 +137,9 @@ mod tests {
         app
     }
 
-    fn default_bolt_radius() -> BoltRadius {
-        BoltRadius(BoltConfig::default().radius)
+    fn bolt_param_bundle() -> (BoltBaseSpeed, BoltRadius) {
+        let bc = BoltConfig::default();
+        (BoltBaseSpeed(bc.base_speed), BoltRadius(bc.radius))
     }
 
     fn default_cell_dims() -> (CellWidth, CellHeight) {
@@ -178,7 +176,7 @@ mod tests {
         let speed = 400.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, speed),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -212,7 +210,7 @@ mod tests {
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -258,7 +256,7 @@ mod tests {
         let start_x = cell_x - cc.width / 2.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1), // mostly horizontal
             Transform::from_xyz(start_x, 0.0, 0.0),
         ));
@@ -293,7 +291,7 @@ mod tests {
         let start_y = cell_bottom - 1.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -335,7 +333,7 @@ mod tests {
         let start_y = near_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -372,7 +370,7 @@ mod tests {
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -395,7 +393,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 300.0),
             Transform::from_xyz(0.0, -100.0, 0.0),
         ));
@@ -435,7 +433,7 @@ mod tests {
         let start_y = upper_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -471,7 +469,7 @@ mod tests {
         let start_x = right_x - cc.width / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(400.0, 10.0),
             Transform::from_xyz(start_x, cell_y, 0.0),
         ));
@@ -509,7 +507,7 @@ mod tests {
         let start_y = base_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(30.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));
@@ -546,7 +544,7 @@ mod tests {
         // Bolt in the channel, moving up very fast
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.1, 800.0),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
@@ -577,14 +575,14 @@ mod tests {
         // Bolt A near cell A
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(-100.0, start_y, 0.0),
         ));
         // Bolt B near cell B
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(100.0, start_y, 0.0),
         ));
@@ -609,7 +607,7 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
-                default_bolt_radius(),
+                bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
                 Transform::from_xyz(0.0, 0.0, 0.0),
             ))
@@ -650,7 +648,7 @@ mod tests {
         let start_x = 200.0 - 50.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1),
             Transform::from_xyz(start_x, 0.0, 0.0),
         ));
@@ -682,7 +680,7 @@ mod tests {
         let start_x = 200.0 - 50.0 - bc.radius - 5.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1),
             Transform::from_xyz(start_x, 0.0, 0.0),
         ));
@@ -712,7 +710,7 @@ mod tests {
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         app.world_mut().spawn((
             Bolt,
-            default_bolt_radius(),
+            bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             Transform::from_xyz(0.0, start_y, 0.0),
         ));

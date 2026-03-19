@@ -4,14 +4,9 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    bolt::{
-        components::{Bolt, BoltVelocity},
-        filters::ActiveBoltFilter,
-        queries::BoltLostQuery,
-    },
-    breaker::components::Breaker,
+    bolt::{components::BoltVelocity, filters::ActiveFilter, queries::LostQuery},
     interpolate::components::PhysicsTranslation,
-    physics::messages::BoltLost,
+    physics::{filters::CollisionFilterBreaker, messages::BoltLost},
     shared::{GameRng, PlayfieldConfig},
 };
 
@@ -35,8 +30,8 @@ pub(crate) fn bolt_lost(
     mut commands: Commands,
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
-    bolt_query: Query<BoltLostQuery, ActiveBoltFilter>,
-    breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
+    bolt_query: Query<LostQuery, ActiveFilter>,
+    breaker_query: Query<&Transform, CollisionFilterBreaker>,
     mut writer: MessageWriter<BoltLost>,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
@@ -94,12 +89,15 @@ pub(crate) fn bolt_lost(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::{
-        components::{
-            Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-            BoltVelocity, ExtraBolt,
+    use crate::{
+        bolt::{
+            components::{
+                Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
+                BoltVelocity, ExtraBolt,
+            },
+            resources::BoltConfig,
         },
-        resources::BoltConfig,
+        breaker::components::Breaker,
     };
 
     fn test_app() -> App {

@@ -12,7 +12,7 @@ use crate::{
             BreakerStateTimer, BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier,
             DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
         },
-        queries::BreakerDashQuery,
+        queries::DashQuery,
     },
     input::resources::{GameAction, InputActions},
 };
@@ -41,7 +41,7 @@ struct DashParams<'a> {
 pub fn update_breaker_state(
     actions: Res<InputActions>,
     time: Res<Time<Fixed>>,
-    mut query: Query<BreakerDashQuery, With<Breaker>>,
+    mut query: Query<DashQuery, With<Breaker>>,
 ) {
     let dt = time.delta_secs();
 

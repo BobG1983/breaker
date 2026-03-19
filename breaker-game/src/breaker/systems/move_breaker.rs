@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     breaker::{
         components::{Breaker, BreakerState},
-        queries::BreakerMovementQuery,
+        queries::MovementQuery,
     },
     input::resources::{GameAction, InputActions},
     shared::PlayfieldConfig,
@@ -20,7 +20,7 @@ pub fn move_breaker(
     actions: Res<InputActions>,
     playfield: Res<PlayfieldConfig>,
     time: Res<Time<Fixed>>,
-    mut query: Query<BreakerMovementQuery, With<Breaker>>,
+    mut query: Query<MovementQuery, With<Breaker>>,
 ) {
     let dt = time.delta_secs();
 
