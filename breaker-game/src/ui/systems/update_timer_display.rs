@@ -89,4 +89,19 @@ mod tests {
         // 5/60 = 0.083 — below urgent (0.15)
         assert_eq!(color.0, config.color_for_fraction(5.0 / 60.0));
     }
+
+    #[test]
+    fn total_zero_does_not_divide_by_zero() {
+        let mut app = test_app(5.0, 0.0);
+        let config = TimerUiConfig::default();
+        let entity = spawn_display(&mut app);
+        app.update();
+
+        let text = app.world().entity(entity).get::<Text>().unwrap();
+        assert_eq!(text.0, "5");
+
+        // fraction should be 0.0 when total is zero
+        let color = app.world().entity(entity).get::<TextColor>().unwrap();
+        assert_eq!(color.0, config.color_for_fraction(0.0));
+    }
 }

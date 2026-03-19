@@ -108,6 +108,27 @@ during the `Loading` phase when entities may not yet exist.
 
 ---
 
+## BoltInBounds — prism_scatter sustained violation (pre-existing, unrelated to asset race)
+
+**First observed:** 2026-03-19 (Local<Vec> refactor run)
+**Violation:** BoltInBounds x1570 frames 6830..7689 (~1.8/frame for 859 frames)
+**Scenario:** Prism + Scatter layout + Chaos(seed=47, action_prob=0.3)
+
+Multiple extra bolts simultaneously outside playfield bounds for sustained period.
+The `Local<Vec>` change in `bolt_lost` / `handle_cell_hit` is NOT the cause — both
+systems call `.clear()` at frame start (fully equivalent to per-frame allocation).
+
+Root cause not yet confirmed. Working hypothesis: under Scatter layout with many cells
+destroyed, extra Prism bolts encounter a degenerate reflection state (velocity
+compounding or wall-exit without `bolt_lost` triggering). Unique to Scatter + Prism +
+seed 47; does not appear in prism_stress, prism_fortress, prism_concurrent_hits,
+prism_accumulation, or prism_bolt_stabilization.
+
+**Confidence: MEDIUM** — physics root cause not yet read; `bolt_cell_collision` and
+wall-reflection math in `shared::math` are the most likely suspects.
+
+---
+
 ## Note: `invariants` field in RON is documentation-only
 
 All invariant check systems run for every scenario unconditionally. The

@@ -196,6 +196,14 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `init_asset::<ColorMaterial>()` — valid; `AssetPlugin` is added first in tuple so AssetServer is live; partial registration intentional (no GPU extraction needed)
 - `MinimalPlugins` includes `TaskPoolPlugin` + `TimePlugin` + `ScheduleRunnerPlugin` — confirmed
 
+## Local<T> System Parameter
+- `Local<T>` requires `T: FromWorld + Send + 'static`
+- Blanket impl: `impl<T: Default> FromWorld for T` — so `Local<Vec<U>>` is valid and auto-initializes to `Vec::new()`
+- Each system gets its own isolated instance; value persists across frames
+- Fully composable with any other SystemParam: Commands, Query, Res, ResMut, MessageReader, MessageWriter, other Locals
+- No ordering constraints relative to other params
+- Pattern confirmed correct: `mut local: Local<Vec<(Entity, f32, f32, f32, bool)>>` with `.clear()` + `.extend()` + `.iter()` — idiomatic scratch-buffer pattern; reuses heap allocation after warmup
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

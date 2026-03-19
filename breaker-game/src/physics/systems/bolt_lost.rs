@@ -15,6 +15,17 @@ use crate::{
     shared::{GameRng, PlayfieldConfig},
 };
 
+/// Collected data for a single lost bolt, used as scratch storage between
+/// the filter pass and the command-application pass.
+#[derive(Clone, Copy)]
+pub(crate) struct LostBoltEntry {
+    entity: Entity,
+    base_speed: f32,
+    respawn_offset: f32,
+    angle_spread: f32,
+    is_extra: bool,
+}
+
 /// Detects when the bolt falls below the playfield.
 ///
 /// Baseline bolts (without [`ExtraBolt`]) are respawned above the breaker.
@@ -27,40 +38,46 @@ pub(crate) fn bolt_lost(
     bolt_query: Query<BoltLostQuery, ActiveBoltFilter>,
     breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
     mut writer: MessageWriter<BoltLost>,
+    mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
     let Ok(breaker_transform) = breaker_query.single() else {
         return;
     };
     let breaker_pos = breaker_transform.translation;
 
-    // Collect lost bolts to avoid mutable borrow conflicts with despawn
-    let lost_bolts: Vec<_> = bolt_query
-        .iter()
-        .filter(|(_, tf, _, _, radius, ..)| tf.translation.y < playfield.bottom() - radius.0)
-        .map(
-            |(entity, _, _, base_speed, _, respawn_offset, angle_spread, is_extra)| {
-                (
-                    entity,
-                    base_speed.0,
-                    respawn_offset.0,
-                    angle_spread.0,
-                    is_extra,
-                )
-            },
-        )
-        .collect();
+    // Collect lost bolts to avoid mutable borrow conflicts with despawn.
+    // Local<Vec> reuses its heap allocation across frames — zero allocs after warmup.
+    lost_bolts.clear();
+    lost_bolts.extend(
+        bolt_query
+            .iter()
+            .filter(|(_, tf, _, _, radius, ..)| tf.translation.y < playfield.bottom() - radius.0)
+            .map(
+                |(entity, _, _, base_speed, _, respawn_offset, angle_spread, is_extra)| {
+                    LostBoltEntry {
+                        entity,
+                        base_speed: base_speed.0,
+                        respawn_offset: respawn_offset.0,
+                        angle_spread: angle_spread.0,
+                        is_extra,
+                    }
+                },
+            ),
+    );
 
-    for (entity, base_speed, respawn_offset, angle_spread, is_extra) in lost_bolts {
+    for entry in &*lost_bolts {
         writer.write(BoltLost);
 
-        if is_extra {
-            commands.entity(entity).despawn();
+        if entry.is_extra {
+            commands.entity(entry.entity).despawn();
         } else {
             // Respawn above breaker
-            let angle = rng.0.random_range(-angle_spread..=angle_spread);
-            let new_velocity = Vec2::new(base_speed * angle.sin(), base_speed * angle.cos());
-            let new_pos = Vec3::new(breaker_pos.x, breaker_pos.y + respawn_offset, 1.0);
-            commands.entity(entity).insert((
+            let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);
+            // Angle from vertical: sin→X, cos→Y; positive Y is upward.
+            let new_velocity =
+                Vec2::new(entry.base_speed * angle.sin(), entry.base_speed * angle.cos());
+            let new_pos = Vec3::new(breaker_pos.x, breaker_pos.y + entry.respawn_offset, 1.0);
+            commands.entity(entry.entity).insert((
                 Transform::from_xyz(new_pos.x, new_pos.y, new_pos.z),
                 BoltVelocity {
                     value: new_velocity,

@@ -61,3 +61,8 @@ type: reference
 - `apply_debug_setup` uses post-teleport `transform.translation` as ScenarioPhysicsFrozen target — mutation happens before insert, correct.
 - `collect_scenarios_recursive` uses `.extension()` + `.ends_with(".scenario.ron")` double-check — correct; the extension check alone would pass `foo.ron` without `.scenario.` prefix.
 - `run_all_parallel` output order: printed in batch-spawn order, not original run-list order. Acceptable since batches are chunks of original order.
+- `Local<Vec<T>>.clear()` AFTER early return in `bolt_lost` (breaker_query.single() fails): stale data is never acted upon on frames where the early return fires; clear executes before extend and before the iteration loop on frames that proceed. No logic error.
+- `Local<Vec<Entity>>` in `handle_cell_hit` as despawn-guard: `.clear()` is the first statement, so stale entities from previous frames are always erased before any `.contains()` call. Pattern correct.
+- `bolt_lost` `for &(entity, base_speed, respawn_offset, angle_spread, is_extra) in lost_bolts.iter()`: all tuple members are `Copy` (Entity, f32, f32, f32, bool). The `&(...)` destructuring pattern correctly copies all values. Correct.
+- `collect_and_evaluate` with empty SharedEvalBuffer (`None`): `.take()` returns `None`, else branch adds fail reason, `verdict.passed()` returns false. Test `collect_and_evaluate_fails_when_no_snapshot` covers this correctly.
+- `valid_breaker_state_does_not_fire_on_braking_to_settling`: `Braking → Settling` is in the legal set. Test correctly seeds on tick 1, transitions before tick 2, asserts no violation. Correct.
