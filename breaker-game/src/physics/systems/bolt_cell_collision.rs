@@ -25,10 +25,7 @@ use crate::{
         filters::{CellCollisionFilter, WallCollisionFilter},
         messages::BoltHitCell,
     },
-    shared::{
-        PlayfieldConfig,
-        math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
-    },
+    shared::math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
     wall::components::WallSize,
 };
 
@@ -41,7 +38,6 @@ use crate::{
 /// messages for each cell hit. Wall hits reflect only.
 pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
-    playfield: Res<PlayfieldConfig>,
     mut bolt_query: Query<
         (Entity, &mut Transform, &mut BoltVelocity, &BoltRadius),
         ActiveBoltFilter,
@@ -117,12 +113,6 @@ pub(crate) fn bolt_cell_collision(
             }
         }
 
-        // Defensive clamp: ensure bolt stays within playfield bounds.
-        // The CCD should handle this via wall reflections, but edge cases
-        // (MAX_BOUNCES exhaustion, corner reflections, numerical precision)
-        // can leave the bolt outside bounds. Bottom is open for bolt-lost.
-        position = playfield.clamp_bolt_position(position, r);
-
         bolt_tf.translation = position.extend(bolt_tf.translation.z);
         bolt_vel.value = velocity;
     }
@@ -145,7 +135,6 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .init_resource::<PlayfieldConfig>()
             .add_message::<BoltHitCell>()
             .add_systems(FixedUpdate, bolt_cell_collision);
         app
@@ -612,7 +601,6 @@ mod tests {
     fn serving_bolt_is_not_advanced() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .init_resource::<PlayfieldConfig>()
             .add_message::<BoltHitCell>()
             .add_systems(FixedUpdate, bolt_cell_collision);
 
@@ -736,78 +724,4 @@ mod tests {
         assert_eq!(hits.0[0], cell_entity, "should hit cell, not wall");
     }
 
-    // --- Defensive position clamp tests ---
-
-    /// Small playfield (200×200) so a fast bolt can exceed bounds in one tick
-    /// when no wall entities are present to reflect off.
-    fn small_playfield_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(PlayfieldConfig {
-                width: 200.0,
-                height: 200.0,
-                background_color_rgb: [0.0, 0.0, 0.0],
-                wall_thickness: 20.0,
-            })
-            .add_message::<BoltHitCell>()
-            .add_systems(FixedUpdate, bolt_cell_collision);
-        app
-    }
-
-    #[test]
-    fn bolt_position_clamped_to_playfield_after_ccd() {
-        let mut app = small_playfield_app();
-        let bc = BoltConfig::default();
-        // Bolt near the right edge, moving right — will overshoot the boundary
-        // since there are no wall entities to reflect off.
-        app.world_mut().spawn((
-            Bolt,
-            BoltRadius(bc.radius),
-            BoltVelocity::new(8000.0, 0.0),
-            Transform::from_xyz(90.0, 0.0, 0.0),
-        ));
-
-        tick(&mut app);
-
-        let tf = app
-            .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
-            .iter(app.world())
-            .next()
-            .unwrap();
-        let max_x = 100.0 - bc.radius; // right boundary - radius
-        assert!(
-            tf.translation.x <= max_x + f32::EPSILON,
-            "bolt x={:.2} should be clamped to at most {max_x:.2}",
-            tf.translation.x
-        );
-    }
-
-    #[test]
-    fn bolt_position_not_clamped_at_bottom() {
-        let mut app = small_playfield_app();
-        let bc = BoltConfig::default();
-        // Bolt moving downward fast — should go below the bottom boundary
-        app.world_mut().spawn((
-            Bolt,
-            BoltRadius(bc.radius),
-            BoltVelocity::new(0.0, -8000.0),
-            Transform::from_xyz(0.0, -90.0, 0.0),
-        ));
-
-        tick(&mut app);
-
-        let tf = app
-            .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
-            .iter(app.world())
-            .next()
-            .unwrap();
-        let bottom = -100.0;
-        assert!(
-            tf.translation.y < bottom,
-            "bolt y={:.2} should be allowed below bottom {bottom:.2} (open floor)",
-            tf.translation.y
-        );
-    }
 }
