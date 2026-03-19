@@ -8,13 +8,17 @@ All implementation goes through the delegated pipeline. The main agent is the or
 1. Main agent describes the feature in plain language
 2. Launch planner-spec to produce all specs (behavioral + implementation, per domain)
 3. Launch planner-review to pressure-test specs
-4. Main agent reviews final specs, creates shared prerequisites
-5. Launch ALL writer-tests in parallel  [RED phase: tests must fail]
-6. As each writer-tests completes: review, launch its writer-code — GREEN phase
-7. After ALL writer-codes complete: launch post-implementation verification
-8. Main agent handles wiring (lib.rs, game.rs, shared.rs) — REFACTOR
-9. Update session-state.md
+4. Main agent reviews planner-review feedback, then sends feedback back to planner-spec to revise
+5. Repeat 3–4 until planner-review confirms specs are clean (usually one revision)
+6. Main agent reviews final specs, creates shared prerequisites
+7. Launch ALL writer-tests in parallel  [RED phase: tests must fail]
+8. As each writer-tests completes: review, launch its writer-code — GREEN phase
+9. After ALL writer-codes complete: launch post-implementation verification
+10. Main agent handles wiring (lib.rs, game.rs, shared.rs) — REFACTOR
+11. Update session-state.md
 ```
+
+**Spec revision loop**: planner-review produces BLOCKING/IMPORTANT/MINOR findings. The main agent triages findings (some may be false positives), then sends the valid feedback back to planner-spec with instructions to produce corrected specs. Do NOT launch writer-tests until the spec revision loop is complete. Do NOT skip this step even for "obvious" specs.
 
 **RED phase requirement**: Before launching each writer-code, review the corresponding writer-tests output and confirm the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
 

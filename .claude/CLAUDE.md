@@ -35,6 +35,9 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Run command line tools individually, do not chain them with &&
 - Fix lint errors in code — **never** suppress them with `#[allow(...)]` attributes or by modifying `[workspace.lints]` in `Cargo.toml`. The lint config in `Cargo.toml` is intentional and must not be changed without explicit approval.
 
+**NEVER do**:
+- Run `cargo dtest`, `cargo dclippy`, `cargo scenario`, or any cargo command directly as the main agent. Always delegate to **runner-tests**, **runner-linting**, or **runner-scenarios** agents. These agents produce output in hint formats that downstream writer agents consume.
+
 **Move freely on**:
 - Implementation within existing system boundaries
 - Adding tests
@@ -60,12 +63,14 @@ See @.claude/rules/delegated-implementation.md for full spec formats and pipelin
 1. Describe the feature in plain language
 2. Launch **planner-spec** to produce all specs (behavioral + implementation, per domain)
 3. Launch **planner-review** to pressure-test specs
-4. Review final specs, create shared prerequisites
-5. Launch ALL **writer-tests** in parallel — RED phase
-6. As each writer-tests completes: review, launch its **writer-code** — GREEN phase
-7. After ALL writer-codes complete: launch post-implementation verification
-8. Handle wiring (`lib.rs`, `game.rs`, `shared.rs`) — REFACTOR
-9. Update session-state.md
+4. Triage review feedback, send valid findings back to **planner-spec** to revise
+5. Repeat 3–4 until specs are clean (do NOT launch writers until revision loop completes)
+6. Review final specs, create shared prerequisites
+7. Launch ALL **writer-tests** in parallel — RED phase
+8. As each writer-tests completes: review, launch its **writer-code** — GREEN phase
+9. After ALL writer-codes complete: launch post-implementation verification
+10. Handle wiring (`lib.rs`, `game.rs`, `shared.rs`) — REFACTOR
+11. Update session-state.md
 
 ### Phase 1 — Before Writing Code (sequential)
 

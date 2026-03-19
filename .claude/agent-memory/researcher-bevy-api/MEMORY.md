@@ -13,6 +13,7 @@
 - [transform_interpolation.md](transform_interpolation.md) — No built-in support; manual or crate
 
 - [app_run_vs_update_loop.md](app_run_vs_update_loop.md) — App::run() self-replacement, WinitPlugin runner mechanics, why manual update() cannot drive windowed apps
+- [numeric_cast_patterns.md](numeric_cast_patterns.md) — f64→u32 under strict cast lints: clamp+#[expect] pattern, int→float via u16 bridge, no Bevy utility exists
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

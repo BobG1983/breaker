@@ -14,6 +14,17 @@ See @.claude/rules/hint-formats.md for the standardized hint block formats that 
 | Choosing between Rust idiom alternatives | **researcher-rust-idioms** |
 | Feature ready for spec writing | **planner-spec** |
 | Specs produced — novel mechanic, cross-domain, or uncertain scope | **planner-review** |
+| planner-review found BLOCKING/IMPORTANT issues | **planner-spec** (revision — send feedback back to get corrected specs) |
+
+### Spec Revision Loop
+
+After planner-review produces findings, the main agent:
+1. Triages findings (dismiss false positives, note valid issues)
+2. Sends valid feedback back to **planner-spec** to produce corrected specs
+3. Re-launches **planner-review** on the corrected specs if needed (skip if only MINOR findings remain)
+4. Only proceeds to writer-tests once specs are confirmed clean
+
+**Never launch writer-tests with unreviewed or uncorrected specs.** The cost of a bad spec propagating through writer-tests → writer-code is high (rework). The cost of one revision loop is low.
 
 ## Phase 2 — Post-Implementation (single parallel wave)
 
@@ -36,6 +47,8 @@ All agents in a tier launch in a **single message** with multiple Agent tool cal
 ## Phase 3 — Failure Routing (sequential, reactive)
 
 React to output from Phase 2. Each failure type routes differently. See orchestration.md for circuit breaking and context pruning rules. See hint-formats.md for the exact block formats agents emit.
+
+**IMPORTANT**: When routing failures to writer-code or writer-tests, pass the runner/reviewer agent's hint blocks verbatim — do NOT rewrite them. The hint formats are standardized so downstream agents can consume them directly. The main agent triages (decides which hints to act on and which to dismiss) but does not rephrase the hints themselves.
 
 ### runner-linting failures
 
