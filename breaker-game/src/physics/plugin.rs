@@ -6,7 +6,9 @@ use crate::{
     bolt::BoltSystems,
     physics::{
         messages::{BoltHitBreaker, BoltHitCell, BoltLost},
-        systems::{bolt_breaker_collision, bolt_cell_collision, bolt_lost},
+        systems::{
+            bolt_breaker_collision, bolt_cell_collision, bolt_lost, clamp_bolt_to_playfield,
+        },
     },
     shared::{GameRng, PlayingState},
 };
@@ -30,8 +32,9 @@ impl Plugin for PhysicsPlugin {
                     bolt_breaker_collision
                         .after(bolt_cell_collision)
                         .in_set(super::PhysicsSystems::BreakerCollision),
+                    clamp_bolt_to_playfield.after(bolt_breaker_collision),
                     bolt_lost
-                        .after(bolt_breaker_collision)
+                        .after(clamp_bolt_to_playfield)
                         .in_set(super::PhysicsSystems::BoltLost),
                 )
                     .run_if(in_state(PlayingState::Active)),

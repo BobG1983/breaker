@@ -82,7 +82,8 @@ BreakerSystems::Move
             <- grade_bump .after(update_bump)
                           .after(PhysicsSystems::BreakerCollision)
               <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
-            <- bolt_lost .after(bolt_breaker_collision)
+            <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
+            <- bolt_lost .after(clamp_bolt_to_playfield)
               PhysicsSystems::BoltLost
                 <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
                    .in_set(BehaviorSystems::Bridge)          [behaviors domain]
