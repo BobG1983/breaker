@@ -15,8 +15,8 @@ use breaker::{
     bolt::components::Bolt,
     breaker::components::Breaker,
     input::resources::InputActions,
-    run::node::messages::SpawnNodeComplete,
-    shared::{GameState, ScenarioLayoutOverride, SelectedArchetype},
+    run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete},
+    shared::{GameState, SelectedArchetype},
 };
 
 use crate::{

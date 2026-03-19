@@ -23,3 +23,4 @@ type: reference
 - `upgrade` module/type names — infrastructure wrappers around Amp/Augment/Overclock; acceptable.
 - `ChaosDriver` — renamed from `ChaosMonkey` in feature/scenario-coverage-expansion. Rename is complete in production code (`src/input.rs`). Test bodies still use `monkey` as local variable names (`let mut monkey = ChaosDriver::new(...)`) — acceptable in test-only code.
 - `HybridInput` scripted phase boundary: doc says `0..scripted_frames` exclusive, implementation uses `frame < scripted_frames` (correct). The edge-case test probes frame 99 (not frame 100); comment in test says "last scripted frame". This is correct — 99 is inside scripted phase when scripted_frames=100.
+- `seed_archetype_registry` test fixture uses `make_archetype("Flux")` — "Flux" is the currency term; using it as an archetype name in test data is a vocabulary violation. Flagged in 2026-03-18 full-codebase review. Fix: rename to something non-conflicting (e.g., "Vortex").

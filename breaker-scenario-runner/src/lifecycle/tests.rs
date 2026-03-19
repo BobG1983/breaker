@@ -61,7 +61,7 @@ fn lifecycle_test_app() -> App {
         });
     // Resources required by bypass_menu_to_playing
     app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()))
-        .insert_resource(breaker::shared::ScenarioLayoutOverride(None));
+        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None));
     // Resources required by inject_scenario_input
     app.init_resource::<InputActions>()
         .add_plugins(ScenarioLifecycle);

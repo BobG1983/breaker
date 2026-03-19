@@ -77,19 +77,19 @@ impl NodeLayout {
 #[derive(Resource, Debug, Clone)]
 pub struct ActiveNodeLayout(pub NodeLayout);
 
+/// Registry of all loaded node layouts.
+#[derive(Resource, Debug, Default, Clone)]
+pub struct NodeLayoutRegistry {
+    /// All loaded layouts, indexed by position.
+    pub layouts: Vec<NodeLayout>,
+}
+
 impl NodeLayoutRegistry {
     /// Returns the first layout whose name matches `name`, or `None` if not found.
     #[must_use]
     pub fn get_by_name(&self, name: &str) -> Option<&NodeLayout> {
         self.layouts.iter().find(|l| l.name == name)
     }
-}
-
-/// Registry of all loaded node layouts.
-#[derive(Resource, Debug, Default, Clone)]
-pub struct NodeLayoutRegistry {
-    /// All loaded layouts, indexed by position.
-    pub layouts: Vec<NodeLayout>,
 }
 
 /// Countdown timer for the current node.

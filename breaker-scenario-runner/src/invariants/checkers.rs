@@ -389,6 +389,7 @@ pub fn check_no_entity_leaks(
         return;
     };
 
+    // Check every 120 frames (~1.9 s at 64 Hz fixed timestep)
     if frame.0.is_multiple_of(120) && count > base * 2 {
         log.0.push(ViolationEntry {
             frame: frame.0,

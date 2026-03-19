@@ -167,11 +167,9 @@ pub fn run_all_parallel(
             return 1;
         }
     };
-    let batch_size = parallelism;
-
     let mut all_results: Vec<ChildResult> = Vec::with_capacity(runs.len());
 
-    for batch in runs.chunks(batch_size) {
+    for batch in runs.chunks(parallelism) {
         let mut children: Vec<(String, Child)> = Vec::with_capacity(batch.len());
 
         for (display_name, path) in batch {
