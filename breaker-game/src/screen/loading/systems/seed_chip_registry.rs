@@ -58,10 +58,14 @@ mod tests {
     }
 
     fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
+        use crate::chips::definition::{ChipEffect, Rarity};
         ChipDefinition {
             name: name.to_owned(),
             kind,
             description: format!("{name} description"),
+            rarity: Rarity::Common,
+            max_stacks: 1,
+            effect: ChipEffect::Overclock,
         }
     }
 

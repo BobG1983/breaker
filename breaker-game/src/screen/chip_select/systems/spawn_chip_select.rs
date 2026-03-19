@@ -159,13 +159,19 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::{ChipDefinition, ChipKind};
+    use crate::chips::{
+        ChipDefinition, ChipKind,
+        definition::{ChipEffect, Rarity},
+    };
 
     fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
         ChipDefinition {
             name: name.to_owned(),
             kind,
             description: format!("{name} description"),
+            rarity: Rarity::Common,
+            max_stacks: 1,
+            effect: ChipEffect::Overclock,
         }
     }
 

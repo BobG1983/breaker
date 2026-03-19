@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use crate::{
     behaviors::ArchetypeRegistry,
     screen::run_setup::{
-        components::{BreakerCard, RunSetupScreen},
-        resources::RunSetupSelection,
+        components::{BreakerCard, RunSetupScreen, SeedDisplay},
+        resources::{RunSetupSelection, SeedEntry},
     },
 };
 
@@ -18,6 +18,7 @@ pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeReg
     names.sort();
 
     commands.insert_resource(RunSetupSelection { index: 0 });
+    commands.insert_resource(SeedEntry::default());
 
     commands
         .spawn((
@@ -92,9 +93,20 @@ pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeReg
                     }
                 });
 
+            // Seed display
+            parent.spawn((
+                SeedDisplay,
+                Text::new("SEED: Random"),
+                TextFont {
+                    font_size: 32.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(0.5, 0.5, 0.6, 1.0)),
+            ));
+
             // Prompt
             parent.spawn((
-                Text::new("Press Enter to confirm"),
+                Text::new("Press Enter to confirm  |  Tab to edit seed"),
                 TextFont {
                     font_size: 28.0,
                     ..default()

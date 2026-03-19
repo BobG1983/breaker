@@ -12,3 +12,7 @@ pub(super) struct BreakerCard {
     /// The archetype name this card represents.
     pub archetype_name: String,
 }
+
+/// Marker component on the seed display text entity.
+#[derive(Component)]
+pub(super) struct SeedDisplay;

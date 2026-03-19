@@ -53,6 +53,7 @@ mod tests {
                     invariant_params: InvariantParams { max_bolt_count },
                     allow_early_end: true,
                     stress: None,
+                    seed: None,
                 },
             })
             .add_systems(FixedUpdate, check_bolt_count_reasonable);

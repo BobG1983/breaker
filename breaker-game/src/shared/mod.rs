@@ -157,6 +157,13 @@ impl Default for GameRng {
     }
 }
 
+/// Optional seed for deterministic RNG at run start.
+///
+/// `None` means random (OS entropy). `Some(n)` seeds the [`GameRng`] with
+/// the given value for deterministic replays.
+#[derive(Resource, Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RunSeed(pub Option<u64>);
+
 /// The archetype selected for the current run.
 ///
 /// Set at run start; read by `init_archetype` to look up the archetype
@@ -206,6 +213,18 @@ mod tests {
         let config = PlayfieldConfig::default();
         assert!((config.right() - config.left() - config.width).abs() < f32::EPSILON);
         assert!((config.top() - config.bottom() - config.height).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn run_seed_default_is_none() {
+        let seed = RunSeed::default();
+        assert_eq!(seed.0, None);
+    }
+
+    #[test]
+    fn run_seed_some_holds_value() {
+        let seed = RunSeed(Some(12345));
+        assert_eq!(seed.0, Some(12345));
     }
 
     #[test]

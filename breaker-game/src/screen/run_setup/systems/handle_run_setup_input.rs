@@ -5,8 +5,11 @@ use bevy::prelude::*;
 use crate::{
     behaviors::ArchetypeRegistry,
     input::InputConfig,
-    screen::run_setup::{components::BreakerCard, resources::RunSetupSelection},
-    shared::{GameState, SelectedArchetype},
+    screen::run_setup::{
+        components::BreakerCard,
+        resources::{RunSetupSelection, SeedEntry},
+    },
+    shared::{GameState, RunSeed, SelectedArchetype},
 };
 
 /// Handles keyboard navigation and confirmation on the run setup screen.
@@ -18,10 +21,15 @@ pub(crate) fn handle_run_setup_input(
     config: Res<InputConfig>,
     registry: Res<ArchetypeRegistry>,
     mut selection: ResMut<RunSetupSelection>,
-    mut selected_archetype: ResMut<SelectedArchetype>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut run_params: (
+        ResMut<SelectedArchetype>,
+        ResMut<NextState<GameState>>,
+        ResMut<RunSeed>,
+    ),
+    seed_entry: Res<SeedEntry>,
     cards: Query<&BreakerCard>,
 ) {
+    let (ref mut selected_archetype, ref mut next_state, ref mut run_seed) = run_params;
     let card_count = cards.iter().count();
     if card_count == 0 {
         return;
@@ -48,6 +56,13 @@ pub(crate) fn handle_run_setup_input(
 
         if let Some(name) = sorted_names.get(selection.index) {
             selected_archetype.0.clone_from(name);
+        }
+
+        // Parse seed entry: empty → None (random), non-empty → Some(parsed)
+        if seed_entry.value.is_empty() {
+            run_seed.0 = None;
+        } else {
+            run_seed.0 = Some(seed_entry.value.parse::<u64>().unwrap_or(0));
         }
 
         next_state.set(GameState::Playing);
@@ -86,7 +101,9 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
             .init_state::<GameState>()
-            .insert_resource(SelectedArchetype::default());
+            .insert_resource(SelectedArchetype::default())
+            .init_resource::<RunSeed>()
+            .init_resource::<SeedEntry>();
 
         let registry = test_registry(&["Aegis", "Chrono"]);
         app.insert_resource(registry)
@@ -168,6 +185,37 @@ mod tests {
 
         let selected = app.world().resource::<SelectedArchetype>();
         assert_eq!(selected.0, "Chrono");
+    }
+
+    #[test]
+    fn confirm_sets_run_seed_none_when_entry_empty() {
+        let mut app = test_app();
+        // SeedEntry default is empty
+        press_key(&mut app, KeyCode::Enter);
+
+        let seed = app.world().resource::<RunSeed>();
+        assert_eq!(seed.0, None);
+    }
+
+    #[test]
+    fn confirm_sets_run_seed_some_when_entry_has_value() {
+        let mut app = test_app();
+        app.world_mut().resource_mut::<SeedEntry>().value = "42".to_owned();
+        press_key(&mut app, KeyCode::Enter);
+
+        let seed = app.world().resource::<RunSeed>();
+        assert_eq!(seed.0, Some(42));
+    }
+
+    #[test]
+    fn confirm_sets_run_seed_zero_on_parse_failure() {
+        let mut app = test_app();
+        // u64 overflow — larger than u64::MAX
+        app.world_mut().resource_mut::<SeedEntry>().value = "99999999999999999999999".to_owned();
+        press_key(&mut app, KeyCode::Enter);
+
+        let seed = app.world().resource::<RunSeed>();
+        assert_eq!(seed.0, Some(0));
     }
 
     #[test]

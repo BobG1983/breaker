@@ -16,7 +16,7 @@ use breaker::{
     breaker::{BreakerSystems, components::Breaker, systems::update_breaker_state},
     input::resources::InputActions,
     run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
-    shared::{GameState, SelectedArchetype},
+    shared::{GameState, RunSeed, SelectedArchetype},
 };
 
 use crate::{
@@ -198,9 +198,12 @@ fn bypass_menu_to_playing(
     mut selected: ResMut<SelectedArchetype>,
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut run_seed: ResMut<RunSeed>,
 ) {
     selected.0.clone_from(&config.definition.breaker);
     layout_override.0 = Some(config.definition.layout.clone());
+    // Scenarios always use deterministic seed (default 0 when not specified)
+    run_seed.0 = Some(config.definition.seed.unwrap_or(0));
     next_state.set(GameState::Playing);
 }
 

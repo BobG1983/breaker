@@ -1,1 +1,8 @@
-(name: "Piercing Shot", kind: Amp, description: "Bolt passes through the first cell it hits")
+(
+    name: "Piercing Shot",
+    kind: Amp,
+    description: "Bolt passes through the first cell it hits",
+    rarity: Common,
+    max_stacks: 3,
+    effect: Amp(Piercing(1)),
+)
