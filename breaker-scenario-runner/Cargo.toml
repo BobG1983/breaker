@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 breaker = { path = "../breaker-game" }
-argh = "0.1"
+clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ron = "0.11"

@@ -6,11 +6,18 @@ dtest = "test -p breaker --features bevy/dynamic_linking"
 dcheck = "check -p breaker --features bevy/dynamic_linking"
 dclippy = "clippy -p breaker --all-targets --features bevy/dynamic_linking"
 
-# scenario runner (dev — fast iteration for tests and debugging)
+# scenario runner (dev — ONLY for debugging bugs in the runner itself)
 dscenario = "run -p breaker_scenario_runner"
 dstest = "test -p breaker_scenario_runner"
 dsclippy = "clippy -p breaker_scenario_runner --all-targets"
 dscheck = "check -p breaker_scenario_runner"
 
-# scenario runner (release — optimized, used as final gate before commit)
+# scenario runner (release — ALWAYS use this for scenario validation)
+# Usage:
+#   cargo scenario -- --all              All scenarios, parallel (default 32 jobs)
+#   cargo scenario -- --all -p 4         All scenarios, 4 parallel jobs
+#   cargo scenario -- --all -p all       All scenarios, unlimited parallelism
+#   cargo scenario -- --all --serial     All scenarios, in-process sequential
+#   cargo scenario -- --all --loop 10    All scenarios 10 times
+#   cargo scenario -- -s aegis_chaos     Single scenario, in-process
 scenario = "run --release -p breaker_scenario_runner"
