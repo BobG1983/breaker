@@ -13,7 +13,7 @@
 | `RunLost` | `run/messages.rs` | `RunPlugin` | behaviors/handle_life_lost | run/handle_run_lost |
 | `BumpPerformed { grade, multiplier }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | bolt/apply_bump_velocity, breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, behaviors/bridge_bump |
 | `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text |
-| `ChipSelected` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | (future: chips) |
+| `ChipSelected` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/apply_chip_effect |
 | `BoltSpawned` | `bolt/messages.rs` | `BoltPlugin` | bolt/spawn_bolt | run/node/check_spawn_complete |
 | `BreakerSpawned` | `breaker/messages.rs` | `BreakerPlugin` | breaker/spawn_breaker | run/node/check_spawn_complete |
 | `WallsSpawned` | `wall/messages.rs` | `WallPlugin` | wall/spawn_walls | run/node/check_spawn_complete |

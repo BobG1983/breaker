@@ -38,9 +38,7 @@ type: reference
 ## Chips Domain Architecture (do not re-flag)
 - `chips/` has `definition.rs` (content data types: ChipDefinition, ChipKind, AmpEffect, AugmentEffect, ChipEffect, Rarity)
 - `chips/effects/` promoted directory with per-effect observer handlers (mirrors behaviors/consequences/ pattern)
-- `chips/messages.rs` holds `ChipEffectApplied { effect, max_stacks }` which is `#[derive(Event)]` (observer trigger), NOT a `#[derive(Message)]` type
-  - This is inconsistent with behaviors domain which puts its Event type in `definition.rs`
-  - Flagged to human as "needs decision": rename to events.rs, move to definition.rs, or update layout.md convention
+- `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
 - `ChipEffectApplied` documented in messages.md Observer Events table
 
 ## Phase 4 Wave 1 Status (as of 2026-03-19)

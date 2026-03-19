@@ -62,10 +62,10 @@ type: reference
 - New scenario categories: mechanic/ (11 scenarios), stress/ (13 scenarios), self_tests/ (3 scenarios)
 
 ## Still Stub (No Systems)
-AudioPlugin, UpgradesPlugin
+AudioPlugin
 
 ## Orphan Messages
-- `ChipSelected` (UiPlugin, formerly UpgradeSelected) — registered but no active gameplay receiver. Expected for future phases.
+- None at current phase. `ChipSelected` (UiPlugin) is now received by `chips/apply_chip_effect`.
 
 ## New in 2026-03-19 (post-spawn-coordinator work)
 - `BoltSpawned` — BoltPlugin, sent by `spawn_bolt`

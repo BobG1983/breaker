@@ -6,7 +6,7 @@ type: feedback
 
 The workspace has `clippy::pedantic = "deny"` which includes `clippy::doc_markdown`. This means:
 
-- CamelCase type names in doc comments MUST have backticks: `ChaosMonkey`, `ScriptedInput`, `Vec`, etc.
+- CamelCase type names in doc comments MUST have backticks: `ChaosDriver`, `ScriptedInput`, `Vec`, etc.
 - Struct field names in doc comments MUST have backticks: `action_prob`, `is_active`, etc.
 - Variant names listed inline in text MUST have backticks: `[MoveLeft, MoveRight]` → `` `[MoveLeft, MoveRight]` ``
 - This applies to ALL doc comments: `//!` module docs, `///` item docs, and test doc comments

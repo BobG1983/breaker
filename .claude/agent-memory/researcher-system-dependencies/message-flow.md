@@ -147,9 +147,9 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Receiver: `handle_run_lost` (RunPlugin, .after(handle_node_cleared), .after(handle_timer_expired))
 - Cross-plugin boundary: BehaviorsPlugin (standalone) → RunPlugin
 
-### ChipSelected (UiPlugin — registered, sender exists, no gameplay receiver yet)
+### ChipSelected (UiPlugin → ChipsPlugin)
 - Sender: `handle_chip_input` (ChipSelectPlugin/ScreenPlugin, Update, run_if(GameState::ChipSelect)) — sent on confirm keypress with chip name + kind
-- Receivers: NONE active (chips domain stub — no system reads ChipSelected yet)
+- Receiver: `apply_chip_effect` (ChipsPlugin, Update, run_if(GameState::ChipSelect)) — reads ChipSelected, triggers ChipEffectApplied observer event
 - NOTE: Previously called UpgradeSelected; renamed to ChipSelected to match game vocabulary.
 - NOTE: handle_chip_input reads ButtonInput<KeyCode> directly (not InputActions). This is intentional — same pattern as main menu.
 
@@ -180,6 +180,7 @@ written in OnEnter are available in the first FixedUpdate tick.
 | BehaviorsPlugin | ApplyTimePenalty | NodePlugin |
 | BehaviorsPlugin | SpawnAdditionalBolt | BoltPlugin |
 | BehaviorsPlugin | RunLost | RunPlugin |
+| UiPlugin/ScreenPlugin | ChipSelected | ChipsPlugin |
 
 ---
 
@@ -221,4 +222,4 @@ handled by apply_bolt_speed_boosts() called from init_archetype. The bridge skip
 - handle_timer_expired reads both sources transparently (single MessageReader)
 - ApplyTimePenalty and SpawnAdditionalBolt are new cross-plugin boundaries, both
   routed through observer → message pattern (same as RunLost)
-- ChipSelected (renamed from UpgradeSelected) remains registered but has no active gameplay receivers (future phases)
+- ChipSelected (renamed from UpgradeSelected) is now received by chips/apply_chip_effect — fully active

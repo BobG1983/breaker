@@ -406,8 +406,16 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 ---
 
 ## AudioPlugin — no systems (stub)
-## ChipsPlugin — no systems (stub beyond chip_select screen)
-## UpgradesPlugin — no systems (stub)
+
+## ChipsPlugin
+### `apply_chip_effect` — Update, run_if(GameState::ChipSelect)
+- Receives: MessageReader<ChipSelected>
+- Reads: Option<Res<ChipRegistry>>
+- Commands: commands.trigger(ChipEffectApplied { effect, max_stacks })
+- Dispatches to 9 registered observers (handle_piercing, handle_damage_boost, handle_bolt_speed_boost, handle_chain_hit, handle_bolt_size_boost, handle_width_boost, handle_breaker_speed_boost, handle_bump_force_boost, handle_tilt_control_boost)
+### 9 observers (registered via add_observer in ChipsPlugin::build):
+Each observes `ChipEffectApplied`, pattern-matches on `trigger.event().effect`, early-returns on non-match.
+Confirmed effect types: Piercing, DamageBoost, BoltSpeedBoost, ChainHit, BoltSizeBoost, WidthBoost, BreakerSpeedBoost, BumpForceBoost, TiltControlBoost
 
 ---
 
