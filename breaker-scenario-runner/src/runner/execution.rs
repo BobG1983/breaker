@@ -443,12 +443,18 @@ pub fn run_stress_scenario(
 
     let failures: Vec<StressFailure> = all_results
         .into_iter()
-        .enumerate()
-        .filter(|(_, r)| !r.passed)
-        .map(|(i, r)| StressFailure {
-            copy_index: i,
-            stdout: r.stdout,
-            stderr: r.stderr,
+        .filter(|r| !r.passed)
+        .map(|r| {
+            let copy_index = r
+                .name
+                .strip_prefix("copy_")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+            StressFailure {
+                copy_index,
+                stdout: r.stdout,
+                stderr: r.stderr,
+            }
         })
         .collect();
 
