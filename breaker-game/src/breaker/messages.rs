@@ -31,6 +31,12 @@ pub struct BumpPerformed {
 #[derive(Message, Clone, Debug)]
 pub struct BumpWhiffed;
 
+/// Sent by `spawn_breaker` after the breaker entity is spawned or confirmed to exist.
+///
+/// Consumed by the spawn coordinator in the node subdomain.
+#[derive(Message, Clone, Debug)]
+pub struct BreakerSpawned;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,5 +63,11 @@ mod tests {
     fn bump_whiffed_debug_format() {
         let msg = BumpWhiffed;
         assert!(format!("{msg:?}").contains("BumpWhiffed"));
+    }
+
+    #[test]
+    fn breaker_spawned_debug_format() {
+        let msg = BreakerSpawned;
+        assert!(format!("{msg:?}").contains("BreakerSpawned"));
     }
 }

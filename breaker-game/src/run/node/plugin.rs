@@ -4,12 +4,12 @@ use bevy::prelude::*;
 
 use crate::{
     run::node::{
-        messages::{ApplyTimePenalty, NodeCleared, TimerExpired},
+        messages::{ApplyTimePenalty, CellsSpawned, NodeCleared, SpawnNodeComplete, TimerExpired},
         resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
         sets::NodeSystems,
         systems::{
-            apply_time_penalty, init_clear_remaining, init_node_timer, set_active_layout,
-            spawn_cells_from_layout, tick_node_timer, track_node_completion,
+            apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
+            set_active_layout, spawn_cells_from_layout, tick_node_timer, track_node_completion,
         },
     },
     shared::{GameState, PlayingState},
@@ -28,6 +28,8 @@ impl Plugin for NodePlugin {
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_message::<ApplyTimePenalty>()
+            .add_message::<CellsSpawned>()
+            .add_message::<SpawnNodeComplete>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -38,6 +40,7 @@ impl Plugin for NodePlugin {
                 )
                     .chain(),
             )
+            .add_systems(FixedUpdate, check_spawn_complete)
             .add_systems(
                 FixedUpdate,
                 (
