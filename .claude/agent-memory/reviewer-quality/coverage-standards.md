@@ -23,6 +23,8 @@ type: reference
 - **valid_breaker_state.rs (Settling→Dashing)**: Legal `Settling → Dashing` transition untested — CLOSED in 2026-03-19 PR (`valid_breaker_state_does_not_fire_on_settling_to_dashing` test added). Braking→Settling also added in same PR.
 - **runner/app.rs `collect_and_evaluate` empty-buffer path**: CLOSED in 2026-03-19 PR (`collect_and_evaluate_fails_when_no_snapshot` test added). Remaining gap: happy-path where a snapshot IS present and passes/fails is still not unit-tested (tested only via full integration runs).
 - **read_input.rs**: `repeat: true` key event filter path untested.
+- **runner/execution.rs stress infrastructure (as of 2026-03-19, feature/fix-scenario-failures)**: `StressResult::passed` and `summary_line` fully covered. `partition_stress_scenarios` covered for normal+stress mix and all-normal. Known gaps: (1) `run_stress_scenario` exe-lookup-error early-return path untested. (2) `print_stress_result` verbose stderr branch untested. (3) `partition_stress_scenarios` with an empty run list not tested.
+- **types/mod.rs StressConfig (as of 2026-03-19)**: Full RON parse, empty-struct defaults, and two partial-override variants tested. ScenarioDefinition stress field (None/Some/Some(()) defaults) all tested.
 
 ## Lifecycle Tests (2026-03-17, updated 2026-03-18)
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
