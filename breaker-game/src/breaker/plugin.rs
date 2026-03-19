@@ -11,7 +11,7 @@ use crate::{
             animate_bump_visual, animate_tilt_visual, grade_bump, init_breaker_params,
             move_breaker, perfect_bump_dash_cancel, reset_breaker, spawn_breaker,
             spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual, update_breaker_state,
-            update_bump,
+            update_bump, width_boost_visual,
         },
     },
     physics::PhysicsSystems,
@@ -64,7 +64,8 @@ impl Plugin for BreakerPlugin {
             )
             .add_systems(
                 Update,
-                (animate_bump_visual, animate_tilt_visual).run_if(in_state(PlayingState::Active)),
+                (animate_bump_visual, animate_tilt_visual, width_boost_visual)
+                    .run_if(in_state(PlayingState::Active)),
             );
     }
 }

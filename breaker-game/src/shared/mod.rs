@@ -11,6 +11,9 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::Deserialize;
 
+/// Base damage dealt by a bolt hit. Fixed game-design constant.
+pub const BASE_BOLT_DAMAGE: u32 = 10;
+
 /// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
 #[must_use]
 pub const fn color_from_rgb(rgb: [f32; 3]) -> Color {
@@ -233,5 +236,10 @@ mod tests {
         let result: PlayfieldDefaults =
             ron::de::from_str(ron_str).expect("playfield RON should parse");
         assert!(result.width > 0.0);
+    }
+
+    #[test]
+    fn base_bolt_damage_equals_10() {
+        assert_eq!(BASE_BOLT_DAMAGE, 10);
     }
 }

@@ -22,7 +22,10 @@ use crate::{
         messages::BoltHitCell,
         queries::{CollisionQueryBolt, CollisionQueryCell},
     },
-    shared::math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
+    shared::{
+        BASE_BOLT_DAMAGE,
+        math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
+    },
     wall::components::WallSize,
 };
 
@@ -39,14 +42,36 @@ pub(crate) fn bolt_cell_collision(
     cell_query: Query<CollisionQueryCell, CollisionFilterCell>,
     wall_query: Query<(Entity, &Transform, &WallSize), CollisionFilterWall>,
     mut hit_writer: MessageWriter<BoltHitCell>,
+    mut pierced_this_frame: Local<Vec<Entity>>,
 ) {
     let dt = time.delta_secs();
 
-    for (_bolt_entity, mut bolt_tf, mut bolt_vel, _, bolt_radius) in &mut bolt_query {
+    for (
+        bolt_entity,
+        mut bolt_tf,
+        mut bolt_vel,
+        _,
+        bolt_radius,
+        mut piercing_remaining,
+        piercing,
+        damage_boost,
+    ) in &mut bolt_query
+    {
         let r = bolt_radius.0;
         let mut position = bolt_tf.translation.truncate();
         let mut velocity = bolt_vel.value;
         let mut remaining = velocity.length() * dt;
+
+        // Effective damage for pierce lookahead (compared against cell HP).
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "BASE_BOLT_DAMAGE is 10 — exact in f32"
+        )]
+        let effective_damage =
+            (BASE_BOLT_DAMAGE as f32 * (1.0 + damage_boost.map_or(0.0, |b| b.0))).round();
+
+        // Clear per-bolt pierce skip set
+        pierced_this_frame.clear();
 
         for _ in 0..MAX_BOUNCES {
             if remaining <= CCD_EPSILON {
@@ -62,7 +87,11 @@ pub(crate) fn bolt_cell_collision(
             let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
 
             // Check cells
-            for (cell_entity, cell_tf, cell_w, cell_h) in &cell_query {
+            for (cell_entity, cell_tf, cell_w, cell_h, _cell_health) in &cell_query {
+                // Skip cells already pierced by this bolt this frame
+                if pierced_this_frame.contains(&cell_entity) {
+                    continue;
+                }
                 let cell_pos = cell_tf.translation.truncate();
                 let cell_half_extents =
                     Vec2::new(cell_w.half_width() + r, cell_h.half_height() + r);
@@ -93,17 +122,45 @@ pub(crate) fn bolt_cell_collision(
                 break;
             };
 
-            // Move to just before the impact point
+            // Advance to the impact point — shared by all hit outcomes
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
             position += direction * advance;
             remaining -= advance;
 
-            // Reflect velocity off the hit face
-            velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
-
-            // Only emit BoltHitCell for cell hits (not walls)
             if let Some(cell_entity) = hit_cell {
-                hit_writer.write(BoltHitCell { cell: cell_entity });
+                // Check if this bolt can pierce this cell
+                let can_pierce = piercing_remaining.as_deref().is_some_and(|pr| pr.0 > 0);
+                let cell_hp = cell_query
+                    .get(cell_entity)
+                    .ok()
+                    .and_then(|(_, _, _, _, health)| health)
+                    .map(|h| h.current);
+                let would_destroy = cell_hp.is_some_and(|hp| {
+                    f32::from(u16::try_from(hp).unwrap_or(u16::MAX)) <= effective_damage
+                });
+
+                if can_pierce && would_destroy {
+                    // PIERCE: do NOT reflect; decrement remaining pierces
+                    if let Some(ref mut pr) = piercing_remaining {
+                        pr.0 = pr.0.saturating_sub(1);
+                    }
+                    pierced_this_frame.push(cell_entity);
+                    // Continue CCD loop — velocity unchanged, direction unchanged
+                } else {
+                    // NORMAL: reflect
+                    velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
+                }
+                hit_writer.write(BoltHitCell {
+                    cell: cell_entity,
+                    bolt: bolt_entity,
+                });
+            } else {
+                // WALL HIT: reflect and reset PiercingRemaining
+                velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
+                // Reset PiercingRemaining to Piercing.0
+                if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
+                    pr.0 = p.0;
+                }
             }
         }
 
@@ -121,9 +178,10 @@ mod tests {
             resources::BoltConfig,
         },
         cells::{
-            components::{Cell, CellHeight, CellWidth},
+            components::{Cell, CellHealth, CellHeight, CellWidth},
             resources::CellConfig,
         },
+        chips::components::{DamageBoost, Piercing, PiercingRemaining},
         wall::components::{Wall, WallSize},
     };
 
@@ -353,6 +411,19 @@ mod tests {
     fn collect_cell_hits(mut reader: MessageReader<BoltHitCell>, mut hits: ResMut<HitCells>) {
         for msg in reader.read() {
             hits.0.push(msg.cell);
+        }
+    }
+
+    /// Collects full `BoltHitCell` messages (including the bolt field) for assertion.
+    #[derive(Resource, Default)]
+    struct FullHitMessages(Vec<BoltHitCell>);
+
+    fn collect_full_hits(
+        mut reader: MessageReader<BoltHitCell>,
+        mut hits: ResMut<FullHitMessages>,
+    ) {
+        for msg in reader.read() {
+            hits.0.push(msg.clone());
         }
     }
 
@@ -623,6 +694,52 @@ mod tests {
         );
     }
 
+    // --- BoltHitCell bolt entity tests ---
+
+    #[test]
+    fn bolt_cell_collision_populates_bolt_entity_in_message() {
+        // This test verifies that BoltHitCell.bolt is set to the actual bolt entity,
+        // not Entity::PLACEHOLDER. It will FAIL until the production code is fixed
+        // to capture the bolt entity from the query binding.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+        app.insert_resource(FullHitMessages::default())
+            .add_systems(FixedUpdate, collect_full_hits.after(bolt_cell_collision));
+
+        let cell_y = 100.0;
+        spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<FullHitMessages>();
+        assert_eq!(
+            hits.0.len(),
+            1,
+            "should send exactly one BoltHitCell message"
+        );
+        assert_ne!(
+            hits.0[0].bolt,
+            Entity::PLACEHOLDER,
+            "BoltHitCell.bolt should not be Entity::PLACEHOLDER — it should be the real bolt entity"
+        );
+        assert_eq!(
+            hits.0[0].bolt, bolt_entity,
+            "BoltHitCell.bolt should equal the bolt entity that caused the collision"
+        );
+    }
+
     // --- Wall collision tests ---
 
     fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_height: f32) {
@@ -720,5 +837,365 @@ mod tests {
         let hits = app.world().resource::<HitCells>();
         assert_eq!(hits.0.len(), 1);
         assert_eq!(hits.0[0], cell_entity, "should hit cell, not wall");
+    }
+
+    // --- Piercing chip effect tests ---
+
+    /// Spawns a cell with explicit [`CellHealth`] for piercing lookahead tests.
+    fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: u32) -> Entity {
+        let (cw, ch) = default_cell_dims();
+        app.world_mut()
+            .spawn((
+                Cell,
+                cw,
+                ch,
+                CellHealth::new(hp),
+                Transform::from_xyz(x, y, 0.0),
+            ))
+            .id()
+    }
+
+    #[test]
+    fn non_piercing_bolt_reflects_off_cell() {
+        // Non-piercing bolt hitting a cell reflects (velocity.y < 0 after upward approach).
+        // BoltHitCell is sent. No PiercingRemaining component involved.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+
+        let cell_y = 100.0;
+        // CellHealth(30) — bolt deals base 10, survives.
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 30);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            // No PiercingRemaining or Piercing component
+            Transform::from_xyz(0.0, start_y, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "non-piercing bolt should reflect downward off cell, got vy={}",
+            vel.value.y
+        );
+
+        let hits = app.world().resource::<HitCells>();
+        assert_eq!(hits.0.len(), 1, "BoltHitCell should be sent");
+    }
+
+    #[test]
+    fn piercing_bolt_passes_through_cell_it_would_destroy() {
+        // Bolt with PiercingRemaining(2), no DamageBoost.
+        // Cell with CellHealth(10) — base damage 10 would destroy it.
+        // Bolt should NOT reflect (velocity.y > 0 after upward approach).
+        // BoltHitCell is sent. PiercingRemaining decremented to 1.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+
+        let cell_y = 100.0;
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 10);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Piercing(2),
+                PiercingRemaining(2),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "piercing bolt should pass through cell it would destroy (velocity.y > 0), got vy={}",
+            vel.value.y
+        );
+
+        let hits = app.world().resource::<HitCells>();
+        assert_eq!(
+            hits.0.len(),
+            1,
+            "BoltHitCell should be sent for pierced cell"
+        );
+
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 1,
+            "PiercingRemaining should decrement from 2 to 1 after one pierce"
+        );
+    }
+
+    #[test]
+    fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
+        // Bolt with PiercingRemaining(1), no DamageBoost.
+        // Cell with CellHealth(30) — base damage 10, cell survives.
+        // Bolt should reflect (velocity.y < 0). PiercingRemaining stays 1.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 30);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Piercing(1),
+                PiercingRemaining(1),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "piercing bolt should reflect off cell it cannot destroy, got vy={}",
+            vel.value.y
+        );
+
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 1,
+            "PiercingRemaining should stay at 1 when cell survives the hit"
+        );
+    }
+
+    #[test]
+    fn piercing_with_damage_boost_uses_boosted_damage_for_lookahead() {
+        // Bolt with PiercingRemaining(1), DamageBoost(0.5).
+        // Cell with CellHealth(12).
+        // Effective damage = (10 * (1.0 + 0.5)).round() = 15 >= 12 → would destroy.
+        // Bolt should pierce (velocity.y > 0).
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        spawn_cell_with_health(&mut app, 0.0, cell_y, 12);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Piercing(1),
+                PiercingRemaining(1),
+                DamageBoost(0.5),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt with DamageBoost(0.5) should pierce 12-HP cell (boosted damage=15), got vy={}",
+            vel.value.y
+        );
+
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 0,
+            "PiercingRemaining should decrement from 1 to 0 after piercing"
+        );
+    }
+
+    #[test]
+    fn two_stacked_cells_both_pierced_in_one_frame() {
+        // Bolt with PiercingRemaining(2), high velocity (10000.0) to reach both cells
+        // in one 64Hz frame (~156 units budget vs ~43 units needed).
+        // Cell A at (0.0, 60.0), Cell B at (0.0, 90.0), both CellHealth(10).
+        // Two BoltHitCell messages. PiercingRemaining goes from 2 to 0.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        app.insert_resource(FullHitMessages::default())
+            .add_systems(FixedUpdate, collect_full_hits.after(bolt_cell_collision));
+
+        // Place bolt below both cells, moving upward at high speed
+        let near_cell_y = 60.0;
+        let far_cell_y = 90.0;
+        spawn_cell_with_health(&mut app, 0.0, near_cell_y, 10);
+        spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10);
+
+        let start_y = near_cell_y - bc.radius - 25.0; // well below cell A
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 10000.0), // 10000/64 ≈ 156 units/frame — covers both cells
+                Piercing(2),
+                PiercingRemaining(2),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<FullHitMessages>();
+        assert_eq!(
+            hits.0.len(),
+            2,
+            "both stacked cells should be pierced in one frame (two BoltHitCell messages)"
+        );
+
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 0,
+            "PiercingRemaining should go from 2 to 0 after piercing both cells"
+        );
+    }
+
+    #[test]
+    fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
+        // Two bolts each with PiercingRemaining(1), one cell in each bolt's path.
+        // Each bolt pierces its cell independently. Two BoltHitCell messages total.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+        app.insert_resource(FullHitMessages::default())
+            .add_systems(FixedUpdate, collect_full_hits.after(bolt_cell_collision));
+
+        let left_cell_y = 100.0;
+        let right_cell_y = 100.0;
+        spawn_cell_with_health(&mut app, -100.0, left_cell_y, 10);
+        spawn_cell_with_health(&mut app, 100.0, right_cell_y, 10);
+
+        let start_y = left_cell_y - cc.height / 2.0 - bc.radius - 2.0;
+
+        // Bolt A targets cell A (left side)
+        let bolt_a = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Piercing(1),
+                PiercingRemaining(1),
+                Transform::from_xyz(-100.0, start_y, 0.0),
+            ))
+            .id();
+
+        // Bolt B targets cell B (right side)
+        let bolt_b = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Piercing(1),
+                PiercingRemaining(1),
+                Transform::from_xyz(100.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<FullHitMessages>();
+        assert_eq!(
+            hits.0.len(),
+            2,
+            "both bolts should pierce their respective cells independently (two BoltHitCell messages)"
+        );
+
+        // Both bolts should still be moving upward (they pierced, not reflected)
+        let pr_a = app.world().get::<PiercingRemaining>(bolt_a).unwrap();
+        let pr_b = app.world().get::<PiercingRemaining>(bolt_b).unwrap();
+        assert_eq!(
+            pr_a.0, 0,
+            "bolt A PiercingRemaining should be 0 after pierce"
+        );
+        assert_eq!(
+            pr_b.0, 0,
+            "bolt B PiercingRemaining should be 0 after pierce"
+        );
+    }
+
+    #[test]
+    fn wall_hit_resets_piercing_remaining() {
+        // Bolt with Piercing(2), PiercingRemaining(0). Bolt hits wall.
+        // PiercingRemaining should reset to Piercing.0 = 2.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+
+        // Place wall to the right
+        spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+
+        let start_x = 200.0 - 50.0 - bc.radius - 5.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(400.0, 0.1),
+                Piercing(2),
+                PiercingRemaining(0),
+                Transform::from_xyz(start_x, 0.0, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // Verify wall hit occurred (velocity.x < 0)
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.x < 0.0,
+            "bolt should have reflected off wall, got vx={}",
+            vel.value.x
+        );
+
+        // PiercingRemaining should be reset to Piercing.0
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 2,
+            "wall hit should reset PiercingRemaining to Piercing.0 (2), got {}",
+            pr.0
+        );
     }
 }

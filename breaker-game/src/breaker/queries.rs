@@ -10,6 +10,7 @@ use crate::{
         BumpPerfectWindow, BumpState, BumpWeakCooldown, BumpWeakMultiplier, DashDuration,
         DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
+    chips::components::{BreakerSpeedBoost, BumpForceBoost, WidthBoost},
     interpolate::components::PhysicsTranslation,
 };
 
@@ -23,6 +24,8 @@ pub type MovementQuery = (
     &'static BreakerDeceleration,
     &'static DecelEasing,
     &'static BreakerWidth,
+    Option<&'static BreakerSpeedBoost>,
+    Option<&'static WidthBoost>,
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
@@ -66,6 +69,7 @@ pub type BumpTimingQuery = (
     &'static BumpWeakCooldown,
     Option<&'static BumpPerfectMultiplier>,
     Option<&'static BumpWeakMultiplier>,
+    Option<&'static BumpForceBoost>,
 );
 
 /// Bump grading data — state, timing windows, cooldowns, and multipliers for `grade_bump`.
@@ -77,6 +81,7 @@ pub type BumpGradingQuery = (
     &'static BumpWeakCooldown,
     Option<&'static BumpPerfectMultiplier>,
     Option<&'static BumpWeakMultiplier>,
+    Option<&'static BumpForceBoost>,
 );
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.
