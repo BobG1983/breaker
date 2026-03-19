@@ -14,12 +14,13 @@ You receive an **implementation spec** from the orchestrating agent that identif
 ## First Step — Always
 
 1. Read `CLAUDE.md` for project conventions
-2. Read `docs/design/terminology.md` for required vocabulary
-3. Read `docs/architecture/layout.md` for domain folder structure
-4. Read `docs/architecture/messages.md` for inter-domain communication patterns
-5. Read `docs/architecture/standards.md` for code standards
-6. Read the failing tests to understand what behavior is expected
-7. Read existing code in the target domain to understand current patterns
+2. Read `.claude/rules/tdd.md` for TDD cycle boundaries (you are the GREEN phase)
+3. Read `docs/design/terminology.md` for required vocabulary
+4. Read `docs/architecture/layout.md` for domain folder structure
+5. Read `docs/architecture/messages.md` for inter-domain communication patterns
+6. Read `docs/architecture/standards.md` for code standards
+7. Read the failing tests to understand what behavior is expected
+8. Read existing code in the target domain to understand current patterns
 
 ## What You Produce
 

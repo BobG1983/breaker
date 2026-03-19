@@ -36,6 +36,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Fix lint errors in code — **never** suppress them with `#[allow(...)]` attributes or by modifying `[workspace.lints]` in `Cargo.toml`. The lint config in `Cargo.toml` is intentional and must not be changed without explicit approval.
 
 **NEVER do**:
+- Write code directly — always delegate to writer-tests/writer-code sub-agents
 - Run any cargo command directly as the main agent — see @.claude/rules/cargo.md
 
 **Move freely on**:
