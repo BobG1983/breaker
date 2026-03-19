@@ -1,5 +1,7 @@
 //! Node subdomain resources — layout definitions, registry, active layout, timer, and completion tracking.
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use serde::Deserialize;
 
@@ -78,17 +80,53 @@ impl NodeLayout {
 pub struct ActiveNodeLayout(pub NodeLayout);
 
 /// Registry of all loaded node layouts.
+///
+/// Stores layouts in a `HashMap` keyed by name, with a separate `Vec` preserving
+/// insertion order for index-based access (node progression).
 #[derive(Resource, Debug, Default, Clone)]
 pub struct NodeLayoutRegistry {
-    /// All loaded layouts, indexed by position.
-    pub layouts: Vec<NodeLayout>,
+    layouts: HashMap<String, NodeLayout>,
+    order: Vec<String>,
 }
 
 impl NodeLayoutRegistry {
-    /// Returns the first layout whose name matches `name`, or `None` if not found.
+    /// Look up a layout by name.
     #[must_use]
     pub fn get_by_name(&self, name: &str) -> Option<&NodeLayout> {
-        self.layouts.iter().find(|l| l.name == name)
+        self.layouts.get(name)
+    }
+
+    /// Look up a layout by insertion-order index.
+    #[must_use]
+    pub fn get_by_index(&self, index: usize) -> Option<&NodeLayout> {
+        self.order
+            .get(index)
+            .and_then(|name| self.layouts.get(name))
+    }
+
+    /// Insert a layout (appended to insertion order).
+    pub fn insert(&mut self, layout: NodeLayout) {
+        let name = layout.name.clone();
+        self.layouts.insert(name.clone(), layout);
+        self.order.push(name);
+    }
+
+    /// Number of registered layouts.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.layouts.len()
+    }
+
+    /// Whether the registry is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.layouts.is_empty()
+    }
+
+    /// Remove all layouts.
+    pub fn clear(&mut self) {
+        self.layouts.clear();
+        self.order.clear();
     }
 }
 
@@ -221,11 +259,17 @@ mod tests {
         assert!(layout.validate(&registry).is_err());
     }
 
+    fn make_node_registry(names: &[&str]) -> NodeLayoutRegistry {
+        let mut registry = NodeLayoutRegistry::default();
+        for name in names {
+            registry.insert(make_layout(name));
+        }
+        registry
+    }
+
     #[test]
     fn get_by_name_returns_layout_with_matching_name() {
-        let registry = NodeLayoutRegistry {
-            layouts: vec![make_layout("corridor"), make_layout("open")],
-        };
+        let registry = make_node_registry(&["corridor", "open"]);
         let result = registry.get_by_name("corridor");
         assert!(result.is_some());
         assert_eq!(result.unwrap().name, "corridor");
@@ -233,16 +277,43 @@ mod tests {
 
     #[test]
     fn get_by_name_returns_none_for_missing_name() {
-        let registry = NodeLayoutRegistry {
-            layouts: vec![make_layout("corridor")],
-        };
+        let registry = make_node_registry(&["corridor"]);
         assert!(registry.get_by_name("missing").is_none());
     }
 
     #[test]
     fn get_by_name_on_empty_registry_returns_none() {
-        let registry = NodeLayoutRegistry { layouts: vec![] };
+        let registry = NodeLayoutRegistry::default();
         assert!(registry.get_by_name("anything").is_none());
+    }
+
+    #[test]
+    fn get_by_index_returns_in_insertion_order() {
+        let registry = make_node_registry(&["first", "second", "third"]);
+        assert_eq!(registry.get_by_index(0).unwrap().name, "first");
+        assert_eq!(registry.get_by_index(1).unwrap().name, "second");
+        assert_eq!(registry.get_by_index(2).unwrap().name, "third");
+        assert!(registry.get_by_index(3).is_none());
+    }
+
+    #[test]
+    fn len_and_is_empty() {
+        let mut registry = NodeLayoutRegistry::default();
+        assert!(registry.is_empty());
+        assert_eq!(registry.len(), 0);
+        registry.insert(make_layout("test"));
+        assert!(!registry.is_empty());
+        assert_eq!(registry.len(), 1);
+    }
+
+    #[test]
+    fn clear_removes_all() {
+        let mut registry = make_node_registry(&["a", "b"]);
+        assert_eq!(registry.len(), 2);
+        registry.clear();
+        assert!(registry.is_empty());
+        assert!(registry.get_by_name("a").is_none());
+        assert!(registry.get_by_index(0).is_none());
     }
 
     #[test]

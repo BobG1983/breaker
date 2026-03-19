@@ -84,5 +84,9 @@ type: reference
 - Phase 4 Wave 1 (2026-03-19): `reset_run_state` uses `Option<Res<SelectedArchetype>>` — for logging only; if absent logs "none". Correct.
 - Phase 4 Wave 1 (2026-03-19): `bypass_menu_to_playing` always sets `RunSeed(Some(n))` — intentional; scenarios always use deterministic seed.
 - Phase 4 Wave 1 (2026-03-19): `stack_u32` and `stack_f32` cap check `current / per_stack < max_stacks` — correct because current is always `n * per_stack` (exact integer/float multiple), so division is exact and gives stack count directly.
+- Phase 4 Wave 1 Cleanup (2026-03-19): `NodeLayoutRegistry` dual-structure (HashMap + Vec order) — `insert` appends to `order` unconditionally. Duplicate names would cause `order` length to diverge from `layouts` length, but production loading (`seed_node_layout_registry`) processes unique handles so duplicates require two RON files with identical `name` fields. Accepted risk.
+- Phase 4 Wave 1 Cleanup (2026-03-19): `commands.trigger(ChipEffectApplied{...})` global trigger dispatches to all `add_observer(handle_X)` observers — correct Bevy 0.18 pattern for global events.
+- Phase 4 Wave 1 Cleanup (2026-03-19): Each observer does direct `&mut Component` mutation (immediate) for existing components, and deferred `commands.entity(entity).insert(...)` for new ones — correct ECS pattern.
+- Phase 4 Wave 1 Cleanup (2026-03-19): `RunConfirmation` SystemParam bundles `SelectedArchetype`, `NextState<GameState>`, `RunSeed` — correct `SystemParam` usage; all three are distinct resources with no aliasing.
 - Phase 4 Wave 1 (2026-03-19): Enter key always confirms in run setup even when seed field is focused — intentional; Tab toggles focus, Enter confirms.
 - Phase 4 Wave 1 (2026-03-19): `MAX_SEED_CHARS=18` — 18 ASCII digits is at most 999_999_999_999_999_999 < u64::MAX (18_446_744_073_709_551_615), so parse always succeeds for filtered digit-only input. `unwrap_or(0)` is defensive for programmatic injection only.

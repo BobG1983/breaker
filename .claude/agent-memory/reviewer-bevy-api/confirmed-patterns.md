@@ -223,6 +223,21 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 ## BorderColor::all(color)
 - `BorderColor::all(border_color)` — confirmed constructor in 0.18 UI API
 
+## Observer Pattern (confirmed for this codebase, 2026-03-19)
+- `fn handler(trigger: On<MyEvent>, mut query: Query<...>, mut commands: Commands)` — correct observer signature; On<E> plus arbitrary SystemParams is valid
+- `app.add_observer(my_handler)` — correct app-level global observer registration in Plugin::build
+- `commands.trigger(MyEvent { ... })` — correct deferred global trigger; observers run at command flush
+- `world.commands().trigger(...)` — correct in tests (deferred; must call `world_mut().flush()` after)
+- `#[derive(Event)]` on the trigger struct — correct; GlobalTrigger (not EntityEvent)
+- Multiple distinct observer fns for the same `On<MyEvent>` type — all run, in registration order
+- Observer fn with `Query<(Entity, Option<&mut C>), With<Marker>>` + `Commands` — confirmed valid combination
+
+## #[derive(SystemParam)] with ResMut fields (confirmed 2026-03-19)
+- `#[derive(SystemParam)] struct Foo<'w> { field: ResMut<'w, T> }` — correct; lifetime 'w required
+- Multiple `ResMut` fields for DIFFERENT resource types in same SystemParam struct — valid, no conflict
+- SystemParam struct used as system function parameter — correct; all fields extracted at scheduling time
+- `confirm.field.set(...)` — correct deref through ResMut; NestedMut access works
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

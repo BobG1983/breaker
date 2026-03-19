@@ -35,6 +35,20 @@ type: reference
 - Intra-domain only — no cross-domain consumers currently
 - Added to ordering.md defined sets table with note "intra-domain only"
 
+## Chips Domain Architecture (do not re-flag)
+- `chips/` has `definition.rs` (content data types: ChipDefinition, ChipKind, AmpEffect, AugmentEffect, ChipEffect, Rarity)
+- `chips/effects/` promoted directory with per-effect observer handlers (mirrors behaviors/consequences/ pattern)
+- `chips/messages.rs` holds `ChipEffectApplied { effect, max_stacks }` which is `#[derive(Event)]` (observer trigger), NOT a `#[derive(Message)]` type
+  - This is inconsistent with behaviors domain which puts its Event type in `definition.rs`
+  - Flagged to human as "needs decision": rename to events.rs, move to definition.rs, or update layout.md convention
+- `ChipEffectApplied` documented in messages.md Observer Events table
+
+## Phase 4 Wave 1 Status (as of 2026-03-19)
+- 4a (Seeded RNG): DONE — moved to `docs/plan/done/phase-4/phase-4a-seeded-rng.md`
+- 4b.1 (Chip Effects & Stacking): DONE — inline in `docs/plan/phase-4/phase-4b-chip-effects.md` (no separate done file)
+- 4b.2 (Per-domain effect consumption): IN PROGRESS — 4b spec file remains at active location
+- `docs/plan/index.md` 4a link fixed to point to done/ location
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table

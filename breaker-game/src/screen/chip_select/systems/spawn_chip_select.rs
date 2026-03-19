@@ -20,7 +20,7 @@ pub(crate) fn spawn_chip_select(
     config: Res<ChipSelectConfig>,
     registry: Res<ChipRegistry>,
 ) {
-    let offers: Vec<_> = registry.chips.iter().take(MAX_CARDS).cloned().collect();
+    let offers: Vec<_> = registry.ordered_values().take(MAX_CARDS).cloned().collect();
 
     commands.insert_resource(ChipSelectTimer {
         remaining: config.timer_secs,
@@ -133,6 +133,15 @@ fn spawn_card_row(
                     ));
 
                     card.spawn((
+                        Text::new(format!("{:?}", chip.rarity)),
+                        TextFont {
+                            font_size: config.card_description_font_size,
+                            ..default()
+                        },
+                        TextColor(Color::srgba(0.8, 0.7, 0.3, 1.0)),
+                    ));
+
+                    card.spawn((
                         Text::new(chip.description.clone()),
                         TextFont {
                             font_size: config.card_description_font_size,
@@ -159,33 +168,21 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::{
-        ChipDefinition, ChipKind,
-        definition::{ChipEffect, Rarity},
-    };
-
-    fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
-        ChipDefinition {
-            name: name.to_owned(),
-            kind,
-            description: format!("{name} description"),
-            rarity: Rarity::Common,
-            max_stacks: 1,
-            effect: ChipEffect::Overclock,
-        }
-    }
+    use crate::chips::{ChipDefinition, ChipKind};
 
     fn make_registry(count: usize) -> ChipRegistry {
-        let chips = vec![
-            make_chip("Piercing Shot", ChipKind::Amp),
-            make_chip("Wide Breaker", ChipKind::Augment),
-            make_chip("Surge", ChipKind::Overclock),
-            make_chip("Ricochet", ChipKind::Amp),
-            make_chip("Quick Dash", ChipKind::Augment),
+        let all = vec![
+            ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp),
+            ChipDefinition::test_simple("Wide Breaker", ChipKind::Augment),
+            ChipDefinition::test_simple("Surge", ChipKind::Overclock),
+            ChipDefinition::test_simple("Ricochet", ChipKind::Amp),
+            ChipDefinition::test_simple("Quick Dash", ChipKind::Augment),
         ];
-        ChipRegistry {
-            chips: chips.into_iter().take(count).collect(),
+        let mut registry = ChipRegistry::default();
+        for chip in all.into_iter().take(count) {
+            registry.insert(chip);
         }
+        registry
     }
 
     fn test_app_with_registry(registry: ChipRegistry) -> App {

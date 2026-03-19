@@ -105,3 +105,61 @@ The `Without<BreakerMaxSpeed>` filter skips already-initialized entities (persis
 - **Init system tests** use `init_resource::<*Config>()` — they test the config→component bridge
 - **Production system tests** spawn entities with component values directly — no config resource needed
 - Tests may use `*Config::default()` to source component values, but never inject the config as a resource for the system under test
+
+---
+
+## Registry Pattern
+
+Domain registries hold definitions loaded from RON during the loading screen. All registries follow a standard encapsulated pattern.
+
+### Standard Shape
+
+```rust
+#[derive(Resource, Debug, Default)]
+pub(crate) struct FooRegistry {
+    items: HashMap<String, FooDefinition>,
+}
+
+impl FooRegistry {
+    pub(crate) fn get(&self, name: &str) -> Option<&FooDefinition> { ... }
+    pub(crate) fn insert(&mut self, def: FooDefinition) { ... }
+    pub(crate) fn values(&self) -> impl Iterator<Item = &FooDefinition> { ... }
+    pub(crate) fn len(&self) -> usize { ... }
+    pub(crate) fn is_empty(&self) -> bool { ... }
+}
+```
+
+Fields are **private** — all access goes through methods. This lets internals change (e.g., adding ordering) without breaking callers.
+
+### Key Types
+
+| Registry | Key | Value | Notes |
+|----------|-----|-------|-------|
+| `ChipRegistry` | `String` (name) | `ChipDefinition` | Paired `Vec<String>` preserves insertion order for deterministic chip offers |
+| `NodeLayoutRegistry` | `String` (name) | `NodeLayout` | Paired `Vec<String>` preserves insertion order for index-based node progression |
+| `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Unsorted — callers sort at call site for UI display |
+| `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name |
+
+### Pipeline
+
+```
+RON asset files
+    ↓  (asset loader)
+Assets<FooDefinition>
+    ↓  (seed_foo_registry — loading screen system)
+Res<FooRegistry>
+    ↓  (production systems read via methods)
+```
+
+### When to Add Ordered Access
+
+If a registry needs both name lookup and index-based access, pair the `HashMap` with a `Vec<String>` for insertion-order keys:
+
+```rust
+pub struct NodeLayoutRegistry {
+    layouts: HashMap<String, NodeLayout>,
+    order: Vec<String>,  // insertion order
+}
+```
+
+Provide `get_by_index(usize)` alongside `get_by_name(&str)`.

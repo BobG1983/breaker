@@ -1,6 +1,6 @@
 //! Handles keyboard input on the breaker selection screen.
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     behaviors::ArchetypeRegistry,
@@ -12,6 +12,14 @@ use crate::{
     shared::{GameState, RunSeed, SelectedArchetype},
 };
 
+/// Bundled parameters for run confirmation (archetype, state transition, seed).
+#[derive(SystemParam)]
+pub(crate) struct RunConfirmation<'w> {
+    archetype: ResMut<'w, SelectedArchetype>,
+    next_state: ResMut<'w, NextState<GameState>>,
+    seed: ResMut<'w, RunSeed>,
+}
+
 /// Handles keyboard navigation and confirmation on the run setup screen.
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as main menu) because
@@ -21,15 +29,10 @@ pub(crate) fn handle_run_setup_input(
     config: Res<InputConfig>,
     registry: Res<ArchetypeRegistry>,
     mut selection: ResMut<RunSetupSelection>,
-    mut run_params: (
-        ResMut<SelectedArchetype>,
-        ResMut<NextState<GameState>>,
-        ResMut<RunSeed>,
-    ),
+    mut confirm: RunConfirmation,
     seed_entry: Res<SeedEntry>,
     cards: Query<&BreakerCard>,
 ) {
-    let (ref mut selected_archetype, ref mut next_state, ref mut run_seed) = run_params;
     let card_count = cards.iter().count();
     if card_count == 0 {
         return;
@@ -55,17 +58,17 @@ pub(crate) fn handle_run_setup_input(
         sorted_names.sort();
 
         if let Some(name) = sorted_names.get(selection.index) {
-            selected_archetype.0.clone_from(name);
+            confirm.archetype.0.clone_from(name);
         }
 
         // Parse seed entry: empty → None (random), non-empty → Some(parsed)
         if seed_entry.value.is_empty() {
-            run_seed.0 = None;
+            confirm.seed.0 = None;
         } else {
-            run_seed.0 = Some(seed_entry.value.parse::<u64>().unwrap_or(0));
+            confirm.seed.0 = Some(seed_entry.value.parse::<u64>().unwrap_or(0));
         }
 
-        next_state.set(GameState::Playing);
+        confirm.next_state.set(GameState::Playing);
     }
 }
 

@@ -31,6 +31,7 @@ These are Bevy observer events (`#[derive(Event)]` + `commands.trigger()`), not 
 | Event | Sent By | Observed By |
 |-------|---------|-------------|
 | `ConsequenceFired(Consequence)` | behaviors (bridge_bolt_lost, bridge_bump) | behaviors/consequences/* (handle_life_lost, handle_time_penalty, handle_spawn_bolt) |
+| `ChipEffectApplied { effect, max_stacks }` | chips (apply_chip_effect) | chips/effects/* (handle_piercing, handle_damage_boost, etc.) |
 
 ## Registered Messages (no consumers yet)
 

@@ -62,6 +62,18 @@ pub(crate) enum ChipEffect {
     Overclock,
 }
 
+/// Triggered when a chip effect should be applied.
+///
+/// Dispatched by `apply_chip_effect` for each selected chip.
+/// Each per-effect observer self-selects via pattern matching on `effect`.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct ChipEffectApplied {
+    /// The effect to apply.
+    pub effect: ChipEffect,
+    /// Maximum stacks for this chip.
+    pub max_stacks: u32,
+}
+
 /// A single chip definition loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub(crate) struct ChipDefinition {
@@ -77,6 +89,26 @@ pub(crate) struct ChipDefinition {
     pub max_stacks: u32,
     /// The effect applied when this chip is selected.
     pub effect: ChipEffect,
+}
+
+#[cfg(test)]
+impl ChipDefinition {
+    /// Build a test chip with full control over effect and stacking.
+    pub(crate) fn test(name: &str, kind: ChipKind, effect: ChipEffect, max_stacks: u32) -> Self {
+        Self {
+            name: name.to_owned(),
+            kind,
+            description: format!("{name} description"),
+            rarity: Rarity::Common,
+            max_stacks,
+            effect,
+        }
+    }
+
+    /// Build a simple test chip with `Overclock` effect and `max_stacks` = 1.
+    pub(crate) fn test_simple(name: &str, kind: ChipKind) -> Self {
+        Self::test(name, kind, ChipEffect::Overclock, 1)
+    }
 }
 
 #[cfg(test)]

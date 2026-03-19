@@ -22,7 +22,7 @@ pub fn set_active_layout(
     override_res: Res<ScenarioLayoutOverride>,
     mut commands: Commands,
 ) {
-    if registry.layouts.is_empty() {
+    if registry.is_empty() {
         warn!("NodeLayoutRegistry is empty — no layout to set");
         return;
     }
@@ -39,10 +39,12 @@ pub fn set_active_layout(
         );
     }
 
-    let index = run_state.node_index as usize % registry.layouts.len();
-    let layout = registry.layouts[index].clone();
+    let index = run_state.node_index as usize % registry.len();
+    let Some(layout) = registry.get_by_index(index) else {
+        return;
+    };
     info!("node layout: {}", layout.name);
-    commands.insert_resource(ActiveNodeLayout(layout));
+    commands.insert_resource(ActiveNodeLayout(layout.clone()));
 }
 
 #[cfg(test)]
@@ -61,6 +63,14 @@ mod tests {
         }
     }
 
+    fn make_node_registry(layouts: Vec<NodeLayout>) -> NodeLayoutRegistry {
+        let mut registry = NodeLayoutRegistry::default();
+        for layout in layouts {
+            registry.insert(layout);
+        }
+        registry
+    }
+
     fn test_app(node_index: u32, layouts: Vec<NodeLayout>) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -68,7 +78,7 @@ mod tests {
                 node_index,
                 ..default()
             })
-            .insert_resource(NodeLayoutRegistry { layouts })
+            .insert_resource(make_node_registry(layouts))
             .insert_resource(ScenarioLayoutOverride::default())
             .add_systems(Startup, set_active_layout);
         app

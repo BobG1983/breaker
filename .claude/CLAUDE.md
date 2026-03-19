@@ -47,24 +47,25 @@ See `docs/design/` for the full set of non-negotiable design pillars. The key me
 
 ## Agent Workflow
 
-The main agent is the orchestrator. Invoke subagents automatically at these trigger points — do not wait to be asked.
+The main agent is the orchestrator — it describes features, reviews outputs, routes failures, and handles shared wiring. All implementation goes through the delegated pipeline.
 
-See @.claude/rules/agent-flow.md for the full flow reference: hint formats, failure routing, and parallel-launch requirements.
+See @.claude/rules/agent-flow.md for hint formats, failure routing, and parallel-launch requirements.
+See @.claude/rules/orchestration.md for session state, verification tiers, circuit breaking, and context pruning.
 
-### Delegated Implementation (writer-tests + writer-code)
+### Delegated Implementation (planner-spec → planner-review → writer-tests → writer-code)
 
-For multi-domain work or context-heavy phases, delegate implementation to the **writer-tests** → **writer-code** TDD pair. This preserves main context and prevents implementation bias through context isolation. See @.claude/rules/delegated-implementation.md for full spec-writing guidelines.
-
-**When to delegate**: Anything non-trivial — single domain or multi-domain. If it has 2+ behaviors to test and the spec can be written clearly, delegate it.
-
-**When NOT to delegate**: Cross-cutting changes, exploratory work, new domain wiring, trivial additions (single function, one-liner config, rename).
+See @.claude/rules/delegated-implementation.md for full spec formats and pipeline details.
 
 **The flow** (RED → GREEN → REFACTOR):
-1. Write ALL specs upfront (behavioral spec for writer-tests + implementation spec for writer-code, one pair per domain)
-2. Launch ALL **writer-tests** as background agents (parallel across domains) — RED phase
-3. As each writer-tests completes: review its output, immediately launch its paired **writer-code** — don't wait for other writer-tests
-4. After ALL writer-codes complete (code only — no self-verification): run the post-implementation checklist below (runner-linting + runner-tests verify)
-5. Handle shared wiring (`lib.rs`, `game.rs`, `shared.rs`) yourself — REFACTOR as needed
+1. Describe the feature in plain language
+2. Launch **planner-spec** to produce all specs (behavioral + implementation, per domain)
+3. Launch **planner-review** to pressure-test specs
+4. Review final specs, create shared prerequisites
+5. Launch ALL **writer-tests** in parallel — RED phase
+6. As each writer-tests completes: review, launch its **writer-code** — GREEN phase
+7. After ALL writer-codes complete: launch post-implementation verification
+8. Handle wiring (`lib.rs`, `game.rs`, `shared.rs`) — REFACTOR
+9. Update session-state.md
 
 ### Phase 1 — Before Writing Code (sequential)
 
@@ -72,27 +73,14 @@ For multi-domain work or context-heavy phases, delegate implementation to the **
 |---------|-------|-----|
 | Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** | Verify before using — Bevy APIs change between versions |
 | Choosing between Rust idiom alternatives | **researcher-rust-idioms** | Research idiomatic patterns before committing to an approach |
+| Feature ready for spec writing | **planner-spec** | Produce behavioral + implementation specs per domain |
+| Specs produced — novel, cross-domain, or uncertain | **planner-review** | Pressure-test specs before committing to writers |
 
 ### Phase 2 — After Implementation (launch in parallel)
 
-Launch all applicable agents simultaneously — they are independent:
+Launch per verification tier defined in @.claude/rules/orchestration.md (Standard or Full).
 
-| Trigger | Agent | Why |
-|---------|-------|-----|
-| Always after implementation | **runner-linting** | Auto-fmt and clippy; errors → writer-code |
-| Always after implementation | **runner-tests** | Run tests; failures → writer-code or writer-tests |
-| Always after implementation | **runner-scenarios** | Run all gameplay scenarios headlessly and diagnose failures |
-| Always after implementation | **reviewer-correctness** | Logic bugs, ECS pitfalls, state machine holes, math |
-| Always after implementation | **reviewer-quality** | Idioms, vocabulary, test coverage, documentation |
-| Always after implementation | **reviewer-bevy-api** | Verify Bevy API usage is correct for this version |
-| Always after implementation | **reviewer-architecture** | Validate plugin boundaries and message discipline |
-| Always after implementation | **reviewer-performance** | Bevy-specific performance: queries, archetypes, scheduling |
-| 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** | Detect ordering issues and conflicts |
-| New gameplay mechanic or upgrade designed | **guard-game-design** | Validate against design pillars |
-| Phase complete or significant structural change | **guard-docs** | Sync architecture docs, plan/, design/terminology.md |
-| New dependencies added or security-sensitive code | **guard-security** | Audit unsafe code, deserialization, dependency CVEs |
-| New dependencies added or before release | **guard-dependencies** | Unused deps, outdated versions, license compliance |
-| New mechanic needs adversarial scenario coverage | **writer-scenarios** | Generate chaos scenarios and invariant checkers |
+All agents in a tier launch in a **single message** — separate messages make them sequential. Add conditional agents (researcher-system-dependencies, guard-game-design, guard-docs, guard-security, guard-dependencies, writer-scenarios, guard-agent-memory) to the same wave when triggered.
 
 ### Phase 3 — On Build/Test Failure (sequential, reactive)
 
@@ -100,10 +88,10 @@ Launch all applicable agents simultaneously — they are independent:
 |---------|------|-------|
 | Compiler errors that aren't obvious | **researcher-rust-errors** → describe fix | Sequential |
 | runner-linting FAIL, clippy errors | runner-linting hint → **writer-code** | No writer-tests needed |
-| runner-scenarios FAIL, high-confidence diagnosis | runner-scenarios hint → **writer-tests** (regression spec) → **writer-code** | writer-tests writes scenario RON or unit test |
-| runner-scenarios FAIL, low-confidence diagnosis | Main agent investigates → writes spec → **writer-tests** → **writer-code** | Main agent reads src first |
+| runner-scenarios FAIL, high-confidence | runner-scenarios hint → **writer-tests** → **writer-code** | writer-tests writes scenario RON or unit test |
+| runner-scenarios FAIL, low-confidence | Main agent investigates → writes spec → **writer-tests** → **writer-code** | Main agent reads src first |
 | runner-tests FAIL, existing test broke | runner-tests hint → **writer-code** (fix spec) | writer-tests skipped — test already exists |
-| runner-tests FAIL, no test for the broken behavior | runner-tests hint → **writer-tests** (regression spec) → **writer-code** | Rare — usually means a gap in coverage |
+| runner-tests FAIL, no test for behavior | runner-tests hint → **writer-tests** → **writer-code** | Rare — gap in coverage |
 
 ### Release (solo)
 
@@ -114,12 +102,7 @@ Launch all applicable agents simultaneously — they are independent:
 ---
 
 **Post-implementation checklist** (run before considering a task done):
-1. Launch **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance** in parallel (always)
-2. If 3+ systems added or cross-plugin data flow → also launch **researcher-system-dependencies** in the same parallel wave
-3. If new gameplay mechanic → also launch **guard-game-design** in the same parallel wave
-4. If phase complete or docs may have drifted → also launch **guard-docs** in the same parallel wave
-5. If new dependencies added or security-sensitive code → also launch **guard-security** in the same parallel wave
-6. If new dependencies added or before release → also launch **guard-dependencies** in the same parallel wave
-7. If new mechanic needs adversarial scenario coverage → also launch **writer-scenarios** in the same parallel wave
-8. Run `/simplify` on changed code
-9. Commit to the feature branch with a conventional commit message
+1. Launch verification agents per tier (Standard or Full) — see @.claude/rules/orchestration.md
+2. Add conditional agents to the same parallel wave when triggered
+3. Run `/simplify` on changed code
+4. Commit to the feature branch with a conventional commit message

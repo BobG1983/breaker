@@ -1,188 +1,36 @@
-//! System that reads [`ChipSelected`] messages and applies or stacks
-//! effect components on the bolt and breaker entities.
+//! Thin dispatcher: reads [`ChipSelected`] messages, looks up the chip in the
+//! [`ChipRegistry`], and triggers [`ChipEffectApplied`] for per-effect observers.
 
 use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
-    chips::{
-        components::*,
-        definition::{AmpEffect, AugmentEffect, ChipEffect},
-        queries::{EffectQueryBolt, EffectQueryBreaker},
-        resources::ChipRegistry,
-    },
+    chips::{definition::ChipEffectApplied, resources::ChipRegistry},
     ui::messages::ChipSelected,
 };
 
 /// Reads [`ChipSelected`] messages, looks up the chip definition in the
-/// [`ChipRegistry`], and inserts or updates effect components on the
-/// appropriate entity (bolt for Amp effects, breaker for Augment effects).
+/// [`ChipRegistry`], and triggers [`ChipEffectApplied`] for each selected chip.
 ///
-/// Stacking logic: adds the per-stack value to any existing component.
-/// Stops stacking when `current / per_stack >= max_stacks`.
-///
-/// Overclock chips are a no-op here — deferred to phase 4d.
+/// Per-effect observers handle the actual stacking logic.
+/// Overclock chips trigger the event too — observers self-select.
 pub(crate) fn apply_chip_effect(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
-    mut bolt_query: Query<EffectQueryBolt, With<Bolt>>,
-    mut breaker_query: Query<EffectQueryBreaker, With<Breaker>>,
     mut commands: Commands,
 ) {
     let Some(registry) = registry else {
         return;
     };
     for msg in reader.read() {
-        let Some(chip) = registry.chips.iter().find(|c| c.name == msg.name) else {
+        let Some(chip) = registry.get(&msg.name) else {
+            debug!("chip not found in registry: {}", msg.name);
             continue;
         };
-        let max_stacks = chip.max_stacks;
-        match chip.effect {
-            ChipEffect::Amp(amp) => {
-                for (entity, mut p, mut d, mut bs, mut ch, mut sz) in &mut bolt_query {
-                    match amp {
-                        AmpEffect::Piercing(v) => stack_u32(
-                            entity,
-                            p.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            Piercing,
-                        ),
-                        AmpEffect::DamageBoost(v) => stack_f32(
-                            entity,
-                            d.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            DamageBoost,
-                        ),
-                        AmpEffect::SpeedBoost(v) => stack_f32(
-                            entity,
-                            bs.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            BoltSpeedBoost,
-                        ),
-                        AmpEffect::ChainHit(v) => stack_u32(
-                            entity,
-                            ch.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            ChainHit,
-                        ),
-                        AmpEffect::SizeBoost(v) => stack_f32(
-                            entity,
-                            sz.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            BoltSizeBoost,
-                        ),
-                    }
-                }
-            }
-            ChipEffect::Augment(aug) => {
-                for (entity, mut w, mut s, mut b, mut t) in &mut breaker_query {
-                    match aug {
-                        AugmentEffect::WidthBoost(v) => stack_f32(
-                            entity,
-                            w.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            WidthBoost,
-                        ),
-                        AugmentEffect::SpeedBoost(v) => stack_f32(
-                            entity,
-                            s.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            BreakerSpeedBoost,
-                        ),
-                        AugmentEffect::BumpForce(v) => stack_f32(
-                            entity,
-                            b.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            BumpForceBoost,
-                        ),
-                        AugmentEffect::TiltControl(v) => stack_f32(
-                            entity,
-                            t.as_deref_mut().map(|c| &mut c.0),
-                            v,
-                            max_stacks,
-                            &mut commands,
-                            TiltControlBoost,
-                        ),
-                    }
-                }
-            }
-            ChipEffect::Overclock => {
-                debug!("overclock effects deferred to 4d");
-            }
-        }
-    }
-}
-
-/// Stacks a `u32` component field on an entity.
-///
-/// If `field` is `Some`, adds `per_stack` when below the cap.
-/// If `field` is `None`, inserts the component with `per_stack` as the initial value.
-fn stack_u32<C, F>(
-    entity: Entity,
-    field: Option<&mut u32>,
-    per_stack: u32,
-    max_stacks: u32,
-    commands: &mut Commands,
-    constructor: F,
-) where
-    C: Component,
-    F: FnOnce(u32) -> C,
-{
-    if per_stack == 0 {
-        return;
-    }
-    if let Some(current) = field {
-        if *current / per_stack < max_stacks {
-            *current += per_stack;
-        }
-    } else {
-        commands.entity(entity).insert(constructor(per_stack));
-    }
-}
-
-/// Stacks an `f32` component field on an entity.
-///
-/// If `field` is `Some`, adds `per_stack` when below the cap.
-/// If `field` is `None`, inserts the component with `per_stack` as the initial value.
-fn stack_f32<C, F>(
-    entity: Entity,
-    field: Option<&mut f32>,
-    per_stack: f32,
-    max_stacks: u32,
-    commands: &mut Commands,
-    constructor: F,
-) where
-    C: Component,
-    F: FnOnce(f32) -> C,
-{
-    if per_stack == 0.0 {
-        return;
-    }
-    if let Some(current) = field {
-        // Compare via f64 to avoid u32→f32 precision loss lint.
-        if f64::from(*current / per_stack) < f64::from(max_stacks) {
-            *current += per_stack;
-        }
-    } else {
-        commands.entity(entity).insert(constructor(per_stack));
+        commands.trigger(ChipEffectApplied {
+            effect: chip.effect,
+            max_stacks: chip.max_stacks,
+        });
     }
 }
 
@@ -196,7 +44,9 @@ mod tests {
         breaker::components::Breaker,
         chips::{
             ChipKind,
-            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect, Rarity},
+            components::*,
+            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect},
+            effects::*,
             resources::ChipRegistry,
         },
         ui::messages::ChipSelected,
@@ -225,7 +75,16 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<ChipSelected>()
             .init_resource::<ChipRegistry>()
-            .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain());
+            .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain())
+            .add_observer(handle_piercing)
+            .add_observer(handle_damage_boost)
+            .add_observer(handle_bolt_speed_boost)
+            .add_observer(handle_chain_hit)
+            .add_observer(handle_bolt_size_boost)
+            .add_observer(handle_width_boost)
+            .add_observer(handle_breaker_speed_boost)
+            .add_observer(handle_bump_force_boost)
+            .add_observer(handle_tilt_control_boost);
         app
     }
 
@@ -235,23 +94,6 @@ mod tests {
             .resource_mut::<Time<Fixed>>()
             .accumulate_overstep(timestep);
         app.update();
-    }
-
-    /// Build a minimal [`ChipDefinition`] for testing.
-    fn make_chip(
-        name: &str,
-        kind: ChipKind,
-        effect: ChipEffect,
-        max_stacks: u32,
-    ) -> ChipDefinition {
-        ChipDefinition {
-            name: name.to_owned(),
-            kind,
-            description: String::new(),
-            rarity: Rarity::Common,
-            max_stacks,
-            effect,
-        }
     }
 
     fn send_chip_selected(app: &mut App, name: &str, kind: ChipKind) {
@@ -272,8 +114,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Piercing Shot",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
@@ -299,8 +140,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, Piercing(1))).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Piercing Shot",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
@@ -325,8 +165,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, Piercing(3))).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Piercing Shot",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
@@ -355,8 +194,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Wide Breaker",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
@@ -386,8 +224,7 @@ mod tests {
         let breaker = app.world_mut().spawn((Breaker, WidthBoost(20.0))).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Wide Breaker",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
@@ -454,8 +291,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Damage Up",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
@@ -485,8 +321,7 @@ mod tests {
         app.world_mut().spawn((Bolt, DamageBoost(1.5)));
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Damage Up",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
@@ -520,8 +355,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Speed Up",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
@@ -555,8 +389,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Chain",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::ChainHit(2)),
@@ -586,8 +419,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Big Bolt",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
@@ -621,8 +453,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Fast Breaker",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
@@ -656,8 +487,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Power Bump",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
@@ -691,8 +521,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Tilt Control",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
@@ -727,8 +556,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(make_chip(
+            .insert(ChipDefinition::test(
                 "Surge",
                 ChipKind::Overclock,
                 ChipEffect::Overclock,
