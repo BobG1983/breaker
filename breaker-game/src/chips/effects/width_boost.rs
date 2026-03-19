@@ -7,8 +7,7 @@ use crate::{
     breaker::components::Breaker,
     chips::{
         components::WidthBoost,
-        definition::{AugmentEffect, ChipEffect},
-        definition::ChipEffectApplied,
+        definition::{AugmentEffect, ChipEffect, ChipEffectApplied},
     },
 };
 

@@ -7,8 +7,7 @@ use crate::{
     bolt::components::Bolt,
     chips::{
         components::Piercing,
-        definition::{AmpEffect, ChipEffect},
-        definition::ChipEffectApplied,
+        definition::{AmpEffect, ChipEffect, ChipEffectApplied},
     },
 };
 
