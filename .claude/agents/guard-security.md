@@ -2,7 +2,7 @@
 name: guard-security
 description: "Use this agent to audit code for security issues: unsafe blocks, path traversal in asset loading, command injection in build scripts, unsanitized RON deserialization, and supply chain risks in dependencies. Focuses on game-specific attack surface, not generic web security.\n\nExamples:\n\n- After adding new RON asset loading:\n  Assistant: \"Let me use the guard-security agent to check the deserialization path for injection risks.\"\n\n- After adding new dependencies:\n  Assistant: \"Let me use the guard-security agent to audit new deps for known vulnerabilities.\"\n\n- After adding unsafe code:\n  Assistant: \"Let me use the guard-security agent to verify the unsafe block is sound.\"\n\n- Parallel note: Run alongside runner-tests, reviewer-correctness, reviewer-quality, and other post-implementation agents — all are independent."
 tools: Read, Glob, Grep, Bash
-model: haiku
+model: sonnet
 color: teal
 memory: project
 ---

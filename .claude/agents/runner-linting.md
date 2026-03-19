@@ -2,7 +2,7 @@
 name: runner-linting
 description: "Run cargo fmt, cargo dclippy (game crate), and cargo dsclippy (scenario runner crate), report results with Fix spec hints for clippy errors that writer-code can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-linting agent to check formatting and clippy.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-linting agent to verify fmt and clippy are clean.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-linting agent to confirm lint is clean.\""
 tools: Bash, Read, Glob, Grep
-model: haiku
+model: sonnet
 color: yellow
 memory: project
 ---
