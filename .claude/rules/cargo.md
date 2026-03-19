@@ -35,11 +35,21 @@ cargo scenario -- --all -p all       # All scenarios, unlimited parallelism
 cargo scenario -- --all --serial     # All scenarios, in-process sequential
 cargo scenario -- --all --loop 10    # All scenarios 10 times
 cargo scenario -- -s aegis_chaos     # Single scenario, in-process
-cargo scenario -- -s prism_scatter -p 10      # Stress test: 10 parallel copies
-cargo scenario -- -s prism_scatter -p 10 -l 3 # 30 total: 3 rounds of 10
 ```
 
 `--serial` and `--parallel` are mutually exclusive.
+
+### Stress testing via RON
+
+Scenarios can declare a `stress` field to automatically run multiple copies under `--all`:
+
+```ron
+stress: Some(()),                           // 32 runs, 32 parallelism (defaults)
+stress: Some((runs: 64)),                   // 64 runs, 32 parallelism
+stress: Some((runs: 64, parallelism: 16)),  // explicit both
+```
+
+When `stress` is `Some(...)`, `cargo scenario -- --all` spawns multiple subprocess copies and aggregates results. A stress scenario passes only if ALL copies pass. Use `-s name` to run a stress scenario individually (it still spawns copies). See `scenarios/stress/breaker_oob_stress.scenario.ron` for an example.
 
 ## Exceptions
 

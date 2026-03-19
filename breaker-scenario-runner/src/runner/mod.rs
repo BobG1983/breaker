@@ -11,7 +11,4 @@ mod output;
 mod tests;
 
 pub use app::{drain_remaining_logs, guarded_update, is_timed_out};
-pub use execution::{
-    Parallelism, build_run_list, parse_parallelism, replicate_run_list, run_all_parallel,
-    run_all_serial, run_with_args, scenarios_dir,
-};
+pub use execution::*;

@@ -8,6 +8,7 @@ type: reference
 
 - **Bump system**: Very high. Grade functions, update_bump, grade_bump, combined pipeline, BoltServing guard, input-loss regression, perfect_bump_dash_cancel.
 - **CCD physics**: Comprehensive. All collision surfaces, multi-bolt, cascade prevention, MAX_BOUNCES cap, wall vs cell, overlap resolution.
+- **clamp_bolt_to_playfield (as of 2026-03-19, feature/ron-stress-testing)**: 8 tests. Covers inside-bounds no-op, right-wall clamp+flip, left-wall clamp+flip, ceiling clamp+flip, floor open (no bottom clamp), inward-velocity-not-double-flipped for right wall and ceiling, serving bolt excluded. Known gaps: (1) no test for a bolt exactly at the clamp boundary (pos.x == x_max) — behavior is defined but boundary is untested. (2) no test that X-axis clamp does not disturb Y velocity in the left-wall case (only right-wall has the vy-unchanged assertion). (3) no test for corner escape (bolt past both right wall and ceiling simultaneously) — both axes clamped independently, but this compound path is not exercised.
 - **Breaker state machine**: All 4 transitions, easing correctness, frame-rate independence, timer init.
 - **Node completion**: All branches (required, non-required, zero, remaining).
 - **Run end paths**: All three outcomes (node-transition, win, no-op).
@@ -23,6 +24,8 @@ type: reference
 - **valid_breaker_state.rs (Settling→Dashing)**: Legal `Settling → Dashing` transition untested — CLOSED in 2026-03-19 PR (`valid_breaker_state_does_not_fire_on_settling_to_dashing` test added). Braking→Settling also added in same PR.
 - **runner/app.rs `collect_and_evaluate` empty-buffer path**: CLOSED in 2026-03-19 PR (`collect_and_evaluate_fails_when_no_snapshot` test added). Remaining gap: happy-path where a snapshot IS present and passes/fails is still not unit-tested (tested only via full integration runs).
 - **read_input.rs**: `repeat: true` key event filter path untested.
+- **runner/execution.rs stress infrastructure (as of 2026-03-19, feature/ron-stress-testing)**: `StressResult::passed`, `summary_line`, and `pass_count` fully covered. `partition_stress_scenarios` covered for normal+stress mix, all-normal, empty input, and returns-default-config. `run_single_scenario` is new (added this branch) — no direct unit test exists for it. `SubprocessSpec`/`ChildResult` are private structs; tested only transitively through `run_all_parallel`/`run_stress_scenario`. Known gaps: (1) `run_stress_scenario` exe-lookup-error early-return path untested. (2) `print_stress_result` verbose stderr branch untested (comment in doc says "not yet implemented"). (3) `run_single_scenario` has no unit test — only exercised via integration run through `main`.
+- **types/mod.rs StressConfig (as of 2026-03-19)**: Full RON parse, empty-struct defaults, and two partial-override variants tested. ScenarioDefinition stress field (None/Some/Some(()) defaults) all tested.
 
 ## Lifecycle Tests (2026-03-17, updated 2026-03-18)
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.

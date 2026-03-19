@@ -424,6 +424,7 @@ mod tests {
             debug_setup: None,
             invariant_params: default(),
             allow_early_end: true,
+            stress: None,
         };
         let stats = ScenarioStats {
             actions_injected: 0,

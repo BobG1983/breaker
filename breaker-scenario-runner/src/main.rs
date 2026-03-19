@@ -11,14 +11,13 @@
 //!   `cargo scenario -- --all -p 4`
 //!   `cargo scenario -- --all --serial`
 //!   `cargo scenario -- --all --loop 3`
-//!   `cargo scenario -- -s prism_scatter -p 10`        (stress test: 10 parallel copies)
-//!   `cargo scenario -- -s prism_scatter -p 10 -l 3`   (30 total: 3 rounds of 10)
 
 use std::process;
 
 use breaker_scenario_runner::runner::{
-    Parallelism, build_run_list, parse_parallelism, replicate_run_list, run_all_parallel,
-    run_all_serial, run_with_args,
+    Parallelism, build_run_list, parse_parallelism, partition_stress_scenarios,
+    print_stress_result, run_all_parallel, run_all_serial, run_single_scenario,
+    run_stress_scenario, run_with_args,
 };
 use clap::Parser;
 
@@ -44,27 +43,36 @@ fn main() {
     let loop_count = args.loops.unwrap_or(1);
     let headless = !args.visual;
 
-    // Fast path: single scenario, no parallelism flag, no loop → in-process, no subprocess overhead.
-    if args.scenario.is_some()
-        && !args.all
-        && loop_count == 1
-        && !args.execution.serial
-        && args.execution.parallel.is_none()
-    {
+    // Stress-copy subprocess: always run single in-process, ignore stress fields.
+    if args.execution.stress_copy {
         let exit_code = run_with_args(args.scenario.as_deref(), headless, args.verbose);
         process::exit(exit_code);
     }
 
-    // -s <name> -p <n>: replicate scenario n times for stress testing.
-    let copies = if !args.all && args.scenario.is_some() && args.execution.parallel.is_some() {
-        match &parallelism {
-            Parallelism::Count(n) => *n,
-            Parallelism::All => 1,
+    // Fast path: single scenario, no loop → check for stress config first.
+    if args.scenario.is_some() && !args.all && loop_count == 1 && !args.execution.serial {
+        // Build the run list to resolve the path, then check for stress config.
+        let runs = build_run_list(args.scenario.as_deref(), false);
+        if runs.is_empty() {
+            eprintln!("No scenarios found. Use -s <name> or --all.");
+            process::exit(1);
         }
-    } else {
-        1
-    };
-    let runs = replicate_run_list(build_run_list(args.scenario.as_deref(), args.all), copies);
+
+        let (normal, stress) = partition_stress_scenarios(&runs);
+        if let Some((name, _path, config)) = stress.into_iter().next() {
+            let result = run_stress_scenario(&name, &config, args.visual, args.verbose);
+            print_stress_result(&result);
+            process::exit(i32::from(!result.passed()));
+        }
+
+        // No stress config — run in-process with the already-resolved path.
+        if !normal.is_empty() {
+            let exit_code = run_single_scenario(&normal[0].1, headless, args.verbose);
+            process::exit(exit_code);
+        }
+    }
+
+    let runs = build_run_list(args.scenario.as_deref(), args.all);
     if runs.is_empty() {
         eprintln!("No scenarios found. Use -s <name> or --all.");
         process::exit(1);
@@ -79,21 +87,45 @@ fn main() {
         process::exit(1);
     }
 
+    // Partition into normal and stress scenarios.
+    let (normal_runs, stress_runs) = partition_stress_scenarios(&runs);
+
+    if args.execution.serial && !stress_runs.is_empty() {
+        let stress_names: Vec<&str> = stress_runs.iter().map(|(n, ..)| n.as_str()).collect();
+        eprintln!(
+            "note: --serial applies to normal scenarios only; {} stress scenario(s) will still use parallel subprocesses: {}",
+            stress_runs.len(),
+            stress_names.join(", ")
+        );
+    }
+
     let mut worst_exit = 0;
     for iteration in 1..=loop_count {
         if loop_count > 1 {
             println!("\n=== Loop {iteration}/{loop_count} ===");
         }
 
-        let exit_code = if args.execution.serial {
-            run_all_serial(&runs, headless, args.verbose)
-        } else {
-            let batch_size = parallelism.resolve(runs.len());
-            run_all_parallel(&runs, args.visual, args.verbose, batch_size)
-        };
+        // Run normal scenarios.
+        if !normal_runs.is_empty() {
+            let exit_code = if args.execution.serial {
+                run_all_serial(&normal_runs, headless, args.verbose)
+            } else {
+                let batch_size = parallelism.resolve(normal_runs.len());
+                run_all_parallel(&normal_runs, args.visual, args.verbose, batch_size)
+            };
 
-        if exit_code > worst_exit {
-            worst_exit = exit_code;
+            if exit_code > worst_exit {
+                worst_exit = exit_code;
+            }
+        }
+
+        // Run stress scenarios.
+        for (name, _path, config) in &stress_runs {
+            let result = run_stress_scenario(name, config, args.visual, args.verbose);
+            print_stress_result(&result);
+            if !result.passed() && worst_exit == 0 {
+                worst_exit = 1;
+            }
         }
     }
 
@@ -138,6 +170,11 @@ struct ExecutionMode {
     /// Run in-process sequentially, no subprocesses
     #[arg(long, conflicts_with = "parallel")]
     serial: bool,
+
+    /// Internal: marks this process as a stress-copy subprocess.
+    /// Skips stress expansion to prevent infinite recursion.
+    #[arg(long, hide = true)]
+    stress_copy: bool,
 }
 
 fn parse_loop_count(s: &str) -> Result<usize, String> {
@@ -169,5 +206,21 @@ mod tests {
     fn parse_loop_count_rejects_non_numeric() {
         let result = parse_loop_count("abc");
         assert!(result.is_err(), "expected error for 'abc', got: {result:?}");
+    }
+
+    #[test]
+    fn stress_copy_flag_parses() {
+        let args = Args::parse_from(["breaker_scenario_runner", "-s", "foo", "--stress-copy"]);
+        assert!(args.execution.stress_copy, "stress_copy must be true");
+        assert_eq!(args.scenario.as_deref(), Some("foo"));
+    }
+
+    #[test]
+    fn stress_copy_flag_defaults_to_false() {
+        let args = Args::parse_from(["breaker_scenario_runner", "-s", "foo"]);
+        assert!(
+            !args.execution.stress_copy,
+            "stress_copy must default to false"
+        );
     }
 }

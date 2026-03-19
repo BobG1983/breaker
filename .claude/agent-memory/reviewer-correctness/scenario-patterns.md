@@ -96,8 +96,7 @@ type: reference
 - Fast path `args.scenario.is_some() && !args.all && loop_count == 1 && !args.execution.serial` — correctly skips for `--loop N` and `--serial`. `--visual -s foo` still goes through fast path (in-process, visual=true, headless=false). Correct.
 - `Parallelism::resolve(Count(n))` ignores `total` — returns `n.max(1)` unconditionally. `Count(100)` with 3 scenarios → chunks(100) gives one batch of 3. Correct.
 - `run_all_parallel` redundant `.max(1)` (batch_size = parallelism.max(1)): `resolve()` already guarantees ≥1. Redundant but harmless.
-- `--visual --serial` guard (runs.len() > 1) correctly blocks multi-scenario visual serial. Does NOT block single-scenario visual serial — intentional (app.run() works once).
-- **CONFIRMED BUG**: `--visual --serial --loop N` (N > 1) with any single scenario: the guard at line 60-65 only checks `runs.len() > 1`, not the loop count. On the second iteration, `run_all_serial` calls `run_scenario(headless=false)` which calls `build_app(headless=false, first_run=true)` (always true because `shared_log_buffer` is reset to `None` on each `run_all_serial` call) and then `app.run()`. Winit event loop cannot be started a second time in the same process → crash.
+- `--visual --serial` guard now uses `total_runs = runs.len() * loop_count > 1`. Fixed in feature/ron-stress-testing. Both `--loop N` and multi-scenario cases correctly blocked. Do not re-flag.
 - `--visual --loop N` without `--serial` is safe: uses `run_all_parallel` which spawns subprocesses; each subprocess sees `--visual` without `--loop`, runs Winit exactly once. Correct.
 - `parse_loop_count` correctly rejects 0. `parse_parallelism` correctly rejects 0 and non-numeric strings.
 - clap `conflicts_with` is bidirectional: `parallel` has `conflicts_with = "serial"` and `serial` has `conflicts_with = "parallel"`. Clap handles both directions. Correct.
@@ -116,3 +115,15 @@ type: reference
 - NodePlugin::plugin_builds test does NOT register BoltSpawned/BreakerSpawned/WallsSpawned. FixedUpdate doesn't fire on first app.update() when Time<Fixed> accumulator starts at 0 with no ManualDuration. Test passes without panic. Correct.
 - WallsSpawned is pub(crate): accessible from check_spawn_complete (same crate). Scenario runner only uses SpawnNodeComplete (pub). Correct.
 - SpawnNodeComplete written by check_spawn_complete in frame N is readable by check_no_entity_leaks in frame N+1 (double-buffer semantics). Entity count at N+1 equals N (no spawning/despawning between). Correct 1-frame delay.
+
+## feature/ron-stress-testing — spawn_batched + run_single_scenario (2026-03-19)
+
+- `spawn_batched` result ordering: spawn-failures for a batch appear BEFORE wait-results within that batch (failure pushed immediately; successfully-spawned children appended to `children` then waited). This means when a spawn failure occurs mid-batch, the enumerate index no longer matches the original spec index.
+- `run_stress_scenario` `copy_index` via `.enumerate()` on `all_results`: incorrect when spawn failures occur mid-batch (enumerate position ≠ spec position). Only affects diagnostic output (`print_stress_result` "Copy N:"), not pass/fail logic. Do not re-flag as a logic bug.
+- `run_stress_scenario` `spawn_batched` Err path: hardcodes `copy_index: 0` in the single failure. Diagnostic display only, not logic.
+- `run_all_parallel` uses `display_name.clone()` for SubprocessSpec and the result's `r.name` for both output and summary. Names are correct.
+- `run_single_scenario` bypasses `collect_scenario_paths` re-lookup — takes already-resolved `&Path` directly. Used in fast path after `build_run_list`. Correct.
+- Fast path in main.rs: `build_run_list` is called once inside the fast-path block; the general path below also calls it independently. No double-call on any code path — fast path always exits via `process::exit`.
+- `--serial` warning fires on line 93 only in the general path (after fast path exit). Fast path condition includes `!args.execution.serial` so serial+stress always reaches the general path. Warning fires correctly.
+- `partition_stress_scenarios_empty_input_returns_empty` test: passes `&[]` directly, pure unit test. Correct.
+- `stress_result_pass_count_derived_from_total_minus_failures` test: total=10, failures=2, expects 8. Matches `total - failures.len()`. Correct.
