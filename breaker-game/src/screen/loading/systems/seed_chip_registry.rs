@@ -57,18 +57,6 @@ mod tests {
         app
     }
 
-    fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
-        use crate::chips::definition::{ChipEffect, Rarity};
-        ChipDefinition {
-            name: name.to_owned(),
-            kind,
-            description: format!("{name} description"),
-            rarity: Rarity::Common,
-            max_stacks: 1,
-            effect: ChipEffect::Overclock,
-        }
-    }
-
     fn make_collection(
         amps: Vec<Handle<ChipDefinition>>,
         augments: Vec<Handle<ChipDefinition>>,
@@ -104,9 +92,12 @@ mod tests {
         let mut app = test_app();
 
         let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
-        let amp = assets.add(make_chip("Piercing Shot", ChipKind::Amp));
-        let augment = assets.add(make_chip("Wide Breaker", ChipKind::Augment));
-        let overclock = assets.add(make_chip("Surge", ChipKind::Overclock));
+        let amp = assets.add(ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp));
+        let augment = assets.add(ChipDefinition::test_simple(
+            "Wide Breaker",
+            ChipKind::Augment,
+        ));
+        let overclock = assets.add(ChipDefinition::test_simple("Surge", ChipKind::Overclock));
 
         app.world_mut()
             .insert_resource(make_collection(vec![amp], vec![augment], vec![overclock]));
@@ -144,7 +135,7 @@ mod tests {
 
         // Add a chip AFTER seeding — if the guard works, it won't be picked up
         let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
-        let handle = assets.add(make_chip("Late Addition", ChipKind::Amp));
+        let handle = assets.add(ChipDefinition::test_simple("Late Addition", ChipKind::Amp));
         app.world_mut()
             .insert_resource(make_collection(vec![handle], vec![], vec![]));
         app.update();

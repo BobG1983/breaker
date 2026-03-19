@@ -159,29 +159,15 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::{
-        ChipDefinition, ChipKind,
-        definition::{ChipEffect, Rarity},
-    };
-
-    fn make_chip(name: &str, kind: ChipKind) -> ChipDefinition {
-        ChipDefinition {
-            name: name.to_owned(),
-            kind,
-            description: format!("{name} description"),
-            rarity: Rarity::Common,
-            max_stacks: 1,
-            effect: ChipEffect::Overclock,
-        }
-    }
+    use crate::chips::{ChipDefinition, ChipKind};
 
     fn make_registry(count: usize) -> ChipRegistry {
         let chips = vec![
-            make_chip("Piercing Shot", ChipKind::Amp),
-            make_chip("Wide Breaker", ChipKind::Augment),
-            make_chip("Surge", ChipKind::Overclock),
-            make_chip("Ricochet", ChipKind::Amp),
-            make_chip("Quick Dash", ChipKind::Augment),
+            ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp),
+            ChipDefinition::test_simple("Wide Breaker", ChipKind::Augment),
+            ChipDefinition::test_simple("Surge", ChipKind::Overclock),
+            ChipDefinition::test_simple("Ricochet", ChipKind::Amp),
+            ChipDefinition::test_simple("Quick Dash", ChipKind::Augment),
         ];
         ChipRegistry {
             chips: chips.into_iter().take(count).collect(),

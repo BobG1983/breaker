@@ -64,7 +64,7 @@ mod tests {
     use super::*;
     use crate::chips::{
         ChipDefinition, ChipKind,
-        definition::{AmpEffect, ChipEffect, Rarity},
+        definition::{AmpEffect, ChipEffect},
     };
 
     #[derive(Resource, Default)]
@@ -78,30 +78,14 @@ mod tests {
 
     fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
-            ChipDefinition {
-                name: "Piercing Shot".to_owned(),
-                kind: ChipKind::Amp,
-                description: "Bolt passes through".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
-            },
-            ChipDefinition {
-                name: "Wide Breaker".to_owned(),
-                kind: ChipKind::Augment,
-                description: "Breaker width increased".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effect: ChipEffect::Overclock,
-            },
-            ChipDefinition {
-                name: "Surge".to_owned(),
-                kind: ChipKind::Overclock,
-                description: "Shockwave damage".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 1,
-                effect: ChipEffect::Overclock,
-            },
+            ChipDefinition::test(
+                "Piercing Shot",
+                ChipKind::Amp,
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            ),
+            ChipDefinition::test_simple("Wide Breaker", ChipKind::Augment),
+            ChipDefinition::test_simple("Surge", ChipKind::Overclock),
         ];
         ChipOffers(all.into_iter().take(count).collect())
     }

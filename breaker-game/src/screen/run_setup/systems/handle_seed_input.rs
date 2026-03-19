@@ -75,7 +75,7 @@ mod tests {
             key_code: KeyCode::Unidentified(bevy::input::keyboard::NativeKeyCode::Unidentified),
             logical_key,
             state: ButtonState::Pressed,
-            text: text.map(smol_str::SmolStr::new),
+            text: text.map(Into::into),
             repeat: false,
             window: entity,
         };
@@ -172,7 +172,7 @@ mod tests {
             key_code: KeyCode::Unidentified(bevy::input::keyboard::NativeKeyCode::Unidentified),
             logical_key: Key::Character("5".into()),
             state: ButtonState::Released,
-            text: Some(smol_str::SmolStr::new("5")),
+            text: Some("5".into()),
             repeat: false,
             window: entity,
         };
