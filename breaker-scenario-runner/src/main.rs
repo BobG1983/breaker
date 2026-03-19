@@ -58,9 +58,9 @@ fn main() {
         }
 
         let (normal, stress) = partition_stress_scenarios(&runs);
-        if let Some((name, path, config)) = stress.into_iter().next() {
-            let result = run_stress_scenario(&name, &path, &config, args.visual, args.verbose);
-            print_stress_result(&result, args.verbose);
+        if let Some((name, _path, config)) = stress.into_iter().next() {
+            let result = run_stress_scenario(&name, &config, args.visual, args.verbose);
+            print_stress_result(&result);
             process::exit(i32::from(!result.passed()));
         }
 
@@ -110,9 +110,9 @@ fn main() {
         }
 
         // Run stress scenarios.
-        for (name, path, config) in &stress_runs {
-            let result = run_stress_scenario(name, path, config, args.visual, args.verbose);
-            print_stress_result(&result, args.verbose);
+        for (name, _path, config) in &stress_runs {
+            let result = run_stress_scenario(name, config, args.visual, args.verbose);
+            print_stress_result(&result);
             if !result.passed() && worst_exit == 0 {
                 worst_exit = 1;
             }

@@ -1,6 +1,6 @@
 use std::{
     fmt,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Child, Command, Stdio},
 };
 
@@ -345,7 +345,6 @@ pub fn partition_stress_scenarios(runs: &[(String, PathBuf)]) -> (Vec<NormalRun>
 #[must_use]
 pub fn run_stress_scenario(
     name: &str,
-    _path: &Path,
     config: &StressConfig,
     visual: bool,
     verbose: bool,
@@ -443,7 +442,11 @@ pub fn run_stress_scenario(
 }
 
 /// Prints the result of a stress scenario run.
-pub fn print_stress_result(result: &StressResult, verbose: bool) {
+///
+/// Failure stdout and stderr are always printed for failed copies.
+/// In verbose mode, stdout/stderr from all copies would be printed
+/// (not yet implemented — only failures are shown).
+pub fn print_stress_result(result: &StressResult) {
     println!("[{}] stress: {}", result.name, result.summary_line());
 
     if !result.passed() {
@@ -452,7 +455,7 @@ pub fn print_stress_result(result: &StressResult, verbose: bool) {
             for line in failure.stdout.lines() {
                 println!("    {line}");
             }
-            if !failure.stderr.is_empty() && verbose {
+            if !failure.stderr.is_empty() {
                 for line in failure.stderr.lines() {
                     eprintln!("    {line}");
                 }
