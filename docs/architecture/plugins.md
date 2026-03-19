@@ -44,7 +44,7 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── chips/            # Amps, Augments, Overclocks system (stub — Phase 8+)
+├── chips/            # Amps, Augments, Overclocks system — registry, effect types, observer-based application
 ├── fx/               # Cross-cutting visual effects (fade-out, flash, particles)
 ├── run/              # Run state, node sequencing (node/ sub-domain), timer
 ├── physics/          # CCD collision detection, collision response

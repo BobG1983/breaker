@@ -16,6 +16,7 @@ Ephemeral reviews on file:
 - `ephemeral/review-2026-03-19-clamp-bolt-to-playfield.md` — clamp_bolt_to_playfield safety system (Clean)
 - `ephemeral/review-2026-03-19-full-tree.md` — Full-tree validation pass (Clean; 2 Minors noted)
 - `ephemeral/review-2026-03-19-chips-runseed.md` — chips/apply_chip_effect + run_setup seed systems (1 Moderate, 2 Minor)
+- `ephemeral/review-2026-03-19-phase4-wave1-cleanup.md` — 9 observer handlers, ChipRegistry/NodeLayoutRegistry, dispatcher pattern (Clean)
 
 ## Known Intentional Patterns (do not flag)
 - `snapshot_eval_data` clones `ViolationLog`, `CapturedLogs`, `ScenarioStats`, `ScenarioDefinition` every frame in the scenario runner — intentional, required to survive `App::run()` teardown.
@@ -27,3 +28,7 @@ Ephemeral reviews on file:
 - Debug overlay systems use early-return on `overlays.is_active(...)` — cheap when disabled, no query work skipped needed.
 - Optional component queries on Bolt (5 optionals) and Breaker (4 optionals) in `apply_chip_effect` — 1 entity each, added gradually during ChipSelect, not per-frame churn. Acceptable at current scale.
 - `update_seed_display` allocates per frame (format! + clone) — guarded by `run_if(in_state(GameState::RunSetup))` and processes 1 entity; acceptable for UI screen.
+- 9 chip effect observer handlers use match-and-return self-selection pattern — early return before any query work for non-matching effects. Correct and intentional.
+- `commands.trigger(ChipEffectApplied)` in `apply_chip_effect` runs all 9 observers on flush (once per chip selection, at ChipSelect pause screen). Not per-frame; not a scheduling concern.
+- `ChipRegistry` and `NodeLayoutRegistry` HashMaps are cold-path: ChipRegistry read only on ChipSelected events; NodeLayoutRegistry read only on OnEnter(Playing) transitions.
+- Chip effect component inserts (Piercing, DamageBoost, etc.) cause one archetype move per new effect type per entity — bounded by 9 components total across 2 entities, happens only at chip-selection time (pause screen), stabilizes quickly.
