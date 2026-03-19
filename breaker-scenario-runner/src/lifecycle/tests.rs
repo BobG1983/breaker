@@ -24,6 +24,7 @@ fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         debug_setup: None,
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
+        stress: None,
     }
 }
 
@@ -40,6 +41,7 @@ fn make_lifecycle_test_scenario() -> ScenarioDefinition {
         debug_setup: None,
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
+        stress: None,
     }
 }
 
@@ -258,6 +260,7 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
         }),
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
+        stress: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -317,6 +320,7 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
         }),
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
+        stress: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -381,6 +385,7 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
         }),
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
+        stress: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -654,6 +659,7 @@ fn init_scenario_input_creates_driver_resource() {
             debug_setup: None,
             invariant_params: InvariantParams::default(),
             allow_early_end: true,
+            stress: None,
         },
     });
     app.add_systems(Update, init_scenario_input);

@@ -17,6 +17,9 @@ type: reference
 - `handle_cell_hit.rs` `peekable().peek().is_none()` early-return — idiom smell, flag if still present in new code.
 - `scenario_actions.len() as u32` in lifecycle.rs — safe in practice.
 
+- `StressFailure` / `StressResult` / `copy_index` in execution.rs — runner-internal infrastructure terms; no game vocabulary rule applies to the scenario runner's own tooling types.
+- `stress_copy` flag in main.rs — internal CLI flag name for subprocess guard; not a game vocabulary term.
+
 ## Vocabulary Decisions
 - `format_lives` in `life_lost.rs` — "lives" is correct game vocabulary (count of `LivesCount`).
 - `fire_consequences` in `bridges.rs` — "consequence" used in its precise game-system sense.

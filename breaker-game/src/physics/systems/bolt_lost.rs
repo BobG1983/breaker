@@ -74,8 +74,10 @@ pub(crate) fn bolt_lost(
             // Respawn above breaker
             let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);
             // Angle from vertical: sin→X, cos→Y; positive Y is upward.
-            let new_velocity =
-                Vec2::new(entry.base_speed * angle.sin(), entry.base_speed * angle.cos());
+            let new_velocity = Vec2::new(
+                entry.base_speed * angle.sin(),
+                entry.base_speed * angle.cos(),
+            );
             let new_pos = Vec3::new(breaker_pos.x, breaker_pos.y + entry.respawn_offset, 1.0);
             commands.entity(entry.entity).insert((
                 Transform::from_xyz(new_pos.x, new_pos.y, new_pos.z),
