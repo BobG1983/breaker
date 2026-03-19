@@ -1,12 +1,12 @@
 ---
 name: system-map
-description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-16 post-behaviors-extraction)
+description: Complete system inventory for the brickbreaker codebase — every system function, its plugin, schedule, ordering, and data access (as of 2026-03-19 post-spawn-coordinator and clamp-bolt additions)
 type: reference
 ---
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-17 (post-merge verification: ChipSelected message (not UpgradeSelected); spawn_side_panels→ApplyDeferred→spawn_timer_hud chained in OnEnter(Playing); update_timer_display run_if PlayingState::Active; UiSystems::SpawnTimerHud set added)
+Last updated: 2026-03-19 (new: clamp_bolt_to_playfield in PhysicsPlugin; check_spawn_complete in NodePlugin; BoltSpawned/BreakerSpawned/CellsSpawned/WallsSpawned/SpawnNodeComplete messages; NodeSystems::ApplyTimePenalty set; RecordingPlugin; seed_chip_registry/seed_chip_select_config in LoadingPlugin; inject_scenario_input moved to FixedPreUpdate; invariant checkers now .after(update_breaker_state).before(BoltLost))
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
@@ -306,7 +306,14 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 - Sends: MessageWriter<BoltHitBreaker>
 - NOTE: New upward-bolt guard added: bolts moving upward (vel.y > 0) are now skipped for ALL face types (previously only top-hit path had this guard; side hits were unguarded). This means upward-moving bolts pass through the breaker entirely.
 
-### `bolt_lost` — FixedUpdate, after(bolt_breaker_collision), in_set(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
+### `clamp_bolt_to_playfield` — FixedUpdate, after(bolt_breaker_collision), run_if(PlayingState::Active)
+- Reads: Res<PlayfieldConfig>
+- Writes (query): mut Transform, mut BoltVelocity; read BoltRadius (ActiveBoltFilter)
+- NOTE: Safety clamp for bolts that escape through wall corner overlaps in CCD. Positioned AFTER bolt_breaker_collision and BEFORE bolt_lost in the chain: `bolt_cell_collision → bolt_breaker_collision → clamp_bolt_to_playfield → bolt_lost`.
+- No bottom clamp — intentionally open for bolt_lost to handle.
+- BoltLost set is now registered `.after(clamp_bolt_to_playfield)` (was previously `.after(bolt_breaker_collision)`).
+
+### `bolt_lost` — FixedUpdate, after(clamp_bolt_to_playfield), in_set(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
 - Reads: Res<PlayfieldConfig>, ResMut<GameRng>
 - Writes (query): mut Transform, mut BoltVelocity + inserts PhysicsTranslation on respawn (baseline bolt)
   OR despawns entity (ExtraBolt)
@@ -336,6 +343,13 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 3. `init_clear_remaining` — Reads (query): Query<(), With<RequiredToClear>>; Commands (insert_resource ClearRemainingCount)
 4. `init_node_timer` — Reads: Res<ActiveNodeLayout>; Commands (insert_resource NodeTimer)
 
+### `check_spawn_complete` — FixedUpdate [NO run_if condition — runs unconditionally]
+- Receives: MessageReader<BoltSpawned>, MessageReader<BreakerSpawned>, MessageReader<CellsSpawned>, MessageReader<WallsSpawned>
+- Sends: MessageWriter<SpawnNodeComplete>
+- Uses: Local<SpawnChecklist> (bitfield, resets after firing)
+- NOTE: Runs in FixedUpdate WITHOUT PlayingState::Active guard. Fires SpawnNodeComplete once when all 4 domain spawn signals have arrived. Resets automatically after firing for next node entry. Cross-frame accumulation supported.
+- NOTE: SpawnNodeComplete consumed by check_no_entity_leaks (scenario runner) for baseline entity count sampling.
+
 ### `track_node_completion` — FixedUpdate, in_set(NodeSystems::TrackCompletion), run_if(PlayingState::Active)
 - Receives: MessageReader<CellDestroyed>
 - Writes: ResMut<ClearRemainingCount>
@@ -346,22 +360,22 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 - Writes: ResMut<NodeTimer>
 - Sends: MessageWriter<TimerExpired>
 
-### `apply_time_penalty` — FixedUpdate, after(NodeSystems::TickTimer), run_if(PlayingState::Active)
+### `apply_time_penalty` — FixedUpdate, in_set(NodeSystems::ApplyTimePenalty), after(NodeSystems::TickTimer), run_if(PlayingState::Active)
 - Receives: MessageReader<ApplyTimePenalty>
 - Writes: ResMut<NodeTimer>
 - Sends: MessageWriter<TimerExpired> (when penalty drives timer to zero)
-- NOTE: Runs AFTER tick_node_timer (ordering constraint in place)
-- NOTE: Runs WITHOUT ordering vs handle_timer_expired (handle_timer_expired reads the message next)
+- NOTE: Now in NodeSystems::ApplyTimePenalty set — handle_timer_expired orders .after(NodeSystems::ApplyTimePenalty) to guarantee same-tick propagation. Prior known-conflict (apply_time_penalty unordered vs handle_timer_expired) is NOW RESOLVED.
 
 ### `handle_node_cleared` — FixedUpdate, after(NodeSystems::TrackCompletion), run_if(PlayingState::Active)
 - Receives: MessageReader<NodeCleared>
 - Reads: Res<NodeLayoutRegistry>
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
 
-### `handle_timer_expired` — FixedUpdate, after(NodeSystems::TickTimer), after(handle_node_cleared), run_if(PlayingState::Active)
+### `handle_timer_expired` — FixedUpdate, after(NodeSystems::ApplyTimePenalty), after(handle_node_cleared), run_if(PlayingState::Active)
 - Receives: MessageReader<TimerExpired>
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
 - Guards: checks run_state.outcome != InProgress and run_state.transition_queued before acting
+- NOTE: Now orders .after(NodeSystems::ApplyTimePenalty) — same-tick penalty-induced expiry is guaranteed. Previously known-conflict (1-tick delay) is RESOLVED.
 - NOTE: Reads TimerExpired messages from BOTH tick_node_timer AND apply_time_penalty
 
 ### `handle_run_lost` — FixedUpdate, after(handle_node_cleared), after(handle_timer_expired), run_if(PlayingState::Active)

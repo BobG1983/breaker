@@ -1,12 +1,12 @@
 ---
 name: message-flow
-description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-16 post-behaviors-extraction)
+description: Complete message flow map — who sends what, who receives what, cross-plugin boundaries, and messages with no consumers (as of 2026-03-19 post-spawn-coordinator additions)
 type: reference
 ---
 
 # Message Flow Map
 
-Last updated: 2026-03-17 (post-merge verification: UpgradeSelected → ChipSelected rename; ChipSelected is pub(crate); no sender/receiver yet)
+Last updated: 2026-03-19 (new spawn coordination messages: BoltSpawned, BreakerSpawned, CellsSpawned, WallsSpawned, SpawnNodeComplete; check_spawn_complete coordinator in NodePlugin; check_no_entity_leaks now gated on SpawnNodeComplete)
 
 ## Registered Messages (by plugin)
 
@@ -15,6 +15,7 @@ Last updated: 2026-03-17 (post-merge verification: UpgradeSelected → ChipSelec
 | KeyboardInput | Bevy built-in (InputPlugin reads it) |
 | BumpPerformed | BreakerPlugin |
 | BumpWhiffed | BreakerPlugin |
+| BreakerSpawned | BreakerPlugin |
 | BoltHitBreaker | PhysicsPlugin |
 | BoltHitCell | PhysicsPlugin |
 | BoltLost | PhysicsPlugin |
@@ -22,7 +23,11 @@ Last updated: 2026-03-17 (post-merge verification: UpgradeSelected → ChipSelec
 | NodeCleared | NodePlugin (RunPlugin sub-plugin) |
 | TimerExpired | NodePlugin (RunPlugin sub-plugin) |
 | ApplyTimePenalty | NodePlugin (RunPlugin sub-plugin) |
+| CellsSpawned | NodePlugin (RunPlugin sub-plugin) |
+| SpawnNodeComplete | NodePlugin (RunPlugin sub-plugin) |
 | SpawnAdditionalBolt | BoltPlugin |
+| BoltSpawned | BoltPlugin |
+| WallsSpawned | WallPlugin |
 | RunLost | RunPlugin |
 | ChipSelected | UiPlugin |
 | AppExit | Bevy built-in |
@@ -30,6 +35,38 @@ Last updated: 2026-03-17 (post-merge verification: UpgradeSelected → ChipSelec
 ---
 
 ## Message Flow Detail
+
+### Spawn Coordination Cluster (cross-plugin → NodePlugin coordinator)
+
+**BoltSpawned** (BoltPlugin → NodePlugin)
+- Sender: `spawn_bolt` (BoltPlugin, OnEnter(GameState::Playing))
+- Receiver: `check_spawn_complete` (NodePlugin, FixedUpdate — coordinator)
+- Sent even when bolt already exists (not possible for baseline bolt, always spawned fresh)
+
+**BreakerSpawned** (BreakerPlugin → NodePlugin)
+- Sender: `spawn_breaker` (BreakerPlugin, OnEnter(GameState::Playing))
+- Receiver: `check_spawn_complete` (NodePlugin, FixedUpdate — coordinator)
+- NOTE: Sent even when breaker already exists (cross-node persistence) — the `spawn_breaker` idempotency guard also sends BreakerSpawned on the no-op path
+
+**CellsSpawned** (NodePlugin internal)
+- Sender: `spawn_cells_from_layout` (NodePlugin, OnEnter(GameState::Playing))
+- Receiver: `check_spawn_complete` (NodePlugin, FixedUpdate — coordinator)
+
+**WallsSpawned** (WallPlugin → NodePlugin)
+- Sender: `spawn_walls` (WallPlugin, OnEnter(GameState::Playing))
+- Receiver: `check_spawn_complete` (NodePlugin, FixedUpdate — coordinator)
+
+**SpawnNodeComplete** (NodePlugin → scenario runner)
+- Sender: `check_spawn_complete` (NodePlugin, FixedUpdate — fires when all 4 signals received)
+- Receiver: `check_no_entity_leaks` (scenario runner, FixedUpdate — uses as baseline trigger)
+- NOTE: No gameplay receiver — purely for scenario runner baseline sampling.
+- NOTE: Registered by both NodePlugin and ScenarioLifecycle (the latter registers it in the scenario runner to listen across the crate boundary).
+
+**Timing note:** All 4 domain spawn signals come from OnEnter(GameState::Playing) systems using
+Commands (deferred). The entities/resources are committed to the world at the end of the OnEnter
+schedule. `check_spawn_complete` runs in FixedUpdate and must receive the messages; since
+OnEnter is fully flushed before the first FixedUpdate tick of the Playing state, the messages
+written in OnEnter are available in the first FixedUpdate tick.
 
 ### KeyboardInput (Bevy built-in)
 - Sender: Bevy input system
@@ -129,6 +166,11 @@ Last updated: 2026-03-17 (post-merge verification: UpgradeSelected → ChipSelec
 | Bevy input | KeyboardInput | InputPlugin |
 | BreakerPlugin | BumpPerformed | BoltPlugin, BehaviorsPlugin, DebugPlugin |
 | BreakerPlugin | BumpWhiffed | DebugPlugin |
+| BreakerPlugin | BreakerSpawned | NodePlugin (coordinator) |
+| BoltPlugin | BoltSpawned | NodePlugin (coordinator) |
+| WallPlugin | WallsSpawned | NodePlugin (coordinator) |
+| NodePlugin | CellsSpawned | NodePlugin (coordinator — self-message) |
+| NodePlugin | SpawnNodeComplete | ScenarioRunner |
 | PhysicsPlugin | BoltHitBreaker | BreakerPlugin |
 | PhysicsPlugin | BoltHitCell | CellsPlugin |
 | PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin |

@@ -6,28 +6,35 @@ type: reference
 
 ## Key Architectural Facts
 - All gameplay systems run in FixedUpdate gated by `run_if(in_state(PlayingState::Active))`
+- EXCEPTION: `check_spawn_complete` (NodePlugin, FixedUpdate) has NO run_if guard — it must fire in the first tick of Playing before Active is set
 - Visual-only systems run in Update (animate_bump_visual, animate_tilt_visual, update_timer_display, debug overlays, update_lives_display, animate_fade_out)
 - InterpolatePlugin registered BEFORE PhysicsPlugin in game.rs
 - BehaviorsPlugin is STANDALONE, registered between BreakerPlugin and BoltPlugin
 - Interpolation pipeline: `restore_authoritative` (FixedFirst) → [FixedUpdate physics] → `store_authoritative` (FixedPostUpdate) → `interpolate_transform` (PostUpdate)
 - Bolt entities carry InterpolateTransform + PhysicsTranslation; bolt_lost inserts PhysicsTranslation on respawn
-- Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `apply_bump_velocity` + `spawn_additional_bolt` → `bolt_lost`
+- Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `clamp_bolt_to_playfield` → `bolt_lost`
+- clamp_bolt_to_playfield: safety clamp for bolts escaping through CCD corner overlaps; no bottom clamp (bolt_lost handles that)
 - apply_bump_velocity: `.after(BreakerCollision).before(BoltLost)`
 - spawn_additional_bolt: `.after(BehaviorSystems::Bridge)`
 - ExtraBolt: despawned permanently when lost (not respawned); still sends BoltLost message
 - Behavior observer chain: bridge systems fire commands.trigger(ConsequenceFired) → observers run immediately
-- apply_time_penalty: `.after(NodeSystems::TickTimer)` — can also send TimerExpired
+- apply_time_penalty: `NodeSystems::ApplyTimePenalty` set, `.after(NodeSystems::TickTimer)` — can also send TimerExpired
+- handle_timer_expired: now `.after(NodeSystems::ApplyTimePenalty)` (was `.after(NodeSystems::TickTimer)`) — same-tick penalty-induced expiry guaranteed
 - handle_run_lost: `.after(handle_node_cleared).after(handle_timer_expired)` — win takes priority
 - Breaker state chain: `update_bump` → `move_breaker` → `update_breaker_state` → `grade_bump`
 - Input: `read_input_actions` in PreUpdate writes InputActions consumed by FixedUpdate
+- Scenario runner inject_scenario_input: moved to FixedPreUpdate (was in FixedUpdate chain)
 - NodePlugin OnEnter chain: `set_active_layout` → `spawn_cells_from_layout` → `init_clear_remaining` → `init_node_timer`
-- UiPlugin OnEnter chain: `spawn_side_panels` → ApplyDeferred → `spawn_timer_hud` (in_set(UiSystems::SpawnTimerHud)); ApplyDeferred ensures StatusPanel entity is committed before spawn_timer_hud queries it
+- UiPlugin OnEnter chain: `spawn_side_panels` → ApplyDeferred → `spawn_timer_hud` (in_set(UiSystems::SpawnTimerHud))
+- Spawn coordinator: `check_spawn_complete` waits for BoltSpawned+BreakerSpawned+CellsSpawned+WallsSpawned → sends SpawnNodeComplete; consumed by check_no_entity_leaks for baseline sampling
+- Scenario runner invariant checkers: `.after(tag_game_entities).after(update_breaker_state).before(PhysicsSystems::BoltLost)`
 - toggle_pause reads InputActions/GameAction::TogglePause
 - bolt_breaker_collision: upward-bolt guard at top of bolt loop
 - BoltHitCell message no longer carries bolt Entity field
 - DebugOverlays: bool fields replaced by enum-indexed array
 - bolt/queries.rs: BoltLostQuery type alias
 - ChaosMonkey includes TogglePause in GAMEPLAY_ACTIONS
+- RecordingPlugin (debug, cfg(feature="dev")): `capture_frame` (FixedUpdate, reads InputActions), `write_recording_on_exit` (Last, triggers on AppExit message)
 
 ## Hot-Reload Pipeline (HotReloadPlugin, Update, GameState::Playing)
 - Set 1 `PropagateDefaults` (11 systems): asset Modified event → Config resource or registry
@@ -59,3 +66,14 @@ AudioPlugin, UpgradesPlugin
 
 ## Orphan Messages
 - `ChipSelected` (UiPlugin, formerly UpgradeSelected) — registered but no active gameplay receiver. Expected for future phases.
+
+## New in 2026-03-19 (post-spawn-coordinator work)
+- `BoltSpawned` — BoltPlugin, sent by `spawn_bolt`
+- `BreakerSpawned` — BreakerPlugin, sent by `spawn_breaker` (even when no-op, i.e. breaker already exists)
+- `CellsSpawned` — NodePlugin, sent by `spawn_cells_from_layout`
+- `WallsSpawned` — WallPlugin, sent by `spawn_walls`
+- `SpawnNodeComplete` — NodePlugin, sent by `check_spawn_complete` coordinator; consumed by scenario runner only
+- `NodeSystems::ApplyTimePenalty` — new system set variant in NodeSystems enum
+- `clamp_bolt_to_playfield` — new PhysicsPlugin system, safety clamp after bolt_breaker_collision
+- `seed_chip_registry` — new LoadingPlugin system (seeds ChipRegistry from chip definition assets)
+- `RecordingPlugin` with `capture_frame` + `write_recording_on_exit` — debug-only input recorder

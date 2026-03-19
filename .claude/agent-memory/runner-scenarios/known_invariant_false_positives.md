@@ -27,16 +27,40 @@ exactly `radius` (not `radius + 1`) to match the bolt_lost threshold.
 
 ---
 
-## ValidBreakerState — Dashing → Settling is a legal transition
+## ValidBreakerState — Dashing → Settling is a legal transition (FIXED)
 
-**Root cause:** `perfect_bump_dash_cancel` system in
-`breaker-game/src/breaker/systems/bump.rs:177` forcibly sets state to `Settling`
-when a perfect bump fires during `Dashing`. This is the "dash cancel" mechanic.
-The invariant only allows `Dashing → Braking`.
+This is already resolved: `check_valid_breaker_state` lists `(Dashing, Braking | Settling)` as legal.
 
-**Fix direction:** Add `(BreakerState::Dashing, BreakerState::Settling)` to
-the legal transitions in `check_valid_breaker_state` at
-`breaker-scenario-runner/src/invariants.rs:53-61`.
+---
+
+## ValidBreakerState — Braking → Dashing appears illegal due to system ordering race (NEW, 2026-03-19)
+
+**Invariant fires:** `prism_scatter_stress` copy 25/32, frame 3257
+**Scenario:** Prism + Scatter + Chaos(seed=47, action_prob=0.3)
+
+**Root cause:** No explicit ordering between `check_valid_breaker_state` (invariant
+checker group, before `PhysicsSystems::BoltLost`) and `update_breaker_state` (after
+`BreakerSystems::Move`). `handle_idle_or_settling` in `dash.rs` performs TWO state
+transitions in one call: timer expiry gives `Settling → Idle`, then dash input immediately
+gives `Idle → Dashing`. Both happen synchronously with no frame boundary.
+
+When the checker samples before `update_breaker_state` on frame N (stores `Braking`),
+then `update_breaker_state` runs (`Braking → Settling`), then on frame N+1 the checker
+samples after `update_breaker_state` (which ran `Settling → Idle → Dashing` in one call),
+the checker records: previous=`Braking`, current=`Dashing` → `Braking → Dashing` is not
+in the legal transition set → VIOLATION.
+
+**Intermittency:** 1/32 copies fail (stress parallelism causes non-deterministic scheduling).
+Does not fire in single-scenario (`-s`) mode or the non-stress `prism_scatter` scenario.
+
+**Fix direction:** Add explicit ordering in lifecycle/mod.rs:
+`check_valid_breaker_state.after(update_breaker_state)` (or after a new
+`BreakerSystems::StateMachine` set that `update_breaker_state` is placed in).
+
+**Confidence: HIGH** — full code path traced:
+`breaker-game/src/breaker/systems/dash.rs:110-146` (double-transition in single call),
+`breaker-scenario-runner/src/lifecycle/mod.rs:149-177` (checker ordering),
+`breaker-game/src/breaker/plugin.rs:46-68` (no mutual ordering between checker and state machine)
 
 ---
 

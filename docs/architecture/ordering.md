@@ -17,17 +17,23 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
 - **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
 
-**Defined sets (as of Phase 2e):**
+**Defined sets (as of Phase 3):**
 
 | Set | Domain | Tags |
 |-----|--------|------|
 | `BreakerSystems::Move` | `breaker/sets.rs` | `move_breaker` |
 | `BreakerSystems::InitParams` | `breaker/sets.rs` | `init_breaker_params` |
+| `BreakerSystems::Reset` | `breaker/sets.rs` | `reset_breaker` (intra-domain only — no cross-domain consumers yet) |
 | `BoltSystems::PrepareVelocity` | `bolt/sets.rs` | `prepare_bolt_velocity` |
 | `PhysicsSystems::BreakerCollision` | `physics/sets.rs` | `bolt_breaker_collision` |
 | `PhysicsSystems::BoltLost` | `physics/sets.rs` | `bolt_lost` |
 | `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
+| `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
+| `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
+| `NodeSystems::ApplyTimePenalty` | `run/node/sets.rs` | `apply_time_penalty` |
+| `NodeSystems::Spawn` | `run/node/sets.rs` | `spawn_cells_from_layout` (OnEnter) |
+| `NodeSystems::InitTimer` | `run/node/sets.rs` | `init_node_timer` (OnEnter) |
 
 **Example:**
 
@@ -94,7 +100,22 @@ BreakerSystems::Move
 
 Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading and velocity application, then bolt-lost detection. Both behavior bridge systems run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
 
-**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` → `grade_bump`. The `trigger_bump_visual` system runs `.after(update_bump)` in the same FixedUpdate schedule.
+```
+NodeSystems::TrackCompletion
+  (track_node_completion)             [run/node domain]
+    <- handle_node_cleared .after(NodeSystems::TrackCompletion)  [run domain]
+
+NodeSystems::TickTimer
+  (tick_node_timer)                   [run/node domain]
+    NodeSystems::ApplyTimePenalty
+      (apply_time_penalty)            [run/node domain]
+        <- handle_timer_expired .after(NodeSystems::ApplyTimePenalty)
+                                .after(handle_node_cleared)       [run domain]
+```
+
+Reading: completion tracking runs first (cells consumed → NodeCleared sent), then run handles it. Timer ticks, then time penalties apply, then the run checks for timer expiry.
+
+**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` (one chain); `grade_bump` runs `.after(update_bump).after(PhysicsSystems::BreakerCollision)` — it is NOT after `update_breaker_state`. `trigger_bump_visual` also runs `.after(update_bump)`. `reset_breaker.after(BreakerSystems::InitParams).in_set(BreakerSystems::Reset)` runs OnEnter(Playing) after init.
 
 ## Schedule Placement
 

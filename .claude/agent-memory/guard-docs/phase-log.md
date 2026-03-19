@@ -12,3 +12,4 @@ type: project
 - 2026-03-16: Phase 2e (Visual Polish & Additional Archetypes) — `docs/plan/done/phase-2/phase-2e-chrono-and-prism.md`
 - 2026-03-16: Full Phase 2 marked Done in PLAN.md; Phase 3 was Current
 - 2026-03-17: Phase 3a/3b/3c/3d/3e all confirmed complete — all in `docs/plan/done/phase-3/`; Phase 4 is now Current
+- 2026-03-19: Full validation pass after merging fix/order-invariant-checkers and refactor/remove-ccd-clamp branches. Phase 4 still Current (no subphases complete yet). Fixed 5 messages.md gaps, 3 ordering.md gaps, 1 plugins.md gap.

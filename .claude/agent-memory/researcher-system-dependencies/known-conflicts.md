@@ -1,12 +1,12 @@
 ---
 name: known-conflicts
-description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-17, post-hot_reload addition)
+description: Known query conflicts, ordering issues, and missing constraints identified in the brickbreaker system map (as of 2026-03-19, post-spawn-coordinator and clamp-bolt additions)
 type: reference
 ---
 
 # Known Conflicts and Ordering Issues
 
-Last updated: 2026-03-17 (post-merge verification: UiPlugin OnEnter chain resolved — spawn_side_panels→ApplyDeferred→spawn_timer_hud is ordered; no new conflicts found)
+Last updated: 2026-03-19 (RESOLVED: apply_time_penalty/handle_timer_expired now ordered via NodeSystems::ApplyTimePenalty set; new clamp_bolt_to_playfield inserted between bolt_breaker_collision and bolt_lost; inject_scenario_input moved to FixedPreUpdate; invariant checkers re-ordered)
 
 ---
 
@@ -193,34 +193,19 @@ No cross-plugin ordering constraint. One-tick delay acceptable — messages pers
 
 ---
 
-## NEW LOW SEVERITY — apply_time_penalty and handle_timer_expired are unordered
+## RESOLVED — apply_time_penalty and handle_timer_expired ordering (was LOW SEVERITY, now fixed)
 
-**Files:** `src/run/node/plugin.rs`, `src/run/plugin.rs`
+**Files:** `src/run/node/plugin.rs`, `src/run/plugin.rs`, `src/run/node/sets.rs`
 
-`apply_time_penalty` is registered `.after(NodeSystems::TickTimer)`.
-`handle_timer_expired` is registered `.after(NodeSystems::TickTimer).after(handle_node_cleared)`.
+`apply_time_penalty` is now in `NodeSystems::ApplyTimePenalty` set (`.after(NodeSystems::TickTimer)`).
+`handle_timer_expired` now orders `.after(NodeSystems::ApplyTimePenalty).after(handle_node_cleared)`.
 
-Both depend on `NodeSystems::TickTimer` completing, but neither is ordered relative to the other.
-When `apply_time_penalty` sends a `TimerExpired` message (penalty drives timer to zero), that
-message may not be read by `handle_timer_expired` until the next tick if `handle_timer_expired`
-runs before `apply_time_penalty` in the same tick.
+This guarantees same-tick propagation: if `apply_time_penalty` sends `TimerExpired` by driving the
+timer to zero, `handle_timer_expired` is guaranteed to see it in the same tick.
 
-**Practical consequence:** A time-penalty-driven timer expiry may be delayed by one fixed tick
-(~16ms at 60Hz). This is imperceptible in gameplay — `tick_node_timer` will catch any remaining
-time on the next tick anyway.
-
-**Severity:** Low. One-tick delay on time-penalty-induced timer expiry.
-
-**Fix (optional):** Add `apply_time_penalty.before(handle_timer_expired)` constraint in NodePlugin,
-OR restructure so `apply_time_penalty` is in its own system set that `handle_timer_expired` is ordered after. For example in node/plugin.rs:
-```rust
-apply_time_penalty
-    .after(NodeSystems::TickTimer)
-    .before(handle_timer_expired),  // ensure same-tick propagation
-```
-But `handle_timer_expired` is in run/plugin.rs, so the cross-plugin ordering would need to be
-established from NodePlugin's side referencing the RunPlugin system function directly — which
-breaks plugin encapsulation. The 1-tick delay is the correct trade-off to preserve encapsulation.
+**Resolution:** `NodeSystems::ApplyTimePenalty` set was added and `handle_timer_expired` was updated
+to order `.after(NodeSystems::ApplyTimePenalty)` instead of `.after(NodeSystems::TickTimer)`.
+The docstring on `NodeSystems::ApplyTimePenalty` explicitly calls this out for downstream systems.
 
 ---
 
@@ -300,10 +285,16 @@ only Commands (deferred). The spawned entity is not visible in the current tick.
 ## ORDERING REFERENCE — Full FixedUpdate Chain (PlayingState::Active)
 
 ```
+FixedPreUpdate:
+  inject_scenario_input  [ScenarioLifecycle — runs unconditionally, after clear_input_actions of prev tick]
+
 FixedFirst:
   restore_authoritative  [InterpolatePlugin]
 
 FixedUpdate:
+  [ScenarioLifecycle (tick_scenario_frame → check_frame_limit).chain().before(BreakerSystems::Move)]
+  [ScenarioLifecycle invariant checkers .after(tag_game_entities).after(update_breaker_state).before(BoltLost)]
+
   update_bump  (BreakerPlugin)
     → move_breaker (.after(update_bump), BreakerSystems::Move)
         → update_breaker_state (.after(move_breaker))
@@ -311,13 +302,14 @@ FixedUpdate:
         → prepare_bolt_velocity (.after(BreakerSystems::Move), BoltSystems::PrepareVelocity)
             → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
                 → bolt_breaker_collision (.after(bolt_cell_collision), BreakerCollision set)
+                    → clamp_bolt_to_playfield (.after(bolt_breaker_collision))  [NEW — safety clamp]
                     → apply_bump_velocity (.after(BreakerCollision), .before(BoltLost))
                     → grade_bump (.after(update_bump) AND .after(BreakerCollision))
                     → bridge_bump (.after(BreakerCollision), BehaviorSystems::Bridge, conditional)
                         → [observer: handle_time_penalty] → ApplyTimePenalty message
                         → [observer: handle_spawn_bolt] → SpawnAdditionalBolt message
                     → track_bump_result (.after(BreakerCollision), dev only)
-                    → bolt_lost (.after(bolt_breaker_collision), BoltLost set)
+                    → bolt_lost (.after(clamp_bolt_to_playfield), BoltLost set)  [was .after(bolt_breaker_collision)]
                         → bridge_bolt_lost (.after(BoltLost), BehaviorSystems::Bridge, conditional)
                             → [observer: handle_life_lost] → RunLost message
                             → [observer: handle_time_penalty] → ApplyTimePenalty message
@@ -331,14 +323,16 @@ FixedUpdate:
     trigger_bump_visual  — reads InputActions, Commands
     handle_cell_hit  — reads BoltHitCell, sends CellDestroyed
 
+  check_spawn_complete  [NodePlugin — NO run_if — reads BoltSpawned/BreakerSpawned/CellsSpawned/WallsSpawned, sends SpawnNodeComplete]
+
   [NodePlugin ordered chain]:
     track_node_completion (NodeSystems::TrackCompletion)  [unordered vs handle_cell_hit]
     tick_node_timer (NodeSystems::TickTimer)
-    apply_time_penalty (.after(NodeSystems::TickTimer))  [unordered vs handle_timer_expired — 1-tick delay acceptable]
+    apply_time_penalty (NodeSystems::ApplyTimePenalty, .after(TickTimer))  [RESOLVED — same-tick guaranteed]
 
   [RunPlugin ordered chain]:
     handle_node_cleared (.after(NodeSystems::TrackCompletion))
-    handle_timer_expired (.after(NodeSystems::TickTimer), .after(handle_node_cleared))
+    handle_timer_expired (.after(NodeSystems::ApplyTimePenalty), .after(handle_node_cleared))  [UPDATED from TickTimer to ApplyTimePenalty]
     handle_run_lost (.after(handle_node_cleared), .after(handle_timer_expired))
 
 FixedPostUpdate:
@@ -351,41 +345,43 @@ PostUpdate:
 
 ---
 
-## SCENARIO RUNNER — ScenarioLifecycle FixedUpdate systems (added 2026-03-17)
+## SCENARIO RUNNER — ScenarioLifecycle ordering (updated 2026-03-19)
 
-These systems run in `FixedUpdate` alongside gameplay systems (but are in `breaker-scenario-runner`, not `breaker-game`).
+These systems run alongside gameplay systems (but are in `breaker-scenario-runner`, not `breaker-game`).
 
-### Lifecycle group (chained, unordered vs gameplay):
+### inject_scenario_input moved to FixedPreUpdate (was previously in FixedUpdate chain)
+`inject_scenario_input` now runs in `FixedPreUpdate` (before all FixedUpdate systems).
+This is the correct and final solution — it runs after `clear_input_actions` (FixedPostUpdate of
+the previous tick) and before any FixedUpdate system that reads InputActions.
+
+`tick_scenario_frame → check_frame_limit` remain in `.chain().before(BreakerSystems::Move)` in FixedUpdate.
+
+### Invariant check systems — ordering updated (2026-03-19)
+All 13 invariant systems (including enforce_frozen_positions + tag_game_entities) now run with:
+```rust
+.after(tag_game_entities)
+.after(update_breaker_state)
+.before(breaker::physics::PhysicsSystems::BoltLost)
 ```
-tick_scenario_frame → inject_scenario_input → check_frame_limit   [.chain()]
-```
-
-### Invariant check systems (unordered, run independently):
-- check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable
-- check_breaker_in_bounds, check_no_nan, check_timer_non_negative
-- check_valid_state_transitions, check_valid_breaker_state
-- check_timer_monotonically_decreasing, check_breaker_position_clamped
-- check_physics_frozen_during_pause, check_no_entity_leaks
-- enforce_frozen_positions, tag_game_entities
+This means: invariants check AFTER breaker state is updated AND before bolt_lost runs.
+The prior concern about bolt_lost respawning OOB bolts before detection is now addressed.
 
 ### tag_game_entities also runs in OnEnter(GameState::Playing) — no conflict (different schedule).
 
 ---
 
-## RESOLVED — inject_scenario_input now orders .before(BreakerSystems::Move)
+## RESOLVED — inject_scenario_input now in FixedPreUpdate (was FixedUpdate + ordering chain)
 
-**Status: RESOLVED** (fixed in feature/scenario-coverage-expansion)
+**Status: RESOLVED** (final fix 2026-03-19)
 
-`inject_scenario_input` writes `ResMut<InputActions>` in `FixedUpdate`.
-`move_breaker` and `update_bump` read `Res<InputActions>` in `FixedUpdate`.
-
-The lifecycle chain now has the correct constraint:
-```rust
-(tick_scenario_frame, inject_scenario_input, check_frame_limit)
-    .chain()
-    .before(breaker::breaker::sets::BreakerSystems::Move),
+`inject_scenario_input` moved from FixedUpdate to FixedPreUpdate — guarantees it runs before
+ALL FixedUpdate systems without needing explicit ordering against BreakerSystems::Move.
+`clear_input_actions` runs in FixedPostUpdate of the previous tick, so the sequence is:
 ```
-Injected input is guaranteed to be written before `move_breaker` and `update_bump` consume it in the same tick.
+FixedPostUpdate[N-1]: clear_input_actions
+FixedPreUpdate[N]:   inject_scenario_input
+FixedUpdate[N]:      [all game systems read InputActions]
+```
 
 ---
 
@@ -441,14 +437,33 @@ runs. This guarantees `StatusPanel` is queryable when `spawn_timer_hud` calls `s
 
 ---
 
-## LOW — enforce_frozen_positions needs explicit .after(PhysicsSystems::BoltLost)
+## LOW — enforce_frozen_positions implicit ordering vs physics
 
-**Status: Low — functionally correct by accident, implicit ordering**
+**Status: Low — functionally correct, implicit ordering**
 
 `enforce_frozen_positions` writes `&mut Transform` on entities with `ScenarioPhysicsFrozen`.
-Physics systems write `&mut Transform` on bolt entities.
-When `ScenarioPhysicsFrozen` is present it is on a bolt entity (same archetype as `Bolt`).
-Bevy serializes these. The correct execution order is physics first, then pin-reset.
-No explicit `.after(PhysicsSystems::BoltLost)` constraint is declared.
+Physics systems write `&mut Transform` on bolt entities. Bevy serializes these because of the
+mutable access conflict. The system is now grouped with invariant checkers which are ordered
+`.after(update_breaker_state).before(PhysicsSystems::BoltLost)` — so it runs BEFORE physics,
+not after. This is intentional: enforce_frozen_positions pins the position BEFORE physics mutates,
+ensuring physics cannot move the frozen entity away from its target in the same tick.
 
-**Fix (optional):** Add `enforce_frozen_positions.after(PhysicsSystems::BoltLost)` in `lifecycle.rs:140`.
+**Verdict:** Ordering is correct for a freeze-before-physics pattern. The frozen entity is clamped
+to target at the start of the FixedUpdate invariant/mutator group, then physics runs.
+No constraint issue.
+
+---
+
+## NO CONFLICT — check_spawn_complete (NodePlugin, FixedUpdate, no run_if)
+
+`check_spawn_complete` runs in FixedUpdate WITHOUT a `run_if(PlayingState::Active)` guard.
+This is intentional: it must receive spawn messages that arrive in the very first FixedUpdate
+tick of `Playing` state, before `PlayingState::Active` is necessarily true.
+
+The 4 sender systems (spawn_bolt, spawn_breaker, spawn_cells_from_layout, spawn_walls) all run
+in `OnEnter(GameState::Playing)` using `MessageWriter` directly (not Commands). Bevy 0.18
+message writes are deferred — they become readable in FixedUpdate after OnEnter completes.
+`check_spawn_complete` accumulates received bits across ticks; it resets after firing.
+
+No conflict with any gameplay system because it is read-only on game world state (only writes
+Local<SpawnChecklist> and MessageWriter<SpawnNodeComplete>).

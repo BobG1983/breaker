@@ -70,3 +70,13 @@ type: reference
 - `clamp_bolt_to_playfield` velocity flip via `vel.value.x = -vel.value.x`: correct axis-aligned wall reflection. Direction guards (`< 0.0`, `> 0.0`) prevent double-reflection when bolt already moving inward. Zero velocity component leaves guard false → position clamped, no spurious velocity added. All correct.
 - `clamp_bolt_to_playfield` bottom intentionally open: `bolt_lost` detects `pos.y < playfield.bottom() - radius.0` independently. No bottom clamp needed in this system.
 - `clamp_bolt_to_playfield` ordering in plugin.rs: after `bolt_breaker_collision` (explicit `.after()`), before `bolt_lost` (explicit `.after(clamp_bolt_to_playfield)`). Not in a named system set — acceptable; no external system needs to order against the clamp specifically.
+- `seed_cell_type_registry` uses `assert!` (panic) for duplicate/reserved alias — intentional hard fail during loading, not a correctness bug.
+- `read_input_actions` DashLeft/DashRight: consume timestamp with `f64::NEG_INFINITY` — correct; next tap records fresh timestamp instead of triggering immediate second dash.
+- `bolt_cell_collision` cascade prevention: tested across 2 frames with adjacent cells at real grid spacing. Correct.
+- `handle_pause_input` Quit: transitions to `GameState::MainMenu` (not `PlayingState::Active`) — correct; PlayingState is a sub-state of Playing, exits automatically when parent exits.
+- `update_loading_bar` uses `u16::try_from` for progress ratio — saturates at `u16::MAX/u16::MAX = 1.0` for very large counts. Correct safety behavior.
+- `animate_bump_visual` uses `Update` time (`time.delta_secs()`) not fixed timestep — correct; visual-only, tied to frame rate not sim rate.
+- `spawn_lives_display` no cleanup marker on wrapper — intentional: cleaned via parent cascade when StatusPanel despawned (CleanupOnRunEnd). Correct.
+- `apply_bolt_speed_boosts` last-write-wins for multiple bindings with same trigger: if two `BoltSpeedBoost` bindings both have `PerfectBump`, the last one wins. This is intentional data-driven behavior.
+- `handle_life_lost` observer iterates all LivesCount entities — correct; if multiple entities have LivesCount (edge case), all are decremented. Intentional by design.
+- Full-tree review 2026-03-19: no confirmed logic bugs found beyond z=1.0 hardcode in bolt_lost (cosmetic concern for multi-layer games but functionally correct for current single-layer setup).

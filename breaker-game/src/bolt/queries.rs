@@ -1,6 +1,6 @@
 //! Bolt domain query type aliases.
 //!
-//! Query types with 5+ components live here rather than inline in system files.
+//! Query types with 4+ components live here rather than inline in system files.
 
 use bevy::{ecs::query::Has, prelude::*};
 

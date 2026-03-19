@@ -6,9 +6,9 @@
 //! is reflected, and the remaining movement continues. The bolt never overlaps
 //! any cell or wall.
 //!
-//! A per-frame `MAX_BOUNCES` cap (4) prevents infinite bounce loops. A 2-frame
-//! cascade prevention window ensures the same cell is not hit on consecutive
-//! frames.
+//! A per-frame `MAX_BOUNCES` cap (4) prevents infinite bounce loops. Cell hits
+//! are naturally bounded: after reflection, the bolt travels away from the hit
+//! surface for the remainder of the frame budget.
 //!
 //! Cell damage and destruction are handled by the cells domain via
 //! [`BoltHitCell`] messages. Wall hits reflect only (no message).
@@ -723,5 +723,4 @@ mod tests {
         assert_eq!(hits.0.len(), 1);
         assert_eq!(hits.0[0], cell_entity, "should hit cell, not wall");
     }
-
 }

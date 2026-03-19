@@ -204,6 +204,25 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - No ordering constraints relative to other params
 - Pattern confirmed correct: `mut local: Local<Vec<(Entity, f32, f32, f32, bool)>>` with `.clear()` + `.extend()` + `.iter()` — idiomatic scratch-buffer pattern; reuses heap allocation after warmup
 
+## EguiContexts::ctx_mut() in bevy_egui 0.39
+- Returns `Result<&mut Context, QuerySingleError>`
+- `let Ok(ctx) = contexts.ctx_mut() else { return; }` — correct pattern
+- Systems using this run in `bevy_egui::EguiPrimaryContextPass` schedule — correct
+
+## bevy::platform::collections::HashMap
+- Correct import path for Bevy 0.18.1's platform-aware HashMap
+- Used in `Local<HashMap<Entity, BreakerState>>` in invariant checkers — confirmed
+
+## ChildSpawnerCommands
+- `bevy::ecs::hierarchy::ChildSpawnerCommands<'_>` — correct type in spawn_chip_select helper functions
+- Import: `use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};`
+
+## BackgroundColor(Color::NONE)
+- `Color::NONE` is transparent; `BackgroundColor(Color::NONE)` — valid in 0.18
+
+## BorderColor::all(color)
+- `BorderColor::all(border_color)` — confirmed constructor in 0.18 UI API
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

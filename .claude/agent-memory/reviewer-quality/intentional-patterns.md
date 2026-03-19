@@ -14,7 +14,7 @@ type: reference
 - `#[cfg(all(test, not(target_os = "macos")))]` on integration tests — platform guard.
 - `#[allow(dead_code)]` on BumpPerformed and CellDestroyed — message type derive macro limitation. Intentional.
 - Double-insert in `init_breaker_params` — Bevy 15-component tuple limit workaround.
-- `handle_cell_hit.rs` `peekable().peek().is_none()` early-return — idiom smell, flag if still present in new code.
+- `handle_cell_hit.rs` `peekable().peek().is_none()` early-return — this pattern has been removed in the current codebase; `handle_cell_hit` now uses a `despawned: Local<Vec<Entity>>` guard and iterates normally. No longer present. CLOSED as of 2026-03-19.
 - `scenario_actions.len() as u32` in lifecycle.rs — safe in practice.
 
 - `StressFailure` / `StressResult` / `copy_index` in execution.rs — runner-internal infrastructure terms; no game vocabulary rule applies to the scenario runner's own tooling types.
@@ -26,4 +26,4 @@ type: reference
 - `upgrade` module/type names — infrastructure wrappers around Amp/Augment/Overclock; acceptable.
 - `ChaosDriver` — renamed from `ChaosMonkey` in feature/scenario-coverage-expansion. Rename is complete in production code (`src/input.rs`). Test bodies still use `monkey` as local variable names (`let mut monkey = ChaosDriver::new(...)`) — acceptable in test-only code.
 - `HybridInput` scripted phase boundary: doc says `0..scripted_frames` exclusive, implementation uses `frame < scripted_frames` (correct). The edge-case test probes frame 99 (not frame 100); comment in test says "last scripted frame". This is correct — 99 is inside scripted phase when scripted_frames=100.
-- `seed_archetype_registry` test fixture uses `make_archetype("Flux")` — "Flux" is the currency term; using it as an archetype name in test data is a vocabulary violation. Flagged in 2026-03-18 full-codebase review. Fix: rename to something non-conflicting (e.g., "Vortex").
+- `seed_archetype_registry` test fixture previously used `make_archetype("Flux")` — renamed to `make_archetype("Vortex")` in a subsequent PR. CLOSED as of 2026-03-19 full-codebase review.

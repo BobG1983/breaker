@@ -1,4 +1,6 @@
-//! Cells domain query type aliases — clippy `type_complexity` lint.
+//! Cells domain query type aliases.
+//!
+//! Query types with 4+ components live here rather than inline in system files.
 
 use bevy::prelude::*;
 

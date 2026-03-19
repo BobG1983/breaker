@@ -191,6 +191,27 @@ mod tests {
     }
 
     #[test]
+    fn repeat_key_events_ignored() {
+        let mut app = test_app();
+        app.world_mut().write_message(KeyboardInput {
+            key_code: KeyCode::ArrowUp,
+            logical_key: bevy::input::keyboard::Key::Unidentified(
+                bevy::input::keyboard::NativeKey::Unidentified,
+            ),
+            state: ButtonState::Pressed,
+            text: None,
+            window: Entity::PLACEHOLDER,
+            repeat: true,
+        });
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(
+            !actions.active(GameAction::Bump),
+            "repeat key press should not produce Bump action"
+        );
+    }
+
+    #[test]
     fn double_tap_left_triggers_dash_left() {
         let mut app = test_app();
 
