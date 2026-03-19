@@ -105,10 +105,10 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
-        assert_eq!(registry.len(), 3);
         assert!(registry.get("Piercing Shot").is_some());
         assert!(registry.get("Wide Breaker").is_some());
         assert!(registry.get("Surge").is_some());
+        assert_eq!(registry.ordered_values().count(), 3);
     }
 
     #[test]
@@ -121,7 +121,7 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
-        assert!(registry.is_empty());
+        assert_eq!(registry.ordered_values().count(), 0);
     }
 
     #[test]
@@ -141,10 +141,10 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
-        assert!(
-            registry.is_empty(),
-            "guard should prevent re-seeding; got {} chips",
-            registry.len()
+        assert_eq!(
+            registry.ordered_values().count(),
+            0,
+            "guard should prevent re-seeding"
         );
     }
 }

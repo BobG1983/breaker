@@ -133,6 +133,15 @@ fn spawn_card_row(
                     ));
 
                     card.spawn((
+                        Text::new(format!("{:?}", chip.rarity)),
+                        TextFont {
+                            font_size: config.card_description_font_size,
+                            ..default()
+                        },
+                        TextColor(Color::srgba(0.8, 0.7, 0.3, 1.0)),
+                    ));
+
+                    card.spawn((
                         Text::new(chip.description.clone()),
                         TextFont {
                             font_size: config.card_description_font_size,

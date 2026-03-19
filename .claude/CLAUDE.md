@@ -80,7 +80,7 @@ See @.claude/rules/delegated-implementation.md for full spec formats and pipelin
 
 Launch per verification tier defined in @.claude/rules/orchestration.md (Standard or Full).
 
-All agents in a tier launch in a **single message** — separate messages make them sequential. Add conditional agents (researcher-system-dependencies, guard-game-design, guard-docs, guard-security, guard-dependencies, writer-scenarios) to the same wave when triggered.
+All agents in a tier launch in a **single message** — separate messages make them sequential. Add conditional agents (researcher-system-dependencies, guard-game-design, guard-docs, guard-security, guard-dependencies, writer-scenarios, guard-agent-memory) to the same wave when triggered.
 
 ### Phase 3 — On Build/Test Failure (sequential, reactive)
 

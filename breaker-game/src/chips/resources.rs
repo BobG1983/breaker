@@ -28,18 +28,6 @@ impl ChipRegistry {
         self.order.iter().filter_map(|name| self.chips.get(name))
     }
 
-    /// Number of registered chips.
-    #[must_use]
-    pub(crate) fn len(&self) -> usize {
-        self.chips.len()
-    }
-
-    /// Whether the registry is empty.
-    #[must_use]
-    pub(crate) fn is_empty(&self) -> bool {
-        self.chips.is_empty()
-    }
-
     /// Insert a chip definition, keyed by its name.
     pub(crate) fn insert(&mut self, def: ChipDefinition) {
         let name = def.name.clone();
@@ -54,17 +42,16 @@ mod tests {
     use crate::chips::definition::ChipKind;
 
     #[test]
-    fn default_registry_is_empty() {
+    fn default_registry_has_no_entries() {
         let registry = ChipRegistry::default();
-        assert!(registry.is_empty());
-        assert_eq!(registry.len(), 0);
+        assert!(registry.get("anything").is_none());
+        assert_eq!(registry.ordered_values().count(), 0);
     }
 
     #[test]
     fn insert_and_get() {
         let mut registry = ChipRegistry::default();
         registry.insert(ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp));
-        assert_eq!(registry.len(), 1);
         assert!(registry.get("Piercing Shot").is_some());
         assert!(registry.get("missing").is_none());
     }

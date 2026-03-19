@@ -80,6 +80,7 @@ Full adds to Standard: **reviewer-bevy-api** + **reviewer-architecture** + **rev
 | New dependencies added or security-sensitive code | **guard-security** |
 | New dependencies added or before release | **guard-dependencies** |
 | New mechanic needs adversarial scenario coverage | **writer-scenarios** |
+| Phase complete or multiple sessions since last audit | **guard-agent-memory** |
 
 All agents in a tier launch in a **single message** — separate messages make them sequential.
 
