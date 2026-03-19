@@ -8,7 +8,7 @@ use crate::{
     chips::{
         components::TiltControlBoost,
         definition::{AugmentEffect, ChipEffect},
-        messages::ChipEffectApplied,
+        definition::ChipEffectApplied,
     },
 };
 

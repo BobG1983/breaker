@@ -8,7 +8,7 @@ use crate::{
     chips::{
         components::BreakerSpeedBoost,
         definition::{AugmentEffect, ChipEffect},
-        messages::ChipEffectApplied,
+        definition::ChipEffectApplied,
     },
 };
 

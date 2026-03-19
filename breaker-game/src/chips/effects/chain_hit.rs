@@ -8,7 +8,7 @@ use crate::{
     chips::{
         components::ChainHit,
         definition::{AmpEffect, ChipEffect},
-        messages::ChipEffectApplied,
+        definition::ChipEffectApplied,
     },
 };
 

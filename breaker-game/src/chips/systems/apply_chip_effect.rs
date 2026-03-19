@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    chips::{messages::ChipEffectApplied, resources::ChipRegistry},
+    chips::{definition::ChipEffectApplied, resources::ChipRegistry},
     ui::messages::ChipSelected,
 };
 

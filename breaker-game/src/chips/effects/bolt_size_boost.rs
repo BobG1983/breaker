@@ -8,7 +8,7 @@ use crate::{
     chips::{
         components::BoltSizeBoost,
         definition::{AmpEffect, ChipEffect},
-        messages::ChipEffectApplied,
+        definition::ChipEffectApplied,
     },
 };
 
