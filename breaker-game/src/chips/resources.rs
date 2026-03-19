@@ -8,11 +8,12 @@ use super::definition::ChipDefinition;
 
 /// `HashMap` pool of all loaded chip definitions, keyed by name.
 ///
-/// The selection screen picks from this pool. Populated during loading
-/// by `seed_chip_registry`.
+/// Preserves insertion order via a separate `Vec<String>` for deterministic
+/// iteration (chip offer display). Populated during loading by `seed_chip_registry`.
 #[derive(Resource, Debug, Default)]
 pub(crate) struct ChipRegistry {
     chips: HashMap<String, ChipDefinition>,
+    order: Vec<String>,
 }
 
 impl ChipRegistry {
@@ -22,9 +23,9 @@ impl ChipRegistry {
         self.chips.get(name)
     }
 
-    /// Iterate all chip definitions (arbitrary order).
-    pub(crate) fn values(&self) -> impl Iterator<Item = &ChipDefinition> {
-        self.chips.values()
+    /// Iterate all chip definitions in insertion order.
+    pub(crate) fn ordered_values(&self) -> impl Iterator<Item = &ChipDefinition> {
+        self.order.iter().filter_map(|name| self.chips.get(name))
     }
 
     /// Number of registered chips.
@@ -41,7 +42,9 @@ impl ChipRegistry {
 
     /// Insert a chip definition, keyed by its name.
     pub(crate) fn insert(&mut self, def: ChipDefinition) {
-        self.chips.insert(def.name.clone(), def);
+        let name = def.name.clone();
+        self.chips.insert(name.clone(), def);
+        self.order.push(name);
     }
 }
 
@@ -67,10 +70,12 @@ mod tests {
     }
 
     #[test]
-    fn values_iterates_all() {
+    fn ordered_values_preserves_insertion_order() {
         let mut registry = ChipRegistry::default();
+        registry.insert(ChipDefinition::test_simple("C", ChipKind::Overclock));
         registry.insert(ChipDefinition::test_simple("A", ChipKind::Amp));
         registry.insert(ChipDefinition::test_simple("B", ChipKind::Augment));
-        assert_eq!(registry.values().count(), 2);
+        let names: Vec<&str> = registry.ordered_values().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["C", "A", "B"]);
     }
 }

@@ -20,7 +20,7 @@ pub(crate) fn spawn_chip_select(
     config: Res<ChipSelectConfig>,
     registry: Res<ChipRegistry>,
 ) {
-    let offers: Vec<_> = registry.values().take(MAX_CARDS).cloned().collect();
+    let offers: Vec<_> = registry.ordered_values().take(MAX_CARDS).cloned().collect();
 
     commands.insert_resource(ChipSelectTimer {
         remaining: config.timer_secs,
@@ -262,10 +262,9 @@ mod tests {
 
         let offers = app.world().resource::<ChipOffers>();
         assert_eq!(offers.0.len(), 3);
-        let names: Vec<&str> = offers.0.iter().map(|c| c.name.as_str()).collect();
-        assert!(names.contains(&"Piercing Shot"));
-        assert!(names.contains(&"Wide Breaker"));
-        assert!(names.contains(&"Surge"));
+        assert_eq!(offers.0[0].name, "Piercing Shot");
+        assert_eq!(offers.0[1].name, "Wide Breaker");
+        assert_eq!(offers.0[2].name, "Surge");
     }
 
     #[test]
