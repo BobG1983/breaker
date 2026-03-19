@@ -12,6 +12,8 @@ Ephemeral reviews on file:
 - `ephemeral/review-2026-03-19-local-vec.md` — Local<Vec> hot-path allocation refactor (Clean)
 - `ephemeral/review-2026-03-19-clamp-applydeferred.md` — PlayfieldConfig Res + ApplyDeferred in OnEnter (Clean)
 - `ephemeral/review-2026-03-19-stress-runner.md` — Stress runner subprocess management (1 Minor, otherwise Clean)
+- `ephemeral/review-2026-03-19-spawn-batched-refactor.md` — spawn_batched extraction in execution.rs (Clean; prior Minor resolved)
+- `ephemeral/review-2026-03-19-clamp-bolt-to-playfield.md` — clamp_bolt_to_playfield safety system (Clean)
 
 ## Known Intentional Patterns (do not flag)
 - `snapshot_eval_data` clones `ViolationLog`, `CapturedLogs`, `ScenarioStats`, `ScenarioDefinition` every frame in the scenario runner — intentional, required to survive `App::run()` teardown.
