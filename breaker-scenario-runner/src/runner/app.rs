@@ -417,9 +417,7 @@ mod tests {
         let definition = ScenarioDefinition {
             breaker: "test".into(),
             layout: "test".into(),
-            input: InputStrategy::Scripted(ScriptedParams {
-                actions: vec![],
-            }),
+            input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
             max_frames: 100,
             invariants: vec![],
             expected_violations: None,
@@ -443,6 +441,9 @@ mod tests {
         };
         let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
         let passed = collect_and_evaluate(&buffer, "test_scenario", false);
-        assert!(passed, "should pass with clean snapshot and empty scripted actions");
+        assert!(
+            passed,
+            "should pass with clean snapshot and empty scripted actions"
+        );
     }
 }
