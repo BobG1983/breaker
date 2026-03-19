@@ -1,3 +1,6 @@
+//! Subprocess batching, in-process serial/parallel execution, and stress-run
+//! aggregation for the scenario runner.
+
 use std::{
     fmt,
     path::{Path, PathBuf},
@@ -459,8 +462,6 @@ pub fn run_stress_scenario(
 /// Prints the result of a stress scenario run.
 ///
 /// Failure stdout and stderr are always printed for failed copies.
-/// In verbose mode, stdout/stderr from all copies would be printed
-/// (not yet implemented — only failures are shown).
 pub fn print_stress_result(result: &StressResult) {
     println!("[{}] stress: {}", result.name, result.summary_line());
 
