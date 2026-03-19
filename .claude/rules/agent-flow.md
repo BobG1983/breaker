@@ -26,7 +26,11 @@ After planner-review produces findings, the main agent:
 
 **Never launch writer-tests with unreviewed or uncorrected specs.** The cost of a bad spec propagating through writer-tests → writer-code is high (rework). The cost of one revision loop is low.
 
-## Phase 2 — Post-Implementation (single parallel wave)
+## Phase 2 + Phase 3 — REFACTOR (verification → fix routing → /simplify)
+
+Phase 2 and Phase 3 together form the **REFACTOR** stage of the TDD cycle. Reviewers and runners identify what needs improving (Phase 2), failure routing executes the fixes (Phase 3), and `/simplify` catches anything left over. See delegated-implementation.md for the full mapping.
+
+### Phase 2 — Post-Implementation (single parallel wave)
 
 Launch per verification tier — see @.claude/rules/orchestration.md for Standard vs Full tier definitions.
 

@@ -25,6 +25,8 @@ Write tests FIRST for all game logic. The full cycle is mandatory:
 2. **GREEN** — Write the minimum code to make the tests pass. No more, no less.
 3. **REFACTOR** — Clean up names, eliminate duplication, improve structure. Tests must still pass after refactoring.
 
+In the delegated agent pipeline, REFACTOR is distributed: post-implementation reviewers (quality, correctness, bevy-api, performance, architecture) identify what to improve, Phase 3 failure routing executes the fixes, and `/simplify` catches the rest. See `.claude/rules/delegated-implementation.md` for the full mapping.
+
 **No implementation before failing tests. No exceptions.**
 
 ### Test Types

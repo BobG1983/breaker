@@ -3,6 +3,7 @@
 ## Routing Patterns
 - [named-agents-rule.md](named-agents-rule.md) — Always use named subagents, never run own versions
 - [writer-tests-boundary.md](writer-tests-boundary.md) — writer-tests must only write failing tests, never implement
+- [refactor-phase-mapping.md](refactor-phase-mapping.md) — REFACTOR phase = Phase 2 reviewers + Phase 3 fix routing + /simplify + wiring
 
 ## Spec Patterns
 - [query-placement-rule.md](query-placement-rule.md) — Query type aliases live in domain/queries.rs

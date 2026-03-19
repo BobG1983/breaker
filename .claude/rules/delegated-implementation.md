@@ -11,12 +11,25 @@ All implementation goes through the delegated pipeline. The main agent is the or
 4. Main agent reviews planner-review feedback, then sends feedback back to planner-spec to revise
 5. Repeat 3–4 until planner-review confirms specs are clean (usually one revision)
 6. Main agent reviews final specs, creates shared prerequisites
-7. Launch ALL writer-tests in parallel  [RED phase: tests must fail]
-8. As each writer-tests completes: review, launch its writer-code — GREEN phase
-9. After ALL writer-codes complete: launch post-implementation verification
-10. Main agent handles wiring (lib.rs, game.rs, shared.rs) — REFACTOR
-11. Update session-state.md
+7. Launch ALL writer-tests in parallel                        ── RED phase
+8. As each writer-tests completes: review, launch writer-code ── GREEN phase
+9. After ALL writer-codes complete: launch verification wave  ─┐
+10. Route Phase 3 failures through fix agents                  │ REFACTOR phase
+11. Run /simplify on changed code                              │
+12. Main agent handles wiring (lib.rs, game.rs, shared.rs)    ─┘
+13. Update session-state.md
 ```
+
+### How REFACTOR maps to agents
+
+Traditional TDD REFACTOR is "clean up while tests stay green." In our delegated pipeline, this is distributed across steps 9–12:
+
+- **Reviewers find what to refactor**: reviewer-quality (idioms, naming, duplication), reviewer-correctness (logic bugs), reviewer-bevy-api (deprecated patterns), reviewer-performance (ECS inefficiencies), reviewer-architecture (structural violations)
+- **Phase 3 routing executes the fixes**: reviewer findings route to writer-code (or inline main-agent fixes) per the failure routing table in agent-flow.md
+- **`/simplify` catches the rest**: runs on changed code after Phase 3 fixes settle — catches anything reviewers missed
+- **Wiring is the final cleanup**: main agent integrates modules, ensuring the public API surface is clean
+
+The REFACTOR phase is complete when all Phase 2 agents pass and `/simplify` finds nothing to change.
 
 **Spec revision loop**: planner-review produces BLOCKING/IMPORTANT/MINOR findings. The main agent triages findings (some may be false positives), then sends the valid feedback back to planner-spec with instructions to produce corrected specs. Do NOT launch writer-tests until the spec revision loop is complete. Do NOT skip this step even for "obvious" specs.
 

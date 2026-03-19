@@ -68,9 +68,11 @@ See @.claude/rules/delegated-implementation.md for full spec formats and pipelin
 6. Review final specs, create shared prerequisites
 7. Launch ALL **writer-tests** in parallel — RED phase
 8. As each writer-tests completes: review, launch its **writer-code** — GREEN phase
-9. After ALL writer-codes complete: launch post-implementation verification
-10. Handle wiring (`lib.rs`, `game.rs`, `shared.rs`) — REFACTOR
-11. Update session-state.md
+9. After ALL writer-codes complete: launch verification wave — REFACTOR phase begins
+10. Route Phase 3 failures through fix agents
+11. Run `/simplify` on changed code
+12. Handle wiring (`lib.rs`, `game.rs`, `shared.rs`) — REFACTOR phase ends
+13. Update session-state.md
 
 ### Phase 1 — Before Writing Code (sequential)
 
