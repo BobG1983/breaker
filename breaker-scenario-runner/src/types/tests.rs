@@ -273,3 +273,130 @@ fn all_variants_covered_by_invariant_kind_all() {
         "InvariantKind::ALL must not contain duplicates"
     );
 }
+
+// -------------------------------------------------------------------------
+// StressConfig — serde deserialization
+// -------------------------------------------------------------------------
+
+#[test]
+fn stress_config_parses_full_ron() {
+    let ron = "(runs: 64, parallelism: 8)";
+    let result: StressConfig = ron::de::from_str(ron).expect("StressConfig full should parse");
+    assert_eq!(
+        result,
+        StressConfig {
+            runs: 64,
+            parallelism: 8,
+        }
+    );
+}
+
+#[test]
+fn stress_config_defaults_both_fields_from_empty_struct() {
+    let ron = "()";
+    let result: StressConfig =
+        ron::de::from_str(ron).expect("StressConfig empty struct should parse");
+    assert_eq!(
+        result,
+        StressConfig {
+            runs: 32,
+            parallelism: 32,
+        }
+    );
+}
+
+#[test]
+fn stress_config_partial_override_only_runs() {
+    let ron = "(runs: 64)";
+    let result: StressConfig = ron::de::from_str(ron).expect("StressConfig runs-only should parse");
+    assert_eq!(
+        result,
+        StressConfig {
+            runs: 64,
+            parallelism: 32,
+        }
+    );
+}
+
+#[test]
+fn stress_config_partial_override_only_parallelism() {
+    let ron = "(parallelism: 4)";
+    let result: StressConfig =
+        ron::de::from_str(ron).expect("StressConfig parallelism-only should parse");
+    assert_eq!(
+        result,
+        StressConfig {
+            runs: 32,
+            parallelism: 4,
+        }
+    );
+}
+
+// -------------------------------------------------------------------------
+// ScenarioDefinition — stress field
+// -------------------------------------------------------------------------
+
+#[test]
+fn scenario_definition_stress_field_defaults_to_none_when_omitted() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition without stress should parse");
+    assert!(
+        result.stress.is_none(),
+        "stress must be None when omitted from RON"
+    );
+}
+
+#[test]
+fn scenario_definition_stress_some_with_explicit_values_parses() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        stress: Some((runs: 64, parallelism: 4)),
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition with stress Some should parse");
+    assert_eq!(
+        result.stress,
+        Some(StressConfig {
+            runs: 64,
+            parallelism: 4,
+        })
+    );
+}
+
+#[test]
+fn scenario_definition_stress_some_empty_uses_defaults() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        stress: Some(()),
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition with stress Some(()) should parse");
+    assert_eq!(
+        result.stress,
+        Some(StressConfig {
+            runs: 32,
+            parallelism: 32,
+        })
+    );
+}

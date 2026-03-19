@@ -1,14 +1,14 @@
 use std::{
     fmt,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
 };
 
 use super::{
     app::run_scenario,
-    discovery::{collect_scenario_paths, scenario_name},
+    discovery::{collect_scenario_paths, load_stress_config, scenario_name},
 };
-use crate::log_capture::LogBuffer;
+use crate::{log_capture::LogBuffer, types::StressConfig};
 
 /// Parallelism level for subprocess-based execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -253,4 +253,211 @@ struct ChildResult {
     passed: bool,
     stdout: String,
     stderr: String,
+}
+
+// -------------------------------------------------------------------------
+// StressResult / StressFailure — stress-run aggregation
+// -------------------------------------------------------------------------
+
+/// A single failed stress copy's output.
+pub struct StressFailure {
+    /// Zero-based index of this copy within the stress run.
+    pub copy_index: usize,
+    /// Captured stdout from the child process.
+    pub stdout: String,
+    /// Captured stderr from the child process.
+    pub stderr: String,
+}
+
+/// Result of running a stress scenario (multiple copies of the same scenario).
+pub struct StressResult {
+    /// Name of the scenario under stress.
+    pub name: String,
+    /// Total number of copies that were run.
+    pub total: usize,
+    /// Details for every copy that failed.
+    pub failures: Vec<StressFailure>,
+}
+
+impl StressResult {
+    /// Returns `true` if every copy of the stress run passed.
+    #[must_use]
+    pub const fn passed(&self) -> bool {
+        self.failures.is_empty()
+    }
+
+    /// Number of copies that passed (derived from total - failures).
+    #[must_use]
+    pub const fn pass_count(&self) -> usize {
+        self.total - self.failures.len()
+    }
+
+    /// Returns a human-readable summary line, e.g. `"32/32 passed"` or
+    /// `"28/32 passed (4 failures)"`.
+    #[must_use]
+    pub fn summary_line(&self) -> String {
+        let pass_count = self.pass_count();
+        if self.failures.is_empty() {
+            format!("{pass_count}/{} passed", self.total)
+        } else {
+            format!(
+                "{pass_count}/{} passed ({} failures)",
+                self.total,
+                self.failures.len()
+            )
+        }
+    }
+}
+
+/// A normal scenario run entry: `(name, path)`.
+pub(super) type NormalRun = (String, PathBuf);
+
+/// A stress scenario run entry: `(name, path, stress_config)`.
+pub(super) type StressRun = (String, PathBuf, StressConfig);
+
+/// Partitions a run list into `(normal, stress)` scenarios by checking each
+/// RON file for a `stress` field.
+///
+/// Returns `(normal_runs, stress_runs)` where `stress_runs` includes the
+/// resolved [`StressConfig`] for each stress scenario.
+#[must_use]
+pub fn partition_stress_scenarios(runs: &[(String, PathBuf)]) -> (Vec<NormalRun>, Vec<StressRun>) {
+    let mut normal = Vec::new();
+    let mut stress = Vec::new();
+
+    for (name, path) in runs {
+        match load_stress_config(path) {
+            Some(config) => stress.push((name.clone(), path.clone(), config)),
+            None => normal.push((name.clone(), path.clone())),
+        }
+    }
+
+    (normal, stress)
+}
+
+/// Runs a stress scenario by spawning `config.runs` copies as subprocesses,
+/// batched by `config.parallelism`.
+///
+/// Each subprocess gets `--stress-copy` so it runs in single in-process mode
+/// without recursively expanding stress config.
+///
+/// Returns a [`StressResult`] aggregating pass/fail across all copies.
+#[must_use]
+pub fn run_stress_scenario(
+    name: &str,
+    _path: &Path,
+    config: &StressConfig,
+    visual: bool,
+    verbose: bool,
+) -> StressResult {
+    let runs = config.runs.max(1);
+    let parallelism = config.parallelism.max(1);
+
+    let exe = match std::env::current_exe() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Failed to determine current executable path: {e}");
+            return StressResult {
+                name: name.to_owned(),
+                total: runs,
+                failures: vec![StressFailure {
+                    copy_index: 0,
+                    stdout: String::new(),
+                    stderr: format!("exe lookup error: {e}"),
+                }],
+            };
+        }
+    };
+
+    let mut all_results: Vec<(usize, bool, String, String)> = Vec::with_capacity(runs);
+
+    // Build indices in chunks of parallelism.
+    let indices: Vec<usize> = (0..runs).collect();
+    for batch in indices.chunks(parallelism) {
+        let mut children: Vec<(usize, Child)> = Vec::with_capacity(batch.len());
+
+        for &copy_index in batch {
+            let mut cmd = Command::new(&exe);
+            cmd.arg("-s").arg(name).arg("--stress-copy");
+            if visual {
+                cmd.arg("--visual");
+            }
+            if verbose {
+                cmd.arg("-v");
+            }
+            cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+            match cmd.spawn() {
+                Ok(child) => children.push((copy_index, child)),
+                Err(e) => {
+                    eprintln!("Failed to spawn stress copy {copy_index} for [{name}]: {e}");
+                    all_results.push((
+                        copy_index,
+                        false,
+                        String::new(),
+                        format!("spawn error: {e}"),
+                    ));
+                }
+            }
+        }
+
+        for (copy_index, child) in children {
+            let output = match child.wait_with_output() {
+                Ok(o) => o,
+                Err(e) => {
+                    eprintln!("Failed to wait on stress copy {copy_index} [{name}]: {e}");
+                    all_results.push((
+                        copy_index,
+                        false,
+                        String::new(),
+                        format!("wait error: {e}"),
+                    ));
+                    continue;
+                }
+            };
+
+            let stdout = String::from_utf8(output.stdout)
+                .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+            let stderr = String::from_utf8(output.stderr)
+                .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+
+            all_results.push((copy_index, output.status.success(), stdout, stderr));
+        }
+    }
+
+    let failures: Vec<StressFailure> = all_results
+        .into_iter()
+        .filter(|(_, passed, ..)| !*passed)
+        .map(|(copy_index, _, stdout, stderr)| StressFailure {
+            copy_index,
+            stdout,
+            stderr,
+        })
+        .collect();
+
+    StressResult {
+        name: name.to_owned(),
+        total: runs,
+        failures,
+    }
+}
+
+/// Prints the result of a stress scenario run.
+pub fn print_stress_result(result: &StressResult, verbose: bool) {
+    println!("[{}] stress: {}", result.name, result.summary_line());
+
+    if !result.passed() {
+        for failure in &result.failures {
+            println!("  Copy {}:", failure.copy_index);
+            for line in failure.stdout.lines() {
+                println!("    {line}");
+            }
+            if !failure.stderr.is_empty() && verbose {
+                for line in failure.stderr.lines() {
+                    eprintln!("    {line}");
+                }
+            }
+        }
+    }
+    println!();
 }

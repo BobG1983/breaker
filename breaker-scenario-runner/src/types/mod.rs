@@ -199,6 +199,40 @@ impl Default for InvariantParams {
     }
 }
 
+/// Stress-test configuration embedded in a scenario definition.
+///
+/// When present, the runner executes the scenario `runs` times with up to
+/// `parallelism` instances running concurrently. All fields default to 32 so
+/// that `stress: Some(())` in RON is a valid minimal stress config.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct StressConfig {
+    /// Number of times to run the scenario. Defaults to 32.
+    #[serde(default = "StressConfig::default_runs")]
+    pub runs: usize,
+    /// Maximum number of concurrent instances. Defaults to 32.
+    #[serde(default = "StressConfig::default_parallelism")]
+    pub parallelism: usize,
+}
+
+impl StressConfig {
+    const fn default_runs() -> usize {
+        32
+    }
+
+    const fn default_parallelism() -> usize {
+        32
+    }
+}
+
+impl Default for StressConfig {
+    fn default() -> Self {
+        Self {
+            runs: Self::default_runs(),
+            parallelism: Self::default_parallelism(),
+        }
+    }
+}
+
 /// Full scenario definition loaded from a `.scenario.ron` file.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ScenarioDefinition {
@@ -225,6 +259,10 @@ pub struct ScenarioDefinition {
     /// intercepted and the run restarts — only `max_frames` triggers exit.
     #[serde(default = "ScenarioDefinition::default_allow_early_end")]
     pub allow_early_end: bool,
+    /// Optional stress-test configuration. When `Some`, the runner executes the
+    /// scenario multiple times in parallel instead of a single run.
+    #[serde(default)]
+    pub stress: Option<StressConfig>,
 }
 
 impl ScenarioDefinition {

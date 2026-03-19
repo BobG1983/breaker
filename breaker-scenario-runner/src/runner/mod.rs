@@ -12,6 +12,7 @@ mod tests;
 
 pub use app::{drain_remaining_logs, guarded_update, is_timed_out};
 pub use execution::{
-    Parallelism, build_run_list, parse_parallelism, run_all_parallel, run_all_serial,
-    run_with_args, scenarios_dir,
+    Parallelism, StressFailure, StressResult, build_run_list, parse_parallelism,
+    partition_stress_scenarios, print_stress_result, run_all_parallel, run_all_serial,
+    run_stress_scenario, run_with_args, scenarios_dir,
 };
