@@ -2,7 +2,7 @@
 name: writer-code
 description: "Use this agent to implement production code that satisfies existing failing tests. The writer-code is the GREEN phase of the TDD cycle — it receives failing tests written by the writer-tests and implements the minimal code to make them pass. Always used as the second half of the writer-tests → writer-code pair, after the main agent reviews the tests.\n\nExamples:\n\n- After the main agent reviews writer-tests output:\n  Assistant: \"Tests look correct. Let me use the writer-code agent to implement the code that satisfies them.\"\n\n- When delegating domain implementation:\n  Assistant: \"Launching writer-codes for bolt and cells domains in parallel — each has failing tests to satisfy.\"\n\n- After test review checkpoint:\n  Assistant: \"All test specs approved. Let me use the writer-code to make them pass.\""
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: sonnet
+model: opus
 color: purple
 memory: project
 ---
