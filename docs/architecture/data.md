@@ -137,7 +137,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 |----------|-----|-------|-------|
 | `ChipRegistry` | `String` (name) | `ChipDefinition` | Flat pool, arbitrary order |
 | `NodeLayoutRegistry` | `String` (name) | `NodeLayout` | Paired `Vec<String>` preserves insertion order for index-based node progression |
-| `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Sorted by name for UI display |
+| `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Unsorted — callers sort at call site for UI display |
 | `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name |
 
 ### Pipeline

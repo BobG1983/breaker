@@ -26,8 +26,9 @@ pub(crate) use width_boost::handle_width_boost;
 
 /// Stacks a `u32` component field on an entity.
 ///
-/// If `field` is `Some`, adds `per_stack` when below the cap.
-/// If `field` is `None`, inserts the component with `per_stack` as the initial value.
+/// - If `per_stack` is 0, this is a no-op regardless of `field`.
+/// - If `field` is `Some`, adds `per_stack` when below the cap.
+/// - If `field` is `None`, inserts the component with `per_stack` as the initial value.
 pub(super) fn stack_u32<C, F>(
     entity: Entity,
     field: Option<&mut u32>,
@@ -53,8 +54,9 @@ pub(super) fn stack_u32<C, F>(
 
 /// Stacks an `f32` component field on an entity.
 ///
-/// If `field` is `Some`, adds `per_stack` when below the cap.
-/// If `field` is `None`, inserts the component with `per_stack` as the initial value.
+/// - If `per_stack` is 0.0, this is a no-op regardless of `field`.
+/// - If `field` is `Some`, adds `per_stack` when below the cap.
+/// - If `field` is `None`, inserts the component with `per_stack` as the initial value.
 pub(super) fn stack_f32<C, F>(
     entity: Entity,
     field: Option<&mut f32>,
@@ -107,24 +109,13 @@ mod tests {
 
     #[test]
     fn stack_u32_adds_when_under_cap() {
+        let mut current = 2u32;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let entity = app.world_mut().spawn(TestU32(2)).id();
-
-        let mut val = 2u32;
-        app.world_mut().commands().queue(move |world: &mut World| {
-            let mut commands = world.commands();
-            stack_u32::<TestU32, _>(entity, Some(&mut val), 2, 3, &mut commands, TestU32);
-        });
-        // val was modified in the closure copy — check via the closure's behavior:
-        // We need to verify the behavior differently since the closure captures a copy.
-        // Instead, test the logic directly:
-        let mut current = 2u32;
-        let per_stack = 2u32;
-        let max_stacks = 3u32;
-        if current / per_stack < max_stacks {
-            current += per_stack;
-        }
+        let entity = app.world_mut().spawn_empty().id();
+        let mut commands = app.world_mut().commands();
+        // 2 / 2 = 1 stack, which is < 3 max — should add
+        stack_u32::<TestU32, _>(entity, Some(&mut current), 2, 3, &mut commands, TestU32);
         assert_eq!(current, 4);
     }
 
@@ -179,12 +170,12 @@ mod tests {
     #[test]
     fn stack_f32_adds_when_under_cap() {
         let mut current = 1.5f32;
-        let per_stack = 1.5f32;
-        let max_stacks = 3u32;
-        // 1.5 / 1.5 = 1.0, which is < 3
-        if f64::from(current / per_stack) < f64::from(max_stacks) {
-            current += per_stack;
-        }
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn_empty().id();
+        let mut commands = app.world_mut().commands();
+        // 1.5 / 1.5 = 1.0 stack, which is < 3 max — should add
+        stack_f32::<TestF32, _>(entity, Some(&mut current), 1.5, 3, &mut commands, TestF32);
         assert!((current - 3.0).abs() < f32::EPSILON);
     }
 
