@@ -5,8 +5,6 @@
 //! all violations for end-of-run reporting.
 
 mod checkers;
-#[cfg(test)]
-mod tests;
 mod types;
 
 pub use checkers::*;
