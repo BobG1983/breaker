@@ -4,7 +4,9 @@
 //! completion, then prints a structured summary and returns the exit code.
 
 use std::{
+    fmt,
     path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -21,26 +23,114 @@ use crate::{
     verdict::ScenarioVerdict,
 };
 
-/// Entry point called by `main`. Returns process exit code (0 = all pass, 1 = any fail).
+/// Parallelism level for subprocess-based execution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Parallelism {
+    /// Run at most N subprocesses concurrently.
+    Count(usize),
+    /// Run all subprocesses at once (unlimited concurrency).
+    All,
+}
+
+impl Parallelism {
+    /// Default parallelism when no `--parallel` flag is given.
+    pub const DEFAULT: Self = Self::Count(32);
+
+    /// Resolves to a concrete batch size given the total number of runs.
+    #[must_use]
+    pub fn resolve(&self, total: usize) -> usize {
+        match self {
+            Self::Count(n) => (*n).max(1),
+            Self::All => total.max(1),
+        }
+    }
+}
+
+impl fmt::Display for Parallelism {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Count(n) => write!(f, "{n}"),
+            Self::All => write!(f, "all"),
+        }
+    }
+}
+
+/// Parses a `--parallel` value: either `"all"` or a positive integer.
+///
+/// # Errors
+///
+/// Returns a descriptive error string if the value is not `"all"` or a positive integer.
+pub fn parse_parallelism(value: &str) -> Result<Parallelism, String> {
+    if value.eq_ignore_ascii_case("all") {
+        return Ok(Parallelism::All);
+    }
+    match value.parse::<usize>() {
+        Ok(0) => Err("--parallel must be a positive number or \"all\"".to_owned()),
+        Ok(n) => Ok(Parallelism::Count(n)),
+        Err(_) => Err(format!(
+            "invalid value for --parallel: \"{value}\" (expected a positive number or \"all\")"
+        )),
+    }
+}
+
+/// Builds the run list for a single iteration of execution.
+///
+/// Each entry is `(display_name, scenario_path)`. For a single scenario,
+/// returns one entry; for `--all`, returns one entry per scenario file.
 #[must_use]
-pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool, verbose: bool) -> i32 {
+pub fn build_run_list(scenario: Option<&str>, all: bool) -> Vec<(String, PathBuf)> {
     let scenario_paths = collect_scenario_paths(scenario, all);
+    scenario_paths
+        .into_iter()
+        .map(|p| {
+            let name = scenario_name(&p);
+            (name, p)
+        })
+        .collect()
+}
+
+/// Runs a single scenario in-process. Returns process exit code (0 = pass, 1 = fail).
+#[must_use]
+pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i32 {
+    let scenario_paths = collect_scenario_paths(scenario, false);
 
     if scenario_paths.is_empty() {
         eprintln!("No scenarios found. Use -s <name> or --all.");
         return 1;
     }
 
-    let mut results: Vec<(String, bool)> = Vec::new();
     let mut shared_log_buffer: Option<LogBuffer> = None;
+    let path = &scenario_paths[0];
+    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
 
-    for path in &scenario_paths {
-        let name = scenario_name(path);
+    i32::from(!passed)
+}
+
+/// Runs scenarios in-process sequentially. Returns process exit code (0 = all pass, 1 = any fail).
+///
+/// Shares a single `LogBuffer` across all runs (the global tracing subscriber is
+/// installed once). Each scenario's result is printed inline and a summary follows.
+#[must_use]
+pub fn run_all_serial(runs: &[(String, PathBuf)], headless: bool, verbose: bool) -> i32 {
+    let mut shared_log_buffer: Option<LogBuffer> = None;
+    let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
+
+    for (display_name, path) in runs {
         let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
-        results.push((name, passed));
+        results.push((display_name.clone(), passed));
     }
 
-    // Cross-scenario summary.
+    print_summary(&results)
+}
+
+/// Returns the path to the `scenarios/` directory relative to this crate's manifest.
+#[must_use]
+pub fn scenarios_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scenarios")
+}
+
+/// Prints the cross-scenario summary and returns the exit code.
+fn print_summary(results: &[(String, bool)]) -> i32 {
     let passed_count = results.iter().filter(|(_, p)| *p).count();
     let failed_count = results.len() - passed_count;
     let failures: Vec<&str> = results
@@ -63,10 +153,121 @@ pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool, verbose:
     i32::from(failed_count > 0)
 }
 
-/// Returns the path to the `scenarios/` directory relative to this crate's manifest.
+/// Runs scenarios as parallel subprocesses. Returns process exit code.
+///
+/// Each scenario gets its own child process. `parallelism` is the maximum
+/// number of subprocesses to run concurrently (must be >= 1; use
+/// [`Parallelism::resolve`] to compute from CLI input).
+///
+/// The run list is pre-built by the caller via [`build_run_list`].
+///
+/// # Errors
+///
+/// Returns exit code `1` if the current executable path cannot be determined.
+/// Spawn or wait failures for individual subprocesses are recorded as failed
+/// results and do not abort the run.
 #[must_use]
-pub fn scenarios_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scenarios")
+pub fn run_all_parallel(
+    runs: &[(String, PathBuf)],
+    visual: bool,
+    verbose: bool,
+    parallelism: usize,
+) -> i32 {
+    let exe = match std::env::current_exe() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Failed to determine current executable path: {e}");
+            return 1;
+        }
+    };
+    let batch_size = parallelism;
+
+    let mut all_results: Vec<ChildResult> = Vec::with_capacity(runs.len());
+
+    for batch in runs.chunks(batch_size) {
+        let mut children: Vec<(String, Child)> = Vec::with_capacity(batch.len());
+
+        for (display_name, path) in batch {
+            let name = scenario_name(path);
+            let mut cmd = Command::new(&exe);
+            cmd.arg("-s").arg(&name);
+            if visual {
+                cmd.arg("--visual");
+            }
+            if verbose {
+                cmd.arg("-v");
+            }
+            cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+            match cmd.spawn() {
+                Ok(child) => children.push((display_name.clone(), child)),
+                Err(e) => {
+                    eprintln!("Failed to spawn subprocess for [{display_name}]: {e}");
+                    all_results.push(ChildResult {
+                        name: display_name.clone(),
+                        passed: false,
+                        stdout: String::new(),
+                        stderr: format!("spawn error: {e}"),
+                    });
+                }
+            }
+        }
+
+        for (name, child) in children {
+            let output = match child.wait_with_output() {
+                Ok(o) => o,
+                Err(e) => {
+                    eprintln!("Failed to wait on child process [{name}]: {e}");
+                    all_results.push(ChildResult {
+                        name,
+                        passed: false,
+                        stdout: String::new(),
+                        stderr: format!("wait error: {e}"),
+                    });
+                    continue;
+                }
+            };
+
+            let stdout = String::from_utf8(output.stdout)
+                .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+            let stderr = String::from_utf8(output.stderr)
+                .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+
+            all_results.push(ChildResult {
+                name,
+                passed: output.status.success(),
+                stdout,
+                stderr,
+            });
+        }
+    }
+
+    // Print output in original scenario order (results collected per batch in spawn order).
+    for result in &all_results {
+        println!("[{}]", result.name);
+        for line in result.stdout.lines() {
+            println!("  {line}");
+        }
+        if !result.stderr.is_empty() {
+            for line in result.stderr.lines() {
+                eprintln!("  {line}");
+            }
+        }
+        println!();
+    }
+
+    let summary: Vec<(String, bool)> = all_results
+        .into_iter()
+        .map(|r| (r.name, r.passed))
+        .collect();
+    print_summary(&summary)
+}
+
+struct ChildResult {
+    name: String,
+    passed: bool,
+    stdout: String,
+    stderr: String,
 }
 
 fn collect_scenario_paths(scenario: Option<&str>, all: bool) -> Vec<PathBuf> {
@@ -701,6 +902,133 @@ pub fn guarded_update(app: &mut App) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::{invariants::ScenarioFrame, log_capture::LogBuffer};
+
+    // -------------------------------------------------------------------------
+    // parse_parallelism — parses "all" or a positive integer
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn parse_parallelism_parses_all() {
+        let result = parse_parallelism("all");
+        assert_eq!(result, Ok(Parallelism::All));
+    }
+
+    #[test]
+    fn parse_parallelism_parses_all_case_insensitive() {
+        assert_eq!(parse_parallelism("ALL"), Ok(Parallelism::All));
+        assert_eq!(parse_parallelism("All"), Ok(Parallelism::All));
+    }
+
+    #[test]
+    fn parse_parallelism_parses_positive_number() {
+        let result = parse_parallelism("8");
+        assert_eq!(result, Ok(Parallelism::Count(8)));
+    }
+
+    #[test]
+    fn parse_parallelism_rejects_zero() {
+        let result = parse_parallelism("0");
+        assert!(result.is_err(), "expected error for 0, got: {result:?}");
+    }
+
+    #[test]
+    fn parse_parallelism_rejects_non_numeric_string() {
+        let result = parse_parallelism("abc");
+        assert!(result.is_err(), "expected error for 'abc', got: {result:?}");
+    }
+
+    // -------------------------------------------------------------------------
+    // Parallelism::resolve — resolves to concrete batch size
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn parallelism_count_resolves_to_given_value() {
+        assert_eq!(Parallelism::Count(4).resolve(100), 4);
+    }
+
+    #[test]
+    fn parallelism_all_resolves_to_total() {
+        assert_eq!(Parallelism::All.resolve(100), 100);
+    }
+
+    #[test]
+    fn parallelism_all_resolves_to_at_least_one() {
+        assert_eq!(Parallelism::All.resolve(0), 1);
+    }
+
+    #[test]
+    fn parallelism_count_zero_resolves_to_one() {
+        assert_eq!(Parallelism::Count(0).resolve(100), 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Parallelism::Display — formats for user-facing output
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn parallelism_display_count() {
+        assert_eq!(Parallelism::Count(4).to_string(), "4");
+    }
+
+    #[test]
+    fn parallelism_display_all() {
+        assert_eq!(Parallelism::All.to_string(), "all");
+    }
+
+    // -------------------------------------------------------------------------
+    // print_summary — prints cross-scenario summary and returns exit code
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn print_summary_returns_zero_when_all_pass() {
+        let results = vec![("a".to_owned(), true), ("b".to_owned(), true)];
+        assert_eq!(print_summary(&results), 0);
+    }
+
+    #[test]
+    fn print_summary_returns_one_when_any_fail() {
+        let results = vec![("a".to_owned(), true), ("b".to_owned(), false)];
+        assert_eq!(print_summary(&results), 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // build_run_list — builds run entries from scenario discovery
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn build_run_list_single_scenario_returns_one_entry() {
+        // Use a known scenario name that exists in the scenarios/ directory.
+        let runs = build_run_list(Some("aegis_chaos"), false);
+        assert_eq!(runs.len(), 1, "single scenario must produce 1 entry");
+        assert_eq!(runs[0].0, "aegis_chaos");
+    }
+
+    #[test]
+    fn build_run_list_all_returns_one_entry_per_scenario() {
+        let runs = build_run_list(None, true);
+        assert!(
+            runs.len() > 1,
+            "--all must discover multiple scenarios, got {}",
+            runs.len()
+        );
+        // Verify no duplicates
+        let names: Vec<&str> = runs.iter().map(|(n, _)| n.as_str()).collect();
+        let unique: std::collections::HashSet<&str> = names.iter().copied().collect();
+        assert_eq!(
+            names.len(),
+            unique.len(),
+            "run list must not contain duplicate names"
+        );
+    }
+
+    #[test]
+    fn build_run_list_nonexistent_scenario_returns_empty() {
+        let runs = build_run_list(Some("nonexistent_scenario_xyz"), false);
+        assert!(
+            runs.is_empty(),
+            "nonexistent scenario must produce 0 entries"
+        );
+    }
 
     // -------------------------------------------------------------------------
     // is_timed_out — returns true when start is in the past beyond timeout
