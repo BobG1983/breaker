@@ -13,7 +13,7 @@ mod tests;
 use bevy::prelude::*;
 use breaker::{
     bolt::{BoltSystems, components::Bolt},
-    breaker::{BreakerSystems, components::Breaker},
+    breaker::{BreakerSystems, components::Breaker, systems::update_breaker_state},
     input::resources::InputActions,
     run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
     shared::{GameState, SelectedArchetype},
@@ -171,6 +171,7 @@ impl Plugin for ScenarioLifecycle {
                         check_no_entity_leaks,
                     )
                         .after(tag_game_entities)
+                        .after(update_breaker_state)
                         .before(breaker::physics::PhysicsSystems::BoltLost),
                     tag_game_entities,
                 ),
