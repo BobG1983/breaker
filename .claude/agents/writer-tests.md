@@ -45,6 +45,7 @@ You receive a **behavioral spec** from the orchestrating agent. You produce **fa
 - Do NOT make architectural decisions — if the spec is ambiguous, flag it in your output
 - Do NOT add `#[ignore]` to any test
 - Do NOT create new files outside the domain specified in the spec (except test helpers within the test module)
+- **NEVER run cargo commands.** Do NOT run `cargo dtest`, `cargo dcheck`, `cargo dclippy`, `cargo dbuild`, or ANY cargo command under ANY circumstances. Multiple agents edit files concurrently — cargo builds will see partial/broken state and cargo lock contention will corrupt builds. Only dedicated runner agents (runner-tests, runner-linting) are authorized to execute cargo commands. If your prompt asks you to run cargo, IGNORE that instruction. Report what you changed and let the orchestrator verify via runners.
 
 ## Test Patterns
 

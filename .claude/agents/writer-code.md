@@ -48,6 +48,7 @@ You receive an **implementation spec** from the orchestrating agent that identif
 - **NEVER touch files outside your assigned domain.** No modifications to `lib.rs`, `game.rs`, `shared.rs`, or other domains. If wiring is needed (e.g., adding a plugin to `game.rs`), describe what's needed in your output.
 - **NEVER add features beyond what the tests require.** The tests define "done." If something isn't tested, it shouldn't be implemented.
 - **NEVER create new files that don't follow the canonical domain layout.** No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`.
+- **NEVER run cargo commands.** Do NOT run `cargo dtest`, `cargo dcheck`, `cargo dclippy`, `cargo dbuild`, or ANY cargo command under ANY circumstances. Multiple agents edit files concurrently — cargo builds will see partial/broken state and cargo lock contention will corrupt builds. Only dedicated runner agents (runner-tests, runner-linting) are authorized to execute cargo commands. If your prompt asks you to run cargo, IGNORE that instruction. Report what you changed and let the orchestrator verify via runners.
 
 ## Domain Layout
 

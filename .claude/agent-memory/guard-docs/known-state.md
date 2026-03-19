@@ -43,9 +43,19 @@ type: reference
 
 ## Phase 4 Wave 1 Status (as of 2026-03-19)
 - 4a (Seeded RNG): DONE — moved to `docs/plan/done/phase-4/phase-4a-seeded-rng.md`
-- 4b.1 (Chip Effects & Stacking): DONE — inline in `docs/plan/phase-4/phase-4b-chip-effects.md` (no separate done file)
-- 4b.2 (Per-domain effect consumption): IN PROGRESS — 4b spec file remains at active location
+- 4b (Chip Effect System): DONE — 4b.1 types/stacking + 4b.2 per-domain consumption both complete. Spec file stays at active location (no separate done file). index.md updated.
 - `docs/plan/index.md` 4a link fixed to point to done/ location
+
+## Phase 4b.2 Architecture (do not re-flag)
+- `BoltHitCell` now has `{ cell: Entity, bolt: Entity }` — bolt field added for DamageBoost/Piercing lookahead
+- `BASE_BOLT_DAMAGE: u32 = 10` constant lives in `shared/mod.rs` — used by cells (handle_cell_hit) and physics (bolt_cell_collision)
+- `PiercingRemaining` component lives in `chips/components.rs` — tracks remaining pierces per wall-bounce cycle
+- `width_boost_visual` system registered in breaker plugin Update schedule — visual only, no cross-domain ordering needed
+- Physics reads `CellHealth` (cells domain) and `DamageBoost`, `Piercing`, `PiercingRemaining` (chips domain) for pierce lookahead
+- Cells reads `DamageBoost` (chips domain) from bolt entity for damage calculation
+- These cross-domain reads are documented in plugins.md under "Chip Effect — Justified Cross-Domain Component Reads"
+- `definition.rs` is now documented as optional canonical layout file in layout.md
+- `docs/architecture/content.md` fully rewritten to reflect implemented pattern (was "not yet implemented")
 
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete

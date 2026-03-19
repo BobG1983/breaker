@@ -9,7 +9,7 @@ type: project
 ### Query Aliases (`physics/queries.rs`)
 - `CollisionQueryBolt` — (Entity, &mut Transform, &mut BoltVelocity, &BoltBaseSpeed, &BoltRadius)
 - `CollisionQueryBreaker` — (&Transform, &BreakerTilt, &BreakerWidth, &BreakerHeight, &MaxReflectionAngle, &MinAngleFromHorizontal)
-- `CollisionQueryCell` — (Entity, &Transform, &CellWidth, &CellHeight)
+- `CollisionQueryCell` — (Entity, &Transform, &CellWidth, &CellHeight, Option<&CellHealth>)
 
 ### Filters (`physics/filters.rs`)
 - `CollisionFilterBreaker` — (With<Breaker>, Without<Bolt>)
@@ -17,7 +17,7 @@ type: project
 - `CollisionFilterWall` — (With<Wall>, Without<Bolt>, Without<Cell>)
 
 ### Systems
-- `bolt_cell_collision` — CCD sweep bolt vs cells+walls; sends BoltHitCell
+- `bolt_cell_collision` — CCD sweep bolt vs cells+walls; sends BoltHitCell. Also imports BASE_BOLT_DAMAGE for pierce lookahead effective_damage calculation.
 - `bolt_breaker_collision` — CCD sweep bolt vs breaker; sends BoltHitBreaker
 
 ### Messages (`physics/messages.rs`)
@@ -32,16 +32,30 @@ type: project
 ### Components (`cells/components.rs`)
 - `Cell` — marker
 - `RequiredToClear` — marker (pub)
-- `CellHealth { current: u32, max: u32 }` — has `take_damage(amount: u32) -> bool`
+- `CellHealth { current: u32, max: u32 }` — has `new(u32)`, `is_destroyed() -> bool`, `take_hit() -> bool`, `take_damage(u32) -> bool`, `fraction() -> f32`
+  - After migration: `current: f32, max: f32`, `new(f32)`, `is_destroyed` uses `<= 0.0`, `take_damage(f32)` uses subtraction, `fraction()` uses `(current/max).clamp(0.0, 1.0)`, `take_hit` removed
 - `CellWidth(f32)`, `CellHeight(f32)` — with `half_width()`, `half_height()`
 - `CellDamageVisuals { hdr_base, green_min, blue_range, blue_base }`
 - `CellTypeAlias(char)`
 
+### Resources (`cells/resources.rs`)
+- `CellTypeDefinition { hp: u32, ... }` — `hp` field to become `f32` after migration
+- `CellTypeRegistry { types: HashMap<char, CellTypeDefinition> }`
+- `CellDefaults` / `CellConfig` — grid layout only (width, height, padding), no hp field
+
 ### Constants (`shared/mod.rs`)
-- `BASE_BOLT_DAMAGE: u32 = 10`
+- `BASE_BOLT_DAMAGE: u32 = 10` — to become `f32 = 10.0` after migration
 
 ### Systems
-- `handle_cell_hit` — reads BoltHitCell, calls take_damage(BASE_BOLT_DAMAGE), sends CellDestroyed
+- `handle_cell_hit` — reads BoltHitCell, calls take_damage(BASE_BOLT_DAMAGE * (1+boost)), sends CellDestroyed. Has `#[expect]` cast attributes to remove.
+
+### Cell type RON files (`assets/cells/`)
+- `standard.cell.ron` — `hp: 10` → `hp: 10.0`
+- `tough.cell.ron` — `hp: 30` → `hp: 30.0`
+
+### Hot-reload systems (`src/debug/hot_reload/systems/`)
+- `propagate_cell_type_changes.rs` — sets `health.max = def.hp` and `health.current = health.current.min(def.hp)` — both sides become f32 after migration
+- `propagate_node_layout_changes.rs` — uses `CellHealth::new(1)` and `CellHealth::new(3)` inline in test fixtures — become `f32`
 
 ## bolt domain (`src/bolt/`)
 
@@ -96,5 +110,5 @@ type: project
 - `BumpForceBoost(f32)` — flat multiplier increase for bump
 - `TiltControlBoost(f32)` — flat angle increase for tilt control
 
-**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19).
+**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19).
 **How to apply:** Use this to avoid re-reading files when writing future specs in these domains.
