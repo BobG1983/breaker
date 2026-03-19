@@ -59,6 +59,55 @@ See: `breaker-scenario-runner/src/invariants.rs:86-117`,
 
 ---
 
+## NoEntityLeaks — fires in parallel subprocess mode when assets load slowly
+
+**Root cause:** `check_no_entity_leaks` samples the entity count at fixed-update
+frame 60 as baseline. In parallel subprocess mode (`--all`, 27 processes on macOS
+under I/O contention), `bevy_asset_loader` can take >60 fixed-update frames to
+finish loading RON assets. The baseline is captured in `GameState::Loading` with
+only ~7 system entities. After `Playing` is entered (post-frame-60), ~49 game
+entities spawn. Every 120-frame check then fires `count=49 > baseline×2=14`.
+
+In `--serial` and single-scenario (`-s`) mode this does not occur — assets load
+within frame 60 reliably when only one process has disk I/O.
+
+**Observed violation message:** `NoEntityLeaks FAIL frame=120 count=49 baseline=7 (>14 threshold)`
+
+**Fix direction:** Defer baseline sampling until `GameState::Playing` has been
+entered. In `check_no_entity_leaks` (`invariants.rs:448-477`), add a check for
+`stats.entered_playing` (or read `GameState` resource) before setting the
+baseline, rather than using a fixed frame-60 sample.
+
+**Confidence: HIGH**
+
+---
+
+## BoltInBounds — fires in parallel subprocess mode under I/O contention (two manifestations)
+
+**Also caused by the same asset-loading race as NoEntityLeaks above.**
+
+**Manifestation A — self-test scenario fails health checks (bolt_oob_detection):**
+When asset loading races in a subprocess, `ScenarioTagBolt` / `ScenarioTagBreaker` are never
+attached (the lifecycle plugin hasn't run tagging yet). The verdict health checks report
+`bolts=0, breakers=0` and fire "no bolts were tagged", "no invariant checks ran", and
+"expected violation BoltInBounds never fired" (since `check_bolt_in_bounds` found no tagged
+entities). Passes reliably with `-s bolt_oob_detection`.
+
+**Manifestation B — stress scenario fires real BoltInBounds (prism_concurrent_hits, chrono_penalty_stress):**
+Under I/O contention, asset loading delays push game initialization into a transient state
+where bolt physics simulate briefly before all walls/layout are ready. Bolts escape the
+playfield boundary during this window. Violations are sustained for hundreds of frames
+(e.g. x2420 frames 13613..15000, x3729 frames 1232..3207). Always passes with `-s <name>`.
+
+**Non-deterministic:** A different scenario fails on each `--all` run. All pass when run
+individually. Confirmed across 3 separate `--all` runs on 2026-03-19.
+
+**Fix direction (same as NoEntityLeaks):** Defer scenario lifecycle initialization until
+`GameState::Playing` has been confirmed entered; do not allow invariant checks to run
+during the `Loading` phase when entities may not yet exist.
+
+---
+
 ## Note: `invariants` field in RON is documentation-only
 
 All invariant check systems run for every scenario unconditionally. The

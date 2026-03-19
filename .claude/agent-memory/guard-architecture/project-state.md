@@ -43,3 +43,4 @@ type: reference
 - Node layout changes mid-play: despawn + re-spawn cells immediately
 - debug/recording/ sub-domain added: captures InputActions for scripted playback
 - Workspace restructured: single crate now lives in game/ directory
+- **Spawn signal system audit 2026-03-18**: PASS with 1 minor issue. 5 new messages (BoltSpawned, BreakerSpawned, WallsSpawned, CellsSpawned, SpawnNodeComplete), all sender-owns. check_spawn_complete coordinator in run/node/ reads cross-domain messages correctly via MessageReader. Minor: ScenarioLifecycle redundantly registers SpawnNodeComplete (NodePlugin already does).

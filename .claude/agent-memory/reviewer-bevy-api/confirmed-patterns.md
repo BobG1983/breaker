@@ -126,6 +126,21 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 - Both patterns are used in scenario runner's `collect_and_evaluate` and `drain_remaining_logs`
 - `app.world().resource::<T>()` → `&T` (panics if missing) — also correct, used in tests
 
+## add_message idempotency
+- `app.add_message::<T>()` is idempotent — `SubApp::add_message` guards with `contains_resource::<Messages<T>>()`
+- Calling it for the same type in both `Game` plugin and `ScenarioLifecycle` is safe — second call is a no-op
+- Source: `bevy_app-0.18.1/src/sub_app.rs` lines 353-363
+
+## Messages<T> direct world access
+- `world.resource_mut::<Messages<T>>().write(msg)` — valid for test message injection
+- `world.resource::<Messages<T>>().iter_current_update_messages()` — valid for test message assertion
+- Both confirmed on docs.rs/bevy/0.18.1 `Messages` struct page
+
+## Tuple SystemParam with multiple ResMut
+- `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` — valid system parameter in Bevy 0.18.1
+- Tuples up to 17 items implement SystemParam; two different ResMut types have no conflict
+- Using `.0` and `.1` to access each from inside the system — correct
+
 ## init_resource with manual Default
 - `app.init_resource::<T>()` requires `T: Resource + Default`
 - Manual `impl Default` satisfies this — does not require `#[derive(Default)]`

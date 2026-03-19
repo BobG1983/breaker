@@ -80,3 +80,25 @@ type: reference
 - `init_resource::<ScenarioVerdict>()` in lifecycle.rs registers a resource that `collect_and_evaluate` does not read from the world — `collect_and_evaluate` constructs its own local `ScenarioVerdict::default()`. This is intentional: the resource exists for the default-fail safety net pattern (any run that never calls evaluate() is still a safe fail), even though collect_and_evaluate doesn't read the world resource.
 - `add_fail_reason` on a default verdict accumulates on top of the default reason — not a bug, just noisy output in the unreachable missing-resource path.
 - `is_empty_scripted` macro pattern `if actions.is_empty()` guard works correctly because `actions` binds as `&Vec<ScriptedFrame>` and `.is_empty()` auto-derefs. Correct.
+
+## feature/scenario-runner-dedup-summary — run_all_parallel (2026-03-18)
+
+- **CONFIRMED BUG (fixed in later commit)**: `run_all_parallel` called `child.wait()` BEFORE reading stdout/stderr → pipe-buffer deadlock. Fixed with `child.wait_with_output()`.
+- `batch_size = jobs.unwrap_or(names.len()).max(1)` — `jobs=Some(0)` becomes 1 (sequential). Correct edge-case handling.
+- Spawn failure path: adds `ChildResult { passed: false }` immediately, does not push to `children` vec, no wait attempted. Correct.
+- `print_summary` called from both `run_with_args` and `run_all_parallel`. Correct.
+- Each child's own `print_summary` output ("--- scenario result:") is captured in stdout and re-printed indented in parent. Slightly noisy but not a logic error.
+- `run_with_args` `all: bool` parameter is now dead (main always passes false). Not a logic bug.
+- `drop(out.read_to_string(&mut stdout))` silently discards I/O errors after child exit. Acceptable.
+
+## feature/scenario-runner-dedup-summary — clap refactor + --loop + --serial (2026-03-18)
+
+- Fast path `args.scenario.is_some() && !args.all && loop_count == 1 && !args.execution.serial` — correctly skips for `--loop N` and `--serial`. `--visual -s foo` still goes through fast path (in-process, visual=true, headless=false). Correct.
+- `Parallelism::resolve(Count(n))` ignores `total` — returns `n.max(1)` unconditionally. `Count(100)` with 3 scenarios → chunks(100) gives one batch of 3. Correct.
+- `run_all_parallel` redundant `.max(1)` (batch_size = parallelism.max(1)): `resolve()` already guarantees ≥1. Redundant but harmless.
+- `--visual --serial` guard (runs.len() > 1) correctly blocks multi-scenario visual serial. Does NOT block single-scenario visual serial — intentional (app.run() works once).
+- **CONFIRMED BUG**: `--visual --serial --loop N` (N > 1) with any single scenario: the guard at line 60-65 only checks `runs.len() > 1`, not the loop count. On the second iteration, `run_all_serial` calls `run_scenario(headless=false)` which calls `build_app(headless=false, first_run=true)` (always true because `shared_log_buffer` is reset to `None` on each `run_all_serial` call) and then `app.run()`. Winit event loop cannot be started a second time in the same process → crash.
+- `--visual --loop N` without `--serial` is safe: uses `run_all_parallel` which spawns subprocesses; each subprocess sees `--visual` without `--loop`, runs Winit exactly once. Correct.
+- `parse_loop_count` correctly rejects 0. `parse_parallelism` correctly rejects 0 and non-numeric strings.
+- clap `conflicts_with` is bidirectional: `parallel` has `conflicts_with = "serial"` and `serial` has `conflicts_with = "parallel"`. Clap handles both directions. Correct.
+- `loop_count = args.loops.unwrap_or(1)`: default of 1 means no-`--loop` behaves as exactly one iteration. Correct.

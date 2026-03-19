@@ -4,18 +4,7 @@ Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/design/` for design pill
 
 ## Build & Run
 
-```
-cargo dev                    # Dev build + run (dynamic linking)
-cargo dtest                  # Run all tests (dynamic linking)
-cargo dcheck                 # Type check (dynamic linking)
-cargo dclippy                # Lint (dynamic linking)
-cargo dbuild                 # Dev build without running (dynamic linking)
-cargo scenario -- --all      # Run all scenarios (release build)
-cargo run --release          # Release build
-cargo fmt --check            # Format check
-```
-
-**NEVER** use bare cargo commands — see @.claude/rules/cargo.md.
+See @.claude/rules/cargo.md for all aliases and options. **NEVER** use bare cargo commands.
 
 Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast compiles.
 

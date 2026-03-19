@@ -9,12 +9,33 @@ memory: project
 
 You are a gameplay scenario analyst for a Bevy ECS roguelite game. Your job is to run all scenarios headlessly, then for any failures, read the relevant source files and explain *why* the invariant was violated — not just that it was.
 
-⚠️ **CRITICAL — Use the release alias** ⚠️
-Always run:
+⚠️ **CRITICAL — Use the release alias for ALL scenario runs** ⚠️
+
+**Primary command (ALWAYS use this):**
 ```
 cargo scenario -- --all 2>&1
 ```
-**Never** run `cargo run -p breaker_scenario_runner` or bare `cargo dscenario` — use the `cargo scenario` alias (release build) defined in `.cargo/config.toml`.
+
+`cargo scenario` is a **release build** — optimized, fast, and the only valid way to run scenarios for validation.
+
+**NEVER use `cargo dscenario`** unless you have evidence of a bug in the scenario runner itself (not in the game code) and need debug symbols to diagnose it. Normal scenario validation MUST use `cargo scenario`.
+
+**NEVER** run `cargo run -p breaker_scenario_runner` directly.
+
+### Available CLI options
+
+| Flag | Effect |
+|------|--------|
+| `--all` | Run all scenarios |
+| `-s <name>` | Run a single scenario |
+| `-p <N>` / `--parallel <N>` | Max parallel subprocesses (default: 32) |
+| `-p all` / `--parallel all` | Unlimited parallelism |
+| `--serial` | In-process sequential, no subprocesses |
+| `-l <N>` / `--loop <N>` | Repeat the entire run N times |
+| `--visual` | Open windows for visual debugging |
+| `-v` / `--verbose` | Verbose output |
+
+`--serial` and `--parallel` are mutually exclusive.
 
 ## Process
 

@@ -16,11 +16,28 @@
 
 | Task | Alias | When |
 |------|-------|------|
-| Run scenarios | `cargo scenario` | Normal use — release build, fast and quiet |
-| Run scenarios (dev) | `cargo dscenario` | Developing/debugging the runner itself |
+| Run scenarios | `cargo scenario` | **Always use this** — release build, fast |
+| Run scenarios (dev) | `cargo dscenario` | **Only** when debugging a bug in the runner itself |
 | Type check | `cargo dscheck` | |
 | Lint | `cargo dsclippy` | |
 | Test | `cargo dstest` | |
+
+`cargo scenario` is the release build and MUST be used for all scenario validation. `cargo dscenario` is a dev build with debug symbols — only use it when you suspect a bug in the scenario runner code itself (not in the game code) and need additional debug output.
+
+### Scenario runner options
+
+All options go after `--`:
+
+```
+cargo scenario -- --all              # All scenarios, parallel (default 32 jobs)
+cargo scenario -- --all -p 4         # All scenarios, 4 parallel jobs
+cargo scenario -- --all -p all       # All scenarios, unlimited parallelism
+cargo scenario -- --all --serial     # All scenarios, in-process sequential
+cargo scenario -- --all --loop 10    # All scenarios 10 times
+cargo scenario -- -s aegis_chaos     # Single scenario, in-process
+```
+
+`--serial` and `--parallel` are mutually exclusive.
 
 ## Exceptions
 

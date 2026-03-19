@@ -12,5 +12,7 @@
 - [third_party_crates.md](third_party_crates.md) — bevy_egui, bevy_common_assets, bevy_asset_loader, iyes_progress
 - [transform_interpolation.md](transform_interpolation.md) — No built-in support; manual or crate
 
+- [app_run_vs_update_loop.md](app_run_vs_update_loop.md) — App::run() self-replacement, WinitPlugin runner mechanics, why manual update() cannot drive windowed apps
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.
