@@ -16,7 +16,8 @@ use std::process;
 
 use breaker_scenario_runner::runner::{
     Parallelism, build_run_list, parse_parallelism, partition_stress_scenarios,
-    print_stress_result, run_all_parallel, run_all_serial, run_stress_scenario, run_with_args,
+    print_stress_result, run_all_parallel, run_all_serial, run_single_scenario,
+    run_stress_scenario, run_with_args,
 };
 use clap::Parser;
 
@@ -64,9 +65,9 @@ fn main() {
             process::exit(i32::from(!result.passed()));
         }
 
-        // No stress config — run in-process.
+        // No stress config — run in-process with the already-resolved path.
         if !normal.is_empty() {
-            let exit_code = run_with_args(args.scenario.as_deref(), headless, args.verbose);
+            let exit_code = run_single_scenario(&normal[0].1, headless, args.verbose);
             process::exit(exit_code);
         }
     }
@@ -88,6 +89,15 @@ fn main() {
 
     // Partition into normal and stress scenarios.
     let (normal_runs, stress_runs) = partition_stress_scenarios(&runs);
+
+    if args.execution.serial && !stress_runs.is_empty() {
+        let stress_names: Vec<&str> = stress_runs.iter().map(|(n, ..)| n.as_str()).collect();
+        eprintln!(
+            "note: --serial applies to normal scenarios only; {} stress scenario(s) will still use parallel subprocesses: {}",
+            stress_runs.len(),
+            stress_names.join(", ")
+        );
+    }
 
     let mut worst_exit = 0;
     for iteration in 1..=loop_count {

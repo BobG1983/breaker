@@ -703,3 +703,37 @@ fn partition_stress_scenarios_returns_default_stress_config() {
     assert_eq!(config.runs, 32, "default runs must be 32");
     assert_eq!(config.parallelism, 32, "default parallelism must be 32");
 }
+
+#[test]
+fn partition_stress_scenarios_empty_input_returns_empty() {
+    use super::execution::partition_stress_scenarios;
+
+    let (normal, stress) = partition_stress_scenarios(&[]);
+    assert!(normal.is_empty());
+    assert!(stress.is_empty());
+}
+
+// -------------------------------------------------------------------------
+// StressResult::pass_count — derived from total minus failures
+// -------------------------------------------------------------------------
+
+#[test]
+fn stress_result_pass_count_derived_from_total_minus_failures() {
+    let result = StressResult {
+        name: "test".into(),
+        total: 10,
+        failures: vec![
+            StressFailure {
+                copy_index: 2,
+                stdout: String::new(),
+                stderr: String::new(),
+            },
+            StressFailure {
+                copy_index: 7,
+                stdout: String::new(),
+                stderr: String::new(),
+            },
+        ],
+    };
+    assert_eq!(result.pass_count(), 8);
+}
