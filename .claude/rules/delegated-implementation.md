@@ -2,7 +2,9 @@
 
 All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, routes failures, and handles shared wiring. The **planner-spec** → **planner-review** → **writer-tests** → **writer-code** pipeline produces the code.
 
-## The Flow (RED → GREEN → REFACTOR)
+## The Flow
+
+See `.claude/rules/tdd.md` for the authoritative RED → GREEN → REFACTOR cycle definition.
 
 ```
 1. Main agent describes the feature in plain language
@@ -11,29 +13,18 @@ All implementation goes through the delegated pipeline. The main agent is the or
 4. Main agent reviews planner-review feedback, then sends feedback back to planner-spec to revise
 5. Repeat 3–4 until planner-review confirms specs are clean (usually one revision)
 6. Main agent reviews final specs, creates shared prerequisites
-7. Launch ALL writer-tests in parallel                        ── RED phase
-8. As each writer-tests completes: review, launch writer-code ── GREEN phase
-9. After ALL writer-codes complete: launch verification wave  ─┐
-10. Route Phase 3 failures through fix agents                  │ REFACTOR phase
-11. Run /simplify on changed code                              │
-12. Main agent handles wiring (lib.rs, game.rs, shared.rs)    ─┘
-13. Update session-state.md
+7. Launch ALL writer-tests in parallel                              ── RED phase
+8. Launch runner-tests to verify tests compile and fail             ── RED gate
+9. As each passes RED gate: review, launch writer-code              ── GREEN phase
+10. After ALL writer-codes complete: launch verification wave        ─┐
+11. Route Phase 3 failures through fix agents                        │ REFACTOR phase
+12. Run /simplify on changed code                                    │
+13. Repeat 10–12 until all agents pass and /simplify is clean        │
+14. Main agent handles wiring (lib.rs, game.rs, shared.rs)          ─┘
+15. Update session-state.md
 ```
 
-### How REFACTOR maps to agents
-
-Traditional TDD REFACTOR is "clean up while tests stay green." In our delegated pipeline, this is distributed across steps 9–12:
-
-- **Reviewers find what to refactor**: reviewer-quality (idioms, naming, duplication), reviewer-correctness (logic bugs), reviewer-bevy-api (deprecated patterns), reviewer-performance (ECS inefficiencies), reviewer-architecture (structural violations)
-- **Phase 3 routing executes the fixes**: reviewer findings route to writer-code (or inline main-agent fixes) per the failure routing table in agent-flow.md
-- **`/simplify` catches the rest**: runs on changed code after Phase 3 fixes settle — catches anything reviewers missed
-- **Wiring is the final cleanup**: main agent integrates modules, ensuring the public API surface is clean
-
-The REFACTOR phase is complete when all Phase 2 agents pass and `/simplify` finds nothing to change.
-
 **Spec revision loop**: planner-review produces BLOCKING/IMPORTANT/MINOR findings. The main agent triages findings (some may be false positives), then sends the valid feedback back to planner-spec with instructions to produce corrected specs. Do NOT launch writer-tests until the spec revision loop is complete. Do NOT skip this step even for "obvious" specs.
-
-**RED phase requirement**: Before launching each writer-code, review the corresponding writer-tests output and confirm the tests actually fail. Tests that pass immediately indicate the behavior already exists or the test is wrong.
 
 ## Writing a Test Spec (for writer-tests)
 
@@ -193,7 +184,7 @@ When implementing multiple domains simultaneously:
 
 1. planner-spec produces ALL specs upfront (test spec + implementation spec for each domain)
 2. Launch ALL writer-tests in parallel **as background agents** (`run_in_background: true`)
-3. When each writer-tests completes (notified automatically): review its output, then immediately launch its writer-code — do NOT wait for other writer-tests still running
+3. When each writer-tests completes (notified automatically): run RED gate (runner-tests), then launch its writer-code — do NOT wait for other writer-tests still running
 4. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation verification per tier
 5. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 

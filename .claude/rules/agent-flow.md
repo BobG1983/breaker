@@ -2,6 +2,7 @@
 
 When to launch which agents, how to interpret their output, and how failures chain to fixes.
 
+See @.claude/rules/tdd.md for the TDD cycle definition, RED gate, and agent boundaries.
 See @.claude/rules/delegated-implementation.md for the planner-spec → planner-review → writer-tests → writer-code pipeline.
 See @.claude/rules/orchestration.md for session state, verification tiers, circuit breaking, and context pruning.
 See @.claude/rules/hint-formats.md for the standardized hint block formats that Phase 2 agents produce.
@@ -26,9 +27,9 @@ After planner-review produces findings, the main agent:
 
 **Never launch writer-tests with unreviewed or uncorrected specs.** The cost of a bad spec propagating through writer-tests → writer-code is high (rework). The cost of one revision loop is low.
 
-## Phase 2 + Phase 3 — REFACTOR (verification → fix routing → /simplify)
+## Phase 2 + Phase 3 — REFACTOR
 
-Phase 2 and Phase 3 together form the **REFACTOR** stage of the TDD cycle. Reviewers and runners identify what needs improving (Phase 2), failure routing executes the fixes (Phase 3), and `/simplify` catches anything left over. See delegated-implementation.md for the full mapping.
+Phase 2 and Phase 3 together form the REFACTOR stage. See `.claude/rules/tdd.md` for how REFACTOR is distributed and when the cycle is complete.
 
 ### Phase 2 — Post-Implementation (single parallel wave)
 

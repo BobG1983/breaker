@@ -17,15 +17,9 @@
 
 ---
 
-## Testing — TDD (RED → GREEN → REFACTOR)
+## Testing — TDD
 
-Write tests FIRST for all game logic. The full cycle is mandatory:
-
-1. **RED** — Write the failing test(s) that describe the desired behavior. Run them — they **must fail** before you write any implementation code. If the test passes immediately, the test is wrong.
-2. **GREEN** — Write the minimum code to make the tests pass. No more, no less.
-3. **REFACTOR** — Clean up names, eliminate duplication, improve structure. Tests must still pass after refactoring.
-
-In the delegated agent pipeline, REFACTOR is distributed: post-implementation reviewers (quality, correctness, bevy-api, performance, architecture) identify what to improve, Phase 3 failure routing executes the fixes, and `/simplify` catches the rest. See `.claude/rules/delegated-implementation.md` for the full mapping.
+See `.claude/rules/tdd.md` for the full RED → GREEN → REFACTOR cycle definition, agent boundaries, and RED gate.
 
 **No implementation before failing tests. No exceptions.**
 

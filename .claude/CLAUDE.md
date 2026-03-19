@@ -29,7 +29,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Architectural changes or refactors affecting multiple systems
 
 **ALWAYS do**:
-- Follow the RED → GREEN → REFACTOR cycle for new game logic: write **failing** tests first (RED), implement minimum code to pass (GREEN), then refactor (REFACTOR). Tests **must fail** before writing any implementation. See `docs/architecture/standards.md` Testing — TDD.
+- Follow the TDD cycle. See @.claude/rules/tdd.md.
 - Consider **scenario runner coverage** for every new gameplay mechanic: new invariants to check, new scenario RON files to add, or new layouts that exercise the feature under chaos input. See `docs/architecture/standards.md` Scenario Coverage.
 - Follow the git workflow in @.claude/rules/git.md
 - Run command line tools individually, do not chain them with &&
@@ -52,27 +52,10 @@ See `docs/design/` for the full set of non-negotiable design pillars. The key me
 
 The main agent is the orchestrator — it describes features, reviews outputs, routes failures, and handles shared wiring. All implementation goes through the delegated pipeline.
 
+See @.claude/rules/tdd.md for the TDD cycle (RED → GREEN → REFACTOR), RED gate, and agent boundaries.
+See @.claude/rules/delegated-implementation.md for spec formats, the full pipeline flow, and parallel execution rules.
 See @.claude/rules/agent-flow.md for hint formats, failure routing, and parallel-launch requirements.
 See @.claude/rules/orchestration.md for session state, verification tiers, circuit breaking, and context pruning.
-
-### Delegated Implementation (planner-spec → planner-review → writer-tests → writer-code)
-
-See @.claude/rules/delegated-implementation.md for full spec formats and pipeline details.
-
-**The flow** (RED → GREEN → REFACTOR):
-1. Describe the feature in plain language
-2. Launch **planner-spec** to produce all specs (behavioral + implementation, per domain)
-3. Launch **planner-review** to pressure-test specs
-4. Triage review feedback, send valid findings back to **planner-spec** to revise
-5. Repeat 3–4 until specs are clean (do NOT launch writers until revision loop completes)
-6. Review final specs, create shared prerequisites
-7. Launch ALL **writer-tests** in parallel — RED phase
-8. As each writer-tests completes: review, launch its **writer-code** — GREEN phase
-9. After ALL writer-codes complete: launch verification wave — REFACTOR phase begins
-10. Route Phase 3 failures through fix agents
-11. Run `/simplify` on changed code
-12. Handle wiring (`lib.rs`, `game.rs`, `shared.rs`) — REFACTOR phase ends
-13. Update session-state.md
 
 ### Phase 1 — Before Writing Code (sequential)
 
@@ -112,4 +95,5 @@ All agents in a tier launch in a **single message** — separate messages make t
 1. Launch verification agents per tier (Standard or Full) — see @.claude/rules/orchestration.md
 2. Add conditional agents to the same parallel wave when triggered
 3. Run `/simplify` on changed code
-4. Commit to the feature branch with a conventional commit message
+4. Repeat until all agents pass and `/simplify` finds nothing to change
+5. Commit to the feature branch with a conventional commit message
