@@ -2,12 +2,13 @@
 
 use bevy::prelude::*;
 
-use super::systems::apply_chip_effect;
+use super::{effects::*, systems::apply_chip_effect};
 use crate::shared::GameState;
 
 /// Plugin for the chips domain.
 ///
 /// Owns chip application, stacking, and registry resources.
+/// Registers per-effect observers and the thin dispatcher system.
 pub(crate) struct ChipsPlugin;
 
 impl Plugin for ChipsPlugin {
@@ -17,7 +18,16 @@ impl Plugin for ChipsPlugin {
         app.add_systems(
             Update,
             apply_chip_effect.run_if(in_state(GameState::ChipSelect)),
-        );
+        )
+        .add_observer(handle_piercing)
+        .add_observer(handle_damage_boost)
+        .add_observer(handle_bolt_speed_boost)
+        .add_observer(handle_chain_hit)
+        .add_observer(handle_bolt_size_boost)
+        .add_observer(handle_width_boost)
+        .add_observer(handle_breaker_speed_boost)
+        .add_observer(handle_bump_force_boost)
+        .add_observer(handle_tilt_control_boost);
     }
 }
 

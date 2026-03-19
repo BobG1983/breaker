@@ -1,4 +1,4 @@
-//! Chip registry — HashMap pool of all loaded chip definitions.
+//! Chip registry — `HashMap` pool of all loaded chip definitions.
 
 use std::collections::HashMap;
 
@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::definition::ChipDefinition;
 
-/// HashMap pool of all loaded chip definitions, keyed by name.
+/// `HashMap` pool of all loaded chip definitions, keyed by name.
 ///
 /// The selection screen picks from this pool. Populated during loading
 /// by `seed_chip_registry`.

@@ -81,7 +81,7 @@ pub struct ActiveNodeLayout(pub NodeLayout);
 
 /// Registry of all loaded node layouts.
 ///
-/// Stores layouts in a HashMap keyed by name, with a separate Vec preserving
+/// Stores layouts in a `HashMap` keyed by name, with a separate `Vec` preserving
 /// insertion order for index-based access (node progression).
 #[derive(Resource, Debug, Default, Clone)]
 pub struct NodeLayoutRegistry {
@@ -99,7 +99,9 @@ impl NodeLayoutRegistry {
     /// Look up a layout by insertion-order index.
     #[must_use]
     pub fn get_by_index(&self, index: usize) -> Option<&NodeLayout> {
-        self.order.get(index).and_then(|name| self.layouts.get(name))
+        self.order
+            .get(index)
+            .and_then(|name| self.layouts.get(name))
     }
 
     /// Insert a layout (appended to insertion order).

@@ -93,7 +93,7 @@ impl ChipDefinition {
         }
     }
 
-    /// Build a simple test chip with Overclock effect and max_stacks=1.
+    /// Build a simple test chip with `Overclock` effect and `max_stacks` = 1.
     pub fn test_simple(name: &str, kind: ChipKind) -> Self {
         Self::test(name, kind, ChipEffect::Overclock, 1)
     }
