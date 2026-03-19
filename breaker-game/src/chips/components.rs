@@ -1,0 +1,46 @@
+//! Chip effect components stamped onto bolt and breaker entities.
+//!
+//! These components are inserted by `apply_chip_effect` and read by gameplay
+//! systems (physics, bump, spawn) to modify entity behaviour.
+
+use bevy::prelude::*;
+
+// --- Bolt effect components (applied by Amp chips) ---
+
+/// Bolt pierces through N cells before stopping.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct Piercing(pub u32);
+
+/// Multiplies damage dealt to cells.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct DamageBoost(pub f32);
+
+/// Adds flat speed to the bolt's base speed.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct BoltSpeedBoost(pub f32);
+
+/// Bolt chains to N additional cells on hit.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct ChainHit(pub u32);
+
+/// Increases bolt radius by a fraction.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct BoltSizeBoost(pub f32);
+
+// --- Breaker effect components (applied by Augment chips) ---
+
+/// Adds flat width to the breaker.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct WidthBoost(pub f32);
+
+/// Adds flat speed to the breaker's movement.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct BreakerSpeedBoost(pub f32);
+
+/// Adds flat force applied during a bump.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct BumpForceBoost(pub f32);
+
+/// Adds flat sensitivity to the breaker's tilt control.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct TiltControlBoost(pub f32);

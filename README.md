@@ -17,6 +17,17 @@ cargo fmt --check            # Format check
 
 Dev aliases are defined in `.cargo/config.toml` and use `bevy/dynamic_linking` for fast compiles.
 
+## Development Tools
+
+Optional cargo subcommands used by CI and development agents:
+
+```
+cargo install cargo-audit     # Dependency vulnerability scanning
+cargo install cargo-deny      # License and advisory checks
+cargo install cargo-machete   # Unused dependency detection
+cargo install cargo-outdated  # Outdated dependency reporting
+```
+
 ## Documentation
 
 | Document | Contents |

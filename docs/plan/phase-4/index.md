@@ -6,8 +6,8 @@
 
 | Stage | Name | Depends On | Size | Risk |
 |-------|------|-----------|------|------|
-| [4a](phase-4a-seeded-rng.md) | Seeded RNG & Run Seed | — | Small | Low |
-| [4b](phase-4b-chip-effects.md) | Chip Effect System | — | Medium-Large | Medium |
+| ~~4a~~ | ~~Seeded RNG & Run Seed~~ | — | ~~Small~~ | **DONE** |
+| [4b](phase-4b-chip-effects.md) | Chip Effect System (4b.1 done, 4b.2 remains) | — | Medium-Large | Medium |
 | [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity | 4b | Large (content-heavy) | Low technical, high design |
 | [4d](phase-4d-trigger-effect.md) | Trigger/Effect Architecture | 4b | Large | **High** — new pattern |
 | [4e](phase-4e-node-escalation.md) | Node Sequence & Escalation | 4a | Very Large | Medium |

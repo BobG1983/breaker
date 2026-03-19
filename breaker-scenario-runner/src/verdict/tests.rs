@@ -44,6 +44,7 @@ fn make_chaos_definition() -> ScenarioDefinition {
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
+        seed: None,
     }
 }
 

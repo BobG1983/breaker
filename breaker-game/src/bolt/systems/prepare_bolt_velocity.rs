@@ -6,7 +6,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{components::*, filters::ActiveBoltFilter},
+    bolt::{components::*, filters::ActiveFilter},
     breaker::components::{Breaker, MinAngleFromHorizontal},
 };
 
@@ -15,7 +15,7 @@ use crate::{
 /// Enforces speed clamping (min/max) and minimum angle from horizontal.
 /// Position advancement is handled by the CCD collision system.
 pub fn prepare_bolt_velocity(
-    mut query: Query<(&mut BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed), ActiveBoltFilter>,
+    mut query: Query<(&mut BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed), ActiveFilter>,
     breaker_query: Query<&MinAngleFromHorizontal, (With<Breaker>, Without<Bolt>)>,
 ) {
     let Ok(min_angle) = breaker_query.single() else {

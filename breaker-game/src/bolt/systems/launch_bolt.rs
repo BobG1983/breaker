@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{components::*, filters::ServingBoltFilter},
+    bolt::{components::*, filters::ServingFilter},
     input::resources::{GameAction, InputActions},
 };
 
@@ -14,10 +14,7 @@ use crate::{
 pub fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
-    mut query: Query<
-        (Entity, &mut BoltVelocity, &BoltBaseSpeed, &BoltInitialAngle),
-        ServingBoltFilter,
-    >,
+    mut query: Query<(Entity, &mut BoltVelocity, &BoltBaseSpeed, &BoltInitialAngle), ServingFilter>,
 ) {
     if !actions.active(GameAction::Bump) {
         return;

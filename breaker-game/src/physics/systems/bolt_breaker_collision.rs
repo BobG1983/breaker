@@ -3,10 +3,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{components::BoltVelocity, filters::ActiveBoltFilter},
-    breaker::components::*,
+    bolt::{components::BoltVelocity, filters::ActiveFilter},
     physics::{
-        filters::BreakerCollisionFilter, messages::BoltHitBreaker, queries::BoltPhysicsQuery,
+        filters::CollisionFilterBreaker,
+        messages::BoltHitBreaker,
+        queries::{CollisionQueryBolt, CollisionQueryBreaker},
     },
     shared::math::{CCD_EPSILON, ray_vs_aabb},
 };
@@ -19,18 +20,8 @@ use crate::{
 /// movement.
 pub(crate) fn bolt_breaker_collision(
     time: Res<Time<Fixed>>,
-    mut bolt_query: Query<BoltPhysicsQuery, ActiveBoltFilter>,
-    breaker_query: Query<
-        (
-            &Transform,
-            &BreakerTilt,
-            &BreakerWidth,
-            &BreakerHeight,
-            &MaxReflectionAngle,
-            &MinAngleFromHorizontal,
-        ),
-        BreakerCollisionFilter,
-    >,
+    mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
+    breaker_query: Query<CollisionQueryBreaker, CollisionFilterBreaker>,
     mut writer: MessageWriter<BoltHitBreaker>,
 ) {
     let Ok((breaker_transform, breaker_tilt, breaker_w, breaker_h, max_angle, min_angle)) =

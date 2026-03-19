@@ -94,20 +94,6 @@ What NOT to save:
 
 Save session-specific outputs (date-stamped reviews, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
-Explicit user requests:
-- When the user asks you to remember something across sessions, save it immediately
-- When the user asks to forget or stop remembering something, find and remove the relevant entries
-- When the user corrects you on something you stated from memory, update or remove the incorrect entry immediately
-- Since this memory is project-scope and shared with your team via version control, tailor your memories to this project
-
-## Searching past context
-
-When looking for past context:
-1. Search topic files in your memory directory:
-```
-Grep with pattern="<search term>" path=".claude/agent-memory/reviewer-architecture/" glob="*.md"
-```
-
 ## MEMORY.md
 
 MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

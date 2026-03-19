@@ -9,7 +9,7 @@ use crate::bolt::components::{
 };
 
 /// Bolt entity data needed by the bolt-lost detection system.
-pub type BoltLostQuery = (
+pub type LostQuery = (
     Entity,
     &'static Transform,
     &'static BoltVelocity,

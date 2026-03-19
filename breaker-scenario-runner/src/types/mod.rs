@@ -263,6 +263,10 @@ pub struct ScenarioDefinition {
     /// scenario multiple times in parallel instead of a single run.
     #[serde(default)]
     pub stress: Option<StressConfig>,
+    /// Optional deterministic seed for the game RNG. All scenarios default to
+    /// seed 0 for determinism. Override in RON to test different seeds.
+    #[serde(default)]
+    pub seed: Option<u64>,
 }
 
 impl ScenarioDefinition {

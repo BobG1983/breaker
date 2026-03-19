@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_egui::EguiContexts;
 
 use crate::{
-    breaker::{components::Breaker, queries::BreakerBumpTelemetryQuery},
+    breaker::{components::Breaker, queries::BumpTelemetryQuery},
     debug::resources::{DebugOverlays, LastBumpResult, Overlay},
 };
 
@@ -13,7 +13,7 @@ pub(crate) fn breaker_state_ui(
     mut contexts: EguiContexts,
     overlays: Res<DebugOverlays>,
     last_bump: Res<LastBumpResult>,
-    breaker_query: Query<BreakerBumpTelemetryQuery, With<Breaker>>,
+    breaker_query: Query<BumpTelemetryQuery, With<Breaker>>,
 ) {
     if !overlays.is_active(Overlay::BreakerState) {
         return;

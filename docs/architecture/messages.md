@@ -22,6 +22,7 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 | `RunLost` | behaviors/consequences/life_lost (handle_life_lost) | run (handle_run_lost) |
 | `ApplyTimePenalty { seconds }` | behaviors/consequences/time_penalty (handle_time_penalty) | run/node (apply_time_penalty) |
 | `SpawnAdditionalBolt` | behaviors/consequences/spawn_bolt (handle_spawn_bolt) | bolt (spawn_additional_bolt) |
+| `ChipSelected { name, kind }` | UI (handle_chip_input) | chips (apply_chip_effect) |
 
 ## Observer Events (trigger via commands.trigger())
 
@@ -33,6 +34,4 @@ These are Bevy observer events (`#[derive(Event)]` + `commands.trigger()`), not 
 
 ## Registered Messages (no consumers yet)
 
-| Message | Registered By | Planned Consumers |
-|---------|---------------|-------------------|
-| `ChipSelected { name, kind }` | UI | chips (apply effects) |
+None — all registered messages now have active consumers.

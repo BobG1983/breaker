@@ -275,6 +275,46 @@ fn all_variants_covered_by_invariant_kind_all() {
 }
 
 // -------------------------------------------------------------------------
+// ScenarioDefinition — seed field
+// -------------------------------------------------------------------------
+
+#[test]
+fn scenario_definition_seed_defaults_to_none_when_omitted() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition without seed should parse");
+    assert!(
+        result.seed.is_none(),
+        "seed must be None when omitted from RON"
+    );
+}
+
+#[test]
+fn scenario_definition_seed_some_value_parses() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        seed: Some(42),
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition with seed Some(42) should parse");
+    assert_eq!(result.seed, Some(42));
+}
+
+// -------------------------------------------------------------------------
 // StressConfig — serde deserialization
 // -------------------------------------------------------------------------
 

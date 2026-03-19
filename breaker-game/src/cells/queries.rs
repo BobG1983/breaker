@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use crate::cells::components::{CellDamageVisuals, CellHealth, RequiredToClear};
 
 /// Cell health, material, damage visuals, and clear-requirement for damage feedback.
-pub(crate) type CellDamageVisualQuery = (
+pub(crate) type DamageVisualQuery = (
     &'static mut CellHealth,
     &'static MeshMaterial2d<ColorMaterial>,
     &'static CellDamageVisuals,

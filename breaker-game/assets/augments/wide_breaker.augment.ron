@@ -1,1 +1,8 @@
-(name: "Wide Breaker", kind: Augment, description: "Breaker width increased")
+(
+    name: "Wide Breaker",
+    kind: Augment,
+    description: "Breaker width increased",
+    rarity: Common,
+    max_stacks: 3,
+    effect: Augment(WidthBoost(20.0)),
+)

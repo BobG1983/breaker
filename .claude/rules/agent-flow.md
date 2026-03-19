@@ -7,6 +7,7 @@ When to launch which agents, how to interpret their output, and how failures cha
 | Trigger | Agent |
 |---------|-------|
 | Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** |
+| Choosing between Rust idiom alternatives | **researcher-rust-idioms** |
 
 ## Phase 2 — Post-Implementation (single parallel wave)
 
@@ -30,6 +31,9 @@ Launch all applicable agents in a **single message** with multiple Agent tool ca
 | 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** |
 | New gameplay mechanic or upgrade designed | **guard-game-design** |
 | Phase complete or significant structural change | **guard-docs** |
+| New dependencies added or security-sensitive code | **guard-security** |
+| New dependencies added or before release | **guard-dependencies** |
+| New mechanic needs adversarial scenario coverage | **writer-scenarios** |
 
 ## Phase 3 — Failure Routing (sequential, reactive)
 
@@ -119,3 +123,53 @@ These agents describe fixes but never produce writer-tests specs.
 | Style/idiom issue (reviewer-quality) | Main agent fixes inline — low risk, no test needed |
 | Deprecated API (reviewer-bevy-api) | Main agent fixes inline — follow stated replacement pattern |
 | Logic-adjacent issue (wrong query filter, etc.) | Treat as correctness issue — write regression spec if behavior is testable |
+
+### guard-security findings
+
+Each finding includes a severity-tagged block:
+
+```
+**Security finding:**
+- Severity: critical | warning | info
+- Location: `path/to/file.rs:line`
+- Issue: [what the security concern is]
+- Fix: [specific remediation]
+- Delegate: main agent fixes inline (warning/info) or writer-code (critical with test coverage)
+```
+
+| Severity | Route |
+|---|---|
+| Critical (unsound unsafe, known CVE) | Main agent writes regression spec → **writer-tests** → **writer-code** |
+| Warning (unwrap on file data, unused deps) | Main agent fixes inline |
+| Info (observation for future phases) | Note and move on |
+
+### guard-dependencies findings
+
+Each finding includes an actionable block:
+
+```
+**Dependency finding:**
+- Category: unused | outdated | duplicate | license | feature-flag
+- Crate: [crate name and version]
+- Issue: [what's wrong]
+- Fix: [specific Cargo.toml change]
+- Delegate: main agent applies Cargo.toml changes directly
+```
+
+| Category | Route |
+|---|---|
+| Unused dependency | Main agent removes from Cargo.toml |
+| Outdated (security patch) | Main agent bumps version |
+| Outdated (feature update) | Main agent evaluates and bumps if appropriate |
+| License issue | Main agent evaluates — may need to replace the crate |
+| Duplicate transitive | Main agent evaluates — may need to pin or unify |
+
+### writer-scenarios output
+
+Writer-scenarios produces files directly (like writer-tests/writer-code). Its output is verified by runner-scenarios.
+
+| Result | Route |
+|---|---|
+| Scenarios created, all pass | Done — scenarios are committed with the feature |
+| Scenarios created, some fail | Investigate — may indicate a real bug (route to writer-tests → writer-code) |
+| Compilation failure | Fix scenario code — may need **researcher-rust-errors** |

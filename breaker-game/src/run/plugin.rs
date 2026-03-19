@@ -12,7 +12,7 @@ use crate::{
             reset_run_state,
         },
     },
-    shared::{GameRng, GameState, PlayingState},
+    shared::{GameRng, GameState, PlayingState, RunSeed},
 };
 
 /// Plugin for the run domain.
@@ -24,6 +24,7 @@ impl Plugin for RunPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<RunState>()
             .init_resource::<GameRng>()
+            .init_resource::<RunSeed>()
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
             .add_systems(

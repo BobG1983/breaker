@@ -25,6 +25,7 @@ fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
+        seed: None,
     }
 }
 
@@ -42,6 +43,7 @@ fn make_lifecycle_test_scenario() -> ScenarioDefinition {
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
+        seed: None,
     }
 }
 
@@ -63,7 +65,8 @@ fn lifecycle_test_app() -> App {
         });
     // Resources required by bypass_menu_to_playing
     app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()))
-        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None));
+        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .init_resource::<breaker::shared::RunSeed>();
     // Resources required by inject_scenario_input
     app.init_resource::<InputActions>()
         .add_plugins(ScenarioLifecycle);
@@ -261,6 +264,7 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
+        seed: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -321,6 +325,7 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
+        seed: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -386,6 +391,7 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
+        seed: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -660,6 +666,7 @@ fn init_scenario_input_creates_driver_resource() {
             invariant_params: InvariantParams::default(),
             allow_early_end: true,
             stress: None,
+            seed: None,
         },
     });
     app.add_systems(Update, init_scenario_input);
@@ -801,6 +808,65 @@ fn scenario_stats_entered_playing_set_by_tag_game_entities() {
     assert!(
         stats.entered_playing,
         "expected entered_playing == true after tag_game_entities ran"
+    );
+}
+
+// -------------------------------------------------------------------------
+// bypass_menu_to_playing — sets RunSeed from scenario config
+// -------------------------------------------------------------------------
+
+/// `bypass_menu_to_playing` must set `RunSeed` to `Some(0)` when the
+/// scenario definition has `seed: None` (default 0 for determinism).
+#[test]
+fn bypass_menu_to_playing_sets_run_seed_default_zero() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig {
+            definition: make_scenario(100),
+        })
+        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .init_resource::<breaker::shared::RunSeed>()
+        .add_plugins(StatesPlugin)
+        .init_state::<GameState>()
+        .add_systems(Update, bypass_menu_to_playing);
+
+    app.update();
+
+    let seed = app.world().resource::<breaker::shared::RunSeed>();
+    assert_eq!(
+        seed.0,
+        Some(0),
+        "expected RunSeed(Some(0)) when scenario seed is None, got {:?}",
+        seed.0
+    );
+}
+
+/// `bypass_menu_to_playing` must set `RunSeed` to `Some(42)` when the
+/// scenario definition has `seed: Some(42)`.
+#[test]
+fn bypass_menu_to_playing_sets_run_seed_from_scenario() {
+    let mut definition = make_scenario(100);
+    definition.seed = Some(42);
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .init_resource::<breaker::shared::RunSeed>()
+        .add_plugins(StatesPlugin)
+        .init_state::<GameState>()
+        .add_systems(Update, bypass_menu_to_playing);
+
+    app.update();
+
+    let seed = app.world().resource::<breaker::shared::RunSeed>();
+    assert_eq!(
+        seed.0,
+        Some(42),
+        "expected RunSeed(Some(42)) from scenario seed, got {:?}",
+        seed.0
     );
 }
 

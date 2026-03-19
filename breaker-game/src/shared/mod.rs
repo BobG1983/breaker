@@ -138,8 +138,8 @@ pub struct CleanupOnRunEnd;
 /// Deterministic RNG for gameplay randomness.
 ///
 /// Initialized at app start with a fixed seed (deterministic for tests).
-/// Reseeded with OS entropy at the start of each run by `reset_run_state`.
-/// Phase 4 will add user-selectable seeds for deterministic replays.
+/// Reseeded at run start by `reset_run_state` using [`RunSeed`]
+/// (user-controlled) or OS entropy when no seed is set.
 #[derive(Resource)]
 pub struct GameRng(pub ChaCha8Rng);
 
@@ -156,6 +156,13 @@ impl Default for GameRng {
         Self::from_seed(0)
     }
 }
+
+/// Optional seed for deterministic RNG at run start.
+///
+/// `None` means random (OS entropy). `Some(n)` seeds the [`GameRng`] with
+/// the given value for deterministic replays.
+#[derive(Resource, Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RunSeed(pub Option<u64>);
 
 /// The archetype selected for the current run.
 ///
@@ -206,6 +213,18 @@ mod tests {
         let config = PlayfieldConfig::default();
         assert!((config.right() - config.left() - config.width).abs() < f32::EPSILON);
         assert!((config.top() - config.bottom() - config.height).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn run_seed_default_is_none() {
+        let seed = RunSeed::default();
+        assert_eq!(seed.0, None);
+    }
+
+    #[test]
+    fn run_seed_some_holds_value() {
+        let seed = RunSeed(Some(12345));
+        assert_eq!(seed.0, Some(12345));
     }
 
     #[test]
