@@ -50,6 +50,10 @@ Each archetype creates a different relationship with the chip pool — chips tha
 - Run history: browseable log of past runs with seeds, builds, highlights, and outcomes
 - Personal bests per archetype
 
+## Infrastructure Note
+
+**New agent for Phase 8:** Introduce `reviewer-migration` agent to validate save file migration paths. As meta-progression data (unlocks, Flux balance, run history) persists between sessions, the save format will evolve. This agent verifies that save files from older versions load correctly after schema changes, preventing data loss for returning players.
+
 ## Acceptance Criteria
 
 1. Flux is spendable on unlocks

@@ -112,20 +112,6 @@ What NOT to save:
 
 Save session-specific outputs (date-stamped lookups, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 
-Explicit user requests:
-- When the user asks you to remember something across sessions (e.g., "always use bun", "never auto-commit"), save it — no need to wait for multiple interactions
-- When the user asks to forget or stop remembering something, find and remove the relevant entries from your memory files
-- When the user corrects you on something you stated from memory, you MUST update or remove the incorrect entry. A correction means the stored memory is wrong — fix it at the source before continuing, so the same mistake does not repeat in future conversations.
-- Since this memory is project-scope and shared with your team via version control, tailor your memories to this project
-
-## Searching past context
-
-When looking for past context:
-1. Search topic files in your memory directory:
-```
-Grep with pattern="<search term>" path=".claude/agent-memory/researcher-bevy-api/" glob="*.md"
-```
-
 ## MEMORY.md
 
 MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

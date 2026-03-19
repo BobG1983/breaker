@@ -71,6 +71,7 @@ For multi-domain work or context-heavy phases, delegate implementation to the **
 | Trigger | Agent | Why |
 |---------|-------|-----|
 | Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** | Verify before using — Bevy APIs change between versions |
+| Choosing between Rust idiom alternatives | **researcher-rust-idioms** | Research idiomatic patterns before committing to an approach |
 
 ### Phase 2 — After Implementation (launch in parallel)
 
@@ -89,6 +90,9 @@ Launch all applicable agents simultaneously — they are independent:
 | 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** | Detect ordering issues and conflicts |
 | New gameplay mechanic or upgrade designed | **guard-game-design** | Validate against design pillars |
 | Phase complete or significant structural change | **guard-docs** | Sync architecture docs, plan/, design/terminology.md |
+| New dependencies added or security-sensitive code | **guard-security** | Audit unsafe code, deserialization, dependency CVEs |
+| New dependencies added or before release | **guard-dependencies** | Unused deps, outdated versions, license compliance |
+| New mechanic needs adversarial scenario coverage | **writer-scenarios** | Generate chaos scenarios and invariant checkers |
 
 ### Phase 3 — On Build/Test Failure (sequential, reactive)
 
@@ -114,5 +118,8 @@ Launch all applicable agents simultaneously — they are independent:
 2. If 3+ systems added or cross-plugin data flow → also launch **researcher-system-dependencies** in the same parallel wave
 3. If new gameplay mechanic → also launch **guard-game-design** in the same parallel wave
 4. If phase complete or docs may have drifted → also launch **guard-docs** in the same parallel wave
-5. Run `/simplify` on changed code
-6. Commit to the feature branch with a conventional commit message
+5. If new dependencies added or security-sensitive code → also launch **guard-security** in the same parallel wave
+6. If new dependencies added or before release → also launch **guard-dependencies** in the same parallel wave
+7. If new mechanic needs adversarial scenario coverage → also launch **writer-scenarios** in the same parallel wave
+8. Run `/simplify` on changed code
+9. Commit to the feature branch with a conventional commit message

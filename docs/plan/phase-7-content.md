@@ -48,6 +48,10 @@ Active nodes must feel fundamentally different from passive nodes, not just "pas
 - Layout templates with variable fill (same shape, different cell types per seed)
 - Node type distribution follows the tier system from Phase 4e
 
+## Infrastructure Note
+
+**New agent for Phase 7:** Introduce `reviewer-compile-time` agent to monitor compile-time impact as the crate grows with 40+ chips, new cell types, and expanded RON content. Track incremental build times and flag when a module or derive macro pushes compile time past acceptable thresholds.
+
 ## Acceptance Criteria
 
 1. 40+ chips with functional effects
