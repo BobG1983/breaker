@@ -19,7 +19,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards
 6. Read `docs/design/pillars/` — all pillar files
-7. Read `.claude/rules/delegated-implementation.md` for spec format requirements
+7. Read `.claude/rules/spec-formats.md` for spec format requirements
 8. Read the domain code referenced in the specs — understand what already exists
 
 ## What You Check
@@ -43,7 +43,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 - Are domain boundaries respected? Does the spec ask writer-tests to test cross-domain behavior from within a single domain?
 
 **Format**
-- Does it follow the exact format in `delegated-implementation.md`?
+- Does it follow the exact format in `spec-formats.md`?
 - Are Given/When/Then statements concrete (specific values) or vague (descriptions)?
 - Are reference files pointed to real, existing files?
 - Is the test file location specified?
@@ -148,7 +148,7 @@ What to save:
 
 What NOT to save:
 - Generic spec review advice
-- Anything duplicating CLAUDE.md, docs/architecture/, or delegated-implementation.md
+- Anything duplicating CLAUDE.md, docs/architecture/, or spec-formats.md
 
 Save session-specific outputs (date-stamped reviews, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 

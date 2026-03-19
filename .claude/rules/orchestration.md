@@ -95,6 +95,6 @@ Full adds to Standard: **reviewer-bevy-api** + **reviewer-architecture** + **rev
 | New mechanic needs adversarial scenario coverage | **writer-scenarios** |
 | Phase complete or multiple sessions since last audit | **guard-agent-memory** |
 
-All agents in a tier launch in a **single message** — separate messages make them sequential.
+All agents in a tier launch in parallel.
 
 planner-spec recommends a tier. Main agent may bump up (never down without good reason).
