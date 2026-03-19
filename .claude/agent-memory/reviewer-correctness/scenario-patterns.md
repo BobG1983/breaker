@@ -102,3 +102,17 @@ type: reference
 - `parse_loop_count` correctly rejects 0. `parse_parallelism` correctly rejects 0 and non-numeric strings.
 - clap `conflicts_with` is bidirectional: `parallel` has `conflicts_with = "serial"` and `serial` has `conflicts_with = "parallel"`. Clap handles both directions. Correct.
 - `loop_count = args.loops.unwrap_or(1)`: default of 1 means no-`--loop` behaves as exactly one iteration. Correct.
+
+## feature/scenario-runner-dedup-summary — SpawnChecklist + EntityLeakBaseline (2026-03-18)
+
+- `check_spawn_complete` `Local<SpawnChecklist>` bitfield: 4 bits (BOLT|BREAKER|CELLS|WALLS). `is_complete()` uses `& Self::ALL == Self::ALL`. Correct.
+- `check_spawn_complete` resets checklist after firing SpawnNodeComplete — `*checklist = SpawnChecklist::default()`. MessageReader cursor advances on `read()`, so messages from the same OnEnter don't re-trigger on frame N+1. No double-fire.
+- `check_spawn_complete` runs in `FixedUpdate` with NO `run_if` guard — messages only arrive from `OnEnter(Playing)` so it's a no-op outside Playing. Correct.
+- `spawn_breaker` idempotency: existing breaker → sends `BreakerSpawned` then returns. Freshly spawned → also sends `BreakerSpawned`. Both paths covered. Correct.
+- Tuple render assets `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` in `spawn_bolt` and `spawn_cells_from_layout`: destructured as `.0` and `.1`. Correct Bevy 0.18 system param pattern.
+- `check_no_entity_leaks` samples `count` BEFORE reading SpawnNodeComplete, then sets baseline. On the same frame SpawnComplete arrives, `count > base * 2` → `count > count * 2` → false. No false positive.
+- `check_no_entity_leaks` frame.0.is_multiple_of(120): frame 0 is a multiple of 120, but baseline is None at that point — guard returns early. First real check at next multiple of 120 after baseline is set. Correct.
+- `add_message::<SpawnNodeComplete>()` called from both NodePlugin and ScenarioLifecycle. `init_resource` is idempotent in Bevy 0.18. No panic. Correct.
+- NodePlugin::plugin_builds test does NOT register BoltSpawned/BreakerSpawned/WallsSpawned. FixedUpdate doesn't fire on first app.update() when Time<Fixed> accumulator starts at 0 with no ManualDuration. Test passes without panic. Correct.
+- WallsSpawned is pub(crate): accessible from check_spawn_complete (same crate). Scenario runner only uses SpawnNodeComplete (pub). Correct.
+- SpawnNodeComplete written by check_spawn_complete in frame N is readable by check_no_entity_leaks in frame N+1 (double-buffer semantics). Entity count at N+1 equals N (no spawning/despawning between). Correct 1-frame delay.
