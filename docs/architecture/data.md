@@ -135,7 +135,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 
 | Registry | Key | Value | Notes |
 |----------|-----|-------|-------|
-| `ChipRegistry` | `String` (name) | `ChipDefinition` | Flat pool, arbitrary order |
+| `ChipRegistry` | `String` (name) | `ChipDefinition` | Paired `Vec<String>` preserves insertion order for deterministic chip offers |
 | `NodeLayoutRegistry` | `String` (name) | `NodeLayout` | Paired `Vec<String>` preserves insertion order for index-based node progression |
 | `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Unsorted — callers sort at call site for UI display |
 | `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name |
