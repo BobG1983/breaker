@@ -38,9 +38,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<MainMenuDefaults>();
-        app.add_systems(Update, seed_main_menu_config.map(drop));
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<MainMenuDefaults>()
+            .add_systems(Update, seed_main_menu_config.map(drop));
         app
     }
 

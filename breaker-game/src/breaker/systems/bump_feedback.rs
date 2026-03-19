@@ -98,15 +98,15 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BumpPerformed>();
-        app.add_systems(
-            FixedUpdate,
-            (
-                enqueue_bump.before(spawn_bump_grade_text),
-                spawn_bump_grade_text,
-            ),
-        );
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .add_systems(
+                FixedUpdate,
+                (
+                    enqueue_bump.before(spawn_bump_grade_text),
+                    spawn_bump_grade_text,
+                ),
+            );
         app
     }
 
@@ -189,13 +189,13 @@ mod tests {
     #[test]
     fn whiff_spawns_text() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BumpWhiffed>();
-        app.insert_resource(TestWhiffMsg(true));
-        app.add_systems(
-            FixedUpdate,
-            (enqueue_whiff.before(spawn_whiff_text), spawn_whiff_text),
-        );
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpWhiffed>()
+            .insert_resource(TestWhiffMsg(true))
+            .add_systems(
+                FixedUpdate,
+                (enqueue_whiff.before(spawn_whiff_text), spawn_whiff_text),
+            );
         spawn_breaker(&mut app);
         tick(&mut app);
 

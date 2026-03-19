@@ -1,52 +1,156 @@
 //! Scenario runner — automated gameplay testing tool.
 //!
 //! Runs headless by default (no GPU required). Pass `--visual` to open a window
-//! with full graphics at 10x speed for debugging a single scenario.
+//! with full graphics at 10x speed for debugging.
 //!
 //! Usage:
 //!   `cargo scenario -- -s aegis_chaos`
 //!   `cargo scenario -- --all`
 //!   `cargo scenario -- --visual -s aegis_chaos`
+//!   `cargo scenario -- --all --visual`
+//!   `cargo scenario -- --all -p 4`
+//!   `cargo scenario -- --all --serial`
+//!   `cargo scenario -- --all --loop 3`
 
 use std::process;
 
-use argh::FromArgs;
+use breaker_scenario_runner::runner::{
+    Parallelism, build_run_list, parse_parallelism, run_all_parallel, run_all_serial, run_with_args,
+};
+use clap::Parser;
 
 fn main() {
-    let args: Args = argh::from_env();
+    let args = Args::parse();
 
-    if args.visual && args.all {
-        eprintln!("--visual cannot be combined with --all (the event loop can only run once)");
-        eprintln!("Use --visual -s <scenario_name> to debug a single scenario.");
+    if args.visual && !args.all && args.scenario.is_none() {
+        eprintln!("--visual requires -s <scenario_name> or --all");
         process::exit(1);
     }
 
-    if args.visual && args.scenario.is_none() {
-        eprintln!("--visual requires -s <scenario_name>");
-        process::exit(1);
-    }
+    let parallelism = args
+        .execution
+        .parallel
+        .as_deref()
+        .map_or(Parallelism::DEFAULT, |value| {
+            parse_parallelism(value).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                process::exit(1);
+            })
+        });
 
+    let loop_count = args.loops.unwrap_or(1);
     let headless = !args.visual;
-    let exit_code = breaker_scenario_runner::runner::run_with_args(
-        args.scenario.as_deref(),
-        args.all,
-        headless,
-    );
-    process::exit(exit_code);
+
+    // Fast path: single scenario, no loop → in-process, no subprocess overhead.
+    if args.scenario.is_some() && !args.all && loop_count == 1 && !args.execution.serial {
+        let exit_code = run_with_args(args.scenario.as_deref(), headless, args.verbose);
+        process::exit(exit_code);
+    }
+
+    let runs = build_run_list(args.scenario.as_deref(), args.all);
+    if runs.is_empty() {
+        eprintln!("No scenarios found. Use -s <name> or --all.");
+        process::exit(1);
+    }
+
+    // Visual + serial with multiple total runs is unsupported (Winit event loop runs once).
+    let total_runs = runs.len() * loop_count;
+    if args.visual && args.execution.serial && total_runs > 1 {
+        eprintln!(
+            "--visual with --serial is not supported for multiple runs (Winit event loop can only run once)"
+        );
+        process::exit(1);
+    }
+
+    let mut worst_exit = 0;
+    for iteration in 1..=loop_count {
+        if loop_count > 1 {
+            println!("\n=== Loop {iteration}/{loop_count} ===");
+        }
+
+        let exit_code = if args.execution.serial {
+            run_all_serial(&runs, headless, args.verbose)
+        } else {
+            let batch_size = parallelism.resolve(runs.len());
+            run_all_parallel(&runs, args.visual, args.verbose, batch_size)
+        };
+
+        if exit_code > worst_exit {
+            worst_exit = exit_code;
+        }
+    }
+
+    process::exit(worst_exit);
 }
 
 /// Automated gameplay scenario runner.
-#[derive(FromArgs)]
-pub struct Args {
-    /// scenario name to run (stem of a `.scenario.ron` file in `scenarios/`)
-    #[argh(option, short = 's')]
-    pub scenario: Option<String>,
+#[derive(Parser)]
+#[command(about = "Automated gameplay scenario runner")]
+struct Args {
+    /// Scenario name to run (stem of a `.scenario.ron` file in `scenarios/`)
+    #[arg(short = 's', long)]
+    scenario: Option<String>,
 
-    /// run all scenarios in the `scenarios/` directory tree
-    #[argh(switch)]
-    pub all: bool,
+    /// Run all scenarios in the `scenarios/` directory tree
+    #[arg(long)]
+    all: bool,
 
-    /// run with a window at normal speed for visual debugging (single scenario only)
-    #[argh(switch)]
-    pub visual: bool,
+    /// Run with a window for visual debugging
+    #[arg(long)]
+    visual: bool,
+
+    /// Print all violations and logs verbatim (default: grouped compact output)
+    #[arg(short = 'v', long)]
+    verbose: bool,
+
+    #[command(flatten)]
+    execution: ExecutionMode,
+
+    /// Repeat the entire run N times
+    #[arg(short = 'l', long = "loop", value_parser = parse_loop_count)]
+    loops: Option<usize>,
+}
+
+/// Execution mode: `--parallel` or `--serial` (clap enforces mutual exclusion).
+#[derive(clap::Args)]
+struct ExecutionMode {
+    /// Max parallel subprocesses: a number or "all" (default: 32)
+    #[arg(short = 'p', long, conflicts_with = "serial")]
+    parallel: Option<String>,
+
+    /// Run in-process sequentially, no subprocesses
+    #[arg(long, conflicts_with = "parallel")]
+    serial: bool,
+}
+
+fn parse_loop_count(s: &str) -> Result<usize, String> {
+    let n: usize = s
+        .parse()
+        .map_err(|_| format!("invalid loop count: \"{s}\""))?;
+    if n == 0 {
+        return Err("--loop must be a positive number".to_owned());
+    }
+    Ok(n)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_loop_count_accepts_positive_number() {
+        assert_eq!(parse_loop_count("5"), Ok(5));
+    }
+
+    #[test]
+    fn parse_loop_count_rejects_zero() {
+        let result = parse_loop_count("0");
+        assert!(result.is_err(), "expected error for 0, got: {result:?}");
+    }
+
+    #[test]
+    fn parse_loop_count_rejects_non_numeric() {
+        let result = parse_loop_count("abc");
+        assert!(result.is_err(), "expected error for 'abc', got: {result:?}");
+    }
 }

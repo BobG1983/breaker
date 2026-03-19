@@ -30,10 +30,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<CellDefaults>();
-        app.init_resource::<CellConfig>();
-        app.add_systems(Update, propagate_cell_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<CellDefaults>()
+            .init_resource::<CellConfig>()
+            .add_systems(Update, propagate_cell_defaults);
         app
     }
 

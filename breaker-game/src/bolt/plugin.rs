@@ -25,8 +25,10 @@ pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
+        use crate::bolt::messages::BoltSpawned;
         app.init_resource::<BoltConfig>()
             .add_message::<SpawnAdditionalBolt>()
+            .add_message::<BoltSpawned>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (spawn_bolt, init_bolt_params.after(spawn_bolt)),

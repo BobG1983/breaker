@@ -23,8 +23,8 @@ mod tests {
     /// resulting Z rotation (euler angle).
     fn run_tilt(angle: f32) -> f32 {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, animate_tilt_visual);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, animate_tilt_visual);
 
         app.world_mut().spawn((
             Breaker,

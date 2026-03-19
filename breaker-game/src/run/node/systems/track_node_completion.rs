@@ -56,14 +56,14 @@ mod tests {
 
     fn test_app(remaining: u32) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<CellDestroyed>();
-        app.add_message::<NodeCleared>();
-        app.insert_resource(ClearRemainingCount { remaining });
-        app.add_systems(
-            FixedUpdate,
-            (enqueue_messages, track_node_completion).chain(),
-        );
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellDestroyed>()
+            .add_message::<NodeCleared>()
+            .insert_resource(ClearRemainingCount { remaining })
+            .add_systems(
+                FixedUpdate,
+                (enqueue_messages, track_node_completion).chain(),
+            );
         app
     }
 

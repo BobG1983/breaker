@@ -42,19 +42,19 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.add_message::<RunLost>();
-        app.insert_resource(RunState {
-            node_index: 0,
-            outcome: RunOutcome::InProgress,
-            ..default()
-        });
-        app.insert_resource(SendRunLost(false));
-        app.add_systems(
-            FixedUpdate,
-            (send_run_lost.before(handle_run_lost), handle_run_lost),
-        );
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .add_message::<RunLost>()
+            .insert_resource(RunState {
+                node_index: 0,
+                outcome: RunOutcome::InProgress,
+                ..default()
+            })
+            .insert_resource(SendRunLost(false))
+            .add_systems(
+                FixedUpdate,
+                (send_run_lost.before(handle_run_lost), handle_run_lost),
+            );
         app
     }
 

@@ -30,10 +30,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<TimerUiDefaults>();
-        app.init_resource::<TimerUiConfig>();
-        app.add_systems(Update, propagate_timer_ui_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<TimerUiDefaults>()
+            .init_resource::<TimerUiConfig>()
+            .add_systems(Update, propagate_timer_ui_defaults);
         app
     }
 

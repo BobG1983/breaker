@@ -8,7 +8,7 @@
     invariants: [BoltInBounds],
     expected_violations: Some([BoltInBounds]),
     debug_setup: Some((
-        bolt_position: Some((0.0, -1000.0)),
+        bolt_position: Some((0.0, 1000.0)),
         disable_physics: true,
     )),
 )

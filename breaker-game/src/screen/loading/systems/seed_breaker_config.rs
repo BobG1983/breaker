@@ -38,9 +38,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<BreakerDefaults>();
-        app.add_systems(Update, seed_breaker_config.map(drop));
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<BreakerDefaults>()
+            .add_systems(Update, seed_breaker_config.map(drop));
         app
     }
 

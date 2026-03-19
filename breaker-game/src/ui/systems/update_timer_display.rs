@@ -32,10 +32,10 @@ mod tests {
 
     fn test_app(remaining: f32, total: f32) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(NodeTimer { remaining, total });
-        app.insert_resource(TimerUiConfig::default());
-        app.add_systems(Update, update_timer_display);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(NodeTimer { remaining, total })
+            .insert_resource(TimerUiConfig::default())
+            .add_systems(Update, update_timer_display);
         app
     }
 

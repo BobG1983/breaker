@@ -2,7 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::{shared::GameState, wall::systems::spawn_walls};
+use crate::{
+    shared::GameState,
+    wall::{messages::WallsSpawned, systems::spawn_walls},
+};
 
 /// Plugin for the wall domain.
 ///
@@ -12,7 +15,8 @@ pub(crate) struct WallPlugin;
 
 impl Plugin for WallPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_walls);
+        app.add_message::<WallsSpawned>()
+            .add_systems(OnEnter(GameState::Playing), spawn_walls);
     }
 }
 

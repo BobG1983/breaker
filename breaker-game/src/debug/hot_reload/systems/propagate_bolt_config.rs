@@ -42,9 +42,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.add_systems(Update, propagate_bolt_config);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BoltConfig>()
+            .add_systems(Update, propagate_bolt_config);
         app
     }
 
@@ -230,12 +230,12 @@ mod tests {
     fn does_not_run_when_config_unchanged() {
         // Register system WITH the run condition, same as the real plugin.
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.add_systems(
-            Update,
-            propagate_bolt_config.run_if(resource_changed::<BoltConfig>),
-        );
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BoltConfig>()
+            .add_systems(
+                Update,
+                propagate_bolt_config.run_if(resource_changed::<BoltConfig>),
+            );
 
         let entity = app
             .world_mut()

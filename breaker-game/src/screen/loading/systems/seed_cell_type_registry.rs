@@ -54,9 +54,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<CellTypeDefinition>();
-        app.add_systems(Update, seed_cell_type_registry.map(drop));
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<CellTypeDefinition>()
+            .add_systems(Update, seed_cell_type_registry.map(drop));
         app
     }
 

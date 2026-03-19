@@ -30,10 +30,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<BoltDefaults>();
-        app.init_resource::<BoltConfig>();
-        app.add_systems(Update, propagate_bolt_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<BoltDefaults>()
+            .init_resource::<BoltConfig>()
+            .add_systems(Update, propagate_bolt_defaults);
         app
     }
 

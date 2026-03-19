@@ -31,14 +31,14 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(RunState {
-            node_index: 5,
-            outcome: RunOutcome::Won,
-            ..default()
-        });
-        app.init_resource::<GameRng>();
-        app.add_systems(Update, reset_run_state);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(RunState {
+                node_index: 5,
+                outcome: RunOutcome::Won,
+                ..default()
+            })
+            .init_resource::<GameRng>()
+            .add_systems(Update, reset_run_state);
         app
     }
 

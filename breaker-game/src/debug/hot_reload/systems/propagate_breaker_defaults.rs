@@ -40,12 +40,12 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<BreakerDefaults>();
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<ArchetypeRegistry>();
-        app.init_resource::<SelectedArchetype>();
-        app.add_systems(Update, propagate_breaker_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<BreakerDefaults>()
+            .init_resource::<BreakerConfig>()
+            .init_resource::<ArchetypeRegistry>()
+            .init_resource::<SelectedArchetype>()
+            .add_systems(Update, propagate_breaker_defaults);
         app
     }
 

@@ -126,6 +126,21 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 - Both patterns are used in scenario runner's `collect_and_evaluate` and `drain_remaining_logs`
 - `app.world().resource::<T>()` → `&T` (panics if missing) — also correct, used in tests
 
+## add_message idempotency
+- `app.add_message::<T>()` is idempotent — `SubApp::add_message` guards with `contains_resource::<Messages<T>>()`
+- Calling it for the same type in both `Game` plugin and `ScenarioLifecycle` is safe — second call is a no-op
+- Source: `bevy_app-0.18.1/src/sub_app.rs` lines 353-363
+
+## Messages<T> direct world access
+- `world.resource_mut::<Messages<T>>().write(msg)` — valid for test message injection
+- `world.resource::<Messages<T>>().iter_current_update_messages()` — valid for test message assertion
+- Both confirmed on docs.rs/bevy/0.18.1 `Messages` struct page
+
+## Tuple SystemParam with multiple ResMut
+- `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` — valid system parameter in Bevy 0.18.1
+- Tuples up to 17 items implement SystemParam; two different ResMut types have no conflict
+- Using `.0` and `.1` to access each from inside the system — correct
+
 ## init_resource with manual Default
 - `app.init_resource::<T>()` requires `T: Resource + Default`
 - Manual `impl Default` satisfies this — does not require `#[derive(Default)]`
@@ -157,6 +172,29 @@ Bevy 0.18.1, `features = ["2d"]`, `default-features = false`
 ## in_state run condition
 - `in_state(S::Variant)` — valid run condition for any schedule including `Update`
 - `.add_systems(Update, my_system.run_if(in_state(GameState::RunEnd)))` — correct
+
+## Headless MinimalPlugins + Manual Plugin Stack (scenario runner)
+
+The following plugin combination is confirmed correct for Bevy 0.18.1 headless mode (`default-features = false, features = ["2d"]`):
+
+```rust
+app.add_plugins((
+    MinimalPlugins,                          // TaskPoolPlugin, TimePlugin, ScheduleRunnerPlugin
+    bevy::state::app::StatesPlugin,          // NOT included in MinimalPlugins — must be explicit
+    bevy::asset::AssetPlugin { file_path, ..default() },
+    bevy::input::InputPlugin,
+    bevy::mesh::MeshPlugin,
+));
+app.init_asset::<ColorMaterial>();           // partial registration — gives Assets<ColorMaterial> without GPU pipeline
+app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe headless
+```
+
+- `bevy::state::app::StatesPlugin` — NOT in MinimalPlugins; this explicit add is required
+- `bevy::input::InputPlugin` — correct re-export path (`bevy_input` → `bevy::input`)
+- `bevy::mesh::MeshPlugin` — correct re-export path (`bevy_mesh` → `bevy::mesh`), available under `"2d"` feature
+- `bevy::text::TextPlugin` — correct re-export; no RenderApp access, verified pure CPU
+- `init_asset::<ColorMaterial>()` — valid; `AssetPlugin` is added first in tuple so AssetServer is live; partial registration intentional (no GPU extraction needed)
+- `MinimalPlugins` includes `TaskPoolPlugin` + `TimePlugin` + `ScheduleRunnerPlugin` — confirmed
 
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+

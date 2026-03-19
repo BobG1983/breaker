@@ -95,12 +95,12 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<Assets<Mesh>>();
-        app.init_resource::<Assets<ColorMaterial>>();
-        app.add_message::<BoltHitCell>();
-        app.add_message::<CellDestroyed>();
-        app.add_systems(FixedUpdate, handle_cell_hit);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_message::<BoltHitCell>()
+            .add_message::<CellDestroyed>()
+            .add_systems(FixedUpdate, handle_cell_hit);
         app
     }
 

@@ -4,57 +4,270 @@
 //! completion, then prints a structured summary and returns the exit code.
 
 use std::{
+    fmt,
     path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
-use bevy::{
-    log::LogPlugin,
-    prelude::*,
-    render::{
-        RenderPlugin,
-        settings::{RenderCreation, WgpuSettings},
-    },
-    time::TimeUpdateStrategy,
-    window::ExitCondition,
-    winit::WinitPlugin,
-};
+use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
 use breaker::game::Game;
 use tracing::{debug, info, warn};
 
 use crate::{
-    invariants::{ScenarioFrame, ScenarioStats, ViolationLog},
+    invariants::{ScenarioFrame, ScenarioStats, ViolationEntry, ViolationLog},
     lifecycle::{ScenarioConfig, ScenarioLifecycle},
     log_capture::{CapturedLogs, LogBuffer, LogEntry, poll_log_buffer, scenario_log_layer_factory},
-    types::ScenarioDefinition,
+    types::{InvariantKind, ScenarioDefinition},
     verdict::ScenarioVerdict,
 };
 
-/// Entry point called by `main`. Returns process exit code (0 = all pass, 1 = any fail).
+/// Parallelism level for subprocess-based execution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Parallelism {
+    /// Run at most N subprocesses concurrently.
+    Count(usize),
+    /// Run all subprocesses at once (unlimited concurrency).
+    All,
+}
+
+impl Parallelism {
+    /// Default parallelism when no `--parallel` flag is given.
+    pub const DEFAULT: Self = Self::Count(32);
+
+    /// Resolves to a concrete batch size given the total number of runs.
+    #[must_use]
+    pub fn resolve(&self, total: usize) -> usize {
+        match self {
+            Self::Count(n) => (*n).max(1),
+            Self::All => total.max(1),
+        }
+    }
+}
+
+impl fmt::Display for Parallelism {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Count(n) => write!(f, "{n}"),
+            Self::All => write!(f, "all"),
+        }
+    }
+}
+
+/// Parses a `--parallel` value: either `"all"` or a positive integer.
+///
+/// # Errors
+///
+/// Returns a descriptive error string if the value is not `"all"` or a positive integer.
+pub fn parse_parallelism(value: &str) -> Result<Parallelism, String> {
+    if value.eq_ignore_ascii_case("all") {
+        return Ok(Parallelism::All);
+    }
+    match value.parse::<usize>() {
+        Ok(0) => Err("--parallel must be a positive number or \"all\"".to_owned()),
+        Ok(n) => Ok(Parallelism::Count(n)),
+        Err(_) => Err(format!(
+            "invalid value for --parallel: \"{value}\" (expected a positive number or \"all\")"
+        )),
+    }
+}
+
+/// Builds the run list for a single iteration of execution.
+///
+/// Each entry is `(display_name, scenario_path)`. For a single scenario,
+/// returns one entry; for `--all`, returns one entry per scenario file.
 #[must_use]
-pub fn run_with_args(scenario: Option<&str>, all: bool, headless: bool) -> i32 {
+pub fn build_run_list(scenario: Option<&str>, all: bool) -> Vec<(String, PathBuf)> {
     let scenario_paths = collect_scenario_paths(scenario, all);
+    scenario_paths
+        .into_iter()
+        .map(|p| {
+            let name = scenario_name(&p);
+            (name, p)
+        })
+        .collect()
+}
+
+/// Runs a single scenario in-process. Returns process exit code (0 = pass, 1 = fail).
+#[must_use]
+pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i32 {
+    let scenario_paths = collect_scenario_paths(scenario, false);
 
     if scenario_paths.is_empty() {
         eprintln!("No scenarios found. Use -s <name> or --all.");
         return 1;
     }
 
-    let mut any_failed = false;
     let mut shared_log_buffer: Option<LogBuffer> = None;
+    let path = &scenario_paths[0];
+    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
 
-    for path in &scenario_paths {
-        let result = run_scenario(path, headless, &mut shared_log_buffer);
-        any_failed = any_failed || !result;
+    i32::from(!passed)
+}
+
+/// Runs scenarios in-process sequentially. Returns process exit code (0 = all pass, 1 = any fail).
+///
+/// Shares a single `LogBuffer` across all runs (the global tracing subscriber is
+/// installed once). Each scenario's result is printed inline and a summary follows.
+#[must_use]
+pub fn run_all_serial(runs: &[(String, PathBuf)], headless: bool, verbose: bool) -> i32 {
+    let mut shared_log_buffer: Option<LogBuffer> = None;
+    let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
+
+    for (display_name, path) in runs {
+        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+        results.push((display_name.clone(), passed));
     }
 
-    i32::from(any_failed)
+    print_summary(&results)
 }
 
 /// Returns the path to the `scenarios/` directory relative to this crate's manifest.
 #[must_use]
 pub fn scenarios_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scenarios")
+}
+
+/// Prints the cross-scenario summary and returns the exit code.
+fn print_summary(results: &[(String, bool)]) -> i32 {
+    let passed_count = results.iter().filter(|(_, p)| *p).count();
+    let failed_count = results.len() - passed_count;
+    let failures: Vec<&str> = results
+        .iter()
+        .filter(|(_, p)| !*p)
+        .map(|(name, _)| name.as_str())
+        .collect();
+
+    println!("\n---");
+    if failures.is_empty() {
+        println!("scenario result: ok. {passed_count} passed; {failed_count} failed");
+    } else {
+        println!("scenario result: FAIL. {passed_count} passed; {failed_count} failed");
+        println!("\nfailures:");
+        for name in &failures {
+            println!("  {name}");
+        }
+    }
+
+    i32::from(failed_count > 0)
+}
+
+/// Runs scenarios as parallel subprocesses. Returns process exit code.
+///
+/// Each scenario gets its own child process. `parallelism` is the maximum
+/// number of subprocesses to run concurrently (must be >= 1; use
+/// [`Parallelism::resolve`] to compute from CLI input).
+///
+/// The run list is pre-built by the caller via [`build_run_list`].
+///
+/// # Errors
+///
+/// Returns exit code `1` if the current executable path cannot be determined.
+/// Spawn or wait failures for individual subprocesses are recorded as failed
+/// results and do not abort the run.
+#[must_use]
+pub fn run_all_parallel(
+    runs: &[(String, PathBuf)],
+    visual: bool,
+    verbose: bool,
+    parallelism: usize,
+) -> i32 {
+    let exe = match std::env::current_exe() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Failed to determine current executable path: {e}");
+            return 1;
+        }
+    };
+    let batch_size = parallelism;
+
+    let mut all_results: Vec<ChildResult> = Vec::with_capacity(runs.len());
+
+    for batch in runs.chunks(batch_size) {
+        let mut children: Vec<(String, Child)> = Vec::with_capacity(batch.len());
+
+        for (display_name, path) in batch {
+            let name = scenario_name(path);
+            let mut cmd = Command::new(&exe);
+            cmd.arg("-s").arg(&name);
+            if visual {
+                cmd.arg("--visual");
+            }
+            if verbose {
+                cmd.arg("-v");
+            }
+            cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+            match cmd.spawn() {
+                Ok(child) => children.push((display_name.clone(), child)),
+                Err(e) => {
+                    eprintln!("Failed to spawn subprocess for [{display_name}]: {e}");
+                    all_results.push(ChildResult {
+                        name: display_name.clone(),
+                        passed: false,
+                        stdout: String::new(),
+                        stderr: format!("spawn error: {e}"),
+                    });
+                }
+            }
+        }
+
+        for (name, child) in children {
+            let output = match child.wait_with_output() {
+                Ok(o) => o,
+                Err(e) => {
+                    eprintln!("Failed to wait on child process [{name}]: {e}");
+                    all_results.push(ChildResult {
+                        name,
+                        passed: false,
+                        stdout: String::new(),
+                        stderr: format!("wait error: {e}"),
+                    });
+                    continue;
+                }
+            };
+
+            let stdout = String::from_utf8(output.stdout)
+                .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+            let stderr = String::from_utf8(output.stderr)
+                .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+
+            all_results.push(ChildResult {
+                name,
+                passed: output.status.success(),
+                stdout,
+                stderr,
+            });
+        }
+    }
+
+    // Print output in original scenario order (results collected per batch in spawn order).
+    for result in &all_results {
+        println!("[{}]", result.name);
+        for line in result.stdout.lines() {
+            println!("  {line}");
+        }
+        if !result.stderr.is_empty() {
+            for line in result.stderr.lines() {
+                eprintln!("  {line}");
+            }
+        }
+        println!();
+    }
+
+    let summary: Vec<(String, bool)> = all_results
+        .into_iter()
+        .map(|r| (r.name, r.passed))
+        .collect();
+    print_summary(&summary)
+}
+
+struct ChildResult {
+    name: String,
+    passed: bool,
+    stdout: String,
+    stderr: String,
 }
 
 fn collect_scenario_paths(scenario: Option<&str>, all: bool) -> Vec<PathBuf> {
@@ -112,6 +325,14 @@ fn find_scenario_by_name(dir: &Path, name: &str) -> Option<PathBuf> {
     })
 }
 
+fn scenario_name(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown")
+        .trim_end_matches(".scenario")
+        .to_owned()
+}
+
 fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| eprintln!("Failed to read {}: {e}", path.display()))
@@ -126,26 +347,26 @@ fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
 /// The `shared_log_buffer` persists across scenarios so the global tracing
 /// subscriber (installed once) always writes to the same buffer that each app's
 /// `poll_log_buffer` system reads from.
-fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogBuffer>) -> bool {
-    let scenario_name = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("unknown")
-        .trim_end_matches(".scenario")
-        .to_owned();
+fn run_scenario(
+    path: &Path,
+    headless: bool,
+    verbose: bool,
+    shared_log_buffer: &mut Option<LogBuffer>,
+) -> bool {
+    let sname = scenario_name(path);
 
     let Some(definition) = load_scenario(path) else {
-        eprintln!("FAIL [{scenario_name}]: could not load scenario file");
+        eprintln!("FAIL [{sname}]: could not load scenario file");
         return false;
     };
 
     println!(
-        "Running [{scenario_name}] breaker={} layout={}",
+        "Running [{sname}] breaker={} layout={}",
         definition.breaker, definition.layout
     );
     info!(
         target: "breaker_scenario_runner",
-        "scenario start name={scenario_name} breaker={} layout={}",
+        "scenario start name={sname} breaker={} layout={}",
         definition.breaker, definition.layout
     );
 
@@ -164,14 +385,16 @@ fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogB
         app.insert_resource(buf.clone());
     }
 
-    app.insert_resource(ScenarioConfig { definition });
-    app.add_plugins(ScenarioLifecycle);
-    app.init_resource::<CapturedLogs>();
-    app.add_systems(FixedUpdate, poll_log_buffer);
+    let eval_buffer = SharedEvalBuffer(Arc::new(Mutex::new(None)));
+
+    app.insert_resource(ScenarioConfig { definition })
+        .add_plugins(ScenarioLifecycle)
+        .init_resource::<CapturedLogs>()
+        .insert_resource(eval_buffer.clone())
+        .add_systems(FixedUpdate, poll_log_buffer)
+        .add_systems(Last, snapshot_eval_data);
 
     if headless {
-        // Run manually so we retain access to the World after exit.
-        // App::run() replaces self with App::empty(), losing all resources.
         app.finish();
         app.cleanup();
 
@@ -182,7 +405,7 @@ fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogB
             match guarded_update(&mut app) {
                 Ok(()) => {}
                 Err(msg) => {
-                    eprintln!("FAIL [{scenario_name}]: system panic: {msg}");
+                    eprintln!("FAIL [{sname}]: system panic: {msg}");
                     break;
                 }
             }
@@ -194,59 +417,46 @@ fn run_scenario(path: &Path, headless: bool, shared_log_buffer: &mut Option<LogB
                     .world()
                     .get_resource::<ScenarioFrame>()
                     .map_or(0, |f| f.0);
-                eprintln!(
-                    "FAIL [{scenario_name}]: wall-clock timeout ({timeout:?}) at frame {frame}"
-                );
+                eprintln!("FAIL [{sname}]: wall-clock timeout ({timeout:?}) at frame {frame}");
                 break;
             }
         }
 
-        // Drain any logs emitted after the last FixedUpdate tick
+        // Drain any logs emitted after the last FixedUpdate tick.
+        // Run one more snapshot to capture the drained logs.
         drain_remaining_logs(&mut app);
+        snapshot_eval_data_from_world(app.world(), &eval_buffer);
     } else {
         // Visual mode — Winit needs app.run() for the event loop.
-        // Results cannot be read after run(); visual mode is for debugging only.
+        // App::run() replaces self with App::empty(), losing all resources.
+        // The Last-schedule snapshot_eval_data captures results each frame,
+        // so the shared buffer holds the final state when run() returns.
         app.run();
-        println!("  [{scenario_name}] visual mode — pass/fail not evaluated");
-        return true;
     }
 
-    collect_and_evaluate(&app, &scenario_name)
+    collect_and_evaluate(&eval_buffer, &sname, verbose)
 }
 
-/// Extracts results from the app world and evaluates pass/fail using [`ScenarioVerdict`].
+/// Evaluates pass/fail from the shared eval buffer populated by [`snapshot_eval_data`].
 ///
-/// Returns `false` if any expected resource is missing, any health check fails,
-/// any invariant violation is unexpected, or any log was captured.
-fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
+/// Returns `false` if the buffer is empty (no snapshot captured), any health
+/// check fails, any invariant violation is unexpected, or any log was captured.
+fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose: bool) -> bool {
     let mut verdict = ScenarioVerdict::default();
 
-    let vl = app.world().get_resource::<ViolationLog>();
-    let cl = app.world().get_resource::<CapturedLogs>();
-    let cfg = app.world().get_resource::<ScenarioConfig>();
-    let st = app.world().get_resource::<ScenarioStats>();
+    let snapshot = shared
+        .0
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .take();
 
-    if let (Some(vl), Some(cl), Some(cfg), Some(st)) = (vl, cl, cfg, st) {
-        verdict.evaluate(&vl.0, &cl.0, st, &cfg.definition);
+    let (violations, logs, stats) = if let Some(snap) = snapshot {
+        verdict.evaluate(&snap.violations, &snap.logs, &snap.stats, &snap.definition);
+        (snap.violations, snap.logs, snap.stats)
     } else {
-        if vl.is_none() {
-            verdict.add_fail_reason("ViolationLog resource missing after run".into());
-        }
-        if cl.is_none() {
-            verdict.add_fail_reason("CapturedLogs resource missing after run".into());
-        }
-        if cfg.is_none() {
-            verdict.add_fail_reason("ScenarioConfig resource missing after run".into());
-        }
-        if st.is_none() {
-            verdict.add_fail_reason("ScenarioStats resource missing after run".into());
-        }
-    }
-
-    // Clone data for printing (resources are borrowed from world above).
-    let violations = vl.map(|v| v.0.clone()).unwrap_or_default();
-    let logs = cl.map(|c| c.0.clone()).unwrap_or_default();
-    let stats = st.cloned().unwrap_or_default();
+        verdict.add_fail_reason("No evaluation data captured during run".into());
+        (vec![], vec![], ScenarioStats::default())
+    };
 
     println!(
         "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
@@ -264,38 +474,274 @@ fn collect_and_evaluate(app: &App, scenario_name: &str) -> bool {
         info!(target: "breaker_scenario_runner", "scenario pass name={scenario_name}");
     } else {
         let reason_count = verdict.reasons.len();
-        println!("FAIL [{scenario_name}]: {reason_count} reason(s)");
+        println!("FAIL [{scenario_name}]: {reason_count} failure(s)");
         warn!(
             target: "breaker_scenario_runner",
             "scenario fail name={scenario_name} reasons={reason_count}",
         );
-        for reason in &verdict.reasons {
-            println!("  REASON [{scenario_name}]: {reason}");
-        }
-        for v in &violations {
-            println!(
-                "  VIOLATION frame={} {:?} entity={:?}: {}",
-                v.frame, v.invariant, v.entity, v.message
-            );
-            debug!(
-                target: "breaker_scenario_runner",
-                "violation frame={} invariant={:?} entity={:?}: {}",
-                v.frame, v.invariant, v.entity, v.message
-            );
-        }
-        for l in &logs {
-            println!(
-                "  LOG frame={} {:?} target={}: {}",
-                l.frame, l.level, l.target, l.message
-            );
+
+        if verbose {
+            print_verbose_failures(scenario_name, &verdict, &violations, &logs);
+        } else {
+            print_compact_failures(&verdict, &violations, &logs);
         }
     }
 
     verdict.passed()
 }
 
+// ---------------------------------------------------------------------------
+// Verbose output (--verbose flag)
+// ---------------------------------------------------------------------------
+
+fn print_verbose_failures(
+    scenario_name: &str,
+    verdict: &ScenarioVerdict,
+    violations: &[ViolationEntry],
+    logs: &[LogEntry],
+) {
+    for reason in &verdict.reasons {
+        println!("  REASON [{scenario_name}]: {reason}");
+    }
+    for v in violations {
+        println!(
+            "  VIOLATION frame={} {:?} entity={:?}: {}",
+            v.frame, v.invariant, v.entity, v.message
+        );
+        debug!(
+            target: "breaker_scenario_runner",
+            "violation frame={} invariant={:?} entity={:?}: {}",
+            v.frame, v.invariant, v.entity, v.message
+        );
+    }
+    for l in logs {
+        println!(
+            "  LOG frame={} {:?} target={}: {}",
+            l.frame, l.level, l.target, l.message
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Compact output (default)
+// ---------------------------------------------------------------------------
+
+fn print_compact_failures(
+    verdict: &ScenarioVerdict,
+    violations: &[ViolationEntry],
+    logs: &[LogEntry],
+) {
+    // Grouped violations.
+    let violation_groups = group_violations(violations);
+    for g in &violation_groups {
+        println!(
+            "  {:30} x{:<5} {}",
+            format!("{:?}", g.invariant),
+            g.count,
+            format_frame_range(g.count, g.first_frame, g.last_frame)
+        );
+    }
+
+    // Grouped logs.
+    let log_groups = group_logs(logs);
+    for g in &log_groups {
+        println!(
+            "  {:30} x{:<5} {}",
+            format!("captured {:?} log", g.level),
+            g.count,
+            format_frame_range(g.count, g.first_frame, g.last_frame)
+        );
+        if g.count == 1 {
+            println!("    {}", g.message);
+        }
+    }
+
+    // Health-check reasons (those not covered by violations or logs).
+    for reason in &verdict.reasons {
+        if is_health_check_reason(reason) {
+            println!("  {reason}");
+        }
+    }
+}
+
+fn format_frame_range(count: u32, first: u32, last: u32) -> String {
+    if count == 1 {
+        format!("frame {first}")
+    } else {
+        format!("frames {first}..{last}")
+    }
+}
+
+/// Returns `true` if the reason is a health-check (not a violation or log reason).
+fn is_health_check_reason(reason: &str) -> bool {
+    // Violation reasons come from InvariantKind::fail_reason() and log reasons
+    // start with "captured". Health checks are everything else.
+    !reason.starts_with("captured ") && !is_invariant_fail_reason(reason)
+}
+
+/// Returns `true` if the reason matches any `InvariantKind::fail_reason()`.
+fn is_invariant_fail_reason(reason: &str) -> bool {
+    InvariantKind::ALL.iter().any(|v| v.fail_reason() == reason)
+}
+
+// ---------------------------------------------------------------------------
+// Grouping types and functions
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, PartialEq)]
+struct ViolationGroup {
+    invariant: InvariantKind,
+    count: u32,
+    first_frame: u32,
+    last_frame: u32,
+}
+
+#[derive(Debug, PartialEq)]
+struct LogGroup {
+    level: bevy::log::Level,
+    message: String,
+    count: u32,
+    first_frame: u32,
+    last_frame: u32,
+}
+
+fn group_violations(violations: &[ViolationEntry]) -> Vec<ViolationGroup> {
+    use std::collections::HashMap;
+
+    let mut map: HashMap<InvariantKind, (u32, u32, u32)> = HashMap::new();
+    let mut insertion_order: Vec<InvariantKind> = Vec::new();
+
+    for v in violations {
+        let entry = map.entry(v.invariant).or_insert_with(|| {
+            insertion_order.push(v.invariant);
+            (0, v.frame, v.frame)
+        });
+        entry.0 += 1;
+        entry.1 = entry.1.min(v.frame);
+        entry.2 = entry.2.max(v.frame);
+    }
+
+    insertion_order
+        .into_iter()
+        .filter_map(|kind| {
+            map.get(&kind).map(|&(count, first, last)| ViolationGroup {
+                invariant: kind,
+                count,
+                first_frame: first,
+                last_frame: last,
+            })
+        })
+        .collect()
+}
+
+fn group_logs(logs: &[LogEntry]) -> Vec<LogGroup> {
+    use std::collections::HashMap;
+
+    type Key = (bevy::log::Level, String);
+    let mut map: HashMap<Key, (u32, u32, u32)> = HashMap::new();
+    let mut insertion_order: Vec<Key> = Vec::new();
+
+    for l in logs {
+        let key: Key = (l.level, l.message.clone());
+        let entry = map.entry(key.clone()).or_insert_with(|| {
+            insertion_order.push(key);
+            (0, l.frame, l.frame)
+        });
+        entry.0 += 1;
+        entry.1 = entry.1.min(l.frame);
+        entry.2 = entry.2.max(l.frame);
+    }
+
+    insertion_order
+        .into_iter()
+        .filter_map(|key| {
+            map.get(&key).map(|&(count, first, last)| LogGroup {
+                level: key.0,
+                message: key.1,
+                count,
+                first_frame: first,
+                last_frame: last,
+            })
+        })
+        .collect()
+}
+
 /// Bevy's default fixed timestep frequency (Hz).
 const FIXED_TIMESTEP_HZ: f64 = 64.0;
+
+// ---------------------------------------------------------------------------
+// Visual-mode result capture
+// ---------------------------------------------------------------------------
+
+/// Cloned snapshot of evaluation data, captured by a `Last` system so results
+/// survive `App::run()` (which replaces self with `App::empty()`).
+struct EvalSnapshot {
+    violations: Vec<ViolationEntry>,
+    logs: Vec<LogEntry>,
+    stats: ScenarioStats,
+    definition: ScenarioDefinition,
+}
+
+/// Shared buffer inserted as a resource so the snapshot system can write to it
+/// and the caller can read it after `app.run()` returns.
+#[derive(Resource, Clone)]
+struct SharedEvalBuffer(Arc<Mutex<Option<EvalSnapshot>>>);
+
+/// Snapshots evaluation data every frame into the shared buffer.
+///
+/// Runs in `Last` so it captures the final state even on the exit frame.
+fn snapshot_eval_data(
+    vl: Option<Res<ViolationLog>>,
+    cl: Option<Res<CapturedLogs>>,
+    stats: Option<Res<ScenarioStats>>,
+    config: Option<Res<ScenarioConfig>>,
+    shared: Res<SharedEvalBuffer>,
+) {
+    let (Some(vl), Some(cl), Some(stats), Some(config)) = (vl, cl, stats, config) else {
+        return;
+    };
+    if let Ok(mut guard) = shared.0.lock() {
+        *guard = Some(EvalSnapshot {
+            violations: vl.0.clone(),
+            logs: cl.0.clone(),
+            stats: stats.clone(),
+            definition: config.definition.clone(),
+        });
+    }
+}
+
+/// Non-system version of [`snapshot_eval_data`] for direct world access.
+///
+/// Called after `drain_remaining_logs` in headless mode to capture the final
+/// state including any logs drained after the last `FixedUpdate` tick.
+fn snapshot_eval_data_from_world(world: &World, shared: &SharedEvalBuffer) {
+    let (Some(vl), Some(cl), Some(stats), Some(config)) = (
+        world.get_resource::<ViolationLog>(),
+        world.get_resource::<CapturedLogs>(),
+        world.get_resource::<ScenarioStats>(),
+        world.get_resource::<ScenarioConfig>(),
+    ) else {
+        return;
+    };
+    if let Ok(mut guard) = shared.0.lock() {
+        *guard = Some(EvalSnapshot {
+            violations: vl.0.clone(),
+            logs: cl.0.clone(),
+            stats: stats.clone(),
+            definition: config.definition.clone(),
+        });
+    }
+}
+
+/// Scenario runner log plugin — captures `WARN`-and-above logs via [`scenario_log_layer_factory`].
+fn scenario_log_plugin() -> LogPlugin {
+    LogPlugin {
+        level: bevy::log::Level::WARN,
+        filter: "warn,bevy_egui=error".to_owned(),
+        custom_layer: scenario_log_layer_factory,
+        ..default()
+    }
+}
 
 /// Speed multiplier for visual mode — each rendered frame advances virtual
 /// time by this many fixed timesteps.
@@ -303,64 +749,45 @@ const VISUAL_SPEED_MULTIPLIER: f64 = 10.0;
 
 /// Builds a Bevy app configured for scenario running.
 ///
-/// In headless mode, disables winit so the app runs without a display server.
-/// On the first run, installs `LogPlugin` with a custom tracing layer.
-/// On subsequent runs, disables `LogPlugin` to avoid the "global logger already
-/// set" error — the shared `LogBuffer` is inserted by `run_scenario` instead.
+/// In headless mode, uses [`MinimalPlugins`] with only the specific Bevy
+/// plugins the game needs (states, assets, input). This avoids pulling in the
+/// full render pipeline, winit event loop, and GPU initialization — none of
+/// which are needed when running scenarios at CPU speed on CI. Asset types
+/// for headless spawn systems (`Mesh`, `ColorMaterial`, `Font`) are registered by
+/// [`Game::headless()`].
+///
+/// In visual mode, uses [`DefaultPlugins`] for full windowed rendering.
+///
+/// On the first run (headless or visual), installs `LogPlugin` with a custom
+/// tracing layer. On subsequent runs, skips `LogPlugin` (headless: omits it;
+/// visual: disables it from `DefaultPlugins`) to avoid the "global logger
+/// already set" error — the shared `LogBuffer` is inserted by `run_scenario`
+/// instead.
 fn build_app(headless: bool, first_run: bool) -> App {
     let mut app = App::new();
 
-    let window = if headless {
-        WindowPlugin {
-            primary_window: None,
-            exit_condition: ExitCondition::DontExit,
-            ..default()
-        }
-    } else {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: "Scenario Runner".into(),
-                ..default()
-            }),
-            ..default()
-        }
-    };
-
     // Point to the game crate's assets directory so scenarios
     // load real RON config files rather than code defaults.
-    let mut defaults = DefaultPlugins.set(window).set(bevy::asset::AssetPlugin {
-        file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned(),
-        ..default()
-    });
-
-    if first_run {
-        defaults = defaults.set(LogPlugin {
-            filter: "warn,bevy_egui=error,breaker=info".to_owned(),
-            custom_layer: scenario_log_layer_factory,
-            ..default()
-        });
-    } else {
-        defaults = defaults.disable::<LogPlugin>();
-    }
+    let game_asset_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../breaker-game/assets").to_owned();
 
     if headless {
-        // Disable Winit (no display server) and GPU initialization (no GPU
-        // on CI runners). Setting backends: None causes RenderPlugin to skip
-        // adapter creation entirely, avoiding the "Unable to find a GPU" panic.
-        defaults = defaults
-            .set(RenderPlugin {
-                render_creation: RenderCreation::Automatic(WgpuSettings {
-                    backends: None,
-                    ..default()
-                }),
+        // Minimal plugin set — no render pipeline, no window, no GPU.
+        // Asset types needed by game spawn systems (Mesh, ColorMaterial, Font)
+        // are registered by HeadlessAssetsPlugin inside Game::headless().
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::state::app::StatesPlugin,
+            bevy::asset::AssetPlugin {
+                file_path: game_asset_path,
                 ..default()
-            })
-            .disable::<WinitPlugin>();
-    }
+            },
+            bevy::input::InputPlugin,
+        ));
 
-    app.add_plugins(defaults);
+        if first_run {
+            app.add_plugins(scenario_log_plugin());
+        }
 
-    if headless {
         // Advance simulated time by exactly one fixed timestep per Update tick.
         // Without this, Time<Fixed> accumulates based on real wall-clock elapsed
         // time, so a 20k-frame scenario would take ~5 minutes. With ManualDuration,
@@ -368,17 +795,37 @@ fn build_app(headless: bool, first_run: bool) -> App {
         // Fixed ticks execute in sequence at CPU speed.
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
             1.0 / FIXED_TIMESTEP_HZ,
-        )));
-
-        app.add_plugins(Game::headless());
+        )))
+        .add_plugins(Game::headless());
     } else {
-        // Visual mode runs at 10x speed to avoid 5+ minute waits for
-        // 20,000-frame scenarios. Each Update tick advances virtual time
-        // by 10 fixed timesteps (10/64 s).
-        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
-            VISUAL_SPEED_MULTIPLIER / FIXED_TIMESTEP_HZ,
-        )));
-        app.add_plugins(Game::default());
+        // Visual mode — full DefaultPlugins for windowed rendering.
+        let mut defaults = DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Scenario Runner".into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(bevy::asset::AssetPlugin {
+                file_path: game_asset_path,
+                ..default()
+            });
+
+        if first_run {
+            defaults = defaults.set(scenario_log_plugin());
+        } else {
+            defaults = defaults.disable::<LogPlugin>();
+        }
+
+        app.add_plugins(defaults)
+            // Visual mode runs at 10x speed to avoid 5+ minute waits for
+            // 20,000-frame scenarios. Each Update tick advances virtual time
+            // by 10 fixed timesteps (10/64 s).
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs_f64(
+                VISUAL_SPEED_MULTIPLIER / FIXED_TIMESTEP_HZ,
+            )))
+            .add_plugins(Game::default());
     }
 
     app
@@ -457,6 +904,133 @@ mod tests {
     use crate::{invariants::ScenarioFrame, log_capture::LogBuffer};
 
     // -------------------------------------------------------------------------
+    // parse_parallelism — parses "all" or a positive integer
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn parse_parallelism_parses_all() {
+        let result = parse_parallelism("all");
+        assert_eq!(result, Ok(Parallelism::All));
+    }
+
+    #[test]
+    fn parse_parallelism_parses_all_case_insensitive() {
+        assert_eq!(parse_parallelism("ALL"), Ok(Parallelism::All));
+        assert_eq!(parse_parallelism("All"), Ok(Parallelism::All));
+    }
+
+    #[test]
+    fn parse_parallelism_parses_positive_number() {
+        let result = parse_parallelism("8");
+        assert_eq!(result, Ok(Parallelism::Count(8)));
+    }
+
+    #[test]
+    fn parse_parallelism_rejects_zero() {
+        let result = parse_parallelism("0");
+        assert!(result.is_err(), "expected error for 0, got: {result:?}");
+    }
+
+    #[test]
+    fn parse_parallelism_rejects_non_numeric_string() {
+        let result = parse_parallelism("abc");
+        assert!(result.is_err(), "expected error for 'abc', got: {result:?}");
+    }
+
+    // -------------------------------------------------------------------------
+    // Parallelism::resolve — resolves to concrete batch size
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn parallelism_count_resolves_to_given_value() {
+        assert_eq!(Parallelism::Count(4).resolve(100), 4);
+    }
+
+    #[test]
+    fn parallelism_all_resolves_to_total() {
+        assert_eq!(Parallelism::All.resolve(100), 100);
+    }
+
+    #[test]
+    fn parallelism_all_resolves_to_at_least_one() {
+        assert_eq!(Parallelism::All.resolve(0), 1);
+    }
+
+    #[test]
+    fn parallelism_count_zero_resolves_to_one() {
+        assert_eq!(Parallelism::Count(0).resolve(100), 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Parallelism::Display — formats for user-facing output
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn parallelism_display_count() {
+        assert_eq!(Parallelism::Count(4).to_string(), "4");
+    }
+
+    #[test]
+    fn parallelism_display_all() {
+        assert_eq!(Parallelism::All.to_string(), "all");
+    }
+
+    // -------------------------------------------------------------------------
+    // print_summary — prints cross-scenario summary and returns exit code
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn print_summary_returns_zero_when_all_pass() {
+        let results = vec![("a".to_owned(), true), ("b".to_owned(), true)];
+        assert_eq!(print_summary(&results), 0);
+    }
+
+    #[test]
+    fn print_summary_returns_one_when_any_fail() {
+        let results = vec![("a".to_owned(), true), ("b".to_owned(), false)];
+        assert_eq!(print_summary(&results), 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // build_run_list — builds run entries from scenario discovery
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn build_run_list_single_scenario_returns_one_entry() {
+        // Use a known scenario name that exists in the scenarios/ directory.
+        let runs = build_run_list(Some("aegis_chaos"), false);
+        assert_eq!(runs.len(), 1, "single scenario must produce 1 entry");
+        assert_eq!(runs[0].0, "aegis_chaos");
+    }
+
+    #[test]
+    fn build_run_list_all_returns_one_entry_per_scenario() {
+        let runs = build_run_list(None, true);
+        assert!(
+            runs.len() > 1,
+            "--all must discover multiple scenarios, got {}",
+            runs.len()
+        );
+        // Verify no duplicates
+        let names: Vec<&str> = runs.iter().map(|(n, _)| n.as_str()).collect();
+        let unique: std::collections::HashSet<&str> = names.iter().copied().collect();
+        assert_eq!(
+            names.len(),
+            unique.len(),
+            "run list must not contain duplicate names"
+        );
+    }
+
+    #[test]
+    fn build_run_list_nonexistent_scenario_returns_empty() {
+        let runs = build_run_list(Some("nonexistent_scenario_xyz"), false);
+        assert!(
+            runs.is_empty(),
+            "nonexistent scenario must produce 0 entries"
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // is_timed_out — returns true when start is in the past beyond timeout
     // -------------------------------------------------------------------------
 
@@ -524,9 +1098,9 @@ mod tests {
             ),
         ];
         let log_buffer = LogBuffer(Arc::new(Mutex::new(buffer_entries)));
-        app.insert_resource(log_buffer);
-        app.insert_resource(CapturedLogs::default());
-        app.insert_resource(ScenarioFrame(42));
+        app.insert_resource(log_buffer)
+            .insert_resource(CapturedLogs::default())
+            .insert_resource(ScenarioFrame(42));
 
         drain_remaining_logs(&mut app);
 
@@ -565,8 +1139,8 @@ mod tests {
         }
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, panicking_system);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, panicking_system);
 
         let result = guarded_update(&mut app);
 
@@ -598,5 +1172,238 @@ mod tests {
             result.is_ok(),
             "expected guarded_update to return Ok when update completes normally, got: {result:?}"
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // group_violations — groups by invariant kind
+    // -------------------------------------------------------------------------
+
+    fn make_violation(invariant: InvariantKind, frame: u32) -> ViolationEntry {
+        ViolationEntry {
+            frame,
+            invariant,
+            entity: None,
+            message: format!("test: {invariant:?}"),
+        }
+    }
+
+    #[test]
+    fn group_violations_groups_by_invariant_kind() {
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds, 100),
+            make_violation(InvariantKind::BoltInBounds, 101),
+            make_violation(InvariantKind::BoltInBounds, 105),
+        ];
+
+        let groups = group_violations(&violations);
+
+        assert_eq!(
+            groups.len(),
+            1,
+            "3 same-kind violations must produce 1 group"
+        );
+        assert_eq!(groups[0].invariant, InvariantKind::BoltInBounds);
+        assert_eq!(groups[0].count, 3);
+        assert_eq!(groups[0].first_frame, 100);
+        assert_eq!(groups[0].last_frame, 105);
+    }
+
+    #[test]
+    fn group_violations_separates_different_invariant_kinds() {
+        let violations = vec![
+            make_violation(InvariantKind::BoltInBounds, 10),
+            make_violation(InvariantKind::NoNaN, 20),
+            make_violation(InvariantKind::BoltInBounds, 30),
+        ];
+
+        let groups = group_violations(&violations);
+
+        assert_eq!(
+            groups.len(),
+            2,
+            "BoltInBounds + NoNaN must produce 2 groups"
+        );
+        let bolt = groups
+            .iter()
+            .find(|g| g.invariant == InvariantKind::BoltInBounds)
+            .unwrap();
+        let nan = groups
+            .iter()
+            .find(|g| g.invariant == InvariantKind::NoNaN)
+            .unwrap();
+        assert_eq!(bolt.count, 2);
+        assert_eq!(bolt.first_frame, 10);
+        assert_eq!(bolt.last_frame, 30);
+        assert_eq!(nan.count, 1);
+        assert_eq!(nan.first_frame, 20);
+        assert_eq!(nan.last_frame, 20);
+    }
+
+    #[test]
+    fn group_violations_single_entry_has_matching_first_last_frame() {
+        let violations = vec![make_violation(InvariantKind::NoNaN, 42)];
+
+        let groups = group_violations(&violations);
+
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].first_frame, 42);
+        assert_eq!(groups[0].last_frame, 42);
+        assert_eq!(groups[0].count, 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // group_logs — groups by level + message
+    // -------------------------------------------------------------------------
+
+    fn make_log(level: bevy::log::Level, message: &str, frame: u32) -> LogEntry {
+        LogEntry {
+            level,
+            target: "breaker::test".to_owned(),
+            message: message.to_owned(),
+            frame,
+        }
+    }
+
+    #[test]
+    fn group_logs_groups_by_level_and_message() {
+        let logs = vec![
+            make_log(bevy::log::Level::WARN, "bad thing", 100),
+            make_log(bevy::log::Level::WARN, "bad thing", 200),
+            make_log(bevy::log::Level::WARN, "bad thing", 300),
+        ];
+
+        let groups = group_logs(&logs);
+
+        assert_eq!(groups.len(), 1, "3 identical logs must produce 1 group");
+        assert_eq!(groups[0].count, 3);
+        assert_eq!(groups[0].first_frame, 100);
+        assert_eq!(groups[0].last_frame, 300);
+        assert_eq!(groups[0].message, "bad thing");
+    }
+
+    #[test]
+    fn group_logs_separates_different_messages() {
+        let logs = vec![
+            make_log(bevy::log::Level::WARN, "msg a", 10),
+            make_log(bevy::log::Level::WARN, "msg b", 20),
+        ];
+
+        let groups = group_logs(&logs);
+
+        assert_eq!(
+            groups.len(),
+            2,
+            "2 different messages must produce 2 groups"
+        );
+    }
+
+    #[test]
+    fn group_logs_separates_different_levels_same_message() {
+        let logs = vec![
+            make_log(bevy::log::Level::WARN, "same msg", 10),
+            make_log(bevy::log::Level::ERROR, "same msg", 20),
+        ];
+
+        let groups = group_logs(&logs);
+
+        assert_eq!(
+            groups.len(),
+            2,
+            "WARN + ERROR with same message must produce 2 groups"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // is_invariant_fail_reason — matches all InvariantKind fail reasons
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn is_invariant_fail_reason_returns_true_for_all_invariant_kinds() {
+        for variant in InvariantKind::ALL {
+            assert!(
+                is_invariant_fail_reason(variant.fail_reason()),
+                "is_invariant_fail_reason must return true for {:?} fail_reason: {:?}",
+                variant,
+                variant.fail_reason()
+            );
+        }
+    }
+
+    #[test]
+    fn is_invariant_fail_reason_returns_false_for_health_check_strings() {
+        assert!(
+            !is_invariant_fail_reason("no actions were injected during scenario run"),
+            "health check string must not match as invariant fail reason"
+        );
+        assert!(
+            !is_invariant_fail_reason("scenario never entered Playing state"),
+            "health check string must not match as invariant fail reason"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // snapshot_eval_data — captures results into shared buffer
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn snapshot_eval_data_captures_results_into_shared_buffer() {
+        use crate::types::{InputStrategy, InvariantParams, ScriptedParams};
+
+        let shared = SharedEvalBuffer(Arc::new(Mutex::new(None)));
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ViolationLog(vec![ViolationEntry {
+                frame: 42,
+                invariant: InvariantKind::BoltInBounds,
+                entity: None,
+                message: "test violation".into(),
+            }]))
+            .insert_resource(CapturedLogs::default())
+            .insert_resource(ScenarioStats {
+                actions_injected: 100,
+                invariant_checks: 50,
+                max_frame: 500,
+                entered_playing: true,
+                bolts_tagged: 1,
+                breakers_tagged: 1,
+            })
+            .insert_resource(ScenarioConfig {
+                definition: ScenarioDefinition {
+                    breaker: "Aegis".to_owned(),
+                    layout: "Corridor".to_owned(),
+                    input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+                    max_frames: 1000,
+                    invariants: vec![],
+                    expected_violations: None,
+                    debug_setup: None,
+                    invariant_params: InvariantParams { max_bolt_count: 8 },
+                    allow_early_end: true,
+                },
+            })
+            .insert_resource(shared.clone())
+            .add_systems(Last, snapshot_eval_data);
+
+        // Before tick: buffer is None
+        assert!(shared.0.lock().unwrap().is_none());
+
+        // Tick once to run the Last system
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
+
+        // After tick: buffer has the snapshot
+        let snapshot = shared
+            .0
+            .lock()
+            .unwrap()
+            .take()
+            .expect("snapshot should be Some after tick");
+        assert_eq!(snapshot.violations.len(), 1);
+        assert_eq!(snapshot.violations[0].frame, 42);
+        assert_eq!(snapshot.stats.max_frame, 500);
+        assert_eq!(snapshot.stats.actions_injected, 100);
     }
 }

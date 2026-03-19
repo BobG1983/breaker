@@ -23,19 +23,30 @@ pub struct ApplyTimePenalty {
     pub seconds: f32,
 }
 
+/// Sent by `spawn_cells_from_layout` after all cells are spawned.
+///
+/// Consumed by the spawn coordinator.
+#[derive(Message, Clone, Debug)]
+pub struct CellsSpawned;
+
+/// Sent by the spawn coordinator after all domain spawn signals have been received.
+///
+/// Indicates the game world is fully set up and gameplay can begin. Consumed by
+/// the scenario runner for baseline entity count sampling.
+#[derive(Message, Clone, Debug)]
+pub struct SpawnNodeComplete;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn messages_debug_format() {
-        let a = NodeCleared;
-        assert!(format!("{a:?}").contains("NodeCleared"));
-
-        let b = TimerExpired;
-        assert!(format!("{b:?}").contains("TimerExpired"));
-
-        let c = ApplyTimePenalty { seconds: 5.0 };
-        assert!(format!("{c:?}").contains("ApplyTimePenalty"));
+        assert!(format!("{NodeCleared:?}").contains("NodeCleared"));
+        assert!(format!("{TimerExpired:?}").contains("TimerExpired"));
+        let penalty = ApplyTimePenalty { seconds: 5.0 };
+        assert!(format!("{penalty:?}").contains("ApplyTimePenalty"));
+        assert!(format!("{CellsSpawned:?}").contains("CellsSpawned"));
+        assert!(format!("{SpawnNodeComplete:?}").contains("SpawnNodeComplete"));
     }
 }

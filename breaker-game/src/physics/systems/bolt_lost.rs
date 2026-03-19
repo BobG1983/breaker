@@ -85,11 +85,11 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<PlayfieldConfig>();
-        app.init_resource::<GameRng>();
-        app.add_message::<BoltLost>();
-        app.add_systems(FixedUpdate, bolt_lost);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<GameRng>()
+            .add_message::<BoltLost>()
+            .add_systems(FixedUpdate, bolt_lost);
         app
     }
 

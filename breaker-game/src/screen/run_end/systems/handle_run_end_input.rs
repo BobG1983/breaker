@@ -25,10 +25,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.init_resource::<InputActions>();
-        app.add_systems(Update, handle_run_end_input);
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .init_resource::<InputActions>()
+            .add_systems(Update, handle_run_end_input);
         app
     }
 

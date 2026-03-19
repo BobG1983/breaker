@@ -4,14 +4,21 @@ use bevy::prelude::*;
 
 use crate::{
     shared::{CleanupOnNodeExit, PlayfieldConfig},
-    wall::components::{Wall, WallSize},
+    wall::{
+        components::{Wall, WallSize},
+        messages::WallsSpawned,
+    },
 };
 
 /// Spawns left, right, and ceiling wall entities.
 ///
 /// No floor wall — bolt-lost handles that case separately.
 /// Wall thickness is loaded from [`PlayfieldConfig::wall_half_thickness`].
-pub(crate) fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig>) {
+pub(crate) fn spawn_walls(
+    mut commands: Commands,
+    playfield: Res<PlayfieldConfig>,
+    mut walls_spawned: MessageWriter<WallsSpawned>,
+) {
     let half_width = playfield.width / 2.0;
     let half_height = playfield.height / 2.0;
     let wall_ht = playfield.wall_half_thickness();
@@ -48,6 +55,8 @@ pub(crate) fn spawn_walls(mut commands: Commands, playfield: Res<PlayfieldConfig
         Transform::from_xyz(0.0, playfield.top() + wall_ht, 0.0),
         CleanupOnNodeExit,
     ));
+
+    walls_spawned.write(WallsSpawned);
 }
 
 #[cfg(test)]
@@ -57,9 +66,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<PlayfieldConfig>();
-        app.add_systems(Update, spawn_walls);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<WallsSpawned>()
+            .init_resource::<PlayfieldConfig>()
+            .add_systems(Update, spawn_walls);
         app
     }
 
@@ -104,6 +114,18 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 3, "all walls should have CleanupOnNodeExit");
+    }
+
+    #[test]
+    fn spawn_walls_sends_walls_spawned_message() {
+        let mut app = test_app();
+        app.update();
+
+        let messages = app.world().resource::<Messages<WallsSpawned>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "spawn_walls must send WallsSpawned message"
+        );
     }
 
     #[test]

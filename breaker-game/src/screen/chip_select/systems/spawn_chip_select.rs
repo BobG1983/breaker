@@ -184,10 +184,10 @@ mod tests {
 
     fn test_app_with_registry(registry: ChipRegistry) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ChipSelectConfig::default());
-        app.insert_resource(registry);
-        app.add_systems(Update, spawn_chip_select);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(registry)
+            .add_systems(Update, spawn_chip_select);
         app
     }
 

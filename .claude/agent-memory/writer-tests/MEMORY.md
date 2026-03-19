@@ -8,6 +8,7 @@
 - [pattern_bevy_system_stub_for_tests.md](pattern_bevy_system_stub_for_tests.md) — Bevy system stubs and type alias for complex Query
 - [pattern_message_capture.md](pattern_message_capture.md) — Capture MessageReader<T> into Resource for assertion
 - [pattern_doc_markdown_clippy.md](pattern_doc_markdown_clippy.md) — CamelCase in doc comments needs backticks
+- [pattern_entity_generational_ids_testing.md](pattern_entity_generational_ids_testing.md) — Bevy generational IDs: stale HashMap entries cause memory leaks, not false violations
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

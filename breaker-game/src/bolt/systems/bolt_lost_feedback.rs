@@ -40,16 +40,16 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BoltLost>();
-        app.add_systems(
-            Update,
-            (
-                enqueue_lost.before(spawn_bolt_lost_text),
-                spawn_bolt_lost_text,
-                animate_fade_out.after(spawn_bolt_lost_text),
-            ),
-        );
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltLost>()
+            .add_systems(
+                Update,
+                (
+                    enqueue_lost.before(spawn_bolt_lost_text),
+                    spawn_bolt_lost_text,
+                    animate_fade_out.after(spawn_bolt_lost_text),
+                ),
+            );
         app
     }
 

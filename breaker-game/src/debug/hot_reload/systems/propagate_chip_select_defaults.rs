@@ -30,10 +30,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<ChipSelectDefaults>();
-        app.init_resource::<ChipSelectConfig>();
-        app.add_systems(Update, propagate_chip_select_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<ChipSelectDefaults>()
+            .init_resource::<ChipSelectConfig>()
+            .add_systems(Update, propagate_chip_select_defaults);
         app
     }
 

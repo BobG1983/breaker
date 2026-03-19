@@ -68,13 +68,13 @@ mod tests {
 
     fn test_app(outcome: RunOutcome) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(RunState {
-            node_index: 0,
-            outcome,
-            ..default()
-        });
-        app.add_systems(Update, spawn_run_end_screen);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(RunState {
+                node_index: 0,
+                outcome,
+                ..default()
+            })
+            .add_systems(Update, spawn_run_end_screen);
         app
     }
 

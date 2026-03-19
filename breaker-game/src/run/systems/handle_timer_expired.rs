@@ -54,16 +54,16 @@ mod tests {
 
     fn test_app(outcome: RunOutcome) -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.add_message::<TimerExpired>();
-        app.insert_resource(RunState {
-            node_index: 0,
-            outcome,
-            ..default()
-        });
-        app.insert_resource(SendTimerExpired(false));
-        app.add_systems(FixedUpdate, (send_expired, handle_timer_expired).chain());
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .add_message::<TimerExpired>()
+            .insert_resource(RunState {
+                node_index: 0,
+                outcome,
+                ..default()
+            })
+            .insert_resource(SendTimerExpired(false))
+            .add_systems(FixedUpdate, (send_expired, handle_timer_expired).chain());
         app
     }
 

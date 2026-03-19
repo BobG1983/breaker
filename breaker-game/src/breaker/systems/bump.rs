@@ -309,22 +309,22 @@ mod tests {
 
     fn update_bump_test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<InputActions>();
-        app.add_message::<BumpPerformed>();
-        app.add_message::<BumpWhiffed>();
-        app.init_resource::<CapturedBumps>();
-        app.init_resource::<CapturedWhiffs>();
-        app.insert_resource(TestInputActive(false));
-        app.add_systems(
-            FixedUpdate,
-            (
-                set_bump_action.before(update_bump),
-                update_bump,
-                (capture_bumps, capture_whiffs).after(update_bump),
-            ),
-        );
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<InputActions>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .init_resource::<CapturedBumps>()
+            .init_resource::<CapturedWhiffs>()
+            .insert_resource(TestInputActive(false))
+            .add_systems(
+                FixedUpdate,
+                (
+                    set_bump_action.before(update_bump),
+                    update_bump,
+                    (capture_bumps, capture_whiffs).after(update_bump),
+                ),
+            );
         app
     }
 
@@ -570,21 +570,21 @@ mod tests {
 
     fn grade_bump_test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.add_message::<BoltHitBreaker>();
-        app.add_message::<BumpPerformed>();
-        app.add_message::<BumpWhiffed>();
-        app.init_resource::<CapturedBumps>();
-        app.insert_resource(TestHitMessage(None));
-        app.add_systems(
-            FixedUpdate,
-            (
-                enqueue_hit.before(grade_bump),
-                grade_bump,
-                capture_bumps.after(grade_bump),
-            ),
-        );
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .init_resource::<CapturedBumps>()
+            .insert_resource(TestHitMessage(None))
+            .add_systems(
+                FixedUpdate,
+                (
+                    enqueue_hit.before(grade_bump),
+                    grade_bump,
+                    capture_bumps.after(grade_bump),
+                ),
+            );
         app
     }
 
@@ -716,26 +716,26 @@ mod tests {
     /// plus a hit injector and message captures.
     fn combined_bump_test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<InputActions>();
-        app.add_message::<BoltHitBreaker>();
-        app.add_message::<BumpPerformed>();
-        app.add_message::<BumpWhiffed>();
-        app.init_resource::<CapturedBumps>();
-        app.init_resource::<CapturedWhiffs>();
-        app.insert_resource(TestInputActive(false));
-        app.insert_resource(TestHitMessage(None));
-        app.add_systems(
-            FixedUpdate,
-            (
-                set_bump_action.before(update_bump),
-                enqueue_hit.before(grade_bump),
-                update_bump,
-                grade_bump.after(update_bump),
-                (capture_bumps, capture_whiffs).after(grade_bump),
-            ),
-        );
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<InputActions>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .init_resource::<CapturedBumps>()
+            .init_resource::<CapturedWhiffs>()
+            .insert_resource(TestInputActive(false))
+            .insert_resource(TestHitMessage(None))
+            .add_systems(
+                FixedUpdate,
+                (
+                    set_bump_action.before(update_bump),
+                    enqueue_hit.before(grade_bump),
+                    update_bump,
+                    grade_bump.after(update_bump),
+                    (capture_bumps, capture_whiffs).after(grade_bump),
+                ),
+            );
         app
     }
 
@@ -845,15 +845,15 @@ mod tests {
         use crate::input::systems::clear_input_actions;
 
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<InputActions>();
-        app.add_message::<BumpPerformed>();
-        app.add_message::<BumpWhiffed>();
-        app.add_message::<BoltHitBreaker>();
-        app.init_resource::<CapturedBumps>();
-        app.init_resource::<CapturedWhiffs>();
-        app.insert_resource(TestInputActive(false));
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<InputActions>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .add_message::<BoltHitBreaker>()
+            .init_resource::<CapturedBumps>()
+            .init_resource::<CapturedWhiffs>()
+            .insert_resource(TestInputActive(false));
 
         // PreUpdate: populate InputActions (like read_input_actions)
         app.add_systems(PreUpdate, set_bump_action);
@@ -913,9 +913,9 @@ mod tests {
     #[test]
     fn perfect_bump_cancels_dash() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.add_message::<BumpPerformed>();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .add_message::<BumpPerformed>();
         let config = app.world().resource::<BreakerConfig>().clone();
 
         let entity = app

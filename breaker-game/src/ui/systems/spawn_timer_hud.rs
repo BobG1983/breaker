@@ -62,18 +62,18 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<Font>();
-        app.insert_resource(TimerUiConfig::default());
-        app.insert_resource(NodeTimer {
-            remaining: 60.0,
-            total: 60.0,
-        });
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Font>()
+            .insert_resource(TimerUiConfig::default())
+            .insert_resource(NodeTimer {
+                remaining: 60.0,
+                total: 60.0,
+            });
         // Spawn a StatusPanel for the HUD to parent under
         app.add_systems(Startup, |mut commands: Commands| {
             commands.spawn((StatusPanel, Node::default()));
-        });
-        app.add_systems(Update, spawn_timer_hud);
+        })
+        .add_systems(Update, spawn_timer_hud);
         app
     }
 
@@ -116,11 +116,11 @@ mod tests {
     #[test]
     fn no_status_panel_no_spawn() {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<Font>();
-        app.insert_resource(TimerUiConfig::default());
-        app.insert_resource(NodeTimer::default());
-        app.add_systems(Update, spawn_timer_hud);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Font>()
+            .insert_resource(TimerUiConfig::default())
+            .insert_resource(NodeTimer::default())
+            .add_systems(Update, spawn_timer_hud);
         app.update();
 
         let count = app

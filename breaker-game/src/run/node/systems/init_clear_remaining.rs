@@ -19,8 +19,8 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Startup, init_clear_remaining);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Startup, init_clear_remaining);
         app
     }
 

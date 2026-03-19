@@ -39,9 +39,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<ChipSelectDefaults>();
-        app.add_systems(Update, seed_chip_select_config.map(drop));
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<ChipSelectDefaults>()
+            .add_systems(Update, seed_chip_select_config.map(drop));
         app
     }
 

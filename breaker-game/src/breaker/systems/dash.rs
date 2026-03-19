@@ -316,10 +316,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BreakerConfig>();
-        app.init_resource::<InputActions>();
-        app.add_systems(FixedUpdate, update_breaker_state);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .init_resource::<InputActions>()
+            .add_systems(FixedUpdate, update_breaker_state);
         app
     }
 

@@ -49,15 +49,15 @@ mod tests {
 
     fn test_app(timer_remaining: f32, selection_index: usize) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(ChipSelectConfig::default());
-        app.insert_resource(ChipSelectTimer {
-            remaining: timer_remaining,
-        });
-        app.insert_resource(ChipSelectSelection {
-            index: selection_index,
-        });
-        app.add_systems(Update, update_chip_display);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipSelectTimer {
+                remaining: timer_remaining,
+            })
+            .insert_resource(ChipSelectSelection {
+                index: selection_index,
+            })
+            .add_systems(Update, update_chip_display);
         app
     }
 

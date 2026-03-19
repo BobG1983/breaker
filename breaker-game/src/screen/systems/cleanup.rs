@@ -20,8 +20,8 @@ mod tests {
     #[test]
     fn cleanup_on_node_exit_despawns_marked_entities() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, cleanup_entities::<CleanupOnNodeExit>);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, cleanup_entities::<CleanupOnNodeExit>);
 
         let marked = app.world_mut().spawn(CleanupOnNodeExit).id();
         let unmarked = app.world_mut().spawn_empty().id();
@@ -35,8 +35,8 @@ mod tests {
     #[test]
     fn cleanup_on_run_end_despawns_marked_entities() {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, cleanup_entities::<CleanupOnRunEnd>);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, cleanup_entities::<CleanupOnRunEnd>);
 
         let marked = app.world_mut().spawn(CleanupOnRunEnd).id();
         let unmarked = app.world_mut().spawn_empty().id();

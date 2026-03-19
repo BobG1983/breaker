@@ -43,9 +43,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<BoltConfig>();
-        app.add_systems(Update, init_bolt_params);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BoltConfig>()
+            .add_systems(Update, init_bolt_params);
         app
     }
 

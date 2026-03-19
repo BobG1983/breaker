@@ -34,11 +34,11 @@ mod tests {
 
     fn test_app(initial_playing_state: PlayingState) -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<InputActions>();
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.init_state::<GameState>();
-        app.add_sub_state::<PlayingState>();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_resource::<InputActions>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_state::<GameState>()
+            .add_sub_state::<PlayingState>();
 
         // Transition to Playing state so PlayingState is active
         app.world_mut()

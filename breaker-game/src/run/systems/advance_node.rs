@@ -21,14 +21,14 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.insert_resource(RunState {
-            node_index: 1,
-            transition_queued: true,
-            ..default()
-        });
-        app.add_systems(Update, advance_node);
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .insert_resource(RunState {
+                node_index: 1,
+                transition_queued: true,
+                ..default()
+            })
+            .add_systems(Update, advance_node);
         app
     }
 

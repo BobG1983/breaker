@@ -123,8 +123,8 @@ pub fn build_app() -> App {
             }),
     );
 
-    app.add_plugins(Game::default());
-    app.add_systems(Startup, maximize_window);
+    app.add_plugins(Game::default())
+        .add_systems(Startup, maximize_window);
 
     app
 }
@@ -147,8 +147,8 @@ mod tests {
             bevy::state::app::StatesPlugin,
             bevy::asset::AssetPlugin::default(),
             bevy::input::InputPlugin,
-        ));
-        app.add_plugins(
+        ))
+        .add_plugins(
             Game::default()
                 .build()
                 .disable::<crate::debug::DebugPlugin>(),

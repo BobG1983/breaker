@@ -30,10 +30,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<PlayfieldDefaults>();
-        app.init_resource::<PlayfieldConfig>();
-        app.add_systems(Update, propagate_playfield_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<PlayfieldDefaults>()
+            .init_resource::<PlayfieldConfig>()
+            .add_systems(Update, propagate_playfield_defaults);
         app
     }
 

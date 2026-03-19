@@ -31,13 +31,13 @@ mod tests {
 
     fn test_app(remaining: f32) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<TimerExpired>();
-        app.insert_resource(NodeTimer {
-            remaining,
-            total: remaining,
-        });
-        app.add_systems(FixedUpdate, tick_node_timer);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<TimerExpired>()
+            .insert_resource(NodeTimer {
+                remaining,
+                total: remaining,
+            })
+            .add_systems(FixedUpdate, tick_node_timer);
         app
     }
 

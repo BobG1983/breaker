@@ -141,9 +141,9 @@ mod tests {
 
     fn test_app(registry: ArchetypeRegistry) -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.insert_resource(registry);
-        app.add_systems(Update, spawn_run_setup);
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(registry)
+            .add_systems(Update, spawn_run_setup);
         app
     }
 

@@ -100,15 +100,15 @@ mod tests {
 
     fn test_app_with_offers(offers: ChipOffers) -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_resource::<ButtonInput<KeyCode>>();
-        app.insert_resource(InputConfig::default());
-        app.init_state::<GameState>();
-        app.insert_resource(ChipSelectSelection { index: 0 });
-        app.insert_resource(offers);
-        app.init_resource::<ReceivedChips>();
-        app.add_message::<ChipSelected>();
-        app.add_systems(Update, (handle_chip_input, collect_chips).chain());
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(InputConfig::default())
+            .init_state::<GameState>()
+            .insert_resource(ChipSelectSelection { index: 0 })
+            .insert_resource(offers)
+            .init_resource::<ReceivedChips>()
+            .add_message::<ChipSelected>()
+            .add_systems(Update, (handle_chip_input, collect_chips).chain());
         app
     }
 

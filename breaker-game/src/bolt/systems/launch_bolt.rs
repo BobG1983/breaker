@@ -42,9 +42,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.init_resource::<InputActions>();
-        app.add_systems(FixedUpdate, launch_bolt);
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<InputActions>()
+            .add_systems(FixedUpdate, launch_bolt);
         app
     }
 

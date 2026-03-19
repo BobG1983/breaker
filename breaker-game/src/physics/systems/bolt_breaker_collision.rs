@@ -172,9 +172,9 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<BoltHitBreaker>();
-        app.add_systems(FixedUpdate, bolt_breaker_collision);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitBreaker>()
+            .add_systems(FixedUpdate, bolt_breaker_collision);
         app
     }
 
@@ -404,8 +404,7 @@ mod tests {
         let mut app = test_app();
         let hh = default_breaker_height();
         let y_pos = -250.0;
-        app.insert_resource(HitBreakers::default());
-        app.add_systems(
+        app.insert_resource(HitBreakers::default()).add_systems(
             FixedUpdate,
             collect_breaker_hits.after(bolt_breaker_collision),
         );
@@ -444,8 +443,7 @@ mod tests {
         let mut app = test_app();
         let hh = default_breaker_height();
         let y_pos = -250.0;
-        app.insert_resource(HitBreakers::default());
-        app.add_systems(
+        app.insert_resource(HitBreakers::default()).add_systems(
             FixedUpdate,
             collect_breaker_hits.after(bolt_breaker_collision),
         );
@@ -502,8 +500,7 @@ mod tests {
     fn upward_bolt_side_hit_is_not_reflected() {
         let mut app = test_app();
         let breaker_y = -250.0;
-        app.insert_resource(HitBreakers::default());
-        app.add_systems(
+        app.insert_resource(HitBreakers::default()).add_systems(
             FixedUpdate,
             collect_breaker_hits.after(bolt_breaker_collision),
         );
@@ -541,8 +538,7 @@ mod tests {
     fn downward_bolt_side_hit_is_reflected() {
         let mut app = test_app();
         let breaker_y = -250.0;
-        app.insert_resource(HitBreakers::default());
-        app.add_systems(
+        app.insert_resource(HitBreakers::default()).add_systems(
             FixedUpdate,
             collect_breaker_hits.after(bolt_breaker_collision),
         );
@@ -566,8 +562,7 @@ mod tests {
         let mut app = test_app();
         let hh = default_breaker_height();
         let y_pos = -250.0;
-        app.insert_resource(HitBreakers::default());
-        app.add_systems(
+        app.insert_resource(HitBreakers::default()).add_systems(
             FixedUpdate,
             collect_breaker_hits.after(bolt_breaker_collision),
         );

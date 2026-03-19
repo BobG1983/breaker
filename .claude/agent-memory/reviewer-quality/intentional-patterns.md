@@ -10,6 +10,7 @@ type: reference
 - `collect_scenarios_recursive` uses `&mut Vec<PathBuf>` out-parameter — intentional for recursive DFS.
 - `let _ = &defaults;` in `apply_archetype_config_overrides` — intentional placeholder.
 - Heavy `.unwrap()` in test code only — all production paths use fallible patterns.
+- `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` tuple system param in `spawn_bolt` and `spawn_cells_from_layout` — intentional Bevy workaround for multiple `ResMut` borrows from the same world; Bevy disallows two separate `ResMut<T>` params for distinct types in the same system in some versions. Do not flag.
 - `#[cfg(all(test, not(target_os = "macos")))]` on integration tests — platform guard.
 - `#[allow(dead_code)]` on BumpPerformed and CellDestroyed — message type derive macro limitation. Intentional.
 - Double-insert in `init_breaker_params` — Bevy 15-component tuple limit workaround.

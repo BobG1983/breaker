@@ -76,8 +76,8 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, spawn_pause_menu);
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, spawn_pause_menu);
         app
     }
 

@@ -30,10 +30,10 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()));
-        app.init_asset::<MainMenuDefaults>();
-        app.init_resource::<MainMenuConfig>();
-        app.add_systems(Update, propagate_main_menu_defaults);
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<MainMenuDefaults>()
+            .init_resource::<MainMenuConfig>()
+            .add_systems(Update, propagate_main_menu_defaults);
         app
     }
 

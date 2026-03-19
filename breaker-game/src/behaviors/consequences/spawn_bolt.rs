@@ -36,11 +36,11 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<SpawnAdditionalBolt>();
-        app.init_resource::<CapturedSpawnBolt>();
-        app.add_observer(handle_spawn_bolt);
-        app.add_systems(FixedUpdate, capture_spawn);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<SpawnAdditionalBolt>()
+            .init_resource::<CapturedSpawnBolt>()
+            .add_observer(handle_spawn_bolt)
+            .add_systems(FixedUpdate, capture_spawn);
         app
     }
 

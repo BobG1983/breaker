@@ -28,10 +28,10 @@ mod tests {
 
     fn test_app(remaining: f32) -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.init_state::<GameState>();
-        app.insert_resource(ChipSelectTimer { remaining });
-        app.add_systems(Update, tick_chip_timer);
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .insert_resource(ChipSelectTimer { remaining })
+            .add_systems(Update, tick_chip_timer);
         app
     }
 

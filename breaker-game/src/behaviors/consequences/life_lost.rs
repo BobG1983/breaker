@@ -117,11 +117,11 @@ mod tests {
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_message::<RunLost>();
-        app.init_resource::<CapturedRunLost>();
-        app.add_observer(handle_life_lost);
-        app.add_systems(FixedUpdate, capture_run_lost);
+        app.add_plugins(MinimalPlugins)
+            .add_message::<RunLost>()
+            .init_resource::<CapturedRunLost>()
+            .add_observer(handle_life_lost)
+            .add_systems(FixedUpdate, capture_run_lost);
         app
     }
 
