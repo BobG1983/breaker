@@ -22,12 +22,12 @@ pub fn handle_node_cleared(
         return;
     }
 
-    if registry.layouts.is_empty() {
+    if registry.is_empty() {
         warn!("NodeCleared received but layout registry is empty — ignoring");
         return;
     }
 
-    let final_index = registry.layouts.len().saturating_sub(1);
+    let final_index = registry.len().saturating_sub(1);
 
     run_state.transition_queued = true;
 
@@ -71,10 +71,11 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<GameState>()
             .add_message::<NodeCleared>();
-        let layouts: Vec<NodeLayout> = (0..layout_count)
-            .map(|i| make_layout(&format!("node_{i}")))
-            .collect();
-        app.insert_resource(NodeLayoutRegistry { layouts })
+        let mut registry = NodeLayoutRegistry::default();
+        for i in 0..layout_count {
+            registry.insert(make_layout(&format!("node_{i}")));
+        }
+        app.insert_resource(registry)
             .insert_resource(RunState {
                 node_index,
                 ..default()

@@ -43,7 +43,7 @@ pub(crate) fn seed_node_layout_registry(
             error!("invalid node layout: {e}");
             return Progress { done: 0, total: 1 };
         }
-        node_layout_registry.layouts.push(layout.clone());
+        node_layout_registry.insert(layout.clone());
     }
 
     commands.insert_resource(node_layout_registry);
@@ -158,7 +158,7 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<NodeLayoutRegistry>();
-        assert_eq!(registry.layouts.len(), 1);
-        assert_eq!(registry.layouts[0].name, "test");
+        assert_eq!(registry.len(), 1);
+        assert_eq!(registry.get_by_index(0).unwrap().name, "test");
     }
 }

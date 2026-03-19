@@ -68,10 +68,10 @@ pub(crate) fn propagate_node_layout_changes(
 
     // Rebuild layout registry
     if any_layout_modified {
-        ctx.registry.layouts.clear();
+        ctx.registry.clear();
         for handle in &ctx.collection.layouts {
             if let Some(layout) = ctx.layout_assets.get(handle.id()) {
-                ctx.registry.layouts.push(layout.clone());
+                ctx.registry.insert(layout.clone());
             }
         }
     }
@@ -82,11 +82,7 @@ pub(crate) fn propagate_node_layout_changes(
     };
 
     let updated_layout = if any_layout_modified {
-        ctx.registry
-            .layouts
-            .iter()
-            .find(|l| l.name == active.0.name)
-            .cloned()
+        ctx.registry.get_by_name(&active.0.name).cloned()
     } else {
         // Cell config changed — respawn with same layout
         Some(active.0.clone())

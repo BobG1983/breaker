@@ -35,7 +35,7 @@ pub(crate) fn apply_chip_effect(
         return;
     };
     for msg in reader.read() {
-        let Some(chip) = registry.chips.iter().find(|c| c.name == msg.name) else {
+        let Some(chip) = registry.get(&msg.name) else {
             continue;
         };
         let max_stacks = chip.max_stacks;
@@ -255,8 +255,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Piercing Shot",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
@@ -282,8 +281,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, Piercing(1))).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Piercing Shot",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
@@ -308,8 +306,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, Piercing(3))).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Piercing Shot",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
@@ -338,8 +335,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Wide Breaker",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
@@ -369,8 +365,7 @@ mod tests {
         let breaker = app.world_mut().spawn((Breaker, WidthBoost(20.0))).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Wide Breaker",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
@@ -437,8 +432,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Damage Up",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
@@ -468,8 +462,7 @@ mod tests {
         app.world_mut().spawn((Bolt, DamageBoost(1.5)));
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Damage Up",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
@@ -503,8 +496,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Speed Up",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
@@ -538,8 +530,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Chain",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::ChainHit(2)),
@@ -569,8 +560,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Big Bolt",
                 ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
@@ -604,8 +594,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Fast Breaker",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
@@ -639,8 +628,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Power Bump",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
@@ -674,8 +662,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Tilt Control",
                 ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
@@ -710,8 +697,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .chips
-            .push(ChipDefinition::test(
+            .insert(ChipDefinition::test(
                 "Surge",
                 ChipKind::Overclock,
                 ChipEffect::Overclock,

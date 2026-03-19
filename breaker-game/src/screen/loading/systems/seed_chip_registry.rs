@@ -36,7 +36,7 @@ pub(crate) fn seed_chip_registry(
         let Some(def) = chip_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
-        registry.chips.push(def.clone());
+        registry.insert(def.clone());
     }
 
     commands.insert_resource(registry);
@@ -105,10 +105,10 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
-        assert_eq!(registry.chips.len(), 3);
-        assert_eq!(registry.chips[0].kind, ChipKind::Amp);
-        assert_eq!(registry.chips[1].kind, ChipKind::Augment);
-        assert_eq!(registry.chips[2].kind, ChipKind::Overclock);
+        assert_eq!(registry.len(), 3);
+        assert!(registry.get("Piercing Shot").is_some());
+        assert!(registry.get("Wide Breaker").is_some());
+        assert!(registry.get("Surge").is_some());
     }
 
     #[test]
@@ -121,7 +121,7 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
-        assert!(registry.chips.is_empty());
+        assert!(registry.is_empty());
     }
 
     #[test]
@@ -142,9 +142,9 @@ mod tests {
 
         let registry = app.world().resource::<ChipRegistry>();
         assert!(
-            registry.chips.is_empty(),
+            registry.is_empty(),
             "guard should prevent re-seeding; got {} chips",
-            registry.chips.len()
+            registry.len()
         );
     }
 }

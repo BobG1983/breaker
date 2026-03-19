@@ -20,7 +20,7 @@ pub(crate) fn spawn_chip_select(
     config: Res<ChipSelectConfig>,
     registry: Res<ChipRegistry>,
 ) {
-    let offers: Vec<_> = registry.chips.iter().take(MAX_CARDS).cloned().collect();
+    let offers: Vec<_> = registry.values().take(MAX_CARDS).cloned().collect();
 
     commands.insert_resource(ChipSelectTimer {
         remaining: config.timer_secs,
@@ -162,16 +162,18 @@ mod tests {
     use crate::chips::{ChipDefinition, ChipKind};
 
     fn make_registry(count: usize) -> ChipRegistry {
-        let chips = vec![
+        let all = vec![
             ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp),
             ChipDefinition::test_simple("Wide Breaker", ChipKind::Augment),
             ChipDefinition::test_simple("Surge", ChipKind::Overclock),
             ChipDefinition::test_simple("Ricochet", ChipKind::Amp),
             ChipDefinition::test_simple("Quick Dash", ChipKind::Augment),
         ];
-        ChipRegistry {
-            chips: chips.into_iter().take(count).collect(),
+        let mut registry = ChipRegistry::default();
+        for chip in all.into_iter().take(count) {
+            registry.insert(chip);
         }
+        registry
     }
 
     fn test_app_with_registry(registry: ChipRegistry) -> App {
@@ -260,9 +262,10 @@ mod tests {
 
         let offers = app.world().resource::<ChipOffers>();
         assert_eq!(offers.0.len(), 3);
-        assert_eq!(offers.0[0].name, "Piercing Shot");
-        assert_eq!(offers.0[1].name, "Wide Breaker");
-        assert_eq!(offers.0[2].name, "Surge");
+        let names: Vec<&str> = offers.0.iter().map(|c| c.name.as_str()).collect();
+        assert!(names.contains(&"Piercing Shot"));
+        assert!(names.contains(&"Wide Breaker"));
+        assert!(names.contains(&"Surge"));
     }
 
     #[test]
