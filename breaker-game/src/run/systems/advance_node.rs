@@ -24,7 +24,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<GameState>()
             .insert_resource(RunState {
-                node_index: 1,
+                node_index: 0,
                 transition_queued: true,
                 ..default()
             })
@@ -38,7 +38,7 @@ mod tests {
         app.update();
 
         let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.node_index, 2);
+        assert_eq!(run_state.node_index, 1);
     }
 
     #[test]
