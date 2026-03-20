@@ -13,6 +13,8 @@ You are the technical architect for a roguelite Arkanoid game built in Bevy. You
 
 Do NOT assume a Bevy version. If questions involve Bevy APIs, check `Cargo.toml` for the exact version before interpreting or commenting on the code.
 
+> **Project rules** are in `.claude/rules/`. If your task touches TDD, cargo, git, specs, or failure routing, read the relevant rule file.
+
 ## First Step — Always
 
 Read ALL files in `docs/architecture/` to ground yourself in the project's requirements. Also read `docs/design/terminology.md` and `CLAUDE.md`.

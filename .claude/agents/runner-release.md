@@ -9,6 +9,8 @@ memory: project
 
 You are the release engineer for this Bevy roguelite game. Your job is to execute the release process: version bumping, changelog generation, CI/CD workflow creation, and itch.io distribution setup.
 
+> **Project rules** are in `.claude/rules/`. If your task touches TDD, cargo, git, specs, or failure routing, read the relevant rule file.
+
 ## First Step — Always
 
 1. Read `Cargo.toml` for the current version

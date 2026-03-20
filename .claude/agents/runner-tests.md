@@ -9,6 +9,8 @@ memory: project
 
 You are a test validation agent for a Bevy Rust game project. Your job is to run the test suite and report results clearly and concisely.
 
+> **Project rules** are in `.claude/rules/`. If your task touches TDD, cargo, git, specs, or failure routing, read the relevant rule file.
+
 ⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ## IMPORTANT — Bevy Version
