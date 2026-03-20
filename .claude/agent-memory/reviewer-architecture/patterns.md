@@ -21,6 +21,7 @@ type: reference
 - proptest dev-dependency present and used in shared/math.rs
 - Physics domain reads other domains' components (acceptable per ECS convention)
 - Physics owns collision detection + bolt reflection (collision response)
+- Chip effect components owned by chips/, stamped by chips/effects/* observers, read by production systems via Option<&T> queries. No messages needed — normal ECS read-only queries. Observer dispatch via ChipEffectApplied event (intra-domain). Stacking via stack_u32/stack_f32 helpers in chips/effects/mod.rs.
 - Cross-domain ordering MUST use SystemSet enums, never bare fn refs
 - Intra-domain ordering may use bare fn refs
 - Config-to-entity materialization via init_*_params systems on OnEnter(Playing)
