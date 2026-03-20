@@ -69,13 +69,20 @@ Cell type content lives in `cells/definition.rs` as `CellTypeDefinition`. Each c
 pub struct CellTypeDefinition {
     pub id: String,
     pub alias: char,            // single-char key used in layout grids
-    pub hp: u32,
+    pub hp: f32,                // hit points (f32 for damage calculations)
     pub color_rgb: [f32; 3],
     pub required_to_clear: bool,
     pub damage_hdr_base: f32,
     pub damage_green_min: f32,
     pub damage_blue_range: f32,
     pub damage_blue_base: f32,
+    pub behavior: CellBehavior, // optional: locked, regen_rate (serde default = no behavior)
+}
+
+// CellBehavior controls special cell mechanics:
+pub struct CellBehavior {
+    pub locked: bool,           // immune to damage until all adjacent cells are cleared
+    pub regen_rate: Option<f32>, // HP/sec regeneration rate (None = no regen)
 }
 ```
 

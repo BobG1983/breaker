@@ -7,10 +7,10 @@
 | Stage | Name | Depends On | Size | Risk |
 |-------|------|-----------|------|------|
 | ~~4a~~ | ~~Seeded RNG & Run Seed~~ | — | ~~Small~~ | **DONE** |
-| [4b](phase-4b-chip-effects.md) | Chip Effect System (4b.1 done, 4b.2 remains) | — | Medium-Large | Medium |
-| [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity | 4b | Large (content-heavy) | Low technical, high design |
+| ~~[4b](phase-4b-chip-effects.md)~~ | ~~Chip Effect System~~ | — | ~~Medium-Large~~ | **DONE** |
+| [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity (4c.1 done) | 4b | Large (content-heavy) | Low technical, high design |
 | [4d](phase-4d-trigger-effect.md) | Trigger/Effect Architecture | 4b | Large | **High** — new pattern |
-| [4e](phase-4e-node-escalation.md) | Node Sequence & Escalation | 4a | Very Large | Medium |
+| ~~[4e](phase-4e-node-escalation.md)~~ | ~~Node Sequence & Escalation~~ | ~~4a~~ | ~~Very Large~~ | **DONE** |
 | [4f](phase-4f-chip-offerings.md) | Chip Offering System | 4a, 4c | Medium | Low |
 | [4g](phase-4g-node-transitions.md) | Node Transitions & VFX | 4e | Medium | Low |
 | [4h](phase-4h-chip-evolution.md) | Chip Evolution | 4c, 4d, 4e | Medium | Low |
@@ -122,10 +122,10 @@ All three are independent and can parallelize.
 
 | Session | Stages | Focus | Domains Touched |
 |---------|--------|-------|-----------------|
-| **1** | 4a + 4b.1 | Seeded RNG + chip effect types/handler/stacking | shared, chips |
-| **2** | 4b.2 | Per-domain effect consumption (parallel across domains) | physics, cells, bolt, breaker |
-| **3** | 4e.1 + 4e.2 + 4c.1 | Tier structures + proc-gen algorithm + rarity/inventory | run, chips |
-| **4** | 4e.3 + 4e.4 | New cell types (Lock, Regen) + layout pool reorg | cells, assets |
+| ~~**1**~~ | ~~4a + 4b.1~~ | ~~Seeded RNG + chip effect types/handler/stacking~~ | ~~shared, chips~~ | **DONE** |
+| ~~**2**~~ | ~~4b.2~~ | ~~Per-domain effect consumption (parallel across domains)~~ | ~~physics, cells, bolt, breaker~~ | **DONE** |
+| ~~**3**~~ | ~~4e.1 + 4e.2 + 4c.1~~ | ~~Tier structures + proc-gen algorithm + rarity/inventory~~ | ~~run, chips~~ | **DONE** |
+| ~~**4**~~ | ~~4e.3 + 4e.4~~ | ~~New cell types (Lock, Regen) + layout pool reorg~~ | ~~cells, assets~~ | **DONE** |
 | **5** | 4d.1 + 4d.2 | TriggerChain types + bolt behaviors module | bolt, chips |
 | **6** | 4d.3 + 4d.4 + 4c.2 | Shockwave + Surge POC + chip RON authoring | bolt, physics, assets |
 | **7** | 4f + 4g | Chip offerings + node transitions (parallel) | chips, screen, fx |

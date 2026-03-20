@@ -17,17 +17,18 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
 - **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
 
-**Defined sets (as of Phase 3):**
+**Defined sets (as of Phase 4 Wave 2):**
 
 | Set | Domain | Tags |
 |-----|--------|------|
 | `BreakerSystems::Move` | `breaker/sets.rs` | `move_breaker` |
 | `BreakerSystems::InitParams` | `breaker/sets.rs` | `init_breaker_params` |
 | `BreakerSystems::Reset` | `breaker/sets.rs` | `reset_breaker` (intra-domain only — no cross-domain consumers yet) |
+| `BreakerSystems::GradeBump` | `breaker/sets.rs` | `grade_bump` |
 | `BoltSystems::PrepareVelocity` | `bolt/sets.rs` | `prepare_bolt_velocity` |
 | `PhysicsSystems::BreakerCollision` | `physics/sets.rs` | `bolt_breaker_collision` |
 | `PhysicsSystems::BoltLost` | `physics/sets.rs` | `bolt_lost` |
-| `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost` |
+| `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
@@ -87,33 +88,47 @@ BreakerSystems::Move
                                    .before(PhysicsSystems::BoltLost)
             <- grade_bump .after(update_bump)
                           .after(PhysicsSystems::BreakerCollision)
-              <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
+              BreakerSystems::GradeBump
+                <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
+                <- bridge_bump .after(BreakerSystems::GradeBump)
+                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                <- bridge_bump_whiff .after(BreakerSystems::GradeBump)
+                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
             <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
             <- bolt_lost .after(clamp_bolt_to_playfield)
               PhysicsSystems::BoltLost
                 <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
                    .in_set(BehaviorSystems::Bridge)          [behaviors domain]
-            <- bridge_bump .after(PhysicsSystems::BreakerCollision)
-               .in_set(BehaviorSystems::Bridge)              [behaviors domain]
-                <- spawn_additional_bolt .after(BehaviorSystems::Bridge)  [bolt domain]
+            <- spawn_additional_bolt .after(BehaviorSystems::Bridge)  [bolt domain]
 ```
 
-Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading and velocity application, then bolt-lost detection. Both behavior bridge systems run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
+Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading (`BreakerSystems::GradeBump`) and velocity application, then bolt-lost detection. All three behavior bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_bolt_lost`) run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion
   (track_node_completion)             [run/node domain]
-    <- handle_node_cleared .after(NodeSystems::TrackCompletion)  [run domain]
-
 NodeSystems::TickTimer
   (tick_node_timer)                   [run/node domain]
     NodeSystems::ApplyTimePenalty
       (apply_time_penalty)            [run/node domain]
-        <- handle_timer_expired .after(NodeSystems::ApplyTimePenalty)
-                                .after(handle_node_cleared)       [run domain]
+
+handle_node_cleared .after(NodeSystems::TrackCompletion)   [run domain]
+handle_timer_expired .after(NodeSystems::ApplyTimePenalty)
+                     .after(handle_node_cleared)            [run domain]
+handle_run_lost .after(handle_node_cleared)
+                .after(handle_timer_expired)                [run domain]
 ```
 
-Reading: completion tracking runs first (cells consumed → NodeCleared sent), then run handles it. Timer ticks, then time penalties apply, then the run checks for timer expiry.
+Reading: completion tracking runs first (cells consumed → NodeCleared sent), then run handles it. Timer ticks, then time penalties apply. Run checks for timer expiry after penalties and after node-cleared (clear beats a simultaneous timer expiry — player wins tie-frame). Run-lost is checked last.
+
+### OnExit(GameState::MainMenu)
+
+```
+reset_run_state                                             [run domain]
+  <- generate_node_sequence_system .after(reset_run_state) [run domain]
+```
+
+Reading: run state is reset and RNG is reseeded first, then the node sequence is generated from the freshly seeded `GameRng`.
 
 **Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` (one chain); `grade_bump` runs `.after(update_bump).after(PhysicsSystems::BreakerCollision)` — it is NOT after `update_breaker_state`. `trigger_bump_visual` also runs `.after(update_bump)`. `reset_breaker.after(BreakerSystems::InitParams).in_set(BreakerSystems::Reset)` runs OnEnter(Playing) after init.
 

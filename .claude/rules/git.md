@@ -94,6 +94,18 @@ If `finish` fails and leaves a stale state, clear it with:
 rm .git/gitflow/state/merge.json
 ```
 
+## Pre-Merge Guard Gate
+
+Before `git flow <type> finish` (merging to `develop`), run ALL guard agents:
+
+- **guard-security**
+- **guard-docs**
+- **guard-game-design**
+- **guard-dependencies**
+- **guard-agent-memory**
+
+All guards must pass before finishing the branch. Fix any findings before merging.
+
 ## History Hygiene
 
 - `merge.ff = false` is set locally — all merges create merge commits, preserving full branch topology in git UIs
