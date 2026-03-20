@@ -118,7 +118,7 @@ pub(crate) fn propagate_node_layout_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{components::CellTypeAlias, resources::CellTypeDefinition};
+    use crate::cells::{CellTypeDefinition, components::CellTypeAlias};
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
@@ -127,7 +127,7 @@ mod tests {
             CellTypeDefinition {
                 id: "standard".to_owned(),
                 alias: 'S',
-                hp: 1,
+                hp: 1.0,
                 color_rgb: [4.0, 0.2, 0.5],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,
@@ -141,7 +141,7 @@ mod tests {
             CellTypeDefinition {
                 id: "tough".to_owned(),
                 alias: 'T',
-                hp: 3,
+                hp: 3.0,
                 color_rgb: [2.5, 0.2, 4.0],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,

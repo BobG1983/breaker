@@ -152,6 +152,37 @@ mod tests {
     }
 
     #[test]
+    fn stack_u32_adds_via_world() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(TestU32(2)).id();
+
+        // Split borrows: get &mut field first, call stack_u32 with commands
+        let mut current = app.world().get::<TestU32>(entity).unwrap().0;
+        let mut commands = app.world_mut().commands();
+        // 2 / 2 = 1 stack < 3 max — should add
+        stack_u32::<TestU32, _>(entity, Some(&mut current), 2, 3, &mut commands, TestU32);
+        // stack_u32 mutated `current` in place for existing fields
+        assert_eq!(current, 4, "stack_u32 should add 2 to existing 2");
+    }
+
+    #[test]
+    fn stack_f32_adds_via_world() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(TestF32(1.5)).id();
+
+        let mut current = app.world().get::<TestF32>(entity).unwrap().0;
+        let mut commands = app.world_mut().commands();
+        // 1.5 / 1.5 = 1.0 stack < 3 max — should add
+        stack_f32::<TestF32, _>(entity, Some(&mut current), 1.5, 3, &mut commands, TestF32);
+        assert!(
+            (current - 3.0).abs() < f32::EPSILON,
+            "stack_f32 should add 1.5 to existing 1.5, got {current}"
+        );
+    }
+
+    #[test]
     fn stack_f32_inserts_when_none() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);

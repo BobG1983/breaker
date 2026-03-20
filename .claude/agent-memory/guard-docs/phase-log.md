@@ -14,3 +14,4 @@ type: project
 - 2026-03-17: Phase 3a/3b/3c/3d/3e all confirmed complete — all in `docs/plan/done/phase-3/`; Phase 4 is now Current
 - 2026-03-19: Full validation pass after merging fix/order-invariant-checkers and refactor/remove-ccd-clamp branches. Phase 4 still Current (no subphases complete yet). Fixed 5 messages.md gaps, 3 ordering.md gaps, 1 plugins.md gap.
 - 2026-03-19: Phase 4 Wave 1 review after refactor/phase4-wave1-cleanup. 4a DONE, 4b.1 DONE. Fixed plugins.md chips stub label, fixed index.md broken 4a link. ChipEffectApplied already in messages.md. data.md already current for HashMap registries.
+- 2026-03-19: Phase 4b.2 (per-domain effect consumption) complete. Fixed messages.md BoltHitCell struct, added definition.rs to layout.md, documented chip cross-domain reads in plugins.md, rewrote content.md (was "not yet implemented"), marked 4b fully done in index.md.

@@ -7,7 +7,7 @@ use super::{
     definition::{Consequence, ConsequenceFired, Trigger},
 };
 use crate::{
-    breaker::messages::{BumpGrade, BumpPerformed},
+    breaker::messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     physics::messages::BoltLost,
 };
 
@@ -25,6 +25,21 @@ pub(crate) fn bridge_bolt_lost(
         return;
     }
     fire_consequences(&bindings, Trigger::BoltLost, &mut commands);
+}
+
+/// Reads `BumpWhiffed` messages and fires consequence events for that trigger.
+///
+/// Drains all messages (not just the first) so that extras don't leak into
+/// subsequent frames. Consequences fire once per bridge invocation.
+pub(crate) fn bridge_bump_whiff(
+    mut reader: MessageReader<BumpWhiffed>,
+    bindings: Res<ActiveBehaviors>,
+    mut commands: Commands,
+) {
+    if reader.read().count() == 0 {
+        return;
+    }
+    fire_consequences(&bindings, Trigger::BumpWhiff, &mut commands);
 }
 
 /// Reads `BumpPerformed` messages and fires consequence events for the
@@ -63,6 +78,7 @@ fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::breaker::messages::BumpWhiffed;
 
     #[derive(Resource)]
     struct SendBoltLost(bool);
@@ -297,6 +313,141 @@ mod tests {
             // BoltSpeedBoost is init-time only, should not fire LoseLife
             let lives = app.world().get::<LivesCount>(entity).unwrap();
             assert_eq!(lives.0, 3);
+        }
+    }
+
+    mod bump_whiff {
+        use super::*;
+        use crate::{behaviors::consequences::life_lost::LivesCount, run::messages::RunLost};
+
+        #[derive(Resource)]
+        struct SendBumpWhiff(bool);
+
+        fn send_bump_whiff(flag: Res<SendBumpWhiff>, mut writer: MessageWriter<BumpWhiffed>) {
+            if flag.0 {
+                writer.write(BumpWhiffed);
+            }
+        }
+
+        fn test_app() -> App {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BumpWhiffed>()
+                .add_message::<RunLost>()
+                .insert_resource(ActiveBehaviors(vec![(
+                    Trigger::BumpWhiff,
+                    Consequence::LoseLife,
+                )]))
+                .insert_resource(SendBumpWhiff(false))
+                .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
+                .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
+            app
+        }
+
+        #[test]
+        fn bump_whiff_triggers_lose_life() {
+            let mut app = test_app();
+            let entity = app.world_mut().spawn(LivesCount(3)).id();
+            app.world_mut().resource_mut::<SendBumpWhiff>().0 = true;
+            tick(&mut app);
+
+            let lives = app.world().get::<LivesCount>(entity).unwrap();
+            assert_eq!(lives.0, 2);
+        }
+
+        #[test]
+        fn no_bump_whiff_no_consequence() {
+            let mut app = test_app();
+            let entity = app.world_mut().spawn(LivesCount(3)).id();
+            tick(&mut app);
+
+            let lives = app.world().get::<LivesCount>(entity).unwrap();
+            assert_eq!(lives.0, 3);
+        }
+
+        #[test]
+        fn bump_whiff_does_not_fire_for_bolt_lost_trigger() {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BumpWhiffed>()
+                .add_message::<RunLost>()
+                .insert_resource(ActiveBehaviors(vec![(
+                    Trigger::BoltLost,
+                    Consequence::LoseLife,
+                )]))
+                .insert_resource(SendBumpWhiff(false))
+                .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
+                .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
+
+            let entity = app.world_mut().spawn(LivesCount(3)).id();
+            app.world_mut().resource_mut::<SendBumpWhiff>().0 = true;
+            tick(&mut app);
+
+            let lives = app.world().get::<LivesCount>(entity).unwrap();
+            assert_eq!(
+                lives.0, 3,
+                "BumpWhiff trigger should not fire BoltLost consequence"
+            );
+        }
+    }
+
+    mod bump_whiff_time_penalty {
+        use super::*;
+        use crate::run::node::messages::ApplyTimePenalty;
+
+        #[derive(Resource)]
+        struct SendBumpWhiff(bool);
+
+        fn send_bump_whiff(flag: Res<SendBumpWhiff>, mut writer: MessageWriter<BumpWhiffed>) {
+            if flag.0 {
+                writer.write(BumpWhiffed);
+            }
+        }
+
+        #[derive(Resource, Default)]
+        struct CapturedPenalties(Vec<f32>);
+
+        fn capture_penalties(
+            mut reader: MessageReader<ApplyTimePenalty>,
+            mut captured: ResMut<CapturedPenalties>,
+        ) {
+            for msg in reader.read() {
+                captured.0.push(msg.seconds);
+            }
+        }
+
+        fn test_app() -> App {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .add_message::<BumpWhiffed>()
+                .add_message::<ApplyTimePenalty>()
+                .insert_resource(ActiveBehaviors(vec![(
+                    Trigger::BumpWhiff,
+                    Consequence::TimePenalty(3.0),
+                )]))
+                .insert_resource(SendBumpWhiff(false))
+                .init_resource::<CapturedPenalties>()
+                .add_observer(crate::behaviors::consequences::time_penalty::handle_time_penalty)
+                .add_systems(
+                    FixedUpdate,
+                    (send_bump_whiff, bridge_bump_whiff, capture_penalties).chain(),
+                );
+            app
+        }
+
+        #[test]
+        fn bump_whiff_triggers_time_penalty() {
+            let mut app = test_app();
+            app.world_mut().resource_mut::<SendBumpWhiff>().0 = true;
+            tick(&mut app);
+
+            let captured = app.world().resource::<CapturedPenalties>();
+            assert_eq!(captured.0.len(), 1);
+            assert!(
+                (captured.0[0] - 3.0).abs() < f32::EPSILON,
+                "expected 3.0 second penalty, got {}",
+                captured.0[0]
+            );
         }
     }
 }

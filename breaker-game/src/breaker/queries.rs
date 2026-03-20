@@ -10,11 +10,12 @@ use crate::{
         BumpPerfectWindow, BumpState, BumpWeakCooldown, BumpWeakMultiplier, DashDuration,
         DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
+    chips::components::{BreakerSpeedBoost, BumpForceBoost, WidthBoost},
     interpolate::components::PhysicsTranslation,
 };
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
-pub type MovementQuery = (
+pub(crate) type MovementQuery = (
     &'static mut Transform,
     &'static mut BreakerVelocity,
     &'static BreakerState,
@@ -23,10 +24,12 @@ pub type MovementQuery = (
     &'static BreakerDeceleration,
     &'static DecelEasing,
     &'static BreakerWidth,
+    Option<&'static BreakerSpeedBoost>,
+    Option<&'static WidthBoost>,
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
-pub type DashQuery = (
+pub(crate) type DashQuery = (
     &'static mut BreakerState,
     &'static mut BreakerVelocity,
     &'static mut BreakerTilt,
@@ -45,7 +48,7 @@ pub type DashQuery = (
 );
 
 /// Breaker reset data — mutable state cleared at node start.
-pub type ResetQuery = (
+pub(crate) type ResetQuery = (
     &'static mut Transform,
     &'static mut BreakerState,
     &'static mut BreakerVelocity,
@@ -57,7 +60,7 @@ pub type ResetQuery = (
 );
 
 /// Bump timing window data — state, timing/cooldown params, and velocity multipliers.
-pub type BumpTimingQuery = (
+pub(crate) type BumpTimingQuery = (
     &'static mut BumpState,
     &'static BumpPerfectWindow,
     &'static BumpEarlyWindow,
@@ -66,10 +69,11 @@ pub type BumpTimingQuery = (
     &'static BumpWeakCooldown,
     Option<&'static BumpPerfectMultiplier>,
     Option<&'static BumpWeakMultiplier>,
+    Option<&'static BumpForceBoost>,
 );
 
 /// Bump grading data — state, timing windows, cooldowns, and multipliers for `grade_bump`.
-pub type BumpGradingQuery = (
+pub(crate) type BumpGradingQuery = (
     &'static mut BumpState,
     &'static BumpPerfectWindow,
     &'static BumpLateWindow,
@@ -77,6 +81,7 @@ pub type BumpGradingQuery = (
     &'static BumpWeakCooldown,
     Option<&'static BumpPerfectMultiplier>,
     Option<&'static BumpWeakMultiplier>,
+    Option<&'static BumpForceBoost>,
 );
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.

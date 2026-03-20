@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{
     active::ActiveBehaviors,
-    bridges::{bridge_bolt_lost, bridge_bump},
+    bridges::{bridge_bolt_lost, bridge_bump, bridge_bump_whiff},
     consequences::{
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
         spawn_bolt::handle_spawn_bolt,
@@ -59,9 +59,13 @@ impl Plugin for BehaviorsPlugin {
                         .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BoltLost)),
                     bridge_bump
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BreakerSystems::GradeBump)
                         .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger_any_bump()),
+                    bridge_bump_whiff
+                        .after(BreakerSystems::GradeBump)
+                        .in_set(BehaviorSystems::Bridge)
+                        .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BumpWhiff)),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

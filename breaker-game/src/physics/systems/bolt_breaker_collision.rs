@@ -12,6 +12,33 @@ use crate::{
     shared::math::{CCD_EPSILON, ray_vs_aabb},
 };
 
+/// Overwrites bolt velocity based on a normalized hit position on the breaker's top surface.
+///
+/// - `hit_fraction`: hit position in `[-1.0, 1.0]` — left edge = -1, right edge = +1
+/// - `bolt_velocity`: mutable bolt velocity to overwrite
+/// - `tilt_angle`: current breaker tilt in radians (added to base angle)
+/// - `max_angle`: maximum reflection angle in radians (used for clamping and scaling)
+/// - `base_speed`: minimum bolt speed to enforce after reflection
+/// - `min_angle_from_horizontal`: minimum angle from horizontal enforced on the result
+fn reflect_top_hit(
+    hit_fraction: f32,
+    bolt_velocity: &mut BoltVelocity,
+    tilt_angle: f32,
+    max_angle: f32,
+    base_speed: f32,
+    min_angle_from_horizontal: f32,
+) {
+    let base_angle = hit_fraction * max_angle;
+    let total_angle = base_angle + tilt_angle;
+    let clamped_angle = total_angle.clamp(-max_angle, max_angle);
+    let new_speed = bolt_velocity.speed().max(base_speed);
+    bolt_velocity.value = Vec2::new(
+        new_speed * clamped_angle.sin(),
+        new_speed * clamped_angle.cos(),
+    );
+    bolt_velocity.enforce_min_angle(min_angle_from_horizontal);
+}
+
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.
 ///
 /// Includes overlap resolution: if the breaker has moved into the bolt (e.g.,
@@ -24,42 +51,41 @@ pub(crate) fn bolt_breaker_collision(
     breaker_query: Query<CollisionQueryBreaker, CollisionFilterBreaker>,
     mut writer: MessageWriter<BoltHitBreaker>,
 ) {
-    let Ok((breaker_transform, breaker_tilt, breaker_w, breaker_h, max_angle, min_angle)) =
-        breaker_query.single()
+    let Ok((
+        breaker_transform,
+        breaker_tilt,
+        breaker_w,
+        breaker_h,
+        max_angle,
+        min_angle,
+        tilt_boost,
+        width_boost,
+    )) = breaker_query.single()
     else {
         return;
     };
 
     let breaker_pos = breaker_transform.translation.truncate();
-    let half_w = breaker_w.half_width();
+    let half_w = breaker_w.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0);
     let half_h = breaker_h.half_height();
+    let effective_max_angle = max_angle.0 + tilt_boost.map_or(0.0, |b| b.0.to_radians());
     let dt = time.delta_secs();
 
-    for (bolt_entity, mut bolt_transform, mut bolt_velocity, base_speed, bolt_radius) in
-        &mut bolt_query
+    for (
+        _bolt_entity,
+        mut bolt_transform,
+        mut bolt_velocity,
+        base_speed,
+        bolt_radius,
+        mut piercing_remaining,
+        piercing,
+        _damage_boost,
+    ) in &mut bolt_query
     {
         let bolt_pos = bolt_transform.translation.truncate();
         let r = bolt_radius.0;
         let expanded_half = Vec2::new(half_w + r, half_h + r);
         let above_y = breaker_pos.y + half_h + r;
-
-        // Overwrites bolt velocity based on hit position on the breaker surface.
-        let reflect_top_hit = |hit_x: f32,
-                               bolt_velocity: &mut BoltVelocity,
-                               b_speed: f32,
-                               m_angle: f32,
-                               m_min: f32| {
-            let hit_fraction = ((hit_x - breaker_pos.x) / half_w).clamp(-1.0, 1.0);
-            let base_angle = hit_fraction * m_angle;
-            let total_angle = base_angle + breaker_tilt.angle;
-            let clamped_angle = total_angle.clamp(-m_angle, m_angle);
-            let new_speed = bolt_velocity.speed().max(b_speed);
-            bolt_velocity.value = Vec2::new(
-                new_speed * clamped_angle.sin(),
-                new_speed * clamped_angle.cos(),
-            );
-            bolt_velocity.enforce_min_angle(m_min);
-        };
 
         // Overlap resolution: breaker may have moved into the bolt (e.g., bump pop).
         // CCD can't detect this since it only sweeps bolt movement.
@@ -80,14 +106,19 @@ pub(crate) fn bolt_breaker_collision(
                 let hit_x = bolt_pos
                     .x
                     .clamp(breaker_pos.x - half_w, breaker_pos.x + half_w);
+                let hit_fraction = ((hit_x - breaker_pos.x) / half_w).clamp(-1.0, 1.0);
                 reflect_top_hit(
-                    hit_x,
+                    hit_fraction,
                     &mut bolt_velocity,
+                    breaker_tilt.angle,
+                    effective_max_angle,
                     base_speed.0,
-                    max_angle.0,
                     min_angle.0,
                 );
-                writer.write(BoltHitBreaker { bolt: bolt_entity });
+                writer.write(BoltHitBreaker);
+                if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
+                    pr.0 = p.0;
+                }
             }
             continue;
         }
@@ -121,26 +152,28 @@ pub(crate) fn bolt_breaker_collision(
             bolt_transform.translation.x = new_pos.x;
             bolt_transform.translation.y = new_pos.y;
         } else {
-            // Top/bottom hit
-
-            // Move to impact point
+            // Top/bottom hit — move to impact point, reflect, push above breaker
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
             let impact_pos = bolt_pos + direction * advance;
+            let hit_fraction = ((impact_pos.x - breaker_pos.x) / half_w).clamp(-1.0, 1.0);
 
             reflect_top_hit(
-                impact_pos.x,
+                hit_fraction,
                 &mut bolt_velocity,
+                breaker_tilt.angle,
+                effective_max_angle,
                 base_speed.0,
-                max_angle.0,
                 min_angle.0,
             );
 
-            // Push bolt above breaker to prevent re-collision
             bolt_transform.translation.x = impact_pos.x;
             bolt_transform.translation.y = above_y;
         }
 
-        writer.write(BoltHitBreaker { bolt: bolt_entity });
+        writer.write(BoltHitBreaker);
+        if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
+            pr.0 = p.0;
+        }
     }
 }
 
@@ -159,6 +192,7 @@ mod tests {
             },
             resources::BreakerConfig,
         },
+        chips::components::{Piercing, PiercingRemaining, TiltControlBoost, WidthBoost},
     };
 
     fn test_app() -> App {
@@ -379,14 +413,14 @@ mod tests {
     }
 
     #[derive(Resource, Default)]
-    struct HitBreakers(Vec<Entity>);
+    struct HitBreakers(u32);
 
     fn collect_breaker_hits(
         mut reader: MessageReader<BoltHitBreaker>,
         mut hits: ResMut<HitBreakers>,
     ) {
-        for msg in reader.read() {
-            hits.0.push(msg.bolt);
+        for _msg in reader.read() {
+            hits.0 += 1;
         }
     }
 
@@ -423,8 +457,7 @@ mod tests {
 
         let hits = app.world().resource::<HitBreakers>();
         assert_eq!(
-            hits.0.len(),
-            1,
+            hits.0, 1,
             "overlap with downward bolt should send BoltHitBreaker"
         );
     }
@@ -467,7 +500,7 @@ mod tests {
 
         let hits = app.world().resource::<HitBreakers>();
         assert!(
-            hits.0.is_empty(),
+            hits.0 == 0,
             "upward bolt overlap should NOT send BoltHitBreaker"
         );
     }
@@ -517,9 +550,9 @@ mod tests {
 
         let hits = app.world().resource::<HitBreakers>();
         assert!(
-            hits.0.is_empty(),
+            hits.0 == 0,
             "upward side hit should NOT send BoltHitBreaker, got {} messages",
-            hits.0.len()
+            hits.0
         );
     }
 
@@ -582,7 +615,7 @@ mod tests {
         }
 
         let hits = app.world().resource::<HitBreakers>();
-        assert_eq!(hits.0.len(), 2, "both bolts should trigger hit messages");
+        assert_eq!(hits.0, 2, "both bolts should trigger hit messages");
 
         let left_vel = velocities.iter().find(|(e, _)| *e == left_bolt).unwrap().1;
         let right_vel = velocities.iter().find(|(e, _)| *e == right_bolt).unwrap().1;
@@ -595,6 +628,193 @@ mod tests {
             right_vel.x > 0.0,
             "right bolt should angle rightward, got vx={:.1}",
             right_vel.x
+        );
+    }
+
+    // --- Chip effect reset tests ---
+
+    #[test]
+    fn breaker_hit_resets_piercing_remaining() {
+        // Bolt with Piercing(3), PiercingRemaining(0). Bolt hits breaker.
+        // PiercingRemaining should reset to Piercing.0 = 3.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let y_pos = -250.0;
+        spawn_breaker_at(&mut app, 0.0, y_pos);
+
+        // Place bolt just above breaker, moving downward toward it
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(0.0, -400.0),
+                bolt_param_bundle(),
+                Piercing(3),
+                PiercingRemaining(0),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // Verify breaker hit occurred (velocity.y > 0 after downward approach)
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt should have reflected off breaker, got vy={}",
+            vel.value.y
+        );
+
+        // PiercingRemaining should be reset to Piercing.0
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 3,
+            "breaker hit should reset PiercingRemaining to Piercing.0 (3), got {}",
+            pr.0
+        );
+    }
+
+    #[test]
+    fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
+        // Bolt has PiercingRemaining(5) but NO Piercing component.
+        // The breaker hit reset guard uses `if let (Some(pr), Some(p))` — both must exist.
+        // PiercingRemaining should stay at 5 after breaker hit.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let y_pos = -250.0;
+        spawn_breaker_at(&mut app, 0.0, y_pos);
+
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(0.0, -400.0),
+                bolt_param_bundle(),
+                // PiercingRemaining WITHOUT Piercing
+                PiercingRemaining(5),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // Verify breaker hit occurred (velocity.y > 0 after downward approach)
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt should have reflected off breaker, got vy={}",
+            vel.value.y
+        );
+
+        // PiercingRemaining should be unchanged — reset requires BOTH Piercing and PiercingRemaining
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 5,
+            "PiercingRemaining without Piercing should not be reset on breaker hit, got {}",
+            pr.0
+        );
+    }
+
+    // --- TiltControlBoost tests ---
+
+    #[test]
+    fn tilt_control_boost_widens_effective_max_reflection_angle() {
+        // Breaker with TiltControlBoost(15.0 degrees).
+        // Bolt hitting far from center (x near the edge).
+        // With TiltControlBoost, the effective max_angle is widened.
+        // Reflected angle should be wider (larger |vx / vy| ratio) than without boost.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let hw = default_breaker_width();
+        let y_pos = -250.0;
+
+        // Spawn breaker WITH TiltControlBoost
+        app.world_mut().spawn((
+            Breaker,
+            BreakerTilt::default(),
+            BreakerWidth(120.0),
+            default_breaker_height(),
+            default_max_reflection_angle(),
+            default_min_angle(),
+            TiltControlBoost(15.0),
+            Transform::from_xyz(0.0, y_pos, 0.0),
+        ));
+
+        // Hit near the right edge of the breaker — should produce maximum angle
+        let hit_x = hw.half_width() - 2.0;
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        let bolt_entity = spawn_bolt(&mut app, hit_x, start_y, 0.0, -400.0);
+
+        tick(&mut app);
+
+        let vel_with_boost = app.world().get::<BoltVelocity>(bolt_entity).unwrap().value;
+        // Reflected angle from vertical: atan2(|vx|, vy)
+        let angle_with_boost = vel_with_boost.x.abs().atan2(vel_with_boost.y);
+
+        // Now test without boost for comparison — spawn fresh app
+        let mut app_no_boost = test_app();
+        app_no_boost.world_mut().spawn((
+            Breaker,
+            BreakerTilt::default(),
+            default_breaker_width(),
+            default_breaker_height(),
+            default_max_reflection_angle(),
+            default_min_angle(),
+            Transform::from_xyz(0.0, y_pos, 0.0),
+        ));
+        let bolt_no_boost = spawn_bolt(&mut app_no_boost, hit_x, start_y, 0.0, -400.0);
+        tick(&mut app_no_boost);
+
+        let vel_no_boost = app_no_boost
+            .world()
+            .get::<BoltVelocity>(bolt_no_boost)
+            .unwrap()
+            .value;
+        let angle_no_boost = vel_no_boost.x.abs().atan2(vel_no_boost.y);
+
+        assert!(
+            angle_with_boost > angle_no_boost,
+            "TiltControlBoost should widen reflection angle: boost={angle_with_boost:.3} rad, no-boost={angle_no_boost:.3} rad"
+        );
+    }
+
+    // --- WidthBoost tests ---
+
+    #[test]
+    fn width_boost_widens_effective_breaker_collision_width() {
+        // Breaker with WidthBoost(40.0) — half_w += 20.
+        // Base BreakerWidth(120.0) → half_w = 60.0.
+        // Boosted: half_w = 60.0 + 20.0 = 80.0.
+        // Bolt at x=75.0 (outside base 60 but inside boosted 80) should reflect.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let y_pos = -250.0;
+
+        // Spawn breaker with WidthBoost(40.0) — adds 20 to each half
+        app.world_mut().spawn((
+            Breaker,
+            BreakerTilt::default(),
+            default_breaker_width(),
+            default_breaker_height(),
+            default_max_reflection_angle(),
+            default_min_angle(),
+            WidthBoost(40.0),
+            Transform::from_xyz(0.0, y_pos, 0.0),
+        ));
+
+        // Bolt at x=75.0 — outside base half_w(60) but inside boosted half_w(80)
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        let bolt_entity = spawn_bolt(&mut app, 75.0, start_y, 0.0, -400.0);
+
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt at x=75.0 (inside boosted width) should reflect upward, got vy={}",
+            vel.value.y
         );
     }
 }

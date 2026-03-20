@@ -12,7 +12,7 @@ use crate::{
     breaker::{BreakerConfig, components::Breaker},
     interpolate::components::{InterpolateTransform, PhysicsTranslation},
     run::RunState,
-    shared::CleanupOnNodeExit,
+    shared::CleanupOnRunEnd,
 };
 
 /// Spawns the bolt entity above the breaker.
@@ -27,14 +27,19 @@ use crate::{
 /// presses the bump button. On subsequent nodes it launches immediately.
 pub fn spawn_bolt(
     mut commands: Commands,
-    config: Res<BoltConfig>,
-    breaker_config: Res<BreakerConfig>,
+    configs: (Res<BoltConfig>, Res<BreakerConfig>),
     run_state: Res<RunState>,
-    // Bundled as a tuple to stay within clippy's 7-argument limit.
     mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
     breaker_query: Query<&Transform, With<Breaker>>,
+    existing: Query<Entity, With<Bolt>>,
     mut bolt_spawned: MessageWriter<BoltSpawned>,
 ) {
+    let (config, breaker_config) = configs;
+    if !existing.is_empty() {
+        bolt_spawned.write(BoltSpawned);
+        return;
+    }
+
     let breaker_y = breaker_query
         .iter()
         .next()
@@ -67,7 +72,7 @@ pub fn spawn_bolt(
             scale: Vec3::new(config.radius, config.radius, 1.0),
             ..default()
         },
-        CleanupOnNodeExit,
+        CleanupOnRunEnd,
     ));
     debug!("bolt spawned entity={:?}", entity.id());
 
@@ -213,6 +218,91 @@ mod tests {
 
         let count = app.world_mut().query::<&Bolt>().iter(app.world()).count();
         assert_eq!(count, 1, "bolt should spawn even without a breaker entity");
+    }
+
+    #[test]
+    fn existing_bolt_is_not_double_spawned() {
+        use crate::{
+            chips::components::{DamageBoost, Piercing},
+            shared::CleanupOnRunEnd,
+        };
+
+        let mut app = test_app();
+        // Pre-spawn a bolt with chip effect components and CleanupOnRunEnd
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, 400.0),
+            CleanupOnRunEnd,
+            Piercing(2),
+            DamageBoost(0.5),
+        ));
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let bolt_count = app.world_mut().query::<&Bolt>().iter(app.world()).count();
+        assert_eq!(
+            bolt_count, 1,
+            "spawn_bolt should not create a second bolt when one already exists"
+        );
+
+        // Verify chip effect components are unchanged
+        let mut query = app
+            .world_mut()
+            .query_filtered::<(Entity, &Piercing, &DamageBoost), With<Bolt>>();
+        let (_, piercing, damage) = query
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist with chip effects");
+        assert_eq!(
+            *piercing,
+            Piercing(2),
+            "Piercing should be unchanged after spawn_bolt"
+        );
+        assert_eq!(
+            *damage,
+            DamageBoost(0.5),
+            "DamageBoost should be unchanged after spawn_bolt"
+        );
+    }
+
+    #[test]
+    fn existing_bolt_still_triggers_bolt_spawned_message() {
+        let mut app = test_app();
+        // Pre-spawn a bolt
+        app.world_mut().spawn((Bolt, BoltVelocity::new(0.0, 400.0)));
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let messages = app.world().resource::<Messages<BoltSpawned>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "spawn_bolt must send BoltSpawned even when bolt already exists"
+        );
+    }
+
+    #[test]
+    fn first_spawn_creates_bolt_with_cleanup_on_run_end() {
+        use crate::shared::{CleanupOnNodeExit, CleanupOnRunEnd};
+
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+
+        assert!(
+            app.world().get::<CleanupOnRunEnd>(entity).is_some(),
+            "bolt should have CleanupOnRunEnd marker (persists across nodes)"
+        );
+        assert!(
+            app.world().get::<CleanupOnNodeExit>(entity).is_none(),
+            "bolt should NOT have CleanupOnNodeExit (it persists across nodes)"
+        );
     }
 
     #[test]

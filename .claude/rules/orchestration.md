@@ -1,6 +1,6 @@
 # Orchestration Rules
 
-Session state management, verification tiers, circuit breaking, and context pruning for the main agent.
+Session state management, verification tiers, circuit breaking, RED gate, and context pruning for the main agent.
 
 ## Session State Protocol
 
@@ -19,7 +19,7 @@ Format (keep under 80 lines):
 ## Decisions
 - [key decisions with rationale]
 ## Specs
-| Domain | Spec Status | Writer-Tests | Writer-Code | Notes |
+| Domain | Spec Status | Writer-Tests | RED Gate | Writer-Code | Notes |
 ## Phase 2 Results
 | Agent | Status | Action Needed |
 ## Active Failures
@@ -54,6 +54,19 @@ What resets the counter:
 
 Do not: keep trying variations, weaken tests, escalate to different agent types hoping for luck.
 
+## RED Gate
+
+See `.claude/rules/tdd.md` for the full TDD cycle definition.
+
+After each writer-tests completes, the orchestrator MUST run the RED gate before launching writer-code:
+
+1. Launch **runner-tests** to compile and run the new tests
+2. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
+3. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
+4. Only after the RED gate passes → launch writer-code
+
+Track RED gate status in session-state.md (the `RED Gate` column in the Specs table).
+
 ## Two-Tier Verification
 
 ### Standard — default for all work
@@ -82,6 +95,6 @@ Full adds to Standard: **reviewer-bevy-api** + **reviewer-architecture** + **rev
 | New mechanic needs adversarial scenario coverage | **writer-scenarios** |
 | Phase complete or multiple sessions since last audit | **guard-agent-memory** |
 
-All agents in a tier launch in a **single message** — separate messages make them sequential.
+All agents in a tier launch in parallel.
 
 planner-spec recommends a tier. Main agent may bump up (never down without good reason).

@@ -11,6 +11,8 @@ pub enum BreakerSystems {
     InitParams,
     /// The `reset_breaker` system — resets breaker position and state on node entry.
     Reset,
+    /// The `grade_bump` system — grades bump timing and writes `BumpPerformed`/`BumpWhiffed`.
+    GradeBump,
 }
 
 #[cfg(test)]

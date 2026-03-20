@@ -23,6 +23,7 @@ type: reference
 - behaviors/consequences/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. All gated behind `#[cfg(feature = "dev")]`. Does NOT set precedent for production domains.
 - **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, input, run domains directly. Four domain modules widened to `pub mod` in lib.rs. Dev-only crate, never shipped.
+- **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).
 
 ## Resolved Compromises (2026-03-16)
 - ~~bolt/apply_bump_velocity reads breaker entity components~~ → multiplier now included in BumpPerformed message

@@ -37,23 +37,9 @@ All work branches are created via `git flow <type> start`:
 
 ## Commits
 
-- Use conventional commit format: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
-- Commit after tests pass, not before
+- Commit only when the full TDD cycle is clean — see `.claude/rules/tdd.md`
+- See `.claude/rules/commit-format.md` for message format and style
 - Group related changes into logical commits when multiple concerns are addressed in one session
-- Use HEREDOC syntax for multi-line commit messages
-- **NEVER** include `Co-Authored-By` lines or any AI attribution in commit messages
-
-## Commit Message Style
-
-```
-feat: short imperative summary under 72 chars
-
-Optional body explaining why, not what. The diff shows what changed.
-```
-
-- Lead with the verb: add, fix, update, remove, extract, rename, wire
-- No trailing period on the subject line
-- Body only when the "why" isn't obvious from the subject
 
 ## Finishing
 

@@ -2,11 +2,15 @@
 
 ## Routing Patterns
 - [named-agents-rule.md](named-agents-rule.md) — Always use named subagents, never run own versions
-- [writer-tests-boundary.md](writer-tests-boundary.md) — writer-tests must only write failing tests, never implement
+- [agent-responsibility-boundaries.md](agent-responsibility-boundaries.md) — Never mix agent responsibilities: runner-tests=tests only, runner-linting=clippy/fmt only
+- [writer-tests-boundary.md](writer-tests-boundary.md) — writer-tests must only write failing tests, never implement (promoted to `.claude/rules/tdd.md`)
 
 ## Spec Patterns
 - [query-placement-rule.md](query-placement-rule.md) — Query type aliases live in domain/queries.rs
 - [test-content-rule.md](test-content-rule.md) — Tests create own data; only one RON parse test per folder
+
+## TDD
+- RED gate rule defined in `.claude/rules/tdd.md` — orchestrator MUST verify tests compile and fail before launching writer-code
 
 ## Domain Quirks
 

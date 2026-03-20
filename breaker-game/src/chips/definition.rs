@@ -28,7 +28,7 @@ pub(crate) enum Rarity {
 pub(crate) enum AmpEffect {
     /// Bolt passes through N cells before stopping.
     Piercing(u32),
-    /// Multiplies damage dealt per stack.
+    /// Adds fractional bonus damage per stack. Formula: damage = `BASE_BOLT_DAMAGE` * (1.0 + boost).
     DamageBoost(f32),
     /// Adds flat speed per stack.
     SpeedBoost(f32),

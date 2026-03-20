@@ -58,4 +58,43 @@ mod tests {
         let b = app.world().entity(breaker).get::<BumpForceBoost>().unwrap();
         assert!((b.0 - 10.0).abs() < f32::EPSILON);
     }
+
+    #[test]
+    fn stacks_bump_force_boost() {
+        let mut app = test_app();
+        let breaker = app.world_mut().spawn((Breaker, BumpForceBoost(10.0))).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let b = app.world().entity(breaker).get::<BumpForceBoost>().unwrap();
+        assert!(
+            (b.0 - 20.0).abs() < f32::EPSILON,
+            "BumpForceBoost should stack from 10.0 to 20.0, got {}",
+            b.0
+        );
+    }
+
+    #[test]
+    fn respects_max_stacks_bump_force_boost() {
+        let mut app = test_app();
+        // 3 stacks of 10.0 = 30.0 (at cap)
+        let breaker = app.world_mut().spawn((Breaker, BumpForceBoost(30.0))).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let b = app.world().entity(breaker).get::<BumpForceBoost>().unwrap();
+        assert!(
+            (b.0 - 30.0).abs() < f32::EPSILON,
+            "BumpForceBoost should not exceed max_stacks cap, got {}",
+            b.0
+        );
+    }
 }

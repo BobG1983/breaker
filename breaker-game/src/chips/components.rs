@@ -11,7 +11,15 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Piercing(pub u32);
 
-/// Multiplies damage dealt to cells.
+/// Remaining pierces before exhaustion. Reset when new Piercing stacks are applied.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct PiercingRemaining(pub u32);
+
+/// Adds fractional bonus damage per stack.
+///
+/// Applied as: `damage = BASE_BOLT_DAMAGE * (1.0 + self.0)`.
+/// With `DamageBoost(0.5)` (one stack at 0.5 per stack): 10 * 1.5 = 15 damage.
+/// With `DamageBoost(1.0)` (two stacks at 0.5 per stack): 10 * 2.0 = 20 damage.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct DamageBoost(pub f32);
 

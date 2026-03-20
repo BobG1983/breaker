@@ -223,6 +223,16 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 ## BorderColor::all(color)
 - `BorderColor::all(border_color)` — confirmed constructor in 0.18 UI API
 
+## MessageWriter<T> inside Observers (confirmed 2026-03-19)
+- `fn handle(trigger: On<E>, mut writer: MessageWriter<M>)` — valid; MessageWriter<T> is a SystemParam and composable in observer fns
+- `fn handle(trigger: On<E>, mut query: Query<...>, mut writer: MessageWriter<M>)` — valid; all SystemParams compose with On<E>
+- Pattern used in `behaviors/consequences/life_lost.rs`, `spawn_bolt.rs`, `time_penalty.rs`
+
+## any_with_component run condition (confirmed 2026-03-19)
+- `any_with_component::<T>` is in the Bevy prelude for 0.18.1
+- Signature: `fn any_with_component<T>(query: Query<(), With<T>>) -> bool where T: Component`
+- `.run_if(any_with_component::<LivesDisplay>)` — correct
+
 ## Observer Pattern (confirmed for this codebase, 2026-03-19)
 - `fn handler(trigger: On<MyEvent>, mut query: Query<...>, mut commands: Commands)` — correct observer signature; On<E> plus arbitrary SystemParams is valid
 - `app.add_observer(my_handler)` — correct app-level global observer registration in Plugin::build
