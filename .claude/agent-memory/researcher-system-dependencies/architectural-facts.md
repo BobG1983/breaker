@@ -30,10 +30,10 @@ type: reference
 - Scenario runner invariant checkers: `.after(tag_game_entities).after(update_breaker_state).before(PhysicsSystems::BoltLost)`
 - toggle_pause reads InputActions/GameAction::TogglePause
 - bolt_breaker_collision: upward-bolt guard at top of bolt loop
-- BoltHitCell message no longer carries bolt Entity field
+- BoltHitCell carries `{ cell: Entity, bolt: Entity }` — both fields present
 - DebugOverlays: bool fields replaced by enum-indexed array
 - bolt/queries.rs: BoltLostQuery type alias
-- ChaosMonkey includes TogglePause in GAMEPLAY_ACTIONS
+- ChaosDriver includes TogglePause in GAMEPLAY_ACTIONS
 - RecordingPlugin (debug, cfg(feature="dev")): `capture_frame` (FixedUpdate, reads InputActions), `write_recording_on_exit` (Last, triggers on AppExit message)
 
 ## Hot-Reload Pipeline (HotReloadPlugin, Update, GameState::Playing)
@@ -67,13 +67,13 @@ AudioPlugin
 ## Orphan Messages
 - None at current phase. `ChipSelected` (UiPlugin) is now received by `chips/apply_chip_effect`.
 
-## New in 2026-03-19 (post-spawn-coordinator work)
+## Spawn Coordination Messages
 - `BoltSpawned` — BoltPlugin, sent by `spawn_bolt`
 - `BreakerSpawned` — BreakerPlugin, sent by `spawn_breaker` (even when no-op, i.e. breaker already exists)
 - `CellsSpawned` — NodePlugin, sent by `spawn_cells_from_layout`
 - `WallsSpawned` — WallPlugin, sent by `spawn_walls`
 - `SpawnNodeComplete` — NodePlugin, sent by `check_spawn_complete` coordinator; consumed by scenario runner only
-- `NodeSystems::ApplyTimePenalty` — new system set variant in NodeSystems enum
-- `clamp_bolt_to_playfield` — new PhysicsPlugin system, safety clamp after bolt_breaker_collision
+- `NodeSystems::ApplyTimePenalty` — system set variant in NodeSystems enum
+- `clamp_bolt_to_playfield` — PhysicsPlugin system, safety clamp after bolt_breaker_collision
 - `seed_chip_registry` — new LoadingPlugin system (seeds ChipRegistry from chip definition assets)
 - `RecordingPlugin` with `capture_frame` + `write_recording_on_exit` — debug-only input recorder

@@ -5,7 +5,7 @@ type: reference
 ---
 
 ## Last Full Audit
-2026-03-19 — 26 agent directories audited, 10 issues found, 10 fixed.
+2026-03-19 — Two runs, 26 agent directories each. Run 1: 10 issues, 10 fixed. Run 2: 8 issues, 8 fixed.
 
 ## Recurring Staleness Patterns
 
@@ -14,6 +14,11 @@ Agents that track plugin stub status drift when plugins gain systems between aud
 Observed: `researcher-system-dependencies/architectural-facts.md` still listed `UpgradesPlugin` (removed) and called `ChipsPlugin` a stub (now fully implemented).
 **Watch:** researcher-system-dependencies and reviewer-architecture — they maintain system inventories that become stale as phases complete.
 
+### Message struct field add/remove drift
+When a message struct gains or loses fields (e.g., `BoltHitCell.bolt: Entity` removed in one branch then re-added in another), multiple agents remember the old struct shape.
+Observed: `architectural-facts.md` and `message-flow.md` both said `BoltHitCell` had no `bolt` field — but the field was re-added in feature/phase4b2-effect-consumption. Fixed in 2026-03-19 audit.
+**Watch:** researcher-system-dependencies (message-flow.md, architectural-facts.md) and planner-spec/domain-inventory.md — they describe message struct shapes.
+
 ### Observer event file location drift
 When observer trigger events move between files (e.g., `chips/messages.rs` → `chips/definition.rs`), multiple agents reference the old file path.
 Observed: `guard-docs/known-state.md` referenced `chips/messages.rs` after `ChipEffectApplied` was moved to `definition.rs`.
@@ -21,13 +26,20 @@ Observed: `guard-docs/known-state.md` referenced `chips/messages.rs` after `Chip
 
 ### Message consumer "future" labels persist after implementation
 Messages listed as "no active gameplay receivers (future phases)" remain labeled that way even after consumers are added.
-Observed: `ChipSelected` in message-inventory, message-flow, architectural-facts, and scenario-patterns all said "no receiver" after `apply_chip_effect` was added.
+Observed: `ChipSelected` in message-inventory, message-flow, architectural-facts, and scenario-patterns all said "no receiver" after `apply_chip_effect` was added. Fixed in bug-patterns.md and architectural-facts.md in 2026-03-19 audit.
 **Watch:** Any message row marked "(future: X)" — verify against current code on each audit.
+**Next candidates to watch:** BoltHitCell `(future: upgrades, audio)` in reviewer-architecture/message-inventory.md.
 
-### ChaosMonkey → ChaosDriver rename drift
+### ChaosMonkey → ChaosDriver rename drift (CLOSED 2026-03-19)
 Multiple agents still referenced the old `ChaosMonkey` name after the rename to `ChaosDriver`.
-Observed: writer-code and writer-tests pattern_doc_markdown_clippy.md.
+Observed: writer-code and writer-tests pattern_doc_markdown_clippy.md — both fixed.
+Also fixed: researcher-system-dependencies/architectural-facts.md, known-conflicts.md.
 **Pattern:** When a type is renamed, grep all agent memories for the old name.
+
+### Pending-migration language outlasts the migration
+When a component type is migrated (e.g., `CellHealth: u32 → f32`), domain inventory files describe both the "before" and "after" states using "After migration:" language. The pending language persists after the migration ships.
+Observed: `planner-spec/domain-inventory.md` still described `CellHealth { current: u32, max: u32 }` with the pending f32 form as "After migration:". Fixed in 2026-03-19 audit.
+**Watch:** planner-spec/domain-inventory.md — updated per-phase-session with explicit pending notes.
 
 ## Recurring Cross-Agent Duplication Patterns
 

@@ -248,6 +248,42 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - SystemParam struct used as system function parameter — correct; all fields extracted at scheduling time
 - `confirm.field.set(...)` — correct deref through ResMut; NestedMut access works
 
+## AssetEvent<A> as Message
+- `AssetEvent<A>` derives `Message` in Bevy 0.18.1 — use `MessageReader<AssetEvent<A>>`
+- NEVER use `EventReader<AssetEvent<A>>` — AssetEvent is not an Event in this version
+- Confirmed in researcher memory (core-api.md line 62) and used throughout hot_reload systems
+
+## SystemParam with Query + Commands (two lifetimes)
+- `#[derive(SystemParam)] struct Foo<'w, 's>` — requires BOTH lifetimes when struct contains Query or Commands
+- `Query<'w, 's, D, F>` and `Commands<'w, 's>` fields require the `'s` state lifetime
+- `LayoutChangeContext<'w, 's>` and `ArchetypeChangeContext<'w, 's>` — both correct patterns
+
+## Additional Confirmed Schedules
+- `FixedFirst` — valid Bevy 0.18.1 schedule, runs before FixedUpdate in FixedMain group
+- `FixedPostUpdate` — valid, runs after FixedUpdate in FixedMain group
+- `Last` — valid for end-of-frame tasks (e.g., write_recording_on_exit)
+- `EguiPrimaryContextPass` — correct schedule for bevy_egui 0.39 UI rendering
+
+## Additional Confirmed Run Conditions
+- `resource_exists::<T>` — valid run condition, in prelude for 0.18
+- `resource_changed::<T>` — valid run condition, in prelude for 0.18
+- `res.is_changed() && !res.is_added()` — correct change-detection-only-after-add pattern
+
+## Additional Confirmed UI Patterns
+- `BorderRadius::all(Val::Px(n))` — correct 0.18 UI API
+- `UiRect::axes(horizontal, vertical)` — confirmed
+- `UiRect::right(val)` / `UiRect::left(val)` — confirmed
+- `.with_child(bundle)` — single-child shorthand, correct
+- `Text::new("...")` then `.0` for field access — Text is a newtype with `.0: String`
+
+## Additional Confirmed Asset Patterns
+- `AssetServer::load::<Font>(&string_path)` — returns `Handle<Font>`, correct
+- `init_asset::<T>()` + `init_asset::<ColorMaterial>()` in tests — correct partial registration
+
+## Custom Test Schedules
+- `#[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]` on custom struct — correct
+- `app.world_mut().run_schedule(TestSchedule)` — valid for running custom schedules in tests
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>
@@ -257,3 +293,6 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - Cross-plugin ordering with `.after(fn_name)` — correct
 - `Has<RequiredToClear>` in query tuple — correct, yields bool
 - `world.get_entity(e).is_err()` after `commands.entity(e).despawn()` + tick — valid existence test in 0.18
+- `MessageReader<AssetEvent<T>>` — AssetEvent derives Message, not Event; this is correct
+- `LayoutChangeContext<'w, 's>` with both lifetimes — correct when struct contains Query/Commands
+- `ctx.cell_config.is_changed() && !ctx.cell_config.is_added()` — correct change detection idiom

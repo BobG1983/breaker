@@ -32,30 +32,25 @@ type: project
 ### Components (`cells/components.rs`)
 - `Cell` — marker
 - `RequiredToClear` — marker (pub)
-- `CellHealth { current: u32, max: u32 }` — has `new(u32)`, `is_destroyed() -> bool`, `take_hit() -> bool`, `take_damage(u32) -> bool`, `fraction() -> f32`
-  - After migration: `current: f32, max: f32`, `new(f32)`, `is_destroyed` uses `<= 0.0`, `take_damage(f32)` uses subtraction, `fraction()` uses `(current/max).clamp(0.0, 1.0)`, `take_hit` removed
+- `CellHealth { current: f32, max: f32 }` — has `new(f32)`, `is_destroyed() -> bool`, `take_damage(f32) -> bool`, `fraction() -> f32`
 - `CellWidth(f32)`, `CellHeight(f32)` — with `half_width()`, `half_height()`
 - `CellDamageVisuals { hdr_base, green_min, blue_range, blue_base }`
 - `CellTypeAlias(char)`
 
 ### Resources (`cells/resources.rs`)
-- `CellTypeDefinition { hp: u32, ... }` — `hp` field to become `f32` after migration
+- `CellTypeDefinition { hp: f32, ... }` — hp is f32 (migration complete)
 - `CellTypeRegistry { types: HashMap<char, CellTypeDefinition> }`
 - `CellDefaults` / `CellConfig` — grid layout only (width, height, padding), no hp field
 
 ### Constants (`shared/mod.rs`)
-- `BASE_BOLT_DAMAGE: u32 = 10` — to become `f32 = 10.0` after migration
+- `BASE_BOLT_DAMAGE: f32 = 10.0`
 
 ### Systems
-- `handle_cell_hit` — reads BoltHitCell, calls take_damage(BASE_BOLT_DAMAGE * (1+boost)), sends CellDestroyed. Has `#[expect]` cast attributes to remove.
+- `handle_cell_hit` — reads BoltHitCell, calls take_damage(BASE_BOLT_DAMAGE * (1.0 + boost)), sends CellDestroyed.
 
 ### Cell type RON files (`assets/cells/`)
-- `standard.cell.ron` — `hp: 10` → `hp: 10.0`
-- `tough.cell.ron` — `hp: 30` → `hp: 30.0`
-
-### Hot-reload systems (`src/debug/hot_reload/systems/`)
-- `propagate_cell_type_changes.rs` — sets `health.max = def.hp` and `health.current = health.current.min(def.hp)` — both sides become f32 after migration
-- `propagate_node_layout_changes.rs` — uses `CellHealth::new(1)` and `CellHealth::new(3)` inline in test fixtures — become `f32`
+- `standard.cell.ron` — `hp: 10.0`
+- `tough.cell.ron` — `hp: 30.0`
 
 ## bolt domain (`src/bolt/`)
 
