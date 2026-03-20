@@ -58,4 +58,43 @@ mod tests {
         let s = app.world().entity(bolt).get::<BoltSpeedBoost>().unwrap();
         assert!((s.0 - 50.0).abs() < f32::EPSILON);
     }
+
+    #[test]
+    fn stacks_bolt_speed_boost() {
+        let mut app = test_app();
+        let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(50.0))).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let s = app.world().entity(bolt).get::<BoltSpeedBoost>().unwrap();
+        assert!(
+            (s.0 - 100.0).abs() < f32::EPSILON,
+            "BoltSpeedBoost should stack from 50.0 to 100.0, got {}",
+            s.0
+        );
+    }
+
+    #[test]
+    fn respects_max_stacks_bolt_speed_boost() {
+        let mut app = test_app();
+        // 3 stacks of 50.0 = 150.0 (at cap)
+        let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(150.0))).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let s = app.world().entity(bolt).get::<BoltSpeedBoost>().unwrap();
+        assert!(
+            (s.0 - 150.0).abs() < f32::EPSILON,
+            "BoltSpeedBoost should not exceed max_stacks cap, got {}",
+            s.0
+        );
+    }
 }

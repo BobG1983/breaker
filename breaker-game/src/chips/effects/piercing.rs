@@ -22,8 +22,8 @@ pub(crate) fn handle_piercing(
     };
     let max_stacks = trigger.event().max_stacks;
     for (entity, mut existing) in &mut query {
-        let is_new = existing.is_none();
-        let old_val = existing.as_deref().map(|p| p.0);
+        let had_piercing = existing.is_some();
+        let piercing_before = existing.as_deref().map(|p| p.0);
         stack_u32(
             entity,
             existing.as_deref_mut().map(|c| &mut c.0),
@@ -32,16 +32,18 @@ pub(crate) fn handle_piercing(
             &mut commands,
             Piercing,
         );
-        if is_new {
+        if had_piercing {
+            let piercing_after = existing.as_deref().map(|p| p.0);
+            if piercing_after != piercing_before
+                && let Some(stacked_count) = piercing_after
+            {
+                commands
+                    .entity(entity)
+                    .insert(PiercingRemaining(stacked_count));
+            }
+        } else {
             // stack_u32 inserted Piercing(per_stack) via deferred commands; mirror it
             commands.entity(entity).insert(PiercingRemaining(per_stack));
-        } else {
-            let new_val = existing.as_deref().map(|p| p.0);
-            if new_val != old_val
-                && let Some(val) = new_val
-            {
-                commands.entity(entity).insert(PiercingRemaining(val));
-            }
         }
     }
 }
@@ -182,6 +184,32 @@ mod tests {
         assert_eq!(p.0, 3);
         let pr = app.world().entity(bolt).get::<PiercingRemaining>().unwrap();
         assert_eq!(pr.0, 1);
+    }
+
+    #[test]
+    fn stacking_with_partial_remaining_refreshes_remaining() {
+        // Bolt has 1 pierce remaining out of 1 max. Stacking adds another stack.
+        // PiercingRemaining should refresh to the new Piercing total (2).
+        let mut app = test_app();
+        let bolt = app
+            .world_mut()
+            .spawn((Bolt, Piercing(1), PiercingRemaining(1)))
+            .id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let p = app.world().entity(bolt).get::<Piercing>().unwrap();
+        assert_eq!(p.0, 2, "Piercing should stack from 1 to 2");
+
+        let pr = app.world().entity(bolt).get::<PiercingRemaining>().unwrap();
+        assert_eq!(
+            pr.0, 2,
+            "PiercingRemaining should refresh to new Piercing total (2)"
+        );
     }
 
     #[test]

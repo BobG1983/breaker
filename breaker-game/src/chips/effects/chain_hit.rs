@@ -58,4 +58,39 @@ mod tests {
         let c = app.world().entity(bolt).get::<ChainHit>().unwrap();
         assert_eq!(c.0, 2);
     }
+
+    #[test]
+    fn stacks_chain_hit() {
+        let mut app = test_app();
+        let bolt = app.world_mut().spawn((Bolt, ChainHit(2))).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Amp(AmpEffect::ChainHit(2)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let c = app.world().entity(bolt).get::<ChainHit>().unwrap();
+        assert_eq!(c.0, 4, "ChainHit should stack from 2 to 4");
+    }
+
+    #[test]
+    fn respects_max_stacks_chain_hit() {
+        let mut app = test_app();
+        // 3 stacks of 2 = 6 (at cap)
+        let bolt = app.world_mut().spawn((Bolt, ChainHit(6))).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: ChipEffect::Amp(AmpEffect::ChainHit(2)),
+            max_stacks: 3,
+        });
+        app.world_mut().flush();
+
+        let c = app.world().entity(bolt).get::<ChainHit>().unwrap();
+        assert_eq!(
+            c.0, 6,
+            "ChainHit should not exceed max_stacks cap, got {}",
+            c.0
+        );
+    }
 }
