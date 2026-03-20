@@ -56,6 +56,7 @@ mod tests {
                 grid_top_offset: 50.0,
                 grid: vec![vec!['S', 'S']],
                 pool: NodePool::default(),
+                entity_scale: 1.0,
             }))
             .add_systems(Startup, init_node_timer);
         app
@@ -93,6 +94,7 @@ mod tests {
                 grid_top_offset: 50.0,
                 grid: vec![vec!['S', 'S']],
                 pool: NodePool::default(),
+                entity_scale: 1.0,
             }))
             .insert_resource(RunState {
                 node_index: 0,

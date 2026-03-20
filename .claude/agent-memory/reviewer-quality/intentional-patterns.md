@@ -20,6 +20,10 @@ type: reference
 - `StressFailure` / `StressResult` / `copy_index` in execution.rs — runner-internal infrastructure terms; no game vocabulary rule applies to the scenario runner's own tooling types.
 - `stress_copy` flag in main.rs — internal CLI flag name for subprocess guard; not a game vocabulary term.
 
+- `make_layout` helper in `apply_entity_scale_to_breaker.rs` tests returns `NodeLayout` (caller wraps in `ActiveNodeLayout`); `make_layout` in `apply_entity_scale_to_bolt.rs` tests returns `ActiveNodeLayout` directly. Intentional asymmetry in helper return types — both are correct. Do not flag.
+- `_entity_scale` binding (bolt_lost.rs map closure): intentionally named-ignored because the filter closure already consumed the scale value. Do not flag as unused.
+- `LostBoltEntry::is_extra: bool` — two-state field (ExtraBolt or not), no third state, acceptable per established SeedEntry::focused pattern.
+
 ## Vocabulary Decisions
 - `format_lives` in `life_lost.rs` — "lives" is correct game vocabulary (count of `LivesCount`).
 - `fire_consequences` in `bridges.rs` — "consequence" used in its precise game-system sense.

@@ -45,6 +45,7 @@ fn make_chaos_definition() -> ScenarioDefinition {
         allow_early_end: true,
         stress: None,
         seed: None,
+        initial_overclocks: None,
     }
 }
 

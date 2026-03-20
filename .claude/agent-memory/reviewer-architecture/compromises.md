@@ -16,7 +16,9 @@ type: reference
 - screen/upgrade_select reads upgrades::UpgradeRegistry (read-only)
 - All screen sub-domains read input::InputConfig (read-only, for key bindings)
 - ui/messages.rs imports chips::ChipKind (vocabulary type in message payload)
-- bolt/spawn_additional_bolt reads breaker Transform (read-only, same pattern as spawn_bolt)
+- bolt/spawn_additional_bolt reads breaker Transform and ActiveNodeLayout (read-only, same pattern as spawn_bolt)
+- breaker/apply_entity_scale_to_breaker reads run::node::ActiveNodeLayout (read-only, extracts entity_scale to stamp EntityScale component)
+- bolt/apply_entity_scale_to_bolt reads run::node::ActiveNodeLayout (read-only, same pattern as breaker)
 - Other domains attach interpolate components at spawn (opt-in cross-domain composition)
 - behaviors/init.rs writes ResMut<BreakerConfig> and inserts breaker-owned components at init time — accepted for archetype config composition
 - behaviors/plugin.rs orders against BreakerSystems::InitParams and UiSystems::SpawnTimerHud

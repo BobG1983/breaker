@@ -4,7 +4,7 @@ description: Current system ordering chain for FixedUpdate and OnEnter(Playing)
 type: reference
 ---
 
-## Current Ordering Chain (verified 2026-03-19)
+## Current Ordering Chain (verified 2026-03-20)
 
 ### Defined SystemSet Variants (code reality)
 | Set | Domain | Tags | Cross-Domain Consumers |
@@ -20,7 +20,7 @@ type: reference
 | PhysicsSystems::BoltLost | physics/sets.rs | bolt_lost | behaviors (bridge_bolt_lost), bolt (apply_bump_velocity .before) |
 | BehaviorSystems::Bridge | behaviors/sets.rs | bridge_bump, bridge_bolt_lost, bridge_bump_whiff | bolt (spawn_additional_bolt) |
 | UiSystems::SpawnTimerHud | ui/sets.rs | spawn_timer_hud | behaviors (spawn_lives_display) |
-| NodeSystems::Spawn | run/node/sets.rs | spawn_cells_from_layout | (intra-domain: init_clear_remaining) |
+| NodeSystems::Spawn | run/node/sets.rs | spawn_cells_from_layout | breaker (apply_entity_scale_to_breaker), bolt (apply_entity_scale_to_bolt) |
 | NodeSystems::TrackCompletion | run/node/sets.rs | track_node_completion | run (handle_node_cleared) |
 | NodeSystems::TickTimer | run/node/sets.rs | tick_node_timer | (intra-domain: apply_time_penalty) |
 | NodeSystems::ApplyTimePenalty | run/node/sets.rs | apply_time_penalty | run (handle_timer_expired) |
@@ -67,8 +67,10 @@ NodeSystems::TickTimer
 ```
 apply_archetype_config_overrides .before(BreakerSystems::InitParams)
 spawn_breaker → init_breaker_params .in_set(BreakerSystems::InitParams)
+  apply_entity_scale_to_breaker .after(BreakerSystems::InitParams) .after(NodeSystems::Spawn)
   reset_breaker .after(BreakerSystems::InitParams) .in_set(BreakerSystems::Reset)
 spawn_bolt → init_bolt_params .in_set(BoltSystems::InitParams)
+  apply_entity_scale_to_bolt .after(BoltSystems::InitParams) .after(NodeSystems::Spawn)
   reset_bolt .after(BoltSystems::InitParams) .after(BreakerSystems::Reset) .in_set(BoltSystems::Reset)
 init_archetype .after(BreakerSystems::InitParams)
 spawn_side_panels → ApplyDeferred → spawn_timer_hud .in_set(UiSystems::SpawnTimerHud)
@@ -92,3 +94,5 @@ Update schedule: animate_bump_visual, animate_tilt_visual, width_boost_visual
 
 ### Known Doc Drift
 - ordering.md "Defined sets" table is missing BoltSystems::InitParams and BoltSystems::Reset (code has them in bolt/sets.rs)
+- ordering.md OnEnter(Playing) chain is missing apply_entity_scale_to_breaker and apply_entity_scale_to_bolt
+- NodeSystems::Spawn now has cross-domain consumers (breaker, bolt entity scale systems) — not reflected in ordering.md table

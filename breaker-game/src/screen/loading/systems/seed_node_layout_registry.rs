@@ -96,6 +96,7 @@ mod tests {
             grid_top_offset: 0.0,
             grid: vec![vec!['S', '.']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         }
     }
 

@@ -58,9 +58,11 @@ pub(crate) fn bolt_cell_collision(
         mut piercing_remaining,
         piercing,
         damage_boost,
+        bolt_entity_scale,
     ) in &mut bolt_query
     {
-        let r = bolt_radius.0;
+        let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
+        let r = bolt_radius.0 * bolt_scale;
         let mut position = bolt_tf.translation.truncate();
         let mut velocity = bolt_vel.value;
         let mut remaining = velocity.length() * dt;
@@ -179,6 +181,7 @@ mod tests {
             resources::CellConfig,
         },
         chips::components::{DamageBoost, Piercing, PiercingRemaining},
+        shared::EntityScale,
         wall::components::{Wall, WallSize},
     };
 
@@ -1277,6 +1280,90 @@ mod tests {
             pr.0, 2,
             "wall hit should reset PiercingRemaining to Piercing.0 (2), got {}",
             pr.0
+        );
+    }
+
+    // --- EntityScale collision tests ---
+
+    #[test]
+    fn scaled_bolt_effective_radius_changes_cell_collision_boundary() {
+        // Cell at (0, 100) with CellWidth(70), CellHeight(24).
+        // Bolt with BoltRadius(8), EntityScale(0.5) → effective_radius = 4.0.
+        //
+        // Cell bottom = 100 - 12 = 88.
+        // Expanded bottom with full radius (8): 88 - 8 = 80.
+        // Expanded bottom with scaled radius (4): 88 - 4 = 84.
+        //
+        // Bolt at y = 81.0, moving up slowly (50 u/s).
+        // Per tick: 50/64 ≈ 0.78 units → reaches y ≈ 81.78.
+        //
+        // With full radius (stub): bolt at y=81 >= expanded bottom 80, so bolt starts
+        //   INSIDE expanded AABB → ray_vs_aabb detects at distance 0 → reflects → vy < 0.
+        // With scaled radius: expanded bottom = 84. Bolt at y=81 < 84. Distance to
+        //   expanded bottom = 3. Max travel = 0.78. Does NOT reach → no hit → vy > 0.
+        //
+        // Expected: bolt should NOT hit (scaled radius too small to reach).
+        // Stub: bolt DOES hit (inside full-radius expanded AABB) → test FAILS.
+        let mut app = test_app();
+
+        let cell_y = 100.0;
+        spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = 81.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 50.0),
+                EntityScale(0.5),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "scaled bolt (effective_radius=4) at y=81 should NOT reach cell (expanded bottom=84), \
+             got vy={:.1} (if negative, full radius expansion was used instead of scaled)",
+            vel.value.y
+        );
+    }
+
+    #[test]
+    fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
+        // Same as bolt_reflects_off_cell_bottom but explicitly no EntityScale.
+        // Bolt should use full radius (8.0) and reflect normally.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 5.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            // No EntityScale component
+            Transform::from_xyz(0.0, start_y, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "bolt without EntityScale should reflect normally, got vy={:.1}",
+            vel.value.y
         );
     }
 }

@@ -5,6 +5,18 @@ type: reference
 ---
 
 ## Known Correct Patterns (Do Not Flag)
+
+### entity_scale feature (2026-03-20, feature/overclock-trigger-chain)
+- `apply_entity_scale_to_breaker` uses `Option<Res<ActiveNodeLayout>>` and early-returns if None — correct guard. Runs `.after(BreakerSystems::InitParams).after(NodeSystems::Spawn)`. `NodeSystems::Spawn` is in a `.chain()` with `set_active_layout` first, so `ActiveNodeLayout` exists before this system runs. No ordering hazard.
+- `apply_entity_scale_to_bolt` runs `.after(BoltSystems::InitParams).after(NodeSystems::Spawn)` — same correct ordering as breaker.
+- `width_boost_visual` formula `(base + boost) * scale` is correct Option B stacking per design.
+- `bolt_breaker_collision` `half_w = (breaker_w.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0)) * breaker_scale` — WidthBoost stores full width (b.0/2 gives half), then multiplied by scale. Correct.
+- `bolt_breaker_collision` `expanded_half = Vec2::new(half_w + r, half_h + r)` — r uses bolt's scaled effective radius. Correct.
+- `bolt_lost` lost-detection threshold `playfield.bottom() - r` where r = radius * entity_scale — smaller bolt needs less clearance below floor. Correct behavior: scaled bolt is lost slightly sooner.
+- `spawn_additional_bolt` reads `layout.as_ref().map_or(1.0, |l| l.0.entity_scale)` and always inserts `EntityScale(entity_scale)` — correct; never missing EntityScale on extra bolts.
+- `NodeLayout.validate()` checks entity_scale before cols/rows — order matters only for error messages; both checks always run via `?`. Correct.
+- `deserialize_entity_scale_at_minimum` test uses `f32::EPSILON` tolerance for 0.5 deserialization — float representation of 0.5 is exact (power of 2), so EPSILON is safe here.
+- `clamp_bolt_to_playfield` effective radius = `radius.0 * bolt_entity_scale.map_or(1.0, |s| s.0)` — correct; a scaled-down bolt sits closer to the walls before triggering the clamp.
 - `init_breaker_params` calls `insert_if_new` BEFORE `init_archetype` runs. Archetype's plain `insert` overwrites defaults — correct last-write-wins.
 - `reset_breaker` uses `f32::midpoint(playfield.left(), playfield.right())` — correct.
 - `handle_cell_hit` replaces HashSet with `Vec + peek()` early exit — correct at MAX_BOUNCES=4 bound.

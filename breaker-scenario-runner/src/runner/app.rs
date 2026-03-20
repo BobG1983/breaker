@@ -426,6 +426,7 @@ mod tests {
             allow_early_end: true,
             stress: None,
             seed: None,
+            initial_overclocks: None,
         };
         let stats = ScenarioStats {
             actions_injected: 0,

@@ -8,13 +8,14 @@ use crate::{
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
-            animate_bump_visual, animate_tilt_visual, grade_bump, init_breaker_params,
-            move_breaker, perfect_bump_dash_cancel, reset_breaker, spawn_breaker,
-            spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual, update_breaker_state,
-            update_bump, width_boost_visual,
+            animate_bump_visual, animate_tilt_visual, apply_entity_scale_to_breaker, grade_bump,
+            init_breaker_params, move_breaker, perfect_bump_dash_cancel, reset_breaker,
+            spawn_breaker, spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual,
+            update_breaker_state, update_bump, width_boost_visual,
         },
     },
     physics::PhysicsSystems,
+    run::node::sets::NodeSystems,
     shared::{GameState, PlayingState, SelectedArchetype},
 };
 
@@ -39,6 +40,12 @@ impl Plugin for BreakerPlugin {
                     init_breaker_params.in_set(BreakerSystems::InitParams),
                 )
                     .chain(),
+            )
+            .add_systems(
+                OnEnter(GameState::Playing),
+                apply_entity_scale_to_breaker
+                    .after(BreakerSystems::InitParams)
+                    .after(NodeSystems::Spawn),
             )
             .add_systems(
                 OnEnter(GameState::Playing),

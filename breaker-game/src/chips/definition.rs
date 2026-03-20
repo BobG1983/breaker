@@ -53,7 +53,7 @@ pub(crate) enum AugmentEffect {
 
 /// Trigger chain for Overclock effects — defines when and what happens.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
-pub(crate) enum TriggerChain {
+pub enum TriggerChain {
     /// Area damage around impact point.
     Shockwave {
         /// Radius of the shockwave effect.

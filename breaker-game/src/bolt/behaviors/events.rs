@@ -8,4 +8,10 @@ use crate::chips::definition::TriggerChain;
 ///
 /// Consumed by per-effect observers (shockwave, multi-bolt, shield, etc.).
 #[derive(Event, Clone, Debug)]
-pub(crate) struct OverclockEffectFired(pub TriggerChain);
+pub(crate) struct OverclockEffectFired {
+    /// The leaf effect to execute.
+    pub effect: TriggerChain,
+    /// The bolt entity that triggered the effect, or `Entity::PLACEHOLDER` for
+    /// global triggers (cell destroyed, bolt lost) that have no specific bolt.
+    pub bolt: Entity,
+}

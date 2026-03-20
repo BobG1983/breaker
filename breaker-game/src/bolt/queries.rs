@@ -11,6 +11,7 @@ use crate::{
     },
     chips::components::{Piercing, PiercingRemaining},
     interpolate::components::PhysicsTranslation,
+    shared::EntityScale,
 };
 
 /// Bolt entity data needed by the reset system at node start.
@@ -33,4 +34,5 @@ pub(crate) type LostQuery = (
     &'static BoltRespawnOffsetY,
     &'static BoltRespawnAngleSpread,
     Has<ExtraBolt>,
+    Option<&'static EntityScale>,
 );

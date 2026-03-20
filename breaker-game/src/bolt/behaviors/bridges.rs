@@ -36,7 +36,10 @@ pub(crate) fn bridge_overclock_bump(
         for chain in &active.0 {
             match evaluate(OverclockTriggerKind::PerfectBump, chain) {
                 EvalResult::Fire(leaf) => {
-                    commands.trigger(OverclockEffectFired(leaf));
+                    commands.trigger(OverclockEffectFired {
+                        effect: leaf,
+                        bolt: bolt_entity,
+                    });
                 }
                 EvalResult::Arm(remaining) => {
                     arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
@@ -62,7 +65,10 @@ pub(crate) fn bridge_overclock_impact(
         for chain in &active.0 {
             match evaluate(OverclockTriggerKind::Impact, chain) {
                 EvalResult::Fire(leaf) => {
-                    commands.trigger(OverclockEffectFired(leaf));
+                    commands.trigger(OverclockEffectFired {
+                        effect: leaf,
+                        bolt: bolt_entity,
+                    });
                 }
                 EvalResult::Arm(remaining) => {
                     arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
@@ -93,7 +99,7 @@ pub(crate) fn bridge_overclock_cell_destroyed(
         return;
     }
     let trigger_kind = OverclockTriggerKind::CellDestroyed;
-    evaluate_active_chains(&active, trigger_kind, &mut commands);
+    evaluate_active_chains(&active, trigger_kind, Entity::PLACEHOLDER, &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 }
 
@@ -111,7 +117,7 @@ pub(crate) fn bridge_overclock_bolt_lost(
         return;
     }
     let trigger_kind = OverclockTriggerKind::BoltLost;
-    evaluate_active_chains(&active, trigger_kind, &mut commands);
+    evaluate_active_chains(&active, trigger_kind, Entity::PLACEHOLDER, &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 }
 
@@ -123,12 +129,13 @@ pub(crate) fn bridge_overclock_bolt_lost(
 fn evaluate_active_chains(
     active: &ActiveOverclocks,
     trigger_kind: OverclockTriggerKind,
+    bolt: Entity,
     commands: &mut Commands,
 ) {
     for chain in &active.0 {
         match evaluate(trigger_kind, chain) {
             EvalResult::Fire(leaf) => {
-                commands.trigger(OverclockEffectFired(leaf));
+                commands.trigger(OverclockEffectFired { effect: leaf, bolt });
             }
             EvalResult::Arm(_) | EvalResult::NoMatch => {}
         }
@@ -141,8 +148,8 @@ fn evaluate_armed_all(
     trigger_kind: OverclockTriggerKind,
     commands: &mut Commands,
 ) {
-    for (_entity, mut armed) in &mut armed_query {
-        resolve_armed(&mut armed, trigger_kind, commands);
+    for (bolt_entity, mut armed) in &mut armed_query {
+        resolve_armed(&mut armed, trigger_kind, bolt_entity, commands);
     }
 }
 
@@ -176,7 +183,7 @@ fn evaluate_armed(
     trigger_kind: OverclockTriggerKind,
 ) {
     if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
-        resolve_armed(&mut armed, trigger_kind, commands);
+        resolve_armed(&mut armed, trigger_kind, bolt_entity, commands);
     }
 }
 
@@ -184,12 +191,13 @@ fn evaluate_armed(
 fn resolve_armed(
     armed: &mut ArmedTriggers,
     trigger_kind: OverclockTriggerKind,
+    bolt: Entity,
     commands: &mut Commands,
 ) {
     let mut new_armed = Vec::new();
     for chain in armed.0.drain(..) {
         match evaluate(trigger_kind, &chain) {
-            EvalResult::Fire(leaf) => commands.trigger(OverclockEffectFired(leaf)),
+            EvalResult::Fire(leaf) => commands.trigger(OverclockEffectFired { effect: leaf, bolt }),
             EvalResult::Arm(next) => new_armed.push(next),
             EvalResult::NoMatch => new_armed.push(chain),
         }
@@ -208,10 +216,12 @@ mod tests {
     // --- Test infrastructure ---
 
     #[derive(Resource, Default)]
-    struct CapturedEffects(Vec<TriggerChain>);
+    struct CapturedEffects(Vec<(TriggerChain, Entity)>);
 
     fn capture_effects(trigger: On<OverclockEffectFired>, mut captured: ResMut<CapturedEffects>) {
-        captured.0.push(trigger.event().0.clone());
+        captured
+            .0
+            .push((trigger.event().effect.clone(), trigger.event().bolt));
     }
 
     #[derive(Resource)]
@@ -338,7 +348,7 @@ mod tests {
             1,
             "perfect bump with active OnPerfectBump(leaf) should fire exactly one effect"
         );
-        assert_eq!(captured.0[0], TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
     }
 
     #[test]
@@ -450,7 +460,7 @@ mod tests {
             1,
             "impact on armed bolt should fire the leaf effect"
         );
-        assert_eq!(captured.0[0], TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
 
         // ArmedTriggers entry should be removed after firing
         let armed = app.world().get::<ArmedTriggers>(bolt_entity).unwrap();
@@ -536,7 +546,7 @@ mod tests {
             1,
             "step 2: impact on armed bolt should fire shockwave"
         );
-        assert_eq!(captured.0[0], TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
     }
 
     // --- Cell destroyed bridge tests ---
@@ -557,7 +567,7 @@ mod tests {
             1,
             "cell destroyed with active OnCellDestroyed chain should fire"
         );
-        assert_eq!(captured.0[0], TriggerChain::Shockwave { range: 32.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 32.0 });
     }
 
     // --- Bolt lost bridge tests ---
@@ -575,6 +585,66 @@ mod tests {
             1,
             "bolt lost with active OnBoltLost chain should fire"
         );
-        assert_eq!(captured.0[0], TriggerChain::Shield { duration: 5.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::Shield { duration: 5.0 });
+    }
+
+    // --- Bolt entity propagation tests ---
+
+    #[test]
+    fn effect_fired_carries_bolt_entity() {
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let mut app = bump_test_app(vec![chain]);
+        let bolt_a = app.world_mut().spawn_empty().id();
+        let _bolt_b = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: 1.5,
+            bolt: bolt_a,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "perfect bump with active OnPerfectBump(leaf) should fire exactly one effect"
+        );
+        assert_eq!(
+            captured.0[0].0,
+            TriggerChain::Shockwave { range: 64.0 },
+            "effect should be the leaf shockwave"
+        );
+        assert_eq!(
+            captured.0[0].1, bolt_a,
+            "effect should carry the bolt entity that triggered it, not PLACEHOLDER"
+        );
+    }
+
+    #[test]
+    fn global_trigger_uses_placeholder_bolt() {
+        let chain =
+            TriggerChain::OnCellDestroyed(Box::new(TriggerChain::Shockwave { range: 32.0 }));
+        let mut app = cell_destroyed_test_app(vec![chain]);
+        app.world_mut().resource_mut::<SendCellDestroyed>().0 = Some(CellDestroyed {
+            was_required_to_clear: true,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "cell destroyed with active OnCellDestroyed chain should fire"
+        );
+        assert_eq!(
+            captured.0[0].0,
+            TriggerChain::Shockwave { range: 32.0 },
+            "effect should be the leaf shockwave"
+        );
+        assert_eq!(
+            captured.0[0].1,
+            Entity::PLACEHOLDER,
+            "global triggers should use Entity::PLACEHOLDER since no specific bolt triggered them"
+        );
     }
 }

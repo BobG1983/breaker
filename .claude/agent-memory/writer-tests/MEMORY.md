@@ -1,3 +1,6 @@
+## Rules
+- [rule_never_run_cargo.md](rule_never_run_cargo.md) — NEVER run cargo commands — only runner agents run cargo
+
 ## Stable
 - [pattern_config_default_vs_ron.md](pattern_config_default_vs_ron.md) — Rust Default may differ from RON; tests use Rust Default
 - [pattern_asset_event_testing.md](pattern_asset_event_testing.md) — Testing AssetEvent<T>/Modified in Bevy 0.18

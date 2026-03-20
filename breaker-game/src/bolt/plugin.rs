@@ -10,12 +10,14 @@ use crate::{
         messages::SpawnAdditionalBolt,
         resources::BoltConfig,
         systems::{
-            apply_bump_velocity, hover_bolt, init_bolt_params, launch_bolt, prepare_bolt_velocity,
-            reset_bolt, spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text,
+            apply_bump_velocity, apply_entity_scale_to_bolt, bolt_scale_visual, hover_bolt,
+            init_bolt_params, launch_bolt, prepare_bolt_velocity, reset_bolt,
+            spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text,
         },
     },
     breaker::BreakerSystems,
     physics::PhysicsSystems,
+    run::node::sets::NodeSystems,
     shared::{GameState, PlayingState},
 };
 
@@ -38,6 +40,9 @@ impl Plugin for BoltPlugin {
                     init_bolt_params
                         .after(spawn_bolt)
                         .in_set(BoltSystems::InitParams),
+                    apply_entity_scale_to_bolt
+                        .after(BoltSystems::InitParams)
+                        .after(NodeSystems::Spawn),
                     reset_bolt
                         .after(BoltSystems::InitParams)
                         .after(BreakerSystems::Reset)
@@ -60,6 +65,10 @@ impl Plugin for BoltPlugin {
                     spawn_bolt_lost_text,
                 )
                     .run_if(in_state(PlayingState::Active)),
+            )
+            .add_systems(
+                Update,
+                bolt_scale_visual.run_if(in_state(PlayingState::Active)),
             );
     }
 }

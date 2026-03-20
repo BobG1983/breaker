@@ -60,14 +60,16 @@ pub(crate) fn bolt_breaker_collision(
         min_angle,
         tilt_boost,
         width_boost,
+        breaker_entity_scale,
     )) = breaker_query.single()
     else {
         return;
     };
 
     let breaker_pos = breaker_transform.translation.truncate();
-    let half_w = breaker_w.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0);
-    let half_h = breaker_h.half_height();
+    let breaker_scale = breaker_entity_scale.map_or(1.0, |s| s.0);
+    let half_w = (breaker_w.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0)) * breaker_scale;
+    let half_h = breaker_h.half_height() * breaker_scale;
     let effective_max_angle = max_angle.0 + tilt_boost.map_or(0.0, |b| b.0.to_radians());
     let dt = time.delta_secs();
 
@@ -80,10 +82,12 @@ pub(crate) fn bolt_breaker_collision(
         mut piercing_remaining,
         piercing,
         _damage_boost,
+        bolt_entity_scale,
     ) in &mut bolt_query
     {
         let bolt_pos = bolt_transform.translation.truncate();
-        let r = bolt_radius.0;
+        let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
+        let r = bolt_radius.0 * bolt_scale;
         let expanded_half = Vec2::new(half_w + r, half_h + r);
         let above_y = breaker_pos.y + half_h + r;
 
@@ -96,13 +100,7 @@ pub(crate) fn bolt_breaker_collision(
 
         if inside {
             bolt_transform.translation.y = above_y;
-
             if bolt_velocity.value.y <= 0.0 {
-                // Clamp hit X to the actual top-face width before computing the
-                // reflection angle. The overlap check uses expanded_half (which
-                // includes the bolt radius), so bolt_pos.x can sit slightly
-                // outside [breaker_pos.x ± half_w]. Clamping here matches the
-                // CCD path, which uses the exact ray-surface impact point.
                 let hit_x = bolt_pos
                     .x
                     .clamp(breaker_pos.x - half_w, breaker_pos.x + half_w);
@@ -128,8 +126,7 @@ pub(crate) fn bolt_breaker_collision(
             continue;
         }
 
-        let direction = bolt_velocity.value / speed;
-        let max_dist = speed * dt;
+        let (direction, max_dist) = (bolt_velocity.value / speed, speed * dt);
 
         let Some(hit) = ray_vs_aabb(bolt_pos, direction, max_dist, breaker_pos, expanded_half)
         else {
@@ -146,11 +143,9 @@ pub(crate) fn bolt_breaker_collision(
             // Side hit — reflect X only, preserve Y velocity
             bolt_velocity.value.x = -bolt_velocity.value.x;
 
-            // Move to impact point
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
             let new_pos = bolt_pos + direction * advance;
-            bolt_transform.translation.x = new_pos.x;
-            bolt_transform.translation.y = new_pos.y;
+            bolt_transform.translation = new_pos.extend(bolt_transform.translation.z);
         } else {
             // Top/bottom hit — move to impact point, reflect, push above breaker
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
@@ -193,6 +188,7 @@ mod tests {
             resources::BreakerConfig,
         },
         chips::components::{Piercing, PiercingRemaining, TiltControlBoost, WidthBoost},
+        shared::EntityScale,
     };
 
     fn test_app() -> App {
@@ -857,6 +853,162 @@ mod tests {
         assert!(
             vel.value.y > 0.0,
             "bolt at x=75.0 (inside boosted width) should reflect upward, got vy={}",
+            vel.value.y
+        );
+    }
+
+    // --- EntityScale collision tests ---
+
+    fn spawn_scaled_breaker_at(app: &mut App, x: f32, y: f32, entity_scale: f32) {
+        app.world_mut().spawn((
+            Breaker,
+            BreakerTilt::default(),
+            default_breaker_width(),
+            default_breaker_height(),
+            default_max_reflection_angle(),
+            default_min_angle(),
+            EntityScale(entity_scale),
+            Transform::from_xyz(x, y, 0.0),
+        ));
+    }
+
+    fn spawn_scaled_bolt(
+        app: &mut App,
+        x: f32,
+        y: f32,
+        vx: f32,
+        vy: f32,
+        entity_scale: f32,
+    ) -> Entity {
+        app.world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(vx, vy),
+                bolt_param_bundle(),
+                EntityScale(entity_scale),
+                Transform::from_xyz(x, y, 0.0),
+            ))
+            .id()
+    }
+
+    #[test]
+    fn scaled_breaker_has_smaller_collision_hitbox() {
+        // Breaker at (0, -250) with BreakerWidth(120), BreakerHeight(20), EntityScale(0.7).
+        // Unscaled half_h = 10.0. Scaled half_h = 10.0 * 0.7 = 7.0.
+        // Bolt with BoltRadius(8.0), no EntityScale, at y = -234.0 (inside unscaled
+        // expanded_half.y = 10+8=18 zone, but outside scaled expanded_half.y = 7+8=15 zone).
+        //
+        // With scaled breaker: expanded top = -250 + 15 = -235. Bolt at -234 is above.
+        // Without scaling: expanded top = -250 + 18 = -232. Bolt at -234 is inside overlap.
+        //
+        // Expected: bolt at -234 should NOT be overlap-resolved (not inside scaled AABB).
+        // Use slow velocity (-1.0) so CCD can't bridge the 1-unit gap to the scaled
+        // AABB top — this isolates the overlap resolution test from CCD behavior.
+        let mut app = test_app();
+        let y_pos = -250.0;
+        spawn_scaled_breaker_at(&mut app, 0.0, y_pos, 0.7);
+
+        // Position between scaled and unscaled expanded tops
+        // Scaled expanded top: -250 + (10*0.7) + 8 = -235
+        // Unscaled expanded top: -250 + 10 + 8 = -232
+        // Bolt at -234 is between them. Slow velocity so CCD doesn't reach.
+        let bolt_entity = spawn_bolt(&mut app, 0.0, -234.0, 0.0, -1.0);
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "bolt at y=-234 should NOT be inside scaled breaker (scaled expanded top=-235), \
+             got vy={:.1} (if positive, overlap resolution fired with unscaled dimensions)",
+            vel.value.y
+        );
+    }
+
+    #[test]
+    fn bolt_outside_scaled_breaker_width_misses() {
+        // Breaker at (0, -250) with BreakerWidth(120), EntityScale(0.7).
+        // Scaled half_w = 60.0 * 0.7 = 42.0. Expanded = 42.0 + 8.0 = 50.0.
+        // Bolt at x = 55.0 (outside 50.0) should NOT reflect.
+        let mut app = test_app();
+        let y_pos = -250.0;
+        spawn_scaled_breaker_at(&mut app, 0.0, y_pos, 0.7);
+
+        let scaled_half_h = 10.0 * 0.7;
+        let bolt_r = default_bolt_radius().0;
+        let start_y = y_pos + scaled_half_h + bolt_r + 3.0;
+        let bolt_entity = spawn_bolt(&mut app, 55.0, start_y, 0.0, -400.0);
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "bolt at x=55 should miss scaled breaker (expanded half_w=50), got vy={:.1}",
+            vel.value.y
+        );
+    }
+
+    #[test]
+    fn width_boost_stacks_with_entity_scale() {
+        // Breaker with BreakerWidth(120), WidthBoost(40), EntityScale(0.7).
+        // Effective half_w = (60 + 20) * 0.7 = 56.0. Expanded = 56.0 + 8.0 = 64.0.
+        // Without scaling: half_w = 60 + 20 = 80. Expanded = 80 + 8 = 88.
+        //
+        // Bolt at x = 70.0:
+        //   With (base+boost)*scale: 70 > 64 → MISS
+        //   Without scaling: 70 < 88 → HIT
+        //
+        // Expected: bolt at x=70 should NOT reflect (outside scaled expanded width).
+        // Stub: bolt at x=70 IS inside unscaled expanded → reflects → test FAILS.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let y_pos = -250.0;
+
+        app.world_mut().spawn((
+            Breaker,
+            BreakerTilt::default(),
+            default_breaker_width(),
+            default_breaker_height(),
+            default_max_reflection_angle(),
+            default_min_angle(),
+            WidthBoost(40.0),
+            EntityScale(0.7),
+            Transform::from_xyz(0.0, y_pos, 0.0),
+        ));
+
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        let bolt_entity = spawn_bolt(&mut app, 70.0, start_y, 0.0, -400.0);
+        tick(&mut app);
+
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y < 0.0,
+            "bolt at x=70 should miss scaled breaker (expanded half_w=64), got vy={:.1}",
+            vel.value.y
+        );
+    }
+
+    #[test]
+    fn entity_scale_1_0_is_backward_compatible_with_breaker_collision() {
+        // Same setup as bolt_reflects_upward_on_center_hit but with EntityScale(1.0).
+        // Behavior should be identical.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let y_pos = -250.0;
+        spawn_scaled_breaker_at(&mut app, 0.0, y_pos, 1.0);
+
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        spawn_scaled_bolt(&mut app, 0.0, start_y, 0.0, -400.0, 1.0);
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "EntityScale(1.0) should produce identical behavior to no scale, got vy={:.1}",
             vel.value.y
         );
     }

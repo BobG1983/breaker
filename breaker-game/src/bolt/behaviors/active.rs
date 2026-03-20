@@ -9,7 +9,7 @@ use crate::chips::definition::TriggerChain;
 /// Populated by `handle_overclock` when a `ChipEffectApplied` with an
 /// `Overclock` effect is observed.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct ActiveOverclocks(pub Vec<TriggerChain>);
+pub struct ActiveOverclocks(pub Vec<TriggerChain>);
 
 #[cfg(test)]
 mod tests {

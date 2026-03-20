@@ -9,6 +9,7 @@ use crate::{
     },
     cells::components::{CellHealth, CellHeight, CellWidth},
     chips::components::{DamageBoost, Piercing, PiercingRemaining, TiltControlBoost, WidthBoost},
+    shared::EntityScale,
 };
 
 /// Bolt entity data needed by physics collision systems.
@@ -21,6 +22,7 @@ pub(crate) type CollisionQueryBolt = (
     Option<&'static mut PiercingRemaining>,
     Option<&'static Piercing>,
     Option<&'static DamageBoost>,
+    Option<&'static EntityScale>,
 );
 
 /// Breaker entity data needed by bolt-breaker collision.
@@ -33,6 +35,7 @@ pub(crate) type CollisionQueryBreaker = (
     &'static MinAngleFromHorizontal,
     Option<&'static TiltControlBoost>,
     Option<&'static WidthBoost>,
+    Option<&'static EntityScale>,
 );
 
 /// Cell entity data needed by bolt-cell collision.

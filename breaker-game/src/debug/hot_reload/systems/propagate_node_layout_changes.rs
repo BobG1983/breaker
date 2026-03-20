@@ -176,6 +176,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid,
             pool: NodePool::default(),
+            entity_scale: 1.0,
         }
     }
 

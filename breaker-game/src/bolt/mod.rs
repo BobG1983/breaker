@@ -10,6 +10,7 @@ pub mod resources;
 pub mod sets;
 pub mod systems;
 
+pub use behaviors::ActiveOverclocks;
 pub use plugin::BoltPlugin;
 pub use resources::{BoltConfig, BoltDefaults};
 pub use sets::BoltSystems;

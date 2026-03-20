@@ -19,6 +19,7 @@ Difficulty increases along multiple axes simultaneously:
 2. **Cell mechanics**: Simple cells early, Lock Cells / Tough Cells / Portal Cells later
 3. **Timer compression**: Timer drops by a fraction after each boss kill
 4. **Cell HP scaling**: Cells get tougher (more HP) as tiers progress
+5. **Entity scale**: Boss layouts shrink breaker/bolt via `entity_scale` (see [entity-scale.md](entity-scale.md))
 
 ## Data Structure
 

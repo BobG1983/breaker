@@ -64,6 +64,14 @@ Coverage: good across the core evaluation and bridge systems. Unit tests cover a
 (6) `shockwave.rs` — no test for distance exactly equal to range boundary (dist == range should hit, dist > range should not); existing tests use distance well inside or outside range.
 (7) `bypass_menu_to_playing` — no test for when `ActiveOverclocks` resource is absent but `initial_overclocks` is `Some` (the `Option<ResMut<ActiveOverclocks>>` guard silently skips population; this path is untested).
 
+## EntityScale feature (as of 2026-03-20, feature/overclock-trigger-chain branch)
+Systems: apply_entity_scale_to_breaker, apply_entity_scale_to_bolt, bolt_scale_visual, width_boost_visual, bolt_breaker_collision, bolt_cell_collision, clamp_bolt_to_playfield, bolt_lost, spawn_additional_bolt, definition.rs validate.
+Coverage: very high. All systems have backward-compat (no EntityScale) + scaled + EntityScale(1.0) identity tests. Known gaps:
+(1) `apply_entity_scale_to_breaker`: no test for multiple Breaker entities in one frame — system loops the query but only one breaker is ever spawned in tests.
+(2) `bolt_lost`: no test for a scaled bolt that is ABOVE the effective lost threshold (should not be detected as lost) — only the positive (below threshold, lost) case is tested.
+(3) `bolt_breaker_collision`: no test for scaled bolt + scaled breaker simultaneously — existing tests scale only one side.
+(4) `clamp_bolt_to_playfield`: left-wall clamp with EntityScale has no vy-unchanged assertion (right-wall scaled test also lacks it — the plain left-wall test does assert vy unchanged, but the scaled version only checks x position).
+
 ## Documentation Conventions
 - Module-level `//!` doc comments on all `.rs` files.
 - Public types/functions have `///` doc comments with field-level docs.

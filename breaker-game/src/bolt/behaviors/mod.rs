@@ -4,11 +4,12 @@
 pub(crate) mod active;
 pub(crate) mod armed;
 pub(crate) mod bridges;
+pub(crate) mod effects;
 pub(crate) mod evaluate;
 pub(crate) mod events;
 pub(crate) mod plugin;
 
-pub(crate) use active::ActiveOverclocks;
+pub use active::ActiveOverclocks;
 pub(crate) use armed::ArmedTriggers;
 pub(crate) use events::OverclockEffectFired;
 pub(crate) use plugin::BoltBehaviorsPlugin;

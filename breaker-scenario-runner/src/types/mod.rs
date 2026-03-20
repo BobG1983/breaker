@@ -267,6 +267,9 @@ pub struct ScenarioDefinition {
     /// seed 0 for determinism. Override in RON to test different seeds.
     #[serde(default)]
     pub seed: Option<u64>,
+    /// Optional overclock chains to pre-populate at scenario start.
+    #[serde(default)]
+    pub initial_overclocks: Option<Vec<breaker::chips::TriggerChain>>,
 }
 
 impl ScenarioDefinition {

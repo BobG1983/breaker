@@ -120,6 +120,7 @@ mod tests {
                 grid_top_offset: 0.0,
                 grid: vec![],
                 pool: NodePool::default(),
+                entity_scale: 1.0,
             }));
         run_with_actions(&mut app, vec![GameAction::MoveRight]);
 
@@ -139,6 +140,7 @@ mod tests {
                 grid_top_offset: 0.0,
                 grid: vec![],
                 pool: NodePool::default(),
+                entity_scale: 1.0,
             }));
         run_with_actions(&mut app, vec![GameAction::DashLeft]);
 

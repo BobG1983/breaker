@@ -299,6 +299,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['T', 'S', 'S'], vec!['S', 'S', 'S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         }
     }
 
@@ -312,6 +313,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['.', 'S', '.'], vec!['T', '.', 'S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         }
     }
 
@@ -491,6 +493,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'X', 'S']], // 'X' not in registry
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = test_app(layout);
         app.update();
@@ -712,6 +715,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['L', 'N']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = behavior_test_app(layout, behavior_registry());
         app.update();
@@ -737,6 +741,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['N', 'R']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = behavior_test_app(layout, behavior_registry());
         app.update();
@@ -762,6 +767,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['L', 'N']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = behavior_test_app(layout, behavior_registry());
         app.update();
@@ -787,6 +793,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['R', 'N']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = behavior_test_app(layout, behavior_registry());
         app.update();
@@ -819,6 +826,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['L', 'N']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = behavior_test_app(layout, behavior_registry());
         app.update();
@@ -846,6 +854,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -900,6 +909,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['T']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -1024,6 +1034,7 @@ mod tests {
             grid_top_offset,
             grid,
             pool: NodePool::default(),
+            entity_scale: 1.0,
         }
     }
 
@@ -1289,6 +1300,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let mut app = scaled_test_app(layout);
         app.update();
