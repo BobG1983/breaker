@@ -6,19 +6,22 @@ use rand_chacha::ChaCha8Rng;
 use tracing::info;
 
 use crate::{
+    chips::inventory::ChipInventory,
     run::resources::RunState,
     shared::{GameRng, RunSeed, SelectedArchetype},
 };
 
 /// Resets [`RunState`] to defaults and reseeds [`GameRng`] when leaving the
 /// main menu (starting a run).
-pub fn reset_run_state(
+pub(crate) fn reset_run_state(
     mut run_state: ResMut<RunState>,
     mut rng: ResMut<GameRng>,
     seed: Res<RunSeed>,
     archetype: Option<Res<SelectedArchetype>>,
+    mut chip_inventory: ResMut<ChipInventory>,
 ) {
     *run_state = RunState::default();
+    chip_inventory.clear();
     if let Some(s) = seed.0 {
         *rng = GameRng::from_seed(s);
         info!("run started seed={s}");
@@ -45,6 +48,7 @@ mod tests {
             })
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
+            .init_resource::<ChipInventory>()
             .add_systems(Update, reset_run_state);
         app
     }

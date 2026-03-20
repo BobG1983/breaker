@@ -126,6 +126,7 @@ mod tests {
             amps: vec![],
             augments: vec![],
             overclocks: vec![],
+            difficulty: Handle::default(),
         }
     }
 

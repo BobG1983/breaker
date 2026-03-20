@@ -8,8 +8,8 @@ use crate::{
         node::{NodePlugin, NodeSystems},
         resources::RunState,
         systems::{
-            advance_node, handle_node_cleared, handle_run_lost, handle_timer_expired,
-            reset_run_state,
+            advance_node, generate_node_sequence_system, handle_node_cleared, handle_run_lost,
+            handle_timer_expired, reset_run_state,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -41,7 +41,13 @@ impl Plugin for RunPlugin {
                     .run_if(in_state(PlayingState::Active)),
             )
             .add_systems(OnEnter(GameState::NodeTransition), advance_node)
-            .add_systems(OnExit(GameState::MainMenu), reset_run_state);
+            .add_systems(
+                OnExit(GameState::MainMenu),
+                (
+                    reset_run_state,
+                    generate_node_sequence_system.after(reset_run_state),
+                ),
+            );
     }
 }
 
@@ -58,6 +64,8 @@ mod tests {
             .add_sub_state::<PlayingState>()
             // RunPlugin reads CellDestroyed messages from cells domain
             .add_message::<crate::cells::messages::CellDestroyed>()
+            // ChipInventory required by reset_run_state
+            .init_resource::<crate::chips::inventory::ChipInventory>()
             .add_plugins(RunPlugin)
             .update();
     }

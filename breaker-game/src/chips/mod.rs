@@ -3,6 +3,7 @@
 pub(crate) mod components;
 pub(crate) mod definition;
 pub(crate) mod effects;
+pub(crate) mod inventory;
 mod plugin;
 mod resources;
 pub(crate) mod systems;

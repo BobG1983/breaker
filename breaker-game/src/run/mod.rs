@@ -1,5 +1,6 @@
 //! Run domain plugin — run state, seeded node sequencing, timer, difficulty scaling.
 
+pub mod difficulty;
 pub mod messages;
 pub mod node;
 mod plugin;

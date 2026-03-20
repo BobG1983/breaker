@@ -21,7 +21,7 @@ use crate::{
     cells::{CellDefaults, CellTypeDefinition},
     chips::ChipDefinition,
     input::InputDefaults,
-    run::NodeLayout,
+    run::{NodeLayout, difficulty::DifficultyCurveDefaults},
     shared::{
         CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
         PlayingState,
@@ -56,6 +56,7 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
                 RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
                 RonAssetPlugin::<ChipDefinition>::new(&["amp.ron", "augment.ron", "overclock.ron"]),
+                RonAssetPlugin::<DifficultyCurveDefaults>::new(&["difficulty.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.
             // Must be added BEFORE add_loading_state.
