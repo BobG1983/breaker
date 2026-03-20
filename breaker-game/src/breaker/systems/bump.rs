@@ -64,7 +64,7 @@ fn multiplier_for_grade(
 /// Ticks the forward window timer but does not expire it — [`grade_bump`]
 /// handles expiry after processing any same-frame hits.
 /// Retroactive bumps grade and write immediately on press.
-pub fn update_bump(
+pub(crate) fn update_bump(
     actions: Res<InputActions>,
     time: Res<Time<Fixed>>,
     mut query: Query<BumpTimingQuery, With<Breaker>>,
@@ -130,7 +130,7 @@ pub fn update_bump(
 ///
 /// Also expires the forward window when the timer runs out without a hit,
 /// sending [`BumpWhiffed`] and setting whiff cooldown.
-pub fn grade_bump(
+pub(crate) fn grade_bump(
     mut bump_query: Query<BumpGradingQuery, With<Breaker>>,
     mut hit_reader: MessageReader<BoltHitBreaker>,
     mut writer: MessageWriter<BumpPerformed>,

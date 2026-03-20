@@ -15,7 +15,7 @@ use crate::{
 ///
 /// Enforces speed clamping (min/max) and minimum angle from horizontal.
 /// Position advancement is handled by the CCD collision system.
-pub fn prepare_bolt_velocity(
+pub(crate) fn prepare_bolt_velocity(
     mut query: Query<
         (
             &mut BoltVelocity,

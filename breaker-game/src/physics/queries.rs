@@ -1,4 +1,4 @@
-//! Physics domain query type aliases — clippy `type_complexity` lint.
+//! Physics domain query type aliases — complex query tuples live here rather than inline in system files.
 
 use bevy::prelude::*;
 

@@ -16,7 +16,7 @@ use crate::{
 /// Accelerates toward max speed when movement is active, decelerates when released.
 /// Movement is allowed in [`BreakerState::Idle`] and [`BreakerState::Settling`].
 /// Clamps position to playfield bounds.
-pub fn move_breaker(
+pub(crate) fn move_breaker(
     actions: Res<InputActions>,
     playfield: Res<PlayfieldConfig>,
     time: Res<Time<Fixed>>,
