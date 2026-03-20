@@ -280,6 +280,45 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `AssetServer::load::<Font>(&string_path)` — returns `Handle<Font>`, correct
 - `init_asset::<T>()` + `init_asset::<ColorMaterial>()` in tests — correct partial registration
 
+## &Entities System Parameter
+- `&Entities` implements `SystemParam` and `ReadOnlySystemParam` in Bevy 0.18.1
+- Used as `all_entities: &Entities` in systems for presence checks
+- `all_entities.contains(entity)` — correct method to test entity existence
+
+## App::should_exit
+- `app.should_exit()` — returns `Option<AppExit>` in Bevy 0.18.1
+- `.is_some()` — correct pattern to check if app has signaled exit
+
+## App::finish and App::cleanup
+- `app.finish()` then `app.cleanup()` before manual `.update()` loop — correct headless init sequence
+- Required to initialize plugins before the manual update loop runs
+
+## system.map(drop) for systems returning Progress
+- Systems returning `iyes_progress::Progress` must use `.map(drop)` when added via `add_systems`
+- `.add_systems(Update, seed_foo.map(drop))` — correct; discards the `Progress` return value
+
+## Time<Real> elapsed_secs_f64
+- `time.elapsed_secs_f64()` — confirmed correct f64 elapsed on `Res<Time<Real>>`
+- Used in double-tap detection in `read_input.rs`
+
+## world.write_message
+- `app.world_mut().write_message(msg)` — correct test helper for injecting messages directly into world
+- Used for `KeyboardInput` injection in tests
+
+## Bloom + Tonemapping in game
+- `post_process::bloom::Bloom` — correct import path for `"2d"` feature
+- `Tonemapping::AcesFitted` — safe (no LUT), confirmed in use
+- `Bloom::default()` — valid preset in 0.18.1
+
+## SubStates
+- `#[derive(SubStates)]` with `#[source(GameState = GameState::Playing)]` — correct
+- `app.add_sub_state::<PlayingState>()` — correct registration (idempotent; multiple plugins call it)
+
+## Interpolation schedule usage
+- `FixedFirst` for `restore_authoritative` — correct (before FixedUpdate)
+- `FixedPostUpdate` for `store_authoritative` — correct (after FixedUpdate)
+- `PostUpdate` for `interpolate_transform` — correct (every render frame)
+
 ## Custom Test Schedules
 - `#[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]` on custom struct — correct
 - `app.world_mut().run_schedule(TestSchedule)` — valid for running custom schedules in tests

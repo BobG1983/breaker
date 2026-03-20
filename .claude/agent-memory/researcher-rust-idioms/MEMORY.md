@@ -1,6 +1,6 @@
 ## Stable
 
-- [pattern_f32_to_u32_damage_cast.md](pattern_f32_to_u32_damage_cast.md) — f32→u32 damage cast: which lints fire, when f64 is required vs f32 literal, minimal `#[expect]` form
+(No stable memories yet. Idiom patterns will be linked here when verified.)
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

@@ -41,3 +41,13 @@ type: reference
 ## Phase 4b.2 Bolt Persistence Bugs (2026-03-19, feature/phase4b2-effect-consumption) — FIXED
 - **reset_bolt spawns bolt at stale breaker x**: FIXED — `reset_bolt` now has `.after(BreakerSystems::Reset)` in `bolt/plugin.rs`. Confirmed in code.
 - **bridge_bump_whiff can miss BumpWhiffed in same frame**: FIXED — `bridge_bump_whiff` now has `.after(BreakerSystems::GradeBump)` in `behaviors/plugin.rs`. Confirmed in code.
+
+## Phase 4 Wave 2 OPEN Bugs — ALL FIXED (2026-03-19 second session)
+All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in current codebase:
+- `handle_node_cleared` now uses `NodeSequence.assignments.len()` ✓
+- `spawn_cells_from_layout` now reads `def.behavior.locked` and `def.behavior.regen_rate` ✓
+- `spawn_cells_from_layout` now uses `resolve_hp_mult()` for `hp_mult` ✓
+- `init_node_timer` now reads `timer_mult` from `NodeSequence` ✓
+
+## Full-tree Review Confirmed Bug (2026-03-19, second session) — FIXED (2026-03-19 third session)
+- **spawn_run_end_screen shows wrong loss text for Aegis**: FIXED — `RunOutcome::Lost` split into `TimerExpired` and `LivesDepleted`. `handle_timer_expired` sets `TimerExpired`, `handle_run_lost` sets `LivesDepleted`. Screen match arm maps each to correct text. Confirmed clean.

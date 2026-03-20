@@ -50,3 +50,14 @@ type: reference
 - 9 chip-effect observers each hold a broad `Option<&mut Component>` query. Fine at 1 entity each; each early-returns on wrong variant — zero query cost for non-matching events.
 - `check_lock_release` drains `CellDestroyed` reader unconditionally then re-checks all locked cells via entity liveness. Not purely event-driven; acceptable at <10 locked cells.
 - `LockAdjacents(Vec<Entity>)`: allocates per locked-cell entity. Could be a fixed-size array. Not worth changing now.
+- `width_boost_visual` (Update, 1 entity): writes Transform::scale every frame unconditionally. Negligible at 1 entity.
+- `spawn_additional_bolt`: allocates Mesh + ColorMaterial per bolt spawn (event-driven, not hot-path). Watch if multi-bolt stacking becomes common in Phase 7+.
+- `animate_fade_out` query (FadeOut + TextColor): no marker filter. Steady-state entity count is 0-3. Negligible.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-19)
+- chips domain (9 effect observers): all event-driven, early-return on wrong variant, 1-2 entities each
+- `apply_chip_effect`: gated in_state(GameState::ChipSelect), correct
+- `spawn_bump_grade_text`, `spawn_whiff_text`, `spawn_bolt_lost_text`: event-driven, single() outside loop
+- `check_lock_release`: destroyed_count guard prevents scan when nothing destroyed
+- ExtraBolt / ServingFilter separation: correct, already in baseline
+- Dash system (breaker): runs in_state(PlayingState::Active), With<Breaker> filtered — 1 entity

@@ -9,7 +9,7 @@
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `physics/messages.rs`
-- `CellHealth::take_hit()` is `const fn` — new methods on the same impl should follow suit
+- `CellHealth::new()` and `is_destroyed()` are `const fn` — new methods on the same impl should follow suit where possible
 - chips domain does NOT currently consume `BoltHitCell` despite messages.md listing it as a consumer
 
 ## Session History

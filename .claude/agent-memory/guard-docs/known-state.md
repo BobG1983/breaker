@@ -85,10 +85,19 @@ type: reference
 - Registered in `ChipsPlugin` as `init_resource::<ChipInventory>()`
 - Also cleared in `reset_run_state` — chips domain resource touched by run domain at run start (intentional cross-domain resource write in init system)
 
+## New Chip Effects (as of 2026-03-19 session 5) (do not re-flag)
+- `AmpEffect::ChainHit(u32)` and `AmpEffect::SizeBoost(f32)` added to `chips/definition.rs`
+- `ChainHit` and `BoltSizeBoost` components in `chips/components.rs`
+- `handle_chain_hit` and `handle_bolt_size_boost` observers registered in `ChipsPlugin`
+- `ChainHit` and `BoltSizeBoost` are stamped by observers but NOT yet consumed by any production gameplay system (physics, cells, bolt) — NOT cross-domain reads yet, not added to plugins.md cross-domain section
+- `content.md` already documents these correctly (AmpEffect enum and component list updated)
+- `behaviors/consequences/bolt_speed_boost.rs` added — init-time function (not observer) — correctly NOT listed in messages.md observer events table
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table
 - Spawn-coordination messages easily missed since they're internal infrastructure, not gameplay messages
 - Intra-domain ordering chains in ordering.md can drift when constraints are restructured
-- `PLAN.md` links break when subphase files are moved to `done/` folder
+- `PLAN.md` links break when subphase files are moved to `done/` folder — also check parent index.md files (e.g., `phase-2/index.md` had stale subphase links)
 - CellTypeDefinition.hp field: always `f32` (not `u32`) — check content.md and data.md on each wave
+- `standards.md` scenario runner section: use `cargo scenario` alias (not `dscenario`) for all standard usage; runner is headless by default (`--visual` to open window, no `--headless` flag)

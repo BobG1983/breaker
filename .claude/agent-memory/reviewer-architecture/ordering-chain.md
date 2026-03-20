@@ -76,6 +76,12 @@ spawn_lives_display .after(init_archetype) .after(UiSystems::SpawnTimerHud)
 set_active_layout → spawn_cells_from_layout .in_set(NodeSystems::Spawn) → init_clear_remaining → init_node_timer .in_set(NodeSystems::InitTimer)  [chained]
 ```
 
+### OnExit(MainMenu)
+```
+reset_run_state
+  <- generate_node_sequence_system .after(reset_run_state)
+```
+
 ### Breaker Intra-Domain
 ```
 update_bump → move_breaker → update_breaker_state
@@ -83,3 +89,6 @@ grade_bump .after(update_bump) .after(PhysicsSystems::BreakerCollision)
 trigger_bump_visual .after(update_bump)
 Update schedule: animate_bump_visual, animate_tilt_visual, width_boost_visual
 ```
+
+### Known Doc Drift
+- ordering.md "Defined sets" table is missing BoltSystems::InitParams and BoltSystems::Reset (code has them in bolt/sets.rs)

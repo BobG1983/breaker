@@ -6,7 +6,7 @@ type: reference
 
 ## Test Coverage Standards by Domain
 
-- **spawn_cells_from_grid / CellBehavior wiring (2026-03-19 full review)**: `CellBehavior.locked` and `CellBehavior.regen_rate` fields in `CellTypeDefinition` are NEVER applied during `spawn_cells_from_grid`. The `Locked`, `LockAdjacents`, and `CellRegen` components can only be added manually; there is no code path that reads `def.behavior` and inserts them at spawn time. This is a LOGIC GAP — the RON data model implies the behavior is wired but the spawn system does not implement it. No test for this integration path exists; all existing tests for `Locked`/`CellRegen` spawn the components manually.
+- **spawn_cells_from_grid / CellBehavior wiring (CLOSED 2026-03-19 verification-fixes branch)**: The previously reported logic gap (locked/regen_rate never wired) is now FIXED. `spawn_cells_from_grid` now reads `def.behavior.locked` and `def.behavior.regen_rate` and inserts `Locked`, `LockAdjacents`, and `CellRegen` at spawn time. Full behavior-wiring tests added in `spawn_cells_from_layout.rs`: `locked_cell_definition_spawns_with_locked_component`, `non_locked_cell_does_not_have_locked_component`, `locked_cell_definition_spawns_with_lock_adjacents_component`, `regen_cell_definition_spawns_with_cell_regen_component`, `non_regen_cell_does_not_have_cell_regen_component`. Gap is CLOSED.
 
 - **Bump system**: Very high. Grade functions, update_bump, grade_bump, combined pipeline, BoltServing guard, input-loss regression, perfect_bump_dash_cancel.
 - **CCD physics**: Comprehensive. All collision surfaces, multi-bolt, cascade prevention, MAX_BOUNCES cap, wall vs cell, overlap resolution.

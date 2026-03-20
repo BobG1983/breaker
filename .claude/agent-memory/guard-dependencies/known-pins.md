@@ -13,9 +13,7 @@ type: project
 - **Where:** `breaker-game/Cargo.toml` and `breaker-scenario-runner/Cargo.toml`
 - **When to re-evaluate:** When Bevy upgrades to use rand 0.10+ in its own internals.
 
-### ron = "0.11"
-- **Why:** Bevy 0.18 pulls `ron 0.12` transitively (via bevy_asset, bevy_scene, bevy_animation).
-  The direct dep is pinned at 0.11, creating a ron v0.11/v0.12 split in the tree already.
-  Upgrading the direct dep to 0.12 would eliminate this split — this is actually RECOMMENDED.
-  If ron 0.12 has no breaking API changes affecting this codebase, it's safe to upgrade.
-- **Status:** NOT an intentional pin — upgrade is recommended. See audit report.
+### ron = "0.12" (upgraded 2026-03-19)
+- **Why (historical):** Previously pinned at 0.11 causing a ron 0.11/0.12 split in the tree.
+  Upgraded to 0.12 in the 2026-03-19 session — now unified with Bevy 0.18's transitive ron 0.12.
+- **Status:** RESOLVED — no longer a pin concern. Both game crate and scenario runner use 0.12.

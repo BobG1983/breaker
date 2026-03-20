@@ -7,15 +7,17 @@ type: reference
 ## Review Status
 - Full codebase audit (2026-03-19): All implemented mechanics reviewed against 9 design pillars
 - Prior review (2026-03-16): Phase 1 APPROVED, Phase 2b APPROVED, Phase 2c APPROVED
-- 3 HIGH issues identified (test 0.8x values, Prism no bolt-lost, run-end dead air)
-- 5 MEDIUM issues tracked (chip timer, regen stalemate, passive/active gap, pool layouts, perfect window)
+- 2 BLOCKING issues (test 0.8x values, Prism bolt-lost too soft)
+- 5 IMPORTANT issues (run-end dead air, subtitle copy, chip timer, layout pools, passive/active differentiation)
+- 3 MINOR issues (RON annotation, perfect window, introduced_cells)
 
 ## Key Parameter Values (Post-Rescale)
 - Playfield: 1440w x 1080h
 - Breaker: width=216, height=36, max_speed=1800, dash_mult=4.0x, dash_dur=0.15s
 - Bolt: base=720, min=360, max=1440, radius=14
 - Bump: perfect_window=0.15s, early=0.15s, late=0.15s
-- Bump multipliers (Aegis/Chrono): perfect=1.5x, early/late=1.1x
+- Bump multipliers (Aegis/Chrono RON): perfect=1.5x, early/late=1.1x
+- Bump multipliers (test code — WRONG): perfect=1.5x, early/late=0.8x
 - Bump cooldowns: perfect=0.0, weak=0.15s
 - Tilt: dash=15deg, brake=25deg
 - Max reflection: 75deg from vertical
@@ -23,9 +25,10 @@ type: reference
 - BASE_BOLT_DAMAGE: 10.0
 - Chip select timer: 10.0s (recommend 8.0s)
 - Cell standard HP: 10, tough HP: 30, lock HP: 10, regen HP: 20
-- Regen rate: 2.0 HP/s (should NOT scale with hp_mult)
+- Regen rate: 2.0 HP/s (confirmed NOT scaling with hp_mult — correct)
 - Difficulty tiers: 5 (hp_mult 1.0->2.5, timer_mult 1.0->0.6, active_ratio 0.0->1.0)
 - Boss HP mult: 3.0x, timer reduction per boss: 0.1
+- Prism bolt-lost: TimePenalty(3.0) — too soft, recommend 7-8s or LoseExtraBolts
 
 ## Data-Driven Config Status
 - bolt: RON + BoltDefaults + BoltConfig — COMPLETE
@@ -36,7 +39,7 @@ type: reference
 - mainmenu: RON + MainMenuDefaults + MainMenuConfig — COMPLETE
 - timerui: RON + TimerUiDefaults + TimerUiConfig — COMPLETE
 - archetype: RON + ArchetypeDefinition + ArchetypeRegistry — COMPLETE
-- chipselect: RON + ChipSelectDefaults + ChipSelectConfig — COMPLETE
+- chipselect: RON + ChipSelectDefaults + ChipSelectConfig — COMPLETE (RON annotation stale)
 - difficulty: RON + DifficultyCurveDefaults + DifficultyCurve — COMPLETE
 - chips: RON + ChipDefinition + ChipRegistry + ChipInventory — COMPLETE
 - cell types: RON + CellTypeDefinition + CellTypeRegistry — COMPLETE (standard, tough, lock, regen)
@@ -47,3 +50,4 @@ type: reference
 3. dash_mult: 4.0x -> try 2.5-3.0x if positioning feels too forgiving
 4. regen_rate: 2.0 -> lower if stalemates occur
 5. timer_mult per tier: current 1.0->0.6 -> steeper curve if late game is too comfortable
+6. prism_bolt_lost_penalty: 3.0s -> 7-8s or add LoseExtraBolts consequence
