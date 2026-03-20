@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use super::definition::NodeLayout;
+use super::definition::{NodeLayout, NodePool};
 
 /// The active node layout for the current node.
 #[derive(Resource, Debug, Clone)]
@@ -18,6 +18,7 @@ pub struct ActiveNodeLayout(pub NodeLayout);
 pub struct NodeLayoutRegistry {
     layouts: HashMap<String, NodeLayout>,
     order: Vec<String>,
+    pools: HashMap<NodePool, Vec<String>>,
 }
 
 impl NodeLayoutRegistry {
@@ -35,11 +36,24 @@ impl NodeLayoutRegistry {
             .and_then(|name| self.layouts.get(name))
     }
 
-    /// Insert a layout (appended to insertion order).
+    /// Insert a layout with its declared pool (appended to insertion order).
     pub fn insert(&mut self, layout: NodeLayout) {
         let name = layout.name.clone();
+        let pool = layout.pool;
+        self.pools.entry(pool).or_default().push(name.clone());
         self.layouts.insert(name.clone(), layout);
         self.order.push(name);
+    }
+
+    /// Get all layout names in a given pool.
+    #[must_use]
+    pub fn get_pool(&self, pool: NodePool) -> Vec<&NodeLayout> {
+        self.pools.get(&pool).map_or_else(Vec::new, |names| {
+            names
+                .iter()
+                .filter_map(|name| self.layouts.get(name))
+                .collect()
+        })
     }
 
     /// Number of registered layouts.
@@ -58,6 +72,7 @@ impl NodeLayoutRegistry {
     pub fn clear(&mut self) {
         self.layouts.clear();
         self.order.clear();
+        self.pools.clear();
     }
 }
 
@@ -97,6 +112,7 @@ mod tests {
             rows: 1,
             grid_top_offset: 50.0,
             grid: vec![vec!['.', '.']],
+            pool: NodePool::default(),
         }
     }
 
@@ -155,5 +171,69 @@ mod tests {
         assert!(registry.is_empty());
         assert!(registry.get_by_name("a").is_none());
         assert!(registry.get_by_index(0).is_none());
+    }
+
+    // --- Pool support tests ---
+
+    fn make_pool_layout(name: &str, pool: NodePool) -> NodeLayout {
+        NodeLayout {
+            name: name.to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['.', '.']],
+            pool,
+        }
+    }
+
+    #[test]
+    fn insert_uses_layout_pool_field() {
+        let mut registry = NodeLayoutRegistry::default();
+        registry.insert(make_pool_layout("arena", NodePool::Active));
+
+        let active_layouts = registry.get_pool(NodePool::Active);
+        assert_eq!(active_layouts.len(), 1);
+        assert_eq!(active_layouts[0].name, "arena");
+    }
+
+    #[test]
+    fn get_pool_returns_only_layouts_matching_pool() {
+        let mut registry = NodeLayoutRegistry::default();
+        registry.insert(make_pool_layout("a", NodePool::Passive));
+        registry.insert(make_pool_layout("b", NodePool::Active));
+        registry.insert(make_pool_layout("c", NodePool::Passive));
+
+        let passive = registry.get_pool(NodePool::Passive);
+        assert_eq!(passive.len(), 2);
+
+        let passive_names: Vec<&str> = passive.iter().map(|l| l.name.as_str()).collect();
+        assert!(passive_names.contains(&"a"));
+        assert!(passive_names.contains(&"c"));
+        assert!(!passive_names.contains(&"b"));
+    }
+
+    #[test]
+    fn get_pool_for_empty_pool_returns_empty() {
+        let mut registry = NodeLayoutRegistry::default();
+        registry.insert(make_pool_layout("quiet", NodePool::Passive));
+        registry.insert(make_pool_layout("calm", NodePool::Passive));
+
+        let boss = registry.get_pool(NodePool::Boss);
+        assert!(boss.is_empty());
+    }
+
+    #[test]
+    fn clear_removes_pool_tracking() {
+        let mut registry = NodeLayoutRegistry::default();
+        registry.insert(make_pool_layout("a", NodePool::Passive));
+        registry.insert(make_pool_layout("b", NodePool::Active));
+        registry.insert(make_pool_layout("c", NodePool::Boss));
+
+        registry.clear();
+
+        assert!(registry.get_pool(NodePool::Passive).is_empty());
+        assert!(registry.get_pool(NodePool::Active).is_empty());
+        assert!(registry.get_pool(NodePool::Boss).is_empty());
     }
 }

@@ -5,6 +5,18 @@ use serde::Deserialize;
 
 use crate::cells::CellTypeRegistry;
 
+/// Which pool a node layout belongs to — controls when it appears in a run.
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+pub enum NodePool {
+    /// Default pool — used for non-combat or early-game nodes.
+    #[default]
+    Passive,
+    /// Active pool — higher-difficulty nodes with timers.
+    Active,
+    /// Boss pool — end-of-tier encounters.
+    Boss,
+}
+
 /// A node layout loaded from RON. Grid uses nested char arrays.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct NodeLayout {
@@ -20,6 +32,9 @@ pub struct NodeLayout {
     pub grid_top_offset: f32,
     /// Grid rows — each inner vec is a row, each char is alias or '.' (empty).
     pub grid: Vec<Vec<char>>,
+    /// Which pool this layout belongs to. Defaults to `Passive` for backward compatibility.
+    #[serde(default)]
+    pub pool: NodePool,
 }
 
 impl NodeLayout {
@@ -76,7 +91,7 @@ impl NodeLayout {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{CellTypeDefinition, CellTypeRegistry};
+    use crate::cells::{CellTypeDefinition, CellTypeRegistry, definition::CellBehavior};
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
@@ -92,6 +107,7 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry.types.insert(
@@ -106,6 +122,7 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry
@@ -120,6 +137,7 @@ mod tests {
             rows: 2,
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'T', '.'], vec!['.', 'S', 'S']],
+            pool: NodePool::default(),
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_ok());
@@ -134,6 +152,7 @@ mod tests {
             rows: 1,
             grid_top_offset: 50.0,
             grid: vec![vec!['X', 'S']],
+            pool: NodePool::default(),
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
@@ -148,6 +167,7 @@ mod tests {
             rows: 3,
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
@@ -162,6 +182,7 @@ mod tests {
             rows: 1,
             grid_top_offset: 50.0,
             grid: vec![vec!['S']],
+            pool: NodePool::default(),
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
@@ -176,6 +197,7 @@ mod tests {
             rows: 2,
             grid_top_offset: 50.0,
             grid: vec![vec!['S', '.', 'T'], vec!['.', 'S', '.']],
+            pool: NodePool::default(),
         };
         assert_eq!(layout.cell_count(), 3);
     }

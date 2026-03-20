@@ -120,9 +120,10 @@ mod tests {
         cells::{
             CellTypeDefinition,
             components::{Cell, CellHealth, CellHeight, CellTypeAlias, CellWidth, RequiredToClear},
+            definition::CellBehavior,
             resources::CellTypeRegistry,
         },
-        run::node::{ActiveNodeLayout, NodeLayout},
+        run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
     };
 
     fn test_registry() -> CellTypeRegistry {
@@ -139,6 +140,7 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry.types.insert(
@@ -153,6 +155,7 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry
@@ -167,6 +170,7 @@ mod tests {
             rows: 2,
             grid_top_offset: 50.0,
             grid: vec![vec!['T', 'S', 'S'], vec!['S', 'S', 'S']],
+            pool: NodePool::default(),
         }
     }
 
@@ -179,6 +183,7 @@ mod tests {
             rows: 2,
             grid_top_offset: 50.0,
             grid: vec![vec!['.', 'S', '.'], vec!['T', '.', 'S']],
+            pool: NodePool::default(),
         }
     }
 
@@ -332,6 +337,7 @@ mod tests {
             rows: 1,
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'X', 'S']], // 'X' not in registry
+            pool: NodePool::default(),
         };
         let mut app = test_app(layout);
         app.update();

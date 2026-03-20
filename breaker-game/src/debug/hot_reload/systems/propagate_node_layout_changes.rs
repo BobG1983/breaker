@@ -118,7 +118,10 @@ pub(crate) fn propagate_node_layout_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{CellTypeDefinition, components::CellTypeAlias};
+    use crate::{
+        cells::{CellTypeDefinition, components::CellTypeAlias, definition::CellBehavior},
+        run::node::definition::NodePool,
+    };
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
@@ -134,6 +137,7 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry.types.insert(
@@ -148,6 +152,7 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry
@@ -167,6 +172,7 @@ mod tests {
             rows,
             grid_top_offset: 50.0,
             grid,
+            pool: NodePool::default(),
         }
     }
 

@@ -18,7 +18,7 @@ pub fn init_node_timer(layout: Res<ActiveNodeLayout>, mut commands: Commands) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::node::NodeLayout;
+    use crate::run::node::{NodeLayout, definition::NodePool};
 
     fn test_app(timer_secs: f32) -> App {
         let mut app = App::new();
@@ -30,6 +30,7 @@ mod tests {
                 rows: 1,
                 grid_top_offset: 50.0,
                 grid: vec![vec!['S', 'S']],
+                pool: NodePool::default(),
             }))
             .add_systems(Startup, init_node_timer);
         app
