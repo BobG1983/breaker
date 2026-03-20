@@ -15,7 +15,7 @@ pub(crate) enum ChipKind {
 }
 
 /// How rare a chip is — controls appearance weight in the selection pool.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Rarity {
     Common,
     Uncommon,

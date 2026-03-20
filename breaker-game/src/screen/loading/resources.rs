@@ -10,7 +10,7 @@ use crate::{
     cells::{CellDefaults, CellTypeDefinition},
     chips::ChipDefinition,
     input::InputDefaults,
-    run::NodeLayout,
+    run::{NodeLayout, difficulty::DifficultyCurveDefaults},
     screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
     shared::PlayfieldDefaults,
     ui::TimerUiDefaults,
@@ -62,4 +62,7 @@ pub(crate) struct DefaultsCollection {
     /// All overclock chip definition handles.
     #[asset(path = "overclocks", collection(typed))]
     pub overclocks: Vec<Handle<ChipDefinition>>,
+    /// Handle for difficulty curve defaults.
+    #[asset(path = "config/defaults.difficulty.ron")]
+    pub difficulty: Handle<DifficultyCurveDefaults>,
 }

@@ -77,6 +77,7 @@ mod tests {
             amps,
             augments,
             overclocks,
+            difficulty: Handle::default(),
         }
     }
 
