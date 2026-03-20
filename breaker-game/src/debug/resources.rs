@@ -1,8 +1,10 @@
 //! Debug domain resources.
 
+#[cfg(feature = "dev")]
 use bevy::prelude::*;
 
 /// Identifies a specific debug overlay.
+#[cfg(feature = "dev")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Overlay {
     /// Frames-per-second counter.
@@ -21,6 +23,7 @@ pub(crate) enum Overlay {
     InputActions,
 }
 
+#[cfg(feature = "dev")]
 impl Overlay {
     /// Total number of overlay variants.
     const COUNT: usize = 7;
@@ -30,12 +33,14 @@ impl Overlay {
 ///
 /// Uses an enum-indexed array instead of individual bool fields to avoid
 /// `clippy::struct_excessive_bools`.
+#[cfg(feature = "dev")]
 #[derive(Resource)]
 pub(crate) struct DebugOverlays {
     /// Visibility flags indexed by [`Overlay`] variant.
     flags: [bool; Overlay::COUNT],
 }
 
+#[cfg(feature = "dev")]
 impl Default for DebugOverlays {
     fn default() -> Self {
         Self {
@@ -44,6 +49,7 @@ impl Default for DebugOverlays {
     }
 }
 
+#[cfg(feature = "dev")]
 impl DebugOverlays {
     /// Returns a mutable reference to the flag for the given overlay.
     ///
@@ -68,6 +74,7 @@ pub(crate) struct LastBumpResult(pub String);
 mod tests {
     use super::*;
 
+    #[cfg(feature = "dev")]
     #[test]
     fn debug_overlays_default_all_off() {
         let overlays = DebugOverlays::default();

@@ -12,7 +12,7 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 | `BumpPerformed { grade, multiplier }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), behaviors (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), behaviors (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_breaker) | run/node (check_spawn_complete) |
-| `CellDestroyed { entity, was_required_to_clear }` | cells | run (track_node_completion) |
+| `CellDestroyed { was_required_to_clear }` | cells | run (track_node_completion) |
 | `CellsSpawned` | run/node (spawn_cells_from_layout) | run/node (check_spawn_complete) |
 | `BoltSpawned` | bolt (spawn_bolt) | run/node (check_spawn_complete) |
 | `WallsSpawned` | wall (spawn_walls) | run/node (check_spawn_complete) |
