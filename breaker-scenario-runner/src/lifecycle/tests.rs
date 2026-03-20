@@ -26,6 +26,7 @@ fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         allow_early_end: true,
         stress: None,
         seed: None,
+        initial_overclocks: None,
     }
 }
 
@@ -44,6 +45,7 @@ fn make_lifecycle_test_scenario() -> ScenarioDefinition {
         allow_early_end: true,
         stress: None,
         seed: None,
+        initial_overclocks: None,
     }
 }
 
@@ -62,6 +64,7 @@ fn lifecycle_test_app() -> App {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
     // Resources required by bypass_menu_to_playing
     app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()))
@@ -186,6 +189,7 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
         height: 700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
         wall_thickness: 180.0,
+        zone_fraction: 0.667,
     });
 
     // Spawn bolt well above the top bound
@@ -265,6 +269,7 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
         allow_early_end: true,
         stress: None,
         seed: None,
+        initial_overclocks: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -326,6 +331,7 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
         allow_early_end: true,
         stress: None,
         seed: None,
+        initial_overclocks: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -392,6 +398,7 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
         allow_early_end: true,
         stress: None,
         seed: None,
+        initial_overclocks: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -667,6 +674,7 @@ fn init_scenario_input_creates_driver_resource() {
             allow_early_end: true,
             stress: None,
             seed: None,
+            initial_overclocks: None,
         },
     });
     app.add_systems(Update, init_scenario_input);
@@ -899,5 +907,77 @@ fn restart_run_on_end_transitions_to_main_menu() {
         **state,
         GameState::MainMenu,
         "expected restart_run_on_end to transition to MainMenu"
+    );
+}
+
+// -------------------------------------------------------------------------
+// bypass_menu_to_playing — populates ActiveOverclocks from initial_overclocks
+// -------------------------------------------------------------------------
+
+/// When `initial_overclocks` is `Some` with one chain, `bypass_menu_to_playing`
+/// must populate `ActiveOverclocks` with that chain.
+///
+/// This test FAILS until `bypass_menu_to_playing` reads `initial_overclocks`
+/// and writes them to `ActiveOverclocks`.
+#[test]
+fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
+    use breaker::{bolt::ActiveOverclocks, chips::TriggerChain};
+
+    let mut definition = make_scenario(100);
+    definition.initial_overclocks = Some(vec![TriggerChain::Shockwave { range: 64.0 }]);
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .init_resource::<breaker::shared::RunSeed>()
+        .init_resource::<ActiveOverclocks>()
+        .add_plugins(StatesPlugin)
+        .init_state::<GameState>()
+        .add_systems(Update, bypass_menu_to_playing);
+
+    app.update();
+
+    let active = app.world().resource::<ActiveOverclocks>();
+    assert_eq!(
+        active.0.len(),
+        1,
+        "expected ActiveOverclocks to contain 1 chain when initial_overclocks is Some, got {}",
+        active.0.len()
+    );
+    assert_eq!(
+        active.0[0],
+        TriggerChain::Shockwave { range: 64.0 },
+        "expected ActiveOverclocks[0] to be Shockwave {{ range: 64.0 }}"
+    );
+}
+
+/// When `initial_overclocks` is `None`, `bypass_menu_to_playing` must leave
+/// `ActiveOverclocks` at its default (empty vec).
+#[test]
+fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
+    use breaker::bolt::ActiveOverclocks;
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig {
+            definition: make_scenario(100),
+        })
+        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .init_resource::<breaker::shared::RunSeed>()
+        .init_resource::<ActiveOverclocks>()
+        .add_plugins(StatesPlugin)
+        .init_state::<GameState>()
+        .add_systems(Update, bypass_menu_to_playing);
+
+    app.update();
+
+    let active = app.world().resource::<ActiveOverclocks>();
+    assert!(
+        active.0.is_empty(),
+        "expected ActiveOverclocks to be empty when initial_overclocks is None, got {} entries",
+        active.0.len()
     );
 }

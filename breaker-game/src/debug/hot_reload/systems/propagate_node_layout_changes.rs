@@ -9,7 +9,7 @@ use crate::{
     },
     run::node::{
         ActiveNodeLayout, ClearRemainingCount, NodeLayout, NodeLayoutRegistry,
-        systems::spawn_cells_from_grid,
+        systems::{RenderAssets, spawn_cells_from_grid},
     },
     screen::loading::resources::DefaultsCollection,
     shared::PlayfieldConfig,
@@ -104,7 +104,10 @@ pub(crate) fn propagate_node_layout_changes(
         &ctx.playfield,
         &layout,
         &ctx.cell_type_registry,
-        (&mut ctx.meshes, &mut ctx.materials),
+        RenderAssets {
+            meshes: &mut ctx.meshes,
+            materials: &mut ctx.materials,
+        },
         1.0,
     );
 

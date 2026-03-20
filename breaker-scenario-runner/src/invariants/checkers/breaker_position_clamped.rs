@@ -55,6 +55,7 @@ mod tests {
                 height: 700.0,
                 background_color_rgb: [0.0, 0.0, 0.0],
                 wall_thickness: 180.0,
+                zone_fraction: 0.667,
             })
             .add_systems(FixedUpdate, check_breaker_position_clamped);
         app

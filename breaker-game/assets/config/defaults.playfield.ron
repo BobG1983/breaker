@@ -4,4 +4,5 @@
     height: 1080.0,
     background_color_rgb: (0.02, 0.01, 0.04),
     wall_thickness: 180.0,
+    zone_fraction: 0.667,
 )

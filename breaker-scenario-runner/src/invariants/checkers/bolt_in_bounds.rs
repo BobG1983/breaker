@@ -91,6 +91,7 @@ mod tests {
                 height: 700.0,
                 background_color_rgb: [0.0, 0.0, 0.0],
                 wall_thickness: 180.0,
+                zone_fraction: 0.667,
             })
             .insert_resource(ViolationLog::default())
             .insert_resource(ScenarioFrame::default())
@@ -120,6 +121,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(1842));
 
@@ -173,6 +175,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(10));
 
@@ -202,6 +205,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(0));
 
@@ -231,6 +235,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioStats::default());
 
@@ -264,6 +269,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(1842));
 
@@ -317,6 +323,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
@@ -349,6 +356,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
@@ -379,6 +387,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
@@ -412,6 +421,7 @@ mod tests {
             height: 700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
             wall_thickness: 180.0,
+            zone_fraction: 0.667,
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 

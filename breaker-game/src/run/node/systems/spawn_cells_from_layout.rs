@@ -15,6 +15,70 @@ use crate::{
     shared::{CleanupOnNodeExit, PlayfieldConfig},
 };
 
+/// Total extent of a grid along one axis: `step * count - padding`.
+fn grid_extent(step: f32, count_f: f32, padding: f32) -> f32 {
+    step.mul_add(count_f, -padding)
+}
+
+/// Pre-computed scaled grid dimensions returned by [`compute_grid_scale`].
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ScaledGridDims {
+    pub cell_width: f32,
+    pub cell_height: f32,
+    pub padding_x: f32,
+    pub step_x: f32,
+    pub step_y: f32,
+    pub scale: f32,
+}
+
+/// Computes the uniform scale factor for a grid layout so that all cells fit
+/// within the playfield cell zone.
+///
+/// Returns [`ScaledGridDims`] with `scale` in `(0.0, 1.0]` — `1.0` when the
+/// grid already fits at native cell dimensions, less when it must shrink.
+pub(crate) fn compute_grid_scale(
+    config: &CellConfig,
+    playfield: &PlayfieldConfig,
+    cols: u32,
+    rows: u32,
+    grid_top_offset: f32,
+) -> ScaledGridDims {
+    let step_x = config.width + config.padding_x;
+    let step_y = config.height + config.padding_y;
+    let cols_f = f32::from(u16::try_from(cols).unwrap_or(u16::MAX));
+    let rows_f = f32::from(u16::try_from(rows).unwrap_or(u16::MAX));
+
+    let default_grid_width = grid_extent(step_x, cols_f, config.padding_x);
+    let default_grid_height = grid_extent(step_y, rows_f, config.padding_y);
+
+    let available_width = playfield.width;
+    let available_height = (playfield.cell_zone_height() - grid_top_offset).max(0.0);
+
+    let scale_x = available_width / default_grid_width;
+    let scale_y = available_height / default_grid_height;
+
+    let scale = scale_x.min(scale_y).min(1.0);
+    let cell_width = config.width * scale;
+    let cell_height = config.height * scale;
+    let padding_x = config.padding_x * scale;
+    let step_x = cell_width + padding_x;
+    let step_y = cell_height + config.padding_y * scale;
+    ScaledGridDims {
+        cell_width,
+        cell_height,
+        padding_x,
+        step_x,
+        step_y,
+        scale,
+    }
+}
+
+/// Bundled mutable access to mesh and material asset stores for cell spawning.
+pub(crate) struct RenderAssets<'a> {
+    pub meshes: &'a mut Assets<Mesh>,
+    pub materials: &'a mut Assets<ColorMaterial>,
+}
+
 /// Spawns cells from a grid layout. Returns the count of `RequiredToClear` cells.
 ///
 /// Shared between the `OnEnter(Playing)` system and hot-reload respawn.
@@ -26,22 +90,36 @@ pub(crate) fn spawn_cells_from_grid(
     playfield: &PlayfieldConfig,
     layout: &NodeLayout,
     registry: &CellTypeRegistry,
-    render_assets: (&mut Assets<Mesh>, &mut Assets<ColorMaterial>),
+    render_assets: RenderAssets<'_>,
     hp_mult: f32,
 ) -> u32 {
-    let (meshes, materials) = render_assets;
-    let cell_width = config.width;
-    let cell_height = config.height;
-    let step_x = cell_width + config.padding_x;
-    let step_y = cell_height + config.padding_y;
+    let RenderAssets { meshes, materials } = render_assets;
+    let dims = compute_grid_scale(
+        config,
+        playfield,
+        layout.cols,
+        layout.rows,
+        layout.grid_top_offset,
+    );
+    let ScaledGridDims {
+        cell_width,
+        cell_height,
+        padding_x,
+        step_x,
+        step_y,
+        scale,
+        ..
+    } = dims;
 
-    let grid_width = step_x.mul_add(
+    let grid_width = grid_extent(
+        step_x,
         f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
-        -config.padding_x,
+        padding_x,
     );
     let start_x = -grid_width / 2.0 + cell_width / 2.0;
     let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
 
+    debug!("grid scale={scale:.3} cell={cell_width:.1}x{cell_height:.1}");
     let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
     let mut required_count = 0u32;
 
@@ -65,8 +143,8 @@ pub(crate) fn spawn_cells_from_grid(
             let mut entity = commands.spawn((
                 Cell,
                 CellTypeAlias(alias),
-                CellWidth(config.width),
-                CellHeight(config.height),
+                CellWidth(cell_width),
+                CellHeight(cell_height),
                 CellHealth::new(scaled_hp),
                 CellDamageVisuals {
                     hdr_base: def.damage_hdr_base,
@@ -146,10 +224,13 @@ pub(crate) fn spawn_cells_from_layout(
         &ctx.playfield_config,
         &layout.0,
         &ctx.cell_registry,
-        (&mut render_assets.0, &mut render_assets.1),
+        RenderAssets {
+            meshes: &mut render_assets.0,
+            materials: &mut render_assets.1,
+        },
         hp_mult,
     );
-    debug!("cells spawned count={}", count);
+    debug!("cells spawned count={count}");
     cells_spawned.write(CellsSpawned);
 }
 
@@ -246,6 +327,31 @@ mod tests {
             .insert_resource(test_registry())
             .add_systems(Startup, spawn_cells_from_layout);
         app
+    }
+
+    fn collect_sorted_cell_positions(app: &mut App) -> Vec<(f32, f32)> {
+        let mut positions: Vec<(f32, f32)> = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Cell>>()
+            .iter(app.world())
+            .map(|tf| (tf.translation.x, tf.translation.y))
+            .collect();
+        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+        positions
+    }
+
+    fn assert_positions_match(actual: &[(f32, f32)], expected: &[(f32, f32)]) {
+        assert_eq!(actual.len(), expected.len(), "position count mismatch");
+        for (i, ((ax, ay), (ex, ey))) in actual.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (ax - ex).abs() < 0.01,
+                "cell {i} x: expected {ex:.2}, got {ax:.2}"
+            );
+            assert!(
+                (ay - ey).abs() < 0.01,
+                "cell {i} y: expected {ey:.2}, got {ay:.2}"
+            );
+        }
     }
 
     #[test]
@@ -409,7 +515,7 @@ mod tests {
         // Grid should be centered: sum of all x positions per row should be ~0
         // With 3 columns the positions should be symmetric around 0
         let cols_f = f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX));
-        let grid_width = step_x.mul_add(cols_f, -config.padding_x);
+        let grid_width = grid_extent(step_x, cols_f, config.padding_x);
         let expected_start = -grid_width / 2.0 + config.width / 2.0;
         let expected_end = step_x.mul_add(cols_f - 1.0, expected_start);
         let center = f32::midpoint(expected_start, expected_end);
@@ -430,20 +536,15 @@ mod tests {
         let mut app = test_app(layout.clone());
         app.update();
 
-        let grid_width = step_x.mul_add(
+        let grid_width = grid_extent(
+            step_x,
             f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
-            -config.padding_x,
+            config.padding_x,
         );
         let start_x = -grid_width / 2.0 + config.width / 2.0;
         let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
 
-        let mut positions: Vec<(f32, f32)> = app
-            .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
-            .iter(app.world())
-            .map(|tf| (tf.translation.x, tf.translation.y))
-            .collect();
-        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+        let positions = collect_sorted_cell_positions(&mut app);
 
         // full_layout: row 0 = [T, S, S], row 1 = [S, S, S]
         let expected: Vec<(f32, f32)> = vec![
@@ -457,17 +558,7 @@ mod tests {
             (step_x.mul_add(2.0, start_x), start_y - step_y),
         ];
 
-        assert_eq!(positions.len(), expected.len());
-        for (i, ((ax, ay), (ex, ey))) in positions.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (ax - ex).abs() < 0.01,
-                "cell {i} x: expected {ex:.2}, got {ax:.2}"
-            );
-            assert!(
-                (ay - ey).abs() < 0.01,
-                "cell {i} y: expected {ey:.2}, got {ay:.2}"
-            );
-        }
+        assert_positions_match(&positions, &expected);
     }
 
     #[test]
@@ -480,20 +571,15 @@ mod tests {
         let mut app = test_app(layout.clone());
         app.update();
 
-        let grid_width = step_x.mul_add(
+        let grid_width = grid_extent(
+            step_x,
             f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
-            -config.padding_x,
+            config.padding_x,
         );
         let start_x = -grid_width / 2.0 + config.width / 2.0;
         let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
 
-        let mut positions: Vec<(f32, f32)> = app
-            .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
-            .iter(app.world())
-            .map(|tf| (tf.translation.x, tf.translation.y))
-            .collect();
-        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+        let positions = collect_sorted_cell_positions(&mut app);
 
         // sparse_layout: row 0 = [., S, .], row 1 = [T, ., S]
         let expected: Vec<(f32, f32)> = vec![
@@ -502,17 +588,7 @@ mod tests {
             (step_x.mul_add(2.0, start_x), start_y - step_y), // row 1, col 2
         ];
 
-        assert_eq!(positions.len(), expected.len());
-        for (i, ((ax, ay), (ex, ey))) in positions.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (ax - ex).abs() < 0.01,
-                "cell {i} x: expected {ex:.2}, got {ax:.2}"
-            );
-            assert!(
-                (ay - ey).abs() < 0.01,
-                "cell {i} y: expected {ey:.2}, got {ay:.2}"
-            );
-        }
+        assert_positions_match(&positions, &expected);
     }
 
     #[test]
@@ -877,13 +953,7 @@ mod tests {
         let mut app = test_app(layout);
         app.update();
 
-        let mut positions: Vec<(f32, f32)> = app
-            .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
-            .iter(app.world())
-            .map(|tf| (tf.translation.x, tf.translation.y))
-            .collect();
-        positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+        let positions = collect_sorted_cell_positions(&mut app);
 
         // Check horizontal spacing within row 0 (first 3 cells)
         let dx_01 = positions[1].0 - positions[0].0;
@@ -902,6 +972,349 @@ mod tests {
         assert!(
             (dy - step_y).abs() < 0.01,
             "vertical spacing should be {step_y}, got {dy}"
+        );
+    }
+
+    // --- Grid scale tests ---
+
+    /// Returns a `CellConfig` with RON-like values (not Rust `Default`).
+    fn ron_like_cell_config() -> CellConfig {
+        CellConfig {
+            width: 126.0,
+            height: 43.0,
+            padding_x: 7.0,
+            padding_y: 7.0,
+        }
+    }
+
+    /// Returns a `PlayfieldConfig` with RON-like values (not Rust `Default`).
+    fn ron_like_playfield_config() -> PlayfieldConfig {
+        PlayfieldConfig {
+            width: 1440.0,
+            height: 1080.0,
+            zone_fraction: 0.667,
+            wall_thickness: 180.0,
+            background_color_rgb: [0.02, 0.01, 0.04],
+        }
+    }
+
+    /// Creates a test `App` with explicit RON-like configs for grid-scale tests.
+    fn scaled_test_app(layout: NodeLayout) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
+            .insert_resource(ron_like_cell_config())
+            .insert_resource(ron_like_playfield_config())
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(test_registry())
+            .add_systems(Startup, spawn_cells_from_layout);
+        app
+    }
+
+    /// Builds a `NodeLayout` filled entirely with 'S' cells.
+    fn uniform_layout(cols: u32, rows: u32, grid_top_offset: f32) -> NodeLayout {
+        let grid = vec![vec!['S'; cols as usize]; rows as usize];
+        NodeLayout {
+            name: format!("uniform_{cols}x{rows}"),
+            timer_secs: 60.0,
+            cols,
+            rows,
+            grid_top_offset,
+            grid,
+            pool: NodePool::default(),
+        }
+    }
+
+    // --- A: Pure function tests for compute_grid_scale ---
+
+    #[test]
+    fn small_grid_returns_scale_one() {
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let result = compute_grid_scale(&config, &playfield, 3, 2, 50.0);
+        assert!(
+            (result.scale - 1.0).abs() < f32::EPSILON,
+            "3x2 grid should fit at scale 1.0, got {}",
+            result.scale
+        );
+    }
+
+    #[test]
+    fn wide_grid_is_width_constrained() {
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let result = compute_grid_scale(&config, &playfield, 30, 2, 90.0);
+        // default_grid_width = 30 * 133 - 7 = 3983
+        // scale = 1440 / 3983 ≈ 0.3615
+        let expected = 1440.0 / 3983.0;
+        assert!(
+            result.scale < 1.0,
+            "30-col grid should need scaling, got {}",
+            result.scale
+        );
+        assert!(
+            (result.scale - expected).abs() < 0.001,
+            "expected scale ~{expected:.4}, got {:.4}",
+            result.scale
+        );
+    }
+
+    #[test]
+    fn tall_grid_is_height_constrained() {
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let result = compute_grid_scale(&config, &playfield, 3, 30, 90.0);
+        // cell_zone_height = 1080 * 0.667 = 720.36
+        // available_height = 720.36 - 90.0 = 630.36
+        // default_grid_height = 30 * 50 - 7 = 1493
+        // scale = 630.36 / 1493 ≈ 0.4222
+        let expected = 630.36 / 1493.0;
+        assert!(
+            result.scale < 1.0,
+            "30-row grid should need scaling, got {}",
+            result.scale
+        );
+        assert!(
+            (result.scale - expected).abs() < 0.001,
+            "expected scale ~{expected:.4}, got {:.4}",
+            result.scale
+        );
+    }
+
+    #[test]
+    fn scale_capped_at_one_for_tiny_grid() {
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let result = compute_grid_scale(&config, &playfield, 1, 1, 50.0);
+        assert!(
+            (result.scale - 1.0).abs() < f32::EPSILON,
+            "1x1 grid should be scale 1.0, got {}",
+            result.scale
+        );
+    }
+
+    #[test]
+    fn corridor_layout_ten_by_five_returns_scale_one() {
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let result = compute_grid_scale(&config, &playfield, 10, 5, 90.0);
+        // grid_width = 10*133 - 7 = 1323 < 1440
+        // grid_height = 5*50 - 7 = 243 < 630.36
+        assert!(
+            (result.scale - 1.0).abs() < f32::EPSILON,
+            "10x5 grid should fit at scale 1.0, got {}",
+            result.scale
+        );
+    }
+
+    #[test]
+    fn extreme_grid_128x128_produces_positive_sub_unit_scale() {
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let result = compute_grid_scale(&config, &playfield, 128, 128, 90.0);
+        // default_grid_width = 128*133 - 7 = 17017
+        // scale_x = 1440 / 17017 ≈ 0.0846
+        // default_grid_height = 128*50 - 7 = 6393
+        // scale_y = 630.36 / 6393 ≈ 0.0986
+        // scale = min(0.0846, 0.0986) ≈ 0.0846
+        let expected = 1440.0 / 17017.0;
+        assert!(
+            result.scale > 0.0,
+            "scale must be positive, got {}",
+            result.scale
+        );
+        assert!(
+            result.scale < 1.0,
+            "128x128 grid must scale down, got {}",
+            result.scale
+        );
+        assert!(
+            (result.scale - expected).abs() < 0.001,
+            "expected scale ~{expected:.4}, got {:.4}",
+            result.scale
+        );
+    }
+
+    // --- B: Integration tests for scaled cell spawning ---
+
+    #[test]
+    fn large_grid_cells_have_scaled_dimensions() {
+        let layout = uniform_layout(40, 20, 90.0);
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        let widths: Vec<f32> = app
+            .world_mut()
+            .query::<(&Cell, &CellWidth)>()
+            .iter(app.world())
+            .map(|(_, w)| w.0)
+            .collect();
+        let heights: Vec<f32> = app
+            .world_mut()
+            .query::<(&Cell, &CellHeight)>()
+            .iter(app.world())
+            .map(|(_, h)| h.0)
+            .collect();
+
+        assert!(!widths.is_empty(), "should have spawned cells");
+
+        // All widths should be less than the base 126.0 (grid is too wide)
+        for (i, &w) in widths.iter().enumerate() {
+            assert!(
+                w < 126.0,
+                "cell {i} CellWidth={w} should be < 126.0 for a 40x20 grid"
+            );
+        }
+        // All heights should be less than the base 43.0
+        for (i, &h) in heights.iter().enumerate() {
+            assert!(
+                h < 43.0,
+                "cell {i} CellHeight={h} should be < 43.0 for a 40x20 grid"
+            );
+        }
+
+        // All widths should be uniform
+        let first_w = widths[0];
+        for (i, &w) in widths.iter().enumerate() {
+            assert!(
+                (w - first_w).abs() < f32::EPSILON,
+                "cell {i} CellWidth={w} differs from first={first_w}"
+            );
+        }
+        // All heights should be uniform
+        let first_h = heights[0];
+        for (i, &h) in heights.iter().enumerate() {
+            assert!(
+                (h - first_h).abs() < f32::EPSILON,
+                "cell {i} CellHeight={h} differs from first={first_h}"
+            );
+        }
+    }
+
+    #[test]
+    fn large_grid_cells_within_cell_zone_bounds() {
+        let layout = uniform_layout(40, 20, 90.0);
+        let playfield = ron_like_playfield_config();
+        let cell_zone_height = playfield.height * playfield.zone_fraction; // 720.36
+        let zone_bottom = playfield.top() - cell_zone_height; // 540.0 - 720.36 = -180.36
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        let positions = collect_sorted_cell_positions(&mut app);
+
+        for &(x, y) in &positions {
+            assert!(
+                y > zone_bottom,
+                "cell y={y} below cell zone bottom {zone_bottom}"
+            );
+            assert!(
+                y < playfield.top(),
+                "cell y={y} above playfield top {}",
+                playfield.top()
+            );
+            assert!(
+                x.abs() < playfield.right(),
+                "cell |x|={} outside playfield right {}",
+                x.abs(),
+                playfield.right()
+            );
+        }
+    }
+
+    #[test]
+    fn small_grid_preserves_original_dimensions() {
+        let layout = uniform_layout(3, 2, 50.0);
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        for (_, w) in app
+            .world_mut()
+            .query::<(&Cell, &CellWidth)>()
+            .iter(app.world())
+        {
+            assert!(
+                (w.0 - 126.0).abs() < f32::EPSILON,
+                "3x2 grid CellWidth should be 126.0, got {}",
+                w.0
+            );
+        }
+        for (_, h) in app
+            .world_mut()
+            .query::<(&Cell, &CellHeight)>()
+            .iter(app.world())
+        {
+            assert!(
+                (h.0 - 43.0).abs() < f32::EPSILON,
+                "3x2 grid CellHeight should be 43.0, got {}",
+                h.0
+            );
+        }
+    }
+
+    #[test]
+    fn large_grid_transform_scale_matches_cell_dimensions() {
+        let layout = uniform_layout(40, 20, 90.0);
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        for (_, w, h, tf) in app
+            .world_mut()
+            .query::<(&Cell, &CellWidth, &CellHeight, &Transform)>()
+            .iter(app.world())
+        {
+            assert!(
+                (tf.scale.x - w.0).abs() < f32::EPSILON,
+                "Transform.scale.x={} should match CellWidth={}",
+                tf.scale.x,
+                w.0
+            );
+            assert!(
+                (tf.scale.y - h.0).abs() < f32::EPSILON,
+                "Transform.scale.y={} should match CellHeight={}",
+                tf.scale.y,
+                h.0
+            );
+        }
+    }
+
+    #[test]
+    fn single_cell_grid_spawns_centered_at_full_scale() {
+        let layout = NodeLayout {
+            name: "single".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool: NodePool::default(),
+        };
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        let cells: Vec<(&CellWidth, &CellHeight, &Transform)> = app
+            .world_mut()
+            .query::<(&CellWidth, &CellHeight, &Transform)>()
+            .iter(app.world())
+            .collect();
+        assert_eq!(cells.len(), 1, "should spawn exactly 1 cell");
+
+        let (w, h, tf) = cells[0];
+        assert!(
+            tf.translation.x.abs() < f32::EPSILON,
+            "single cell should be centered at x=0.0, got {}",
+            tf.translation.x
+        );
+        assert!(
+            (w.0 - 126.0).abs() < f32::EPSILON,
+            "1x1 grid CellWidth should be 126.0, got {}",
+            w.0
+        );
+        assert!(
+            (h.0 - 43.0).abs() < f32::EPSILON,
+            "1x1 grid CellHeight should be 43.0, got {}",
+            h.0
         );
     }
 }
