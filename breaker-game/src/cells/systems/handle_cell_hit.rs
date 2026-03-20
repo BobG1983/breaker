@@ -34,10 +34,16 @@ pub(crate) fn handle_cell_hit(
         if despawned.contains(&hit.cell) {
             continue;
         }
-        let Ok((mut health, material_handle, visuals, is_required)) = cell_query.get_mut(hit.cell)
+        let Ok((mut health, material_handle, visuals, is_required, is_locked)) =
+            cell_query.get_mut(hit.cell)
         else {
             continue;
         };
+
+        // Locked cells are immune to damage until unlocked.
+        if is_locked {
+            continue;
+        }
 
         let boost = bolt_query.get(hit.bolt).map_or(0.0_f32, |b| b.0);
         let destroyed = health.take_damage(BASE_BOLT_DAMAGE * (1.0 + boost));

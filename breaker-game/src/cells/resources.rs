@@ -43,6 +43,7 @@ pub struct CellTypeRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cells::definition::CellBehavior;
 
     #[test]
     fn cell_defaults_width_height_positive() {
@@ -96,6 +97,7 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
+            behavior: CellBehavior::default(),
         };
         let def_b = CellTypeDefinition {
             id: "b".to_owned(),
@@ -107,6 +109,7 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
+            behavior: CellBehavior::default(),
         };
         let mut registry = CellTypeRegistry::default();
         registry.types.insert(def_a.alias, def_a);

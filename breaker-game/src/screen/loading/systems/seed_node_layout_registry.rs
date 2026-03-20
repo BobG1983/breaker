@@ -54,7 +54,10 @@ pub(crate) fn seed_node_layout_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::CellTypeDefinition;
+    use crate::{
+        cells::{CellTypeDefinition, definition::CellBehavior},
+        run::node::definition::NodePool,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -78,6 +81,7 @@ mod tests {
                 damage_green_min: 0.3,
                 damage_blue_range: 0.5,
                 damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
             },
         );
         registry
@@ -91,6 +95,7 @@ mod tests {
             rows: 1,
             grid_top_offset: 0.0,
             grid: vec![vec!['S', '.']],
+            pool: NodePool::default(),
         }
     }
 

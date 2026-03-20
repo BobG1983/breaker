@@ -3,6 +3,17 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+/// Optional behavior flags for a cell type.
+#[derive(Deserialize, Clone, Debug, Default)]
+pub struct CellBehavior {
+    /// Whether this cell starts locked (immune to damage until adjacents are cleared).
+    #[serde(default)]
+    pub locked: bool,
+    /// If set, HP regenerates at this rate per second.
+    #[serde(default)]
+    pub regen_rate: Option<f32>,
+}
+
 /// A cell type definition loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct CellTypeDefinition {
@@ -24,6 +35,9 @@ pub struct CellTypeDefinition {
     pub damage_blue_range: f32,
     /// Base blue channel value for damage color feedback.
     pub damage_blue_base: f32,
+    /// Optional behavior flags (locked, regen). Defaults to no behavior.
+    #[serde(default)]
+    pub behavior: CellBehavior,
 }
 
 impl CellTypeDefinition {

@@ -51,6 +51,7 @@ pub(crate) fn seed_cell_type_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cells::definition::CellBehavior;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -71,6 +72,7 @@ mod tests {
             damage_green_min: 0.3,
             damage_blue_range: 0.5,
             damage_blue_base: 0.2,
+            behavior: CellBehavior::default(),
         }
     }
 

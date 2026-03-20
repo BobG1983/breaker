@@ -70,6 +70,7 @@ pub(crate) fn propagate_cell_type_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cells::definition::CellBehavior;
 
     fn make_standard_def() -> CellTypeDefinition {
         CellTypeDefinition {
@@ -82,6 +83,7 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
+            behavior: CellBehavior::default(),
         }
     }
 
@@ -96,6 +98,7 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
+            behavior: CellBehavior::default(),
         }
     }
 

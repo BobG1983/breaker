@@ -44,7 +44,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::run::node::NodeLayout;
+    use crate::run::node::{NodeLayout, definition::NodePool};
 
     fn make_layout(name: &str) -> NodeLayout {
         NodeLayout {
@@ -54,6 +54,7 @@ mod tests {
             rows: 1,
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
         }
     }
 

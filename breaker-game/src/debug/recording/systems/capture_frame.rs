@@ -52,7 +52,7 @@ mod tests {
     use super::*;
     use crate::{
         input::resources::GameAction,
-        run::node::{ActiveNodeLayout, NodeLayout},
+        run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
     };
 
     #[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
@@ -119,6 +119,7 @@ mod tests {
                 rows: 5,
                 grid_top_offset: 0.0,
                 grid: vec![],
+                pool: NodePool::default(),
             }));
         run_with_actions(&mut app, vec![GameAction::MoveRight]);
 
@@ -137,6 +138,7 @@ mod tests {
                 rows: 5,
                 grid_top_offset: 0.0,
                 grid: vec![],
+                pool: NodePool::default(),
             }));
         run_with_actions(&mut app, vec![GameAction::DashLeft]);
 

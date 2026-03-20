@@ -3,7 +3,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{messages::CellDestroyed, resources::CellConfig, systems::handle_cell_hit},
+    cells::{
+        messages::CellDestroyed,
+        resources::CellConfig,
+        systems::{
+            check_lock_release::check_lock_release, handle_cell_hit,
+            tick_cell_regen::tick_cell_regen,
+        },
+    },
     shared::PlayingState,
 };
 
@@ -18,7 +25,12 @@ impl Plugin for CellsPlugin {
             .init_resource::<CellConfig>()
             .add_systems(
                 FixedUpdate,
-                handle_cell_hit.run_if(in_state(PlayingState::Active)),
+                (
+                    handle_cell_hit,
+                    check_lock_release.after(handle_cell_hit),
+                    tick_cell_regen,
+                )
+                    .run_if(in_state(PlayingState::Active)),
             );
     }
 }

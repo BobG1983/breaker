@@ -4,12 +4,13 @@
 
 use bevy::prelude::*;
 
-use crate::cells::components::{CellDamageVisuals, CellHealth, RequiredToClear};
+use crate::cells::components::{CellDamageVisuals, CellHealth, Locked, RequiredToClear};
 
-/// Cell health, material, damage visuals, and clear-requirement for damage feedback.
+/// Cell health, material, damage visuals, clear-requirement, and lock status.
 pub(crate) type DamageVisualQuery = (
     &'static mut CellHealth,
     &'static MeshMaterial2d<ColorMaterial>,
     &'static CellDamageVisuals,
     Has<RequiredToClear>,
+    Has<Locked>,
 );
