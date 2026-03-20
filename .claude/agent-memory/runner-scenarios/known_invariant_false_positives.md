@@ -153,6 +153,24 @@ wall-reflection math in `shared::math` are the most likely suspects.
 
 ---
 
+## BreakerPositionClamped — never fires in breaker_oob_detection self-test (NEW, 2026-03-19)
+
+**Scenario:** `breaker_oob_detection` — Aegis + Corridor, breaker teleported to x=2000.0 via `debug_setup`, `disable_physics=true`. Expects BOTH `BreakerInBounds` AND `BreakerPositionClamped` to fire.
+
+**Observed:** `BreakerInBounds` fires 105 times (frames 16-120). `BreakerPositionClamped` never fires. Fails with `-s` (single-run), confirming it is a real bug not a parallelism artifact.
+
+**Root cause:** `check_breaker_position_clamped` queries `(Entity, &Transform, &BreakerWidth), With<ScenarioTagBreaker>`. `BreakerWidth` is inserted by `init_breaker_params` which uses `Commands` (deferred). The entity is spawned in `spawn_breaker` (also deferred). In `OnEnter(GameState::Playing)`, there is no explicit `ApplyDeferred` between `spawn_breaker` and `init_breaker_params` in the breaker plugin's schedule, so when `init_breaker_params` runs, the newly-spawned `Breaker` entity is not yet visible via query — the deferred spawn has not been applied. As a result, `init_breaker_params` is a no-op on the first node, `BreakerWidth` is never inserted, and the `check_breaker_position_clamped` query matches no entities.
+
+**Why BreakerInBounds still fires:** `check_breaker_in_bounds` queries only `(Entity, &Transform), With<ScenarioTagBreaker>` — no `BreakerWidth` required. `ScenarioTagBreaker` is inserted by `tag_game_entities`, which runs BEFORE `apply_debug_setup` in the scenario lifecycle chain. The `Transform` teleport to x=2000.0 happens in `apply_debug_setup`. So the entity IS tagged and has the right Transform by the first `FixedUpdate`.
+
+**Evidence:** `spawn_breaker.rs:37-54` — no `BreakerWidth` in the spawn bundle. `init_breaker_params.rs:27-30` — inserts `BreakerWidth` via `Commands`, filtered by `Without<BreakerMaxSpeed>`, deferred. `breaker/plugin.rs:36-44` — no `ApplyDeferred` between `spawn_breaker` and `init_breaker_params`.
+
+**Fix direction:** Add `ApplyDeferred` between `spawn_breaker` and `init_breaker_params` in `breaker/plugin.rs:36-44`. This allows `init_breaker_params` to find the newly-spawned entity on the first node.
+
+**Confidence: HIGH**
+
+---
+
 ## Note: `invariants` field in RON is documentation-only
 
 All invariant check systems run for every scenario unconditionally. The
