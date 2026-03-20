@@ -230,11 +230,9 @@ mod tests {
         // Send CellDestroyed messages for both adjacents.
         app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![
             CellDestroyed {
-                entity: adj_a,
                 was_required_to_clear: true,
             },
             CellDestroyed {
-                entity: adj_b,
                 was_required_to_clear: true,
             },
         ];
@@ -275,7 +273,6 @@ mod tests {
 
         // Send CellDestroyed only for adj_a.
         app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![CellDestroyed {
-            entity: adj_a,
             was_required_to_clear: true,
         }];
 

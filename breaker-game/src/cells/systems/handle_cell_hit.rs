@@ -51,7 +51,6 @@ pub(crate) fn handle_cell_hit(
         if destroyed {
             commands.entity(hit.cell).despawn();
             destroyed_writer.write(CellDestroyed {
-                entity: hit.cell,
                 was_required_to_clear: is_required,
             });
             despawned.push(hit.cell);

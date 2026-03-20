@@ -107,12 +107,17 @@ pub fn run_single_scenario(path: &Path, headless: bool, verbose: bool) -> i32 {
     i32::from(!passed)
 }
 
-/// Runs scenarios in-process sequentially. Returns process exit code (0 = all pass, 1 = any fail).
+/// Runs scenarios in-process sequentially. Returns per-scenario pass/fail results.
 ///
 /// Shares a single `LogBuffer` across all runs (the global tracing subscriber is
-/// installed once). Each scenario's result is printed inline and a summary follows.
+/// installed once). Each scenario's result is printed inline. The caller is
+/// responsible for aggregating results and printing a summary.
 #[must_use]
-pub fn run_all_serial(runs: &[(String, PathBuf)], headless: bool, verbose: bool) -> i32 {
+pub fn run_all_serial(
+    runs: &[(String, PathBuf)],
+    headless: bool,
+    verbose: bool,
+) -> Vec<(String, bool)> {
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
 
@@ -121,7 +126,7 @@ pub fn run_all_serial(runs: &[(String, PathBuf)], headless: bool, verbose: bool)
         results.push((display_name.clone(), passed));
     }
 
-    print_summary(&results)
+    results
 }
 
 /// Returns the path to the `scenarios/` directory relative to this crate's manifest.
@@ -131,7 +136,8 @@ pub fn scenarios_dir() -> PathBuf {
 }
 
 /// Prints the cross-scenario summary and returns the exit code.
-pub(super) fn print_summary(results: &[(String, bool)]) -> i32 {
+#[must_use]
+pub fn print_summary(results: &[(String, bool)]) -> i32 {
     let passed_count = results.iter().filter(|(_, p)| *p).count();
     let failed_count = results.len() - passed_count;
     let failures: Vec<&str> = results
@@ -261,7 +267,7 @@ fn spawn_batched(
     Ok(all_results)
 }
 
-/// Runs scenarios as parallel subprocesses. Returns process exit code.
+/// Runs scenarios as parallel subprocesses. Returns per-scenario pass/fail results.
 ///
 /// Each scenario gets its own child process. `parallelism` is the maximum
 /// number of subprocesses to run concurrently (must be >= 1; use
@@ -269,9 +275,9 @@ fn spawn_batched(
 ///
 /// The run list is pre-built by the caller via [`build_run_list`].
 ///
-/// # Errors
+/// If the current executable path cannot be determined, returns a single
+/// failed entry so the caller can still produce a summary.
 ///
-/// Returns exit code `1` if the current executable path cannot be determined.
 /// Spawn or wait failures for individual subprocesses are recorded as failed
 /// results and do not abort the run.
 #[must_use]
@@ -280,7 +286,7 @@ pub fn run_all_parallel(
     visual: bool,
     verbose: bool,
     parallelism: usize,
-) -> i32 {
+) -> Vec<(String, bool)> {
     let specs: Vec<SubprocessSpec> = runs
         .iter()
         .map(|(display_name, path)| {
@@ -296,7 +302,7 @@ pub fn run_all_parallel(
         Ok(results) => results,
         Err(e) => {
             eprintln!("{e}");
-            return 1;
+            return vec![("(subprocess error)".to_owned(), false)];
         }
     };
 
@@ -314,11 +320,10 @@ pub fn run_all_parallel(
         println!();
     }
 
-    let summary: Vec<(String, bool)> = all_results
+    all_results
         .into_iter()
         .map(|r| (r.name, r.passed))
-        .collect();
-    print_summary(&summary)
+        .collect()
 }
 
 // -------------------------------------------------------------------------

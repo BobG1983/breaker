@@ -16,7 +16,7 @@ use std::process;
 
 use breaker_scenario_runner::runner::{
     Parallelism, build_run_list, parse_parallelism, partition_stress_scenarios,
-    print_stress_result, run_all_parallel, run_all_serial, run_single_scenario,
+    print_stress_result, print_summary, run_all_parallel, run_all_serial, run_single_scenario,
     run_stress_scenario, run_with_args,
 };
 use clap::Parser;
@@ -105,27 +105,30 @@ fn main() {
             println!("\n=== Loop {iteration}/{loop_count} ===");
         }
 
+        let mut all_results: Vec<(String, bool)> = Vec::new();
+
         // Run normal scenarios.
         if !normal_runs.is_empty() {
-            let exit_code = if args.execution.serial {
+            let results = if args.execution.serial {
                 run_all_serial(&normal_runs, headless, args.verbose)
             } else {
                 let batch_size = parallelism.resolve(normal_runs.len());
                 run_all_parallel(&normal_runs, args.visual, args.verbose, batch_size)
             };
-
-            if exit_code > worst_exit {
-                worst_exit = exit_code;
-            }
+            all_results.extend(results);
         }
 
         // Run stress scenarios.
         for (name, _path, config) in &stress_runs {
             let result = run_stress_scenario(name, config, args.visual, args.verbose);
             print_stress_result(&result);
-            if !result.passed() && worst_exit == 0 {
-                worst_exit = 1;
-            }
+            all_results.push((name.clone(), result.passed()));
+        }
+
+        // Print combined summary for this iteration.
+        let exit_code = print_summary(&all_results);
+        if exit_code > worst_exit {
+            worst_exit = exit_code;
         }
     }
 

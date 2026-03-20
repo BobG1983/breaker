@@ -4,11 +4,9 @@ use bevy::prelude::*;
 
 /// Sent when a cell is destroyed.
 ///
-/// Consumed by run (progress tracking), chips (overclock triggers), and audio.
+/// Consumed by run (progress tracking) and chips (overclock triggers).
 #[derive(Message, Clone, Debug)]
-pub struct CellDestroyed {
-    /// The entity that was destroyed.
-    pub entity: Entity,
+pub(crate) struct CellDestroyed {
     /// Whether this cell counted toward node completion.
     pub was_required_to_clear: bool,
 }
@@ -20,7 +18,6 @@ mod tests {
     #[test]
     fn cell_destroyed_debug_format() {
         let msg = CellDestroyed {
-            entity: Entity::PLACEHOLDER,
             was_required_to_clear: true,
         };
         assert!(format!("{msg:?}").contains("CellDestroyed"));
