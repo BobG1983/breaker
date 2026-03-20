@@ -9,4 +9,6 @@ pub enum BoltSystems {
     InitParams,
     /// The `prepare_bolt_velocity` system — copies bolt velocity for physics.
     PrepareVelocity,
+    /// The `reset_bolt` system — resets bolt position and velocity at node start.
+    Reset,
 }

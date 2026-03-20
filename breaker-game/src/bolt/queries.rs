@@ -4,9 +4,24 @@
 
 use bevy::{ecs::query::Has, prelude::*};
 
-use crate::bolt::components::{
-    BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltVelocity, ExtraBolt,
+use crate::{
+    bolt::components::{
+        BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltVelocity,
+        ExtraBolt,
+    },
+    chips::components::{Piercing, PiercingRemaining},
+    interpolate::components::PhysicsTranslation,
 };
+
+/// Bolt entity data needed by the reset system at node start.
+pub(crate) type ResetBoltQuery = (
+    Entity,
+    &'static mut Transform,
+    &'static mut BoltVelocity,
+    Option<&'static mut PiercingRemaining>,
+    Option<&'static Piercing>,
+    Option<&'static mut PhysicsTranslation>,
+);
 
 /// Bolt entity data needed by the bolt-lost detection system.
 pub type LostQuery = (

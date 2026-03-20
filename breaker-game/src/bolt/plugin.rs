@@ -10,7 +10,7 @@ use crate::{
         resources::BoltConfig,
         systems::{
             apply_bump_velocity, hover_bolt, init_bolt_params, launch_bolt, prepare_bolt_velocity,
-            spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text,
+            reset_bolt, spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text,
         },
     },
     breaker::BreakerSystems,
@@ -36,6 +36,10 @@ impl Plugin for BoltPlugin {
                     init_bolt_params
                         .after(spawn_bolt)
                         .in_set(BoltSystems::InitParams),
+                    reset_bolt
+                        .after(BoltSystems::InitParams)
+                        .after(BreakerSystems::Reset)
+                        .in_set(BoltSystems::Reset),
                 ),
             )
             .add_systems(

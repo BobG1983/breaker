@@ -676,6 +676,48 @@ mod tests {
         );
     }
 
+    #[test]
+    fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
+        // Bolt has PiercingRemaining(5) but NO Piercing component.
+        // The breaker hit reset guard uses `if let (Some(pr), Some(p))` — both must exist.
+        // PiercingRemaining should stay at 5 after breaker hit.
+        let mut app = test_app();
+        let hh = default_breaker_height();
+        let y_pos = -250.0;
+        spawn_breaker_at(&mut app, 0.0, y_pos);
+
+        let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(0.0, -400.0),
+                bolt_param_bundle(),
+                // PiercingRemaining WITHOUT Piercing
+                PiercingRemaining(5),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // Verify breaker hit occurred (velocity.y > 0 after downward approach)
+        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt should have reflected off breaker, got vy={}",
+            vel.value.y
+        );
+
+        // PiercingRemaining should be unchanged — reset requires BOTH Piercing and PiercingRemaining
+        let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+        assert_eq!(
+            pr.0, 5,
+            "PiercingRemaining without Piercing should not be reset on breaker hit, got {}",
+            pr.0
+        );
+    }
+
     // --- TiltControlBoost tests ---
 
     #[test]
@@ -697,7 +739,7 @@ mod tests {
             default_breaker_height(),
             default_max_reflection_angle(),
             default_min_angle(),
-            TiltControlBoost(15.0_f32.to_radians()),
+            TiltControlBoost(15.0),
             Transform::from_xyz(0.0, y_pos, 0.0),
         ));
 
