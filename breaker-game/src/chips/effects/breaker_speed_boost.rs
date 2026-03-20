@@ -17,7 +17,8 @@ pub(crate) fn handle_breaker_speed_boost(
     mut query: Query<(Entity, Option<&mut BreakerSpeedBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Augment(AugmentEffect::SpeedBoost(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Augment(AugmentEffect::SpeedBoost(per_stack)) = trigger.event().effect.clone()
+    else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

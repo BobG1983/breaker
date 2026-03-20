@@ -245,6 +245,7 @@ mod tests {
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
                 grade: BumpGrade::Perfect,
                 multiplier: 1.5,
+                bolt: Entity::PLACEHOLDER,
             });
             tick(&mut app);
 
@@ -258,6 +259,7 @@ mod tests {
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
                 grade: BumpGrade::Early,
                 multiplier: 1.1,
+                bolt: Entity::PLACEHOLDER,
             });
             tick(&mut app);
 
@@ -293,6 +295,7 @@ mod tests {
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
                 grade: BumpGrade::Early,
                 multiplier: 1.1,
+                bolt: Entity::PLACEHOLDER,
             });
             tick(&mut app);
 
@@ -307,6 +310,7 @@ mod tests {
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
                 grade: BumpGrade::Perfect,
                 multiplier: 1.5,
+                bolt: Entity::PLACEHOLDER,
             });
             tick(&mut app);
 

@@ -6,7 +6,10 @@ use bevy::prelude::*;
 ///
 /// Consumed by breaker (`grade_bump`).
 #[derive(Message, Clone, Debug)]
-pub(crate) struct BoltHitBreaker;
+pub(crate) struct BoltHitBreaker {
+    /// The bolt entity that hit the breaker.
+    pub bolt: Entity,
+}
 
 /// Sent when the bolt collides with a cell.
 ///
@@ -49,8 +52,15 @@ mod tests {
 
     #[test]
     fn messages_debug_format() {
-        let a = BoltHitBreaker;
-        assert!(format!("{a:?}").contains("BoltHitBreaker"));
+        let a = BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        };
+        let a_fmt = format!("{a:?}");
+        assert!(a_fmt.contains("BoltHitBreaker"));
+        assert!(
+            a_fmt.contains("bolt"),
+            "BoltHitBreaker debug format should include 'bolt' field name"
+        );
 
         let b = BoltHitCell {
             cell: Entity::PLACEHOLDER,

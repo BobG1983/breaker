@@ -23,6 +23,8 @@ pub struct BumpPerformed {
     pub grade: BumpGrade,
     /// Velocity multiplier for this bump grade.
     pub multiplier: f32,
+    /// The bolt entity involved in this bump.
+    pub bolt: Entity,
 }
 
 /// Sent when a forward bump window expires without bolt contact.
@@ -55,6 +57,7 @@ mod tests {
         let msg = BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: 1.5,
+            bolt: Entity::PLACEHOLDER,
         };
         assert!(format!("{msg:?}").contains("Perfect"));
     }

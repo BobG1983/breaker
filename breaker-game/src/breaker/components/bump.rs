@@ -13,6 +13,8 @@ pub struct BumpState {
     pub post_hit_timer: f32,
     /// Cooldown remaining before another bump can be triggered (seconds).
     pub cooldown: f32,
+    /// The bolt entity from the most recent hit, used for retroactive bump grading.
+    pub last_hit_bolt: Option<Entity>,
 }
 
 impl Default for BumpState {
@@ -22,6 +24,7 @@ impl Default for BumpState {
             timer: 0.0,
             post_hit_timer: 0.0,
             cooldown: 0.0,
+            last_hit_bolt: None,
         }
     }
 }
@@ -90,5 +93,14 @@ mod tests {
         assert!(!bump.active);
         assert!((bump.timer - 0.0).abs() < f32::EPSILON);
         assert!((bump.cooldown - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn bump_state_default_last_hit_bolt_is_none() {
+        let bump = BumpState::default();
+        assert!(
+            bump.last_hit_bolt.is_none(),
+            "BumpState::default().last_hit_bolt should be None"
+        );
     }
 }

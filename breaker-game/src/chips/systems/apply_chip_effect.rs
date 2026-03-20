@@ -28,7 +28,7 @@ pub(crate) fn apply_chip_effect(
             continue;
         };
         commands.trigger(ChipEffectApplied {
-            effect: chip.effect,
+            effect: chip.effect.clone(),
             max_stacks: chip.max_stacks,
         });
     }
@@ -45,7 +45,7 @@ mod tests {
         chips::{
             ChipKind,
             components::*,
-            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect},
+            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect, TriggerChain},
             effects::*,
             resources::ChipRegistry,
         },
@@ -559,7 +559,7 @@ mod tests {
             .insert(ChipDefinition::test(
                 "Surge",
                 ChipKind::Overclock,
-                ChipEffect::Overclock,
+                ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 }),
                 1,
             ));
 

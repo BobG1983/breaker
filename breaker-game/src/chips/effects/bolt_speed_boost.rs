@@ -17,7 +17,7 @@ pub(crate) fn handle_bolt_speed_boost(
     mut query: Query<(Entity, Option<&mut BoltSpeedBoost>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::SpeedBoost(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Amp(AmpEffect::SpeedBoost(per_stack)) = trigger.event().effect.clone() else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

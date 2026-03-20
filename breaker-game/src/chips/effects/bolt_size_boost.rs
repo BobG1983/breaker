@@ -17,7 +17,7 @@ pub(crate) fn handle_bolt_size_boost(
     mut query: Query<(Entity, Option<&mut BoltSizeBoost>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::SizeBoost(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Amp(AmpEffect::SizeBoost(per_stack)) = trigger.event().effect.clone() else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

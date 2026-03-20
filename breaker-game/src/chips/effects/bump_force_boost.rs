@@ -17,7 +17,8 @@ pub(crate) fn handle_bump_force_boost(
     mut query: Query<(Entity, Option<&mut BumpForceBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Augment(AugmentEffect::BumpForce(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Augment(AugmentEffect::BumpForce(per_stack)) = trigger.event().effect.clone()
+    else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

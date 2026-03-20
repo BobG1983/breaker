@@ -51,15 +51,68 @@ pub(crate) enum AugmentEffect {
     TiltControl(f32),
 }
 
+/// Trigger chain for Overclock effects — defines when and what happens.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub(crate) enum TriggerChain {
+    /// Area damage around impact point.
+    Shockwave {
+        /// Radius of the shockwave effect.
+        range: f32,
+    },
+    /// Spawns additional bolts on trigger.
+    MultiBolt {
+        /// Number of extra bolts to spawn.
+        count: u32,
+    },
+    /// Temporary shield protecting the breaker.
+    Shield {
+        /// How long the shield lasts in seconds.
+        duration: f32,
+    },
+    /// Fires on a perfect bump.
+    OnPerfectBump(Box<Self>),
+    /// Fires on bolt impact with a cell.
+    OnImpact(Box<Self>),
+    /// Fires when a cell is destroyed.
+    OnCellDestroyed(Box<Self>),
+    /// Fires when a bolt is lost.
+    OnBoltLost(Box<Self>),
+}
+
+impl TriggerChain {
+    /// Returns the nesting depth of this chain.
+    ///
+    /// Leaf variants return 0, trigger variants return 1 + inner depth.
+    #[must_use]
+    pub(crate) fn depth(&self) -> u32 {
+        match self {
+            Self::Shockwave { .. } | Self::MultiBolt { .. } | Self::Shield { .. } => 0,
+            Self::OnPerfectBump(inner)
+            | Self::OnImpact(inner)
+            | Self::OnCellDestroyed(inner)
+            | Self::OnBoltLost(inner) => 1 + inner.depth(),
+        }
+    }
+
+    /// Returns true if this is a leaf (action) variant, false if it is a trigger wrapper.
+    #[must_use]
+    pub(crate) const fn is_leaf(&self) -> bool {
+        matches!(
+            self,
+            Self::Shockwave { .. } | Self::MultiBolt { .. } | Self::Shield { .. }
+        )
+    }
+}
+
 /// Top-level effect wrapper for any chip type.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq)]
+#[derive(Deserialize, Clone, Debug, PartialEq)]
 pub(crate) enum ChipEffect {
     /// Applies an Amp (bolt) effect.
     Amp(AmpEffect),
     /// Applies an Augment (breaker) effect.
     Augment(AugmentEffect),
-    /// Triggered ability — deferred to phase 4d.
-    Overclock,
+    /// Triggered ability with a trigger chain.
+    Overclock(TriggerChain),
 }
 
 /// Triggered when a chip effect should be applied.
@@ -107,7 +160,12 @@ impl ChipDefinition {
 
     /// Build a simple test chip with `Overclock` effect and `max_stacks` = 1.
     pub(crate) fn test_simple(name: &str, kind: ChipKind) -> Self {
-        Self::test(name, kind, ChipEffect::Overclock, 1)
+        Self::test(
+            name,
+            kind,
+            ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 }),
+            1,
+        )
     }
 }
 
@@ -251,8 +309,12 @@ mod tests {
 
     #[test]
     fn chip_effect_deserializes_overclock() {
-        let e: ChipEffect = ron::de::from_str("Overclock").expect("should parse Overclock");
-        assert_eq!(e, ChipEffect::Overclock);
+        let e: ChipEffect = ron::de::from_str("Overclock(Shockwave(range: 64.0))")
+            .expect("should parse Overclock(Shockwave)");
+        assert_eq!(
+            e,
+            ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 })
+        );
     }
 
     #[test]
@@ -305,5 +367,122 @@ mod tests {
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("overclock RON should parse");
         assert_eq!(def.kind, ChipKind::Overclock);
+        assert_eq!(
+            def.effect,
+            ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
+                TriggerChain::OnImpact(Box::new(TriggerChain::Shockwave { range: 64.0 }))
+            )))
+        );
+    }
+
+    // --- TriggerChain deserialization tests ---
+
+    #[test]
+    fn trigger_chain_deserializes_shockwave() {
+        let tc: TriggerChain =
+            ron::de::from_str("Shockwave(range: 64.0)").expect("should parse Shockwave");
+        assert_eq!(tc, TriggerChain::Shockwave { range: 64.0 });
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_multi_bolt() {
+        let tc: TriggerChain =
+            ron::de::from_str("MultiBolt(count: 3)").expect("should parse MultiBolt");
+        assert_eq!(tc, TriggerChain::MultiBolt { count: 3 });
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_shield() {
+        let tc: TriggerChain =
+            ron::de::from_str("Shield(duration: 5.0)").expect("should parse Shield");
+        assert_eq!(tc, TriggerChain::Shield { duration: 5.0 });
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_on_perfect_bump_leaf() {
+        let tc: TriggerChain = ron::de::from_str("OnPerfectBump(Shockwave(range: 64.0))")
+            .expect("should parse OnPerfectBump wrapping Shockwave");
+        assert_eq!(
+            tc,
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_nested_two_deep() {
+        let tc: TriggerChain = ron::de::from_str("OnPerfectBump(OnImpact(Shockwave(range: 64.0)))")
+            .expect("should parse double-nested TriggerChain");
+        assert_eq!(
+            tc,
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(Box::new(
+                TriggerChain::Shockwave { range: 64.0 }
+            ))))
+        );
+    }
+
+    // --- TriggerChain depth tests ---
+
+    #[test]
+    fn trigger_chain_depth_leaf_is_zero() {
+        assert_eq!(TriggerChain::Shockwave { range: 64.0 }.depth(), 0);
+        assert_eq!(TriggerChain::MultiBolt { count: 3 }.depth(), 0);
+        assert_eq!(TriggerChain::Shield { duration: 5.0 }.depth(), 0);
+    }
+
+    #[test]
+    fn trigger_chain_depth_single_trigger_is_one() {
+        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        assert_eq!(tc.depth(), 1);
+    }
+
+    #[test]
+    fn trigger_chain_depth_nested_is_two() {
+        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(Box::new(
+            TriggerChain::Shockwave { range: 64.0 },
+        ))));
+        assert_eq!(tc.depth(), 2);
+    }
+
+    // --- TriggerChain is_leaf tests ---
+
+    #[test]
+    fn trigger_chain_is_leaf_true_for_leaves() {
+        assert!(TriggerChain::Shockwave { range: 64.0 }.is_leaf());
+        assert!(TriggerChain::MultiBolt { count: 3 }.is_leaf());
+        assert!(TriggerChain::Shield { duration: 5.0 }.is_leaf());
+    }
+
+    #[test]
+    fn trigger_chain_is_leaf_false_for_triggers() {
+        let leaf = TriggerChain::Shockwave { range: 64.0 };
+        assert!(!TriggerChain::OnPerfectBump(Box::new(leaf.clone())).is_leaf());
+        assert!(!TriggerChain::OnImpact(Box::new(leaf.clone())).is_leaf());
+        assert!(!TriggerChain::OnCellDestroyed(Box::new(leaf.clone())).is_leaf());
+        assert!(!TriggerChain::OnBoltLost(Box::new(leaf)).is_leaf());
+    }
+
+    // --- ChipEffect with TriggerChain tests ---
+
+    #[test]
+    fn chip_effect_overclock_with_trigger_chain_deserializes() {
+        let e: ChipEffect = ron::de::from_str("Overclock(Shockwave(range: 64.0))")
+            .expect("should parse Overclock with TriggerChain");
+        assert_eq!(
+            e,
+            ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 })
+        );
+    }
+
+    #[test]
+    fn full_surge_chain_ron_parses() {
+        let e: ChipEffect =
+            ron::de::from_str("Overclock(OnPerfectBump(OnImpact(Shockwave(range: 64.0))))")
+                .expect("should parse full surge chain as ChipEffect");
+        assert_eq!(
+            e,
+            ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
+                TriggerChain::OnImpact(Box::new(TriggerChain::Shockwave { range: 64.0 }))
+            )))
+        );
     }
 }

@@ -224,6 +224,7 @@ mod tests {
                 timer: 0.1,
                 post_hit_timer: 0.05,
                 cooldown: 0.2,
+                last_hit_bolt: None,
             },
             Transform::from_xyz(100.0, config.y_position + 50.0, 0.0),
             CleanupOnRunEnd,

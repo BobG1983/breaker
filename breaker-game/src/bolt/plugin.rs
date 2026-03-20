@@ -6,6 +6,7 @@ use crate::{
     behaviors::BehaviorSystems,
     bolt::{
         BoltSystems,
+        behaviors::BoltBehaviorsPlugin,
         messages::SpawnAdditionalBolt,
         resources::BoltConfig,
         systems::{
@@ -26,7 +27,8 @@ pub struct BoltPlugin;
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
         use crate::bolt::messages::BoltSpawned;
-        app.init_resource::<BoltConfig>()
+        app.add_plugins(BoltBehaviorsPlugin)
+            .init_resource::<BoltConfig>()
             .add_message::<SpawnAdditionalBolt>()
             .add_message::<BoltSpawned>()
             .add_systems(
@@ -77,10 +79,11 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BoltPlugin reads BumpPerformed messages from breaker domain
-            // and BoltLost messages from physics domain
+            // BoltPlugin reads messages from breaker, physics, and cells domains
             .add_message::<crate::breaker::messages::BumpPerformed>()
+            .add_message::<crate::physics::messages::BoltHitCell>()
             .add_message::<crate::physics::messages::BoltLost>()
+            .add_message::<crate::cells::messages::CellDestroyed>()
             .add_plugins(BoltPlugin)
             .update();
     }
