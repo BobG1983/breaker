@@ -613,9 +613,7 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -651,9 +649,7 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -679,9 +675,7 @@ mod tests {
             .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -765,9 +759,7 @@ mod tests {
             .id();
 
         // Bolt hits the same frame the window would expire
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -1014,9 +1006,7 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -1051,9 +1041,7 @@ mod tests {
             bump_param_bundle_with_force_boost(&config, 0.2),
         ));
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedBumps>();

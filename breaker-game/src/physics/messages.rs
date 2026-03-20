@@ -4,12 +4,9 @@ use bevy::prelude::*;
 
 /// Sent when the bolt collides with the breaker.
 ///
-/// Consumed by audio, chips, and UI.
+/// Consumed by breaker (`grade_bump`).
 #[derive(Message, Clone, Debug)]
-pub struct BoltHitBreaker {
-    /// The bolt entity involved in the collision.
-    pub bolt: Entity,
-}
+pub(crate) struct BoltHitBreaker;
 
 /// Sent when the bolt collides with a cell.
 ///
@@ -52,9 +49,7 @@ mod tests {
 
     #[test]
     fn messages_debug_format() {
-        let a = BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        };
+        let a = BoltHitBreaker;
         assert!(format!("{a:?}").contains("BoltHitBreaker"));
 
         let b = BoltHitCell {

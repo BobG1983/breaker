@@ -22,7 +22,7 @@ use crate::{
 ///
 /// Chip effect components (e.g. [`Piercing`], [`DamageBoost`]) are NOT touched
 /// — they persist across nodes. Only positional and velocity state is reset.
-pub fn reset_bolt(
+pub(crate) fn reset_bolt(
     mut commands: Commands,
     config: Res<BoltConfig>,
     run_state: Res<RunState>,

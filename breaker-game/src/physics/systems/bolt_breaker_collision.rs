@@ -72,7 +72,7 @@ pub(crate) fn bolt_breaker_collision(
     let dt = time.delta_secs();
 
     for (
-        bolt_entity,
+        _bolt_entity,
         mut bolt_transform,
         mut bolt_velocity,
         base_speed,
@@ -115,7 +115,7 @@ pub(crate) fn bolt_breaker_collision(
                     base_speed.0,
                     min_angle.0,
                 );
-                writer.write(BoltHitBreaker { bolt: bolt_entity });
+                writer.write(BoltHitBreaker);
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
                 }
@@ -170,7 +170,7 @@ pub(crate) fn bolt_breaker_collision(
             bolt_transform.translation.y = above_y;
         }
 
-        writer.write(BoltHitBreaker { bolt: bolt_entity });
+        writer.write(BoltHitBreaker);
         if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
             pr.0 = p.0;
         }
@@ -413,14 +413,14 @@ mod tests {
     }
 
     #[derive(Resource, Default)]
-    struct HitBreakers(Vec<Entity>);
+    struct HitBreakers(u32);
 
     fn collect_breaker_hits(
         mut reader: MessageReader<BoltHitBreaker>,
         mut hits: ResMut<HitBreakers>,
     ) {
-        for msg in reader.read() {
-            hits.0.push(msg.bolt);
+        for _msg in reader.read() {
+            hits.0 += 1;
         }
     }
 
@@ -457,8 +457,7 @@ mod tests {
 
         let hits = app.world().resource::<HitBreakers>();
         assert_eq!(
-            hits.0.len(),
-            1,
+            hits.0, 1,
             "overlap with downward bolt should send BoltHitBreaker"
         );
     }
@@ -501,7 +500,7 @@ mod tests {
 
         let hits = app.world().resource::<HitBreakers>();
         assert!(
-            hits.0.is_empty(),
+            hits.0 == 0,
             "upward bolt overlap should NOT send BoltHitBreaker"
         );
     }
@@ -551,9 +550,9 @@ mod tests {
 
         let hits = app.world().resource::<HitBreakers>();
         assert!(
-            hits.0.is_empty(),
+            hits.0 == 0,
             "upward side hit should NOT send BoltHitBreaker, got {} messages",
-            hits.0.len()
+            hits.0
         );
     }
 
@@ -616,7 +615,7 @@ mod tests {
         }
 
         let hits = app.world().resource::<HitBreakers>();
-        assert_eq!(hits.0.len(), 2, "both bolts should trigger hit messages");
+        assert_eq!(hits.0, 2, "both bolts should trigger hit messages");
 
         let left_vel = velocities.iter().find(|(e, _)| *e == left_bolt).unwrap().1;
         let right_vel = velocities.iter().find(|(e, _)| *e == right_bolt).unwrap().1;

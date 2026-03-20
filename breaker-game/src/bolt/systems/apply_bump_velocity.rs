@@ -10,7 +10,7 @@ use crate::{
 ///
 /// The multiplier is included in the message by the breaker domain, eliminating
 /// the need for cross-domain component reads.
-pub fn apply_bump_velocity(
+pub(crate) fn apply_bump_velocity(
     mut reader: MessageReader<BumpPerformed>,
     mut bolt_query: Query<
         (
