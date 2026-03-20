@@ -59,11 +59,11 @@ impl Plugin for BehaviorsPlugin {
                         .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BoltLost)),
                     bridge_bump
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BreakerSystems::GradeBump)
                         .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger_any_bump()),
                     bridge_bump_whiff
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BreakerSystems::GradeBump)
                         .in_set(BehaviorSystems::Bridge)
                         .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BumpWhiff)),
                 )

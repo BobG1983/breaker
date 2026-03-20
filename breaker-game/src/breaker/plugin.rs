@@ -51,7 +51,8 @@ impl Plugin for BreakerPlugin {
                     update_breaker_state.after(move_breaker),
                     grade_bump
                         .after(update_bump)
-                        .after(PhysicsSystems::BreakerCollision),
+                        .after(PhysicsSystems::BreakerCollision)
+                        .in_set(BreakerSystems::GradeBump),
                     (
                         perfect_bump_dash_cancel,
                         spawn_bump_grade_text,
