@@ -30,11 +30,11 @@ pub(crate) fn seed_archetype_registry(
             return Progress { done: 0, total: 1 };
         };
         assert!(
-            !registry.archetypes.contains_key(&def.name),
+            !registry.contains(&def.name),
             "duplicate archetype name '{}'",
             def.name
         );
-        registry.archetypes.insert(def.name.clone(), def.clone());
+        registry.insert(def.name.clone(), def.clone());
     }
 
     commands.insert_resource(registry);
@@ -107,9 +107,9 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ArchetypeRegistry>();
-        assert_eq!(registry.archetypes.len(), 2);
-        assert!(registry.archetypes.contains_key("Aegis"));
-        assert!(registry.archetypes.contains_key("Vortex"));
+        assert_eq!(registry.len(), 2);
+        assert!(registry.contains("Aegis"));
+        assert!(registry.contains("Vortex"));
     }
 
     #[test]

@@ -78,7 +78,7 @@ pub(crate) fn propagate_breaker_config(
                 },
             ));
 
-        if let Some(def) = registry.archetypes.get(&selected.0) {
+        if let Some(def) = registry.get(&selected.0) {
             apply_bolt_speed_boosts(&mut commands, entity, &def.behaviors);
         }
     }
@@ -375,7 +375,7 @@ mod tests {
         // Register the archetype and select it.
         {
             let mut registry = app.world_mut().resource_mut::<ArchetypeRegistry>();
-            registry.archetypes.insert(ARCHETYPE_NAME.to_owned(), def);
+            registry.insert(ARCHETYPE_NAME.to_owned(), def);
         }
         app.world_mut()
             .insert_resource(SelectedArchetype(ARCHETYPE_NAME.to_owned()));

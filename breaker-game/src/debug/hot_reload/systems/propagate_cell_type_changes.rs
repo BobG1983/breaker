@@ -40,16 +40,16 @@ pub(crate) fn propagate_cell_type_changes(
     }
 
     // Rebuild registry from current asset state
-    registry.types.clear();
+    registry.clear();
     for handle in &collection.cell_types {
         if let Some(def) = assets.get(handle.id()) {
-            registry.types.insert(def.alias, def.clone());
+            registry.insert(def.alias, def.clone());
         }
     }
 
     // Update matching live cell entities
     for (alias, mut health, mut visuals, mat_handle) in &mut query {
-        let Some(def) = registry.types.get(&alias.0) else {
+        let Some(def) = registry.get(alias.0) else {
             continue;
         };
 
@@ -147,7 +147,7 @@ mod tests {
         // Seed the registry manually
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            registry.types.insert('S', def);
+            registry.insert('S', def);
         }
 
         // Spawn a cell entity with alias 'S' and health matching old definition
@@ -224,8 +224,8 @@ mod tests {
 
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            registry.types.insert('S', s_def);
-            registry.types.insert('T', t_def);
+            registry.insert('S', s_def);
+            registry.insert('T', t_def);
         }
 
         let material_handle = {
@@ -286,7 +286,7 @@ mod tests {
 
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            registry.types.insert('T', def);
+            registry.insert('T', def);
         }
 
         let material_handle = {

@@ -69,7 +69,7 @@ mod tests {
 
     fn make_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
-        registry.types.insert(
+        registry.insert(
             'S',
             CellTypeDefinition {
                 id: "standard".to_owned(),

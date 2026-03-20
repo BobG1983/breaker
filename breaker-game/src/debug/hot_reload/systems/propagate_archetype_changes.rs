@@ -63,17 +63,15 @@ pub(crate) fn propagate_archetype_changes(
     }
 
     // Rebuild registry
-    ctx.registry.archetypes.clear();
+    ctx.registry.clear();
     for handle in &ctx.collection.archetypes {
         if let Some(def) = ctx.assets.get(handle.id()) {
-            ctx.registry
-                .archetypes
-                .insert(def.name.clone(), def.clone());
+            ctx.registry.insert(def.name.clone(), def.clone());
         }
     }
 
     // Check if the selected archetype was modified
-    let Some(def) = ctx.registry.archetypes.get(&ctx.selected.0) else {
+    let Some(def) = ctx.registry.get(&ctx.selected.0) else {
         return;
     };
     let def = def.clone();
@@ -175,7 +173,7 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<ArchetypeRegistry>();
-        let rebuilt = registry.archetypes.get("Test").unwrap();
+        let rebuilt = registry.get("Test").unwrap();
         assert_eq!(rebuilt.life_pool, Some(5));
     }
 

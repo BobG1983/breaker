@@ -54,7 +54,7 @@ pub(crate) fn handle_run_setup_input(
 
     // Confirm selection
     if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-        let mut sorted_names: Vec<&String> = registry.archetypes.keys().collect();
+        let mut sorted_names: Vec<&String> = registry.names().collect();
         sorted_names.sort();
 
         if let Some(name) = sorted_names.get(selection.index) {
@@ -91,9 +91,7 @@ mod tests {
     fn test_registry(names: &[&str]) -> ArchetypeRegistry {
         let mut registry = ArchetypeRegistry::default();
         for name in names {
-            registry
-                .archetypes
-                .insert((*name).to_owned(), make_archetype(name));
+            registry.insert((*name).to_owned(), make_archetype(name));
         }
         registry
     }

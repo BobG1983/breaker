@@ -97,15 +97,15 @@ pub(crate) fn propagate_node_layout_changes(
         ctx.commands.entity(entity).despawn();
     }
 
-    // Respawn cells from updated layout
+    // Respawn cells from updated layout (hot-reload uses default hp_mult)
     let required_count = spawn_cells_from_grid(
         &mut ctx.commands,
         &ctx.cell_config,
         &ctx.playfield,
         &layout,
         &ctx.cell_type_registry,
-        &mut ctx.meshes,
-        &mut ctx.materials,
+        (&mut ctx.meshes, &mut ctx.materials),
+        1.0,
     );
 
     // Update active layout and clear remaining count
@@ -125,7 +125,7 @@ mod tests {
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
-        registry.types.insert(
+        registry.insert(
             'S',
             CellTypeDefinition {
                 id: "standard".to_owned(),
@@ -140,7 +140,7 @@ mod tests {
                 behavior: CellBehavior::default(),
             },
         );
-        registry.types.insert(
+        registry.insert(
             'T',
             CellTypeDefinition {
                 id: "tough".to_owned(),
