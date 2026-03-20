@@ -25,6 +25,9 @@ type: reference
 - **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, input, run domains directly. Four domain modules widened to `pub mod` in lib.rs. Dev-only crate, never shipped.
 - **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).
 
+## Active Violations (pending resolution)
+- **bolt/behaviors/effects/shockwave.rs** (2026-03-20): cross-domain mutation — directly queries `&mut CellHealth`, despawns cell entities, writes `CellDestroyed` message. Must be refactored to message-based indirection matching behaviors/consequences pattern (e.g., `AreaDamage` or `DamageCell` message consumed by cells domain).
+
 ## Resolved Compromises (2026-03-16)
 - ~~bolt/apply_bump_velocity reads breaker entity components~~ → multiplier now included in BumpPerformed message
 - ~~physics/ccd.rs exists outside canonical layout~~ → moved to shared/math.rs

@@ -57,6 +57,24 @@ type: reference
 - All in `bevy::prelude`
 - `ColorMaterial::from_color(color)` — color field accepts HDR values >1.0
 - `Circle::new(radius)` and `Rectangle::new(width, height)` — both in prelude
+- `ColorMaterial` struct fields (verified from `bevy_sprite_render` 0.18.1 source):
+  - `color: Color`
+  - `alpha_mode: AlphaMode2d`
+  - `uv_transform: Affine2`
+  - `texture: Option<Handle<Image>>`
+- `ColorMaterial` lives in `bevy_sprite_render` crate (NOT `bevy_sprite`) in 0.18.1
+- Batching key for 2D meshes: `(Material2dBindGroupId, AssetId<Mesh>)` — entities sharing the same material handle AND same mesh handle batch into one draw call
+- Unique material per entity = unique pipeline bind group per entity = NO batching
+
+## Vertex Colors on Mesh (ATTRIBUTE_COLOR)
+- `Mesh::ATTRIBUTE_COLOR: MeshVertexAttribute` — `VertexFormat::Float32x4` (RGBA f32)
+- Insert: `mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, vec![[r, g, b, a], ...])`
+  — one `[f32; 4]` entry per vertex; use `LinearRgba::to_f32_array()`
+- Presence of `ATTRIBUTE_COLOR` on a mesh **automatically triggers** `#define VERTEX_COLORS` in the `color_material.wgsl` shader (set during pipeline specialization when the mesh vertex layout contains the color attribute)
+- In the shader: `output_color = output_color * mesh.color;` — vertex color MULTIPLIES the material's uniform color
+- Sharing one mesh handle + one material handle: all instances batch, but all share identical vertex colors
+- Unique mesh per entity + vertex colors: no batching (each entity has its own mesh asset ID)
+- Vertex colors do NOT break batching by themselves — batching depends on mesh asset ID + material bind group ID
 
 ## AssetEvent
 - `AssetEvent<A>` derives `Message` — use `MessageReader<AssetEvent<A>>`, never `EventReader`

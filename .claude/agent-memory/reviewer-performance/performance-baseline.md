@@ -7,6 +7,8 @@ type: reference
 ## Entity Scale Expectations
 - Phase 1-2: ~50 cells, 1 bolt, 1 breaker, 3 walls — most concerns are theoretical
 - Phase 3+: upgrades add entity variety but not significantly more count
+- Grid layouts now support up to 128×128 = 16,384 entities (design-time maximum, not typical gameplay)
+- Typical gameplay grids expected to remain small (3–10 cols, 2–8 rows); 128×128 is a pathological upper bound
 - Phase 7+ (roguelite meta): may introduce persistent entities across runs
 
 ## Confirmed Efficient Patterns
@@ -61,3 +63,37 @@ type: reference
 - `check_lock_release`: destroyed_count guard prevents scan when nothing destroyed
 - ExtraBolt / ServingFilter separation: correct, already in baseline
 - Dash system (breaker): runs in_state(PlayingState::Active), With<Breaker> filtered — 1 entity
+
+## Confirmed-Clean New Systems (reviewed 2026-03-20, session 2)
+
+### run/node/systems/spawn_cells_from_layout.rs — compute_grid_scale + spawn_cells_from_grid
+- `compute_grid_scale` is a pure function: O(1), called once per spawn event (not per entity). Confirmed clean.
+- Scaled dimension arithmetic (cell_width, cell_height, step_x, step_y, start_x, start_y) computed once before the loop. No per-entity divisions or scaling math. Clean.
+- Per-entity `materials.add(ColorMaterial::from_color(...))` is intentional: damage visual system mutates each cell's material independently. Accepted design decision; not a bug.
+- Shared `rect_mesh` handle is cloned per entity (`rect_mesh.clone()` on the handle — a cheap `Arc`-like clone, not a mesh copy). One mesh allocation per spawn call regardless of cell count. Efficient.
+- Loop is O(rows × cols), skips '.' and unrecognized aliases early. No allocations inside the loop body beyond the `commands.spawn(...)` command itself.
+- At 16K entities the spawn itself is a one-time O(N) operation at level load. Not a hot path; acceptable.
+- CCD collision inner loop is O(bolts × cells × MAX_BOUNCES=4). At 16K cells this becomes a real concern if typical grids reach that scale. Flagged as Moderate watch item. At current typical scale (50 cells) it remains clean.
+- `u16::try_from(col_idx).unwrap_or(u16::MAX)` / `u16::try_from(row_idx)` pattern: safe saturation for extreme grids. Accepted.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-20)
+
+### bolt/behaviors/effects/shockwave.rs — handle_shockwave observer
+- Fires only on OverclockEffectFired (event-driven, not polling). Early-returns for non-Shockwave variants.
+- Cell query: `Query<(Entity, &Transform, &mut CellHealth, Has<RequiredToClear>, Has<Locked>), With<Cell>>` — correct filter.
+- Has<Locked> used correctly for skip logic (cheaper than Without<Locked> filter here because locked cells also need to be iterated past; no archetype penalty).
+- Archetype fragmentation: Locked + RequiredToClear adds to known cell archetypes (already tracked in baseline). No new concern.
+- No allocations inside the observer body. Clean.
+
+### bolt/behaviors/bridges.rs — bridge systems + resolve_armed
+- `resolve_armed` allocates `Vec::new()` per call and swaps it into `armed.0`. This is NOT a hot-path: fires only when an OverclockEffectFired chain resolves (rare game event, not per-frame). Acceptable.
+- `bridge_overclock_cell_destroyed` / `bridge_overclock_bolt_lost` guards: `reader.read().count() == 0` early-exit — prevents work when no events. But NOTE: calling `.count()` drains the iterator; the events are consumed. Fine because the only needed info is "did any arrive."
+- `bridge_overclock_cell_destroyed` / `bridge_overclock_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` — mutable access even in function signature passed immutably to `evaluate_armed_all`. The `&mut ArmedTriggers` is warranted (resolve_armed mutates armed.0). Correct.
+- `arm_bolt` inserts `ArmedTriggers(vec![remaining])` — single allocation at arm-time. Event-driven, not hot-path.
+- Observer registration via `add_observer(handle_shockwave)`: standard Bevy 0.18 global observer. Per-call overhead is observer dispatch + query, not per-frame. No concern.
+
+### Archetype Note
+- ArmedTriggers added/removed at runtime per bolt. With 1 bolt this is negligible. If multi-bolt upgrades arrive (Phase 7+), watch for archetype churn if bolts frequently arm/disarm mid-run.
+
+### Intentional Pattern: resolve_armed swap idiom
+- `drain(..)` into `new_armed` then assign back to `armed.0` is the standard "process and rebuild" Vec pattern. At typical scale (≤3 armed chains per bolt, ≤3 active overclock chips), this is negligible. Not worth changing.

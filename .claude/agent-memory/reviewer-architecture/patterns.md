@@ -22,6 +22,7 @@ type: reference
 - Physics domain reads other domains' components (acceptable per ECS convention)
 - Physics owns collision detection + bolt reflection (collision response)
 - Chip effect components owned by chips/, stamped by chips/effects/* observers, read by production systems via Option<&T> queries. No messages needed — normal ECS read-only queries. Observer dispatch via ChipEffectApplied event (intra-domain). Stacking via stack_u32/stack_f32 helpers in chips/effects/mod.rs.
+- **bolt/behaviors sub-domain** (2026-03-20): nested sub-domain under bolt/ for overclock evaluation engine. Uses functional decomposition (active.rs, armed.rs, evaluate.rs, bridges.rs, events.rs, effects/) rather than canonical components.rs/resources.rs/systems/ split. Parent bolt/plugin.rs adds BoltBehaviorsPlugin. OverclockEffectFired event dispatched via commands.trigger(), consumed by per-effect observers in effects/. Bridges read cross-domain messages (BumpPerformed, BoltHitCell, CellDestroyed, BoltLost) and evaluate trigger chains. ActiveOverclocks resource (pub for scenario runner), ArmedTriggers component (pub(crate)).
 - Cross-domain ordering MUST use SystemSet enums, never bare fn refs
 - Intra-domain ordering may use bare fn refs
 - Config-to-entity materialization via init_*_params systems on OnEnter(Playing)

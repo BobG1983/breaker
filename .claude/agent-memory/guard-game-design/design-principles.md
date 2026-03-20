@@ -17,6 +17,9 @@ type: reference
 - Every archetype MUST have a bolt-lost consequence — no free respawns
 - Regen rate must NOT scale with hp_mult (avoids late-game stalemates)
 - ExtraBolt despawns on loss, never respawns — correct Prism behavior
+- Shockwave damage MUST scale with DamageBoost — no "flat area damage" exceptions; synergy web requires it
+- Perfect bump requirement for Surge overclock is correct — do not weaken
+- Global triggers (OnCellDestroyed, OnBoltLost) must not silently no-op when used with position-dependent effects
 
 ## Open Issues (Ordered by Priority)
 1. **BLOCKING** Test code uses 0.8x weak multiplier (should be 1.1x) — bump.rs, apply_bump_velocity.rs, init_breaker_params.rs
@@ -45,3 +48,7 @@ type: reference
 - Chip authoring (4c.2): prioritize synergy pairs, don't ship 16 independent stat buffs
 - Surge overclock needs visible juice when implemented — shockwave is the poster child for overclock feel
 - Run-end screen: consider randomized subtitle pools for variety + forward-looking tone
+- Shockwave range 96.0 (not 64.0) — 64 only hits vertical neighbors; 96 catches near-diagonal, rewards positioning
+- Piercing + armed trigger interaction needs explicit design intent: fire once or at each impact point?
+- ChainHit + trigger evaluation: do chain hits resolve armed triggers? Phase 7+ decision but architecture must not prevent it
+- Phase 7: consider OnCellDestroyed(Shockwave) using destroyed cell position for chain reaction mechanic

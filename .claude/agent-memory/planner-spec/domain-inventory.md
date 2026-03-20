@@ -67,6 +67,36 @@ type: project
 ### Systems
 - `prepare_bolt_velocity` — clamps speed to [min, max], enforces min angle. Runs FixedUpdate.
 
+### Sub-domain: bolt/behaviors/ (overclock evaluation engine)
+
+#### Events (`bolt/behaviors/events.rs`)
+- `OverclockEffectFired { pub effect: TriggerChain, pub bolt: Entity }` — Event, fired when chain resolves to leaf. (After Phase 0: was tuple struct `OverclockEffectFired(pub TriggerChain)`)
+
+#### Resources (`bolt/behaviors/active.rs`)
+- `ActiveOverclocks(pub Vec<TriggerChain>)` — runtime active overclock chains
+
+#### Components (`bolt/behaviors/armed.rs`)
+- `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains
+
+#### Systems (`bolt/behaviors/bridges.rs`)
+- `bridge_overclock_bump` — reads BumpPerformed (Perfect only), evaluates chains, fires/arms
+- `bridge_overclock_impact` — reads BoltHitCell, evaluates active chains + armed triggers
+- `bridge_overclock_cell_destroyed` — reads CellDestroyed, evaluates active + armed_all, uses Entity::PLACEHOLDER for bolt
+- `bridge_overclock_bolt_lost` — reads BoltLost, evaluates active + armed_all, uses Entity::PLACEHOLDER for bolt
+- Private helpers: `evaluate_active_chains`, `evaluate_armed_all`, `evaluate_armed`, `resolve_armed`, `arm_bolt`
+
+#### Pure functions (`bolt/behaviors/evaluate.rs`)
+- `evaluate(trigger: OverclockTriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire
+
+#### Plugin (`bolt/behaviors/plugin.rs`)
+- `BoltBehaviorsPlugin` — registers ActiveOverclocks, bridge systems in FixedUpdate with ordering constraints
+
+#### Observers (`bolt/behaviors/effects/shockwave.rs`) [Phase 1 — new]
+- `handle_shockwave` — observes OverclockEffectFired, pattern matches Shockwave, area damage to cells
+
+### DamageVisualQuery update
+- `DamageVisualQuery` now includes `Has<Locked>` (5th element)
+
 ## breaker domain (`src/breaker/`)
 
 ### Query Aliases (`breaker/queries.rs`)
