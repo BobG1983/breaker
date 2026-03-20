@@ -54,6 +54,14 @@ New bridge with 4 tests: fires LoseLife, no-message no-consequence, wrong-trigge
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
 `restart_run_on_end` gap was closed — `restart_run_on_end_transitions_to_main_menu` test exists at `breaker-scenario-runner/src/lifecycle/tests.rs:808`. No longer a gap.
 
+## Overclock evaluation engine (bolt/behaviors/, as of 2026-03-20, fix/stress-count-and-dead-code branch)
+Coverage: good across the core evaluation and bridge systems. Unit tests cover all four trigger kinds in evaluate.rs, all four bridge functions in bridges.rs (including two-step surge chain and bolt-specific arming), handle_overclock in chips/effects/overclock.rs. Known gaps:
+(1) `bridge_overclock_cell_destroyed` — no test that evaluates ARMED triggers on all bolts when a cell is destroyed (the `evaluate_armed_all` path from CellDestroyed is not exercised).
+(2) `bridge_overclock_bolt_lost` — same gap: no test for armed triggers on all bolts when bolt is lost.
+(3) `handle_overclock` — no test for `ChipEffect::Augment` being ignored (only `Amp` is tested as a negative case).
+(4) `ActiveOverclocks` with multiple chains — no test asserting all chains are evaluated on a single trigger (only single-chain scenarios tested in bridges.rs).
+(5) `evaluate_active_chains` — no test exercising the `Arm` result path when CellDestroyed/BoltLost fires (active chain arming is silently discarded in these bridges; no test confirms this is intentional).
+
 ## Documentation Conventions
 - Module-level `//!` doc comments on all `.rs` files.
 - Public types/functions have `///` doc comments with field-level docs.

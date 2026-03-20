@@ -6,6 +6,7 @@
 - [pattern_ron_hp_scaling_scenario_impact.md](pattern_ron_hp_scaling_scenario_impact.md) — RON HP scaling changes scenario dynamics; frame limits may need updating
 - [pattern_cross_system_component_preservation.md](pattern_cross_system_component_preservation.md) — "Don't touch X" specs must enumerate ALL components in the category
 - [pattern_plugin_registration_in_impl_spec.md](pattern_plugin_registration_in_impl_spec.md) — New systems need plugin.rs registration (schedule, ordering, run_if, set)
+- [pattern_copy_derive_removal_cascade.md](pattern_copy_derive_removal_cascade.md) — Removing Copy from an enum breaks all pattern-match sites that relied on implicit copy
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `physics/messages.rs`

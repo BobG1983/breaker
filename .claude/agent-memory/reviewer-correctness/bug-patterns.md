@@ -51,3 +51,12 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## Full-tree Review Confirmed Bug (2026-03-19, second session) — FIXED (2026-03-19 third session)
 - **spawn_run_end_screen shows wrong loss text for Aegis**: FIXED — `RunOutcome::Lost` split into `TimerExpired` and `LivesDepleted`. `handle_timer_expired` sets `TimerExpired`, `handle_run_lost` sets `LivesDepleted`. Screen match arm maps each to correct text. Confirmed clean.
+
+## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
+
+- **ActiveOverclocks never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveOverclocks.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveOverclocks. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveOverclocks.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`.
+
+- **Retroactive bump path silences None last_hit_bolt**: `breaker/systems/bump.rs:115` — `update_bump` uses `bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER)`. The `None` case is not reachable through current code, but the invariant `post_hit_timer > 0 ↔ last_hit_bolt is Some` is not structural. Should use `expect()` or restructure the timer/entity as a single `Option<(f32, Entity)>`. Medium confidence — not currently reachable, but silently wrong if it becomes reachable.
+
+## Recurring Bug Category (new)
+- **Resource Vec not cleared on run reset**: pattern seen in ActiveOverclocks. When a Vec resource is populated during gameplay, ensure `reset_run_state` or an OnEnter(Playing) system clears it. Check all Vec resources when adding new ones.
