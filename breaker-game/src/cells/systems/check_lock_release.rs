@@ -19,14 +19,19 @@ pub(crate) fn check_lock_release(
     mut commands: Commands,
     all_entities: &Entities,
 ) {
-    // Drain destroyed messages so they don't accumulate.
-    for _ in reader.read() {}
+    // Drain destroyed messages and count them so they don't accumulate.
+    let destroyed_count = reader.read().count();
 
     for (entity, adjacents) in &query {
-        // If every adjacent entity has been despawned (or the list is empty), unlock.
-        let all_gone = adjacents.0.iter().all(|adj| !all_entities.contains(*adj));
-        if all_gone {
+        if adjacents.0.is_empty() {
+            // Empty adjacents list means the cell should always unlock.
             commands.entity(entity).remove::<Locked>();
+        } else if destroyed_count > 0 {
+            // Only scan entity existence when something was actually destroyed.
+            let all_gone = adjacents.0.iter().all(|adj| !all_entities.contains(*adj));
+            if all_gone {
+                commands.entity(entity).remove::<Locked>();
+            }
         }
     }
 }

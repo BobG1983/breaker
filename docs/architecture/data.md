@@ -138,7 +138,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 | `ChipRegistry` | `String` (name) | `ChipDefinition` | Paired `Vec<String>` preserves insertion order for deterministic chip offers |
 | `NodeLayoutRegistry` | `String` (name) | `NodeLayout` | Paired `Vec<String>` preserves insertion order for index-based node progression |
 | `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Unsorted — callers sort at call site for UI display |
-| `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name |
+| `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |
 
 ### Pipeline
 

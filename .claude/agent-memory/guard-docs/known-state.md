@@ -57,9 +57,38 @@ type: reference
 - `definition.rs` is now documented as optional canonical layout file in layout.md
 - `docs/architecture/content.md` fully rewritten to reflect implemented pattern (was "not yet implemented")
 
+## Phase 4 Wave 2 Architecture (do not re-flag)
+
+### BreakerSystems::GradeBump (do not re-flag)
+- `BreakerSystems::GradeBump` is a real set variant in `breaker/sets.rs` — tags `grade_bump` system
+- Cross-domain consumers: `behaviors/plugin.rs` orders `bridge_bump` and `bridge_bump_whiff` `.after(BreakerSystems::GradeBump)`
+- Added to ordering.md defined sets table and FixedUpdate chain
+
+### bridge_bump_whiff (do not re-flag)
+- `bridge_bump_whiff` is a real bridge system in `behaviors/bridges.rs` — reads `BumpWhiffed`, fires `ConsequenceFired`
+- Runs `.after(BreakerSystems::GradeBump).in_set(BehaviorSystems::Bridge)`
+- Added to messages.md BumpWhiffed consumers and ConsequenceFired senders
+
+### Phase 4 Wave 2 Completion (as of 2026-03-19)
+- 4c.1 (Rarity enum + ChipInventory): DONE — `Rarity` in `chips/definition.rs`, `ChipInventory` in `chips/inventory.rs`
+- 4e.1 (Tier data structures + difficulty curve): DONE — `run/difficulty.rs` (TierDefinition, DifficultyCurve, NodeType, DifficultyCurveDefaults, TierNodeCount)
+- 4e.2 (Procedural sequence generation): DONE — `run/systems/generate_node_sequence.rs` (NodeAssignment, NodeSequence, generate_node_sequence)
+- 4e.3 (Lock + Regen cell types): DONE — `cells/components.rs` (Locked, LockAdjacents, CellRegen); systems `check_lock_release`, `tick_cell_regen`
+- 4e.4 (Layout pool support): DONE — `NodePool` in `run/node/definition.rs`, `pools` HashMap in `NodeLayoutRegistry`; `generate_node_sequence_system` registered `OnExit(MainMenu).after(reset_run_state)`
+- index.md and phase-4/index.md updated accordingly
+
+### CellTypeDefinition hp field (do not re-flag)
+- `CellTypeDefinition.hp` is `f32`, not `u32` — fixed in data.md and content.md
+
+### ChipInventory layout (do not re-flag)
+- `chips/inventory.rs` is a standalone resource file (not canonical category — it's a domain-specific resource for tracking the player build)
+- Registered in `ChipsPlugin` as `init_resource::<ChipInventory>()`
+- Also cleared in `reset_run_state` — chips domain resource touched by run domain at run start (intentional cross-domain resource write in init system)
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table
 - Spawn-coordination messages easily missed since they're internal infrastructure, not gameplay messages
 - Intra-domain ordering chains in ordering.md can drift when constraints are restructured
 - `PLAN.md` links break when subphase files are moved to `done/` folder
+- CellTypeDefinition.hp field: always `f32` (not `u32`) — check content.md and data.md on each wave

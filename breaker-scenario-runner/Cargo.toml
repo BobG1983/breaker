@@ -9,11 +9,11 @@ path = "src/main.rs"
 
 [dependencies]
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
-breaker = { path = "../breaker-game" }
+breaker = { path = "../breaker-game", default-features = false }
 clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-ron = "0.11"
+ron = "0.12"
 serde = { version = "1", features = ["derive"] }
 rand = "0.9"
 

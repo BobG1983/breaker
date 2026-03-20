@@ -26,7 +26,7 @@ pub(crate) fn propagate_breaker_defaults(
             && let Some(defaults) = assets.get(collection.breaker.id())
         {
             *config = BreakerConfig::from(defaults.clone());
-            if let Some(def) = registry.archetypes.get(&selected.0) {
+            if let Some(def) = registry.get(&selected.0) {
                 apply_stat_overrides(&mut config, &def.stat_overrides);
             }
         }
@@ -154,7 +154,7 @@ mod tests {
         };
 
         let mut registry = ArchetypeRegistry::default();
-        registry.archetypes.insert(ARCHETYPE_NAME.to_owned(), def);
+        registry.insert(ARCHETYPE_NAME.to_owned(), def);
         app.world_mut().insert_resource(registry);
         app.world_mut()
             .insert_resource(SelectedArchetype(ARCHETYPE_NAME.to_owned()));
@@ -209,7 +209,7 @@ mod tests {
             behaviors: vec![],
         };
         let mut registry = ArchetypeRegistry::default();
-        registry.archetypes.insert("Plain".to_owned(), def);
+        registry.insert("Plain".to_owned(), def);
         app.world_mut().insert_resource(registry);
         app.world_mut()
             .insert_resource(SelectedArchetype("Plain".to_owned()));

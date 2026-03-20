@@ -78,6 +78,16 @@ pub struct DifficultyCurve {
     pub timer_reduction_per_boss: f32,
 }
 
+impl Default for DifficultyCurve {
+    fn default() -> Self {
+        Self {
+            tiers: vec![],
+            boss_hp_mult: 1.0,
+            timer_reduction_per_boss: 0.0,
+        }
+    }
+}
+
 impl From<DifficultyCurveDefaults> for DifficultyCurve {
     fn from(defaults: DifficultyCurveDefaults) -> Self {
         Self {

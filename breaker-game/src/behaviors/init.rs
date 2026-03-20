@@ -59,7 +59,7 @@ pub(crate) fn apply_archetype_config_overrides(
     }
 
     // Apply archetype overrides
-    let Some(def) = registry.archetypes.get(&selected.0) else {
+    let Some(def) = registry.get(&selected.0) else {
         warn!("Archetype '{}' not found in registry", selected.0);
         return;
     };
@@ -80,7 +80,7 @@ pub(crate) fn init_archetype(
     breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
     mut active: ResMut<ActiveBehaviors>,
 ) {
-    let Some(def) = registry.archetypes.get(&selected.0) else {
+    let Some(def) = registry.get(&selected.0) else {
         warn!("Archetype '{}' not found in registry", selected.0);
         return;
     };
@@ -137,7 +137,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let mut registry = ArchetypeRegistry::default();
-        registry.archetypes.insert(def.name.clone(), def);
+        registry.insert(def.name.clone(), def);
         app.insert_resource(registry)
             .insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()))
             .init_resource::<ActiveBehaviors>()
@@ -271,7 +271,7 @@ mod tests {
         };
 
         let mut registry = ArchetypeRegistry::default();
-        registry.archetypes.insert("Wide".to_owned(), def);
+        registry.insert("Wide".to_owned(), def);
         app.insert_resource(registry)
             .insert_resource(SelectedArchetype("Wide".to_owned()))
             .add_systems(Update, apply_archetype_config_overrides);

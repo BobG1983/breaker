@@ -2,8 +2,6 @@
 
 use bevy::prelude::*;
 
-use super::resources::DebugOverlays;
-
 /// Plugin for debug tooling.
 ///
 /// Provides an in-game debug panel with overlay toggles, state inspection,
@@ -24,7 +22,7 @@ impl Plugin for DebugPlugin {
                 hot_reload::plugin::HotReloadPlugin,
                 overlays::plugin::OverlaysPlugin,
                 recording::{RecordingConfig, RecordingPlugin},
-                resources::LastBumpResult,
+                resources::{DebugOverlays, LastBumpResult},
                 telemetry::plugin::TelemetryPlugin,
             };
 

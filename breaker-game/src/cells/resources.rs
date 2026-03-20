@@ -37,7 +37,59 @@ impl Default for CellDefaults {
 #[derive(Resource, Debug, Default)]
 pub struct CellTypeRegistry {
     /// Map from alias char to cell type definition.
-    pub types: HashMap<char, CellTypeDefinition>,
+    types: HashMap<char, CellTypeDefinition>,
+}
+
+impl CellTypeRegistry {
+    /// Looks up a cell type definition by its alias char.
+    pub(crate) fn get(&self, alias: char) -> Option<&CellTypeDefinition> {
+        self.types.get(&alias)
+    }
+
+    /// Returns `true` if the registry contains a definition for the given alias.
+    pub(crate) fn contains(&self, alias: char) -> bool {
+        self.types.contains_key(&alias)
+    }
+
+    /// Inserts a cell type definition under the given alias, returning the
+    /// previous definition if one existed.
+    pub(crate) fn insert(
+        &mut self,
+        alias: char,
+        def: CellTypeDefinition,
+    ) -> Option<CellTypeDefinition> {
+        self.types.insert(alias, def)
+    }
+
+    /// Returns an iterator over all cell type definitions.
+    pub(crate) fn values(&self) -> impl Iterator<Item = &CellTypeDefinition> {
+        self.types.values()
+    }
+
+    /// Returns an iterator over `(alias, definition)` pairs.
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (&char, &CellTypeDefinition)> {
+        self.types.iter()
+    }
+
+    /// Returns an iterator over all registered alias chars.
+    pub(crate) fn aliases(&self) -> impl Iterator<Item = &char> {
+        self.types.keys()
+    }
+
+    /// Returns the number of registered cell types.
+    pub(crate) fn len(&self) -> usize {
+        self.types.len()
+    }
+
+    /// Returns `true` if the registry contains no cell types.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.types.is_empty()
+    }
+
+    /// Removes all entries from the registry.
+    pub(crate) fn clear(&mut self) {
+        self.types.clear();
+    }
 }
 
 #[cfg(test)]
@@ -112,8 +164,8 @@ mod tests {
             behavior: CellBehavior::default(),
         };
         let mut registry = CellTypeRegistry::default();
-        registry.types.insert(def_a.alias, def_a);
-        let had_existing = registry.types.insert(def_b.alias, def_b);
+        registry.insert(def_a.alias, def_a);
+        let had_existing = registry.insert(def_b.alias, def_b);
         assert!(
             had_existing.is_some(),
             "inserting duplicate alias should replace"

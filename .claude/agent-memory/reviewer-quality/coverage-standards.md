@@ -6,6 +6,8 @@ type: reference
 
 ## Test Coverage Standards by Domain
 
+- **spawn_cells_from_grid / CellBehavior wiring (2026-03-19 full review)**: `CellBehavior.locked` and `CellBehavior.regen_rate` fields in `CellTypeDefinition` are NEVER applied during `spawn_cells_from_grid`. The `Locked`, `LockAdjacents`, and `CellRegen` components can only be added manually; there is no code path that reads `def.behavior` and inserts them at spawn time. This is a LOGIC GAP — the RON data model implies the behavior is wired but the spawn system does not implement it. No test for this integration path exists; all existing tests for `Locked`/`CellRegen` spawn the components manually.
+
 - **Bump system**: Very high. Grade functions, update_bump, grade_bump, combined pipeline, BoltServing guard, input-loss regression, perfect_bump_dash_cancel.
 - **CCD physics**: Comprehensive. All collision surfaces, multi-bolt, cascade prevention, MAX_BOUNCES cap, wall vs cell, overlap resolution.
 - **clamp_bolt_to_playfield (as of 2026-03-19, develop branch)**: Now has 9 tests including `corner_escape_both_axes_clamped`. Previous gap (3) CLOSED. Known remaining gaps: (1) no test for a bolt exactly at the clamp boundary (pos.x == x_max) — behavior defined but boundary untested. (2) left-wall clamp does not assert vy unchanged (only right-wall does). (3) corner escape test exists but only tests both-positive velocity case — no test for partially-inward velocity on corner escape.

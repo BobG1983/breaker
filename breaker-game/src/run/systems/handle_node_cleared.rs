@@ -6,7 +6,7 @@ use tracing::warn;
 use crate::{
     run::{
         node::{NodeLayoutRegistry, messages::NodeCleared},
-        resources::{RunOutcome, RunState},
+        resources::{NodeSequence, RunOutcome, RunState},
     },
     shared::GameState,
 };
@@ -15,6 +15,7 @@ use crate::{
 pub fn handle_node_cleared(
     mut reader: MessageReader<NodeCleared>,
     registry: Res<NodeLayoutRegistry>,
+    node_sequence: Option<Res<NodeSequence>>,
     mut run_state: ResMut<RunState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
@@ -22,12 +23,16 @@ pub fn handle_node_cleared(
         return;
     }
 
-    if registry.is_empty() {
-        warn!("NodeCleared received but layout registry is empty — ignoring");
+    let total_nodes = node_sequence
+        .as_ref()
+        .map_or_else(|| registry.len(), |seq| seq.assignments.len());
+
+    if total_nodes == 0 {
+        warn!("NodeCleared received but no nodes in sequence or registry — ignoring");
         return;
     }
 
-    let final_index = registry.len().saturating_sub(1);
+    let final_index = total_nodes.saturating_sub(1);
 
     run_state.transition_queued = true;
 
@@ -153,6 +158,119 @@ mod tests {
         assert!(
             !debug.contains("ChipSelect") && !debug.contains("RunEnd"),
             "expected no state change, got: {next:?}"
+        );
+    }
+
+    // ── NodeSequence-length regression tests (A3) ─────────────────────
+
+    use crate::run::{
+        difficulty::NodeType,
+        resources::{NodeAssignment, NodeSequence},
+    };
+
+    /// Helper: build a [`NodeSequence`] with `count` assignments (all Passive, tier 0).
+    fn make_node_sequence(count: usize) -> NodeSequence {
+        NodeSequence {
+            assignments: (0..count)
+                .map(|_| NodeAssignment {
+                    node_type: NodeType::Passive,
+                    tier_index: 0,
+                    hp_mult: 1.0,
+                    timer_mult: 1.0,
+                })
+                .collect(),
+        }
+    }
+
+    /// Helper: build an app with *both* a [`NodeLayoutRegistry`] and a [`NodeSequence`].
+    ///
+    /// `layout_count` controls the registry size; `sequence_len` controls the
+    /// node sequence length. The system should use `sequence_len` to determine
+    /// the final node index, **not** `layout_count`.
+    fn test_app_with_sequence(node_index: u32, layout_count: usize, sequence_len: usize) -> App {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .add_message::<NodeCleared>();
+        let mut registry = NodeLayoutRegistry::default();
+        for i in 0..layout_count {
+            registry.insert(make_layout(&format!("node_{i}")));
+        }
+        app.insert_resource(registry)
+            .insert_resource(make_node_sequence(sequence_len))
+            .insert_resource(RunState {
+                node_index,
+                ..default()
+            })
+            .insert_resource(SendNodeCleared(false))
+            .add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
+        app
+    }
+
+    #[test]
+    fn mid_run_node_does_not_end_game_when_sequence_longer_than_registry() {
+        // NodeSequence has 9 assignments, registry has 3 layouts.
+        // At node_index 3, we are only at the 4th of 9 nodes — NOT the end.
+        // Bug: system uses registry.len() (3) and thinks index 3 >= final (2).
+        let mut app = test_app_with_sequence(3, 3, 9);
+        app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
+        tick(&mut app);
+
+        let next = app.world().resource::<NextState<GameState>>();
+        assert!(
+            format!("{next:?}").contains("ChipSelect"),
+            "node_index 3 of 9 should advance to ChipSelect, not end the run; got: {next:?}"
+        );
+
+        let run_state = app.world().resource::<RunState>();
+        assert_eq!(
+            run_state.outcome,
+            RunOutcome::InProgress,
+            "run should still be in progress at node 3 of 9"
+        );
+    }
+
+    #[test]
+    fn run_ends_at_last_node_sequence_assignment() {
+        // NodeSequence has 9 assignments (final_index = 8), registry has 3 layouts.
+        // At node_index 8, we are at the last node — run should end with Won.
+        let mut app = test_app_with_sequence(8, 3, 9);
+        app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
+        tick(&mut app);
+
+        let next = app.world().resource::<NextState<GameState>>();
+        assert!(
+            format!("{next:?}").contains("RunEnd"),
+            "node_index 8 of 9 should trigger RunEnd; got: {next:?}"
+        );
+
+        let run_state = app.world().resource::<RunState>();
+        assert_eq!(
+            run_state.outcome,
+            RunOutcome::Won,
+            "outcome should be Won at final node"
+        );
+    }
+
+    #[test]
+    fn penultimate_node_transitions_to_chip_select_not_run_end() {
+        // NodeSequence has 9 assignments (final_index = 8), registry has 3 layouts.
+        // At node_index 7, we are one before the last — should go to ChipSelect.
+        let mut app = test_app_with_sequence(7, 3, 9);
+        app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
+        tick(&mut app);
+
+        let next = app.world().resource::<NextState<GameState>>();
+        assert!(
+            format!("{next:?}").contains("ChipSelect"),
+            "node_index 7 of 9 should advance to ChipSelect; got: {next:?}"
+        );
+
+        let run_state = app.world().resource::<RunState>();
+        assert_eq!(
+            run_state.outcome,
+            RunOutcome::InProgress,
+            "run should still be in progress at penultimate node"
         );
     }
 }

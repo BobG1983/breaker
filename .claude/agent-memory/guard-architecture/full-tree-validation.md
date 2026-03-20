@@ -7,23 +7,11 @@ type: project
 ## Last validated: 2026-03-19
 
 ### Summary
-16 domains reviewed. Architecture is well-maintained. 6 documentation drift items found. 2 structural observations (not violations). No boundary violations in production code.
+16 domains reviewed. Architecture is well-maintained. All documentation drift found was fixed in the same session. 2 structural observations (not violations). No boundary violations in production code.
 
-### Key Findings
-
-**Documentation Drift (messages.md)**
-5 messages exist in code but are not documented in `docs/architecture/messages.md`:
-- `BreakerSpawned` (breaker/messages.rs) — sent by spawn_breaker, consumed by check_spawn_complete
-- `BoltSpawned` (bolt/messages.rs) — sent by spawn_bolt, consumed by check_spawn_complete
-- `CellsSpawned` (run/node/messages.rs) — sent by spawn_cells_from_layout, consumed by check_spawn_complete
-- `WallsSpawned` (wall/messages.rs) — sent by spawn_walls, consumed by check_spawn_complete
-- `SpawnNodeComplete` (run/node/messages.rs) — sent by check_spawn_complete, consumed by scenario runner
-
-**Documentation Drift (ordering.md)**
-- `BreakerSystems::Reset` exists in code (sets.rs, plugin.rs:43) but not in ordering.md's "Defined sets" table
-- `BoltSystems::InitParams` exists in code (sets.rs, plugin.rs:38) but not in ordering.md's "Defined sets" table
-- `NodeSystems` (5 variants: Spawn, TrackCompletion, TickTimer, ApplyTimePenalty, InitTimer) not in ordering.md's table
-- The OnEnter chain in ordering.md is outdated — does not include BreakerSystems::Reset or BoltSystems::InitParams
+### Documentation Status (all items fixed 2026-03-19)
+- `docs/architecture/messages.md` updated: BreakerSpawned, BoltSpawned, CellsSpawned, WallsSpawned, SpawnNodeComplete all documented (verify: confirmed in messages.md as of audit)
+- `docs/architecture/ordering.md` updated: BreakerSystems::Reset, BoltSystems::InitParams, NodeSystems all documented (verify against code if regenerating)
 
 **Cross-domain reads that are architecturally sound (not violations):**
 - Physics reads bolt, breaker, cell, wall components (necessary for collision)

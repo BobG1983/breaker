@@ -71,17 +71,7 @@ Track RED gate status in session-state.md (the `RED Gate` column in the Specs ta
 
 ### Standard — default for all work
 
-Launch: **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality**
-
-### Full — triggered by conditions
-
-Use Full when any of these apply:
-- Cross-domain feature (2+ domains)
-- New message types or plugins
-- Scheduling/ordering changes
-- Any Phase 3 failure (bumps from Standard to Full for re-verification)
-
-Full adds to Standard: **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance**
+Launch: **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance**
 
 ### Conditional agents (add to either tier when triggered)
 

@@ -98,7 +98,7 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Sender: `bolt_cell_collision` (PhysicsPlugin)
 - Receivers:
   - `handle_cell_hit` (CellsPlugin)
-- NOTE: `BoltHitCell` now carries only `cell: Entity` — the `bolt: Entity` field was removed in feature/scenario-coverage-expansion. Any system reading BoltHitCell.bolt will fail to compile.
+- NOTE: `BoltHitCell` carries `{ cell: Entity, bolt: Entity }` — the bolt field was re-added in feature/phase4b2-effect-consumption for pierce lookahead. Both fields are present and used.
 
 ### BoltLost (PhysicsPlugin → cross-domain)
 - Sender: `bolt_lost` (PhysicsPlugin, PhysicsSystems::BoltLost) — fires for baseline AND ExtraBolt

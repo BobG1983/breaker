@@ -65,7 +65,7 @@ impl NodeLayout {
                 ));
             }
             for &ch in row {
-                if ch != '.' && !registry.types.contains_key(&ch) {
+                if ch != '.' && !registry.contains(ch) {
                     return Err(format!(
                         "layout '{}': unknown alias '{}' at row {}",
                         self.name, ch, i,
@@ -95,7 +95,7 @@ mod tests {
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
-        registry.types.insert(
+        registry.insert(
             'S',
             CellTypeDefinition {
                 id: "standard".to_owned(),
@@ -110,7 +110,7 @@ mod tests {
                 behavior: CellBehavior::default(),
             },
         );
-        registry.types.insert(
+        registry.insert(
             'T',
             CellTypeDefinition {
                 id: "tough".to_owned(),

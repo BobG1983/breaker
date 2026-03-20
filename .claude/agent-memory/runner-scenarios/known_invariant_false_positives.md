@@ -153,19 +153,41 @@ wall-reflection math in `shared::math` are the most likely suspects.
 
 ---
 
-## BreakerPositionClamped — never fires in breaker_oob_detection self-test (NEW, 2026-03-19)
+## BreakerPositionClamped — never fires in breaker_oob_detection self-test (UPDATED analysis 2026-03-20)
 
 **Scenario:** `breaker_oob_detection` — Aegis + Corridor, breaker teleported to x=2000.0 via `debug_setup`, `disable_physics=true`. Expects BOTH `BreakerInBounds` AND `BreakerPositionClamped` to fire.
 
-**Observed:** `BreakerInBounds` fires 105 times (frames 16-120). `BreakerPositionClamped` never fires. Fails with `-s` (single-run), confirming it is a real bug not a parallelism artifact.
+**Observed:** `BreakerInBounds` fires 83 times (frames 38-120). `BreakerPositionClamped` never fires.
 
-**Root cause:** `check_breaker_position_clamped` queries `(Entity, &Transform, &BreakerWidth), With<ScenarioTagBreaker>`. `BreakerWidth` is inserted by `init_breaker_params` which uses `Commands` (deferred). The entity is spawned in `spawn_breaker` (also deferred). In `OnEnter(GameState::Playing)`, there is no explicit `ApplyDeferred` between `spawn_breaker` and `init_breaker_params` in the breaker plugin's schedule, so when `init_breaker_params` runs, the newly-spawned `Breaker` entity is not yet visible via query — the deferred spawn has not been applied. As a result, `init_breaker_params` is a no-op on the first node, `BreakerWidth` is never inserted, and the `check_breaker_position_clamped` query matches no entities.
+**Root cause (corrected 2026-03-20):** System ordering ambiguity in the `FixedUpdate` invariant block. The block is registered as an UNORDERED tuple (no `.chain()`):
 
-**Why BreakerInBounds still fires:** `check_breaker_in_bounds` queries only `(Entity, &Transform), With<ScenarioTagBreaker>` — no `BreakerWidth` required. `ScenarioTagBreaker` is inserted by `tag_game_entities`, which runs BEFORE `apply_debug_setup` in the scenario lifecycle chain. The `Transform` teleport to x=2000.0 happens in `apply_debug_setup`. So the entity IS tagged and has the right Transform by the first `FixedUpdate`.
+```
+(enforce_frozen_positions, ..., check_breaker_in_bounds, ..., check_breaker_position_clamped, ...)
+```
 
-**Evidence:** `spawn_breaker.rs:37-54` — no `BreakerWidth` in the spawn bundle. `init_breaker_params.rs:27-30` — inserts `BreakerWidth` via `Commands`, filtered by `Without<BreakerMaxSpeed>`, deferred. `breaker/plugin.rs:36-44` — no `ApplyDeferred` between `spawn_breaker` and `init_breaker_params`.
+Both `enforce_frozen_positions` (writes `&mut Transform`) and the two checkers (read `&Transform`) have a data conflict. Bevy's ambiguity resolver may schedule `check_breaker_position_clamped` BEFORE `enforce_frozen_positions`.
 
-**Fix direction:** Add `ApplyDeferred` between `spawn_breaker` and `init_breaker_params` in `breaker/plugin.rs:36-44`. This allows `init_breaker_params` to find the newly-spawned entity on the first node.
+When `check_breaker_position_clamped` runs first:
+- `move_breaker` already ran (before the invariant block, via `.after(update_breaker_state)`)
+- `move_breaker` clamped x=2000 to `max_x = right() - half_width = 720 - 108 = 612`
+- checker tests: `612 > 612 + 1.0 = 613` → FALSE → no violation
+
+When `check_breaker_in_bounds` runs AFTER `enforce_frozen_positions` (Bevy happened to order it correctly for this checker):
+- position is restored to x=2000
+- `2000 > 720 + 50 = 770` → TRUE → fires
+
+**Why violations start at frame 38:** `apply_debug_setup` (which sets x=2000 and inserts `ScenarioPhysicsFrozen`) runs in `OnEnter(Playing)` AFTER `tag_game_entities` in the same `.chain()`. But `tag_game_entities` inserts `ScenarioTagBreaker` via deferred `Commands` — no `ApplyDeferred` between them. So `apply_debug_setup` finds no breaker on the FIRST `OnEnter(Playing)`. The game cycles MainMenu → Playing → ChipSelect → NodeTransition → Playing (second entry). On the second `OnEnter(Playing)`, tags are already flushed from pass 1, so `apply_debug_setup` succeeds. This second entry occurs ~frame 38.
+
+**Evidence:**
+- `breaker-scenario-runner/src/lifecycle/mod.rs:149-177` — unordered invariant tuple (no `.chain()`)
+- `breaker-scenario-runner/src/invariants/checkers/breaker_position_clamped.rs:22` — tolerance check `x > max_x + 1.0`
+- `breaker-game/src/breaker/systems/move_breaker.rs:75-78` — clamp to exactly `max_x`
+- `breaker-game/assets/config/defaults.playfield.ron` — `width: 1440.0`, so `right()=720`
+- `breaker-game/assets/config/defaults.breaker.ron` — `width: 216.0`, so `half_width=108`, `max_x=612`
+
+**Note:** Previous diagnosis (2026-03-19) claimed `BreakerWidth` was never inserted due to missing `ApplyDeferred` in `breaker/plugin.rs`. This is INCORRECT — `ApplyDeferred` IS present in the chain (plugin.rs lines 38). The real cause is system ordering.
+
+**Fix direction:** Add `.chain()` to the FixedUpdate invariant block in `breaker-scenario-runner/src/lifecycle/mod.rs:159-173` so `enforce_frozen_positions` is guaranteed to run before all checkers. Also add `ApplyDeferred` between `tag_game_entities` and `apply_debug_setup` in the `OnEnter(Playing)` chain (lifecycle/mod.rs:133-143) so debug teleport works on the first `OnEnter` instead of requiring a second entry.
 
 **Confidence: HIGH**
 

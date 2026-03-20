@@ -415,7 +415,7 @@ is pressed. `toggle_pause` reads the populated `InputActions` in Update.
 The execution order is: PreUpdate (`read_input_actions`) → Update (`toggle_pause`) — unchanged
 and correct. The scenario runner also maps `TogglePause` correctly in the action table.
 
-ChaosMonkey in the scenario runner now includes `TogglePause` in its `GAMEPLAY_ACTIONS` pool.
+ChaosDriver in the scenario runner now includes `TogglePause` in its `GAMEPLAY_ACTIONS` pool.
 This means chaos scenarios can inject random pause/unpause events. The `check_physics_frozen_during_pause`
 invariant validates that physics stops during pause — this is now exercised by chaos scenarios.
 

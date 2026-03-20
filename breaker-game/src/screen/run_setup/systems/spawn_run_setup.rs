@@ -14,7 +14,7 @@ use crate::{
 ///
 /// Reads [`ArchetypeRegistry`] to display one card per available breaker.
 pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeRegistry>) {
-    let mut names: Vec<&String> = registry.archetypes.keys().collect();
+    let mut names: Vec<&String> = registry.names().collect();
     names.sort();
 
     commands.insert_resource(RunSetupSelection { index: 0 });
@@ -144,9 +144,7 @@ mod tests {
     fn test_registry(names: &[&str]) -> ArchetypeRegistry {
         let mut registry = ArchetypeRegistry::default();
         for name in names {
-            registry
-                .archetypes
-                .insert((*name).to_owned(), make_archetype(name));
+            registry.insert((*name).to_owned(), make_archetype(name));
         }
         registry
     }

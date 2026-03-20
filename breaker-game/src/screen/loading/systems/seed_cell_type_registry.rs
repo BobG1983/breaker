@@ -29,18 +29,22 @@ pub(crate) fn seed_cell_type_registry(
         let Some(def) = cell_type_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
+        if let Err(e) = def.validate() {
+            warn!("Skipping cell type '{}': {e}", def.id);
+            continue;
+        }
         assert!(
             def.alias != '.',
             "cell type '{}' uses reserved alias '.'",
             def.id
         );
         assert!(
-            !registry.types.contains_key(&def.alias),
+            !registry.contains(def.alias),
             "duplicate cell type alias '{}' from '{}'",
             def.alias,
             def.id
         );
-        registry.types.insert(def.alias, def.clone());
+        registry.insert(def.alias, def.clone());
     }
 
     commands.insert_resource(registry);
@@ -112,9 +116,9 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<CellTypeRegistry>();
-        assert_eq!(registry.types.len(), 2);
-        assert!(registry.types.contains_key(&'S'));
-        assert!(registry.types.contains_key(&'T'));
+        assert_eq!(registry.len(), 2);
+        assert!(registry.contains('S'));
+        assert!(registry.contains('T'));
     }
 
     #[test]

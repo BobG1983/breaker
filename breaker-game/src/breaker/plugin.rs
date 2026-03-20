@@ -35,13 +35,16 @@ impl Plugin for BreakerPlugin {
                 OnEnter(GameState::Playing),
                 (
                     spawn_breaker,
-                    init_breaker_params
-                        .after(spawn_breaker)
-                        .in_set(BreakerSystems::InitParams),
-                    reset_breaker
-                        .after(BreakerSystems::InitParams)
-                        .in_set(BreakerSystems::Reset),
-                ),
+                    ApplyDeferred,
+                    init_breaker_params.in_set(BreakerSystems::InitParams),
+                )
+                    .chain(),
+            )
+            .add_systems(
+                OnEnter(GameState::Playing),
+                reset_breaker
+                    .after(BreakerSystems::InitParams)
+                    .in_set(BreakerSystems::Reset),
             )
             .add_systems(
                 FixedUpdate,

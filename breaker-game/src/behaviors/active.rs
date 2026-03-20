@@ -61,8 +61,8 @@ mod tests {
         ActiveBehaviors(vec![
             (Trigger::BoltLost, Consequence::LoseLife),
             (Trigger::PerfectBump, Consequence::BoltSpeedBoost(1.5)),
-            (Trigger::EarlyBump, Consequence::BoltSpeedBoost(0.8)),
-            (Trigger::LateBump, Consequence::BoltSpeedBoost(0.8)),
+            (Trigger::EarlyBump, Consequence::BoltSpeedBoost(1.1)),
+            (Trigger::LateBump, Consequence::BoltSpeedBoost(1.1)),
         ])
     }
 

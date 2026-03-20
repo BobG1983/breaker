@@ -5,21 +5,27 @@ type: reference
 ---
 
 ## Review Status
-- Full codebase review (2026-03-16): Phase 1 APPROVED, Phase 2b APPROVED, Phase 2c APPROVED
-- Parameters rescaled to 1920x1080 canvas (all values differ from Phase 1 review)
-- 2 HIGH issues fixed (run-end dead air, bump multipliers 0.8x->1.1x)
-- 2 MEDIUM issues tracked (bolt-lost respawn, perfect window generosity)
+- Full codebase audit (2026-03-19): All implemented mechanics reviewed against 9 design pillars
+- Prior review (2026-03-16): Phase 1 APPROVED, Phase 2b APPROVED, Phase 2c APPROVED
+- 3 HIGH issues identified (test 0.8x values, Prism no bolt-lost, run-end dead air)
+- 5 MEDIUM issues tracked (chip timer, regen stalemate, passive/active gap, pool layouts, perfect window)
 
-## Key Parameter Values (Post-Rescale, 2026-03-16)
+## Key Parameter Values (Post-Rescale)
 - Playfield: 1440w x 1080h
-- Breaker: width=216, height=36, max_speed=900, dash_mult=4.0x, dash_dur=0.15s
+- Breaker: width=216, height=36, max_speed=1800, dash_mult=4.0x, dash_dur=0.15s
 - Bolt: base=720, min=360, max=1440, radius=14
 - Bump: perfect_window=0.15s, early=0.15s, late=0.15s
-- Bump multipliers (Aegis): perfect=1.5x, early/late=1.1x
+- Bump multipliers (Aegis/Chrono): perfect=1.5x, early/late=1.1x
 - Bump cooldowns: perfect=0.0, weak=0.15s
 - Tilt: dash=15deg, brake=25deg
 - Max reflection: 75deg from vertical
 - Dash covers 540 units = 37.5% of playfield width
+- BASE_BOLT_DAMAGE: 10.0
+- Chip select timer: 10.0s (recommend 8.0s)
+- Cell standard HP: 10, tough HP: 30, lock HP: 10, regen HP: 20
+- Regen rate: 2.0 HP/s (should NOT scale with hp_mult)
+- Difficulty tiers: 5 (hp_mult 1.0->2.5, timer_mult 1.0->0.6, active_ratio 0.0->1.0)
+- Boss HP mult: 3.0x, timer reduction per boss: 0.1
 
 ## Data-Driven Config Status
 - bolt: RON + BoltDefaults + BoltConfig — COMPLETE
@@ -30,3 +36,14 @@ type: reference
 - mainmenu: RON + MainMenuDefaults + MainMenuConfig — COMPLETE
 - timerui: RON + TimerUiDefaults + TimerUiConfig — COMPLETE
 - archetype: RON + ArchetypeDefinition + ArchetypeRegistry — COMPLETE
+- chipselect: RON + ChipSelectDefaults + ChipSelectConfig — COMPLETE
+- difficulty: RON + DifficultyCurveDefaults + DifficultyCurve — COMPLETE
+- chips: RON + ChipDefinition + ChipRegistry + ChipInventory — COMPLETE
+- cell types: RON + CellTypeDefinition + CellTypeRegistry — COMPLETE (standard, tough, lock, regen)
+
+## Playtest Tuning Knobs (ordered by impact)
+1. perfect_window: 0.15s -> try 0.10-0.12s if too easy
+2. chip_select_timer: 10.0s -> try 8.0s
+3. dash_mult: 4.0x -> try 2.5-3.0x if positioning feels too forgiving
+4. regen_rate: 2.0 -> lower if stalemates occur
+5. timer_mult per tier: current 1.0->0.6 -> steeper curve if late game is too comfortable

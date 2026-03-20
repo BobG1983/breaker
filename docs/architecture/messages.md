@@ -10,7 +10,7 @@ Systems are decoupled through Bevy 0.18 messages (`#[derive(Message)]`, `Message
 | `BoltHitCell { cell, bolt }` | physics | cells (handle_cell_hit) |
 | `BoltLost` | physics | bolt (spawn_bolt_lost_text), behaviors (bridge_bolt_lost) |
 | `BumpPerformed { grade, multiplier }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), behaviors (bridge_bump) |
-| `BumpWhiffed` | breaker | breaker (spawn_whiff_text) |
+| `BumpWhiffed` | breaker | breaker (spawn_whiff_text), behaviors (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_breaker) | run/node (check_spawn_complete) |
 | `CellDestroyed { entity, was_required_to_clear }` | cells | run (track_node_completion) |
 | `CellsSpawned` | run/node (spawn_cells_from_layout) | run/node (check_spawn_complete) |
@@ -30,7 +30,7 @@ These are Bevy observer events (`#[derive(Event)]` + `commands.trigger()`), not 
 
 | Event | Sent By | Observed By |
 |-------|---------|-------------|
-| `ConsequenceFired(Consequence)` | behaviors (bridge_bolt_lost, bridge_bump) | behaviors/consequences/* (handle_life_lost, handle_time_penalty, handle_spawn_bolt) |
+| `ConsequenceFired(Consequence)` | behaviors (bridge_bolt_lost, bridge_bump, bridge_bump_whiff) | behaviors/consequences/* (handle_life_lost, handle_time_penalty, handle_spawn_bolt) |
 | `ChipEffectApplied { effect, max_stacks }` | chips (apply_chip_effect) | chips/effects/* (handle_piercing, handle_damage_boost, etc.) |
 
 ## Registered Messages (no consumers yet)
