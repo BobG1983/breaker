@@ -24,7 +24,7 @@ pub(crate) type ResetBoltQuery = (
 );
 
 /// Bolt entity data needed by the bolt-lost detection system.
-pub type LostQuery = (
+pub(crate) type LostQuery = (
     Entity,
     &'static Transform,
     &'static BoltVelocity,

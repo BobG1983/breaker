@@ -4,11 +4,11 @@
 
 ## Subphases
 
-- [2a: Level Loading](phase-2a-level-loading.md) — Hand-authored RON layouts, node completion detection
-- [2b: Run Structure & Node Timer](phase-2b-run-and-timer.md) — 3-node sequential runs, countdown timer, game-over, run-end screen
-- [2c: Archetype System & Aegis](phase-2c-archetype-system.md) — Polymorphic bolt-lost dispatch, per-breaker RON config, Aegis as proof-of-concept
-- [2d: Screens](phase-2d-screens-and-ui.md) — Breaker selection, placeholder upgrade screen, pause menu
-- [2e: Visual Polish & Additional Archetypes](phase-2e-chrono-and-prism.md) — Visual interpolation, Chrono, Prism
+- [2a: Level Loading](../done/phase-2/phase-2a-level-loading.md) — Hand-authored RON layouts, node completion detection
+- [2b: Run Structure & Node Timer](../done/phase-2/phase-2b-run-and-timer.md) — 3-node sequential runs, countdown timer, game-over, run-end screen
+- [2c: Archetype System & Aegis](../done/phase-2/phase-2c-archetype-system.md) — Polymorphic bolt-lost dispatch, per-breaker RON config, Aegis as proof-of-concept
+- [2d: Screens](../done/phase-2/phase-2d-screens-and-ui.md) — Breaker selection, placeholder upgrade screen, pause menu
+- [2e: Visual Polish & Additional Archetypes](../done/phase-2/phase-2e-chrono-and-prism.md) — Visual interpolation, Chrono, Prism
 
 ## Build Order Rationale
 

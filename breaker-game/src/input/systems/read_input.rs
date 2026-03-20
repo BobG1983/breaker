@@ -212,6 +212,32 @@ mod tests {
     }
 
     #[test]
+    fn repeat_key_event_does_not_produce_toggle_pause() {
+        let mut app = test_app();
+        app.world_mut().write_message(KeyboardInput {
+            key_code: KeyCode::Escape,
+            logical_key: bevy::input::keyboard::Key::Unidentified(
+                bevy::input::keyboard::NativeKey::Unidentified,
+            ),
+            state: ButtonState::Pressed,
+            text: None,
+            window: Entity::PLACEHOLDER,
+            repeat: true,
+        });
+        app.update();
+        let actions = app.world().resource::<InputActions>();
+        assert!(
+            !actions.active(GameAction::TogglePause),
+            "repeat Escape key press should not produce TogglePause action"
+        );
+        // Also verify no other actions leaked through
+        assert!(
+            actions.0.is_empty(),
+            "repeat key event should produce no actions at all"
+        );
+    }
+
+    #[test]
     fn double_tap_left_triggers_dash_left() {
         let mut app = test_app();
 

@@ -309,7 +309,7 @@ mod tests {
             BumpPerfectCooldown(config.perfect_bump_cooldown),
             BumpWeakCooldown(config.weak_bump_cooldown),
             BumpPerfectMultiplier(1.5),
-            BumpWeakMultiplier(0.8),
+            BumpWeakMultiplier(1.1),
             SettleDuration(config.settle_duration),
         )
     }
@@ -978,7 +978,7 @@ mod tests {
             BumpPerfectCooldown(config.perfect_bump_cooldown),
             BumpWeakCooldown(config.weak_bump_cooldown),
             BumpPerfectMultiplier(1.5),
-            BumpWeakMultiplier(0.8),
+            BumpWeakMultiplier(1.1),
             SettleDuration(config.settle_duration),
             BumpForceBoost(force_boost),
         )
@@ -1024,10 +1024,10 @@ mod tests {
 
     #[test]
     fn force_boost_adds_to_early_grade_multiplier() {
-        // Given: BumpWeakMultiplier(0.8), BumpForceBoost(0.2)
+        // Given: BumpWeakMultiplier(1.1), BumpForceBoost(0.2)
         //        Forward bump in early zone
         // When: grade_bump runs
-        // Then: BumpPerformed.multiplier = 1.0
+        // Then: BumpPerformed.multiplier = 1.3
         let mut app = grade_bump_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
@@ -1048,18 +1048,18 @@ mod tests {
         assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
         assert_eq!(captured.0[0].grade, BumpGrade::Early);
         assert!(
-            (captured.0[0].multiplier - 1.0).abs() < 0.001,
-            "multiplier should be BumpWeakMultiplier(0.8) + BumpForceBoost(0.2) = 1.0, got {:.4}",
+            (captured.0[0].multiplier - 1.3).abs() < 0.001,
+            "multiplier should be BumpWeakMultiplier(1.1) + BumpForceBoost(0.2) = 1.3, got {:.4}",
             captured.0[0].multiplier
         );
     }
 
     #[test]
     fn force_boost_adds_to_late_retroactive_multiplier() {
-        // Given: BumpWeakMultiplier(0.8), BumpForceBoost(0.5)
+        // Given: BumpWeakMultiplier(1.1), BumpForceBoost(0.5)
         //        Retroactive bump (post_hit_timer set, past perfect zone)
         // When: update_bump runs with Bump input
-        // Then: BumpPerformed.multiplier = 1.3
+        // Then: BumpPerformed.multiplier = 1.6
         let mut app = update_bump_test_app();
         let config = app.world().resource::<BreakerConfig>().clone();
 
@@ -1084,8 +1084,8 @@ mod tests {
         assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
         assert_eq!(captured.0[0].grade, BumpGrade::Late);
         assert!(
-            (captured.0[0].multiplier - 1.3).abs() < 0.001,
-            "multiplier should be BumpWeakMultiplier(0.8) + BumpForceBoost(0.5) = 1.3, got {:.4}",
+            (captured.0[0].multiplier - 1.6).abs() < 0.001,
+            "multiplier should be BumpWeakMultiplier(1.1) + BumpForceBoost(0.5) = 1.6, got {:.4}",
             captured.0[0].multiplier
         );
     }

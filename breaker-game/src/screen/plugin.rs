@@ -21,7 +21,7 @@ use crate::{
     cells::{CellDefaults, CellTypeDefinition},
     chips::ChipDefinition,
     input::InputDefaults,
-    run::{NodeLayout, difficulty::DifficultyCurveDefaults},
+    run::{NodeLayout, definition::DifficultyCurveDefaults},
     shared::{
         CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
         PlayingState,

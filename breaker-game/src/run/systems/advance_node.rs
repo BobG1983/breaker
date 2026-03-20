@@ -7,7 +7,10 @@ use crate::{run::resources::RunState, shared::GameState};
 /// Increments the node index and transitions to [`GameState::Playing`].
 ///
 /// Runs on `OnEnter(GameState::NodeTransition)`.
-pub fn advance_node(mut run_state: ResMut<RunState>, mut next_state: ResMut<NextState<GameState>>) {
+pub(crate) fn advance_node(
+    mut run_state: ResMut<RunState>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
     run_state.node_index += 1;
     run_state.transition_queued = false;
     next_state.set(GameState::Playing);

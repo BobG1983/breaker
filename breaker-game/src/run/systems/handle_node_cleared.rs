@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// When [`NodeCleared`] is received, either advance to the next node or win the run.
-pub fn handle_node_cleared(
+pub(crate) fn handle_node_cleared(
     mut reader: MessageReader<NodeCleared>,
     registry: Res<NodeLayoutRegistry>,
     node_sequence: Option<Res<NodeSequence>>,
@@ -164,7 +164,7 @@ mod tests {
     // ── NodeSequence-length regression tests (A3) ─────────────────────
 
     use crate::run::{
-        difficulty::NodeType,
+        definition::NodeType,
         resources::{NodeAssignment, NodeSequence},
     };
 

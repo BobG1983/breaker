@@ -78,11 +78,11 @@ All assets (RON data, textures, audio) are loaded during a single loading screen
 For a 2D game of this scope, total asset size is small. Simplicity wins.
 
 **Current boot sequence:**
-1. Load RON defaults (playfield, bolt, breaker, cells, input, mainmenu) via `bevy_asset_loader`
-2. Seed config resources from loaded defaults (`seed_configs_from_defaults`)
+1. Load RON defaults (playfield, bolt, breaker, cells, input, mainmenu, chipselect, archetype definitions, cell type definitions, node layouts, chip definitions, difficulty curve) via `bevy_asset_loader`
+2. Seed config resources from loaded assets — individual per-config seed systems (`seed_bolt_config`, `seed_breaker_config`, `seed_cell_config`, `seed_playfield_config`, `seed_input_config`, `seed_main_menu_config`, `seed_timer_ui_config`, `seed_chip_select_config`, `seed_archetype_registry`, `seed_cell_type_registry`, `seed_node_layout_registry`, `seed_chip_registry`, `seed_difficulty_curve`)
 3. Transition to `MainMenu` state
 
-Future phases will add: upgrade registries (Amp, Augment, Overclock), textures, sprite atlases, audio clips, and cross-reference validation.
+Future phases will add: textures, sprite atlases, audio clips, and cross-reference validation.
 
 ---
 
@@ -90,14 +90,14 @@ Future phases will add: upgrade registries (Amp, Augment, Overclock), textures, 
 
 Automated gameplay testing tool in `breaker-scenario-runner/`. A separate workspace crate that is never shipped in release builds.
 
-- **CLI**: `cargo dscenario -- -s <name>` (visual), `cargo dscenario -- --all --headless` (CI)
+- **CLI**: `cargo scenario -- -s <name> --visual` (visual debug), `cargo scenario -- --all` (CI/validation)
 - **Scenario files**: RON-defined runs (`breaker`, `layout`, `input`, `max_frames`, `invariants`) stored in `breaker-scenario-runner/scenarios/`
 - **Input strategies**: `Chaos` (seeded random), `Scripted` (deterministic frame-action pairs), `Hybrid` (scripted then chaos)
-- **Invariants checked each frame**: `BoltInBounds`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `ValidStateTransitions`
+- **Invariants checked each frame**: `BoltInBounds`, `BoltSpeedInRange`, `BoltCountReasonable`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidStateTransitions`, `ValidBreakerState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`, `PhysicsFrozenDuringPause`
 - **Log capture**: custom `tracing::Layer` fails the scenario on any WARN/ERROR from `breaker` targets
 - **Self-test scenarios**: scenarios in `scenarios/self_tests/` use `expected_violations` to verify the invariant checker itself
 
-The scenario runner uses `ScenarioLayoutOverride` (a resource in `shared/`) to bypass the run-setup screen and inject the specified layout and archetype directly.
+The scenario runner uses `ScenarioLayoutOverride` (a resource in `run/node/resources.rs`) to bypass the run-setup screen and inject the specified layout and archetype directly.
 
 CI runs all scenarios headless on Linux via `.github/workflows/ci.yml` (`scenarios` job).
 

@@ -73,7 +73,7 @@ mod tests {
     }
 
     const TEST_PERFECT_MULT: f32 = 1.5;
-    const TEST_WEAK_MULT: f32 = 0.8;
+    const TEST_WEAK_MULT: f32 = 1.1;
 
     fn spawn_test_bolt(app: &mut App, vx: f32, vy: f32) {
         let bolt_config = BoltConfig::default();
@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn weak_bump_reduces_velocity() {
+    fn weak_bump_amplifies_velocity() {
         let mut app = test_app();
         let bolt_config = BoltConfig::default();
         // Start above base speed so weak multiplier has room to reduce
@@ -443,6 +443,48 @@ mod tests {
             "speed {:.1} should be floored at elevated base {effective_base:.1} \
              (base speed + boost), not raw base 400.0",
             vel.speed(),
+        );
+    }
+
+    #[test]
+    fn sub_one_multiplier_floors_at_base_speed() {
+        let mut app = test_app();
+        // Spawn bolt at base speed with explicit components (no BoltSpeedBoost)
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, 400.0),
+            BoltBaseSpeed(400.0),
+            BoltMaxSpeed(800.0),
+        ));
+
+        // Sub-1.0 multiplier: 400.0 * 0.5 = 200.0, which is below base_speed
+        app.insert_resource(TestMessage(Some(BumpPerformed {
+            grade: BumpGrade::Early,
+            multiplier: 0.5,
+        })));
+
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        // Unclamped would be 200.0; floor guard must clamp to base_speed 400.0
+        assert!(
+            (vel.speed() - 400.0).abs() < 1.0,
+            "sub-1.0 multiplier should floor at base_speed 400.0, not unclamped 200.0; got {:.1}",
+            vel.speed(),
+        );
+        // Direction should be preserved (still pointing up)
+        assert!(
+            vel.value.y > 0.0,
+            "direction should be preserved after floor clamp"
         );
     }
 

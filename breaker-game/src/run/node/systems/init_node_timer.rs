@@ -40,7 +40,7 @@ pub fn init_node_timer(
 mod tests {
     use super::*;
     use crate::run::{
-        difficulty::NodeType,
+        definition::NodeType,
         node::{NodeLayout, definition::NodePool},
         resources::{NodeAssignment, NodeSequence, RunState},
     };

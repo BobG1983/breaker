@@ -123,7 +123,7 @@ mod tests {
         ));
         assert!(matches!(
             def.behaviors[1].consequence,
-            Consequence::TimePenalty(t) if (t - 3.0).abs() < f32::EPSILON
+            Consequence::TimePenalty(t) if (t - 7.0).abs() < f32::EPSILON
         ));
     }
 

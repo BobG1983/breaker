@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// Sent when the run is lost (e.g. all lives depleted).
 ///
-/// Consumed by the run state machine to set [`RunOutcome::Lost`] and transition
+/// Consumed by the run state machine to set [`RunOutcome::LivesDepleted`] and transition
 /// to [`GameState::RunEnd`].
 #[derive(Message, Clone, Debug)]
 pub struct RunLost;

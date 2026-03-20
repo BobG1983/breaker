@@ -231,7 +231,7 @@ mod tests {
                 BreakerVelocity::default(),
                 BumpState::default(),
                 BumpPerfectMultiplier(1.5),
-                BumpWeakMultiplier(0.8),
+                BumpWeakMultiplier(1.1),
             ))
             .id();
 
@@ -244,7 +244,7 @@ mod tests {
         );
         let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
         assert!(
-            (weak.0 - 0.8).abs() < f32::EPSILON,
+            (weak.0 - 1.1).abs() < f32::EPSILON,
             "archetype-stamped weak multiplier should be preserved"
         );
     }

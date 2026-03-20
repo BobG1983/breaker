@@ -40,6 +40,7 @@ impl Plugin for NodePlugin {
                 )
                     .chain(),
             )
+            // Intentionally runs without PlayingState::Active guard — must catch spawn signals on the first frame of play.
             .add_systems(FixedUpdate, check_spawn_complete)
             .add_systems(
                 FixedUpdate,

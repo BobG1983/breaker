@@ -29,6 +29,7 @@ pub(crate) fn seed_archetype_registry(
         let Some(def) = archetype_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
+        // Invariant: asset pipeline enforces unique IDs before loading; a duplicate here is a data authoring error, not a recoverable runtime condition.
         assert!(
             !registry.contains(&def.name),
             "duplicate archetype name '{}'",

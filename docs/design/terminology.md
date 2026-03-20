@@ -27,7 +27,7 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **Recording** | Dev-only system that captures live `GameAction` inputs to a `.scripted.ron` file for later scripted playback | `RecordingConfig`, `--record` flag |
 | **Tier** | A group of nodes in a run sequence sharing the same difficulty parameters (HP multiplier, timer multiplier, active ratio, introduced cell types) | `TierDefinition`, `tier_index` |
 | **DifficultyCurve** | The ordered list of tier definitions loaded from `defaults.difficulty.ron`; drives procedural node sequence generation | `DifficultyCurve`, `DifficultyCurveDefaults` |
-| **NodeType** | The category of a single node in the run sequence: Passive (no timer pressure), Active (timer ticks), or Boss (end-of-tier encounter) | `NodeType::Passive`, `NodeType::Active`, `NodeType::Boss` |
+| **NodeType** | The category of a single node in the run sequence: Passive (no hostile cells), Active (contains cells that fight back), or Boss (unique encounter with special mechanics) | `NodeType::Passive`, `NodeType::Active`, `NodeType::Boss` |
 | **NodePool** | The pool a node layout belongs to — `Passive`, `Active`, or `Boss` — controls which layouts are eligible for each node type | `NodePool`, `NodeLayout.pool`, `NodeLayoutRegistry::get_pool` |
 | **NodeSequence** | The full ordered list of node assignments generated from the difficulty curve and run seed; one `NodeAssignment` per node | `NodeSequence`, `NodeAssignment`, `generate_node_sequence` |
 | **ChipInventory** | Runtime resource tracking the player's chip build during a run: which chips are held and at what stack level, and which chips have been seen in offerings | `ChipInventory`, `ChipEntry` |

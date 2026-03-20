@@ -12,14 +12,14 @@ use crate::{
 
 /// When [`RunLost`] is received, sets the run outcome to lost and transitions
 /// to [`GameState::RunEnd`].
-pub fn handle_run_lost(
+pub(crate) fn handle_run_lost(
     mut reader: MessageReader<RunLost>,
     mut run_state: ResMut<RunState>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for _msg in reader.read() {
         if run_state.outcome == RunOutcome::InProgress {
-            run_state.outcome = RunOutcome::Lost;
+            run_state.outcome = RunOutcome::LivesDepleted;
             next_state.set(GameState::RunEnd);
         }
     }
@@ -73,7 +73,7 @@ mod tests {
         tick(&mut app);
 
         let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Lost);
+        assert_eq!(run_state.outcome, RunOutcome::LivesDepleted);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(

@@ -1,4 +1,4 @@
-//! Tier-based difficulty curve — data structures and RON loading.
+//! Tier-based difficulty curve — RON-deserialized content data types.
 
 use bevy::prelude::*;
 use serde::Deserialize;
@@ -67,42 +67,11 @@ pub struct DifficultyCurveDefaults {
     pub timer_reduction_per_boss: f32,
 }
 
-/// Runtime resource holding the active difficulty curve.
-#[derive(Resource, Debug, Clone)]
-pub struct DifficultyCurve {
-    /// Ordered list of tier definitions.
-    pub tiers: Vec<TierDefinition>,
-    /// HP multiplier applied to boss nodes.
-    pub boss_hp_mult: f32,
-    /// Timer reduction applied after each boss encounter.
-    pub timer_reduction_per_boss: f32,
-}
-
-impl Default for DifficultyCurve {
-    fn default() -> Self {
-        Self {
-            tiers: vec![],
-            boss_hp_mult: 1.0,
-            timer_reduction_per_boss: 0.0,
-        }
-    }
-}
-
-impl From<DifficultyCurveDefaults> for DifficultyCurve {
-    fn from(defaults: DifficultyCurveDefaults) -> Self {
-        Self {
-            tiers: defaults.tiers,
-            boss_hp_mult: defaults.boss_hp_mult,
-            timer_reduction_per_boss: defaults.timer_reduction_per_boss,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // ── NodeType deserialization ──────────────────────────────────────
+    // -- NodeType deserialization --
 
     #[test]
     fn node_type_passive_deserializes_from_ron() {
@@ -122,7 +91,7 @@ mod tests {
         assert_eq!(result, NodeType::Boss);
     }
 
-    // ── TierNodeCount deserialization ────────────────────────────────
+    // -- TierNodeCount deserialization --
 
     #[test]
     fn tier_node_count_fixed_deserializes_from_ron() {
@@ -152,7 +121,7 @@ mod tests {
         assert_eq!(result, TierNodeCount::Range(5, 5));
     }
 
-    // ── TierNodeCount::validate ──────────────────────────────────────
+    // -- TierNodeCount::validate --
 
     #[test]
     fn validate_accepts_fixed_count() {
@@ -185,7 +154,7 @@ mod tests {
         );
     }
 
-    // ── TierDefinition deserialization ───────────────────────────────
+    // -- TierDefinition deserialization --
 
     #[test]
     fn tier_definition_deserializes_from_ron() {
@@ -207,7 +176,7 @@ mod tests {
         assert!(tier.introduced_cells.is_empty());
     }
 
-    // ── DifficultyCurveDefaults deserialization ──────────────────────
+    // -- DifficultyCurveDefaults deserialization --
 
     #[test]
     fn difficulty_curve_defaults_deserializes_from_ron() {
@@ -242,7 +211,7 @@ mod tests {
         assert!(defaults.tiers.is_empty());
     }
 
-    // ── difficulty.ron file parse ────────────────────────────────────
+    // -- difficulty.ron file parse --
 
     #[test]
     fn difficulty_ron_file_parses() {
@@ -252,54 +221,5 @@ mod tests {
         assert_eq!(defaults.tiers.len(), 5);
         assert!((defaults.boss_hp_mult - 3.0).abs() < f32::EPSILON);
         assert!((defaults.timer_reduction_per_boss - 0.1).abs() < f32::EPSILON);
-    }
-
-    // ── DifficultyCurve From conversion ─────────────────────────────
-
-    #[test]
-    fn difficulty_curve_from_defaults_copies_all_fields() {
-        let defaults = DifficultyCurveDefaults {
-            tiers: vec![
-                TierDefinition {
-                    nodes: TierNodeCount::Fixed(3),
-                    active_ratio: 0.0,
-                    hp_mult: 1.0,
-                    timer_mult: 1.0,
-                    introduced_cells: vec![],
-                },
-                TierDefinition {
-                    nodes: TierNodeCount::Range(4, 6),
-                    active_ratio: 0.5,
-                    hp_mult: 1.5,
-                    timer_mult: 0.8,
-                    introduced_cells: vec!['T'],
-                },
-            ],
-            boss_hp_mult: 3.0,
-            timer_reduction_per_boss: 0.1,
-        };
-
-        let curve = DifficultyCurve::from(defaults);
-
-        assert_eq!(curve.tiers.len(), 2, "tier count should match");
-        assert!(
-            (curve.boss_hp_mult - 3.0).abs() < f32::EPSILON,
-            "boss_hp_mult should be 3.0, got {}",
-            curve.boss_hp_mult
-        );
-        assert!(
-            (curve.timer_reduction_per_boss - 0.1).abs() < f32::EPSILON,
-            "timer_reduction_per_boss should be 0.1, got {}",
-            curve.timer_reduction_per_boss
-        );
-        // Spot-check first tier fields
-        assert!(
-            (curve.tiers[0].hp_mult - 1.0).abs() < f32::EPSILON,
-            "first tier hp_mult should be 1.0"
-        );
-        assert!(
-            (curve.tiers[0].active_ratio - 0.0).abs() < f32::EPSILON,
-            "first tier active_ratio should be 0.0"
-        );
     }
 }

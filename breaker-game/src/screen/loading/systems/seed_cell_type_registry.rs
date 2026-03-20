@@ -33,11 +33,13 @@ pub(crate) fn seed_cell_type_registry(
             warn!("Skipping cell type '{}': {e}", def.id);
             continue;
         }
+        // Invariant: asset pipeline enforces unique IDs before loading; a duplicate here is a data authoring error, not a recoverable runtime condition.
         assert!(
             def.alias != '.',
             "cell type '{}' uses reserved alias '.'",
             def.id
         );
+        // Invariant: asset pipeline enforces unique IDs before loading; a duplicate here is a data authoring error, not a recoverable runtime condition.
         assert!(
             !registry.contains(def.alias),
             "duplicate cell type alias '{}' from '{}'",
@@ -119,6 +121,58 @@ mod tests {
         assert_eq!(registry.len(), 2);
         assert!(registry.contains('S'));
         assert!(registry.contains('T'));
+    }
+
+    #[test]
+    fn skips_invalid_definition_and_keeps_valid_ones() {
+        let mut app = test_app();
+
+        let mut invalid_def = make_cell_type("broken", 'B');
+        invalid_def.hp = 0.0; // hp <= 0.0 fails validate()
+
+        let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
+        let h_invalid = assets.add(invalid_def);
+        let h_before = assets.add(make_cell_type("before", 'A'));
+        let h_after = assets.add(make_cell_type("after", 'C'));
+
+        app.world_mut().insert_resource(DefaultsCollection {
+            playfield: Handle::default(),
+            bolt: Handle::default(),
+            breaker: Handle::default(),
+            cells: Handle::default(),
+            input: Handle::default(),
+            mainmenu: Handle::default(),
+            timerui: Handle::default(),
+            cell_types: vec![h_before, h_invalid, h_after],
+            layouts: vec![],
+            archetypes: vec![],
+            chipselect: Handle::default(),
+            amps: vec![],
+            augments: vec![],
+            overclocks: vec![],
+            difficulty: Handle::default(),
+        });
+
+        app.update();
+
+        let registry = app.world().resource::<CellTypeRegistry>();
+        assert_eq!(
+            registry.len(),
+            2,
+            "invalid definition should be skipped, leaving 2 valid entries"
+        );
+        assert!(
+            !registry.contains('B'),
+            "invalid cell type 'B' (hp=0.0) should not be in registry"
+        );
+        assert!(
+            registry.contains('A'),
+            "valid cell type 'A' before the invalid one should be in registry"
+        );
+        assert!(
+            registry.contains('C'),
+            "valid cell type 'C' after the invalid one should be in registry"
+        );
     }
 
     #[test]

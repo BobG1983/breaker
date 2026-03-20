@@ -12,8 +12,9 @@ use crate::{
 pub(crate) fn spawn_run_end_screen(mut commands: Commands, run_state: Res<RunState>) {
     info!("run ended");
     let (title, subtitle) = match run_state.outcome {
-        RunOutcome::Won => ("RUN COMPLETE", "All nodes cleared!"),
-        RunOutcome::Lost => ("TIME'S UP", "The clock ran out."),
+        RunOutcome::Won => ("RUN COMPLETE", "The bolt obeys. For now."),
+        RunOutcome::TimerExpired => ("TIME'S UP", "Almost had it."),
+        RunOutcome::LivesDepleted => ("SIGNAL LOST", "Almost had it."),
         RunOutcome::InProgress => ("RUN ENDED", ""),
     };
 
@@ -106,11 +107,15 @@ mod tests {
             texts.iter().any(|t| t.contains("RUN COMPLETE")),
             "expected 'RUN COMPLETE' in texts: {texts:?}"
         );
+        assert!(
+            texts.iter().any(|t| t.contains("The bolt obeys")),
+            "expected 'The bolt obeys' subtitle in texts: {texts:?}"
+        );
     }
 
     #[test]
-    fn lost_shows_times_up_text() {
-        let mut app = test_app(RunOutcome::Lost);
+    fn timer_expired_shows_times_up_text() {
+        let mut app = test_app(RunOutcome::TimerExpired);
         app.update();
 
         let texts: Vec<String> = app
@@ -122,6 +127,50 @@ mod tests {
         assert!(
             texts.iter().any(|t| t.contains("TIME'S UP")),
             "expected \"TIME'S UP\" in texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn in_progress_shows_run_ended_text() {
+        let mut app = test_app(RunOutcome::InProgress);
+        app.update();
+
+        let screen_count = app
+            .world_mut()
+            .query_filtered::<Entity, With<RunEndScreen>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            screen_count, 1,
+            "RunEndScreen entity should be spawned for InProgress fallback"
+        );
+
+        let texts: Vec<String> = app
+            .world_mut()
+            .query::<&Text>()
+            .iter(app.world())
+            .map(|t| t.0.clone())
+            .collect();
+        assert!(
+            texts.iter().any(|t| t.contains("RUN ENDED")),
+            "expected 'RUN ENDED' in texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn lives_depleted_shows_signal_lost_text() {
+        let mut app = test_app(RunOutcome::LivesDepleted);
+        app.update();
+
+        let texts: Vec<String> = app
+            .world_mut()
+            .query::<&Text>()
+            .iter(app.world())
+            .map(|t| t.0.clone())
+            .collect();
+        assert!(
+            texts.iter().any(|t| t.contains("SIGNAL LOST")),
+            "expected 'SIGNAL LOST' in texts: {texts:?}"
         );
     }
 }

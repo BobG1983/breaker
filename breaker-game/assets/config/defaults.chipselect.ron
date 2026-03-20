@@ -1,6 +1,6 @@
-/* @[brickbreaker::screen::upgrade_select::resources::UpgradeSelectDefaults] */
+/* @[brickbreaker::screen::chip_select::resources::ChipSelectDefaults] */
 (
-    timer_secs: 10.0,
+    timer_secs: 8.0,
     card_title_font_size: 36.0,
     card_description_font_size: 20.0,
     timer_font_size: 48.0,

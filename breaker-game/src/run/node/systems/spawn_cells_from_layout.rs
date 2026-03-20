@@ -20,7 +20,7 @@ use crate::{
 /// Shared between the `OnEnter(Playing)` system and hot-reload respawn.
 ///
 /// `hp_mult` scales every cell's HP (from the node's difficulty assignment).
-pub fn spawn_cells_from_grid(
+pub(crate) fn spawn_cells_from_grid(
     commands: &mut Commands,
     config: &CellConfig,
     playfield: &PlayfieldConfig,
@@ -132,7 +132,7 @@ pub(crate) struct CellSpawnContext<'w> {
 /// Runs once when entering [`GameState::Playing`], after [`set_active_layout`].
 /// Reads the grid from [`ActiveNodeLayout`] and looks up each alias in
 /// [`CellTypeRegistry`] to determine cell properties.
-pub fn spawn_cells_from_layout(
+pub(crate) fn spawn_cells_from_layout(
     mut commands: Commands,
     ctx: CellSpawnContext,
     layout: Res<ActiveNodeLayout>,
@@ -167,7 +167,7 @@ mod tests {
             resources::CellTypeRegistry,
         },
         run::{
-            difficulty::NodeType,
+            definition::NodeType,
             node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
             resources::{NodeAssignment, NodeSequence, RunState},
         },

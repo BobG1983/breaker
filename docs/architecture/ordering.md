@@ -17,7 +17,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
 - **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
 
-**Defined sets (as of Phase 4 Wave 2):**
+**Defined sets:**
 
 | Set | Domain | Tags |
 |-----|--------|------|
@@ -25,7 +25,9 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BreakerSystems::InitParams` | `breaker/sets.rs` | `init_breaker_params` |
 | `BreakerSystems::Reset` | `breaker/sets.rs` | `reset_breaker` (intra-domain only — no cross-domain consumers yet) |
 | `BreakerSystems::GradeBump` | `breaker/sets.rs` | `grade_bump` |
+| `BoltSystems::InitParams` | `bolt/sets.rs` | `init_bolt_params` |
 | `BoltSystems::PrepareVelocity` | `bolt/sets.rs` | `prepare_bolt_velocity` |
+| `BoltSystems::Reset` | `bolt/sets.rs` | `reset_bolt` (intra-domain only — no cross-domain consumers yet) |
 | `PhysicsSystems::BreakerCollision` | `physics/sets.rs` | `bolt_breaker_collision` |
 | `PhysicsSystems::BoltLost` | `physics/sets.rs` | `bolt_lost` |
 | `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff` |
@@ -67,13 +69,21 @@ apply_archetype_config_overrides       [behaviors domain]
     BreakerSystems::InitParams
     (init_breaker_params)              [breaker domain]
       <- init_archetype .after(BreakerSystems::InitParams)   [behaviors domain]
+      <- reset_breaker .after(BreakerSystems::InitParams)
+         BreakerSystems::Reset                                [breaker domain]
       <- UiSystems::SpawnTimerHud
          (spawn_timer_hud)             [ui domain]
            <- spawn_lives_display .after(init_archetype)
                                   .after(UiSystems::SpawnTimerHud)  [behaviors domain]
+
+spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
+  BoltSystems::InitParams
+    <- reset_bolt .after(BoltSystems::InitParams)
+                  .after(BreakerSystems::Reset)
+       BoltSystems::Reset              [bolt domain]
 ```
 
-Note: `spawn_breaker` runs before `BreakerSystems::InitParams` (intra-domain, breaker plugin), and `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin (`.chain()`), so `UiSystems::SpawnTimerHud` is the externally-visible anchor.
+Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained inside the breaker plugin. `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin, so `UiSystems::SpawnTimerHud` is the externally-visible anchor. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init.
 
 ### FixedUpdate
 
@@ -130,7 +140,7 @@ reset_run_state                                             [run domain]
 
 Reading: run state is reset and RNG is reseeded first, then the node sequence is generated from the freshly seeded `GameRng`.
 
-**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` (one chain); `grade_bump` runs `.after(update_bump).after(PhysicsSystems::BreakerCollision)` — it is NOT after `update_breaker_state`. `trigger_bump_visual` also runs `.after(update_bump)`. `reset_breaker.after(BreakerSystems::InitParams).in_set(BreakerSystems::Reset)` runs OnEnter(Playing) after init.
+**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` (one chain); `grade_bump` runs `.after(update_bump).after(PhysicsSystems::BreakerCollision)` — it is NOT after `update_breaker_state`. `trigger_bump_visual` also runs `.after(update_bump)`.
 
 ## Schedule Placement
 

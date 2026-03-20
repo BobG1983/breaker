@@ -10,7 +10,7 @@ use crate::{
     cells::{CellDefaults, CellTypeDefinition},
     chips::ChipDefinition,
     input::InputDefaults,
-    run::{NodeLayout, difficulty::DifficultyCurveDefaults},
+    run::{NodeLayout, definition::DifficultyCurveDefaults},
     screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
     shared::PlayfieldDefaults,
     ui::TimerUiDefaults,

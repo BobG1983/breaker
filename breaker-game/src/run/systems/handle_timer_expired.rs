@@ -15,7 +15,7 @@ use crate::{
 /// Yields to any transition already queued this frame by `handle_node_cleared`
 /// (`run_state.transition_queued`). If the last cell was cleared on the same
 /// tick the timer fired, the player wins — clear beats loss.
-pub fn handle_timer_expired(
+pub(crate) fn handle_timer_expired(
     mut reader: MessageReader<TimerExpired>,
     mut run_state: ResMut<RunState>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -33,7 +33,7 @@ pub fn handle_timer_expired(
         return;
     }
 
-    run_state.outcome = RunOutcome::Lost;
+    run_state.outcome = RunOutcome::TimerExpired;
     next_state.set(GameState::RunEnd);
 }
 
@@ -82,7 +82,7 @@ mod tests {
         tick(&mut app);
 
         let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Lost);
+        assert_eq!(run_state.outcome, RunOutcome::TimerExpired);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
@@ -98,6 +98,22 @@ mod tests {
 
         let run_state = app.world().resource::<RunState>();
         assert_eq!(run_state.outcome, RunOutcome::InProgress);
+    }
+
+    #[test]
+    fn timer_expired_yields_to_node_cleared_transition() {
+        let mut app = test_app(RunOutcome::InProgress);
+        // Simulate handle_node_cleared having already queued a transition this frame
+        app.world_mut().resource_mut::<RunState>().transition_queued = true;
+        app.world_mut().resource_mut::<SendTimerExpired>().0 = true;
+        tick(&mut app);
+
+        let run_state = app.world().resource::<RunState>();
+        assert_eq!(
+            run_state.outcome,
+            RunOutcome::InProgress,
+            "timer expiry should be silently dropped when a node-cleared transition is already queued"
+        );
     }
 
     #[test]

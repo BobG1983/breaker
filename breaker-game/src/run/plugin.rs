@@ -4,10 +4,9 @@ use bevy::prelude::*;
 
 use crate::{
     run::{
-        difficulty::DifficultyCurve,
         messages::RunLost,
         node::{NodePlugin, NodeSystems},
-        resources::RunState,
+        resources::{DifficultyCurve, RunState},
         systems::{
             advance_node, generate_node_sequence_system, handle_node_cleared, handle_run_lost,
             handle_timer_expired, reset_run_state,

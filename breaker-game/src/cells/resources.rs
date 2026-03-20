@@ -11,7 +11,7 @@ use super::definition::CellTypeDefinition;
 /// Cell defaults loaded from RON — shared grid layout properties only.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "CellConfig")]
-pub struct CellDefaults {
+pub(crate) struct CellDefaults {
     /// Full width of a cell in world units.
     pub width: f32,
     /// Full height of a cell in world units.

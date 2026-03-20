@@ -18,4 +18,4 @@ pub use launch_bolt::launch_bolt;
 pub(crate) use prepare_bolt_velocity::prepare_bolt_velocity;
 pub(crate) use reset_bolt::reset_bolt;
 pub use spawn_additional_bolt::spawn_additional_bolt;
-pub use spawn_bolt::spawn_bolt;
+pub(crate) use spawn_bolt::spawn_bolt;

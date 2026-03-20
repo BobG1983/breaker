@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    run::difficulty::{DifficultyCurve, DifficultyCurveDefaults},
+    run::{definition::DifficultyCurveDefaults, resources::DifficultyCurve},
     screen::loading::resources::DefaultsCollection,
 };
 

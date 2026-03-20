@@ -5,6 +5,6 @@
     life_pool: None,
     behaviors: [
         (triggers: [PerfectBump], consequence: SpawnBolt),
-        (triggers: [BoltLost], consequence: TimePenalty(3.0)),
+        (triggers: [BoltLost], consequence: TimePenalty(7.0)),
     ],
 )
