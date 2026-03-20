@@ -66,21 +66,23 @@ src/
 - Each defines its own `Plugin` struct implementing `bevy::app::Plugin`
 - Registers its Bevy systems, messages, and states
 - Owns its components and resources
-- Communicates outward only through messages — no direct cross-module imports for data flow
+- **Writes** to other domains only through messages — no direct mutation of another domain's components or resources
+- **Reads** from other domains' types (components, messages, resources) are normal ECS patterns and not violations — see "Cross-Domain Read Access" below
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
 **Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `PhysicsSystems` (`physics/sets.rs`), `BehaviorSystems` (`behaviors/sets.rs`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). See [ordering.md](ordering.md) for the full table and usage rules.
 
-## Chip Effect — Justified Cross-Domain Component Reads
+## Cross-Domain Read Access
 
-Chip effect components (defined in `chips/components.rs`) are stamped onto bolt and breaker entities and read by production systems in other domains. This is an accepted pattern, not a violation:
+The architectural boundary is about **writes** (mutations), not reads. Domains freely **read** other domains' types — components, message types, resources — via standard ECS queries. This is normal Bevy and not a violation:
 
-- **physics** reads `Piercing`, `PiercingRemaining`, and `DamageBoost` from bolt entities in `bolt_cell_collision` — needed for pierce lookahead (comparing effective damage against `CellHealth` to decide whether the bolt passes through or reflects). Physics also reads `CellHealth` from cells domain entities for this same pierce lookahead.
-- **cells** reads `DamageBoost` from bolt entities in `handle_cell_hit` — computes `BASE_BOLT_DAMAGE * (1.0 + boost)` damage per hit.
-- **breaker** reads `WidthBoost`, `TiltControlBoost`, `BreakerSpeedBoost`, and `BumpForceBoost` from breaker entities — these components are on the same entity the breaker domain already owns.
+- **physics** reads `Piercing`, `PiercingRemaining`, `DamageBoost` (chips domain) from bolt entities, `CellHealth`, `CellWidth`, `CellHeight` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. Physics also imports and writes message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — physics is a cross-cutting collision service.
+- **cells** reads `DamageBoost` (chips domain) from bolt entities in `handle_cell_hit`.
+- **breaker** reads `WidthBoost`, `TiltControlBoost`, `BreakerSpeedBoost`, `BumpForceBoost` (chips domain) from its own entity.
+- **bolt/behaviors** reads `BumpPerformed` (breaker domain), `BoltHitCell` (physics domain), `CellDestroyed` (cells domain) messages in bridge systems.
 
-These are **read-only cross-entity queries** (normal ECS) — the chips domain still owns the components and stamps them; other domains only read. No domain writes to another domain's canonical components. The `debug/` domain exception (read AND write across all domains) is separate and more permissive.
+**The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the sole exception (read AND write, compiled out of release builds).
 
 ## Debug Domain — Cross-Domain Exception
 

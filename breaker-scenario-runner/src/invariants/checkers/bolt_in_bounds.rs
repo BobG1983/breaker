@@ -11,6 +11,11 @@ use crate::{invariants::*, types::InvariantKind};
 /// absent). The bottom is intentionally open (no floor wall) — bolts exit through
 /// the bottom during life-loss, so no bottom check is performed.
 ///
+/// Gated on [`ScenarioStats::entered_playing`]: when [`ScenarioStats`] is present
+/// and `entered_playing` is `false`, the checker early-returns without producing
+/// violations. This prevents false positives during `GameState::Loading` before
+/// entities are fully initialized.
+///
 /// Increments [`ScenarioStats::invariant_checks`] by the number of bolts checked.
 pub fn check_bolt_in_bounds(
     bolts: Query<(Entity, &Transform, Option<&BoltRadius>), With<ScenarioTagBolt>>,
@@ -19,6 +24,14 @@ pub fn check_bolt_in_bounds(
     mut log: ResMut<ViolationLog>,
     mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    // Gate: do not check invariants until the game has entered Playing.
+    // When ScenarioStats is present but entered_playing is false, we are
+    // still in Loading/MainMenu — entities may not be fully initialized.
+    if let Some(ref stats) = stats
+        && !stats.entered_playing
+    {
+        return;
+    }
     let top = playfield.top();
     let left = playfield.left();
     let right = playfield.right();
@@ -237,7 +250,10 @@ mod tests {
             wall_thickness: 180.0,
             zone_fraction: 0.667,
         });
-        app.world_mut().insert_resource(ScenarioStats::default());
+        app.world_mut().insert_resource(ScenarioStats {
+            entered_playing: true,
+            ..Default::default()
+        });
 
         // Spawn 3 tagged bolts, all in-bounds
         for _ in 0..3 {

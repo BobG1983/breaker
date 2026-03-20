@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::behaviors::ActiveOverclocks,
-    chips::definition::{ChipEffect, ChipEffectApplied},
+    chips::definition::{ChipEffect, ChipEffectApplied, ImpactTarget},
 };
 
 /// Observer: adds overclock trigger chains to `ActiveOverclocks` when a
@@ -37,9 +37,10 @@ mod tests {
     #[test]
     fn handle_overclock_pushes_chain_to_active() {
         let mut app = test_app();
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(Box::new(
-            TriggerChain::Shockwave { range: 64.0 },
-        ))));
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+        )));
 
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Overclock(chain.clone()),

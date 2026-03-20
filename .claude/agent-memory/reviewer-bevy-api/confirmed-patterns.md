@@ -344,6 +344,32 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `app.world_mut().despawn(entity)` — valid direct World method for despawning in tests (recursive in 0.18)
 - Distinct from `commands.entity(e).despawn()` (deferred); world method is immediate
 
+## Multiple MessageWriter params in one system (confirmed 2026-03-20)
+- A system may have 2, 3, or more `MessageWriter<T>` params for DIFFERENT message types — valid, no conflict
+- `(mut hit_writer: MessageWriter<BoltHitCell>, mut damage_writer: MessageWriter<DamageCell>, mut wall_hit_writer: MessageWriter<BoltHitWall>)` — confirmed correct
+- Each `MessageWriter<T>` is an independent `SystemParam`; they don't conflict because they write to different `Messages<T>` resources
+- `add_message` is idempotent — registering the same type in multiple plugins (e.g., `BoltHitCell` in `PhysicsPlugin` and in a test app) is safe
+
+## DamageCell message (confirmed 2026-03-20)
+- `#[derive(Message, Clone, Debug)]` on `DamageCell` — correct; lives in `cells/messages.rs`
+- Registered with `app.add_message::<DamageCell>()` in `CellsPlugin` — correct owner
+- Written by `bolt_cell_collision` (physics domain) — cross-domain write is fine since receiver (cells) owns the registration
+
+## BoltHitWall message (confirmed 2026-03-20)
+- `#[derive(Message, Clone, Debug)]` on `BoltHitWall` — correct; lives in `physics/messages.rs`
+- Registered with `app.add_message::<BoltHitWall>()` in `PhysicsPlugin` alongside the other physics messages — correct
+- `MessageReader<BoltHitWall>` in `bridge_overclock_wall_impact` — correct consumer pattern
+
+## Query<(Entity, &mut ArmedTriggers)> without mut binding (re-confirmed 2026-03-20)
+- Functions `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` (no `mut` on the binding)
+- Then pass it by value to `evaluate_armed_all(mut armed_query: Query<...>, ...)` which does declare it `mut`
+- This is valid: `mut` on a binding only governs reborrow semantics within a scope; moving into a `mut` parameter is always allowed regardless
+
+## System set ordering for bridge systems (confirmed 2026-03-20)
+- `.after(BreakerSystems::GradeBump).after(BehaviorSystems::Bridge)` — chaining multiple `.after()` is valid; all constraints are AND-ed
+- `.after(PhysicsSystems::BreakerCollision).after(BehaviorSystems::Bridge)` — same pattern, confirmed valid
+- Bridge systems ordered after both a message-producer set AND the behaviors bridge set — correct for ensuring messages exist before evaluation
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

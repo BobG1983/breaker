@@ -14,15 +14,17 @@
 //! reflecting, decrementing `PiercingRemaining` on each hit.
 //!
 //! Cell damage and destruction are handled by the cells domain via
-//! [`BoltHitCell`] messages. Wall hits reflect only (no message).
+//! [`BoltHitCell`] and [`DamageCell`] messages. Wall hits send
+//! [`BoltHitWall`] messages for overclock triggers.
 
 use bevy::prelude::*;
 
 use crate::{
     bolt::filters::ActiveFilter,
+    cells::messages::DamageCell,
     physics::{
         filters::{CollisionFilterCell, CollisionFilterWall},
-        messages::BoltHitCell,
+        messages::{BoltHitCell, BoltHitWall},
         queries::{CollisionQueryBolt, CollisionQueryCell},
     },
     shared::{
@@ -32,21 +34,30 @@ use crate::{
     wall::components::WallSize,
 };
 
+/// Message writers used by the bolt-cell-wall collision system.
+type CollisionWriters<'a> = (
+    MessageWriter<'a, BoltHitCell>,
+    MessageWriter<'a, DamageCell>,
+    MessageWriter<'a, BoltHitWall>,
+);
+
 /// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
 ///
 /// For each bolt, traces a ray from its current position in the velocity
 /// direction. If a cell or wall is hit, the bolt is placed just before the
 /// impact point, the velocity is reflected off the hit face, and tracing
 /// continues with the remaining movement distance. Sends [`BoltHitCell`]
-/// messages for each cell hit. Wall hits reflect only.
+/// and [`DamageCell`] messages for each cell hit. Sends [`BoltHitWall`]
+/// messages for each wall hit.
 pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
     cell_query: Query<CollisionQueryCell, CollisionFilterCell>,
     wall_query: Query<(Entity, &Transform, &WallSize), CollisionFilterWall>,
-    mut hit_writer: MessageWriter<BoltHitCell>,
+    mut writers: CollisionWriters,
     mut pierced_this_frame: Local<Vec<Entity>>,
 ) {
+    let (ref mut hit_writer, ref mut damage_writer, ref mut wall_hit_writer) = writers;
     let dt = time.delta_secs();
 
     for (
@@ -153,6 +164,11 @@ pub(crate) fn bolt_cell_collision(
                     cell: cell_entity,
                     bolt: bolt_entity,
                 });
+                damage_writer.write(DamageCell {
+                    cell: cell_entity,
+                    damage: effective_damage,
+                    source_bolt: bolt_entity,
+                });
             } else {
                 // WALL HIT: reflect and reset PiercingRemaining
                 velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
@@ -160,6 +176,7 @@ pub(crate) fn bolt_cell_collision(
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
                 }
+                wall_hit_writer.write(BoltHitWall { bolt: bolt_entity });
             }
         }
 
@@ -178,9 +195,11 @@ mod tests {
         },
         cells::{
             components::{Cell, CellHealth, CellHeight, CellWidth},
+            messages::DamageCell,
             resources::CellConfig,
         },
         chips::components::{DamageBoost, Piercing, PiercingRemaining},
+        physics::messages::BoltHitWall,
         shared::EntityScale,
         wall::components::{Wall, WallSize},
     };
@@ -191,6 +210,8 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
+            .add_message::<DamageCell>()
+            .add_message::<BoltHitWall>()
             .add_systems(FixedUpdate, bolt_cell_collision);
         app
     }
@@ -671,6 +692,8 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
+            .add_message::<DamageCell>()
+            .add_message::<BoltHitWall>()
             .add_systems(FixedUpdate, bolt_cell_collision);
 
         let entity = app
@@ -1364,6 +1387,476 @@ mod tests {
             vel.value.y < 0.0,
             "bolt without EntityScale should reflect normally, got vy={:.1}",
             vel.value.y
+        );
+    }
+
+    // --- DamageCell emission tests ---
+
+    /// Collects [`DamageCell`] messages into a resource for test assertions.
+    #[derive(Resource, Default)]
+    struct DamageCellMessages(Vec<DamageCell>);
+
+    fn collect_damage_cells(
+        mut reader: MessageReader<DamageCell>,
+        mut msgs: ResMut<DamageCellMessages>,
+    ) {
+        for msg in reader.read() {
+            msgs.0.push(msg.clone());
+        }
+    }
+
+    /// Collects [`BoltHitWall`] messages into a resource for test assertions.
+    #[derive(Resource, Default)]
+    struct WallHitMessages(Vec<BoltHitWall>);
+
+    fn collect_wall_hits(
+        mut reader: MessageReader<BoltHitWall>,
+        mut msgs: ResMut<WallHitMessages>,
+    ) {
+        for msg in reader.read() {
+            msgs.0.push(msg.clone());
+        }
+    }
+
+    /// Creates a test app with `DamageCell` and `BoltHitWall` message capture
+    /// in addition to the standard `BoltHitCell`.
+    fn test_app_with_damage_and_wall_messages() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitCell>()
+            .add_message::<DamageCell>()
+            .add_message::<BoltHitWall>()
+            .insert_resource(DamageCellMessages::default())
+            .insert_resource(WallHitMessages::default())
+            .insert_resource(FullHitMessages::default())
+            .add_systems(FixedUpdate, bolt_cell_collision)
+            .add_systems(
+                FixedUpdate,
+                (collect_damage_cells, collect_wall_hits, collect_full_hits)
+                    .after(bolt_cell_collision),
+            );
+        app
+    }
+
+    #[test]
+    fn cell_collision_emits_damage_cell_with_base_damage() {
+        // Bolt with no DamageBoost hits a cell.
+        // DamageCell should be sent with damage == BASE_BOLT_DAMAGE (10.0),
+        // correct cell entity, and correct source_bolt entity.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
+
+        // start_y = cell_y - cell_half_height - bolt_radius - gap
+        // = 100.0 - 12.0 - 8.0 - 2.0 = 78.0
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<DamageCellMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "should emit exactly one DamageCell message on cell hit"
+        );
+        assert_eq!(
+            msgs.0[0].cell, cell_entity,
+            "DamageCell.cell should match the hit cell entity"
+        );
+        assert!(
+            (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
+            "DamageCell.damage should be BASE_BOLT_DAMAGE (10.0), got {}",
+            msgs.0[0].damage
+        );
+        assert_eq!(
+            msgs.0[0].source_bolt, bolt_entity,
+            "DamageCell.source_bolt should match the bolt entity"
+        );
+    }
+
+    #[test]
+    fn cell_collision_emits_damage_cell_with_zero_damage_boost() {
+        // Edge case: DamageBoost(0.0) should still produce damage == 10.0
+        // (BASE_BOLT_DAMAGE * (1.0 + 0.0) = 10.0).
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            DamageBoost(0.0),
+            Transform::from_xyz(0.0, start_y, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<DamageCellMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "DamageBoost(0.0) bolt should emit one DamageCell"
+        );
+        assert!(
+            (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
+            "DamageBoost(0.0) should produce damage == 10.0, got {}",
+            msgs.0[0].damage
+        );
+    }
+
+    #[test]
+    fn cell_collision_emits_damage_cell_with_boosted_damage() {
+        // Bolt with DamageBoost(0.5) hits a cell.
+        // DamageCell.damage should be 10.0 * 1.5 = 15.0.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                DamageBoost(0.5),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<DamageCellMessages>();
+        assert_eq!(msgs.0.len(), 1, "boosted bolt should emit one DamageCell");
+        assert!(
+            (msgs.0[0].damage - 15.0).abs() < f32::EPSILON,
+            "DamageCell.damage with DamageBoost(0.5) should be 15.0, got {}",
+            msgs.0[0].damage
+        );
+        assert_eq!(
+            msgs.0[0].source_bolt, bolt_entity,
+            "DamageCell.source_bolt should match bolt entity"
+        );
+    }
+
+    #[test]
+    fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
+        // Two bolts hitting two separate cells should produce two DamageCell
+        // messages, each with the correct source_bolt.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_a = spawn_cell(&mut app, -100.0, 100.0);
+        let cell_b = spawn_cell(&mut app, 100.0, 100.0);
+
+        let start_y = 100.0 - cc.height / 2.0 - bc.radius - 2.0;
+
+        let bolt_a = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Transform::from_xyz(-100.0, start_y, 0.0),
+            ))
+            .id();
+        let bolt_b = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Transform::from_xyz(100.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<DamageCellMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            2,
+            "two bolts hitting two cells should produce two DamageCell messages"
+        );
+
+        // Find the message for each cell and verify source_bolt
+        let msg_a = msgs.0.iter().find(|m| m.cell == cell_a);
+        let msg_b = msgs.0.iter().find(|m| m.cell == cell_b);
+        assert!(msg_a.is_some(), "DamageCell for cell A should exist");
+        assert!(msg_b.is_some(), "DamageCell for cell B should exist");
+        assert_eq!(
+            msg_a.unwrap().source_bolt,
+            bolt_a,
+            "DamageCell for cell A should have source_bolt == bolt A"
+        );
+        assert_eq!(
+            msg_b.unwrap().source_bolt,
+            bolt_b,
+            "DamageCell for cell B should have source_bolt == bolt B"
+        );
+    }
+
+    #[test]
+    fn wall_hit_does_not_emit_damage_cell() {
+        // A bolt hitting only a wall should produce zero DamageCell messages.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+
+        spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+
+        let start_x = 200.0 - 50.0 - bc.radius - 5.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(400.0, 0.1),
+            Transform::from_xyz(start_x, 0.0, 0.0),
+        ));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<DamageCellMessages>();
+        assert!(
+            msgs.0.is_empty(),
+            "wall hit should NOT emit DamageCell, got {} messages",
+            msgs.0.len()
+        );
+    }
+
+    #[test]
+    fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
+        // Bolt with Piercing(2), PiercingRemaining(2), no DamageBoost.
+        // Two stacked cells with CellHealth(10.0) each.
+        // Should produce two DamageCell messages, each with damage == 10.0.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+
+        let near_cell_y = 60.0;
+        let far_cell_y = 90.0;
+        let cell_a = spawn_cell_with_health(&mut app, 0.0, near_cell_y, 10.0);
+        let cell_b = spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10.0);
+
+        let start_y = near_cell_y - bc.radius - 25.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 10000.0),
+                Piercing(2),
+                PiercingRemaining(2),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<DamageCellMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            2,
+            "piercing bolt should emit DamageCell for each pierced cell, got {}",
+            msgs.0.len()
+        );
+
+        for msg in &msgs.0 {
+            assert!(
+                (msg.damage - 10.0).abs() < f32::EPSILON,
+                "each DamageCell.damage should be 10.0, got {}",
+                msg.damage
+            );
+            assert_eq!(
+                msg.source_bolt, bolt_entity,
+                "each DamageCell.source_bolt should match the bolt entity"
+            );
+        }
+
+        let cells_hit: Vec<Entity> = msgs.0.iter().map(|m| m.cell).collect();
+        assert!(
+            cells_hit.contains(&cell_a),
+            "DamageCell for near cell should exist"
+        );
+        assert!(
+            cells_hit.contains(&cell_b),
+            "DamageCell for far cell should exist"
+        );
+    }
+
+    #[test]
+    fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
+        // A single cell hit should produce exactly one BoltHitCell AND
+        // exactly one DamageCell, both referencing the same cell and bolt.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Transform::from_xyz(0.0, start_y, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let hit_msgs = app.world().resource::<FullHitMessages>();
+        assert_eq!(hit_msgs.0.len(), 1, "should emit exactly one BoltHitCell");
+        assert_eq!(hit_msgs.0[0].cell, cell_entity);
+        assert_eq!(hit_msgs.0[0].bolt, bolt_entity);
+
+        let dmg_msgs = app.world().resource::<DamageCellMessages>();
+        assert_eq!(
+            dmg_msgs.0.len(),
+            1,
+            "should emit exactly one DamageCell alongside BoltHitCell"
+        );
+        assert_eq!(dmg_msgs.0[0].cell, cell_entity);
+        assert_eq!(dmg_msgs.0[0].source_bolt, bolt_entity);
+    }
+
+    // --- BoltHitWall emission tests ---
+
+    #[test]
+    fn wall_hit_emits_bolt_hit_wall_with_correct_bolt_entity() {
+        // Bolt hitting a wall should emit BoltHitWall with the bolt entity.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+
+        spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+
+        let start_x = 200.0 - 50.0 - bc.radius - 5.0;
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(400.0, 0.1),
+                Transform::from_xyz(start_x, 0.0, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<WallHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "wall hit should emit exactly one BoltHitWall message"
+        );
+        assert_eq!(
+            msgs.0[0].bolt, bolt_entity,
+            "BoltHitWall.bolt should match the bolt entity that hit the wall"
+        );
+    }
+
+    #[test]
+    fn cell_hit_does_not_emit_bolt_hit_wall() {
+        // Bolt hitting a cell (no walls present) should NOT emit BoltHitWall.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        spawn_cell(&mut app, 0.0, cell_y);
+
+        let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            Transform::from_xyz(0.0, start_y, 0.0),
+        ));
+
+        tick(&mut app);
+
+        // BoltHitCell should be sent (existing behavior)
+        let hit_msgs = app.world().resource::<FullHitMessages>();
+        assert_eq!(
+            hit_msgs.0.len(),
+            1,
+            "BoltHitCell should be sent for cell hit"
+        );
+
+        // BoltHitWall should NOT be sent
+        let wall_msgs = app.world().resource::<WallHitMessages>();
+        assert!(
+            wall_msgs.0.is_empty(),
+            "cell hit should NOT emit BoltHitWall, got {} messages",
+            wall_msgs.0.len()
+        );
+    }
+
+    #[test]
+    fn bolt_hit_wall_identifies_correct_bolt_among_two() {
+        // Two bolts: Bolt A heading toward a wall, Bolt B heading away.
+        // Only Bolt A should produce a BoltHitWall.
+        let mut app = test_app_with_damage_and_wall_messages();
+        let bc = BoltConfig::default();
+
+        spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+
+        // Bolt A: moving right toward wall
+        let start_x_a = 200.0 - 50.0 - bc.radius - 5.0;
+        let bolt_a = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(400.0, 0.1),
+                Transform::from_xyz(start_x_a, 0.0, 0.0),
+            ))
+            .id();
+
+        // Bolt B: moving upward, far from wall — will not hit it
+        let _bolt_b = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                BoltVelocity::new(0.0, 400.0),
+                Transform::from_xyz(-100.0, 0.0, 0.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<WallHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "only bolt A should hit the wall, got {} BoltHitWall messages",
+            msgs.0.len()
+        );
+        assert_eq!(
+            msgs.0[0].bolt, bolt_a,
+            "BoltHitWall.bolt should be bolt A (the one that hit the wall)"
         );
     }
 }

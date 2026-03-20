@@ -76,6 +76,31 @@ type: reference
 - CCD collision inner loop is O(bolts × cells × MAX_BOUNCES=4). At 16K cells this becomes a real concern if typical grids reach that scale. Flagged as Moderate watch item. At current typical scale (50 cells) it remains clean.
 - `u16::try_from(col_idx).unwrap_or(u16::MAX)` / `u16::try_from(row_idx)` pattern: safe saturation for extreme grids. Accepted.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-20, session 3)
+
+### physics/systems/bolt_cell_collision.rs — 3 MessageWriter params
+- Added `wall_hit_writer: MessageWriter<BoltHitWall>` alongside existing `hit_writer` and `damage_writer`.
+- In Bevy 0.18 all MessageWriter params share the same deferred command buffer as the system's Commands — no additional per-writer overhead, no new parallelism conflict.
+- System was already serialized by its mutable bolt_query + Commands. Third writer adds zero scheduling cost.
+
+### bolt/behaviors/bridges.rs — bridge_overclock_breaker_impact, bridge_overclock_wall_impact
+- Structurally identical to bridge_overclock_cell_impact (already clean).
+- MessageReader drains early-exit on no events; armed_query: Query<&mut ArmedTriggers> hits 0–1 entities.
+- All three impact bridges access &mut ArmedTriggers — cannot run in parallel with each other. Correct and expected; they are all ordered after(PhysicsSystems::BreakerCollision).
+- No new archetype fragmentation: ArmedTriggers is already tracked as 1-entity add/remove.
+
+### bolt/behaviors/bridges.rs — bridge_overclock_bump double evaluation
+- Iterates active.0 twice per bump message: once for grade-specific trigger, once for BumpSuccess.
+- Max 3 chains × 2 passes × 1 pure match each = negligible. evaluate() is a pure enum pattern match.
+- Not a hot-path concern at any foreseeable chip stack cap. Correct design, not double-work.
+
+### bolt/behaviors/evaluate.rs — ImpactTarget 3-arm explicit match vs wildcard
+- Explicit (CellImpact, OnImpact(Cell, inner)) | (BreakerImpact, OnImpact(Breaker, inner)) | (WallImpact, OnImpact(Wall, inner)) arms compile identically to a wildcard after optimization.
+- The explicit arms are a correctness win (prevent cross-target misfires). Zero performance difference.
+
+### Deferred Item Update
+- resolve_armed Vec allocation (bridges.rs:289-298): confirmed still deferred. Moderate concern only when multi-bolt upgrades arrive (Phase 7+). At 1 bolt and typical <4 armed chains the per-bounce Vec::new() is negligible.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-20)
 
 ### bolt/behaviors/effects/shockwave.rs — handle_shockwave observer

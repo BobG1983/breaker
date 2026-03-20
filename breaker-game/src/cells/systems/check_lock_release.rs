@@ -39,7 +39,7 @@ pub(crate) fn check_lock_release(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{cells::components::*, physics::messages::BoltHitCell};
+    use crate::cells::{components::*, messages::DamageCell};
 
     // ---------------------------------------------------------------
     // Test helpers — message injection for CellDestroyed
@@ -58,13 +58,16 @@ mod tests {
     }
 
     // ---------------------------------------------------------------
-    // Test helpers — message injection for BoltHitCell
+    // Test helpers — message injection for DamageCell
     // ---------------------------------------------------------------
 
     #[derive(Resource)]
-    struct TestBoltHitMessage(Option<BoltHitCell>);
+    struct TestDamageCellMessage(Option<DamageCell>);
 
-    fn enqueue_bolt_hit(msg_res: Res<TestBoltHitMessage>, mut writer: MessageWriter<BoltHitCell>) {
+    fn enqueue_damage_cell(
+        msg_res: Res<TestDamageCellMessage>,
+        mut writer: MessageWriter<DamageCell>,
+    ) {
         if let Some(msg) = msg_res.0.clone() {
             writer.write(msg);
         }
@@ -98,11 +101,11 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
-            .add_message::<BoltHitCell>()
+            .add_message::<DamageCell>()
             .add_message::<CellDestroyed>()
             .add_systems(
                 FixedUpdate,
-                (enqueue_bolt_hit.before(handle_cell_hit), handle_cell_hit),
+                (enqueue_damage_cell.before(handle_cell_hit), handle_cell_hit),
             );
         app
     }
@@ -176,20 +179,21 @@ mod tests {
     // ---------------------------------------------------------------
 
     #[test]
-    fn locked_cell_hp_unchanged_after_bolt_hit() {
+    fn locked_cell_hp_unchanged_after_damage_cell() {
         let mut app = hit_app();
         let cell = spawn_locked_cell(&mut app, 10.0);
 
-        app.insert_resource(TestBoltHitMessage(Some(BoltHitCell {
+        app.insert_resource(TestDamageCellMessage(Some(DamageCell {
             cell,
-            bolt: Entity::PLACEHOLDER,
+            damage: 10.0,
+            source_bolt: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 
         // Locked cell should still exist (not destroyed)
         assert!(
             app.world().get_entity(cell).is_ok(),
-            "locked cell should not be despawned by bolt hit"
+            "locked cell should not be despawned by DamageCell"
         );
         // HP should be untouched
         let health = app.world().get::<CellHealth>(cell).unwrap();
@@ -290,20 +294,21 @@ mod tests {
     // ---------------------------------------------------------------
 
     #[test]
-    fn unlocked_cell_takes_normal_damage_and_is_destroyed() {
+    fn unlocked_cell_takes_damage_and_is_destroyed() {
         let mut app = hit_app();
         let cell = spawn_unlocked_cell(&mut app, 10.0);
 
-        app.insert_resource(TestBoltHitMessage(Some(BoltHitCell {
+        app.insert_resource(TestDamageCellMessage(Some(DamageCell {
             cell,
-            bolt: Entity::PLACEHOLDER,
+            damage: 10.0,
+            source_bolt: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 
-        // 10.0 HP cell hit with BASE_BOLT_DAMAGE (10.0) should be destroyed.
+        // 10.0 HP cell hit with 10.0 damage should be destroyed.
         assert!(
             app.world().get_entity(cell).is_err(),
-            "unlocked 10-HP cell should be destroyed by 10 base damage"
+            "unlocked 10-HP cell should be destroyed by 10.0 damage via DamageCell"
         );
     }
 

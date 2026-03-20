@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::BoltSystems,
     physics::{
-        messages::{BoltHitBreaker, BoltHitCell, BoltLost},
+        messages::{BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost},
         systems::{
             bolt_breaker_collision, bolt_cell_collision, bolt_lost, clamp_bolt_to_playfield,
         },
@@ -25,6 +25,7 @@ impl Plugin for PhysicsPlugin {
             .add_message::<BoltHitBreaker>()
             .add_message::<BoltHitCell>()
             .add_message::<BoltLost>()
+            .add_message::<BoltHitWall>()
             .add_systems(
                 FixedUpdate,
                 (

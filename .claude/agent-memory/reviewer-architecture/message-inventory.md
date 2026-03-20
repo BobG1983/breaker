@@ -2,9 +2,11 @@
 
 | Message | Defined In | Registered By | Written By | Consumed By (actual) |
 |---------|-----------|---------------|------------|---------------------|
-| `BoltHitBreaker` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_breaker_collision | breaker/grade_bump, (future: audio, upgrades, UI) |
-| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | cells/handle_cell_hit, bolt/behaviors/bridges/bridge_overclock_impact |
+| `BoltHitBreaker` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_breaker_collision | breaker/grade_bump, bolt/behaviors/bridges/bridge_overclock_breaker_impact, (future: audio, upgrades, UI) |
+| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | cells/handle_cell_hit, bolt/behaviors/bridges/bridge_overclock_cell_impact |
+| `BoltHitWall` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | bolt/behaviors/bridges/bridge_overclock_wall_impact |
 | `BoltLost` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_lost | bolt/spawn_bolt_lost_text, behaviors/bridge_bolt_lost, bolt/behaviors/bridges/bridge_overclock_bolt_lost |
+| `DamageCell { cell, damage, source_bolt }` | `cells/messages.rs` | `CellsPlugin` | physics/bolt_cell_collision, (pending: bolt/behaviors/effects/shockwave) | cells/handle_cell_hit |
 | `CellDestroyed` | `cells/messages.rs` | `CellsPlugin` | cells/handle_cell_hit, **bolt/behaviors/effects/shockwave (VIOLATION)** | run/track_node_completion, bolt/behaviors/bridges/bridge_overclock_cell_destroyed |
 | `NodeCleared` | `run/node/messages.rs` | `NodePlugin` | run/node/track_node_completion | run/handle_node_cleared |
 | `TimerExpired` | `run/node/messages.rs` | `NodePlugin` | run/node/tick_node_timer, run/node/apply_time_penalty | run/handle_timer_expired |
@@ -21,7 +23,7 @@
 | `SpawnNodeComplete` | `run/node/messages.rs` | `NodePlugin` | run/node/check_spawn_complete | scenario-runner/check_no_entity_leaks |
 
 ## Ownership Note
-`RunLost`, `ApplyTimePenalty`, and `SpawnAdditionalBolt` all deviate from the sender-owns convention: each is defined in the consuming domain but sent by `behaviors` consequence observers. Accepted because the message semantically belongs to the consumer's vocabulary (run-lost is a run concept, apply-time-penalty is a node concept, spawn-additional-bolt is a bolt concept). The breaker behavior system is merely the trigger source. This is now a consistent pattern for all consequence-to-target messages.
+`RunLost`, `ApplyTimePenalty`, `SpawnAdditionalBolt`, and `DamageCell` all deviate from the sender-owns convention: each is defined in the consuming domain but sent by other domains. Accepted because the message semantically belongs to the consumer's vocabulary. `DamageCell` is a "command" message — the cells domain defines the damage API, physics (and eventually shockwave) call it. This is now a consistent pattern for all command-to-domain messages.
 
 ## Observer Events (intra-domain, not Messages)
 | Event | Domain | Triggered By | Observed By |

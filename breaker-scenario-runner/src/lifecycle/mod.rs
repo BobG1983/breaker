@@ -156,6 +156,10 @@ impl Plugin for ScenarioLifecycle {
                     // Invariant checkers and frozen position enforcement must run
                     // BEFORE physics systems. Otherwise bolt_lost respawns OOB
                     // bolts before invariants can detect them.
+                    //
+                    // Gated on entered_playing: during Loading/MainMenu, entities
+                    // may not be fully initialized (especially under parallel I/O
+                    // contention). Checkers only fire once Playing has been entered.
                     (
                         enforce_frozen_positions,
                         check_bolt_in_bounds,
@@ -172,6 +176,9 @@ impl Plugin for ScenarioLifecycle {
                         check_no_entity_leaks,
                     )
                         .chain()
+                        .run_if(|stats: Option<Res<ScenarioStats>>| {
+                            stats.is_some_and(|s| s.entered_playing)
+                        })
                         .after(tag_game_entities)
                         .after(update_breaker_state)
                         .before(breaker::physics::PhysicsSystems::BoltLost),

@@ -28,6 +28,15 @@ pub(crate) struct BoltHitCell {
 #[derive(Message, Clone, Debug)]
 pub struct BoltLost;
 
+/// Sent when the bolt reflects off a wall.
+///
+/// Consumed by bolt/behaviors (overclock wall impact bridge).
+#[derive(Message, Clone, Debug)]
+pub(crate) struct BoltHitWall {
+    /// The bolt entity that hit the wall.
+    pub bolt: Entity,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,5 +84,15 @@ mod tests {
 
         let c = BoltLost;
         assert!(format!("{c:?}").contains("BoltLost"));
+
+        let d = BoltHitWall {
+            bolt: Entity::PLACEHOLDER,
+        };
+        let d_fmt = format!("{d:?}");
+        assert!(d_fmt.contains("BoltHitWall"));
+        assert!(
+            d_fmt.contains("bolt"),
+            "BoltHitWall debug format should include 'bolt' field name"
+        );
     }
 }

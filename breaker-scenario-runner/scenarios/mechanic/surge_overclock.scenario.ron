@@ -10,5 +10,5 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    initial_overclocks: Some([OnPerfectBump(OnImpact(Shockwave(range: 64.0)))]),
+    initial_overclocks: Some([OnPerfectBump(OnImpact(Cell, Shockwave(range: 64.0)))]),
 )

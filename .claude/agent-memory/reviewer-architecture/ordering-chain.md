@@ -92,7 +92,20 @@ trigger_bump_visual .after(update_bump)
 Update schedule: animate_bump_visual, animate_tilt_visual, width_boost_visual
 ```
 
+### bolt/behaviors overclock bridges (FixedUpdate)
+```
+bridge_overclock_bump .after(BreakerSystems::GradeBump) .after(BehaviorSystems::Bridge)
+bridge_overclock_cell_impact .after(PhysicsSystems::BreakerCollision) .after(BehaviorSystems::Bridge)
+bridge_overclock_breaker_impact .after(PhysicsSystems::BreakerCollision) .after(BehaviorSystems::Bridge)
+bridge_overclock_wall_impact .after(PhysicsSystems::BreakerCollision) .after(BehaviorSystems::Bridge)
+bridge_overclock_cell_destroyed .after(BehaviorSystems::Bridge)
+bridge_overclock_bolt_lost .after(PhysicsSystems::BoltLost) .after(BehaviorSystems::Bridge)
+```
+All run_if(in_state(PlayingState::Active)). No SystemSet exported — these are leaf consumers, not ordering anchors.
+
 ### Known Doc Drift
 - ordering.md "Defined sets" table is missing BoltSystems::InitParams and BoltSystems::Reset (code has them in bolt/sets.rs)
 - ordering.md OnEnter(Playing) chain is missing apply_entity_scale_to_breaker and apply_entity_scale_to_bolt
 - NodeSystems::Spawn now has cross-domain consumers (breaker, bolt entity scale systems) — not reflected in ordering.md table
+- messages.md active messages table is missing DamageCell and BoltHitWall
+- BoltHitBreaker consumers should include bolt/behaviors/bridges/bridge_overclock_breaker_impact

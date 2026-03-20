@@ -70,7 +70,7 @@ mod tests {
             components::{Cell, CellHealth, Locked, RequiredToClear},
             messages::CellDestroyed,
         },
-        chips::definition::TriggerChain,
+        chips::definition::{ImpactTarget, TriggerChain},
     };
 
     // --- Test infrastructure ---
@@ -463,7 +463,7 @@ mod tests {
             bolt::behaviors::{
                 ActiveOverclocks,
                 armed::ArmedTriggers,
-                bridges::{bridge_overclock_bump, bridge_overclock_impact},
+                bridges::{bridge_overclock_bump, bridge_overclock_cell_impact},
             },
             breaker::messages::{BumpGrade, BumpPerformed},
             physics::messages::BoltHitCell,
@@ -506,7 +506,7 @@ mod tests {
                         send_bump,
                         bridge_overclock_bump,
                         send_bolt_hit_cell,
-                        bridge_overclock_impact,
+                        bridge_overclock_cell_impact,
                         capture_destroyed,
                     )
                         .chain(),
@@ -519,8 +519,9 @@ mod tests {
         /// shockwave damages nearby cells and despawns those at zero HP.
         #[test]
         fn surge_e2e_perfect_bump_then_impact_fires_shockwave() {
-            // Full Surge chain: OnPerfectBump(OnImpact(Shockwave{range: 64.0}))
+            // Full Surge chain: OnPerfectBump(OnImpact(Cell, Shockwave{range: 64.0}))
             let surge_chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+                ImpactTarget::Cell,
                 Box::new(TriggerChain::Shockwave { range: 64.0 }),
             )));
             let mut app = e2e_test_app(vec![surge_chain]);
@@ -572,8 +573,11 @@ mod tests {
             );
             assert_eq!(
                 armed.0[0],
-                TriggerChain::OnImpact(Box::new(TriggerChain::Shockwave { range: 64.0 })),
-                "armed trigger should be OnImpact(Shockwave {{range: 64.0}})"
+                TriggerChain::OnImpact(
+                    ImpactTarget::Cell,
+                    Box::new(TriggerChain::Shockwave { range: 64.0 })
+                ),
+                "armed trigger should be OnImpact(Cell, Shockwave {{range: 64.0}})"
             );
 
             // No cells damaged yet

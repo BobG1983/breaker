@@ -24,6 +24,10 @@ type: reference
 - `_entity_scale` binding (bolt_lost.rs map closure): intentionally named-ignored because the filter closure already consumed the scale value. Do not flag as unused.
 - `LostBoltEntry::is_extra: bool` — two-state field (ExtraBolt or not), no third state, acceptable per established SeedEntry::focused pattern.
 
+- `SendBoltLostFlag(bool)` in bridges.rs tests — inconsistent with all other `Send*(Option<T>)` test helpers in the same file. Flag as a style inconsistency (should be `Option<BoltLost>`).
+- `pub enum ImpactTarget` / `pub enum TriggerChain` in definition.rs — `pub` (not `pub(crate)`) is justified: `chips/mod.rs` re-exports them as `pub use`, and the scenario runner crate uses `breaker::chips::TriggerChain` directly in `types/mod.rs:272`. Do not flag.
+- `armed_query: Query<(Entity, &mut ArmedTriggers)>` (no `mut` on binding) in `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` — correct; the `mut` is inside the query type for `ArmedTriggers`. Binding mutability not needed because `evaluate_armed_all` takes the query by value (moves it). Do not flag.
+
 ## Vocabulary Decisions
 - `format_lives` in `life_lost.rs` — "lives" is correct game vocabulary (count of `LivesCount`).
 - `fire_consequences` in `bridges.rs` — "consequence" used in its precise game-system sense.

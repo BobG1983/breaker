@@ -5,8 +5,9 @@ use bevy::prelude::*;
 use super::{
     active::ActiveOverclocks,
     bridges::{
-        bridge_overclock_bolt_lost, bridge_overclock_bump, bridge_overclock_cell_destroyed,
-        bridge_overclock_impact,
+        bridge_overclock_bolt_lost, bridge_overclock_breaker_impact, bridge_overclock_bump,
+        bridge_overclock_cell_destroyed, bridge_overclock_cell_impact,
+        bridge_overclock_wall_impact,
     },
     effects::handle_shockwave,
 };
@@ -33,7 +34,13 @@ impl Plugin for BoltBehaviorsPlugin {
                     bridge_overclock_bump
                         .after(BreakerSystems::GradeBump)
                         .after(BehaviorSystems::Bridge),
-                    bridge_overclock_impact
+                    bridge_overclock_cell_impact
+                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BehaviorSystems::Bridge),
+                    bridge_overclock_breaker_impact
+                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BehaviorSystems::Bridge),
+                    bridge_overclock_wall_impact
                         .after(PhysicsSystems::BreakerCollision)
                         .after(BehaviorSystems::Bridge),
                     bridge_overclock_cell_destroyed.after(BehaviorSystems::Bridge),
