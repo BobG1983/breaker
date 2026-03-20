@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::components::*, breaker::messages::BumpPerformed};
+use crate::{
+    bolt::components::*, breaker::messages::BumpPerformed, chips::components::BoltSpeedBoost,
+};
 
 /// Reads [`BumpPerformed`] messages and applies the velocity multiplier to the bolt.
 ///
@@ -10,7 +12,15 @@ use crate::{bolt::components::*, breaker::messages::BumpPerformed};
 /// the need for cross-domain component reads.
 pub fn apply_bump_velocity(
     mut reader: MessageReader<BumpPerformed>,
-    mut bolt_query: Query<(&mut BoltVelocity, &BoltBaseSpeed, &BoltMaxSpeed), With<Bolt>>,
+    mut bolt_query: Query<
+        (
+            &mut BoltVelocity,
+            &BoltBaseSpeed,
+            &BoltMaxSpeed,
+            Option<&BoltSpeedBoost>,
+        ),
+        With<Bolt>,
+    >,
 ) {
     // One BumpPerformed per tick is the invariant (one bump action per fixed step).
     // Take the first message and drain any extras to prevent compounded velocity
@@ -22,19 +32,21 @@ pub fn apply_bump_velocity(
 
     let multiplier = performed.multiplier;
 
-    for (mut bolt_velocity, base_speed, max_speed) in &mut bolt_query {
+    for (mut bolt_velocity, base_speed, max_speed, speed_boost) in &mut bolt_query {
+        let boost = speed_boost.map_or(0.0, |b| b.0);
+
         bolt_velocity.value *= multiplier;
 
-        // Never drop below base speed
+        // Never drop below effective base speed (base + boost)
         let speed = bolt_velocity.speed();
-        if speed < base_speed.0 {
-            bolt_velocity.value = bolt_velocity.direction() * base_speed.0;
+        if speed < base_speed.0 + boost {
+            bolt_velocity.value = bolt_velocity.direction() * (base_speed.0 + boost);
         }
 
-        // Clamp to max speed
+        // Clamp to effective max speed (max + boost)
         let speed = bolt_velocity.speed();
-        if speed > max_speed.0 {
-            bolt_velocity.value = bolt_velocity.direction() * max_speed.0;
+        if speed > max_speed.0 + boost {
+            bolt_velocity.value = bolt_velocity.direction() * (max_speed.0 + boost);
         }
     }
 }
@@ -349,6 +361,125 @@ mod tests {
             "weak bump should not drop speed below base_speed ({:.0}), got {:.0}",
             bolt_config.base_speed,
             vel.speed()
+        );
+    }
+
+    #[test]
+    fn bolt_with_speed_boost_clamps_to_elevated_max() {
+        use crate::chips::components::BoltSpeedBoost;
+
+        let mut app = test_app();
+        // Bolt at max speed with BoltSpeedBoost(100.0): effective max = 800 + 100 = 900
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, 800.0),
+            BoltBaseSpeed(400.0),
+            BoltMaxSpeed(800.0),
+            BoltSpeedBoost(100.0),
+        ));
+
+        app.insert_resource(TestMessage(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: TEST_PERFECT_MULT,
+        })));
+
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        // 800 * 1.5 = 1200, should clamp to effective max 900 (800 + 100), not 800
+        let effective_max = 800.0 + 100.0;
+        assert!(
+            (vel.speed() - effective_max).abs() < 1.0,
+            "speed {:.1} should be clamped to elevated max {effective_max:.1} (base max + boost), \
+             not raw max 800.0",
+            vel.speed(),
+        );
+    }
+
+    #[test]
+    fn bolt_with_speed_boost_floors_at_elevated_base() {
+        use crate::chips::components::BoltSpeedBoost;
+
+        let mut app = test_app();
+        // Bolt at base speed with BoltSpeedBoost(100.0): effective base = 400 + 100 = 500
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, 400.0),
+            BoltBaseSpeed(400.0),
+            BoltMaxSpeed(800.0),
+            BoltSpeedBoost(100.0),
+        ));
+
+        app.insert_resource(TestMessage(Some(BumpPerformed {
+            grade: BumpGrade::Early,
+            multiplier: 0.5,
+        })));
+
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        // 400 * 0.5 = 200, should floor at effective base 500 (400 + 100), not 400
+        let effective_base = 400.0 + 100.0;
+        assert!(
+            (vel.speed() - effective_base).abs() < 1.0,
+            "speed {:.1} should be floored at elevated base {effective_base:.1} \
+             (base speed + boost), not raw base 400.0",
+            vel.speed(),
+        );
+    }
+
+    #[test]
+    fn bolt_without_speed_boost_unchanged() {
+        let mut app = test_app();
+        // No BoltSpeedBoost — existing behavior should be unchanged
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, 400.0),
+            BoltBaseSpeed(400.0),
+            BoltMaxSpeed(800.0),
+        ));
+
+        app.insert_resource(TestMessage(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: TEST_PERFECT_MULT,
+        })));
+
+        app.add_systems(
+            FixedUpdate,
+            enqueue_from_resource.before(apply_bump_velocity),
+        );
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        // 400 * 1.5 = 600, within max of 800, no boost component
+        let expected = 400.0 * TEST_PERFECT_MULT;
+        assert!(
+            (vel.speed() - expected).abs() < 1.0,
+            "speed {:.1} should be {expected:.1} (400 * 1.5) — no speed boost component present",
+            vel.speed(),
         );
     }
 }
