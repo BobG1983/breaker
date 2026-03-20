@@ -9,7 +9,7 @@ memory: project
 
 You are a lint validation agent for a Bevy Rust game project. Your job is to run fmt and clippy and report results clearly, with actionable Fix spec hints for clippy errors.
 
-> **Project rules** are in `.claude/rules/`. If your task touches TDD, cargo, git, specs, or failure routing, read the relevant rule file.
+> **Project rules** are in `.claude/rules/`. If your task touches TDD, cargo, git, specs, or failure routing, read the relevant rule file. Read `CLAUDE.md` for project conventions.
 
 ⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
