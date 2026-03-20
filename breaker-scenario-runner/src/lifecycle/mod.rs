@@ -135,6 +135,7 @@ impl Plugin for ScenarioLifecycle {
                     init_scenario_input,
                     ApplyDeferred,
                     tag_game_entities,
+                    ApplyDeferred,
                     apply_debug_setup,
                 )
                     .chain()
@@ -170,6 +171,7 @@ impl Plugin for ScenarioLifecycle {
                         check_physics_frozen_during_pause,
                         check_no_entity_leaks,
                     )
+                        .chain()
                         .after(tag_game_entities)
                         .after(update_breaker_state)
                         .before(breaker::physics::PhysicsSystems::BoltLost),

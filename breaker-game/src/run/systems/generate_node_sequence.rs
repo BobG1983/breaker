@@ -4,39 +4,20 @@ use bevy::prelude::*;
 use rand::{Rng, seq::SliceRandom};
 use rand_chacha::ChaCha8Rng;
 
-use crate::run::difficulty::{DifficultyCurve, NodeType, TierNodeCount};
-
-/// A single node assignment in the generated sequence.
-#[derive(Debug, Clone, PartialEq)]
-pub struct NodeAssignment {
-    /// The type of this node (`Passive`, `Active`, or `Boss`).
-    pub node_type: NodeType,
-    /// Which tier this node belongs to (0-indexed).
-    pub tier_index: u32,
-    /// Hit-point multiplier for cells in this node.
-    pub hp_mult: f32,
-    /// Timer multiplier for this node.
-    pub timer_mult: f32,
-}
-
-/// The full node sequence for a run.
-#[derive(Resource, Debug, Clone)]
-pub struct NodeSequence {
-    /// Ordered list of node assignments from first to last.
-    pub assignments: Vec<NodeAssignment>,
-}
+use crate::run::{
+    difficulty::{DifficultyCurve, NodeType, TierNodeCount},
+    resources::{NodeAssignment, NodeSequence},
+};
 
 /// Generates a deterministic node sequence from the difficulty curve.
 ///
 /// Uses the provided `ChaCha8Rng` for deterministic randomness (range
 /// resolution and shuffle). The caller is responsible for seeding the RNG.
-///
-/// # Panics
-///
-/// Panics if a tier node count exceeds `u16::MAX`. In practice, difficulty
-/// curves have single-digit node counts per tier.
 #[must_use]
-pub fn generate_node_sequence(curve: &DifficultyCurve, rng: &mut ChaCha8Rng) -> NodeSequence {
+pub(super) fn generate_node_sequence(
+    curve: &DifficultyCurve,
+    rng: &mut ChaCha8Rng,
+) -> NodeSequence {
     let mut assignments = Vec::new();
     let mut cumulative_timer_reduction: f32 = 0.0;
 
@@ -49,18 +30,18 @@ pub fn generate_node_sequence(curve: &DifficultyCurve, rng: &mut ChaCha8Rng) -> 
 
         // 2. Compute active threshold — kept as f32 to avoid float→int cast lints.
         //    active_ratio is 0.0..=1.0; threshold marks the boundary between Active and Passive.
-        let count_u16 = u16::try_from(count).expect("tier node count fits u16");
-        let active_threshold = (f32::from(count_u16) * tier.active_ratio).round();
+        let active_threshold =
+            (f32::from(u16::try_from(count).unwrap_or(u16::MAX)) * tier.active_ratio).round();
 
         // 3. Create non-boss assignments
         let mut tier_nodes: Vec<NodeAssignment> = (0..count)
             .map(|i| {
-                let i_f32 = f32::from(u16::try_from(i).expect("index fits u16"));
-                let node_type = if i_f32 < active_threshold {
-                    NodeType::Active
-                } else {
-                    NodeType::Passive
-                };
+                let node_type =
+                    if f32::from(u16::try_from(i).unwrap_or(u16::MAX)) < active_threshold {
+                        NodeType::Active
+                    } else {
+                        NodeType::Passive
+                    };
                 NodeAssignment {
                     node_type,
                     tier_index,
@@ -103,7 +84,7 @@ pub fn generate_node_sequence(curve: &DifficultyCurve, rng: &mut ChaCha8Rng) -> 
 /// ECS system wrapper — generates the node sequence at run start.
 ///
 /// Runs on `OnExit(GameState::MainMenu)`, after `reset_run_state` reseeds the RNG.
-pub fn generate_node_sequence_system(
+pub(crate) fn generate_node_sequence_system(
     curve: Res<DifficultyCurve>,
     mut rng: ResMut<crate::shared::GameRng>,
     mut commands: Commands,

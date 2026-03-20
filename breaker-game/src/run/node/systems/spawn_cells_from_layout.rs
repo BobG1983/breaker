@@ -1,6 +1,6 @@
 //! System to spawn cells from the active node layout.
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use tracing::debug;
 
 use crate::{
@@ -8,22 +8,28 @@ use crate::{
         components::*,
         resources::{CellConfig, CellTypeRegistry},
     },
-    run::node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
+    run::{
+        node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
+        resources::{NodeSequence, RunState},
+    },
     shared::{CleanupOnNodeExit, PlayfieldConfig},
 };
 
 /// Spawns cells from a grid layout. Returns the count of `RequiredToClear` cells.
 ///
 /// Shared between the `OnEnter(Playing)` system and hot-reload respawn.
+///
+/// `hp_mult` scales every cell's HP (from the node's difficulty assignment).
 pub fn spawn_cells_from_grid(
     commands: &mut Commands,
     config: &CellConfig,
     playfield: &PlayfieldConfig,
     layout: &NodeLayout,
     registry: &CellTypeRegistry,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
+    render_assets: (&mut Assets<Mesh>, &mut Assets<ColorMaterial>),
+    hp_mult: f32,
 ) -> u32 {
+    let (meshes, materials) = render_assets;
     let cell_width = config.width;
     let cell_height = config.height;
     let step_x = cell_width + config.padding_x;
@@ -45,7 +51,7 @@ pub fn spawn_cells_from_grid(
                 continue;
             }
 
-            let Some(def) = registry.types.get(&alias) else {
+            let Some(def) = registry.get(alias) else {
                 continue;
             };
 
@@ -54,12 +60,14 @@ pub fn spawn_cells_from_grid(
             let x = col_f.mul_add(step_x, start_x);
             let y = row_f.mul_add(-step_y, start_y);
 
+            let scaled_hp = def.hp * hp_mult;
+
             let mut entity = commands.spawn((
                 Cell,
                 CellTypeAlias(alias),
                 CellWidth(config.width),
                 CellHeight(config.height),
-                CellHealth::new(def.hp),
+                CellHealth::new(scaled_hp),
                 CellDamageVisuals {
                     hdr_base: def.damage_hdr_base,
                     green_min: def.damage_green_min,
@@ -80,9 +88,43 @@ pub fn spawn_cells_from_grid(
                 entity.insert(RequiredToClear);
                 required_count += 1;
             }
+
+            if def.behavior.locked {
+                entity.insert(Locked);
+                entity.insert(LockAdjacents(Vec::new()));
+            }
+
+            if let Some(rate) = def.behavior.regen_rate {
+                entity.insert(CellRegen { rate });
+            }
         }
     }
     required_count
+}
+
+/// Resolves the `hp_mult` for the current node from the run state and node
+/// sequence, falling back to `1.0` when those resources are absent (e.g. in
+/// tests or scenario overrides).
+fn resolve_hp_mult(run_state: Option<&RunState>, node_sequence: Option<&NodeSequence>) -> f32 {
+    if let (Some(state), Some(sequence)) = (run_state, node_sequence) {
+        sequence
+            .assignments
+            .get(state.node_index as usize)
+            .map_or(1.0, |a| a.hp_mult)
+    } else {
+        1.0
+    }
+}
+
+/// Bundles read-only resources needed by [`spawn_cells_from_layout`] to stay
+/// within clippy's argument-count limit.
+#[derive(SystemParam)]
+pub(crate) struct CellSpawnContext<'w> {
+    cell_config: Res<'w, CellConfig>,
+    playfield_config: Res<'w, PlayfieldConfig>,
+    cell_registry: Res<'w, CellTypeRegistry>,
+    run_state: Option<Res<'w, RunState>>,
+    node_sequence: Option<Res<'w, NodeSequence>>,
 }
 
 /// Spawns cells from the active node layout.
@@ -92,22 +134,20 @@ pub fn spawn_cells_from_grid(
 /// [`CellTypeRegistry`] to determine cell properties.
 pub fn spawn_cells_from_layout(
     mut commands: Commands,
-    config: Res<CellConfig>,
-    playfield: Res<PlayfieldConfig>,
+    ctx: CellSpawnContext,
     layout: Res<ActiveNodeLayout>,
-    registry: Res<CellTypeRegistry>,
-    // Bundled as a tuple to stay within clippy's 7-argument limit.
     mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
     mut cells_spawned: MessageWriter<CellsSpawned>,
 ) {
+    let hp_mult = resolve_hp_mult(ctx.run_state.as_deref(), ctx.node_sequence.as_deref());
     let count = spawn_cells_from_grid(
         &mut commands,
-        &config,
-        &playfield,
+        &ctx.cell_config,
+        &ctx.playfield_config,
         &layout.0,
-        &registry,
-        &mut render_assets.0,
-        &mut render_assets.1,
+        &ctx.cell_registry,
+        (&mut render_assets.0, &mut render_assets.1),
+        hp_mult,
     );
     debug!("cells spawned count={}", count);
     cells_spawned.write(CellsSpawned);
@@ -119,16 +159,23 @@ mod tests {
     use crate::{
         cells::{
             CellTypeDefinition,
-            components::{Cell, CellHealth, CellHeight, CellTypeAlias, CellWidth, RequiredToClear},
+            components::{
+                Cell, CellHealth, CellHeight, CellRegen, CellTypeAlias, CellWidth, LockAdjacents,
+                Locked, RequiredToClear,
+            },
             definition::CellBehavior,
             resources::CellTypeRegistry,
         },
-        run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
+        run::{
+            difficulty::NodeType,
+            node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
+            resources::{NodeAssignment, NodeSequence, RunState},
+        },
     };
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
-        registry.types.insert(
+        registry.insert(
             'S',
             CellTypeDefinition {
                 id: "standard".to_owned(),
@@ -143,7 +190,7 @@ mod tests {
                 behavior: CellBehavior::default(),
             },
         );
-        registry.types.insert(
+        registry.insert(
             'T',
             CellTypeDefinition {
                 id: "tough".to_owned(),
@@ -504,6 +551,321 @@ mod tests {
         }
         assert_eq!(t_count, 1, "should have 1 tough cell");
         assert_eq!(s_count, 5, "should have 5 standard cells");
+    }
+
+    // --- A2: CellBehavior wiring tests ---
+
+    /// Creates a registry with a locked cell type ('L') and a regen cell type ('R').
+    fn behavior_registry() -> CellTypeRegistry {
+        let mut registry = CellTypeRegistry::default();
+        registry.insert(
+            'L',
+            CellTypeDefinition {
+                id: "locked".to_owned(),
+                alias: 'L',
+                hp: 5.0,
+                color_rgb: [1.0, 1.0, 1.0],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+                behavior: CellBehavior {
+                    locked: true,
+                    regen_rate: None,
+                },
+            },
+        );
+        registry.insert(
+            'R',
+            CellTypeDefinition {
+                id: "regen".to_owned(),
+                alias: 'R',
+                hp: 8.0,
+                color_rgb: [0.5, 1.0, 0.5],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+                behavior: CellBehavior {
+                    locked: false,
+                    regen_rate: Some(2.0),
+                },
+            },
+        );
+        registry.insert(
+            'N',
+            CellTypeDefinition {
+                id: "normal".to_owned(),
+                alias: 'N',
+                hp: 1.0,
+                color_rgb: [1.0, 0.5, 0.5],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
+            },
+        );
+        registry
+    }
+
+    fn behavior_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
+            .init_resource::<CellConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(registry)
+            .add_systems(Startup, spawn_cells_from_layout);
+        app
+    }
+
+    #[test]
+    fn locked_cell_definition_spawns_with_locked_component() {
+        let layout = NodeLayout {
+            name: "lock_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['L', 'N']],
+            pool: NodePool::default(),
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let locked_count = app
+            .world_mut()
+            .query::<(&Cell, &Locked)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            locked_count, 1,
+            "cell with behavior.locked=true should have Locked component"
+        );
+    }
+
+    #[test]
+    fn non_locked_cell_does_not_have_locked_component() {
+        let layout = NodeLayout {
+            name: "no_lock_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['N', 'R']],
+            pool: NodePool::default(),
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let locked_count = app
+            .world_mut()
+            .query::<(&Cell, &Locked)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            locked_count, 0,
+            "cells with behavior.locked=false should NOT have Locked component"
+        );
+    }
+
+    #[test]
+    fn locked_cell_definition_spawns_with_lock_adjacents_component() {
+        let layout = NodeLayout {
+            name: "lock_adj_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['L', 'N']],
+            pool: NodePool::default(),
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let lock_adj_count = app
+            .world_mut()
+            .query::<(&Cell, &LockAdjacents)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            lock_adj_count, 1,
+            "cell with behavior.locked=true should have LockAdjacents component"
+        );
+    }
+
+    #[test]
+    fn regen_cell_definition_spawns_with_cell_regen_component() {
+        let layout = NodeLayout {
+            name: "regen_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['R', 'N']],
+            pool: NodePool::default(),
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let regen_cells: Vec<&CellRegen> = app
+            .world_mut()
+            .query::<(&Cell, &CellRegen)>()
+            .iter(app.world())
+            .map(|(_, regen)| regen)
+            .collect();
+        assert_eq!(
+            regen_cells.len(),
+            1,
+            "cell with behavior.regen_rate=Some(2.0) should have CellRegen component"
+        );
+        assert!(
+            (regen_cells[0].rate - 2.0).abs() < f32::EPSILON,
+            "CellRegen rate should be 2.0, got {}",
+            regen_cells[0].rate
+        );
+    }
+
+    #[test]
+    fn non_regen_cell_does_not_have_cell_regen_component() {
+        let layout = NodeLayout {
+            name: "no_regen_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['L', 'N']],
+            pool: NodePool::default(),
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let regen_count = app
+            .world_mut()
+            .query::<(&Cell, &CellRegen)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            regen_count, 0,
+            "cells with behavior.regen_rate=None should NOT have CellRegen component"
+        );
+    }
+
+    // --- A4: HP multiplier tests ---
+
+    #[test]
+    fn cell_hp_scaled_by_node_assignment_hp_mult() {
+        let layout = NodeLayout {
+            name: "hp_mult_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool: NodePool::default(),
+        };
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
+            .init_resource::<CellConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(test_registry())
+            .insert_resource(RunState {
+                node_index: 0,
+                ..Default::default()
+            })
+            .insert_resource(NodeSequence {
+                assignments: vec![NodeAssignment {
+                    node_type: NodeType::Active,
+                    tier_index: 0,
+                    hp_mult: 3.0,
+                    timer_mult: 1.0,
+                }],
+            })
+            .add_systems(Startup, spawn_cells_from_layout);
+        app.update();
+
+        // 'S' has hp=1.0, hp_mult=3.0 → CellHealth { current: 3.0, max: 3.0 }
+        let healths: Vec<&CellHealth> = app
+            .world_mut()
+            .query::<&CellHealth>()
+            .iter(app.world())
+            .collect();
+        assert_eq!(healths.len(), 1);
+        assert!(
+            (healths[0].current - 3.0).abs() < f32::EPSILON,
+            "cell current HP should be 1.0 * 3.0 = 3.0, got {}",
+            healths[0].current
+        );
+        assert!(
+            (healths[0].max - 3.0).abs() < f32::EPSILON,
+            "cell max HP should be 1.0 * 3.0 = 3.0, got {}",
+            healths[0].max
+        );
+    }
+
+    #[test]
+    fn cell_hp_unchanged_when_hp_mult_is_one() {
+        let layout = NodeLayout {
+            name: "hp_mult_one_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['T']],
+            pool: NodePool::default(),
+        };
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
+            .init_resource::<CellConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(test_registry())
+            .insert_resource(RunState {
+                node_index: 0,
+                ..Default::default()
+            })
+            .insert_resource(NodeSequence {
+                assignments: vec![NodeAssignment {
+                    node_type: NodeType::Passive,
+                    tier_index: 0,
+                    hp_mult: 1.0,
+                    timer_mult: 1.0,
+                }],
+            })
+            .add_systems(Startup, spawn_cells_from_layout);
+        app.update();
+
+        // 'T' has hp=3.0, hp_mult=1.0 → CellHealth { current: 3.0, max: 3.0 }
+        let healths: Vec<&CellHealth> = app
+            .world_mut()
+            .query::<&CellHealth>()
+            .iter(app.world())
+            .collect();
+        assert_eq!(healths.len(), 1);
+        assert!(
+            (healths[0].current - 3.0).abs() < f32::EPSILON,
+            "cell current HP should be 3.0 * 1.0 = 3.0, got {}",
+            healths[0].current
+        );
+        assert!(
+            (healths[0].max - 3.0).abs() < f32::EPSILON,
+            "cell max HP should be 3.0 * 1.0 = 3.0, got {}",
+            healths[0].max
+        );
     }
 
     #[test]

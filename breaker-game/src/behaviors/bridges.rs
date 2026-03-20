@@ -257,7 +257,7 @@ mod tests {
             let mut app = test_app();
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
                 grade: BumpGrade::Early,
-                multiplier: 0.8,
+                multiplier: 1.1,
             });
             tick(&mut app);
 
@@ -292,7 +292,7 @@ mod tests {
             let entity = app.world_mut().spawn(LivesCount(3)).id();
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
                 grade: BumpGrade::Early,
-                multiplier: 0.8,
+                multiplier: 1.1,
             });
             tick(&mut app);
 

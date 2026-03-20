@@ -2,6 +2,28 @@
 
 use bevy::prelude::*;
 
+use crate::run::difficulty::NodeType;
+
+/// A single node assignment in the generated sequence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeAssignment {
+    /// The type of this node (`Passive`, `Active`, or `Boss`).
+    pub node_type: NodeType,
+    /// Which tier this node belongs to (0-indexed).
+    pub tier_index: u32,
+    /// Hit-point multiplier for cells in this node.
+    pub hp_mult: f32,
+    /// Timer multiplier for this node.
+    pub timer_mult: f32,
+}
+
+/// The full node sequence for a run.
+#[derive(Resource, Debug, Clone)]
+pub struct NodeSequence {
+    /// Ordered list of node assignments from first to last.
+    pub assignments: Vec<NodeAssignment>,
+}
+
 /// Outcome of the current run.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum RunOutcome {

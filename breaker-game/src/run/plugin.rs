@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     run::{
+        difficulty::DifficultyCurve,
         messages::RunLost,
         node::{NodePlugin, NodeSystems},
         resources::RunState,
@@ -23,6 +24,7 @@ pub struct RunPlugin;
 impl Plugin for RunPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<RunState>()
+            .init_resource::<DifficultyCurve>()
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
             .add_plugins(NodePlugin)

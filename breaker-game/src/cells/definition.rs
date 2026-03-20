@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 /// Optional behavior flags for a cell type.
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct CellBehavior {
+pub(crate) struct CellBehavior {
     /// Whether this cell starts locked (immune to damage until adjacents are cleared).
     #[serde(default)]
     pub locked: bool,
@@ -16,7 +16,7 @@ pub struct CellBehavior {
 
 /// A cell type definition loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub struct CellTypeDefinition {
+pub(crate) struct CellTypeDefinition {
     /// Unique identifier.
     pub id: String,
     /// Single-char alias used in node layout grids.
@@ -43,7 +43,137 @@ pub struct CellTypeDefinition {
 impl CellTypeDefinition {
     /// Cell color as a Bevy [`Color`].
     #[must_use]
-    pub const fn color(&self) -> Color {
+    pub(crate) const fn color(&self) -> Color {
         crate::shared::color_from_rgb(self.color_rgb)
+    }
+
+    /// Validates that all fields of this definition are well-formed at runtime.
+    ///
+    /// Checks:
+    /// - `hp` must be finite and positive (> 0.0).
+    /// - `behavior.regen_rate`, if `Some`, must be finite and positive (> 0.0).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string describing the first invalid field found.
+    pub(crate) fn validate(&self) -> Result<(), String> {
+        if self.hp <= 0.0 || !self.hp.is_finite() {
+            return Err(format!("hp must be positive and finite, got {}", self.hp));
+        }
+        if let Some(rate) = self.behavior.regen_rate
+            && (rate <= 0.0 || !rate.is_finite())
+        {
+            return Err(format!(
+                "regen_rate must be positive and finite, got {rate}"
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Builds a valid [`CellTypeDefinition`] with sensible defaults.
+    /// Individual tests override fields to test specific validation rules.
+    fn valid_definition() -> CellTypeDefinition {
+        CellTypeDefinition {
+            id: "test".to_owned(),
+            alias: 'T',
+            hp: 20.0,
+            color_rgb: [1.0, 0.5, 0.2],
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+            behavior: CellBehavior::default(),
+        }
+    }
+
+    // ── hp validation ────────────────────────────────────────────────
+
+    #[test]
+    fn validate_rejects_zero_hp() {
+        let mut def = valid_definition();
+        def.hp = 0.0;
+        assert!(def.validate().is_err(), "hp = 0.0 should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_negative_hp() {
+        let mut def = valid_definition();
+        def.hp = -1.0;
+        assert!(def.validate().is_err(), "hp = -1.0 should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_nan_hp() {
+        let mut def = valid_definition();
+        def.hp = f32::NAN;
+        assert!(def.validate().is_err(), "hp = NaN should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_infinite_hp() {
+        let mut def = valid_definition();
+        def.hp = f32::INFINITY;
+        assert!(def.validate().is_err(), "hp = INFINITY should be rejected");
+    }
+
+    // ── regen_rate validation ────────────────────────────────────────
+
+    #[test]
+    fn validate_rejects_zero_regen_rate() {
+        let mut def = valid_definition();
+        def.behavior.regen_rate = Some(0.0);
+        assert!(
+            def.validate().is_err(),
+            "regen_rate = Some(0.0) should be rejected"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_negative_regen_rate() {
+        let mut def = valid_definition();
+        def.behavior.regen_rate = Some(-1.0);
+        assert!(
+            def.validate().is_err(),
+            "regen_rate = Some(-1.0) should be rejected"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_infinite_regen_rate() {
+        let mut def = valid_definition();
+        def.behavior.regen_rate = Some(f32::INFINITY);
+        assert!(
+            def.validate().is_err(),
+            "regen_rate = Some(INFINITY) should be rejected"
+        );
+    }
+
+    // ── positive cases ──────────────────────────────────────────────
+
+    #[test]
+    fn validate_accepts_valid_definition_without_regen() {
+        let def = valid_definition();
+        assert!(
+            def.validate().is_ok(),
+            "valid definition with regen_rate = None should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    #[test]
+    fn validate_accepts_valid_definition_with_regen() {
+        let mut def = valid_definition();
+        def.behavior.regen_rate = Some(2.0);
+        assert!(
+            def.validate().is_ok(),
+            "valid definition with regen_rate = Some(2.0) should pass: {:?}",
+            def.validate(),
+        );
     }
 }

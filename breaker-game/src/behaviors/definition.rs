@@ -116,10 +116,14 @@ mod tests {
             ron::de::from_str(ron_str).expect("prism archetype RON should parse");
         assert_eq!(def.name, "Prism");
         assert!(def.life_pool.is_none());
-        assert_eq!(def.behaviors.len(), 1);
+        assert_eq!(def.behaviors.len(), 2);
         assert!(matches!(
             def.behaviors[0].consequence,
             Consequence::SpawnBolt
+        ));
+        assert!(matches!(
+            def.behaviors[1].consequence,
+            Consequence::TimePenalty(t) if (t - 3.0).abs() < f32::EPSILON
         ));
     }
 
@@ -195,7 +199,7 @@ mod tests {
             stat_overrides: (),
             life_pool: None,
             behaviors: [
-                (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(0.8)),
+                (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(1.1)),
             ],
         )
         "#;
