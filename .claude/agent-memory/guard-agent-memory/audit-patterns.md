@@ -7,6 +7,7 @@ type: reference
 ## Last Full Audit
 2026-03-19 (run 1-2) — 26 agent directories each. Run 1: 10 issues, 10 fixed. Run 2: 8 issues, 8 fixed.
 2026-03-19 (run 3) — 26 directories. 6 issues found, 6 fixed. Key: stale cast-pattern memories, orphaned writer-tests file, entity_scale duplication, planner-review stale method name.
+2026-03-20 (targeted: session 7 overclock-trigger-chain changes) — 12 directories audited. 20 issues found, 20 fixed. Key: ChipKind removal, OverclockEffectFired.bolt Entity→Option<Entity>, TriggerChain stacking fields, shockwave violation resolution (DamageCell pattern), handle_cell_hit consumer migration from BoltHitCell to DamageCell, performance-baseline stale cell query.
 
 ## Recurring Staleness Patterns
 
@@ -43,6 +44,14 @@ Observed: `researcher-rust-idioms/pattern_f32_to_u32_damage_cast.md` and `resear
 **Watch:** researcher-rust-idioms and researcher-bevy-api — they record patterns tied to specific codebase implementations that may become stale after type migrations.
 **Action taken:** Retired both files (MEMORY.md links removed; pattern_f32_to_u32_damage_cast.md marked stale; numeric_cast_patterns.md de-indexed).
 
+### Active Violation resolution not propagated
+When a BLOCKING violation is fixed (e.g., shockwave cross-domain mutation → DamageCell message pattern), three memory files hold stale "violation" language: the reviewer-architecture/compromises.md Active Violations list, the reviewer-architecture/project-state.md audit entry, and the reviewer-correctness/bug-patterns.md bug entry.
+**Watch:** Any entry marked "BLOCKING", "VIOLATION", or "pending fix" — verify against current code on each audit. Also check known-correct.md for stale correctness notes that referenced the old (broken) implementation.
+
+### Event/message field type changes cascade to multiple memories
+When a field type changes (e.g., `OverclockEffectFired.bolt: Entity → Option<Entity>`), all memories that describe usage patterns for that field become stale: domain-inventory.md (field description), known-correct.md (usage correctness notes), bug-patterns.md (bugs that depended on the old type), and message-flow/message-inventory tables.
+**Watch:** planner-spec/domain-inventory.md, reviewer-correctness/known-correct.md, reviewer-correctness/bug-patterns.md, reviewer-architecture/message-inventory.md, researcher-system-dependencies/message-flow.md — all describe message/event struct shapes.
+
 ### Pending-migration language outlasts the migration
 When a component type is migrated (e.g., `CellHealth: u32 → f32`), domain inventory files describe both the "before" and "after" states using "After migration:" language. The pending language persists after the migration ships.
 Observed: `planner-spec/domain-inventory.md` still described `CellHealth { current: u32, max: u32 }` with the pending f32 form as "After migration:". Fixed in 2026-03-19 audit.
@@ -67,7 +76,7 @@ These files are legitimately large due to the scope of their content:
 - `researcher-system-dependencies/known-conflicts.md` (~470 lines) — full conflict history, consulted as a whole
 - `researcher-system-dependencies/message-flow.md` (~226 lines) — complete message flow map
 - `reviewer-bevy-api/confirmed-patterns.md` (~250 lines) — complete API reference
-- `reviewer-correctness/known-correct.md` (~103 lines) — approaching split threshold
+- `reviewer-correctness/known-correct.md` (~154 lines) — **at split threshold**; consider splitting by domain (physics/gameplay correctness vs scenario runner correctness) if it continues to grow
 - `reviewer-correctness/scenario-patterns.md` (~130 lines) — approaching split threshold
 - `runner-scenarios/known_invariant_false_positives.md` (~201 lines) — accepted; each false positive entry is a detailed root-cause analysis that must be read together with others
 

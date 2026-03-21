@@ -17,7 +17,7 @@ type: reference
 - **Consumer-owns message pattern** for consequence-to-target messages: RunLost, ApplyTimePenalty, SpawnAdditionalBolt all defined in consuming domain.
 - interpolate/ domain: FixedFirst (restore_authoritative), FixedPostUpdate (store_authoritative), PostUpdate (interpolate_transform). Entities opt in via InterpolateTransform + PhysicsTranslation components.
 - Debug plugin gated behind `#[cfg(feature = "dev")]` inside `build()`, struct always compiled
-- lib.rs visibility: pub for app/game/shared/bolt/breaker/input/run (widened for scenario runner), pub(crate) for remaining
+- lib.rs visibility: pub for app/game/shared/bolt/breaker/chips/input/run (widened for scenario runner — chips added 2026-03-20 for TriggerChain/ImpactTarget), pub(crate) for remaining
 - proptest dev-dependency present and used in shared/math.rs
 - Physics domain reads other domains' components (acceptable per ECS convention)
 - Physics owns collision detection + bolt reflection (collision response)

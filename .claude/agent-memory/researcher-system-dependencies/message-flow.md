@@ -6,7 +6,7 @@ type: reference
 
 # Message Flow Map
 
-Last updated: 2026-03-19 (new spawn coordination messages: BoltSpawned, BreakerSpawned, CellsSpawned, WallsSpawned, SpawnNodeComplete; check_spawn_complete coordinator in NodePlugin; check_no_entity_leaks now gated on SpawnNodeComplete)
+Last updated: 2026-03-20 (session 7: added DamageCell entry; added BoltHitWall entry; updated BoltHitCell consumers — handle_cell_hit removed (now reads DamageCell); added bridge_overclock_* consumers to BoltHitBreaker, BoltLost, CellDestroyed; ChipSelected name-only field; updated cross-plugin summary)
 
 ## Registered Messages (by plugin)
 
@@ -18,7 +18,9 @@ Last updated: 2026-03-19 (new spawn coordination messages: BoltSpawned, BreakerS
 | BreakerSpawned | BreakerPlugin |
 | BoltHitBreaker | PhysicsPlugin |
 | BoltHitCell | PhysicsPlugin |
+| BoltHitWall | PhysicsPlugin |
 | BoltLost | PhysicsPlugin |
+| DamageCell | CellsPlugin |
 | CellDestroyed | CellsPlugin |
 | NodeCleared | NodePlugin (RunPlugin sub-plugin) |
 | TimerExpired | NodePlugin (RunPlugin sub-plugin) |
@@ -93,23 +95,37 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Sender: `bolt_breaker_collision` (PhysicsPlugin)
 - Receivers:
   - `grade_bump` (BreakerPlugin)
+  - `bridge_overclock_breaker_impact` (BoltBehaviorsPlugin, FixedUpdate)
 
 ### BoltHitCell (PhysicsPlugin → cross-domain)
 - Sender: `bolt_cell_collision` (PhysicsPlugin)
 - Receivers:
-  - `handle_cell_hit` (CellsPlugin)
-- NOTE: `BoltHitCell` carries `{ cell: Entity, bolt: Entity }` — the bolt field was re-added in feature/phase4b2-effect-consumption for pierce lookahead. Both fields are present and used.
+  - `bridge_overclock_cell_impact` (BoltBehaviorsPlugin, FixedUpdate) — evaluates overclock trigger chains
+- NOTE: `BoltHitCell` carries `{ cell: Entity, bolt: Entity }`. `handle_cell_hit` now reads `DamageCell` (not BoltHitCell) — see DamageCell entry below.
+
+### DamageCell (CellsPlugin-owned, sent by physics + shockwave)
+- Senders:
+  - `bolt_cell_collision` (PhysicsPlugin) — one per cell hit (alongside BoltHitCell)
+  - `handle_shockwave` (BoltBehaviorsPlugin) — one per in-range non-locked cell
+- Receiver: `handle_cell_hit` (CellsPlugin, FixedUpdate)
+- NOTE: Consumer-owns pattern — cells defines the damage API, physics and shockwave call it.
+
+### BoltHitWall (PhysicsPlugin → cross-domain)
+- Sender: `bolt_cell_collision` (PhysicsPlugin) — sent when bolt hits a wall entity
+- Receiver: `bridge_overclock_wall_impact` (BoltBehaviorsPlugin, FixedUpdate)
 
 ### BoltLost (PhysicsPlugin → cross-domain)
 - Sender: `bolt_lost` (PhysicsPlugin, PhysicsSystems::BoltLost) — fires for baseline AND ExtraBolt
 - Receivers:
   - `spawn_bolt_lost_text` (BoltPlugin)
   - `bridge_bolt_lost` (BehaviorsPlugin, conditional) — fires ConsequenceFired trigger → observers handle_life_lost / handle_time_penalty
+  - `bridge_overclock_bolt_lost` (BoltBehaviorsPlugin, FixedUpdate) — evaluates overclock trigger chains
 
 ### CellDestroyed (CellsPlugin → RunPlugin/NodePlugin)
 - Sender: `handle_cell_hit` (CellsPlugin, FixedUpdate, no ordering vs receiver)
 - Receivers:
   - `track_node_completion` (NodePlugin, FixedUpdate, NodeSystems::TrackCompletion)
+  - `bridge_overclock_cell_destroyed` (BoltBehaviorsPlugin, FixedUpdate)
 - One-tick delay is safe — messages persist across frames.
 
 ### NodeCleared (NodePlugin internal → RunPlugin)
@@ -148,7 +164,7 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Cross-plugin boundary: BehaviorsPlugin (standalone) → RunPlugin
 
 ### ChipSelected (UiPlugin → ChipsPlugin)
-- Sender: `handle_chip_input` (ChipSelectPlugin/ScreenPlugin, Update, run_if(GameState::ChipSelect)) — sent on confirm keypress with chip name + kind
+- Sender: `handle_chip_input` (ChipSelectPlugin/ScreenPlugin, Update, run_if(GameState::ChipSelect)) — sent on confirm keypress with chip name only (`{ name: String }`)
 - Receiver: `apply_chip_effect` (ChipsPlugin, Update, run_if(GameState::ChipSelect)) — reads ChipSelected, triggers ChipEffectApplied observer event
 - NOTE: Previously called UpgradeSelected; renamed to ChipSelected to match game vocabulary.
 - NOTE: handle_chip_input reads ButtonInput<KeyCode> directly (not InputActions). This is intentional — same pattern as main menu.
@@ -171,10 +187,13 @@ written in OnEnter are available in the first FixedUpdate tick.
 | WallPlugin | WallsSpawned | NodePlugin (coordinator) |
 | NodePlugin | CellsSpawned | NodePlugin (coordinator — self-message) |
 | NodePlugin | SpawnNodeComplete | ScenarioRunner |
-| PhysicsPlugin | BoltHitBreaker | BreakerPlugin |
-| PhysicsPlugin | BoltHitCell | CellsPlugin |
-| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin |
-| CellsPlugin | CellDestroyed | NodePlugin |
+| PhysicsPlugin | BoltHitBreaker | BreakerPlugin, BoltBehaviorsPlugin |
+| PhysicsPlugin | BoltHitCell | BoltBehaviorsPlugin |
+| PhysicsPlugin | BoltHitWall | BoltBehaviorsPlugin |
+| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin, BoltBehaviorsPlugin |
+| CellsPlugin | DamageCell | CellsPlugin (handle_cell_hit) |
+| CellsPlugin | CellDestroyed | NodePlugin, BoltBehaviorsPlugin |
+| BoltBehaviorsPlugin | DamageCell (via shockwave) | CellsPlugin |
 | NodePlugin | NodeCleared | RunPlugin |
 | NodePlugin | TimerExpired | RunPlugin |
 | BehaviorsPlugin | ApplyTimePenalty | NodePlugin |

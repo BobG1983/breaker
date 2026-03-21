@@ -36,7 +36,7 @@ type: reference
 - Added to ordering.md defined sets table with note "intra-domain only"
 
 ## Chips Domain Architecture (do not re-flag)
-- `chips/` has `definition.rs` (content data types: ChipDefinition, ChipKind, AmpEffect, AugmentEffect, ChipEffect, Rarity)
+- `chips/` has `definition.rs` (content data types: ChipDefinition, AmpEffect, AugmentEffect, ChipEffect, TriggerChain, ImpactTarget, Rarity, ChipEffectApplied)
 - `chips/effects/` promoted directory with per-effect observer handlers (mirrors behaviors/consequences/ pattern)
 - `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
 - `ChipEffectApplied` documented in messages.md Observer Events table

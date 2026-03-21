@@ -14,7 +14,7 @@ type: reference
 - `BreakerSystems::InitParams` tags `init_breaker_params` — alongside `BreakerSystems::Move`.
 - `UiSystems::SpawnTimerHud` tags `spawn_timer_hud`.
 - OnEnter(Playing) ordering chain documented in `docs/architecture/ordering.md`.
-- `GameState::ChipSelect` (NOT `UpgradeSelect`). Message is `ChipSelected { name, kind }`.
+- `GameState::ChipSelect` (NOT `UpgradeSelect`). Message is `ChipSelected { name: String }` — name only, no kind field.
 - Inter-node flow: `Playing → ChipSelect → NodeTransition → Playing`.
 
 ## Terminology Additions (2026-03-17)

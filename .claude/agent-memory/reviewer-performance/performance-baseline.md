@@ -105,9 +105,9 @@ type: reference
 
 ### bolt/behaviors/effects/shockwave.rs — handle_shockwave observer
 - Fires only on OverclockEffectFired (event-driven, not polling). Early-returns for non-Shockwave variants.
-- Cell query: `Query<(Entity, &Transform, &mut CellHealth, Has<RequiredToClear>, Has<Locked>), With<Cell>>` — correct filter.
+- Cell query (updated 2026-03-20 session 7): `ShockwaveCellQuery = (Entity, &Transform, Has<Locked>)` with `With<Cell>` filter — shockwave no longer needs &mut CellHealth or RequiredToClear since it writes DamageCell messages instead. Smaller tuple, no mutable component access. Clean.
 - Has<Locked> used correctly for skip logic (cheaper than Without<Locked> filter here because locked cells also need to be iterated past; no archetype penalty).
-- Archetype fragmentation: Locked + RequiredToClear adds to known cell archetypes (already tracked in baseline). No new concern.
+- Archetype fragmentation: no new fragmentation vs prior baseline — Locked is existing archetype component. No new concern.
 - No allocations inside the observer body. Clean.
 
 ### bolt/behaviors/bridges.rs — bridge systems + resolve_armed

@@ -63,12 +63,11 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## Overclock Trigger Chain Bugs (2026-03-20, feature/overclock-trigger-chain)
 
-- **Global-triggered Shockwave no-ops silently**: `handle_shockwave` (shockwave.rs:43) calls `bolt_query.get(trigger.event().bolt)` and returns early on `Err`. For global triggers (OnCellDestroyed, OnBoltLost), `bolt` is `Entity::PLACEHOLDER` which is never in any query — the observer returns immediately without dealing damage. Fix: detect `Entity::PLACEHOLDER` and use a fallback position (e.g., first active bolt) or reject at design level by not supporting global-trigger shockwaves.
-  - Confidence: high
-  - Test type: integration
+- **Global-triggered Shockwave no-ops silently**: FIXED (2026-03-20, feature/overclock-trigger-chain). `OverclockEffectFired.bolt` changed from `Entity` (using PLACEHOLDER for global triggers) to `Option<Entity>` (using `None`). `handle_shockwave` explicitly `let Some(bolt_entity) = trigger.event().bolt else { return; }` — the no-op for global triggers is now intentional and documented. Test `shockwave_no_op_with_none_bolt` covers this. Design decision: global-trigger shockwaves require a bolt entity for position; no position → no area damage. See design-principles.md for the design note.
 
 - **bridge_overclock_cell_destroyed fires once for N destroyed cells**: Uses `reader.read().count() == 0` to detect any messages then evaluates chains once regardless of count. If N cells are destroyed in one frame, `OnCellDestroyed(Shockwave)` fires exactly once. The comment says "once per message" but implementation is "once if any messages". If design intent is one-shockwave-per-destroyed-cell, this is a bug.
   - Confidence: medium (design intent unclear)
 
-- **inter-frame cascade for OnCellDestroyed(Shockwave)**: Shockwave writes CellDestroyed messages into next-frame buffer. On the next frame, bridge_overclock_cell_destroyed sees those messages and fires the shockwave again. This repeats each frame until all cells in range are dead. Bounded (terminates), but produces multiple shockwaves per original trigger. May be surprising.
+- **inter-frame cascade for OnCellDestroyed(Shockwave)**: Shockwave writes DamageCell messages → handle_cell_hit processes them and writes CellDestroyed → on the next frame, bridge_overclock_cell_destroyed sees those CellDestroyed messages and fires the shockwave again → shockwave writes more DamageCell → etc. Bounded (terminates when no in-range cells remain), but produces multiple shockwave rounds per original trigger. May be surprising.
+  - Confidence: medium (may be intentional cascade mechanic)
   - Confidence: medium (may be intentional)

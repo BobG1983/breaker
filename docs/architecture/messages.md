@@ -10,9 +10,11 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 
 | Message | Sent By | Consumed By |
 |---------|---------|-------------|
-| `BoltHitBreaker { bolt }` | physics | breaker (grade_bump) |
-| `BoltHitCell { cell, bolt }` | physics | cells (handle_cell_hit) |
-| `BoltLost` | physics | bolt (spawn_bolt_lost_text), behaviors (bridge_bolt_lost) |
+| `BoltHitBreaker { bolt }` | physics | breaker (grade_bump), behaviors (bridge_overclock_breaker_impact) |
+| `BoltHitCell { cell, bolt }` | physics | behaviors (bridge_overclock_cell_impact) |
+| `BoltHitWall { bolt }` | physics | behaviors (bridge_overclock_wall_impact) |
+| `BoltLost` | physics | bolt (spawn_bolt_lost_text), behaviors (bridge_overclock_bolt_lost) |
+| `DamageCell { cell, damage, source_bolt }` | physics (bolt_cell_collision), behaviors/effects (shockwave) | cells (handle_cell_hit) |
 | `BumpPerformed { grade, multiplier }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), behaviors (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), behaviors (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_breaker) | run/node (check_spawn_complete) |
@@ -26,7 +28,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `RunLost` | behaviors/consequences/life_lost (handle_life_lost) | run (handle_run_lost) |
 | `ApplyTimePenalty { seconds }` | behaviors/consequences/time_penalty (handle_time_penalty) | run/node (apply_time_penalty) |
 | `SpawnAdditionalBolt` | behaviors/consequences/spawn_bolt (handle_spawn_bolt) | bolt (spawn_additional_bolt) |
-| `ChipSelected { name, kind }` | UI (handle_chip_input) | chips (apply_chip_effect) |
+| `ChipSelected { name }` | UI (handle_chip_input) | chips (apply_chip_effect) |
 
 ## Observer Events (trigger via commands.trigger())
 
@@ -36,6 +38,7 @@ These are Bevy observer events (`#[derive(Event)]` + `commands.trigger()`), not 
 |-------|---------|-------------|
 | `ConsequenceFired(Consequence)` | behaviors (bridge_bolt_lost, bridge_bump, bridge_bump_whiff) | behaviors/consequences/* (handle_life_lost, handle_time_penalty, handle_spawn_bolt) |
 | `ChipEffectApplied { effect, max_stacks }` | chips (apply_chip_effect) | chips/effects/* (handle_piercing, handle_damage_boost, etc.) |
+| `OverclockEffectFired { effect, bolt: Option<Entity> }` | behaviors/bridges/* | behaviors/effects/* (handle_shockwave, etc.) |
 
 ## Registered Messages (no consumers yet)
 

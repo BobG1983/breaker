@@ -3,11 +3,11 @@
 | Message | Defined In | Registered By | Written By | Consumed By (actual) |
 |---------|-----------|---------------|------------|---------------------|
 | `BoltHitBreaker` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_breaker_collision | breaker/grade_bump, bolt/behaviors/bridges/bridge_overclock_breaker_impact, (future: audio, upgrades, UI) |
-| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | cells/handle_cell_hit, bolt/behaviors/bridges/bridge_overclock_cell_impact |
+| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | bolt/behaviors/bridges/bridge_overclock_cell_impact |
 | `BoltHitWall` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | bolt/behaviors/bridges/bridge_overclock_wall_impact |
 | `BoltLost` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_lost | bolt/spawn_bolt_lost_text, behaviors/bridge_bolt_lost, bolt/behaviors/bridges/bridge_overclock_bolt_lost |
-| `DamageCell { cell, damage, source_bolt }` | `cells/messages.rs` | `CellsPlugin` | physics/bolt_cell_collision, (pending: bolt/behaviors/effects/shockwave) | cells/handle_cell_hit |
-| `CellDestroyed` | `cells/messages.rs` | `CellsPlugin` | cells/handle_cell_hit, **bolt/behaviors/effects/shockwave (VIOLATION)** | run/track_node_completion, bolt/behaviors/bridges/bridge_overclock_cell_destroyed |
+| `DamageCell { cell, damage, source_bolt }` | `cells/messages.rs` | `CellsPlugin` | physics/bolt_cell_collision, bolt/behaviors/effects/shockwave (confirmed) | cells/handle_cell_hit |
+| `CellDestroyed` | `cells/messages.rs` | `CellsPlugin` | cells/handle_cell_hit | run/track_node_completion, bolt/behaviors/bridges/bridge_overclock_cell_destroyed |
 | `NodeCleared` | `run/node/messages.rs` | `NodePlugin` | run/node/track_node_completion | run/handle_node_cleared |
 | `TimerExpired` | `run/node/messages.rs` | `NodePlugin` | run/node/tick_node_timer, run/node/apply_time_penalty | run/handle_timer_expired |
 | `ApplyTimePenalty { seconds }` | `run/node/messages.rs` | `NodePlugin` | behaviors/time_penalty (observer) | run/node/apply_time_penalty |
@@ -15,7 +15,7 @@
 | `RunLost` | `run/messages.rs` | `RunPlugin` | behaviors/handle_life_lost | run/handle_run_lost |
 | `BumpPerformed { grade, multiplier, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | bolt/apply_bump_velocity, breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, behaviors/bridge_bump, bolt/behaviors/bridges/bridge_overclock_bump |
 | `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text |
-| `ChipSelected` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/apply_chip_effect |
+| `ChipSelected { name }` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/apply_chip_effect |
 | `BoltSpawned` | `bolt/messages.rs` | `BoltPlugin` | bolt/spawn_bolt | run/node/check_spawn_complete |
 | `BreakerSpawned` | `breaker/messages.rs` | `BreakerPlugin` | breaker/spawn_breaker | run/node/check_spawn_complete |
 | `WallsSpawned` | `wall/messages.rs` | `WallPlugin` | wall/spawn_walls | run/node/check_spawn_complete |
@@ -23,14 +23,14 @@
 | `SpawnNodeComplete` | `run/node/messages.rs` | `NodePlugin` | run/node/check_spawn_complete | scenario-runner/check_no_entity_leaks |
 
 ## Ownership Note
-`RunLost`, `ApplyTimePenalty`, `SpawnAdditionalBolt`, and `DamageCell` all deviate from the sender-owns convention: each is defined in the consuming domain but sent by other domains. Accepted because the message semantically belongs to the consumer's vocabulary. `DamageCell` is a "command" message — the cells domain defines the damage API, physics (and eventually shockwave) call it. This is now a consistent pattern for all command-to-domain messages.
+`RunLost`, `ApplyTimePenalty`, `SpawnAdditionalBolt`, and `DamageCell` all deviate from the sender-owns convention: each is defined in the consuming domain but sent by other domains. Accepted because the message semantically belongs to the consumer's vocabulary. `DamageCell` is a "command" message — the cells domain defines the damage API, physics and bolt/behaviors/effects/shockwave both call it. This is now a consistent pattern for all command-to-domain messages.
 
 ## Observer Events (intra-domain, not Messages)
 | Event | Domain | Triggered By | Observed By |
 |-------|--------|-------------|-------------|
 | `ConsequenceFired(Consequence)` | behaviors | bridge_bolt_lost, bridge_bump, bridge_bump_whiff | consequences/* handlers |
 | `ChipEffectApplied { effect, max_stacks }` | chips | apply_chip_effect | effects/* handlers |
-| `OverclockEffectFired { effect, bolt }` | bolt/behaviors | bridges (bridge_overclock_*) | effects/shockwave (+ future effect handlers) |
+| `OverclockEffectFired { effect, bolt: Option<Entity> }` | bolt/behaviors | bridges (bridge_overclock_*) | effects/shockwave (+ future effect handlers) |
 
 ## Spawn Signal Pattern (added 2026-03-18)
 Four domain-owned spawn signals (`BoltSpawned`, `BreakerSpawned`, `WallsSpawned`, `CellsSpawned`) converge in `run/node/check_spawn_complete`, which aggregates them via a `Local<SpawnChecklist>` bitfield and fires `SpawnNodeComplete` when all four arrive. Currently consumed only by the scenario runner for entity-leak baseline sampling. Known issue: `ScenarioLifecycle` redundantly calls `add_message::<SpawnNodeComplete>()` despite `NodePlugin` already registering it.

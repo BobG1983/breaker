@@ -15,7 +15,6 @@ type: reference
 - screen/run_setup reads behaviors::ArchetypeRegistry (read-only)
 - screen/upgrade_select reads upgrades::UpgradeRegistry (read-only)
 - All screen sub-domains read input::InputConfig (read-only, for key bindings)
-- ui/messages.rs imports chips::ChipKind (vocabulary type in message payload)
 - bolt/spawn_additional_bolt reads breaker Transform and ActiveNodeLayout (read-only, same pattern as spawn_bolt)
 - breaker/apply_entity_scale_to_breaker reads run::node::ActiveNodeLayout (read-only, extracts entity_scale to stamp EntityScale component)
 - bolt/apply_entity_scale_to_bolt reads run::node::ActiveNodeLayout (read-only, same pattern as breaker)
@@ -24,14 +23,15 @@ type: reference
 - behaviors/plugin.rs orders against BreakerSystems::InitParams and UiSystems::SpawnTimerHud
 - behaviors/consequences/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. All gated behind `#[cfg(feature = "dev")]`. Does NOT set precedent for production domains.
-- **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, input, run domains directly. Four domain modules widened to `pub mod` in lib.rs. Dev-only crate, never shipped.
+- **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, chips, input, run domains directly. Five domain modules widened to `pub mod` in lib.rs (`chips` added 2026-03-20 for `TriggerChain`/`ImpactTarget` in `initial_overclocks`). Dev-only crate, never shipped.
 - **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).
 
 ## Active Violations (pending resolution)
-- **bolt/behaviors/effects/shockwave.rs** (2026-03-20): cross-domain mutation — directly queries `&mut CellHealth`, despawns cell entities, writes `CellDestroyed` message. Must be refactored to message-based indirection matching behaviors/consequences pattern (e.g., `AreaDamage` or `DamageCell` message consumed by cells domain).
+(none)
 
 ## Resolved Compromises (2026-03-16)
 - ~~bolt/apply_bump_velocity reads breaker entity components~~ → multiplier now included in BumpPerformed message
+- ~~bolt/behaviors/effects/shockwave.rs cross-domain mutation~~ → FIXED 2026-03-20 (feature/overclock-trigger-chain): shockwave now writes `DamageCell` messages (consumer-owns pattern); cells/handle_cell_hit processes damage. No direct CellHealth mutation, no cell despawns, no CellDestroyed writes from shockwave.
 - ~~physics/ccd.rs exists outside canonical layout~~ → moved to shared/math.rs
 - ~~run/node/ lacks its own plugin.rs~~ → NodePlugin extracted
 - ~~handle_life_lost writes ResMut<RunState>~~ → sends RunLost message instead
