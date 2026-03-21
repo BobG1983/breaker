@@ -1,6 +1,8 @@
 # Phase 4d: Trigger/Effect Architecture
 
-**Goal**: Recursive RON-defined trigger chains for overclocks. Bolt behaviors domain. Surge overclock as proof-of-concept.
+**Goal**: Recursive RON-defined trigger chains for overclocks. Unified behavior dispatch across archetype behaviors and overclock chips. Surge overclock as proof-of-concept.
+
+**Status**: DONE (implemented as `refactor/unify-behaviors` → `feature/overclock-trigger-chain`)
 
 **Wave**: 2 (after 4b) — parallel with 4c and 4e. **Highest-risk stage in Phase 4.**
 
@@ -51,16 +53,17 @@ OnPerfectBump(OnImpact(OnCellDestroyed(MultiBolt(count: 2))))
 
 **Delegatable**: Yes — pure types + parsing tests.
 
-### 4d.2: Bolt Behaviors Module + Intermediate State (Session 5)
+### 4d.2: Unified Chain Evaluation + Intermediate State (Session 5)
 
-**Domain**: bolt/
+**Domain**: behaviors/
 
-New `src/bolt/behaviors/` module (mirrors `src/breaker/behaviors/`):
-- Bolt behavior definitions loaded from RON
-- Trigger evaluation system that reads bolt state + game messages
-- Intermediate state tracking: marker components (e.g., `Surging`) added to bolt when a trigger fires but the chain continues
+Unified evaluation engine in `behaviors/` (no separate `bolt/behaviors/` — that plan was superseded):
+- `TriggerKind` enum + pure `evaluate()` function in `behaviors/evaluate.rs`
+- `ArmedTriggers` component on bolt entities for partially-resolved chains (replaces marker-component approach)
+- `ActiveChains` resource replaces separate `ActiveBehaviors` + `ActiveOverclocks`
+- All bridge systems consolidated in `behaviors/bridges.rs`
 
-**Delegatable**: Yes — writer-tests → writer-code, scoped to bolt/ domain.
+**Delegatable**: Yes — writer-tests → writer-code, scoped to behaviors/ domain.
 
 ### 4d.3: Shockwave Effect Implementation (Session 6)
 
@@ -77,10 +80,11 @@ The first concrete effect, proving the leaf-effect execution path:
 
 **Integration task** — likely manual (main agent):
 
-- **Trigger chain**: `OnPerfectBump(OnImpact(Shockwave(range: 64.0)))`
-- **Flow**: Perfect bump → mark bolt "surging" → on next impact → fire shockwave at impact point
-- Wires together 4d.1 (types), 4d.2 (trigger evaluation), 4d.3 (shockwave)
+- **Trigger chain**: `OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1)))`
+- **Flow**: Perfect bump → arms bolt with `OnImpact(Cell, Shockwave(...))` via `ArmedTriggers` → on next cell hit → fire shockwave at bolt position
+- Wires together 4d.1 (types), 4d.2 (unified evaluation), 4d.3 (shockwave)
 - Validates the architecture works end-to-end
+- Scenario: `mechanic/surge_overclock.scenario.ron` with `initial_overclocks` field
 
 ### Hot-Reload Support
 

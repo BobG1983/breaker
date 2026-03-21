@@ -31,7 +31,7 @@ type: reference
 
 ## Resolved Compromises (2026-03-16)
 - ~~bolt/apply_bump_velocity reads breaker entity components~~ → multiplier now included in BumpPerformed message
-- ~~bolt/behaviors/effects/shockwave.rs cross-domain mutation~~ → FIXED 2026-03-20 (feature/overclock-trigger-chain): shockwave now writes `DamageCell` messages (consumer-owns pattern); cells/handle_cell_hit processes damage. No direct CellHealth mutation, no cell despawns, no CellDestroyed writes from shockwave.
+- ~~bolt/behaviors/effects/shockwave.rs cross-domain mutation~~ → FIXED 2026-03-20 (feature/overclock-trigger-chain): shockwave now writes `DamageCell` messages (consumer-owns pattern); cells/handle_cell_hit processes damage. No direct CellHealth mutation. NOTE: shockwave.rs now lives at behaviors/effects/shockwave.rs (bolt/behaviors/ deleted in refactor/unify-behaviors).
 - ~~physics/ccd.rs exists outside canonical layout~~ → moved to shared/math.rs
 - ~~run/node/ lacks its own plugin.rs~~ → NodePlugin extracted
 - ~~handle_life_lost writes ResMut<RunState>~~ → sends RunLost message instead

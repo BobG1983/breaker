@@ -9,7 +9,7 @@ type: reference
 - Bolt lost feedback: system is `spawn_bolt_lost_text` in module `bolt/systems/bolt_lost_feedback.rs`
 - Archetypes (Aegis, Chrono, Prism) are purely data-driven via RON files — no `AegisPlugin`, `ChronoPlugin`, or `PrismPlugin` exist. Do not flag as a gap.
 - `behaviors/` is a top-level domain (not nested under `breaker/`). Plugin is `BehaviorsPlugin`. System set is `BehaviorSystems::Bridge`.
-- `ConsequenceFired(Consequence)` is a Bevy observer event (not a Message) — lives in `behaviors/definition.rs`.
+- `ConsequenceFired(Consequence)` DELETED in refactor/unify-behaviors (2026-03-21). Replaced by `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` in `behaviors/events.rs`. Do not flag `ConsequenceFired` absence as drift.
 - `handle_spawn_bolt` replaced `handle_spawn_bolt_requested`.
 - `BreakerSystems::InitParams` tags `init_breaker_params` — alongside `BreakerSystems::Move`.
 - `UiSystems::SpawnTimerHud` tags `spawn_timer_hud`.

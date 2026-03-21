@@ -19,14 +19,18 @@ type: reference
 - ExtraBolt despawns on loss, never respawns — correct Prism behavior
 - Shockwave damage MUST scale with DamageBoost — no "flat area damage" exceptions; synergy web requires it (IMPLEMENTED: shockwave.rs reads DamageBoost from bolt entity)
 - Perfect bump requirement for Surge overclock is correct — do not weaken
-- Global triggers (OnCellDestroyed, OnBoltLost) must not silently no-op when used with position-dependent effects (IMPLEMENTED: Option<Entity> on OverclockEffectFired.bolt, shockwave returns early on None)
+- Global triggers (OnCellDestroyed, OnBoltLost) must not silently no-op when used with position-dependent effects (IMPLEMENTED: Option<Entity> on EffectFired.bolt, shockwave returns early on None)
 - ChipKind removed — chip category is derived from ChipEffect variant, not a parallel enum. Enables multi-effect chips cleanly.
 - TriggerChain leaf stacking formula: base + (stacks-1) * per_level — uniform across Shockwave/MultiBolt/Shield
 - Surge shockwave range_per_level: 32.0 is well-calibrated (each stack adds ~0.6 cell widths of radius)
+- Unified TriggerChain evaluation engine — archetypes and overclocks share the same grammar (2026-03-21)
+- OnBumpSuccess should be reserved for defensive effects (Shield) — offensive power demands OnPerfectBump
+- Bump-grade triggers (EarlyBump, LateBump, BumpWhiff) transform bumping from binary to spectrum — use aggressively in archetype/chip design
+- Archetype root fields (on_bolt_lost, on_perfect_bump, etc.) get auto-wrapped into ActiveChains at init — no separate dispatch path
 
 ## Open Issues (Ordered by Priority)
 1. **BLOCKING** Test code uses 0.8x weak multiplier (should be 1.1x) — bump.rs, apply_bump_velocity.rs, init_breaker_params.rs
-2. **BLOCKING** Prism archetype bolt-lost penalty too soft (3s TimePenalty) — needs LoseExtraBolts or higher penalty
+2. **BLOCKING** Prism archetype bolt-lost penalty too soft (7s TimePenalty, was 3s) — needs LoseExtraBolts leaf variant or higher penalty
 3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — still unfixed from 2 prior reviews
 4. **IMPORTANT** Run-end subtitle copy weak/passive — needs motivating tone
 5. **IMPORTANT** Chip select timer 10s too generous — recommend 8s
@@ -41,7 +45,7 @@ type: reference
 - ~~Bolt-lost respawn straight up = no reaction required~~ FIXED — randomized within +/-30deg
 - ~~Shockwave used flat BASE_BOLT_DAMAGE~~ FIXED — now routes through DamageCell with DamageBoost scaling (2026-03-20)
 - ~~ChipKind redundant discriminator~~ REMOVED — ChipEffect enum is the sole category source (2026-03-20)
-- ~~Entity::PLACEHOLDER in OverclockEffectFired.bolt~~ FIXED — replaced with Option<Entity> for proper null semantics (2026-03-20)
+- ~~Entity::PLACEHOLDER in EffectFired.bolt (was OverclockEffectFired.bolt)~~ FIXED — replaced with Option<Entity> for proper null semantics (2026-03-20); event renamed EffectFired in refactor/unify-behaviors (2026-03-21)
 
 ## Future Design Notes
 - Speed decay: recommend per-bounce/per-cell-hit decay, NOT passive time decay
@@ -58,3 +62,6 @@ type: reference
 - Piercing + armed trigger interaction needs explicit design intent: fire once or at each impact point?
 - ChainHit + trigger evaluation: do chain hits resolve armed triggers? Phase 7+ decision but architecture must not prevent it
 - Phase 7: consider OnCellDestroyed(Shockwave) using destroyed cell position for chain reaction mechanic
+- Global trigger arming limitation: Arm results discarded for CellDestroyed/BoltLost/BumpWhiff (no bolt entity). Phase 7: decide if global-to-armed chains should target all bolts or require rethinking
+- Risk/reward archetype design now possible: OnBumpWhiff penalties + higher OnPerfectBump rewards = sharp skill expression
+- Archetype-overclock resonance: design overclocks that double up on archetype trigger kinds for build affinities (Phase 7+)

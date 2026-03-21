@@ -30,7 +30,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::Reset` | `bolt/sets.rs` | `reset_bolt` (intra-domain only — no cross-domain consumers yet) |
 | `PhysicsSystems::BreakerCollision` | `physics/sets.rs` | `bolt_breaker_collision` |
 | `PhysicsSystems::BoltLost` | `physics/sets.rs` | `bolt_lost` |
-| `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff` |
+| `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
@@ -104,15 +104,23 @@ BreakerSystems::Move
                    .in_set(BehaviorSystems::Bridge)              [behaviors domain]
                 <- bridge_bump_whiff .after(BreakerSystems::GradeBump)
                    .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                <- bridge_cell_impact .after(PhysicsSystems::BreakerCollision)
+                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                <- bridge_breaker_impact .after(PhysicsSystems::BreakerCollision)
+                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                <- bridge_wall_impact .after(PhysicsSystems::BreakerCollision)
+                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
             <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
             <- bolt_lost .after(clamp_bolt_to_playfield)
               PhysicsSystems::BoltLost
                 <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
                    .in_set(BehaviorSystems::Bridge)          [behaviors domain]
+            <- bridge_cell_destroyed .in_set(BehaviorSystems::Bridge)
+               [behaviors domain, unordered relative to physics chain]
             <- spawn_additional_bolt .after(BehaviorSystems::Bridge)  [bolt domain]
 ```
 
-Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading (`BreakerSystems::GradeBump`) and velocity application, then bolt-lost detection. All three behavior bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_bolt_lost`) run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
+Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading (`BreakerSystems::GradeBump`) and velocity application, then bolt-lost detection. All behavior bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_bolt_lost`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`) run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion

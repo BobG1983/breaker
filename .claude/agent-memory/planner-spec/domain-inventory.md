@@ -67,34 +67,7 @@ type: project
 ### Systems
 - `prepare_bolt_velocity` — clamps speed to [min, max], enforces min angle. Runs FixedUpdate.
 
-### Sub-domain: bolt/behaviors/ (overclock evaluation engine)
-
-#### Events (`bolt/behaviors/events.rs`)
-- `OverclockEffectFired { pub effect: TriggerChain, pub bolt: Option<Entity> }` — Event, fired when chain resolves to leaf. `bolt` is `None` for global triggers (OnCellDestroyed, OnBoltLost) that have no specific bolt; `Some(entity)` for bolt-specific triggers (OnPerfectBump, OnImpact, OnBumpSuccess).
-
-#### Resources (`bolt/behaviors/active.rs`)
-- `ActiveOverclocks(pub Vec<TriggerChain>)` — runtime active overclock chains
-
-#### Components (`bolt/behaviors/armed.rs`)
-- `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains
-
-#### Systems (`bolt/behaviors/bridges.rs`)
-- `bridge_overclock_bump` — reads BumpPerformed (BumpSuccess trigger; also PerfectBump via evaluate), evaluates chains, fires/arms
-- `bridge_overclock_cell_impact` — reads BoltHitCell, evaluates active chains + armed triggers for the hit bolt
-- `bridge_overclock_breaker_impact` — reads BoltHitBreaker, evaluates active chains + armed triggers
-- `bridge_overclock_wall_impact` — reads BoltHitWall, evaluates active chains + armed triggers
-- `bridge_overclock_cell_destroyed` — reads CellDestroyed, evaluates active + armed_all, passes bolt: None in OverclockEffectFired
-- `bridge_overclock_bolt_lost` — reads BoltLost, evaluates active + armed_all, passes bolt: None in OverclockEffectFired
-- Private helpers: `evaluate_active_chains`, `evaluate_armed_all`, `evaluate_armed`, `resolve_armed`, `arm_bolt`
-
-#### Pure functions (`bolt/behaviors/evaluate.rs`)
-- `evaluate(trigger: OverclockTriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire
-
-#### Plugin (`bolt/behaviors/plugin.rs`)
-- `BoltBehaviorsPlugin` — registers ActiveOverclocks, bridge systems in FixedUpdate with ordering constraints
-
-#### Observers (`bolt/behaviors/effects/shockwave.rs`)
-- `handle_shockwave` — observes OverclockEffectFired, pattern-matches TriggerChain::Shockwave, early-returns when bolt is None (global triggers). Writes DamageCell messages for all non-locked cells within effective_range = base_range + (stacks-1) * range_per_level. Does NOT mutate CellHealth directly.
+NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKind`, bridge systems, `handle_shockwave`) was unified into the top-level `behaviors/` domain in the refactor/unify-behaviors branch. See behaviors domain below. `bolt/behaviors/` sub-domain no longer exists.
 
 ### DamageVisualQuery update
 - `DamageVisualQuery` now includes `Has<Locked>` (5th element)
@@ -137,5 +110,34 @@ type: project
 - `BumpForceBoost(f32)` — flat multiplier increase for bump
 - `TiltControlBoost(f32)` — flat angle increase for tilt control
 
-**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19).
+## behaviors domain (`src/behaviors/`) — UNIFIED as of refactor/unify-behaviors
+
+NOTE: This domain was restructured. The old `behaviors/consequences/` directory is GONE. The old `bolt/behaviors/` sub-domain is GONE. Both were merged here.
+
+### Resources (`behaviors/active.rs`)
+- `ActiveChains(pub Vec<TriggerChain>)` — runtime active overclock chains (was `ActiveOverclocks` in old `bolt/behaviors/`)
+
+### Components (`behaviors/armed.rs`)
+- `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains (was in `bolt/behaviors/armed.rs`)
+
+### Events (`behaviors/events.rs`)
+- `EffectFired { pub effect: TriggerChain, pub bolt: Option<Entity> }` — fired when chain resolves to leaf (was `OverclockEffectFired` in old `bolt/behaviors/events.rs`)
+
+### Pure functions (`behaviors/evaluate.rs`)
+- `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire (was `OverclockTriggerKind` in old `bolt/behaviors/evaluate.rs`)
+- `TriggerKind` enum (was `OverclockTriggerKind`) — PerfectBump, EarlyBump, LateBump, BumpWhiff, BumpSuccess, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost
+
+### Systems (`behaviors/bridges.rs`)
+- All bridge systems now live here (was `bolt/behaviors/bridges.rs`)
+- `bridge_overclock_bump`, `bridge_overclock_cell_impact`, `bridge_overclock_breaker_impact`, `bridge_overclock_wall_impact`, `bridge_overclock_cell_destroyed`, `bridge_overclock_bolt_lost`
+- Also: life-lost, time-penalty, spawn-bolt, bolt-lost consequences (from old consequences/)
+
+### Effects observers (`behaviors/effects/`)
+- `handle_shockwave` in `behaviors/effects/shockwave.rs` (was `bolt/behaviors/effects/shockwave.rs`)
+- `handle_life_lost` in `behaviors/effects/life_lost.rs`
+- `handle_time_penalty` in `behaviors/effects/time_penalty.rs`
+- `handle_spawn_bolt` in `behaviors/effects/spawn_bolt.rs`
+All observe `EffectFired` (not `ConsequenceFired`).
+
+**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21).
 **How to apply:** Use this to avoid re-reading files when writing future specs in these domains.

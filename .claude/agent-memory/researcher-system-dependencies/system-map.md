@@ -6,7 +6,7 @@ type: reference
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-19 (new: clamp_bolt_to_playfield in PhysicsPlugin; check_spawn_complete in NodePlugin; BoltSpawned/BreakerSpawned/CellsSpawned/WallsSpawned/SpawnNodeComplete messages; NodeSystems::ApplyTimePenalty set; RecordingPlugin; seed_chip_registry/seed_chip_select_config in LoadingPlugin; inject_scenario_input moved to FixedPreUpdate; invariant checkers now .after(update_breaker_state).before(BoltLost))
+Last updated: 2026-03-21 — refactor/unify-behaviors: bolt/behaviors/ sub-domain deleted, BoltBehaviorsPlugin removed, all overclock bridge systems + EffectFired/TriggerKind/ActiveChains/ArmedTriggers/handle_shockwave merged into top-level BehaviorsPlugin. behaviors/consequences/ replaced by behaviors/effects/. ActiveBehaviors → ActiveChains. BreakerSpawned→ (see 2026-03-19 entry for earlier changes).
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
@@ -16,6 +16,8 @@ UiPlugin → DebugPlugin
 Note: InterpolatePlugin is registered BEFORE PhysicsPlugin.
 Note: BehaviorsPlugin is a STANDALONE domain, registered between BreakerPlugin and BoltPlugin.
 BreakerPlugin no longer contains any behavior sub-plugin.
+NOTE (2026-03-21): BoltBehaviorsPlugin has been REMOVED — it was a sub-plugin of BoltPlugin that
+contained the overclock bridge systems. Those systems are now registered directly in BehaviorsPlugin.
 
 ---
 
@@ -184,10 +186,16 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 
 ---
 
-## BehaviorsPlugin (src/behaviors/ — standalone domain)
+## BehaviorsPlugin (src/behaviors/ — standalone domain, UNIFIED 2026-03-21)
 
-Resources owned: ArchetypeRegistry, ActiveBehaviors
+Resources owned: ArchetypeRegistry, ActiveChains (was ActiveBehaviors+ActiveOverclocks)
 System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
+
+NOTE (2026-03-21 refactor/unify-behaviors): behaviors/consequences/ is GONE. behaviors/effects/ replaces it.
+ConsequenceFired event is GONE. EffectFired (was OverclockEffectFired in bolt/behaviors/) is the unified trigger.
+ActiveBehaviors (old archetype trigger/consequence logic) merged into ActiveChains.
+All bridge systems (overclock + archetype consequence) now live in behaviors/bridges.rs.
+All effect observers (shockwave + life_lost + time_penalty + spawn_bolt) in behaviors/effects/.
 
 ### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), .before(init_breaker_params)
 - Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>, Res<Assets<BreakerDefaults>>
@@ -197,7 +205,7 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 ### `init_archetype` — OnEnter(GameState::Playing), .after(init_breaker_params)
 - Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
 - Reads (query): Query<Entity, (With<Breaker>, Without<LivesCount>)>
-- Writes: ResMut<ActiveBehaviors>
+- Writes: ResMut<ActiveChains>
 - Commands: inserts LivesCount, BumpPerfectMultiplier, BumpWeakMultiplier on Breaker entity
 - Cross-domain: stamps components from breaker domain (BumpPerfectMultiplier, BumpWeakMultiplier)
 
@@ -207,30 +215,21 @@ System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
 - Reads (query): Query<(), With<LivesDisplay>> (existence guard)
 - Commands: spawns LivesDisplay as child of StatusPanel (UI entity)
 
-### `bridge_bolt_lost` — FixedUpdate, .after(PhysicsSystems::BoltLost), .in_set(BehaviorSystems::Bridge)
-- run_if: ActiveBehaviors.has_trigger(Trigger::BoltLost) AND PlayingState::Active
-- Receives: MessageReader<BoltLost>
-- Reads: Res<ActiveBehaviors>
-- Commands: commands.trigger(ConsequenceFired(_)) for each matching consequence
+### Bridge systems — FixedUpdate, .in_set(BehaviorSystems::Bridge), run_if(PlayingState::Active)
+All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) to fire EffectFired or arm bolts.
+- `bridge_overclock_bolt_lost` — .after(PhysicsSystems::BoltLost) — reads BoltLost
+- `bridge_overclock_bump` — .after(BreakerSystems::GradeBump) — reads BumpPerformed
+- `bridge_overclock_bump_whiff` — .after(BreakerSystems::GradeBump) — reads BumpWhiffed
+- `bridge_overclock_cell_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitCell
+- `bridge_overclock_breaker_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitBreaker
+- `bridge_overclock_wall_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitWall
+- `bridge_overclock_cell_destroyed` — .after(BehaviorSystems::Bridge) — reads CellDestroyed
 
-### `bridge_bump` — FixedUpdate, .after(PhysicsSystems::BreakerCollision), .in_set(BehaviorSystems::Bridge)
-- run_if: ActiveBehaviors.has_trigger_any_bump() AND PlayingState::Active
-- Receives: MessageReader<BumpPerformed>
-- Reads: Res<ActiveBehaviors>
-- Commands: commands.trigger(ConsequenceFired(_)) for each matching consequence
-
-### `handle_life_lost` — Observer on ConsequenceFired (immediate, runs in command flush)
-- Pattern-matches: Consequence::LoseLife only, ignores others
-- Writes (query): mut LivesCount (all entities with LivesCount)
-- Sends: MessageWriter<RunLost> (only when lives.0 reaches 0)
-
-### `handle_time_penalty` — Observer on ConsequenceFired (immediate, runs in command flush)
-- Pattern-matches: Consequence::TimePenalty(seconds) only
-- Sends: MessageWriter<ApplyTimePenalty>
-
-### `handle_spawn_bolt` — Observer on ConsequenceFired (immediate, runs in command flush)
-- Pattern-matches: Consequence::SpawnBolt only
-- Sends: MessageWriter<SpawnAdditionalBolt>
+### Effect observers (all observe EffectFired):
+- `handle_life_lost` — pattern-matches TriggerChain::LoseLife; writes LivesCount; sends RunLost
+- `handle_time_penalty` — pattern-matches TriggerChain::TimePenalty; sends ApplyTimePenalty
+- `handle_spawn_bolt` — pattern-matches TriggerChain::SpawnBolt; sends SpawnAdditionalBolt
+- `handle_shockwave` — pattern-matches TriggerChain::Shockwave; early-returns when bolt is None; writes DamageCell
 
 ### `update_lives_display` — Update, run_if(any_with_component::<LivesDisplay> AND PlayingState::Active)
 - Reads (query): Query<&LivesCount>

@@ -34,7 +34,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
     - [~~4b: Chip Effect System~~](phase-4/phase-4b-chip-effects.md) — **Done** (~~4b.1 types/stacking~~, ~~4b.2 per-domain effects~~)
   - **Wave 2 — Core Systems** (Sessions 3-6)
     - [4c: Chip Pool & Rarity](phase-4/phase-4c-chip-pool.md) (~~4c.1 rarity/inventory~~, 4c.2 RON authoring, 4c.3 synergy review)
-    - [4d: Trigger/Effect Architecture](phase-4/phase-4d-trigger-effect.md) (4d.1 types, 4d.2 bolt behaviors, 4d.3 shockwave, 4d.4 Surge POC)
+    - [4d: Trigger/Effect Architecture](phase-4/phase-4d-trigger-effect.md) (~~4d.1 types~~, ~~4d.2 unified chain evaluation~~, ~~4d.3 shockwave~~, ~~4d.4 Surge POC~~) — **Done**
     - [4e: Node Sequence & Escalation](phase-4/phase-4e-node-escalation.md) (~~4e.1 tiers~~, ~~4e.2 proc-gen~~, ~~4e.3 cell types~~, ~~4e.4 layout pools~~)
   - **Wave 3 — Integration** (Session 7)
     - [4f: Chip Offering System](phase-4/phase-4f-chip-offerings.md)

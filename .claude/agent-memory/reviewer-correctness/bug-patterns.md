@@ -54,16 +54,16 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 
-- **ActiveOverclocks never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveOverclocks.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveOverclocks. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveOverclocks.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`.
+- **ActiveChains (was ActiveOverclocks) never cleared between runs**: `chips/effects/overclock.rs` — `handle_overclock` pushes to `ActiveChains.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveChains. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveChains.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`.
 
 - **Retroactive bump path silences None last_hit_bolt**: `breaker/systems/bump.rs:115` — `update_bump` uses `bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER)`. The `None` case is not reachable through current code, but the invariant `post_hit_timer > 0 ↔ last_hit_bolt is Some` is not structural. Should use `expect()` or restructure the timer/entity as a single `Option<(f32, Entity)>`. Medium confidence — not currently reachable, but silently wrong if it becomes reachable.
 
 ## Recurring Bug Category (new)
-- **Resource Vec not cleared on run reset**: pattern seen in ActiveOverclocks. When a Vec resource is populated during gameplay, ensure `reset_run_state` or an OnEnter(Playing) system clears it. Check all Vec resources when adding new ones.
+- **Resource Vec not cleared on run reset**: pattern seen in ActiveChains. When a Vec resource is populated during gameplay, ensure `reset_run_state` or an OnEnter(Playing) system clears it. Check all Vec resources when adding new ones.
 
 ## Overclock Trigger Chain Bugs (2026-03-20, feature/overclock-trigger-chain)
 
-- **Global-triggered Shockwave no-ops silently**: FIXED (2026-03-20, feature/overclock-trigger-chain). `OverclockEffectFired.bolt` changed from `Entity` (using PLACEHOLDER for global triggers) to `Option<Entity>` (using `None`). `handle_shockwave` explicitly `let Some(bolt_entity) = trigger.event().bolt else { return; }` — the no-op for global triggers is now intentional and documented. Test `shockwave_no_op_with_none_bolt` covers this. Design decision: global-trigger shockwaves require a bolt entity for position; no position → no area damage. See design-principles.md for the design note.
+- **Global-triggered Shockwave no-ops silently**: FIXED (2026-03-20, feature/overclock-trigger-chain). `EffectFired.bolt` (was `OverclockEffectFired.bolt`) changed from `Entity` (using PLACEHOLDER for global triggers) to `Option<Entity>` (using `None`). `handle_shockwave` explicitly `let Some(bolt_entity) = trigger.event().bolt else { return; }` — the no-op for global triggers is now intentional and documented. Test `shockwave_no_op_with_none_bolt` covers this. Design decision: global-trigger shockwaves require a bolt entity for position; no position → no area damage. See design-principles.md for the design note.
 
 - **bridge_overclock_cell_destroyed fires once for N destroyed cells**: Uses `reader.read().count() == 0` to detect any messages then evaluates chains once regardless of count. If N cells are destroyed in one frame, `OnCellDestroyed(Shockwave)` fires exactly once. The comment says "once per message" but implementation is "once if any messages". If design intent is one-shockwave-per-destroyed-cell, this is a bug.
   - Confidence: medium (design intent unclear)
@@ -72,12 +72,18 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
   - Confidence: medium (may be intentional cascade mechanic)
   - Confidence: medium (may be intentional)
 
-## refactor/unify-behaviors Confirmed Bugs (2026-03-21)
+## refactor/unify-behaviors Confirmed Bugs (2026-03-21) — RESOLVED BY UNIFICATION
 
-- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants silently never fire**: `OverclockTriggerKind` in `evaluate.rs` has no variants for EarlyBump, LateBump, or BumpWhiff. The `evaluate()` function's or-pattern is exhaustive for the 7 existing kinds only. Any TriggerChain starting with OnEarlyBump/OnLateBump/OnBumpWhiff always returns `EvalResult::NoMatch`. Three new trigger types are completely non-functional at runtime. evaluate.rs:7-22 and 46-57.
+NOTE: The following bugs were opened when new TriggerChain variants were added as type-only in refactor/unify-behaviors Step 1. The full unification (bolt/behaviors/ merged into behaviors/) resolved the structural issues by wiring evaluate.rs (now TriggerKind in behaviors/evaluate.rs with EarlyBump, LateBump, BumpWhiff variants) and adding handlers in behaviors/effects/. Verify against current code before re-flagging.
 
-- **No bridge system dispatches EarlyBump/LateBump/BumpWhiff to overclock evaluate()**: `bridge_overclock_bump` (bridges.rs:27-71) handles `BumpGrade::Early|Late` with BumpSuccess only, not with new grade-specific trigger kinds. No bridge exists to read `BumpWhiffed` and call `evaluate(OnBumpWhiffKind, chain)` for overclock chains. Even if OverclockTriggerKind were extended, the dispatch path from message → evaluate() is absent.
+- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` (was `OverclockTriggerKind`) in `behaviors/evaluate.rs` now includes EarlyBump, LateBump, BumpWhiff variants. The evaluate() function's or-pattern now covers all 10 trigger kinds. VERIFY: check behaviors/evaluate.rs — if TriggerKind has EarlyBump/LateBump/BumpWhiff variants and evaluate() handles them, this is fixed.
 
-- **LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost leaves have no OverclockEffectFired handlers**: Only `handle_shockwave` is registered in `bolt/behaviors/effects/`. When these fire via `commands.trigger(OverclockEffectFired{effect: TriggerChain::LoseLife/TimePenalty/SpawnBolt/BoltSpeedBoost, ...})`, no observer acts on them. Silent no-op. `bolt/behaviors/effects/mod.rs:1-5`.
+- **No bridge for BumpWhiffed**: `bridge_overclock_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_overclock_bump_whiff system exists in behaviors/bridges.rs.
 
-- **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) OverclockTriggerKind + evaluate(), (3) bridge system. This PR only did (1) for the trigger variants and (1) for the leaf variants.
+- **LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost leaves have no handlers**: The unification added `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt` observers in `behaviors/effects/`. These observe `EffectFired` (was `OverclockEffectFired`) and pattern-match their leaf variants. VERIFY: check behaviors/effects/mod.rs for registered observers.
+
+- **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) TriggerKind + evaluate(), (3) bridge system + effect handler. This three-part requirement is now well-documented in the codebase.
+
+## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
+
+- **ActiveOverclocks (now ActiveChains) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveChains.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveChains. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveChains.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: type renamed from ActiveOverclocks to ActiveChains in refactor/unify-behaviors.

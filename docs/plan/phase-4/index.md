@@ -9,7 +9,7 @@
 | ~~4a~~ | ~~Seeded RNG & Run Seed~~ | — | ~~Small~~ | **DONE** |
 | ~~[4b](phase-4b-chip-effects.md)~~ | ~~Chip Effect System~~ | — | ~~Medium-Large~~ | **DONE** |
 | [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity (4c.1 done) | 4b | Large (content-heavy) | Low technical, high design |
-| [4d](phase-4d-trigger-effect.md) | Trigger/Effect Architecture | 4b | Large | **High** — new pattern |
+| ~~[4d](phase-4d-trigger-effect.md)~~ | ~~Trigger/Effect Architecture~~ | ~~4b~~ | ~~Large~~ | **DONE** |
 | ~~[4e](phase-4e-node-escalation.md)~~ | ~~Node Sequence & Escalation~~ | ~~4a~~ | ~~Very Large~~ | **DONE** |
 | [4f](phase-4f-chip-offerings.md) | Chip Offering System | 4a, 4c | Medium | Low |
 | [4g](phase-4g-node-transitions.md) | Node Transitions & VFX | 4e | Medium | Low |
@@ -76,17 +76,16 @@ Three stages unlock. **4c**, **4d**, and **4e** can all parallelize since they d
   - **4c.2**: Author 16-20 chip RON files (content, can batch)
   - **4c.3**: Synergy design review (guard-game-design validation)
 
-- **4d (Trigger/Effect Architecture)** — riskiest stage, split into:
-  - **Research**: Use researcher-bevy-api to verify observer/event pattern for trigger chains
-  - **4d.1**: TriggerChain enum + RON parsing (types only)
-  - **4d.2**: Bolt behaviors module + intermediate state markers (bolt/ domain)
-  - **4d.3**: Shockwave effect implementation
-  - **4d.4**: Surge overclock end-to-end proof-of-concept (integration, likely manual)
+- **~~4d (Trigger/Effect Architecture)~~** — **DONE**. Split into:
+  - **~~4d.1~~**: TriggerChain enum + RON parsing (in chips/definition.rs)
+  - **~~4d.2~~**: Unified evaluation engine (behaviors/evaluate.rs, behaviors/active.rs, behaviors/armed.rs, behaviors/events.rs — no separate bolt/behaviors/)
+  - **~~4d.3~~**: Shockwave effect in behaviors/effects/shockwave.rs
+  - **~~4d.4~~**: Surge overclock end-to-end via surge_overclock.scenario.ron with initial_overclocks field
 
 **Session 3**: 4e.1 + 4e.2 + 4c.1 in parallel (data structures + algorithm + rarity system)
 **Session 4**: 4e.3 (Lock + Regen cells in parallel) + 4e.4 (layout pools)
-**Session 5**: 4d.1 + 4d.2 (trigger types + bolt behaviors — after researcher-bevy-api)
-**Session 6**: 4d.3 + 4d.4 + 4c.2 (shockwave + Surge POC + chip RON authoring)
+**~~Session 5~~**: ~~4d.1 + 4d.2 (trigger types + unified evaluation engine)~~ **DONE**
+**~~Session 6~~**: ~~4d.3 + 4d.4 (shockwave + Surge POC)~~ **DONE** (4c.2 chip RON authoring deferred)
 
 ### Wave 3 — Integration (after Wave 2, parallel)
 
@@ -126,8 +125,8 @@ All three are independent and can parallelize.
 | ~~**2**~~ | ~~4b.2~~ | ~~Per-domain effect consumption (parallel across domains)~~ | ~~physics, cells, bolt, breaker~~ | **DONE** |
 | ~~**3**~~ | ~~4e.1 + 4e.2 + 4c.1~~ | ~~Tier structures + proc-gen algorithm + rarity/inventory~~ | ~~run, chips~~ | **DONE** |
 | ~~**4**~~ | ~~4e.3 + 4e.4~~ | ~~New cell types (Lock, Regen) + layout pool reorg~~ | ~~cells, assets~~ | **DONE** |
-| **5** | 4d.1 + 4d.2 | TriggerChain types + bolt behaviors module | bolt, chips |
-| **6** | 4d.3 + 4d.4 + 4c.2 | Shockwave + Surge POC + chip RON authoring | bolt, physics, assets |
+| ~~**5**~~ | ~~4d.1 + 4d.2~~ | ~~TriggerChain types + unified chain evaluation engine~~ | ~~behaviors, chips~~ | **DONE** |
+| ~~**6**~~ | ~~4d.3 + 4d.4~~ | ~~Shockwave + Surge POC (4c.2 deferred)~~ | ~~behaviors, assets~~ | **DONE** |
 | **7** | 4f + 4g | Chip offerings + node transitions (parallel) | chips, screen, fx |
 | **8** | 4h + 4i + 4j | Evolution + run stats + release infra (parallel capstones) | chips, run, ui, CI |
 
@@ -146,7 +145,7 @@ Each stage includes a **Scenario Coverage** section listing suggested invariants
 These tasks span multiple domains and cannot be delegated:
 - Shared type creation (new message types, shared enums used by multiple domains)
 - `lib.rs` / `game.rs` / `shared.rs` wiring for new plugins or modules
-- New domain creation wiring (if bolt/behaviors becomes a new sub-domain)
+- New domain creation wiring (if a new top-level sub-domain is introduced)
 - Architectural decisions for 4d's trigger chain pattern
 
 ## Design Decisions
