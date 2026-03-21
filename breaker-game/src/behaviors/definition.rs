@@ -3,11 +3,13 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use crate::chips::definition::TriggerChain;
+
 /// A breaker archetype definition loaded from a RON file.
 ///
-/// Composes behaviors from a closed set of triggers and consequences.
+/// Uses unified `TriggerChain` for all behavior bindings.
 /// Adding a new archetype = new RON file. Adding a new behavior type =
-/// new trigger/consequence variant + handler.
+/// new `TriggerChain` variant + handler.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub(crate) struct ArchetypeDefinition {
     /// Display name of the archetype.
@@ -16,53 +18,17 @@ pub(crate) struct ArchetypeDefinition {
     pub stat_overrides: BreakerStatOverrides,
     /// Number of lives, if the archetype uses a life pool.
     pub life_pool: Option<u32>,
-    /// Trigger→consequence bindings that define this archetype's behaviors.
-    pub behaviors: Vec<BehaviorBinding>,
+    /// Chain fired when a bolt is lost.
+    pub on_bolt_lost: Option<TriggerChain>,
+    /// Chain fired on a perfect bump.
+    pub on_perfect_bump: Option<TriggerChain>,
+    /// Chain fired on an early bump.
+    pub on_early_bump: Option<TriggerChain>,
+    /// Chain fired on a late bump.
+    pub on_late_bump: Option<TriggerChain>,
+    /// Additional trigger chains (overclock-style multi-step chains).
+    pub chains: Vec<TriggerChain>,
 }
-
-/// A single trigger→consequence binding within an archetype.
-#[derive(Deserialize, Clone, Debug)]
-pub(crate) struct BehaviorBinding {
-    /// One or more triggers that activate this consequence.
-    pub triggers: Vec<Trigger>,
-    /// The consequence to fire when any of the triggers occur.
-    pub consequence: Consequence,
-}
-
-/// Events that can trigger a behavior consequence.
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) enum Trigger {
-    /// Bolt fell below the breaker.
-    BoltLost,
-    /// Bump timed within the perfect window.
-    PerfectBump,
-    /// Bump pressed before the perfect zone.
-    EarlyBump,
-    /// Bump pressed after the bolt hit.
-    LateBump,
-    /// Forward bump window expired without bolt contact.
-    BumpWhiff,
-}
-
-/// Actions that occur when a trigger fires.
-#[derive(Deserialize, Clone, Debug)]
-pub(crate) enum Consequence {
-    /// Lose one life from the life pool.
-    LoseLife,
-    /// Multiply bolt speed (applied at init time via components).
-    BoltSpeedBoost(f32),
-    /// Subtract seconds from the node timer.
-    TimePenalty(f32),
-    /// Spawn an additional bolt.
-    SpawnBolt,
-}
-
-/// Generic consequence event — each handler self-selects via pattern matching.
-///
-/// Replaces per-consequence events (`LoseLifeRequested`, `TimePenaltyRequested`,
-/// `SpawnBoltRequested`). Adding a new consequence never touches `fire_consequences`.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ConsequenceFired(pub Consequence);
 
 /// Optional overrides for `BreakerDefaults` fields.
 ///
@@ -92,7 +58,11 @@ mod tests {
             ron::de::from_str(ron_str).expect("aegis archetype RON should parse");
         assert_eq!(def.name, "Aegis");
         assert_eq!(def.life_pool, Some(3));
-        assert_eq!(def.behaviors.len(), 3);
+        assert!(matches!(def.on_bolt_lost, Some(TriggerChain::LoseLife)));
+        assert!(matches!(
+            def.on_perfect_bump,
+            Some(TriggerChain::BoltSpeedBoost { multiplier }) if (multiplier - 1.5).abs() < f32::EPSILON
+        ));
     }
 
     #[test]
@@ -102,10 +72,9 @@ mod tests {
             ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
         assert_eq!(def.name, "Chrono");
         assert!(def.life_pool.is_none());
-        assert_eq!(def.behaviors.len(), 3);
         assert!(matches!(
-            def.behaviors[0].consequence,
-            Consequence::TimePenalty(t) if (t - 5.0).abs() < f32::EPSILON
+            def.on_bolt_lost,
+            Some(TriggerChain::TimePenalty { seconds }) if (seconds - 5.0).abs() < f32::EPSILON
         ));
     }
 
@@ -116,15 +85,13 @@ mod tests {
             ron::de::from_str(ron_str).expect("prism archetype RON should parse");
         assert_eq!(def.name, "Prism");
         assert!(def.life_pool.is_none());
-        assert_eq!(def.behaviors.len(), 2);
+        assert!(matches!(def.on_perfect_bump, Some(TriggerChain::SpawnBolt)));
         assert!(matches!(
-            def.behaviors[0].consequence,
-            Consequence::SpawnBolt
+            def.on_bolt_lost,
+            Some(TriggerChain::TimePenalty { seconds }) if (seconds - 7.0).abs() < f32::EPSILON
         ));
-        assert!(matches!(
-            def.behaviors[1].consequence,
-            Consequence::TimePenalty(t) if (t - 7.0).abs() < f32::EPSILON
-        ));
+        assert!(def.on_early_bump.is_none());
+        assert!(def.on_late_bump.is_none());
     }
 
     #[test]
@@ -134,26 +101,18 @@ mod tests {
             name: "Prism",
             stat_overrides: (),
             life_pool: None,
-            behaviors: [
-                (triggers: [PerfectBump], consequence: SpawnBolt),
-            ],
+            on_bolt_lost: None,
+            on_perfect_bump: Some(SpawnBolt),
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: [],
         )
         "#;
         let def: ArchetypeDefinition =
             ron::de::from_str(ron_str).expect("prism archetype RON should parse");
         assert_eq!(def.name, "Prism");
         assert!(def.life_pool.is_none());
-        assert_eq!(def.behaviors.len(), 1);
-        assert!(matches!(
-            def.behaviors[0].consequence,
-            Consequence::SpawnBolt
-        ));
-    }
-
-    #[test]
-    fn trigger_equality() {
-        assert_eq!(Trigger::BoltLost, Trigger::BoltLost);
-        assert_ne!(Trigger::BoltLost, Trigger::PerfectBump);
+        assert!(matches!(def.on_perfect_bump, Some(TriggerChain::SpawnBolt)));
     }
 
     #[test]
@@ -173,38 +132,65 @@ mod tests {
             name: "Chrono",
             stat_overrides: (),
             life_pool: None,
-            behaviors: [
-                (triggers: [BoltLost], consequence: TimePenalty(5.0)),
-                (triggers: [PerfectBump], consequence: BoltSpeedBoost(1.5)),
-                (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(1.1)),
-            ],
+            on_bolt_lost: Some(TimePenalty(seconds: 5.0)),
+            on_perfect_bump: Some(BoltSpeedBoost(multiplier: 1.5)),
+            on_early_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
+            on_late_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
+            chains: [],
         )
         "#;
         let def: ArchetypeDefinition =
             ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
         assert_eq!(def.name, "Chrono");
         assert!(def.life_pool.is_none());
-        assert_eq!(def.behaviors.len(), 3);
         assert!(matches!(
-            def.behaviors[0].consequence,
-            Consequence::TimePenalty(t) if (t - 5.0).abs() < f32::EPSILON
+            def.on_bolt_lost,
+            Some(TriggerChain::TimePenalty { seconds }) if (seconds - 5.0).abs() < f32::EPSILON
         ));
     }
 
     #[test]
-    fn multi_trigger_binding_parses() {
+    fn archetype_with_chains_parses() {
         let ron_str = r#"
         (
             name: "Test",
             stat_overrides: (),
             life_pool: None,
-            behaviors: [
-                (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(1.1)),
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: [
+                OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))),
             ],
         )
         "#;
         let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("multi-trigger RON should parse");
-        assert_eq!(def.behaviors[0].triggers.len(), 2);
+            ron::de::from_str(ron_str).expect("archetype with chains should parse");
+        assert_eq!(def.chains.len(), 1);
+    }
+
+    #[test]
+    fn apply_stat_overrides_partial() {
+        use super::super::init::apply_stat_overrides;
+        use crate::breaker::resources::BreakerConfig;
+
+        let mut config = BreakerConfig::default();
+        let original_max_speed = config.max_speed;
+
+        let overrides = BreakerStatOverrides {
+            width: Some(200.0),
+            height: Some(30.0),
+            ..default()
+        };
+
+        apply_stat_overrides(&mut config, &overrides);
+
+        assert!((config.width - 200.0).abs() < f32::EPSILON);
+        assert!((config.height - 30.0).abs() < f32::EPSILON);
+        assert!(
+            (config.max_speed - original_max_speed).abs() < f32::EPSILON,
+            "unset fields should remain unchanged"
+        );
     }
 }

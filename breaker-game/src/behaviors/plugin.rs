@@ -3,14 +3,17 @@
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveBehaviors,
-    bridges::{bridge_bolt_lost, bridge_bump, bridge_bump_whiff},
-    consequences::{
+    active::ActiveChains,
+    bridges::{
+        bridge_bolt_lost, bridge_breaker_impact, bridge_bump, bridge_bump_whiff,
+        bridge_cell_destroyed, bridge_cell_impact, bridge_wall_impact,
+    },
+    effects::{
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
+        shockwave::handle_shockwave,
         spawn_bolt::handle_spawn_bolt,
         time_penalty::handle_time_penalty,
     },
-    definition::Trigger,
     init::{apply_archetype_config_overrides, init_archetype},
     registry::ArchetypeRegistry,
     sets::BehaviorSystems,
@@ -26,19 +29,20 @@ use crate::{
 ///
 /// Registers:
 /// - Archetype init systems (config overrides, component stamping)
-/// - Per-trigger bridge systems (message → consequence event)
-/// - Consequence observers (event → game effect)
+/// - Per-trigger bridge systems (message → effect event)
+/// - Effect observers (event → game effect)
 /// - Lives HUD
 pub(crate) struct BehaviorsPlugin;
 
 impl Plugin for BehaviorsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ArchetypeRegistry>()
-            .init_resource::<ActiveBehaviors>()
-            // Consequence observers
+            .init_resource::<ActiveChains>()
+            // Effect observers
             .add_observer(handle_life_lost)
             .add_observer(handle_time_penalty)
             .add_observer(handle_spawn_bolt)
+            .add_observer(handle_shockwave)
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -56,16 +60,23 @@ impl Plugin for BehaviorsPlugin {
                 (
                     bridge_bolt_lost
                         .after(PhysicsSystems::BoltLost)
-                        .in_set(BehaviorSystems::Bridge)
-                        .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BoltLost)),
+                        .in_set(BehaviorSystems::Bridge),
                     bridge_bump
                         .after(BreakerSystems::GradeBump)
-                        .in_set(BehaviorSystems::Bridge)
-                        .run_if(|b: Res<ActiveBehaviors>| b.has_trigger_any_bump()),
+                        .in_set(BehaviorSystems::Bridge),
                     bridge_bump_whiff
                         .after(BreakerSystems::GradeBump)
-                        .in_set(BehaviorSystems::Bridge)
-                        .run_if(|b: Res<ActiveBehaviors>| b.has_trigger(Trigger::BumpWhiff)),
+                        .in_set(BehaviorSystems::Bridge),
+                    bridge_cell_impact
+                        .after(PhysicsSystems::BreakerCollision)
+                        .in_set(BehaviorSystems::Bridge),
+                    bridge_breaker_impact
+                        .after(PhysicsSystems::BreakerCollision)
+                        .in_set(BehaviorSystems::Bridge),
+                    bridge_wall_impact
+                        .after(PhysicsSystems::BreakerCollision)
+                        .in_set(BehaviorSystems::Bridge),
+                    bridge_cell_destroyed.in_set(BehaviorSystems::Bridge),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
@@ -102,7 +113,11 @@ mod tests {
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
             .add_message::<crate::physics::messages::BoltHitBreaker>()
+            .add_message::<crate::physics::messages::BoltHitCell>()
+            .add_message::<crate::physics::messages::BoltHitWall>()
             .add_message::<crate::physics::messages::BoltLost>()
+            .add_message::<crate::cells::messages::CellDestroyed>()
+            .add_message::<crate::breaker::messages::BumpWhiffed>()
             .add_plugins(BreakerPlugin)
             .add_plugins(BehaviorsPlugin)
             .update();

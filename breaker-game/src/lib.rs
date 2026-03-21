@@ -18,7 +18,7 @@ pub(crate) mod screen;
 pub mod shared;
 
 pub(crate) mod audio;
-pub(crate) mod behaviors;
+pub mod behaviors;
 pub mod bolt;
 pub mod breaker;
 pub(crate) mod cells;

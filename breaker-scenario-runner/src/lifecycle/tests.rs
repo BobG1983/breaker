@@ -914,17 +914,17 @@ fn restart_run_on_end_transitions_to_main_menu() {
 }
 
 // -------------------------------------------------------------------------
-// bypass_menu_to_playing — populates ActiveOverclocks from initial_overclocks
+// bypass_menu_to_playing — populates ActiveChains from initial_overclocks
 // -------------------------------------------------------------------------
 
 /// When `initial_overclocks` is `Some` with one chain, `bypass_menu_to_playing`
-/// must populate `ActiveOverclocks` with that chain.
+/// must populate `ActiveChains` with that chain.
 ///
 /// This test FAILS until `bypass_menu_to_playing` reads `initial_overclocks`
-/// and writes them to `ActiveOverclocks`.
+/// and writes them to `ActiveChains`.
 #[test]
 fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
-    use breaker::{bolt::ActiveOverclocks, chips::TriggerChain};
+    use breaker::{behaviors::ActiveChains, chips::TriggerChain};
 
     let mut definition = make_scenario(100);
     definition.initial_overclocks = Some(vec![TriggerChain::Shockwave {
@@ -939,18 +939,18 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
         .insert_resource(breaker::shared::SelectedArchetype::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveOverclocks>()
+        .init_resource::<ActiveChains>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
     app.update();
 
-    let active = app.world().resource::<ActiveOverclocks>();
+    let active = app.world().resource::<ActiveChains>();
     assert_eq!(
         active.0.len(),
         1,
-        "expected ActiveOverclocks to contain 1 chain when initial_overclocks is Some, got {}",
+        "expected ActiveChains to contain 1 chain when initial_overclocks is Some, got {}",
         active.0.len()
     );
     assert_eq!(
@@ -960,15 +960,15 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
             range_per_level: 0.0,
             stacks: 1
         },
-        "expected ActiveOverclocks[0] to be Shockwave"
+        "expected ActiveChains[0] to be Shockwave"
     );
 }
 
 /// When `initial_overclocks` is `None`, `bypass_menu_to_playing` must leave
-/// `ActiveOverclocks` at its default (empty vec).
+/// `ActiveChains` at its default (empty vec).
 #[test]
 fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
-    use breaker::bolt::ActiveOverclocks;
+    use breaker::behaviors::ActiveChains;
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -978,17 +978,17 @@ fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
         .insert_resource(breaker::shared::SelectedArchetype::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveOverclocks>()
+        .init_resource::<ActiveChains>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
     app.update();
 
-    let active = app.world().resource::<ActiveOverclocks>();
+    let active = app.world().resource::<ActiveChains>();
     assert!(
         active.0.is_empty(),
-        "expected ActiveOverclocks to be empty when initial_overclocks is None, got {} entries",
+        "expected ActiveChains to be empty when initial_overclocks is None, got {} entries",
         active.0.len()
     );
 }

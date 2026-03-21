@@ -1,4 +1,4 @@
-//! `ArmedTriggers` component — per-bolt list of partially-resolved trigger chains.
+//! `ArmedTriggers` component for the unified behaviors system.
 
 use bevy::prelude::*;
 

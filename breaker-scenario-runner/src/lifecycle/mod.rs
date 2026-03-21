@@ -12,7 +12,8 @@ mod tests;
 
 use bevy::prelude::*;
 use breaker::{
-    bolt::{ActiveOverclocks, BoltSystems, components::Bolt},
+    behaviors::ActiveChains,
+    bolt::{BoltSystems, components::Bolt},
     breaker::{BreakerSystems, components::Breaker, systems::update_breaker_state},
     input::resources::InputActions,
     run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
@@ -208,7 +209,7 @@ fn bypass_menu_to_playing(
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
-    mut active_overclocks: Option<ResMut<ActiveOverclocks>>,
+    mut active_overclocks: Option<ResMut<ActiveChains>>,
 ) {
     selected.0.clone_from(&config.definition.breaker);
     layout_override.0 = Some(config.definition.layout.clone());

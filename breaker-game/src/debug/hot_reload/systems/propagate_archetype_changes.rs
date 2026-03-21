@@ -4,16 +4,14 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     behaviors::{
-        active::ActiveBehaviors,
-        consequences::{bolt_speed_boost::apply_bolt_speed_boosts, life_lost::LivesCount},
-        definition::ArchetypeDefinition,
-        init::apply_stat_overrides,
-        registry::ArchetypeRegistry,
+        active::ActiveChains, definition::ArchetypeDefinition, effects::life_lost::LivesCount,
+        init::apply_stat_overrides, registry::ArchetypeRegistry,
     },
     breaker::{
-        components::Breaker,
+        components::{Breaker, BumpPerfectMultiplier, BumpWeakMultiplier},
         resources::{BreakerConfig, BreakerDefaults},
     },
+    chips::definition::TriggerChain,
     screen::loading::resources::DefaultsCollection,
     shared::SelectedArchetype,
 };
@@ -33,8 +31,8 @@ pub(crate) struct ArchetypeChangeContext<'w, 's> {
     registry: ResMut<'w, ArchetypeRegistry>,
     /// Mutable breaker configuration.
     config: ResMut<'w, BreakerConfig>,
-    /// Mutable active behaviors set.
-    active: ResMut<'w, ActiveBehaviors>,
+    /// Mutable active chains.
+    active: ResMut<'w, ActiveChains>,
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
     /// Command buffer for entity modifications.
@@ -46,7 +44,7 @@ pub(crate) struct ArchetypeChangeContext<'w, 's> {
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
 /// 2. Re-stamps consequence components (bolt speed multipliers)
 /// 3. Resets `LivesCount` if archetype has `life_pool`
-/// 4. Rebuilds `ActiveBehaviors`
+/// 4. Rebuilds `ActiveChains`
 pub(crate) fn propagate_archetype_changes(
     mut events: MessageReader<AssetEvent<ArchetypeDefinition>>,
     mut ctx: ArchetypeChangeContext,
@@ -84,23 +82,58 @@ pub(crate) fn propagate_archetype_changes(
 
     // Re-stamp consequence components and lives on breaker entities
     for entity in &ctx.breaker_query {
-        apply_bolt_speed_boosts(&mut ctx.commands, entity, &def.behaviors);
+        // Pre-stamp BoltSpeedBoost multipliers
+        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_perfect_bump {
+            ctx.commands
+                .entity(entity)
+                .insert(BumpPerfectMultiplier(*multiplier));
+        }
+        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_early_bump {
+            ctx.commands
+                .entity(entity)
+                .insert(BumpWeakMultiplier(*multiplier));
+        }
+        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_late_bump {
+            ctx.commands
+                .entity(entity)
+                .insert(BumpWeakMultiplier(*multiplier));
+        }
 
         if let Some(life_pool) = def.life_pool {
             ctx.commands.entity(entity).insert(LivesCount(life_pool));
         }
     }
 
-    *ctx.active = ActiveBehaviors::from_bindings(&def.behaviors);
+    // Build ActiveChains from root fields (filter BoltSpeedBoost) + chains
+    let mut chains = Vec::new();
+    if let Some(chain) = &def.on_bolt_lost
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnBoltLost(Box::new(chain.clone())));
+    }
+    if let Some(chain) = &def.on_perfect_bump
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnPerfectBump(Box::new(chain.clone())));
+    }
+    if let Some(chain) = &def.on_early_bump
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnEarlyBump(Box::new(chain.clone())));
+    }
+    if let Some(chain) = &def.on_late_bump
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnLateBump(Box::new(chain.clone())));
+    }
+    chains.extend(def.chains.iter().cloned());
+    *ctx.active = ActiveChains(chains);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        behaviors::definition::{BehaviorBinding, BreakerStatOverrides, Consequence, Trigger},
-        breaker::components::BumpPerfectMultiplier,
-    };
+    use crate::behaviors::definition::BreakerStatOverrides;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -110,7 +143,7 @@ mod tests {
             .init_resource::<BreakerConfig>()
             .init_resource::<ArchetypeRegistry>()
             .init_resource::<SelectedArchetype>()
-            .init_resource::<ActiveBehaviors>()
+            .init_resource::<ActiveChains>()
             .add_systems(Update, propagate_archetype_changes);
         app
     }
@@ -143,7 +176,11 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
         let handle = {
             let mut assets = app
@@ -188,7 +225,11 @@ mod tests {
                 ..default()
             },
             life_pool: None,
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
         let handle = {
             let mut assets = app
@@ -229,17 +270,18 @@ mod tests {
     }
 
     #[test]
-    fn active_behaviors_rebuilt_on_archetype_change() {
+    fn active_chains_rebuilt_on_archetype_change() {
         let mut app = test_app();
 
         let def = ArchetypeDefinition {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            behaviors: vec![BehaviorBinding {
-                triggers: vec![Trigger::PerfectBump],
-                consequence: Consequence::BoltSpeedBoost(1.5),
-            }],
+            on_bolt_lost: None,
+            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
         let handle = {
             let mut assets = app
@@ -256,36 +298,31 @@ mod tests {
         app.update();
         app.update();
 
-        // Modify behaviors
+        // Modify: add bolt_lost and early/late bump
         {
             let mut assets = app
                 .world_mut()
                 .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.behaviors = vec![
-                BehaviorBinding {
-                    triggers: vec![Trigger::BoltLost],
-                    consequence: Consequence::LoseLife,
-                },
-                BehaviorBinding {
-                    triggers: vec![Trigger::EarlyBump, Trigger::LateBump],
-                    consequence: Consequence::BoltSpeedBoost(1.1),
-                },
-            ];
+            asset.on_bolt_lost = Some(TriggerChain::LoseLife);
+            asset.on_early_bump = Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 });
+            asset.on_late_bump = Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 });
         }
 
         app.update();
         app.update();
 
-        let active = app.world().resource::<ActiveBehaviors>();
+        let active = app.world().resource::<ActiveChains>();
+        // on_bolt_lost=LoseLife → OnBoltLost(LoseLife) (1)
+        // on_perfect_bump=BoltSpeedBoost → filtered out
+        // on_early_bump=BoltSpeedBoost → filtered out
+        // on_late_bump=BoltSpeedBoost → filtered out
         assert_eq!(
             active.0.len(),
-            3,
-            "should have 3 flattened bindings (1 + 2 multi-trigger)"
+            1,
+            "should have 1 active chain (BoltSpeedBoost filtered), got {}",
+            active.0.len()
         );
-        assert!(active.has_trigger(Trigger::BoltLost));
-        assert!(active.has_trigger(Trigger::EarlyBump));
-        assert!(active.has_trigger(Trigger::LateBump));
     }
 
     #[test]
@@ -296,7 +333,11 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
         let handle = {
             let mut assets = app
@@ -343,10 +384,11 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            behaviors: vec![BehaviorBinding {
-                triggers: vec![Trigger::PerfectBump],
-                consequence: Consequence::BoltSpeedBoost(1.5),
-            }],
+            on_bolt_lost: None,
+            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
         let handle = {
             let mut assets = app
@@ -374,10 +416,7 @@ mod tests {
                 .world_mut()
                 .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.behaviors = vec![BehaviorBinding {
-                triggers: vec![Trigger::PerfectBump],
-                consequence: Consequence::BoltSpeedBoost(2.0),
-            }];
+            asset.on_perfect_bump = Some(TriggerChain::BoltSpeedBoost { multiplier: 2.0 });
         }
 
         app.update();

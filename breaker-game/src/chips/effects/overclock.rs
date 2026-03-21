@@ -1,21 +1,18 @@
 //! Overclock chip effect observer — pushes overclock trigger chains into
-//! `ActiveOverclocks`.
+//! `ActiveChains`.
 
 use bevy::prelude::*;
 
 use crate::{
-    bolt::behaviors::ActiveOverclocks,
+    behaviors::ActiveChains,
     chips::definition::{ChipEffect, ChipEffectApplied, ImpactTarget},
 };
 
-/// Observer: adds overclock trigger chains to `ActiveOverclocks` when a
+/// Observer: adds overclock trigger chains to `ActiveChains` when a
 /// `ChipEffectApplied` with an `Overclock` effect is observed.
 ///
 /// Self-selects via pattern matching — ignores `Amp` and `Augment` effects.
-pub(crate) fn handle_overclock(
-    trigger: On<ChipEffectApplied>,
-    mut active: ResMut<ActiveOverclocks>,
-) {
+pub(crate) fn handle_overclock(trigger: On<ChipEffectApplied>, mut active: ResMut<ActiveChains>) {
     if let ChipEffect::Overclock(chain) = &trigger.event().effect {
         active.0.push(chain.clone());
     }
@@ -29,7 +26,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .init_resource::<ActiveOverclocks>()
+            .init_resource::<ActiveChains>()
             .add_observer(handle_overclock);
         app
     }
@@ -48,11 +45,11 @@ mod tests {
         });
         app.world_mut().flush();
 
-        let active = app.world().resource::<ActiveOverclocks>();
+        let active = app.world().resource::<ActiveChains>();
         assert_eq!(
             active.0.len(),
             1,
-            "handle_overclock should push the chain into ActiveOverclocks"
+            "handle_overclock should push the chain into ActiveChains"
         );
         assert_eq!(active.0[0], chain);
     }
@@ -67,7 +64,7 @@ mod tests {
         });
         app.world_mut().flush();
 
-        let active = app.world().resource::<ActiveOverclocks>();
+        let active = app.world().resource::<ActiveChains>();
         assert!(
             active.0.is_empty(),
             "handle_overclock should ignore Amp effects"

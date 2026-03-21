@@ -1,21 +1,21 @@
-//! Time penalty consequence — observer that translates event into a message.
+//! Time penalty effect handler — observer that translates event into a message.
 
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::definition::{Consequence, ConsequenceFired},
+    behaviors::events::EffectFired, chips::definition::TriggerChain,
     run::node::messages::ApplyTimePenalty,
 };
 
 /// Observer that handles time penalty — writes [`ApplyTimePenalty`] message.
 pub(crate) fn handle_time_penalty(
-    trigger: On<ConsequenceFired>,
+    trigger: On<EffectFired>,
     mut writer: MessageWriter<ApplyTimePenalty>,
 ) {
-    let Consequence::TimePenalty(seconds) = trigger.event().0 else {
+    let TriggerChain::TimePenalty { seconds } = &trigger.event().effect else {
         return;
     };
-    writer.write(ApplyTimePenalty { seconds });
+    writer.write(ApplyTimePenalty { seconds: *seconds });
 }
 
 #[cfg(test)]
@@ -56,28 +56,38 @@ mod tests {
     fn handle_time_penalty_sends_apply_message() {
         let mut app = test_app();
 
-        app.world_mut()
-            .commands()
-            .trigger(ConsequenceFired(Consequence::TimePenalty(5.0)));
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::TimePenalty { seconds: 5.0 },
+            bolt: None,
+        });
         app.world_mut().flush();
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedApplyTimePenalty>();
-        assert_eq!(captured.0.len(), 1);
-        assert!((captured.0[0] - 5.0).abs() < f32::EPSILON);
+        assert_eq!(captured.0.len(), 1, "should write one ApplyTimePenalty");
+        assert!(
+            (captured.0[0] - 5.0).abs() < f32::EPSILON,
+            "ApplyTimePenalty.seconds should be 5.0, got {}",
+            captured.0[0]
+        );
     }
 
     #[test]
-    fn handle_time_penalty_preserves_seconds_value() {
+    fn non_time_penalty_effect_does_not_send_message() {
         let mut app = test_app();
 
-        app.world_mut()
-            .commands()
-            .trigger(ConsequenceFired(Consequence::TimePenalty(12.5)));
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::LoseLife,
+            bolt: None,
+        });
         app.world_mut().flush();
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedApplyTimePenalty>();
-        assert!((captured.0[0] - 12.5).abs() < f32::EPSILON);
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "LoseLife effect should not produce ApplyTimePenalty (self-selection)"
+        );
     }
 }

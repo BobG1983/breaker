@@ -3,9 +3,9 @@
     name: "Chrono",
     stat_overrides: (),
     life_pool: None,
-    behaviors: [
-        (triggers: [BoltLost], consequence: TimePenalty(5.0)),
-        (triggers: [PerfectBump], consequence: BoltSpeedBoost(1.5)),
-        (triggers: [EarlyBump, LateBump], consequence: BoltSpeedBoost(1.1)),
-    ],
+    on_bolt_lost: Some(TimePenalty(seconds: 5.0)),
+    on_perfect_bump: Some(BoltSpeedBoost(multiplier: 1.5)),
+    on_early_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
+    on_late_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
+    chains: [],
 )

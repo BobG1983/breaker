@@ -1,89 +1,339 @@
-//! Per-trigger bridge systems — translate messages into consequence events.
+//! Per-trigger bridge systems — translate messages into effect events.
+//!
+//! Each bridge reads one message type, evaluates all active chains,
+//! and either fires `EffectFired` or arms the bolt with `ArmedTriggers`.
 
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveBehaviors,
-    definition::{Consequence, ConsequenceFired, Trigger},
+    active::ActiveChains,
+    armed::ArmedTriggers,
+    evaluate::{EvalResult, TriggerKind, evaluate},
+    events::EffectFired,
 };
 use crate::{
     breaker::messages::{BumpGrade, BumpPerformed, BumpWhiffed},
-    physics::messages::BoltLost,
+    cells::messages::CellDestroyed,
+    chips::definition::TriggerChain,
+    physics::messages::{BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost},
 };
 
-/// Reads `BoltLost` messages and fires consequence events for that trigger.
+/// Bridge for `BoltLost` — evaluates chains when a bolt is lost.
 ///
-/// Drains all messages (not just the first) so that extras from future multi-bolt
-/// archetypes don't leak into subsequent frames. Consequences fire once per
-/// bridge invocation regardless of how many bolts were lost in the same frame.
+/// Global trigger: evaluates active chains once per frame (not per message)
+/// and evaluates armed triggers on ALL bolt entities.
 pub(crate) fn bridge_bolt_lost(
     mut reader: MessageReader<BoltLost>,
-    bindings: Res<ActiveBehaviors>,
+    active: Res<ActiveChains>,
+    armed_query: Query<(Entity, &mut ArmedTriggers)>,
     mut commands: Commands,
 ) {
     if reader.read().count() == 0 {
         return;
     }
-    fire_consequences(&bindings, Trigger::BoltLost, &mut commands);
+    let trigger_kind = TriggerKind::BoltLost;
+    evaluate_active_chains(&active, trigger_kind, None, &mut commands);
+    evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 }
 
-/// Reads `BumpWhiffed` messages and fires consequence events for that trigger.
+/// Bridge for `BumpPerformed` — evaluates chains on bump.
 ///
-/// Drains all messages (not just the first) so that extras don't leak into
-/// subsequent frames. Consequences fire once per bridge invocation.
-pub(crate) fn bridge_bump_whiff(
-    mut reader: MessageReader<BumpWhiffed>,
-    bindings: Res<ActiveBehaviors>,
-    mut commands: Commands,
-) {
-    if reader.read().count() == 0 {
-        return;
-    }
-    fire_consequences(&bindings, Trigger::BumpWhiff, &mut commands);
-}
-
-/// Reads `BumpPerformed` messages and fires consequence events for the
-/// corresponding bump trigger.
+/// For each bump message, evaluates two trigger kinds:
+/// 1. Grade-specific: Perfect→`PerfectBump`, Early→`EarlyBump`, Late→`LateBump`
+/// 2. `BumpSuccess`: all non-whiff bumps evaluate `OnBumpSuccess` chains.
 pub(crate) fn bridge_bump(
     mut reader: MessageReader<BumpPerformed>,
-    bindings: Res<ActiveBehaviors>,
+    active: Res<ActiveChains>,
+    mut armed_query: Query<&mut ArmedTriggers>,
     mut commands: Commands,
 ) {
-    for msg in reader.read() {
-        let trigger = match msg.grade {
-            BumpGrade::Perfect => Trigger::PerfectBump,
-            BumpGrade::Early => Trigger::EarlyBump,
-            BumpGrade::Late => Trigger::LateBump,
+    for performed in reader.read() {
+        let bolt_entity = performed.bolt;
+        let grade_trigger = match performed.grade {
+            BumpGrade::Perfect => TriggerKind::PerfectBump,
+            BumpGrade::Early => TriggerKind::EarlyBump,
+            BumpGrade::Late => TriggerKind::LateBump,
         };
-        fire_consequences(&bindings, trigger, &mut commands);
+
+        for chain in &active.0 {
+            // Grade-specific evaluation
+            match evaluate(grade_trigger, chain) {
+                EvalResult::Fire(leaf) => {
+                    commands.trigger(EffectFired {
+                        effect: leaf,
+                        bolt: Some(bolt_entity),
+                    });
+                }
+                EvalResult::Arm(remaining) => {
+                    arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
+                }
+                EvalResult::NoMatch => {}
+            }
+            // BumpSuccess evaluation (all grades)
+            match evaluate(TriggerKind::BumpSuccess, chain) {
+                EvalResult::Fire(leaf) => {
+                    commands.trigger(EffectFired {
+                        effect: leaf,
+                        bolt: Some(bolt_entity),
+                    });
+                }
+                EvalResult::Arm(remaining) => {
+                    arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
+                }
+                EvalResult::NoMatch => {}
+            }
+        }
+
+        // Evaluate armed triggers on the specific bolt
+        evaluate_armed(&mut armed_query, &mut commands, bolt_entity, grade_trigger);
+        evaluate_armed(
+            &mut armed_query,
+            &mut commands,
+            bolt_entity,
+            TriggerKind::BumpSuccess,
+        );
     }
 }
 
-/// Dispatches consequences for the given trigger via [`ConsequenceFired`].
+/// Bridge for `BumpWhiffed` — evaluates chains when a bump whiffs.
 ///
-/// Each handler self-selects via pattern matching on the [`Consequence`] variant.
-/// Adding a new consequence never touches this function.
-///
-/// `BoltSpeedBoost` is skipped — it is applied once at init time by
-/// `consequences::bolt_speed_boost` when the archetype loads.
-fn fire_consequences(bindings: &ActiveBehaviors, trigger: Trigger, commands: &mut Commands) {
-    for consequence in bindings.consequences_for(trigger) {
-        if matches!(consequence, Consequence::BoltSpeedBoost(_)) {
-            continue; // Init-time only — no runtime handler
-        }
-        commands.trigger(ConsequenceFired(consequence.clone()));
+/// Global trigger: evaluates active chains once per frame and evaluates
+/// armed triggers on ALL bolt entities.
+pub(crate) fn bridge_bump_whiff(
+    mut reader: MessageReader<BumpWhiffed>,
+    active: Res<ActiveChains>,
+    armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    mut commands: Commands,
+) {
+    if reader.read().count() == 0 {
+        return;
     }
+    let trigger_kind = TriggerKind::BumpWhiff;
+    evaluate_active_chains(&active, trigger_kind, None, &mut commands);
+    evaluate_armed_all(armed_query, trigger_kind, &mut commands);
+}
+
+/// Bridge for `BoltHitCell` — evaluates chains and armed triggers on cell impact.
+pub(crate) fn bridge_cell_impact(
+    mut reader: MessageReader<BoltHitCell>,
+    active: Res<ActiveChains>,
+    mut armed_query: Query<&mut ArmedTriggers>,
+    mut commands: Commands,
+) {
+    for hit in reader.read() {
+        let bolt_entity = hit.bolt;
+        for chain in &active.0 {
+            match evaluate(TriggerKind::CellImpact, chain) {
+                EvalResult::Fire(leaf) => {
+                    commands.trigger(EffectFired {
+                        effect: leaf,
+                        bolt: Some(bolt_entity),
+                    });
+                }
+                EvalResult::Arm(remaining) => {
+                    arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
+                }
+                EvalResult::NoMatch => {}
+            }
+        }
+        evaluate_armed(
+            &mut armed_query,
+            &mut commands,
+            bolt_entity,
+            TriggerKind::CellImpact,
+        );
+    }
+}
+
+/// Bridge for `BoltHitBreaker` — evaluates chains and armed triggers on
+/// breaker impact.
+pub(crate) fn bridge_breaker_impact(
+    mut reader: MessageReader<BoltHitBreaker>,
+    active: Res<ActiveChains>,
+    mut armed_query: Query<&mut ArmedTriggers>,
+    mut commands: Commands,
+) {
+    for hit in reader.read() {
+        let bolt_entity = hit.bolt;
+        for chain in &active.0 {
+            match evaluate(TriggerKind::BreakerImpact, chain) {
+                EvalResult::Fire(leaf) => {
+                    commands.trigger(EffectFired {
+                        effect: leaf,
+                        bolt: Some(bolt_entity),
+                    });
+                }
+                EvalResult::Arm(remaining) => {
+                    arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
+                }
+                EvalResult::NoMatch => {}
+            }
+        }
+        evaluate_armed(
+            &mut armed_query,
+            &mut commands,
+            bolt_entity,
+            TriggerKind::BreakerImpact,
+        );
+    }
+}
+
+/// Bridge for `BoltHitWall` — evaluates chains and armed triggers on
+/// wall impact.
+pub(crate) fn bridge_wall_impact(
+    mut reader: MessageReader<BoltHitWall>,
+    active: Res<ActiveChains>,
+    mut armed_query: Query<&mut ArmedTriggers>,
+    mut commands: Commands,
+) {
+    for hit in reader.read() {
+        let bolt_entity = hit.bolt;
+        for chain in &active.0 {
+            match evaluate(TriggerKind::WallImpact, chain) {
+                EvalResult::Fire(leaf) => {
+                    commands.trigger(EffectFired {
+                        effect: leaf,
+                        bolt: Some(bolt_entity),
+                    });
+                }
+                EvalResult::Arm(remaining) => {
+                    arm_bolt(&mut armed_query, &mut commands, bolt_entity, remaining);
+                }
+                EvalResult::NoMatch => {}
+            }
+        }
+        evaluate_armed(
+            &mut armed_query,
+            &mut commands,
+            bolt_entity,
+            TriggerKind::WallImpact,
+        );
+    }
+}
+
+/// Bridge for `CellDestroyed` — evaluates chains when a cell is destroyed.
+///
+/// Global trigger: evaluates active chains once per frame and evaluates
+/// armed triggers on ALL bolt entities.
+pub(crate) fn bridge_cell_destroyed(
+    mut reader: MessageReader<CellDestroyed>,
+    active: Res<ActiveChains>,
+    armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    mut commands: Commands,
+) {
+    if reader.read().count() == 0 {
+        return;
+    }
+    let trigger_kind = TriggerKind::CellDestroyed;
+    evaluate_active_chains(&active, trigger_kind, None, &mut commands);
+    evaluate_armed_all(armed_query, trigger_kind, &mut commands);
+}
+
+/// Evaluates all active chains against a trigger kind.
+///
+/// `Arm` results are intentionally discarded for global triggers — only `Fire`
+/// results are actioned. Arming requires a specific bolt entity, which global
+/// triggers (cell destroyed, bolt lost, bump whiff) don't provide.
+fn evaluate_active_chains(
+    active: &ActiveChains,
+    trigger_kind: TriggerKind,
+    bolt: Option<Entity>,
+    commands: &mut Commands,
+) {
+    for chain in &active.0 {
+        match evaluate(trigger_kind, chain) {
+            EvalResult::Fire(leaf) => {
+                commands.trigger(EffectFired { effect: leaf, bolt });
+            }
+            EvalResult::Arm(_) | EvalResult::NoMatch => {}
+        }
+    }
+}
+
+/// Evaluates armed triggers on all bolt entities that have `ArmedTriggers`.
+fn evaluate_armed_all(
+    mut armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    trigger_kind: TriggerKind,
+    commands: &mut Commands,
+) {
+    for (bolt_entity, mut armed) in &mut armed_query {
+        resolve_armed(&mut armed, trigger_kind, Some(bolt_entity), commands);
+    }
+}
+
+/// Arms a bolt entity with a remaining trigger chain.
+///
+/// If the bolt already has `ArmedTriggers`, pushes to the existing vec.
+/// Otherwise, inserts a new `ArmedTriggers` component.
+fn arm_bolt(
+    armed_query: &mut Query<&mut ArmedTriggers>,
+    commands: &mut Commands,
+    bolt_entity: Entity,
+    remaining: TriggerChain,
+) {
+    if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
+        armed.0.push(remaining);
+    } else {
+        commands
+            .entity(bolt_entity)
+            .insert(ArmedTriggers(vec![remaining]));
+    }
+}
+
+/// Evaluates armed triggers on a specific bolt entity.
+fn evaluate_armed(
+    armed_query: &mut Query<&mut ArmedTriggers>,
+    commands: &mut Commands,
+    bolt_entity: Entity,
+    trigger_kind: TriggerKind,
+) {
+    if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
+        resolve_armed(&mut armed, trigger_kind, Some(bolt_entity), commands);
+    }
+}
+
+/// Resolves armed trigger chains: fires leaves, re-arms non-leaves, retains non-matches.
+fn resolve_armed(
+    armed: &mut ArmedTriggers,
+    trigger_kind: TriggerKind,
+    bolt: Option<Entity>,
+    commands: &mut Commands,
+) {
+    let mut new_armed = Vec::new();
+    for chain in armed.0.drain(..) {
+        match evaluate(trigger_kind, &chain) {
+            EvalResult::Fire(leaf) => commands.trigger(EffectFired { effect: leaf, bolt }),
+            EvalResult::Arm(next) => new_armed.push(next),
+            EvalResult::NoMatch => new_armed.push(chain),
+        }
+    }
+    armed.0 = new_armed;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::messages::BumpWhiffed;
+    use crate::{
+        behaviors::events::EffectFired,
+        breaker::messages::BumpGrade,
+        chips::definition::{ImpactTarget, TriggerChain},
+    };
+
+    // --- Test infrastructure ---
+
+    #[derive(Resource, Default)]
+    struct CapturedEffects(Vec<(TriggerChain, Option<Entity>)>);
+
+    fn capture_effects(trigger: On<EffectFired>, mut captured: ResMut<CapturedEffects>) {
+        captured
+            .0
+            .push((trigger.event().effect.clone(), trigger.event().bolt));
+    }
 
     #[derive(Resource)]
-    struct SendBoltLost(bool);
+    struct SendBoltLostFlag(bool);
 
-    fn send_bolt_lost(flag: Res<SendBoltLost>, mut writer: MessageWriter<BoltLost>) {
+    fn send_bolt_lost(flag: Res<SendBoltLostFlag>, mut writer: MessageWriter<BoltLost>) {
         if flag.0 {
             writer.write(BoltLost);
         }
@@ -98,6 +348,54 @@ mod tests {
         }
     }
 
+    #[derive(Resource)]
+    struct SendBumpWhiffFlag(bool);
+
+    fn send_bump_whiff(flag: Res<SendBumpWhiffFlag>, mut writer: MessageWriter<BumpWhiffed>) {
+        if flag.0 {
+            writer.write(BumpWhiffed);
+        }
+    }
+
+    #[derive(Resource)]
+    struct SendBoltHitCell(Option<BoltHitCell>);
+
+    fn send_bolt_hit_cell(msg: Res<SendBoltHitCell>, mut writer: MessageWriter<BoltHitCell>) {
+        if let Some(m) = msg.0.clone() {
+            writer.write(m);
+        }
+    }
+
+    #[derive(Resource)]
+    struct SendBoltHitBreaker(Option<BoltHitBreaker>);
+
+    fn send_bolt_hit_breaker(
+        msg: Res<SendBoltHitBreaker>,
+        mut writer: MessageWriter<BoltHitBreaker>,
+    ) {
+        if let Some(m) = msg.0.clone() {
+            writer.write(m);
+        }
+    }
+
+    #[derive(Resource)]
+    struct SendBoltHitWall(Option<BoltHitWall>);
+
+    fn send_bolt_hit_wall(msg: Res<SendBoltHitWall>, mut writer: MessageWriter<BoltHitWall>) {
+        if let Some(m) = msg.0.clone() {
+            writer.write(m);
+        }
+    }
+
+    #[derive(Resource)]
+    struct SendCellDestroyed(Option<CellDestroyed>);
+
+    fn send_cell_destroyed(msg: Res<SendCellDestroyed>, mut writer: MessageWriter<CellDestroyed>) {
+        if let Some(m) = msg.0.clone() {
+            writer.write(m);
+        }
+    }
+
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
         app.world_mut()
@@ -106,352 +404,521 @@ mod tests {
         app.update();
     }
 
-    mod bolt_lost {
-        use super::*;
-        use crate::{behaviors::consequences::life_lost::LivesCount, run::messages::RunLost};
+    // --- Per-bridge test app builders ---
 
-        fn test_app() -> App {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BoltLost>()
-                .add_message::<RunLost>()
-                .insert_resource(ActiveBehaviors(vec![(
-                    Trigger::BoltLost,
-                    Consequence::LoseLife,
-                )]))
-                .insert_resource(SendBoltLost(false))
-                .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
-                .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
-            app
-        }
-
-        #[test]
-        fn bolt_lost_triggers_lose_life() {
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            app.world_mut().resource_mut::<SendBoltLost>().0 = true;
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 2);
-        }
-
-        #[test]
-        fn no_bolt_lost_no_consequence() {
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 3);
-        }
+    fn bolt_lost_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltLost>()
+            .insert_resource(ActiveChains(active_chains))
+            .insert_resource(SendBoltLostFlag(false))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
+        app
     }
 
-    mod bolt_lost_time_penalty {
-        use super::*;
-        use crate::run::node::messages::ApplyTimePenalty;
-
-        #[derive(Resource, Default)]
-        struct CapturedPenalties(Vec<f32>);
-
-        fn capture_penalties(
-            mut reader: MessageReader<ApplyTimePenalty>,
-            mut captured: ResMut<CapturedPenalties>,
-        ) {
-            for msg in reader.read() {
-                captured.0.push(msg.seconds);
-            }
-        }
-
-        fn test_app() -> App {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BoltLost>()
-                .add_message::<ApplyTimePenalty>()
-                .insert_resource(ActiveBehaviors(vec![(
-                    Trigger::BoltLost,
-                    Consequence::TimePenalty(5.0),
-                )]))
-                .insert_resource(SendBoltLost(false))
-                .init_resource::<CapturedPenalties>()
-                .add_observer(crate::behaviors::consequences::time_penalty::handle_time_penalty)
-                .add_systems(
-                    FixedUpdate,
-                    (send_bolt_lost, bridge_bolt_lost, capture_penalties).chain(),
-                );
-            app
-        }
-
-        #[test]
-        fn bolt_lost_triggers_time_penalty() {
-            let mut app = test_app();
-            app.world_mut().resource_mut::<SendBoltLost>().0 = true;
-            tick(&mut app);
-
-            let captured = app.world().resource::<CapturedPenalties>();
-            assert_eq!(captured.0.len(), 1);
-            assert!((captured.0[0] - 5.0).abs() < f32::EPSILON);
-        }
-
-        #[test]
-        fn time_penalty_does_not_lose_life() {
-            use crate::behaviors::consequences::life_lost::LivesCount;
-
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            app.world_mut().resource_mut::<SendBoltLost>().0 = true;
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 3, "TimePenalty should not affect lives");
-        }
-    }
-
-    mod bump_spawn_bolt {
-        use super::*;
-        use crate::bolt::messages::SpawnAdditionalBolt;
-
-        #[derive(Resource, Default)]
-        struct CapturedSpawnBolt(u32);
-
-        fn capture_spawn(
-            mut reader: MessageReader<SpawnAdditionalBolt>,
-            mut captured: ResMut<CapturedSpawnBolt>,
-        ) {
-            for _msg in reader.read() {
-                captured.0 += 1;
-            }
-        }
-
-        fn test_app() -> App {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BumpPerformed>()
-                .add_message::<SpawnAdditionalBolt>()
-                .insert_resource(ActiveBehaviors(vec![(
-                    Trigger::PerfectBump,
-                    Consequence::SpawnBolt,
-                )]))
-                .insert_resource(SendBump(None))
-                .init_resource::<CapturedSpawnBolt>()
-                .add_observer(crate::behaviors::consequences::spawn_bolt::handle_spawn_bolt)
-                .add_systems(FixedUpdate, (send_bump, bridge_bump, capture_spawn).chain());
-            app
-        }
-
-        #[test]
-        fn perfect_bump_triggers_spawn_bolt() {
-            let mut app = test_app();
-            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
-                grade: BumpGrade::Perfect,
-                multiplier: 1.5,
-                bolt: Entity::PLACEHOLDER,
-            });
-            tick(&mut app);
-
-            let captured = app.world().resource::<CapturedSpawnBolt>();
-            assert_eq!(captured.0, 1, "perfect bump should trigger SpawnBolt");
-        }
-
-        #[test]
-        fn early_bump_does_not_trigger_spawn_bolt() {
-            let mut app = test_app();
-            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
-                grade: BumpGrade::Early,
-                multiplier: 1.1,
-                bolt: Entity::PLACEHOLDER,
-            });
-            tick(&mut app);
-
-            let captured = app.world().resource::<CapturedSpawnBolt>();
-            assert_eq!(captured.0, 0, "early bump should not trigger SpawnBolt");
-        }
-    }
-
-    mod bump {
-        use super::*;
-        use crate::{behaviors::consequences::life_lost::LivesCount, run::messages::RunLost};
-
-        fn test_app() -> App {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BumpPerformed>()
-                .add_message::<RunLost>();
-            // BumpWhiff triggers LoseLife (for testing bridge_bump dispatch)
-            app.insert_resource(ActiveBehaviors(vec![
-                (Trigger::PerfectBump, Consequence::BoltSpeedBoost(1.5)),
-                (Trigger::EarlyBump, Consequence::LoseLife),
-            ]))
+    fn bump_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveChains(active_chains))
             .insert_resource(SendBump(None))
-            .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
             .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
-            app
-        }
-
-        #[test]
-        fn early_bump_triggers_lose_life() {
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
-                grade: BumpGrade::Early,
-                multiplier: 1.1,
-                bolt: Entity::PLACEHOLDER,
-            });
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 2);
-        }
-
-        #[test]
-        fn perfect_bump_does_not_lose_life() {
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
-                grade: BumpGrade::Perfect,
-                multiplier: 1.5,
-                bolt: Entity::PLACEHOLDER,
-            });
-            tick(&mut app);
-
-            // BoltSpeedBoost is init-time only, should not fire LoseLife
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 3);
-        }
+        app
     }
 
-    mod bump_whiff {
-        use super::*;
-        use crate::{behaviors::consequences::life_lost::LivesCount, run::messages::RunLost};
-
-        #[derive(Resource)]
-        struct SendBumpWhiff(bool);
-
-        fn send_bump_whiff(flag: Res<SendBumpWhiff>, mut writer: MessageWriter<BumpWhiffed>) {
-            if flag.0 {
-                writer.write(BumpWhiffed);
-            }
-        }
-
-        fn test_app() -> App {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BumpWhiffed>()
-                .add_message::<RunLost>()
-                .insert_resource(ActiveBehaviors(vec![(
-                    Trigger::BumpWhiff,
-                    Consequence::LoseLife,
-                )]))
-                .insert_resource(SendBumpWhiff(false))
-                .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
-                .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
-            app
-        }
-
-        #[test]
-        fn bump_whiff_triggers_lose_life() {
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            app.world_mut().resource_mut::<SendBumpWhiff>().0 = true;
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 2);
-        }
-
-        #[test]
-        fn no_bump_whiff_no_consequence() {
-            let mut app = test_app();
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(lives.0, 3);
-        }
-
-        #[test]
-        fn bump_whiff_does_not_fire_for_bolt_lost_trigger() {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BumpWhiffed>()
-                .add_message::<RunLost>()
-                .insert_resource(ActiveBehaviors(vec![(
-                    Trigger::BoltLost,
-                    Consequence::LoseLife,
-                )]))
-                .insert_resource(SendBumpWhiff(false))
-                .add_observer(crate::behaviors::consequences::life_lost::handle_life_lost)
-                .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
-
-            let entity = app.world_mut().spawn(LivesCount(3)).id();
-            app.world_mut().resource_mut::<SendBumpWhiff>().0 = true;
-            tick(&mut app);
-
-            let lives = app.world().get::<LivesCount>(entity).unwrap();
-            assert_eq!(
-                lives.0, 3,
-                "BumpWhiff trigger should not fire BoltLost consequence"
-            );
-        }
+    fn bump_whiff_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpWhiffed>()
+            .insert_resource(ActiveChains(active_chains))
+            .insert_resource(SendBumpWhiffFlag(false))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
+        app
     }
 
-    mod bump_whiff_time_penalty {
-        use super::*;
-        use crate::run::node::messages::ApplyTimePenalty;
-
-        #[derive(Resource)]
-        struct SendBumpWhiff(bool);
-
-        fn send_bump_whiff(flag: Res<SendBumpWhiff>, mut writer: MessageWriter<BumpWhiffed>) {
-            if flag.0 {
-                writer.write(BumpWhiffed);
-            }
-        }
-
-        #[derive(Resource, Default)]
-        struct CapturedPenalties(Vec<f32>);
-
-        fn capture_penalties(
-            mut reader: MessageReader<ApplyTimePenalty>,
-            mut captured: ResMut<CapturedPenalties>,
-        ) {
-            for msg in reader.read() {
-                captured.0.push(msg.seconds);
-            }
-        }
-
-        fn test_app() -> App {
-            let mut app = App::new();
-            app.add_plugins(MinimalPlugins)
-                .add_message::<BumpWhiffed>()
-                .add_message::<ApplyTimePenalty>()
-                .insert_resource(ActiveBehaviors(vec![(
-                    Trigger::BumpWhiff,
-                    Consequence::TimePenalty(3.0),
-                )]))
-                .insert_resource(SendBumpWhiff(false))
-                .init_resource::<CapturedPenalties>()
-                .add_observer(crate::behaviors::consequences::time_penalty::handle_time_penalty)
-                .add_systems(
-                    FixedUpdate,
-                    (send_bump_whiff, bridge_bump_whiff, capture_penalties).chain(),
-                );
-            app
-        }
-
-        #[test]
-        fn bump_whiff_triggers_time_penalty() {
-            let mut app = test_app();
-            app.world_mut().resource_mut::<SendBumpWhiff>().0 = true;
-            tick(&mut app);
-
-            let captured = app.world().resource::<CapturedPenalties>();
-            assert_eq!(captured.0.len(), 1);
-            assert!(
-                (captured.0[0] - 3.0).abs() < f32::EPSILON,
-                "expected 3.0 second penalty, got {}",
-                captured.0[0]
+    fn cell_impact_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitCell>()
+            .insert_resource(ActiveChains(active_chains))
+            .insert_resource(SendBoltHitCell(None))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(
+                FixedUpdate,
+                (send_bolt_hit_cell, bridge_cell_impact).chain(),
             );
-        }
+        app
+    }
+
+    fn breaker_impact_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitBreaker>()
+            .insert_resource(ActiveChains(active_chains))
+            .insert_resource(SendBoltHitBreaker(None))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(
+                FixedUpdate,
+                (send_bolt_hit_breaker, bridge_breaker_impact).chain(),
+            );
+        app
+    }
+
+    fn wall_impact_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitWall>()
+            .insert_resource(ActiveChains(active_chains))
+            .insert_resource(SendBoltHitWall(None))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(
+                FixedUpdate,
+                (send_bolt_hit_wall, bridge_wall_impact).chain(),
+            );
+        app
+    }
+
+    fn cell_destroyed_test_app(active_chains: Vec<TriggerChain>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellDestroyed>()
+            .insert_resource(ActiveChains(active_chains))
+            .insert_resource(SendCellDestroyed(None))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(
+                FixedUpdate,
+                (send_cell_destroyed, bridge_cell_destroyed).chain(),
+            );
+        app
+    }
+
+    // --- Bolt lost bridge tests ---
+
+    #[test]
+    fn bolt_lost_fires_active_chains() {
+        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::test_lose_life()));
+        let mut app = bolt_lost_test_app(vec![chain]);
+        app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::LoseLife);
+        assert_eq!(captured.0[0].1, None);
+    }
+
+    #[test]
+    fn bolt_lost_no_message_no_fire() {
+        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::test_lose_life()));
+        let mut app = bolt_lost_test_app(vec![chain]);
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(captured.0.is_empty());
+    }
+
+    // --- Bump bridge tests ---
+
+    #[test]
+    fn perfect_bump_fires_on_perfect_bump_chain() {
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
+        let mut app = bump_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: 1.5,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
+        assert_eq!(captured.0[0].1, Some(bolt));
+    }
+
+    #[test]
+    fn perfect_bump_fires_both_on_perfect_bump_and_on_bump_success() {
+        let chains = vec![
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0))),
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0))),
+        ];
+        let mut app = bump_test_app(chains);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: 1.5,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(
+            captured.0.len(),
+            2,
+            "perfect bump should fire BOTH OnPerfectBump and OnBumpSuccess chains"
+        );
+        let effects: Vec<&TriggerChain> = captured.0.iter().map(|(e, _)| e).collect();
+        assert!(effects.contains(&&TriggerChain::test_shockwave(64.0)));
+        assert!(effects.contains(&&TriggerChain::test_shield(3.0)));
+    }
+
+    #[test]
+    fn early_bump_fires_on_early_bump_and_on_bump_success_but_not_on_perfect_bump() {
+        let chains = vec![
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0))),
+            TriggerChain::OnEarlyBump(Box::new(TriggerChain::test_lose_life())),
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0))),
+        ];
+        let mut app = bump_test_app(chains);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Early,
+            multiplier: 1.1,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(
+            captured.0.len(),
+            2,
+            "early bump should fire OnEarlyBump and OnBumpSuccess, not OnPerfectBump"
+        );
+        let effects: Vec<&TriggerChain> = captured.0.iter().map(|(e, _)| e).collect();
+        assert!(effects.contains(&&TriggerChain::LoseLife));
+        assert!(effects.contains(&&TriggerChain::test_shield(3.0)));
+        assert!(!effects.contains(&&TriggerChain::test_shockwave(64.0)));
+    }
+
+    #[test]
+    fn late_bump_fires_on_late_bump_and_on_bump_success() {
+        let chains = vec![
+            TriggerChain::OnLateBump(Box::new(TriggerChain::test_time_penalty(3.0))),
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0))),
+        ];
+        let mut app = bump_test_app(chains);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Late,
+            multiplier: 1.0,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 2);
+        let effects: Vec<&TriggerChain> = captured.0.iter().map(|(e, _)| e).collect();
+        assert!(effects.contains(&&TriggerChain::test_time_penalty(3.0)));
+        assert!(effects.contains(&&TriggerChain::test_shield(3.0)));
+    }
+
+    #[test]
+    fn perfect_bump_with_non_leaf_arms_bolt() {
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::test_shockwave(64.0)),
+        )));
+        let mut app = bump_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: 1.5,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(captured.0.is_empty(), "non-leaf inner should arm, not fire");
+
+        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        assert_eq!(armed.0.len(), 1);
+        assert_eq!(
+            armed.0[0],
+            TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                Box::new(TriggerChain::test_shockwave(64.0))
+            )
+        );
+    }
+
+    // --- BumpWhiff bridge tests ---
+
+    #[test]
+    fn bump_whiff_fires_on_bump_whiff_chain() {
+        let chain = TriggerChain::OnBumpWhiff(Box::new(TriggerChain::test_lose_life()));
+        let mut app = bump_whiff_test_app(vec![chain]);
+        app.world_mut().resource_mut::<SendBumpWhiffFlag>().0 = true;
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::LoseLife);
+        assert_eq!(captured.0[0].1, None);
+    }
+
+    #[test]
+    fn bump_whiff_no_message_no_fire() {
+        let chain = TriggerChain::OnBumpWhiff(Box::new(TriggerChain::test_lose_life()));
+        let mut app = bump_whiff_test_app(vec![chain]);
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(captured.0.is_empty());
+    }
+
+    // --- Cell impact bridge tests ---
+
+    #[test]
+    fn cell_impact_fires_active_chain() {
+        let chain = TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::test_shockwave(64.0)),
+        );
+        let mut app = cell_impact_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
+            cell: Entity::PLACEHOLDER,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
+    }
+
+    #[test]
+    fn cell_impact_fires_armed_trigger() {
+        let mut app = cell_impact_test_app(vec![]);
+        let bolt = app
+            .world_mut()
+            .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                Box::new(TriggerChain::test_shockwave(64.0)),
+            )]))
+            .id();
+        app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
+            cell: Entity::PLACEHOLDER,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
+
+        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        assert!(armed.0.is_empty());
+    }
+
+    #[test]
+    fn cell_impact_no_message_no_fire() {
+        let chain = TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::test_shockwave(64.0)),
+        );
+        let mut app = cell_impact_test_app(vec![chain]);
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(captured.0.is_empty());
+    }
+
+    // --- Breaker impact bridge tests ---
+
+    #[test]
+    fn breaker_impact_fires_active_chain() {
+        let chain = TriggerChain::OnImpact(
+            ImpactTarget::Breaker,
+            Box::new(TriggerChain::test_shield(5.0)),
+        );
+        let mut app = breaker_impact_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shield(5.0));
+    }
+
+    #[test]
+    fn breaker_impact_fires_armed_trigger() {
+        let mut app = breaker_impact_test_app(vec![]);
+        let bolt = app
+            .world_mut()
+            .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
+                ImpactTarget::Breaker,
+                Box::new(TriggerChain::test_multi_bolt(2)),
+            )]))
+            .id();
+        app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_multi_bolt(2));
+    }
+
+    // --- Wall impact bridge tests ---
+
+    #[test]
+    fn wall_impact_fires_active_chain() {
+        let chain = TriggerChain::OnImpact(
+            ImpactTarget::Wall,
+            Box::new(TriggerChain::test_shockwave(32.0)),
+        );
+        let mut app = wall_impact_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(32.0));
+    }
+
+    #[test]
+    fn wall_impact_fires_armed_trigger() {
+        let mut app = wall_impact_test_app(vec![]);
+        let bolt = app
+            .world_mut()
+            .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
+                ImpactTarget::Wall,
+                Box::new(TriggerChain::test_shield(5.0)),
+            )]))
+            .id();
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shield(5.0));
+    }
+
+    // --- Cell destroyed bridge tests ---
+
+    #[test]
+    fn cell_destroyed_fires_active_chain() {
+        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shockwave(32.0)));
+        let mut app = cell_destroyed_test_app(vec![chain]);
+        app.world_mut().resource_mut::<SendCellDestroyed>().0 = Some(CellDestroyed {
+            was_required_to_clear: true,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(32.0));
+        assert_eq!(captured.0[0].1, None);
+    }
+
+    #[test]
+    fn cell_destroyed_no_message_no_fire() {
+        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shockwave(32.0)));
+        let mut app = cell_destroyed_test_app(vec![chain]);
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(captured.0.is_empty());
+    }
+
+    // --- Full two-step chain tests ---
+
+    #[test]
+    fn full_two_step_chain_bump_arms_then_impact_fires() {
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::test_shockwave(64.0)),
+        )));
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .add_message::<BoltHitCell>()
+            .insert_resource(ActiveChains(vec![chain]))
+            .insert_resource(SendBump(None))
+            .insert_resource(SendBoltHitCell(None))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(
+                FixedUpdate,
+                (
+                    send_bump,
+                    bridge_bump,
+                    send_bolt_hit_cell,
+                    bridge_cell_impact,
+                )
+                    .chain(),
+            );
+
+        let bolt = app.world_mut().spawn_empty().id();
+
+        // Step 1: Perfect bump -- arms
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            multiplier: 1.5,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(captured.0.is_empty(), "step 1: should arm, not fire");
+        assert!(
+            app.world().get::<ArmedTriggers>(bolt).is_some(),
+            "step 1: bolt should be armed"
+        );
+
+        app.world_mut().resource_mut::<SendBump>().0 = None;
+
+        // Step 2: Cell impact -- fires
+        app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
+            cell: Entity::PLACEHOLDER,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(captured.0.len(), 1);
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
+    }
+
+    // --- Integration: bridge + effect observer ---
+
+    #[test]
+    fn bridge_bolt_lost_plus_life_lost_observer_decrements_lives() {
+        use crate::{behaviors::effects::life_lost::LivesCount, run::messages::RunLost};
+
+        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::LoseLife));
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltLost>()
+            .add_message::<RunLost>()
+            .insert_resource(ActiveChains(vec![chain]))
+            .insert_resource(SendBoltLostFlag(false))
+            .add_observer(capture_effects)
+            .add_observer(crate::behaviors::effects::life_lost::handle_life_lost)
+            .init_resource::<CapturedEffects>()
+            .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
+
+        let entity = app.world_mut().spawn(LivesCount(3)).id();
+        app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
+        tick(&mut app);
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, 2,
+            "bolt lost should decrement LivesCount via unified bridge"
+        );
     }
 }
