@@ -39,7 +39,10 @@ pub(crate) fn handle_shockwave(
     else {
         return;
     };
-    #[expect(clippy::cast_precision_loss, reason = "stacks is always small (< max_stacks ≈ 5)")]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "stacks is always small (< max_stacks ≈ 5)"
+    )]
     let extra_stacks = (*stacks).saturating_sub(1) as f32;
     let range = extra_stacks.mul_add(*range_per_level, *base_range);
     let Some(bolt_entity) = trigger.event().bolt else {

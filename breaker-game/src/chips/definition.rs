@@ -3,17 +3,6 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-/// The category of a chip.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum ChipKind {
-    /// Passive bolt chip.
-    Amp,
-    /// Passive breaker chip.
-    Augment,
-    /// Triggered ability.
-    Overclock,
-}
-
 /// How rare a chip is — controls appearance weight in the selection pool.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Rarity {
@@ -158,37 +147,33 @@ pub(crate) struct ChipEffectApplied {
 pub(crate) struct ChipDefinition {
     /// Display name shown on the chip card.
     pub name: String,
-    /// Category discriminator.
-    pub kind: ChipKind,
     /// Flavor text shown below the name.
     pub description: String,
     /// How rare this chip is.
     pub rarity: Rarity,
     /// Maximum number of times this chip can be stacked.
     pub max_stacks: u32,
-    /// The effect applied when this chip is selected.
-    pub effect: ChipEffect,
+    /// The effects applied when this chip is selected.
+    pub effects: Vec<ChipEffect>,
 }
 
 #[cfg(test)]
 impl ChipDefinition {
     /// Build a test chip with full control over effect and stacking.
-    pub(crate) fn test(name: &str, kind: ChipKind, effect: ChipEffect, max_stacks: u32) -> Self {
+    pub(crate) fn test(name: &str, effect: ChipEffect, max_stacks: u32) -> Self {
         Self {
             name: name.to_owned(),
-            kind,
             description: format!("{name} description"),
             rarity: Rarity::Common,
             max_stacks,
-            effect,
+            effects: vec![effect],
         }
     }
 
     /// Build a simple test chip with `Overclock` effect and `max_stacks` = 1.
-    pub(crate) fn test_simple(name: &str, kind: ChipKind) -> Self {
+    pub(crate) fn test_simple(name: &str) -> Self {
         Self::test(
             name,
-            kind,
             ChipEffect::Overclock(TriggerChain::test_shockwave(64.0)),
             1,
         )
@@ -230,36 +215,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn chip_kind_deserializes_amp() {
-        let ron_str = "Amp";
-        let kind: ChipKind = ron::de::from_str(ron_str).expect("should parse Amp");
-        assert_eq!(kind, ChipKind::Amp);
-    }
-
-    #[test]
-    fn chip_kind_deserializes_augment() {
-        let ron_str = "Augment";
-        let kind: ChipKind = ron::de::from_str(ron_str).expect("should parse Augment");
-        assert_eq!(kind, ChipKind::Augment);
-    }
-
-    #[test]
-    fn chip_kind_deserializes_overclock() {
-        let ron_str = "Overclock";
-        let kind: ChipKind = ron::de::from_str(ron_str).expect("should parse Overclock");
-        assert_eq!(kind, ChipKind::Overclock);
-    }
-
-    #[test]
     fn chip_definition_deserializes_from_ron() {
-        let ron_str = r#"(name: "Piercing Shot", kind: Amp, description: "Bolt passes through", rarity: Common, max_stacks: 3, effect: Amp(Piercing(1)))"#;
+        let ron_str = r#"(name: "Piercing Shot", description: "Bolt passes through", rarity: Common, max_stacks: 3, effects: [Amp(Piercing(1))])"#;
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("should parse ChipDefinition");
         assert_eq!(def.name, "Piercing Shot");
-        assert_eq!(def.kind, ChipKind::Amp);
         assert_eq!(def.description, "Bolt passes through");
         assert_eq!(def.rarity, Rarity::Common);
         assert_eq!(def.max_stacks, 3);
-        assert_eq!(def.effect, ChipEffect::Amp(AmpEffect::Piercing(1)));
+        assert_eq!(def.effects[0], ChipEffect::Amp(AmpEffect::Piercing(1)));
     }
 
     // --- Part A: New type deserialization tests ---
@@ -383,20 +346,18 @@ mod tests {
     fn chip_definition_deserializes_with_all_new_fields() {
         let ron_str = r#"(
             name: "Piercing Shot",
-            kind: Amp,
             description: "Bolt passes through",
             rarity: Common,
             max_stacks: 3,
-            effect: Amp(Piercing(1))
+            effects: [Amp(Piercing(1))]
         )"#;
         let def: ChipDefinition =
             ron::de::from_str(ron_str).expect("should parse ChipDefinition with new fields");
         assert_eq!(def.name, "Piercing Shot");
-        assert_eq!(def.kind, ChipKind::Amp);
         assert_eq!(def.description, "Bolt passes through");
         assert_eq!(def.rarity, Rarity::Common);
         assert_eq!(def.max_stacks, 3);
-        assert_eq!(def.effect, ChipEffect::Amp(AmpEffect::Piercing(1)));
+        assert_eq!(def.effects[0], ChipEffect::Amp(AmpEffect::Piercing(1)));
     }
 
     // --- Existing RON file tests (will fail until RON files are updated) ---
@@ -408,7 +369,7 @@ mod tests {
             "/assets/amps/piercing.amp.ron"
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("amp RON should parse");
-        assert_eq!(def.kind, ChipKind::Amp);
+        assert_eq!(def.effects[0], ChipEffect::Amp(AmpEffect::Piercing(1)));
     }
 
     #[test]
@@ -418,7 +379,10 @@ mod tests {
             "/assets/augments/wide_breaker.augment.ron"
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("augment RON should parse");
-        assert_eq!(def.kind, ChipKind::Augment);
+        assert_eq!(
+            def.effects[0],
+            ChipEffect::Augment(AugmentEffect::WidthBoost(20.0))
+        );
     }
 
     #[test]
@@ -428,9 +392,8 @@ mod tests {
             "/assets/overclocks/surge.overclock.ron"
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("overclock RON should parse");
-        assert_eq!(def.kind, ChipKind::Overclock);
         assert_eq!(
-            def.effect,
+            def.effects[0],
             ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
                 TriggerChain::OnImpact(
                     ImpactTarget::Cell,
@@ -441,6 +404,25 @@ mod tests {
                     })
                 )
             )))
+        );
+    }
+
+    #[test]
+    fn chip_definition_with_multiple_effects_deserializes() {
+        let ron_str = r#"(
+            name: "Hybrid",
+            description: "Two effects",
+            rarity: Rare,
+            max_stacks: 2,
+            effects: [Amp(Piercing(1)), Augment(WidthBoost(20.0))]
+        )"#;
+        let def: ChipDefinition =
+            ron::de::from_str(ron_str).expect("should parse ChipDefinition with multiple effects");
+        assert_eq!(def.effects.len(), 2);
+        assert_eq!(def.effects[0], ChipEffect::Amp(AmpEffect::Piercing(1)));
+        assert_eq!(
+            def.effects[1],
+            ChipEffect::Augment(AugmentEffect::WidthBoost(20.0))
         );
     }
 
@@ -706,7 +688,10 @@ mod tests {
     // --- Phase D: Stacking effective value tests ---
 
     /// Compute effective f32 value: `base + (stacks - 1) * per_level`.
-    #[expect(clippy::cast_precision_loss, reason = "stacks is always small (< max_stacks)")]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "stacks is always small (< max_stacks)"
+    )]
     fn effective_f32(base: f32, per_level: f32, stacks: u32) -> f32 {
         (stacks.saturating_sub(1) as f32).mul_add(per_level, base)
     }

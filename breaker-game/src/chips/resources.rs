@@ -39,7 +39,6 @@ impl ChipRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::ChipKind;
 
     #[test]
     fn default_registry_has_no_entries() {
@@ -51,7 +50,7 @@ mod tests {
     #[test]
     fn insert_and_get() {
         let mut registry = ChipRegistry::default();
-        registry.insert(ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp));
+        registry.insert(ChipDefinition::test_simple("Piercing Shot"));
         assert!(registry.get("Piercing Shot").is_some());
         assert!(registry.get("missing").is_none());
     }
@@ -59,9 +58,9 @@ mod tests {
     #[test]
     fn ordered_values_preserves_insertion_order() {
         let mut registry = ChipRegistry::default();
-        registry.insert(ChipDefinition::test_simple("C", ChipKind::Overclock));
-        registry.insert(ChipDefinition::test_simple("A", ChipKind::Amp));
-        registry.insert(ChipDefinition::test_simple("B", ChipKind::Augment));
+        registry.insert(ChipDefinition::test_simple("C"));
+        registry.insert(ChipDefinition::test_simple("A"));
+        registry.insert(ChipDefinition::test_simple("B"));
         let names: Vec<&str> = registry.ordered_values().map(|c| c.name.as_str()).collect();
         assert_eq!(names, vec!["C", "A", "B"]);
     }
