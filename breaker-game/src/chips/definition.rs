@@ -81,6 +81,20 @@ pub enum TriggerChain {
         /// Current stack count.
         stacks: u32,
     },
+    /// Deducts a life from the breaker.
+    LoseLife,
+    /// Applies a time penalty in seconds.
+    TimePenalty {
+        /// Duration of the penalty in seconds.
+        seconds: f32,
+    },
+    /// Spawns an additional bolt.
+    SpawnBolt,
+    /// Multiplies bolt speed temporarily.
+    BoltSpeedBoost {
+        /// Speed multiplier applied to the bolt.
+        multiplier: f32,
+    },
     /// Fires on a perfect bump.
     OnPerfectBump(Box<Self>),
     /// Fires on bolt impact with a specific surface.
@@ -91,6 +105,12 @@ pub enum TriggerChain {
     OnBoltLost(Box<Self>),
     /// Fires on any non-whiff bump (Early, Late, or Perfect).
     OnBumpSuccess(Box<Self>),
+    /// Fires on an early bump.
+    OnEarlyBump(Box<Self>),
+    /// Fires on a late bump.
+    OnLateBump(Box<Self>),
+    /// Fires when a bump whiffs (misses).
+    OnBumpWhiff(Box<Self>),
 }
 
 impl TriggerChain {
@@ -100,12 +120,21 @@ impl TriggerChain {
     #[must_use]
     pub(crate) fn depth(&self) -> u32 {
         match self {
-            Self::Shockwave { .. } | Self::MultiBolt { .. } | Self::Shield { .. } => 0,
+            Self::Shockwave { .. }
+            | Self::MultiBolt { .. }
+            | Self::Shield { .. }
+            | Self::LoseLife
+            | Self::SpawnBolt
+            | Self::TimePenalty { .. }
+            | Self::BoltSpeedBoost { .. } => 0,
             Self::OnPerfectBump(inner)
             | Self::OnImpact(_, inner)
             | Self::OnCellDestroyed(inner)
             | Self::OnBoltLost(inner)
-            | Self::OnBumpSuccess(inner) => 1 + inner.depth(),
+            | Self::OnBumpSuccess(inner)
+            | Self::OnEarlyBump(inner)
+            | Self::OnLateBump(inner)
+            | Self::OnBumpWhiff(inner) => 1 + inner.depth(),
         }
     }
 
@@ -114,7 +143,13 @@ impl TriggerChain {
     pub(crate) const fn is_leaf(&self) -> bool {
         matches!(
             self,
-            Self::Shockwave { .. } | Self::MultiBolt { .. } | Self::Shield { .. }
+            Self::Shockwave { .. }
+                | Self::MultiBolt { .. }
+                | Self::Shield { .. }
+                | Self::LoseLife
+                | Self::SpawnBolt
+                | Self::TimePenalty { .. }
+                | Self::BoltSpeedBoost { .. }
         )
     }
 }
@@ -207,6 +242,26 @@ impl TriggerChain {
             duration_per_level: 0.0,
             stacks: 1,
         }
+    }
+
+    /// Build a `LoseLife` leaf.
+    pub(crate) fn test_lose_life() -> Self {
+        Self::LoseLife
+    }
+
+    /// Build a `TimePenalty` leaf with the given duration in seconds.
+    pub(crate) fn test_time_penalty(seconds: f32) -> Self {
+        Self::TimePenalty { seconds }
+    }
+
+    /// Build a `SpawnBolt` leaf.
+    pub(crate) fn test_spawn_bolt() -> Self {
+        Self::SpawnBolt
+    }
+
+    /// Build a `BoltSpeedBoost` leaf with the given multiplier.
+    pub(crate) fn test_bolt_speed_boost(multiplier: f32) -> Self {
+        Self::BoltSpeedBoost { multiplier }
     }
 }
 
@@ -856,6 +911,224 @@ mod tests {
                 duration_per_level: 0.0,
                 stacks: 1,
             }
+        );
+    }
+
+    // --- New leaf variant deserialization tests ---
+
+    #[test]
+    fn trigger_chain_deserializes_lose_life() {
+        let tc: TriggerChain = ron::de::from_str("LoseLife").expect("should parse LoseLife");
+        assert_eq!(tc, TriggerChain::LoseLife);
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_lose_life_wrapped_in_on_bolt_lost() {
+        let tc: TriggerChain =
+            ron::de::from_str("OnBoltLost(LoseLife)").expect("should parse OnBoltLost(LoseLife)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnBoltLost(Box::new(TriggerChain::LoseLife))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_time_penalty() {
+        let tc: TriggerChain =
+            ron::de::from_str("TimePenalty(seconds: 5.0)").expect("should parse TimePenalty");
+        assert_eq!(tc, TriggerChain::TimePenalty { seconds: 5.0 });
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_time_penalty_fractional() {
+        let tc: TriggerChain = ron::de::from_str("TimePenalty(seconds: 2.5)")
+            .expect("should parse TimePenalty with fractional seconds");
+        assert_eq!(tc, TriggerChain::TimePenalty { seconds: 2.5 });
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_spawn_bolt() {
+        let tc: TriggerChain = ron::de::from_str("SpawnBolt").expect("should parse SpawnBolt");
+        assert_eq!(tc, TriggerChain::SpawnBolt);
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_spawn_bolt_wrapped_in_on_bump_success() {
+        let tc: TriggerChain = ron::de::from_str("OnBumpSuccess(SpawnBolt)")
+            .expect("should parse OnBumpSuccess(SpawnBolt)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::SpawnBolt))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_bolt_speed_boost() {
+        let tc: TriggerChain = ron::de::from_str("BoltSpeedBoost(multiplier: 1.5)")
+            .expect("should parse BoltSpeedBoost");
+        assert_eq!(tc, TriggerChain::BoltSpeedBoost { multiplier: 1.5 });
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_bolt_speed_boost_identity() {
+        let tc: TriggerChain = ron::de::from_str("BoltSpeedBoost(multiplier: 1.0)")
+            .expect("should parse BoltSpeedBoost with identity multiplier");
+        assert_eq!(tc, TriggerChain::BoltSpeedBoost { multiplier: 1.0 });
+    }
+
+    // --- New trigger variant deserialization tests ---
+
+    #[test]
+    fn trigger_chain_deserializes_on_early_bump_wrapping_leaf() {
+        let tc: TriggerChain =
+            ron::de::from_str("OnEarlyBump(LoseLife)").expect("should parse OnEarlyBump(LoseLife)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnEarlyBump(Box::new(TriggerChain::LoseLife))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_on_early_bump_nested_two_deep() {
+        let tc: TriggerChain = ron::de::from_str(
+            "OnEarlyBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1)))",
+        )
+        .expect("should parse OnEarlyBump nested two deep");
+        assert_eq!(
+            tc,
+            TriggerChain::OnEarlyBump(Box::new(TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                Box::new(TriggerChain::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 0.0,
+                    stacks: 1,
+                })
+            )))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_on_late_bump_wrapping_leaf() {
+        let tc: TriggerChain = ron::de::from_str("OnLateBump(TimePenalty(seconds: 3.0))")
+            .expect("should parse OnLateBump(TimePenalty)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnLateBump(Box::new(TriggerChain::TimePenalty { seconds: 3.0 }))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_on_bump_whiff_wrapping_spawn_bolt() {
+        let tc: TriggerChain = ron::de::from_str("OnBumpWhiff(SpawnBolt)")
+            .expect("should parse OnBumpWhiff(SpawnBolt)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::SpawnBolt))
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_on_bump_whiff_wrapping_bolt_speed_boost() {
+        let tc: TriggerChain = ron::de::from_str("OnBumpWhiff(BoltSpeedBoost(multiplier: 1.5))")
+            .expect("should parse OnBumpWhiff(BoltSpeedBoost)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }))
+        );
+    }
+
+    // --- New variant depth tests ---
+
+    #[test]
+    fn new_leaves_have_depth_zero() {
+        assert_eq!(TriggerChain::LoseLife.depth(), 0);
+        assert_eq!(TriggerChain::SpawnBolt.depth(), 0);
+        assert_eq!(TriggerChain::TimePenalty { seconds: 5.0 }.depth(), 0);
+        assert_eq!(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }.depth(), 0);
+    }
+
+    #[test]
+    fn new_triggers_wrapping_leaf_have_depth_one() {
+        assert_eq!(
+            TriggerChain::OnEarlyBump(Box::new(TriggerChain::LoseLife)).depth(),
+            1
+        );
+        assert_eq!(
+            TriggerChain::OnLateBump(Box::new(TriggerChain::SpawnBolt)).depth(),
+            1
+        );
+        assert_eq!(
+            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::TimePenalty { seconds: 5.0 })).depth(),
+            1
+        );
+    }
+
+    #[test]
+    fn on_bump_whiff_nested_two_deep_has_depth_two() {
+        let tc = TriggerChain::OnBumpWhiff(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::LoseLife),
+        )));
+        assert_eq!(tc.depth(), 2);
+    }
+
+    // --- New variant is_leaf tests ---
+
+    #[test]
+    fn new_leaves_return_is_leaf_true() {
+        assert!(TriggerChain::LoseLife.is_leaf());
+        assert!(TriggerChain::SpawnBolt.is_leaf());
+        assert!(TriggerChain::TimePenalty { seconds: 5.0 }.is_leaf());
+        assert!(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }.is_leaf());
+    }
+
+    #[test]
+    fn new_triggers_return_is_leaf_false() {
+        assert!(!TriggerChain::OnEarlyBump(Box::new(TriggerChain::LoseLife)).is_leaf());
+        assert!(!TriggerChain::OnLateBump(Box::new(TriggerChain::SpawnBolt)).is_leaf());
+        assert!(
+            !TriggerChain::OnBumpWhiff(Box::new(TriggerChain::TimePenalty { seconds: 5.0 }))
+                .is_leaf()
+        );
+    }
+
+    // --- Convenience constructor tests ---
+
+    #[test]
+    fn test_lose_life_convenience_constructor() {
+        assert_eq!(TriggerChain::test_lose_life(), TriggerChain::LoseLife);
+    }
+
+    #[test]
+    fn test_time_penalty_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_time_penalty(5.0),
+            TriggerChain::TimePenalty { seconds: 5.0 }
+        );
+    }
+
+    #[test]
+    fn test_spawn_bolt_convenience_constructor() {
+        assert_eq!(TriggerChain::test_spawn_bolt(), TriggerChain::SpawnBolt);
+    }
+
+    #[test]
+    fn test_bolt_speed_boost_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_bolt_speed_boost(1.5),
+            TriggerChain::BoltSpeedBoost { multiplier: 1.5 }
+        );
+    }
+
+    // --- ChipEffect integration with new variants ---
+
+    #[test]
+    fn chip_effect_overclock_with_on_bump_whiff_lose_life() {
+        let e: ChipEffect = ron::de::from_str("Overclock(OnBumpWhiff(LoseLife))")
+            .expect("should parse Overclock(OnBumpWhiff(LoseLife))");
+        assert_eq!(
+            e,
+            ChipEffect::Overclock(TriggerChain::OnBumpWhiff(Box::new(TriggerChain::LoseLife)))
         );
     }
 }

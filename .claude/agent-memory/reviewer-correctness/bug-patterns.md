@@ -71,3 +71,13 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 - **inter-frame cascade for OnCellDestroyed(Shockwave)**: Shockwave writes DamageCell messages → handle_cell_hit processes them and writes CellDestroyed → on the next frame, bridge_overclock_cell_destroyed sees those CellDestroyed messages and fires the shockwave again → shockwave writes more DamageCell → etc. Bounded (terminates when no in-range cells remain), but produces multiple shockwave rounds per original trigger. May be surprising.
   - Confidence: medium (may be intentional cascade mechanic)
   - Confidence: medium (may be intentional)
+
+## refactor/unify-behaviors Confirmed Bugs (2026-03-21)
+
+- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants silently never fire**: `OverclockTriggerKind` in `evaluate.rs` has no variants for EarlyBump, LateBump, or BumpWhiff. The `evaluate()` function's or-pattern is exhaustive for the 7 existing kinds only. Any TriggerChain starting with OnEarlyBump/OnLateBump/OnBumpWhiff always returns `EvalResult::NoMatch`. Three new trigger types are completely non-functional at runtime. evaluate.rs:7-22 and 46-57.
+
+- **No bridge system dispatches EarlyBump/LateBump/BumpWhiff to overclock evaluate()**: `bridge_overclock_bump` (bridges.rs:27-71) handles `BumpGrade::Early|Late` with BumpSuccess only, not with new grade-specific trigger kinds. No bridge exists to read `BumpWhiffed` and call `evaluate(OnBumpWhiffKind, chain)` for overclock chains. Even if OverclockTriggerKind were extended, the dispatch path from message → evaluate() is absent.
+
+- **LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost leaves have no OverclockEffectFired handlers**: Only `handle_shockwave` is registered in `bolt/behaviors/effects/`. When these fire via `commands.trigger(OverclockEffectFired{effect: TriggerChain::LoseLife/TimePenalty/SpawnBolt/BoltSpeedBoost, ...})`, no observer acts on them. Silent no-op. `bolt/behaviors/effects/mod.rs:1-5`.
+
+- **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) OverclockTriggerKind + evaluate(), (3) bridge system. This PR only did (1) for the trigger variants and (1) for the leaf variants.

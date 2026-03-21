@@ -4,7 +4,7 @@
 
 ## Chip Content System (Implemented — Phase 4b)
 
-All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers Amps, Augments, and Overclocks. Each chip has exactly one `ChipEffect`, which wraps either an `AmpEffect` (bolt) or `AugmentEffect` (breaker).
+All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers Amps, Augments, and Overclocks. Each chip can have one or more `ChipEffect` entries, which wrap an `AmpEffect` (bolt), `AugmentEffect` (breaker), or `Overclock(TriggerChain)` (triggered ability).
 
 ```rust
 // chips/definition.rs
@@ -28,18 +28,17 @@ pub(crate) enum AugmentEffect {
 pub(crate) enum ChipEffect {
     Amp(AmpEffect),
     Augment(AugmentEffect),
-    Overclock,          // deferred to Phase 4d
+    Overclock(TriggerChain), // triggered ability with recursive trigger chain
 }
 
 // Content instance — data-driven, no recompile to add
 #[derive(Asset, TypePath, Deserialize)]
 pub(crate) struct ChipDefinition {
     pub name: String,
-    pub kind: ChipKind,         // Amp | Augment | Overclock
     pub description: String,
     pub rarity: Rarity,         // Common | Uncommon | Rare | Legendary
     pub max_stacks: u32,
-    pub effect: ChipEffect,
+    pub effects: Vec<ChipEffect>,
 }
 ```
 
@@ -47,11 +46,10 @@ pub(crate) struct ChipDefinition {
 // assets/amps/piercing.amp.ron
 (
     name: "Piercing Shot",
-    kind: Amp,
     description: "Bolt passes through the first cell it hits",
     rarity: Common,
     max_stacks: 3,
-    effect: Amp(Piercing(1)),
+    effects: [Amp(Piercing(1))],
 )
 ```
 

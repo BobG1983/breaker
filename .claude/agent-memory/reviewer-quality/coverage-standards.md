@@ -54,8 +54,8 @@ New bridge with 4 tests: fires LoseLife, no-message no-consequence, wrong-trigge
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
 `restart_run_on_end` gap was closed — `restart_run_on_end_transitions_to_main_menu` test exists at `breaker-scenario-runner/src/lifecycle/tests.rs:808`. No longer a gap.
 
-## Overclock evaluation engine (bolt/behaviors/, as of 2026-03-20, feature/overclock-trigger-chain branch)
-Coverage: good across the core evaluation and bridge systems. Unit tests cover all four trigger kinds in evaluate.rs, all four bridge functions in bridges.rs (including two-step surge chain and bolt-specific arming), handle_overclock in chips/effects/overclock.rs. shockwave.rs now has 10 unit tests + 1 E2E test (full surge pipeline). lifecycle/mod.rs has 2 new tests for ActiveOverclocks population from initial_overclocks. New bridges added: bridge_overclock_breaker_impact, bridge_overclock_wall_impact, bridge_overclock_bump (BumpSuccess path). Known gaps:
+## Overclock evaluation engine (bolt/behaviors/, as of 2026-03-21, feature/refactor/unify-behaviors branch)
+Coverage: good across the core evaluation and bridge systems. Unit tests cover all four trigger kinds in evaluate.rs, all four bridge functions in bridges.rs (including two-step surge chain and bolt-specific arming), handle_overclock in chips/effects/overclock.rs. shockwave.rs now has 10 unit tests + 1 E2E test (full surge pipeline). lifecycle/mod.rs has 2 new tests for ActiveOverclocks population from initial_overclocks. New bridges added: bridge_overclock_breaker_impact, bridge_overclock_wall_impact, bridge_overclock_bump (BumpSuccess path). New TriggerChain variants added: OnEarlyBump, OnLateBump, OnBumpWhiff (triggers) + LoseLife, SpawnBolt, TimePenalty, BoltSpeedBoost (leaves). Known gaps:
 (1) `bridge_overclock_cell_destroyed` — no test that evaluates ARMED triggers on all bolts when a cell is destroyed (the `evaluate_armed_all` path from CellDestroyed is not exercised).
 (2) `bridge_overclock_bolt_lost` — same gap: no test for armed triggers on all bolts when bolt is lost.
 (3) `handle_overclock` — no test for `ChipEffect::Augment` being ignored (only `Amp` is tested as a negative case).
@@ -66,6 +66,9 @@ Coverage: good across the core evaluation and bridge systems. Unit tests cover a
 (8) `source_bolt` field on `DamageCell` is always `Entity::PLACEHOLDER` in ALL tests across handle_cell_hit.rs and check_lock_release.rs — the VFX-attachment semantic of this field is untested.
 (9) `bridge_overclock_breaker_impact` — no test for BreakerImpact chain NOT matching OnImpact(Cell, ...) or OnImpact(Wall, ...) (negative ImpactTarget discrimination not tested for breaker bridge; only covered in evaluate.rs unit tests).
 (10) `bridge_overclock_wall_impact` — same gap: wall bridge has no negative-target discrimination test at the bridge level.
+(11) NEW (refactor/unify-behaviors): OnEarlyBump, OnLateBump, OnBumpWhiff added to TriggerChain but NO corresponding OverclockTriggerKind variants exist in evaluate.rs and NO match arms exist in evaluate(). These trigger variants will ALWAYS return EvalResult::NoMatch at runtime. No evaluate.rs tests cover these three variants.
+(12) NEW (refactor/unify-behaviors): LoseLife, SpawnBolt, TimePenalty, BoltSpeedBoost leaf variants have no effect handlers — no observers registered in plugin.rs for any of these. They exist in TriggerChain and can be deserialized but do nothing when fired.
+(13) NEW (refactor/unify-behaviors): No bridge exists for BumpWhiffed → bridge_overclock_bump_whiff; no bridge for EarlyBump/LateBump grade routing in bridge_overclock_bump. The bridge only maps Perfect→PerfectBump and Early/Late→None.
 
 ## EntityScale feature (as of 2026-03-20, feature/overclock-trigger-chain branch)
 Systems: apply_entity_scale_to_breaker, apply_entity_scale_to_bolt, bolt_scale_visual, width_boost_visual, bolt_breaker_collision, bolt_cell_collision, clamp_bolt_to_playfield, bolt_lost, spawn_additional_bolt, definition.rs validate.
