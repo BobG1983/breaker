@@ -38,6 +38,8 @@ src/[domain]/
 ### Scenario Coverage
 - New invariants: [InvariantKind variants to add, or "none — existing invariants cover this"]
 - New scenarios: [scenario RON files to add, or "none — existing scenarios exercise this"]
+- Self-test scenarios: For each new InvariantKind, a self-test scenario in `scenarios/self_tests/`
+  with `expected_violations: Some([NewVariant])` that intentionally triggers the invariant
 - Layout updates: [existing layouts to update with new cell types / features, or "none"]
 
 ### Constraints
@@ -91,6 +93,7 @@ src/bolt/
 ### Scenario Coverage
 - New invariants: `BoltSpeedInRange` already exists — covers this
 - New scenarios: none — existing chaos scenarios exercise speed clamping
+- Self-test scenarios: none — `BoltSpeedInRange` already has a self-test
 - Layout updates: none
 
 ### Constraints

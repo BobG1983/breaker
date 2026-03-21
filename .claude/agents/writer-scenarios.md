@@ -48,6 +48,11 @@ When the spec calls for a new invariant, implement it in the scenario runner cra
 - Implement the checker system
 - Wire it into the invariant runner
 
+When implementing a new invariant checker, also create a self-test scenario in
+`scenarios/self_tests/` that intentionally triggers the violation using `debug_setup`
+and asserts it fires via `expected_violations`. Every `InvariantKind` variant must
+have at least one self-test scenario that proves the invariant fires when violated.
+
 ### Stress Scenarios
 
 For mechanics that need high-volume testing:

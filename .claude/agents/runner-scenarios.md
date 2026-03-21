@@ -126,11 +126,14 @@ If confidence is low (multiple possible causes), omit the "Delegate" line and re
 
 [One diagnosis block per failing scenario — see format above]
 
+### Coverage Parity
+[Include coverage manifest output from `--all` run if present: missing self-tests, unused layouts]
+
 ### Summary
 [One paragraph: which invariants fired, common thread if any, confidence in diagnosis]
 ```
 
-If all scenarios pass, the report should be brief — just the results table and "All scenarios passed."
+If all scenarios pass, the report should be brief — just the results table, coverage parity, and "All scenarios passed."
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**
