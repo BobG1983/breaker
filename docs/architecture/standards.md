@@ -38,12 +38,14 @@ Every new gameplay mechanic or system must also be evaluated for **scenario runn
 
 When implementing a new feature, ask:
 1. **Can existing invariants catch regressions?** If so, ensure existing scenarios exercise the new code path (e.g., a new cell type should appear in at least one scenario layout).
-2. **Does this feature introduce a new invariant?** Properties that must always hold (e.g., "chip stack count never exceeds max_stacks", "bolt count never exceeds configured max") should become new `InvariantKind` variants checked every frame.
+2. **Does this feature introduce a new invariant?** Properties that must always hold (e.g., "chip stack count never exceeds max_stacks", "bolt count never exceeds configured max") should become new `InvariantKind` variants checked every frame. **Every new `InvariantKind` must have a self-test scenario** in `scenarios/self_tests/` that intentionally triggers the violation using `debug_setup` or `frame_mutations` and asserts it fires via `expected_violations`.
 3. **Does this feature need a dedicated scenario?** New mechanics that interact with physics, timing, or state machines benefit from chaos-input stress testing that unit tests cannot replicate.
 
 Existing invariant kinds: `BoltInBounds`, `BoltSpeedInRange`, `BoltCountReasonable`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidStateTransitions`, `ValidBreakerState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`, `PhysicsFrozenDuringPause`.
 
 Scenarios live in `breaker-scenario-runner/scenarios/` organized by category (`mechanic/`, `stress/`, `self_tests/`).
+
+The coverage manifest (`breaker-scenario-runner/src/coverage.rs`) runs with `--all` and reports missing self-tests and unused layouts. All 12 invariants have self-test coverage as of Session 8.
 
 ---
 
