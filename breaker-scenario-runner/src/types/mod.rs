@@ -308,10 +308,61 @@ pub struct ScenarioDefinition {
     /// Optional overclock chains to pre-populate at scenario start.
     #[serde(default)]
     pub initial_overclocks: Option<Vec<breaker::chips::TriggerChain>>,
+    /// Optional per-frame mutations for self-test scenarios.
+    ///
+    /// When `Some`, each [`FrameMutation`] is applied at its specified frame
+    /// by [`crate::lifecycle::apply_debug_frame_mutations`].
+    #[serde(default)]
+    pub frame_mutations: Option<Vec<FrameMutation>>,
 }
 
 impl ScenarioDefinition {
     const fn default_allow_early_end() -> bool {
         true
     }
+}
+
+/// A mutation to apply at a specific frame during a scenario run.
+///
+/// Used by self-test scenarios to intentionally trigger invariant violations
+/// at scripted points in the run.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct FrameMutation {
+    /// The fixed-update frame on which this mutation is applied.
+    pub frame: u32,
+    /// The kind of mutation to apply.
+    pub mutation: MutationKind,
+}
+
+/// The kind of mutation to apply at a given frame.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub enum MutationKind {
+    /// Override the breaker's movement state.
+    SetBreakerState(ScenarioBreakerState),
+    /// Override `NodeTimer::remaining` to this value.
+    SetTimerRemaining(f32),
+    /// Spawn N extra entities with `Transform` (for entity leak testing).
+    SpawnExtraEntities(usize),
+    /// Move the first tagged bolt to `(x, y)`, preserving z.
+    MoveBolt(f32, f32),
+    /// Toggle between `PlayingState::Active` and `PlayingState::Paused`.
+    TogglePause,
+}
+
+/// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.
+///
+/// The game crate's `BreakerState` derives `Component` (which brings in Bevy
+/// dependencies). This enum carries the same variants and is mapped to
+/// `BreakerState` at runtime by
+/// [`crate::lifecycle::map_scenario_breaker_state`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum ScenarioBreakerState {
+    /// Corresponds to `BreakerState::Idle`.
+    Idle,
+    /// Corresponds to `BreakerState::Dashing`.
+    Dashing,
+    /// Corresponds to `BreakerState::Braking`.
+    Braking,
+    /// Corresponds to `BreakerState::Settling`.
+    Settling,
 }

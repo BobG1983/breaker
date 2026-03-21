@@ -125,6 +125,7 @@ mod tests {
             stress: None,
             seed: None,
             initial_overclocks: None,
+            frame_mutations: None,
         }
     }
 

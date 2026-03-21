@@ -498,6 +498,7 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
                 stress: None,
                 seed: None,
                 initial_overclocks: None,
+                frame_mutations: None,
             },
         })
         .insert_resource(shared.clone())

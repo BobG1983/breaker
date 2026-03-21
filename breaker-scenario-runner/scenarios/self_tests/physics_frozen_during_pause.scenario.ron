@@ -1,0 +1,17 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [PhysicsFrozenDuringPause],
+    expected_violations: Some([PhysicsFrozenDuringPause]),
+    debug_setup: Some((
+        disable_physics: true,
+    )),
+    frame_mutations: Some([
+        (frame: 30, mutation: TogglePause),
+        (frame: 35, mutation: MoveBolt(100.0, 100.0)),
+    ]),
+)
