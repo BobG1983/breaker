@@ -1,0 +1,14 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [BoltSpeedInRange],
+    expected_violations: Some([BoltSpeedInRange]),
+    debug_setup: Some((
+        bolt_velocity: Some((0.0, 2000.0)),
+        disable_physics: true,
+    )),
+)

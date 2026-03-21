@@ -13,10 +13,16 @@ mod tests;
 use bevy::prelude::*;
 use breaker::{
     behaviors::ActiveChains,
-    bolt::{BoltSystems, components::Bolt},
+    bolt::{
+        BoltSystems,
+        components::{Bolt, BoltVelocity},
+    },
     breaker::{BreakerSystems, components::Breaker, systems::update_breaker_state},
     input::resources::InputActions,
-    run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
+    run::node::{
+        ScenarioLayoutOverride, messages::SpawnNodeComplete, resources::NodeTimer,
+        sets::NodeSystems,
+    },
     shared::{GameState, RunSeed, SelectedArchetype},
 };
 
@@ -30,8 +36,20 @@ use crate::{
         check_physics_frozen_during_pause, check_timer_monotonically_decreasing,
         check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
     },
-    types::{GameAction as ScenarioGameAction, ScenarioDefinition},
+    types::{ForcedGameState, GameAction as ScenarioGameAction, ScenarioDefinition},
 };
+
+/// Query alias for bolt entities in [`apply_debug_setup`].
+type BoltDebugQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut Transform,
+        Option<&'static mut BoltVelocity>,
+    ),
+    With<ScenarioTagBolt>,
+>;
 
 /// Query alias for breaker entities in [`apply_debug_setup`].
 type BreakerDebugQuery<'w, 's> = Query<
@@ -266,26 +284,54 @@ fn restart_run_on_end(mut next_state: ResMut<NextState<GameState>>) {
     next_state.set(GameState::MainMenu);
 }
 
+/// Maps a [`ForcedGameState`] to the game crate's [`GameState`].
+///
+/// Used by [`apply_debug_setup`] to translate the RON-serializable enum
+/// into the Bevy state enum.
+pub(crate) fn map_forced_game_state(forced: ForcedGameState) -> GameState {
+    match forced {
+        ForcedGameState::Loading => GameState::Loading,
+        ForcedGameState::MainMenu => GameState::MainMenu,
+        ForcedGameState::RunSetup => GameState::RunSetup,
+        ForcedGameState::Playing => GameState::Playing,
+        ForcedGameState::NodeTransition => GameState::NodeTransition,
+        ForcedGameState::ChipSelect => GameState::ChipSelect,
+        ForcedGameState::RunEnd => GameState::RunEnd,
+        ForcedGameState::MetaProgression => GameState::MetaProgression,
+    }
+}
+
 /// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
 ///
 /// For each entity tagged with [`ScenarioTagBolt`] or [`ScenarioTagBreaker`],
 /// applies position teleports from [`crate::types::DebugSetup`] (z coordinate is
 /// preserved). When `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`]
 /// on both bolts and breakers with the post-teleport position as the frozen target.
+///
+/// Also handles `bolt_velocity`, `extra_tagged_bolts`, `node_timer_remaining`,
+/// and `force_previous_game_state` overrides.
 pub fn apply_debug_setup(
     config: Res<ScenarioConfig>,
-    mut bolt_query: Query<(Entity, &mut Transform), With<ScenarioTagBolt>>,
+    mut bolt_query: BoltDebugQuery,
     mut breaker_query: BreakerDebugQuery,
     mut commands: Commands,
+    node_timer: Option<ResMut<NodeTimer>>,
+    mut previous_state: Option<ResMut<PreviousGameState>>,
 ) {
     let Some(setup) = config.definition.debug_setup.as_ref() else {
         return;
     };
 
-    for (entity, mut transform) in &mut bolt_query {
+    for (entity, mut transform, bolt_vel) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
             transform.translation.x = x;
             transform.translation.y = y;
+        }
+
+        if let Some((vx, vy)) = setup.bolt_velocity
+            && let Some(mut vel) = bolt_vel
+        {
+            vel.value = Vec2::new(vx, vy);
         }
 
         if setup.disable_physics {
@@ -306,6 +352,24 @@ pub fn apply_debug_setup(
                 target: transform.translation,
             });
         }
+    }
+
+    if let Some(count) = setup.extra_tagged_bolts {
+        for _ in 0..count {
+            commands.spawn(ScenarioTagBolt);
+        }
+    }
+
+    if let Some(remaining) = setup.node_timer_remaining
+        && let Some(mut timer) = node_timer
+    {
+        timer.remaining = remaining;
+    }
+
+    if let Some(forced) = setup.force_previous_game_state
+        && let Some(ref mut prev) = previous_state
+    {
+        prev.0 = Some(map_forced_game_state(forced));
     }
 }
 

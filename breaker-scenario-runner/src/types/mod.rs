@@ -161,6 +161,32 @@ impl InvariantKind {
     }
 }
 
+/// Mirrors `GameState` for RON deserialization in the scenario runner crate.
+///
+/// The game crate's `GameState` derives `States` (which brings in `Bevy`
+/// dependencies that cannot appear in plain-data RON files). This enum
+/// carries the same variants and is mapped to `GameState` at runtime by
+/// [`crate::lifecycle::map_forced_game_state`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum ForcedGameState {
+    /// Corresponds to `GameState::Loading`.
+    Loading,
+    /// Corresponds to `GameState::MainMenu`.
+    MainMenu,
+    /// Corresponds to `GameState::RunSetup`.
+    RunSetup,
+    /// Corresponds to `GameState::Playing`.
+    Playing,
+    /// Corresponds to `GameState::NodeTransition`.
+    NodeTransition,
+    /// Corresponds to `GameState::ChipSelect`.
+    ChipSelect,
+    /// Corresponds to `GameState::RunEnd`.
+    RunEnd,
+    /// Corresponds to `GameState::MetaProgression`.
+    MetaProgression,
+}
+
 /// Optional debug overrides applied after entity spawn (used in self-test scenarios).
 #[derive(Debug, Clone, PartialEq, Deserialize, Default)]
 pub struct DebugSetup {
@@ -172,6 +198,18 @@ pub struct DebugSetup {
     /// When `true`, freeze physics so the bolt stays at the injected position.
     #[serde(default)]
     pub disable_physics: bool,
+    /// Override bolt velocity for all tagged bolts.
+    #[serde(default)]
+    pub bolt_velocity: Option<(f32, f32)>,
+    /// Number of extra bare `ScenarioTagBolt` entities to spawn (no physics components).
+    #[serde(default)]
+    pub extra_tagged_bolts: Option<usize>,
+    /// Override `NodeTimer::remaining` to this value.
+    #[serde(default)]
+    pub node_timer_remaining: Option<f32>,
+    /// Force `PreviousGameState` to this value (mapped to `GameState`).
+    #[serde(default)]
+    pub force_previous_game_state: Option<ForcedGameState>,
 }
 
 /// Tunable parameters for invariant checkers.
