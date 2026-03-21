@@ -50,7 +50,7 @@ enum AugmentEffect {
 **Augment design rationale** — all modify properties every archetype has:
 - **WidthBoost** — wider breaker = easier to catch bolt, changes reflection positioning
 - **SpeedBoost** — faster movement = more aggressive positioning, better recovery
-- **BumpForce** — modifies `BumpPerfectMultiplier` and `BumpWeakMultiplier`. More velocity per bump = faster clears, but bolt becomes harder to track
+- **BumpForce** — adds to bump impulse force on the bolt. More velocity per bump = faster clears, but bolt becomes harder to track
 - **TiltControl** — modifies `MaxReflectionAngle`. More extreme angles = precision aiming for skilled players. High skill-ceiling augment (Pillar 3: "master player uses this differently than novice")
 
 **What to build**:
@@ -89,7 +89,7 @@ Modify existing systems to check for chip effect components. Each domain modific
 | SizeBoost | bolt/ | init_bolt_params or spawn | Add to `BoltRadius` when `SizeBoost(f32)` present |
 | WidthBoost | breaker/ | init_breaker_params or spawn | Add to `BreakerWidth` when `WidthBoost(f32)` present |
 | SpeedBoost (breaker) | breaker/ | move_breaker | Add to `BreakerMaxSpeed` when `BreakerSpeedBoost(f32)` present |
-| BumpForce | breaker/ | grade_bump | Add to `BumpPerfectMultiplier` and `BumpWeakMultiplier` when present |
+| BumpForce | breaker/ | grade_bump | Add to bump force impulse when `BumpForceBoost` component present |
 | TiltControl | breaker/ | init_breaker_params or spawn | Add to `MaxReflectionAngle` when `TiltControl(f32)` present |
 
 **Delegatable**: Yes — one writer-tests → writer-code pair per domain (up to 4 parallel).

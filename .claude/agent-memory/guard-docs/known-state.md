@@ -94,6 +94,14 @@ type: reference
 - SUPERSEDED BY TRIGGERCHAIN UNIFICATION: `behaviors/consequences/` directory deleted; replaced by `behaviors/effects/` with `life_lost`, `time_penalty`, `spawn_bolt`, `shockwave` handlers
 - `BoltSpeedBoost` is now a `TriggerChain` leaf variant — no longer a separate file
 
+## SpeedBoost Generalization (merged into develop 2026-03-21) (do not re-flag)
+- `TriggerChain::BoltSpeedBoost` renamed to `TriggerChain::SpeedBoost { target: SpeedBoostTarget, multiplier: f32 }`
+- `BumpPerformed.multiplier` field deleted — message is now `{ grade: BumpGrade, bolt: Entity }` only
+- `apply_bump_velocity` system deleted from bolt domain entirely
+- `BumpPerfectMultiplier` and `BumpWeakMultiplier` components deleted from breaker domain
+- SpeedBoost is now a normal `TriggerChain` leaf effect handled by `handle_speed_boost` observer in `behaviors/effects/speed_boost.rs`
+- `SpeedBoostTarget` enum in `chips/definition.rs`: variants `Bolt`, `Breaker`, `AllBolts` (Breaker and AllBolts are no-ops for now)
+
 ## TriggerChain Unification (refactor/unify-behaviors, as of 2026-03-21) (do not re-flag)
 
 ### Core architectural changes
@@ -110,8 +118,10 @@ type: reference
 - `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(PhysicsSystems::BreakerCollision)`
 - `bridge_cell_destroyed` — reads `CellDestroyed`, unordered (no physics dependency)
 
-### BumpPerformed now carries bolt field
-- `BumpPerformed { grade, multiplier, bolt: Entity }` — bolt field added; bridge_bump uses it to arm specific bolt
+### BumpPerformed carries bolt field only
+- `BumpPerformed { grade, bolt: Entity }` — no multiplier field; bridge_bump uses bolt to arm specific bolt
+- SpeedBoost generalization refactor (refactor/unify-behaviors) removed `multiplier` from BumpPerformed and deleted `apply_bump_velocity` system from bolt domain
+- Bump velocity scaling is now handled through `TriggerChain::SpeedBoost { target, multiplier }` fired through `EffectFired`, not through BumpPerformed
 
 ### Scenario runner new field
 - `ScenarioDefinition.initial_overclocks: Option<Vec<TriggerChain>>` — injects overclock chains at scenario start without going through chip selection UI. Used in `surge_overclock.scenario.ron`.
