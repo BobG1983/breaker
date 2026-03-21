@@ -16,8 +16,9 @@ type: reference
 - clamp_bolt_to_playfield: safety clamp for bolts escaping through CCD corner overlaps; no bottom clamp (bolt_lost handles that)
 - apply_bump_velocity: `.after(BreakerCollision).before(BoltLost)`
 - spawn_additional_bolt: `.after(BehaviorSystems::Bridge)`
+- NOTE (2026-03-21): bolt/behaviors/ sub-domain DELETED. BoltBehaviorsPlugin REMOVED. ActiveOverclocks→ActiveChains. OverclockEffectFired→EffectFired. OverclockTriggerKind→TriggerKind. behaviors/consequences/→behaviors/effects/. All bridge/effect logic unified in BehaviorsPlugin.
 - ExtraBolt: despawned permanently when lost (not respawned); still sends BoltLost message
-- Behavior observer chain: bridge systems fire commands.trigger(ConsequenceFired) → observers run immediately
+- Behavior observer chain: bridge systems fire commands.trigger(EffectFired) → effect observers run immediately (ConsequenceFired REMOVED; EffectFired is the unified trigger for all leaf effects including old consequences)
 - apply_time_penalty: `NodeSystems::ApplyTimePenalty` set, `.after(NodeSystems::TickTimer)` — can also send TimerExpired
 - handle_timer_expired: now `.after(NodeSystems::ApplyTimePenalty)` (was `.after(NodeSystems::TickTimer)`) — same-tick penalty-induced expiry guaranteed
 - handle_run_lost: `.after(handle_node_cleared).after(handle_timer_expired)` — win takes priority

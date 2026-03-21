@@ -6,7 +6,6 @@ use crate::{
     behaviors::BehaviorSystems,
     bolt::{
         BoltSystems,
-        behaviors::BoltBehaviorsPlugin,
         messages::SpawnAdditionalBolt,
         resources::BoltConfig,
         systems::{
@@ -29,8 +28,7 @@ pub struct BoltPlugin;
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
         use crate::bolt::messages::BoltSpawned;
-        app.add_plugins(BoltBehaviorsPlugin)
-            .init_resource::<BoltConfig>()
+        app.init_resource::<BoltConfig>()
             .add_message::<SpawnAdditionalBolt>()
             .add_message::<BoltSpawned>()
             .add_systems(

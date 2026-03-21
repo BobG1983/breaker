@@ -6,7 +6,7 @@ type: reference
 
 # Message Flow Map
 
-Last updated: 2026-03-20 (session 7: added DamageCell entry; added BoltHitWall entry; updated BoltHitCell consumers — handle_cell_hit removed (now reads DamageCell); added bridge_overclock_* consumers to BoltHitBreaker, BoltLost, CellDestroyed; ChipSelected name-only field; updated cross-plugin summary)
+Last updated: 2026-03-21 (refactor/unify-behaviors: BehaviorsPlugin removed; all bridge_overclock_* systems moved to BehaviorsPlugin/behaviors/bridges.rs; OverclockEffectFired renamed to EffectFired; ActiveOverclocks→ActiveChains; OverclockTriggerKind→TriggerKind. Also: behaviors/consequences/ → behaviors/effects/; ConsequenceFired removed; EffectFired is now the unified observer event for all leaf effects.)
 
 ## Registered Messages (by plugin)
 
@@ -82,7 +82,7 @@ written in OnEnter are available in the first FixedUpdate tick.
   - `perfect_bump_dash_cancel` (BreakerPlugin)
   - `spawn_bump_grade_text` (BreakerPlugin)
   - `apply_bump_velocity` (BoltPlugin)
-  - `bridge_bump` (BehaviorsPlugin, conditional) — fires ConsequenceFired trigger → observers handle_time_penalty / handle_spawn_bolt
+  - `bridge_overclock_bump` (BehaviorsPlugin) — evaluates chains via TriggerKind::PerfectBump/EarlyBump/LateBump/BumpSuccess → fires EffectFired → effect observers
   - `track_bump_result` (DebugPlugin, dev only)
 
 ### BumpWhiffed (BreakerPlugin → cross-domain)
@@ -95,37 +95,36 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Sender: `bolt_breaker_collision` (PhysicsPlugin)
 - Receivers:
   - `grade_bump` (BreakerPlugin)
-  - `bridge_overclock_breaker_impact` (BoltBehaviorsPlugin, FixedUpdate)
+  - `bridge_overclock_breaker_impact` (BehaviorsPlugin, FixedUpdate)
 
 ### BoltHitCell (PhysicsPlugin → cross-domain)
 - Sender: `bolt_cell_collision` (PhysicsPlugin)
 - Receivers:
-  - `bridge_overclock_cell_impact` (BoltBehaviorsPlugin, FixedUpdate) — evaluates overclock trigger chains
+  - `bridge_overclock_cell_impact` (BehaviorsPlugin, FixedUpdate) — evaluates overclock trigger chains
 - NOTE: `BoltHitCell` carries `{ cell: Entity, bolt: Entity }`. `handle_cell_hit` now reads `DamageCell` (not BoltHitCell) — see DamageCell entry below.
 
 ### DamageCell (CellsPlugin-owned, sent by physics + shockwave)
 - Senders:
   - `bolt_cell_collision` (PhysicsPlugin) — one per cell hit (alongside BoltHitCell)
-  - `handle_shockwave` (BoltBehaviorsPlugin) — one per in-range non-locked cell
+  - `handle_shockwave` (BehaviorsPlugin) — one per in-range non-locked cell
 - Receiver: `handle_cell_hit` (CellsPlugin, FixedUpdate)
 - NOTE: Consumer-owns pattern — cells defines the damage API, physics and shockwave call it.
 
 ### BoltHitWall (PhysicsPlugin → cross-domain)
 - Sender: `bolt_cell_collision` (PhysicsPlugin) — sent when bolt hits a wall entity
-- Receiver: `bridge_overclock_wall_impact` (BoltBehaviorsPlugin, FixedUpdate)
+- Receiver: `bridge_overclock_wall_impact` (BehaviorsPlugin, FixedUpdate)
 
 ### BoltLost (PhysicsPlugin → cross-domain)
 - Sender: `bolt_lost` (PhysicsPlugin, PhysicsSystems::BoltLost) — fires for baseline AND ExtraBolt
 - Receivers:
   - `spawn_bolt_lost_text` (BoltPlugin)
-  - `bridge_bolt_lost` (BehaviorsPlugin, conditional) — fires ConsequenceFired trigger → observers handle_life_lost / handle_time_penalty
-  - `bridge_overclock_bolt_lost` (BoltBehaviorsPlugin, FixedUpdate) — evaluates overclock trigger chains
+  - `bridge_overclock_bolt_lost` (BehaviorsPlugin, FixedUpdate) — evaluates all chains via TriggerKind::BoltLost → fires EffectFired → effect observers (handles both old bridge_bolt_lost consequence and new overclock chains in one unified bridge)
 
 ### CellDestroyed (CellsPlugin → RunPlugin/NodePlugin)
 - Sender: `handle_cell_hit` (CellsPlugin, FixedUpdate, no ordering vs receiver)
 - Receivers:
   - `track_node_completion` (NodePlugin, FixedUpdate, NodeSystems::TrackCompletion)
-  - `bridge_overclock_cell_destroyed` (BoltBehaviorsPlugin, FixedUpdate)
+  - `bridge_overclock_cell_destroyed` (BehaviorsPlugin, FixedUpdate)
 - One-tick delay is safe — messages persist across frames.
 
 ### NodeCleared (NodePlugin internal → RunPlugin)
@@ -145,21 +144,21 @@ written in OnEnter are available in the first FixedUpdate tick.
 
 ### ApplyTimePenalty (BehaviorsPlugin → NodePlugin) — cross-plugin message
 - Sender chain:
-  - `bridge_bolt_lost` or `bridge_bump` (BehaviorsPlugin) → commands.trigger(ConsequenceFired(TimePenalty))
+  - `bridge_overclock_bolt_lost` or `bridge_overclock_bump` (BehaviorsPlugin) → commands.trigger(EffectFired { effect: TriggerChain::TimePenalty { .. }, bolt })
     → `handle_time_penalty` observer (immediate) → writes ApplyTimePenalty
 - Receiver: `apply_time_penalty` (NodePlugin, FixedUpdate, .after(NodeSystems::TickTimer))
 - Cross-plugin boundary: BehaviorsPlugin (standalone) → NodePlugin
 
 ### SpawnAdditionalBolt (BehaviorsPlugin → BoltPlugin) — cross-plugin message
 - Sender chain:
-  - `bridge_bump` (BehaviorsPlugin) → commands.trigger(ConsequenceFired(SpawnBolt))
+  - `bridge_overclock_bump` (BehaviorsPlugin) → commands.trigger(EffectFired { effect: TriggerChain::SpawnBolt, bolt })
     → `handle_spawn_bolt` observer (immediate) → writes SpawnAdditionalBolt
 - Receiver: `spawn_additional_bolt` (BoltPlugin, FixedUpdate, .after(BehaviorSystems::Bridge))
 - Cross-plugin boundary: BehaviorsPlugin (standalone) → BoltPlugin
 - Ordering: spawn_additional_bolt runs AFTER BehaviorSystems::Bridge set — same-tick guarantee
 
 ### RunLost (BehaviorsPlugin → RunPlugin)
-- Sender: `handle_life_lost` observer (immediate on ConsequenceFired(LoseLife))
+- Sender: `handle_life_lost` observer (immediate on EffectFired { effect: TriggerChain::LoseLife, .. })
 - Receiver: `handle_run_lost` (RunPlugin, .after(handle_node_cleared), .after(handle_timer_expired))
 - Cross-plugin boundary: BehaviorsPlugin (standalone) → RunPlugin
 
@@ -187,13 +186,13 @@ written in OnEnter are available in the first FixedUpdate tick.
 | WallPlugin | WallsSpawned | NodePlugin (coordinator) |
 | NodePlugin | CellsSpawned | NodePlugin (coordinator — self-message) |
 | NodePlugin | SpawnNodeComplete | ScenarioRunner |
-| PhysicsPlugin | BoltHitBreaker | BreakerPlugin, BoltBehaviorsPlugin |
-| PhysicsPlugin | BoltHitCell | BoltBehaviorsPlugin |
-| PhysicsPlugin | BoltHitWall | BoltBehaviorsPlugin |
-| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin, BoltBehaviorsPlugin |
+| PhysicsPlugin | BoltHitBreaker | BreakerPlugin, BehaviorsPlugin |
+| PhysicsPlugin | BoltHitCell | BehaviorsPlugin |
+| PhysicsPlugin | BoltHitWall | BehaviorsPlugin |
+| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin |
 | CellsPlugin | DamageCell | CellsPlugin (handle_cell_hit) |
-| CellsPlugin | CellDestroyed | NodePlugin, BoltBehaviorsPlugin |
-| BoltBehaviorsPlugin | DamageCell (via shockwave) | CellsPlugin |
+| CellsPlugin | CellDestroyed | NodePlugin, BehaviorsPlugin |
+| BehaviorsPlugin | DamageCell (via shockwave) | CellsPlugin |
 | NodePlugin | NodeCleared | RunPlugin |
 | NodePlugin | TimerExpired | RunPlugin |
 | BehaviorsPlugin | ApplyTimePenalty | NodePlugin |
@@ -203,35 +202,34 @@ written in OnEnter are available in the first FixedUpdate tick.
 
 ---
 
-## Observer → Message Chains (all in BehaviorsPlugin)
+## Observer → Message Chains (all in BehaviorsPlugin, unified 2026-03-21)
+
+NOTE: ConsequenceFired is GONE. All leaf effects are now dispatched via EffectFired (was OverclockEffectFired).
+Bridge systems call `commands.trigger(EffectFired { effect: TriggerChain::LeafVariant, bolt })`.
+Effect observers pattern-match on EffectFired.effect to determine their leaf variant.
 
 ```
 BoltLost message
-  → bridge_bolt_lost system (.after(BoltLost set), in_set(BehaviorSystems::Bridge), conditional)
-    → commands.trigger(ConsequenceFired(LoseLife))
-      → handle_life_lost observer (immediate, pattern-matches Consequence::LoseLife)
-        → LivesCount decremented
-        → RunLost message (when lives == 0)
-    → commands.trigger(ConsequenceFired(TimePenalty(seconds)))
-      → handle_time_penalty observer (immediate, pattern-matches Consequence::TimePenalty)
-        → ApplyTimePenalty message
+  → bridge_overclock_bolt_lost (.after(BoltLost set), in_set(BehaviorSystems::Bridge))
+    → evaluate(TriggerKind::BoltLost, chain) → Fire(leaf) or Arm
+    → commands.trigger(EffectFired { effect: TriggerChain::LoseLife, bolt: None })
+      → handle_life_lost observer → LivesCount decremented → RunLost message (when lives == 0)
+    → commands.trigger(EffectFired { effect: TriggerChain::TimePenalty{seconds}, bolt: None })
+      → handle_time_penalty observer → ApplyTimePenalty message
 
 BumpPerformed message
-  → bridge_bump system (.after(BreakerCollision), in_set(BehaviorSystems::Bridge), conditional)
-    → commands.trigger(ConsequenceFired(SpawnBolt))
-      → handle_spawn_bolt observer (immediate, pattern-matches Consequence::SpawnBolt)
-        → SpawnAdditionalBolt message
-    → commands.trigger(ConsequenceFired(TimePenalty(seconds)))
-      → handle_time_penalty observer (immediate, pattern-matches Consequence::TimePenalty)
-        → ApplyTimePenalty message
+  → bridge_overclock_bump (.after(BreakerSystems::GradeBump), in_set(BehaviorSystems::Bridge))
+    → evaluate(TriggerKind::PerfectBump/EarlyBump/LateBump/BumpSuccess, chain) → Fire(leaf) or Arm
+    → commands.trigger(EffectFired { effect: TriggerChain::SpawnBolt, bolt: Some(e) })
+      → handle_spawn_bolt observer → SpawnAdditionalBolt message
+    → commands.trigger(EffectFired { effect: TriggerChain::Shockwave{..}, bolt: Some(e) })
+      → handle_shockwave observer → DamageCell messages (for cells in range)
 ```
 
-All three observers (handle_life_lost, handle_time_penalty, handle_spawn_bolt) run immediately
-when triggered via commands.trigger(ConsequenceFired). Messages written by observers are
-available to downstream systems that run .after(BehaviorSystems::Bridge).
+All observers run immediately when triggered via commands.trigger(EffectFired).
+Messages written by observers are available to downstream systems .after(BehaviorSystems::Bridge).
 
-Consequence::BoltSpeedBoost is NEVER triggered at runtime — it is an init-time-only consequence
-handled by apply_bolt_speed_boosts() called from init_archetype. The bridge skips it explicitly.
+TriggerChain::BoltSpeedBoost is init-time-only (handled by init_archetype), not dispatched at runtime.
 
 ---
 

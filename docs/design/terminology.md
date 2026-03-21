@@ -10,11 +10,11 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **Node** | A level | `Node`, `NodeTimer`, `NodeLayout` |
 | **Amp** | Passive bolt upgrade | `Amp`, `AmpEffect`, `AmpPool` |
 | **Augment** | Passive breaker upgrade | `Augment`, `AugmentEffect` |
-| **Overclock** | Triggered ability | `Overclock`, `OverclockTrigger` |
+| **Overclock** | Triggered ability — a chip effect defined as a `TriggerChain` | `Overclock`, `ChipEffect::Overclock`, `TriggerChain` |
 | **Bump** | Breaker's upward hit | `BumpGrade`, `BumpPerformed` |
-| **Aegis** | Lives-based breaker archetype | `aegis.archetype.ron`, `Consequence::LoseLife` |
-| **Chrono** | Time-penalty breaker archetype | `chrono.archetype.ron`, `Consequence::TimePenalty` |
-| **Prism** | Multi-bolt breaker archetype | `prism.archetype.ron`, `Consequence::SpawnBolt` |
+| **Aegis** | Lives-based breaker archetype | `aegis.archetype.ron`, `TriggerChain::LoseLife` |
+| **Chrono** | Time-penalty breaker archetype | `chrono.archetype.ron`, `TriggerChain::TimePenalty` |
+| **Prism** | Multi-bolt breaker archetype | `prism.archetype.ron`, `TriggerChain::SpawnBolt` |
 | **ExtraBolt** | Additional bolt spawned by the Prism archetype on a perfect bump; despawned on loss rather than respawned | `ExtraBolt` |
 | **Chip** | Any Amp, Augment, or Overclock (collective term) | `ChipDefinition`, `ChipRegistry`, `ChipSelected` |
 | **Rig** | The player's complete build (Breaker + Bolt + Chips + seed + score) | `Rig`, `RigSummary` |
@@ -31,5 +31,9 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **NodePool** | The pool a node layout belongs to — `Passive`, `Active`, or `Boss` — controls which layouts are eligible for each node type | `NodePool`, `NodeLayout.pool`, `NodeLayoutRegistry::get_pool` |
 | **NodeSequence** | The full ordered list of node assignments generated from the difficulty curve and run seed; one `NodeAssignment` per node | `NodeSequence`, `NodeAssignment`, `generate_node_sequence` |
 | **ChipInventory** | Runtime resource tracking the player's chip build during a run: which chips are held and at what stack level, and which chips have been seen in offerings | `ChipInventory`, `ChipEntry` |
+| **TriggerChain** | Recursive enum that encodes the full trigger→effect tree for both archetype behaviors and overclock chips. Trigger wrapper variants (`OnPerfectBump`, `OnImpact`, etc.) nest around leaf effect variants (`Shockwave`, `LoseLife`, `SpawnBolt`, etc.) | `TriggerChain`, `ImpactTarget`, `ChipEffect::Overclock` |
+| **ActiveChains** | Runtime resource holding all `TriggerChain`s active for the current run. Populated from the archetype definition on entering Playing, and extended by `handle_overclock` when an overclock chip is selected | `ActiveChains` |
+| **ArmedTriggers** | Component attached to a bolt entity when a trigger chain matches a trigger node but the inner chain is not yet a leaf. Carries the remaining chain; evaluated by the next matching bridge system | `ArmedTriggers` |
+| **EffectFired** | Observer event fired by bridge systems when a `TriggerChain` fully resolves to a leaf. Carries the leaf `TriggerChain` variant and an optional bolt entity | `EffectFired` |
 
 **Do NOT use generic terms** like "paddle", "ball", "brick", "level", "powerup", or "upgrade" for type names, identifiers, or modules.

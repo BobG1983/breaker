@@ -30,34 +30,40 @@ src/<domain>/
 - **Shared math modules** live in `shared/math.rs` when multiple domains need the same pure functions (e.g., `ray_vs_aabb` for CCD). These should contain only pure functions and data types — no systems, no Bevy resources.
 - No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`. If it doesn't fit the categories above, it probably belongs in an existing file or a different domain.
 
-## Per-Consequence Layout (Behaviors Domain)
+## Per-Effect Layout (Behaviors Domain)
 
-The `behaviors/` domain dispatches from triggers to consequences using a **per-consequence file** layout instead of the canonical category-based layout. Each consequence gets its own file containing the relevant components, observer, and helper systems. This keeps each consequence self-contained and scales cleanly as new consequences are added.
+The `behaviors/` domain evaluates unified `TriggerChain` trees and dispatches leaf effects using a **per-effect file** layout instead of the canonical category-based layout. Each effect gets its own file containing the relevant components, observer, and helper systems. This keeps each effect self-contained and scales cleanly as new effects are added.
 
 ```
 src/behaviors/
 ├── mod.rs                 # Re-exports + pub mod declarations
 ├── plugin.rs              # BehaviorsPlugin — wires init, bridges, observers
 ├── sets.rs                # BehaviorSystems set (Bridge variant for cross-domain ordering)
-├── definition.rs          # Asset type, trigger/consequence enums, ConsequenceFired event
+├── definition.rs          # Asset type (ArchetypeDefinition with root trigger fields + chains vec)
 ├── registry.rs            # Registry resource (name → definition lookup)
-├── active.rs              # ActiveBehaviors resource (trigger → consequence runtime lookup)
+├── active.rs              # ActiveChains resource (Vec<TriggerChain> populated at run start and by overclocks)
+├── armed.rs               # ArmedTriggers component (partially-resolved chains attached to a bolt entity)
+├── evaluate.rs            # TriggerKind enum + evaluate() pure function for chain resolution
+├── events.rs              # EffectFired { effect: TriggerChain, bolt: Option<Entity> } observer event
 ├── init.rs                # Init systems (config overrides, component stamping)
-├── bridges.rs             # Per-trigger bridge systems (message → ConsequenceFired event)
-└── consequences/          # Per-consequence handlers (NOT a sub-domain — no plugin.rs)
+├── bridges.rs             # Per-trigger bridge systems (message → EffectFired event or ArmedTriggers)
+└── effects/               # Per-effect handlers (NOT a sub-domain — no plugin.rs)
     ├── mod.rs             # Routing only
-    ├── <consequence_a>.rs # Components + observer + HUD for consequence A
-    └── <consequence_b>.rs # Init-time apply function for consequence B
+    ├── <effect_a>.rs      # Components + observer + HUD for effect A
+    └── <effect_b>.rs      # Observer handler for effect B
 ```
 
 **Rules:**
-- One file per consequence type. The file owns any `Component`s the consequence needs and the observer or helper that handles it.
-- `consequences/` is a **directory grouping**, not a sub-domain — it has no `plugin.rs`. `BehaviorsPlugin` registers all observers and systems from consequence files.
-- `definition.rs` holds the RON-deserialized data types (`Asset`, trigger/consequence enums) and the `ConsequenceFired(Consequence)` event. These are content data types, not Bevy components or resources.
-- `bridges.rs` holds per-trigger bridge systems. Each reads ONE message type and fires `ConsequenceFired` events via `commands.trigger()`. Each consequence handler self-selects via pattern matching — adding a new consequence never touches `bridges.rs`.
-- `init.rs` holds systems that run at archetype init time (config overrides, component stamping).
-- Adding a new consequence = new file in `consequences/` + `mod.rs` entry + `Consequence` enum variant in `definition.rs` + observer registered in `plugin.rs`.
-- Adding a new archetype = new RON file only (if using existing triggers/consequences).
+- One file per effect type. The file owns any `Component`s the effect needs and the observer that handles `EffectFired`.
+- `effects/` is a **directory grouping**, not a sub-domain — it has no `plugin.rs`. `BehaviorsPlugin` registers all observers and systems from effect files.
+- `definition.rs` holds the RON-deserialized `ArchetypeDefinition` asset type. `ArchetypeDefinition` has named root trigger fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`) plus a `chains: Vec<TriggerChain>` for additional multi-step chains. These are content data types, not Bevy components or resources.
+- `events.rs` holds the `EffectFired` observer event. Bridge systems fire it via `commands.trigger()` when a `TriggerChain` resolves to a leaf. Each effect handler self-selects via pattern matching on `effect` — adding a new leaf effect never touches `bridges.rs`.
+- `armed.rs` holds the `ArmedTriggers` component. When a bridge resolves a trigger node but the inner chain is not a leaf, it pushes the remaining chain onto the bolt's `ArmedTriggers` for evaluation on the next matching trigger event.
+- `evaluate.rs` holds the pure `evaluate(TriggerKind, &TriggerChain) -> EvalResult` function and the `TriggerKind` enum. Bridge systems call this to determine whether a chain fires, arms, or does not match.
+- `bridges.rs` holds per-trigger bridge systems. Each reads ONE message type, evaluates all active chains and any armed triggers, and fires `EffectFired` or updates `ArmedTriggers`. Adding a new trigger = new bridge system + `BehaviorSystems::Bridge` entry in `plugin.rs`.
+- `init.rs` holds systems that run at archetype init time (config overrides, component stamping). `init_archetype` populates `ActiveChains` from the archetype definition's root trigger fields and `chains` vec.
+- Adding a new leaf effect = new file in `effects/` + `mod.rs` entry + `TriggerChain` leaf variant in `chips/definition.rs` + observer registered in `plugin.rs`.
+- Adding a new archetype = new RON file only (if using existing trigger fields and effects).
 - This layout applies **only** to the `behaviors/` domain. Standard domains use the canonical category-based layout.
 - `behaviors/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.
 

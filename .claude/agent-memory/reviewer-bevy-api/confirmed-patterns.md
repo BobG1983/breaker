@@ -226,7 +226,7 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 ## MessageWriter<T> inside Observers (confirmed 2026-03-19)
 - `fn handle(trigger: On<E>, mut writer: MessageWriter<M>)` — valid; MessageWriter<T> is a SystemParam and composable in observer fns
 - `fn handle(trigger: On<E>, mut query: Query<...>, mut writer: MessageWriter<M>)` — valid; all SystemParams compose with On<E>
-- Pattern used in `behaviors/consequences/life_lost.rs`, `spawn_bolt.rs`, `time_penalty.rs`
+- Pattern used in `behaviors/effects/life_lost.rs`, `spawn_bolt.rs`, `time_penalty.rs` (directory renamed consequences/→effects/ in refactor/unify-behaviors 2026-03-21)
 
 ## any_with_component run condition (confirmed 2026-03-19)
 - `any_with_component::<T>` is in the Bevy prelude for 0.18.1
@@ -328,7 +328,7 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `commands.trigger(MyEvent { ... })` is the correct deferred global trigger
 - Observer fn signature: `fn handler(trigger: On<MyEvent>, query: Query<...>, mut commands: Commands, mut writer: MessageWriter<M>)` — all SystemParams compose freely
 - `#[derive(Event, Clone, Debug)]` on a trigger struct — valid, no extras needed
-- Confirmed: `OverclockEffectFired` using `#[derive(Event)]` (not Message) is correct for observer dispatch
+- Confirmed: `EffectFired` (was `OverclockEffectFired` before refactor/unify-behaviors 2026-03-21) using `#[derive(Event)]` (not Message) is correct for observer dispatch
 
 ## Non-mut Query binding with &mut T data
 - `armed_query: Query<(Entity, &mut ArmedTriggers)>` without `mut` on the binding is valid when the value is immediately moved into a helper function that declares it `mut`
@@ -336,7 +336,7 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - Confirmed: `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` in bridges.rs
 
 ## Option<ResMut<T>> for optional system params (re-confirmed)
-- `mut active_overclocks: Option<ResMut<ActiveOverclocks>>` — valid system parameter; None when not inserted
+- `mut active_chains: Option<ResMut<ActiveChains>>` (was `ActiveOverclocks` before refactor/unify-behaviors 2026-03-21) — valid system parameter; None when not inserted
 - Pattern used in `bypass_menu_to_playing` in lifecycle/mod.rs — correct
 - `mut stats: Option<ResMut<ScenarioStats>>` — same pattern, confirmed correct
 

@@ -4,16 +4,15 @@ use bevy::prelude::*;
 use tracing::warn;
 
 use super::{
-    active::ActiveBehaviors,
-    consequences::{bolt_speed_boost::apply_bolt_speed_boosts, life_lost::LivesCount},
-    definition::BreakerStatOverrides,
+    active::ActiveChains, definition::BreakerStatOverrides, effects::life_lost::LivesCount,
     registry::ArchetypeRegistry,
 };
 use crate::{
     breaker::{
-        components::Breaker,
+        components::{Breaker, BumpPerfectMultiplier, BumpWeakMultiplier},
         resources::{BreakerConfig, BreakerDefaults},
     },
+    chips::definition::TriggerChain,
     shared::SelectedArchetype,
 };
 
@@ -67,18 +66,18 @@ pub(crate) fn apply_archetype_config_overrides(
     apply_stat_overrides(&mut config, &def.stat_overrides);
 }
 
-/// Stamps init-time behavior components and builds `ActiveBehaviors`.
+/// Stamps init-time behavior components and builds `ActiveChains`.
 ///
 /// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
-/// - Inserts `LivesCount` if any binding uses `LoseLife`
-/// - Applies `BoltSpeedBoost` bindings as multiplier components
-/// - Builds `ActiveBehaviors` with ALL bindings for runtime bridge dispatch
+/// - Inserts `LivesCount` if archetype has `life_pool`
+/// - Stamps `BoltSpeedBoost` bindings as multiplier components
+/// - Builds `ActiveChains` from root fields and `chains`
 pub(crate) fn init_archetype(
     mut commands: Commands,
     selected: Res<SelectedArchetype>,
     registry: Res<ArchetypeRegistry>,
     breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
-    mut active: ResMut<ActiveBehaviors>,
+    mut active: ResMut<ActiveChains>,
 ) {
     let Some(def) = registry.get(&selected.0) else {
         warn!("Archetype '{}' not found in registry", selected.0);
@@ -87,27 +86,58 @@ pub(crate) fn init_archetype(
 
     // Stamp init-time components on breaker entity
     for entity in &breaker_query {
-        // Lives
         if let Some(life_pool) = def.life_pool {
             commands.entity(entity).insert(LivesCount(life_pool));
         }
 
-        // Bolt speed boosts → stamp multiplier components
-        apply_bolt_speed_boosts(&mut commands, entity, &def.behaviors);
+        // Pre-stamp BoltSpeedBoost multipliers
+        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_perfect_bump {
+            commands
+                .entity(entity)
+                .insert(BumpPerfectMultiplier(*multiplier));
+        }
+        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_early_bump {
+            commands
+                .entity(entity)
+                .insert(BumpWeakMultiplier(*multiplier));
+        }
+        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_late_bump {
+            commands
+                .entity(entity)
+                .insert(BumpWeakMultiplier(*multiplier));
+        }
     }
 
-    *active = ActiveBehaviors::from_bindings(&def.behaviors);
+    // Build ActiveChains from root fields (filter BoltSpeedBoost) + chains
+    let mut chains = Vec::new();
+    if let Some(chain) = &def.on_bolt_lost
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnBoltLost(Box::new(chain.clone())));
+    }
+    if let Some(chain) = &def.on_perfect_bump
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnPerfectBump(Box::new(chain.clone())));
+    }
+    if let Some(chain) = &def.on_early_bump
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnEarlyBump(Box::new(chain.clone())));
+    }
+    if let Some(chain) = &def.on_late_bump
+        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
+    {
+        chains.push(TriggerChain::OnLateBump(Box::new(chain.clone())));
+    }
+    chains.extend(def.chains.iter().cloned());
+    *active = ActiveChains(chains);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        behaviors::definition::{
-            ArchetypeDefinition, BehaviorBinding, BreakerStatOverrides, Consequence, Trigger,
-        },
-        breaker::components::{BumpPerfectMultiplier, BumpWeakMultiplier},
-    };
+    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
 
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
 
@@ -116,20 +146,11 @@ mod tests {
             name: TEST_ARCHETYPE_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            behaviors: vec![
-                BehaviorBinding {
-                    triggers: vec![Trigger::BoltLost],
-                    consequence: Consequence::LoseLife,
-                },
-                BehaviorBinding {
-                    triggers: vec![Trigger::PerfectBump],
-                    consequence: Consequence::BoltSpeedBoost(1.5),
-                },
-                BehaviorBinding {
-                    triggers: vec![Trigger::EarlyBump, Trigger::LateBump],
-                    consequence: Consequence::BoltSpeedBoost(1.1),
-                },
-            ],
+            on_bolt_lost: Some(TriggerChain::LoseLife),
+            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
+            on_early_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 }),
+            on_late_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 }),
+            chains: vec![],
         }
     }
 
@@ -140,7 +161,7 @@ mod tests {
         registry.insert(def.name.clone(), def);
         app.insert_resource(registry)
             .insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()))
-            .init_resource::<ActiveBehaviors>()
+            .init_resource::<ActiveChains>()
             .add_systems(Update, init_archetype);
         app
     }
@@ -169,24 +190,71 @@ mod tests {
     }
 
     #[test]
-    fn init_archetype_builds_active_behaviors() {
+    fn init_archetype_builds_active_chains() {
         let mut app = test_app_with_archetype(make_test_archetype());
         app.world_mut().spawn(Breaker);
         app.update();
 
-        let active = app.world().resource::<ActiveBehaviors>();
-        // 3 bindings: BoltLost, PerfectBump, EarlyBump, LateBump (multi-trigger expanded)
-        assert_eq!(active.0.len(), 4);
-        assert!(active.has_trigger(Trigger::BoltLost));
-        assert!(active.has_trigger(Trigger::PerfectBump));
-        assert!(active.has_trigger(Trigger::EarlyBump));
-        assert!(active.has_trigger(Trigger::LateBump));
+        let active = app.world().resource::<ActiveChains>();
+        // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
+        // on_perfect_bump=BoltSpeedBoost → filtered out
+        // on_early_bump=BoltSpeedBoost → filtered out
+        // on_late_bump=BoltSpeedBoost → filtered out
+        assert_eq!(active.0.len(), 1);
+        assert!(matches!(
+            &active.0[0],
+            TriggerChain::OnBoltLost(inner) if matches!(**inner, TriggerChain::LoseLife)
+        ));
+    }
+
+    #[test]
+    fn init_archetype_builds_active_chains_with_non_speed_boost() {
+        let def = ArchetypeDefinition {
+            name: TEST_ARCHETYPE_NAME.to_owned(),
+            stat_overrides: BreakerStatOverrides::default(),
+            life_pool: None,
+            on_bolt_lost: Some(TriggerChain::TimePenalty { seconds: 5.0 }),
+            on_perfect_bump: Some(TriggerChain::SpawnBolt),
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
+        };
+        let mut app = test_app_with_archetype(def);
+        app.world_mut().spawn(Breaker);
+        app.update();
+
+        let active = app.world().resource::<ActiveChains>();
+        assert_eq!(active.0.len(), 2);
+    }
+
+    #[test]
+    fn init_archetype_includes_chains_field() {
+        let def = ArchetypeDefinition {
+            name: TEST_ARCHETYPE_NAME.to_owned(),
+            stat_overrides: BreakerStatOverrides::default(),
+            life_pool: None,
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![TriggerChain::OnPerfectBump(Box::new(
+                TriggerChain::OnImpact(
+                    crate::chips::definition::ImpactTarget::Cell,
+                    Box::new(TriggerChain::test_shockwave(64.0)),
+                ),
+            ))],
+        };
+        let mut app = test_app_with_archetype(def);
+        app.world_mut().spawn(Breaker);
+        app.update();
+
+        let active = app.world().resource::<ActiveChains>();
+        assert_eq!(active.0.len(), 1);
     }
 
     #[test]
     fn init_archetype_skips_already_initialized() {
         let mut app = test_app_with_archetype(make_test_archetype());
-        // Entity already has LivesCount → should skip
         let entity = app.world_mut().spawn((Breaker, LivesCount(99))).id();
         app.update();
 
@@ -267,7 +335,11 @@ mod tests {
                 ..default()
             },
             life_pool: None,
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
 
         let mut registry = ArchetypeRegistry::default();
@@ -279,7 +351,6 @@ mod tests {
 
         let config = app.world().resource::<BreakerConfig>();
         assert!((config.width - 200.0).abs() < f32::EPSILON);
-        // Other values should be defaults
         let default_config = BreakerConfig::default();
         assert!((config.max_speed - default_config.max_speed).abs() < f32::EPSILON);
     }
@@ -287,10 +358,14 @@ mod tests {
     #[test]
     fn no_life_pool_no_lives_count() {
         let def = ArchetypeDefinition {
-            name: "Aegis".to_owned(),
+            name: TEST_ARCHETYPE_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
 
         let mut app = test_app_with_archetype(def);

@@ -37,7 +37,7 @@ type: reference
 
 ## Chips Domain Architecture (do not re-flag)
 - `chips/` has `definition.rs` (content data types: ChipDefinition, AmpEffect, AugmentEffect, ChipEffect, TriggerChain, ImpactTarget, Rarity, ChipEffectApplied)
-- `chips/effects/` promoted directory with per-effect observer handlers (mirrors behaviors/consequences/ pattern)
+- `chips/effects/` promoted directory with per-effect observer handlers (mirrors behaviors/effects/ pattern — note: behaviors/consequences/ was deleted in refactor/unify-behaviors; behaviors/effects/ is the current name)
 - `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
 - `ChipEffectApplied` documented in messages.md Observer Events table
 
@@ -65,9 +65,9 @@ type: reference
 - Added to ordering.md defined sets table and FixedUpdate chain
 
 ### bridge_bump_whiff (do not re-flag)
-- `bridge_bump_whiff` is a real bridge system in `behaviors/bridges.rs` — reads `BumpWhiffed`, fires `ConsequenceFired`
+- `bridge_bump_whiff` is a real bridge system in `behaviors/bridges.rs` — reads `BumpWhiffed`, fires `EffectFired`
 - Runs `.after(BreakerSystems::GradeBump).in_set(BehaviorSystems::Bridge)`
-- Added to messages.md BumpWhiffed consumers and ConsequenceFired senders
+- NOTE: previously fired `ConsequenceFired` — now fires `EffectFired` after TriggerChain unification
 
 ### Phase 4 Wave 2 Completion (as of 2026-03-19)
 - 4c.1 (Rarity enum + ChipInventory): DONE — `Rarity` in `chips/definition.rs`, `ChipInventory` in `chips/inventory.rs`
@@ -91,7 +91,33 @@ type: reference
 - `handle_chain_hit` and `handle_bolt_size_boost` observers registered in `ChipsPlugin`
 - `ChainHit` and `BoltSizeBoost` are stamped by observers but NOT yet consumed by any production gameplay system (physics, cells, bolt) — NOT cross-domain reads yet, not added to plugins.md cross-domain section
 - `content.md` already documents these correctly (AmpEffect enum and component list updated)
-- `behaviors/consequences/bolt_speed_boost.rs` added — init-time function (not observer) — correctly NOT listed in messages.md observer events table
+- SUPERSEDED BY TRIGGERCHAIN UNIFICATION: `behaviors/consequences/` directory deleted; replaced by `behaviors/effects/` with `life_lost`, `time_penalty`, `spawn_bolt`, `shockwave` handlers
+- `BoltSpeedBoost` is now a `TriggerChain` leaf variant — no longer a separate file
+
+## TriggerChain Unification (refactor/unify-behaviors, as of 2026-03-21) (do not re-flag)
+
+### Core architectural changes
+- `ActiveBehaviors` + `ActiveOverclocks` → single `ActiveChains(Vec<TriggerChain>)` resource in `behaviors/active.rs`
+- `ConsequenceFired(Consequence)` + `OverclockEffectFired` → single `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` in `behaviors/events.rs`
+- `behaviors/consequences/` directory deleted → replaced by `behaviors/effects/` (life_lost, time_penalty, spawn_bolt, shockwave)
+- `bolt/behaviors/` directory deleted — all bridges now live in `behaviors/bridges.rs`
+- New files: `behaviors/armed.rs` (ArmedTriggers component), `behaviors/evaluate.rs` (TriggerKind + evaluate() fn), `behaviors/events.rs` (EffectFired)
+- `ArchetypeDefinition` now has named root fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`: `Option<TriggerChain>`) + `chains: Vec<TriggerChain>` — no more `BehaviorBinding` vec
+
+### New bridge systems in BehaviorSystems::Bridge
+- `bridge_cell_impact` — reads `BoltHitCell`, runs `.after(PhysicsSystems::BreakerCollision)`
+- `bridge_breaker_impact` — reads `BoltHitBreaker`, runs `.after(PhysicsSystems::BreakerCollision)`
+- `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(PhysicsSystems::BreakerCollision)`
+- `bridge_cell_destroyed` — reads `CellDestroyed`, unordered (no physics dependency)
+
+### BumpPerformed now carries bolt field
+- `BumpPerformed { grade, multiplier, bolt: Entity }` — bolt field added; bridge_bump uses it to arm specific bolt
+
+### Scenario runner new field
+- `ScenarioDefinition.initial_overclocks: Option<Vec<TriggerChain>>` — injects overclock chains at scenario start without going through chip selection UI. Used in `surge_overclock.scenario.ron`.
+
+### Phase 4d status
+- 4d is complete on feature/overclock-trigger-chain branch. Plan updated to mark all 4d sub-stages done.
 
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete

@@ -137,7 +137,11 @@ mod tests {
             name: name.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         }
     }
 

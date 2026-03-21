@@ -8,6 +8,7 @@ type: reference
 2026-03-19 (run 1-2) — 26 agent directories each. Run 1: 10 issues, 10 fixed. Run 2: 8 issues, 8 fixed.
 2026-03-19 (run 3) — 26 directories. 6 issues found, 6 fixed. Key: stale cast-pattern memories, orphaned writer-tests file, entity_scale duplication, planner-review stale method name.
 2026-03-20 (targeted: session 7 overclock-trigger-chain changes) — 12 directories audited. 20 issues found, 20 fixed. Key: ChipKind removal, OverclockEffectFired.bolt Entity→Option<Entity>, TriggerChain stacking fields, shockwave violation resolution (DamageCell pattern), handle_cell_hit consumer migration from BoltHitCell to DamageCell, performance-baseline stale cell query.
+2026-03-21 (targeted: refactor/unify-behaviors) — 15 directories audited. 40+ stale references fixed across 17 files. Key changes: bolt/behaviors/ subdomain DELETED, behaviors/consequences/ DELETED, ActiveOverclocks→ActiveChains, OverclockEffectFired→EffectFired, OverclockTriggerKind→TriggerKind, BoltBehaviorsPlugin DELETED, all bridge/effect systems consolidated in behaviors/. Agents affected: planner-spec, researcher-system-dependencies (3 files), reviewer-architecture (5 files), reviewer-correctness (2 files), reviewer-quality, reviewer-performance, reviewer-bevy-api, runner-linting, guard-docs (3 files), guard-game-design.
 
 ## Recurring Staleness Patterns
 
@@ -51,6 +52,12 @@ When a BLOCKING violation is fixed (e.g., shockwave cross-domain mutation → Da
 ### Event/message field type changes cascade to multiple memories
 When a field type changes (e.g., `OverclockEffectFired.bolt: Entity → Option<Entity>`), all memories that describe usage patterns for that field become stale: domain-inventory.md (field description), known-correct.md (usage correctness notes), bug-patterns.md (bugs that depended on the old type), and message-flow/message-inventory tables.
 **Watch:** planner-spec/domain-inventory.md, reviewer-correctness/known-correct.md, reviewer-correctness/bug-patterns.md, reviewer-architecture/message-inventory.md, researcher-system-dependencies/message-flow.md — all describe message/event struct shapes.
+
+### Domain deletion / consolidation cascades across all memory files
+When an entire subdomain is deleted and its systems consolidated elsewhere (e.g., bolt/behaviors/ deleted, behaviors/consequences/ deleted, all content merged into behaviors/), every agent that recorded file paths, type names, or system names from the deleted domain holds stale data. This is the highest-impact staleness event — it touches file paths, type names, bridge system names, and plugin registration in every agent that covered the deleted domain.
+Observed: refactor/unify-behaviors (2026-03-21) deleted bolt/behaviors/ and behaviors/consequences/, renaming 3 types (ActiveOverclocks→ActiveChains, OverclockEffectFired→EffectFired, OverclockTriggerKind→TriggerKind) and deleting 1 plugin (BoltBehaviorsPlugin). This produced stale references in 15 agent memories requiring 40+ individual edits.
+**Watch:** When any subdomain is deleted, immediately audit: planner-spec/domain-inventory.md, researcher-system-dependencies (all 4 files), reviewer-architecture (all 5 files), reviewer-correctness, reviewer-quality, reviewer-performance, reviewer-bevy-api, runner-linting, guard-docs (terminology, known-state, phase-log), guard-game-design.
+**Pattern:** Grep all agent memories for the old subdomain path (e.g., `bolt/behaviors`, `behaviors/consequences`) and old type names before closing the branch.
 
 ### Pending-migration language outlasts the migration
 When a component type is migrated (e.g., `CellHealth: u32 → f32`), domain inventory files describe both the "before" and "after" states using "After migration:" language. The pending language persists after the migration ships.

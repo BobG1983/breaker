@@ -10,6 +10,7 @@
 - [pattern_default_vs_ron_test_values.md](pattern_default_vs_ron_test_values.md) — Specs citing RON values but tests using Default trait values; CellConfig and PlayfieldConfig defaults differ from RON
 - [pattern_onenter_resource_timing.md](pattern_onenter_resource_timing.md) — Systems reading resources inserted via deferred commands in OnEnter need explicit ordering after the inserting chain
 - [pattern_enum_signature_migration.md](pattern_enum_signature_migration.md) — Changing enum variant signatures breaks ALL existing construction/match sites; spec must enumerate them as prerequisites
+- [pattern_refactor_atomicity.md](pattern_refactor_atomicity.md) — Multi-unit refactors that move/rename types cannot compile independently; must be atomic or use re-export bridge
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `physics/messages.rs`

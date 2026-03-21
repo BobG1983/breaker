@@ -1,6 +1,5 @@
 //! Bolt domain plugin — bolt physics, reflection model, speed management.
 
-pub(crate) mod behaviors;
 pub mod components;
 pub mod filters;
 pub mod messages;
@@ -10,7 +9,6 @@ pub mod resources;
 pub mod sets;
 pub mod systems;
 
-pub use behaviors::ActiveOverclocks;
 pub use plugin::BoltPlugin;
 pub use resources::{BoltConfig, BoltDefaults};
 pub use sets::BoltSystems;

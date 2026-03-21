@@ -83,18 +83,18 @@ type: reference
 - In Bevy 0.18 all MessageWriter params share the same deferred command buffer as the system's Commands — no additional per-writer overhead, no new parallelism conflict.
 - System was already serialized by its mutable bolt_query + Commands. Third writer adds zero scheduling cost.
 
-### bolt/behaviors/bridges.rs — bridge_overclock_breaker_impact, bridge_overclock_wall_impact
+### behaviors/bridges.rs — bridge_overclock_breaker_impact, bridge_overclock_wall_impact (was bolt/behaviors/bridges.rs)
 - Structurally identical to bridge_overclock_cell_impact (already clean).
 - MessageReader drains early-exit on no events; armed_query: Query<&mut ArmedTriggers> hits 0–1 entities.
 - All three impact bridges access &mut ArmedTriggers — cannot run in parallel with each other. Correct and expected; they are all ordered after(PhysicsSystems::BreakerCollision).
 - No new archetype fragmentation: ArmedTriggers is already tracked as 1-entity add/remove.
 
-### bolt/behaviors/bridges.rs — bridge_overclock_bump double evaluation
+### behaviors/bridges.rs — bridge_overclock_bump double evaluation (was bolt/behaviors/bridges.rs)
 - Iterates active.0 twice per bump message: once for grade-specific trigger, once for BumpSuccess.
 - Max 3 chains × 2 passes × 1 pure match each = negligible. evaluate() is a pure enum pattern match.
 - Not a hot-path concern at any foreseeable chip stack cap. Correct design, not double-work.
 
-### bolt/behaviors/evaluate.rs — ImpactTarget 3-arm explicit match vs wildcard
+### behaviors/evaluate.rs — ImpactTarget 3-arm explicit match vs wildcard (was bolt/behaviors/evaluate.rs)
 - Explicit (CellImpact, OnImpact(Cell, inner)) | (BreakerImpact, OnImpact(Breaker, inner)) | (WallImpact, OnImpact(Wall, inner)) arms compile identically to a wildcard after optimization.
 - The explicit arms are a correctness win (prevent cross-target misfires). Zero performance difference.
 
@@ -103,15 +103,15 @@ type: reference
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-20)
 
-### bolt/behaviors/effects/shockwave.rs — handle_shockwave observer
-- Fires only on OverclockEffectFired (event-driven, not polling). Early-returns for non-Shockwave variants.
+### behaviors/effects/shockwave.rs — handle_shockwave observer (was bolt/behaviors/effects/shockwave.rs)
+- Fires only on EffectFired (was OverclockEffectFired — renamed in refactor/unify-behaviors). Event-driven, not polling. Early-returns for non-Shockwave variants.
 - Cell query (updated 2026-03-20 session 7): `ShockwaveCellQuery = (Entity, &Transform, Has<Locked>)` with `With<Cell>` filter — shockwave no longer needs &mut CellHealth or RequiredToClear since it writes DamageCell messages instead. Smaller tuple, no mutable component access. Clean.
 - Has<Locked> used correctly for skip logic (cheaper than Without<Locked> filter here because locked cells also need to be iterated past; no archetype penalty).
 - Archetype fragmentation: no new fragmentation vs prior baseline — Locked is existing archetype component. No new concern.
 - No allocations inside the observer body. Clean.
 
-### bolt/behaviors/bridges.rs — bridge systems + resolve_armed
-- `resolve_armed` allocates `Vec::new()` per call and swaps it into `armed.0`. This is NOT a hot-path: fires only when an OverclockEffectFired chain resolves (rare game event, not per-frame). Acceptable.
+### behaviors/bridges.rs — bridge systems + resolve_armed (was bolt/behaviors/bridges.rs)
+- `resolve_armed` allocates `Vec::new()` per call and swaps it into `armed.0`. This is NOT a hot-path: fires only when an EffectFired (was OverclockEffectFired) chain resolves (rare game event, not per-frame). Acceptable.
 - `bridge_overclock_cell_destroyed` / `bridge_overclock_bolt_lost` guards: `reader.read().count() == 0` early-exit — prevents work when no events. But NOTE: calling `.count()` drains the iterator; the events are consumed. Fine because the only needed info is "did any arrive."
 - `bridge_overclock_cell_destroyed` / `bridge_overclock_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` — mutable access even in function signature passed immutably to `evaluate_armed_all`. The `&mut ArmedTriggers` is warranted (resolve_armed mutates armed.0). Correct.
 - `arm_bolt` inserts `ArmedTriggers(vec![remaining])` — single allocation at arm-time. Event-driven, not hot-path.
@@ -122,3 +122,15 @@ type: reference
 
 ### Intentional Pattern: resolve_armed swap idiom
 - `drain(..)` into `new_armed` then assign back to `armed.0` is the standard "process and rebuild" Vec pattern. At typical scale (≤3 armed chains per bolt, ≤3 active overclock chips), this is negligible. Not worth changing.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
+
+### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors)
+- 4 new leaf variants: LoseLife (0 payload), SpawnBolt (0 payload), TimePenalty { seconds: f32 } (4B), BoltSpeedBoost { multiplier: f32 } (4B).
+- 3 new trigger wrappers: OnEarlyBump(Box<Self>), OnLateBump(Box<Self>), OnBumpWhiff(Box<Self>).
+- Enum size impact: NONE. Discriminant expands trivially (still 1 byte). Largest variant is Shockwave/MultiBolt/Shield at 12 bytes — unchanged by new variants. Box<Self> wrappers are all 8 bytes. No size regression.
+- ECS impact: TriggerChain is NOT a component or resource by itself. It lives inside ActiveChains(Vec<TriggerChain>) (Res, was ActiveOverclocks) and ArmedTriggers(Vec<TriggerChain>) (Component). Neither archetype fragmentation nor query cost is affected by adding enum variants.
+- Hot-path impact: evaluate() is a pure pattern match called O(active_chains) times per bridge event (typically <5 chains). Adding 7 variants to the match adds zero branches to existing trigger kinds — the `else { NoMatch }` fallback absorbs them cheaply.
+- The 3 new trigger wrappers (OnEarlyBump, OnLateBump, OnBumpWhiff) have NO corresponding OverclockTriggerKind variants or bridge systems yet — they are dead types until wired. Zero runtime cost for now.
+- The 4 new leaf variants (LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost) have NO effect handler observers yet — they are dead types until wired. Zero runtime cost for now.
+- bridge_overclock_bump handles BumpGrade::Early|Late → None for grade-specific trigger (no Early/LateBump kind yet). BumpSuccess fires for all non-whiff grades. Correct and intentional pending wiring.

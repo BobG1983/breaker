@@ -150,7 +150,11 @@ mod tests {
                 ..default()
             },
             life_pool: None,
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
 
         let mut registry = ArchetypeRegistry::default();
@@ -206,7 +210,11 @@ mod tests {
             name: "Plain".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            behaviors: vec![],
+            on_bolt_lost: None,
+            on_perfect_bump: None,
+            on_early_bump: None,
+            on_late_bump: None,
+            chains: vec![],
         };
         let mut registry = ArchetypeRegistry::default();
         registry.insert("Plain".to_owned(), def);

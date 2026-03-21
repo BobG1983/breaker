@@ -37,7 +37,7 @@ All systems dev-only (`#[cfg(feature = "dev")]`), centralized in `debug/hot_relo
 
 - **Cell type definitions**: rebuild registry, update health/visuals/color on matching live cells via `CellTypeAlias` tracking component
 - **Node layouts**: rebuild registry, despawn current cells directly (skip destruction pipeline), re-spawn from updated layout
-- **Archetypes**: rebuild registry, reset BreakerConfig from defaults + re-apply overrides, re-stamp consequence components, rebuild ActiveBehaviors
+- **Archetypes**: rebuild registry, reset BreakerConfig from defaults + re-apply overrides, re-stamp effect components (bolt speed multipliers, lives), rebuild ActiveChains
 
 ---
 
@@ -49,7 +49,7 @@ Rather than a generic modifier stack (premature — chips aren't implemented yet
 RON changes → re-seed Config from new Defaults
   → re-apply archetype stat overrides (apply_stat_overrides helper)
     → re-stamp entity components (force-overwrite)
-      → re-stamp archetype consequence components (multipliers, lives)
+      → re-stamp archetype effect components (multipliers, lives)
 ```
 
 When chips arrive in Phase 4, they add one more step at the end of this chain.

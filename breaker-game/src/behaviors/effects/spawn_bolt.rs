@@ -1,18 +1,18 @@
-//! Spawn-bolt consequence — observer that translates event into a message.
+//! Spawn-bolt effect handler — observer that translates event into a message.
 
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::definition::{Consequence, ConsequenceFired},
-    bolt::messages::SpawnAdditionalBolt,
+    behaviors::events::EffectFired, bolt::messages::SpawnAdditionalBolt,
+    chips::definition::TriggerChain,
 };
 
 /// Observer that handles spawn-bolt — writes [`SpawnAdditionalBolt`] message.
 pub(crate) fn handle_spawn_bolt(
-    trigger: On<ConsequenceFired>,
+    trigger: On<EffectFired>,
     mut writer: MessageWriter<SpawnAdditionalBolt>,
 ) {
-    let Consequence::SpawnBolt = trigger.event().0 else {
+    let TriggerChain::SpawnBolt = &trigger.event().effect else {
         return;
     };
     writer.write(SpawnAdditionalBolt);
@@ -56,13 +56,35 @@ mod tests {
     fn handle_spawn_bolt_sends_message() {
         let mut app = test_app();
 
-        app.world_mut()
-            .commands()
-            .trigger(ConsequenceFired(Consequence::SpawnBolt));
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::SpawnBolt,
+            bolt: None,
+        });
         app.world_mut().flush();
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedSpawnBolt>();
-        assert_eq!(captured.0, 1);
+        assert_eq!(
+            captured.0, 1,
+            "SpawnBolt effect should write one SpawnAdditionalBolt message"
+        );
+    }
+
+    #[test]
+    fn non_spawn_bolt_effect_does_not_send_message() {
+        let mut app = test_app();
+
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::LoseLife,
+            bolt: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedSpawnBolt>();
+        assert_eq!(
+            captured.0, 0,
+            "LoseLife effect should not produce SpawnAdditionalBolt (self-selection)"
+        );
     }
 }
