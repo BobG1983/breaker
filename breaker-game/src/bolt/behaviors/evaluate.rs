@@ -73,7 +73,7 @@ mod tests {
         // PerfectBump vs OnImpact(leaf) -- wrong trigger kind
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         );
         let result = evaluate(OverclockTriggerKind::PerfectBump, &chain);
         assert_eq!(result, EvalResult::NoMatch);
@@ -82,11 +82,15 @@ mod tests {
     #[test]
     fn evaluate_returns_fire_for_matching_trigger_with_leaf() {
         // PerfectBump vs OnPerfectBump(Shockwave{64}) -- match, inner is leaf
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
         let result = evaluate(OverclockTriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shockwave { range: 64.0 })
+            EvalResult::Fire(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            })
         );
     }
 
@@ -95,7 +99,7 @@ mod tests {
         // PerfectBump vs OnPerfectBump(OnImpact(Shockwave{64})) -- match, inner is non-leaf
         let inner_chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         );
         let chain = TriggerChain::OnPerfectBump(Box::new(inner_chain.clone()));
         let result = evaluate(OverclockTriggerKind::PerfectBump, &chain);
@@ -107,41 +111,53 @@ mod tests {
         // CellImpact vs OnImpact(Cell, MultiBolt{3}) -- match, inner is leaf
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::MultiBolt { count: 3 }),
+            Box::new(TriggerChain::test_multi_bolt(3)),
         );
         let result = evaluate(OverclockTriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::MultiBolt { count: 3 })
+            EvalResult::Fire(TriggerChain::MultiBolt {
+                base_count: 3,
+                count_per_level: 0,
+                stacks: 1,
+            })
         );
     }
 
     #[test]
     fn evaluate_cell_destroyed_trigger_fires() {
         // CellDestroyed vs OnCellDestroyed(Shield{5.0}) -- match, inner is leaf
-        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::Shield { duration: 5.0 }));
+        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shield(5.0)));
         let result = evaluate(OverclockTriggerKind::CellDestroyed, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shield { duration: 5.0 })
+            EvalResult::Fire(TriggerChain::Shield {
+                base_duration: 5.0,
+                duration_per_level: 0.0,
+                stacks: 1,
+            })
         );
     }
 
     #[test]
     fn evaluate_bolt_lost_trigger_fires() {
         // BoltLost vs OnBoltLost(Shockwave{32}) -- match, inner is leaf
-        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::Shockwave { range: 32.0 }));
+        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::test_shockwave(32.0)));
         let result = evaluate(OverclockTriggerKind::BoltLost, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shockwave { range: 32.0 })
+            EvalResult::Fire(TriggerChain::Shockwave {
+                base_range: 32.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            })
         );
     }
 
     #[test]
     fn evaluate_leaf_chain_returns_no_match() {
         // PerfectBump vs Shockwave{64} -- leaf, not wrapped in a trigger
-        let chain = TriggerChain::Shockwave { range: 64.0 };
+        let chain = TriggerChain::test_shockwave(64.0);
         let result = evaluate(OverclockTriggerKind::PerfectBump, &chain);
         assert_eq!(result, EvalResult::NoMatch);
     }
@@ -152,12 +168,16 @@ mod tests {
     fn cell_impact_matches_on_impact_cell_and_fires() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         );
         let result = evaluate(OverclockTriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shockwave { range: 64.0 }),
+            EvalResult::Fire(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            }),
             "CellImpact should match OnImpact(Cell, leaf) and fire"
         );
     }
@@ -166,26 +186,32 @@ mod tests {
     fn breaker_impact_matches_on_impact_breaker_and_fires() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Breaker,
-            Box::new(TriggerChain::MultiBolt { count: 2 }),
+            Box::new(TriggerChain::test_multi_bolt(2)),
         );
         let result = evaluate(OverclockTriggerKind::BreakerImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::MultiBolt { count: 2 }),
+            EvalResult::Fire(TriggerChain::MultiBolt {
+                base_count: 2,
+                count_per_level: 0,
+                stacks: 1,
+            }),
             "BreakerImpact should match OnImpact(Breaker, leaf) and fire"
         );
     }
 
     #[test]
     fn wall_impact_matches_on_impact_wall_and_fires() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Wall,
-            Box::new(TriggerChain::Shield { duration: 5.0 }),
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Wall, Box::new(TriggerChain::test_shield(5.0)));
         let result = evaluate(OverclockTriggerKind::WallImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shield { duration: 5.0 }),
+            EvalResult::Fire(TriggerChain::Shield {
+                base_duration: 5.0,
+                duration_per_level: 0.0,
+                stacks: 1,
+            }),
             "WallImpact should match OnImpact(Wall, leaf) and fire"
         );
     }
@@ -194,7 +220,7 @@ mod tests {
     fn cell_impact_does_not_match_on_impact_breaker() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Breaker,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         );
         let result = evaluate(OverclockTriggerKind::CellImpact, &chain);
         assert_eq!(
@@ -206,10 +232,8 @@ mod tests {
 
     #[test]
     fn breaker_impact_does_not_match_on_impact_wall() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Wall,
-            Box::new(TriggerChain::Shield { duration: 5.0 }),
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Wall, Box::new(TriggerChain::test_shield(5.0)));
         let result = evaluate(OverclockTriggerKind::BreakerImpact, &chain);
         assert_eq!(
             result,
@@ -223,14 +247,14 @@ mod tests {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
             Box::new(TriggerChain::OnCellDestroyed(Box::new(
-                TriggerChain::Shockwave { range: 32.0 },
+                TriggerChain::test_shockwave(32.0),
             ))),
         );
         let result = evaluate(OverclockTriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
             EvalResult::Arm(TriggerChain::OnCellDestroyed(Box::new(
-                TriggerChain::Shockwave { range: 32.0 }
+                TriggerChain::test_shockwave(32.0)
             ))),
             "CellImpact with non-leaf inner should return Arm with inner chain"
         );
@@ -240,18 +264,22 @@ mod tests {
 
     #[test]
     fn bump_success_matches_on_bump_success_and_fires() {
-        let chain = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 }));
+        let chain = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0)));
         let result = evaluate(OverclockTriggerKind::BumpSuccess, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shield { duration: 3.0 }),
+            EvalResult::Fire(TriggerChain::Shield {
+                base_duration: 3.0,
+                duration_per_level: 0.0,
+                stacks: 1,
+            }),
             "BumpSuccess should match OnBumpSuccess(leaf) and fire"
         );
     }
 
     #[test]
     fn perfect_bump_does_not_match_on_bump_success() {
-        let chain = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 }));
+        let chain = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0)));
         let result = evaluate(OverclockTriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
@@ -262,7 +290,7 @@ mod tests {
 
     #[test]
     fn bump_success_does_not_match_on_perfect_bump() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
         let result = evaluate(OverclockTriggerKind::BumpSuccess, &chain);
         assert_eq!(
             result,

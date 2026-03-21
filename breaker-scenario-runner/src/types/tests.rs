@@ -457,7 +457,7 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
         invariants: [],
         expected_violations: None,
         debug_setup: None,
-        initial_overclocks: Some([OnPerfectBump(OnImpact(Cell, Shockwave(range: 64.0)))]),
+        initial_overclocks: Some([OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1)))]),
     )"#;
     let result: ScenarioDefinition = ron::de::from_str(ron)
         .expect("ScenarioDefinition with initial_overclocks surge chain should parse");
@@ -469,9 +469,13 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
         overclocks[0],
         TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 })
+            Box::new(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 32.0,
+                stacks: 1
+            })
         ))),
-        "overclock chain must match OnPerfectBump(OnImpact(Cell, Shockwave {{ range: 64.0 }}))"
+        "overclock chain must match OnPerfectBump(OnImpact(Cell, Shockwave))"
     );
 }
 
@@ -487,7 +491,7 @@ fn scenario_definition_initial_overclocks_multiple_parses() {
         invariants: [],
         expected_violations: None,
         debug_setup: None,
-        initial_overclocks: Some([Shockwave(range: 64.0), MultiBolt(count: 3)]),
+        initial_overclocks: Some([Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1), MultiBolt(base_count: 3, count_per_level: 0, stacks: 1)]),
     )"#;
     let result: ScenarioDefinition = ron::de::from_str(ron)
         .expect("ScenarioDefinition with multiple initial_overclocks should parse");
@@ -497,13 +501,21 @@ fn scenario_definition_initial_overclocks_multiple_parses() {
     assert_eq!(overclocks.len(), 2, "expected 2 overclock chains");
     assert_eq!(
         overclocks[0],
-        TriggerChain::Shockwave { range: 64.0 },
-        "first overclock must be Shockwave {{ range: 64.0 }}"
+        TriggerChain::Shockwave {
+            base_range: 64.0,
+            range_per_level: 0.0,
+            stacks: 1
+        },
+        "first overclock must be Shockwave"
     );
     assert_eq!(
         overclocks[1],
-        TriggerChain::MultiBolt { count: 3 },
-        "second overclock must be MultiBolt {{ count: 3 }}"
+        TriggerChain::MultiBolt {
+            base_count: 3,
+            count_per_level: 0,
+            stacks: 1
+        },
+        "second overclock must be MultiBolt"
     );
 }
 

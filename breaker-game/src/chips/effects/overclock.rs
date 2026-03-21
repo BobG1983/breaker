@@ -39,7 +39,7 @@ mod tests {
         let mut app = test_app();
         let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )));
 
         app.world_mut().commands().trigger(ChipEffectApplied {

@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn perfect_bump_with_active_leaf_fires_effect() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
         let mut app = bump_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
@@ -441,7 +441,7 @@ mod tests {
             1,
             "perfect bump with active OnPerfectBump(leaf) should fire exactly one effect"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
     }
 
     #[test]
@@ -449,7 +449,7 @@ mod tests {
         // Full surge chain: OnPerfectBump(OnImpact(Cell, Shockwave{64}))
         let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )));
         let mut app = bump_test_app(vec![chain]);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -476,14 +476,14 @@ mod tests {
             armed.0[0],
             TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave { range: 64.0 })
+                Box::new(TriggerChain::test_shockwave(64.0))
             )
         );
     }
 
     #[test]
     fn early_bump_does_not_fire() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
         let mut app = bump_test_app(vec![chain]);
         let bolt_entity = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
@@ -509,7 +509,7 @@ mod tests {
         // Two bolts, perfect bump only references bolt A
         let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )));
         let mut app = bump_test_app(vec![chain]);
         let bolt_a = app.world_mut().spawn_empty().id();
@@ -543,7 +543,7 @@ mod tests {
             .world_mut()
             .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave { range: 64.0 }),
+                Box::new(TriggerChain::test_shockwave(64.0)),
             )]))
             .id();
 
@@ -559,7 +559,7 @@ mod tests {
             1,
             "impact on armed bolt should fire the leaf effect"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
 
         // ArmedTriggers entry should be removed after firing
         let armed = app.world().get::<ArmedTriggers>(bolt_entity).unwrap();
@@ -591,7 +591,7 @@ mod tests {
         // Step 1: PerfectBump arms the bolt with OnImpact(Cell, Shockwave{64})
         let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )));
 
         // Build an app with BOTH bridges
@@ -646,15 +646,14 @@ mod tests {
             1,
             "step 2: impact on armed bolt should fire shockwave"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
     }
 
     // --- Cell destroyed bridge tests ---
 
     #[test]
     fn cell_destroyed_fires_active_chains() {
-        let chain =
-            TriggerChain::OnCellDestroyed(Box::new(TriggerChain::Shockwave { range: 32.0 }));
+        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shockwave(32.0)));
         let mut app = cell_destroyed_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendCellDestroyed>().0 = Some(CellDestroyed {
             was_required_to_clear: true,
@@ -667,14 +666,14 @@ mod tests {
             1,
             "cell destroyed with active OnCellDestroyed chain should fire"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 32.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(32.0));
     }
 
     // --- Bolt lost bridge tests ---
 
     #[test]
     fn bolt_lost_fires_active_chains() {
-        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::Shield { duration: 5.0 }));
+        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::test_shield(5.0)));
         let mut app = bolt_lost_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
         tick(&mut app);
@@ -685,14 +684,14 @@ mod tests {
             1,
             "bolt lost with active OnBoltLost chain should fire"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shield { duration: 5.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shield(5.0));
     }
 
     // --- Bolt entity propagation tests ---
 
     #[test]
     fn effect_fired_carries_bolt_entity() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
         let mut app = bump_test_app(vec![chain]);
         let bolt_a = app.world_mut().spawn_empty().id();
         let _bolt_b = app.world_mut().spawn_empty().id();
@@ -711,7 +710,7 @@ mod tests {
         );
         assert_eq!(
             captured.0[0].0,
-            TriggerChain::Shockwave { range: 64.0 },
+            TriggerChain::test_shockwave(64.0),
             "effect should be the leaf shockwave"
         );
         assert_eq!(
@@ -722,8 +721,7 @@ mod tests {
 
     #[test]
     fn global_trigger_uses_placeholder_bolt() {
-        let chain =
-            TriggerChain::OnCellDestroyed(Box::new(TriggerChain::Shockwave { range: 32.0 }));
+        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shockwave(32.0)));
         let mut app = cell_destroyed_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendCellDestroyed>().0 = Some(CellDestroyed {
             was_required_to_clear: true,
@@ -738,7 +736,7 @@ mod tests {
         );
         assert_eq!(
             captured.0[0].0,
-            TriggerChain::Shockwave { range: 32.0 },
+            TriggerChain::test_shockwave(32.0),
             "effect should be the leaf shockwave"
         );
         assert_eq!(
@@ -809,8 +807,8 @@ mod tests {
     fn perfect_bump_fires_both_perfect_bump_and_bump_success_chains() {
         // Active chains: OnPerfectBump(Shockwave{64}) AND OnBumpSuccess(Shield{3.0})
         let chains = vec![
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 })),
-            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 })),
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0))),
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0))),
         ];
         let mut app = bump_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -830,11 +828,11 @@ mod tests {
         );
         let effects: Vec<&TriggerChain> = captured.0.iter().map(|(e, _)| e).collect();
         assert!(
-            effects.contains(&&TriggerChain::Shockwave { range: 64.0 }),
+            effects.contains(&&TriggerChain::test_shockwave(64.0)),
             "should fire Shockwave from OnPerfectBump chain"
         );
         assert!(
-            effects.contains(&&TriggerChain::Shield { duration: 3.0 }),
+            effects.contains(&&TriggerChain::test_shield(3.0)),
             "should fire Shield from OnBumpSuccess chain"
         );
     }
@@ -843,8 +841,8 @@ mod tests {
     fn early_bump_fires_bump_success_but_not_perfect_bump() {
         // Active chains: OnPerfectBump(Shockwave{64}) AND OnBumpSuccess(Shield{3.0})
         let chains = vec![
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 })),
-            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 })),
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0))),
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0))),
         ];
         let mut app = bump_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -864,7 +862,7 @@ mod tests {
         );
         assert_eq!(
             captured.0[0].0,
-            TriggerChain::Shield { duration: 3.0 },
+            TriggerChain::test_shield(3.0),
             "early bump should fire Shield from OnBumpSuccess chain"
         );
     }
@@ -873,8 +871,8 @@ mod tests {
     fn late_bump_fires_bump_success_but_not_perfect_bump() {
         // Active chains: OnPerfectBump(Shockwave{64}) AND OnBumpSuccess(Shield{3.0})
         let chains = vec![
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 })),
-            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 })),
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0))),
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0))),
         ];
         let mut app = bump_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -894,7 +892,7 @@ mod tests {
         );
         assert_eq!(
             captured.0[0].0,
-            TriggerChain::Shield { duration: 3.0 },
+            TriggerChain::test_shield(3.0),
             "late bump should fire Shield from OnBumpSuccess chain"
         );
     }
@@ -905,7 +903,7 @@ mod tests {
     fn cell_impact_bridge_fires_on_impact_cell_active_chain() {
         let chains = vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )];
         let mut app = impact_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -921,14 +919,14 @@ mod tests {
             1,
             "cell impact with active OnImpact(Cell, leaf) should fire exactly one effect"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
     }
 
     #[test]
     fn cell_impact_bridge_does_not_fire_on_impact_breaker_active_chain() {
         let chains = vec![TriggerChain::OnImpact(
             ImpactTarget::Breaker,
-            Box::new(TriggerChain::MultiBolt { count: 2 }),
+            Box::new(TriggerChain::test_multi_bolt(2)),
         )];
         let mut app = impact_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -953,7 +951,7 @@ mod tests {
             .world_mut()
             .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave { range: 64.0 }),
+                Box::new(TriggerChain::test_shockwave(64.0)),
             )]))
             .id();
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -968,7 +966,7 @@ mod tests {
             1,
             "cell impact should fire armed OnImpact(Cell, leaf) trigger"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 64.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
 
         let armed = app.world().get::<ArmedTriggers>(bolt_entity).unwrap();
         assert!(
@@ -987,7 +985,7 @@ mod tests {
             .world_mut()
             .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
                 ImpactTarget::Breaker,
-                Box::new(TriggerChain::MultiBolt { count: 2 }),
+                Box::new(TriggerChain::test_multi_bolt(2)),
             )]))
             .id();
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 =
@@ -1000,7 +998,7 @@ mod tests {
             1,
             "breaker impact should fire armed OnImpact(Breaker, leaf) trigger"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::MultiBolt { count: 2 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_multi_bolt(2));
 
         let armed = app.world().get::<ArmedTriggers>(bolt_entity).unwrap();
         assert!(
@@ -1013,7 +1011,7 @@ mod tests {
     fn breaker_impact_bridge_evaluates_active_chains() {
         let chains = vec![TriggerChain::OnImpact(
             ImpactTarget::Breaker,
-            Box::new(TriggerChain::Shield { duration: 5.0 }),
+            Box::new(TriggerChain::test_shield(5.0)),
         )];
         let mut app = breaker_impact_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -1027,7 +1025,7 @@ mod tests {
             1,
             "breaker impact with active OnImpact(Breaker, leaf) should fire"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shield { duration: 5.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shield(5.0));
     }
 
     // --- Wall impact bridge tests ---
@@ -1040,7 +1038,7 @@ mod tests {
             .world_mut()
             .spawn(ArmedTriggers(vec![TriggerChain::OnImpact(
                 ImpactTarget::Wall,
-                Box::new(TriggerChain::Shield { duration: 5.0 }),
+                Box::new(TriggerChain::test_shield(5.0)),
             )]))
             .id();
         app.world_mut().resource_mut::<SendBoltHitWall>().0 =
@@ -1053,7 +1051,7 @@ mod tests {
             1,
             "wall impact should fire armed OnImpact(Wall, leaf) trigger"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shield { duration: 5.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shield(5.0));
 
         let armed = app.world().get::<ArmedTriggers>(bolt_entity).unwrap();
         assert!(
@@ -1066,7 +1064,7 @@ mod tests {
     fn wall_impact_bridge_evaluates_active_chains() {
         let chains = vec![TriggerChain::OnImpact(
             ImpactTarget::Wall,
-            Box::new(TriggerChain::Shockwave { range: 32.0 }),
+            Box::new(TriggerChain::test_shockwave(32.0)),
         )];
         let mut app = wall_impact_test_app(chains);
         let bolt_entity = app.world_mut().spawn_empty().id();
@@ -1080,7 +1078,7 @@ mod tests {
             1,
             "wall impact with active OnImpact(Wall, leaf) should fire"
         );
-        assert_eq!(captured.0[0].0, TriggerChain::Shockwave { range: 32.0 });
+        assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(32.0));
     }
 
     // --- Full updated surge chain: PerfectBump arms, CellImpact fires ---
@@ -1090,7 +1088,7 @@ mod tests {
         // Active chain: OnPerfectBump(OnImpact(Cell, Shockwave{64}))
         let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )));
 
         // App with BOTH bump and cell_impact bridges
@@ -1135,7 +1133,7 @@ mod tests {
             armed.unwrap().0[0],
             TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave { range: 64.0 })
+                Box::new(TriggerChain::test_shockwave(64.0))
             ),
             "step 1: armed trigger should be OnImpact(Cell, Shockwave)"
         );
@@ -1158,7 +1156,7 @@ mod tests {
         );
         assert_eq!(
             captured.0[0].0,
-            TriggerChain::Shockwave { range: 64.0 },
+            TriggerChain::test_shockwave(64.0),
             "step 2: fired effect should be Shockwave"
         );
     }

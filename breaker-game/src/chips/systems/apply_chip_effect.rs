@@ -559,7 +559,7 @@ mod tests {
             .insert(ChipDefinition::test(
                 "Surge",
                 ChipKind::Overclock,
-                ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 }),
+                ChipEffect::Overclock(TriggerChain::test_shockwave(64.0)),
                 1,
             ));
 

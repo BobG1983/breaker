@@ -67,18 +67,30 @@ pub enum ImpactTarget {
 pub enum TriggerChain {
     /// Area damage around impact point.
     Shockwave {
-        /// Radius of the shockwave effect.
-        range: f32,
+        /// Base radius of the shockwave effect.
+        base_range: f32,
+        /// Additional radius per stack beyond the first.
+        range_per_level: f32,
+        /// Current stack count (starts at 1, incremented at runtime).
+        stacks: u32,
     },
     /// Spawns additional bolts on trigger.
     MultiBolt {
-        /// Number of extra bolts to spawn.
-        count: u32,
+        /// Base number of extra bolts to spawn.
+        base_count: u32,
+        /// Additional bolts per stack beyond the first.
+        count_per_level: u32,
+        /// Current stack count.
+        stacks: u32,
     },
     /// Temporary shield protecting the breaker.
     Shield {
-        /// How long the shield lasts in seconds.
-        duration: f32,
+        /// Base duration in seconds.
+        base_duration: f32,
+        /// Additional duration per stack beyond the first.
+        duration_per_level: f32,
+        /// Current stack count.
+        stacks: u32,
     },
     /// Fires on a perfect bump.
     OnPerfectBump(Box<Self>),
@@ -177,9 +189,39 @@ impl ChipDefinition {
         Self::test(
             name,
             kind,
-            ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 }),
+            ChipEffect::Overclock(TriggerChain::test_shockwave(64.0)),
             1,
         )
+    }
+}
+
+#[cfg(test)]
+impl TriggerChain {
+    /// Build a `Shockwave` leaf with `range_per_level: 0.0` and `stacks: 1`.
+    pub(crate) fn test_shockwave(range: f32) -> Self {
+        Self::Shockwave {
+            base_range: range,
+            range_per_level: 0.0,
+            stacks: 1,
+        }
+    }
+
+    /// Build a `MultiBolt` leaf with `count_per_level: 0` and `stacks: 1`.
+    pub(crate) fn test_multi_bolt(count: u32) -> Self {
+        Self::MultiBolt {
+            base_count: count,
+            count_per_level: 0,
+            stacks: 1,
+        }
+    }
+
+    /// Build a `Shield` leaf with `duration_per_level: 0.0` and `stacks: 1`.
+    pub(crate) fn test_shield(duration: f32) -> Self {
+        Self::Shield {
+            base_duration: duration,
+            duration_per_level: 0.0,
+            stacks: 1,
+        }
     }
 }
 
@@ -323,11 +365,17 @@ mod tests {
 
     #[test]
     fn chip_effect_deserializes_overclock() {
-        let e: ChipEffect = ron::de::from_str("Overclock(Shockwave(range: 64.0))")
-            .expect("should parse Overclock(Shockwave)");
+        let e: ChipEffect = ron::de::from_str(
+            "Overclock(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))",
+        )
+        .expect("should parse Overclock(Shockwave)");
         assert_eq!(
             e,
-            ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 })
+            ChipEffect::Overclock(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            })
         );
     }
 
@@ -386,7 +434,11 @@ mod tests {
             ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
                 TriggerChain::OnImpact(
                     ImpactTarget::Cell,
-                    Box::new(TriggerChain::Shockwave { range: 64.0 })
+                    Box::new(TriggerChain::Shockwave {
+                        base_range: 64.0,
+                        range_per_level: 32.0,
+                        stacks: 1,
+                    })
                 )
             )))
         );
@@ -397,44 +449,79 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_shockwave() {
         let tc: TriggerChain =
-            ron::de::from_str("Shockwave(range: 64.0)").expect("should parse Shockwave");
-        assert_eq!(tc, TriggerChain::Shockwave { range: 64.0 });
+            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1)")
+                .expect("should parse Shockwave");
+        assert_eq!(
+            tc,
+            TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            }
+        );
     }
 
     #[test]
     fn trigger_chain_deserializes_multi_bolt() {
         let tc: TriggerChain =
-            ron::de::from_str("MultiBolt(count: 3)").expect("should parse MultiBolt");
-        assert_eq!(tc, TriggerChain::MultiBolt { count: 3 });
+            ron::de::from_str("MultiBolt(base_count: 3, count_per_level: 0, stacks: 1)")
+                .expect("should parse MultiBolt");
+        assert_eq!(
+            tc,
+            TriggerChain::MultiBolt {
+                base_count: 3,
+                count_per_level: 0,
+                stacks: 1,
+            }
+        );
     }
 
     #[test]
     fn trigger_chain_deserializes_shield() {
         let tc: TriggerChain =
-            ron::de::from_str("Shield(duration: 5.0)").expect("should parse Shield");
-        assert_eq!(tc, TriggerChain::Shield { duration: 5.0 });
+            ron::de::from_str("Shield(base_duration: 5.0, duration_per_level: 0.0, stacks: 1)")
+                .expect("should parse Shield");
+        assert_eq!(
+            tc,
+            TriggerChain::Shield {
+                base_duration: 5.0,
+                duration_per_level: 0.0,
+                stacks: 1,
+            }
+        );
     }
 
     #[test]
     fn trigger_chain_deserializes_on_perfect_bump_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnPerfectBump(Shockwave(range: 64.0))")
-            .expect("should parse OnPerfectBump wrapping Shockwave");
+        let tc: TriggerChain = ron::de::from_str(
+            "OnPerfectBump(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))",
+        )
+        .expect("should parse OnPerfectBump wrapping Shockwave");
         assert_eq!(
             tc,
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }))
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            }))
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_nested_two_deep() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnPerfectBump(OnImpact(Cell, Shockwave(range: 64.0)))")
-                .expect("should parse double-nested TriggerChain");
+        let tc: TriggerChain = ron::de::from_str(
+            "OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1)))",
+        )
+        .expect("should parse double-nested TriggerChain");
         assert_eq!(
             tc,
             TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave { range: 64.0 })
+                Box::new(TriggerChain::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 0.0,
+                    stacks: 1,
+                })
             )))
         );
     }
@@ -443,14 +530,14 @@ mod tests {
 
     #[test]
     fn trigger_chain_depth_leaf_is_zero() {
-        assert_eq!(TriggerChain::Shockwave { range: 64.0 }.depth(), 0);
-        assert_eq!(TriggerChain::MultiBolt { count: 3 }.depth(), 0);
-        assert_eq!(TriggerChain::Shield { duration: 5.0 }.depth(), 0);
+        assert_eq!(TriggerChain::test_shockwave(64.0).depth(), 0);
+        assert_eq!(TriggerChain::test_multi_bolt(3).depth(), 0);
+        assert_eq!(TriggerChain::test_shield(5.0).depth(), 0);
     }
 
     #[test]
     fn trigger_chain_depth_single_trigger_is_one() {
-        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave { range: 64.0 }));
+        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
         assert_eq!(tc.depth(), 1);
     }
 
@@ -458,7 +545,7 @@ mod tests {
     fn trigger_chain_depth_nested_is_two() {
         let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         )));
         assert_eq!(tc.depth(), 2);
     }
@@ -467,14 +554,14 @@ mod tests {
 
     #[test]
     fn trigger_chain_is_leaf_true_for_leaves() {
-        assert!(TriggerChain::Shockwave { range: 64.0 }.is_leaf());
-        assert!(TriggerChain::MultiBolt { count: 3 }.is_leaf());
-        assert!(TriggerChain::Shield { duration: 5.0 }.is_leaf());
+        assert!(TriggerChain::test_shockwave(64.0).is_leaf());
+        assert!(TriggerChain::test_multi_bolt(3).is_leaf());
+        assert!(TriggerChain::test_shield(5.0).is_leaf());
     }
 
     #[test]
     fn trigger_chain_is_leaf_false_for_triggers() {
-        let leaf = TriggerChain::Shockwave { range: 64.0 };
+        let leaf = TriggerChain::test_shockwave(64.0);
         assert!(!TriggerChain::OnPerfectBump(Box::new(leaf.clone())).is_leaf());
         assert!(!TriggerChain::OnImpact(ImpactTarget::Cell, Box::new(leaf.clone())).is_leaf());
         assert!(!TriggerChain::OnCellDestroyed(Box::new(leaf.clone())).is_leaf());
@@ -486,25 +573,36 @@ mod tests {
 
     #[test]
     fn chip_effect_overclock_with_trigger_chain_deserializes() {
-        let e: ChipEffect = ron::de::from_str("Overclock(Shockwave(range: 64.0))")
-            .expect("should parse Overclock with TriggerChain");
+        let e: ChipEffect = ron::de::from_str(
+            "Overclock(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))",
+        )
+        .expect("should parse Overclock with TriggerChain");
         assert_eq!(
             e,
-            ChipEffect::Overclock(TriggerChain::Shockwave { range: 64.0 })
+            ChipEffect::Overclock(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            })
         );
     }
 
     #[test]
     fn full_surge_chain_ron_parses() {
-        let e: ChipEffect =
-            ron::de::from_str("Overclock(OnPerfectBump(OnImpact(Cell, Shockwave(range: 64.0))))")
-                .expect("should parse full surge chain as ChipEffect");
+        let e: ChipEffect = ron::de::from_str(
+            "Overclock(OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1))))",
+        )
+        .expect("should parse full surge chain as ChipEffect");
         assert_eq!(
             e,
             ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
                 TriggerChain::OnImpact(
                     ImpactTarget::Cell,
-                    Box::new(TriggerChain::Shockwave { range: 64.0 })
+                    Box::new(TriggerChain::Shockwave {
+                        base_range: 64.0,
+                        range_per_level: 32.0,
+                        stacks: 1,
+                    })
                 )
             )))
         );
@@ -534,26 +632,38 @@ mod tests {
 
     #[test]
     fn trigger_chain_deserializes_on_impact_breaker_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnImpact(Breaker, MultiBolt(count: 2))")
-            .expect("should parse OnImpact(Breaker, MultiBolt)");
+        let tc: TriggerChain = ron::de::from_str(
+            "OnImpact(Breaker, MultiBolt(base_count: 2, count_per_level: 0, stacks: 1))",
+        )
+        .expect("should parse OnImpact(Breaker, MultiBolt)");
         assert_eq!(
             tc,
             TriggerChain::OnImpact(
                 ImpactTarget::Breaker,
-                Box::new(TriggerChain::MultiBolt { count: 2 })
+                Box::new(TriggerChain::MultiBolt {
+                    base_count: 2,
+                    count_per_level: 0,
+                    stacks: 1,
+                })
             )
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_on_impact_wall_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnImpact(Wall, Shield(duration: 5.0))")
-            .expect("should parse OnImpact(Wall, Shield)");
+        let tc: TriggerChain = ron::de::from_str(
+            "OnImpact(Wall, Shield(base_duration: 5.0, duration_per_level: 0.0, stacks: 1))",
+        )
+        .expect("should parse OnImpact(Wall, Shield)");
         assert_eq!(
             tc,
             TriggerChain::OnImpact(
                 ImpactTarget::Wall,
-                Box::new(TriggerChain::Shield { duration: 5.0 })
+                Box::new(TriggerChain::Shield {
+                    base_duration: 5.0,
+                    duration_per_level: 0.0,
+                    stacks: 1,
+                })
             )
         );
     }
@@ -562,11 +672,17 @@ mod tests {
 
     #[test]
     fn trigger_chain_deserializes_on_bump_success_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnBumpSuccess(Shield(duration: 3.0))")
-            .expect("should parse OnBumpSuccess(Shield)");
+        let tc: TriggerChain = ron::de::from_str(
+            "OnBumpSuccess(Shield(base_duration: 3.0, duration_per_level: 0.0, stacks: 1))",
+        )
+        .expect("should parse OnBumpSuccess(Shield)");
         assert_eq!(
             tc,
-            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 }))
+            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield {
+                base_duration: 3.0,
+                duration_per_level: 0.0,
+                stacks: 1,
+            }))
         );
     }
 
@@ -574,7 +690,7 @@ mod tests {
 
     #[test]
     fn on_bump_success_depth_is_one() {
-        let tc = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield { duration: 3.0 }));
+        let tc = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0)));
         assert_eq!(tc.depth(), 1);
     }
 
@@ -582,8 +698,191 @@ mod tests {
     fn on_impact_depth_is_one() {
         let tc = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave { range: 64.0 }),
+            Box::new(TriggerChain::test_shockwave(64.0)),
         );
         assert_eq!(tc.depth(), 1);
+    }
+
+    // --- Phase D: Stacking effective value tests ---
+
+    #[test]
+    fn shockwave_effective_range_at_stacks_1() {
+        let base_range: f32 = 64.0;
+        let range_per_level: f32 = 32.0;
+        let stacks: u32 = 1;
+        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        assert!(
+            (effective - 64.0).abs() < f32::EPSILON,
+            "stacks=1: effective should be base_range 64.0, got {effective}"
+        );
+    }
+
+    #[test]
+    fn shockwave_effective_range_at_stacks_2() {
+        let base_range: f32 = 64.0;
+        let range_per_level: f32 = 32.0;
+        let stacks: u32 = 2;
+        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        assert!(
+            (effective - 96.0).abs() < f32::EPSILON,
+            "stacks=2: effective should be 96.0 (64.0 + 1*32.0), got {effective}"
+        );
+    }
+
+    #[test]
+    fn shockwave_effective_range_at_stacks_3() {
+        let base_range: f32 = 64.0;
+        let range_per_level: f32 = 32.0;
+        let stacks: u32 = 3;
+        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        assert!(
+            (effective - 128.0).abs() < f32::EPSILON,
+            "stacks=3: effective should be 128.0 (64.0 + 2*32.0), got {effective}"
+        );
+    }
+
+    #[test]
+    fn shockwave_effective_range_at_stacks_0() {
+        let base_range: f32 = 64.0;
+        let range_per_level: f32 = 32.0;
+        let stacks: u32 = 0;
+        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        assert!(
+            (effective - 64.0).abs() < f32::EPSILON,
+            "stacks=0: saturating_sub prevents underflow, effective should be 64.0, got {effective}"
+        );
+    }
+
+    #[test]
+    fn multi_bolt_effective_count_at_stacks_1() {
+        let base_count: u32 = 3;
+        let count_per_level: u32 = 1;
+        let stacks: u32 = 1;
+        let effective = base_count + stacks.saturating_sub(1) * count_per_level;
+        assert_eq!(
+            effective, 3,
+            "stacks=1: effective should be base_count 3, got {effective}"
+        );
+    }
+
+    #[test]
+    fn multi_bolt_effective_count_at_stacks_2() {
+        let base_count: u32 = 3;
+        let count_per_level: u32 = 1;
+        let stacks: u32 = 2;
+        let effective = base_count + stacks.saturating_sub(1) * count_per_level;
+        assert_eq!(
+            effective, 4,
+            "stacks=2: effective should be 4 (3 + 1*1), got {effective}"
+        );
+    }
+
+    #[test]
+    fn shield_effective_duration_at_stacks_1() {
+        let base_duration: f32 = 5.0;
+        let duration_per_level: f32 = 2.0;
+        let stacks: u32 = 1;
+        let effective = base_duration + f32::from(stacks.saturating_sub(1)) * duration_per_level;
+        assert!(
+            (effective - 5.0).abs() < f32::EPSILON,
+            "stacks=1: effective should be base_duration 5.0, got {effective}"
+        );
+    }
+
+    #[test]
+    fn shield_effective_duration_at_stacks_3() {
+        let base_duration: f32 = 5.0;
+        let duration_per_level: f32 = 2.0;
+        let stacks: u32 = 3;
+        let effective = base_duration + f32::from(stacks.saturating_sub(1)) * duration_per_level;
+        assert!(
+            (effective - 9.0).abs() < f32::EPSILON,
+            "stacks=3: effective should be 9.0 (5.0 + 2*2.0), got {effective}"
+        );
+    }
+
+    // --- Phase D: RON deserialization with new stacking fields ---
+
+    #[test]
+    fn shockwave_ron_deserializes_with_new_fields() {
+        let tc: TriggerChain =
+            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1)")
+                .expect("should parse Shockwave with stacking fields");
+        assert_eq!(
+            tc,
+            TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 32.0,
+                stacks: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn multi_bolt_ron_deserializes_with_new_fields() {
+        let tc: TriggerChain =
+            ron::de::from_str("MultiBolt(base_count: 3, count_per_level: 1, stacks: 1)")
+                .expect("should parse MultiBolt with stacking fields");
+        assert_eq!(
+            tc,
+            TriggerChain::MultiBolt {
+                base_count: 3,
+                count_per_level: 1,
+                stacks: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn shield_ron_deserializes_with_new_fields() {
+        let tc: TriggerChain =
+            ron::de::from_str("Shield(base_duration: 5.0, duration_per_level: 2.0, stacks: 1)")
+                .expect("should parse Shield with stacking fields");
+        assert_eq!(
+            tc,
+            TriggerChain::Shield {
+                base_duration: 5.0,
+                duration_per_level: 2.0,
+                stacks: 1,
+            }
+        );
+    }
+
+    // --- Phase D: Convenience constructor tests ---
+
+    #[test]
+    fn test_shockwave_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_shockwave(64.0),
+            TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_multi_bolt_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_multi_bolt(3),
+            TriggerChain::MultiBolt {
+                base_count: 3,
+                count_per_level: 0,
+                stacks: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_shield_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_shield(5.0),
+            TriggerChain::Shield {
+                base_duration: 5.0,
+                duration_per_level: 0.0,
+                stacks: 1,
+            }
+        );
     }
 }

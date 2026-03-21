@@ -1,63 +1,63 @@
 //! Shockwave effect handler — area damage around the bolt's position.
 //!
 //! Observes [`OverclockEffectFired`], pattern-matches on
-//! [`TriggerChain::Shockwave`], and damages all non-locked cells within range
-//! using flat `BASE_BOLT_DAMAGE` (no `DamageBoost`).
+//! [`TriggerChain::Shockwave`], and writes [`DamageCell`] messages for all
+//! non-locked cells within range. Damage includes [`DamageBoost`] if present.
 
 use bevy::prelude::*;
 
 use crate::{
     bolt::behaviors::events::OverclockEffectFired,
     cells::{
-        components::{Cell, CellHealth, Locked, RequiredToClear},
-        messages::CellDestroyed,
+        components::{Cell, Locked},
+        messages::DamageCell,
     },
-    chips::definition::TriggerChain,
+    chips::{components::DamageBoost, definition::TriggerChain},
     shared::BASE_BOLT_DAMAGE,
 };
 
 /// Cell data needed by the shockwave effect handler.
-type ShockwaveCellQuery = (
-    Entity,
-    &'static Transform,
-    &'static mut CellHealth,
-    Has<RequiredToClear>,
-    Has<Locked>,
-);
+type ShockwaveCellQuery = (Entity, &'static Transform, Has<Locked>);
 
 /// Observer: handles shockwave area damage when an overclock effect fires.
 ///
 /// Self-selects via pattern matching on [`TriggerChain::Shockwave`] — ignores
-/// all other effect variants. Damages all non-locked cells within `range` of
-/// the bolt's position using flat [`BASE_BOLT_DAMAGE`].
+/// all other effect variants. Writes [`DamageCell`] messages for all non-locked
+/// cells within `range` of the bolt's position. Damage is calculated as
+/// `BASE_BOLT_DAMAGE * (1.0 + DamageBoost)`.
 pub(crate) fn handle_shockwave(
     trigger: On<OverclockEffectFired>,
-    bolt_query: Query<&Transform>,
-    mut cell_query: Query<ShockwaveCellQuery, With<Cell>>,
-    mut commands: Commands,
-    mut destroyed_writer: MessageWriter<CellDestroyed>,
+    bolt_query: Query<(&Transform, Option<&DamageBoost>)>,
+    cell_query: Query<ShockwaveCellQuery, With<Cell>>,
+    mut damage_writer: MessageWriter<DamageCell>,
 ) {
-    let TriggerChain::Shockwave { range } = &trigger.event().effect else {
+    let TriggerChain::Shockwave {
+        base_range,
+        range_per_level,
+        stacks,
+    } = &trigger.event().effect
+    else {
         return;
     };
-    let Ok(bolt_tf) = bolt_query.get(trigger.event().bolt) else {
+    let range = base_range + f32::from((*stacks).saturating_sub(1)) * range_per_level;
+    let Ok((bolt_tf, damage_boost)) = bolt_query.get(trigger.event().bolt) else {
         return;
     };
+    let boost = damage_boost.map_or(0.0, |b| b.0);
+    let damage = BASE_BOLT_DAMAGE * (1.0 + boost);
     let center = bolt_tf.translation.truncate();
 
-    for (cell_entity, cell_tf, mut health, is_required, is_locked) in &mut cell_query {
+    for (cell_entity, cell_tf, is_locked) in &cell_query {
         if is_locked {
             continue;
         }
         let dist = (cell_tf.translation.truncate() - center).length();
-        if dist <= *range {
-            let destroyed = health.take_damage(BASE_BOLT_DAMAGE);
-            if destroyed {
-                commands.entity(cell_entity).despawn();
-                destroyed_writer.write(CellDestroyed {
-                    was_required_to_clear: is_required,
-                });
-            }
+        if dist <= range {
+            damage_writer.write(DamageCell {
+                cell: cell_entity,
+                damage,
+                source_bolt: trigger.event().bolt,
+            });
         }
     }
 }
@@ -68,13 +68,24 @@ mod tests {
     use crate::{
         cells::{
             components::{Cell, CellHealth, Locked, RequiredToClear},
-            messages::CellDestroyed,
+            messages::{CellDestroyed, DamageCell},
         },
-        chips::definition::{ImpactTarget, TriggerChain},
+        chips::{components::DamageBoost, definition::TriggerChain},
     };
 
     // --- Test infrastructure ---
 
+    /// Captured `DamageCell` messages written by the shockwave observer.
+    #[derive(Resource, Default)]
+    struct CapturedDamage(Vec<DamageCell>);
+
+    fn capture_damage(mut reader: MessageReader<DamageCell>, mut captured: ResMut<CapturedDamage>) {
+        for msg in reader.read() {
+            captured.0.push(msg.clone());
+        }
+    }
+
+    /// Captured `CellDestroyed` messages — used to verify shockwave does NOT write them.
     #[derive(Resource, Default)]
     struct CapturedDestroyed(Vec<CellDestroyed>);
 
@@ -90,9 +101,11 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_message::<DamageCell>()
             .add_message::<CellDestroyed>()
+            .init_resource::<CapturedDamage>()
             .init_resource::<CapturedDestroyed>()
-            .add_systems(FixedUpdate, capture_destroyed)
+            .add_systems(FixedUpdate, (capture_damage, capture_destroyed))
             .add_observer(handle_shockwave);
         app
     }
@@ -107,6 +120,12 @@ mod tests {
 
     fn spawn_bolt(app: &mut App, x: f32, y: f32) -> Entity {
         app.world_mut().spawn(Transform::from_xyz(x, y, 0.0)).id()
+    }
+
+    fn spawn_bolt_with_damage_boost(app: &mut App, x: f32, y: f32, boost: f32) -> Entity {
+        app.world_mut()
+            .spawn((Transform::from_xyz(x, y, 0.0), DamageBoost(boost)))
+            .id()
     }
 
     fn spawn_cell(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
@@ -139,20 +158,44 @@ mod tests {
 
     fn trigger_shockwave(app: &mut App, bolt: Entity, range: f32) {
         app.world_mut().commands().trigger(OverclockEffectFired {
-            effect: TriggerChain::Shockwave { range },
+            effect: TriggerChain::Shockwave {
+                base_range: range,
+                range_per_level: 0.0,
+                stacks: 1,
+            },
             bolt,
         });
         // Flush commands so the observer fires synchronously, writing
-        // CellDestroyed messages before the next tick's FixedUpdate runs
-        // capture_destroyed via MessageReader.
+        // DamageCell messages before the next tick's FixedUpdate runs
+        // capture_damage via MessageReader.
+        app.world_mut().flush();
+        tick(app);
+    }
+
+    fn trigger_shockwave_stacked(
+        app: &mut App,
+        bolt: Entity,
+        base_range: f32,
+        range_per_level: f32,
+        stacks: u32,
+    ) {
+        app.world_mut().commands().trigger(OverclockEffectFired {
+            effect: TriggerChain::Shockwave {
+                base_range,
+                range_per_level,
+                stacks,
+            },
+            bolt,
+        });
         app.world_mut().flush();
         tick(app);
     }
 
     // --- Tests ---
 
+    // Behavior 1: Shockwave writes DamageCell for each in-range non-locked cell
     #[test]
-    fn shockwave_damages_cells_within_range() {
+    fn shockwave_writes_damage_cell_for_each_in_range_cell() {
         let mut app = test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 0.0);
         let cell_a = spawn_cell(&mut app, 30.0, 0.0, 20.0);
@@ -160,302 +203,393 @@ mod tests {
 
         trigger_shockwave(&mut app, bolt, 64.0);
 
-        let health_a = app.world().get::<CellHealth>(cell_a).unwrap();
-        assert!(
-            (health_a.current - 10.0).abs() < f32::EPSILON,
-            "Cell A at (30,0) with 20 HP should take {} damage and have 10 HP, got {}",
-            BASE_BOLT_DAMAGE,
-            health_a.current
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            2,
+            "shockwave with two in-range cells should write two DamageCell messages, got {}",
+            captured.0.len()
         );
 
-        let health_b = app.world().get::<CellHealth>(cell_b).unwrap();
+        // Find message for cell A
+        let msg_a = captured
+            .0
+            .iter()
+            .find(|m| m.cell == cell_a)
+            .expect("should have a DamageCell for cell A at (30, 0)");
         assert!(
-            (health_b.current - 10.0).abs() < f32::EPSILON,
-            "Cell B at (50,0) with 20 HP should take {} damage and have 10 HP, got {}",
+            (msg_a.damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
+            "DamageCell for cell A should have damage == {}, got {}",
             BASE_BOLT_DAMAGE,
-            health_b.current
+            msg_a.damage
+        );
+        assert_eq!(
+            msg_a.source_bolt, bolt,
+            "DamageCell.source_bolt should be the bolt entity"
+        );
+
+        // Find message for cell B
+        let msg_b = captured
+            .0
+            .iter()
+            .find(|m| m.cell == cell_b)
+            .expect("should have a DamageCell for cell B at (50, 0)");
+        assert!(
+            (msg_b.damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
+            "DamageCell for cell B should have damage == {}, got {}",
+            BASE_BOLT_DAMAGE,
+            msg_b.damage
+        );
+        assert_eq!(
+            msg_b.source_bolt, bolt,
+            "DamageCell.source_bolt should be the bolt entity"
         );
     }
 
+    // Behavior 2: Shockwave at exact range boundary includes cell
     #[test]
-    fn shockwave_destroys_low_hp_cell_sends_cell_destroyed() {
+    fn shockwave_includes_cell_at_exact_range_boundary() {
         let mut app = test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let cell = spawn_required_cell(&mut app, 10.0, 0.0, 10.0);
+        let _cell = spawn_cell(&mut app, 64.0, 0.0, 20.0);
 
         trigger_shockwave(&mut app, bolt, 64.0);
 
-        assert!(
-            app.world().get_entity(cell).is_err(),
-            "Cell with 10 HP taking 10 damage should be despawned"
-        );
-
-        let captured = app.world().resource::<CapturedDestroyed>();
+        let captured = app.world().resource::<CapturedDamage>();
         assert_eq!(
             captured.0.len(),
             1,
-            "exactly one CellDestroyed message should be sent"
+            "cell at exactly range 64.0 should be included, got {} messages",
+            captured.0.len()
         );
         assert!(
-            captured.0[0].was_required_to_clear,
-            "RequiredToClear cell should set was_required_to_clear = true"
+            (captured.0[0].damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
+            "DamageCell.damage should be {}, got {}",
+            BASE_BOLT_DAMAGE,
+            captured.0[0].damage
         );
     }
 
+    // Behavior 3: Shockwave does NOT directly mutate CellHealth
     #[test]
-    fn shockwave_ignores_locked_cells() {
+    fn shockwave_does_not_directly_mutate_cell_health() {
         let mut app = test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let locked_cell = spawn_locked_cell(&mut app, 10.0, 0.0, 10.0);
-        // Also spawn a non-locked cell to verify shockwave IS active (prevents false pass with stub)
-        let unlocked_cell = spawn_cell(&mut app, 20.0, 0.0, 20.0);
-
-        trigger_shockwave(&mut app, bolt, 64.0);
-
-        // Locked cell should be immune
-        assert!(
-            app.world().get_entity(locked_cell).is_ok(),
-            "Locked cell should NOT be despawned"
-        );
-        let health = app.world().get::<CellHealth>(locked_cell).unwrap();
-        assert!(
-            (health.current - 10.0).abs() < f32::EPSILON,
-            "Locked cell should still have 10 HP, got {}",
-            health.current
-        );
-
-        // Non-locked cell should take damage (ensures shockwave actually ran)
-        let unlocked_health = app.world().get::<CellHealth>(unlocked_cell).unwrap();
-        assert!(
-            (unlocked_health.current - 10.0).abs() < f32::EPSILON,
-            "Unlocked cell at (20,0) should take 10 damage: 20 - 10 = 10 HP, got {}",
-            unlocked_health.current
-        );
-    }
-
-    #[test]
-    fn shockwave_ignores_cells_outside_range() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let far_cell = spawn_cell(&mut app, 100.0, 0.0, 10.0);
-        // Also spawn an in-range cell to verify shockwave IS active (prevents false pass with stub)
-        let near_cell = spawn_cell(&mut app, 30.0, 0.0, 20.0);
-
-        trigger_shockwave(&mut app, bolt, 64.0);
-
-        // Far cell should be untouched
-        assert!(
-            app.world().get_entity(far_cell).is_ok(),
-            "Cell at distance 100 should NOT be affected by range-64 shockwave"
-        );
-        let far_health = app.world().get::<CellHealth>(far_cell).unwrap();
-        assert!(
-            (far_health.current - 10.0).abs() < f32::EPSILON,
-            "Cell outside range should still have 10 HP, got {}",
-            far_health.current
-        );
-
-        // Near cell should take damage (ensures shockwave actually ran)
-        let near_health = app.world().get::<CellHealth>(near_cell).unwrap();
-        assert!(
-            (near_health.current - 10.0).abs() < f32::EPSILON,
-            "Cell at (30,0) in range should take 10 damage: 20 - 10 = 10 HP, got {}",
-            near_health.current
-        );
-    }
-
-    #[test]
-    fn shockwave_no_op_when_bolt_despawned() {
-        // First verify shockwave DOES damage when bolt exists (proves system is wired up)
-        let mut app = test_app();
-        let proof_bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let proof_cell = spawn_cell(&mut app, 10.0, 0.0, 20.0);
-
-        trigger_shockwave(&mut app, proof_bolt, 64.0);
-
-        let proof_health = app.world().get::<CellHealth>(proof_cell).unwrap();
-        assert!(
-            (proof_health.current - 10.0).abs() < f32::EPSILON,
-            "Proof: shockwave with live bolt should deal 10 damage (20 - 10 = 10 HP), got {}",
-            proof_health.current
-        );
-
-        // Now test the actual behavior: despawned bolt -> no damage
-        let mut app2 = test_app();
-        let bolt = spawn_bolt(&mut app2, 0.0, 0.0);
-        let cell = spawn_cell(&mut app2, 10.0, 0.0, 10.0);
-
-        app2.world_mut().despawn(bolt);
-
-        trigger_shockwave(&mut app2, bolt, 64.0);
-
-        let health = app2.world().get::<CellHealth>(cell).unwrap();
-        assert!(
-            (health.current - 10.0).abs() < f32::EPSILON,
-            "No cells should be damaged when bolt entity is gone, but cell has {} HP",
-            health.current
-        );
-    }
-
-    #[test]
-    fn shockwave_zero_range_damages_cell_at_same_position() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let cell_at_origin = spawn_cell(&mut app, 0.0, 0.0, 10.0);
-        let cell_nearby = spawn_cell(&mut app, 1.0, 0.0, 10.0);
-
-        trigger_shockwave(&mut app, bolt, 0.0);
-
-        // Cell at exactly the same position (distance 0.0 <= range 0.0) should be damaged
-        assert!(
-            app.world().get_entity(cell_at_origin).is_err(),
-            "Cell at distance 0.0 should be damaged and destroyed by zero-range shockwave"
-        );
-
-        // Cell at distance 1.0 should NOT be damaged (1.0 > 0.0)
-        assert!(
-            app.world().get_entity(cell_nearby).is_ok(),
-            "Cell at distance 1.0 should NOT be affected by zero-range shockwave"
-        );
-        let health_nearby = app.world().get::<CellHealth>(cell_nearby).unwrap();
-        assert!(
-            (health_nearby.current - 10.0).abs() < f32::EPSILON,
-            "Cell outside zero range should still have 10 HP, got {}",
-            health_nearby.current
-        );
-    }
-
-    #[test]
-    fn shockwave_ignores_non_shockwave_effects() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let cell = spawn_cell(&mut app, 10.0, 0.0, 20.0);
-
-        // First, prove shockwave works for Shockwave variant
-        trigger_shockwave(&mut app, bolt, 64.0);
-
-        let health_after_shockwave = app.world().get::<CellHealth>(cell).unwrap();
-        assert!(
-            (health_after_shockwave.current - 10.0).abs() < f32::EPSILON,
-            "Proof: Shockwave variant should deal 10 damage (20 - 10 = 10 HP), got {}",
-            health_after_shockwave.current
-        );
-
-        // Now fire a non-shockwave effect -- cell should NOT take further damage
-        app.world_mut().commands().trigger(OverclockEffectFired {
-            effect: TriggerChain::MultiBolt { count: 3 },
-            bolt,
-        });
-        tick(&mut app);
-
-        let health_after_multi = app.world().get::<CellHealth>(cell).unwrap();
-        assert!(
-            (health_after_multi.current - 10.0).abs() < f32::EPSILON,
-            "MultiBolt effect should not damage cells, expected 10 HP but got {}",
-            health_after_multi.current
-        );
-    }
-
-    #[test]
-    fn shockwave_cell_destroyed_false_for_optional_cell() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        // Cell WITHOUT RequiredToClear
         let cell = spawn_cell(&mut app, 10.0, 0.0, 10.0);
 
         trigger_shockwave(&mut app, bolt, 64.0);
 
-        assert!(
-            app.world().get_entity(cell).is_err(),
-            "10 HP cell taking 10 damage should be despawned"
-        );
-
-        let captured = app.world().resource::<CapturedDestroyed>();
-        assert_eq!(
-            captured.0.len(),
-            1,
-            "exactly one CellDestroyed message should be sent"
-        );
-        assert!(
-            !captured.0[0].was_required_to_clear,
-            "Cell without RequiredToClear should set was_required_to_clear = false"
-        );
-    }
-
-    #[test]
-    fn shockwave_multiple_cells_destroyed_sends_multiple_messages() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let cell_a = spawn_required_cell(&mut app, 10.0, 0.0, 10.0);
-        // Cell B has no RequiredToClear
-        let cell_b = spawn_cell(&mut app, 20.0, 0.0, 10.0);
-
-        trigger_shockwave(&mut app, bolt, 64.0);
-
-        assert!(
-            app.world().get_entity(cell_a).is_err(),
-            "Cell A (required, 10 HP) should be despawned"
-        );
-        assert!(
-            app.world().get_entity(cell_b).is_err(),
-            "Cell B (optional, 10 HP) should be despawned"
-        );
-
-        let captured = app.world().resource::<CapturedDestroyed>();
-        assert_eq!(
-            captured.0.len(),
-            2,
-            "two CellDestroyed messages should be sent for two destroyed cells"
-        );
-
-        let required_count = captured
-            .0
-            .iter()
-            .filter(|m| m.was_required_to_clear)
-            .count();
-        let optional_count = captured
-            .0
-            .iter()
-            .filter(|m| !m.was_required_to_clear)
-            .count();
-        assert_eq!(
-            required_count, 1,
-            "exactly one CellDestroyed with was_required_to_clear = true"
-        );
-        assert_eq!(
-            optional_count, 1,
-            "exactly one CellDestroyed with was_required_to_clear = false"
-        );
-    }
-
-    #[test]
-    fn shockwave_high_hp_cell_survives_no_destroyed_message() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-        let cell = spawn_cell(&mut app, 10.0, 0.0, 30.0);
-
-        trigger_shockwave(&mut app, bolt, 64.0);
-
-        assert!(
-            app.world().get_entity(cell).is_ok(),
-            "30 HP cell taking 10 damage should survive"
-        );
+        // CellHealth should be UNCHANGED — shockwave delegates damage to handle_cell_hit
         let health = app.world().get::<CellHealth>(cell).unwrap();
         assert!(
-            (health.current - 20.0).abs() < f32::EPSILON,
-            "30 HP cell taking 10 damage should have 20 HP remaining, got {}",
+            (health.current - 10.0).abs() < f32::EPSILON,
+            "Shockwave should NOT mutate CellHealth directly; expected 10.0, got {}",
             health.current
         );
 
-        let captured = app.world().resource::<CapturedDestroyed>();
+        // Cell entity should still exist (not despawned by shockwave)
         assert!(
-            captured.0.is_empty(),
-            "no CellDestroyed should be sent when cell survives, got {} messages",
+            app.world().get_entity(cell).is_ok(),
+            "Shockwave should NOT despawn cells directly — that is handle_cell_hit's job"
+        );
+
+        // DamageCell should still be written
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "one DamageCell message should be written for the in-range cell"
+        );
+    }
+
+    // Behavior 4: Shockwave does NOT write CellDestroyed messages
+    #[test]
+    fn shockwave_does_not_write_cell_destroyed() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let _cell = spawn_required_cell(&mut app, 10.0, 0.0, 10.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "Shockwave should NOT write CellDestroyed — that is handle_cell_hit's job, got {} messages",
             captured.0.len()
         );
     }
 
-    // --- E2E integration test: full Surge overclock chain pipeline ---
+    // Behavior 5: Shockwave applies DamageBoost to damage amount
+    #[test]
+    fn shockwave_applies_damage_boost() {
+        let mut app = test_app();
+        let bolt = spawn_bolt_with_damage_boost(&mut app, 0.0, 0.0, 0.5);
+        let _cell = spawn_cell(&mut app, 10.0, 0.0, 20.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "one DamageCell should be written for in-range cell"
+        );
+        // damage = BASE_BOLT_DAMAGE * (1.0 + 0.5) = 10.0 * 1.5 = 15.0
+        assert!(
+            (captured.0[0].damage - 15.0).abs() < f32::EPSILON,
+            "DamageCell.damage with DamageBoost(0.5) should be 15.0, got {}",
+            captured.0[0].damage
+        );
+        assert_eq!(
+            captured.0[0].source_bolt, bolt,
+            "DamageCell.source_bolt should be the bolt entity"
+        );
+    }
+
+    // Behavior 6: Shockwave with large DamageBoost
+    #[test]
+    fn shockwave_with_large_damage_boost() {
+        let mut app = test_app();
+        let bolt = spawn_bolt_with_damage_boost(&mut app, 0.0, 0.0, 1.0);
+        let _cell = spawn_cell(&mut app, 10.0, 0.0, 30.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(captured.0.len(), 1, "one DamageCell should be written");
+        // damage = BASE_BOLT_DAMAGE * (1.0 + 1.0) = 10.0 * 2.0 = 20.0
+        assert!(
+            (captured.0[0].damage - 20.0).abs() < f32::EPSILON,
+            "DamageCell.damage with DamageBoost(1.0) should be 20.0, got {}",
+            captured.0[0].damage
+        );
+    }
+
+    // Behavior 7: Shockwave without DamageBoost uses base damage
+    #[test]
+    fn shockwave_without_damage_boost_uses_base_damage() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0); // no DamageBoost component
+        let _cell = spawn_cell(&mut app, 10.0, 0.0, 20.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(captured.0.len(), 1, "one DamageCell should be written");
+        assert!(
+            (captured.0[0].damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
+            "DamageCell.damage without DamageBoost should be {}, got {}",
+            BASE_BOLT_DAMAGE,
+            captured.0[0].damage
+        );
+    }
+
+    // Behavior 8: Shockwave skips locked cells
+    #[test]
+    fn shockwave_skips_locked_cells() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let _locked_cell = spawn_locked_cell(&mut app, 10.0, 0.0, 10.0);
+        let unlocked_cell = spawn_cell(&mut app, 20.0, 0.0, 20.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "only one DamageCell for the unlocked cell, got {}",
+            captured.0.len()
+        );
+        assert_eq!(
+            captured.0[0].cell, unlocked_cell,
+            "DamageCell should target the unlocked cell, not the locked one"
+        );
+    }
+
+    // Behavior 9: Shockwave skips cells outside range
+    #[test]
+    fn shockwave_skips_cells_outside_range() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let _far_cell = spawn_cell(&mut app, 100.0, 0.0, 10.0);
+        let near_cell = spawn_cell(&mut app, 30.0, 0.0, 20.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "only one DamageCell for the near cell, got {}",
+            captured.0.len()
+        );
+        assert_eq!(
+            captured.0[0].cell, near_cell,
+            "DamageCell should target the near cell (distance 30), not the far cell (distance 100)"
+        );
+    }
+
+    // Behavior 10: Shockwave no-op when bolt despawned
+    #[test]
+    fn shockwave_no_op_when_bolt_despawned() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let _cell = spawn_cell(&mut app, 10.0, 0.0, 10.0);
+
+        app.world_mut().despawn(bolt);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "no DamageCell messages when bolt entity is despawned, got {}",
+            captured.0.len()
+        );
+    }
+
+    // Behavior 11: Shockwave no-op with Entity::PLACEHOLDER bolt (global trigger)
+    #[test]
+    fn shockwave_no_op_with_placeholder_bolt() {
+        let mut app = test_app();
+        let _cell = spawn_cell(&mut app, 10.0, 0.0, 10.0);
+
+        trigger_shockwave(&mut app, Entity::PLACEHOLDER, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "no DamageCell messages when bolt is Entity::PLACEHOLDER, got {}",
+            captured.0.len()
+        );
+    }
+
+    // Behavior 12: Shockwave zero range — co-located cell only
+    #[test]
+    fn shockwave_zero_range_targets_colocated_cell_only() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let colocated_cell = spawn_cell(&mut app, 0.0, 0.0, 10.0);
+        let _nearby_cell = spawn_cell(&mut app, 1.0, 0.0, 10.0);
+
+        trigger_shockwave(&mut app, bolt, 0.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "zero-range shockwave should only target co-located cell (distance 0.0), got {}",
+            captured.0.len()
+        );
+        assert_eq!(
+            captured.0[0].cell, colocated_cell,
+            "DamageCell should target the co-located cell, not the nearby one"
+        );
+    }
+
+    // Behavior 13: Shockwave ignores non-Shockwave effects
+    #[test]
+    fn shockwave_ignores_non_shockwave_effects() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let _cell = spawn_cell(&mut app, 10.0, 0.0, 20.0);
+
+        // Fire a MultiBolt effect — shockwave observer should ignore it
+        app.world_mut().commands().trigger(OverclockEffectFired {
+            effect: TriggerChain::MultiBolt {
+                base_count: 3,
+                count_per_level: 0,
+                stacks: 1,
+            },
+            bolt,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "MultiBolt effect should not produce any DamageCell messages, got {}",
+            captured.0.len()
+        );
+    }
+
+    // --- Phase D: Stacking integration tests ---
+
+    // Behavior: stacks=2 computes effective range = base + 1*per_level = 64+32 = 96
+    #[test]
+    fn shockwave_uses_effective_range_from_stacked_variant() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let cell_30 = spawn_cell(&mut app, 30.0, 0.0, 20.0);
+        let cell_50 = spawn_cell(&mut app, 50.0, 0.0, 20.0);
+        let cell_70 = spawn_cell(&mut app, 70.0, 0.0, 20.0);
+        let _cell_100 = spawn_cell(&mut app, 100.0, 0.0, 20.0);
+
+        // Shockwave { base_range: 64.0, range_per_level: 32.0, stacks: 2 }
+        // effective range = 64.0 + (2-1)*32.0 = 96.0
+        trigger_shockwave_stacked(&mut app, bolt, 64.0, 32.0, 2);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            3,
+            "stacks=2 effective range 96.0: cells at 30, 50, 70 should be hit, not cell at 100; got {} hits",
+            captured.0.len()
+        );
+        let hit_cells: Vec<Entity> = captured.0.iter().map(|m| m.cell).collect();
+        assert!(
+            hit_cells.contains(&cell_30),
+            "cell at 30 should be within effective range 96.0"
+        );
+        assert!(
+            hit_cells.contains(&cell_50),
+            "cell at 50 should be within effective range 96.0"
+        );
+        assert!(
+            hit_cells.contains(&cell_70),
+            "cell at 70 should be within effective range 96.0"
+        );
+    }
+
+    // Behavior: stacks=1 uses base_range only (effective = 64.0)
+    #[test]
+    fn shockwave_stacks_1_uses_base_range_only() {
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+        let cell_30 = spawn_cell(&mut app, 30.0, 0.0, 20.0);
+        let cell_50 = spawn_cell(&mut app, 50.0, 0.0, 20.0);
+        let _cell_70 = spawn_cell(&mut app, 70.0, 0.0, 20.0);
+        let _cell_100 = spawn_cell(&mut app, 100.0, 0.0, 20.0);
+
+        // Shockwave { base_range: 64.0, range_per_level: 32.0, stacks: 1 }
+        // effective range = 64.0 + (1-1)*32.0 = 64.0
+        trigger_shockwave_stacked(&mut app, bolt, 64.0, 32.0, 1);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            2,
+            "stacks=1 effective range 64.0: cells at 30 and 50 should be hit; got {} hits",
+            captured.0.len()
+        );
+        let hit_cells: Vec<Entity> = captured.0.iter().map(|m| m.cell).collect();
+        assert!(
+            hit_cells.contains(&cell_30),
+            "cell at 30 should be within effective range 64.0"
+        );
+        assert!(
+            hit_cells.contains(&cell_50),
+            "cell at 50 should be within effective range 64.0"
+        );
+    }
+
+    // --- E2E integration tests: full Surge pipeline ---
 
     mod e2e {
         use super::*;
@@ -466,6 +600,11 @@ mod tests {
                 bridges::{bridge_overclock_bump, bridge_overclock_cell_impact},
             },
             breaker::messages::{BumpGrade, BumpPerformed},
+            cells::components::CellDamageVisuals,
+            // NOTE: handle_cell_hit needs a pub(crate) re-export from cells/mod.rs.
+            // The orchestrator adds: `pub(crate) use systems::handle_cell_hit;`
+            cells::handle_cell_hit,
+            chips::definition::ImpactTarget,
             physics::messages::BoltHitCell,
         };
 
@@ -489,12 +628,24 @@ mod tests {
             }
         }
 
+        fn default_damage_visuals() -> CellDamageVisuals {
+            CellDamageVisuals {
+                hdr_base: 4.0,
+                green_min: 0.2,
+                blue_range: 0.4,
+                blue_base: 0.2,
+            }
+        }
+
         fn e2e_test_app(active_chains: Vec<TriggerChain>) -> App {
             let mut app = App::new();
             app.add_plugins(MinimalPlugins)
+                .add_message::<DamageCell>()
                 .add_message::<BumpPerformed>()
                 .add_message::<BoltHitCell>()
                 .add_message::<CellDestroyed>()
+                .init_resource::<Assets<ColorMaterial>>()
+                .init_resource::<Assets<Mesh>>()
                 .insert_resource(ActiveOverclocks(active_chains))
                 .insert_resource(SendBump(None))
                 .insert_resource(SendBoltHitCell(None))
@@ -507,6 +658,7 @@ mod tests {
                         bridge_overclock_bump,
                         send_bolt_hit_cell,
                         bridge_overclock_cell_impact,
+                        handle_cell_hit,
                         capture_destroyed,
                     )
                         .chain(),
@@ -514,44 +666,50 @@ mod tests {
             app
         }
 
-        /// Exercises the full Surge overclock pipeline end-to-end:
-        /// `BumpPerformed(Perfect)` arms bolt, `BoltHitCell` fires shockwave,
-        /// shockwave damages nearby cells and despawns those at zero HP.
+        fn spawn_e2e_cell(app: &mut App, x: f32, y: f32, hp: f32, required: bool) -> Entity {
+            let material = app
+                .world_mut()
+                .resource_mut::<Assets<ColorMaterial>>()
+                .add(ColorMaterial::from_color(Color::srgb(4.0, 0.2, 0.5)));
+            let mesh = app
+                .world_mut()
+                .resource_mut::<Assets<Mesh>>()
+                .add(Rectangle::new(1.0, 1.0));
+            let mut entity = app.world_mut().spawn((
+                Cell,
+                CellHealth::new(hp),
+                default_damage_visuals(),
+                Mesh2d(mesh),
+                MeshMaterial2d(material),
+                Transform::from_xyz(x, y, 0.0),
+            ));
+            if required {
+                entity.insert(RequiredToClear);
+            }
+            entity.id()
+        }
+
+        // Behavior 14: E2E full Surge pipeline — DamageCell -> handle_cell_hit -> CellDestroyed
         #[test]
-        fn surge_e2e_perfect_bump_then_impact_fires_shockwave() {
+        fn surge_e2e_shockwave_routes_damage_cell_through_handle_cell_hit() {
             // Full Surge chain: OnPerfectBump(OnImpact(Cell, Shockwave{range: 64.0}))
             let surge_chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave { range: 64.0 }),
+                Box::new(TriggerChain::test_shockwave(64.0)),
             )));
             let mut app = e2e_test_app(vec![surge_chain]);
 
-            // Bolt at (0, 50) — shockwave radiates from here
+            // Bolt at (0, 50)
             let bolt = app
                 .world_mut()
                 .spawn(Transform::from_xyz(0.0, 50.0, 0.0))
                 .id();
 
             // Cell A at (10, 50): distance 10 from bolt, within range 64 — 10 HP (will die)
-            let cell_a = app
-                .world_mut()
-                .spawn((
-                    Cell,
-                    CellHealth::new(10.0),
-                    RequiredToClear,
-                    Transform::from_xyz(10.0, 50.0, 0.0),
-                ))
-                .id();
+            let cell_a = spawn_e2e_cell(&mut app, 10.0, 50.0, 10.0, true);
 
-            // Cell B at (200, 50): distance 200 from bolt, outside range 64 — 10 HP (safe)
-            let cell_b = app
-                .world_mut()
-                .spawn((
-                    Cell,
-                    CellHealth::new(10.0),
-                    Transform::from_xyz(200.0, 50.0, 0.0),
-                ))
-                .id();
+            // Cell B at (200, 50): distance 200, outside range 64 — 10 HP (safe)
+            let cell_b = spawn_e2e_cell(&mut app, 200.0, 50.0, 10.0, false);
 
             // --- Step 1: Perfect bump arms the bolt ---
             app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
@@ -561,7 +719,7 @@ mod tests {
             });
             tick(&mut app);
 
-            // Bolt should now have ArmedTriggers with [OnImpact(Shockwave{64})]
+            // Bolt should now have ArmedTriggers
             let armed = app
                 .world()
                 .get::<ArmedTriggers>(bolt)
@@ -571,55 +729,52 @@ mod tests {
                 1,
                 "bolt should have exactly 1 armed trigger chain"
             );
-            assert_eq!(
-                armed.0[0],
-                TriggerChain::OnImpact(
-                    ImpactTarget::Cell,
-                    Box::new(TriggerChain::Shockwave { range: 64.0 })
-                ),
-                "armed trigger should be OnImpact(Cell, Shockwave {{range: 64.0}})"
-            );
 
             // No cells damaged yet
             let health_a = app.world().get::<CellHealth>(cell_a).unwrap();
             assert!(
                 (health_a.current - 10.0).abs() < f32::EPSILON,
-                "Cell A should still have 10.0 HP after bump (no damage yet), got {}",
+                "Cell A should still have 10.0 HP after bump, got {}",
                 health_a.current
             );
-            let health_b = app.world().get::<CellHealth>(cell_b).unwrap();
-            assert!(
-                (health_b.current - 10.0).abs() < f32::EPSILON,
-                "Cell B should still have 10.0 HP after bump (no damage yet), got {}",
-                health_b.current
-            );
 
-            // --- Step 2: Impact fires the shockwave ---
-            // Clear bump message, set impact message
+            // --- Step 2: Impact fires shockwave -> DamageCell -> handle_cell_hit ---
             app.world_mut().resource_mut::<SendBump>().0 = None;
             app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
-                cell: Entity::PLACEHOLDER, // The cell hit is arbitrary for trigger eval
+                cell: Entity::PLACEHOLDER,
                 bolt,
             });
             tick(&mut app);
 
-            // Cell A (within range 64 at distance 10) should be despawned
-            // 10 HP - 10 BASE_BOLT_DAMAGE = 0 HP -> destroyed
+            // Cell A (distance 10, in range 64, 10 HP - 10 damage = 0) should be despawned
             assert!(
                 app.world().get_entity(cell_a).is_err(),
-                "Cell A at distance 10 from bolt should be destroyed by shockwave (10 HP - 10 damage)"
+                "Cell A at distance 10 should be destroyed via DamageCell -> handle_cell_hit"
             );
 
-            // Cell B (outside range 64 at distance 200) should still exist at full HP
+            // Cell B (distance 200, out of range) should still exist
             assert!(
                 app.world().get_entity(cell_b).is_ok(),
                 "Cell B at distance 200 should NOT be affected by range-64 shockwave"
             );
-            let health_b_after = app.world().get::<CellHealth>(cell_b).unwrap();
+            let health_b = app.world().get::<CellHealth>(cell_b).unwrap();
             assert!(
-                (health_b_after.current - 10.0).abs() < f32::EPSILON,
-                "Cell B should still have 10.0 HP after shockwave, got {}",
-                health_b_after.current
+                (health_b.current - 10.0).abs() < f32::EPSILON,
+                "Cell B should still have 10.0 HP, got {}",
+                health_b.current
+            );
+
+            // CellDestroyed from handle_cell_hit (NOT from shockwave directly)
+            let captured = app.world().resource::<CapturedDestroyed>();
+            assert_eq!(
+                captured.0.len(),
+                1,
+                "exactly one CellDestroyed expected from handle_cell_hit for Cell A, got {}",
+                captured.0.len()
+            );
+            assert!(
+                captured.0[0].was_required_to_clear,
+                "Cell A has RequiredToClear — CellDestroyed.was_required_to_clear should be true"
             );
 
             // ArmedTriggers on bolt should be empty (trigger consumed)
@@ -629,17 +784,61 @@ mod tests {
                 "ArmedTriggers should be empty after shockwave fired, got {} entries",
                 armed_after.0.len()
             );
+        }
 
-            // CellDestroyed message should have been sent for Cell A
+        // Behavior 15: E2E shockwave with DamageBoost through full pipeline
+        #[test]
+        fn surge_e2e_shockwave_with_damage_boost_partial_damage() {
+            let surge_chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                Box::new(TriggerChain::test_shockwave(64.0)),
+            )));
+            let mut app = e2e_test_app(vec![surge_chain]);
+
+            // Bolt at (0, 50) with DamageBoost(0.5) -> damage = 10 * 1.5 = 15
+            let bolt = app
+                .world_mut()
+                .spawn((Transform::from_xyz(0.0, 50.0, 0.0), DamageBoost(0.5)))
+                .id();
+
+            // Cell at (10, 50): 20 HP — should survive with 5 HP after 15 damage
+            let cell = spawn_e2e_cell(&mut app, 10.0, 50.0, 20.0, true);
+
+            // Step 1: Perfect bump arms the bolt
+            app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+                grade: BumpGrade::Perfect,
+                multiplier: 1.5,
+                bolt,
+            });
+            tick(&mut app);
+
+            // Step 2: Impact fires shockwave -> DamageCell(15) -> handle_cell_hit
+            app.world_mut().resource_mut::<SendBump>().0 = None;
+            app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
+                cell: Entity::PLACEHOLDER,
+                bolt,
+            });
+            tick(&mut app);
+
+            // Cell should survive with 5.0 HP (20.0 - 15.0)
+            assert!(
+                app.world().get_entity(cell).is_ok(),
+                "20 HP cell hit by 15 damage (DamageBoost 0.5) should survive"
+            );
+            let health = app.world().get::<CellHealth>(cell).unwrap();
+            assert!(
+                (health.current - 5.0).abs() < f32::EPSILON,
+                "Cell should have 5.0 HP (20.0 - 15.0), got {}",
+                health.current
+            );
+
+            // No CellDestroyed — cell survived
             let captured = app.world().resource::<CapturedDestroyed>();
             assert_eq!(
                 captured.0.len(),
-                1,
-                "exactly one CellDestroyed message expected for destroyed Cell A"
-            );
-            assert!(
-                captured.0[0].was_required_to_clear,
-                "Cell A has RequiredToClear — CellDestroyed.was_required_to_clear should be true"
+                0,
+                "surviving cell should not produce CellDestroyed, got {}",
+                captured.0.len()
             );
         }
     }

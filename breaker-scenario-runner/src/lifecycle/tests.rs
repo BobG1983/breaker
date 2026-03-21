@@ -927,7 +927,11 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
     use breaker::{bolt::ActiveOverclocks, chips::TriggerChain};
 
     let mut definition = make_scenario(100);
-    definition.initial_overclocks = Some(vec![TriggerChain::Shockwave { range: 64.0 }]);
+    definition.initial_overclocks = Some(vec![TriggerChain::Shockwave {
+        base_range: 64.0,
+        range_per_level: 0.0,
+        stacks: 1,
+    }]);
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -951,8 +955,12 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
     );
     assert_eq!(
         active.0[0],
-        TriggerChain::Shockwave { range: 64.0 },
-        "expected ActiveOverclocks[0] to be Shockwave {{ range: 64.0 }}"
+        TriggerChain::Shockwave {
+            base_range: 64.0,
+            range_per_level: 0.0,
+            stacks: 1
+        },
+        "expected ActiveOverclocks[0] to be Shockwave"
     );
 }
 
