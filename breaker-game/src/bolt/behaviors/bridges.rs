@@ -44,7 +44,7 @@ pub(crate) fn bridge_overclock_bump(
                     EvalResult::Fire(leaf) => {
                         commands.trigger(OverclockEffectFired {
                             effect: leaf,
-                            bolt: bolt_entity,
+                            bolt: Some(bolt_entity),
                         });
                     }
                     EvalResult::Arm(remaining) => {
@@ -58,7 +58,7 @@ pub(crate) fn bridge_overclock_bump(
                 EvalResult::Fire(leaf) => {
                     commands.trigger(OverclockEffectFired {
                         effect: leaf,
-                        bolt: bolt_entity,
+                        bolt: Some(bolt_entity),
                     });
                 }
                 EvalResult::Arm(remaining) => {
@@ -87,7 +87,7 @@ pub(crate) fn bridge_overclock_cell_impact(
                 EvalResult::Fire(leaf) => {
                     commands.trigger(OverclockEffectFired {
                         effect: leaf,
-                        bolt: bolt_entity,
+                        bolt: Some(bolt_entity),
                     });
                 }
                 EvalResult::Arm(remaining) => {
@@ -123,7 +123,7 @@ pub(crate) fn bridge_overclock_breaker_impact(
                 EvalResult::Fire(leaf) => {
                     commands.trigger(OverclockEffectFired {
                         effect: leaf,
-                        bolt: bolt_entity,
+                        bolt: Some(bolt_entity),
                     });
                 }
                 EvalResult::Arm(remaining) => {
@@ -159,7 +159,7 @@ pub(crate) fn bridge_overclock_wall_impact(
                 EvalResult::Fire(leaf) => {
                     commands.trigger(OverclockEffectFired {
                         effect: leaf,
-                        bolt: bolt_entity,
+                        bolt: Some(bolt_entity),
                     });
                 }
                 EvalResult::Arm(remaining) => {
@@ -191,7 +191,7 @@ pub(crate) fn bridge_overclock_cell_destroyed(
         return;
     }
     let trigger_kind = OverclockTriggerKind::CellDestroyed;
-    evaluate_active_chains(&active, trigger_kind, Entity::PLACEHOLDER, &mut commands);
+    evaluate_active_chains(&active, trigger_kind, None, &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 }
 
@@ -209,7 +209,7 @@ pub(crate) fn bridge_overclock_bolt_lost(
         return;
     }
     let trigger_kind = OverclockTriggerKind::BoltLost;
-    evaluate_active_chains(&active, trigger_kind, Entity::PLACEHOLDER, &mut commands);
+    evaluate_active_chains(&active, trigger_kind, None, &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 }
 
@@ -221,7 +221,7 @@ pub(crate) fn bridge_overclock_bolt_lost(
 fn evaluate_active_chains(
     active: &ActiveOverclocks,
     trigger_kind: OverclockTriggerKind,
-    bolt: Entity,
+    bolt: Option<Entity>,
     commands: &mut Commands,
 ) {
     for chain in &active.0 {
@@ -241,7 +241,7 @@ fn evaluate_armed_all(
     commands: &mut Commands,
 ) {
     for (bolt_entity, mut armed) in &mut armed_query {
-        resolve_armed(&mut armed, trigger_kind, bolt_entity, commands);
+        resolve_armed(&mut armed, trigger_kind, Some(bolt_entity), commands);
     }
 }
 
@@ -275,7 +275,7 @@ fn evaluate_armed(
     trigger_kind: OverclockTriggerKind,
 ) {
     if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
-        resolve_armed(&mut armed, trigger_kind, bolt_entity, commands);
+        resolve_armed(&mut armed, trigger_kind, Some(bolt_entity), commands);
     }
 }
 
@@ -283,7 +283,7 @@ fn evaluate_armed(
 fn resolve_armed(
     armed: &mut ArmedTriggers,
     trigger_kind: OverclockTriggerKind,
-    bolt: Entity,
+    bolt: Option<Entity>,
     commands: &mut Commands,
 ) {
     let mut new_armed = Vec::new();
@@ -309,7 +309,7 @@ mod tests {
     // --- Test infrastructure ---
 
     #[derive(Resource, Default)]
-    struct CapturedEffects(Vec<(TriggerChain, Entity)>);
+    struct CapturedEffects(Vec<(TriggerChain, Option<Entity>)>);
 
     fn capture_effects(trigger: On<OverclockEffectFired>, mut captured: ResMut<CapturedEffects>) {
         captured
@@ -714,13 +714,14 @@ mod tests {
             "effect should be the leaf shockwave"
         );
         assert_eq!(
-            captured.0[0].1, bolt_a,
-            "effect should carry the bolt entity that triggered it, not PLACEHOLDER"
+            captured.0[0].1,
+            Some(bolt_a),
+            "effect should carry Some(bolt entity) that triggered it, not None"
         );
     }
 
     #[test]
-    fn global_trigger_uses_placeholder_bolt() {
+    fn global_trigger_uses_none_for_bolt() {
         let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shockwave(32.0)));
         let mut app = cell_destroyed_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendCellDestroyed>().0 = Some(CellDestroyed {
@@ -740,9 +741,32 @@ mod tests {
             "effect should be the leaf shockwave"
         );
         assert_eq!(
-            captured.0[0].1,
-            Entity::PLACEHOLDER,
-            "global triggers should use Entity::PLACEHOLDER since no specific bolt triggered them"
+            captured.0[0].1, None,
+            "global triggers should use None since no specific bolt triggered them"
+        );
+    }
+
+    #[test]
+    fn bolt_lost_global_trigger_uses_none_for_bolt() {
+        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::test_shield(5.0)));
+        let mut app = bolt_lost_test_app(vec![chain]);
+        app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "bolt lost with active OnBoltLost chain should fire"
+        );
+        assert_eq!(
+            captured.0[0].0,
+            TriggerChain::test_shield(5.0),
+            "effect should be the leaf shield"
+        );
+        assert_eq!(
+            captured.0[0].1, None,
+            "bolt lost global trigger should use None since no specific bolt triggered it"
         );
     }
 

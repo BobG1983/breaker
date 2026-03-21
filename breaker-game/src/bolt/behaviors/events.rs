@@ -11,7 +11,7 @@ use crate::chips::definition::TriggerChain;
 pub(crate) struct OverclockEffectFired {
     /// The leaf effect to execute.
     pub effect: TriggerChain,
-    /// The bolt entity that triggered the effect, or `Entity::PLACEHOLDER` for
-    /// global triggers (cell destroyed, bolt lost) that have no specific bolt.
-    pub bolt: Entity,
+    /// The bolt entity that triggered the effect, or `None` for global triggers
+    /// (cell destroyed, bolt lost) that have no specific bolt.
+    pub bolt: Option<Entity>,
 }

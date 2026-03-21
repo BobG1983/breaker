@@ -705,12 +705,15 @@ mod tests {
 
     // --- Phase D: Stacking effective value tests ---
 
+    /// Compute effective f32 value: `base + (stacks - 1) * per_level`.
+    #[expect(clippy::cast_precision_loss, reason = "stacks is always small (< max_stacks)")]
+    fn effective_f32(base: f32, per_level: f32, stacks: u32) -> f32 {
+        (stacks.saturating_sub(1) as f32).mul_add(per_level, base)
+    }
+
     #[test]
     fn shockwave_effective_range_at_stacks_1() {
-        let base_range: f32 = 64.0;
-        let range_per_level: f32 = 32.0;
-        let stacks: u32 = 1;
-        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        let effective = effective_f32(64.0, 32.0, 1);
         assert!(
             (effective - 64.0).abs() < f32::EPSILON,
             "stacks=1: effective should be base_range 64.0, got {effective}"
@@ -719,10 +722,7 @@ mod tests {
 
     #[test]
     fn shockwave_effective_range_at_stacks_2() {
-        let base_range: f32 = 64.0;
-        let range_per_level: f32 = 32.0;
-        let stacks: u32 = 2;
-        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        let effective = effective_f32(64.0, 32.0, 2);
         assert!(
             (effective - 96.0).abs() < f32::EPSILON,
             "stacks=2: effective should be 96.0 (64.0 + 1*32.0), got {effective}"
@@ -731,10 +731,7 @@ mod tests {
 
     #[test]
     fn shockwave_effective_range_at_stacks_3() {
-        let base_range: f32 = 64.0;
-        let range_per_level: f32 = 32.0;
-        let stacks: u32 = 3;
-        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        let effective = effective_f32(64.0, 32.0, 3);
         assert!(
             (effective - 128.0).abs() < f32::EPSILON,
             "stacks=3: effective should be 128.0 (64.0 + 2*32.0), got {effective}"
@@ -743,10 +740,7 @@ mod tests {
 
     #[test]
     fn shockwave_effective_range_at_stacks_0() {
-        let base_range: f32 = 64.0;
-        let range_per_level: f32 = 32.0;
-        let stacks: u32 = 0;
-        let effective = base_range + f32::from(stacks.saturating_sub(1)) * range_per_level;
+        let effective = effective_f32(64.0, 32.0, 0);
         assert!(
             (effective - 64.0).abs() < f32::EPSILON,
             "stacks=0: saturating_sub prevents underflow, effective should be 64.0, got {effective}"
@@ -779,10 +773,7 @@ mod tests {
 
     #[test]
     fn shield_effective_duration_at_stacks_1() {
-        let base_duration: f32 = 5.0;
-        let duration_per_level: f32 = 2.0;
-        let stacks: u32 = 1;
-        let effective = base_duration + f32::from(stacks.saturating_sub(1)) * duration_per_level;
+        let effective = effective_f32(5.0, 2.0, 1);
         assert!(
             (effective - 5.0).abs() < f32::EPSILON,
             "stacks=1: effective should be base_duration 5.0, got {effective}"
@@ -791,10 +782,7 @@ mod tests {
 
     #[test]
     fn shield_effective_duration_at_stacks_3() {
-        let base_duration: f32 = 5.0;
-        let duration_per_level: f32 = 2.0;
-        let stacks: u32 = 3;
-        let effective = base_duration + f32::from(stacks.saturating_sub(1)) * duration_per_level;
+        let effective = effective_f32(5.0, 2.0, 3);
         assert!(
             (effective - 9.0).abs() < f32::EPSILON,
             "stacks=3: effective should be 9.0 (5.0 + 2*2.0), got {effective}"

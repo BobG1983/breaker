@@ -39,8 +39,13 @@ pub(crate) fn handle_shockwave(
     else {
         return;
     };
-    let range = base_range + f32::from((*stacks).saturating_sub(1)) * range_per_level;
-    let Ok((bolt_tf, damage_boost)) = bolt_query.get(trigger.event().bolt) else {
+    #[expect(clippy::cast_precision_loss, reason = "stacks is always small (< max_stacks ≈ 5)")]
+    let extra_stacks = (*stacks).saturating_sub(1) as f32;
+    let range = extra_stacks.mul_add(*range_per_level, *base_range);
+    let Some(bolt_entity) = trigger.event().bolt else {
+        return;
+    };
+    let Ok((bolt_tf, damage_boost)) = bolt_query.get(bolt_entity) else {
         return;
     };
     let boost = damage_boost.map_or(0.0, |b| b.0);
@@ -56,7 +61,7 @@ pub(crate) fn handle_shockwave(
             damage_writer.write(DamageCell {
                 cell: cell_entity,
                 damage,
-                source_bolt: trigger.event().bolt,
+                source_bolt: bolt_entity,
             });
         }
     }
@@ -163,7 +168,7 @@ mod tests {
                 range_per_level: 0.0,
                 stacks: 1,
             },
-            bolt,
+            bolt: Some(bolt),
         });
         // Flush commands so the observer fires synchronously, writing
         // DamageCell messages before the next tick's FixedUpdate runs
@@ -185,7 +190,7 @@ mod tests {
                 range_per_level,
                 stacks,
             },
-            bolt,
+            bolt: Some(bolt),
         });
         app.world_mut().flush();
         tick(app);
@@ -451,19 +456,25 @@ mod tests {
         );
     }
 
-    // Behavior 11: Shockwave no-op with Entity::PLACEHOLDER bolt (global trigger)
+    // Behavior 11: Shockwave no-op with None bolt (global trigger)
     #[test]
-    fn shockwave_no_op_with_placeholder_bolt() {
+    fn shockwave_no_op_with_none_bolt() {
         let mut app = test_app();
         let _cell = spawn_cell(&mut app, 10.0, 0.0, 10.0);
 
-        trigger_shockwave(&mut app, Entity::PLACEHOLDER, 64.0);
+        // Trigger directly with bolt: None (global trigger, no specific bolt)
+        app.world_mut().commands().trigger(OverclockEffectFired {
+            effect: TriggerChain::test_shockwave(64.0),
+            bolt: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
 
         let captured = app.world().resource::<CapturedDamage>();
         assert_eq!(
             captured.0.len(),
             0,
-            "no DamageCell messages when bolt is Entity::PLACEHOLDER, got {}",
+            "no DamageCell messages when bolt is None, got {}",
             captured.0.len()
         );
     }
@@ -505,7 +516,7 @@ mod tests {
                 count_per_level: 0,
                 stacks: 1,
             },
-            bolt,
+            bolt: Some(bolt),
         });
         app.world_mut().flush();
         tick(&mut app);
