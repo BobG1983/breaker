@@ -24,13 +24,13 @@ type: reference
 - behaviors/consequences/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. All gated behind `#[cfg(feature = "dev")]`. Does NOT set precedent for production domains.
 - **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, chips, input, run domains directly. Five domain modules widened to `pub mod` in lib.rs (`chips` added 2026-03-20 for `TriggerChain`/`ImpactTarget` in `initial_overclocks`). Dev-only crate, never shipped.
-- **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).
+- **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost (Amp chip component in chips/components.rs) from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).
 
 ## Active Violations (pending resolution)
 (none)
 
 ## Resolved Compromises (2026-03-16)
-- ~~bolt/apply_bump_velocity reads breaker entity components~~ → multiplier now included in BumpPerformed message
+- ~~bolt/apply_bump_velocity reads breaker entity components~~ → first resolved by including multiplier in BumpPerformed message (2026-03-16); then apply_bump_velocity itself DELETED in refactor/unify-behaviors (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf
 - ~~bolt/behaviors/effects/shockwave.rs cross-domain mutation~~ → FIXED 2026-03-20 (feature/overclock-trigger-chain): shockwave now writes `DamageCell` messages (consumer-owns pattern); cells/handle_cell_hit processes damage. No direct CellHealth mutation. NOTE: shockwave.rs now lives at behaviors/effects/shockwave.rs (bolt/behaviors/ deleted in refactor/unify-behaviors).
 - ~~physics/ccd.rs exists outside canonical layout~~ → moved to shared/math.rs
 - ~~run/node/ lacks its own plugin.rs~~ → NodePlugin extracted

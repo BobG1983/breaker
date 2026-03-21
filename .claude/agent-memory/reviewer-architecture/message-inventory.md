@@ -13,7 +13,7 @@
 | `ApplyTimePenalty { seconds }` | `run/node/messages.rs` | `NodePlugin` | behaviors/time_penalty (observer) | run/node/apply_time_penalty |
 | `SpawnAdditionalBolt` | `bolt/messages.rs` | `BoltPlugin` | behaviors/spawn_bolt (observer) | bolt/spawn_additional_bolt |
 | `RunLost` | `run/messages.rs` | `RunPlugin` | behaviors/handle_life_lost | run/handle_run_lost |
-| `BumpPerformed { grade, multiplier, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | bolt/apply_bump_velocity, breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, behaviors/bridges/bridge_overclock_bump |
+| `BumpPerformed { grade, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, behaviors/bridges/bridge_overclock_bump |
 | `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text |
 | `ChipSelected { name }` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/apply_chip_effect |
 | `BoltSpawned` | `bolt/messages.rs` | `BoltPlugin` | bolt/spawn_bolt | run/node/check_spawn_complete |

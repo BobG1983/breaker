@@ -81,9 +81,9 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Receivers:
   - `perfect_bump_dash_cancel` (BreakerPlugin)
   - `spawn_bump_grade_text` (BreakerPlugin)
-  - `apply_bump_velocity` (BoltPlugin)
-  - `bridge_overclock_bump` (BehaviorsPlugin) — evaluates chains via TriggerKind::PerfectBump/EarlyBump/LateBump/BumpSuccess → fires EffectFired → effect observers
+  - `bridge_overclock_bump` (BehaviorsPlugin) — evaluates chains via TriggerKind::PerfectBump/EarlyBump/LateBump/BumpSuccess → fires EffectFired → effect observers (including handle_speed_boost for SpeedBoost leaf)
   - `track_bump_result` (DebugPlugin, dev only)
+  - NOTE (2026-03-21): `apply_bump_velocity` (BoltPlugin) DELETED — velocity scaling now handled by TriggerChain::SpeedBoost leaf via EffectFired/handle_speed_boost
 
 ### BumpWhiffed (BreakerPlugin → cross-domain)
 - Sender: `grade_bump` (BreakerPlugin)
@@ -229,7 +229,7 @@ BumpPerformed message
 All observers run immediately when triggered via commands.trigger(EffectFired).
 Messages written by observers are available to downstream systems .after(BehaviorSystems::Bridge).
 
-TriggerChain::BoltSpeedBoost is init-time-only (handled by init_archetype), not dispatched at runtime.
+TriggerChain::SpeedBoost (was BoltSpeedBoost) is dispatched at runtime via EffectFired → handle_speed_boost in behaviors/effects/speed_boost.rs. It is NOT init-time-only. (Note: the old BoltSpeedBoost name was renamed to SpeedBoost { target, multiplier } in refactor/unify-behaviors.)
 
 ---
 

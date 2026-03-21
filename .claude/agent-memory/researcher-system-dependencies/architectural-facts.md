@@ -14,7 +14,7 @@ type: reference
 - Bolt entities carry InterpolateTransform + PhysicsTranslation; bolt_lost inserts PhysicsTranslation on respawn
 - Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `clamp_bolt_to_playfield` → `bolt_lost`
 - clamp_bolt_to_playfield: safety clamp for bolts escaping through CCD corner overlaps; no bottom clamp (bolt_lost handles that)
-- apply_bump_velocity: `.after(BreakerCollision).before(BoltLost)`
+- apply_bump_velocity: DELETED (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf → handle_speed_boost observer in behaviors/effects/speed_boost.rs
 - spawn_additional_bolt: `.after(BehaviorSystems::Bridge)`
 - NOTE (2026-03-21): bolt/behaviors/ sub-domain DELETED. BoltBehaviorsPlugin REMOVED. ActiveOverclocks→ActiveChains. OverclockEffectFired→EffectFired. OverclockTriggerKind→TriggerKind. behaviors/consequences/→behaviors/effects/. All bridge/effect logic unified in BehaviorsPlugin.
 - ExtraBolt: despawned permanently when lost (not respawned); still sends BoltLost message
@@ -42,7 +42,7 @@ type: reference
 - Set 2 `PropagateConfig` (2 systems): `.after(PropagateDefaults)`, gated by `resource_changed::<T>`
 - Breaker path: direct `ResMut<BreakerConfig>` write → same-frame propagation
 - Bolt/cell/etc.: `commands.insert_resource` → next-frame propagation
-- `propagate_archetype_changes` also writes `ResMut<BreakerConfig>` and `ResMut<ActiveBehaviors>`
+- `propagate_archetype_changes` also writes `ResMut<BreakerConfig>` and `ResMut<ActiveChains>` (was ActiveBehaviors before refactor/unify-behaviors)
 - `propagate_breaker_defaults` and `propagate_archetype_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
 
 ## Scenario Runner (breaker-scenario-runner)

@@ -76,8 +76,9 @@ NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKi
 
 ### Query Aliases (`breaker/queries.rs`)
 - `MovementQuery` — (&mut Transform, &mut BreakerVelocity, &BreakerState, &BreakerMaxSpeed, &BreakerAcceleration, &BreakerDeceleration, &DecelEasing, &BreakerWidth)
-- `BumpTimingQuery` — (&mut BumpState, &BumpPerfectWindow, &BumpEarlyWindow, &BumpLateWindow, &BumpPerfectCooldown, &BumpWeakCooldown, Option<&BumpPerfectMultiplier>, Option<&BumpWeakMultiplier>)
-- `BumpGradingQuery` — (&mut BumpState, &BumpPerfectWindow, &BumpLateWindow, &BumpPerfectCooldown, &BumpWeakCooldown, Option<&BumpPerfectMultiplier>, Option<&BumpWeakMultiplier>)
+- `BumpTimingQuery` — (&mut BumpState, &BumpPerfectWindow, &BumpEarlyWindow, &BumpLateWindow, &BumpPerfectCooldown, &BumpWeakCooldown)
+- `BumpGradingQuery` — (&mut BumpState, &BumpPerfectWindow, &BumpLateWindow, &BumpPerfectCooldown, &BumpWeakCooldown)
+- NOTE (2026-03-21): BumpPerfectMultiplier and BumpWeakMultiplier DELETED from both queries. Multiplier logic moved to TriggerChain::SpeedBoost leaves in archetype RON.
 
 ### Components (core.rs)
 - `Breaker` — marker (pub)
@@ -136,6 +137,7 @@ NOTE: This domain was restructured. The old `behaviors/consequences/` directory 
 - `handle_life_lost` in `behaviors/effects/life_lost.rs`
 - `handle_time_penalty` in `behaviors/effects/time_penalty.rs`
 - `handle_spawn_bolt` in `behaviors/effects/spawn_bolt.rs`
+- `handle_speed_boost` in `behaviors/effects/speed_boost.rs` — handles TriggerChain::SpeedBoost { target, multiplier }; targets specific bolt from EffectFired.bolt; applies multiplier to bolt velocity
 All observe `EffectFired` (not `ConsequenceFired`).
 
 **Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21).

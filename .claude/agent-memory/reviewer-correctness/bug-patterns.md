@@ -15,7 +15,7 @@ type: reference
 - **seed_upgrade_registry Local<bool>**: Persists for app lifetime. Correct — Loading only runs once.
 
 ## ECS Pitfalls Found
-- `apply_bump_velocity` collects messages into Vec before querying — correct pattern for borrow conflicts.
+- `apply_bump_velocity` DELETED (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf → handle_speed_boost observer. The Vec-collection pattern for borrow conflicts was used here; apply it in any future systems with the same shape.
 - `ChipSelected` message is consumed by `apply_chip_effect` (ChipsPlugin). Consumer added in feature/phase4b1-chip-effects.
 - `spawn_chip_select` takes `Res<ChipRegistry>` (not Option) — guaranteed safe because Loading completes first.
 
@@ -80,7 +80,7 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **No bridge for BumpWhiffed**: `bridge_overclock_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_overclock_bump_whiff system exists in behaviors/bridges.rs.
 
-- **LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost leaves have no handlers**: The unification added `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt` observers in `behaviors/effects/`. These observe `EffectFired` (was `OverclockEffectFired`) and pattern-match their leaf variants. VERIFY: check behaviors/effects/mod.rs for registered observers.
+- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: The unification confirmed `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` observers all exist in `behaviors/effects/` and observe `EffectFired`. All four leaf types are fully wired. BoltSpeedBoost renamed to SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } in refactor/unify-behaviors.
 
 - **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) TriggerKind + evaluate(), (3) bridge system + effect handler. This three-part requirement is now well-documented in the codebase.
 

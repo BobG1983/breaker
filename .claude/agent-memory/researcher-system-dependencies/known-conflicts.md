@@ -158,9 +158,9 @@ tick after Update frame N. The latency is at most 1 fixed tick (~16ms at 60Hz) �
 
 ---
 
-## RESOLVED — apply_bump_velocity ordering vs bolt_lost
+## DELETED — apply_bump_velocity (was: ordering vs bolt_lost)
 
-`apply_bump_velocity` runs `.after(BreakerCollision).before(BoltLost)`. Correct and confirmed.
+`apply_bump_velocity` was DELETED in refactor/unify-behaviors (2026-03-21). Velocity scaling is now handled by TriggerChain::SpeedBoost leaf via EffectFired → handle_speed_boost. No ordering constraint remains.
 
 ---
 
@@ -275,7 +275,7 @@ It now orders `.after(BehaviorSystems::Bridge)` — which runs after BreakerColl
 This guarantees the SpawnAdditionalBolt message written by the bridge observer is readable
 in the same tick.
 
-`apply_bump_velocity` orders `.after(BreakerCollision).before(BoltLost)`.
+`apply_bump_velocity` is DELETED (2026-03-21).
 `spawn_additional_bolt` orders `.after(BehaviorSystems::Bridge)`.
 No explicit ordering between them — but no conflict because spawn_additional_bolt uses
 only Commands (deferred). The spawned entity is not visible in the current tick.
@@ -303,7 +303,6 @@ FixedUpdate:
             → bolt_cell_collision (.after(BoltSystems::PrepareVelocity))
                 → bolt_breaker_collision (.after(bolt_cell_collision), BreakerCollision set)
                     → clamp_bolt_to_playfield (.after(bolt_breaker_collision))  [NEW — safety clamp]
-                    → apply_bump_velocity (.after(BreakerCollision), .before(BoltLost))
                     → grade_bump (.after(update_bump) AND .after(BreakerCollision))
                     → bridge_bump (.after(BreakerCollision), BehaviorSystems::Bridge, conditional)
                         → [observer: handle_time_penalty] → ApplyTimePenalty message

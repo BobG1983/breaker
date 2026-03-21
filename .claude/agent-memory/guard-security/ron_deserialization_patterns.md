@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding.
 
 ## Summary
 
@@ -66,3 +66,28 @@ recursion limit (~128) provides a practical cap on chain depth.
 
 **How to apply:** On future audits, check for runtime validation added to the chip asset loader
 path and to `CellHealth::take_damage` (negative amount guard).
+
+## Warning: TriggerChain::SpeedBoost.multiplier has no bounds validation (added 2026-03-21)
+
+`TriggerChain::SpeedBoost { multiplier: f32 }` is deserialized from `.archetype.ron` files without
+any bounds check. The handler in `src/behaviors/effects/speed_boost.rs` applies `bolt_velocity.value
+*= *multiplier` directly.
+
+Concrete risks:
+- `multiplier: 0.0` collapses velocity to zero. The `speed > 0.0` floor guard (`line 57`) correctly
+  skips re-normalizing a zero vector (uses `normalize_or_zero`), so no NaN — but the bolt becomes
+  motionless and the game soft-locks.
+- `multiplier: -1.0` reverses the velocity direction. The `speed > 0.0` floor guard only checks
+  magnitude, not sign, so a negative multiplier passes through. The bolt now travels in the
+  opposite direction. The `BoltInBounds` invariant and OOB detection should eventually catch it, but
+  this is an authored foot-gun.
+- `multiplier: 1e10` hits the `max_speed` clamp and is safe (no panic, no NaN). Max-speed clamp
+  path is exercised by test `handle_speed_boost_clamps_to_max_speed`.
+
+**Status as of 2026-03-21:** Unvalidated. First-party data only. All production RON files use
+safe positive values (1.1, 1.5). The zero-velocity path is explicitly covered by test
+`handle_speed_boost_zero_velocity_remains_zero` and does not panic. Scenario invariant
+`BoltSpeedInRange` would catch a motionless bolt at runtime.
+
+**How to apply:** On future audits, check if a `multiplier > 0.0` assertion has been added to the
+archetype asset loader path or inside `handle_speed_boost`.
