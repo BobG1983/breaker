@@ -11,4 +11,5 @@ mod output;
 mod tests;
 
 pub use app::{drain_remaining_logs, guarded_update, is_timed_out};
+pub use discovery::load_scenario;
 pub use execution::*;

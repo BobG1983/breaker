@@ -1,0 +1,17 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 300,
+    invariants: [NoEntityLeaks],
+    expected_violations: Some([NoEntityLeaks]),
+    debug_setup: Some((
+        disable_physics: true,
+    )),
+    allow_early_end: false,
+    frame_mutations: Some([
+        (frame: 119, mutation: SpawnExtraEntities(200)),
+    ]),
+)

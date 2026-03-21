@@ -1,0 +1,16 @@
+(
+    breaker: "Chrono",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [TimerMonotonicallyDecreasing],
+    expected_violations: Some([TimerMonotonicallyDecreasing]),
+    debug_setup: Some((
+        disable_physics: true,
+    )),
+    frame_mutations: Some([
+        (frame: 30, mutation: SetTimerRemaining(80.0)),
+    ]),
+)

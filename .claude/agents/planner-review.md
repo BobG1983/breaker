@@ -33,6 +33,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 - Are edge cases explicit? Every boundary (zero, max, min, empty, exactly-at-threshold) should be named.
 - Are negative cases covered? What should NOT happen? What inputs should be rejected?
 - Are error/panic conditions addressed? What happens when preconditions aren't met?
+- Does the Scenario Coverage section include self-test scenarios for any new invariants? Every InvariantKind needs a self-test that proves it fires.
 
 **Correctness**
 - Do the concrete values make physical sense? A bolt at position (0, 50) moving at (0, 400) — does that direction/speed match the game's coordinate system and scale?

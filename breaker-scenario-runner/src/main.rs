@@ -14,10 +14,13 @@
 
 use std::process;
 
-use breaker_scenario_runner::runner::{
-    Parallelism, build_run_list, parse_parallelism, partition_stress_scenarios,
-    print_stress_result, print_summary, run_all_parallel, run_all_serial, run_single_scenario,
-    run_stress_scenario, run_with_args,
+use breaker_scenario_runner::{
+    coverage::{check_coverage, print_coverage_report},
+    runner::{
+        Parallelism, build_run_list, load_scenario, parse_parallelism, partition_stress_scenarios,
+        print_stress_result, print_summary, run_all_parallel, run_all_serial, run_single_scenario,
+        run_stress_scenario, run_with_args,
+    },
 };
 use clap::Parser;
 
@@ -132,7 +135,61 @@ fn main() {
         }
     }
 
+    // Print coverage report when running --all.
+    if args.all {
+        print_coverage_for_runs(&runs);
+    }
+
     process::exit(worst_exit);
+}
+
+/// Loads all scenario definitions, identifies self-test scenarios, discovers
+/// layout files, and prints the coverage report.
+fn print_coverage_for_runs(runs: &[(String, std::path::PathBuf)]) {
+    use breaker_scenario_runner::runner::scenarios_dir;
+
+    let scenarios: Vec<(String, breaker_scenario_runner::types::ScenarioDefinition)> = runs
+        .iter()
+        .filter_map(|(name, path)| {
+            let def = load_scenario(path)?;
+            Some((name.clone(), def))
+        })
+        .collect();
+
+    let self_tests_dir = scenarios_dir().join("self_tests");
+    let self_test_names: Vec<String> = runs
+        .iter()
+        .filter(|(_, path)| path.starts_with(&self_tests_dir))
+        .map(|(name, _)| name.clone())
+        .collect();
+
+    let layout_names = discover_layout_names();
+
+    let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+    println!();
+    let _ = print_coverage_report(&report);
+}
+
+/// Discovers layout names from `.node.ron` files in the game assets directory.
+fn discover_layout_names() -> Vec<String> {
+    let nodes_dir =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../breaker-game/assets/nodes");
+    let Ok(entries) = std::fs::read_dir(&nodes_dir) else {
+        return vec![];
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            let name = path.file_name()?.to_str()?;
+            if name.ends_with(".node.ron") {
+                let stem = name.strip_suffix(".node.ron")?;
+                Some(stem.to_owned())
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Automated gameplay scenario runner.

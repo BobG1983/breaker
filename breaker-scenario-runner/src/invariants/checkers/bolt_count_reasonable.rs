@@ -55,6 +55,7 @@ mod tests {
                     stress: None,
                     seed: None,
                     initial_overclocks: None,
+                    frame_mutations: None,
                 },
             })
             .add_systems(FixedUpdate, check_bolt_count_reasonable);

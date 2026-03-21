@@ -35,5 +35,7 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **ActiveChains** | Runtime resource holding all `TriggerChain`s active for the current run. Populated from the archetype definition on entering Playing, and extended by `handle_overclock` when an overclock chip is selected | `ActiveChains` |
 | **ArmedTriggers** | Component attached to a bolt entity when a trigger chain matches a trigger node but the inner chain is not yet a leaf. Carries the remaining chain; evaluated by the next matching bridge system | `ArmedTriggers` |
 | **EffectFired** | Observer event fired by bridge systems when a `TriggerChain` fully resolves to a leaf. Carries the leaf `TriggerChain` variant and an optional bolt entity | `EffectFired` |
+| **FrameMutation** | A scripted mutation applied at a specific fixed-update frame during a scenario run. Used in `frame_mutations` to trigger invariant violations at deterministic points in self-test scenarios | `FrameMutation`, `frame_mutations` field in `ScenarioDefinition` |
+| **MutationKind** | The enum of mutation operations a `FrameMutation` can apply: `SetBreakerState`, `SetTimerRemaining`, `SpawnExtraEntities`, `MoveBolt`, `TogglePause` | `MutationKind`, `apply_debug_frame_mutations` |
 
 **Do NOT use generic terms** like "paddle", "ball", "brick", "level", "powerup", or "upgrade" for type names, identifiers, or modules.

@@ -161,6 +161,32 @@ impl InvariantKind {
     }
 }
 
+/// Mirrors `GameState` for RON deserialization in the scenario runner crate.
+///
+/// The game crate's `GameState` derives `States` (which brings in `Bevy`
+/// dependencies that cannot appear in plain-data RON files). This enum
+/// carries the same variants and is mapped to `GameState` at runtime by
+/// [`crate::lifecycle::map_forced_game_state`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum ForcedGameState {
+    /// Corresponds to `GameState::Loading`.
+    Loading,
+    /// Corresponds to `GameState::MainMenu`.
+    MainMenu,
+    /// Corresponds to `GameState::RunSetup`.
+    RunSetup,
+    /// Corresponds to `GameState::Playing`.
+    Playing,
+    /// Corresponds to `GameState::NodeTransition`.
+    NodeTransition,
+    /// Corresponds to `GameState::ChipSelect`.
+    ChipSelect,
+    /// Corresponds to `GameState::RunEnd`.
+    RunEnd,
+    /// Corresponds to `GameState::MetaProgression`.
+    MetaProgression,
+}
+
 /// Optional debug overrides applied after entity spawn (used in self-test scenarios).
 #[derive(Debug, Clone, PartialEq, Deserialize, Default)]
 pub struct DebugSetup {
@@ -172,6 +198,18 @@ pub struct DebugSetup {
     /// When `true`, freeze physics so the bolt stays at the injected position.
     #[serde(default)]
     pub disable_physics: bool,
+    /// Override bolt velocity for all tagged bolts.
+    #[serde(default)]
+    pub bolt_velocity: Option<(f32, f32)>,
+    /// Number of extra bare `ScenarioTagBolt` entities to spawn (no physics components).
+    #[serde(default)]
+    pub extra_tagged_bolts: Option<usize>,
+    /// Override `NodeTimer::remaining` to this value.
+    #[serde(default)]
+    pub node_timer_remaining: Option<f32>,
+    /// Force `PreviousGameState` to this value (mapped to `GameState`).
+    #[serde(default)]
+    pub force_previous_game_state: Option<ForcedGameState>,
 }
 
 /// Tunable parameters for invariant checkers.
@@ -270,10 +308,61 @@ pub struct ScenarioDefinition {
     /// Optional overclock chains to pre-populate at scenario start.
     #[serde(default)]
     pub initial_overclocks: Option<Vec<breaker::chips::TriggerChain>>,
+    /// Optional per-frame mutations for self-test scenarios.
+    ///
+    /// When `Some`, each [`FrameMutation`] is applied at its specified frame
+    /// by [`crate::lifecycle::apply_debug_frame_mutations`].
+    #[serde(default)]
+    pub frame_mutations: Option<Vec<FrameMutation>>,
 }
 
 impl ScenarioDefinition {
     const fn default_allow_early_end() -> bool {
         true
     }
+}
+
+/// A mutation to apply at a specific frame during a scenario run.
+///
+/// Used by self-test scenarios to intentionally trigger invariant violations
+/// at scripted points in the run.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct FrameMutation {
+    /// The fixed-update frame on which this mutation is applied.
+    pub frame: u32,
+    /// The kind of mutation to apply.
+    pub mutation: MutationKind,
+}
+
+/// The kind of mutation to apply at a given frame.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub enum MutationKind {
+    /// Override the breaker's movement state.
+    SetBreakerState(ScenarioBreakerState),
+    /// Override `NodeTimer::remaining` to this value.
+    SetTimerRemaining(f32),
+    /// Spawn N extra entities with `Transform` (for entity leak testing).
+    SpawnExtraEntities(usize),
+    /// Move the first tagged bolt to `(x, y)`, preserving z.
+    MoveBolt(f32, f32),
+    /// Toggle between `PlayingState::Active` and `PlayingState::Paused`.
+    TogglePause,
+}
+
+/// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.
+///
+/// The game crate's `BreakerState` derives `Component` (which brings in Bevy
+/// dependencies). This enum carries the same variants and is mapped to
+/// `BreakerState` at runtime by
+/// [`crate::lifecycle::map_scenario_breaker_state`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum ScenarioBreakerState {
+    /// Corresponds to `BreakerState::Idle`.
+    Idle,
+    /// Corresponds to `BreakerState::Dashing`.
+    Dashing,
+    /// Corresponds to `BreakerState::Braking`.
+    Braking,
+    /// Corresponds to `BreakerState::Settling`.
+    Settling,
 }

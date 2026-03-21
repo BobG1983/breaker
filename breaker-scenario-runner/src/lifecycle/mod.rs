@@ -10,14 +10,24 @@
 #[cfg(test)]
 mod tests;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     behaviors::ActiveChains,
-    bolt::{BoltSystems, components::Bolt},
-    breaker::{BreakerSystems, components::Breaker, systems::update_breaker_state},
+    bolt::{
+        BoltSystems,
+        components::{Bolt, BoltVelocity},
+    },
+    breaker::{
+        BreakerSystems,
+        components::{Breaker, BreakerState},
+        systems::update_breaker_state,
+    },
     input::resources::InputActions,
-    run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
-    shared::{GameState, RunSeed, SelectedArchetype},
+    run::node::{
+        ScenarioLayoutOverride, messages::SpawnNodeComplete, resources::NodeTimer,
+        sets::NodeSystems,
+    },
+    shared::{GameState, PlayingState, RunSeed, SelectedArchetype},
 };
 
 use crate::{
@@ -30,8 +40,23 @@ use crate::{
         check_physics_frozen_during_pause, check_timer_monotonically_decreasing,
         check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
     },
-    types::{GameAction as ScenarioGameAction, ScenarioDefinition},
+    types::{
+        ForcedGameState, GameAction as ScenarioGameAction, MutationKind, ScenarioBreakerState,
+        ScenarioDefinition,
+    },
 };
+
+/// Query alias for bolt entities in [`apply_debug_setup`].
+type BoltDebugQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut Transform,
+        Option<&'static mut BoltVelocity>,
+    ),
+    With<ScenarioTagBolt>,
+>;
 
 /// Query alias for breaker entities in [`apply_debug_setup`].
 type BreakerDebugQuery<'w, 's> = Query<
@@ -163,6 +188,7 @@ impl Plugin for ScenarioLifecycle {
                     // contention). Checkers only fire once Playing has been entered.
                     (
                         enforce_frozen_positions,
+                        apply_debug_frame_mutations,
                         check_bolt_in_bounds,
                         check_bolt_speed_in_range,
                         check_bolt_count_reasonable,
@@ -266,26 +292,54 @@ fn restart_run_on_end(mut next_state: ResMut<NextState<GameState>>) {
     next_state.set(GameState::MainMenu);
 }
 
+/// Maps a [`ForcedGameState`] to the game crate's [`GameState`].
+///
+/// Used by [`apply_debug_setup`] to translate the RON-serializable enum
+/// into the Bevy state enum.
+pub(crate) fn map_forced_game_state(forced: ForcedGameState) -> GameState {
+    match forced {
+        ForcedGameState::Loading => GameState::Loading,
+        ForcedGameState::MainMenu => GameState::MainMenu,
+        ForcedGameState::RunSetup => GameState::RunSetup,
+        ForcedGameState::Playing => GameState::Playing,
+        ForcedGameState::NodeTransition => GameState::NodeTransition,
+        ForcedGameState::ChipSelect => GameState::ChipSelect,
+        ForcedGameState::RunEnd => GameState::RunEnd,
+        ForcedGameState::MetaProgression => GameState::MetaProgression,
+    }
+}
+
 /// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
 ///
 /// For each entity tagged with [`ScenarioTagBolt`] or [`ScenarioTagBreaker`],
 /// applies position teleports from [`crate::types::DebugSetup`] (z coordinate is
 /// preserved). When `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`]
 /// on both bolts and breakers with the post-teleport position as the frozen target.
+///
+/// Also handles `bolt_velocity`, `extra_tagged_bolts`, `node_timer_remaining`,
+/// and `force_previous_game_state` overrides.
 pub fn apply_debug_setup(
     config: Res<ScenarioConfig>,
-    mut bolt_query: Query<(Entity, &mut Transform), With<ScenarioTagBolt>>,
+    mut bolt_query: BoltDebugQuery,
     mut breaker_query: BreakerDebugQuery,
     mut commands: Commands,
+    node_timer: Option<ResMut<NodeTimer>>,
+    mut previous_state: Option<ResMut<PreviousGameState>>,
 ) {
     let Some(setup) = config.definition.debug_setup.as_ref() else {
         return;
     };
 
-    for (entity, mut transform) in &mut bolt_query {
+    for (entity, mut transform, bolt_vel) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
             transform.translation.x = x;
             transform.translation.y = y;
+        }
+
+        if let Some((vx, vy)) = setup.bolt_velocity
+            && let Some(mut vel) = bolt_vel
+        {
+            vel.value = Vec2::new(vx, vy);
         }
 
         if setup.disable_physics {
@@ -306,6 +360,24 @@ pub fn apply_debug_setup(
                 target: transform.translation,
             });
         }
+    }
+
+    if let Some(count) = setup.extra_tagged_bolts {
+        for _ in 0..count {
+            commands.spawn(ScenarioTagBolt);
+        }
+    }
+
+    if let Some(remaining) = setup.node_timer_remaining
+        && let Some(mut timer) = node_timer
+    {
+        timer.remaining = remaining;
+    }
+
+    if let Some(forced) = setup.force_previous_game_state
+        && let Some(ref mut prev) = previous_state
+    {
+        prev.0 = Some(map_forced_game_state(forced));
     }
 }
 
@@ -348,5 +420,90 @@ pub fn tag_game_entities(
         s.entered_playing = true;
         s.bolts_tagged += bolts_tagged;
         s.breakers_tagged += breakers_tagged;
+    }
+}
+
+/// Maps a [`ScenarioBreakerState`] to the game crate's [`BreakerState`].
+///
+/// Used by [`apply_debug_frame_mutations`] to translate the RON-serializable
+/// enum into the Bevy component enum.
+#[must_use]
+pub(crate) fn map_scenario_breaker_state(state: ScenarioBreakerState) -> BreakerState {
+    match state {
+        ScenarioBreakerState::Idle => BreakerState::Idle,
+        ScenarioBreakerState::Dashing => BreakerState::Dashing,
+        ScenarioBreakerState::Braking => BreakerState::Braking,
+        ScenarioBreakerState::Settling => BreakerState::Settling,
+    }
+}
+
+/// Grouped system parameters for pause toggle control.
+///
+/// Extracted to keep [`apply_debug_frame_mutations`] under the 7-argument clippy limit.
+#[derive(SystemParam)]
+pub struct PauseControl<'w> {
+    /// Current [`PlayingState`] — only present when [`GameState::Playing`] is active.
+    state: Option<Res<'w, State<PlayingState>>>,
+    /// [`NextState`] writer for toggling pause.
+    next: Option<ResMut<'w, NextState<PlayingState>>>,
+}
+
+/// Applies per-frame mutations from [`ScenarioConfig`] at matching frames.
+///
+/// Reads `frame_mutations` from the scenario definition. For each mutation
+/// whose frame matches [`ScenarioFrame`], applies the corresponding state
+/// change (breaker state override, timer override, entity spawn, bolt
+/// teleport, or pause toggle).
+pub fn apply_debug_frame_mutations(
+    config: Res<ScenarioConfig>,
+    frame: Res<ScenarioFrame>,
+    mut breakers: Query<&mut BreakerState, With<ScenarioTagBreaker>>,
+    mut bolts: Query<&mut Transform, With<ScenarioTagBolt>>,
+    mut node_timer: Option<ResMut<NodeTimer>>,
+    mut pause: PauseControl,
+    mut commands: Commands,
+) {
+    let Some(ref mutations) = config.definition.frame_mutations else {
+        return;
+    };
+
+    for mutation in mutations {
+        if mutation.frame != frame.0 {
+            continue;
+        }
+        match &mutation.mutation {
+            MutationKind::SetBreakerState(scenario_state) => {
+                let target = map_scenario_breaker_state(*scenario_state);
+                for mut state in &mut breakers {
+                    *state = target;
+                }
+            }
+            MutationKind::SetTimerRemaining(remaining) => {
+                if let Some(ref mut timer) = node_timer {
+                    timer.remaining = *remaining;
+                }
+            }
+            MutationKind::SpawnExtraEntities(count) => {
+                for _ in 0..*count {
+                    commands.spawn(Transform::default());
+                }
+            }
+            MutationKind::MoveBolt(x, y) => {
+                for mut transform in &mut bolts {
+                    transform.translation.x = *x;
+                    transform.translation.y = *y;
+                }
+            }
+            MutationKind::TogglePause => {
+                if let Some(ref state) = pause.state
+                    && let Some(ref mut next) = pause.next
+                {
+                    match ***state {
+                        PlayingState::Active => next.set(PlayingState::Paused),
+                        PlayingState::Paused => next.set(PlayingState::Active),
+                    }
+                }
+            }
+        }
     }
 }

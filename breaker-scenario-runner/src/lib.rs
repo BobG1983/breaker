@@ -12,6 +12,7 @@
     )
 )]
 
+pub mod coverage;
 pub mod input;
 pub mod invariants;
 pub mod lifecycle;

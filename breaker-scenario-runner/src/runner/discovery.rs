@@ -66,7 +66,11 @@ pub(super) fn scenario_name(path: &Path) -> String {
         .to_owned()
 }
 
-pub(super) fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
+/// Loads and deserializes a [`ScenarioDefinition`] from a `.scenario.ron` file.
+///
+/// Returns `None` if the file cannot be read or parsed (errors are printed to stderr).
+#[must_use]
+pub fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| eprintln!("Failed to read {}: {e}", path.display()))
         .ok()?;

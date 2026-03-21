@@ -1,0 +1,15 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [BoltCountReasonable],
+    expected_violations: Some([BoltCountReasonable]),
+    debug_setup: Some((
+        extra_tagged_bolts: Some(12),
+        disable_physics: true,
+    )),
+    invariant_params: (max_bolt_count: 8),
+)

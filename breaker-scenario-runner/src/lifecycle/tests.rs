@@ -1,12 +1,17 @@
 use bevy::state::app::StatesPlugin;
-use breaker::{bolt::components::Bolt, breaker::components::Breaker, shared::PlayfieldConfig};
+use breaker::{
+    bolt::components::Bolt,
+    breaker::components::{Breaker, BreakerState},
+    run::node::resources::NodeTimer,
+    shared::{GameState, PlayfieldConfig, PlayingState},
+};
 
 use super::*;
 use crate::{
-    invariants::{ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker},
+    invariants::{PreviousGameState, ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker},
     types::{
-        ChaosParams, DebugSetup, InputStrategy, InvariantKind, InvariantParams, ScenarioDefinition,
-        ScriptedParams,
+        ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy, InvariantKind,
+        InvariantParams, MutationKind, ScenarioBreakerState, ScenarioDefinition, ScriptedParams,
     },
 };
 
@@ -27,6 +32,7 @@ fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         stress: None,
         seed: None,
         initial_overclocks: None,
+        frame_mutations: None,
     }
 }
 
@@ -46,6 +52,7 @@ fn make_lifecycle_test_scenario() -> ScenarioDefinition {
         stress: None,
         seed: None,
         initial_overclocks: None,
+        frame_mutations: None,
     }
 }
 
@@ -264,12 +271,14 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
             bolt_position: Some((0.0, -500.0)),
             breaker_position: None,
             disable_physics: false,
+            ..Default::default()
         }),
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
         seed: None,
         initial_overclocks: None,
+        frame_mutations: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -326,12 +335,14 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
             bolt_position: None,
             breaker_position: Some((100.0, -50.0)),
             disable_physics: false,
+            ..Default::default()
         }),
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
         seed: None,
         initial_overclocks: None,
+        frame_mutations: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -393,12 +404,14 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
             bolt_position: Some((0.0, -400.0)),
             breaker_position: None,
             disable_physics: true,
+            ..Default::default()
         }),
         invariant_params: InvariantParams::default(),
         allow_early_end: true,
         stress: None,
         seed: None,
         initial_overclocks: None,
+        frame_mutations: None,
     };
 
     let mut app = debug_setup_app(definition);
@@ -675,6 +688,7 @@ fn init_scenario_input_creates_driver_resource() {
             stress: None,
             seed: None,
             initial_overclocks: None,
+            frame_mutations: None,
         },
     });
     app.add_systems(Update, init_scenario_input);
@@ -1133,5 +1147,958 @@ fn invariant_checkers_remain_gated_across_multiple_frames_while_not_playing() {
         "expected no violations after 5 ticks with entered_playing=false, but got {}: {:?}",
         log.0.len(),
         log.0.iter().map(|e| &e.message).collect::<Vec<_>>()
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — sets BoltVelocity when bolt_velocity is Some
+// -------------------------------------------------------------------------
+
+/// When `debug_setup` has `bolt_velocity: Some((0.0, 2000.0))`, `apply_debug_setup`
+/// must set `BoltVelocity.value` to `Vec2::new(0.0, 2000.0)` on the tagged bolt.
+#[test]
+fn apply_debug_setup_sets_bolt_velocity_when_some() {
+    use breaker::bolt::components::BoltVelocity;
+
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            bolt_velocity: Some((0.0, 2000.0)),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Transform::from_xyz(0.0, 0.0, 1.0),
+            BoltVelocity::new(0.0, 400.0),
+        ))
+        .id();
+
+    app.update();
+    app.update();
+
+    let vel = app
+        .world()
+        .entity(entity)
+        .get::<BoltVelocity>()
+        .expect("entity must still have BoltVelocity");
+    assert_eq!(
+        vel.value,
+        Vec2::new(0.0, 2000.0),
+        "expected BoltVelocity.value == (0.0, 2000.0), got {:?}",
+        vel.value
+    );
+}
+
+/// When `debug_setup` has `bolt_velocity: None`, `BoltVelocity` must remain unchanged.
+#[test]
+fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
+    use breaker::bolt::components::BoltVelocity;
+
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            bolt_velocity: None,
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Transform::from_xyz(0.0, 0.0, 1.0),
+            BoltVelocity::new(0.0, 400.0),
+        ))
+        .id();
+
+    app.update();
+    app.update();
+
+    let vel = app
+        .world()
+        .entity(entity)
+        .get::<BoltVelocity>()
+        .expect("entity must still have BoltVelocity");
+    assert_eq!(
+        vel.value,
+        Vec2::new(0.0, 400.0),
+        "expected BoltVelocity unchanged at (0.0, 400.0), got {:?}",
+        vel.value
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — sets BoltVelocity on ALL tagged bolts
+// -------------------------------------------------------------------------
+
+/// When `bolt_velocity: Some((100.0, 200.0))`, ALL tagged bolts must get
+/// the overridden velocity, not just the first one.
+#[test]
+fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
+    use breaker::bolt::components::BoltVelocity;
+
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            bolt_velocity: Some((100.0, 200.0)),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    let e1 = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Transform::from_xyz(0.0, 0.0, 1.0),
+            BoltVelocity::new(0.0, 400.0),
+        ))
+        .id();
+    let e2 = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Transform::from_xyz(10.0, 10.0, 1.0),
+            BoltVelocity::new(300.0, 0.0),
+        ))
+        .id();
+    let e3 = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Transform::from_xyz(20.0, 20.0, 1.0),
+            BoltVelocity::new(-100.0, -100.0),
+        ))
+        .id();
+
+    app.update();
+    app.update();
+
+    let expected = Vec2::new(100.0, 200.0);
+    for (label, entity) in [("bolt1", e1), ("bolt2", e2), ("bolt3", e3)] {
+        let vel = app
+            .world()
+            .entity(entity)
+            .get::<BoltVelocity>()
+            .unwrap_or_else(|| panic!("{label} must still have BoltVelocity"));
+        assert_eq!(
+            vel.value, expected,
+            "{label}: expected BoltVelocity.value == {expected:?}, got {:?}",
+            vel.value
+        );
+    }
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — spawns extra tagged bolts
+// -------------------------------------------------------------------------
+
+/// When `extra_tagged_bolts: Some(5)`, `apply_debug_setup` must spawn 5 extra
+/// `ScenarioTagBolt` entities. Combined with the 1 existing tagged bolt, the
+/// total must be 6. The extra entities must NOT have `Bolt`, `BoltVelocity`,
+/// `BoltMinSpeed`, or `BoltMaxSpeed` components.
+#[test]
+fn apply_debug_setup_spawns_extra_tagged_bolts() {
+    use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity};
+
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            extra_tagged_bolts: Some(5),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    // Spawn one existing tagged bolt
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)));
+
+    // Single update: apply_debug_setup runs as OnEnter in production (fires once).
+    // Two updates would run the system twice, doubling the spawned count.
+    app.update();
+
+    // Count all ScenarioTagBolt entities
+    let tagged_count = app
+        .world_mut()
+        .query_filtered::<Entity, With<ScenarioTagBolt>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        tagged_count, 6,
+        "expected 6 total ScenarioTagBolt entities (1 original + 5 extra), got {tagged_count}"
+    );
+
+    // Verify extra bolts do NOT have physics components
+    let bolts_with_bolt_component = app
+        .world_mut()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<Bolt>)>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        bolts_with_bolt_component, 0,
+        "extra tagged bolts must NOT have Bolt component, found {bolts_with_bolt_component}"
+    );
+
+    let bolts_with_velocity = app
+        .world_mut()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltVelocity>)>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        bolts_with_velocity, 0,
+        "extra tagged bolts must NOT have BoltVelocity component, found {bolts_with_velocity}"
+    );
+
+    let bolts_with_min_speed = app
+        .world_mut()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltMinSpeed>)>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        bolts_with_min_speed, 0,
+        "extra tagged bolts must NOT have BoltMinSpeed component, found {bolts_with_min_speed}"
+    );
+
+    let bolts_with_max_speed = app
+        .world_mut()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltMaxSpeed>)>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        bolts_with_max_speed, 0,
+        "extra tagged bolts must NOT have BoltMaxSpeed component, found {bolts_with_max_speed}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — spawns zero extra bolts when Some(0)
+// -------------------------------------------------------------------------
+
+/// When `extra_tagged_bolts: Some(0)`, no extra entities should be spawned.
+/// Total `ScenarioTagBolt` count remains 1.
+#[test]
+fn apply_debug_setup_spawns_zero_extra_bolts_when_some_zero() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            extra_tagged_bolts: Some(0),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)));
+
+    app.update();
+    app.update();
+
+    let tagged_count = app
+        .world_mut()
+        .query_filtered::<Entity, With<ScenarioTagBolt>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        tagged_count, 1,
+        "expected 1 ScenarioTagBolt entity (no extras from Some(0)), got {tagged_count}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — sets NodeTimer.remaining
+// -------------------------------------------------------------------------
+
+/// When `node_timer_remaining: Some(-1.0)`, `apply_debug_setup` must set
+/// `NodeTimer.remaining` to -1.0.
+#[test]
+fn apply_debug_setup_sets_node_timer_remaining() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            node_timer_remaining: Some(-1.0),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+    app.world_mut().insert_resource(NodeTimer {
+        remaining: 60.0,
+        total: 60.0,
+    });
+
+    app.update();
+    app.update();
+
+    let timer = app.world().resource::<NodeTimer>();
+    assert!(
+        (timer.remaining - (-1.0_f32)).abs() < f32::EPSILON,
+        "expected NodeTimer.remaining == -1.0, got {}",
+        timer.remaining
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — ignores node_timer_remaining when no NodeTimer
+// -------------------------------------------------------------------------
+
+/// When `node_timer_remaining: Some(-1.0)` but no `NodeTimer` resource is
+/// present, `apply_debug_setup` must not panic.
+#[test]
+fn apply_debug_setup_ignores_node_timer_remaining_when_no_resource() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            node_timer_remaining: Some(-1.0),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+    // Deliberately do NOT insert NodeTimer
+
+    // Must not panic
+    app.update();
+    app.update();
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_setup — sets PreviousGameState from force_previous_game_state
+// -------------------------------------------------------------------------
+
+/// When `force_previous_game_state: Some(ForcedGameState::Loading)`,
+/// `apply_debug_setup` must set `PreviousGameState.0` to `Some(GameState::Loading)`.
+#[test]
+fn apply_debug_setup_sets_previous_game_state_from_forced() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            force_previous_game_state: Some(ForcedGameState::Loading),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+    app.init_resource::<PreviousGameState>();
+
+    app.update();
+    app.update();
+
+    let prev = app.world().resource::<PreviousGameState>();
+    assert_eq!(
+        prev.0,
+        Some(GameState::Loading),
+        "expected PreviousGameState.0 == Some(GameState::Loading), got {:?}",
+        prev.0
+    );
+}
+
+// -------------------------------------------------------------------------
+// map_forced_game_state — maps all variants correctly
+// -------------------------------------------------------------------------
+
+/// Each `ForcedGameState` variant must map 1:1 to the corresponding `GameState` variant.
+#[test]
+fn map_forced_game_state_maps_all_variants_correctly() {
+    let mappings = [
+        (ForcedGameState::Loading, GameState::Loading),
+        (ForcedGameState::MainMenu, GameState::MainMenu),
+        (ForcedGameState::RunSetup, GameState::RunSetup),
+        (ForcedGameState::Playing, GameState::Playing),
+        (ForcedGameState::NodeTransition, GameState::NodeTransition),
+        (ForcedGameState::ChipSelect, GameState::ChipSelect),
+        (ForcedGameState::RunEnd, GameState::RunEnd),
+        (ForcedGameState::MetaProgression, GameState::MetaProgression),
+    ];
+    for (forced, expected) in &mappings {
+        let result = map_forced_game_state(*forced);
+        assert_eq!(
+            result, *expected,
+            "map_forced_game_state({forced:?}) must return {expected:?}, got {result:?}"
+        );
+    }
+}
+
+// -------------------------------------------------------------------------
+// map_scenario_breaker_state — maps all variants 1:1
+// -------------------------------------------------------------------------
+
+/// Each `ScenarioBreakerState` variant must map 1:1 to the corresponding
+/// `BreakerState` variant.
+#[test]
+fn map_scenario_breaker_state_maps_all_variants() {
+    let mappings = [
+        (ScenarioBreakerState::Idle, BreakerState::Idle),
+        (ScenarioBreakerState::Dashing, BreakerState::Dashing),
+        (ScenarioBreakerState::Braking, BreakerState::Braking),
+        (ScenarioBreakerState::Settling, BreakerState::Settling),
+    ];
+    for (scenario, expected) in &mappings {
+        let result = map_scenario_breaker_state(*scenario);
+        assert_eq!(
+            result, *expected,
+            "map_scenario_breaker_state({scenario:?}) must return {expected:?}, got {result:?}"
+        );
+    }
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — no-op when frame_mutations is None
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` is `None`, `apply_debug_frame_mutations` must
+/// do nothing and not panic at any frame.
+#[test]
+fn apply_debug_frame_mutations_noop_when_none() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(5))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    // Must not panic
+    app.update();
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — SetBreakerState at matching frame
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `SetBreakerState(Braking)` at frame 3 and
+/// the current frame is 3, the breaker entity's `BreakerState` must
+/// become `BreakerState::Braking`.
+#[test]
+fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 3,
+            mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(3))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    let entity = app
+        .world_mut()
+        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .id();
+
+    app.update();
+
+    let state = app
+        .world()
+        .entity(entity)
+        .get::<BreakerState>()
+        .expect("entity must still have BreakerState");
+    assert_eq!(
+        *state,
+        BreakerState::Braking,
+        "expected BreakerState::Braking at frame 3, got {state:?}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — SetBreakerState does NOT apply at non-matching frame
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `SetBreakerState(Braking)` at frame 3 but
+/// the current frame is 2, the breaker must remain `Idle`.
+#[test]
+fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 3,
+            mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(2))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    let entity = app
+        .world_mut()
+        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .id();
+
+    app.update();
+
+    let state = app
+        .world()
+        .entity(entity)
+        .get::<BreakerState>()
+        .expect("entity must still have BreakerState");
+    assert_eq!(
+        *state,
+        BreakerState::Idle,
+        "expected BreakerState::Idle at frame 2 (mutation at frame 3), got {state:?}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — SetTimerRemaining at matching frame
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `SetTimerRemaining(61.0)` at frame 5 and
+/// the current frame is 5, `NodeTimer.remaining` must be set to 61.0.
+#[test]
+fn apply_debug_frame_mutations_set_timer_remaining_at_matching_frame() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 5,
+            mutation: MutationKind::SetTimerRemaining(61.0),
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(5))
+        .insert_resource(NodeTimer {
+            remaining: 55.0,
+            total: 60.0,
+        })
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    app.update();
+
+    let timer = app.world().resource::<NodeTimer>();
+    assert!(
+        (timer.remaining - 61.0_f32).abs() < f32::EPSILON,
+        "expected NodeTimer.remaining == 61.0, got {}",
+        timer.remaining
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — SetTimerRemaining no-op when no NodeTimer
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `SetTimerRemaining(61.0)` at frame 5 but
+/// no `NodeTimer` resource exists, the system must not panic.
+#[test]
+fn apply_debug_frame_mutations_set_timer_remaining_noop_when_no_timer() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 5,
+            mutation: MutationKind::SetTimerRemaining(61.0),
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(5))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    // Deliberately do NOT insert NodeTimer — must not panic
+    app.update();
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — SpawnExtraEntities at matching frame
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `SpawnExtraEntities(5)` at frame 10 and
+/// the current frame is 10, 5 new entities with `Transform` must be spawned.
+#[test]
+fn apply_debug_frame_mutations_spawn_extra_entities_at_matching_frame() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 10,
+            mutation: MutationKind::SpawnExtraEntities(5),
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(10))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    // Single update only — avoid double-spawn from running the system twice
+    app.update();
+
+    let count = app
+        .world_mut()
+        .query_filtered::<Entity, With<Transform>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        count, 5,
+        "expected 5 entities with Transform from SpawnExtraEntities(5), got {count}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — MoveBolt at matching frame
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `MoveBolt(999.0, 999.0)` at frame 5 and
+/// the current frame is 5, the tagged bolt must be moved to (999.0, 999.0)
+/// with z preserved.
+#[test]
+fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 5,
+            mutation: MutationKind::MoveBolt(999.0, 999.0),
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(5))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    let entity = app
+        .world_mut()
+        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)))
+        .id();
+
+    app.update();
+
+    let transform = app
+        .world()
+        .entity(entity)
+        .get::<Transform>()
+        .expect("entity must still have Transform");
+    assert_eq!(
+        transform.translation,
+        Vec3::new(999.0, 999.0, 1.0),
+        "expected bolt at (999.0, 999.0, 1.0) with z preserved, got {:?}",
+        transform.translation
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — TogglePause sets NextState to Paused
+// -------------------------------------------------------------------------
+
+/// When `frame_mutations` has `TogglePause` at frame 3, the current frame
+/// is 3, and the game is in `PlayingState::Active`, the system must set
+/// `NextState<PlayingState>` to `Paused`.
+#[test]
+fn apply_debug_frame_mutations_toggle_pause_sets_paused() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![FrameMutation {
+            frame: 3,
+            mutation: MutationKind::TogglePause,
+        }]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_plugins(StatesPlugin)
+        .init_state::<GameState>()
+        .add_sub_state::<PlayingState>()
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(3))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    // Drive into GameState::Playing so PlayingState becomes active.
+    // Single update: state transition activates PlayingState, then the mutation
+    // system runs (frame=3 matches) and sets NextState<PlayingState> to Paused.
+    // A second update would process that transition, then the system would toggle
+    // back to Active (because TogglePause runs again at the same frame).
+    app.world_mut()
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Playing);
+    app.update();
+
+    // Check that NextState<PlayingState> is set to Paused
+    let next = app.world().resource::<NextState<PlayingState>>();
+    assert!(
+        format!("{next:?}").contains("Paused"),
+        "expected NextState<PlayingState> to contain Paused after TogglePause, got: {next:?}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// apply_debug_frame_mutations — multiple mutations on same frame
+// -------------------------------------------------------------------------
+
+/// When two mutations are scheduled for the same frame, both must apply.
+/// Given `SetBreakerState(Braking)` and `MoveBolt(100.0, 200.0)` both at
+/// frame 5, the breaker state must change AND the bolt must move.
+#[test]
+fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: None,
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: Some(vec![
+            FrameMutation {
+                frame: 5,
+                mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
+            },
+            FrameMutation {
+                frame: 5,
+                mutation: MutationKind::MoveBolt(100.0, 200.0),
+            },
+        ]),
+    };
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ScenarioConfig { definition })
+        .insert_resource(ScenarioFrame(5))
+        .add_systems(Update, apply_debug_frame_mutations);
+
+    let breaker_entity = app
+        .world_mut()
+        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .id();
+    let bolt_entity = app
+        .world_mut()
+        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 3.0)))
+        .id();
+
+    app.update();
+
+    let state = app
+        .world()
+        .entity(breaker_entity)
+        .get::<BreakerState>()
+        .expect("breaker entity must still have BreakerState");
+    assert_eq!(
+        *state,
+        BreakerState::Braking,
+        "expected BreakerState::Braking from first mutation, got {state:?}"
+    );
+
+    let transform = app
+        .world()
+        .entity(bolt_entity)
+        .get::<Transform>()
+        .expect("bolt entity must still have Transform");
+    assert_eq!(
+        transform.translation,
+        Vec3::new(100.0, 200.0, 3.0),
+        "expected bolt at (100.0, 200.0, 3.0) from second mutation, got {:?}",
+        transform.translation
     );
 }

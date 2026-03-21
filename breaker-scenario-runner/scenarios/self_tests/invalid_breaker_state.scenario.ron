@@ -1,0 +1,16 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [ValidBreakerState],
+    expected_violations: Some([ValidBreakerState]),
+    debug_setup: Some((
+        disable_physics: true,
+    )),
+    frame_mutations: Some([
+        (frame: 30, mutation: SetBreakerState(Braking)),
+    ]),
+)

@@ -427,6 +427,7 @@ mod tests {
             stress: None,
             seed: None,
             initial_overclocks: None,
+            frame_mutations: None,
         };
         let stats = ScenarioStats {
             actions_injected: 0,
