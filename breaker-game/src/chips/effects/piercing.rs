@@ -17,7 +17,7 @@ pub(crate) fn handle_piercing(
     mut query: Query<(Entity, Option<&mut Piercing>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::Piercing(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Amp(AmpEffect::Piercing(per_stack)) = trigger.event().effect.clone() else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

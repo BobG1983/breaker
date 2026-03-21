@@ -51,7 +51,6 @@ pub(crate) fn handle_chip_input(
         let chip = &offers.0[selection.index];
         writer.write(ChipSelected {
             name: chip.name.clone(),
-            kind: chip.kind,
         });
         next_state.set(GameState::NodeTransition);
     }
@@ -63,7 +62,7 @@ mod tests {
 
     use super::*;
     use crate::chips::{
-        ChipDefinition, ChipKind,
+        ChipDefinition,
         definition::{AmpEffect, ChipEffect},
     };
 
@@ -78,14 +77,9 @@ mod tests {
 
     fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
-            ChipDefinition::test(
-                "Piercing Shot",
-                ChipKind::Amp,
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            ),
-            ChipDefinition::test_simple("Wide Breaker", ChipKind::Augment),
-            ChipDefinition::test_simple("Surge", ChipKind::Overclock),
+            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
+            ChipDefinition::test_simple("Wide Breaker"),
+            ChipDefinition::test_simple("Surge"),
         ];
         ChipOffers(all.into_iter().take(count).collect())
     }
@@ -153,7 +147,6 @@ mod tests {
         let received = app.world().resource::<ReceivedChips>();
         assert_eq!(received.0.len(), 1);
         assert_eq!(received.0[0].name, "Piercing Shot");
-        assert_eq!(received.0[0].kind, ChipKind::Amp);
     }
 
     #[test]
@@ -173,7 +166,6 @@ mod tests {
         let received = app.world().resource::<ReceivedChips>();
         assert_eq!(received.0.len(), 1);
         assert_eq!(received.0[0].name, "Wide Breaker");
-        assert_eq!(received.0[0].kind, ChipKind::Augment);
     }
 
     #[test]

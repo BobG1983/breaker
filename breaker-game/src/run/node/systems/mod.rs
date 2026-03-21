@@ -15,6 +15,8 @@ pub use init_clear_remaining::init_clear_remaining;
 pub use init_node_timer::init_node_timer;
 pub use set_active_layout::set_active_layout;
 #[cfg(feature = "dev")]
+pub(crate) use spawn_cells_from_layout::RenderAssets;
+#[cfg(feature = "dev")]
 pub(crate) use spawn_cells_from_layout::spawn_cells_from_grid;
 pub(crate) use spawn_cells_from_layout::spawn_cells_from_layout;
 pub use tick_node_timer::tick_node_timer;

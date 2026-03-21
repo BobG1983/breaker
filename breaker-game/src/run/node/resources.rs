@@ -113,6 +113,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['.', '.']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         }
     }
 
@@ -184,6 +185,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['.', '.']],
             pool,
+            entity_scale: 1.0,
         }
     }
 

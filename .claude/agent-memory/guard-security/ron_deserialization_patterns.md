@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated to reflect ron 0.12 upgrade and new crates.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns.
 
 ## Summary
 
@@ -41,7 +41,28 @@ without bounds checks in the asset loader path. A `.cell.ron` with `hp: -1.0` or
 `regen_rate: Some(999999.0)` would load silently and cause downstream logic issues. Test code
 validates `hp > 0.0` but only in `#[cfg(test)]`.
 
-**Status as of this audit:** Still unvalidated. No runtime validation added yet.
+**Status as of 2026-03-20 audit:** Still unvalidated. No runtime validation added yet.
 
 **How to apply:** On future audits, check whether validation has been added to the runtime
 asset-loaded path (the system that processes `CellTypeAsset` events and populates `CellTypeRegistry`).
+
+## Warning: TriggerChain stacking fields have no bounds validation (added 2026-03-20)
+
+`TriggerChain::Shockwave.base_range`, `range_per_level`, `MultiBolt.base_count`, `count_per_level`,
+`Shield.base_duration`, `duration_per_level`, and `stacks` are all deserialized from `.overclock.ron`
+files (and `initial_overclocks` in `.scenario.ron`) without any bounds check.
+
+Concrete risks:
+- `base_range: 1e30` in a shockwave hits all cells in the scene simultaneously. Safe at the entity
+  level (handle_cell_hit dedup prevents double CellDestroyed), but all cells destroyed in one frame.
+- `base_count: u32::MAX` in MultiBolt queues a huge number of bolt spawns — potential hang/OOM.
+- `AmpEffect::DamageBoost(f32)` accepts negative values. `DamageBoost(-2.0)` makes shockwave damage
+  negative (`BASE_BOLT_DAMAGE * (1 + (-2.0)) < 0`), which heals cells via `take_damage`. Cells
+  with `hp = max` would never be destroyed — node completion impossible.
+
+**Status as of 2026-03-20:** All unvalidated. First-party data only, no external input path.
+OnPerfectBump → OnImpact nesting means deeply nested chains are author-controlled. RON parser
+recursion limit (~128) provides a practical cap on chain depth.
+
+**How to apply:** On future audits, check for runtime validation added to the chip asset loader
+path and to `CellHealth::take_damage` (negative amount guard).

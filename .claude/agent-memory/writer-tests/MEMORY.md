@@ -1,3 +1,6 @@
+## Rules
+- [rule_never_run_cargo.md](rule_never_run_cargo.md) — NEVER run cargo commands — only runner agents run cargo
+
 ## Stable
 - [pattern_config_default_vs_ron.md](pattern_config_default_vs_ron.md) — Rust Default may differ from RON; tests use Rust Default
 - [pattern_asset_event_testing.md](pattern_asset_event_testing.md) — Testing AssetEvent<T>/Modified in Bevy 0.18
@@ -9,6 +12,7 @@
 - [pattern_message_capture.md](pattern_message_capture.md) — Capture MessageReader<T> into Resource for assertion
 - [pattern_doc_markdown_clippy.md](pattern_doc_markdown_clippy.md) — CamelCase in doc comments needs backticks; derive Eq alongside PartialEq
 - [pattern_entity_generational_ids_testing.md](pattern_entity_generational_ids_testing.md) — Bevy generational IDs: stale HashMap entries cause memory leaks, not false violations
+- [pattern_observer_message_timing.md](pattern_observer_message_timing.md) — Flush commands before tick when observers write Messages for MessageReader capture
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

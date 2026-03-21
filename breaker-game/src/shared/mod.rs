@@ -32,6 +32,14 @@ pub struct PlayfieldDefaults {
     pub background_color_rgb: [f32; 3],
     /// Thickness of boundary walls in world units.
     pub wall_thickness: f32,
+    /// Fraction of height reserved for the cell zone (0.0 to 1.0).
+    #[serde(default = "default_zone_fraction")]
+    pub zone_fraction: f32,
+}
+
+/// Default value for `zone_fraction` used by serde when the field is absent.
+fn default_zone_fraction() -> f32 {
+    0.667
 }
 
 impl Default for PlayfieldDefaults {
@@ -41,6 +49,7 @@ impl Default for PlayfieldDefaults {
             height: 600.0,
             background_color_rgb: [0.02, 0.01, 0.04],
             wall_thickness: 180.0,
+            zone_fraction: default_zone_fraction(),
         }
     }
 }
@@ -80,6 +89,12 @@ impl PlayfieldConfig {
     #[must_use]
     pub const fn background_color(&self) -> Color {
         color_from_rgb(self.background_color_rgb)
+    }
+
+    /// Height of the cell zone in world units.
+    #[must_use]
+    pub fn cell_zone_height(&self) -> f32 {
+        self.height * self.zone_fraction
     }
 }
 
@@ -122,6 +137,13 @@ pub enum PlayingState {
     /// Game paused — all gameplay systems frozen.
     Paused,
 }
+
+/// Scale factor applied to breaker and bolt dimensions per layout.
+///
+/// Set at node entry from [`ActiveNodeLayout`]. Multiplies visual size and
+/// collision hitboxes — speed is unaffected. Defaults to 1.0 (no scaling).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct EntityScale(pub f32);
 
 /// Marker component for entities that should be despawned when exiting a node.
 ///
@@ -236,10 +258,50 @@ mod tests {
         let result: PlayfieldDefaults =
             ron::de::from_str(ron_str).expect("playfield RON should parse");
         assert!(result.width > 0.0);
+        assert!((result.zone_fraction - 0.667).abs() < f32::EPSILON);
     }
 
     #[test]
     fn base_bolt_damage_equals_10() {
         assert!((BASE_BOLT_DAMAGE - 10.0_f32).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn playfield_config_default_includes_zone_fraction() {
+        let config = PlayfieldConfig::default();
+        assert!(
+            (config.zone_fraction - 0.667).abs() < f32::EPSILON,
+            "expected zone_fraction ~0.667, got {}",
+            config.zone_fraction,
+        );
+    }
+
+    #[test]
+    fn cell_zone_height_computes_fraction_of_height() {
+        let config = PlayfieldConfig {
+            height: 1080.0,
+            zone_fraction: 0.667,
+            ..Default::default()
+        };
+        let expected = 1080.0 * 0.667;
+        assert!(
+            (config.cell_zone_height() - expected).abs() < 0.01,
+            "expected cell_zone_height ~{expected}, got {}",
+            config.cell_zone_height(),
+        );
+    }
+
+    #[test]
+    fn cell_zone_height_with_zero_fraction_returns_zero() {
+        let config = PlayfieldConfig {
+            height: 1080.0,
+            zone_fraction: 0.0,
+            ..Default::default()
+        };
+        assert!(
+            config.cell_zone_height().abs() < f32::EPSILON,
+            "expected cell_zone_height 0.0, got {}",
+            config.cell_zone_height(),
+        );
     }
 }

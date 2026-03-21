@@ -27,10 +27,12 @@ pub(crate) fn apply_chip_effect(
             debug!("chip not found in registry: {}", msg.name);
             continue;
         };
-        commands.trigger(ChipEffectApplied {
-            effect: chip.effect,
-            max_stacks: chip.max_stacks,
-        });
+        for effect in &chip.effects {
+            commands.trigger(ChipEffectApplied {
+                effect: effect.clone(),
+                max_stacks: chip.max_stacks,
+            });
+        }
     }
 }
 
@@ -43,9 +45,8 @@ mod tests {
         bolt::components::Bolt,
         breaker::components::Breaker,
         chips::{
-            ChipKind,
             components::*,
-            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect},
+            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect, TriggerChain},
             effects::*,
             resources::ChipRegistry,
         },
@@ -96,10 +97,9 @@ mod tests {
         app.update();
     }
 
-    fn send_chip_selected(app: &mut App, name: &str, kind: ChipKind) {
+    fn send_chip_selected(app: &mut App, name: &str) {
         app.insert_resource(PendingChipSelected(Some(ChipSelected {
             name: name.to_owned(),
-            kind,
         })));
     }
 
@@ -116,12 +116,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Piercing Shot", ChipKind::Amp);
+        send_chip_selected(&mut app, "Piercing Shot");
         tick(&mut app);
 
         let piercing = app
@@ -142,12 +141,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Piercing Shot", ChipKind::Amp);
+        send_chip_selected(&mut app, "Piercing Shot");
         tick(&mut app);
 
         let piercing = app
@@ -167,12 +165,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::Piercing(1)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Piercing Shot", ChipKind::Amp);
+        send_chip_selected(&mut app, "Piercing Shot");
         tick(&mut app);
 
         let piercing = app
@@ -196,12 +193,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Wide Breaker",
-                ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Wide Breaker", ChipKind::Augment);
+        send_chip_selected(&mut app, "Wide Breaker");
         tick(&mut app);
 
         let wb = app
@@ -226,12 +222,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Wide Breaker",
-                ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Wide Breaker", ChipKind::Augment);
+        send_chip_selected(&mut app, "Wide Breaker");
         tick(&mut app);
 
         let wb = app
@@ -258,7 +253,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         // Registry is empty — no chips registered
 
-        send_chip_selected(&mut app, "Nonexistent", ChipKind::Amp);
+        send_chip_selected(&mut app, "Nonexistent");
         tick(&mut app);
 
         // No bolt effect components should be inserted
@@ -293,12 +288,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Damage Up",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
                 2,
             ));
 
-        send_chip_selected(&mut app, "Damage Up", ChipKind::Amp);
+        send_chip_selected(&mut app, "Damage Up");
         tick(&mut app);
 
         let db = app
@@ -323,12 +317,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Damage Up",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
                 2,
             ));
 
-        send_chip_selected(&mut app, "Damage Up", ChipKind::Amp);
+        send_chip_selected(&mut app, "Damage Up");
         tick(&mut app);
 
         let db = app
@@ -357,12 +350,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Speed Up",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Speed Up", ChipKind::Amp);
+        send_chip_selected(&mut app, "Speed Up");
         tick(&mut app);
 
         let sb = app
@@ -391,12 +383,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Chain",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::ChainHit(2)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Chain", ChipKind::Amp);
+        send_chip_selected(&mut app, "Chain");
         tick(&mut app);
 
         let ch = app
@@ -421,12 +412,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Big Bolt",
-                ChipKind::Amp,
                 ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Big Bolt", ChipKind::Amp);
+        send_chip_selected(&mut app, "Big Bolt");
         tick(&mut app);
 
         let bsb = app
@@ -455,12 +445,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Fast Breaker",
-                ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Fast Breaker", ChipKind::Augment);
+        send_chip_selected(&mut app, "Fast Breaker");
         tick(&mut app);
 
         let bsb = app
@@ -489,12 +478,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Power Bump",
-                ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Power Bump", ChipKind::Augment);
+        send_chip_selected(&mut app, "Power Bump");
         tick(&mut app);
 
         let bfb = app
@@ -523,12 +511,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Tilt Control",
-                ChipKind::Augment,
                 ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
                 3,
             ));
 
-        send_chip_selected(&mut app, "Tilt Control", ChipKind::Augment);
+        send_chip_selected(&mut app, "Tilt Control");
         tick(&mut app);
 
         let tcb = app
@@ -558,12 +545,11 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Surge",
-                ChipKind::Overclock,
-                ChipEffect::Overclock,
+                ChipEffect::Overclock(TriggerChain::test_shockwave(64.0)),
                 1,
             ));
 
-        send_chip_selected(&mut app, "Surge", ChipKind::Overclock);
+        send_chip_selected(&mut app, "Surge");
         tick(&mut app);
 
         // No bolt effect components

@@ -105,16 +105,11 @@ impl ChipInventory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::{AmpEffect, ChipEffect, ChipKind};
+    use crate::chips::definition::{AmpEffect, ChipEffect};
 
     /// Helper: create a Piercing Shot definition with `max_stacks=3`, Common rarity.
     fn piercing_shot_def() -> ChipDefinition {
-        ChipDefinition::test(
-            "Piercing Shot",
-            ChipKind::Amp,
-            ChipEffect::Amp(AmpEffect::Piercing(1)),
-            3,
-        )
+        ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3)
     }
 
     /// Helper: create a Wide Breaker definition with `max_stacks=3`, Rare rarity.
@@ -123,7 +118,6 @@ mod tests {
             rarity: Rarity::Rare,
             ..ChipDefinition::test(
                 "Wide Breaker",
-                ChipKind::Augment,
                 ChipEffect::Augment(crate::chips::definition::AugmentEffect::WidthBoost(20.0)),
                 3,
             )
@@ -132,22 +126,12 @@ mod tests {
 
     /// Helper: create a Damage Up definition with `max_stacks=2`, Common rarity.
     fn damage_up_def() -> ChipDefinition {
-        ChipDefinition::test(
-            "Damage Up",
-            ChipKind::Amp,
-            ChipEffect::Amp(AmpEffect::DamageBoost(0.5)),
-            2,
-        )
+        ChipDefinition::test("Damage Up", ChipEffect::Amp(AmpEffect::DamageBoost(0.5)), 2)
     }
 
     /// Helper: create a chip definition with `max_stacks=1`, Common rarity.
     fn single_stack_def() -> ChipDefinition {
-        ChipDefinition::test(
-            "Single Stack",
-            ChipKind::Amp,
-            ChipEffect::Amp(AmpEffect::Piercing(1)),
-            1,
-        )
+        ChipDefinition::test("Single Stack", ChipEffect::Amp(AmpEffect::Piercing(1)), 1)
     }
 
     // --- Behavior 1: Default inventory is empty ---

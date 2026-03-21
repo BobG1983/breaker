@@ -44,6 +44,16 @@ type: reference
 - chips: RON + ChipDefinition + ChipRegistry + ChipInventory — COMPLETE
 - cell types: RON + CellTypeDefinition + CellTypeRegistry — COMPLETE (standard, tough, lock, regen)
 
+## Shockwave / Overclock Parameters
+- Shockwave base range (Surge): 64.0, range_per_level: 32.0 — stacked range at 2 stacks = 96.0
+- Shockwave damage: scales with DamageBoost — formula: BASE_BOLT_DAMAGE * (1.0 + boost) — IMPLEMENTED
+- Surge trigger chain: OnPerfectBump(OnImpact(Cell, Shockwave))
+- Surge rarity: Rare, max_stacks: 1 (note: range_per_level is dead weight until max_stacks > 1 or evolution adds stacks)
+- Cell grid spacing: 133 horizontal (126w + 7pad), 50 vertical (43h + 7pad)
+- At stacks=1 range 64: hits ~1-3 cells (vertical strip only)
+- At stacks=2 range 96: hits ~3-6 cells (vertical + near-diagonal neighbors)
+- At stacks=3 range 128: hits ~5-10 cells (covers ~2.5 cell widths in all directions)
+
 ## Playtest Tuning Knobs (ordered by impact)
 1. perfect_window: 0.15s -> try 0.10-0.12s if too easy
 2. chip_select_timer: 10.0s -> try 8.0s

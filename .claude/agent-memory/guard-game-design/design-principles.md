@@ -17,6 +17,12 @@ type: reference
 - Every archetype MUST have a bolt-lost consequence — no free respawns
 - Regen rate must NOT scale with hp_mult (avoids late-game stalemates)
 - ExtraBolt despawns on loss, never respawns — correct Prism behavior
+- Shockwave damage MUST scale with DamageBoost — no "flat area damage" exceptions; synergy web requires it (IMPLEMENTED: shockwave.rs reads DamageBoost from bolt entity)
+- Perfect bump requirement for Surge overclock is correct — do not weaken
+- Global triggers (OnCellDestroyed, OnBoltLost) must not silently no-op when used with position-dependent effects (IMPLEMENTED: Option<Entity> on OverclockEffectFired.bolt, shockwave returns early on None)
+- ChipKind removed — chip category is derived from ChipEffect variant, not a parallel enum. Enables multi-effect chips cleanly.
+- TriggerChain leaf stacking formula: base + (stacks-1) * per_level — uniform across Shockwave/MultiBolt/Shield
+- Surge shockwave range_per_level: 32.0 is well-calibrated (each stack adds ~0.6 cell widths of radius)
 
 ## Open Issues (Ordered by Priority)
 1. **BLOCKING** Test code uses 0.8x weak multiplier (should be 1.1x) — bump.rs, apply_bump_velocity.rs, init_breaker_params.rs
@@ -33,6 +39,9 @@ type: reference
 ## Resolved (from prior reviews)
 - ~~PLAN.md/README say bump "all grades boost" but 0.8x is penalty~~ FIXED in RON — but test code still uses 0.8x (issue #1)
 - ~~Bolt-lost respawn straight up = no reaction required~~ FIXED — randomized within +/-30deg
+- ~~Shockwave used flat BASE_BOLT_DAMAGE~~ FIXED — now routes through DamageCell with DamageBoost scaling (2026-03-20)
+- ~~ChipKind redundant discriminator~~ REMOVED — ChipEffect enum is the sole category source (2026-03-20)
+- ~~Entity::PLACEHOLDER in OverclockEffectFired.bolt~~ FIXED — replaced with Option<Entity> for proper null semantics (2026-03-20)
 
 ## Future Design Notes
 - Speed decay: recommend per-bounce/per-cell-hit decay, NOT passive time decay
@@ -45,3 +54,7 @@ type: reference
 - Chip authoring (4c.2): prioritize synergy pairs, don't ship 16 independent stat buffs
 - Surge overclock needs visible juice when implemented — shockwave is the poster child for overclock feel
 - Run-end screen: consider randomized subtitle pools for variety + forward-looking tone
+- Shockwave range 96.0 (not 64.0) — 64 only hits vertical neighbors; 96 catches near-diagonal, rewards positioning
+- Piercing + armed trigger interaction needs explicit design intent: fire once or at each impact point?
+- ChainHit + trigger evaluation: do chain hits resolve armed triggers? Phase 7+ decision but architecture must not prevent it
+- Phase 7: consider OnCellDestroyed(Shockwave) using destroyed cell position for chain reaction mechanic

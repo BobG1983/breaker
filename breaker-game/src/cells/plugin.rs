@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        messages::CellDestroyed,
+        messages::{CellDestroyed, DamageCell},
         resources::CellConfig,
         systems::{
             check_lock_release::check_lock_release, handle_cell_hit,
@@ -22,6 +22,7 @@ pub(crate) struct CellsPlugin;
 impl Plugin for CellsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<CellDestroyed>()
+            .add_message::<DamageCell>()
             .init_resource::<CellConfig>()
             .add_systems(
                 FixedUpdate,

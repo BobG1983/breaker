@@ -8,6 +8,7 @@ mod plugin;
 mod resources;
 pub(crate) mod systems;
 
-pub(crate) use definition::{ChipDefinition, ChipKind};
+pub(crate) use definition::ChipDefinition;
+pub use definition::{ImpactTarget, TriggerChain};
 pub(crate) use plugin::ChipsPlugin;
 pub(crate) use resources::ChipRegistry;

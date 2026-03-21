@@ -109,6 +109,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: TEST_PERFECT_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -139,6 +140,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: TEST_PERFECT_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -171,6 +173,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: TEST_PERFECT_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -250,6 +253,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: TEST_PERFECT_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         tick(&mut app);
@@ -283,6 +287,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
             multiplier: TEST_WEAK_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -312,6 +317,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: 1.0,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -342,6 +348,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
             multiplier: TEST_WEAK_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -381,6 +388,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: TEST_PERFECT_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -422,6 +430,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
             multiplier: 0.5,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -461,6 +470,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Early,
             multiplier: 0.5,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -502,6 +512,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: TEST_PERFECT_MULT,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(

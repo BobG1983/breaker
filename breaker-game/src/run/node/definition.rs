@@ -5,6 +5,11 @@ use serde::Deserialize;
 
 use crate::cells::CellTypeRegistry;
 
+/// Maximum number of columns in a node grid.
+pub(crate) const MAX_GRID_COLS: u32 = 128;
+/// Maximum number of rows in a node grid.
+pub(crate) const MAX_GRID_ROWS: u32 = 128;
+
 /// Which pool a node layout belongs to — controls when it appears in a run.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 pub enum NodePool {
@@ -35,6 +40,19 @@ pub struct NodeLayout {
     /// Which pool this layout belongs to. Defaults to `Passive` for backward compatibility.
     #[serde(default)]
     pub pool: NodePool,
+    /// Scale factor for breaker and bolt entities (0.5..=1.0). Defaults to 1.0.
+    #[serde(default = "default_entity_scale")]
+    pub entity_scale: f32,
+}
+
+/// Minimum allowed entity scale — below this, bolt is visually illegible (~4px).
+pub(crate) const MIN_ENTITY_SCALE: f32 = 0.5;
+/// Maximum entity scale — unscaled.
+pub(crate) const MAX_ENTITY_SCALE: f32 = 1.0;
+
+/// Default value for `entity_scale` used by serde when the field is absent.
+fn default_entity_scale() -> f32 {
+    1.0
 }
 
 impl NodeLayout {
@@ -46,6 +64,24 @@ impl NodeLayout {
     /// Returns an error string if row/column counts don't match the declared
     /// dimensions or if the grid contains an alias not found in the registry.
     pub fn validate(&self, registry: &CellTypeRegistry) -> Result<(), String> {
+        if self.entity_scale < MIN_ENTITY_SCALE || self.entity_scale > MAX_ENTITY_SCALE {
+            return Err(format!(
+                "layout '{}': entity_scale {} must be {}..={}",
+                self.name, self.entity_scale, MIN_ENTITY_SCALE, MAX_ENTITY_SCALE,
+            ));
+        }
+        if self.cols == 0 || self.cols > MAX_GRID_COLS {
+            return Err(format!(
+                "layout '{}': cols {} must be 1..={}",
+                self.name, self.cols, MAX_GRID_COLS,
+            ));
+        }
+        if self.rows == 0 || self.rows > MAX_GRID_ROWS {
+            return Err(format!(
+                "layout '{}': rows {} must be 1..={}",
+                self.name, self.rows, MAX_GRID_ROWS,
+            ));
+        }
         if self.grid.len() != self.rows as usize {
             return Err(format!(
                 "layout '{}': grid has {} rows, expected {}",
@@ -138,6 +174,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'T', '.'], vec!['.', 'S', 'S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_ok());
@@ -153,6 +190,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['X', 'S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
@@ -168,6 +206,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S', 'S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
@@ -183,6 +222,7 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         let registry = test_registry();
         assert!(layout.validate(&registry).is_err());
@@ -198,8 +238,179 @@ mod tests {
             grid_top_offset: 50.0,
             grid: vec![vec!['S', '.', 'T'], vec!['.', 'S', '.']],
             pool: NodePool::default(),
+            entity_scale: 1.0,
         };
         assert_eq!(layout.cell_count(), 3);
+    }
+
+    #[test]
+    fn deserialize_default_entity_scale_is_one() {
+        let ron_str = r#"(name: "test", timer_secs: 60.0, cols: 2, rows: 1, grid_top_offset: 50.0, grid: [['S','S']])"#;
+        let layout: NodeLayout = ron::de::from_str(ron_str).expect("should deserialize");
+        assert!(
+            (layout.entity_scale - 1.0).abs() < f32::EPSILON,
+            "entity_scale should default to 1.0, got {}",
+            layout.entity_scale,
+        );
+    }
+
+    #[test]
+    fn deserialize_explicit_entity_scale_one() {
+        let ron_str = r#"(name: "test", timer_secs: 60.0, cols: 2, rows: 1, grid_top_offset: 50.0, grid: [['S','S']], entity_scale: 1.0)"#;
+        let layout: NodeLayout = ron::de::from_str(ron_str).expect("should deserialize");
+        assert!(
+            (layout.entity_scale - 1.0).abs() < f32::EPSILON,
+            "explicit entity_scale: 1.0 should deserialize to 1.0, got {}",
+            layout.entity_scale,
+        );
+    }
+
+    #[test]
+    fn deserialize_explicit_entity_scale_custom() {
+        let ron_str = r#"(name: "test", timer_secs: 60.0, cols: 2, rows: 1, grid_top_offset: 50.0, grid: [['S','S']], entity_scale: 0.7)"#;
+        let layout: NodeLayout = ron::de::from_str(ron_str).expect("should deserialize");
+        assert!(
+            (layout.entity_scale - 0.7).abs() < f32::EPSILON,
+            "entity_scale: 0.7 should deserialize to 0.7, got {}",
+            layout.entity_scale,
+        );
+    }
+
+    #[test]
+    fn deserialize_entity_scale_at_minimum() {
+        let ron_str = r#"(name: "test", timer_secs: 60.0, cols: 2, rows: 1, grid_top_offset: 50.0, grid: [['S','S']], entity_scale: 0.5)"#;
+        let layout: NodeLayout = ron::de::from_str(ron_str).expect("should deserialize");
+        assert!(
+            (layout.entity_scale - 0.5).abs() < f32::EPSILON,
+            "entity_scale: 0.5 should deserialize to 0.5, got {}",
+            layout.entity_scale,
+        );
+    }
+
+    #[test]
+    fn validate_rejects_entity_scale_below_minimum() {
+        let layout = NodeLayout {
+            name: "scale_low".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 0.49,
+        };
+        let registry = test_registry();
+        let err = layout
+            .validate(&registry)
+            .expect_err("entity_scale 0.49 is below MIN_ENTITY_SCALE and must be rejected");
+        assert!(
+            err.contains("entity_scale"),
+            "error message should mention entity_scale, got: {err}",
+        );
+    }
+
+    #[test]
+    fn validate_rejects_entity_scale_zero() {
+        let layout = NodeLayout {
+            name: "scale_zero".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 0.0,
+        };
+        let registry = test_registry();
+        let err = layout
+            .validate(&registry)
+            .expect_err("entity_scale 0.0 is below MIN_ENTITY_SCALE and must be rejected");
+        assert!(
+            err.contains("entity_scale"),
+            "error message should mention entity_scale, got: {err}",
+        );
+    }
+
+    #[test]
+    fn validate_rejects_entity_scale_above_maximum() {
+        let layout = NodeLayout {
+            name: "scale_high".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 1.01,
+        };
+        let registry = test_registry();
+        let err = layout
+            .validate(&registry)
+            .expect_err("entity_scale 1.01 is above MAX_ENTITY_SCALE and must be rejected");
+        assert!(
+            err.contains("entity_scale"),
+            "error message should mention entity_scale, got: {err}",
+        );
+    }
+
+    #[test]
+    fn validate_rejects_entity_scale_far_above_maximum() {
+        let layout = NodeLayout {
+            name: "scale_double".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 2.0,
+        };
+        let registry = test_registry();
+        let err = layout
+            .validate(&registry)
+            .expect_err("entity_scale 2.0 is above MAX_ENTITY_SCALE and must be rejected");
+        assert!(
+            err.contains("entity_scale"),
+            "error message should mention entity_scale, got: {err}",
+        );
+    }
+
+    #[test]
+    fn validate_accepts_entity_scale_at_minimum() {
+        let layout = NodeLayout {
+            name: "scale_min".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 0.5,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_ok(),
+            "entity_scale 0.5 equals MIN_ENTITY_SCALE and must be accepted",
+        );
+    }
+
+    #[test]
+    fn validate_accepts_entity_scale_at_maximum() {
+        let layout = NodeLayout {
+            name: "scale_max".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_ok(),
+            "entity_scale 1.0 equals MAX_ENTITY_SCALE and must be accepted",
+        );
     }
 
     #[test]
@@ -219,5 +430,119 @@ mod tests {
                 });
             }
         }
+    }
+
+    #[test]
+    fn validate_rejects_cols_above_max() {
+        let layout = NodeLayout {
+            name: "big_cols".to_owned(),
+            timer_secs: 60.0,
+            cols: 129,
+            rows: 5,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S'; 129]; 5],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_err(),
+            "cols=129 exceeds MAX_GRID_COLS={MAX_GRID_COLS} and must be rejected",
+        );
+    }
+
+    #[test]
+    fn validate_rejects_rows_above_max() {
+        let layout = NodeLayout {
+            name: "big_rows".to_owned(),
+            timer_secs: 60.0,
+            cols: 5,
+            rows: 129,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S'; 5]; 129],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_err(),
+            "rows=129 exceeds MAX_GRID_ROWS={MAX_GRID_ROWS} and must be rejected",
+        );
+    }
+
+    #[test]
+    fn validate_rejects_zero_cols() {
+        let layout = NodeLayout {
+            name: "zero_cols".to_owned(),
+            timer_secs: 60.0,
+            cols: 0,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec![]],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_err(),
+            "cols=0 must be rejected",
+        );
+    }
+
+    #[test]
+    fn validate_rejects_zero_rows() {
+        let layout = NodeLayout {
+            name: "zero_rows".to_owned(),
+            timer_secs: 60.0,
+            cols: 5,
+            rows: 0,
+            grid_top_offset: 50.0,
+            grid: vec![],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_err(),
+            "rows=0 must be rejected",
+        );
+    }
+
+    #[test]
+    fn validate_accepts_max_dimensions() {
+        let layout = NodeLayout {
+            name: "max_grid".to_owned(),
+            timer_secs: 60.0,
+            cols: 128,
+            rows: 128,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S'; 128]; 128],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_ok(),
+            "128x128 is the maximum valid dimension and must be accepted",
+        );
+    }
+
+    #[test]
+    fn validate_accepts_minimum_dimensions() {
+        let layout = NodeLayout {
+            name: "tiny".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let registry = test_registry();
+        assert!(
+            layout.validate(&registry).is_ok(),
+            "1x1 is the minimum valid dimension and must be accepted",
+        );
     }
 }

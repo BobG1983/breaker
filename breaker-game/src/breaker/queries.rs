@@ -5,13 +5,15 @@ use bevy::prelude::*;
 use crate::{
     breaker::components::{
         BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity,
-        BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier,
-        BumpPerfectWindow, BumpState, BumpWeakCooldown, BumpWeakMultiplier, DashDuration,
-        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+        BreakerHeight, BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt,
+        BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
+        BumpPerfectMultiplier, BumpPerfectWindow, BumpState, BumpWeakCooldown, BumpWeakMultiplier,
+        DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
+        SettleTiltEase,
     },
     chips::components::{BreakerSpeedBoost, BumpForceBoost, WidthBoost},
     interpolate::components::PhysicsTranslation,
+    shared::EntityScale,
 };
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
@@ -82,6 +84,15 @@ pub(crate) type BumpGradingQuery = (
     Option<&'static BumpPerfectMultiplier>,
     Option<&'static BumpWeakMultiplier>,
     Option<&'static BumpForceBoost>,
+);
+
+/// Breaker data needed by the width boost visual system.
+pub(crate) type WidthBoostVisualQuery = (
+    &'static BreakerWidth,
+    Option<&'static WidthBoost>,
+    &'static BreakerHeight,
+    Option<&'static EntityScale>,
+    &'static mut Transform,
 );
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.

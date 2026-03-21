@@ -12,7 +12,7 @@ mod tests;
 
 use bevy::prelude::*;
 use breaker::{
-    bolt::{BoltSystems, components::Bolt},
+    bolt::{ActiveOverclocks, BoltSystems, components::Bolt},
     breaker::{BreakerSystems, components::Breaker, systems::update_breaker_state},
     input::resources::InputActions,
     run::node::{ScenarioLayoutOverride, messages::SpawnNodeComplete, sets::NodeSystems},
@@ -156,6 +156,10 @@ impl Plugin for ScenarioLifecycle {
                     // Invariant checkers and frozen position enforcement must run
                     // BEFORE physics systems. Otherwise bolt_lost respawns OOB
                     // bolts before invariants can detect them.
+                    //
+                    // Gated on entered_playing: during Loading/MainMenu, entities
+                    // may not be fully initialized (especially under parallel I/O
+                    // contention). Checkers only fire once Playing has been entered.
                     (
                         enforce_frozen_positions,
                         check_bolt_in_bounds,
@@ -172,6 +176,9 @@ impl Plugin for ScenarioLifecycle {
                         check_no_entity_leaks,
                     )
                         .chain()
+                        .run_if(|stats: Option<Res<ScenarioStats>>| {
+                            stats.is_some_and(|s| s.entered_playing)
+                        })
                         .after(tag_game_entities)
                         .after(update_breaker_state)
                         .before(breaker::physics::PhysicsSystems::BoltLost),
@@ -201,11 +208,17 @@ fn bypass_menu_to_playing(
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
+    mut active_overclocks: Option<ResMut<ActiveOverclocks>>,
 ) {
     selected.0.clone_from(&config.definition.breaker);
     layout_override.0 = Some(config.definition.layout.clone());
     // Scenarios always use deterministic seed (default 0 when not specified)
     run_seed.0 = Some(config.definition.seed.unwrap_or(0));
+    if let Some(ref overclocks) = config.definition.initial_overclocks
+        && let Some(ref mut active) = active_overclocks
+    {
+        active.0.clone_from(overclocks);
+    }
     next_state.set(GameState::Playing);
 }
 

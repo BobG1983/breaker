@@ -17,7 +17,8 @@ pub(crate) fn handle_tilt_control_boost(
     mut query: Query<(Entity, Option<&mut TiltControlBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Augment(AugmentEffect::TiltControl(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Augment(AugmentEffect::TiltControl(per_stack)) = trigger.event().effect.clone()
+    else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

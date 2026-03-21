@@ -109,9 +109,14 @@ pub(crate) fn update_bump(
                 let grade = retroactive_grade(time_since_hit, perfect_window.0);
                 let base_multiplier = multiplier_for_grade(grade, perfect_mult, weak_mult);
                 let multiplier = base_multiplier + force_boost.map_or(0.0, |b| b.0);
-                writer.write(BumpPerformed { grade, multiplier });
+                writer.write(BumpPerformed {
+                    grade,
+                    multiplier,
+                    bolt: bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER),
+                });
                 bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
                 bump.post_hit_timer = 0.0;
+                bump.last_hit_bolt = None;
                 bump.active = false;
             } else if !bump.active {
                 // Forward path: no recent hit, open the window
@@ -150,18 +155,23 @@ pub(crate) fn grade_bump(
         return;
     };
 
-    for _hit in hit_reader.read() {
+    for hit in hit_reader.read() {
         if bump.active {
             // Forward path: grade based on timer position
             let grade = forward_grade(bump.timer, perfect_window.0);
             let base_multiplier = multiplier_for_grade(grade, perfect_mult, weak_mult);
             let multiplier = base_multiplier + force_boost.map_or(0.0, |b| b.0);
-            writer.write(BumpPerformed { grade, multiplier });
+            writer.write(BumpPerformed {
+                grade,
+                multiplier,
+                bolt: hit.bolt,
+            });
             bump.active = false;
             bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
         } else {
             // No active bump — open retroactive window for update_bump
             bump.post_hit_timer = perfect_window.0 + late_window.0;
+            bump.last_hit_bolt = Some(hit.bolt);
         }
     }
 
@@ -613,7 +623,9 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -649,7 +661,9 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -675,7 +689,9 @@ mod tests {
             .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -759,7 +775,9 @@ mod tests {
             .id();
 
         // Bolt hits the same frame the window would expire
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -930,6 +948,7 @@ mod tests {
         app.insert_resource(TestBumpMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             multiplier: 1.5,
+            bolt: Entity::PLACEHOLDER,
         })));
 
         app.add_systems(
@@ -1006,7 +1025,9 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
         tick(&mut app);
 
         let bump = app.world().get::<BumpState>(entity).unwrap();
@@ -1041,7 +1062,9 @@ mod tests {
             bump_param_bundle_with_force_boost(&config, 0.2),
         ));
 
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker)));
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedBumps>();
@@ -1087,6 +1110,130 @@ mod tests {
             (captured.0[0].multiplier - 1.6).abs() < 0.001,
             "multiplier should be BumpWeakMultiplier(1.1) + BumpForceBoost(0.5) = 1.6, got {:.4}",
             captured.0[0].multiplier
+        );
+    }
+
+    // ── Bolt entity threading tests ──────────────────────────────────
+
+    #[test]
+    fn grade_bump_forward_sends_bolt_entity() {
+        // Given: forward bump active, BoltHitBreaker arrives with a specific bolt entity
+        // When: grade_bump runs
+        // Then: BumpPerformed.bolt matches the bolt from BoltHitBreaker
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .init_resource::<CapturedBumps>();
+
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        // Spawn a bolt entity to reference
+        let bolt_entity = app.world_mut().spawn_empty().id();
+
+        // Use a dedicated resource with the specific bolt entity
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker { bolt: bolt_entity })));
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_hit.before(grade_bump),
+                grade_bump,
+                capture_bumps.after(grade_bump),
+            ),
+        );
+
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                active: true,
+                timer: config.perfect_window * 0.5, // in the perfect zone
+                ..Default::default()
+            },
+            bump_param_bundle(&config),
+        ));
+
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
+        assert_eq!(
+            captured.0[0].bolt, bolt_entity,
+            "BumpPerformed.bolt should match the bolt entity from BoltHitBreaker"
+        );
+    }
+
+    #[test]
+    fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
+        // Given: no active forward bump, BoltHitBreaker arrives with a specific bolt entity
+        // When: grade_bump runs
+        // Then: BumpState.last_hit_bolt == Some(bolt_entity)
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BreakerConfig>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BumpWhiffed>()
+            .init_resource::<CapturedBumps>();
+
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let bolt_entity = app.world_mut().spawn_empty().id();
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker { bolt: bolt_entity })));
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_hit.before(grade_bump),
+                grade_bump,
+                capture_bumps.after(grade_bump),
+            ),
+        );
+
+        let breaker_entity = app
+            .world_mut()
+            .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+            .id();
+
+        tick(&mut app);
+
+        let bump = app.world().get::<BumpState>(breaker_entity).unwrap();
+        assert_eq!(
+            bump.last_hit_bolt,
+            Some(bolt_entity),
+            "BumpState.last_hit_bolt should be set to the bolt entity when no active bump"
+        );
+    }
+
+    #[test]
+    fn update_bump_retroactive_uses_last_hit_bolt() {
+        // Given: BumpState.last_hit_bolt is set to a specific entity, post_hit_timer is active
+        // When: update_bump runs with Bump input (retroactive path)
+        // Then: BumpPerformed.bolt matches last_hit_bolt
+        let mut app = update_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        let bolt_entity = app.world_mut().spawn_empty().id();
+
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                post_hit_timer: config.perfect_window + config.late_window,
+                last_hit_bolt: Some(bolt_entity),
+                ..Default::default()
+            },
+            bump_param_bundle(&config),
+        ));
+
+        app.insert_resource(TestInputActive(true));
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
+        assert_eq!(
+            captured.0[0].bolt, bolt_entity,
+            "BumpPerformed.bolt in retroactive path should match BumpState.last_hit_bolt"
         );
     }
 }

@@ -440,3 +440,100 @@ fn scenario_definition_stress_some_empty_uses_defaults() {
         })
     );
 }
+
+// -------------------------------------------------------------------------
+// ScenarioDefinition — initial_overclocks field
+// -------------------------------------------------------------------------
+
+#[test]
+fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
+    use breaker::chips::{ImpactTarget, TriggerChain};
+
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        initial_overclocks: Some([OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1)))]),
+    )"#;
+    let result: ScenarioDefinition = ron::de::from_str(ron)
+        .expect("ScenarioDefinition with initial_overclocks surge chain should parse");
+    let overclocks = result
+        .initial_overclocks
+        .expect("initial_overclocks must be Some");
+    assert_eq!(overclocks.len(), 1, "expected 1 overclock chain");
+    assert_eq!(
+        overclocks[0],
+        TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 32.0,
+                stacks: 1
+            })
+        ))),
+        "overclock chain must match OnPerfectBump(OnImpact(Cell, Shockwave))"
+    );
+}
+
+#[test]
+fn scenario_definition_initial_overclocks_multiple_parses() {
+    use breaker::chips::TriggerChain;
+
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        initial_overclocks: Some([Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1), MultiBolt(base_count: 3, count_per_level: 0, stacks: 1)]),
+    )"#;
+    let result: ScenarioDefinition = ron::de::from_str(ron)
+        .expect("ScenarioDefinition with multiple initial_overclocks should parse");
+    let overclocks = result
+        .initial_overclocks
+        .expect("initial_overclocks must be Some");
+    assert_eq!(overclocks.len(), 2, "expected 2 overclock chains");
+    assert_eq!(
+        overclocks[0],
+        TriggerChain::Shockwave {
+            base_range: 64.0,
+            range_per_level: 0.0,
+            stacks: 1
+        },
+        "first overclock must be Shockwave"
+    );
+    assert_eq!(
+        overclocks[1],
+        TriggerChain::MultiBolt {
+            base_count: 3,
+            count_per_level: 0,
+            stacks: 1
+        },
+        "second overclock must be MultiBolt"
+    );
+}
+
+#[test]
+fn scenario_definition_initial_overclocks_defaults_to_none() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((seed: 1, action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition without initial_overclocks should parse");
+    assert!(
+        result.initial_overclocks.is_none(),
+        "initial_overclocks must be None when omitted from RON"
+    );
+}

@@ -71,12 +71,13 @@ Track RED gate status in session-state.md (the `RED Gate` column in the Specs ta
 
 ### Standard — default for all work
 
-Launch: **runner-linting** + **runner-tests** + **runner-scenarios** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance**
+Launch: **runner-linting** + **runner-tests** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance**
 
 ### Conditional agents (add to either tier when triggered)
 
 | Condition | Agent |
 |-----------|-------|
+| Pre-commit (end of REFACTOR phase) or phase boundary | **runner-scenarios** |
 | 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** |
 | New gameplay mechanic or upgrade designed | **guard-game-design** |
 | Phase complete or significant structural change | **guard-docs** |

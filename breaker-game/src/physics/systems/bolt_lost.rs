@@ -46,9 +46,22 @@ pub(crate) fn bolt_lost(
     lost_bolts.extend(
         bolt_query
             .iter()
-            .filter(|(_, tf, _, _, radius, ..)| tf.translation.y < playfield.bottom() - radius.0)
+            .filter(|(_, tf, _, _, radius, _, _, _, entity_scale)| {
+                let r = radius.0 * entity_scale.map_or(1.0, |s| s.0);
+                tf.translation.y < playfield.bottom() - r
+            })
             .map(
-                |(entity, _, _, base_speed, _, respawn_offset, angle_spread, is_extra)| {
+                |(
+                    entity,
+                    _,
+                    _,
+                    base_speed,
+                    _,
+                    respawn_offset,
+                    angle_spread,
+                    is_extra,
+                    _entity_scale,
+                )| {
                     LostBoltEntry {
                         entity,
                         base_speed: base_speed.0,
@@ -98,6 +111,7 @@ mod tests {
             resources::BoltConfig,
         },
         breaker::components::Breaker,
+        shared::EntityScale,
     };
 
     fn test_app() -> App {
@@ -392,5 +406,73 @@ mod tests {
             .next()
             .unwrap();
         assert!(vel.value.y < 0.0, "bolt above floor should keep going down");
+    }
+
+    // --- EntityScale lost detection tests ---
+
+    #[test]
+    fn scaled_bolt_uses_effective_radius_for_lost_detection() {
+        // BoltRadius(8.0), EntityScale(0.5) → effective_radius = 4.0.
+        // Playfield bottom = -300.0.
+        // With effective radius 4.0: lost threshold = -300.0 - 4.0 = -304.0.
+        // Bolt at y = -305.0 (below -304.0) should be detected as lost.
+        let mut app = test_app();
+        let playfield = PlayfieldConfig::default();
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+
+        // effective_radius = 8.0 * 0.5 = 4.0
+        // Lost threshold = playfield.bottom() - effective_radius = -300.0 - 4.0 = -304.0
+        let bolt_y = playfield.bottom() - 4.0 - 1.0; // -305.0
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
+            EntityScale(0.5),
+            Transform::from_xyz(0.0, bolt_y, 0.0),
+        ));
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "scaled bolt below effective threshold should be respawned (vy > 0), got vy={:.1}",
+            vel.value.y
+        );
+    }
+
+    #[test]
+    fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
+        // Same as bolt_below_floor_triggers_respawn but explicitly no EntityScale.
+        let mut app = test_app();
+        let playfield = PlayfieldConfig::default();
+        app.world_mut()
+            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(0.0, -400.0),
+            bolt_lost_bundle(),
+            // No EntityScale
+            Transform::from_xyz(0.0, playfield.bottom() - 100.0, 0.0),
+        ));
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt without EntityScale should be respawned normally, got vy={:.1}",
+            vel.value.y
+        );
     }
 }

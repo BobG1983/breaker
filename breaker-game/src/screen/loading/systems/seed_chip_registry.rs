@@ -47,7 +47,6 @@ pub(crate) fn seed_chip_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::ChipKind;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -93,12 +92,9 @@ mod tests {
         let mut app = test_app();
 
         let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
-        let amp = assets.add(ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp));
-        let augment = assets.add(ChipDefinition::test_simple(
-            "Wide Breaker",
-            ChipKind::Augment,
-        ));
-        let overclock = assets.add(ChipDefinition::test_simple("Surge", ChipKind::Overclock));
+        let amp = assets.add(ChipDefinition::test_simple("Piercing Shot"));
+        let augment = assets.add(ChipDefinition::test_simple("Wide Breaker"));
+        let overclock = assets.add(ChipDefinition::test_simple("Surge"));
 
         app.world_mut()
             .insert_resource(make_collection(vec![amp], vec![augment], vec![overclock]));
@@ -136,7 +132,7 @@ mod tests {
 
         // Add a chip AFTER seeding — if the guard works, it won't be picked up
         let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
-        let handle = assets.add(ChipDefinition::test_simple("Late Addition", ChipKind::Amp));
+        let handle = assets.add(ChipDefinition::test_simple("Late Addition"));
         app.world_mut()
             .insert_resource(make_collection(vec![handle], vec![], vec![]));
         app.update();

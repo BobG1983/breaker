@@ -1,5 +1,6 @@
 //! Breaker systems — one file per system function.
 
+pub(crate) mod apply_entity_scale_to_breaker;
 mod bump;
 mod bump_feedback;
 mod bump_visual;
@@ -10,6 +11,7 @@ mod spawn_breaker;
 mod tilt_visual;
 pub(crate) mod width_boost_visual;
 
+pub(crate) use apply_entity_scale_to_breaker::apply_entity_scale_to_breaker;
 pub use bump::perfect_bump_dash_cancel;
 pub(crate) use bump::{grade_bump, update_bump};
 pub use bump_feedback::{spawn_bump_grade_text, spawn_whiff_text};

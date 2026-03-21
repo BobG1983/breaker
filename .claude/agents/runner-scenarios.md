@@ -49,7 +49,17 @@ cargo scenario -- --all 2>&1
 
 Collect every `PASS [name]`, `FAIL [name]`, `VIOLATION ...`, and `LOG ...` line.
 
-### 2. For each failure — diagnose
+### 2. For each failure — classify as deterministic or flaky
+
+Run the failing scenario **once** individually with `-s <name>`. If it passes individually:
+- It is **flaky** (parallel I/O contention). Run `-s <name>` one more time to confirm. If both pass → report as "flaky in parallel mode, passes individually" and move on. Do NOT loop `--all` repeatedly trying to reproduce it.
+- Known flaky patterns are documented in `.claude/agent-memory/runner-scenarios/known_invariant_false_positives.md`.
+
+If the individual run also fails → it is **deterministic**. Diagnose it (step 3).
+
+**NEVER run `--all` more than once per invocation.** The release build takes minutes. One `--all` run plus one or two individual `-s` runs is the maximum.
+
+### 3. For each deterministic failure — diagnose
 
 Read the relevant source files based on which invariant fired. Use the mapping below to know where to look.
 

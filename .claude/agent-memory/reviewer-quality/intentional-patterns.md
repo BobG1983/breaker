@@ -20,6 +20,14 @@ type: reference
 - `StressFailure` / `StressResult` / `copy_index` in execution.rs — runner-internal infrastructure terms; no game vocabulary rule applies to the scenario runner's own tooling types.
 - `stress_copy` flag in main.rs — internal CLI flag name for subprocess guard; not a game vocabulary term.
 
+- `make_layout` helper in `apply_entity_scale_to_breaker.rs` tests returns `NodeLayout` (caller wraps in `ActiveNodeLayout`); `make_layout` in `apply_entity_scale_to_bolt.rs` tests returns `ActiveNodeLayout` directly. Intentional asymmetry in helper return types — both are correct. Do not flag.
+- `_entity_scale` binding (bolt_lost.rs map closure): intentionally named-ignored because the filter closure already consumed the scale value. Do not flag as unused.
+- `LostBoltEntry::is_extra: bool` — two-state field (ExtraBolt or not), no third state, acceptable per established SeedEntry::focused pattern.
+
+- `SendBoltLostFlag(bool)` in bridges.rs tests — inconsistent with all other `Send*(Option<T>)` test helpers in the same file. Flag as a style inconsistency (should be `Option<BoltLost>`).
+- `pub enum ImpactTarget` / `pub enum TriggerChain` in definition.rs — `pub` (not `pub(crate)`) is justified: `chips/mod.rs` re-exports them as `pub use`, and the scenario runner crate uses `breaker::chips::TriggerChain` directly in `types/mod.rs:272`. Do not flag.
+- `armed_query: Query<(Entity, &mut ArmedTriggers)>` (no `mut` on binding) in `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` — correct; the `mut` is inside the query type for `ArmedTriggers`. Binding mutability not needed because `evaluate_armed_all` takes the query by value (moves it). Do not flag.
+
 ## Vocabulary Decisions
 - `format_lives` in `life_lost.rs` — "lives" is correct game vocabulary (count of `LivesCount`).
 - `fire_consequences` in `bridges.rs` — "consequence" used in its precise game-system sense.
@@ -41,3 +49,8 @@ type: reference
 - `handle_run_lost` and `handle_timer_expired` are `pub` (not `pub(crate)`) in `run/systems/mod.rs` — they are registered only inside `RunPlugin` (same crate), so `pub(crate)` would suffice. Pre-existing pattern; acceptable until a cleanup pass targets visibility across the run domain.
 - `bolt/systems/mod.rs`: `spawn_bolt_lost_text`, `hover_bolt`, `init_bolt_params`, `launch_bolt`, `spawn_additional_bolt` are `pub` but only consumed by `BoltPlugin` inside the same crate. Pre-existing pattern matching run-domain behavior. Do not flag as a new issue.
 - `CellSpawnContext` SystemParam in `spawn_cells_from_layout.rs` is `pub(crate)` — used only inside the node subdomain and by `spawn_cells_from_grid` (dev feature). Correct visibility.
+- `reader.read().count() == 0` early-exit in `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` — consumes the message iterator entirely just to check for presence; the idiomatic alternative (`reader.is_empty()` or `peekable`) may not be available depending on the MessageReader API. Do not flag unless the API supports a non-consuming peek.
+- `_entity` in `for (_entity, mut armed) in &mut armed_query` in `evaluate_armed_all` — entity is destructured but not used because the function fires/re-arms based on chain state alone (CellDestroyed/BoltLost are global events). Acceptable.
+- `shockwave_no_op_when_bolt_despawned` test creates two separate `App` instances (proof-app and test-app pattern) — intentional, the first proves the observer is wired before the second proves the no-op; do not flag the two-app pattern as waste.
+- `pub fn perfect_bump_dash_cancel` in `bump.rs` — wider than `pub(crate)` needed. Pre-existing pattern matching other bump system functions; acceptable until a cleanup pass targets visibility.
+- `f32::from(u16::try_from(n).unwrap_or(u16::MAX))` pattern for safe u32→f32 conversion — appears 12+ times across spawn_cells_from_layout.rs, generate_node_sequence.rs, update_loading_bar.rs. Accepted as idiomatic in this codebase. Could be extracted to a shared helper in a future cleanup pass but is not a priority.

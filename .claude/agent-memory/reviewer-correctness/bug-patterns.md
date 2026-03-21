@@ -51,3 +51,23 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## Full-tree Review Confirmed Bug (2026-03-19, second session) — FIXED (2026-03-19 third session)
 - **spawn_run_end_screen shows wrong loss text for Aegis**: FIXED — `RunOutcome::Lost` split into `TimerExpired` and `LivesDepleted`. `handle_timer_expired` sets `TimerExpired`, `handle_run_lost` sets `LivesDepleted`. Screen match arm maps each to correct text. Confirmed clean.
+
+## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
+
+- **ActiveOverclocks never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveOverclocks.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveOverclocks. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveOverclocks.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`.
+
+- **Retroactive bump path silences None last_hit_bolt**: `breaker/systems/bump.rs:115` — `update_bump` uses `bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER)`. The `None` case is not reachable through current code, but the invariant `post_hit_timer > 0 ↔ last_hit_bolt is Some` is not structural. Should use `expect()` or restructure the timer/entity as a single `Option<(f32, Entity)>`. Medium confidence — not currently reachable, but silently wrong if it becomes reachable.
+
+## Recurring Bug Category (new)
+- **Resource Vec not cleared on run reset**: pattern seen in ActiveOverclocks. When a Vec resource is populated during gameplay, ensure `reset_run_state` or an OnEnter(Playing) system clears it. Check all Vec resources when adding new ones.
+
+## Overclock Trigger Chain Bugs (2026-03-20, feature/overclock-trigger-chain)
+
+- **Global-triggered Shockwave no-ops silently**: FIXED (2026-03-20, feature/overclock-trigger-chain). `OverclockEffectFired.bolt` changed from `Entity` (using PLACEHOLDER for global triggers) to `Option<Entity>` (using `None`). `handle_shockwave` explicitly `let Some(bolt_entity) = trigger.event().bolt else { return; }` — the no-op for global triggers is now intentional and documented. Test `shockwave_no_op_with_none_bolt` covers this. Design decision: global-trigger shockwaves require a bolt entity for position; no position → no area damage. See design-principles.md for the design note.
+
+- **bridge_overclock_cell_destroyed fires once for N destroyed cells**: Uses `reader.read().count() == 0` to detect any messages then evaluates chains once regardless of count. If N cells are destroyed in one frame, `OnCellDestroyed(Shockwave)` fires exactly once. The comment says "once per message" but implementation is "once if any messages". If design intent is one-shockwave-per-destroyed-cell, this is a bug.
+  - Confidence: medium (design intent unclear)
+
+- **inter-frame cascade for OnCellDestroyed(Shockwave)**: Shockwave writes DamageCell messages → handle_cell_hit processes them and writes CellDestroyed → on the next frame, bridge_overclock_cell_destroyed sees those CellDestroyed messages and fires the shockwave again → shockwave writes more DamageCell → etc. Bounded (terminates when no in-range cells remain), but produces multiple shockwave rounds per original trigger. May be surprising.
+  - Confidence: medium (may be intentional cascade mechanic)
+  - Confidence: medium (may be intentional)

@@ -321,7 +321,7 @@ FixedUpdate:
     launch_bolt  — ServingBoltFilter (disjoint)
     spawn_bolt_lost_text  — reads BoltLost message
     trigger_bump_visual  — reads InputActions, Commands
-    handle_cell_hit  — reads BoltHitCell, sends CellDestroyed
+    handle_cell_hit  — reads DamageCell (NOT BoltHitCell), sends CellDestroyed
 
   check_spawn_complete  [NodePlugin — NO run_if — reads BoltSpawned/BreakerSpawned/CellsSpawned/WallsSpawned, sends SpawnNodeComplete]
 

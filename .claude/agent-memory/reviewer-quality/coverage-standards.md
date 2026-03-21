@@ -54,6 +54,27 @@ New bridge with 4 tests: fires LoseLife, no-message no-consequence, wrong-trigge
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
 `restart_run_on_end` gap was closed — `restart_run_on_end_transitions_to_main_menu` test exists at `breaker-scenario-runner/src/lifecycle/tests.rs:808`. No longer a gap.
 
+## Overclock evaluation engine (bolt/behaviors/, as of 2026-03-20, feature/overclock-trigger-chain branch)
+Coverage: good across the core evaluation and bridge systems. Unit tests cover all four trigger kinds in evaluate.rs, all four bridge functions in bridges.rs (including two-step surge chain and bolt-specific arming), handle_overclock in chips/effects/overclock.rs. shockwave.rs now has 10 unit tests + 1 E2E test (full surge pipeline). lifecycle/mod.rs has 2 new tests for ActiveOverclocks population from initial_overclocks. New bridges added: bridge_overclock_breaker_impact, bridge_overclock_wall_impact, bridge_overclock_bump (BumpSuccess path). Known gaps:
+(1) `bridge_overclock_cell_destroyed` — no test that evaluates ARMED triggers on all bolts when a cell is destroyed (the `evaluate_armed_all` path from CellDestroyed is not exercised).
+(2) `bridge_overclock_bolt_lost` — same gap: no test for armed triggers on all bolts when bolt is lost.
+(3) `handle_overclock` — no test for `ChipEffect::Augment` being ignored (only `Amp` is tested as a negative case).
+(4) `ActiveOverclocks` with multiple chains — no test asserting all chains are evaluated on a single trigger (only single-chain scenarios tested in bridges.rs).
+(5) `evaluate_active_chains` — no test exercising the `Arm` result path when CellDestroyed/BoltLost fires (active chain arming is silently discarded in these bridges; no test confirms this is intentional).
+(6) `shockwave.rs` — no test for distance exactly equal to range boundary (dist == range should hit, dist > range should not); existing tests use distance well inside or outside range.
+(7) `bypass_menu_to_playing` — no test for when `ActiveOverclocks` resource is absent but `initial_overclocks` is `Some` (the `Option<ResMut<ActiveOverclocks>>` guard silently skips population; this path is untested).
+(8) `source_bolt` field on `DamageCell` is always `Entity::PLACEHOLDER` in ALL tests across handle_cell_hit.rs and check_lock_release.rs — the VFX-attachment semantic of this field is untested.
+(9) `bridge_overclock_breaker_impact` — no test for BreakerImpact chain NOT matching OnImpact(Cell, ...) or OnImpact(Wall, ...) (negative ImpactTarget discrimination not tested for breaker bridge; only covered in evaluate.rs unit tests).
+(10) `bridge_overclock_wall_impact` — same gap: wall bridge has no negative-target discrimination test at the bridge level.
+
+## EntityScale feature (as of 2026-03-20, feature/overclock-trigger-chain branch)
+Systems: apply_entity_scale_to_breaker, apply_entity_scale_to_bolt, bolt_scale_visual, width_boost_visual, bolt_breaker_collision, bolt_cell_collision, clamp_bolt_to_playfield, bolt_lost, spawn_additional_bolt, definition.rs validate.
+Coverage: very high. All systems have backward-compat (no EntityScale) + scaled + EntityScale(1.0) identity tests. Known gaps:
+(1) `apply_entity_scale_to_breaker`: no test for multiple Breaker entities in one frame — system loops the query but only one breaker is ever spawned in tests.
+(2) `bolt_lost`: no test for a scaled bolt that is ABOVE the effective lost threshold (should not be detected as lost) — only the positive (below threshold, lost) case is tested.
+(3) `bolt_breaker_collision`: no test for scaled bolt + scaled breaker simultaneously — existing tests scale only one side.
+(4) `clamp_bolt_to_playfield`: left-wall clamp with EntityScale has no vy-unchanged assertion (right-wall scaled test also lacks it — the plain left-wall test does assert vy unchanged, but the scaled version only checks x position).
+
 ## Documentation Conventions
 - Module-level `//!` doc comments on all `.rs` files.
 - Public types/functions have `///` doc comments with field-level docs.

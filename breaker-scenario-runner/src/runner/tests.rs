@@ -497,6 +497,7 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
                 allow_early_end: true,
                 stress: None,
                 seed: None,
+                initial_overclocks: None,
             },
         })
         .insert_resource(shared.clone())

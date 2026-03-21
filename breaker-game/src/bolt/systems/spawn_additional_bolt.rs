@@ -14,7 +14,8 @@ use crate::{
     },
     breaker::components::Breaker,
     interpolate::components::{InterpolateTransform, PhysicsTranslation},
-    shared::{CleanupOnNodeExit, GameRng},
+    run::node::ActiveNodeLayout,
+    shared::{CleanupOnNodeExit, EntityScale, GameRng},
 };
 
 /// Reads [`SpawnAdditionalBolt`] messages and spawns new bolt entities.
@@ -27,14 +28,16 @@ pub fn spawn_additional_bolt(
     mut reader: MessageReader<SpawnAdditionalBolt>,
     bolt_config: Res<BoltConfig>,
     mut rng: ResMut<GameRng>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
     breaker_query: Query<&Transform, With<Breaker>>,
+    layout: Option<Res<ActiveNodeLayout>>,
 ) {
     let Ok(breaker_tf) = breaker_query.single() else {
         return;
     };
     let breaker_pos = breaker_tf.translation;
+
+    let entity_scale = layout.as_ref().map_or(1.0, |l| l.0.entity_scale);
 
     for _msg in reader.read() {
         let angle = rng
@@ -67,8 +70,13 @@ pub fn spawn_additional_bolt(
                 BoltRespawnAngleSpread(bolt_config.respawn_angle_spread),
                 BoltInitialAngle(bolt_config.initial_angle),
             ),
-            Mesh2d(meshes.add(Circle::new(1.0))),
-            MeshMaterial2d(materials.add(ColorMaterial::from_color(bolt_config.color()))),
+            EntityScale(entity_scale),
+            Mesh2d(render_assets.0.add(Circle::new(1.0))),
+            MeshMaterial2d(
+                render_assets
+                    .1
+                    .add(ColorMaterial::from_color(bolt_config.color())),
+            ),
             Transform {
                 translation: spawn_pos,
                 scale: Vec3::new(bolt_config.radius, bolt_config.radius, 1.0),
@@ -279,5 +287,73 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(count, 2, "2 messages should spawn 2 extra bolts");
+    }
+
+    #[test]
+    fn spawned_bolt_inherits_entity_scale_from_active_node_layout() {
+        // Given: ActiveNodeLayout with entity_scale = 0.7
+        // When: SpawnAdditionalBolt message is sent
+        // Then: newly spawned ExtraBolt has EntityScale(0.7)
+        use crate::{
+            run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
+            shared::EntityScale,
+        };
+
+        let mut app = test_app();
+        app.insert_resource(ActiveNodeLayout(NodeLayout {
+            name: "test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S', 'S']],
+            pool: NodePool::default(),
+            entity_scale: 0.7,
+        }));
+        spawn_breaker(&mut app);
+        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
+        tick(&mut app);
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should exist");
+
+        let scale = app.world().get::<EntityScale>(entity).unwrap();
+        assert!(
+            (scale.0 - 0.7).abs() < f32::EPSILON,
+            "EntityScale should be 0.7 from ActiveNodeLayout, got {}",
+            scale.0,
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_defaults_entity_scale_without_active_node_layout() {
+        // Given: NO ActiveNodeLayout resource
+        // When: SpawnAdditionalBolt message is sent
+        // Then: newly spawned ExtraBolt has EntityScale(1.0)
+        use crate::shared::EntityScale;
+
+        let mut app = test_app();
+        // No ActiveNodeLayout inserted
+        spawn_breaker(&mut app);
+        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
+        tick(&mut app);
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should exist");
+
+        let scale = app.world().get::<EntityScale>(entity).unwrap();
+        assert!(
+            (scale.0 - 1.0).abs() < f32::EPSILON,
+            "EntityScale should default to 1.0, got {}",
+            scale.0,
+        );
     }
 }

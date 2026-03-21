@@ -11,6 +11,22 @@ pub(crate) struct CellDestroyed {
     pub was_required_to_clear: bool,
 }
 
+/// Sent by physics (`bolt_cell_collision`) and bolt/behaviors (shockwave) to
+/// request damage application on a cell.
+///
+/// A "command" message — owned by the receiving domain (cells), written by
+/// multiple senders. The `damage` field is pre-calculated by the sender
+/// (includes `DamageBoost`). `source_bolt` is pass-through for VFX attachment.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct DamageCell {
+    /// The cell entity to damage.
+    pub cell: Entity,
+    /// Pre-calculated damage amount.
+    pub damage: f32,
+    /// The bolt entity that caused this damage (for VFX attachment).
+    pub source_bolt: Entity,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -21,5 +37,15 @@ mod tests {
             was_required_to_clear: true,
         };
         assert!(format!("{msg:?}").contains("CellDestroyed"));
+    }
+
+    #[test]
+    fn damage_cell_debug_format() {
+        let msg = DamageCell {
+            cell: Entity::PLACEHOLDER,
+            damage: 10.0,
+            source_bolt: Entity::PLACEHOLDER,
+        };
+        assert!(format!("{msg:?}").contains("DamageCell"));
     }
 }

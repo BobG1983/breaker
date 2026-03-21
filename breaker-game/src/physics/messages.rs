@@ -6,7 +6,10 @@ use bevy::prelude::*;
 ///
 /// Consumed by breaker (`grade_bump`).
 #[derive(Message, Clone, Debug)]
-pub(crate) struct BoltHitBreaker;
+pub(crate) struct BoltHitBreaker {
+    /// The bolt entity that hit the breaker.
+    pub bolt: Entity,
+}
 
 /// Sent when the bolt collides with a cell.
 ///
@@ -24,6 +27,15 @@ pub(crate) struct BoltHitCell {
 /// Consumed by the breaker plugin (applies penalty per breaker type).
 #[derive(Message, Clone, Debug)]
 pub struct BoltLost;
+
+/// Sent when the bolt reflects off a wall.
+///
+/// Consumed by bolt/behaviors (overclock wall impact bridge).
+#[derive(Message, Clone, Debug)]
+pub(crate) struct BoltHitWall {
+    /// The bolt entity that hit the wall.
+    pub bolt: Entity,
+}
 
 #[cfg(test)]
 mod tests {
@@ -49,8 +61,15 @@ mod tests {
 
     #[test]
     fn messages_debug_format() {
-        let a = BoltHitBreaker;
-        assert!(format!("{a:?}").contains("BoltHitBreaker"));
+        let a = BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        };
+        let a_fmt = format!("{a:?}");
+        assert!(a_fmt.contains("BoltHitBreaker"));
+        assert!(
+            a_fmt.contains("bolt"),
+            "BoltHitBreaker debug format should include 'bolt' field name"
+        );
 
         let b = BoltHitCell {
             cell: Entity::PLACEHOLDER,
@@ -65,5 +84,15 @@ mod tests {
 
         let c = BoltLost;
         assert!(format!("{c:?}").contains("BoltLost"));
+
+        let d = BoltHitWall {
+            bolt: Entity::PLACEHOLDER,
+        };
+        let d_fmt = format!("{d:?}");
+        assert!(d_fmt.contains("BoltHitWall"));
+        assert!(
+            d_fmt.contains("bolt"),
+            "BoltHitWall debug format should include 'bolt' field name"
+        );
     }
 }

@@ -13,6 +13,10 @@ pub struct ScenarioStats {
     /// Highest [`ScenarioFrame`] value reached.
     pub max_frame: u32,
     /// Whether [`GameState::Playing`] was entered at least once.
+    ///
+    /// Defaults to `false`. Set to `true` by `tag_game_entities` on
+    /// `OnEnter(Playing)`. Invariant checkers are gated on this flag
+    /// to prevent false positives during `GameState::Loading`.
     pub entered_playing: bool,
     /// Number of bolt entities that were tagged with [`ScenarioTagBolt`].
     pub bolts_tagged: u32,

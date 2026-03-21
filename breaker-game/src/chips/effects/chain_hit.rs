@@ -17,7 +17,7 @@ pub(crate) fn handle_chain_hit(
     mut query: Query<(Entity, Option<&mut ChainHit>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::ChainHit(per_stack)) = trigger.event().effect else {
+    let ChipEffect::Amp(AmpEffect::ChainHit(per_stack)) = trigger.event().effect.clone() else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;

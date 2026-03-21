@@ -7,7 +7,7 @@ use crate::{
         components::{BoltRadius, BoltVelocity},
         filters::ActiveFilter,
     },
-    shared::{PlayfieldConfig, math::CCD_EPSILON},
+    shared::{EntityScale, PlayfieldConfig, math::CCD_EPSILON},
 };
 
 /// Clamps bolt position to within the playfield walls and reflects the
@@ -21,10 +21,18 @@ use crate::{
 /// playfield are handled by [`bolt_lost`].
 pub(crate) fn clamp_bolt_to_playfield(
     playfield: Res<PlayfieldConfig>,
-    mut bolt_query: Query<(&mut Transform, &mut BoltVelocity, &BoltRadius), ActiveFilter>,
+    mut bolt_query: Query<
+        (
+            &mut Transform,
+            &mut BoltVelocity,
+            &BoltRadius,
+            Option<&EntityScale>,
+        ),
+        ActiveFilter,
+    >,
 ) {
-    for (mut tf, mut vel, radius) in &mut bolt_query {
-        let r = radius.0;
+    for (mut tf, mut vel, radius, bolt_entity_scale) in &mut bolt_query {
+        let r = radius.0 * bolt_entity_scale.map_or(1.0, |s| s.0);
         // Read immutably first to avoid triggering Bevy change detection
         // when no clamping is needed (the common case).
         let pos = tf.translation;
@@ -370,6 +378,73 @@ mod tests {
             (tf.translation.x - 500.0).abs() < TOLERANCE,
             "serving bolt should NOT be clamped, got {}",
             tf.translation.x
+        );
+    }
+
+    // --- EntityScale clamping tests ---
+
+    #[test]
+    fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
+        // BoltRadius(8.0), EntityScale(0.5) → effective_radius = 4.0.
+        // Bolt at x = 500.0 (past right wall = 400.0).
+        // With effective radius 4.0: x_max = 400.0 - 4.0 - CCD_EPSILON ≈ 395.99
+        // Without scale (radius 8.0): x_max = 400.0 - 8.0 - CCD_EPSILON ≈ 391.99
+        // The difference should be ~4.0.
+        let mut app = test_app();
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(300.0, 400.0),
+            BoltRadius(8.0),
+            EntityScale(0.5),
+            Transform::from_xyz(500.0, 0.0, 0.0),
+        ));
+        tick(&mut app);
+
+        let expected_x_scaled = 400.0 - 4.0 - CCD_EPSILON; // ~395.99
+        let expected_x_unscaled = 400.0 - 8.0 - CCD_EPSILON; // ~391.99
+        let tf = app
+            .world_mut()
+            .query_filtered::<&Transform, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            (tf.translation.x - expected_x_scaled).abs() < TOLERANCE,
+            "scaled bolt should clamp to {expected_x_scaled:.2} (not {expected_x_unscaled:.2}), got {:.2}",
+            tf.translation.x
+        );
+    }
+
+    #[test]
+    fn bolt_without_entity_scale_in_clamping_is_backward_compatible() {
+        // Same as bolt_past_right_wall_clamped_vx_flipped but explicitly no EntityScale.
+        // Should behave identically to the existing test.
+        let mut app = test_app();
+        app.world_mut().spawn((
+            Bolt,
+            BoltVelocity::new(300.0, 400.0),
+            BoltRadius(RADIUS),
+            // No EntityScale
+            Transform::from_xyz(500.0, 0.0, 0.0),
+        ));
+        tick(&mut app);
+
+        let expected_x = 400.0 - RADIUS - CCD_EPSILON;
+        let (tf, vel) = app
+            .world_mut()
+            .query::<(&Transform, &BoltVelocity)>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            (tf.translation.x - expected_x).abs() < TOLERANCE,
+            "bolt without EntityScale should clamp to {expected_x:.2}, got {:.2}",
+            tf.translation.x
+        );
+        assert!(
+            (vel.value.x - (-300.0)).abs() < TOLERANCE,
+            "vx should be flipped to -300, got {:.1}",
+            vel.value.x
         );
     }
 }

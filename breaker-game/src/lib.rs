@@ -22,7 +22,7 @@ pub(crate) mod behaviors;
 pub mod bolt;
 pub mod breaker;
 pub(crate) mod cells;
-pub(crate) mod chips;
+pub mod chips;
 pub(crate) mod debug;
 pub(crate) mod fx;
 pub mod input;

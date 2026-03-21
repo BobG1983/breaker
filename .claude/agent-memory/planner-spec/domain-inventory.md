@@ -46,7 +46,7 @@ type: project
 - `BASE_BOLT_DAMAGE: f32 = 10.0`
 
 ### Systems
-- `handle_cell_hit` — reads BoltHitCell, calls take_damage(BASE_BOLT_DAMAGE * (1.0 + boost)), sends CellDestroyed.
+- `handle_cell_hit` — reads DamageCell (NOT BoltHitCell), calls take_damage(msg.damage), sends CellDestroyed. DamageCell.damage already includes DamageBoost calculation from the sender (bolt_cell_collision or shockwave).
 
 ### Cell type RON files (`assets/cells/`)
 - `standard.cell.ron` — `hp: 10.0`
@@ -66,6 +66,38 @@ type: project
 
 ### Systems
 - `prepare_bolt_velocity` — clamps speed to [min, max], enforces min angle. Runs FixedUpdate.
+
+### Sub-domain: bolt/behaviors/ (overclock evaluation engine)
+
+#### Events (`bolt/behaviors/events.rs`)
+- `OverclockEffectFired { pub effect: TriggerChain, pub bolt: Option<Entity> }` — Event, fired when chain resolves to leaf. `bolt` is `None` for global triggers (OnCellDestroyed, OnBoltLost) that have no specific bolt; `Some(entity)` for bolt-specific triggers (OnPerfectBump, OnImpact, OnBumpSuccess).
+
+#### Resources (`bolt/behaviors/active.rs`)
+- `ActiveOverclocks(pub Vec<TriggerChain>)` — runtime active overclock chains
+
+#### Components (`bolt/behaviors/armed.rs`)
+- `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains
+
+#### Systems (`bolt/behaviors/bridges.rs`)
+- `bridge_overclock_bump` — reads BumpPerformed (BumpSuccess trigger; also PerfectBump via evaluate), evaluates chains, fires/arms
+- `bridge_overclock_cell_impact` — reads BoltHitCell, evaluates active chains + armed triggers for the hit bolt
+- `bridge_overclock_breaker_impact` — reads BoltHitBreaker, evaluates active chains + armed triggers
+- `bridge_overclock_wall_impact` — reads BoltHitWall, evaluates active chains + armed triggers
+- `bridge_overclock_cell_destroyed` — reads CellDestroyed, evaluates active + armed_all, passes bolt: None in OverclockEffectFired
+- `bridge_overclock_bolt_lost` — reads BoltLost, evaluates active + armed_all, passes bolt: None in OverclockEffectFired
+- Private helpers: `evaluate_active_chains`, `evaluate_armed_all`, `evaluate_armed`, `resolve_armed`, `arm_bolt`
+
+#### Pure functions (`bolt/behaviors/evaluate.rs`)
+- `evaluate(trigger: OverclockTriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire
+
+#### Plugin (`bolt/behaviors/plugin.rs`)
+- `BoltBehaviorsPlugin` — registers ActiveOverclocks, bridge systems in FixedUpdate with ordering constraints
+
+#### Observers (`bolt/behaviors/effects/shockwave.rs`)
+- `handle_shockwave` — observes OverclockEffectFired, pattern-matches TriggerChain::Shockwave, early-returns when bolt is None (global triggers). Writes DamageCell messages for all non-locked cells within effective_range = base_range + (stacks-1) * range_per_level. Does NOT mutate CellHealth directly.
+
+### DamageVisualQuery update
+- `DamageVisualQuery` now includes `Has<Locked>` (5th element)
 
 ## breaker domain (`src/breaker/`)
 

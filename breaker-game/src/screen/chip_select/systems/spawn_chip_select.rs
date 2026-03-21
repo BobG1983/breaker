@@ -168,15 +168,15 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::{ChipDefinition, ChipKind};
+    use crate::chips::ChipDefinition;
 
     fn make_registry(count: usize) -> ChipRegistry {
         let all = vec![
-            ChipDefinition::test_simple("Piercing Shot", ChipKind::Amp),
-            ChipDefinition::test_simple("Wide Breaker", ChipKind::Augment),
-            ChipDefinition::test_simple("Surge", ChipKind::Overclock),
-            ChipDefinition::test_simple("Ricochet", ChipKind::Amp),
-            ChipDefinition::test_simple("Quick Dash", ChipKind::Augment),
+            ChipDefinition::test_simple("Piercing Shot"),
+            ChipDefinition::test_simple("Wide Breaker"),
+            ChipDefinition::test_simple("Surge"),
+            ChipDefinition::test_simple("Ricochet"),
+            ChipDefinition::test_simple("Quick Dash"),
         ];
         let mut registry = ChipRegistry::default();
         for chip in all.into_iter().take(count) {
