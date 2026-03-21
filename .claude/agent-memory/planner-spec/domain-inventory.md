@@ -129,8 +129,7 @@ NOTE: This domain was restructured. The old `behaviors/consequences/` directory 
 
 ### Systems (`behaviors/bridges.rs`)
 - All bridge systems now live here (was `bolt/behaviors/bridges.rs`)
-- `bridge_overclock_bump`, `bridge_overclock_cell_impact`, `bridge_overclock_breaker_impact`, `bridge_overclock_wall_impact`, `bridge_overclock_cell_destroyed`, `bridge_overclock_bolt_lost`
-- Also: life-lost, time-penalty, spawn-bolt, bolt-lost consequences (from old consequences/)
+- `bridge_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_lost`, `bridge_bump_whiff`
 
 ### Effects observers (`behaviors/effects/`)
 - `handle_shockwave` in `behaviors/effects/shockwave.rs` (was `bolt/behaviors/effects/shockwave.rs`)

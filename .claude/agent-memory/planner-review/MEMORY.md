@@ -11,6 +11,8 @@
 - [pattern_onenter_resource_timing.md](pattern_onenter_resource_timing.md) — Systems reading resources inserted via deferred commands in OnEnter need explicit ordering after the inserting chain
 - [pattern_enum_signature_migration.md](pattern_enum_signature_migration.md) — Changing enum variant signatures breaks ALL existing construction/match sites; spec must enumerate them as prerequisites
 - [pattern_refactor_atomicity.md](pattern_refactor_atomicity.md) — Multi-unit refactors that move/rename types cannot compile independently; must be atomic or use re-export bridge
+- [pattern_observer_mutation_vs_message.md](pattern_observer_mutation_vs_message.md) — Observers that mutate components need different query patterns than observers that write messages; spec must specify exact query
+- [pattern_message_field_removal_cascade.md](pattern_message_field_removal_cascade.md) — Removing a field from a Message struct breaks ALL construction sites; specs must enumerate every file
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `physics/messages.rs`
