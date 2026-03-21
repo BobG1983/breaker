@@ -40,6 +40,17 @@ pub(crate) enum AugmentEffect {
     TiltControl(f32),
 }
 
+/// Discriminates which entity a speed boost effect targets.
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpeedBoostTarget {
+    /// Target the specific bolt that triggered the effect.
+    Bolt,
+    /// Target the breaker entity.
+    Breaker,
+    /// Target all bolt entities in play.
+    AllBolts,
+}
+
 /// Discriminates which surface triggered an impact event.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ImpactTarget {
@@ -90,9 +101,11 @@ pub enum TriggerChain {
     },
     /// Spawns an additional bolt.
     SpawnBolt,
-    /// Multiplies bolt speed temporarily.
-    BoltSpeedBoost {
-        /// Speed multiplier applied to the bolt.
+    /// Scales a target's speed by a multiplier, clamped within base/max bounds.
+    SpeedBoost {
+        /// Which entity to apply the speed change to.
+        target: SpeedBoostTarget,
+        /// Multiplier applied to the current velocity magnitude.
         multiplier: f32,
     },
     /// Fires on a perfect bump.
@@ -126,7 +139,7 @@ impl TriggerChain {
             | Self::LoseLife
             | Self::SpawnBolt
             | Self::TimePenalty { .. }
-            | Self::BoltSpeedBoost { .. } => 0,
+            | Self::SpeedBoost { .. } => 0,
             Self::OnPerfectBump(inner)
             | Self::OnImpact(_, inner)
             | Self::OnCellDestroyed(inner)
@@ -149,7 +162,7 @@ impl TriggerChain {
                 | Self::LoseLife
                 | Self::SpawnBolt
                 | Self::TimePenalty { .. }
-                | Self::BoltSpeedBoost { .. }
+                | Self::SpeedBoost { .. }
         )
     }
 }
@@ -259,9 +272,12 @@ impl TriggerChain {
         Self::SpawnBolt
     }
 
-    /// Build a `BoltSpeedBoost` leaf with the given multiplier.
-    pub(crate) fn test_bolt_speed_boost(multiplier: f32) -> Self {
-        Self::BoltSpeedBoost { multiplier }
+    /// Build a `SpeedBoost` leaf targeting `Bolt` with the given multiplier.
+    pub(crate) fn test_speed_boost(multiplier: f32) -> Self {
+        Self::SpeedBoost {
+            target: SpeedBoostTarget::Bolt,
+            multiplier,
+        }
     }
 }
 
@@ -963,17 +979,29 @@ mod tests {
     }
 
     #[test]
-    fn trigger_chain_deserializes_bolt_speed_boost() {
-        let tc: TriggerChain = ron::de::from_str("BoltSpeedBoost(multiplier: 1.5)")
-            .expect("should parse BoltSpeedBoost");
-        assert_eq!(tc, TriggerChain::BoltSpeedBoost { multiplier: 1.5 });
+    fn trigger_chain_deserializes_speed_boost_bolt() {
+        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.5)")
+            .expect("should parse SpeedBoost(target: Bolt)");
+        assert_eq!(
+            tc,
+            TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }
+        );
     }
 
     #[test]
-    fn trigger_chain_deserializes_bolt_speed_boost_identity() {
-        let tc: TriggerChain = ron::de::from_str("BoltSpeedBoost(multiplier: 1.0)")
-            .expect("should parse BoltSpeedBoost with identity multiplier");
-        assert_eq!(tc, TriggerChain::BoltSpeedBoost { multiplier: 1.0 });
+    fn trigger_chain_deserializes_speed_boost_bolt_identity() {
+        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.0)")
+            .expect("should parse SpeedBoost(target: Bolt) with identity multiplier");
+        assert_eq!(
+            tc,
+            TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.0,
+            }
+        );
     }
 
     // --- New trigger variant deserialization tests ---
@@ -1028,12 +1056,16 @@ mod tests {
     }
 
     #[test]
-    fn trigger_chain_deserializes_on_bump_whiff_wrapping_bolt_speed_boost() {
-        let tc: TriggerChain = ron::de::from_str("OnBumpWhiff(BoltSpeedBoost(multiplier: 1.5))")
-            .expect("should parse OnBumpWhiff(BoltSpeedBoost)");
+    fn trigger_chain_deserializes_on_bump_whiff_wrapping_speed_boost() {
+        let tc: TriggerChain =
+            ron::de::from_str("OnBumpWhiff(SpeedBoost(target: Bolt, multiplier: 1.5))")
+                .expect("should parse OnBumpWhiff(SpeedBoost)");
         assert_eq!(
             tc,
-            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }))
+            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }))
         );
     }
 
@@ -1044,7 +1076,14 @@ mod tests {
         assert_eq!(TriggerChain::LoseLife.depth(), 0);
         assert_eq!(TriggerChain::SpawnBolt.depth(), 0);
         assert_eq!(TriggerChain::TimePenalty { seconds: 5.0 }.depth(), 0);
-        assert_eq!(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }.depth(), 0);
+        assert_eq!(
+            TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }
+            .depth(),
+            0
+        );
     }
 
     #[test]
@@ -1079,7 +1118,13 @@ mod tests {
         assert!(TriggerChain::LoseLife.is_leaf());
         assert!(TriggerChain::SpawnBolt.is_leaf());
         assert!(TriggerChain::TimePenalty { seconds: 5.0 }.is_leaf());
-        assert!(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }.is_leaf());
+        assert!(
+            TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }
+            .is_leaf()
+        );
     }
 
     #[test]
@@ -1112,14 +1157,6 @@ mod tests {
         assert_eq!(TriggerChain::test_spawn_bolt(), TriggerChain::SpawnBolt);
     }
 
-    #[test]
-    fn test_bolt_speed_boost_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_bolt_speed_boost(1.5),
-            TriggerChain::BoltSpeedBoost { multiplier: 1.5 }
-        );
-    }
-
     // --- ChipEffect integration with new variants ---
 
     #[test]
@@ -1129,6 +1166,88 @@ mod tests {
         assert_eq!(
             e,
             ChipEffect::Overclock(TriggerChain::OnBumpWhiff(Box::new(TriggerChain::LoseLife)))
+        );
+    }
+
+    // --- SpeedBoostTarget deserialization tests ---
+
+    #[test]
+    fn speed_boost_target_deserializes_bolt() {
+        let t: SpeedBoostTarget = ron::de::from_str("Bolt").expect("should parse Bolt");
+        assert_eq!(t, SpeedBoostTarget::Bolt);
+    }
+
+    #[test]
+    fn speed_boost_target_deserializes_breaker() {
+        let t: SpeedBoostTarget = ron::de::from_str("Breaker").expect("should parse Breaker");
+        assert_eq!(t, SpeedBoostTarget::Breaker);
+    }
+
+    #[test]
+    fn speed_boost_target_deserializes_all_bolts() {
+        let t: SpeedBoostTarget = ron::de::from_str("AllBolts").expect("should parse AllBolts");
+        assert_eq!(t, SpeedBoostTarget::AllBolts);
+    }
+
+    // --- SpeedBoost variant deserialization tests ---
+
+    #[test]
+    fn trigger_chain_deserializes_speed_boost() {
+        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.5)")
+            .expect("should parse SpeedBoost");
+        assert_eq!(
+            tc,
+            TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_speed_boost_wrapped_in_on_perfect_bump() {
+        let tc: TriggerChain =
+            ron::de::from_str("OnPerfectBump(SpeedBoost(target: Bolt, multiplier: 1.5))")
+                .expect("should parse OnPerfectBump(SpeedBoost)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }))
+        );
+    }
+
+    // --- SpeedBoost depth and is_leaf tests ---
+
+    #[test]
+    fn speed_boost_depth_is_zero() {
+        let tc = TriggerChain::SpeedBoost {
+            target: SpeedBoostTarget::Bolt,
+            multiplier: 1.5,
+        };
+        assert_eq!(tc.depth(), 0);
+    }
+
+    #[test]
+    fn speed_boost_is_leaf_true() {
+        let tc = TriggerChain::SpeedBoost {
+            target: SpeedBoostTarget::Bolt,
+            multiplier: 1.5,
+        };
+        assert!(tc.is_leaf());
+    }
+
+    // --- SpeedBoost convenience constructor test ---
+
+    #[test]
+    fn test_speed_boost_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_speed_boost(1.5),
+            TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }
         );
     }
 }

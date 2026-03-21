@@ -15,7 +15,7 @@ type: reference
 - **seed_upgrade_registry Local<bool>**: Persists for app lifetime. Correct — Loading only runs once.
 
 ## ECS Pitfalls Found
-- `apply_bump_velocity` collects messages into Vec before querying — correct pattern for borrow conflicts.
+- `apply_bump_velocity` DELETED (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf → handle_speed_boost observer. The Vec-collection pattern for borrow conflicts was used here; apply it in any future systems with the same shape.
 - `ChipSelected` message is consumed by `apply_chip_effect` (ChipsPlugin). Consumer added in feature/phase4b1-chip-effects.
 - `spawn_chip_select` takes `Res<ChipRegistry>` (not Option) — guaranteed safe because Loading completes first.
 
@@ -80,10 +80,17 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **No bridge for BumpWhiffed**: `bridge_overclock_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_overclock_bump_whiff system exists in behaviors/bridges.rs.
 
-- **LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost leaves have no handlers**: The unification added `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt` observers in `behaviors/effects/`. These observe `EffectFired` (was `OverclockEffectFired`) and pattern-match their leaf variants. VERIFY: check behaviors/effects/mod.rs for registered observers.
+- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: The unification confirmed `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` observers all exist in `behaviors/effects/` and observe `EffectFired`. All four leaf types are fully wired. BoltSpeedBoost renamed to SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } in refactor/unify-behaviors.
 
 - **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) TriggerKind + evaluate(), (3) bridge system + effect handler. This three-part requirement is now well-documented in the codebase.
 
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 
 - **ActiveOverclocks (now ActiveChains) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveChains.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveChains. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveChains.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: type renamed from ActiveOverclocks to ActiveChains in refactor/unify-behaviors.
+
+## SpeedBoost Generalization Bugs (2026-03-21, refactor/unify-behaviors or follow-on branch)
+
+- **init_archetype wipes overclock chains on every node entry**: `behaviors/init.rs:108` — `*active = ActiveChains(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `handle_overclock` pushes overclock chip chains to `ActiveChains` during ChipSelect state. State flow: Playing→ChipSelect (handle_overclock adds chain)→NodeTransition→Playing (init_archetype resets). Overclock chains selected between nodes are silently discarded on the next node entry. Fix: `init_archetype` should EXTEND `active.0` with the archetype chains rather than replacing the entire resource. Or separate "archetype chains" from "overclock chains" so only archetype chains are reset. Confidence: HIGH.
+
+## BumpForceBoost Dead Code (confirmed 2026-03-21)
+- `BumpForceBoost` component is stamped by `handle_bump_force_boost` (chips/effects/bump_force_boost.rs) but no system reads it to affect bump behavior. The chip effect observer correctly stacks the value on the breaker, but the value is never consumed. This is a pre-existing gap, not introduced by the SpeedBoost refactor. The PR description notes it as "intentional — left for future use."

@@ -5,10 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::components::BoltServing,
     breaker::{
-        components::{
-            Breaker, BreakerState, BreakerStateTimer, BumpPerfectMultiplier, BumpWeakMultiplier,
-            SettleDuration,
-        },
+        components::{Breaker, BreakerState, BreakerStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
         queries::{BumpGradingQuery, BumpTimingQuery},
     },
@@ -47,18 +44,6 @@ const fn cooldown_for_grade(grade: BumpGrade, perfect_cooldown: f32, weak_cooldo
     }
 }
 
-/// Returns the velocity multiplier for the given grade.
-fn multiplier_for_grade(
-    grade: BumpGrade,
-    perfect_mult: Option<&BumpPerfectMultiplier>,
-    weak_mult: Option<&BumpWeakMultiplier>,
-) -> f32 {
-    match grade {
-        BumpGrade::Perfect => perfect_mult.map_or(1.0, |m| m.0),
-        BumpGrade::Early | BumpGrade::Late => weak_mult.map_or(1.0, |m| m.0),
-    }
-}
-
 /// Updates bump state: handles input, ticks timers, resolves retroactive bumps.
 ///
 /// Ticks the forward window timer but does not expire it — [`grade_bump`]
@@ -74,17 +59,8 @@ pub(crate) fn update_bump(
     let bolt_serving = !serving_query.is_empty();
     let dt = time.delta_secs();
 
-    for (
-        mut bump,
-        perfect_window,
-        early_window,
-        late_window,
-        perfect_cooldown,
-        weak_cooldown,
-        perfect_mult,
-        weak_mult,
-        force_boost,
-    ) in &mut query
+    for (mut bump, perfect_window, early_window, late_window, perfect_cooldown, weak_cooldown) in
+        &mut query
     {
         // Tick cooldown
         if bump.cooldown > 0.0 {
@@ -107,11 +83,8 @@ pub(crate) fn update_bump(
                 // Retroactive path: bolt already hit, player pressing after
                 let time_since_hit = (perfect_window.0 + late_window.0) - bump.post_hit_timer;
                 let grade = retroactive_grade(time_since_hit, perfect_window.0);
-                let base_multiplier = multiplier_for_grade(grade, perfect_mult, weak_mult);
-                let multiplier = base_multiplier + force_boost.map_or(0.0, |b| b.0);
                 writer.write(BumpPerformed {
                     grade,
-                    multiplier,
                     bolt: bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER),
                 });
                 bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
@@ -141,16 +114,8 @@ pub(crate) fn grade_bump(
     mut writer: MessageWriter<BumpPerformed>,
     mut whiff_writer: MessageWriter<BumpWhiffed>,
 ) {
-    let Ok((
-        mut bump,
-        perfect_window,
-        late_window,
-        perfect_cooldown,
-        weak_cooldown,
-        perfect_mult,
-        weak_mult,
-        force_boost,
-    )) = bump_query.single_mut()
+    let Ok((mut bump, perfect_window, late_window, perfect_cooldown, weak_cooldown)) =
+        bump_query.single_mut()
     else {
         return;
     };
@@ -159,11 +124,8 @@ pub(crate) fn grade_bump(
         if bump.active {
             // Forward path: grade based on timer position
             let grade = forward_grade(bump.timer, perfect_window.0);
-            let base_multiplier = multiplier_for_grade(grade, perfect_mult, weak_mult);
-            let multiplier = base_multiplier + force_boost.map_or(0.0, |b| b.0);
             writer.write(BumpPerformed {
                 grade,
-                multiplier,
                 bolt: hit.bolt,
             });
             bump.active = false;
@@ -209,15 +171,12 @@ pub fn perfect_bump_dash_cancel(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        breaker::{
-            components::{
-                BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
-                BumpWeakCooldown,
-            },
-            resources::BreakerConfig,
+    use crate::breaker::{
+        components::{
+            BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+            BumpWeakCooldown,
         },
-        chips::components::BumpForceBoost,
+        resources::BreakerConfig,
     };
 
     // ── Pure grade helper tests ──────────────────────────────────────
@@ -308,8 +267,6 @@ mod tests {
         BumpLateWindow,
         BumpPerfectCooldown,
         BumpWeakCooldown,
-        BumpPerfectMultiplier,
-        BumpWeakMultiplier,
         SettleDuration,
     ) {
         (
@@ -318,8 +275,6 @@ mod tests {
             BumpLateWindow(config.late_window),
             BumpPerfectCooldown(config.perfect_bump_cooldown),
             BumpWeakCooldown(config.weak_bump_cooldown),
-            BumpPerfectMultiplier(1.5),
-            BumpWeakMultiplier(1.1),
             SettleDuration(config.settle_duration),
         )
     }
@@ -947,7 +902,6 @@ mod tests {
 
         app.insert_resource(TestBumpMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            multiplier: 1.5,
             bolt: Entity::PLACEHOLDER,
         })));
 
@@ -971,145 +925,6 @@ mod tests {
         assert!(
             (timer.remaining - config.settle_duration).abs() < f32::EPSILON,
             "settle timer should be set to config.settle_duration"
-        );
-    }
-
-    // ── BumpForceBoost tests ──────────────────────────────────────────
-
-    fn bump_param_bundle_with_force_boost(
-        config: &BreakerConfig,
-        force_boost: f32,
-    ) -> (
-        BumpPerfectWindow,
-        BumpEarlyWindow,
-        BumpLateWindow,
-        BumpPerfectCooldown,
-        BumpWeakCooldown,
-        BumpPerfectMultiplier,
-        BumpWeakMultiplier,
-        SettleDuration,
-        BumpForceBoost,
-    ) {
-        (
-            BumpPerfectWindow(config.perfect_window),
-            BumpEarlyWindow(config.early_window),
-            BumpLateWindow(config.late_window),
-            BumpPerfectCooldown(config.perfect_bump_cooldown),
-            BumpWeakCooldown(config.weak_bump_cooldown),
-            BumpPerfectMultiplier(1.5),
-            BumpWeakMultiplier(1.1),
-            SettleDuration(config.settle_duration),
-            BumpForceBoost(force_boost),
-        )
-    }
-
-    #[test]
-    fn force_boost_adds_to_perfect_grade_multiplier() {
-        // Given: BumpPerfectMultiplier(1.5), BumpForceBoost(0.3)
-        //        Forward bump in perfect zone, BoltHitBreaker received
-        // When: grade_bump runs
-        // Then: BumpPerformed.multiplier = 1.8
-        let mut app = grade_bump_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
-
-        let entity = app
-            .world_mut()
-            .spawn((
-                Breaker,
-                BumpState {
-                    active: true,
-                    timer: config.perfect_window * 0.5, // in perfect zone
-                    ..Default::default()
-                },
-                bump_param_bundle_with_force_boost(&config, 0.3),
-            ))
-            .id();
-
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
-        tick(&mut app);
-
-        let bump = app.world().get::<BumpState>(entity).unwrap();
-        assert!(!bump.active, "should deactivate after grading");
-
-        let captured = app.world().resource::<CapturedBumps>();
-        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
-        assert_eq!(captured.0[0].grade, BumpGrade::Perfect);
-        assert!(
-            (captured.0[0].multiplier - 1.8).abs() < 0.001,
-            "multiplier should be BumpPerfectMultiplier(1.5) + BumpForceBoost(0.3) = 1.8, got {:.4}",
-            captured.0[0].multiplier
-        );
-    }
-
-    #[test]
-    fn force_boost_adds_to_early_grade_multiplier() {
-        // Given: BumpWeakMultiplier(1.1), BumpForceBoost(0.2)
-        //        Forward bump in early zone
-        // When: grade_bump runs
-        // Then: BumpPerformed.multiplier = 1.3
-        let mut app = grade_bump_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
-
-        app.world_mut().spawn((
-            Breaker,
-            BumpState {
-                active: true,
-                timer: config.early_window + config.perfect_window, // just opened (early zone)
-                ..Default::default()
-            },
-            bump_param_bundle_with_force_boost(&config, 0.2),
-        ));
-
-        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        })));
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedBumps>();
-        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
-        assert_eq!(captured.0[0].grade, BumpGrade::Early);
-        assert!(
-            (captured.0[0].multiplier - 1.3).abs() < 0.001,
-            "multiplier should be BumpWeakMultiplier(1.1) + BumpForceBoost(0.2) = 1.3, got {:.4}",
-            captured.0[0].multiplier
-        );
-    }
-
-    #[test]
-    fn force_boost_adds_to_late_retroactive_multiplier() {
-        // Given: BumpWeakMultiplier(1.1), BumpForceBoost(0.5)
-        //        Retroactive bump (post_hit_timer set, past perfect zone)
-        // When: update_bump runs with Bump input
-        // Then: BumpPerformed.multiplier = 1.6
-        let mut app = update_bump_test_app();
-        let config = app.world().resource::<BreakerConfig>().clone();
-
-        // post_hit_timer is low — past the perfect window, in the late zone
-        // time_since_hit = (perfect_window + late_window) - remaining
-        // For Late grade: time_since_hit > perfect_window
-        // Use remaining = late_window * 0.5, so time_since_hit = perfect_window + late_window * 0.5
-        let remaining = config.late_window * 0.5;
-        app.world_mut().spawn((
-            Breaker,
-            BumpState {
-                post_hit_timer: remaining,
-                ..Default::default()
-            },
-            bump_param_bundle_with_force_boost(&config, 0.5),
-        ));
-
-        app.insert_resource(TestInputActive(true));
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedBumps>();
-        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
-        assert_eq!(captured.0[0].grade, BumpGrade::Late);
-        assert!(
-            (captured.0[0].multiplier - 1.6).abs() < 0.001,
-            "multiplier should be BumpWeakMultiplier(1.1) + BumpForceBoost(0.5) = 1.6, got {:.4}",
-            captured.0[0].multiplier
         );
     }
 

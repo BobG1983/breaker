@@ -9,7 +9,7 @@ use super::{
 };
 use crate::{
     breaker::{
-        components::{Breaker, BumpPerfectMultiplier, BumpWeakMultiplier},
+        components::Breaker,
         resources::{BreakerConfig, BreakerDefaults},
     },
     chips::definition::TriggerChain,
@@ -70,7 +70,6 @@ pub(crate) fn apply_archetype_config_overrides(
 ///
 /// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
 /// - Inserts `LivesCount` if archetype has `life_pool`
-/// - Stamps `BoltSpeedBoost` bindings as multiplier components
 /// - Builds `ActiveChains` from root fields and `chains`
 pub(crate) fn init_archetype(
     mut commands: Commands,
@@ -89,45 +88,20 @@ pub(crate) fn init_archetype(
         if let Some(life_pool) = def.life_pool {
             commands.entity(entity).insert(LivesCount(life_pool));
         }
-
-        // Pre-stamp BoltSpeedBoost multipliers
-        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_perfect_bump {
-            commands
-                .entity(entity)
-                .insert(BumpPerfectMultiplier(*multiplier));
-        }
-        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_early_bump {
-            commands
-                .entity(entity)
-                .insert(BumpWeakMultiplier(*multiplier));
-        }
-        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_late_bump {
-            commands
-                .entity(entity)
-                .insert(BumpWeakMultiplier(*multiplier));
-        }
     }
 
-    // Build ActiveChains from root fields (filter BoltSpeedBoost) + chains
+    // Build ActiveChains from root fields + chains
     let mut chains = Vec::new();
-    if let Some(chain) = &def.on_bolt_lost
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_bolt_lost {
         chains.push(TriggerChain::OnBoltLost(Box::new(chain.clone())));
     }
-    if let Some(chain) = &def.on_perfect_bump
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_perfect_bump {
         chains.push(TriggerChain::OnPerfectBump(Box::new(chain.clone())));
     }
-    if let Some(chain) = &def.on_early_bump
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_early_bump {
         chains.push(TriggerChain::OnEarlyBump(Box::new(chain.clone())));
     }
-    if let Some(chain) = &def.on_late_bump
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_late_bump {
         chains.push(TriggerChain::OnLateBump(Box::new(chain.clone())));
     }
     chains.extend(def.chains.iter().cloned());
@@ -142,14 +116,25 @@ mod tests {
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
 
     fn make_test_archetype() -> ArchetypeDefinition {
+        use crate::chips::definition::SpeedBoostTarget;
+
         ArchetypeDefinition {
             name: TEST_ARCHETYPE_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
             on_bolt_lost: Some(TriggerChain::LoseLife),
-            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
-            on_early_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 }),
-            on_late_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 }),
+            on_perfect_bump: Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }),
+            on_early_bump: Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.1,
+            }),
+            on_late_bump: Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.1,
+            }),
             chains: vec![],
         }
     }
@@ -177,19 +162,6 @@ mod tests {
     }
 
     #[test]
-    fn init_archetype_stamps_bump_multipliers() {
-        let mut app = test_app_with_archetype(make_test_archetype());
-        let entity = app.world_mut().spawn(Breaker).id();
-        app.update();
-
-        let perfect = app.world().get::<BumpPerfectMultiplier>(entity).unwrap();
-        assert!((perfect.0 - 1.5).abs() < f32::EPSILON);
-
-        let weak = app.world().get::<BumpWeakMultiplier>(entity).unwrap();
-        assert!((weak.0 - 1.1).abs() < f32::EPSILON);
-    }
-
-    #[test]
     fn init_archetype_builds_active_chains() {
         let mut app = test_app_with_archetype(make_test_archetype());
         app.world_mut().spawn(Breaker);
@@ -197,10 +169,10 @@ mod tests {
 
         let active = app.world().resource::<ActiveChains>();
         // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
-        // on_perfect_bump=BoltSpeedBoost → filtered out
-        // on_early_bump=BoltSpeedBoost → filtered out
-        // on_late_bump=BoltSpeedBoost → filtered out
-        assert_eq!(active.0.len(), 1);
+        // on_perfect_bump=SpeedBoost → OnPerfectBump(SpeedBoost{...})
+        // on_early_bump=SpeedBoost → OnEarlyBump(SpeedBoost{...})
+        // on_late_bump=SpeedBoost → OnLateBump(SpeedBoost{...})
+        assert_eq!(active.0.len(), 4);
         assert!(matches!(
             &active.0[0],
             TriggerChain::OnBoltLost(inner) if matches!(**inner, TriggerChain::LoseLife)

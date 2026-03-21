@@ -15,7 +15,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `BoltHitWall { bolt }` | physics | behaviors (bridge_wall_impact) |
 | `BoltLost` | physics | bolt (spawn_bolt_lost_text), behaviors (bridge_bolt_lost) |
 | `DamageCell { cell, damage, source_bolt }` | physics (bolt_cell_collision), behaviors/effects (shockwave) | cells (handle_cell_hit) |
-| `BumpPerformed { grade, multiplier, bolt }` | breaker | bolt (apply_bump_velocity), breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), behaviors (bridge_bump) |
+| `BumpPerformed { grade, bolt }` | breaker | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), behaviors (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), behaviors (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_breaker) | run/node (check_spawn_complete) |
 | `CellDestroyed { was_required_to_clear }` | cells | run (track_node_completion), behaviors (bridge_cell_destroyed) |
@@ -36,7 +36,7 @@ These are Bevy observer events (`#[derive(Event)]` + `commands.trigger()`), not 
 
 | Event | Sent By | Observed By |
 |-------|---------|-------------|
-| `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` | behaviors/bridges/* (all bridge systems) | behaviors/effects/* (handle_life_lost, handle_time_penalty, handle_spawn_bolt, handle_shockwave) |
+| `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` | behaviors/bridges/* (all bridge systems) | behaviors/effects/* (handle_life_lost, handle_time_penalty, handle_spawn_bolt, handle_shockwave, handle_speed_boost) |
 | `ChipEffectApplied { effect, max_stacks }` | chips (apply_chip_effect) | chips/effects/* (handle_piercing, handle_damage_boost, handle_overclock, etc.) |
 
 ## Registered Messages (no consumers yet)

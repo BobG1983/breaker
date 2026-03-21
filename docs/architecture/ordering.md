@@ -94,8 +94,6 @@ BreakerSystems::Move
       <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
         <- bolt_breaker_collision .after(bolt_cell_collision)
           PhysicsSystems::BreakerCollision
-            <- apply_bump_velocity .after(PhysicsSystems::BreakerCollision)
-                                   .before(PhysicsSystems::BoltLost)
             <- grade_bump .after(update_bump)
                           .after(PhysicsSystems::BreakerCollision)
               BreakerSystems::GradeBump
@@ -120,7 +118,7 @@ BreakerSystems::Move
             <- spawn_additional_bolt .after(BehaviorSystems::Bridge)  [bolt domain]
 ```
 
-Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading (`BreakerSystems::GradeBump`) and velocity application, then bolt-lost detection. All behavior bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_bolt_lost`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`) run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
+Reading: breaker moves first, then bolt velocity is prepared, then cell collisions run, then breaker collision, then bump grading (`BreakerSystems::GradeBump`), then bolt-lost detection. All behavior bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_bolt_lost`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`) run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion

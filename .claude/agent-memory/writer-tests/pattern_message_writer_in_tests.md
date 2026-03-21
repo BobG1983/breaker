@@ -8,7 +8,7 @@ type: project
 
 ## Pattern: helper resource + sender system
 
-The standard pattern (from `apply_bump_velocity.rs` tests):
+The standard pattern (from bump system tests — `apply_bump_velocity.rs` was deleted in refactor/unify-behaviors; see `behaviors/effects/speed_boost.rs` tests for current usage):
 
 ```rust
 #[derive(Resource)]

@@ -4,8 +4,8 @@
     stat_overrides: (),
     life_pool: Some(3),
     on_bolt_lost: Some(LoseLife),
-    on_perfect_bump: Some(BoltSpeedBoost(multiplier: 1.5)),
-    on_early_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
-    on_late_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
+    on_perfect_bump: Some(SpeedBoost(target: Bolt, multiplier: 1.5)),
+    on_early_bump: Some(SpeedBoost(target: Bolt, multiplier: 1.1)),
+    on_late_bump: Some(SpeedBoost(target: Bolt, multiplier: 1.1)),
     chains: [],
 )

@@ -9,7 +9,7 @@ type: reference
 - `snapshot_eval_data` clones `ViolationLog`, `CapturedLogs`, `ScenarioStats`, `ScenarioDefinition` every frame in the scenario runner — intentional, required to survive `App::run()` teardown.
 - `Local<Vec>` reuse in `bolt_lost` and `handle_cell_hit` hot paths — established pattern after deferred-review fix (2026-03-19).
 - `BumpVisual` add/remove per bump on single Breaker entity — 1 entity, low frequency, negligible archetype cost.
-- `Option<&BumpPerfectMultiplier>` / `Option<&BumpWeakMultiplier>` in BumpTimingQuery / BumpGradingQuery — set at archetype init time, not per-frame churn. Intentional archetype-optional design.
+- NOTE (2026-03-21): `BumpPerfectMultiplier` and `BumpWeakMultiplier` components DELETED — no longer in BumpTimingQuery / BumpGradingQuery. Multiplier logic now via TriggerChain::SpeedBoost in ActiveChains. No per-frame churn; archetype complexity reduced.
 - All FixedUpdate physics/breaker/cell systems have `run_if(in_state(PlayingState::Active))` guards — confirmed correct.
 - Hot-reload propagation uses `resource_changed::<T>` guards — does not run every frame.
 - Debug overlay systems use early-return on `overlays.is_active(...)` — cheap when disabled, no query work skipped needed.

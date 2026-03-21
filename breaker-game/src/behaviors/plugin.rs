@@ -12,6 +12,7 @@ use super::{
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
         shockwave::handle_shockwave,
         spawn_bolt::handle_spawn_bolt,
+        speed_boost::handle_speed_boost,
         time_penalty::handle_time_penalty,
     },
     init::{apply_archetype_config_overrides, init_archetype},
@@ -43,6 +44,7 @@ impl Plugin for BehaviorsPlugin {
             .add_observer(handle_time_penalty)
             .add_observer(handle_spawn_bolt)
             .add_observer(handle_shockwave)
+            .add_observer(handle_speed_boost)
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),

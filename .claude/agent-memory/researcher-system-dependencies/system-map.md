@@ -140,7 +140,7 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 
 ### `update_bump` — FixedUpdate, run_if(PlayingState::Active) [first in chain]
 - Reads: Res<InputActions>, Res<Time<Fixed>>
-- Writes (query): BumpTimingQuery (mut BumpState; read BumpPerfectWindow, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown, Option<BumpPerfectMultiplier>, Option<BumpWeakMultiplier>)
+- Writes (query): BumpTimingQuery (mut BumpState; read BumpPerfectWindow, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown)
 - Reads (query): Query<(), With<BoltServing>> (serving guard)
 - Sends: MessageWriter<BumpPerformed> (retroactive path only)
 
@@ -155,7 +155,7 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 ### `grade_bump` — FixedUpdate, after(update_bump), after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
 - Receives: MessageReader<BoltHitBreaker>
 - Sends: MessageWriter<BumpPerformed>, MessageWriter<BumpWhiffed>
-- Writes (query): BumpGradingQuery (mut BumpState; read BumpPerfectWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown, Option<BumpPerfectMultiplier>, Option<BumpWeakMultiplier>)
+- Writes (query): BumpGradingQuery (mut BumpState; read BumpPerfectWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown)
 
 ### `perfect_bump_dash_cancel` — FixedUpdate, after(grade_bump), run_if(PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>
@@ -206,8 +206,8 @@ All effect observers (shockwave + life_lost + time_penalty + spawn_bolt) in beha
 - Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
 - Reads (query): Query<Entity, (With<Breaker>, Without<LivesCount>)>
 - Writes: ResMut<ActiveChains>
-- Commands: inserts LivesCount, BumpPerfectMultiplier, BumpWeakMultiplier on Breaker entity
-- Cross-domain: stamps components from breaker domain (BumpPerfectMultiplier, BumpWeakMultiplier)
+- Commands: inserts LivesCount on Breaker entity; populates ActiveChains from archetype root fields
+- NOTE (2026-03-21): BumpPerfectMultiplier and BumpWeakMultiplier DELETED — multipliers are now expressed as TriggerChain::SpeedBoost leaves in archetype RON
 
 ### `spawn_lives_display` — OnEnter(GameState::Playing), .after(init_archetype), .after(spawn_timer_hud)
 - Reads (query): Query<&LivesCount>
@@ -261,10 +261,6 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 ### `prepare_bolt_velocity` — FixedUpdate, after(BreakerSystems::Move), in_set(BoltSystems::PrepareVelocity), run_if(PlayingState::Active)
 - Writes (query): mut BoltVelocity, read BoltMinSpeed, BoltMaxSpeed (ActiveBoltFilter)
 - Reads (query): Query<&MinAngleFromHorizontal, (With<Breaker>, Without<Bolt>)>
-
-### `apply_bump_velocity` — FixedUpdate, after(PhysicsSystems::BreakerCollision), before(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
-- Receives: MessageReader<BumpPerformed>
-- Writes (query): mut BoltVelocity, read BoltBaseSpeed, BoltMaxSpeed (With<Bolt>)
 
 ### `spawn_additional_bolt` — FixedUpdate, after(BehaviorSystems::Bridge), run_if(PlayingState::Active)
 - Receives: MessageReader<SpawnAdditionalBolt>
@@ -414,7 +410,8 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 - Dispatches to 9 registered observers (handle_piercing, handle_damage_boost, handle_bolt_speed_boost, handle_chain_hit, handle_bolt_size_boost, handle_width_boost, handle_breaker_speed_boost, handle_bump_force_boost, handle_tilt_control_boost)
 ### 9 observers (registered via add_observer in ChipsPlugin::build):
 Each observes `ChipEffectApplied`, pattern-matches on `trigger.event().effect`, early-returns on non-match.
-Confirmed effect types: Piercing, DamageBoost, BoltSpeedBoost, ChainHit, BoltSizeBoost, WidthBoost, BreakerSpeedBoost, BumpForceBoost, TiltControlBoost
+Confirmed effect types: Piercing, DamageBoost, BoltSpeedBoost (Amp chip component), ChainHit, BoltSizeBoost, WidthBoost, BreakerSpeedBoost, BumpForceBoost, TiltControlBoost
+NOTE: BoltSpeedBoost here is the chips/components.rs Amp chip component (flat speed raise on base/max), NOT the removed apply_bump_velocity system or the TriggerChain::SpeedBoost leaf.
 
 ---
 

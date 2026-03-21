@@ -7,11 +7,10 @@ use crate::{
         BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
         BreakerHeight, BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt,
         BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
-        BumpPerfectMultiplier, BumpPerfectWindow, BumpState, BumpWeakCooldown, BumpWeakMultiplier,
-        DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
-        SettleTiltEase,
+        BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
+        DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
-    chips::components::{BreakerSpeedBoost, BumpForceBoost, WidthBoost},
+    chips::components::{BreakerSpeedBoost, WidthBoost},
     interpolate::components::PhysicsTranslation,
     shared::EntityScale,
 };
@@ -61,7 +60,7 @@ pub(crate) type ResetQuery = (
     Option<&'static mut PhysicsTranslation>,
 );
 
-/// Bump timing window data — state, timing/cooldown params, and velocity multipliers.
+/// Bump timing window data — state, timing/cooldown params.
 pub(crate) type BumpTimingQuery = (
     &'static mut BumpState,
     &'static BumpPerfectWindow,
@@ -69,21 +68,15 @@ pub(crate) type BumpTimingQuery = (
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
-    Option<&'static BumpPerfectMultiplier>,
-    Option<&'static BumpWeakMultiplier>,
-    Option<&'static BumpForceBoost>,
 );
 
-/// Bump grading data — state, timing windows, cooldowns, and multipliers for `grade_bump`.
+/// Bump grading data — state, timing windows, and cooldowns for `grade_bump`.
 pub(crate) type BumpGradingQuery = (
     &'static mut BumpState,
     &'static BumpPerfectWindow,
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
-    Option<&'static BumpPerfectMultiplier>,
-    Option<&'static BumpWeakMultiplier>,
-    Option<&'static BumpForceBoost>,
 );
 
 /// Breaker data needed by the width boost visual system.

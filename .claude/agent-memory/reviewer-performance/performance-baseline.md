@@ -34,7 +34,7 @@ type: reference
 - `BumpVisual` added/removed at runtime — 1 entity, negligible.
 - `BoltServing` added/removed at launch — 1 entity, negligible.
 - `Locked` added/removed at runtime (via `check_lock_release`) — rare structural change, fine.
-- Chip effect components (`Piercing`, `DamageBoost`, `BoltSpeedBoost`, `ChainHit`, `BoltSizeBoost`, `WidthBoost`, `BreakerSpeedBoost`, `BumpForceBoost`, `TiltControlBoost`) added once at chip-select time via observers. Fine at 1-bolt/1-breaker scale.
+- Chip effect components (`Piercing`, `DamageBoost`, `BoltSpeedBoost` (Amp flat-speed chip), `ChainHit`, `BoltSizeBoost`, `WidthBoost`, `BreakerSpeedBoost`, `BumpForceBoost`, `TiltControlBoost`) added once at chip-select time via observers. Fine at 1-bolt/1-breaker scale.
 
 ## Known Hotspots
 - `bolt_cell_collision` (FixedUpdate): O(bolts × cells × MAX_BOUNCES=4). Watch if multi-bolt upgrades added.
@@ -125,12 +125,10 @@ type: reference
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 
-### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors)
-- 4 new leaf variants: LoseLife (0 payload), SpawnBolt (0 payload), TimePenalty { seconds: f32 } (4B), BoltSpeedBoost { multiplier: f32 } (4B).
-- 3 new trigger wrappers: OnEarlyBump(Box<Self>), OnLateBump(Box<Self>), OnBumpWhiff(Box<Self>).
+### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors — NOW FULLY WIRED)
+- 4 new leaf variants: LoseLife (0 payload), SpawnBolt (0 payload), TimePenalty { seconds: f32 } (4B), SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } (was BoltSpeedBoost { multiplier: f32 } — renamed and expanded in refactor/unify-behaviors).
+- 3 new trigger wrappers: OnEarlyBump(Box<Self>), OnLateBump(Box<Self>), OnBumpWhiff(Box<Self>) — all now wired in TriggerKind + evaluate() + bridge_overclock_bump_whiff.
 - Enum size impact: NONE. Discriminant expands trivially (still 1 byte). Largest variant is Shockwave/MultiBolt/Shield at 12 bytes — unchanged by new variants. Box<Self> wrappers are all 8 bytes. No size regression.
-- ECS impact: TriggerChain is NOT a component or resource by itself. It lives inside ActiveChains(Vec<TriggerChain>) (Res, was ActiveOverclocks) and ArmedTriggers(Vec<TriggerChain>) (Component). Neither archetype fragmentation nor query cost is affected by adding enum variants.
-- Hot-path impact: evaluate() is a pure pattern match called O(active_chains) times per bridge event (typically <5 chains). Adding 7 variants to the match adds zero branches to existing trigger kinds — the `else { NoMatch }` fallback absorbs them cheaply.
-- The 3 new trigger wrappers (OnEarlyBump, OnLateBump, OnBumpWhiff) have NO corresponding OverclockTriggerKind variants or bridge systems yet — they are dead types until wired. Zero runtime cost for now.
-- The 4 new leaf variants (LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost) have NO effect handler observers yet — they are dead types until wired. Zero runtime cost for now.
-- bridge_overclock_bump handles BumpGrade::Early|Late → None for grade-specific trigger (no Early/LateBump kind yet). BumpSuccess fires for all non-whiff grades. Correct and intentional pending wiring.
+- ECS impact: TriggerChain is NOT a component or resource by itself. It lives inside ActiveChains(Vec<TriggerChain>) (Res) and ArmedTriggers(Vec<TriggerChain>) (Component). Neither archetype fragmentation nor query cost is affected by adding enum variants.
+- Hot-path impact: evaluate() is a pure pattern match called O(active_chains) times per bridge event (typically <5 chains). All variants are now wired; no dead-type overhead.
+- All 4 leaf variants now have registered effect observers: handle_life_lost, handle_time_penalty, handle_spawn_bolt, handle_speed_boost (was handle_bolt_speed_boost) in behaviors/effects/.

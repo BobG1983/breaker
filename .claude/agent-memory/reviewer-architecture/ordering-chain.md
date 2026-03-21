@@ -16,8 +16,8 @@ type: reference
 | BoltSystems::InitParams | bolt/sets.rs | init_bolt_params | (intra-domain: reset_bolt) |
 | BoltSystems::PrepareVelocity | bolt/sets.rs | prepare_bolt_velocity | physics (bolt_cell_collision) |
 | BoltSystems::Reset | bolt/sets.rs | reset_bolt | (no cross-domain consumers) |
-| PhysicsSystems::BreakerCollision | physics/sets.rs | bolt_breaker_collision | bolt (apply_bump_velocity), breaker (grade_bump) |
-| PhysicsSystems::BoltLost | physics/sets.rs | bolt_lost | behaviors (bridge_bolt_lost), bolt (apply_bump_velocity .before) |
+| PhysicsSystems::BreakerCollision | physics/sets.rs | bolt_breaker_collision | breaker (grade_bump) |
+| PhysicsSystems::BoltLost | physics/sets.rs | bolt_lost | behaviors (bridge_bolt_lost) |
 | BehaviorSystems::Bridge | behaviors/sets.rs | bridge_bump, bridge_bolt_lost, bridge_bump_whiff | bolt (spawn_additional_bolt) |
 | UiSystems::SpawnTimerHud | ui/sets.rs | spawn_timer_hud | behaviors (spawn_lives_display) |
 | NodeSystems::Spawn | run/node/sets.rs | spawn_cells_from_layout | breaker (apply_entity_scale_to_breaker), bolt (apply_entity_scale_to_bolt) |
@@ -34,8 +34,6 @@ BreakerSystems::Move
       <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
         <- bolt_breaker_collision .after(bolt_cell_collision)
           PhysicsSystems::BreakerCollision
-            <- apply_bump_velocity .after(PhysicsSystems::BreakerCollision)
-                                   .before(PhysicsSystems::BoltLost)
             <- grade_bump .after(update_bump)
                           .after(PhysicsSystems::BreakerCollision)
                           .in_set(BreakerSystems::GradeBump)

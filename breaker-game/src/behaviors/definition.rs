@@ -61,7 +61,7 @@ mod tests {
         assert!(matches!(def.on_bolt_lost, Some(TriggerChain::LoseLife)));
         assert!(matches!(
             def.on_perfect_bump,
-            Some(TriggerChain::BoltSpeedBoost { multiplier }) if (multiplier - 1.5).abs() < f32::EPSILON
+            Some(TriggerChain::SpeedBoost { multiplier, .. }) if (multiplier - 1.5).abs() < f32::EPSILON
         ));
     }
 
@@ -133,9 +133,9 @@ mod tests {
             stat_overrides: (),
             life_pool: None,
             on_bolt_lost: Some(TimePenalty(seconds: 5.0)),
-            on_perfect_bump: Some(BoltSpeedBoost(multiplier: 1.5)),
-            on_early_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
-            on_late_bump: Some(BoltSpeedBoost(multiplier: 1.1)),
+            on_perfect_bump: Some(SpeedBoost(target: Bolt, multiplier: 1.5)),
+            on_early_bump: Some(SpeedBoost(target: Bolt, multiplier: 1.1)),
+            on_late_bump: Some(SpeedBoost(target: Bolt, multiplier: 1.1)),
             chains: [],
         )
         "#;

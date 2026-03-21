@@ -60,14 +60,6 @@ pub struct BumpPerfectCooldown(pub f32);
 #[derive(Component, Debug)]
 pub struct BumpWeakCooldown(pub f32);
 
-/// Velocity multiplier for perfect bump.
-#[derive(Component, Debug)]
-pub struct BumpPerfectMultiplier(pub f32);
-
-/// Velocity multiplier for early/late bump.
-#[derive(Component, Debug)]
-pub struct BumpWeakMultiplier(pub f32);
-
 /// Parameters for the bump pop visual animation.
 #[derive(Component, Debug, Clone)]
 pub struct BumpVisualParams {

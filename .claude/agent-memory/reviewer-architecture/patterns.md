@@ -34,7 +34,7 @@ type: reference
 - bolt/components.rs: BoltBaseSpeed, BoltMinSpeed, BoltMaxSpeed, BoltRadius, BoltSpawnOffsetY, BoltRespawnOffsetY, BoltInitialAngle
 - cells/components.rs: CellDamageVisuals, CellWidth, CellHeight
 - init_breaker_params + init_bolt_params: OnEnter(Playing), after spawn, guard via Without<sentinel>
-- bolt/apply_bump_velocity reads multiplier from BumpPerformed message
+- NOTE (2026-03-21): bolt/apply_bump_velocity DELETED — velocity scaling now via TriggerChain::SpeedBoost leaf in archetype RON, handled by handle_speed_boost observer in behaviors/effects/speed_boost.rs. BumpPerformed no longer carries a multiplier field.
 - PhysicsConfig/PhysicsDefaults no longer exist (all fields moved to BreakerConfig)
 
 ## Test Pattern

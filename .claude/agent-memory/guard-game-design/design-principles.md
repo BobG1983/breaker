@@ -27,10 +27,15 @@ type: reference
 - OnBumpSuccess should be reserved for defensive effects (Shield) — offensive power demands OnPerfectBump
 - Bump-grade triggers (EarlyBump, LateBump, BumpWhiff) transform bumping from binary to spectrum — use aggressively in archetype/chip design
 - Archetype root fields (on_bolt_lost, on_perfect_bump, etc.) get auto-wrapped into ActiveChains at init — no separate dispatch path
+- SpeedBoost is a TriggerChain leaf (not special-cased) — fires through EffectFired like all other effects (2026-03-21)
+- Bump SpeedBoost targets SPECIFIC bolt (SpeedBoostTarget::Bolt) not all bolts — per-bolt targeting rewards skill in multi-bolt (Prism) play
+- BumpForceBoost (Augment) is conceptually DISTINCT from TriggerChain SpeedBoost: BumpForce = flat additive impulse at reflection, SpeedBoost = multiplicative scaling via triggered events
+- Prism archetype has NO bump speed boost (intentional) — Prism trades velocity for quantity (SpawnBolt on perfect bump)
 
 ## Open Issues (Ordered by Priority)
-1. **BLOCKING** Test code uses 0.8x weak multiplier (should be 1.1x) — bump.rs, apply_bump_velocity.rs, init_breaker_params.rs
+1. ~~**BLOCKING** Test code uses 0.8x weak multiplier (should be 1.1x)~~ RESOLVED — apply_bump_velocity.rs removed by unify-behaviors refactor; multipliers now expressed as TriggerChain SpeedBoost leaves in archetype RON (1.1x early/late, 1.5x perfect) (2026-03-21)
 2. **BLOCKING** Prism archetype bolt-lost penalty too soft (7s TimePenalty, was 3s) — needs LoseExtraBolts leaf variant or higher penalty
+2b. **BLOCKING** BumpForceBoost (Augment chip) is dead code — component gets stamped on Breaker but never read by any system. Was never wired up (pre-dates SpeedBoost refactor). Needs: flat additive speed bonus in reflect_top_hit (bolt_breaker_collision.rs), reading BumpForceBoost from breaker entity
 3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — still unfixed from 2 prior reviews
 4. **IMPORTANT** Run-end subtitle copy weak/passive — needs motivating tone
 5. **IMPORTANT** Chip select timer 10s too generous — recommend 8s
@@ -65,3 +70,6 @@ type: reference
 - Global trigger arming limitation: Arm results discarded for CellDestroyed/BoltLost/BumpWhiff (no bolt entity). Phase 7: decide if global-to-armed chains should target all bolts or require rethinking
 - Risk/reward archetype design now possible: OnBumpWhiff penalties + higher OnPerfectBump rewards = sharp skill expression
 - Archetype-overclock resonance: design overclocks that double up on archetype trigger kinds for build affinities (Phase 7+)
+- SpeedBoost as TriggerChain leaf enables new chip archetypes: OnCellDestroyed(SpeedBoost) for velocity ramp, OnBumpWhiff(SpeedBoost(0.8)) for whiff penalties, etc.
+- Amp SpeedBoost (flat, raises base/max) + TriggerChain SpeedBoost (multiplier) = multiplicative synergy — classic build-game power curve
+- Prism SpeedBoost chip concept: "Photon Accelerator: OnPerfectBump(SpeedBoost(target: AllBolts, multiplier: 1.2))" — opt-in, not archetype baseline
