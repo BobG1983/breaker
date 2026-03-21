@@ -11,8 +11,8 @@ pub use core::{
 };
 
 pub use bump::{
-    BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow,
-    BumpState, BumpVisual, BumpVisualParams, BumpWeakCooldown, BumpWeakMultiplier,
+    BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpVisual,
+    BumpVisualParams, BumpWeakCooldown,
 };
 pub use dash::{
     BrakeDecel, BrakeTilt, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase,

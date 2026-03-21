@@ -2,21 +2,15 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    behaviors::registry::ArchetypeRegistry,
-    breaker::{
-        components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-            BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-            BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow, BumpVisualParams,
-            BumpWeakCooldown, BumpWeakMultiplier, DashDuration, DashSpeedMultiplier, DashTilt,
-            DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration,
-            SettleTiltEase,
-        },
-        resources::BreakerConfig,
+use crate::breaker::{
+    components::{
+        BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+        BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
+        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
+        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle,
+        MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
     },
-    chips::definition::TriggerChain,
-    shared::SelectedArchetype,
+    resources::BreakerConfig,
 };
 
 /// Force-overwrites breaker components on all breaker entities when `BreakerConfig` changes.
@@ -24,14 +18,9 @@ use crate::{
 /// Runs in `Update` in the `HotReloadSystems::PropagateConfig` system set,
 /// conditioned on `resource_changed::<BreakerConfig>`. Unlike `init_breaker_params`,
 /// this system has no `Without<BreakerMaxSpeed>` filter — it always overwrites.
-///
-/// After stamping config-derived components, re-applies archetype bolt speed
-/// multipliers from the new `ArchetypeDefinition` format.
 pub(crate) fn propagate_breaker_config(
     mut commands: Commands,
     config: Res<BreakerConfig>,
-    selected: Res<SelectedArchetype>,
-    registry: Res<ArchetypeRegistry>,
     query: Query<Entity, With<Breaker>>,
 ) {
     for entity in &query {
@@ -77,25 +66,6 @@ pub(crate) fn propagate_breaker_config(
                     fall_ease: config.bump_visual_fall_ease,
                 },
             ));
-
-        if let Some(def) = registry.get(&selected.0) {
-            // Pre-stamp BoltSpeedBoost multipliers from archetype definition
-            if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_perfect_bump {
-                commands
-                    .entity(entity)
-                    .insert(BumpPerfectMultiplier(*multiplier));
-            }
-            if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_early_bump {
-                commands
-                    .entity(entity)
-                    .insert(BumpWeakMultiplier(*multiplier));
-            }
-            if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_late_bump {
-                commands
-                    .entity(entity)
-                    .insert(BumpWeakMultiplier(*multiplier));
-            }
-        }
     }
 }
 
@@ -103,31 +73,24 @@ pub(crate) fn propagate_breaker_config(
 mod tests {
     use super::*;
     use crate::{
-        behaviors::{
-            definition::{ArchetypeDefinition, BreakerStatOverrides},
-            effects::life_lost::LivesCount,
-            registry::ArchetypeRegistry,
-        },
+        behaviors::effects::life_lost::LivesCount,
         breaker::{
             components::{
                 BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
                 BreakerDeceleration, BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow,
-                BumpLateWindow, BumpPerfectCooldown, BumpPerfectMultiplier, BumpPerfectWindow,
-                BumpVisualParams, BumpWeakCooldown, BumpWeakMultiplier, DashDuration,
-                DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle,
-                MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
+                BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams,
+                BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase,
+                DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal, SettleDuration,
+                SettleTiltEase,
             },
             resources::BreakerConfig,
         },
-        shared::SelectedArchetype,
     };
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<BreakerConfig>()
-            .init_resource::<SelectedArchetype>()
-            .init_resource::<ArchetypeRegistry>()
             .add_systems(Update, propagate_breaker_config);
         app
     }
@@ -175,8 +138,6 @@ mod tests {
                 rise_ease: config.bump_visual_rise_ease,
                 fall_ease: config.bump_visual_fall_ease,
             },
-            BumpPerfectMultiplier(1.0),
-            BumpWeakMultiplier(1.0),
         ));
         entity
     }
@@ -330,45 +291,6 @@ mod tests {
             (window.0 - 0.25).abs() < f32::EPSILON,
             "BumpPerfectWindow should be 0.25 after config change, got {}",
             window.0
-        );
-    }
-
-    #[test]
-    fn re_stamps_archetype_bolt_speed_multipliers() {
-        const ARCHETYPE_NAME: &str = "Test";
-
-        let def = ArchetypeDefinition {
-            name: ARCHETYPE_NAME.to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
-        };
-
-        let mut app = test_app();
-        {
-            let mut registry = app.world_mut().resource_mut::<ArchetypeRegistry>();
-            registry.insert(ARCHETYPE_NAME.to_owned(), def);
-        }
-        app.world_mut()
-            .insert_resource(SelectedArchetype(ARCHETYPE_NAME.to_owned()));
-
-        let config = app.world().resource::<BreakerConfig>().clone();
-        let entity = {
-            let world = app.world_mut();
-            spawn_breaker_with_config(world, &config)
-        };
-        app.world_mut().resource_mut::<BreakerConfig>().max_speed = 600.0;
-        app.update();
-
-        let mult = app.world().get::<BumpPerfectMultiplier>(entity).unwrap();
-        assert!(
-            (mult.0 - 1.5).abs() < f32::EPSILON,
-            "BumpPerfectMultiplier should be re-stamped to 1.5, got {}",
-            mult.0
         );
     }
 

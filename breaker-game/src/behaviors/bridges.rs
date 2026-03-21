@@ -536,7 +536,6 @@ mod tests {
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            multiplier: 1.5,
             bolt,
         });
         tick(&mut app);
@@ -557,7 +556,6 @@ mod tests {
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            multiplier: 1.5,
             bolt,
         });
         tick(&mut app);
@@ -584,7 +582,6 @@ mod tests {
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Early,
-            multiplier: 1.1,
             bolt,
         });
         tick(&mut app);
@@ -611,7 +608,6 @@ mod tests {
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Late,
-            multiplier: 1.0,
             bolt,
         });
         tick(&mut app);
@@ -633,7 +629,6 @@ mod tests {
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            multiplier: 1.5,
             bolt,
         });
         tick(&mut app);
@@ -867,7 +862,6 @@ mod tests {
         // Step 1: Perfect bump -- arms
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            multiplier: 1.5,
             bolt,
         });
         tick(&mut app);

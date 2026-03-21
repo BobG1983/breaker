@@ -8,7 +8,7 @@ use crate::{
         init::apply_stat_overrides, registry::ArchetypeRegistry,
     },
     breaker::{
-        components::{Breaker, BumpPerfectMultiplier, BumpWeakMultiplier},
+        components::Breaker,
         resources::{BreakerConfig, BreakerDefaults},
     },
     chips::definition::TriggerChain,
@@ -42,9 +42,8 @@ pub(crate) struct ArchetypeChangeContext<'w, 's> {
 /// Detects `AssetEvent::Modified` on any `ArchetypeDefinition`, rebuilds
 /// `ArchetypeRegistry`, and if the selected archetype was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
-/// 2. Re-stamps consequence components (bolt speed multipliers)
-/// 3. Resets `LivesCount` if archetype has `life_pool`
-/// 4. Rebuilds `ActiveChains`
+/// 2. Resets `LivesCount` if archetype has `life_pool`
+/// 3. Rebuilds `ActiveChains`
 pub(crate) fn propagate_archetype_changes(
     mut events: MessageReader<AssetEvent<ArchetypeDefinition>>,
     mut ctx: ArchetypeChangeContext,
@@ -82,48 +81,23 @@ pub(crate) fn propagate_archetype_changes(
 
     // Re-stamp consequence components and lives on breaker entities
     for entity in &ctx.breaker_query {
-        // Pre-stamp BoltSpeedBoost multipliers
-        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_perfect_bump {
-            ctx.commands
-                .entity(entity)
-                .insert(BumpPerfectMultiplier(*multiplier));
-        }
-        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_early_bump {
-            ctx.commands
-                .entity(entity)
-                .insert(BumpWeakMultiplier(*multiplier));
-        }
-        if let Some(TriggerChain::BoltSpeedBoost { multiplier }) = &def.on_late_bump {
-            ctx.commands
-                .entity(entity)
-                .insert(BumpWeakMultiplier(*multiplier));
-        }
-
         if let Some(life_pool) = def.life_pool {
             ctx.commands.entity(entity).insert(LivesCount(life_pool));
         }
     }
 
-    // Build ActiveChains from root fields (filter BoltSpeedBoost) + chains
+    // Build ActiveChains from root fields + chains
     let mut chains = Vec::new();
-    if let Some(chain) = &def.on_bolt_lost
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_bolt_lost {
         chains.push(TriggerChain::OnBoltLost(Box::new(chain.clone())));
     }
-    if let Some(chain) = &def.on_perfect_bump
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_perfect_bump {
         chains.push(TriggerChain::OnPerfectBump(Box::new(chain.clone())));
     }
-    if let Some(chain) = &def.on_early_bump
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_early_bump {
         chains.push(TriggerChain::OnEarlyBump(Box::new(chain.clone())));
     }
-    if let Some(chain) = &def.on_late_bump
-        && !matches!(chain, TriggerChain::BoltSpeedBoost { .. })
-    {
+    if let Some(chain) = &def.on_late_bump {
         chains.push(TriggerChain::OnLateBump(Box::new(chain.clone())));
     }
     chains.extend(def.chains.iter().cloned());
@@ -271,6 +245,8 @@ mod tests {
 
     #[test]
     fn active_chains_rebuilt_on_archetype_change() {
+        use crate::chips::definition::SpeedBoostTarget;
+
         let mut app = test_app();
 
         let def = ArchetypeDefinition {
@@ -278,7 +254,10 @@ mod tests {
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             on_bolt_lost: None,
-            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
+            on_perfect_bump: Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }),
             on_early_bump: None,
             on_late_bump: None,
             chains: vec![],
@@ -305,22 +284,28 @@ mod tests {
                 .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.on_bolt_lost = Some(TriggerChain::LoseLife);
-            asset.on_early_bump = Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 });
-            asset.on_late_bump = Some(TriggerChain::BoltSpeedBoost { multiplier: 1.1 });
+            asset.on_early_bump = Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.1,
+            });
+            asset.on_late_bump = Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.1,
+            });
         }
 
         app.update();
         app.update();
 
         let active = app.world().resource::<ActiveChains>();
-        // on_bolt_lost=LoseLife → OnBoltLost(LoseLife) (1)
-        // on_perfect_bump=BoltSpeedBoost → filtered out
-        // on_early_bump=BoltSpeedBoost → filtered out
-        // on_late_bump=BoltSpeedBoost → filtered out
+        // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
+        // on_perfect_bump=SpeedBoost → OnPerfectBump(SpeedBoost{...})
+        // on_early_bump=SpeedBoost → OnEarlyBump(SpeedBoost{...})
+        // on_late_bump=SpeedBoost → OnLateBump(SpeedBoost{...})
         assert_eq!(
             active.0.len(),
-            1,
-            "should have 1 active chain (BoltSpeedBoost filtered), got {}",
+            4,
+            "should have 4 active chains (all included), got {}",
             active.0.len()
         );
     }
@@ -377,7 +362,9 @@ mod tests {
     }
 
     #[test]
-    fn multipliers_re_stamped_on_archetype_change() {
+    fn speed_boost_chains_appear_in_active_chains_on_archetype_change() {
+        use crate::chips::definition::SpeedBoostTarget;
+
         let mut app = test_app();
 
         let def = ArchetypeDefinition {
@@ -385,7 +372,10 @@ mod tests {
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             on_bolt_lost: None,
-            on_perfect_bump: Some(TriggerChain::BoltSpeedBoost { multiplier: 1.5 }),
+            on_perfect_bump: Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 1.5,
+            }),
             on_early_bump: None,
             on_late_bump: None,
             chains: vec![],
@@ -402,10 +392,7 @@ mod tests {
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
-        let entity = app
-            .world_mut()
-            .spawn((Breaker, BumpPerfectMultiplier(1.0)))
-            .id();
+        app.world_mut().spawn(Breaker);
 
         app.update();
         app.update();
@@ -416,17 +403,28 @@ mod tests {
                 .world_mut()
                 .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.on_perfect_bump = Some(TriggerChain::BoltSpeedBoost { multiplier: 2.0 });
+            asset.on_perfect_bump = Some(TriggerChain::SpeedBoost {
+                target: SpeedBoostTarget::Bolt,
+                multiplier: 2.0,
+            });
         }
 
         app.update();
         app.update();
 
-        let mult = app.world().get::<BumpPerfectMultiplier>(entity).unwrap();
-        assert!(
-            (mult.0 - 2.0).abs() < f32::EPSILON,
-            "BumpPerfectMultiplier should be re-stamped to 2.0, got {}",
-            mult.0
+        let active = app.world().resource::<ActiveChains>();
+        assert_eq!(
+            active.0.len(),
+            1,
+            "should have 1 active chain for SpeedBoost, got {}",
+            active.0.len()
         );
+        assert!(matches!(
+            &active.0[0],
+            TriggerChain::OnPerfectBump(inner) if matches!(
+                **inner,
+                TriggerChain::SpeedBoost { multiplier, .. } if (multiplier - 2.0).abs() < f32::EPSILON
+            )
+        ));
     }
 }
