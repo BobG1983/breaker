@@ -29,7 +29,7 @@ pub fn check_timer_monotonically_decreasing(
             *previous = Some((current, current_total));
             return;
         }
-        if prev_remaining > 0.0 && current > prev_remaining {
+        if current > prev_remaining {
             // Check if this looks like a freshly initialized timer (new node
             // with the same duration). On the first tick of a new node,
             // remaining ≈ total. A real intra-node bug would have remaining
@@ -322,6 +322,52 @@ mod tests {
                 .any(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing),
             "expected no TimerMonotonicallyDecreasing violation on same-duration node \
             transition (remaining 53.7 → 59.984, total unchanged at 60.0), got: {:?}",
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)
+                .map(|e| &e.message)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// When `NodeTimer` starts at `remaining: 0.0` and then jumps to 80.0
+    /// (e.g., zero-initialized timer receives `SetTimerRemaining` mutation),
+    /// the invariant must detect this increase. The current guard
+    /// `prev_remaining > 0.0` incorrectly skips this case.
+    #[test]
+    fn timer_monotonically_decreasing_fires_when_timer_increases_from_zero() {
+        let mut app = test_app_timer_monotonic();
+
+        // Start with a zero-initialized NodeTimer (both fields zero)
+        app.insert_resource(NodeTimer {
+            remaining: 0.0,
+            total: 0.0,
+        });
+
+        // Tick 1: seeds Local with (0.0, 0.0)
+        tick(&mut app);
+
+        assert!(
+            app.world().resource::<ViolationLog>().0.is_empty(),
+            "no violation expected after seeding tick"
+        );
+
+        // Remaining jumps from 0.0 to 80.0 while total stays at 0.0
+        // (simulates asset-loading race: timer zero-initialized, then mutated)
+        app.world_mut().resource_mut::<NodeTimer>().remaining = 80.0;
+
+        // Tick 2: remaining 0.0 → 80.0, total unchanged at 0.0 → violation
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)
+                .count(),
+            1,
+            "expected exactly 1 TimerMonotonicallyDecreasing violation when remaining \
+            increases from 0.0 to 80.0, got: {:?}",
             log.0
                 .iter()
                 .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)

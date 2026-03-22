@@ -34,8 +34,9 @@ pub fn check_maxed_chip_never_offered(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+
+    use super::*;
 
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
