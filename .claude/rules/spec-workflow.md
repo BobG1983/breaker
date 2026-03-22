@@ -11,7 +11,10 @@ Before writing any code, resolve unknowns and produce specs:
 
 | Trigger | Agent |
 |---------|-------|
+| Feature touches 2+ domains (query conflicts, message flow, ordering) | **researcher-system-dependencies** |
 | Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** |
+| Modifying existing types or systems (ripple effects) | **researcher-impact** |
+| Need to understand current behavior before modifying it | **researcher-codebase** |
 | Choosing between Rust idiom alternatives | **researcher-rust-idioms** |
 | Feature ready for spec writing | **planner-spec** |
 | Specs produced — novel mechanic, cross-domain, or uncertain scope | **planner-review** |

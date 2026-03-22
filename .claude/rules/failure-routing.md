@@ -64,6 +64,14 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | License issue | Main agent evaluates — may need to replace the crate |
 | Duplicate transitive | Main agent evaluates — may need to pin or unify |
 
+## reviewer-tests findings
+
+| Finding type | Route |
+|---|---|
+| BLOCKING (missing behavior, production logic in stub) | Test revision spec → **writer-tests** |
+| IMPORTANT (wrong values, partial coverage) | Main agent triages → **writer-tests** if warranted |
+| MINOR (naming, style) | Note and proceed to RED gate |
+
 ## writer-scenarios output
 
 | Result | Route |

@@ -5,26 +5,47 @@ All implementation goes through the delegated pipeline. The main agent is the or
 ## The Flow
 
 See `.claude/rules/tdd.md` for the TDD cycle definition and when to commit.
-See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 2-5).
+See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6).
 See `.claude/rules/spec-formats.md` for spec templates and quality rules.
 
 ```
 1. Main agent describes the feature in plain language
-2. Launch planner-spec to produce all specs (behavioral + implementation, per domain)
-3. Launch planner-review to pressure-test specs
-4. Main agent reviews planner-review feedback, then sends feedback back to planner-spec to revise
-5. Repeat 3–4 until planner-review confirms specs are clean (usually one revision)
-6. Main agent reviews final specs, creates shared prerequisites
-7. Launch ALL writer-tests in parallel                              ── RED phase
-8. Launch runner-tests to verify tests compile and fail             ── RED gate
-9. As each passes RED gate: review, launch writer-code              ── GREEN phase
-10. After ALL writer-codes complete: launch verification wave        ─┐
-11. Route Phase 3 failures through fix agents                        │ REFACTOR phase
-12. Run /simplify on changed code                                    │
-13. Repeat 10–12 until all agents pass and /simplify is clean        │
-14. Main agent handles wiring (lib.rs, game.rs, shared.rs)          ─┘
-15. Update session-state.md
+2. Research wave (when triggered — see below)                      ── optional
+3. Launch planner-spec to produce all specs (behavioral + implementation, per domain)
+4. Launch planner-review to pressure-test specs
+5. Main agent reviews planner-review feedback, then sends feedback back to planner-spec to revise
+6. Repeat 4–5 until planner-review confirms specs are clean (usually one revision)
+7. Main agent reviews final specs, creates shared prerequisites
+8. Launch ALL writer-tests in parallel                              ── RED phase
+9. Launch reviewer-tests to verify tests match spec                 ── test review
+10. Launch runner-tests to verify tests compile and fail             ── RED gate
+11. As each passes RED gate: launch writer-code                      ── GREEN phase
+12. After ALL writer-codes complete: launch verification wave        ─┐
+13. Route Phase 3 failures through fix agents                        │ REFACTOR phase
+14. Run /simplify on changed code                                    │
+15. Repeat 12–14 until all agents pass and /simplify is clean        │
+16. Main agent handles wiring (lib.rs, game.rs, shared.rs)          ─┘
+17. Update session-state.md
 ```
+
+## Research Wave (Step 2)
+
+Before planner-spec runs, launch research agents in parallel to surface conflicts early. This is optional — skip it for single-domain features with familiar APIs.
+
+**Triggers** (any of these):
+- Feature touches 2+ domains
+- Feature uses unfamiliar Bevy 0.18 APIs
+- Feature adds new messages, state transitions, or cross-plugin data flow
+
+**Agents to launch** (in parallel):
+- **researcher-system-dependencies** — "Analyze potential conflicts for a feature that adds [X] to [domain A] and [domain B]. Focus on query conflicts, message flow gaps, and ordering issues."
+- **researcher-bevy-api** — only when unfamiliar APIs are involved
+- **researcher-impact** — when modifying existing types/systems/messages
+- **researcher-codebase** — when modifying existing behavior (need to understand current flow)
+
+**Feed results into planner-spec**: include the research reports in the planner-spec feature description so specs account for known conflicts and correct API patterns from the start.
+
+**Why**: pitfalls that surface late (during planner-review revision loops or post-implementation review) cost 2-10x more than catching them before spec writing. This gets proactive conflict detection without a new agent.
 
 ## Parallel Domain Implementation
 
@@ -32,7 +53,7 @@ When implementing multiple domains simultaneously:
 
 1. planner-spec produces ALL specs upfront (test spec + implementation spec for each domain)
 2. Launch ALL writer-tests in parallel **as background agents** (`run_in_background: true`)
-3. When each writer-tests completes (notified automatically): run RED gate (runner-tests), then launch its writer-code — do NOT wait for other writer-tests still running
+3. When each writer-tests completes (notified automatically): launch reviewer-tests to verify tests match spec, then run RED gate (runner-tests), then launch its writer-code — do NOT wait for other writer-tests still running
 4. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation verification per tier
 5. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 

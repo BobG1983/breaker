@@ -19,7 +19,7 @@ Format (keep under 80 lines):
 ## Decisions
 - [key decisions with rationale]
 ## Specs
-| Domain | Spec Status | Writer-Tests | RED Gate | Writer-Code | Notes |
+| Domain | Spec Status | Writer-Tests | Test Review | RED Gate | Writer-Code | Notes |
 ## Phase 2 Results
 | Agent | Status | Action Needed |
 ## Active Failures
@@ -58,12 +58,13 @@ Do not: keep trying variations, weaken tests, escalate to different agent types 
 
 See `.claude/rules/tdd.md` for the full TDD cycle definition.
 
-After each writer-tests completes, the orchestrator MUST run the RED gate before launching writer-code:
+After each writer-tests completes, the orchestrator MUST run reviewer-tests and the RED gate before launching writer-code:
 
-1. Launch **runner-tests** to compile and run the new tests
-2. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
-3. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
-4. Only after the RED gate passes → launch writer-code
+1. Launch **reviewer-tests** to verify tests match the spec (PASS → proceed; BLOCKING findings → route back to writer-tests)
+2. Launch **runner-tests** to compile and run the new tests
+3. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
+4. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
+5. Only after reviewer-tests passes AND the RED gate passes → launch writer-code
 
 Track RED gate status in session-state.md (the `RED Gate` column in the Specs table).
 
@@ -72,6 +73,15 @@ Track RED gate status in session-state.md (the `RED Gate` column in the Specs ta
 ### Standard — default for all work
 
 Launch: **runner-linting** + **runner-tests** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance**
+
+### Pre-planning research (before planner-spec — see `delegated-implementation.md` step 2)
+
+| Condition | Agent |
+|-----------|-------|
+| Feature touches 2+ domains, or adds new messages/state transitions/cross-plugin flow | **researcher-system-dependencies** |
+| Feature uses unfamiliar Bevy 0.18 APIs | **researcher-bevy-api** |
+| Modifying existing types, systems, or messages | **researcher-impact** |
+| Modifying existing behavior (need to understand current flow) | **researcher-codebase** |
 
 ### Conditional agents (add to either tier when triggered)
 
@@ -85,6 +95,8 @@ Launch: **runner-linting** + **runner-tests** + **reviewer-correctness** + **rev
 | New dependencies added or before release | **guard-dependencies** |
 | New mechanic needs adversarial scenario coverage | **writer-scenarios** |
 | Phase complete or multiple sessions since last audit | **guard-agent-memory** |
+| Choosing a new dependency | **researcher-crates** |
+| Modifying code with non-obvious history | **researcher-git** |
 
 All agents in a tier launch in parallel.
 
