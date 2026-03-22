@@ -22,7 +22,7 @@ pub(crate) struct ChipEntry {
 /// `held` maps chip names to their [`ChipEntry`] (stacks, max, rarity).
 /// `decay_weights` tracks accumulated offering decay per chip name.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct ChipInventory {
+pub struct ChipInventory {
     held: HashMap<String, ChipEntry>,
     decay_weights: HashMap<String, f32>,
 }
@@ -32,7 +32,7 @@ impl ChipInventory {
     ///
     /// Returns `true` if the chip was added, `false` if already at max stacks.
     #[must_use]
-    pub(crate) fn add_chip(&mut self, name: &str, def: &ChipDefinition) -> bool {
+    pub fn add_chip(&mut self, name: &str, def: &ChipDefinition) -> bool {
         if let Some(entry) = self.held.get_mut(name) {
             if entry.stacks >= entry.max_stacks {
                 return false;
@@ -53,36 +53,36 @@ impl ChipInventory {
 
     /// Returns the current stack count for the named chip, or 0 if not held.
     #[must_use]
-    pub(crate) fn stacks(&self, name: &str) -> u32 {
+    pub fn stacks(&self, name: &str) -> u32 {
         self.held.get(name).map_or(0, |entry| entry.stacks)
     }
 
     /// Returns `true` if the named chip is at its maximum stack count.
     #[must_use]
-    pub(crate) fn is_maxed(&self, name: &str) -> bool {
+    pub fn is_maxed(&self, name: &str) -> bool {
         self.held
             .get(name)
             .is_some_and(|entry| entry.stacks >= entry.max_stacks)
     }
 
     /// Record that the player has seen this chip in an offer screen.
-    pub(crate) fn mark_seen(&mut self, name: &str) {
+    pub fn mark_seen(&mut self, name: &str) {
         self.record_offered(name, 0.8);
     }
 
     /// Returns `true` if the player has seen the named chip.
     #[must_use]
-    pub(crate) fn has_seen(&self, name: &str) -> bool {
+    pub fn has_seen(&self, name: &str) -> bool {
         self.decay_weights.contains_key(name)
     }
 
     /// Iterate all held chips as `(name, entry)` pairs.
-    pub(crate) fn held_chips(&self) -> impl Iterator<Item = (&str, &ChipEntry)> {
+    pub fn held_chips(&self) -> impl Iterator<Item = (&str, &ChipEntry)> {
         self.held.iter().map(|(k, v)| (k.as_str(), v))
     }
 
     /// Iterate names of all chips currently at max stacks.
-    pub(crate) fn maxed_chips(&self) -> impl Iterator<Item = &str> {
+    pub fn maxed_chips(&self) -> impl Iterator<Item = &str> {
         self.held
             .iter()
             .filter(|(_, entry)| entry.stacks >= entry.max_stacks)
@@ -91,18 +91,18 @@ impl ChipInventory {
 
     /// Returns the number of distinct chips held (not total stacks).
     #[must_use]
-    pub(crate) fn total_held(&self) -> usize {
+    pub fn total_held(&self) -> usize {
         self.held.len()
     }
 
     /// Remove all held chips and seen history.
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.held.clear();
         self.decay_weights.clear();
     }
 
     /// Record that a chip was offered, multiplying existing decay by the factor.
-    pub(crate) fn record_offered(&mut self, name: &str, decay_factor: f32) {
+    pub fn record_offered(&mut self, name: &str, decay_factor: f32) {
         if let Some(existing) = self.decay_weights.get_mut(name) {
             *existing *= decay_factor;
         } else {
@@ -112,7 +112,7 @@ impl ChipInventory {
 
     /// Returns the accumulated decay weight for a chip (1.0 if never offered).
     #[must_use]
-    pub(crate) fn weight_decay(&self, name: &str) -> f32 {
+    pub fn weight_decay(&self, name: &str) -> f32 {
         self.decay_weights.get(name).copied().unwrap_or(1.0)
     }
 }

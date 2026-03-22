@@ -115,6 +115,10 @@ pub enum InvariantKind {
     BreakerPositionClamped,
     /// Physics entities do not move while game is paused.
     PhysicsFrozenDuringPause,
+    /// No duplicate chip names in a single offering.
+    OfferingNoDuplicates,
+    /// Maxed chips never appear in offerings.
+    MaxedChipNeverOffered,
 }
 
 impl InvariantKind {
@@ -136,6 +140,8 @@ impl InvariantKind {
         Self::TimerMonotonicallyDecreasing,
         Self::BreakerPositionClamped,
         Self::PhysicsFrozenDuringPause,
+        Self::OfferingNoDuplicates,
+        Self::MaxedChipNeverOffered,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -157,6 +163,8 @@ impl InvariantKind {
             Self::TimerMonotonicallyDecreasing => "node timer increased mid-node",
             Self::BreakerPositionClamped => "breaker position not clamped to playfield",
             Self::PhysicsFrozenDuringPause => "physics entity moved while paused",
+            Self::OfferingNoDuplicates => "duplicate chip in offering",
+            Self::MaxedChipNeverOffered => "maxed chip appeared in offering",
         }
     }
 }

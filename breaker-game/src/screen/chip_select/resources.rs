@@ -130,7 +130,7 @@ pub(super) struct ChipSelectSelection {
 /// Inserted by `generate_chip_offerings`, read by `spawn_chip_select`
 /// and `handle_chip_input` to resolve a selection index into chip identity.
 #[derive(Resource, Debug)]
-pub(crate) struct ChipOffers(pub Vec<ChipDefinition>);
+pub struct ChipOffers(pub Vec<ChipDefinition>);
 
 #[cfg(test)]
 mod tests {

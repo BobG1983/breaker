@@ -5,16 +5,20 @@ use serde::Deserialize;
 
 /// How rare a chip is — controls appearance weight in the selection pool.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) enum Rarity {
+pub enum Rarity {
+    /// Frequently appearing chips.
     Common,
+    /// Moderately rare chips.
     Uncommon,
+    /// Hard to find chips.
     Rare,
+    /// Extremely rare, run-defining chips.
     Legendary,
 }
 
 /// Effect variants for Amp chips (passive bolt upgrades).
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq)]
-pub(crate) enum AmpEffect {
+pub enum AmpEffect {
     /// Bolt passes through N cells before stopping.
     Piercing(u32),
     /// Adds fractional bonus damage per stack. Formula: damage = `BASE_BOLT_DAMAGE` * (1.0 + boost).
@@ -169,7 +173,7 @@ impl TriggerChain {
 
 /// Top-level effect wrapper for any chip type.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
-pub(crate) enum ChipEffect {
+pub enum ChipEffect {
     /// Applies an Amp (bolt) effect.
     Amp(AmpEffect),
     /// Applies an Augment (breaker) effect.
@@ -192,7 +196,7 @@ pub(crate) struct ChipEffectApplied {
 
 /// A single chip definition loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub(crate) struct ChipDefinition {
+pub struct ChipDefinition {
     /// Display name shown on the chip card.
     pub name: String,
     /// Flavor text shown below the name.
