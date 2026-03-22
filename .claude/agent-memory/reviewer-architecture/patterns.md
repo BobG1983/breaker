@@ -9,7 +9,7 @@ type: reference
 - `shared/` has passive types only: GameState, PlayingState, cleanup markers, playfield constants, shared math helpers (shared/math.rs)
 - `game.rs` is the ONLY file that imports top-level plugin structs (sub-domain plugins are added by their parent)
 - `screen/` owns state registration (init_state, add_sub_state) and cleanup systems
-- `screen/` has six sub-domains: `loading/`, `main_menu/`, `run_end/`, `run_setup/`, `pause_menu/`, `upgrade_select/`
+- `screen/` has six sub-domains: `loading/`, `main_menu/`, `run_end/`, `run_setup/`, `pause_menu/`, `chip_select/` (was `upgrade_select/` — renamed; also has a `systems/` module for shared cleanup)
 - `loading/` cross-references `main_menu::MainMenuDefaults` for config seeding — acceptable sibling import
 - **Nested sub-domains allowed** (added 2026-03-13): a domain may contain child sub-domains with their own plugin, components, and systems. Same canonical layout. Parent plugin adds child plugins. Max one level of nesting.
 - **Per-effect layout** (updated 2026-03-21, supersedes per-consequence layout from 2026-03-16): `behaviors/` uses per-effect file organization in an `effects/` directory (NOT a sub-domain). Each effect file owns its observer and helpers. `behaviors/consequences/` and `ConsequenceFired` were DELETED in refactor/unify-behaviors. The unified `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` observer event (behaviors/events.rs) replaces both ConsequenceFired and OverclockEffectFired. Current effects: shockwave.rs, life_lost.rs, time_penalty.rs, spawn_bolt.rs.

@@ -33,12 +33,12 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
     - [~~4a: Seeded RNG & Run Seed~~](done/phase-4/phase-4a-seeded-rng.md) — **Done**
     - [~~4b: Chip Effect System~~](phase-4/phase-4b-chip-effects.md) — **Done** (~~4b.1 types/stacking~~, ~~4b.2 per-domain effects~~)
   - **Wave 2 — Core Systems** (Sessions 3-6)
-    - [4c: Chip Pool & Rarity](phase-4/phase-4c-chip-pool.md) (~~4c.1 rarity/inventory~~, 4c.2 RON authoring, 4c.3 synergy review)
+    - [4c: Chip Pool & Rarity](phase-4/phase-4c-chip-pool.md) (~~4c.1 rarity/inventory~~, ~~4c.2 RON authoring~~, 4c.3 synergy review)
     - [4d: Trigger/Effect Architecture](phase-4/phase-4d-trigger-effect.md) (~~4d.1 types~~, ~~4d.2 unified chain evaluation~~, ~~4d.3 shockwave~~, ~~4d.4 Surge POC~~) — **Done**
-    - [4e: Node Sequence & Escalation](phase-4/phase-4e-node-escalation.md) (~~4e.1 tiers~~, ~~4e.2 proc-gen~~, ~~4e.3 cell types~~, ~~4e.4 layout pools~~)
+    - [~~4e: Node Sequence & Escalation~~](phase-4/phase-4e-node-escalation.md) (~~4e.1 tiers~~, ~~4e.2 proc-gen~~, ~~4e.3 cell types~~, ~~4e.4 layout pools~~) — **Done**
   - **Wave 3 — Integration** (Session 7)
-    - [4f: Chip Offering System](phase-4/phase-4f-chip-offerings.md)
-    - [4g: Node Transitions & VFX](phase-4/phase-4g-node-transitions.md)
+    - [~~4f: Chip Offering System~~](phase-4/phase-4f-chip-offerings.md) — **Done**
+    - [~~4g: Node Transitions & VFX~~](phase-4/phase-4g-node-transitions.md) — **Done**
   - **Wave 4 — Capstones** (Session 8)
     - [4h: Chip Evolution](phase-4/phase-4h-chip-evolution.md)
     - [4i: Run Stats & Summary](phase-4/phase-4i-run-stats.md)

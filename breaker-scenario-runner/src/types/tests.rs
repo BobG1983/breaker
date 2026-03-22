@@ -111,6 +111,20 @@ fn invariant_kind_valid_state_transitions_parses() {
     assert_eq!(result, InvariantKind::ValidStateTransitions);
 }
 
+#[test]
+fn invariant_kind_offering_no_duplicates_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("OfferingNoDuplicates").expect("OfferingNoDuplicates should parse");
+    assert_eq!(result, InvariantKind::OfferingNoDuplicates);
+}
+
+#[test]
+fn invariant_kind_maxed_chip_never_offered_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("MaxedChipNeverOffered").expect("MaxedChipNeverOffered should parse");
+    assert_eq!(result, InvariantKind::MaxedChipNeverOffered);
+}
+
 // -------------------------------------------------------------------------
 // ScenarioDefinition — expected_violations field
 // -------------------------------------------------------------------------
@@ -628,7 +642,8 @@ fn forced_game_state_all_variants_parse_from_ron() {
         ("MainMenu", ForcedGameState::MainMenu),
         ("Playing", ForcedGameState::Playing),
         ("RunSetup", ForcedGameState::RunSetup),
-        ("NodeTransition", ForcedGameState::NodeTransition),
+        ("TransitionOut", ForcedGameState::TransitionOut),
+        ("TransitionIn", ForcedGameState::TransitionIn),
         ("ChipSelect", ForcedGameState::ChipSelect),
         ("RunEnd", ForcedGameState::RunEnd),
         ("MetaProgression", ForcedGameState::MetaProgression),

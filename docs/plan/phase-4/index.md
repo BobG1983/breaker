@@ -8,11 +8,11 @@
 |-------|------|-----------|------|------|
 | ~~4a~~ | ~~Seeded RNG & Run Seed~~ | — | ~~Small~~ | **DONE** |
 | ~~[4b](phase-4b-chip-effects.md)~~ | ~~Chip Effect System~~ | — | ~~Medium-Large~~ | **DONE** |
-| [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity (4c.1 done) | 4b | Large (content-heavy) | Low technical, high design |
+| [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity (~~4c.1~~ ~~4c.2~~ done, 4c.3 pending) | 4b | Large (content-heavy) | Low technical, high design |
 | ~~[4d](phase-4d-trigger-effect.md)~~ | ~~Trigger/Effect Architecture~~ | ~~4b~~ | ~~Large~~ | **DONE** |
 | ~~[4e](phase-4e-node-escalation.md)~~ | ~~Node Sequence & Escalation~~ | ~~4a~~ | ~~Very Large~~ | **DONE** |
-| [4f](phase-4f-chip-offerings.md) | Chip Offering System | 4a, 4c | Medium | Low |
-| [4g](phase-4g-node-transitions.md) | Node Transitions & VFX | 4e | Medium | Low |
+| ~~[4f](phase-4f-chip-offerings.md)~~ | ~~Chip Offering System~~ | ~~4a, 4c~~ | ~~Medium~~ | **DONE** |
+| ~~[4g](phase-4g-node-transitions.md)~~ | ~~Node Transitions & VFX~~ | ~~4e~~ | ~~Medium~~ | **DONE** |
 | [4h](phase-4h-chip-evolution.md) | Chip Evolution | 4c, 4d, 4e | Medium | Low |
 | [4i](phase-4i-run-stats.md) | Run Stats & Summary | 4e, 4f | Medium | Low |
 | [4j](phase-4j-release-infrastructure.md) | Release Infrastructure | — | Small | Low |
@@ -127,7 +127,7 @@ All three are independent and can parallelize.
 | ~~**4**~~ | ~~4e.3 + 4e.4~~ | ~~New cell types (Lock, Regen) + layout pool reorg~~ | ~~cells, assets~~ | **DONE** |
 | ~~**5**~~ | ~~4d.1 + 4d.2~~ | ~~TriggerChain types + unified chain evaluation engine~~ | ~~behaviors, chips~~ | **DONE** |
 | ~~**6**~~ | ~~4d.3 + 4d.4~~ | ~~Shockwave + Surge POC (4c.2 deferred)~~ | ~~behaviors, assets~~ | **DONE** |
-| **7** | 4f + 4g | Chip offerings + node transitions (parallel) | chips, screen, fx |
+| ~~**7**~~ | ~~4f + 4g~~ | ~~Chip offerings + node transitions (parallel)~~ | ~~chips, screen, fx~~ | **DONE** |
 | **8** | 4h + 4i + 4j | Evolution + run stats + release infra (parallel capstones) | chips, run, ui, CI |
 
 ## What NOT to Combine

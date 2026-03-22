@@ -4,6 +4,7 @@
 - [named-agents-rule.md](named-agents-rule.md) — Always use named subagents, never run own versions
 - [agent-responsibility-boundaries.md](agent-responsibility-boundaries.md) — Never mix agent responsibilities: runner-tests=tests only, runner-linting=clippy/fmt only
 - [writer-tests-boundary.md](writer-tests-boundary.md) — writer-tests must only write failing tests, never implement (promoted to `.claude/rules/tdd.md`)
+- [use-research-agents-not-explore.md](use-research-agents-not-explore.md) — Use dedicated research agents for specialized tasks, not Explore agents
 
 ## Spec Patterns
 - [query-placement-rule.md](query-placement-rule.md) — Query type aliases live in domain/queries.rs

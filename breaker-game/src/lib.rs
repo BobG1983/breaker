@@ -14,7 +14,7 @@
 
 pub mod app;
 pub mod game;
-pub(crate) mod screen;
+pub mod screen;
 pub mod shared;
 
 pub(crate) mod audio;

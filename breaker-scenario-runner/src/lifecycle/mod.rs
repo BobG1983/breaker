@@ -2,7 +2,7 @@
 //!
 //! [`ScenarioLifecycle`] is a Bevy plugin that:
 //! - Bypasses menus: `OnEnter(GameState::MainMenu)` → immediately enters `Playing`
-//! - Auto-skips chip selection: `OnEnter(GameState::ChipSelect)` → `NodeTransition`
+//! - Auto-skips chip selection: `OnEnter(GameState::ChipSelect)` → `TransitionIn`
 //! - Counts fixed-update frames via [`ScenarioFrame`]
 //! - Exits when `max_frames` is reached; optionally exits when the run ends
 //!   naturally (controlled by [`ScenarioDefinition::allow_early_end`])
@@ -178,6 +178,7 @@ impl Plugin for ScenarioLifecycle {
                 (
                     (tick_scenario_frame, check_frame_limit)
                         .chain()
+                        .run_if(entered_playing)
                         .before(breaker::breaker::sets::BreakerSystems::Move),
                     // Invariant checkers and frozen position enforcement must run
                     // BEFORE physics systems. Otherwise bolt_lost respawns OOB
@@ -249,11 +250,11 @@ fn bypass_menu_to_playing(
     next_state.set(GameState::Playing);
 }
 
-/// Transitions immediately to `NodeTransition`, skipping chip selection UI.
+/// Transitions immediately to `TransitionIn`, skipping chip selection UI.
 ///
 /// No chip is applied — the scenario runner does not model chip effects.
 fn auto_skip_chip_select(mut next_state: ResMut<NextState<GameState>>) {
-    next_state.set(GameState::NodeTransition);
+    next_state.set(GameState::TransitionIn);
 }
 
 /// Increments [`ScenarioFrame`] by 1 each fixed-update tick.
@@ -302,8 +303,9 @@ pub(crate) fn map_forced_game_state(forced: ForcedGameState) -> GameState {
         ForcedGameState::MainMenu => GameState::MainMenu,
         ForcedGameState::RunSetup => GameState::RunSetup,
         ForcedGameState::Playing => GameState::Playing,
-        ForcedGameState::NodeTransition => GameState::NodeTransition,
+        ForcedGameState::TransitionOut => GameState::TransitionOut,
         ForcedGameState::ChipSelect => GameState::ChipSelect,
+        ForcedGameState::TransitionIn => GameState::TransitionIn,
         ForcedGameState::RunEnd => GameState::RunEnd,
         ForcedGameState::MetaProgression => GameState::MetaProgression,
     }
@@ -506,4 +508,13 @@ pub fn apply_debug_frame_mutations(
             }
         }
     }
+}
+
+/// Run condition: returns `true` when [`ScenarioStats::entered_playing`] is `true`.
+///
+/// Used as a `run_if` guard to prevent frame counting and frame-limit
+/// checking from running before the game has entered `Playing`.
+#[must_use]
+pub fn entered_playing(stats: Option<Res<ScenarioStats>>) -> bool {
+    stats.is_some_and(|s| s.entered_playing)
 }

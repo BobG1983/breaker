@@ -2,19 +2,19 @@
 
 | Message | Defined In | Registered By | Written By | Consumed By (actual) |
 |---------|-----------|---------------|------------|---------------------|
-| `BoltHitBreaker` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_breaker_collision | breaker/grade_bump, behaviors/bridges/bridge_overclock_breaker_impact |
-| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | behaviors/bridges/bridge_overclock_cell_impact |
-| `BoltHitWall` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | behaviors/bridges/bridge_overclock_wall_impact |
-| `BoltLost` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_lost | bolt/spawn_bolt_lost_text, behaviors/bridges/bridge_overclock_bolt_lost |
+| `BoltHitBreaker` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_breaker_collision | breaker/grade_bump, behaviors/bridge_breaker_impact |
+| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | behaviors/bridge_cell_impact |
+| `BoltHitWall` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | behaviors/bridge_wall_impact |
+| `BoltLost` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_lost | bolt/spawn_bolt_lost_text, behaviors/bridge_bolt_lost |
 | `DamageCell { cell, damage, source_bolt }` | `cells/messages.rs` | `CellsPlugin` | physics/bolt_cell_collision, behaviors/effects/shockwave | cells/handle_cell_hit |
-| `CellDestroyed` | `cells/messages.rs` | `CellsPlugin` | cells/handle_cell_hit | run/track_node_completion, behaviors/bridges/bridge_overclock_cell_destroyed |
+| `CellDestroyed` | `cells/messages.rs` | `CellsPlugin` | cells/handle_cell_hit | run/track_node_completion, behaviors/bridge_cell_destroyed |
 | `NodeCleared` | `run/node/messages.rs` | `NodePlugin` | run/node/track_node_completion | run/handle_node_cleared |
 | `TimerExpired` | `run/node/messages.rs` | `NodePlugin` | run/node/tick_node_timer, run/node/apply_time_penalty | run/handle_timer_expired |
 | `ApplyTimePenalty { seconds }` | `run/node/messages.rs` | `NodePlugin` | behaviors/time_penalty (observer) | run/node/apply_time_penalty |
 | `SpawnAdditionalBolt` | `bolt/messages.rs` | `BoltPlugin` | behaviors/spawn_bolt (observer) | bolt/spawn_additional_bolt |
 | `RunLost` | `run/messages.rs` | `RunPlugin` | behaviors/handle_life_lost | run/handle_run_lost |
-| `BumpPerformed { grade, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, behaviors/bridges/bridge_overclock_bump |
-| `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text |
+| `BumpPerformed { grade, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, behaviors/bridge_bump |
+| `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text, behaviors/bridge_bump_whiff |
 | `ChipSelected { name }` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/apply_chip_effect |
 | `BoltSpawned` | `bolt/messages.rs` | `BoltPlugin` | bolt/spawn_bolt | run/node/check_spawn_complete |
 | `BreakerSpawned` | `breaker/messages.rs` | `BreakerPlugin` | breaker/spawn_breaker | run/node/check_spawn_complete |
@@ -28,7 +28,7 @@
 ## Observer Events (intra-domain, not Messages)
 | Event | Domain | Triggered By | Observed By |
 |-------|--------|-------------|-------------|
-| `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` | behaviors | bridge_overclock_* systems (all in behaviors/bridges.rs) | behaviors/effects/* handlers (shockwave, life_lost, time_penalty, spawn_bolt) |
+| `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` | behaviors | bridge_* systems (all in behaviors/bridges.rs) | behaviors/effects/* handlers (shockwave, life_lost, time_penalty, spawn_bolt, speed_boost) |
 | `ChipEffectApplied { effect, max_stacks }` | chips | apply_chip_effect | effects/* handlers |
 
 NOTE (2026-03-21): ConsequenceFired REMOVED. OverclockEffectFired RENAMED to EffectFired. Both old streams (archetype consequences + overclock effects) now use EffectFired. bolt/behaviors/ DELETED — was the old home of OverclockEffectFired. behaviors/consequences/ DELETED — was the old ConsequenceFired handler home.

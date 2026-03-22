@@ -34,6 +34,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Follow the git workflow — see @.claude/rules/git.md
 - Run command line tools individually, do not chain them with &&
 - Fix lint errors in code — **never** suppress them with `#[allow(...)]` attributes or by modifying `[workspace.lints]` in `Cargo.toml`. The lint config in `Cargo.toml` is intentional and must not be changed without explicit approval.
+- Use TaskList to create a list of tasks visible to the user
 
 **NEVER do**:
 - Write code directly — always delegate to writer-tests/writer-code sub-agents

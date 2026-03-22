@@ -18,7 +18,7 @@ type: reference
 | BoltSystems::Reset | bolt/sets.rs | reset_bolt | (no cross-domain consumers) |
 | PhysicsSystems::BreakerCollision | physics/sets.rs | bolt_breaker_collision | breaker (grade_bump) |
 | PhysicsSystems::BoltLost | physics/sets.rs | bolt_lost | behaviors (bridge_bolt_lost) |
-| BehaviorSystems::Bridge | behaviors/sets.rs | bridge_bump, bridge_bolt_lost, bridge_bump_whiff | bolt (spawn_additional_bolt) |
+| BehaviorSystems::Bridge | behaviors/sets.rs | bridge_bump, bridge_bolt_lost, bridge_bump_whiff, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_cell_destroyed | bolt (spawn_additional_bolt) |
 | UiSystems::SpawnTimerHud | ui/sets.rs | spawn_timer_hud | behaviors (spawn_lives_display) |
 | NodeSystems::Spawn | run/node/sets.rs | spawn_cells_from_layout | breaker (apply_entity_scale_to_breaker), bolt (apply_entity_scale_to_bolt) |
 | NodeSystems::TrackCompletion | run/node/sets.rs | track_node_completion | run (handle_node_cleared) |
@@ -90,21 +90,8 @@ trigger_bump_visual .after(update_bump)
 Update schedule: animate_bump_visual, animate_tilt_visual, width_boost_visual
 ```
 
-### behaviors/ overclock bridges (FixedUpdate) — MOVED from bolt/behaviors/ (2026-03-21)
-```
-bridge_overclock_bump .after(BreakerSystems::GradeBump) .after(BehaviorSystems::Bridge)
-bridge_overclock_cell_impact .after(PhysicsSystems::BreakerCollision) .after(BehaviorSystems::Bridge)
-bridge_overclock_breaker_impact .after(PhysicsSystems::BreakerCollision) .after(BehaviorSystems::Bridge)
-bridge_overclock_wall_impact .after(PhysicsSystems::BreakerCollision) .after(BehaviorSystems::Bridge)
-bridge_overclock_cell_destroyed .after(BehaviorSystems::Bridge)
-bridge_overclock_bolt_lost .after(PhysicsSystems::BoltLost) .after(BehaviorSystems::Bridge)
-```
-All run_if(in_state(PlayingState::Active)). No SystemSet exported — these are leaf consumers, not ordering anchors.
-NOTE: These are now registered in BehaviorsPlugin (behaviors/plugin.rs), not in BoltBehaviorsPlugin (which was deleted).
-
 ### Known Doc Drift
-- ordering.md "Defined sets" table is missing BoltSystems::InitParams and BoltSystems::Reset (code has them in bolt/sets.rs)
-- ordering.md OnEnter(Playing) chain is missing apply_entity_scale_to_breaker and apply_entity_scale_to_bolt
-- NodeSystems::Spawn now has cross-domain consumers (breaker, bolt entity scale systems) — not reflected in ordering.md table
-- messages.md active messages table is missing DamageCell and BoltHitWall
-- BoltHitBreaker consumers should include behaviors/bridges/bridge_overclock_breaker_impact (moved from bolt/behaviors/ in refactor/unify-behaviors)
+- ordering.md OnEnter(Playing) chain is missing apply_entity_scale_to_breaker and apply_entity_scale_to_bolt (both in breaker/plugin.rs OnEnter(Playing) .after(BreakerSystems::InitParams).after(NodeSystems::Spawn))
+- NodeSystems::Spawn table entry does not list cross-domain consumers (breaker, bolt entity scale systems)
+
+Note: BoltSystems::InitParams/Reset, DamageCell, BoltHitWall, and BoltHitBreaker consumer list were all fixed in docs as of 2026-03-21/2026-03-22.

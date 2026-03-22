@@ -46,9 +46,9 @@ type: reference
 - `propagate_breaker_defaults` and `propagate_archetype_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
 
 ## Scenario Runner (breaker-scenario-runner)
-- 15 systems in FixedUpdate (lifecycle chain + 12 invariant checkers + enforce_frozen_positions + tag_game_entities), 1 OnEnter group
+- 17 systems in FixedUpdate (lifecycle chain + 14 invariant checkers + enforce_frozen_positions + tag_game_entities), 1 OnEnter group
 - Lifecycle chain: `tick_scenario_frame → inject_scenario_input → check_frame_limit` .chain() .before(BreakerSystems::Move)
-- 12 invariant checkers (unordered, all read-only on game world): check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable, check_breaker_in_bounds, check_no_nan, check_timer_non_negative, check_valid_state_transitions, check_valid_breaker_state, check_timer_monotonically_decreasing, check_breaker_position_clamped, check_physics_frozen_during_pause, check_no_entity_leaks
+- 14 invariant checkers (unordered, all read-only on game world): check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable, check_breaker_in_bounds, check_no_nan, check_timer_non_negative, check_valid_state_transitions, check_valid_breaker_state, check_timer_monotonically_decreasing, check_breaker_position_clamped, check_physics_frozen_during_pause, check_no_entity_leaks, check_offering_no_duplicates, check_maxed_chip_never_offered
 - 2 mutators: enforce_frozen_positions (writes &mut Transform on ScenarioPhysicsFrozen entities), tag_game_entities (Commands insert marker components)
 - OnEnter chain: `init_scenario_input → tag_game_entities → apply_debug_setup` .chain() .after(init_bolt_params)
 - InputStrategy: Chaos, Scripted, Hybrid
@@ -59,8 +59,8 @@ type: reference
 - check_valid_state_transitions uses ResMut<PreviousGameState> (not Local) — stored in world, survives ticks
 - check_valid_breaker_state uses Local<Option<BreakerState>> — not in world, per-system state
 - All new invariant checkers imported from breaker:: — uses pub bolt, breaker, run modules (lib.rs visibility change)
-- 12 InvariantKind variants: BoltInBounds, BoltSpeedInRange, BoltCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN, TimerNonNegative, ValidStateTransitions, ValidBreakerState, TimerMonotonicallyDecreasing, BreakerPositionClamped, PhysicsFrozenDuringPause
-- New scenario categories: mechanic/ (11 scenarios), stress/ (13 scenarios), self_tests/ (3 scenarios)
+- 14 InvariantKind variants: BoltInBounds, BoltSpeedInRange, BoltCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN, TimerNonNegative, ValidStateTransitions, ValidBreakerState, TimerMonotonicallyDecreasing, BreakerPositionClamped, PhysicsFrozenDuringPause, OfferingNoDuplicates, MaxedChipNeverOffered
+- Scenario categories (as of 2026-03-22): mechanic/ (12 scenarios), stress/ (15 scenarios), self_tests/ (12 scenarios)
 
 ## Still Stub (No Systems)
 AudioPlugin

@@ -110,4 +110,66 @@ mod tests {
             violations.iter().map(|v| &v.message).collect::<Vec<_>>()
         );
     }
+
+    // ── TransitionOut / TransitionIn path validation ─────────────────────
+
+    /// Helper: set up previous state, transition to target, run checker,
+    /// return violations.
+    fn transition_violations(previous: GameState, target: GameState) -> Vec<ViolationEntry> {
+        let mut app = test_app_valid_transitions();
+        app.world_mut()
+            .insert_resource(PreviousGameState(Some(previous)));
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(target);
+        app.update(); // process state transition
+        tick(&mut app); // run checker in FixedUpdate
+
+        let log = app.world().resource::<ViolationLog>();
+        log.0
+            .iter()
+            .filter(|v| v.invariant == InvariantKind::ValidStateTransitions)
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn transition_out_from_playing_is_valid() {
+        let violations = transition_violations(GameState::Playing, GameState::TransitionOut);
+        assert!(
+            violations.is_empty(),
+            "Playing→TransitionOut should be valid, got: {:?}",
+            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn transition_out_to_chip_select_is_valid() {
+        let violations = transition_violations(GameState::TransitionOut, GameState::ChipSelect);
+        assert!(
+            violations.is_empty(),
+            "TransitionOut→ChipSelect should be valid, got: {:?}",
+            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn chip_select_to_transition_in_is_valid() {
+        let violations = transition_violations(GameState::ChipSelect, GameState::TransitionIn);
+        assert!(
+            violations.is_empty(),
+            "ChipSelect→TransitionIn should be valid, got: {:?}",
+            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn transition_in_to_playing_is_valid() {
+        let violations = transition_violations(GameState::TransitionIn, GameState::Playing);
+        assert!(
+            violations.is_empty(),
+            "TransitionIn→Playing should be valid, got: {:?}",
+            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+        );
+    }
 }

@@ -37,7 +37,7 @@ pub(crate) fn handle_node_cleared(
     run_state.transition_queued = true;
 
     if (run_state.node_index as usize) < final_index {
-        next_state.set(GameState::ChipSelect);
+        next_state.set(GameState::TransitionOut);
     } else {
         run_state.outcome = RunOutcome::Won;
         next_state.set(GameState::RunEnd);
@@ -101,15 +101,15 @@ mod tests {
     }
 
     #[test]
-    fn non_final_node_transitions_to_chip_select() {
+    fn non_final_node_transitions_to_transition_out() {
         let mut app = test_app(0, 3);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("ChipSelect"),
-            "expected ChipSelect, got: {next:?}"
+            format!("{next:?}").contains("TransitionOut"),
+            "expected TransitionOut, got: {next:?}"
         );
         let run_state = app.world().resource::<RunState>();
         assert!(run_state.transition_queued);
@@ -219,8 +219,8 @@ mod tests {
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("ChipSelect"),
-            "node_index 3 of 9 should advance to ChipSelect, not end the run; got: {next:?}"
+            format!("{next:?}").contains("TransitionOut"),
+            "node_index 3 of 9 should advance to TransitionOut, not end the run; got: {next:?}"
         );
 
         let run_state = app.world().resource::<RunState>();
@@ -254,17 +254,17 @@ mod tests {
     }
 
     #[test]
-    fn penultimate_node_transitions_to_chip_select_not_run_end() {
+    fn penultimate_node_transitions_to_transition_out_not_run_end() {
         // NodeSequence has 9 assignments (final_index = 8), registry has 3 layouts.
-        // At node_index 7, we are one before the last — should go to ChipSelect.
+        // At node_index 7, we are one before the last — should go to TransitionOut.
         let mut app = test_app_with_sequence(7, 3, 9);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("ChipSelect"),
-            "node_index 7 of 9 should advance to ChipSelect; got: {next:?}"
+            format!("{next:?}").contains("TransitionOut"),
+            "node_index 7 of 9 should advance to TransitionOut; got: {next:?}"
         );
 
         let run_state = app.world().resource::<RunState>();

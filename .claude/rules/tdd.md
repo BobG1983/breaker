@@ -7,6 +7,7 @@ Authoritative reference for the TDD cycle in the delegated agent pipeline.
 | Phase | Agent | What happens | Hard rule |
 |-------|-------|-------------|-----------|
 | RED | writer-tests | Write failing tests + compilable stubs | Tests MUST fail. NEVER implement production logic. |
+| Test review | reviewer-tests (orchestrator) | Verify tests match spec | MUST pass before RED gate. |
 | RED gate | runner-tests (orchestrator) | Verify tests compile and fail | MUST pass before launching writer-code. |
 | GREEN | writer-code | Minimum code to pass tests | NEVER modify tests. NEVER add untested features. |
 | REFACTOR | Phase 2 + Phase 3 + /simplify | Reviewers find issues, fix agents resolve them | Complete when all reviewers pass and /simplify is clean. |
@@ -24,14 +25,18 @@ Authoritative reference for the TDD cycle in the delegated agent pipeline.
 - **writer-code**: ONLY production code. NEVER modify tests. If a test seems wrong, flag it — do not change it.
 - **NEITHER agent runs cargo. EVER.** Only runner agents (runner-tests, runner-linting, runner-scenarios) execute cargo commands. See `.claude/rules/cargo.md`.
 
+## Test Review
+
+After writer-tests completes, the orchestrator launches **reviewer-tests** to verify tests match the spec. If reviewer-tests reports BLOCKING findings, route back to writer-tests with a test revision spec. Only proceed to the RED gate once reviewer-tests passes.
+
 ## RED Gate
 
-After writer-tests completes, the orchestrator launches runner-tests to verify:
+After reviewer-tests passes, the orchestrator launches runner-tests to verify:
 
 1. Tests compile
 2. Tests fail (if any pass → the test is wrong or the behavior already exists — investigate before proceeding)
 
-Only after the RED gate passes does the orchestrator launch writer-code.
+Only after both reviewer-tests and the RED gate pass does the orchestrator launch writer-code.
 
 ## When to Commit
 

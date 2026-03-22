@@ -1,9 +1,10 @@
 //! Chips domain plugin — Amps, Augments, and Overclocks system.
 
 pub(crate) mod components;
-pub(crate) mod definition;
+pub mod definition;
 pub(crate) mod effects;
-pub(crate) mod inventory;
+pub mod inventory;
+pub(crate) mod offering;
 mod plugin;
 mod resources;
 pub(crate) mod systems;

@@ -41,7 +41,7 @@ impl Plugin for RunPlugin {
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
-            .add_systems(OnEnter(GameState::NodeTransition), advance_node)
+            .add_systems(OnEnter(GameState::TransitionIn), advance_node)
             .add_systems(
                 OnExit(GameState::MainMenu),
                 (

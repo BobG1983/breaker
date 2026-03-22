@@ -137,6 +137,23 @@ handle_run_lost .after(handle_node_cleared)
 
 Reading: completion tracking runs first (cells consumed → NodeCleared sent), then run handles it. Timer ticks, then time penalties apply. Run checks for timer expiry after penalties and after node-cleared (clear beats a simultaneous timer expiry — player wins tie-frame). Run-lost is checked last.
 
+### OnEnter(GameState::TransitionOut) / OnEnter(GameState::TransitionIn)
+
+```
+OnEnter(TransitionOut):
+  spawn_transition_out        [fx domain — spawns TransitionOverlay with TransitionTimer]
+OnExit(TransitionOut):
+  cleanup_transition          [fx domain — despawns all TransitionOverlay entities]
+
+OnEnter(TransitionIn):
+  advance_node                [run domain — increments node index in RunState]
+  spawn_transition_in         [fx domain — spawns TransitionOverlay with TransitionTimer]
+OnExit(TransitionIn):
+  cleanup_transition          [fx domain — despawns all TransitionOverlay entities]
+```
+
+Note: `advance_node` and `spawn_transition_in` are unordered relative to each other (no data dependency). The `animate_transition` system runs in `Update` conditioned on `in_state(TransitionOut).or(in_state(TransitionIn))` — it ticks the `TransitionTimer` and sets `NextState` to `ChipSelect` (on `TransitionOut` completion) or `Playing` (on `TransitionIn` completion).
+
 ### OnExit(GameState::MainMenu)
 
 ```

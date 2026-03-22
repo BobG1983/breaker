@@ -54,10 +54,19 @@ type: reference
 - At stacks=2 range 96: hits ~3-6 cells (vertical + near-diagonal neighbors)
 - At stacks=3 range 128: hits ~5-10 cells (covers ~2.5 cell widths in all directions)
 
+## Offering Parameters (2026-03-22)
+- Rarity weights: Common=100, Uncommon=50, Rare=15, Legendary=3 (code defaults — NOT in RON yet)
+- Seen decay factor: 0.8 (code default — NOT in RON yet)
+- Offers per node: 3 (code default — NOT in RON yet)
+- Chip select timer: 8.0s (RON value, down from 10.0s default)
+- Transition out duration: 0.5s, in duration: 0.3s (code defaults — no transition RON file)
+- Flash color: white [1.0, 1.0, 1.0], Sweep color: neon cyan [0.0, 0.8, 1.0]
+
 ## Playtest Tuning Knobs (ordered by impact)
 1. perfect_window: 0.15s -> try 0.10-0.12s if too easy
-2. chip_select_timer: 10.0s -> try 8.0s
+2. ~~chip_select_timer: 10.0s -> try 8.0s~~ DONE (RON at 8.0s)
 3. dash_mult: 4.0x -> try 2.5-3.0x if positioning feels too forgiving
 4. regen_rate: 2.0 -> lower if stalemates occur
 5. timer_mult per tier: current 1.0->0.6 -> steeper curve if late game is too comfortable
 6. prism_bolt_lost_penalty: 3.0s -> 7-8s or add LoseExtraBolts consequence
+7. seen_decay_factor: 0.8 -> try 0.7 if offerings feel too samey across runs

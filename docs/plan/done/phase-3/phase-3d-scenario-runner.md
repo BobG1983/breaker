@@ -72,7 +72,7 @@ cargo dscenario -- --all --headless            # run all, headless (CI)
 4. Add `ScenarioLifecycle` plugin which:
    - Loads the scenario RON file via `ScenarioConfig` resource
    - Auto-navigates `MainMenu` → `Playing` with the specified breaker and layout override
-   - Auto-skips `ChipSelect` → `NodeTransition`
+   - Auto-skips `ChipSelect` → `TransitionIn` (was `NodeTransition` before 4g)
    - Counts fixed-update frames via `ScenarioFrame`
    - Exits when `max_frames` is reached or `RunEnd` state is entered
 5. Invariant systems run each FixedUpdate, appending to `ViolationLog`

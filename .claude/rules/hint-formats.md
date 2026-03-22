@@ -48,6 +48,18 @@ Standardized output formats that Phase 2 agents produce and Phase 3 routing cons
 - Delegate: main agent can hand this directly to writer-tests if confidence is high
 ```
 
+## Test revision hint (reviewer-tests)
+
+```
+**Test revision hint:**
+- Test file: `path/to/test_file.rs`
+- Spec behavior: [which numbered behavior from the spec]
+- Finding: [what's wrong — missing coverage, wrong values, production logic in stub]
+- Severity: BLOCKING | IMPORTANT | MINOR
+- Fix: [specific change needed]
+- Delegate: main agent routes back to writer-tests with test revision spec
+```
+
 ## Security finding (guard-security)
 
 ```

@@ -2,21 +2,39 @@
 
 use bevy::prelude::*;
 
-use crate::{screen::chip_select::resources::ChipSelectTimer, shared::GameState};
+use crate::{
+    chips::inventory::ChipInventory,
+    screen::chip_select::{
+        ChipSelectConfig,
+        resources::{ChipOffers, ChipSelectTimer},
+    },
+    shared::GameState,
+};
 
 /// Ticks the chip selection timer and auto-advances on expiry.
 ///
-/// Timer expiry transitions to [`GameState::NodeTransition`] (skip, no chip).
+/// Timer expiry transitions to [`GameState::TransitionIn`] (skip, no chip).
 pub(crate) fn tick_chip_timer(
     time: Res<Time>,
     mut timer: ResMut<ChipSelectTimer>,
     mut next_state: ResMut<NextState<GameState>>,
+    offers: Option<Res<ChipOffers>>,
+    inventory: Option<ResMut<ChipInventory>>,
+    config: Option<Res<ChipSelectConfig>>,
 ) {
     timer.remaining -= time.delta_secs();
 
     if timer.remaining <= 0.0 {
         timer.remaining = 0.0;
-        next_state.set(GameState::NodeTransition);
+
+        // On timeout, all offered chips were seen but none selected — decay all
+        if let (Some(offers), Some(mut inventory), Some(config)) = (offers, inventory, config) {
+            for offer in &offers.0 {
+                inventory.record_offered(&offer.name, config.seen_decay_factor);
+            }
+        }
+
+        next_state.set(GameState::TransitionIn);
     }
 }
 
@@ -52,15 +70,15 @@ mod tests {
     }
 
     #[test]
-    fn timer_expiry_transitions_to_node_transition() {
+    fn timer_expiry_transitions_to_transition_in() {
         // Start with 0 remaining — should expire immediately
         let mut app = test_app(0.0);
         app.update();
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("NodeTransition"),
-            "expected NodeTransition, got: {next:?}"
+            format!("{next:?}").contains("TransitionIn"),
+            "expected TransitionIn, got: {next:?}"
         );
     }
 
@@ -84,8 +102,77 @@ mod tests {
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            !format!("{next:?}").contains("NodeTransition"),
+            !format!("{next:?}").contains("TransitionIn"),
             "expected no transition, got: {next:?}"
         );
+    }
+
+    // --- Decay-on-expiry tests ---
+
+    use crate::{
+        chips::{
+            ChipDefinition,
+            definition::{AmpEffect, ChipEffect},
+            inventory::ChipInventory,
+        },
+        screen::chip_select::{ChipSelectConfig, resources::ChipOffers},
+    };
+
+    fn make_offers_3() -> ChipOffers {
+        ChipOffers(vec![
+            ChipDefinition::test("A", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
+            ChipDefinition::test("B", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
+            ChipDefinition::test("C", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
+        ])
+    }
+
+    fn test_app_with_offers(remaining: f32, offers: ChipOffers) -> App {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<GameState>()
+            .insert_resource(ChipSelectTimer { remaining })
+            .insert_resource(offers)
+            .init_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .add_systems(Update, tick_chip_timer);
+        app
+    }
+
+    #[test]
+    fn timer_expiry_applies_decay_to_all_offered_chips() {
+        // Timer at 0.0 — expires immediately on first update
+        let mut app = test_app_with_offers(0.0, make_offers_3());
+        app.update();
+
+        let inventory = app.world().resource::<ChipInventory>();
+        let config = app.world().resource::<ChipSelectConfig>();
+        let expected_decay = config.seen_decay_factor; // 0.8
+
+        // On timeout (no chip selected), ALL offered chips should be decayed
+        for name in &["A", "B", "C"] {
+            let decay = inventory.weight_decay(name);
+            assert!(
+                (decay - expected_decay).abs() < f32::EPSILON,
+                "expected chip '{name}' to have decay {expected_decay} after timer expiry, got {decay}"
+            );
+        }
+    }
+
+    #[test]
+    fn timer_no_decay_when_time_remains() {
+        // Timer at 100.0 — plenty of time remaining, should NOT expire
+        let mut app = test_app_with_offers(100.0, make_offers_3());
+        app.update();
+
+        let inventory = app.world().resource::<ChipInventory>();
+
+        // Timer has not expired — no decay should be applied
+        for name in &["A", "B", "C"] {
+            let decay = inventory.weight_decay(name);
+            assert!(
+                (decay - 1.0).abs() < f32::EPSILON,
+                "expected chip '{name}' to have no decay (1.0) when time remains, got {decay}"
+            );
+        }
     }
 }

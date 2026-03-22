@@ -114,10 +114,12 @@ pub enum GameState {
     RunSetup,
     /// Active gameplay within a node. See [`PlayingState`] for sub-states.
     Playing,
-    /// Transient 1-frame state between nodes — exits `Playing` then re-enters it.
-    NodeTransition,
+    /// Animated transition out of a completed node (clear animation).
+    TransitionOut,
     /// Timed chip selection between nodes.
     ChipSelect,
+    /// Animated transition into the next node (load animation).
+    TransitionIn,
     /// Run end screen — win or lose.
     RunEnd,
     /// Between-run Flux spending and meta-progression.
