@@ -95,6 +95,22 @@ impl ChipInventory {
         self.held.len()
     }
 
+    /// Remove one stack of the named chip.
+    ///
+    /// Returns `true` if a stack was removed, `false` if the chip is not held.
+    /// If this reduces the stack count to 0, the entry is removed entirely.
+    #[must_use]
+    pub fn remove_chip(&mut self, name: &str) -> bool {
+        let Some(entry) = self.held.get_mut(name) else {
+            return false;
+        };
+        entry.stacks -= 1;
+        if entry.stacks == 0 {
+            self.held.remove(name);
+        }
+        true
+    }
+
     /// Remove all held chips and seen history.
     pub fn clear(&mut self) {
         self.held.clear();
@@ -679,6 +695,103 @@ mod tests {
         assert!(
             weight.abs() < f32::EPSILON,
             "expected 0.0 (0.0*0.8), got {weight}"
+        );
+    }
+
+    // --- Behavior: remove_chip decrements stack count ---
+
+    #[test]
+    fn remove_chip_decrements_stacks_from_two_to_one() {
+        let mut inv = ChipInventory::default();
+        let def = piercing_shot_def(); // max_stacks=3, Common
+        let _ = inv.add_chip("Piercing Shot", &def);
+        let _ = inv.add_chip("Piercing Shot", &def);
+        assert_eq!(inv.stacks("Piercing Shot"), 2);
+
+        let removed = inv.remove_chip("Piercing Shot");
+        assert!(removed, "remove_chip should return true when chip is held");
+        assert_eq!(
+            inv.stacks("Piercing Shot"),
+            1,
+            "stacks should decrease from 2 to 1"
+        );
+    }
+
+    #[test]
+    fn remove_chip_at_one_stack_removes_entry_entirely() {
+        let mut inv = ChipInventory::default();
+        let def = single_stack_def(); // max_stacks=1
+        let _ = inv.add_chip("Single Stack", &def);
+        assert_eq!(inv.stacks("Single Stack"), 1);
+
+        let removed = inv.remove_chip("Single Stack");
+        assert!(removed, "remove_chip should return true");
+        assert_eq!(
+            inv.stacks("Single Stack"),
+            0,
+            "stacks should be 0 after removing last stack"
+        );
+        assert_eq!(
+            inv.total_held(),
+            0,
+            "total_held should decrease when last stack removed"
+        );
+        assert!(
+            !inv.held_chips().any(|(name, _)| name == "Single Stack"),
+            "held_chips should no longer contain removed chip"
+        );
+        assert!(
+            !inv.is_maxed("Single Stack"),
+            "is_maxed should return false after removal"
+        );
+    }
+
+    #[test]
+    fn remove_chip_on_chip_not_held_returns_false() {
+        let mut inv = ChipInventory::default();
+        assert!(
+            !inv.remove_chip("Nonexistent"),
+            "remove_chip should return false for unheld chip"
+        );
+        assert_eq!(inv.total_held(), 0, "total_held should remain 0");
+    }
+
+    #[test]
+    fn remove_chip_does_not_affect_other_held_chips() {
+        let mut inv = ChipInventory::default();
+        let def_a = piercing_shot_def(); // max_stacks=3
+        let def_b = single_stack_def(); // max_stacks=1
+        let _ = inv.add_chip("Piercing Shot", &def_a);
+        let _ = inv.add_chip("Piercing Shot", &def_a);
+        let _ = inv.add_chip("Single Stack", &def_b);
+
+        let _ = inv.remove_chip("Piercing Shot");
+        assert_eq!(
+            inv.stacks("Piercing Shot"),
+            1,
+            "Piercing Shot should go from 2 to 1"
+        );
+        assert_eq!(
+            inv.stacks("Single Stack"),
+            1,
+            "Single Stack should be unchanged"
+        );
+    }
+
+    #[test]
+    fn remove_chip_then_add_chip_re_adds_from_zero() {
+        let mut inv = ChipInventory::default();
+        let def = single_stack_def(); // max_stacks=1
+        let _ = inv.add_chip("Single Stack", &def);
+        let _ = inv.remove_chip("Single Stack");
+        assert_eq!(inv.stacks("Single Stack"), 0);
+
+        let added = inv.add_chip("Single Stack", &def);
+        assert!(added, "add_chip should succeed after removal");
+        assert_eq!(
+            inv.stacks("Single Stack"),
+            1,
+            "stacks should be 1 after re-adding"
         );
     }
 }
