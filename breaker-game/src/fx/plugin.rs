@@ -2,12 +2,20 @@
 
 use bevy::prelude::*;
 
-use crate::{fx::systems::animate_fade_out, shared::PlayingState};
+use crate::{
+    fx::{
+        systems::animate_fade_out,
+        transition::{
+            animate_transition, cleanup_transition, spawn_transition_in, spawn_transition_out,
+        },
+    },
+    shared::{GameState, PlayingState},
+};
 
 /// Plugin for the fx domain.
 ///
-/// Owns cross-cutting visual effects: fade-out animations, and (future) flash,
-/// screen shake, and particles.
+/// Owns cross-cutting visual effects: fade-out animations, transition overlays,
+/// and (future) screen shake and particles.
 pub(crate) struct FxPlugin;
 
 impl Plugin for FxPlugin {
@@ -15,7 +23,16 @@ impl Plugin for FxPlugin {
         app.add_systems(
             Update,
             animate_fade_out.run_if(in_state(PlayingState::Active)),
-        );
+        )
+        .add_systems(OnEnter(GameState::TransitionOut), spawn_transition_out)
+        .add_systems(OnEnter(GameState::TransitionIn), spawn_transition_in)
+        .add_systems(
+            Update,
+            animate_transition
+                .run_if(in_state(GameState::TransitionOut).or(in_state(GameState::TransitionIn))),
+        )
+        .add_systems(OnExit(GameState::TransitionOut), cleanup_transition)
+        .add_systems(OnExit(GameState::TransitionIn), cleanup_transition);
     }
 }
 
