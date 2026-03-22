@@ -37,5 +37,9 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 | **EffectFired** | Observer event fired by bridge systems when a `TriggerChain` fully resolves to a leaf. Carries the leaf `TriggerChain` variant and an optional bolt entity | `EffectFired` |
 | **FrameMutation** | A scripted mutation applied at a specific fixed-update frame during a scenario run. Used in `frame_mutations` to trigger invariant violations at deterministic points in self-test scenarios | `FrameMutation`, `frame_mutations` field in `ScenarioDefinition` |
 | **MutationKind** | The enum of mutation operations a `FrameMutation` can apply: `SetBreakerState`, `SetTimerRemaining`, `SpawnExtraEntities`, `MoveBolt`, `TogglePause` | `MutationKind`, `apply_debug_frame_mutations` |
+| **TransitionOut** | Game state representing an animated transition out of a completed node (clear animation). Replaces the old 1-frame `NodeTransition` state. | `GameState::TransitionOut`, `spawn_transition_out`, `TransitionDirection::Out` |
+| **TransitionIn** | Game state representing an animated transition into the next node (load animation). | `GameState::TransitionIn`, `spawn_transition_in`, `TransitionDirection::In` |
+| **TransitionStyle** | Visual style of a node transition animation — either `Flash` (full-screen overlay fades in/out) or `Sweep` (full-screen rect sweeps across screen). Picked randomly from the seeded `GameRng`. | `TransitionStyle::Flash`, `TransitionStyle::Sweep` |
+| **ChipOffers** | Transient resource holding the `ChipDefinition`s offered on the chip selection screen for the current visit. Inserted by `generate_chip_offerings` on `OnEnter(ChipSelect)` and consumed by `spawn_chip_select` and `handle_chip_input`. | `ChipOffers`, `generate_chip_offerings` |
 
 **Do NOT use generic terms** like "paddle", "ball", "brick", "level", "powerup", or "upgrade" for type names, identifiers, or modules.
