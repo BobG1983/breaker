@@ -165,3 +165,9 @@ type: reference
 - Wave 3 (2026-03-22): `TransitionOut` is only entered for non-final nodes (RunEnd bypass goes directly from Playing). `animate_transition` for Out always targets ChipSelect — correct because TransitionOut is never entered on the final node.
 - Wave 3 (2026-03-22): `CleanupOnNodeExit` fires `OnExit(Playing)`. Playing→TransitionOut fires this cleanup — bolts/cells despawned before chip select. This is correct; re-spawned by `OnEnter(Playing)` systems in NodePlugin.
 - Wave 3 (2026-03-22): `handle_chip_input` empty-offers branch: confirm-key triggers `NextState(TransitionIn)` directly without sending ChipSelected. Correct — no chip to select, advance anyway.
+- 4h (2026-03-22): `remove_chip` u32 underflow is not possible: `add_chip` always inserts with `stacks: 1`; the only mutations are `+= 1` and `-= 1` with HashMap removal at 0. An entry always has `stacks >= 1` when it exists. Safe.
+- 4h (2026-03-22): `EvolutionRegistry.eligible_evolutions` uses `>=` for stacks check — correct; player must hold AT LEAST the required count, not exactly.
+- 4h (2026-03-22): `apply_chip_effect` uses `Option<ResMut<ChipInventory>>` — defensive guard; in production inventory is always Some, but guard prevents panic in test apps that don't init the resource.
+- 4i (2026-03-22): `track_node_cleared_stats` FastClear math `elapsed = total - remaining` is correct; no division involved, no div-by-zero when total=0 (0 < 0*0.5 = 0 is false, no false positive).
+- 4i (2026-03-22): `track_node_cleared_stats` highlight cap: `nodes_cleared += 1` runs BEFORE the `continue` guard, so node count is always accurate even when highlights are full.
+- 4i (2026-03-22): `capture_run_seed` re-seeding logic in the None branch: generates seed from RNG, stores it, then re-seeds RNG with that seed. This makes the RNG deterministic starting from the captured seed for subsequent use. Correct.

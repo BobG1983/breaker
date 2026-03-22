@@ -95,6 +95,16 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 ## BumpForceBoost Dead Code (confirmed 2026-03-21)
 - `BumpForceBoost` component is stamped by `handle_bump_force_boost` (chips/effects/bump_force_boost.rs) but no system reads it to affect bump behavior. The chip effect observer correctly stacks the value on the breaker, but the value is never consumed. This is a pre-existing gap, not introduced by the SpeedBoost refactor. The PR description notes it as "intentional — left for future use."
 
+## 4h/4i Run Stats Bugs (2026-03-22, feature/wave-3-offerings-transitions) — OPEN
+
+- **All 8 new stats/highlight systems never registered in RunPlugin**: `run/plugin.rs` — `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_chips_collected`, `track_node_cleared_stats`, `reset_highlight_tracker`, `capture_run_seed` are exported from `run/systems/mod.rs` but never added to the plugin. `RunStats` and `HighlightTracker` are also not initialized as resources in `RunPlugin`. All stats remain at their default zero values; no highlights are ever detected. Confidence: HIGH.
+
+- **RunStats never reset between runs**: `run/systems/reset_run_state.rs` — `reset_run_state` calls `*run_state = RunState::default()` and `chip_inventory.clear()` but does NOT reset `RunStats`. Stats (cells destroyed, bumps, bolts lost, highlights, seed, etc.) from run N accumulate into run N+1. Confidence: HIGH.
+
+- **MassDestruction and FirstEvolution highlight variants defined but never detected**: `run/resources.rs:102,108` / `run/systems/track_node_cleared_stats.rs` — `HighlightKind::MassDestruction` and `HighlightKind::FirstEvolution` are defined and the infrastructure to detect them exists (`cell_destroyed_times` Vec in HighlightTracker), but no detection code exists anywhere. `MASS_DESTRUCTION_COUNT` is declared but never used. `cell_destroyed_times` is populated by `track_cells_destroyed` but never queried for time-window analysis. Confidence: HIGH.
+
+- **capture_run_seed seed=0 edge case**: `run/systems/capture_run_seed.rs:21-30` — the early-return guard is `if stats.seed != 0 { return; }`. If `rng.0.random::<u64>()` returns 0 (probability 2^-64, practically impossible but not structurally impossible), `stats.seed` is set to 0 and the guard does NOT prevent re-generation on the next call. On re-generation, a different seed is generated and the RNG is re-seeded with it, silently changing the run seed mid-run. Confidence: medium (probability is astronomically low but the sentinel value is structurally fragile).
+
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — OPEN
 
 - **spawn_chip_select overwrites ChipOffers with unweighted registry-order list**: `screen/chip_select/systems/spawn_chip_select.rs:23,50` — Despite the `(generate_chip_offerings, ApplyDeferred, spawn_chip_select).chain()` wiring in ChipSelectPlugin, `spawn_chip_select` reads `registry.ordered_values().take(MAX_CARDS)` directly and then calls `commands.insert_resource(ChipOffers(offers))`, overwriting the weighted-random `ChipOffers` inserted by `generate_chip_offerings`. The entire offering algorithm is bypassed. Players always see the same first-N chips from registry insertion order.
