@@ -65,10 +65,10 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 - **Global-triggered Shockwave no-ops silently**: FIXED (2026-03-20, feature/overclock-trigger-chain). `EffectFired.bolt` (was `OverclockEffectFired.bolt`) changed from `Entity` (using PLACEHOLDER for global triggers) to `Option<Entity>` (using `None`). `handle_shockwave` explicitly `let Some(bolt_entity) = trigger.event().bolt else { return; }` — the no-op for global triggers is now intentional and documented. Test `shockwave_no_op_with_none_bolt` covers this. Design decision: global-trigger shockwaves require a bolt entity for position; no position → no area damage. See design-principles.md for the design note.
 
-- **bridge_overclock_cell_destroyed fires once for N destroyed cells**: Uses `reader.read().count() == 0` to detect any messages then evaluates chains once regardless of count. If N cells are destroyed in one frame, `OnCellDestroyed(Shockwave)` fires exactly once. The comment says "once per message" but implementation is "once if any messages". If design intent is one-shockwave-per-destroyed-cell, this is a bug.
+- **bridge_cell_destroyed fires once for N destroyed cells**: Uses `reader.read().count() == 0` to detect any messages then evaluates chains once regardless of count. If N cells are destroyed in one frame, `OnCellDestroyed(Shockwave)` fires exactly once. The comment says "once per message" but implementation is "once if any messages". If design intent is one-shockwave-per-destroyed-cell, this is a bug.
   - Confidence: medium (design intent unclear)
 
-- **inter-frame cascade for OnCellDestroyed(Shockwave)**: Shockwave writes DamageCell messages → handle_cell_hit processes them and writes CellDestroyed → on the next frame, bridge_overclock_cell_destroyed sees those CellDestroyed messages and fires the shockwave again → shockwave writes more DamageCell → etc. Bounded (terminates when no in-range cells remain), but produces multiple shockwave rounds per original trigger. May be surprising.
+- **inter-frame cascade for OnCellDestroyed(Shockwave)**: Shockwave writes DamageCell messages → handle_cell_hit processes them and writes CellDestroyed → on the next frame, bridge_cell_destroyed sees those CellDestroyed messages and fires the shockwave again → shockwave writes more DamageCell → etc. Bounded (terminates when no in-range cells remain), but produces multiple shockwave rounds per original trigger. May be surprising.
   - Confidence: medium (may be intentional cascade mechanic)
   - Confidence: medium (may be intentional)
 
@@ -78,7 +78,7 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` (was `OverclockTriggerKind`) in `behaviors/evaluate.rs` now includes EarlyBump, LateBump, BumpWhiff variants. The evaluate() function's or-pattern now covers all 10 trigger kinds. VERIFY: check behaviors/evaluate.rs — if TriggerKind has EarlyBump/LateBump/BumpWhiff variants and evaluate() handles them, this is fixed.
 
-- **No bridge for BumpWhiffed**: `bridge_overclock_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_overclock_bump_whiff system exists in behaviors/bridges.rs.
+- **No bridge for BumpWhiffed**: `bridge_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_bump_whiff system exists in behaviors/bridges.rs.
 
 - **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: The unification confirmed `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` observers all exist in `behaviors/effects/` and observe `EffectFired`. All four leaf types are fully wired. BoltSpeedBoost renamed to SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } in refactor/unify-behaviors.
 
@@ -90,7 +90,13 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 ## SpeedBoost Generalization Bugs (2026-03-21, refactor/unify-behaviors or follow-on branch)
 
-- **init_archetype wipes overclock chains on every node entry**: `behaviors/init.rs:108` — `*active = ActiveChains(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `handle_overclock` pushes overclock chip chains to `ActiveChains` during ChipSelect state. State flow: Playing→ChipSelect (handle_overclock adds chain)→NodeTransition→Playing (init_archetype resets). Overclock chains selected between nodes are silently discarded on the next node entry. Fix: `init_archetype` should EXTEND `active.0` with the archetype chains rather than replacing the entire resource. Or separate "archetype chains" from "overclock chains" so only archetype chains are reset. Confidence: HIGH.
+- **init_archetype wipes overclock chains on every node entry**: `behaviors/init.rs:108` — `*active = ActiveChains(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `handle_overclock` pushes overclock chip chains to `ActiveChains` during ChipSelect state. State flow: Playing→TransitionOut→ChipSelect (handle_overclock adds chain)→TransitionIn→Playing (init_archetype resets). Overclock chains selected between nodes are silently discarded on the next node entry. Fix: `init_archetype` should EXTEND `active.0` with the archetype chains rather than replacing the entire resource. Or separate "archetype chains" from "overclock chains" so only archetype chains are reset. Confidence: HIGH.
 
 ## BumpForceBoost Dead Code (confirmed 2026-03-21)
 - `BumpForceBoost` component is stamped by `handle_bump_force_boost` (chips/effects/bump_force_boost.rs) but no system reads it to affect bump behavior. The chip effect observer correctly stacks the value on the breaker, but the value is never consumed. This is a pre-existing gap, not introduced by the SpeedBoost refactor. The PR description notes it as "intentional — left for future use."
+
+## Wave 3 Chip Select / Transition Bugs (2026-03-22) — OPEN
+
+- **spawn_chip_select overwrites ChipOffers with unweighted registry-order list**: `screen/chip_select/systems/spawn_chip_select.rs:23,50` — Despite the `(generate_chip_offerings, ApplyDeferred, spawn_chip_select).chain()` wiring in ChipSelectPlugin, `spawn_chip_select` reads `registry.ordered_values().take(MAX_CARDS)` directly and then calls `commands.insert_resource(ChipOffers(offers))`, overwriting the weighted-random `ChipOffers` inserted by `generate_chip_offerings`. The entire offering algorithm is bypassed. Players always see the same first-N chips from registry insertion order.
+
+- **advance_node on OnEnter(TransitionIn) immediately short-circuits the TransitionIn animation**: `run/plugin.rs:44` — `advance_node` is registered on `OnEnter(GameState::TransitionIn)` and unconditionally sets `NextState(Playing)`. Since OnEnter schedules run before Update, this means `TransitionIn` lasts exactly one frame. The `animate_transition` system (Update) never gets a chance to run its timer to completion and transition to Playing — `advance_node` always wins. Fix: either move `advance_node` to `OnEnter(GameState::Playing)` (so it fires when Playing is entered), or remove the `NextState(Playing)` call from `advance_node` and let `animate_transition` drive the `TransitionIn → Playing` transition.

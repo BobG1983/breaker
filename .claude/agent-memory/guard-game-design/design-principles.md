@@ -31,19 +31,30 @@ type: reference
 - Bump SpeedBoost targets SPECIFIC bolt (SpeedBoostTarget::Bolt) not all bolts — per-bolt targeting rewards skill in multi-bolt (Prism) play
 - BumpForceBoost (Augment) is conceptually DISTINCT from TriggerChain SpeedBoost: BumpForce = flat additive impulse at reflection, SpeedBoost = multiplicative scaling via triggered events
 - Prism archetype has NO bump speed boost (intentional) — Prism trades velocity for quantity (SpawnBolt on perfect bump)
+- Offering weights (Common=100, Uncommon=50, Rare=15, Legendary=3) produce 33:17:5:1 ratio — well-calibrated for 12-chip pool (2026-03-22)
+- Pool depletion accelerates build-crafting: maxing chips concentrates future offerings toward remaining pieces (Pillar 2 alignment confirmed)
+- Weight decay 0.8x per rejection is correct rate — creates "fresh options" without removing anything permanently
+- Decay must ONLY apply at selection/timeout, NEVER at generation time — generation reads decay, does not write it
+- Selected chip must NOT be decayed — player is actively building around it
+- Timeout must decay all offered chips (player saw them and chose none)
+- Transition timing 0.5s out + 0.3s in (0.8s total) is at fast end of spec — correct instinct for this game
 
 ## Open Issues (Ordered by Priority)
 1. ~~**BLOCKING** Test code uses 0.8x weak multiplier (should be 1.1x)~~ RESOLVED — apply_bump_velocity.rs removed by unify-behaviors refactor; multipliers now expressed as TriggerChain SpeedBoost leaves in archetype RON (1.1x early/late, 1.5x perfect) (2026-03-21)
 2. **BLOCKING** Prism archetype bolt-lost penalty too soft (7s TimePenalty, was 3s) — needs LoseExtraBolts leaf variant or higher penalty
 2b. **BLOCKING** BumpForceBoost (Augment chip) is dead code — component gets stamped on Breaker but never read by any system. Was never wired up (pre-dates SpeedBoost refactor). Needs: flat additive speed bonus in reflect_top_hit (bolt_breaker_collision.rs), reading BumpForceBoost from breaker entity
-3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — still unfixed from 2 prior reviews
+2c. **BLOCKING** Double decay bug in chip offerings — generate_chip_offerings applies decay at generation AND handle_chip_input applies at confirmation. Selected chip also penalized. Fix: remove generation-time decay, add timeout decay to tick_chip_timer (2026-03-22)
+3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — still unfixed from 3 prior reviews
 4. **IMPORTANT** Run-end subtitle copy weak/passive — needs motivating tone
-5. **IMPORTANT** Chip select timer 10s too generous — recommend 8s
+5. ~~**IMPORTANT** Chip select timer 10s too generous — recommend 8s~~ RESOLVED — RON now at 8.0s (2026-03-22)
 6. **IMPORTANT** All 3 layouts in Passive pool — no Active or Boss pool layouts
 7. **IMPORTANT** Passive vs Active node types not behaviorally differentiated — timer ticks on all nodes
-8. **MINOR** RON type annotation mismatch: defaults.chipselect.ron says upgrade_select, should be chip_select
-9. **MINOR** 150ms perfect window may be too generous post-rescale — validate Phase 4
-10. **MINOR** introduced_cells field in difficulty tiers is empty (content gap)
+8. **IMPORTANT** TransitionOut hardcoded to ChipSelect — needs TransitionTarget mechanism for 4h (evolution) branching (2026-03-22)
+9. **IMPORTANT** RON config missing new offering/rarity weight fields — falls back to code defaults, defeats data-driven tuning (2026-03-22)
+10. **MINOR** 150ms perfect window may be too generous post-rescale — validate Phase 4
+12. **MINOR** introduced_cells field in difficulty tiers is empty (content gap)
+13. **MINOR** Flash transition color white is off-brand for neon cyberpunk — consider hot neon color (Phase 5)
+14. **MINOR** Sweep direction always left-to-right — consider seeded direction randomization
 
 ## Resolved (from prior reviews)
 - ~~PLAN.md/README say bump "all grades boost" but 0.8x is penalty~~ FIXED in RON — but test code still uses 0.8x (issue #1)
@@ -51,6 +62,7 @@ type: reference
 - ~~Shockwave used flat BASE_BOLT_DAMAGE~~ FIXED — now routes through DamageCell with DamageBoost scaling (2026-03-20)
 - ~~ChipKind redundant discriminator~~ REMOVED — ChipEffect enum is the sole category source (2026-03-20)
 - ~~Entity::PLACEHOLDER in EffectFired.bolt (was OverclockEffectFired.bolt)~~ FIXED — replaced with Option<Entity> for proper null semantics (2026-03-20); event renamed EffectFired in refactor/unify-behaviors (2026-03-21)
+- ~~RON type annotation mismatch: defaults.chipselect.ron says upgrade_select, should be chip_select~~ FIXED — verified 2026-03-22, file already says chip_select in type annotation
 
 ## Future Design Notes
 - Speed decay: recommend per-bounce/per-cell-hit decay, NOT passive time decay

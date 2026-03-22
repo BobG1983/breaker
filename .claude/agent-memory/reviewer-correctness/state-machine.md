@@ -5,13 +5,13 @@ type: reference
 ---
 
 ## State Machine Rules
-- Valid transitions: Loading→MainMenu, MainMenu→RunSetup, RunSetup→Playing, Playing→NodeTransition→Playing, Playing→ChipSelect→NodeTransition→Playing, Playing→RunEnd, RunEnd→MainMenu
+- Valid transitions: Loading→MainMenu, MainMenu→RunSetup, RunSetup→Playing, Playing→TransitionOut→ChipSelect→TransitionIn→Playing, Playing→RunEnd, RunEnd→MainMenu
 - Pause sub-machine: Playing(Active)↔Playing(Paused), Paused+Quit→MainMenu
-- `advance_node` runs OnEnter(NodeTransition) and immediately sets NextState(Playing) — 1-frame intermediate
+- `advance_node` runs OnEnter(GameState::TransitionIn) and immediately sets NextState(Playing) — 1-frame intermediate (was OnEnter(NodeTransition); NodeTransition state removed in Wave 3)
 - `reset_run_state` runs OnExit(MainMenu) — resets node_index and outcome
 - `handle_timer_expired` guards on RunOutcome::InProgress
-- `handle_node_cleared` routes non-final nodes to ChipSelect
-- `CleanupOnNodeExit` fires on OnExit(GameState::Playing) — fires on Playing→ChipSelect too
+- `handle_node_cleared` routes non-final nodes to TransitionOut (not directly to ChipSelect; FxPlugin drives TransitionOut→ChipSelect animation)
+- `CleanupOnNodeExit` fires on OnExit(GameState::Playing) — fires on Playing→TransitionOut too
 
 ## Math/Physics Notes
 - `bolt_lost` angle: angle-from-vertical convention. Speed preserved (sin²+cos²=1).

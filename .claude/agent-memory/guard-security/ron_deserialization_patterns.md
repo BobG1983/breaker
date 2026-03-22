@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings.
 
 ## Summary
 
@@ -91,3 +91,84 @@ safe positive values (1.1, 1.5). The zero-velocity path is explicitly covered by
 
 **How to apply:** On future audits, check if a `multiplier > 0.0` assertion has been added to the
 archetype asset loader path or inside `handle_speed_boost`.
+
+## Warning: scenario runner debug fields have no bounds validation (added 2026-03-21, feature/invariant-self-tests)
+
+New fields in `DebugSetup` and `MutationKind` (scenario runner only, not game crate):
+- `DebugSetup.node_timer_remaining: Option<f32>` — no bounds check; negative values are intentional (timer_negative self-test).
+- `DebugSetup.bolt_velocity: Option<(f32, f32)>` — no magnitude bounds check; large values intentional for bolt_speed_out_of_range self-test.
+- `DebugSetup.extra_tagged_bolts: Option<usize>` — no upper bound; `usize::MAX` would OOM.
+- `MutationKind::SpawnExtraEntities(usize)` — no upper bound; same OOM risk.
+
+All of these are in the scenario runner developer tool — `.scenario.ron` files are first-party only.
+No runtime user input path. Acceptable risk identical to prior TriggerChain stacking fields.
+
+**Status as of 2026-03-21:** Unvalidated. First-party data only. Same category as TriggerChain stacking fields.
+
+**How to apply:** On future audits, verify no external path to `.scenario.ron` loading has been added
+(e.g., a flag to load a scenario from an arbitrary filesystem path provided by the user).
+
+## Wave 3: TransitionDefaults fields — no bounds validation (added 2026-03-22, feature/wave-3-offerings-transitions)
+
+`TransitionDefaults` in `src/fx/transition.rs` has `out_duration: f32` and `in_duration: f32` deserialized from RON (via `GameConfig` derive macro) without any bounds check.
+
+Concrete risks:
+- `out_duration: 0.0` causes a divide-by-zero in `animate_transition` at `transition.rs:148`:
+  `let progress = 1.0 - (timer.remaining / timer.duration);`. When `timer.duration == 0.0`,
+  this produces `NaN` (not a panic — Rust `f32` division by zero yields `±inf` or `NaN`).
+  `NaN` then flows into `Val::Percent(NaN * 100.0)` in the Sweep branch, causing an undefined
+  layout result. In the Flash branch, `bg_color.0.with_alpha(NaN)` produces invisible/undefined
+  visuals. The state machine still completes (the `timer.remaining <= 0.0` guard fires on the
+  first frame), so this is a visual glitch rather than a hard lock.
+- `out_duration: -1.0` causes the timer to expire immediately on the first update (remaining
+  starts at duration = -1.0, then remaining -= dt makes it even more negative, triggering the
+  `<= 0.0` guard on the first frame). No hang, but skips the animation entirely.
+- `out_duration: 1e30` produces a duration so long it never expires — hard lock (game stuck in
+  TransitionOut/TransitionIn forever).
+
+**Note:** `TransitionDefaults` is NOT in `DefaultsCollection` — it is not loaded from a RON file
+at runtime. `TransitionConfig` is always seeded from `TransitionConfig::default()` (hardcoded
+defaults). There is no `.transition.ron` file in assets/ and no asset path in `DefaultsCollection`.
+The RON deserialization risk is **latent** — it would only become active if someone adds a
+`defaults.transition.ron` asset path in the future.
+
+**Status as of 2026-03-22:** Unvalidated but latent — no RON file loaded at runtime. The divide-
+by-zero path in `animate_transition` is a real risk if a transition RON config file is ever added.
+
+**How to apply:** On future audits, check whether `TransitionDefaults` has been added to
+`DefaultsCollection` (i.e., a `.transition.ron` file and an `#[asset(path = ...)]` field). If so,
+the `out_duration == 0.0` divide-by-zero becomes active and should be fixed.
+
+## Wave 3: ChipSelectDefaults weight/rarity fields — no bounds validation (added 2026-03-22)
+
+New fields on `ChipSelectDefaults` in `src/screen/chip_select/resources.rs`:
+- `rarity_weight_common/uncommon/rare/legendary: f32` — base weights for weighted random selection
+- `seen_decay_factor: f32` — multiplier for pool depletion
+- `offers_per_node: usize` — number of chips offered per node
+- `rarity_color_*_rgb: [f32; 3]` — display-only color values
+
+All use `#[serde(default)]` so missing fields fall back to hardcoded safe values. The
+`defaults.chipselect.ron` file does NOT include these new fields (as of 2026-03-22 — only the
+original 7 fields are present), so all production runs use the default values.
+
+Concrete risks:
+- `rarity_weight_common: 0.0` + all other weights 0.0 — `WeightedIndex::new` receives all-zero
+  weights. `draw_offerings` in `offering.rs:72` already handles this correctly:
+  `let Ok(dist) = WeightedIndex::new(&weights) else { break; }` — breaks the loop cleanly with
+  whatever was drawn so far. Zero-weight pool returns empty offerings, not a panic.
+- `seen_decay_factor: 0.0` — zeroes out the weight of any previously seen chip permanently
+  (it will never be offered again). Intended range is (0.0, 1.0]. A value of 0.0 is
+  functionally the "never offer again" behavior, which `record_offered_with_0_0_factor_zeroes_weight`
+  tests explicitly. Not a panic.
+- `offers_per_node: usize::MAX` — `draw_offerings` clamps to `count.min(pool.len())` at line 66.
+  Pool size is bounded by the chip registry (first-party data). No OOM risk.
+- `seen_decay_factor: 2.0` (> 1.0) — amplifies weight of seen chips rather than decaying. A
+  chip offered many times would become increasingly likely. Authored foot-gun but no panic.
+
+**Status as of 2026-03-22:** Unvalidated, but no production RON includes these fields — all use
+`#[serde(default)]` defaults. The offering algorithm gracefully handles all degenerate inputs
+(empty pool, zero weights, `count > pool.len()`). Lower security priority than prior findings.
+
+**How to apply:** On future audits, check if the new weight fields have been added to
+`defaults.chipselect.ron`. If so, verify they include authoring guidance (positive, <= 1.0 for
+decay) to prevent foot-guns.

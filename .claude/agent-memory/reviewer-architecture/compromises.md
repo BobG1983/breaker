@@ -13,7 +13,7 @@ type: reference
 - UI domain reads run::node::NodeTimer (read-only, for timer display)
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only)
 - screen/run_setup reads behaviors::ArchetypeRegistry (read-only)
-- screen/upgrade_select reads upgrades::UpgradeRegistry (read-only)
+- screen/chip_select reads chips::ChipRegistry (read-only)
 - All screen sub-domains read input::InputConfig (read-only, for key bindings)
 - bolt/spawn_additional_bolt reads breaker Transform and ActiveNodeLayout (read-only, same pattern as spawn_bolt)
 - breaker/apply_entity_scale_to_breaker reads run::node::ActiveNodeLayout (read-only, extracts entity_scale to stamp EntityScale component)
@@ -21,7 +21,7 @@ type: reference
 - Other domains attach interpolate components at spawn (opt-in cross-domain composition)
 - behaviors/init.rs writes ResMut<BreakerConfig> and inserts breaker-owned components at init time — accepted for archetype config composition
 - behaviors/plugin.rs orders against BreakerSystems::InitParams and UiSystems::SpawnTimerHud
-- behaviors/consequences/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
+- behaviors/effects/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)
 - **Debug domain cross-domain exception**: debug/ is the ONLY domain permitted to read AND write other domains' resources and components directly. All gated behind `#[cfg(feature = "dev")]`. Does NOT set precedent for production domains.
 - **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, chips, input, run domains directly. Five domain modules widened to `pub mod` in lib.rs (`chips` added 2026-03-20 for `TriggerChain`/`ImpactTarget` in `initial_overclocks`). Dev-only crate, never shipped.
 - **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost (Amp chip component in chips/components.rs) from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).

@@ -65,7 +65,7 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 - Each reads its own Res<Assets<*Defaults>> and Commands (insert_resource)
 - Systems: seed_playfield_config, seed_bolt_config, seed_breaker_config, seed_cell_config,
   seed_input_config, seed_main_menu_config, seed_timer_ui_config, seed_archetype_registry,
-  seed_cell_type_registry, seed_node_layout_registry, seed_upgrade_select_config
+  seed_cell_type_registry, seed_node_layout_registry, seed_chip_select_config (was seed_upgrade_select_config), seed_chip_registry
 
 ### `update_loading_bar` — Update, run_if(GameState::Loading)
 - Reads: Res<ProgressTracker<GameState>>
@@ -105,11 +105,12 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 ### `spawn_run_setup` — OnEnter(GameState::RunSetup)
 ### `handle_run_setup_input` + `update_run_setup_colors` — Update, run_if(RunSetup), chained
 
-### UpgradeSelectPlugin
-### `spawn_upgrade_select` — OnEnter(GameState::UpgradeSelect)
-### `handle_upgrade_input` — Update, run_if(UpgradeSelect)
-### `tick_upgrade_timer` — Update, run_if(UpgradeSelect)
-### `update_upgrade_display` — Update, run_if(UpgradeSelect)
+### ChipSelectPlugin
+### `spawn_chip_select` — OnEnter(GameState::ChipSelect)
+### `handle_chip_input` — Update, run_if(ChipSelect)
+### `tick_chip_timer` — Update, run_if(ChipSelect)
+### `update_chip_display` — Update, run_if(ChipSelect)
+### `generate_chip_offerings` — OnEnter(GameState::ChipSelect), chained with spawn_chip_select via ApplyDeferred
 
 ---
 
@@ -217,13 +218,13 @@ All effect observers (shockwave + life_lost + time_penalty + spawn_bolt) in beha
 
 ### Bridge systems — FixedUpdate, .in_set(BehaviorSystems::Bridge), run_if(PlayingState::Active)
 All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) to fire EffectFired or arm bolts.
-- `bridge_overclock_bolt_lost` — .after(PhysicsSystems::BoltLost) — reads BoltLost
-- `bridge_overclock_bump` — .after(BreakerSystems::GradeBump) — reads BumpPerformed
-- `bridge_overclock_bump_whiff` — .after(BreakerSystems::GradeBump) — reads BumpWhiffed
-- `bridge_overclock_cell_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitCell
-- `bridge_overclock_breaker_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitBreaker
-- `bridge_overclock_wall_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitWall
-- `bridge_overclock_cell_destroyed` — .after(BehaviorSystems::Bridge) — reads CellDestroyed
+- `bridge_bolt_lost` — .after(PhysicsSystems::BoltLost) — reads BoltLost
+- `bridge_bump` — .after(BreakerSystems::GradeBump) — reads BumpPerformed
+- `bridge_bump_whiff` — .after(BreakerSystems::GradeBump) — reads BumpWhiffed
+- `bridge_cell_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitCell
+- `bridge_breaker_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitBreaker
+- `bridge_wall_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitWall
+- `bridge_cell_destroyed` — .in_set(BehaviorSystems::Bridge) (unordered relative to physics chain) — reads CellDestroyed
 
 ### Effect observers (all observe EffectFired):
 - `handle_life_lost` — pattern-matches TriggerChain::LoseLife; writes LivesCount; sends RunLost
@@ -378,7 +379,7 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
 - NOTE: Previously unordered vs handle_node_cleared/handle_timer_expired — NOW FIXED
 
-### `advance_node` — OnEnter(GameState::NodeTransition)
+### `advance_node` — OnEnter(GameState::TransitionIn) (was OnEnter(NodeTransition); NodeTransition removed in Wave 3)
 - Writes: ResMut<RunState>, ResMut<NextState<GameState>>
 
 ### `reset_run_state` — OnExit(GameState::MainMenu)

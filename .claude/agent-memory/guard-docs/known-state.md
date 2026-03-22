@@ -41,6 +41,27 @@ type: reference
 - `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
 - `ChipEffectApplied` documented in messages.md Observer Events table
 
+## Phase 4 Wave 3 Architecture (as of 2026-03-22, do not re-flag)
+
+### TransitionOut / TransitionIn states
+- `GameState::NodeTransition` DELETED — replaced by `GameState::TransitionOut` + `GameState::TransitionIn`
+- Inter-node flow: `Playing → TransitionOut → ChipSelect → TransitionIn → Playing`
+- `handle_node_cleared` (run domain) transitions to `TransitionOut` on node clear
+- `fx/plugin.rs`: `OnEnter(TransitionOut)` → `spawn_transition_out`; `animate_transition` drives timer and sets `NextState(ChipSelect)` on completion
+- `handle_chip_input` (screen/chip_select) transitions to `TransitionIn` on confirm
+- `run/plugin.rs`: `OnEnter(TransitionIn)` → `advance_node`
+- `fx/plugin.rs`: `OnEnter(TransitionIn)` → `spawn_transition_in`; `animate_transition` sets `NextState(Playing)` on completion
+- `TransitionStyle` (Flash/Sweep), `TransitionDirection` (Out/In), `TransitionTimer`, `TransitionOverlay` in `fx/transition.rs`
+- `TransitionDefaults`/`TransitionConfig` in `fx/transition.rs` — uses `Default` impl directly (no RON file yet)
+- `complete_transition_out.rs` still exists in `run/systems/` but is NOT registered in `run/plugin.rs` — dead code stub
+
+### Chip Offering System (4f)
+- `generate_chip_offerings` system in `screen/chip_select/systems/` — runs `OnEnter(ChipSelect)` before `spawn_chip_select`
+- `ChipOffers` resource in `screen/chip_select/resources.rs` — transient, inserted per chip-select visit
+- `OfferingConfig` + `generate_offerings` in `chips/offering.rs`
+- New invariants: `OfferingNoDuplicates`, `MaxedChipNeverOffered` — both in `InvariantKind` and checked in `breaker-scenario-runner/src/invariants/checkers/`
+- 13 chip RON files: 5 amps (`amps/`), 4 augments (`augments/`), 4 overclocks (`overclocks/`) — 4c.2 complete
+
 ## Phase 4 Wave 1 Status (as of 2026-03-19)
 - 4a (Seeded RNG): DONE — moved to `docs/plan/done/phase-4/phase-4a-seeded-rng.md`
 - 4b (Chip Effect System): DONE — 4b.1 types/stacking + 4b.2 per-domain consumption both complete. Spec file stays at active location (no separate done file). index.md updated.
@@ -129,6 +150,16 @@ type: reference
 ### Phase 4d status
 - 4d is complete on feature/overclock-trigger-chain branch. Plan updated to mark all 4d sub-stages done.
 
+## refactor/unify-behaviors Branch New Content (as of 2026-03-21, do not re-flag)
+- `chips/effects/bolt_speed_boost.rs` + `handle_bolt_speed_boost` observer: handles `AmpEffect::SpeedBoost`
+- `chips/effects/breaker_speed_boost.rs` + `handle_breaker_speed_boost` observer: handles `AugmentEffect::SpeedBoost`
+- `chips/effects/bump_force_boost.rs` + `handle_bump_force_boost` observer: handles `AugmentEffect::BumpForce`
+- `chips/effects/tilt_control_boost.rs` + `handle_tilt_control_boost` observer: handles `AugmentEffect::TiltControl`
+- `BreakerSpeedBoost`, `BumpForceBoost`, `TiltControlBoost` components in `chips/components.rs` — all already documented in content.md and plugins.md
+- `TriggerChain::MultiBolt` and `TriggerChain::Shield` leaf variants: in code and already documented in `docs/design/triggers-and-effects.md` (marked "not yet wired")
+- `TriggerKind` / `EvalResult` in `behaviors/evaluate.rs`: internal eval types, not glossary-level terms
+- `FrameMutation` / `MutationKind`: added to `docs/design/terminology.md` in 2026-03-21 session
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table
@@ -137,3 +168,4 @@ type: reference
 - `PLAN.md` links break when subphase files are moved to `done/` folder — also check parent index.md files (e.g., `phase-2/index.md` had stale subphase links)
 - CellTypeDefinition.hp field: always `f32` (not `u32`) — check content.md and data.md on each wave
 - `standards.md` scenario runner section: use `cargo scenario` alias (not `dscenario`) for all standard usage; runner is headless by default (`--visual` to open window, no `--headless` flag)
+- New chip effect observers land in `chips/effects/` but content.md covers them via the flat component list — don't re-flag observer names as missing unless new component types are added

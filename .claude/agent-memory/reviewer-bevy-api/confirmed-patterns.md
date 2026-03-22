@@ -333,7 +333,7 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 ## Non-mut Query binding with &mut T data
 - `armed_query: Query<(Entity, &mut ArmedTriggers)>` without `mut` on the binding is valid when the value is immediately moved into a helper function that declares it `mut`
 - `mut` on a binding governs reborrowing in scope, not ownership transfer — moving to a `mut` parameter is always valid
-- Confirmed: `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` in bridges.rs
+- Confirmed: `bridge_cell_destroyed` and `bridge_bolt_lost` in bridges.rs
 
 ## Option<ResMut<T>> for optional system params (re-confirmed)
 - `mut active_chains: Option<ResMut<ActiveChains>>` (was `ActiveOverclocks` before refactor/unify-behaviors 2026-03-21) — valid system parameter; None when not inserted
@@ -358,10 +358,10 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 ## BoltHitWall message (confirmed 2026-03-20)
 - `#[derive(Message, Clone, Debug)]` on `BoltHitWall` — correct; lives in `physics/messages.rs`
 - Registered with `app.add_message::<BoltHitWall>()` in `PhysicsPlugin` alongside the other physics messages — correct
-- `MessageReader<BoltHitWall>` in `bridge_overclock_wall_impact` — correct consumer pattern
+- `MessageReader<BoltHitWall>` in `bridge_wall_impact` — correct consumer pattern
 
 ## Query<(Entity, &mut ArmedTriggers)> without mut binding (re-confirmed 2026-03-20)
-- Functions `bridge_overclock_cell_destroyed` and `bridge_overclock_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` (no `mut` on the binding)
+- Functions `bridge_cell_destroyed` and `bridge_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` (no `mut` on the binding)
 - Then pass it by value to `evaluate_armed_all(mut armed_query: Query<...>, ...)` which does declare it `mut`
 - This is valid: `mut` on a binding only governs reborrow semantics within a scope; moving into a `mut` parameter is always allowed regardless
 

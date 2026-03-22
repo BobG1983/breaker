@@ -26,7 +26,7 @@ type: reference
 - **Phase 2c audit 2026-03-13**: PASS — BehaviorPlugin added as breaker sub-domain (later extracted to top-level behaviors/ domain 2026-03-16). Per-consequence file layout in `consequences/` directory. Bridge systems consume BoltLost + BumpPerformed messages. Internal dispatch via Bevy observers (Events), not messages.
 - **Full codebase audit 2026-03-16**: PASS — 0 critical violations, 2 minor observations (SelectedArchetype placement in shared.rs, double init_resource in tests). All 11 review categories clean.
 - **fix/review-findings audit 2026-03-16**: PASS — animate_fade_out moved bolt→UI (correct), FadeOut shared type correct, multiplier insert_if_new precedence correct.
-- **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains.
+- **Phase 2d audit 2026-03-16**: PASS with 3 structural issues — RunSetupPlugin, PauseMenuPlugin, UpgradeSelectPlugin added as screen sub-domains. (NOTE: UpgradeSelectPlugin subsequently renamed to ChipSelectPlugin in Phase 4.)
 - **Architecture compromise cleanup 2026-03-16**: 5 compromises resolved — bump multiplier in message, shared math module, NodePlugin extracted, RunLost message, fx domain.
 - **Upgrade infrastructure audit 2026-03-16**: PASS with 3 structural issues. upgrades/ domain renamed to chips/.
 - **Compromise cleanup verification audit 2026-03-16**: PASS — all 5 compromises confirmed resolved. 3 doc drift items.

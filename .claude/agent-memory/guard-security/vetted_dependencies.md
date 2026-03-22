@@ -4,7 +4,7 @@ description: Verified dependency versions and audit state as of 2026-03-19 (post
 type: project
 ---
 
-Vetted as of 2026-03-19 (develop, commit 7256360).
+Vetted as of 2026-03-22 (feature/wave-3-offerings-transitions). Prior vetted: 2026-03-19 (develop, commit 7256360).
 
 ## Direct Dependencies
 
@@ -38,6 +38,11 @@ Vetted as of 2026-03-19 (develop, commit 7256360).
 - ron 0.12 — upgraded from 0.11, no known CVEs
 - serde 1 — current, trusted
 - rand 0.9 — current, trusted
+
+## cargo audit result (2026-03-22, Wave 3 audit)
+- 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)
+- No CVEs or errors
+- No new dependencies added in Wave 3. Dep list unchanged from 2026-03-19 audit.
 
 ## cargo audit result (2026-03-19, post-upgrade)
 - 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)

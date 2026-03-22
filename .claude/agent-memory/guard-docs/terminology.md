@@ -15,7 +15,7 @@ type: reference
 - `UiSystems::SpawnTimerHud` tags `spawn_timer_hud`.
 - OnEnter(Playing) ordering chain documented in `docs/architecture/ordering.md`.
 - `GameState::ChipSelect` (NOT `UpgradeSelect`). Message is `ChipSelected { name: String }` — name only, no kind field.
-- Inter-node flow: `Playing → ChipSelect → NodeTransition → Playing`.
+- Inter-node flow: `Playing → TransitionOut → ChipSelect → TransitionIn → Playing` (NodeTransition state removed in Wave 3; replaced by TransitionOut and TransitionIn states with animation).
 
 ## Terminology Additions (2026-03-17)
 - `Scenario` / `ScenarioDefinition` — automated test run defined in `.scenario.ron`
@@ -23,3 +23,8 @@ type: reference
 - `Chaos` / `Scripted` / `Hybrid` — input strategies in the scenario runner
 - `Recording` — `debug/recording/` sub-domain, `RecordingConfig`, `--record` dev flag
 - All added to `docs/design/terminology.md`
+
+## Terminology Additions (2026-03-21)
+- `FrameMutation` — scripted mutation applied at a specific frame during a scenario; used in `frame_mutations` field of `ScenarioDefinition`
+- `MutationKind` — enum of mutation operations: `SetBreakerState`, `SetTimerRemaining`, `SpawnExtraEntities`, `MoveBolt`, `TogglePause`
+- Added to `docs/design/terminology.md`

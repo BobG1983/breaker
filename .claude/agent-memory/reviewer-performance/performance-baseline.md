@@ -83,13 +83,13 @@ type: reference
 - In Bevy 0.18 all MessageWriter params share the same deferred command buffer as the system's Commands — no additional per-writer overhead, no new parallelism conflict.
 - System was already serialized by its mutable bolt_query + Commands. Third writer adds zero scheduling cost.
 
-### behaviors/bridges.rs — bridge_overclock_breaker_impact, bridge_overclock_wall_impact (was bolt/behaviors/bridges.rs)
-- Structurally identical to bridge_overclock_cell_impact (already clean).
+### behaviors/bridges.rs — bridge_breaker_impact, bridge_wall_impact (was bolt/behaviors/bridges.rs)
+- Structurally identical to bridge_cell_impact (already clean).
 - MessageReader drains early-exit on no events; armed_query: Query<&mut ArmedTriggers> hits 0–1 entities.
 - All three impact bridges access &mut ArmedTriggers — cannot run in parallel with each other. Correct and expected; they are all ordered after(PhysicsSystems::BreakerCollision).
 - No new archetype fragmentation: ArmedTriggers is already tracked as 1-entity add/remove.
 
-### behaviors/bridges.rs — bridge_overclock_bump double evaluation (was bolt/behaviors/bridges.rs)
+### behaviors/bridges.rs — bridge_bump double evaluation (was bolt/behaviors/bridges.rs)
 - Iterates active.0 twice per bump message: once for grade-specific trigger, once for BumpSuccess.
 - Max 3 chains × 2 passes × 1 pure match each = negligible. evaluate() is a pure enum pattern match.
 - Not a hot-path concern at any foreseeable chip stack cap. Correct design, not double-work.
@@ -112,8 +112,8 @@ type: reference
 
 ### behaviors/bridges.rs — bridge systems + resolve_armed (was bolt/behaviors/bridges.rs)
 - `resolve_armed` allocates `Vec::new()` per call and swaps it into `armed.0`. This is NOT a hot-path: fires only when an EffectFired (was OverclockEffectFired) chain resolves (rare game event, not per-frame). Acceptable.
-- `bridge_overclock_cell_destroyed` / `bridge_overclock_bolt_lost` guards: `reader.read().count() == 0` early-exit — prevents work when no events. But NOTE: calling `.count()` drains the iterator; the events are consumed. Fine because the only needed info is "did any arrive."
-- `bridge_overclock_cell_destroyed` / `bridge_overclock_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` — mutable access even in function signature passed immutably to `evaluate_armed_all`. The `&mut ArmedTriggers` is warranted (resolve_armed mutates armed.0). Correct.
+- `bridge_cell_destroyed` / `bridge_bolt_lost` guards: `reader.read().count() == 0` early-exit — prevents work when no events. But NOTE: calling `.count()` drains the iterator; the events are consumed. Fine because the only needed info is "did any arrive."
+- `bridge_cell_destroyed` / `bridge_bolt_lost` declare `armed_query: Query<(Entity, &mut ArmedTriggers)>` — mutable access even in function signature passed immutably to `evaluate_armed_all`. The `&mut ArmedTriggers` is warranted (resolve_armed mutates armed.0). Correct.
 - `arm_bolt` inserts `ArmedTriggers(vec![remaining])` — single allocation at arm-time. Event-driven, not hot-path.
 - Observer registration via `add_observer(handle_shockwave)`: standard Bevy 0.18 global observer. Per-call overhead is observer dispatch + query, not per-frame. No concern.
 
@@ -127,7 +127,7 @@ type: reference
 
 ### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors — NOW FULLY WIRED)
 - 4 new leaf variants: LoseLife (0 payload), SpawnBolt (0 payload), TimePenalty { seconds: f32 } (4B), SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } (was BoltSpeedBoost { multiplier: f32 } — renamed and expanded in refactor/unify-behaviors).
-- 3 new trigger wrappers: OnEarlyBump(Box<Self>), OnLateBump(Box<Self>), OnBumpWhiff(Box<Self>) — all now wired in TriggerKind + evaluate() + bridge_overclock_bump_whiff.
+- 3 new trigger wrappers: OnEarlyBump(Box<Self>), OnLateBump(Box<Self>), OnBumpWhiff(Box<Self>) — all now wired in TriggerKind + evaluate() + bridge_bump_whiff.
 - Enum size impact: NONE. Discriminant expands trivially (still 1 byte). Largest variant is Shockwave/MultiBolt/Shield at 12 bytes — unchanged by new variants. Box<Self> wrappers are all 8 bytes. No size regression.
 - ECS impact: TriggerChain is NOT a component or resource by itself. It lives inside ActiveChains(Vec<TriggerChain>) (Res) and ArmedTriggers(Vec<TriggerChain>) (Component). Neither archetype fragmentation nor query cost is affected by adding enum variants.
 - Hot-path impact: evaluate() is a pure pattern match called O(active_chains) times per bridge event (typically <5 chains). All variants are now wired; no dead-type overhead.
