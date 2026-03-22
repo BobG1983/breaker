@@ -7,7 +7,7 @@ use tracing::info;
 
 use crate::{
     chips::inventory::ChipInventory,
-    run::resources::RunState,
+    run::resources::{HighlightTracker, RunState, RunStats},
     shared::{GameRng, RunSeed, SelectedArchetype},
 };
 
@@ -19,8 +19,12 @@ pub(crate) fn reset_run_state(
     seed: Res<RunSeed>,
     archetype: Option<Res<SelectedArchetype>>,
     mut chip_inventory: ResMut<ChipInventory>,
+    mut run_stats: ResMut<RunStats>,
+    mut highlight_tracker: ResMut<HighlightTracker>,
 ) {
     *run_state = RunState::default();
+    *run_stats = RunStats::default();
+    *highlight_tracker = HighlightTracker::default();
     chip_inventory.clear();
     if let Some(s) = seed.0 {
         *rng = GameRng::from_seed(s);
@@ -49,6 +53,8 @@ mod tests {
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
             .init_resource::<ChipInventory>()
+            .init_resource::<RunStats>()
+            .init_resource::<HighlightTracker>()
             .add_systems(Update, reset_run_state);
         app
     }

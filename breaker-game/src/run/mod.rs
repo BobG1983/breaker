@@ -9,4 +9,4 @@ pub mod systems;
 
 pub use node::{NodeLayout, NodeLayoutRegistry};
 pub use plugin::RunPlugin;
-pub use resources::RunState;
+pub use resources::{HighlightKind, HighlightTracker, RunHighlight, RunState, RunStats};
