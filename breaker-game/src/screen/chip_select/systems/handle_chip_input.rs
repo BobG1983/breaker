@@ -13,7 +13,7 @@ use crate::{
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as other menus).
 /// On confirm, sends `ChipSelected` with the chosen chip's identity
-/// before transitioning to `NodeTransition`.
+/// before transitioning to `TransitionIn`.
 pub(crate) fn handle_chip_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
@@ -27,7 +27,7 @@ pub(crate) fn handle_chip_input(
     // No cards — nothing to navigate or confirm
     if card_count == 0 {
         if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-            next_state.set(GameState::NodeTransition);
+            next_state.set(GameState::TransitionIn);
         }
         return;
     }
@@ -52,7 +52,7 @@ pub(crate) fn handle_chip_input(
         writer.write(ChipSelected {
             name: chip.name.clone(),
         });
-        next_state.set(GameState::NodeTransition);
+        next_state.set(GameState::TransitionIn);
     }
 }
 
@@ -128,14 +128,14 @@ mod tests {
     }
 
     #[test]
-    fn confirm_transitions_to_node_transition() {
+    fn confirm_transitions_to_transition_in() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("NodeTransition"),
-            "expected NodeTransition, got: {next:?}"
+            format!("{next:?}").contains("TransitionIn"),
+            "expected TransitionIn, got: {next:?}"
         );
     }
 
@@ -196,7 +196,7 @@ mod tests {
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            !format!("{next:?}").contains("NodeTransition"),
+            !format!("{next:?}").contains("TransitionIn"),
             "expected no transition, got: {next:?}"
         );
     }
@@ -208,8 +208,8 @@ mod tests {
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("NodeTransition"),
-            "expected NodeTransition, got: {next:?}"
+            format!("{next:?}").contains("TransitionIn"),
+            "expected TransitionIn, got: {next:?}"
         );
 
         let received = app.world().resource::<ReceivedChips>();

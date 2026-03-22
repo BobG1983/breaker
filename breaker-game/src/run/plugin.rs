@@ -8,8 +8,8 @@ use crate::{
         node::{NodePlugin, NodeSystems},
         resources::{DifficultyCurve, RunState},
         systems::{
-            advance_node, generate_node_sequence_system, handle_node_cleared, handle_run_lost,
-            handle_timer_expired, reset_run_state,
+            advance_node, complete_transition_out, generate_node_sequence_system,
+            handle_node_cleared, handle_run_lost, handle_timer_expired, reset_run_state,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -41,7 +41,8 @@ impl Plugin for RunPlugin {
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
-            .add_systems(OnEnter(GameState::NodeTransition), advance_node)
+            .add_systems(OnEnter(GameState::TransitionOut), complete_transition_out)
+            .add_systems(OnEnter(GameState::TransitionIn), advance_node)
             .add_systems(
                 OnExit(GameState::MainMenu),
                 (

@@ -177,10 +177,12 @@ pub enum ForcedGameState {
     RunSetup,
     /// Corresponds to `GameState::Playing`.
     Playing,
-    /// Corresponds to `GameState::NodeTransition`.
-    NodeTransition,
+    /// Corresponds to `GameState::TransitionOut`.
+    TransitionOut,
     /// Corresponds to `GameState::ChipSelect`.
     ChipSelect,
+    /// Corresponds to `GameState::TransitionIn`.
+    TransitionIn,
     /// Corresponds to `GameState::RunEnd`.
     RunEnd,
     /// Corresponds to `GameState::MetaProgression`.

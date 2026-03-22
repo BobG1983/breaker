@@ -6,7 +6,7 @@ use crate::{screen::chip_select::resources::ChipSelectTimer, shared::GameState};
 
 /// Ticks the chip selection timer and auto-advances on expiry.
 ///
-/// Timer expiry transitions to [`GameState::NodeTransition`] (skip, no chip).
+/// Timer expiry transitions to [`GameState::TransitionIn`] (skip, no chip).
 pub(crate) fn tick_chip_timer(
     time: Res<Time>,
     mut timer: ResMut<ChipSelectTimer>,
@@ -16,7 +16,7 @@ pub(crate) fn tick_chip_timer(
 
     if timer.remaining <= 0.0 {
         timer.remaining = 0.0;
-        next_state.set(GameState::NodeTransition);
+        next_state.set(GameState::TransitionIn);
     }
 }
 
@@ -52,15 +52,15 @@ mod tests {
     }
 
     #[test]
-    fn timer_expiry_transitions_to_node_transition() {
+    fn timer_expiry_transitions_to_transition_in() {
         // Start with 0 remaining — should expire immediately
         let mut app = test_app(0.0);
         app.update();
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            format!("{next:?}").contains("NodeTransition"),
-            "expected NodeTransition, got: {next:?}"
+            format!("{next:?}").contains("TransitionIn"),
+            "expected TransitionIn, got: {next:?}"
         );
     }
 
@@ -84,7 +84,7 @@ mod tests {
 
         let next = app.world().resource::<NextState<GameState>>();
         assert!(
-            !format!("{next:?}").contains("NodeTransition"),
+            !format!("{next:?}").contains("TransitionIn"),
             "expected no transition, got: {next:?}"
         );
     }
