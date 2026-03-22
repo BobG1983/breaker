@@ -274,6 +274,27 @@ mod tests {
         );
     }
 
+    #[test]
+    fn three_deep_chain_returns_arm_with_two_deep_remaining() {
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::OnCellDestroyed(Box::new(
+                TriggerChain::test_shockwave(64.0),
+            ))),
+        )));
+        let result = evaluate(TriggerKind::PerfectBump, &chain);
+        assert_eq!(
+            result,
+            EvalResult::Arm(TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                Box::new(TriggerChain::OnCellDestroyed(Box::new(
+                    TriggerChain::test_shockwave(64.0),
+                ))),
+            )),
+            "3-deep chain should peel off outermost trigger and return Arm with 2-deep remaining"
+        );
+    }
+
     // --- NoMatch tests: trigger kind does not match chain's outermost trigger ---
 
     #[test]

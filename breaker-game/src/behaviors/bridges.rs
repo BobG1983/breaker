@@ -887,6 +887,117 @@ mod tests {
         assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
     }
 
+    #[test]
+    fn full_three_step_chain_bump_arms_impact_rearms_cell_destroyed_fires() {
+        // 3-deep: OnPerfectBump(OnImpact(Cell, OnCellDestroyed(Shockwave(64.0))))
+        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::OnCellDestroyed(Box::new(
+                TriggerChain::test_shockwave(64.0),
+            ))),
+        )));
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .add_message::<BoltHitCell>()
+            .add_message::<CellDestroyed>()
+            .insert_resource(ActiveChains(vec![chain]))
+            .insert_resource(SendBump(None))
+            .insert_resource(SendBoltHitCell(None))
+            .insert_resource(SendCellDestroyed(None))
+            .init_resource::<CapturedEffects>()
+            .add_observer(capture_effects)
+            .add_systems(
+                FixedUpdate,
+                (
+                    send_bump,
+                    bridge_bump,
+                    send_bolt_hit_cell,
+                    bridge_cell_impact,
+                    send_cell_destroyed,
+                    bridge_cell_destroyed,
+                )
+                    .chain(),
+            );
+
+        let bolt = app.world_mut().spawn_empty().id();
+
+        // Step 1: Perfect bump — arms bolt with OnImpact(Cell, OnCellDestroyed(Shockwave))
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt,
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(
+            captured.0.is_empty(),
+            "step 1: should arm, not fire any effect"
+        );
+        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        assert_eq!(
+            armed.0.len(),
+            1,
+            "step 1: bolt should have exactly one armed trigger"
+        );
+        assert_eq!(
+            armed.0[0],
+            TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                Box::new(TriggerChain::OnCellDestroyed(Box::new(
+                    TriggerChain::test_shockwave(64.0),
+                ))),
+            ),
+            "step 1: armed trigger should be the 2-deep remaining chain"
+        );
+
+        // Clear bump, prepare cell impact
+        app.world_mut().resource_mut::<SendBump>().0 = None;
+        app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
+            cell: Entity::PLACEHOLDER,
+            bolt,
+        });
+        tick(&mut app);
+
+        // Step 2: Cell impact — re-arms bolt with OnCellDestroyed(Shockwave)
+        let captured = app.world().resource::<CapturedEffects>();
+        assert!(
+            captured.0.is_empty(),
+            "step 2: should re-arm, not fire any effect"
+        );
+        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        assert_eq!(
+            armed.0.len(),
+            1,
+            "step 2: bolt should have exactly one armed trigger"
+        );
+        assert_eq!(
+            armed.0[0],
+            TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shockwave(64.0))),
+            "step 2: armed trigger should be OnCellDestroyed(Shockwave)"
+        );
+
+        // Clear cell hit, prepare cell destroyed
+        app.world_mut().resource_mut::<SendBoltHitCell>().0 = None;
+        app.world_mut().resource_mut::<SendCellDestroyed>().0 = Some(CellDestroyed {
+            was_required_to_clear: true,
+        });
+        tick(&mut app);
+
+        // Step 3: Cell destroyed — fires the shockwave
+        let captured = app.world().resource::<CapturedEffects>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "step 3: shockwave should fire after cell destroyed"
+        );
+        assert_eq!(
+            captured.0[0].0,
+            TriggerChain::test_shockwave(64.0),
+            "step 3: fired effect should be the shockwave leaf"
+        );
+    }
+
     // --- Integration: bridge + effect observer ---
 
     #[test]

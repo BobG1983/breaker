@@ -603,6 +603,17 @@ mod tests {
         assert_eq!(tc.depth(), 2);
     }
 
+    #[test]
+    fn trigger_chain_depth_three_deep_is_three() {
+        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            Box::new(TriggerChain::OnCellDestroyed(Box::new(
+                TriggerChain::test_shockwave(64.0),
+            ))),
+        )));
+        assert_eq!(tc.depth(), 3);
+    }
+
     // --- TriggerChain is_leaf tests ---
 
     #[test]

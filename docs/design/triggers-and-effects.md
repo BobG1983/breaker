@@ -21,9 +21,12 @@ Triggers wrap an inner chain (another trigger or a leaf effect). When the trigge
 
 ### Trigger Chaining
 
-Triggers can nest up to 2 deep. Examples:
+Triggers can nest arbitrarily deep. Each nesting layer adds one arm-then-resolve step before the leaf effect fires. Examples:
 - `OnPerfectBump(Shockwave(...))` — depth 1, fires shockwave on perfect bump
 - `OnPerfectBump(OnImpact(Cell, Shockwave(...)))` — depth 2, fires shockwave on cell impact after a perfect bump
+- `OnPerfectBump(OnImpact(Cell, OnCellDestroyed(Shockwave(...))))` — depth 3, fires shockwave when the hit cell is destroyed after a perfect-bump cell impact
+
+The evaluate/arm/resolve cycle is depth-agnostic: `evaluate()` peels the outermost trigger layer, `arm_bolt()` pushes the remaining chain onto the bolt's `ArmedTriggers`, and `resolve_armed()` re-evaluates on subsequent triggers — producing either another `Arm` (re-arm with a shorter chain) or `Fire` (execute the leaf). A 5-deep chain would arm 4 times then fire.
 
 ### Bolt Context
 
