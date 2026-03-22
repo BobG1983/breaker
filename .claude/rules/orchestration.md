@@ -58,13 +58,16 @@ Do not: keep trying variations, weaken tests, escalate to different agent types 
 
 See `.claude/rules/tdd.md` for the full TDD cycle definition.
 
-After each writer-tests completes, the orchestrator MUST run reviewer-tests and the RED gate before launching writer-code:
+When implementing multiple domains, the orchestrator MUST sequence these steps correctly:
 
-1. Launch **reviewer-tests** to verify tests match the spec (PASS → proceed; BLOCKING findings → route back to writer-tests)
-2. Launch **runner-tests** to compile and run the new tests
-3. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
-4. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
-5. Only after reviewer-tests passes AND the RED gate passes → launch writer-code
+1. Launch ALL **writer-tests** in parallel (one per domain, as background agents)
+2. As each writer-tests completes: launch its **reviewer-tests** immediately (read-only — safe to run in parallel)
+3. After ALL reviewer-tests pass: launch a single **runner-tests** to compile and run all new tests (cargo cannot run concurrently)
+4. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
+5. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
+6. After the RED gate passes: launch ALL **writer-codes** in parallel
+
+For single-domain work, the same sequence applies — it just has one agent per step.
 
 Track RED gate status in session-state.md (the `RED Gate` column in the Specs table).
 

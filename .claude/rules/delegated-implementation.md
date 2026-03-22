@@ -17,9 +17,9 @@ See `.claude/rules/spec-formats.md` for spec templates and quality rules.
 6. Repeat 4–5 until planner-review confirms specs are clean (usually one revision)
 7. Main agent reviews final specs, creates shared prerequisites
 8. Launch ALL writer-tests in parallel                              ── RED phase
-9. Launch reviewer-tests to verify tests match spec                 ── test review
-10. Launch runner-tests to verify tests compile and fail             ── RED gate
-11. As each passes RED gate: launch writer-code                      ── GREEN phase
+9. As each completes: launch reviewer-tests (read-only, parallel)   ── test review
+10. After ALL reviewer-tests pass: single runner-tests               ── RED gate
+11. Launch ALL writer-codes in parallel                              ── GREEN phase
 12. After ALL writer-codes complete: launch verification wave        ─┐
 13. Route Phase 3 failures through fix agents                        │ REFACTOR phase
 14. Run /simplify on changed code                                    │
@@ -53,9 +53,10 @@ When implementing multiple domains simultaneously:
 
 1. planner-spec produces ALL specs upfront (test spec + implementation spec for each domain)
 2. Launch ALL writer-tests in parallel **as background agents** (`run_in_background: true`)
-3. When each writer-tests completes (notified automatically): launch reviewer-tests to verify tests match spec, then run RED gate (runner-tests), then launch its writer-code — do NOT wait for other writer-tests still running
-4. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation verification per tier
-5. Main agent handles wiring (lib.rs, game.rs, shared.rs)
+3. When each writer-tests completes (notified automatically): launch its reviewer-tests immediately (read-only, no cargo — safe to run in parallel)
+4. After ALL reviewer-tests pass: run RED gate once (single runner-tests for all domains), then launch writer-codes
+5. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation verification per tier
+6. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 
 ### Safety Requirements for Parallel Execution
 
