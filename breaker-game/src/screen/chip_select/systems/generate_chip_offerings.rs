@@ -21,7 +21,7 @@ use crate::{
 pub(crate) fn generate_chip_offerings(
     mut commands: Commands,
     registry: Res<ChipRegistry>,
-    mut inventory: ResMut<ChipInventory>,
+    inventory: Res<ChipInventory>,
     config: Res<ChipSelectConfig>,
     mut rng: ResMut<GameRng>,
 ) {
@@ -40,11 +40,6 @@ pub(crate) fn generate_chip_offerings(
 
     // Generate offerings
     let offers = generate_offerings(&registry, &inventory, &offering_config, &mut rng.0);
-
-    // Record each offered chip in inventory for decay tracking
-    for chip in &offers {
-        inventory.record_offered(&chip.name, config.seen_decay_factor);
-    }
 
     // Insert offers resource
     commands.insert_resource(ChipOffers(offers));
@@ -134,19 +129,20 @@ mod tests {
     }
 
     #[test]
-    fn generate_records_offered_chips_in_inventory() {
+    fn generate_does_not_apply_decay() {
         let mut app = test_app_with_registry(make_registry(5));
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
         let inventory = app.world().resource::<ChipInventory>();
 
-        // Each offered chip should have decay recorded (weight_decay < 1.0).
+        // Generation should NOT apply decay — decay is deferred to confirmation
+        // or timer expiry. All offered chips must have weight_decay == 1.0.
         for chip in &offers.0 {
             let decay = inventory.weight_decay(&chip.name);
             assert!(
-                decay < 1.0,
-                "expected offered chip '{}' to have decay < 1.0, got {decay}",
+                (decay - 1.0).abs() < f32::EPSILON,
+                "expected offered chip '{}' to have no decay (1.0), got {decay}",
                 chip.name
             );
         }
