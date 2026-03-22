@@ -35,7 +35,6 @@ pub(crate) fn generate_chip_offerings(
 
     let offering_config = OfferingConfig {
         rarity_weights,
-        seen_decay_factor: config.seen_decay_factor,
         offers_per_node: config.offers_per_node,
     };
 

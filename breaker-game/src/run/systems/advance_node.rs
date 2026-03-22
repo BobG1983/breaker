@@ -2,30 +2,25 @@
 
 use bevy::prelude::*;
 
-use crate::{run::resources::RunState, shared::GameState};
+use crate::run::resources::RunState;
 
-/// Increments the node index and transitions to [`GameState::Playing`].
+/// Increments the node index and resets the transition flag.
 ///
-/// Runs on `OnEnter(GameState::TransitionIn)`.
-pub(crate) fn advance_node(
-    mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
+/// Runs on `OnEnter(GameState::TransitionIn)`. The `TransitionIn` to `Playing`
+/// state change is handled by the `animate_transition` system in the fx domain
+/// when the transition animation timer completes.
+pub(crate) fn advance_node(mut run_state: ResMut<RunState>) {
     run_state.node_index += 1;
     run_state.transition_queued = false;
-    next_state.set(GameState::Playing);
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
-
     use super::*;
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
+        app.add_plugins(MinimalPlugins)
             .insert_resource(RunState {
                 node_index: 0,
                 transition_queued: true,
@@ -53,18 +48,6 @@ mod tests {
         assert!(
             !run_state.transition_queued,
             "transition_queued should be reset for the next node"
-        );
-    }
-
-    #[test]
-    fn sets_next_state_to_playing() {
-        let mut app = test_app();
-        app.update();
-
-        let next = app.world().resource::<NextState<GameState>>();
-        assert!(
-            format!("{next:?}").contains("Playing"),
-            "expected Playing, got: {next:?}"
         );
     }
 }

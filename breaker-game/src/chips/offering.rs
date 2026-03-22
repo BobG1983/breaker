@@ -18,8 +18,6 @@ use crate::chips::{
 pub(crate) struct OfferingConfig {
     /// Base weight per rarity tier.
     pub rarity_weights: HashMap<Rarity, f32>,
-    /// Decay factor applied per offering.
-    pub seen_decay_factor: f32,
     /// Number of chips to offer per node.
     pub offers_per_node: usize,
 }
@@ -116,7 +114,6 @@ mod tests {
         rarity_weights.insert(Rarity::Legendary, 3.0);
         OfferingConfig {
             rarity_weights,
-            seen_decay_factor: 0.8,
             offers_per_node: 3,
         }
     }

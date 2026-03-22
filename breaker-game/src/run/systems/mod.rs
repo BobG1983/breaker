@@ -1,7 +1,6 @@
 //! Run domain systems.
 
 mod advance_node;
-mod complete_transition_out;
 mod generate_node_sequence;
 mod handle_node_cleared;
 mod handle_run_lost;

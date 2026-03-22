@@ -2,25 +2,22 @@
 
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
-use crate::{
-    chips::ChipRegistry,
-    screen::chip_select::{
-        ChipSelectConfig,
-        components::{ChipCard, ChipSelectScreen, ChipTimerText},
-        resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
-    },
+use crate::screen::chip_select::{
+    ChipSelectConfig,
+    components::{ChipCard, ChipSelectScreen, ChipTimerText},
+    resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
 };
 
-/// Maximum number of chip cards to display.
-const MAX_CARDS: usize = 3;
-
-/// Spawns the chip selection UI with cards from the registry and a countdown timer.
+/// Spawns the chip selection UI with cards from the pre-generated offers and a countdown timer.
+///
+/// Reads `ChipOffers` inserted by `generate_chip_offerings` (which runs earlier in the
+/// `OnEnter(ChipSelect)` chain). Does not interact with `ChipRegistry` directly.
 pub(crate) fn spawn_chip_select(
     mut commands: Commands,
     config: Res<ChipSelectConfig>,
-    registry: Res<ChipRegistry>,
+    offers: Res<ChipOffers>,
 ) {
-    let offers: Vec<_> = registry.ordered_values().take(MAX_CARDS).cloned().collect();
+    let offer_list = offers.0.clone();
 
     commands.insert_resource(ChipSelectTimer {
         remaining: config.timer_secs,
@@ -43,11 +40,9 @@ pub(crate) fn spawn_chip_select(
         .with_children(|parent| {
             spawn_timer_display(parent, &config);
             spawn_title(parent);
-            spawn_card_row(parent, &config, &offers);
+            spawn_card_row(parent, &config, &offer_list);
             spawn_prompt(parent);
         });
-
-    commands.insert_resource(ChipOffers(offers));
 }
 
 fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &ChipSelectConfig) {
@@ -170,7 +165,7 @@ mod tests {
     use super::*;
     use crate::chips::ChipDefinition;
 
-    fn make_registry(count: usize) -> ChipRegistry {
+    fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
             ChipDefinition::test_simple("Piercing Shot"),
             ChipDefinition::test_simple("Wide Breaker"),
@@ -178,25 +173,21 @@ mod tests {
             ChipDefinition::test_simple("Ricochet"),
             ChipDefinition::test_simple("Quick Dash"),
         ];
-        let mut registry = ChipRegistry::default();
-        for chip in all.into_iter().take(count) {
-            registry.insert(chip);
-        }
-        registry
+        ChipOffers(all.into_iter().take(count).collect())
     }
 
-    fn test_app_with_registry(registry: ChipRegistry) -> App {
+    fn test_app_with_offers(offers: ChipOffers) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(ChipSelectConfig::default())
-            .insert_resource(registry)
+            .insert_resource(offers)
             .add_systems(Update, spawn_chip_select);
         app
     }
 
     #[test]
     fn spawn_creates_screen_entity() {
-        let mut app = test_app_with_registry(make_registry(3));
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let count = app
@@ -208,8 +199,8 @@ mod tests {
     }
 
     #[test]
-    fn spawn_creates_three_cards_from_registry() {
-        let mut app = test_app_with_registry(make_registry(3));
+    fn spawn_creates_three_cards_from_offers() {
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let count = app
@@ -221,8 +212,8 @@ mod tests {
     }
 
     #[test]
-    fn spawn_creates_cards_matching_registry_size() {
-        let mut app = test_app_with_registry(make_registry(2));
+    fn spawn_creates_cards_matching_offers_size() {
+        let mut app = test_app_with_offers(make_offers(2));
         app.update();
 
         let count = app
@@ -234,8 +225,8 @@ mod tests {
     }
 
     #[test]
-    fn empty_registry_creates_no_cards() {
-        let mut app = test_app_with_registry(make_registry(0));
+    fn empty_offers_creates_no_cards() {
+        let mut app = test_app_with_offers(make_offers(0));
         app.update();
 
         let count = app
@@ -248,7 +239,7 @@ mod tests {
 
     #[test]
     fn spawn_inserts_timer_resource() {
-        let mut app = test_app_with_registry(make_registry(3));
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let timer = app.world().resource::<ChipSelectTimer>();
@@ -257,7 +248,7 @@ mod tests {
 
     #[test]
     fn spawn_inserts_selection_resource() {
-        let mut app = test_app_with_registry(make_registry(3));
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let selection = app.world().resource::<ChipSelectSelection>();
@@ -265,8 +256,8 @@ mod tests {
     }
 
     #[test]
-    fn spawn_inserts_offers_resource() {
-        let mut app = test_app_with_registry(make_registry(3));
+    fn spawn_reads_existing_offers_resource() {
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
@@ -278,7 +269,7 @@ mod tests {
 
     #[test]
     fn spawn_creates_timer_text() {
-        let mut app = test_app_with_registry(make_registry(3));
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let count = app
@@ -291,7 +282,7 @@ mod tests {
 
     #[test]
     fn cards_display_real_chip_names() {
-        let mut app = test_app_with_registry(make_registry(3));
+        let mut app = test_app_with_offers(make_offers(3));
         app.update();
 
         let mut found_names: Vec<String> = Vec::new();
@@ -305,8 +296,8 @@ mod tests {
     }
 
     #[test]
-    fn empty_registry_still_creates_screen() {
-        let mut app = test_app_with_registry(make_registry(0));
+    fn empty_offers_still_creates_screen() {
+        let mut app = test_app_with_offers(make_offers(0));
         app.update();
 
         let count = app
@@ -318,8 +309,8 @@ mod tests {
     }
 
     #[test]
-    fn large_registry_caps_at_max_cards() {
-        let mut app = test_app_with_registry(make_registry(5));
+    fn offers_with_five_spawns_all_five_cards() {
+        let mut app = test_app_with_offers(make_offers(5));
         app.update();
 
         let count = app
@@ -327,9 +318,6 @@ mod tests {
             .query::<&ChipCard>()
             .iter(app.world())
             .count();
-        assert_eq!(count, 3, "should cap at MAX_CARDS even with 5 in registry");
-
-        let offers = app.world().resource::<ChipOffers>();
-        assert_eq!(offers.0.len(), 3);
+        assert_eq!(count, 5, "should spawn a card for each offer");
     }
 }
