@@ -40,9 +40,9 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
     - [~~4f: Chip Offering System~~](phase-4/phase-4f-chip-offerings.md) — **Done**
     - [~~4g: Node Transitions & VFX~~](phase-4/phase-4g-node-transitions.md) — **Done**
   - **Wave 4 — Capstones** (Session 8)
-    - [4h: Chip Evolution](phase-4/phase-4h-chip-evolution.md)
-    - [4i: Run Stats & Summary](phase-4/phase-4i-run-stats.md)
-    - [4j: Release Infrastructure](phase-4/phase-4j-release-infrastructure.md)
+    - [~~4h: Chip Evolution~~](phase-4/phase-4h-chip-evolution.md) — **Done**
+    - [~~4i: Run Stats & Summary~~](phase-4/phase-4i-run-stats.md) — **Done**
+    - [~~4j: Release Infrastructure~~](phase-4/phase-4j-release-infrastructure.md) — **Done**
 
 ### Upcoming
 - [Phase 5: Visual Identity](phase-5-visual-identity.md)

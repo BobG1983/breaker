@@ -13,9 +13,9 @@
 | ~~[4e](phase-4e-node-escalation.md)~~ | ~~Node Sequence & Escalation~~ | ~~4a~~ | ~~Very Large~~ | **DONE** |
 | ~~[4f](phase-4f-chip-offerings.md)~~ | ~~Chip Offering System~~ | ~~4a, 4c~~ | ~~Medium~~ | **DONE** |
 | ~~[4g](phase-4g-node-transitions.md)~~ | ~~Node Transitions & VFX~~ | ~~4e~~ | ~~Medium~~ | **DONE** |
-| [4h](phase-4h-chip-evolution.md) | Chip Evolution | 4c, 4d, 4e | Medium | Low |
-| [4i](phase-4i-run-stats.md) | Run Stats & Summary | 4e, 4f | Medium | Low |
-| [4j](phase-4j-release-infrastructure.md) | Release Infrastructure | — | Small | Low |
+| ~~[4h](phase-4h-chip-evolution.md)~~ | ~~Chip Evolution~~ | ~~4c, 4d, 4e~~ | ~~Medium~~ | **DONE** |
+| ~~[4i](phase-4i-run-stats.md)~~ | ~~Run Stats & Summary~~ | ~~4e, 4f~~ | ~~Medium~~ | **DONE** |
+| ~~[4j](phase-4j-release-infrastructure.md)~~ | ~~Release Infrastructure~~ | ~~—~~ | ~~Small~~ | **DONE** |
 | 4k | Render Plugin Separation | Phase 4 complete | Medium | Low — refactor only |
 
 ## Dependency Graph
@@ -128,7 +128,7 @@ All three are independent and can parallelize.
 | ~~**5**~~ | ~~4d.1 + 4d.2~~ | ~~TriggerChain types + unified chain evaluation engine~~ | ~~behaviors, chips~~ | **DONE** |
 | ~~**6**~~ | ~~4d.3 + 4d.4~~ | ~~Shockwave + Surge POC (4c.2 deferred)~~ | ~~behaviors, assets~~ | **DONE** |
 | ~~**7**~~ | ~~4f + 4g~~ | ~~Chip offerings + node transitions (parallel)~~ | ~~chips, screen, fx~~ | **DONE** |
-| **8** | 4h + 4i + 4j | Evolution + run stats + release infra (parallel capstones) | chips, run, ui, CI |
+| ~~**8**~~ | ~~4h + 4i + 4j~~ | ~~Evolution + run stats + release infra (parallel capstones)~~ | ~~chips, run, ui, CI~~ | **DONE** |
 
 ## What NOT to Combine
 

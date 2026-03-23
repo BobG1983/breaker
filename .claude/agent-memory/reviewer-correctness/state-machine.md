@@ -7,7 +7,7 @@ type: reference
 ## State Machine Rules
 - Valid transitions: Loading→MainMenu, MainMenu→RunSetup, RunSetup→Playing, Playing→TransitionOut→ChipSelect→TransitionIn→Playing, Playing→RunEnd, RunEnd→MainMenu
 - Pause sub-machine: Playing(Active)↔Playing(Paused), Paused+Quit→MainMenu
-- `advance_node` runs OnEnter(GameState::TransitionIn) and immediately sets NextState(Playing) — 1-frame intermediate (was OnEnter(NodeTransition); NodeTransition state removed in Wave 3)
+- `advance_node` runs OnEnter(GameState::TransitionIn) — only increments `run_state.node_index` and resets `transition_queued`. Does NOT set NextState(Playing). The TransitionIn→Playing state change is handled by `animate_transition` in FxPlugin when the transition animation timer completes.
 - `reset_run_state` runs OnExit(MainMenu) — resets node_index and outcome
 - `handle_timer_expired` guards on RunOutcome::InProgress
 - `handle_node_cleared` routes non-final nodes to TransitionOut (not directly to ChipSelect; FxPlugin drives TransitionOut→ChipSelect animation)

@@ -22,11 +22,16 @@ use breaker::{
         components::{Breaker, BreakerState},
         systems::update_breaker_state,
     },
+    chips::inventory::ChipInventory,
     input::resources::InputActions,
-    run::node::{
-        ScenarioLayoutOverride, messages::SpawnNodeComplete, resources::NodeTimer,
-        sets::NodeSystems,
+    run::{
+        RunStats,
+        node::{
+            ScenarioLayoutOverride, messages::SpawnNodeComplete, resources::NodeTimer,
+            sets::NodeSystems,
+        },
     },
+    screen::chip_select::{ChipOffering, ChipOffers},
     shared::{GameState, PlayingState, RunSeed, SelectedArchetype},
 };
 
@@ -36,13 +41,15 @@ use crate::{
         EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats,
         ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_count_reasonable,
         check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
-        check_breaker_position_clamped, check_no_entity_leaks, check_no_nan,
-        check_physics_frozen_during_pause, check_timer_monotonically_decreasing,
-        check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
+        check_breaker_position_clamped, check_chip_stacks_consistent,
+        check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
+        check_offering_no_duplicates, check_physics_frozen_during_pause,
+        check_run_stats_monotonic, check_timer_monotonically_decreasing, check_timer_non_negative,
+        check_valid_breaker_state, check_valid_state_transitions,
     },
     types::{
-        ForcedGameState, GameAction as ScenarioGameAction, MutationKind, ScenarioBreakerState,
-        ScenarioDefinition,
+        ForcedGameState, GameAction as ScenarioGameAction, MutationKind, RunStatCounter,
+        ScenarioBreakerState, ScenarioDefinition,
     },
 };
 
@@ -202,6 +209,10 @@ impl Plugin for ScenarioLifecycle {
                         check_breaker_position_clamped,
                         check_physics_frozen_during_pause,
                         check_no_entity_leaks,
+                        check_offering_no_duplicates,
+                        check_maxed_chip_never_offered,
+                        check_chip_stacks_consistent,
+                        check_run_stats_monotonic,
                     )
                         .chain()
                         .run_if(|stats: Option<Res<ScenarioStats>>| {
@@ -450,12 +461,27 @@ pub struct PauseControl<'w> {
     next: Option<ResMut<'w, NextState<PlayingState>>>,
 }
 
+/// Grouped system parameters for mutation targets that need additional game state.
+///
+/// Extracted to keep [`apply_debug_frame_mutations`] under the 7-argument clippy limit.
+#[derive(SystemParam)]
+pub struct MutationTargets<'w, 's> {
+    /// [`RunStats`] resource — absent before a run starts.
+    run_stats: Option<ResMut<'w, RunStats>>,
+    /// [`ChipInventory`] resource — absent before a run starts.
+    chip_inventory: Option<ResMut<'w, ChipInventory>>,
+    /// [`ChipOffers`] resource — present only during [`GameState::ChipSelect`].
+    chip_offers: Option<ResMut<'w, ChipOffers>>,
+    /// [`Commands`] for inserting resources when the optional resource is absent.
+    commands: Commands<'w, 's>,
+}
+
 /// Applies per-frame mutations from [`ScenarioConfig`] at matching frames.
 ///
 /// Reads `frame_mutations` from the scenario definition. For each mutation
 /// whose frame matches [`ScenarioFrame`], applies the corresponding state
 /// change (breaker state override, timer override, entity spawn, bolt
-/// teleport, or pause toggle).
+/// teleport, pause toggle, run stat decrement, or chip inventory injection).
 pub fn apply_debug_frame_mutations(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
@@ -463,7 +489,7 @@ pub fn apply_debug_frame_mutations(
     mut bolts: Query<&mut Transform, With<ScenarioTagBolt>>,
     mut node_timer: Option<ResMut<NodeTimer>>,
     mut pause: PauseControl,
-    mut commands: Commands,
+    mut targets: MutationTargets,
 ) {
     let Some(ref mutations) = config.definition.frame_mutations else {
         return;
@@ -487,7 +513,7 @@ pub fn apply_debug_frame_mutations(
             }
             MutationKind::SpawnExtraEntities(count) => {
                 for _ in 0..*count {
-                    commands.spawn(Transform::default());
+                    targets.commands.spawn(Transform::default());
                 }
             }
             MutationKind::MoveBolt(x, y) => {
@@ -506,7 +532,126 @@ pub fn apply_debug_frame_mutations(
                     }
                 }
             }
+            MutationKind::SetRunStat(counter, value) => {
+                if let Some(ref mut stats) = targets.run_stats {
+                    apply_set_run_stat(stats, *counter, *value);
+                }
+            }
+            MutationKind::DecrementRunStat(counter) => {
+                if let Some(ref mut stats) = targets.run_stats {
+                    apply_decrement_run_stat(stats, *counter);
+                }
+            }
+            MutationKind::InjectOverStackedChip {
+                chip_name,
+                stacks,
+                max_stacks,
+            } => {
+                if let Some(ref mut inventory) = targets.chip_inventory {
+                    inventory.force_insert_entry(chip_name, *stacks, *max_stacks);
+                }
+            }
+            MutationKind::InjectDuplicateOffers { chip_name } => {
+                apply_inject_duplicate_offers(
+                    chip_name,
+                    &mut targets.chip_offers,
+                    &mut targets.commands,
+                );
+            }
+            MutationKind::InjectMaxedChipOffer { chip_name } => {
+                apply_inject_maxed_chip_offer(
+                    chip_name,
+                    &mut targets.chip_inventory,
+                    &mut targets.chip_offers,
+                    &mut targets.commands,
+                );
+            }
         }
+    }
+}
+
+/// Sets the named [`RunStats`] counter to `value`.
+fn apply_set_run_stat(stats: &mut RunStats, counter: RunStatCounter, value: u32) {
+    match counter {
+        RunStatCounter::NodesCleared => stats.nodes_cleared = value,
+        RunStatCounter::CellsDestroyed => stats.cells_destroyed = value,
+        RunStatCounter::BumpsPerformed => stats.bumps_performed = value,
+        RunStatCounter::PerfectBumps => stats.perfect_bumps = value,
+        RunStatCounter::BoltsLost => stats.bolts_lost = value,
+    }
+}
+
+/// Decrements the named [`RunStats`] counter by 1 (saturating at 0).
+fn apply_decrement_run_stat(stats: &mut RunStats, counter: RunStatCounter) {
+    match counter {
+        RunStatCounter::NodesCleared => {
+            stats.nodes_cleared = stats.nodes_cleared.saturating_sub(1);
+        }
+        RunStatCounter::CellsDestroyed => {
+            stats.cells_destroyed = stats.cells_destroyed.saturating_sub(1);
+        }
+        RunStatCounter::BumpsPerformed => {
+            stats.bumps_performed = stats.bumps_performed.saturating_sub(1);
+        }
+        RunStatCounter::PerfectBumps => {
+            stats.perfect_bumps = stats.perfect_bumps.saturating_sub(1);
+        }
+        RunStatCounter::BoltsLost => {
+            stats.bolts_lost = stats.bolts_lost.saturating_sub(1);
+        }
+    }
+}
+
+/// Injects a [`ChipOffers`] resource containing two identical chips (triggers
+/// [`InvariantKind::OfferingNoDuplicates`]).
+fn apply_inject_duplicate_offers(
+    chip_name: &str,
+    chip_offers: &mut Option<ResMut<ChipOffers>>,
+    commands: &mut Commands,
+) {
+    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    let def = ChipDefinition {
+        name: chip_name.to_owned(),
+        description: String::new(),
+        rarity: Rarity::Common,
+        max_stacks: 3,
+        effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+    };
+    let offers = ChipOffers(vec![
+        ChipOffering::Normal(def.clone()),
+        ChipOffering::Normal(def),
+    ]);
+    if let Some(existing) = chip_offers {
+        **existing = offers;
+    } else {
+        commands.insert_resource(offers);
+    }
+}
+
+/// Injects a [`ChipOffers`] resource containing a chip already maxed in
+/// [`ChipInventory`] (triggers [`InvariantKind::MaxedChipNeverOffered`]).
+fn apply_inject_maxed_chip_offer(
+    chip_name: &str,
+    chip_inventory: &mut Option<ResMut<ChipInventory>>,
+    chip_offers: &mut Option<ResMut<ChipOffers>>,
+    commands: &mut Commands,
+) {
+    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    let def = ChipDefinition {
+        name: chip_name.to_owned(),
+        description: String::new(),
+        rarity: Rarity::Common,
+        max_stacks: 1,
+        effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+    };
+    if let Some(inventory) = chip_inventory {
+        inventory.force_insert_entry(chip_name, 1, 1);
+    }
+    let offers = ChipOffers(vec![ChipOffering::Normal(def)]);
+    if let Some(existing) = chip_offers {
+        **existing = offers;
+    } else {
+        commands.insert_resource(offers);
     }
 }
 

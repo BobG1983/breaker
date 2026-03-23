@@ -4,7 +4,7 @@ description: Accepted/wontfix findings with rationale from past audits
 type: project
 ---
 
-## Accepted Findings (updated 2026-03-22)
+## Accepted Findings (updated 2026-03-23)
 
 ### proc-macro2 in breaker-derive flagged by machete
 - **Finding:** cargo machete reports proc-macro2 as unused in breaker-derive
@@ -62,28 +62,24 @@ type: project
 - **Fix if needed:** Replace `bevy_common_assets` with a direct implementation using ron 0.12
   directly, or wait for a future bevy_common_assets release that bumps to `ron ^0.12`.
 
-### OFL-1.1 / Ubuntu-font-1.0 (epaint_default_fonts) — OPEN
-- **Finding:** `cargo deny check licenses` fails on OFL-1.1 and Ubuntu-font-1.0 from
-  `epaint_default_fonts 0.33.3`, transitively via `bevy_egui → epaint`.
-- **Status:** OPEN — deny.toml does not allow these licenses; cargo deny check licenses fails.
-- **Compliance note:** OFL-1.1 (SIL Open Font License) is a font-specific copyleft license. It
-  applies only to the font software itself, not to programs that use the fonts. Embedding OFL-1.1
-  fonts in a proprietary binary is permitted under OFL-1.1 terms.
-  Ubuntu-font-1.0 is the Ubuntu Font Licence — similar font-specific terms, embedding permitted.
-- **Fix:** Add `"OFL-1.1"` and `"Ubuntu-font-1.0"` to the `allow` array in `deny.toml`.
+### OFL-1.1 / Ubuntu-font-1.0 (epaint_default_fonts) — RESOLVED
+- **Status:** RESOLVED 2026-03-22 — "OFL-1.1" and "Ubuntu-font-1.0" added to deny.toml allow list.
 
-### CC0-1.0 (hexf-parse) — OPEN
-- **Finding:** `cargo deny check licenses` fails on CC0-1.0 from `hexf-parse 0.2.1`,
-  transitively via `naga → wgpu → bevy_render`.
-- **Status:** OPEN — deny.toml does not allow CC0-1.0; cargo deny fails.
-- **Compliance note:** CC0-1.0 is a public domain dedication — the most permissive license possible.
-  No attribution required, no copyleft, no restrictions. Safe for proprietary use.
-- **Fix:** Add `"CC0-1.0"` to the `allow` array in `deny.toml`.
+### CC0-1.0 (hexf-parse) — RESOLVED
+- **Status:** RESOLVED 2026-03-22 — "CC0-1.0" added to deny.toml allow list.
 
-### Unicode-3.0 (unicode-ident) — OPEN
-- **Finding:** `cargo deny check licenses` fails on Unicode-3.0 from `unicode-ident`,
-  transitively via `naga → proc-macro2`.
-- **Status:** OPEN — deny.toml does not allow Unicode-3.0; cargo deny fails.
-- **Compliance note:** Unicode-3.0 (Unicode License v3) is OSI-approved. It is a permissive license
-  that allows use in proprietary software. No copyleft.
-- **Fix:** Add `"Unicode-3.0"` to the `allow` array in `deny.toml`.
+### Unicode-3.0 (unicode-ident) — RESOLVED
+- **Status:** RESOLVED 2026-03-22 — "Unicode-3.0" added to deny.toml allow list.
+
+### Workspace crates unlicensed — OPEN (re-opened 2026-03-23)
+- **Finding:** `cargo deny check licenses` errors on all three workspace crates:
+  `breaker`, `breaker_derive`, `breaker_scenario_runner`.
+- **Status:** OPEN — `private.ignore = true` does NOT suppress this without `publish = false`
+  in each crate's `[package]` section. Previously marked RESOLVED incorrectly.
+- **Fix:** Add `publish = false` to the `[package]` section in each of:
+  - `breaker-game/Cargo.toml`
+  - `breaker-derive/Cargo.toml`
+  - `breaker-scenario-runner/Cargo.toml`
+- **Compliance note:** These are proprietary workspace crates — `publish = false` is correct and
+  also prevents accidental `cargo publish`.
+- **Priority:** LOW — only blocks `cargo deny check licenses` CI gate, not builds or tests.

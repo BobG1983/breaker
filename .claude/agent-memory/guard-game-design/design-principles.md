@@ -44,7 +44,7 @@ type: reference
 2. **BLOCKING** Prism archetype bolt-lost penalty too soft (7s TimePenalty, was 3s) — needs LoseExtraBolts leaf variant or higher penalty
 2b. **BLOCKING** BumpForceBoost (Augment chip) is dead code — component gets stamped on Breaker but never read by any system. Was never wired up (pre-dates SpeedBoost refactor). Needs: flat additive speed bonus in reflect_top_hit (bolt_breaker_collision.rs), reading BumpForceBoost from breaker entity
 2c. **BLOCKING** Double decay bug in chip offerings — generate_chip_offerings applies decay at generation AND handle_chip_input applies at confirmation. Selected chip also penalized. Fix: remove generation-time decay, add timeout decay to tick_chip_timer (2026-03-22)
-3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — still unfixed from 3 prior reviews
+3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — unfixed from 4 prior reviews (2026-03-23: flagged again in Wave 4 review). Recommend 10s auto-advance timer, timeout = New Run.
 4. **IMPORTANT** Run-end subtitle copy weak/passive — needs motivating tone
 5. ~~**IMPORTANT** Chip select timer 10s too generous — recommend 8s~~ RESOLVED — RON now at 8.0s (2026-03-22)
 6. **IMPORTANT** All 3 layouts in Passive pool — no Active or Boss pool layouts
@@ -55,6 +55,9 @@ type: reference
 12. **MINOR** introduced_cells field in difficulty tiers is empty (content gap)
 13. **MINOR** Flash transition color white is off-brand for neon cyberpunk — consider hot neon color (Phase 5)
 14. **MINOR** Sweep direction always left-to-right — consider seeded direction randomization
+15. **BLOCKING** Evolution reward screen spec says "no timer" — violates Pillar 1. Must have timer (6s, timeout = skip). (2026-03-23)
+16. **IMPORTANT** Evolution "no eligible" fallback undefined — recommend curated boss chip pool w/ higher rarity weights (2026-03-23)
+17. **IMPORTANT** Evolved chip effects need design direction: must introduce new interaction points, not just stat boosts (2026-03-23)
 
 ## Resolved (from prior reviews)
 - ~~PLAN.md/README say bump "all grades boost" but 0.8x is penalty~~ FIXED in RON — but test code still uses 0.8x (issue #1)
@@ -85,3 +88,9 @@ type: reference
 - SpeedBoost as TriggerChain leaf enables new chip archetypes: OnCellDestroyed(SpeedBoost) for velocity ramp, OnBumpWhiff(SpeedBoost(0.8)) for whiff penalties, etc.
 - Amp SpeedBoost (flat, raises base/max) + TriggerChain SpeedBoost (multiplier) = multiplicative synergy — classic build-game power curve
 - Prism SpeedBoost chip concept: "Photon Accelerator: OnPerfectBump(SpeedBoost(target: AllBolts, multiplier: 1.2))" — opt-in, not archetype baseline
+- Evolution reward screen MUST have timer (6s recommended) — "no timer" violates Pillar 1 (2026-03-23)
+- Evolution "no eligible" fallback: curated boss chip pool with higher rarity weights, same timer pressure
+- Evolved chips must introduce new interaction points (new trigger conditions, cross-kind synergies) — not just stronger stat versions (2026-03-23)
+- Highlight moments (ClutchClear, PerfectStreak, etc.) should trigger in-game juice when detected, not just post-run display (2026-03-23)
+- Run-end subtitles should be distinct per death type and ideally randomized from a pool (2026-03-23)
+- Flux formula too soft for final balance (bolts_lost * -3 is negligible) — flag for Phase 8 tuning, fine for vertical slice

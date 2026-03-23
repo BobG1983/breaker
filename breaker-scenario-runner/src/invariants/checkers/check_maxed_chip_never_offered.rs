@@ -17,15 +17,16 @@ pub fn check_maxed_chip_never_offered(
     let Some(offers) = offers else { return };
     let Some(inventory) = inventory else { return };
 
-    for chip in &offers.0 {
-        if inventory.is_maxed(&chip.name) {
+    for offering in &offers.0 {
+        let name = offering.name();
+        if inventory.is_maxed(name) {
             log.0.push(ViolationEntry {
                 frame: frame.0,
                 invariant: InvariantKind::MaxedChipNeverOffered,
                 entity: None,
                 message: format!(
-                    "MaxedChipNeverOffered FAIL frame={} maxed chip in offering: {}",
-                    frame.0, chip.name,
+                    "MaxedChipNeverOffered FAIL frame={} maxed chip in offering: {name}",
+                    frame.0,
                 ),
             });
         }
@@ -74,7 +75,9 @@ mod tests {
         let chip_a = test_chip("A", 1);
 
         // Insert ChipOffers containing "A"
-        app.insert_resource(ChipOffers(vec![chip_a.clone()]));
+        app.insert_resource(ChipOffers(vec![
+            breaker::screen::chip_select::ChipOffering::Normal(chip_a.clone()),
+        ]));
 
         // Insert ChipInventory where "A" is at 1/1 (maxed)
         let mut inventory = ChipInventory::default();
@@ -104,7 +107,9 @@ mod tests {
         let chip_a = test_chip("A", 3);
 
         // Insert ChipOffers containing "A"
-        app.insert_resource(ChipOffers(vec![chip_a.clone()]));
+        app.insert_resource(ChipOffers(vec![
+            breaker::screen::chip_select::ChipOffering::Normal(chip_a.clone()),
+        ]));
 
         // Insert ChipInventory where "A" is at 1/3 (not maxed)
         let mut inventory = ChipInventory::default();
@@ -140,7 +145,9 @@ mod tests {
         let mut app = test_app();
         // No ChipInventory inserted — system should skip gracefully
         let chip_a = test_chip("A", 1);
-        app.insert_resource(ChipOffers(vec![chip_a]));
+        app.insert_resource(ChipOffers(vec![
+            breaker::screen::chip_select::ChipOffering::Normal(chip_a),
+        ]));
 
         tick(&mut app);
 

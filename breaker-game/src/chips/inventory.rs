@@ -81,6 +81,16 @@ impl ChipInventory {
         self.held.iter().map(|(k, v)| (k.as_str(), v))
     }
 
+    /// Iterate held chips as `(name, stacks, max_stacks)` tuples.
+    ///
+    /// Exposes stack counts without revealing [`ChipEntry`] internals. Used
+    /// by the scenario runner's [`ChipStacksConsistent`] invariant checker.
+    pub fn iter_held_stacks(&self) -> impl Iterator<Item = (&str, u32, u32)> {
+        self.held
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.stacks, v.max_stacks))
+    }
+
     /// Iterate names of all chips currently at max stacks.
     pub fn maxed_chips(&self) -> impl Iterator<Item = &str> {
         self.held
@@ -95,10 +105,45 @@ impl ChipInventory {
         self.held.len()
     }
 
+    /// Remove one stack of the named chip.
+    ///
+    /// Returns `true` if a stack was removed, `false` if the chip is not held.
+    /// If this reduces the stack count to 0, the entry is removed entirely.
+    #[must_use]
+    pub fn remove_chip(&mut self, name: &str) -> bool {
+        let Some(entry) = self.held.get_mut(name) else {
+            return false;
+        };
+        entry.stacks -= 1;
+        if entry.stacks == 0 {
+            self.held.remove(name);
+        }
+        true
+    }
+
     /// Remove all held chips and seen history.
     pub fn clear(&mut self) {
         self.held.clear();
         self.decay_weights.clear();
+    }
+
+    /// Directly insert a chip entry with arbitrary `stacks` and `max_stacks`,
+    /// bypassing normal cap enforcement.
+    ///
+    /// **For scenario-runner self-tests only.** This is the only sanctioned way
+    /// to construct an over-stacked entry (where `stacks > max_stacks`) for
+    /// testing [`InvariantKind::ChipStacksConsistent`] violation detection.
+    ///
+    /// Never call this from game logic — `add_chip` enforces the stack cap.
+    pub fn force_insert_entry(&mut self, name: &str, stacks: u32, max_stacks: u32) {
+        self.held.insert(
+            name.to_owned(),
+            ChipEntry {
+                stacks,
+                max_stacks,
+                rarity: Rarity::Common,
+            },
+        );
     }
 
     /// Record that a chip was offered, multiplying existing decay by the factor.
@@ -679,6 +724,103 @@ mod tests {
         assert!(
             weight.abs() < f32::EPSILON,
             "expected 0.0 (0.0*0.8), got {weight}"
+        );
+    }
+
+    // --- Behavior: remove_chip decrements stack count ---
+
+    #[test]
+    fn remove_chip_decrements_stacks_from_two_to_one() {
+        let mut inv = ChipInventory::default();
+        let def = piercing_shot_def(); // max_stacks=3, Common
+        let _ = inv.add_chip("Piercing Shot", &def);
+        let _ = inv.add_chip("Piercing Shot", &def);
+        assert_eq!(inv.stacks("Piercing Shot"), 2);
+
+        let removed = inv.remove_chip("Piercing Shot");
+        assert!(removed, "remove_chip should return true when chip is held");
+        assert_eq!(
+            inv.stacks("Piercing Shot"),
+            1,
+            "stacks should decrease from 2 to 1"
+        );
+    }
+
+    #[test]
+    fn remove_chip_at_one_stack_removes_entry_entirely() {
+        let mut inv = ChipInventory::default();
+        let def = single_stack_def(); // max_stacks=1
+        let _ = inv.add_chip("Single Stack", &def);
+        assert_eq!(inv.stacks("Single Stack"), 1);
+
+        let removed = inv.remove_chip("Single Stack");
+        assert!(removed, "remove_chip should return true");
+        assert_eq!(
+            inv.stacks("Single Stack"),
+            0,
+            "stacks should be 0 after removing last stack"
+        );
+        assert_eq!(
+            inv.total_held(),
+            0,
+            "total_held should decrease when last stack removed"
+        );
+        assert!(
+            !inv.held_chips().any(|(name, _)| name == "Single Stack"),
+            "held_chips should no longer contain removed chip"
+        );
+        assert!(
+            !inv.is_maxed("Single Stack"),
+            "is_maxed should return false after removal"
+        );
+    }
+
+    #[test]
+    fn remove_chip_on_chip_not_held_returns_false() {
+        let mut inv = ChipInventory::default();
+        assert!(
+            !inv.remove_chip("Nonexistent"),
+            "remove_chip should return false for unheld chip"
+        );
+        assert_eq!(inv.total_held(), 0, "total_held should remain 0");
+    }
+
+    #[test]
+    fn remove_chip_does_not_affect_other_held_chips() {
+        let mut inv = ChipInventory::default();
+        let def_a = piercing_shot_def(); // max_stacks=3
+        let def_b = single_stack_def(); // max_stacks=1
+        let _ = inv.add_chip("Piercing Shot", &def_a);
+        let _ = inv.add_chip("Piercing Shot", &def_a);
+        let _ = inv.add_chip("Single Stack", &def_b);
+
+        let _ = inv.remove_chip("Piercing Shot");
+        assert_eq!(
+            inv.stacks("Piercing Shot"),
+            1,
+            "Piercing Shot should go from 2 to 1"
+        );
+        assert_eq!(
+            inv.stacks("Single Stack"),
+            1,
+            "Single Stack should be unchanged"
+        );
+    }
+
+    #[test]
+    fn remove_chip_then_add_chip_re_adds_from_zero() {
+        let mut inv = ChipInventory::default();
+        let def = single_stack_def(); // max_stacks=1
+        let _ = inv.add_chip("Single Stack", &def);
+        let _ = inv.remove_chip("Single Stack");
+        assert_eq!(inv.stacks("Single Stack"), 0);
+
+        let added = inv.add_chip("Single Stack", &def);
+        assert!(added, "add_chip should succeed after removal");
+        assert_eq!(
+            inv.stacks("Single Stack"),
+            1,
+            "stacks should be 1 after re-adding"
         );
     }
 }

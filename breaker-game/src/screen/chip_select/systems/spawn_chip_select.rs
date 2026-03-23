@@ -3,7 +3,7 @@
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
 use crate::screen::chip_select::{
-    ChipSelectConfig,
+    ChipOffering, ChipSelectConfig,
     components::{ChipCard, ChipSelectScreen, ChipTimerText},
     resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
 };
@@ -75,7 +75,7 @@ fn spawn_title(parent: &mut ChildSpawnerCommands<'_>) {
 fn spawn_card_row(
     parent: &mut ChildSpawnerCommands<'_>,
     config: &ChipSelectConfig,
-    offers: &[crate::chips::ChipDefinition],
+    offers: &[ChipOffering],
 ) {
     let selected_color = Color::srgb(
         config.selected_color_rgb[0],
@@ -97,8 +97,9 @@ fn spawn_card_row(
             ..default()
         })
         .with_children(|row| {
-            for (i, chip) in offers.iter().enumerate() {
+            for (i, offering) in offers.iter().enumerate() {
                 let border_color = if i == 0 { selected_color } else { normal_color };
+                let def = offering.definition();
 
                 row.spawn((
                     ChipCard { index: i },
@@ -119,7 +120,7 @@ fn spawn_card_row(
                 ))
                 .with_children(|card| {
                     card.spawn((
-                        Text::new(chip.name.clone()),
+                        Text::new(def.name.clone()),
                         TextFont {
                             font_size: config.card_title_font_size,
                             ..default()
@@ -128,7 +129,7 @@ fn spawn_card_row(
                     ));
 
                     card.spawn((
-                        Text::new(format!("{:?}", chip.rarity)),
+                        Text::new(format!("{:?}", def.rarity)),
                         TextFont {
                             font_size: config.card_description_font_size,
                             ..default()
@@ -137,7 +138,7 @@ fn spawn_card_row(
                     ));
 
                     card.spawn((
-                        Text::new(chip.description.clone()),
+                        Text::new(def.description.clone()),
                         TextFont {
                             font_size: config.card_description_font_size,
                             ..default()
@@ -167,11 +168,11 @@ mod tests {
 
     fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
-            ChipDefinition::test_simple("Piercing Shot"),
-            ChipDefinition::test_simple("Wide Breaker"),
-            ChipDefinition::test_simple("Surge"),
-            ChipDefinition::test_simple("Ricochet"),
-            ChipDefinition::test_simple("Quick Dash"),
+            ChipOffering::Normal(ChipDefinition::test_simple("Piercing Shot")),
+            ChipOffering::Normal(ChipDefinition::test_simple("Wide Breaker")),
+            ChipOffering::Normal(ChipDefinition::test_simple("Surge")),
+            ChipOffering::Normal(ChipDefinition::test_simple("Ricochet")),
+            ChipOffering::Normal(ChipDefinition::test_simple("Quick Dash")),
         ];
         ChipOffers(all.into_iter().take(count).collect())
     }
@@ -262,9 +263,9 @@ mod tests {
 
         let offers = app.world().resource::<ChipOffers>();
         assert_eq!(offers.0.len(), 3);
-        assert_eq!(offers.0[0].name, "Piercing Shot");
-        assert_eq!(offers.0[1].name, "Wide Breaker");
-        assert_eq!(offers.0[2].name, "Surge");
+        assert_eq!(offers.0[0].name(), "Piercing Shot");
+        assert_eq!(offers.0[1].name(), "Wide Breaker");
+        assert_eq!(offers.0[2].name(), "Surge");
     }
 
     #[test]

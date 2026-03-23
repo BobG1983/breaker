@@ -44,9 +44,9 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── chips/            # Amps, Augments, Overclocks system — registry, effect types, observer-based application
+├── chips/            # Amps, Augments, Overclocks system — registry, effect types, observer-based application; EvolutionRegistry for evolution recipes
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
-├── run/              # Run state, node sequencing (node/ sub-domain), timer
+├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker
 ├── physics/          # CCD collision detection, collision response
 ├── interpolate/      # Transform interpolation for smooth rendering between FixedUpdate ticks
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)

@@ -1,0 +1,323 @@
+# Release workflow for Breaker
+#
+# Triggers:
+#   - Tag push matching v* (full pipeline: build, GitHub Release, itch.io publish)
+#   - Manual workflow_dispatch with a tag input (build + GitHub Release only; no itch.io)
+#
+# Jobs:
+#   build-macos   — aarch64-apple-darwin, zipped with assets
+#   build-windows — x86_64-pc-windows-msvc, zipped with assets
+#   build-linux   — x86_64-unknown-linux-gnu, zipped with assets
+#   create-release — creates a GitHub Release and attaches all three zips
+#   publish-itch  — pushes zips to itch.io via butler (tag push only)
+#
+# Required secrets:
+#   BUTLER_API_KEY — itch.io butler API key (Settings → Secrets → Actions)
+#   GITHUB_TOKEN   — automatically provided by GitHub Actions
+#
+# itch.io config:
+#   username: rantzgames
+#   game slug: breaker
+#   channels: mac, windows, linux
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v0.2.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Resolve which tag we're building so both triggers use the same logic
+  # ---------------------------------------------------------------------------
+  resolve-tag:
+    name: Resolve Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # macOS ARM64 build
+  # ---------------------------------------------------------------------------
+  build-macos:
+    name: Build (macOS ARM64)
+    needs: resolve-tag
+    runs-on: macos-latest
+    env:
+      TAG: ${{ needs.resolve-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-macos-latest"
+          save-if: ${{ github.event_name == 'push' }}
+
+      - name: Build release binary
+        run: cargo build --release -p breaker --no-default-features --target aarch64-apple-darwin
+
+      - name: Bundle artifact
+        run: |
+          BUNDLE_DIR="breaker-${{ env.TAG }}-macos-arm64"
+          mkdir -p "$BUNDLE_DIR"
+          cp target/aarch64-apple-darwin/release/breaker "$BUNDLE_DIR/"
+          cp -r breaker-game/assets "$BUNDLE_DIR/"
+          zip -r "$BUNDLE_DIR.zip" "$BUNDLE_DIR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-macos-arm64
+          path: breaker-${{ env.TAG }}-macos-arm64.zip
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Windows x64 build
+  # ---------------------------------------------------------------------------
+  build-windows:
+    name: Build (Windows x64)
+    needs: resolve-tag
+    runs-on: windows-latest
+    env:
+      TAG: ${{ needs.resolve-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-windows-latest"
+          save-if: ${{ github.event_name == 'push' }}
+
+      - name: Build release binary
+        run: cargo build --release -p breaker --no-default-features --target x86_64-pc-windows-msvc
+
+      - name: Bundle artifact
+        shell: pwsh
+        run: |
+          $BundleDir = "breaker-${{ env.TAG }}-windows-x64"
+          New-Item -ItemType Directory -Path $BundleDir
+          Copy-Item "target\x86_64-pc-windows-msvc\release\breaker.exe" -Destination "$BundleDir\"
+          Copy-Item "breaker-game\assets" -Destination "$BundleDir\" -Recurse
+          Compress-Archive -Path "$BundleDir" -DestinationPath "$BundleDir.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-windows-x64
+          path: breaker-${{ env.TAG }}-windows-x64.zip
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Linux x64 build
+  # ---------------------------------------------------------------------------
+  build-linux:
+    name: Build (Linux x64)
+    needs: resolve-tag
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.resolve-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libudev-dev \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-ubuntu-latest"
+          save-if: ${{ github.event_name == 'push' }}
+
+      - name: Build release binary
+        run: cargo build --release -p breaker --no-default-features --target x86_64-unknown-linux-gnu
+
+      - name: Bundle artifact
+        run: |
+          BUNDLE_DIR="breaker-${{ env.TAG }}-linux-x64"
+          mkdir -p "$BUNDLE_DIR"
+          cp target/x86_64-unknown-linux-gnu/release/breaker "$BUNDLE_DIR/"
+          cp -r breaker-game/assets "$BUNDLE_DIR/"
+          zip -r "$BUNDLE_DIR.zip" "$BUNDLE_DIR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-linux-x64
+          path: breaker-${{ env.TAG }}-linux-x64.zip
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Create GitHub Release and attach zips
+  # ---------------------------------------------------------------------------
+  create-release:
+    name: Create GitHub Release
+    needs: [resolve-tag, build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.resolve-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-macos-arm64
+          path: artifacts/
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-windows-x64
+          path: artifacts/
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-linux-x64
+          path: artifacts/
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          # Extract the first release section from CHANGELOG.md (between first two ## headers)
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(awk '/^## \[/{found++} found==1{print} found==2{exit}' CHANGELOG.md | tail -n +2)
+          else
+            NOTES="See repository for details."
+          fi
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: ${{ contains(env.TAG, '-') }}
+          files: |
+            artifacts/breaker-${{ env.TAG }}-macos-arm64.zip
+            artifacts/breaker-${{ env.TAG }}-windows-x64.zip
+            artifacts/breaker-${{ env.TAG }}-linux-x64.zip
+
+  # ---------------------------------------------------------------------------
+  # Publish to itch.io via butler (tag push only — not manual dispatch)
+  # ---------------------------------------------------------------------------
+  publish-itch:
+    name: Publish to itch.io
+    needs: [resolve-tag, build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    env:
+      TAG: ${{ needs.resolve-tag.outputs.tag }}
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-macos-arm64
+          path: artifacts/
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-windows-x64
+          path: artifacts/
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: breaker-${{ env.TAG }}-linux-x64
+          path: artifacts/
+
+      - name: Install butler
+        run: |
+          curl -L -o butler.zip \
+            https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip
+          chmod +x butler
+          ./butler version
+
+      - name: Authenticate butler
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: ./butler login
+
+      - name: Push macOS build to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          ./butler push \
+            artifacts/breaker-${{ env.TAG }}-macos-arm64.zip \
+            rantzgames/breaker:mac \
+            --userversion "${{ env.TAG }}"
+
+      - name: Push Windows build to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          ./butler push \
+            artifacts/breaker-${{ env.TAG }}-windows-x64.zip \
+            rantzgames/breaker:windows \
+            --userversion "${{ env.TAG }}"
+
+      - name: Push Linux build to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          ./butler push \
+            artifacts/breaker-${{ env.TAG }}-linux-x64.zip \
+            rantzgames/breaker:linux \
+            --userversion "${{ env.TAG }}"

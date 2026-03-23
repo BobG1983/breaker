@@ -125,6 +125,20 @@ fn invariant_kind_maxed_chip_never_offered_parses() {
     assert_eq!(result, InvariantKind::MaxedChipNeverOffered);
 }
 
+#[test]
+fn invariant_kind_chip_stacks_consistent_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("ChipStacksConsistent").expect("ChipStacksConsistent should parse");
+    assert_eq!(result, InvariantKind::ChipStacksConsistent);
+}
+
+#[test]
+fn invariant_kind_run_stats_monotonic_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("RunStatsMonotonic").expect("RunStatsMonotonic should parse");
+    assert_eq!(result, InvariantKind::RunStatsMonotonic);
+}
+
 // -------------------------------------------------------------------------
 // ScenarioDefinition — expected_violations field
 // -------------------------------------------------------------------------
@@ -765,6 +779,93 @@ fn frame_mutation_toggle_pause_parses_from_ron() {
         ron::de::from_str(ron).expect("FrameMutation TogglePause should parse");
     assert_eq!(result.frame, 3);
     assert_eq!(result.mutation, MutationKind::TogglePause);
+}
+
+#[test]
+fn frame_mutation_set_run_stat_nodes_cleared_parses_from_ron() {
+    let ron = "(frame: 10, mutation: SetRunStat(NodesCleared, 5))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SetRunStat should parse");
+    assert_eq!(result.frame, 10);
+    assert_eq!(
+        result.mutation,
+        MutationKind::SetRunStat(RunStatCounter::NodesCleared, 5)
+    );
+}
+
+#[test]
+fn frame_mutation_decrement_run_stat_nodes_cleared_parses_from_ron() {
+    let ron = "(frame: 30, mutation: DecrementRunStat(NodesCleared))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation DecrementRunStat should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(
+        result.mutation,
+        MutationKind::DecrementRunStat(RunStatCounter::NodesCleared)
+    );
+}
+
+#[test]
+fn run_stat_counter_all_variants_parse_from_ron() {
+    let variants = [
+        ("NodesCleared", RunStatCounter::NodesCleared),
+        ("CellsDestroyed", RunStatCounter::CellsDestroyed),
+        ("BumpsPerformed", RunStatCounter::BumpsPerformed),
+        ("PerfectBumps", RunStatCounter::PerfectBumps),
+        ("BoltsLost", RunStatCounter::BoltsLost),
+    ];
+    for (ron_str, expected) in &variants {
+        let result: RunStatCounter = ron::de::from_str(ron_str)
+            .unwrap_or_else(|e| panic!("RunStatCounter::{ron_str} should parse: {e}"));
+        assert_eq!(
+            result, *expected,
+            "RunStatCounter::{ron_str} must parse to {expected:?}"
+        );
+    }
+}
+
+#[test]
+fn frame_mutation_inject_over_stacked_chip_parses_from_ron() {
+    let ron = r#"(frame: 30, mutation: InjectOverStackedChip(chip_name: "TestChip", stacks: 3, max_stacks: 2))"#;
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectOverStackedChip should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(
+        result.mutation,
+        MutationKind::InjectOverStackedChip {
+            chip_name: "TestChip".to_owned(),
+            stacks: 3,
+            max_stacks: 2,
+        }
+    );
+}
+
+#[test]
+fn frame_mutation_inject_duplicate_offers_parses_from_ron() {
+    let ron = r#"(frame: 30, mutation: InjectDuplicateOffers(chip_name: "TestChip"))"#;
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectDuplicateOffers should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(
+        result.mutation,
+        MutationKind::InjectDuplicateOffers {
+            chip_name: "TestChip".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn frame_mutation_inject_maxed_chip_offer_parses_from_ron() {
+    let ron = r#"(frame: 30, mutation: InjectMaxedChipOffer(chip_name: "TestChip"))"#;
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectMaxedChipOffer should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(
+        result.mutation,
+        MutationKind::InjectMaxedChipOffer {
+            chip_name: "TestChip".to_owned(),
+        }
+    );
 }
 
 // -------------------------------------------------------------------------

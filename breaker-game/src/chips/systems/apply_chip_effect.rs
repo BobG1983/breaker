@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    chips::{definition::ChipEffectApplied, resources::ChipRegistry},
+    chips::{definition::ChipEffectApplied, inventory::ChipInventory, resources::ChipRegistry},
     ui::messages::ChipSelected,
 };
 
@@ -17,6 +17,7 @@ use crate::{
 pub(crate) fn apply_chip_effect(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
+    mut inventory: Option<ResMut<ChipInventory>>,
     mut commands: Commands,
 ) {
     let Some(registry) = registry else {
@@ -27,6 +28,9 @@ pub(crate) fn apply_chip_effect(
             debug!("chip not found in registry: {}", msg.name);
             continue;
         };
+        if let Some(ref mut inv) = inventory {
+            let _ = inv.add_chip(&msg.name, chip);
+        }
         for effect in &chip.effects {
             commands.trigger(ChipEffectApplied {
                 effect: effect.clone(),
@@ -528,6 +532,87 @@ mod tests {
             (tcb.0 - 5.0).abs() < f32::EPSILON,
             "TiltControlBoost should be 5.0, got {}",
             tcb.0
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Tests: apply_chip_effect updates ChipInventory
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn apply_chip_effect_adds_chip_to_inventory_on_chip_selected() {
+        let mut app = test_app();
+        app.init_resource::<crate::chips::inventory::ChipInventory>();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition::test(
+                "Piercing Shot",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            ));
+
+        send_chip_selected(&mut app, "Piercing Shot");
+        tick(&mut app);
+
+        let inventory = app
+            .world()
+            .resource::<crate::chips::inventory::ChipInventory>();
+        assert_eq!(
+            inventory.stacks("Piercing Shot"),
+            1,
+            "ChipInventory should track the selected chip at 1 stack"
+        );
+    }
+
+    #[test]
+    fn apply_chip_effect_does_not_add_inventory_entry_for_unknown_chip() {
+        let mut app = test_app();
+        app.init_resource::<crate::chips::inventory::ChipInventory>();
+
+        // Registry is empty — no chips registered
+        send_chip_selected(&mut app, "Nonexistent");
+        tick(&mut app);
+
+        let inventory = app
+            .world()
+            .resource::<crate::chips::inventory::ChipInventory>();
+        assert_eq!(
+            inventory.total_held(),
+            0,
+            "ChipInventory should remain empty for unknown chip"
+        );
+    }
+
+    #[test]
+    fn apply_chip_effect_does_not_add_when_already_maxed() {
+        let mut app = test_app();
+        app.init_resource::<crate::chips::inventory::ChipInventory>();
+
+        let single_def = ChipDefinition::test("Single", ChipEffect::Amp(AmpEffect::Piercing(1)), 1);
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(single_def.clone());
+
+        // Pre-fill inventory to max
+        let _ = app
+            .world_mut()
+            .resource_mut::<crate::chips::inventory::ChipInventory>()
+            .add_chip("Single", &single_def);
+
+        send_chip_selected(&mut app, "Single");
+        tick(&mut app);
+
+        let inventory = app
+            .world()
+            .resource::<crate::chips::inventory::ChipInventory>();
+        assert_eq!(
+            inventory.stacks("Single"),
+            1,
+            "ChipInventory should not exceed max_stacks"
         );
     }
 

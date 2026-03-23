@@ -171,6 +171,24 @@ impl TriggerChain {
     }
 }
 
+/// A single ingredient required for a chip evolution recipe.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub struct EvolutionIngredient {
+    /// Name of the chip required.
+    pub chip_name: String,
+    /// Minimum stacks the player must hold.
+    pub stacks_required: u32,
+}
+
+/// A recipe that combines existing chips into a new evolved chip.
+#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+pub struct EvolutionRecipe {
+    /// Chips consumed by this evolution.
+    pub ingredients: Vec<EvolutionIngredient>,
+    /// The chip produced when this recipe is fulfilled.
+    pub result_definition: ChipDefinition,
+}
+
 /// Top-level effect wrapper for any chip type.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub enum ChipEffect {
@@ -1264,5 +1282,64 @@ mod tests {
                 multiplier: 1.5,
             }
         );
+    }
+
+    // --- Evolution types deserialization tests ---
+
+    #[test]
+    fn evolution_ingredient_deserializes_from_ron() {
+        let ron_str = r#"(chip_name: "Piercing Shot", stacks_required: 2)"#;
+        let ingredient: EvolutionIngredient =
+            ron::de::from_str(ron_str).expect("should parse EvolutionIngredient");
+        assert_eq!(ingredient.chip_name, "Piercing Shot");
+        assert_eq!(ingredient.stacks_required, 2);
+    }
+
+    #[test]
+    fn evolution_recipe_deserializes_with_full_result_definition() {
+        let ron_str = r#"(
+            ingredients: [
+                (chip_name: "Piercing Shot", stacks_required: 2),
+                (chip_name: "Damage Up", stacks_required: 1),
+            ],
+            result_definition: (
+                name: "Piercing Barrage",
+                description: "Evolved piercing",
+                rarity: Legendary,
+                max_stacks: 1,
+                effects: [Amp(Piercing(5))],
+            ),
+        )"#;
+        let recipe: EvolutionRecipe =
+            ron::de::from_str(ron_str).expect("should parse EvolutionRecipe");
+        assert_eq!(recipe.ingredients.len(), 2);
+        assert_eq!(recipe.ingredients[0].chip_name, "Piercing Shot");
+        assert_eq!(recipe.ingredients[0].stacks_required, 2);
+        assert_eq!(recipe.ingredients[1].chip_name, "Damage Up");
+        assert_eq!(recipe.ingredients[1].stacks_required, 1);
+        assert_eq!(recipe.result_definition.name, "Piercing Barrage");
+        assert_eq!(recipe.result_definition.rarity, Rarity::Legendary);
+        assert_eq!(recipe.result_definition.max_stacks, 1);
+        assert_eq!(
+            recipe.result_definition.effects[0],
+            ChipEffect::Amp(AmpEffect::Piercing(5))
+        );
+    }
+
+    #[test]
+    fn evolution_recipe_with_empty_ingredients_deserializes() {
+        let ron_str = r#"(
+            ingredients: [],
+            result_definition: (
+                name: "Empty Recipe",
+                description: "No ingredients",
+                rarity: Common,
+                max_stacks: 1,
+                effects: [Amp(Piercing(1))],
+            ),
+        )"#;
+        let recipe: EvolutionRecipe = ron::de::from_str(ron_str)
+            .expect("should parse EvolutionRecipe with empty ingredients");
+        assert_eq!(recipe.ingredients.len(), 0);
     }
 }

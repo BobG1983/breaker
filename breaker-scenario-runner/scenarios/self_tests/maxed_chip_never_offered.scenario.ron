@@ -1,0 +1,16 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [MaxedChipNeverOffered],
+    expected_violations: Some([MaxedChipNeverOffered]),
+    debug_setup: Some((
+        disable_physics: true,
+    )),
+    frame_mutations: Some([
+        (frame: 30, mutation: InjectMaxedChipOffer(chip_name: "TestChip")),
+    ]),
+)

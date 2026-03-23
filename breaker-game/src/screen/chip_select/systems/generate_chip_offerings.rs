@@ -2,47 +2,96 @@
 
 use std::collections::HashMap;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     chips::{
-        ChipRegistry,
+        ChipRegistry, EvolutionRegistry,
         definition::Rarity,
         inventory::ChipInventory,
         offering::{OfferingConfig, generate_offerings},
     },
-    screen::chip_select::{ChipSelectConfig, resources::ChipOffers},
+    run::{
+        definition::NodeType,
+        resources::{NodeSequence, RunState},
+    },
+    screen::chip_select::{
+        ChipSelectConfig,
+        resources::{ChipOffering, ChipOffers},
+    },
     shared::GameRng,
 };
+
+/// Bundled parameters for chip offering generation.
+#[derive(SystemParam)]
+pub(crate) struct ChipOfferingParams<'w, 's> {
+    commands: Commands<'w, 's>,
+    registry: Res<'w, ChipRegistry>,
+    inventory: Res<'w, ChipInventory>,
+    config: Res<'w, ChipSelectConfig>,
+    rng: ResMut<'w, GameRng>,
+    run_state: Option<Res<'w, RunState>>,
+    node_sequence: Option<Res<'w, NodeSequence>>,
+    evolution_registry: Option<Res<'w, EvolutionRegistry>>,
+}
 
 /// Generates chip offerings using weighted random selection and inserts `ChipOffers`.
 ///
 /// Runs `OnEnter(GameState::ChipSelect)`, before `spawn_chip_select`.
-pub(crate) fn generate_chip_offerings(
-    mut commands: Commands,
-    registry: Res<ChipRegistry>,
-    inventory: Res<ChipInventory>,
-    config: Res<ChipSelectConfig>,
-    mut rng: ResMut<GameRng>,
-) {
-    // Build `OfferingConfig` from `ChipSelectConfig` fields
+/// On boss nodes with eligible evolutions, evolution offerings take priority
+/// and remaining slots are filled with normal offerings.
+pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
+    // Build rarity weight map from config
     let rarity_weights = HashMap::from([
-        (Rarity::Common, config.rarity_weight_common),
-        (Rarity::Uncommon, config.rarity_weight_uncommon),
-        (Rarity::Rare, config.rarity_weight_rare),
-        (Rarity::Legendary, config.rarity_weight_legendary),
+        (Rarity::Common, params.config.rarity_weight_common),
+        (Rarity::Uncommon, params.config.rarity_weight_uncommon),
+        (Rarity::Rare, params.config.rarity_weight_rare),
+        (Rarity::Legendary, params.config.rarity_weight_legendary),
     ]);
 
+    // Check for boss node with eligible evolutions
+    let mut evolution_offers: Vec<ChipOffering> = Vec::new();
+    if let (Some(run_state), Some(node_sequence), Some(evo_reg)) = (
+        &params.run_state,
+        &params.node_sequence,
+        &params.evolution_registry,
+    ) {
+        let idx = run_state.node_index as usize;
+        if idx < node_sequence.assignments.len()
+            && node_sequence.assignments[idx].node_type == NodeType::Boss
+        {
+            let eligible = evo_reg.eligible_evolutions(&params.inventory);
+            for recipe in eligible.iter().take(params.config.offers_per_node) {
+                evolution_offers.push(ChipOffering::Evolution {
+                    ingredients: recipe.ingredients.clone(),
+                    result: recipe.result_definition.clone(),
+                });
+            }
+        }
+    }
+
+    // Fill remaining slots with normal offerings
+    let remaining_slots = params
+        .config
+        .offers_per_node
+        .saturating_sub(evolution_offers.len());
     let offering_config = OfferingConfig {
         rarity_weights,
-        offers_per_node: config.offers_per_node,
+        offers_per_node: remaining_slots,
     };
+    let normal_offers = generate_offerings(
+        &params.registry,
+        &params.inventory,
+        &offering_config,
+        &mut params.rng.0,
+    );
 
-    // Generate offerings
-    let offers = generate_offerings(&registry, &inventory, &offering_config, &mut rng.0);
+    // Combine: evolutions first, then normal
+    let mut chip_offers: Vec<ChipOffering> = evolution_offers;
+    chip_offers.extend(normal_offers.into_iter().map(ChipOffering::Normal));
 
     // Insert offers resource
-    commands.insert_resource(ChipOffers(offers));
+    params.commands.insert_resource(ChipOffers(chip_offers));
 }
 
 #[cfg(test)]
@@ -50,10 +99,13 @@ mod tests {
     use super::*;
     use crate::{
         chips::{
-            ChipDefinition,
-            definition::{AmpEffect, ChipEffect, Rarity},
+            ChipDefinition, EvolutionRegistry,
+            definition::{AmpEffect, ChipEffect, EvolutionIngredient, EvolutionRecipe, Rarity},
         },
-        screen::chip_select::resources::ChipOffers,
+        run::{
+            definition::NodeType,
+            resources::{NodeAssignment, NodeSequence, RunState},
+        },
     };
 
     /// Build a registry with `count` Common chips named `Chip_0`, `Chip_1`, etc.
@@ -138,12 +190,12 @@ mod tests {
 
         // Generation should NOT apply decay — decay is deferred to confirmation
         // or timer expiry. All offered chips must have weight_decay == 1.0.
-        for chip in &offers.0 {
-            let decay = inventory.weight_decay(&chip.name);
+        for offering in &offers.0 {
+            let decay = inventory.weight_decay(offering.name());
             assert!(
                 (decay - 1.0).abs() < f32::EPSILON,
                 "expected offered chip '{}' to have no decay (1.0), got {decay}",
-                chip.name
+                offering.name()
             );
         }
     }
@@ -184,7 +236,7 @@ mod tests {
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
-        let names: Vec<&str> = offers.0.iter().map(|d| d.name.as_str()).collect();
+        let names: Vec<&str> = offers.0.iter().map(ChipOffering::name).collect();
         assert!(
             !names.contains(&"MaxedChip"),
             "maxed chip should not appear in offerings, got: {names:?}"
@@ -197,17 +249,216 @@ mod tests {
         let mut app1 = test_app_with_registry(make_mixed_registry());
         app1.update();
         let offers1 = app1.world().resource::<ChipOffers>();
-        let names1: Vec<String> = offers1.0.iter().map(|d| d.name.clone()).collect();
+        let names1: Vec<String> = offers1.0.iter().map(|o| o.name().to_owned()).collect();
 
         // Second app with same seed 42
         let mut app2 = test_app_with_registry(make_mixed_registry());
         app2.update();
         let offers2 = app2.world().resource::<ChipOffers>();
-        let names2: Vec<String> = offers2.0.iter().map(|d| d.name.clone()).collect();
+        let names2: Vec<String> = offers2.0.iter().map(|o| o.name().to_owned()).collect();
 
         assert_eq!(
             names1, names2,
             "same seed should produce identical offerings"
+        );
+    }
+
+    // --- Evolution offering generation tests ---
+
+    /// Creates a `NodeSequence` with a single boss node at the given index
+    /// and active nodes at all other positions.
+    fn make_node_sequence_with_boss(boss_index: usize, total: usize) -> NodeSequence {
+        let mut assignments = Vec::with_capacity(total);
+        for i in 0..total {
+            let node_type = if i == boss_index {
+                NodeType::Boss
+            } else {
+                NodeType::Active
+            };
+            assignments.push(NodeAssignment {
+                node_type,
+                tier_index: 0,
+                hp_mult: 1.0,
+                timer_mult: 1.0,
+            });
+        }
+        NodeSequence { assignments }
+    }
+
+    /// Test app with `RunState`, `NodeSequence`, and pre-populated
+    /// `ChipInventory` for evolution eligibility testing.
+    ///
+    /// NOTE: `EvolutionRegistry` is not yet re-exported from `chips/mod.rs`
+    /// (it is `pub(crate)` in `chips/resources.rs` behind a private module).
+    /// The main agent must add `pub(crate) use resources::EvolutionRegistry;`
+    /// to `chips/mod.rs` before the GREEN phase. The system will need it as
+    /// a parameter. For the RED phase, the test still fails correctly because
+    /// the system does not yet generate `Evolution` offerings.
+    fn test_app_for_evolution(
+        node_index: u32,
+        node_type_at_index: NodeType,
+        evolution_eligible: bool,
+    ) -> App {
+        let mut app = App::new();
+
+        let boss_index = if node_type_at_index == NodeType::Boss {
+            node_index as usize
+        } else {
+            // Put boss somewhere else so the queried node is not boss
+            99
+        };
+        let total = (boss_index + 1).max(node_index as usize + 1);
+        let mut seq = make_node_sequence_with_boss(boss_index, total);
+        // Override the specific node if it's not the boss
+        if node_type_at_index != NodeType::Boss {
+            seq.assignments[node_index as usize].node_type = node_type_at_index;
+        }
+
+        let ps_def =
+            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let mut inventory = ChipInventory::default();
+        if evolution_eligible {
+            // Add 2+ stacks so the recipe's ingredient requirement is met
+            let _ = inventory.add_chip("Piercing Shot", &ps_def);
+            let _ = inventory.add_chip("Piercing Shot", &ps_def);
+            let _ = inventory.add_chip("Piercing Shot", &ps_def);
+        }
+
+        // Build evolution registry with a recipe requiring Piercing Shot x2
+        let mut evo_registry = EvolutionRegistry::default();
+        evo_registry.insert(EvolutionRecipe {
+            ingredients: vec![EvolutionIngredient {
+                chip_name: "Piercing Shot".into(),
+                stacks_required: 2,
+            }],
+            result_definition: ChipDefinition {
+                name: "Barrage".into(),
+                description: "Combined piercing power".into(),
+                rarity: Rarity::Legendary,
+                max_stacks: 1,
+                effects: vec![ChipEffect::Amp(AmpEffect::Piercing(5))],
+            },
+        });
+
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(make_registry(5))
+            .insert_resource(inventory)
+            .insert_resource(evo_registry)
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(GameRng::from_seed(42))
+            .insert_resource(RunState {
+                node_index,
+                ..Default::default()
+            })
+            .insert_resource(seq)
+            .add_systems(Update, generate_chip_offerings);
+        app
+    }
+
+    #[test]
+    fn boss_node_eligible_evolution_appears_in_offers() {
+        let mut app = test_app_for_evolution(5, NodeType::Boss, true);
+        app.update();
+
+        let offers = app.world().resource::<ChipOffers>();
+        let has_evolution = offers
+            .0
+            .iter()
+            .any(|o| matches!(o, ChipOffering::Evolution { .. }));
+        assert!(
+            has_evolution,
+            "boss node with eligible evolution should include at least one Evolution offering, got: {:?}",
+            offers.0.iter().map(ChipOffering::name).collect::<Vec<_>>()
+        );
+
+        // Verify the evolution result name matches the recipe
+        let evo_names: Vec<&str> = offers
+            .0
+            .iter()
+            .filter_map(|o| match o {
+                ChipOffering::Evolution { result, .. } => Some(result.name.as_str()),
+                ChipOffering::Normal(_) => None,
+            })
+            .collect();
+        assert!(
+            evo_names.contains(&"Barrage"),
+            "evolution offering should have result name 'Barrage', got: {evo_names:?}"
+        );
+    }
+
+    #[test]
+    fn non_boss_node_has_no_evolution_offerings() {
+        let mut app = test_app_for_evolution(2, NodeType::Active, true);
+        app.update();
+
+        let offers = app.world().resource::<ChipOffers>();
+        let has_evolution = offers
+            .0
+            .iter()
+            .any(|o| matches!(o, ChipOffering::Evolution { .. }));
+        assert!(
+            !has_evolution,
+            "non-boss node should have no Evolution offerings, got: {:?}",
+            offers.0.iter().map(ChipOffering::name).collect::<Vec<_>>()
+        );
+
+        // All should be Normal
+        assert!(
+            offers
+                .0
+                .iter()
+                .all(|o| matches!(o, ChipOffering::Normal(_))),
+            "all offerings on non-boss node should be Normal"
+        );
+    }
+
+    #[test]
+    fn boss_node_no_eligible_evolutions_all_normal() {
+        // Boss node but evolution not eligible (insufficient stacks)
+        let mut app = test_app_for_evolution(5, NodeType::Boss, false);
+        app.update();
+
+        let offers = app.world().resource::<ChipOffers>();
+        assert!(
+            offers
+                .0
+                .iter()
+                .all(|o| matches!(o, ChipOffering::Normal(_))),
+            "boss node with no eligible evolutions should only have Normal offerings"
+        );
+    }
+
+    #[test]
+    fn boss_node_remaining_slots_filled_with_normal() {
+        // Boss node, 1 eligible evolution, offers_per_node=3 → 1 Evo + 2 Normal = 3 total
+        let mut app = test_app_for_evolution(5, NodeType::Boss, true);
+        app.update();
+
+        let offers = app.world().resource::<ChipOffers>();
+        assert_eq!(
+            offers.0.len(),
+            3,
+            "offers_per_node=3, total should be 3 (1 evolution + 2 normal), got {}",
+            offers.0.len()
+        );
+
+        let evo_count = offers
+            .0
+            .iter()
+            .filter(|o| matches!(o, ChipOffering::Evolution { .. }))
+            .count();
+        let normal_count = offers
+            .0
+            .iter()
+            .filter(|o| matches!(o, ChipOffering::Normal(_)))
+            .count();
+        assert_eq!(
+            evo_count, 1,
+            "expected exactly 1 evolution offering, got {evo_count}"
+        );
+        assert_eq!(
+            normal_count, 2,
+            "expected 2 normal offerings to fill remaining slots, got {normal_count}"
         );
     }
 }

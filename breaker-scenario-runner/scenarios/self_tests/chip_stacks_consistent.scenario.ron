@@ -1,0 +1,16 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [ChipStacksConsistent],
+    expected_violations: Some([ChipStacksConsistent]),
+    debug_setup: Some((
+        disable_physics: true,
+    )),
+    frame_mutations: Some([
+        (frame: 30, mutation: InjectOverStackedChip(chip_name: "TestChip", stacks: 3, max_stacks: 2)),
+    ]),
+)

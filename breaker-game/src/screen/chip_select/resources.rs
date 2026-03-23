@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use breaker_derive::GameConfig;
 use serde::Deserialize;
 
-use crate::chips::ChipDefinition;
+use crate::chips::{ChipDefinition, definition::EvolutionIngredient};
 
 /// Chip select defaults loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
@@ -125,16 +125,51 @@ pub(super) struct ChipSelectSelection {
     pub index: usize,
 }
 
-/// The chip definitions offered this screen visit.
+/// A single offering on the chip selection screen — either a normal chip
+/// or an evolution that combines existing chips into a new one.
+#[derive(Debug, Clone)]
+pub enum ChipOffering {
+    /// A standard chip offered for selection.
+    Normal(ChipDefinition),
+    /// An evolution that consumes ingredient stacks to produce a new chip.
+    Evolution {
+        /// Ingredients consumed from the player's inventory.
+        ingredients: Vec<EvolutionIngredient>,
+        /// The chip produced by this evolution.
+        result: ChipDefinition,
+    },
+}
+
+impl ChipOffering {
+    /// Returns the display name of this offering.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Normal(def) => &def.name,
+            Self::Evolution { result, .. } => &result.name,
+        }
+    }
+
+    /// Returns the chip definition this offering would grant.
+    #[must_use]
+    pub fn definition(&self) -> &ChipDefinition {
+        match self {
+            Self::Normal(def) | Self::Evolution { result: def, .. } => def,
+        }
+    }
+}
+
+/// The chip offerings presented this screen visit.
 ///
 /// Inserted by `generate_chip_offerings`, read by `spawn_chip_select`
 /// and `handle_chip_input` to resolve a selection index into chip identity.
 #[derive(Resource, Debug)]
-pub struct ChipOffers(pub Vec<ChipDefinition>);
+pub struct ChipOffers(pub Vec<ChipOffering>);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chips::definition::{AmpEffect, ChipEffect, EvolutionIngredient};
 
     #[test]
     fn default_config_has_positive_timer() {
@@ -151,5 +186,47 @@ mod tests {
         let result: ChipSelectDefaults =
             ron::de::from_str(ron_str).expect("chipselect RON should parse");
         assert!(result.timer_secs > 0.0);
+    }
+
+    // --- ChipOffering::Normal ---
+
+    #[test]
+    fn normal_offering_name_returns_inner_definition_name() {
+        let def = ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3);
+        let offering = ChipOffering::Normal(def);
+        assert_eq!(offering.name(), "Piercing Shot");
+    }
+
+    #[test]
+    fn normal_offering_definition_returns_inner_definition() {
+        let def = ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3);
+        let offering = ChipOffering::Normal(def);
+        assert_eq!(offering.definition().name, "Piercing Shot");
+    }
+
+    // --- ChipOffering::Evolution ---
+
+    #[test]
+    fn evolution_offering_name_returns_result_name() {
+        let offering = ChipOffering::Evolution {
+            ingredients: vec![EvolutionIngredient {
+                chip_name: "A".to_owned(),
+                stacks_required: 2,
+            }],
+            result: ChipDefinition::test("A+", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+        };
+        assert_eq!(offering.name(), "A+");
+    }
+
+    #[test]
+    fn evolution_offering_definition_returns_result_definition() {
+        let offering = ChipOffering::Evolution {
+            ingredients: vec![EvolutionIngredient {
+                chip_name: "A".to_owned(),
+                stacks_required: 2,
+            }],
+            result: ChipDefinition::test("Barrage", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+        };
+        assert_eq!(offering.definition().name, "Barrage");
     }
 }
