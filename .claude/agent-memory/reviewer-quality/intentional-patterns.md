@@ -65,3 +65,10 @@ type: reference
 - Scenario runner checker files (`breaker-scenario-runner/src/invariants/checkers/`) do NOT have `//!` module-level doc comments — this is the established pattern for all checkers in this directory (bolt_in_bounds.rs, valid_breaker_state.rs, etc.). Do not flag new checkers for missing module docs.
 - `OfferingConfig::seen_decay_factor` field — defined in the struct but not used inside `offering.rs` itself; the field exists so callers can pass a complete config bundle (the actual decay recording happens in the caller, `generate_chip_offerings`). Intentional data-bag design. Do not flag as dead code.
 - Checker files in `breaker-scenario-runner/src/invariants/checkers/` that lack `//!` module docs — pre-existing pattern in this directory; all existing checkers (e.g., bolt_in_bounds.rs, valid_breaker_state.rs) also omit module docs. Only flag if the project convention is updated.
+
+## Phase 5c / Phase 6 (feature/wave-3-offerings-transitions, 2026-03-23)
+- `spawn_bolt.rs` calls `breaker_query.iter().next()` twice to get y and x separately — minor redundancy, but pre-existing; do not flag as new issue introduced by this PR.
+- `Wall` and `Cell` markers are `pub(crate)` — intentional; only spawned internally. Do not flag `pub(crate)` visibility on these markers.
+- `PreviousScale` struct mirrors `Scale2D` field layout (x: f32, y: f32) rather than being a newtype over Vec2 — intentional; matches `Scale2D`'s non-newtype design for easy field-by-field lerp in `propagate_scale`.
+- `save_previous_positions` function name still references only positions — the function now also saves rotation and scale. The name is stale. Flag until renamed.
+- The `#[require]` tests for `Bolt`, `Breaker`, `Cell`, and `Wall` all verify negative cases (cleanup components NOT auto-inserted) — intentional regression guard pattern. Do not flag as over-testing.

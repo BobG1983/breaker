@@ -17,6 +17,8 @@
 - [require_attribute.md](require_attribute.md) — #[require(...)] syntax: plain, constructor, named-field, expression forms
 
 - [spatial2d_builtin_audit.md](spatial2d_builtin_audit.md) — What Bevy 0.18.1 provides natively vs what must be custom for a spatial2d crate (Position2D, interpolation, z-order, absolute positioning, Transform2D)
+- [change_removal_detection.md](change_removal_detection.md) — Added<T>, Changed<T>, Ref<T>, RemovedComponents<T>: signatures, iteration method (.read()), gotchas
+- [resource_and_system_ordering.md](resource_and_system_ordering.md) — Resource trait bounds, generic Resource derive, .before()/.after()/.in_set(), cross-plugin set ordering
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

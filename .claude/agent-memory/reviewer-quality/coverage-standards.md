@@ -84,6 +84,11 @@ New bridge with 4 tests: fires LoseLife, no-message no-consequence, wrong-trigge
 - `update_seed_display`: all four state combos tested (empty/unfocused, value/unfocused, empty/focused, value/focused). Color tested for focused and unfocused. Clean.
 - `handle_run_setup_input` seed integration: `confirm_sets_run_seed_none_when_entry_empty`, `confirm_sets_run_seed_some_when_entry_has_value`, `confirm_sets_run_seed_zero_on_parse_failure` — parse-failure fallback produces `Some(0)` (not `None`). No test verifies behavior when `SeedEntry` resource is absent (the `Option<Res<SeedEntry>>` guard).
 
+## PreviousScale / propagate_scale (as of 2026-03-23, feature/wave-3-offerings-transitions)
+- `PreviousScale` component: default test, copies_scale_to_previous_scale, skips_scale_without_interpolate_marker. Clean. Known gap: no test for PreviousScale on an entity with `Spatial2D` that goes through a full fixed-update pipeline (integration level).
+- `propagate_scale`: basic, entity_without_scale, relative/absolute parent/child, interpolated half-alpha, alpha-zero, high-alpha, absolute+interpolation. Known gap: no test for division-by-zero in absolute mode when parent_scale.x or parent_scale.y is 0.0 (Scale2D::new prevents this at construction but parent entity could have stale scale after forced mutation).
+- `#[require]` tests for Bolt/Breaker/Cell/Wall: all cover positive (required components present) and negative (cleanup NOT auto-inserted). Pattern is consistent and comprehensive.
+
 ## Lifecycle Tests (2026-03-17, updated 2026-03-18)
 Cover all major public systems: tick_scenario_frame, check_frame_limit, apply_debug_setup, enforce_frozen_positions, tag_game_entities, inject_scenario_input, init_scenario_input, ScenarioStats increments.
 `restart_run_on_end` gap was closed — `restart_run_on_end_transitions_to_main_menu` test exists at `breaker-scenario-runner/src/lifecycle/tests.rs:808`. No longer a gap.

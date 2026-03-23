@@ -1,6 +1,6 @@
 ---
 name: runner-linting
-description: "Run cargo fmt, cargo dclippy (game crate), and cargo dsclippy (scenario runner crate), report results with Fix spec hints for clippy errors that writer-code can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-linting agent to check formatting and clippy.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-linting agent to verify fmt and clippy are clean.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-linting agent to confirm lint is clean.\""
+description: "Run cargo fmt, cargo dclippy (game crate), cargo spatial2dclippy (spatial2d crate), cargo physics2dclippy (physics2d crate), and cargo dsclippy (scenario runner crate), report results with Fix spec hints for clippy errors that writer-code can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-linting agent to check formatting and clippy.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-linting agent to verify fmt and clippy are clean.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-linting agent to confirm lint is clean.\""
 tools: Bash, Read, Glob, Grep
 model: sonnet
 color: yellow
@@ -36,7 +36,21 @@ cargo dclippy 2>&1
 - For each warning/error: file:line, the lint name, and a one-line summary.
 - Count total warnings and errors.
 
-### 3. Clippy — Scenario Runner Crate
+### 3. Clippy — rantzsoft_spatial2d
+```
+cargo spatial2dclippy 2>&1
+```
+- Report separately.
+- Same format: warnings and errors, file:line, lint name, one-line summary.
+
+### 4. Clippy — rantzsoft_physics2d
+```
+cargo physics2dclippy 2>&1
+```
+- Report separately.
+- Same format.
+
+### 5. Clippy — Scenario Runner Crate
 ```
 cargo dsclippy 2>&1
 ```

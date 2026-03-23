@@ -110,11 +110,34 @@ type: reference
 - `animate_tilt_visual`: writes `Rotation2D(Rot2::radians(-tilt.angle))` — correct sign convention (positive tilt=clockwise=negative CCW).
 - `width_boost_visual`: writes `Scale2D.x/y` — correct.
 - `bolt_scale_visual`: writes `Scale2D.x/y` from `BoltRadius * EntityScale` — correct.
-- `spawn_walls`: static, has `Spatial2D` + `Position2D` but NOT `InterpolateTransform2D` — correct for static entity.
-- `spawn_cells_from_grid`: static cells, has `Spatial2D` + `Position2D` but NOT `InterpolateTransform2D` — correct.
+- `spawn_walls`: static, has `Spatial2D` + `Position2D` but NOT `InterpolateTransform2D` — correct for static entity. Also redundantly sets Transform::from_xyz (migration contract violation but no runtime impact — walls are static). Do not re-flag as a logic bug.
+- `spawn_cells_from_grid`: static cells, has `Spatial2D` + `Position2D` but NOT `InterpolateTransform2D` — correct. Also redundantly sets Transform { translation, scale } alongside Position2D+Scale2D — same migration contract violation, same no-impact conclusion. Do not re-flag as logic bug.
 - Wall collision query in `bolt_cell_collision`: `Query<(Entity, &Position2D, &WallSize), CollisionFilterWall>` — Position2D used. Correct.
 - `CollisionQueryBolt/Breaker/Cell` all use `Position2D` — correct.
 - `GameDrawLayer` Z values: Bolt=1.0, Breaker/Cell/Wall=0.0, Fx=2.0 — correct.
+
+## Phase 5c / Phase 6 Migration Patterns (2026-03-23)
+- `Bolt #[require]` Spatial2D + InterpolateTransform2D + BoltVelocity — correct. Bolt moves and needs interpolation.
+- `Breaker #[require]` Spatial2D + InterpolateTransform2D — correct.
+- `Cell #[require]` Spatial2D + CleanupOnNodeExit — correct, no InterpolateTransform2D (static).
+- `Wall #[require]` Spatial2D + CleanupOnNodeExit — correct, no InterpolateTransform2D (static).
+- `BoltVelocity Default` = zero velocity — correct for `#[require]` fallback; spawn sites override with real velocity.
+- `CleanupOnNodeExit Default` = unit struct marker — trivially correct.
+- `PreviousScale` defaults to `{1.0, 1.0}` — correct; matches `Scale2D` default, no teleport artifact on first tick.
+- `save_previous_positions` third loop for Scale2D → PreviousScale: gated on `With<InterpolateTransform2D>`. Only dynamic entities (Bolt, Breaker) have the marker. Cells/walls are excluded. Correct.
+- `propagate_scale` interpolation path: `prev + (current - prev) * alpha` is correct lerp. PreviousScale defaults to 1.0 to match Scale2D default — no first-frame artifact.
+- `propagate_scale` Absolute mode divides by `parent_scale.x/y`. All production spawn sites use non-zero scales so no live division-by-zero. Latent hazard only if zero scale is manually set — do NOT flag as confirmed production bug.
+- `check_no_nan` rotation check removed — Rot2 cannot hold NaN by construction. Correct.
+- `ScenarioPhysicsFrozen.target` changed Vec3 → Vec2. `enforce_frozen_positions` assigns `position.0 = pinned.target` (Vec2 = Vec2). Correct.
+- `apply_debug_setup` and `deferred_debug_setup` write Position2D not Transform — correct migration.
+- `enforce_frozen_positions` resets `Position2D` each tick — correct.
+- `check_bolt_in_bounds`, `check_no_nan`, `check_physics_frozen_during_pause` all use `&Position2D` — correct post-migration.
+- `wall_positions_match_playfield` test reads `&Transform` (stale after migration) — currently passes because spawn_walls still sets Transform explicitly. Not a production logic bug but tests the wrong field.
+
+## PreviousScale Interpolation Pattern
+- `save_previous_positions` runs in FixedPreUpdate. At the start of each fixed tick, it snaps PreviousScale to Scale2D.
+- `propagate_scale` runs in PostUpdate (AfterFixedMainLoop equivalent). It lerps from PreviousScale to Scale2D using overstep fraction.
+- On spawn frame: PreviousScale starts at (1.0, 1.0) (default). First `save_previous_positions` call before first game tick sets PreviousScale = Scale2D. On that same tick, `propagate_scale` sees PreviousScale == Scale2D so lerp produces Scale2D regardless of alpha. No teleport artifact. Correct.
 - Phase 4 Wave 1 (2026-03-19): `reset_run_state` uses `Option<Res<SelectedArchetype>>` — for logging only; if absent logs "none". Correct.
 - Phase 4 Wave 1 (2026-03-19): `bypass_menu_to_playing` always sets `RunSeed(Some(n))` — intentional; scenarios always use deterministic seed.
 - Phase 4 Wave 1 (2026-03-19): `stack_u32` and `stack_f32` cap check `current / per_stack < max_stacks` — correct because current is always `n * per_stack` (exact integer/float multiple), so division is exact and gives stack count directly.

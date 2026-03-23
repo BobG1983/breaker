@@ -7,6 +7,7 @@ All implementation goes through the delegated pipeline. The main agent is the or
 See `.claude/rules/tdd.md` for the TDD cycle definition and when to commit.
 See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6).
 See `.claude/rules/spec-formats.md` for spec templates and quality rules.
+See `.claude/rules/git.md` for git usage and rules.
 
 ```
 1. Main agent describes the feature, identifies parallel waves
@@ -28,7 +29,7 @@ See `.claude/rules/spec-formats.md` for spec templates and quality rules.
 17. Main agent handles wiring (lib.rs, game.rs, shared.rs)          ─┘
 18. Update session-state.md
 19. Run the full verification suite (all lints, tests, reviewers, and guards)  ── BUG IDENTIFICATION AND FIX phase
-20. Commit and Merge according to git rules. See `.claude/rules/git.md`
+20. Commit and Merge according to git rules. 
 ```
 
 ### Key principle: maximize parallelism, serialize only cargo
@@ -49,9 +50,9 @@ When producing a plan, the main agent **MUST** identify which parts of the work 
 
 **How to identify waves:**
 - Work that touches **different files** can run in parallel
-- Work that touches **different domains** can usually run in parallel
+- Work that touches **different domains** can usually run in parallel 
 - Work with **no data dependencies** can run in parallel
-- Cross-domain types (queries, filters, messages) are **shared prerequisites** — create before launching waves
+- Cross-domain types (queries, filters, messages) are **shared prerequisites** — create in a prerequisite wave or refactor in a final wave
 
 **Example:** Migrating bolt, breaker, and cells to Position2D:
 - Wave 1: bolt domain (bolt/systems/*)
@@ -85,9 +86,4 @@ Before planner-spec runs, launch research agents in parallel to surface conflict
 
 When a background agent is running, the main agent should **not** fill time with unnecessary analysis or speculation. Background agents notify on completion — end your turn with a brief status message and wait. Don't read files, don't plan ahead, don't analyze speculatively while waiting.
 
-## Safety Requirements for Parallel Execution
 
-- Each agent ONLY touches files within its assigned domain directory
-- The main agent handles all shared file modifications (`lib.rs`, `game.rs`, `shared.rs`, `mod.rs` at crate root)
-- If two domains need a new shared type, the main agent creates it before launching agents
-- If a domain needs a message from another domain, the main agent ensures the message type exists before launching agents
