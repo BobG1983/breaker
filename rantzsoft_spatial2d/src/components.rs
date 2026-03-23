@@ -154,6 +154,21 @@ impl Default for PreviousRotation {
     }
 }
 
+/// Snapshot of the previous frame's scale for interpolation.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+pub struct PreviousScale {
+    /// Previous horizontal scale factor.
+    pub x: f32,
+    /// Previous vertical scale factor.
+    pub y: f32,
+}
+
+impl Default for PreviousScale {
+    fn default() -> Self {
+        Self { x: 1.0, y: 1.0 }
+    }
+}
+
 /// Marker: this entity interpolates its `Transform` between fixed timesteps.
 #[derive(Component, Clone, Copy, Debug, Default, Reflect)]
 pub struct InterpolateTransform2D;
@@ -170,9 +185,11 @@ pub struct VisualOffset(pub Vec3);
     Scale2D,
     PreviousPosition,
     PreviousRotation,
+    PreviousScale,
     PositionPropagation,
     RotationPropagation,
-    ScalePropagation
+    ScalePropagation,
+    Transform
 )]
 pub struct Spatial2D;
 
@@ -330,6 +347,13 @@ mod tests {
     }
 
     #[test]
+    fn previous_scale_default_is_one_one() {
+        let ps = PreviousScale::default();
+        assert!((ps.x - 1.0).abs() < f32::EPSILON);
+        assert!((ps.y - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn previous_rotation_default_is_zero() {
         assert!(PreviousRotation::default().0.as_radians().abs() < 1e-6);
     }
@@ -377,6 +401,22 @@ mod tests {
         assert!(
             world.get::<PreviousRotation>(entity).is_some(),
             "missing PreviousRotation"
+        );
+        assert!(
+            world.get::<PreviousScale>(entity).is_some(),
+            "missing PreviousScale"
+        );
+        // Verify PreviousScale defaults to (1.0, 1.0).
+        let prev_scale = world.get::<PreviousScale>(entity).unwrap();
+        assert!(
+            (prev_scale.x - 1.0).abs() < f32::EPSILON,
+            "PreviousScale.x should default to 1.0, got {}",
+            prev_scale.x
+        );
+        assert!(
+            (prev_scale.y - 1.0).abs() < f32::EPSILON,
+            "PreviousScale.y should default to 1.0, got {}",
+            prev_scale.y
         );
         assert!(
             world.get::<PositionPropagation>(entity).is_some(),

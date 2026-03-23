@@ -1,16 +1,18 @@
-//! Snapshots current position/rotation to previous for interpolation.
+//! Snapshots current position/rotation/scale to previous for interpolation.
 
 use bevy::prelude::*;
 
 use crate::components::{
-    InterpolateTransform2D, Position2D, PreviousPosition, PreviousRotation, Rotation2D,
+    InterpolateTransform2D, Position2D, PreviousPosition, PreviousRotation, PreviousScale,
+    Rotation2D, Scale2D,
 };
 
-/// Copies current `Position2D` and `Rotation2D` into their previous-frame
-/// snapshots for entities that have `InterpolateTransform2D`.
-pub fn save_previous_positions(
+/// Copies current `Position2D`, `Rotation2D`, and `Scale2D` into their
+/// previous-frame snapshots for entities that have `InterpolateTransform2D`.
+pub fn save_previous(
     mut query_pos: Query<(&Position2D, &mut PreviousPosition), With<InterpolateTransform2D>>,
     mut query_rot: Query<(&Rotation2D, &mut PreviousRotation), With<InterpolateTransform2D>>,
+    mut query_scale: Query<(&Scale2D, &mut PreviousScale), With<InterpolateTransform2D>>,
 ) {
     for (pos, mut prev) in &mut query_pos {
         prev.0 = pos.0;
@@ -18,11 +20,16 @@ pub fn save_previous_positions(
     for (rot, mut prev) in &mut query_rot {
         prev.0 = rot.0;
     }
+    for (scale, mut prev) in &mut query_scale {
+        prev.x = scale.x;
+        prev.y = scale.y;
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::{PreviousScale, Scale2D};
 
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
@@ -36,7 +43,7 @@ mod tests {
     fn copies_position_to_previous_position() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, save_previous_positions);
+        app.add_systems(FixedUpdate, save_previous);
 
         app.world_mut().spawn((
             InterpolateTransform2D,
@@ -66,7 +73,7 @@ mod tests {
     fn copies_rotation_to_previous_rotation() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, save_previous_positions);
+        app.add_systems(FixedUpdate, save_previous);
 
         app.world_mut().spawn((
             InterpolateTransform2D,
@@ -96,7 +103,7 @@ mod tests {
     fn skips_entity_without_interpolate_marker_position() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, save_previous_positions);
+        app.add_systems(FixedUpdate, save_previous);
 
         // No InterpolateTransform2D marker
         app.world_mut().spawn((
@@ -124,7 +131,7 @@ mod tests {
     fn skips_entity_without_interpolate_marker_rotation() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, save_previous_positions);
+        app.add_systems(FixedUpdate, save_previous);
 
         // No InterpolateTransform2D marker
         app.world_mut()
@@ -149,7 +156,7 @@ mod tests {
     fn multiple_entities_all_updated() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, save_previous_positions);
+        app.add_systems(FixedUpdate, save_previous);
 
         let e1 = app
             .world_mut()
@@ -187,6 +194,76 @@ mod tests {
             prev2.0,
             Vec2::new(30.0, 40.0),
             "second entity PreviousPosition should be updated"
+        );
+    }
+
+    // ── PreviousScale ─────────────────────────────────────────
+
+    #[test]
+    fn copies_scale_to_previous_scale() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(FixedUpdate, save_previous);
+
+        app.world_mut().spawn((
+            InterpolateTransform2D,
+            Scale2D { x: 3.0, y: 4.0 },
+            PreviousScale { x: 1.0, y: 1.0 },
+            Position2D::default(),
+            PreviousPosition::default(),
+            Rotation2D::default(),
+            PreviousRotation::default(),
+        ));
+
+        tick(&mut app);
+
+        let prev = app
+            .world_mut()
+            .query::<&PreviousScale>()
+            .iter(app.world())
+            .next()
+            .expect("entity should exist");
+
+        assert!(
+            (prev.x - 3.0).abs() < f32::EPSILON,
+            "PreviousScale.x should match current Scale2D.x (3.0), got {}",
+            prev.x
+        );
+        assert!(
+            (prev.y - 4.0).abs() < f32::EPSILON,
+            "PreviousScale.y should match current Scale2D.y (4.0), got {}",
+            prev.y
+        );
+    }
+
+    #[test]
+    fn skips_scale_without_interpolate_marker() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(FixedUpdate, save_previous);
+
+        // No InterpolateTransform2D marker.
+        app.world_mut()
+            .spawn((Scale2D { x: 5.0, y: 6.0 }, PreviousScale { x: 1.0, y: 1.0 }));
+
+        tick(&mut app);
+
+        let prev = app
+            .world_mut()
+            .query::<&PreviousScale>()
+            .iter(app.world())
+            .next()
+            .expect("entity should exist");
+
+        assert!(
+            (prev.x - 1.0).abs() < f32::EPSILON,
+            "PreviousScale.x should remain 1.0 without InterpolateTransform2D, got {}",
+            prev.x
+        );
+        assert!(
+            (prev.y - 1.0).abs() < f32::EPSILON,
+            "PreviousScale.y should remain 1.0 without InterpolateTransform2D, got {}",
+            prev.y
         );
     }
 }

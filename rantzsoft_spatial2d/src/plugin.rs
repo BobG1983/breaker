@@ -10,7 +10,7 @@ use crate::{
     propagation::*,
     systems::{
         propagate_position::propagate_position, propagate_rotation::propagate_rotation,
-        propagate_scale::propagate_scale, save_previous::save_previous_positions,
+        propagate_scale::propagate_scale, save_previous::save_previous,
     },
 };
 
@@ -36,12 +36,13 @@ impl<D: DrawLayer> Plugin for RantzSpatial2dPlugin<D> {
             .register_type::<Scale2D>()
             .register_type::<PreviousPosition>()
             .register_type::<PreviousRotation>()
+            .register_type::<PreviousScale>()
             .register_type::<InterpolateTransform2D>()
             .register_type::<VisualOffset>()
             .register_type::<PositionPropagation>()
             .register_type::<RotationPropagation>()
             .register_type::<ScalePropagation>()
-            .add_systems(FixedFirst, save_previous_positions)
+            .add_systems(FixedFirst, save_previous)
             .add_systems(
                 RunFixedMainLoop,
                 (propagate_position::<D>, propagate_rotation, propagate_scale)
