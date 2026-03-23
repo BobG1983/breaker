@@ -1,0 +1,15 @@
+(
+    clutch_clear_secs: 3.0,
+    fast_clear_fraction: 0.5,
+    perfect_streak_count: 5,
+    mass_destruction_count: 10,
+    mass_destruction_window_secs: 2.0,
+    combo_king_cells: 8,
+    pinball_wizard_bounces: 12,
+    speed_demon_secs: 5.0,
+    close_save_pixels: 20.0,
+    comeback_bolts_lost: 3,
+    nail_biter_pixels: 30.0,
+    untouchable_nodes: 2,
+    highlight_cap: 5,
+)

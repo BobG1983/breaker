@@ -1,6 +1,7 @@
-//! Tier-based difficulty curve — RON-deserialized content data types.
+//! Tier-based difficulty curve and highlight thresholds — RON-deserialized content data types.
 
 use bevy::prelude::*;
+use breaker_derive::GameConfig;
 use serde::Deserialize;
 
 /// The type of a node in the run sequence.
@@ -65,6 +66,60 @@ pub struct DifficultyCurveDefaults {
     pub boss_hp_mult: f32,
     /// Timer reduction applied after each boss encounter.
     pub timer_reduction_per_boss: f32,
+}
+
+/// Highlight detection thresholds loaded from `defaults.highlights.ron`.
+///
+/// The `GameConfig` derive generates a `HighlightConfig` resource with `From<HighlightDefaults>`.
+#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
+#[game_config(name = "HighlightConfig")]
+pub struct HighlightDefaults {
+    /// Seconds remaining for `ClutchClear` detection.
+    pub clutch_clear_secs: f32,
+    /// Fraction of total time for `FastClear` detection.
+    pub fast_clear_fraction: f32,
+    /// Consecutive perfect bumps for `PerfectStreak`.
+    pub perfect_streak_count: u32,
+    /// Cells destroyed in window for `MassDestruction`.
+    pub mass_destruction_count: u32,
+    /// Window duration (seconds) for `MassDestruction`.
+    pub mass_destruction_window_secs: f32,
+    /// Cells destroyed between breaker impacts for `ComboKing`.
+    pub combo_king_cells: u32,
+    /// Cell bounces without breaker for `PinballWizard`.
+    pub pinball_wizard_bounces: u32,
+    /// Seconds for fastest node clear (`SpeedDemon`).
+    pub speed_demon_secs: f32,
+    /// Pixels from bottom boundary for `CloseSave`.
+    pub close_save_pixels: f32,
+    /// Bolts lost in node for `Comeback`.
+    pub comeback_bolts_lost: u32,
+    /// Pixels from bottom boundary for `NailBiter`.
+    pub nail_biter_pixels: f32,
+    /// Consecutive no-damage nodes for `Untouchable`.
+    pub untouchable_nodes: u32,
+    /// Maximum highlights recorded per run.
+    pub highlight_cap: u32,
+}
+
+impl Default for HighlightDefaults {
+    fn default() -> Self {
+        Self {
+            clutch_clear_secs: 3.0,
+            fast_clear_fraction: 0.5,
+            perfect_streak_count: 5,
+            mass_destruction_count: 10,
+            mass_destruction_window_secs: 2.0,
+            combo_king_cells: 8,
+            pinball_wizard_bounces: 12,
+            speed_demon_secs: 5.0,
+            close_save_pixels: 20.0,
+            comeback_bolts_lost: 3,
+            nail_biter_pixels: 30.0,
+            untouchable_nodes: 2,
+            highlight_cap: 5,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -221,5 +276,92 @@ mod tests {
         assert_eq!(defaults.tiers.len(), 5);
         assert!((defaults.boss_hp_mult - 3.0).abs() < f32::EPSILON);
         assert!((defaults.timer_reduction_per_boss - 0.1).abs() < f32::EPSILON);
+    }
+
+    // -- HighlightDefaults deserialization --
+
+    #[test]
+    fn highlight_defaults_deserializes_all_13_fields_from_ron() {
+        let ron_str = "
+(
+    clutch_clear_secs: 4.0,
+    fast_clear_fraction: 0.4,
+    perfect_streak_count: 6,
+    mass_destruction_count: 12,
+    mass_destruction_window_secs: 1.5,
+    combo_king_cells: 10,
+    pinball_wizard_bounces: 15,
+    speed_demon_secs: 6.0,
+    close_save_pixels: 25.0,
+    comeback_bolts_lost: 4,
+    nail_biter_pixels: 35.0,
+    untouchable_nodes: 3,
+    highlight_cap: 7,
+)";
+        let defaults: HighlightDefaults =
+            ron::de::from_str(ron_str).expect("HighlightDefaults should deserialize");
+        assert!((defaults.clutch_clear_secs - 4.0).abs() < f32::EPSILON);
+        assert!((defaults.fast_clear_fraction - 0.4).abs() < f32::EPSILON);
+        assert_eq!(defaults.perfect_streak_count, 6);
+        assert_eq!(defaults.mass_destruction_count, 12);
+        assert!((defaults.mass_destruction_window_secs - 1.5).abs() < f32::EPSILON);
+        assert_eq!(defaults.combo_king_cells, 10);
+        assert_eq!(defaults.pinball_wizard_bounces, 15);
+        assert!((defaults.speed_demon_secs - 6.0).abs() < f32::EPSILON);
+        assert!((defaults.close_save_pixels - 25.0).abs() < f32::EPSILON);
+        assert_eq!(defaults.comeback_bolts_lost, 4);
+        assert!((defaults.nail_biter_pixels - 35.0).abs() < f32::EPSILON);
+        assert_eq!(defaults.untouchable_nodes, 3);
+        assert_eq!(defaults.highlight_cap, 7);
+    }
+
+    #[test]
+    fn highlights_ron_file_parses() {
+        let ron_str = include_str!("../../assets/config/defaults.highlights.ron");
+        let defaults: HighlightDefaults =
+            ron::de::from_str(ron_str).expect("defaults.highlights.ron should parse");
+        assert!(
+            defaults.clutch_clear_secs > 0.0,
+            "clutch_clear_secs should be positive"
+        );
+        assert!(
+            defaults.highlight_cap > 0,
+            "highlight_cap should be positive"
+        );
+    }
+
+    #[test]
+    fn highlight_config_from_defaults_copies_all_fields() {
+        let defaults = HighlightDefaults {
+            clutch_clear_secs: 2.5,
+            fast_clear_fraction: 0.35,
+            perfect_streak_count: 4,
+            mass_destruction_count: 8,
+            mass_destruction_window_secs: 1.0,
+            combo_king_cells: 6,
+            pinball_wizard_bounces: 10,
+            speed_demon_secs: 4.0,
+            close_save_pixels: 15.0,
+            comeback_bolts_lost: 2,
+            nail_biter_pixels: 25.0,
+            untouchable_nodes: 3,
+            highlight_cap: 4,
+        };
+
+        let config = HighlightConfig::from(defaults);
+
+        assert!((config.clutch_clear_secs - 2.5).abs() < f32::EPSILON);
+        assert!((config.fast_clear_fraction - 0.35).abs() < f32::EPSILON);
+        assert_eq!(config.perfect_streak_count, 4);
+        assert_eq!(config.mass_destruction_count, 8);
+        assert!((config.mass_destruction_window_secs - 1.0).abs() < f32::EPSILON);
+        assert_eq!(config.combo_king_cells, 6);
+        assert_eq!(config.pinball_wizard_bounces, 10);
+        assert!((config.speed_demon_secs - 4.0).abs() < f32::EPSILON);
+        assert!((config.close_save_pixels - 15.0).abs() < f32::EPSILON);
+        assert_eq!(config.comeback_bolts_lost, 2);
+        assert!((config.nail_biter_pixels - 25.0).abs() < f32::EPSILON);
+        assert_eq!(config.untouchable_nodes, 3);
+        assert_eq!(config.highlight_cap, 4);
     }
 }

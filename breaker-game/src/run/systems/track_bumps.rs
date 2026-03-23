@@ -16,10 +16,12 @@ pub(crate) fn track_bumps(
 ) {
     for msg in reader.read() {
         stats.bumps_performed += 1;
+        tracker.total_bumps_this_node += 1;
         if msg.grade == BumpGrade::Perfect {
             stats.perfect_bumps += 1;
             tracker.consecutive_perfect_bumps += 1;
         } else {
+            tracker.non_perfect_bumps_this_node += 1;
             tracker.best_perfect_streak = tracker
                 .best_perfect_streak
                 .max(tracker.consecutive_perfect_bumps);
@@ -143,7 +145,7 @@ mod tests {
     #[test]
     fn non_perfect_bump_records_streak_below_threshold() {
         let mut app = test_app();
-        // Set up 3 consecutive perfect bumps (below PERFECT_STREAK_THRESHOLD of 5)
+        // Set up 3 consecutive perfect bumps (below perfect_streak_count of 5)
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .consecutive_perfect_bumps = 3;
@@ -162,6 +164,58 @@ mod tests {
         assert_eq!(
             tracker.best_perfect_streak, 3,
             "streak of 3 is recorded but will not become a highlight (3 < 5)"
+        );
+    }
+
+    // --- Behavior 20: non-perfect bumps increment non_perfect_bumps_this_node ---
+
+    #[test]
+    fn early_bump_increments_non_perfect_bumps_this_node() {
+        let mut app = test_app();
+        app.insert_resource(TestMessages(vec![
+            BumpPerformed {
+                grade: BumpGrade::Early,
+                bolt: Entity::PLACEHOLDER,
+            },
+            BumpPerformed {
+                grade: BumpGrade::Late,
+                bolt: Entity::PLACEHOLDER,
+            },
+        ]));
+        tick(&mut app);
+
+        let tracker = app.world().resource::<HighlightTracker>();
+        assert_eq!(
+            tracker.non_perfect_bumps_this_node, 2,
+            "Early and Late bumps should both increment non_perfect_bumps_this_node"
+        );
+    }
+
+    // --- Behavior 21: all bumps increment total_bumps_this_node ---
+
+    #[test]
+    fn all_grades_increment_total_bumps_this_node() {
+        let mut app = test_app();
+        app.insert_resource(TestMessages(vec![
+            BumpPerformed {
+                grade: BumpGrade::Perfect,
+                bolt: Entity::PLACEHOLDER,
+            },
+            BumpPerformed {
+                grade: BumpGrade::Early,
+                bolt: Entity::PLACEHOLDER,
+            },
+            BumpPerformed {
+                grade: BumpGrade::Late,
+                bolt: Entity::PLACEHOLDER,
+            },
+        ]));
+        tick(&mut app);
+
+        let tracker = app.world().resource::<HighlightTracker>();
+        assert_eq!(
+            tracker.total_bumps_this_node, 3,
+            "all bump grades should increment total_bumps_this_node"
         );
     }
 }

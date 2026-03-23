@@ -2,6 +2,7 @@
 
 mod advance_node;
 mod capture_run_seed;
+mod detect_mass_destruction;
 mod generate_node_sequence;
 mod handle_node_cleared;
 mod handle_run_lost;
@@ -17,6 +18,7 @@ mod track_time_elapsed;
 
 pub(crate) use advance_node::advance_node;
 pub(crate) use capture_run_seed::capture_run_seed;
+pub(crate) use detect_mass_destruction::detect_mass_destruction;
 pub(crate) use generate_node_sequence::generate_node_sequence_system;
 pub(crate) use handle_node_cleared::handle_node_cleared;
 pub(crate) use handle_run_lost::handle_run_lost;

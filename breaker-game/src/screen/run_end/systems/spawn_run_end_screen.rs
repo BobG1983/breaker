@@ -135,6 +135,42 @@ fn spawn_highlights_section(parent: &mut ChildSpawnerCommands<'_>, stats: &RunSt
             HighlightKind::FirstEvolution => {
                 format!("First Evolution - Node {}", highlight.node_index)
             }
+            HighlightKind::MostPowerfulEvolution => {
+                format!("Most Powerful Evolution - Node {}", highlight.node_index)
+            }
+            HighlightKind::CloseSave => {
+                format!("Close Save - Node {}", highlight.node_index)
+            }
+            HighlightKind::SpeedDemon => {
+                format!(
+                    "Speed Demon - Node {} ({:.1}s)",
+                    highlight.node_index, highlight.value
+                )
+            }
+            HighlightKind::Untouchable => {
+                format!("Untouchable x{:.0}", highlight.value)
+            }
+            HighlightKind::ComboKing => {
+                format!(
+                    "Combo King x{:.0} - Node {}",
+                    highlight.value, highlight.node_index
+                )
+            }
+            HighlightKind::PinballWizard => {
+                format!(
+                    "Pinball Wizard x{:.0} - Node {}",
+                    highlight.value, highlight.node_index
+                )
+            }
+            HighlightKind::Comeback => {
+                format!("Comeback - Node {}", highlight.node_index)
+            }
+            HighlightKind::PerfectNode => {
+                format!("Perfect Node - Node {}", highlight.node_index)
+            }
+            HighlightKind::NailBiter => {
+                format!("Nail Biter - Node {}", highlight.node_index)
+            }
         };
         parent.spawn((
             Text::new(text),
