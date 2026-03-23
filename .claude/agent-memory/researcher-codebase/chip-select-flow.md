@@ -30,7 +30,6 @@ ChipRegistry + ChipInventory + ChipSelectConfig + GameRng
 - `ChipEffectApplied { effect, max_stacks }` -- triggered event for observer dispatch
 - `ChipInventory` -- tracks held chips (stacks) and decay_weights (offering weight decay)
 
-## Noted Gap
+## Inventory Tracking
 
-`ChipInventory::add_chip()` is never called in production code. Only effects are applied via observers.
-The inventory only tracks decay weights (via record_offered) but does not track which chips were actually selected.
+`ChipInventory::add_chip()` IS called in production code: `chips/systems/apply_chip_effect.rs:32` calls `inv.add_chip(&msg.name, chip)` when processing `ChipSelected`. The inventory tracks both stacks (via `add_chip`) and decay weights (via `record_offered`).

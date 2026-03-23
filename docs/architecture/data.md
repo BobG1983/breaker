@@ -136,6 +136,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 | Registry | Key | Value | Notes |
 |----------|-----|-------|-------|
 | `ChipRegistry` | `String` (name) | `ChipDefinition` | Paired `Vec<String>` preserves insertion order for deterministic chip offers |
+| `EvolutionRegistry` | — (Vec) | `EvolutionRecipe` | Stores recipes as a flat `Vec` (not keyed by name). Provides `eligible_evolutions(&ChipInventory)` lookup. Populated at load time. |
 | `NodeLayoutRegistry` | `String` (name) | `NodeLayout` | Paired `Vec<String>` preserves insertion order for index-based node progression |
 | `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Unsorted — callers sort at call site for UI display. `ArchetypeDefinition` has named root trigger fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`: `Option<TriggerChain>`) plus a `chains: Vec<TriggerChain>` for additional multi-step chains. |
 | `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |

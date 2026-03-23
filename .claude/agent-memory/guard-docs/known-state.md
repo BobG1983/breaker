@@ -41,6 +41,34 @@ type: reference
 - `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
 - `ChipEffectApplied` documented in messages.md Observer Events table
 
+## Phase 4 Wave 4 Architecture (as of 2026-03-23, do not re-flag)
+
+### Chip Evolution (4h)
+- `ChipOffering` enum in `screen/chip_select/resources.rs`: `Normal(ChipDefinition)` and `Evolution { ingredients: Vec<EvolutionIngredient>, result: ChipDefinition }`
+- `EvolutionRecipe` / `EvolutionIngredient` in `chips/definition.rs` — both `Asset + TypePath + Deserialize`; ingredient fields: `chip_name: String`, `stacks_required: u32`; recipe field: `result_definition: ChipDefinition`
+- `EvolutionRegistry` in `chips/resources.rs` — flat `Vec<EvolutionRecipe>`; `eligible_evolutions(&ChipInventory)` for lookup
+- Evolution is presented via existing ChipSelect screen (not a separate screen) — boss nodes inject `ChipOffering::Evolution` before normal chips in `generate_chip_offerings`
+- `handle_chip_input` consumes ingredient stacks for `ChipOffering::Evolution` on confirm
+- No RON data files in `assets/evolutions/` yet — infrastructure in place, data authoring pending
+- `EvolutionRegistry` NOT in `DefaultsCollection` / loading screen — only inserted if explicitly added; `generate_chip_offerings` uses `Option<Res<EvolutionRegistry>>`
+- No `EvolutionConsumesIngredients` scenario invariant yet — described in plan but not yet implemented in runner
+
+### Run Stats & Highlights (4i)
+- `RunStats` resource in `run/resources.rs` — counters: nodes_cleared, cells_destroyed, bumps_performed, perfect_bumps, bolts_lost, chips_collected (Vec<String>), evolutions_performed, time_elapsed, seed; plus `highlights: Vec<RunHighlight>`
+- `HighlightTracker` resource in `run/resources.rs` — per-node transient state for highlight detection
+- `HighlightKind` enum: ClutchClear, MassDestruction, PerfectStreak, FastClear, FirstEvolution, NoDamageNode
+- Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`
+- `track_chips_collected` runs in `Update` during `GameState::ChipSelect` (reads `ChipSelected` message)
+- `reset_highlight_tracker` + `capture_run_seed` run on `OnEnter(GameState::Playing)` — both unordered
+- `track_node_cleared_stats` is `.after(NodeSystems::TrackCompletion)` (already in ordering.md)
+- Run-end screen enhanced: spawns stats grid, flux, highlights (up to 3), chips list, seed via `spawn_run_end_screen`
+- New invariants: `ChipStacksConsistent` (chip stacks never exceed max_stacks) and `RunStatsMonotonic` (stat counters never decrease) — both in runner `InvariantKind` and `checkers/`
+
+### Release Infrastructure (4j)
+- `.github/workflows/release.yml` — builds macOS ARM64, Windows x64, Linux x64; creates GitHub Release; pushes to itch.io (rantzgames/breaker) on tag push; also supports `workflow_dispatch` (build + release only, no itch.io)
+- itch.io channels: `mac`, `windows`, `linux`
+- `CHANGELOG.md` exists at repo root — release workflow reads first section for release notes
+
 ## Phase 4 Wave 3 Architecture (as of 2026-03-22, do not re-flag)
 
 ### TransitionOut / TransitionIn states

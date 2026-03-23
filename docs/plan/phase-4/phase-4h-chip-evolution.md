@@ -14,21 +14,21 @@
 
 ### Evolution Recipes
 
-RON-defined recipes:
+RON-defined recipes match `EvolutionRecipe` shape:
 
 ```ron
 // assets/evolutions/cleaving_arc.evolution.ron
 (
-    name: "Cleaving Arc",
-    description: "Wide piercing bolt that shatters cells on contact",
     ingredients: [
-        (chip: "Piercing Shot", min_stacks: 2),
-        (chip: "Wide Breaker", min_stacks: 2),
+        (chip_name: "Piercing Shot", stacks_required: 2),
+        (chip_name: "Wide Breaker", stacks_required: 2),
     ],
-    result: (
-        kind: Amp,
+    result_definition: (
+        name: "Cleaving Arc",
+        description: "Wide piercing bolt that shatters cells on contact",
         rarity: Legendary,
-        effect: /* evolved effect — stronger than either ingredient */
+        max_stacks: 1,
+        effects: [Amp(Piercing(5))],
     ),
 )
 ```
@@ -36,17 +36,14 @@ RON-defined recipes:
 ### Evolution Flow
 
 1. Player beats a boss node
-2. System checks `ChipInventory` against all evolution recipes
-3. If the player qualifies for 1+ evolutions: present evolution choice screen
-4. If the player qualifies for 0 evolutions: offer alternative boss reward (chips, stats, etc.)
-5. Evolving consumes both ingredient chips from inventory and adds the evolved chip
+2. `generate_chip_offerings` checks `EvolutionRegistry.eligible_evolutions(&ChipInventory)` and injects `ChipOffering::Evolution` entries before normal chip slots
+3. If the player qualifies for 1+ evolutions: evolution offerings appear first on the ChipSelect screen; remaining slots filled with normal chips
+4. If the player qualifies for 0 evolutions: normal chip offerings fill all slots as usual
+5. Confirming an evolution offering consumes ingredient stacks from `ChipInventory` and grants the evolved chip via the normal `ChipSelected` message flow
 
-### Evolution Reward Screen
+### Evolution Offering — Implementation Note
 
-- Similar to chip select but shows evolution options
-- Displays the recipe (which two chips combine)
-- Shows the resulting evolved chip with its effect
-- No timer — boss rewards are a brief respite (but still fast UI)
+Evolution offerings are integrated directly into the existing **ChipSelect screen** via `ChipOffering::Evolution { ingredients, result }` rather than a separate reward screen. `handle_chip_input` pattern-matches on `ChipOffering::Evolution` to consume ingredient stacks before transitioning. This reuses the full chip-select infrastructure (timer, navigation, transition) without needing a new screen.
 
 ### Target: 3-4 Evolutions
 
@@ -60,14 +57,14 @@ Specific recipes designed during implementation alongside the chip pool.
 
 ### Evolution Registry
 
-- Loaded from RON files in `assets/evolutions/`
-- Indexed by ingredient pair for fast lookup
-- Hot-reloadable
+- `EvolutionRegistry` resource in `chips/resources.rs` — stores recipes as a flat `Vec<EvolutionRecipe>`
+- Provides `eligible_evolutions(&ChipInventory)` returning all recipes whose ingredient stacks are met
+- RON data in `assets/evolutions/` (not yet authored — infrastructure in place, data pending)
 
 ## Scenario Coverage
 
 ### New Invariants
-- **`EvolutionConsumesIngredients`** — after evolution, both ingredient chips are removed from `ChipInventory` and the evolved chip is present. Checked on state transition out of evolution reward screen.
+- **`EvolutionConsumesIngredients`** — after evolution, ingredient chips are removed from `ChipInventory` and the evolved chip is present. Described in plan but not yet implemented as a scenario runner invariant. Ingredient consumption is tested via unit tests in `handle_chip_input`.
 
 ### New Scenarios
 - `mechanic/evolution_boss_reward.scenario.ron` — Scripted run that accumulates specific chips to min stacks, then clears a boss. Verifies evolution is offered, ingredients consumed, evolved chip applied.

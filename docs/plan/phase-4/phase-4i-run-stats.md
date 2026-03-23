@@ -17,35 +17,31 @@ Hybrid approach: a dedicated `RunStats` resource populated by observing existing
 
 ```rust
 #[derive(Resource, Default)]
-struct RunStats {
-    // Counters
-    nodes_cleared: u32,
-    cells_destroyed: u32,
-    bumps_performed: u32,
-    perfect_bumps: u32,
-    bolts_lost: u32,
-    chips_collected: Vec<String>,   // names in order collected
-    chips_maxed: u32,
-    evolutions_performed: u32,
-    time_elapsed: f32,              // total run time
-    seed: u64,
-
-    // Highlight moments (Pillar 9: Every Run Tells a Story)
-    highlights: Vec<RunHighlight>,
+pub struct RunStats {
+    pub nodes_cleared: u32,
+    pub cells_destroyed: u32,
+    pub bumps_performed: u32,
+    pub perfect_bumps: u32,
+    pub bolts_lost: u32,
+    pub chips_collected: Vec<String>,   // names in order collected
+    pub evolutions_performed: u32,
+    pub time_elapsed: f32,
+    pub seed: u64,
+    pub highlights: Vec<RunHighlight>,
 }
 
 #[derive(Clone, Debug)]
-struct RunHighlight {
-    kind: HighlightKind,
-    node_index: u32,
-    value: f32,         // context-dependent (time remaining, cell count, etc.)
+pub struct RunHighlight {
+    pub kind: HighlightKind,
+    pub node_index: u32,
+    pub value: f32,         // context-dependent (time remaining, streak count, etc.)
 }
 
-enum HighlightKind {
+pub enum HighlightKind {
     ClutchClear,        // node cleared with < 3s remaining
-    MassDestruction,    // 5+ cells destroyed in a single shockwave/chain
-    PerfectStreak,      // N perfect bumps in a row
-    FastClear,          // node cleared in < N seconds
+    MassDestruction,    // 10+ cells destroyed within a 1-second window
+    PerfectStreak,      // 5+ consecutive perfect bumps
+    FastClear,          // node cleared in < 50% of allotted time
     FirstEvolution,     // first evolution performed this run
     NoDamageNode,       // node cleared without losing a bolt
 }
@@ -89,8 +85,8 @@ Flux is *earned and displayed* but not *spendable* until Phase 8 (Roguelite Prog
 ## Scenario Coverage
 
 ### New Invariants
-- **`RunStatsMonotonic`** — counters in `RunStats` (nodes_cleared, cells_destroyed, bumps_performed) never decrease. Checked every frame during `Playing`.
-- **`FluxNonNegative`** — calculated Flux is always >= 0. Checked on run end.
+- **`RunStatsMonotonic`** — counters in `RunStats` (nodes_cleared, cells_destroyed, bumps_performed, perfect_bumps, bolts_lost) never decrease. Implemented in runner as `InvariantKind::RunStatsMonotonic`.
+- **`FluxNonNegative`** — Flux is guaranteed non-negative via `saturating_sub` in `RunStats::flux_earned()`. No separate invariant implemented — the invariant is structural.
 
 ### New Scenarios
 - `mechanic/run_stats_accumulation.scenario.ron` — Scripted multi-node run that clears nodes, loses bolts, performs bumps. At run end, verify `RunStats` counters match expected values (known inputs → known outputs).

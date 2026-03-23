@@ -6,7 +6,7 @@ type: reference
 
 # System Map — Full Inventory
 
-Last updated: 2026-03-21 — refactor/unify-behaviors: bolt/behaviors/ sub-domain deleted, BoltBehaviorsPlugin removed, all overclock bridge systems + EffectFired/TriggerKind/ActiveChains/ArmedTriggers/handle_shockwave merged into top-level BehaviorsPlugin. behaviors/consequences/ replaced by behaviors/effects/. ActiveBehaviors → ActiveChains. BreakerSpawned→ (see 2026-03-19 entry for earlier changes).
+Last updated: 2026-03-21 — refactor/unify-behaviors (see above). PARTIAL UPDATE 2026-03-23 (Wave 4 audit): RunPlugin now additionally registers RunStats, HighlightTracker resources and 8 stat-tracking systems: track_cells_destroyed, track_bumps, track_bolts_lost, track_time_elapsed, track_node_cleared_stats (FixedUpdate PlayingState::Active); track_chips_collected (Update ChipSelect); reset_highlight_tracker, capture_run_seed (OnEnter(Playing)). spawn_run_end_screen enhanced to read RunStats. Full re-research recommended before Wave 5 planning.
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
@@ -293,7 +293,7 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 - Reads (query): Entity+Transform+CellWidth+CellHeight (CellCollisionFilter)
 - Reads (query): Entity+Transform+WallSize (WallCollisionFilter)
 - Sends: MessageWriter<BoltHitCell>
-- NOTE: BoltHitCell no longer carries a bolt Entity field (removed in feature/scenario-coverage-expansion)
+- NOTE: BoltHitCell carries `{ cell: Entity, bolt: Entity }` — both fields present (bolt field was removed then re-added in feature/phase4b2-effect-consumption)
 
 ### `bolt_breaker_collision` — FixedUpdate, after(bolt_cell_collision), in_set(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
 - Reads: Res<Time<Fixed>>
