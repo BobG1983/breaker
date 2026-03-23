@@ -9,6 +9,7 @@
 - [pattern_copy_derive_removal_cascade.md](pattern_copy_derive_removal_cascade.md) — Removing Copy from an enum breaks all pattern-match sites that relied on implicit copy
 - [pattern_default_vs_ron_test_values.md](pattern_default_vs_ron_test_values.md) — Specs citing RON values but tests using Default trait values; CellConfig and PlayfieldConfig defaults differ from RON
 - [pattern_onenter_resource_timing.md](pattern_onenter_resource_timing.md) — Systems reading resources inserted via deferred commands in OnEnter need explicit ordering after the inserting chain
+- [pattern_onenter_deferred_resource_chain.md](pattern_onenter_deferred_resource_chain.md) — Chained OnEnter systems using commands.insert_resource() need apply_deferred between producer and consumer
 - [pattern_enum_signature_migration.md](pattern_enum_signature_migration.md) — Changing enum variant signatures breaks ALL existing construction/match sites; spec must enumerate them as prerequisites
 - [pattern_refactor_atomicity.md](pattern_refactor_atomicity.md) — Multi-unit refactors that move/rename types cannot compile independently; must be atomic or use re-export bridge
 - [pattern_observer_mutation_vs_message.md](pattern_observer_mutation_vs_message.md) — Observers that mutate components need different query patterns than observers that write messages; spec must specify exact query

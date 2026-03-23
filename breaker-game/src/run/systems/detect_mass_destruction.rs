@@ -24,15 +24,18 @@ pub(crate) fn detect_mass_destruction(
     let now = time.elapsed_secs();
     let window_start = now - config.mass_destruction_window_secs;
 
+    let mut new_messages = false;
     for _msg in reader.read() {
         tracker.cell_destroyed_times.push(now);
+        new_messages = true;
     }
 
     // Prune timestamps older than the window
     tracker.cell_destroyed_times.retain(|&t| t >= window_start);
 
+    // Only check threshold on frames where new destructions arrived
     let count = tracker.cell_destroyed_times.len();
-    if count >= config.mass_destruction_count as usize {
+    if new_messages && count >= config.mass_destruction_count as usize {
         // Always emit HighlightTriggered for juice/VFX feedback
         writer.write(HighlightTriggered {
             kind: HighlightKind::MassDestruction,
@@ -131,10 +134,9 @@ mod tests {
 
         // Advance time to ~5.0s first so we have a concrete time reference
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        let advance_ticks = u32::try_from(
-            std::time::Duration::from_secs(5).as_micros() / timestep.as_micros(),
-        )
-        .expect("tick count fits in u32");
+        let advance_ticks =
+            u32::try_from(std::time::Duration::from_secs(5).as_micros() / timestep.as_micros())
+                .expect("tick count fits in u32");
         app.insert_resource(TestMessages(vec![]));
         for _ in 0..advance_ticks {
             tick(&mut app);
@@ -174,10 +176,9 @@ mod tests {
 
         // Advance time to ~5.0s
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        let advance_ticks = u32::try_from(
-            std::time::Duration::from_secs(5).as_micros() / timestep.as_micros(),
-        )
-        .expect("tick count fits in u32");
+        let advance_ticks =
+            u32::try_from(std::time::Duration::from_secs(5).as_micros() / timestep.as_micros())
+                .expect("tick count fits in u32");
         app.insert_resource(TestMessages(vec![]));
         for _ in 0..advance_ticks {
             tick(&mut app);
@@ -214,10 +215,9 @@ mod tests {
 
         // Advance time to ~5.0s
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        let advance_ticks = u32::try_from(
-            std::time::Duration::from_secs(5).as_micros() / timestep.as_micros(),
-        )
-        .expect("tick count fits in u32");
+        let advance_ticks =
+            u32::try_from(std::time::Duration::from_secs(5).as_micros() / timestep.as_micros())
+                .expect("tick count fits in u32");
         app.insert_resource(TestMessages(vec![]));
         for _ in 0..advance_ticks {
             tick(&mut app);
@@ -262,10 +262,9 @@ mod tests {
 
         // Advance time to ~5.0s
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        let advance_ticks = u32::try_from(
-            std::time::Duration::from_secs(5).as_micros() / timestep.as_micros(),
-        )
-        .expect("tick count fits in u32");
+        let advance_ticks =
+            u32::try_from(std::time::Duration::from_secs(5).as_micros() / timestep.as_micros())
+                .expect("tick count fits in u32");
         app.insert_resource(TestMessages(vec![]));
         for _ in 0..advance_ticks {
             tick(&mut app);

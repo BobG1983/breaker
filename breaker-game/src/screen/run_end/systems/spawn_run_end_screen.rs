@@ -763,10 +763,8 @@ mod tests {
                 .cloned()
         };
 
-        let sub_a = find_subtitle(&texts_a)
-            .expect("first app should have a known Won subtitle");
-        let sub_b = find_subtitle(&texts_b)
-            .expect("second app should have a known Won subtitle");
+        let sub_a = find_subtitle(&texts_a).expect("first app should have a known Won subtitle");
+        let sub_b = find_subtitle(&texts_b).expect("second app should have a known Won subtitle");
         assert_eq!(
             sub_a, sub_b,
             "same seed=42 should produce the same subtitle across runs"
@@ -838,7 +836,9 @@ mod tests {
 
         let texts = collect_texts(&mut app);
         assert!(
-            texts.iter().any(|t| t.as_str() == "The bolt obeys. For now."),
+            texts
+                .iter()
+                .any(|t| t.as_str() == "The bolt obeys. For now."),
             "expected fallback subtitle 'The bolt obeys. For now.' without RunStats, got texts: {texts:?}"
         );
     }

@@ -65,6 +65,15 @@ type: reference
 ## Still Stub (No Systems)
 AudioPlugin
 
+## RunPlugin Summary (as of 2026-03-23, memorable moments wave)
+- FixedUpdate (PlayingState::Active): track_cells_destroyed, track_bumps, track_bolts_lost, track_time_elapsed, track_node_cleared_stats (.after TrackCompletion), detect_mass_destruction, detect_close_save (.after BreakerCollision), detect_combo_and_pinball, detect_nail_biter (.after TrackCompletion)
+- Update (ChipSelect state): track_chips_collected, detect_first_evolution
+- OnEnter(Playing): reset_highlight_tracker, capture_run_seed (unordered)
+- OnEnter(TransitionIn): advance_node
+- OnExit(MainMenu): reset_run_state → generate_node_sequence_system
+- Registered: HighlightTriggered message; HighlightConfig, HighlightTracker, RunStats init_resource'd
+- NOT registered: spawn_highlight_text (imported but not wired into schedule — wiring gap as of 2026-03-23)
+
 ## Orphan Messages
 - None at current phase. `ChipSelected` (UiPlugin) is now received by `chips/apply_chip_effect`.
 

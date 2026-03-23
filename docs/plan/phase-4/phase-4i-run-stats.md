@@ -38,26 +38,62 @@ pub struct RunHighlight {
 }
 
 pub enum HighlightKind {
-    ClutchClear,        // node cleared with < 3s remaining
-    MassDestruction,    // 10+ cells destroyed within a 1-second window
-    PerfectStreak,      // 5+ consecutive perfect bumps
-    FastClear,          // node cleared in < 50% of allotted time
-    FirstEvolution,     // first evolution performed this run
-    NoDamageNode,       // node cleared without losing a bolt
+    ClutchClear,            // node cleared with < N secs remaining (configurable)
+    MassDestruction,        // M+ cells destroyed within a time window (configurable)
+    PerfectStreak,          // K+ consecutive perfect bumps (configurable)
+    FastClear,              // node cleared in < fraction of allotted time (configurable)
+    FirstEvolution,         // first chip evolution in the run
+    NoDamageNode,           // node cleared without losing a bolt
+    MostPowerfulEvolution,  // evolution that dealt the most total damage
+    CloseSave,              // bolt saved by bump within N pixels of bottom (configurable)
+    SpeedDemon,             // node cleared in < N seconds wall-clock (configurable)
+    Untouchable,            // N+ consecutive no-damage nodes (configurable)
+    ComboKing,              // N+ cells destroyed between breaker hits (configurable)
+    PinballWizard,          // N+ cell bounces without breaker contact (configurable)
+    Comeback,               // cleared despite losing N+ bolts (configurable)
+    PerfectNode,            // every bump in the node was perfect grade
+    NailBiter,              // node cleared while bolt within N pixels of bottom (configurable)
 }
+// All thresholds are loaded from defaults.highlights.ron via HighlightDefaults → HighlightConfig.
 ```
 
 ### Message Observation Systems
 
 Systems that listen to existing messages and increment `RunStats`:
-- `CellDestroyed` -> `cells_destroyed += 1`
-- `BumpPerformed { grade }` -> `bumps_performed += 1`, if perfect: `perfect_bumps += 1`
-- `BoltLost` -> `bolts_lost += 1`
-- `ChipSelected { name }` -> `chips_collected.push(name)`
-- Node cleared -> `nodes_cleared += 1`
-- Time tracking: accumulate `time.delta_secs()` each frame during `Playing`
+- `CellDestroyed` → `cells_destroyed += 1`
+- `BumpPerformed { grade }` → `bumps_performed += 1`, if perfect: `perfect_bumps += 1`
+- `BoltLost` → `bolts_lost += 1`
+- `ChipSelected { name }` → `chips_collected.push(name)`
+- `NodeCleared` → `nodes_cleared += 1` (via `track_node_cleared_stats`)
+- Time tracking: `track_time_elapsed` accumulates `time.delta_secs()` each FixedUpdate tick during `PlayingState::Active`
 
 No new mutation paths — purely observational.
+
+### Highlight Detection Systems (10 systems in run domain)
+
+All detection systems emit `HighlightTriggered { kind }` on every trigger (for juice) and additionally push to `RunStats::highlights` only once per kind per run, subject to `HighlightConfig::highlight_cap`. Implemented as separate systems:
+
+- `detect_mass_destruction` — reads `CellDestroyed`, maintains sliding time window
+- `detect_close_save` — reads `BumpPerformed`, queries bolt `Transform` vs `PlayfieldConfig::bottom()`
+- `detect_combo_and_pinball` — reads `CellDestroyed`, `BoltHitCell`, `BoltHitBreaker`; dual detection in one system
+- `detect_nail_biter` — reads `NodeCleared`, queries nearest bolt distance from bottom
+- `detect_first_evolution` — reads `ChipSelected`, queries `EvolutionRegistry` for name match; also increments `evolutions_performed`
+- `track_node_cleared_stats` — reads `NodeCleared`; detects `ClutchClear`, `NoDamageNode`, `FastClear`, `PerfectStreak`, `SpeedDemon`, `Untouchable`, `Comeback`, `PerfectNode` on node clear
+- `track_bumps` — reads `BumpPerformed`; increments `bumps_performed`/`perfect_bumps`; detects `PerfectStreak`-related tracker updates
+
+### HighlightDefaults / HighlightConfig RON Pipeline
+
+All thresholds are configurable. `HighlightDefaults` (`run/definition.rs`) is a `GameConfig`-derived asset type with a corresponding `assets/config/defaults.highlights.ron` file. The `GameConfig` macro generates `HighlightConfig` resource with `From<HighlightDefaults>`. Detection systems all read `Res<HighlightConfig>`. `RunPlugin` initializes `HighlightConfig` via `init_resource` using the `Default` impl (which matches the RON file values). The RON file is not wired into `DefaultsCollection` for hot-reload but the defaults are correctly reflected at runtime.
+
+### Death Copy Subtitles
+
+Run-end screen picks a seed-deterministic subtitle per outcome from 5 variants each:
+- `RunOutcome::Won` — 5 flavour strings (e.g., "The bolt obeys. For now.")
+- `RunOutcome::TimerExpired` — 5 flavour strings
+- `RunOutcome::LivesDepleted` — 5 flavour strings
+- `RunOutcome::InProgress` — falls back to plain "RUN ENDED" with no subtitle
+
+Subtitle index is `seed % 5`.
 
 ### Run-End Screen Enhancement
 
@@ -68,8 +104,8 @@ Current run-end screen shows win/lose. Enhance with:
 - **Build summary**: List of chips collected (with stack counts), evolutions performed
 - **Flux earned**: Calculated from stats (formula TBD — even if Flux spending isn't built yet, show the earned amount)
 - **Seed**: Displayed for sharing/replay
-- **Highlights**: Top 3 highlight moments from the run (e.g., "Clutch Clear — Node 7, 0.3s remaining", "Mass Destruction — 11 cells in one shockwave")
-- **Actions**: Retry (same seed), New Run, Main Menu
+- **Highlights**: Up to N highlight moments from the run, where N = `HighlightConfig::highlight_cap` (default 5, RON-configurable). Falls back to 3 if `HighlightConfig` is absent.
+- **Actions**: Press Enter to continue (Retry/New Run/Main Menu are future work)
 
 ### Flux Calculation
 
@@ -100,4 +136,6 @@ Flux is *earned and displayed* but not *spendable* until Phase 8 (Roguelite Prog
 4. Flux earned is calculated and displayed
 5. Seed is displayed on run-end screen
 6. Retry option starts a new run with the same seed
-7. At least 3 highlight moment types are detected and displayed on the run-end screen
+7. All 15 `HighlightKind` variants are detected by the 10 detection systems and can appear on the run-end screen
+8. All highlight thresholds are configurable via `defaults.highlights.ron` (no hardcoded constants)
+9. Seed-based death copy subtitles are displayed per run outcome (5 variants each, `Won`, `TimerExpired`, `LivesDepleted`)

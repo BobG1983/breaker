@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding. Updated 2026-03-23 (memorable moments audit) to add HighlightDefaults findings.
 
 ## Summary
 
@@ -196,6 +196,34 @@ from test code at this time. Risk is latent until authored evolution RON files a
 **How to apply:** On future audits, check if `.evolution.ron` files have been added to assets/.
 If so, verify `stacks_required > 0` is either enforced in the asset loader or documented as an
 authoring constraint.
+
+## Memorable Moments: HighlightDefaults fields — latent RON risk (added 2026-03-23)
+
+`HighlightDefaults` in `src/run/definition.rs` has 13 f32/u32 fields deserialized from
+`defaults.highlights.ron` without any bounds validation:
+- `clutch_clear_secs: f32` — no positivity check
+- `fast_clear_fraction: f32` — no [0.0, 1.0] range check; `0.0` silently disables `FastClear`
+- `mass_destruction_window_secs: f32` — no positivity check; `0.0` keeps only same-frame counts;
+  `f32::INFINITY` causes `cell_destroyed_times` Vec to never prune (bounded by total cells in run)
+- `speed_demon_secs: f32` — no positivity check
+- All threshold `u32` fields: `0` values make highlights fire on every event
+
+**Critical note:** `defaults.highlights.ron` is currently an ORPHANED asset — it exists in
+`assets/config/` but is NOT referenced in `DefaultsCollection` (no `Handle<HighlightDefaults>`
+field) and NOT loaded by any seeding system. `HighlightConfig` is also NOT initialized by
+`RunPlugin`. This means the RON fields cannot be misconfigured at runtime (no file is loaded),
+but the detection systems will panic because `HighlightConfig` resource is absent. See the
+critical finding in `ephemeral/audit-2026-03-23-memorable-moments.md`.
+
+**Status as of 2026-03-23:** All HighlightDefaults fields unvalidated, but latent — RON file
+is orphaned. `HighlightConfig` missing from ECS is the active bug (critical), not the RON values.
+
+**How to apply:** On future audits:
+1. Check whether `HighlightConfig` has been added to `DefaultsCollection` or initialized via
+   `init_resource` in `RunPlugin`. If added to `DefaultsCollection`, the RON field validation
+   becomes active and the latent findings above become real.
+2. Check `clutch_clear_secs > 0.0`, `fast_clear_fraction` in `(0.0, 1.0]`, and
+   `mass_destruction_window_secs > 0.0` are documented as authoring constraints.
 
 ## Wave 4: CI release workflow — workflow_dispatch tag input injection risk (added 2026-03-23)
 

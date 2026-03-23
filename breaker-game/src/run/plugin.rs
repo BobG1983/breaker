@@ -12,9 +12,9 @@ use crate::{
             advance_node, capture_run_seed, detect_close_save, detect_combo_and_pinball,
             detect_first_evolution, detect_mass_destruction, detect_nail_biter,
             generate_node_sequence_system, handle_node_cleared, handle_run_lost,
-            handle_timer_expired, reset_highlight_tracker, reset_run_state, track_bolts_lost,
-            track_bumps, track_cells_destroyed, track_chips_collected, track_node_cleared_stats,
-            track_time_elapsed,
+            handle_timer_expired, reset_highlight_tracker, reset_run_state, spawn_highlight_text,
+            track_bolts_lost, track_bumps, track_cells_destroyed, track_chips_collected,
+            track_node_cleared_stats, track_time_elapsed,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -32,6 +32,7 @@ impl Plugin for RunPlugin {
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
             .init_resource::<RunStats>()
+            .init_resource::<crate::run::definition::HighlightConfig>()
             .init_resource::<HighlightTracker>()
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
@@ -54,19 +55,21 @@ impl Plugin for RunPlugin {
                     track_node_cleared_stats.after(NodeSystems::TrackCompletion),
                     // Highlight detection
                     detect_mass_destruction,
-                    detect_close_save.after(PhysicsSystems::BreakerCollision),
+                    detect_close_save.after(crate::breaker::BreakerSystems::GradeBump),
                     detect_combo_and_pinball,
                     detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
+            // In-game highlight juice (Update, PlayingState::Active)
+            .add_systems(
+                Update,
+                spawn_highlight_text.run_if(in_state(PlayingState::Active)),
+            )
             // Chip selection tracking + evolution detection (Update, ChipSelect state)
             .add_systems(
                 Update,
-                (
-                    track_chips_collected,
-                    detect_first_evolution,
-                )
+                (track_chips_collected, detect_first_evolution)
                     .run_if(in_state(GameState::ChipSelect)),
             )
             .add_systems(

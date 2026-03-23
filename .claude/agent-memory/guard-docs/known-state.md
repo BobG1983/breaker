@@ -53,15 +53,21 @@ type: reference
 - `EvolutionRegistry` NOT in `DefaultsCollection` / loading screen — only inserted if explicitly added; `generate_chip_offerings` uses `Option<Res<EvolutionRegistry>>`
 - No `EvolutionConsumesIngredients` scenario invariant yet — described in plan but not yet implemented in runner
 
-### Run Stats & Highlights (4i)
+### Run Stats & Highlights (4i) — UPDATED for memorable moments wave (2026-03-23)
 - `RunStats` resource in `run/resources.rs` — counters: nodes_cleared, cells_destroyed, bumps_performed, perfect_bumps, bolts_lost, chips_collected (Vec<String>), evolutions_performed, time_elapsed, seed; plus `highlights: Vec<RunHighlight>`
-- `HighlightTracker` resource in `run/resources.rs` — per-node transient state for highlight detection
-- `HighlightKind` enum: ClutchClear, MassDestruction, PerfectStreak, FastClear, FirstEvolution, NoDamageNode
-- Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`
-- `track_chips_collected` runs in `Update` during `GameState::ChipSelect` (reads `ChipSelected` message)
+- `HighlightTracker` resource in `run/resources.rs` — per-node AND cross-node transient tracking fields; reset by `reset_highlight_tracker` (per-node fields only)
+- `HighlightKind` enum (15 variants): ClutchClear, MassDestruction, PerfectStreak, FastClear, FirstEvolution, NoDamageNode, MostPowerfulEvolution, CloseSave, SpeedDemon, Untouchable, ComboKing, PinballWizard, Comeback, PerfectNode, NailBiter
+- `HighlightDefaults` in `run/definition.rs` — `#[derive(Asset, TypePath, Deserialize, GameConfig)]` → generates `HighlightConfig` resource via `#[game_config(name = "HighlightConfig")]`; RON file `assets/config/defaults.highlights.ron` exists (tested via `include_str!`); NOT in `DefaultsCollection` — not hot-reload wired
+- `HighlightConfig` is `init_resource`'d in `RunPlugin.build()` — uses `Default` impl (matches `defaults.highlights.ron` values). Fields: clutch_clear_secs, fast_clear_fraction, perfect_streak_count, mass_destruction_count, mass_destruction_window_secs, combo_king_cells, pinball_wizard_bounces, speed_demon_secs, close_save_pixels, comeback_bolts_lost, nail_biter_pixels, untouchable_nodes, highlight_cap
+- `HighlightTriggered { kind: HighlightKind }` message in `run/messages.rs` — registered by `RunPlugin`; emitted by all detection systems; consumed by `spawn_highlight_text` for in-game popups
+- Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`, `detect_mass_destruction`, `detect_close_save`, `detect_combo_and_pinball`, `detect_nail_biter`
+- `detect_close_save` is `.after(PhysicsSystems::BreakerCollision)` (needs post-collision bolt position)
+- `detect_nail_biter` is `.after(NodeSystems::TrackCompletion)` (fires on node clear)
+- `track_chips_collected` + `detect_first_evolution` run in `Update` during `GameState::ChipSelect`
 - `reset_highlight_tracker` + `capture_run_seed` run on `OnEnter(GameState::Playing)` — both unordered
 - `track_node_cleared_stats` is `.after(NodeSystems::TrackCompletion)` (already in ordering.md)
-- Run-end screen enhanced: spawns stats grid, flux, highlights (up to 3), chips list, seed via `spawn_run_end_screen`
+- `spawn_highlight_text` — run domain system in `run/systems/spawn_highlight_text.rs`; reads `HighlightTriggered` messages and spawns `Text2d` entities with `FadeOut` + `CleanupOnNodeExit`; imported in `run/plugin.rs` use block but NOT registered in any schedule (wiring gap — system and tests complete, plugin.rs wiring pending)
+- Run-end screen reads `Option<Res<HighlightConfig>>` (not required — graceful fallback if absent)
 - New invariants: `ChipStacksConsistent` (chip stacks never exceed max_stacks) and `RunStatsMonotonic` (stat counters never decrease) — both in runner `InvariantKind` and `checkers/`
 
 ### Release Infrastructure (4j)

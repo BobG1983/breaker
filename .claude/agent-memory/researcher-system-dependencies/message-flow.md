@@ -6,7 +6,7 @@ type: reference
 
 # Message Flow Map
 
-Last updated: 2026-03-22 (Wave 3 audit: bridge names now bridge_bolt_lost, bridge_bump, bridge_bump_whiff, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_cell_destroyed — no _overclock_ infix. Prior: refactor/unify-behaviors renamed OverclockEffectFired→EffectFired, ActiveOverclocks→ActiveChains, OverclockTriggerKind→TriggerKind; behaviors/consequences/→behaviors/effects/; ConsequenceFired removed.)
+Last updated: 2026-03-23 (Wave 4+ audit: HighlightTriggered message added — RunPlugin, emitted by 5 detection systems, consumed by spawn_highlight_text. Prior: 2026-03-22 Wave 3 audit — bridge names finalized; 2026-03-21 refactor/unify-behaviors — OverclockEffectFired→EffectFired, etc.)
 
 ## Registered Messages (by plugin)
 
@@ -31,6 +31,7 @@ Last updated: 2026-03-22 (Wave 3 audit: bridge names now bridge_bolt_lost, bridg
 | BoltSpawned | BoltPlugin |
 | WallsSpawned | WallPlugin |
 | RunLost | RunPlugin |
+| HighlightTriggered | RunPlugin |
 | ChipSelected | UiPlugin |
 | AppExit | Bevy built-in |
 
@@ -169,6 +170,17 @@ written in OnEnter are available in the first FixedUpdate tick.
 - NOTE: Previously called UpgradeSelected; renamed to ChipSelected to match game vocabulary.
 - NOTE: handle_chip_input reads ButtonInput<KeyCode> directly (not InputActions). This is intentional — same pattern as main menu.
 
+### HighlightTriggered (RunPlugin internal)
+- Senders (all FixedUpdate PlayingState::Active or Update ChipSelect):
+  - `detect_mass_destruction` (RunPlugin, FixedUpdate)
+  - `detect_close_save` (RunPlugin, FixedUpdate, .after(BreakerCollision))
+  - `detect_combo_and_pinball` (RunPlugin, FixedUpdate) — emits ComboKing and/or PinballWizard
+  - `detect_nail_biter` (RunPlugin, FixedUpdate, .after(NodeSystems::TrackCompletion))
+  - `detect_first_evolution` (RunPlugin, Update, ChipSelect state)
+- Receiver: `spawn_highlight_text` (RunPlugin, Update, PlayingState::Active) — spawns Text2d popup per message
+- All detection systems also record to RunStats.highlights (bounded by HighlightConfig.highlight_cap)
+- HighlightTriggered is always emitted on detection regardless of cap (juice fires even when highlight list is full)
+
 ### AppExit (Bevy built-in)
 - Sender: `handle_main_menu_input` (ScreenPlugin)
 - Receiver: Bevy app exit handler
@@ -199,6 +211,7 @@ written in OnEnter are available in the first FixedUpdate tick.
 | BehaviorsPlugin | ApplyTimePenalty | NodePlugin |
 | BehaviorsPlugin | SpawnAdditionalBolt | BoltPlugin |
 | BehaviorsPlugin | RunLost | RunPlugin |
+| RunPlugin | HighlightTriggered | RunPlugin (spawn_highlight_text) |
 | UiPlugin/ScreenPlugin | ChipSelected | ChipsPlugin |
 
 ---

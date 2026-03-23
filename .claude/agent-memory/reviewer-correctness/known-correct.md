@@ -93,6 +93,10 @@ type: reference
 - `handle_life_lost` observer iterates all LivesCount entities — correct; if multiple entities have LivesCount (edge case), all are decremented. Intentional by design.
 - Full-tree review 2026-03-19: no confirmed logic bugs found beyond z=1.0 hardcode in bolt_lost (cosmetic concern for multi-layer games but functionally correct for current single-layer setup).
 - Phase 4 Wave 1 (2026-03-19): `handle_run_setup_input` uses `Option<Res<SeedEntry>>` — always Some at runtime because `spawn_run_setup` (OnEnter) fires before Update. Defensive Option is correct, not a bug.
+- Memorable moments (2026-03-23): `detect_close_save` guards `distance >= 0.0 && distance < threshold` — correct; prevents firing on bolts below the floor. Do not re-flag.
+- Memorable moments (2026-03-23): `spawn_run_end_screen` subtitle index `usize::try_from(seed % 5).unwrap_or(0)` — `seed % 5` in [0,4], `try_from` infallible on all 16-bit+ targets, `.unwrap_or(0)` is dead but harmless. Not a bug.
+- Memorable moments (2026-03-23): `track_node_cleared_stats` early-continue at top of loop before highlight checks — correct for the record path. The system intentionally does not emit HighlightTriggered (design inconsistency with other systems but not a crash).
+- Memorable moments (2026-03-23): `detect_combo_and_pinball` resets counters AFTER threshold check on BoltHitBreaker — correct ordering.
 - Phase 4 Wave 1 (2026-03-19): `reset_run_state` uses `Option<Res<SelectedArchetype>>` — for logging only; if absent logs "none". Correct.
 - Phase 4 Wave 1 (2026-03-19): `bypass_menu_to_playing` always sets `RunSeed(Some(n))` — intentional; scenarios always use deterministic seed.
 - Phase 4 Wave 1 (2026-03-19): `stack_u32` and `stack_f32` cap check `current / per_stack < max_stacks` — correct because current is always `n * per_stack` (exact integer/float multiple), so division is exact and gives stack count directly.

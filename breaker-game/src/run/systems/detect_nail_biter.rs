@@ -6,9 +6,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::components::{Bolt, BoltServing},
     run::{
-        definition::HighlightConfig,
-        messages::HighlightTriggered,
-        node::messages::NodeCleared,
+        definition::HighlightConfig, messages::HighlightTriggered, node::messages::NodeCleared,
         resources::*,
     },
     shared::PlayfieldConfig,
@@ -40,7 +38,7 @@ pub(crate) fn detect_nail_biter(
             continue;
         };
 
-        if min_distance < config.nail_biter_pixels {
+        if min_distance >= 0.0 && min_distance < config.nail_biter_pixels {
             // Always emit for juice/VFX feedback
             writer.write(HighlightTriggered {
                 kind: HighlightKind::NailBiter,

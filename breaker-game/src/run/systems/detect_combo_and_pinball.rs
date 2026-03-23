@@ -46,9 +46,7 @@ pub(crate) fn detect_combo_and_pinball(
         let node_index = run_state.node_index;
 
         // --- ComboKing ---
-        tracker.best_combo = tracker
-            .best_combo
-            .max(tracker.cells_since_last_breaker_hit);
+        tracker.best_combo = tracker.best_combo.max(tracker.cells_since_last_breaker_hit);
 
         if tracker.cells_since_last_breaker_hit >= config.combo_king_cells {
             // Always emit for juice
@@ -509,7 +507,10 @@ mod tests {
             .iter()
             .filter(|h| h.kind == HighlightKind::PinballWizard)
             .count();
-        assert_eq!(combo_count, 1, "should NOT add a second ComboKing highlight");
+        assert_eq!(
+            combo_count, 1,
+            "should NOT add a second ComboKing highlight"
+        );
         assert_eq!(
             pinball_count, 1,
             "should NOT add a second PinballWizard highlight"

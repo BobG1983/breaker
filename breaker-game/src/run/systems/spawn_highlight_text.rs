@@ -2,10 +2,11 @@
 
 use bevy::prelude::*;
 
-use crate::fx::FadeOut;
-use crate::run::messages::HighlightTriggered;
-use crate::run::resources::HighlightKind;
-use crate::shared::CleanupOnNodeExit;
+use crate::{
+    fx::FadeOut,
+    run::{messages::HighlightTriggered, resources::HighlightKind},
+    shared::CleanupOnNodeExit,
+};
 
 /// Spawns floating text for each [`HighlightTriggered`] message.
 pub(crate) fn spawn_highlight_text(
@@ -28,9 +29,7 @@ pub(crate) fn spawn_highlight_text(
             HighlightKind::Comeback => ("COMEBACK!", Color::srgb(0.0, 1.0, 0.4)),
             HighlightKind::PerfectNode => ("PERFECT NODE!", Color::srgb(0.0, 1.0, 1.0)),
             HighlightKind::NailBiter => ("NAIL BITER!", Color::srgb(0.0, 1.0, 0.4)),
-            HighlightKind::MostPowerfulEvolution => {
-                ("DEVASTATING!", Color::srgb(1.0, 0.6, 0.0))
-            }
+            HighlightKind::MostPowerfulEvolution => ("DEVASTATING!", Color::srgb(1.0, 0.6, 0.0)),
         };
 
         commands.spawn((
@@ -39,7 +38,7 @@ pub(crate) fn spawn_highlight_text(
             TextFont::from_font_size(64.0),
             Transform::from_xyz(0.0, 100.0, 10.0),
             FadeOut {
-                timer: 0.0,
+                timer: 2.0,
                 duration: 2.0,
             },
             CleanupOnNodeExit,
@@ -49,12 +48,14 @@ pub(crate) fn spawn_highlight_text(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::fx::FadeOut;
-    use crate::run::messages::HighlightTriggered;
-    use crate::run::resources::HighlightKind;
-    use crate::shared::CleanupOnNodeExit;
     use bevy::prelude::Text2d;
+
+    use super::*;
+    use crate::{
+        fx::FadeOut,
+        run::{messages::HighlightTriggered, resources::HighlightKind},
+        shared::CleanupOnNodeExit,
+    };
 
     #[derive(Resource)]
     struct TestHighlightMsg(Vec<HighlightTriggered>);
@@ -217,11 +218,7 @@ mod tests {
         ]));
         app.update();
 
-        let count = app
-            .world_mut()
-            .query::<&Text2d>()
-            .iter(app.world())
-            .count();
+        let count = app.world_mut().query::<&Text2d>().iter(app.world()).count();
         assert_eq!(
             count, 3,
             "each HighlightTriggered message should spawn one Text2d entity"
@@ -234,11 +231,7 @@ mod tests {
         app.insert_resource(TestHighlightMsg(vec![]));
         app.update();
 
-        let count = app
-            .world_mut()
-            .query::<&Text2d>()
-            .iter(app.world())
-            .count();
+        let count = app.world_mut().query::<&Text2d>().iter(app.world()).count();
         assert_eq!(
             count, 0,
             "no HighlightTriggered messages should spawn no Text2d entities"

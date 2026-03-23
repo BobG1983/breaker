@@ -57,8 +57,10 @@ pub(crate) fn detect_close_save(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::messages::BumpGrade;
-    use crate::run::resources::{HighlightKind, RunHighlight};
+    use crate::{
+        breaker::messages::BumpGrade,
+        run::resources::{HighlightKind, RunHighlight},
+    };
 
     #[derive(Resource)]
     struct TestMessages(Vec<BumpPerformed>);

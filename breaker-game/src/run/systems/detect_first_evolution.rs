@@ -69,10 +69,12 @@ pub(crate) fn detect_first_evolution(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::{
-        AmpEffect, ChipDefinition, ChipEffect, EvolutionIngredient, EvolutionRecipe, Rarity,
+    use crate::{
+        chips::definition::{
+            AmpEffect, ChipDefinition, ChipEffect, EvolutionIngredient, EvolutionRecipe, Rarity,
+        },
+        run::resources::{HighlightKind, RunHighlight},
     };
-    use crate::run::resources::{HighlightKind, RunHighlight};
 
     #[derive(Resource)]
     struct TestMessages(Vec<ChipSelected>);
@@ -192,7 +194,9 @@ mod tests {
             let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
             tracker.first_evolution_recorded = true;
         }
-        app.world_mut().resource_mut::<RunStats>().evolutions_performed = 1;
+        app.world_mut()
+            .resource_mut::<RunStats>()
+            .evolutions_performed = 1;
 
         app.insert_resource(TestMessages(vec![ChipSelected {
             name: "Piercing Barrage".to_owned(),

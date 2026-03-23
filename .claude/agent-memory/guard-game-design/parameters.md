@@ -62,6 +62,21 @@ type: reference
 - Transition out duration: 0.5s, in duration: 0.3s (code defaults — no transition RON file)
 - Flash color: white [1.0, 1.0, 1.0], Sweep color: neon cyan [0.0, 0.8, 1.0]
 
+## Highlight Parameters (2026-03-23, RON: defaults.highlights.ron)
+- clutch_clear_secs: 3.0 — appropriate
+- fast_clear_fraction: 0.5 — appropriate
+- perfect_streak_count: 5 — appropriate
+- mass_destruction_count: 10, window: 2.0s — watch for over-triggering (window was 1.0s in original spec)
+- combo_king_cells: 8 — appropriate
+- pinball_wizard_bounces: 12 — high bar, appropriate for expert-only
+- speed_demon_secs: 5.0 — depends on node timer, revisit in playtesting
+- close_save_pixels: 20.0 — tight (bolt radius 14px), appropriate
+- comeback_bolts_lost: 3 — maps to Aegis lives, thematic
+- nail_biter_pixels: 30.0 — slightly more generous than CloseSave, appropriate
+- untouchable_nodes: 2 — achievable but meaningful
+- highlight_cap: 5 — up from spec's 3, good for story-telling (Pillar 9)
+- FadeOut duration for juice popups: 2.0s (code default, not yet in RON)
+
 ## Playtest Tuning Knobs (ordered by impact)
 1. perfect_window: 0.15s -> try 0.10-0.12s if too easy
 2. ~~chip_select_timer: 10.0s -> try 8.0s~~ DONE (RON at 8.0s)
