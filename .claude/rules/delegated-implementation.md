@@ -58,6 +58,10 @@ When implementing multiple domains simultaneously:
 5. When ALL writer-codes have completed (they produce code only — no build verification): launch post-implementation verification per tier
 6. Main agent handles wiring (lib.rs, game.rs, shared.rs)
 
+### Background Agent Efficiency
+
+When a background agent is running, the main agent should **not** fill time with unnecessary analysis or speculation. Background agents notify on completion — end your turn with a brief status message and wait. Don't read files, don't plan ahead, don't analyze speculatively while waiting.
+
 ### Safety Requirements for Parallel Execution
 
 - Each agent ONLY touches files within its assigned domain directory

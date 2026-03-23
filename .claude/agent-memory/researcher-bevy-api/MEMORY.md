@@ -10,8 +10,13 @@
 - [observers_and_oneshot.md](observers_and_oneshot.md) — Observers, triggers, one-shot systems
 - [text_input.md](text_input.md) — Text input via KeyboardInput.text, repeat handling, focus, bevy_simple_text_input 0.14.1
 - [third_party_crates.md](third_party_crates.md) — bevy_egui, bevy_common_assets, bevy_asset_loader, iyes_progress
-- [transform_interpolation.md](transform_interpolation.md) — No built-in support; manual or crate
+- [transform_interpolation.md](transform_interpolation.md) — No built-in support; manual or crate; overstep_fraction() for lerp alpha
 - [app_run_vs_update_loop.md](app_run_vs_update_loop.md) — App::run() self-replacement, WinitPlugin runner mechanics, why manual update() cannot drive windowed apps
+- [rot2_and_math.md](rot2_and_math.md) — Rot2: constructors, accessors, slerp/nlerp (no lerp), IDENTITY, Default, Reflect
+- [transform_systems_set.md](transform_systems_set.md) — TransformSystems::Propagate (plural, NOT TransformSystem::TransformPropagate)
+- [require_attribute.md](require_attribute.md) — #[require(...)] syntax: plain, constructor, named-field, expression forms
+
+- [spatial2d_builtin_audit.md](spatial2d_builtin_audit.md) — What Bevy 0.18.1 provides natively vs what must be custom for a spatial2d crate (Position2D, interpolation, z-order, absolute positioning, Transform2D)
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.
