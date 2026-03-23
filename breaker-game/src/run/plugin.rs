@@ -3,15 +3,18 @@
 use bevy::prelude::*;
 
 use crate::{
+    physics::PhysicsSystems,
     run::{
-        messages::RunLost,
+        messages::{HighlightTriggered, RunLost},
         node::{NodePlugin, NodeSystems},
         resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
         systems::{
-            advance_node, capture_run_seed, generate_node_sequence_system, handle_node_cleared,
-            handle_run_lost, handle_timer_expired, reset_highlight_tracker, reset_run_state,
-            track_bolts_lost, track_bumps, track_cells_destroyed, track_chips_collected,
-            track_node_cleared_stats, track_time_elapsed,
+            advance_node, capture_run_seed, detect_close_save, detect_combo_and_pinball,
+            detect_first_evolution, detect_mass_destruction, detect_nail_biter,
+            generate_node_sequence_system, handle_node_cleared, handle_run_lost,
+            handle_timer_expired, reset_highlight_tracker, reset_run_state, track_bolts_lost,
+            track_bumps, track_cells_destroyed, track_chips_collected, track_node_cleared_stats,
+            track_time_elapsed,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -32,6 +35,7 @@ impl Plugin for RunPlugin {
             .init_resource::<HighlightTracker>()
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
+            .add_message::<HighlightTriggered>()
             .add_systems(
                 FixedUpdate,
                 (
@@ -48,13 +52,22 @@ impl Plugin for RunPlugin {
                     track_bolts_lost,
                     track_time_elapsed,
                     track_node_cleared_stats.after(NodeSystems::TrackCompletion),
+                    // Highlight detection
+                    detect_mass_destruction,
+                    detect_close_save.after(PhysicsSystems::BreakerCollision),
+                    detect_combo_and_pinball,
+                    detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
-            // Chip selection tracking (Update schedule, ChipSelect state)
+            // Chip selection tracking + evolution detection (Update, ChipSelect state)
             .add_systems(
                 Update,
-                track_chips_collected.run_if(in_state(GameState::ChipSelect)),
+                (
+                    track_chips_collected,
+                    detect_first_evolution,
+                )
+                    .run_if(in_state(GameState::ChipSelect)),
             )
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -86,9 +99,12 @@ mod tests {
             .add_message::<crate::cells::messages::CellDestroyed>()
             .add_message::<crate::breaker::messages::BumpPerformed>()
             .add_message::<crate::physics::messages::BoltLost>()
+            .add_message::<crate::physics::messages::BoltHitBreaker>()
+            .add_message::<crate::physics::messages::BoltHitCell>()
             .add_message::<crate::ui::messages::ChipSelected>()
-            // ChipInventory required by reset_run_state
+            // Resources required by run domain systems
             .init_resource::<crate::chips::inventory::ChipInventory>()
+            .init_resource::<crate::shared::PlayfieldConfig>()
             .add_plugins(RunPlugin)
             .update();
     }

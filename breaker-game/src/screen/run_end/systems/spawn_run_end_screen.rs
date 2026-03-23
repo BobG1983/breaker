@@ -4,9 +4,34 @@ use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 use tracing::info;
 
 use crate::{
-    run::resources::{HighlightKind, RunOutcome, RunState, RunStats},
+    run::{
+        definition::HighlightConfig,
+        resources::{HighlightKind, RunOutcome, RunState, RunStats},
+    },
     screen::run_end::RunEndScreen,
 };
+
+const WON_SUBTITLES: [&str; 5] = [
+    "The bolt obeys. For now.",
+    "Every wall crumbles eventually.",
+    "Built different. Broke everything.",
+    "The signal holds. Barely.",
+    "Clean sweep. Next time won't be.",
+];
+const TIMER_EXPIRED_SUBTITLES: [&str; 5] = [
+    "The clock doesn't wait.",
+    "Almost had it.",
+    "Time ran out. The build didn't.",
+    "So close. So far.",
+    "One more second would've changed everything.",
+];
+const LIVES_DEPLETED_SUBTITLES: [&str; 5] = [
+    "Signal lost. Rerouting.",
+    "The bolt slipped away.",
+    "Every loss teaches something.",
+    "Down but not deleted.",
+    "The grid remembers.",
+];
 
 /// Label color for stat rows and section headers.
 const LABEL_COLOR: Color = Color::srgba(0.7, 0.7, 0.7, 1.0);
@@ -16,12 +41,15 @@ pub(crate) fn spawn_run_end_screen(
     mut commands: Commands,
     run_state: Res<RunState>,
     stats: Option<Res<RunStats>>,
+    config: Option<Res<HighlightConfig>>,
 ) {
     info!("run ended");
+    let seed = stats.as_ref().map_or(0_u64, |s| s.seed);
+    let idx = usize::try_from(seed % 5).unwrap_or(0);
     let (title, subtitle) = match run_state.outcome {
-        RunOutcome::Won => ("RUN COMPLETE", "The bolt obeys. For now."),
-        RunOutcome::TimerExpired => ("TIME'S UP", "Almost had it."),
-        RunOutcome::LivesDepleted => ("SIGNAL LOST", "Almost had it."),
+        RunOutcome::Won => ("RUN COMPLETE", WON_SUBTITLES[idx]),
+        RunOutcome::TimerExpired => ("TIME'S UP", TIMER_EXPIRED_SUBTITLES[idx]),
+        RunOutcome::LivesDepleted => ("SIGNAL LOST", LIVES_DEPLETED_SUBTITLES[idx]),
         RunOutcome::InProgress => ("RUN ENDED", ""),
     };
 
@@ -60,9 +88,10 @@ pub(crate) fn spawn_run_end_screen(
             }
 
             if let Some(stats) = &stats {
+                let highlight_cap = config.as_ref().map_or(3, |c| c.highlight_cap as usize);
                 spawn_stats_section(parent, stats);
                 spawn_flux_section(parent, stats);
-                spawn_highlights_section(parent, stats);
+                spawn_highlights_section(parent, stats, highlight_cap);
                 spawn_chips_section(parent, stats);
                 spawn_seed_section(parent, stats);
             }
@@ -113,9 +142,9 @@ fn spawn_flux_section(parent: &mut ChildSpawnerCommands<'_>, stats: &RunStats) {
     ));
 }
 
-/// Spawns text nodes for up to 3 run highlights.
-fn spawn_highlights_section(parent: &mut ChildSpawnerCommands<'_>, stats: &RunStats) {
-    for highlight in stats.highlights.iter().take(3) {
+/// Spawns text nodes for up to `cap` run highlights.
+fn spawn_highlights_section(parent: &mut ChildSpawnerCommands<'_>, stats: &RunStats, cap: usize) {
+    for highlight in stats.highlights.iter().take(cap) {
         let text = match &highlight.kind {
             HighlightKind::ClutchClear => {
                 format!("Clutch Clear - Node {}", highlight.node_index)
@@ -667,6 +696,283 @@ mod tests {
         assert!(
             texts.iter().any(|t| t.contains("RUN COMPLETE")),
             "expected 'RUN COMPLETE' in texts even without RunStats: {texts:?}"
+        );
+    }
+
+    // ---- Death copy variants (seed-based subtitle selection) ----
+
+    const WON_SUBS: [&str; 5] = [
+        "The bolt obeys. For now.",
+        "Every wall crumbles eventually.",
+        "Built different. Broke everything.",
+        "The signal holds. Barely.",
+        "Clean sweep. Next time won't be.",
+    ];
+    const TIMER_EXPIRED_SUBS: [&str; 5] = [
+        "The clock doesn't wait.",
+        "Almost had it.",
+        "Time ran out. The build didn't.",
+        "So close. So far.",
+        "One more second would've changed everything.",
+    ];
+    const LIVES_DEPLETED_SUBS: [&str; 5] = [
+        "Signal lost. Rerouting.",
+        "The bolt slipped away.",
+        "Every loss teaches something.",
+        "Down but not deleted.",
+        "The grid remembers.",
+    ];
+
+    #[test]
+    fn won_subtitle_is_from_known_variants() {
+        let stats = RunStats {
+            seed: 42,
+            ..Default::default()
+        };
+        let mut app = test_app_with_stats(RunOutcome::Won, stats);
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        let subtitle_found = texts.iter().any(|t| WON_SUBS.contains(&t.as_str()));
+        assert!(
+            subtitle_found,
+            "expected subtitle to be one of the known Won variants, got texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn won_subtitle_is_deterministic_with_same_seed() {
+        let make_app = || {
+            let stats = RunStats {
+                seed: 42,
+                ..Default::default()
+            };
+            let mut app = test_app_with_stats(RunOutcome::Won, stats);
+            app.update();
+            collect_texts(&mut app)
+        };
+
+        let texts_a = make_app();
+        let texts_b = make_app();
+
+        // Find subtitle text (not the title, not "Press Enter")
+        let find_subtitle = |texts: &[String]| -> Option<String> {
+            texts
+                .iter()
+                .find(|t| WON_SUBS.contains(&t.as_str()))
+                .cloned()
+        };
+
+        let sub_a = find_subtitle(&texts_a)
+            .expect("first app should have a known Won subtitle");
+        let sub_b = find_subtitle(&texts_b)
+            .expect("second app should have a known Won subtitle");
+        assert_eq!(
+            sub_a, sub_b,
+            "same seed=42 should produce the same subtitle across runs"
+        );
+    }
+
+    #[test]
+    fn timer_expired_subtitle_is_from_known_variants() {
+        let stats = RunStats {
+            seed: 99,
+            ..Default::default()
+        };
+        let mut app = test_app_with_stats(RunOutcome::TimerExpired, stats);
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        let subtitle_found = TIMER_EXPIRED_SUBS
+            .iter()
+            .any(|sub| texts.iter().any(|t| t.as_str() == *sub));
+        assert!(
+            subtitle_found,
+            "expected subtitle to be one of the known TimerExpired variants, got texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn lives_depleted_subtitle_is_from_known_variants() {
+        let stats = RunStats {
+            seed: 77,
+            ..Default::default()
+        };
+        let mut app = test_app_with_stats(RunOutcome::LivesDepleted, stats);
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        let subtitle_found = LIVES_DEPLETED_SUBS
+            .iter()
+            .any(|sub| texts.iter().any(|t| t.as_str() == *sub));
+        assert!(
+            subtitle_found,
+            "expected subtitle to be one of the known LivesDepleted variants, got texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn in_progress_outcome_shows_run_ended() {
+        let mut app = test_app(RunOutcome::InProgress);
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        assert!(
+            texts.iter().any(|t| t.as_str() == "RUN ENDED"),
+            "expected title 'RUN ENDED' for InProgress outcome, got texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn subtitle_falls_back_to_first_variant_without_stats() {
+        // No RunStats inserted — subtitle should fall back to first Won variant.
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(RunState {
+                node_index: 0,
+                outcome: RunOutcome::Won,
+                ..default()
+            })
+            .add_systems(Update, spawn_run_end_screen);
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        assert!(
+            texts.iter().any(|t| t.as_str() == "The bolt obeys. For now."),
+            "expected fallback subtitle 'The bolt obeys. For now.' without RunStats, got texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn different_seeds_produce_different_subtitles() {
+        let seeds = [0u64, 1, 2, 3, 4];
+        let mut subtitles = Vec::new();
+
+        for seed in seeds {
+            let stats = RunStats {
+                seed,
+                ..Default::default()
+            };
+            let mut app = test_app_with_stats(RunOutcome::Won, stats);
+            app.update();
+
+            let texts = collect_texts(&mut app);
+            let subtitle = texts
+                .iter()
+                .find(|t| WON_SUBS.contains(&t.as_str()))
+                .cloned()
+                .unwrap_or_default();
+            subtitles.push(subtitle);
+        }
+
+        subtitles.sort();
+        subtitles.dedup();
+        assert!(
+            subtitles.len() >= 2,
+            "expected at least 2 distinct subtitles across seeds [0..4], got: {subtitles:?}"
+        );
+    }
+
+    // ---- Dynamic highlight cap ----
+
+    /// Known highlight text prefixes used in `spawn_highlights_section`.
+    fn is_highlight_text(text: &str) -> bool {
+        text.starts_with("Clutch Clear")
+            || text.starts_with("No Damage")
+            || text.starts_with("Fast Clear")
+            || text.starts_with("Perfect Streak")
+            || text.starts_with("Mass Destruction")
+            || text.starts_with("First Evolution")
+            || text.starts_with("Most Powerful Evolution")
+            || text.starts_with("Close Save")
+            || text.starts_with("Speed Demon")
+            || text.starts_with("Untouchable")
+            || text.starts_with("Combo King")
+            || text.starts_with("Pinball Wizard")
+            || text.starts_with("Comeback")
+            || text.starts_with("Perfect Node")
+            || text.starts_with("Nail Biter")
+    }
+
+    fn make_highlights(count: usize) -> Vec<RunHighlight> {
+        let kinds = [
+            HighlightKind::ClutchClear,
+            HighlightKind::NoDamageNode,
+            HighlightKind::FastClear,
+            HighlightKind::PerfectStreak,
+            HighlightKind::MassDestruction,
+            HighlightKind::FirstEvolution,
+        ];
+        (0..count)
+            .map(|i| RunHighlight {
+                kind: kinds[i % kinds.len()].clone(),
+                node_index: u32::try_from(i).unwrap_or(u32::MAX),
+                value: 1.0,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn highlight_cap_reads_from_config() {
+        use crate::run::definition::HighlightConfig;
+
+        let stats = RunStats {
+            highlights: make_highlights(6),
+            ..Default::default()
+        };
+        let mut app = test_app_with_stats(RunOutcome::Won, stats);
+        app.insert_resource(HighlightConfig {
+            highlight_cap: 4,
+            ..Default::default()
+        });
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        let highlight_count = texts.iter().filter(|t| is_highlight_text(t)).count();
+        assert_eq!(
+            highlight_count, 4,
+            "expected 4 highlights when HighlightConfig.highlight_cap = 4, got {highlight_count} in texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn highlight_cap_falls_back_to_three_without_config() {
+        let stats = RunStats {
+            highlights: make_highlights(6),
+            ..Default::default()
+        };
+        let mut app = test_app_with_stats(RunOutcome::Won, stats);
+        // Deliberately do NOT insert HighlightConfig.
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        let highlight_count = texts.iter().filter(|t| is_highlight_text(t)).count();
+        assert_eq!(
+            highlight_count, 3,
+            "expected 3 highlights as fallback without HighlightConfig, got {highlight_count} in texts: {texts:?}"
+        );
+    }
+
+    #[test]
+    fn highlight_cap_shows_fewer_when_fewer_exist() {
+        use crate::run::definition::HighlightConfig;
+
+        let stats = RunStats {
+            highlights: make_highlights(2),
+            ..Default::default()
+        };
+        let mut app = test_app_with_stats(RunOutcome::Won, stats);
+        app.insert_resource(HighlightConfig {
+            highlight_cap: 10,
+            ..Default::default()
+        });
+        app.update();
+
+        let texts = collect_texts(&mut app);
+        let highlight_count = texts.iter().filter(|t| is_highlight_text(t)).count();
+        assert_eq!(
+            highlight_count, 2,
+            "expected 2 highlights when only 2 exist (cap=10), got {highlight_count} in texts: {texts:?}"
         );
     }
 }
