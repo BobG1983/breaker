@@ -4707,6 +4707,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rantzsoft_physics2d"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "proptest",
+ "rantzsoft_spatial2d",
+]
+
+[[package]]
 name = "rantzsoft_spatial2d"
 version = "0.1.0"
 dependencies = [

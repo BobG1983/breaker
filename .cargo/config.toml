@@ -11,6 +11,11 @@ spatial2dtest = "test -p rantzsoft_spatial2d --features bevy/dynamic_linking"
 spatial2dclippy = "clippy -p rantzsoft_spatial2d --all-targets --features bevy/dynamic_linking"
 spatial2dcheck = "check -p rantzsoft_spatial2d --features bevy/dynamic_linking"
 
+# rantzsoft_physics2d (dynamic linking to avoid workspace artifact conflicts)
+physics2dtest = "test -p rantzsoft_physics2d --features bevy/dynamic_linking"
+physics2dclippy = "clippy -p rantzsoft_physics2d --all-targets --features bevy/dynamic_linking"
+physics2dcheck = "check -p rantzsoft_physics2d --features bevy/dynamic_linking"
+
 # scenario runner (dev — ONLY for debugging bugs in the runner itself)
 dscenario = "run -p breaker_scenario_runner"
 dstest = "test -p breaker_scenario_runner"
