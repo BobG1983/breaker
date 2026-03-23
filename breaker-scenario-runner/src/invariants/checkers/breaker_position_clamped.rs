@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use breaker::{breaker::components::BreakerWidth, shared::PlayfieldConfig};
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -8,17 +9,17 @@ use crate::{invariants::*, types::InvariantKind};
 /// Appends a [`ViolationEntry`] with [`InvariantKind::BreakerPositionClamped`] when the
 /// breaker is outside the tight clamping bounds (with 1px tolerance).
 pub fn check_breaker_position_clamped(
-    breakers: Query<(Entity, &Transform, &BreakerWidth), With<ScenarioTagBreaker>>,
+    breakers: Query<(Entity, &Position2D, &BreakerWidth), With<ScenarioTagBreaker>>,
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
 ) {
     let tolerance = 1.0_f32;
-    for (entity, transform, width) in &breakers {
+    for (entity, position, width) in &breakers {
         let half_width = width.half_width();
         let max_x = playfield.right() - half_width;
         let min_x = playfield.left() + half_width;
-        let x = transform.translation.x;
+        let x = position.0.x;
         if x > max_x + tolerance || x < min_x - tolerance {
             log.0.push(ViolationEntry {
                 frame: frame.0,
@@ -70,7 +71,7 @@ mod tests {
         // BreakerWidth(120.0) → half_width = 60.0; right() = 400.0 → clamped max = 340.0
         app.world_mut().spawn((
             ScenarioTagBreaker,
-            Transform::from_translation(Vec3::new(1000.0, -250.0, 0.0)),
+            Position2D(Vec2::new(1000.0, -250.0)),
             BreakerWidth(120.0),
         ));
 
@@ -93,7 +94,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBreaker,
-            Transform::from_translation(Vec3::new(0.0, -250.0, 0.0)),
+            Position2D(Vec2::new(0.0, -250.0)),
             BreakerWidth(120.0),
         ));
 
@@ -115,7 +116,7 @@ mod tests {
         // Exact boundary: right() - half_width = 400.0 - 60.0 = 340.0
         app.world_mut().spawn((
             ScenarioTagBreaker,
-            Transform::from_translation(Vec3::new(340.0, -250.0, 0.0)),
+            Position2D(Vec2::new(340.0, -250.0)),
             BreakerWidth(120.0),
         ));
 

@@ -34,6 +34,7 @@ use breaker::{
     screen::chip_select::{ChipOffering, ChipOffers},
     shared::{GameState, PlayingState, RunSeed, SelectedArchetype},
 };
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     input::InputDriver,
@@ -59,7 +60,7 @@ type BoltDebugQuery<'w, 's> = Query<
     's,
     (
         Entity,
-        &'static mut Transform,
+        &'static mut Position2D,
         Option<&'static mut BoltVelocity>,
     ),
     With<ScenarioTagBolt>,
@@ -69,7 +70,7 @@ type BoltDebugQuery<'w, 's> = Query<
 type BreakerDebugQuery<'w, 's> = Query<
     'w,
     's,
-    (Entity, &'static mut Transform),
+    (Entity, &'static mut Position2D),
     (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>),
 >;
 
@@ -327,9 +328,9 @@ pub(crate) fn map_forced_game_state(forced: ForcedGameState) -> GameState {
 /// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
 ///
 /// For each entity tagged with [`ScenarioTagBolt`] or [`ScenarioTagBreaker`],
-/// applies position teleports from [`crate::types::DebugSetup`] (z coordinate is
-/// preserved). When `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`]
-/// on both bolts and breakers with the post-teleport position as the frozen target.
+/// applies position teleports from [`crate::types::DebugSetup`]. When
+/// `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`] on both bolts
+/// and breakers with the post-teleport position as the frozen target.
 ///
 /// Also handles `bolt_velocity`, `extra_tagged_bolts`, `node_timer_remaining`,
 /// and `force_previous_game_state` overrides.
@@ -345,10 +346,10 @@ pub fn apply_debug_setup(
         return;
     };
 
-    for (entity, mut transform, bolt_vel) in &mut bolt_query {
+    for (entity, mut position, bolt_vel) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
-            transform.translation.x = x;
-            transform.translation.y = y;
+            position.0.x = x;
+            position.0.y = y;
         }
 
         if let Some((vx, vy)) = setup.bolt_velocity
@@ -358,22 +359,22 @@ pub fn apply_debug_setup(
         }
 
         if setup.disable_physics {
-            commands.entity(entity).insert(ScenarioPhysicsFrozen {
-                target: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
         }
     }
 
-    for (entity, mut transform) in &mut breaker_query {
+    for (entity, mut position) in &mut breaker_query {
         if let Some((x, y)) = setup.breaker_position {
-            transform.translation.x = x;
-            transform.translation.y = y;
+            position.0.x = x;
+            position.0.y = y;
         }
 
         if setup.disable_physics {
-            commands.entity(entity).insert(ScenarioPhysicsFrozen {
-                target: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
         }
     }
 
@@ -431,10 +432,10 @@ pub fn deferred_debug_setup(
         return;
     }
 
-    for (entity, mut transform, bolt_vel) in &mut bolt_query {
+    for (entity, mut position, bolt_vel) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
-            transform.translation.x = x;
-            transform.translation.y = y;
+            position.0.x = x;
+            position.0.y = y;
         }
 
         if let Some((vx, vy)) = setup.bolt_velocity
@@ -444,22 +445,22 @@ pub fn deferred_debug_setup(
         }
 
         if setup.disable_physics {
-            commands.entity(entity).insert(ScenarioPhysicsFrozen {
-                target: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
         }
     }
 
-    for (entity, mut transform) in &mut breaker_query {
+    for (entity, mut position) in &mut breaker_query {
         if let Some((x, y)) = setup.breaker_position {
-            transform.translation.x = x;
-            transform.translation.y = y;
+            position.0.x = x;
+            position.0.y = y;
         }
 
         if setup.disable_physics {
-            commands.entity(entity).insert(ScenarioPhysicsFrozen {
-                target: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
         }
     }
 
@@ -470,9 +471,9 @@ pub fn deferred_debug_setup(
 ///
 /// Prevents physics systems from moving entities that should be stationary during
 /// a self-test scenario. Runs after physics in `FixedUpdate`.
-pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Transform)>) {
-    for (pinned, mut transform) in &mut frozen {
-        transform.translation = pinned.target;
+pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Position2D)>) {
+    for (pinned, mut position) in &mut frozen {
+        position.0 = pinned.target;
     }
 }
 
@@ -558,7 +559,7 @@ pub fn apply_debug_frame_mutations(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut breakers: Query<&mut BreakerState, With<ScenarioTagBreaker>>,
-    mut bolts: Query<&mut Transform, With<ScenarioTagBolt>>,
+    mut bolts: Query<&mut Position2D, With<ScenarioTagBolt>>,
     mut node_timer: Option<ResMut<NodeTimer>>,
     mut pause: PauseControl,
     mut targets: MutationTargets,
@@ -589,9 +590,9 @@ pub fn apply_debug_frame_mutations(
                 }
             }
             MutationKind::MoveBolt(x, y) => {
-                for mut transform in &mut bolts {
-                    transform.translation.x = *x;
-                    transform.translation.y = *y;
+                for mut position in &mut bolts {
+                    position.0.x = *x;
+                    position.0.y = *y;
                 }
             }
             MutationKind::TogglePause => {
