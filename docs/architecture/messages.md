@@ -29,6 +29,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `ApplyTimePenalty { seconds }` | behaviors/effects/time_penalty (handle_time_penalty) | run/node (apply_time_penalty) |
 | `SpawnAdditionalBolt` | behaviors/effects/spawn_bolt (handle_spawn_bolt) | bolt (spawn_additional_bolt) |
 | `ChipSelected { name }` | UI (handle_chip_input) | chips (apply_chip_effect) |
+| `HighlightTriggered { kind }` | run (detect_mass_destruction, detect_close_save, detect_combo_and_pinball, detect_nail_biter, detect_first_evolution, track_node_cleared_stats) | run (spawn_highlight_text) |
 
 ## Observer Events (trigger via commands.trigger())
 

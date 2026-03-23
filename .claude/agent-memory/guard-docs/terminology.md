@@ -28,3 +28,10 @@ type: reference
 - `FrameMutation` — scripted mutation applied at a specific frame during a scenario; used in `frame_mutations` field of `ScenarioDefinition`
 - `MutationKind` — enum of mutation operations: `SetBreakerState`, `SetTimerRemaining`, `SpawnExtraEntities`, `MoveBolt`, `TogglePause`
 - Added to `docs/design/terminology.md`
+
+## Terminology Additions (2026-03-23, Memorable Moments)
+- `HighlightKind` entry expanded from 6 to 15 variants — do not flag 6-variant list as drift
+- `HighlightDefaults` — new glossary entry for the RON-loaded asset and its `GameConfig` derive
+- `HighlightTriggered` — new glossary entry for the juice/VFX message
+- `RunHighlight.value` semantics clarified per-kind (distance for CloseSave, etc.)
+- All added to `docs/design/terminology.md`

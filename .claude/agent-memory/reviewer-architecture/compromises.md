@@ -26,6 +26,8 @@ type: reference
 - **Scenario runner cross-crate exception**: breaker-scenario-runner reads entity components from bolt, breaker, chips, input, run domains directly. Five domain modules widened to `pub mod` in lib.rs (`chips` added 2026-03-20 for `TriggerChain`/`ImpactTarget` in `initial_overclocks`). Dev-only crate, never shipped.
 - **Chip effect cross-domain reads**: physics reads Piercing, PiercingRemaining (mut), DamageBoost from bolt; TiltControlBoost, WidthBoost from breaker. cells reads DamageBoost from bolt. breaker reads BreakerSpeedBoost, WidthBoost, BumpForceBoost from breaker entity (same entity). bolt reads BoltSpeedBoost (Amp chip component in chips/components.rs) from bolt entity. All justified per plugins.md "Chip Effect" section. PiercingRemaining mutation is collision-response (same class as BoltVelocity mutation).
 
+- **run/reset_run_state mutates ChipInventory**: run domain clears chips/ domain's ChipInventory resource at run start. Same class as screen/loading seeding all domain configs — centralized boot/reset sequence. No alternative consumer-owns pattern makes sense for a cross-domain reset.
+
 ## Active Violations (pending resolution)
 (none)
 

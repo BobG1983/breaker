@@ -9,6 +9,15 @@ use bevy::prelude::*;
 #[derive(Message, Clone, Debug)]
 pub struct RunLost;
 
+/// Emitted by highlight detection systems when a memorable moment is detected.
+///
+/// Consumed by the juice feedback system to spawn in-game text popups.
+#[derive(Message, Clone, Debug)]
+pub struct HighlightTriggered {
+    /// Which kind of memorable moment was detected.
+    pub kind: crate::run::resources::HighlightKind,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

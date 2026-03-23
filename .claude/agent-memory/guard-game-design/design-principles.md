@@ -45,7 +45,7 @@ type: reference
 2b. **BLOCKING** BumpForceBoost (Augment chip) is dead code — component gets stamped on Breaker but never read by any system. Was never wired up (pre-dates SpeedBoost refactor). Needs: flat additive speed bonus in reflect_top_hit (bolt_breaker_collision.rs), reading BumpForceBoost from breaker entity
 2c. **BLOCKING** Double decay bug in chip offerings — generate_chip_offerings applies decay at generation AND handle_chip_input applies at confirmation. Selected chip also penalized. Fix: remove generation-time decay, add timeout decay to tick_chip_timer (2026-03-22)
 3. **IMPORTANT** Run-end screen dead air (no timer/auto-advance) — unfixed from 4 prior reviews (2026-03-23: flagged again in Wave 4 review). Recommend 10s auto-advance timer, timeout = New Run.
-4. **IMPORTANT** Run-end subtitle copy weak/passive — needs motivating tone
+4. ~~**IMPORTANT** Run-end subtitle copy weak/passive — needs motivating tone~~ RESOLVED — 5 variants per outcome, seed-deterministic, good tone (2026-03-23)
 5. ~~**IMPORTANT** Chip select timer 10s too generous — recommend 8s~~ RESOLVED — RON now at 8.0s (2026-03-22)
 6. **IMPORTANT** All 3 layouts in Passive pool — no Active or Boss pool layouts
 7. **IMPORTANT** Passive vs Active node types not behaviorally differentiated — timer ticks on all nodes
@@ -58,6 +58,11 @@ type: reference
 15. **BLOCKING** Evolution reward screen spec says "no timer" — violates Pillar 1. Must have timer (6s, timeout = skip). (2026-03-23)
 16. **IMPORTANT** Evolution "no eligible" fallback undefined — recommend curated boss chip pool w/ higher rarity weights (2026-03-23)
 17. **IMPORTANT** Evolved chip effects need design direction: must introduce new interaction points, not just stat boosts (2026-03-23)
+18. **BLOCKING** spawn_highlight_text system is dead code — never registered in RunPlugin::build. Zero in-game juice from highlights (2026-03-23)
+19. **BLOCKING** FadeOut { timer: 0.0 } in spawn_highlight_text — text despawns immediately (timer should equal duration: 2.0) (2026-03-23)
+20. **BLOCKING** track_node_cleared_stats never emits HighlightTriggered — 8 of 15 highlight types have no in-game juice message (2026-03-23)
+21. **IMPORTANT** All highlight popups spawn at same position (0,100,10) — simultaneous highlights stack unreadably (2026-03-23)
+22. **IMPORTANT** track_node_cleared_stats has no per-kind dedup — same HighlightKind can fill entire cap (2026-03-23)
 
 ## Resolved (from prior reviews)
 - ~~PLAN.md/README say bump "all grades boost" but 0.8x is penalty~~ FIXED in RON — but test code still uses 0.8x (issue #1)
@@ -91,6 +96,8 @@ type: reference
 - Evolution reward screen MUST have timer (6s recommended) — "no timer" violates Pillar 1 (2026-03-23)
 - Evolution "no eligible" fallback: curated boss chip pool with higher rarity weights, same timer pressure
 - Evolved chips must introduce new interaction points (new trigger conditions, cross-kind synergies) — not just stronger stat versions (2026-03-23)
-- Highlight moments (ClutchClear, PerfectStreak, etc.) should trigger in-game juice when detected, not just post-run display (2026-03-23)
-- Run-end subtitles should be distinct per death type and ideally randomized from a pool (2026-03-23)
+- ~~Highlight moments (ClutchClear, PerfectStreak, etc.) should trigger in-game juice when detected, not just post-run display (2026-03-23)~~ IMPLEMENTED (spawn_highlight_text exists but has 3 BLOCKING bugs, see issues #18-20)
+- ~~Run-end subtitles should be distinct per death type and ideally randomized from a pool (2026-03-23)~~ IMPLEMENTED — 5 variants per outcome, seed-deterministic selection
+- Highlight popup system needs screen shake + particles in Phase 5+ (text-only is placeholder)
+- Future: Flux bonus per highlight, or chip that scales with highlights earned (Phase 8)
 - Flux formula too soft for final balance (bolts_lost * -3 is negligible) — flag for Phase 8 tuning, fine for vertical slice

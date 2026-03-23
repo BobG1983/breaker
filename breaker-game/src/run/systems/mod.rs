@@ -2,12 +2,18 @@
 
 mod advance_node;
 mod capture_run_seed;
+mod detect_close_save;
+mod detect_combo_and_pinball;
+mod detect_first_evolution;
+mod detect_mass_destruction;
+mod detect_nail_biter;
 mod generate_node_sequence;
 mod handle_node_cleared;
 mod handle_run_lost;
 mod handle_timer_expired;
 mod reset_highlight_tracker;
 mod reset_run_state;
+mod spawn_highlight_text;
 mod track_bolts_lost;
 mod track_bumps;
 mod track_cells_destroyed;
@@ -17,12 +23,18 @@ mod track_time_elapsed;
 
 pub(crate) use advance_node::advance_node;
 pub(crate) use capture_run_seed::capture_run_seed;
+pub(crate) use detect_close_save::detect_close_save;
+pub(crate) use detect_combo_and_pinball::detect_combo_and_pinball;
+pub(crate) use detect_first_evolution::detect_first_evolution;
+pub(crate) use detect_mass_destruction::detect_mass_destruction;
+pub(crate) use detect_nail_biter::detect_nail_biter;
 pub(crate) use generate_node_sequence::generate_node_sequence_system;
 pub(crate) use handle_node_cleared::handle_node_cleared;
 pub(crate) use handle_run_lost::handle_run_lost;
 pub(crate) use handle_timer_expired::handle_timer_expired;
 pub(crate) use reset_highlight_tracker::reset_highlight_tracker;
 pub(crate) use reset_run_state::reset_run_state;
+pub(crate) use spawn_highlight_text::spawn_highlight_text;
 pub(crate) use track_bolts_lost::track_bolts_lost;
 pub(crate) use track_bumps::track_bumps;
 pub(crate) use track_cells_destroyed::track_cells_destroyed;

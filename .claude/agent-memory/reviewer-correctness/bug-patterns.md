@@ -99,11 +99,21 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **All 8 stats/highlight systems ARE registered in RunPlugin**: FIXED — verified in run/plugin.rs. `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats` run FixedUpdate with PlayingState::Active. `track_chips_collected` runs Update with ChipSelect state. `reset_highlight_tracker` and `capture_run_seed` run OnEnter(Playing). `RunStats` and `HighlightTracker` are both `init_resource`d in RunPlugin.
 
-- **RunStats reset**: VERIFY — check if `reset_run_state` now resets `RunStats`. If not, stats from run N still accumulate into run N+1. Confidence: MEDIUM (Wave 4 may have fixed this).
+- **RunStats reset**: FIXED — verified in `reset_run_state.rs:26` (`*stats = RunStats::default()`). Also resets `*highlight_tracker = HighlightTracker::default()`. Both resources cleared at run start.
 
-- **MassDestruction and FirstEvolution highlight variants defined but never detected**: `run/resources.rs:102,108` / `run/systems/track_node_cleared_stats.rs` — `HighlightKind::MassDestruction` and `HighlightKind::FirstEvolution` are defined and the infrastructure to detect them exists (`cell_destroyed_times` Vec in HighlightTracker), but no detection code exists anywhere. `MASS_DESTRUCTION_COUNT` is declared but never used. `cell_destroyed_times` is populated by `track_cells_destroyed` but never queried for time-window analysis. Confidence: HIGH.
+- **MassDestruction, FirstEvolution, CloseSave, ComboKing, PinballWizard, NailBiter detection systems**: FIXED in memorable moments wave (2026-03-23). Dedicated detection systems now exist: `detect_mass_destruction`, `detect_close_save`, `detect_combo_and_pinball`, `detect_nail_biter` (FixedUpdate), `detect_first_evolution` (Update/ChipSelect). All emit `HighlightTriggered` message and record to RunStats.highlights. `HighlightConfig` resource provides all thresholds.
 
 - **capture_run_seed seed=0 edge case**: `run/systems/capture_run_seed.rs:21-30` — the early-return guard is `if stats.seed != 0 { return; }`. If `rng.0.random::<u64>()` returns 0 (probability 2^-64, practically impossible but not structurally impossible), `stats.seed` is set to 0 and the guard does NOT prevent re-generation on the next call. On re-generation, a different seed is generated and the RNG is re-seeded with it, silently changing the run seed mid-run. Confidence: medium (probability is astronomically low but the sentinel value is structurally fragile).
+
+## Memorable Moments Feature Bugs (2026-03-23, feature/wave-3-offerings-transitions)
+
+- **spawn_highlight_text not registered in any plugin**: The system is exported from `run/systems/mod.rs` and imported in `run/plugin.rs` imports list, but is NEVER added to the plugin's schedule. `HighlightTriggered` messages accumulate unread every frame. No popup text appears in-game. Confidence: HIGH.
+
+- **detect_mass_destruction perpetual re-fire**: Once `cell_destroyed_times.len() >= mass_destruction_count`, `HighlightTriggered` is emitted every fixed tick until the timestamps drain from the 2-second window (up to ~120 frames at 64Hz). The `already_recorded` guard prevents duplicate `RunStats` entries but does NOT prevent repeated `HighlightTriggered` writes. Confidence: HIGH.
+
+- **detect_nail_biter fires on below-floor bolts**: `min_distance < config.nail_biter_pixels` has no lower bound guard. A bolt at y < bottom has `distance < 0.0`, which satisfies `< 30.0`. Triggers NailBiter incorrectly for bolts that are effectively lost. Contrast: `detect_close_save` correctly guards `distance >= 0.0`. Confidence: HIGH.
+
+- **track_node_cleared_stats: no HighlightTriggered emitted for juice VFX**: ClutchClear, NoDamageNode, FastClear, PerfectStreak, SpeedDemon, Untouchable, Comeback, PerfectNode are silently skipped when cap is full with no HighlightTriggered message. Architecture contract says "always emit HighlightTriggered for juice/VFX feedback even if the highlight cap is full." These 8 kinds never emit HighlightTriggered at all — not even when the cap is NOT full. This is inconsistent with the other 6 detection systems. Confidence: HIGH (design inconsistency; all others emit the message).
 
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 

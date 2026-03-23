@@ -50,7 +50,8 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
 - [Phase 7: Content & Variety](phase-7-content.md)
 - [Phase 8: Roguelite Progression](phase-8-roguelite.md)
 - [Phase 9: Boss Nodes & Advanced Mechanics](phase-9-bosses.md)
-- [Phase 10: Polish & Ship](phase-10-polish.md)
+- [Phase 10: Social Shareability](phase-10-social-shareability.md) — Video clips of highlight moments, run-end playback, social media sharing
+- [Phase 11: Polish & Ship](phase-11-polish.md)
 
 ## Build Order Rationale
 

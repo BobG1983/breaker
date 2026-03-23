@@ -46,7 +46,7 @@ src/
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
 ├── chips/            # Amps, Augments, Overclocks system — registry, effect types, observer-based application; EvolutionRegistry for evolution recipes
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
-├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker
+├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker, highlight detection (10 systems), spawn_highlight_text juice
 ├── physics/          # CCD collision detection, collision response
 ├── interpolate/      # Transform interpolation for smooth rendering between FixedUpdate ticks
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)

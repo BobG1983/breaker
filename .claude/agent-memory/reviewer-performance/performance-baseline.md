@@ -123,6 +123,36 @@ type: reference
 ### Intentional Pattern: resolve_armed swap idiom
 - `drain(..)` into `new_armed` then assign back to `armed.0` is the standard "process and rebuild" Vec pattern. At typical scale (≤3 armed chains per bolt, ≤3 active overclock chips), this is negligible. Not worth changing.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-23, feature/wave-3-offerings-transitions, memorable moments)
+
+### run/systems/ — detection systems (detect_mass_destruction, detect_combo_and_pinball, detect_close_save, detect_nail_biter, detect_first_evolution, track_node_cleared_stats)
+
+SCHEDULING — 10+ systems in FixedUpdate gated with run_if(in_state(PlayingState::Active)). All passive message-reader pattern (drain, early-exit when no messages). Scheduling overhead is negligible: Bevy 0.18 run_if short-circuits at resource check, system body is skipped. Clean.
+
+DETECT_MASS_DESTRUCTION — Vec<f32> (cell_destroyed_times) in HighlightTracker. Bounded per node: at most ~50-100 cells per typical node. Vec is cleared at node exit (reset_highlight_tracker). No unbounded growth. `retain()` runs every FixedUpdate unconditionally even when no messages arrived; retain on an empty Vec is O(1). Clean.
+
+DETECT_COMBO_AND_PINBALL — 3 MessageReaders via SystemParam. Pure counter increments; no queries or allocations. Clean.
+
+DETECT_CLOSE_SAVE — bolt_query.get(msg.bolt) inside loop. Correct pattern: called per BumpPerformed message (rare event, not per-frame). With<Bolt> + Without<BoltServing> filter produces clean 2-archetype separation (ActiveBoltFilter pattern). Clean.
+
+DETECT_NAIL_BITER — bolt_query.iter() inside NodeCleared handler. Called once per NodeCleared (rare event). Iterates 1-2 bolts. Clean. bolt_query identical archetype filter to detect_close_save; shares archetype cache.
+
+TRACK_NODE_CLEARED_STATS — 8 conditions checked, all against scalar fields in HighlightTracker / NodeTimer. No queries, no allocations. NodeCleared fires once per node. Clean.
+
+HIGHLIGHTS VEC DEDUP — stats.highlights.iter().any(|h| h.kind == kind) is O(cap) = O(5). Not a scan concern.
+
+SPAWN_HIGHLIGHT_TEXT — NOT REGISTERED in any plugin. Function is exported from systems mod but absent from RunPlugin::build. Text popups will never appear in-game. This is a correctness bug, not a performance concern, but noted here because it means the FadeOut entity accumulation concern (entity leak) is moot — no entities are spawned.
+
+ANIMATE_FADE_OUT — runs Update, PlayingState::Active guard. Query: FadeOut + TextColor, no marker filter. Since spawn_highlight_text is unregistered, zero entities match. Fine.
+
+CONFIRM-EFFICIENT PATTERNS:
+- detect_close_save + detect_nail_biter both use (With<Bolt>, Without<BoltServing>) — matches existing ActiveBoltFilter archetype convention. Confirmed clean.
+- All detection systems are message-reader pattern: drain → early-exit if empty → process. Zero CPU cost in steady state with no messages.
+- No allocations in any hot path. HighlightTracker fields are all primitive scalars or the one Vec<f32> (bounded, cleared per node).
+- reset_highlight_tracker runs OnEnter(GameState::Playing) — correct placement, not FixedUpdate.
+
+OPEN ISSUE (correctness, not performance): spawn_highlight_text is exported but not registered in RunPlugin::build. Highlights are detected and HighlightTriggered is emitted correctly, but no text popup is ever spawned.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 
 ### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors — NOW FULLY WIRED)

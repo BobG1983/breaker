@@ -82,32 +82,39 @@ pub struct RunState {
     pub transition_queued: bool,
 }
 
-// -- Highlight detection constants --
-
-/// Node cleared with less than this many seconds remaining.
-pub const CLUTCH_CLEAR_THRESHOLD: f32 = 3.0;
-/// Number of cells destroyed within a 1-second window to trigger `MassDestruction`.
-pub const MASS_DESTRUCTION_COUNT: usize = 10;
-/// Consecutive perfect bumps required for a `PerfectStreak` highlight.
-pub const PERFECT_STREAK_THRESHOLD: u32 = 5;
-/// Node cleared in less than this fraction of allotted time triggers `FastClear`.
-pub const FAST_CLEAR_FRACTION: f32 = 0.5;
-
 /// Categories of memorable run moments.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HighlightKind {
-    /// Node cleared with < 3.0s remaining.
+    /// Node cleared with little time remaining (configurable via RON).
     ClutchClear,
-    /// 10+ cells destroyed within a 1-second window.
+    /// Many cells destroyed within a short time window (configurable via RON).
     MassDestruction,
-    /// 5+ consecutive perfect bumps.
+    /// Consecutive perfect bumps exceeding threshold (configurable via RON).
     PerfectStreak,
-    /// Node cleared in < 50% of allotted time.
+    /// Node cleared in less than a fraction of allotted time (configurable via RON).
     FastClear,
     /// First chip evolution in a run.
     FirstEvolution,
     /// Node cleared without losing a bolt.
     NoDamageNode,
+    /// Evolution that dealt the most total damage.
+    MostPowerfulEvolution,
+    /// Bolt saved by bump when near the bottom boundary.
+    CloseSave,
+    /// Node cleared faster than the speed threshold (configurable via RON).
+    SpeedDemon,
+    /// Multiple consecutive nodes cleared without losing a bolt.
+    Untouchable,
+    /// Many cells destroyed between consecutive breaker impacts (configurable via RON).
+    ComboKing,
+    /// Many consecutive cell bounces without breaker contact (configurable via RON).
+    PinballWizard,
+    /// Node cleared despite losing many bolts (configurable via RON).
+    Comeback,
+    /// Every bump in the node was perfect grade.
+    PerfectNode,
+    /// Final cell cleared while a bolt was near the loss boundary.
+    NailBiter,
 }
 
 /// A memorable moment recorded during the run.
@@ -159,18 +166,63 @@ impl RunStats {
 }
 
 /// Per-node intermediate tracking state for highlight detection.
-#[derive(Resource, Debug, Clone, Default)]
+///
+/// Fields are split into per-node (reset by `reset_highlight_tracker`) and
+/// cross-node (persist across node resets, reset only at run start).
+#[derive(Resource, Debug, Clone)]
 pub struct HighlightTracker {
+    // -- Per-node fields (reset between nodes) --
     /// Consecutive perfect bumps in the current node.
     pub consecutive_perfect_bumps: u32,
-    /// Best perfect streak in the current node.
-    pub best_perfect_streak: u32,
     /// Bolts lost in the current node.
     pub node_bolts_lost: u32,
     /// Cell destruction timestamps (simulation time) within the current node.
     pub cell_destroyed_times: Vec<f32>,
     /// Simulation time when the current node started.
     pub node_start_time: f32,
+    /// Non-perfect bumps in the current node (for `PerfectNode`).
+    pub non_perfect_bumps_this_node: u32,
+    /// Total bumps in the current node (for `PerfectNode`).
+    pub total_bumps_this_node: u32,
+    /// Cells destroyed since last breaker impact (for `ComboKing`).
+    pub cells_since_last_breaker_hit: u32,
+    /// Best combo this node (for `ComboKing`).
+    pub best_combo: u32,
+    /// Cell bounces since last breaker contact (for `PinballWizard`).
+    pub cell_bounces_since_breaker: u32,
+    /// Best pinball rally this node (for `PinballWizard`).
+    pub best_pinball_rally: u32,
+
+    // -- Cross-node fields (persist across node resets) --
+    /// Best perfect streak across the entire run.
+    pub best_perfect_streak: u32,
+    /// Consecutive no-damage nodes (for `Untouchable`).
+    pub consecutive_no_damage_nodes: u32,
+    /// Fastest node clear in seconds (for `SpeedDemon`).
+    pub fastest_node_clear_secs: f32,
+    /// Whether the first evolution has been recorded (for `FirstEvolution`).
+    pub first_evolution_recorded: bool,
+}
+
+impl Default for HighlightTracker {
+    fn default() -> Self {
+        Self {
+            consecutive_perfect_bumps: 0,
+            node_bolts_lost: 0,
+            cell_destroyed_times: Vec::new(),
+            node_start_time: 0.0,
+            non_perfect_bumps_this_node: 0,
+            total_bumps_this_node: 0,
+            cells_since_last_breaker_hit: 0,
+            best_combo: 0,
+            cell_bounces_since_breaker: 0,
+            best_pinball_rally: 0,
+            best_perfect_streak: 0,
+            consecutive_no_damage_nodes: 0,
+            fastest_node_clear_secs: f32::MAX,
+            first_evolution_recorded: false,
+        }
+    }
 }
 
 #[cfg(test)]
