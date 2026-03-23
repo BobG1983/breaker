@@ -81,6 +81,16 @@ impl ChipInventory {
         self.held.iter().map(|(k, v)| (k.as_str(), v))
     }
 
+    /// Iterate held chips as `(name, stacks, max_stacks)` tuples.
+    ///
+    /// Exposes stack counts without revealing [`ChipEntry`] internals. Used
+    /// by the scenario runner's [`ChipStacksConsistent`] invariant checker.
+    pub fn iter_held_stacks(&self) -> impl Iterator<Item = (&str, u32, u32)> {
+        self.held
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.stacks, v.max_stacks))
+    }
+
     /// Iterate names of all chips currently at max stacks.
     pub fn maxed_chips(&self) -> impl Iterator<Item = &str> {
         self.held
@@ -115,6 +125,25 @@ impl ChipInventory {
     pub fn clear(&mut self) {
         self.held.clear();
         self.decay_weights.clear();
+    }
+
+    /// Directly insert a chip entry with arbitrary `stacks` and `max_stacks`,
+    /// bypassing normal cap enforcement.
+    ///
+    /// **For scenario-runner self-tests only.** This is the only sanctioned way
+    /// to construct an over-stacked entry (where `stacks > max_stacks`) for
+    /// testing [`InvariantKind::ChipStacksConsistent`] violation detection.
+    ///
+    /// Never call this from game logic — `add_chip` enforces the stack cap.
+    pub fn force_insert_entry(&mut self, name: &str, stacks: u32, max_stacks: u32) {
+        self.held.insert(
+            name.to_owned(),
+            ChipEntry {
+                stacks,
+                max_stacks,
+                rarity: Rarity::Common,
+            },
+        );
     }
 
     /// Record that a chip was offered, multiplying existing decay by the factor.

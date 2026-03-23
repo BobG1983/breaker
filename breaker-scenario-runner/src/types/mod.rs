@@ -119,6 +119,10 @@ pub enum InvariantKind {
     OfferingNoDuplicates,
     /// Maxed chips never appear in offerings.
     MaxedChipNeverOffered,
+    /// Held chip stacks never exceed `max_stacks` in [`ChipInventory`].
+    ChipStacksConsistent,
+    /// [`RunStats`] counters never decrease during a run.
+    RunStatsMonotonic,
 }
 
 impl InvariantKind {
@@ -142,6 +146,8 @@ impl InvariantKind {
         Self::PhysicsFrozenDuringPause,
         Self::OfferingNoDuplicates,
         Self::MaxedChipNeverOffered,
+        Self::ChipStacksConsistent,
+        Self::RunStatsMonotonic,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -165,6 +171,8 @@ impl InvariantKind {
             Self::PhysicsFrozenDuringPause => "physics entity moved while paused",
             Self::OfferingNoDuplicates => "duplicate chip in offering",
             Self::MaxedChipNeverOffered => "maxed chip appeared in offering",
+            Self::ChipStacksConsistent => "held chip stacks exceed max_stacks",
+            Self::RunStatsMonotonic => "run stats counter decreased mid-run",
         }
     }
 }
@@ -344,6 +352,21 @@ pub struct FrameMutation {
     pub mutation: MutationKind,
 }
 
+/// Which [`RunStats`] counter to target in a [`MutationKind::DecrementRunStat`] mutation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum RunStatCounter {
+    /// `RunStats::nodes_cleared`.
+    NodesCleared,
+    /// `RunStats::cells_destroyed`.
+    CellsDestroyed,
+    /// `RunStats::bumps_performed`.
+    BumpsPerformed,
+    /// `RunStats::perfect_bumps`.
+    PerfectBumps,
+    /// `RunStats::bolts_lost`.
+    BoltsLost,
+}
+
 /// The kind of mutation to apply at a given frame.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum MutationKind {
@@ -357,6 +380,47 @@ pub enum MutationKind {
     MoveBolt(f32, f32),
     /// Toggle between `PlayingState::Active` and `PlayingState::Paused`.
     TogglePause,
+    /// Set the named [`RunStats`] counter to a specific value.
+    ///
+    /// Used by the `run_stats_monotonic` self-test to seed a counter before
+    /// decrementing it, making the violation deterministic.
+    SetRunStat(RunStatCounter, u32),
+    /// Decrement the named [`RunStats`] counter by 1.
+    ///
+    /// Used by the `run_stats_monotonic` self-test to intentionally trigger
+    /// a [`InvariantKind::RunStatsMonotonic`] violation.
+    DecrementRunStat(RunStatCounter),
+    /// Inject a chip entry with `stacks > max_stacks` into [`ChipInventory`].
+    ///
+    /// Inserts a chip named `chip_name` with the given `stacks` and `max_stacks`
+    /// bypassing the normal `add_chip` cap enforcement. Used by the
+    /// `chip_stacks_consistent` self-test to trigger a
+    /// [`InvariantKind::ChipStacksConsistent`] violation.
+    InjectOverStackedChip {
+        /// Name of the chip to inject.
+        chip_name: String,
+        /// Stack count to set (should exceed `max_stacks` to trigger violation).
+        stacks: u32,
+        /// Maximum stacks declared for this chip.
+        max_stacks: u32,
+    },
+    /// Insert a [`ChipOffers`] resource with duplicate chip names.
+    ///
+    /// Used by the `offering_no_duplicates` self-test to trigger an
+    /// [`InvariantKind::OfferingNoDuplicates`] violation.
+    InjectDuplicateOffers {
+        /// The chip name to duplicate in the offering.
+        chip_name: String,
+    },
+    /// Insert a [`ChipOffers`] resource containing a chip that is already
+    /// at max stacks in [`ChipInventory`].
+    ///
+    /// Used by the `maxed_chip_never_offered` self-test to trigger an
+    /// [`InvariantKind::MaxedChipNeverOffered`] violation.
+    InjectMaxedChipOffer {
+        /// The chip name to inject as maxed in both inventory and offers.
+        chip_name: String,
+    },
 }
 
 /// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.

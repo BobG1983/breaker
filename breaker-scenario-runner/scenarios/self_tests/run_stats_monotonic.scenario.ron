@@ -1,0 +1,19 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [RunStatsMonotonic],
+    expected_violations: Some([RunStatsMonotonic]),
+    allow_early_end: false,
+    debug_setup: Some((
+        disable_physics: true,
+        node_timer_remaining: Some(9999.0),
+    )),
+    frame_mutations: Some([
+        (frame: 5, mutation: SetRunStat(NodesCleared, 10)),
+        (frame: 8, mutation: SetRunStat(NodesCleared, 5)),
+    ]),
+)
