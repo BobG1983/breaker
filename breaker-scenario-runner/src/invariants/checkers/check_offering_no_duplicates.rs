@@ -17,15 +17,16 @@ pub fn check_offering_no_duplicates(
     let Some(offers) = offers else { return };
 
     let mut seen = HashSet::new();
-    for chip in &offers.0 {
-        if !seen.insert(&chip.name) {
+    for offering in &offers.0 {
+        let name = offering.name();
+        if !seen.insert(name.to_owned()) {
             log.0.push(ViolationEntry {
                 frame: frame.0,
                 invariant: InvariantKind::OfferingNoDuplicates,
                 entity: None,
                 message: format!(
-                    "OfferingNoDuplicates FAIL frame={} duplicate chip name: {}",
-                    frame.0, chip.name,
+                    "OfferingNoDuplicates FAIL frame={} duplicate chip name: {name}",
+                    frame.0,
                 ),
             });
         }
@@ -73,7 +74,10 @@ mod tests {
         // Insert ChipOffers with two chips sharing the same name "A"
         let chip_a1 = test_chip("A", 3);
         let chip_a2 = test_chip("A", 3);
-        app.insert_resource(ChipOffers(vec![chip_a1, chip_a2]));
+        app.insert_resource(ChipOffers(vec![
+            breaker::screen::chip_select::ChipOffering::Normal(chip_a1),
+            breaker::screen::chip_select::ChipOffering::Normal(chip_a2),
+        ]));
 
         tick(&mut app);
 
@@ -92,13 +96,18 @@ mod tests {
 
     #[test]
     fn no_duplicates_no_violation() {
+        use breaker::screen::chip_select::ChipOffering;
         let mut app = test_app();
 
         // Insert ChipOffers with three distinct chip names
         let chip_a = test_chip("A", 3);
         let chip_b = test_chip("B", 3);
         let chip_c = test_chip("C", 3);
-        app.insert_resource(ChipOffers(vec![chip_a, chip_b, chip_c]));
+        app.insert_resource(ChipOffers(vec![
+            ChipOffering::Normal(chip_a),
+            ChipOffering::Normal(chip_b),
+            ChipOffering::Normal(chip_c),
+        ]));
 
         tick(&mut app);
 

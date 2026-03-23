@@ -7,7 +7,7 @@ use crate::{
     input::InputConfig,
     screen::chip_select::{
         ChipSelectConfig,
-        resources::{ChipOffers, ChipSelectSelection},
+        resources::{ChipOffering, ChipOffers, ChipSelectSelection},
     },
     shared::GameState,
     ui::messages::ChipSelected,
@@ -66,17 +66,26 @@ pub(crate) fn handle_chip_input(
 
     // Confirm selection
     if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-        let chip = &offers.0[actions.selection.index];
+        let offering = &offers.0[actions.selection.index];
         actions.writer.write(ChipSelected {
-            name: chip.name.clone(),
+            name: offering.name().to_owned(),
         });
+
+        // Consume ingredient stacks for evolution offerings
+        if let ChipOffering::Evolution { ingredients, .. } = offering {
+            for ingredient in ingredients {
+                for _ in 0..ingredient.stacks_required {
+                    let _ = actions.inventory.remove_chip(&ingredient.chip_name);
+                }
+            }
+        }
 
         // Record decay for non-selected chips
         for (i, offer) in offers.0.iter().enumerate() {
             if i != actions.selection.index {
                 actions
                     .inventory
-                    .record_offered(&offer.name, actions.chip_config.seen_decay_factor);
+                    .record_offered(offer.name(), actions.chip_config.seen_decay_factor);
             }
         }
 
@@ -89,9 +98,12 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::chips::{
-        ChipDefinition,
-        definition::{AmpEffect, ChipEffect},
+    use crate::{
+        chips::{
+            ChipDefinition,
+            definition::{AmpEffect, ChipEffect, EvolutionIngredient},
+        },
+        screen::chip_select::resources::ChipOffering,
     };
 
     #[derive(Resource, Default)]
@@ -105,9 +117,13 @@ mod tests {
 
     fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
-            ChipDefinition::test_simple("Wide Breaker"),
-            ChipDefinition::test_simple("Surge"),
+            ChipOffering::Normal(ChipDefinition::test(
+                "Piercing Shot",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            )),
+            ChipOffering::Normal(ChipDefinition::test_simple("Wide Breaker")),
+            ChipOffering::Normal(ChipDefinition::test_simple("Surge")),
         ];
         ChipOffers(all.into_iter().take(count).collect())
     }
@@ -311,6 +327,117 @@ mod tests {
         assert!(
             (decay - 1.0).abs() < f32::EPSILON,
             "single offered + selected chip should have no decay, got {decay}"
+        );
+    }
+
+    // --- Evolution offering tests ---
+
+    fn make_evolution_offering() -> ChipOffering {
+        ChipOffering::Evolution {
+            ingredients: vec![
+                EvolutionIngredient {
+                    chip_name: "Piercing Shot".to_owned(),
+                    stacks_required: 2,
+                },
+                EvolutionIngredient {
+                    chip_name: "Damage Up".to_owned(),
+                    stacks_required: 1,
+                },
+            ],
+            result: ChipDefinition::test("Barrage", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+        }
+    }
+
+    fn test_app_with_evolution_inventory() -> App {
+        let offers = ChipOffers(vec![make_evolution_offering()]);
+        let mut app = test_app_with_offers(offers);
+
+        // Seed inventory with ingredient stacks
+        let ps_def =
+            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let du_def =
+            ChipDefinition::test("Damage Up", ChipEffect::Amp(AmpEffect::DamageBoost(0.5)), 5);
+        let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
+        let _ = inventory.add_chip("Piercing Shot", &ps_def);
+        let _ = inventory.add_chip("Piercing Shot", &ps_def);
+        let _ = inventory.add_chip("Piercing Shot", &ps_def); // 3 stacks
+        let _ = inventory.add_chip("Damage Up", &du_def);
+        let _ = inventory.add_chip("Damage Up", &du_def); // 2 stacks
+
+        app
+    }
+
+    #[test]
+    fn confirm_evolution_sends_chip_selected_with_result_name() {
+        let mut app = test_app_with_evolution_inventory();
+        press_key(&mut app, KeyCode::Enter);
+
+        let received = app.world().resource::<ReceivedChips>();
+        assert_eq!(received.0.len(), 1);
+        assert_eq!(
+            received.0[0].name, "Barrage",
+            "evolution confirm should send ChipSelected with the result name"
+        );
+    }
+
+    #[test]
+    fn confirm_evolution_transitions_to_transition_in() {
+        let mut app = test_app_with_evolution_inventory();
+        press_key(&mut app, KeyCode::Enter);
+
+        let next = app.world().resource::<NextState<GameState>>();
+        assert!(
+            format!("{next:?}").contains("TransitionIn"),
+            "expected TransitionIn after evolution confirm, got: {next:?}"
+        );
+    }
+
+    #[test]
+    fn confirm_evolution_consumes_ingredient_stacks() {
+        // Inventory: "Piercing Shot" at 3, "Damage Up" at 2
+        // Evolution requires: "Piercing Shot" x2, "Damage Up" x1
+        // After confirm: "Piercing Shot" = 3 - 2 = 1, "Damage Up" = 2 - 1 = 1
+        let mut app = test_app_with_evolution_inventory();
+        press_key(&mut app, KeyCode::Enter);
+
+        let inventory = app.world().resource::<ChipInventory>();
+        assert_eq!(
+            inventory.stacks("Piercing Shot"),
+            1,
+            "Piercing Shot should have 1 stack remaining (3 - 2)"
+        );
+        assert_eq!(
+            inventory.stacks("Damage Up"),
+            1,
+            "Damage Up should have 1 stack remaining (2 - 1)"
+        );
+    }
+
+    #[test]
+    fn confirm_normal_does_not_consume_ingredient_stacks() {
+        // Set up a Normal offering with inventory pre-populated
+        let offers = ChipOffers(vec![ChipOffering::Normal(ChipDefinition::test(
+            "Piercing Shot",
+            ChipEffect::Amp(AmpEffect::Piercing(1)),
+            3,
+        ))]);
+        let mut app = test_app_with_offers(offers);
+
+        // Pre-populate inventory with Piercing Shot at 3 stacks
+        let ps_def =
+            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
+        let _ = inventory.add_chip("Piercing Shot", &ps_def);
+        let _ = inventory.add_chip("Piercing Shot", &ps_def);
+        let _ = inventory.add_chip("Piercing Shot", &ps_def);
+
+        press_key(&mut app, KeyCode::Enter);
+
+        let inventory = app.world().resource::<ChipInventory>();
+        assert_eq!(
+            inventory.stacks("Piercing Shot"),
+            3,
+            "Normal confirm should NOT consume ingredient stacks"
         );
     }
 }

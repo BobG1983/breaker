@@ -6,7 +6,7 @@ use crate::{
     chips::inventory::ChipInventory,
     screen::chip_select::{
         ChipSelectConfig,
-        resources::{ChipOffers, ChipSelectTimer},
+        resources::{ChipOffering, ChipOffers, ChipSelectTimer},
     },
     shared::GameState,
 };
@@ -27,10 +27,12 @@ pub(crate) fn tick_chip_timer(
     if timer.remaining <= 0.0 {
         timer.remaining = 0.0;
 
-        // On timeout, all offered chips were seen but none selected — decay all
+        // On timeout, all offered chips were seen but none selected — decay normal only
         if let (Some(offers), Some(mut inventory), Some(config)) = (offers, inventory, config) {
             for offer in &offers.0 {
-                inventory.record_offered(&offer.name, config.seen_decay_factor);
+                if let ChipOffering::Normal(_) = offer {
+                    inventory.record_offered(offer.name(), config.seen_decay_factor);
+                }
             }
         }
 
@@ -112,17 +114,32 @@ mod tests {
     use crate::{
         chips::{
             ChipDefinition,
-            definition::{AmpEffect, ChipEffect},
+            definition::{AmpEffect, ChipEffect, EvolutionIngredient},
             inventory::ChipInventory,
         },
-        screen::chip_select::{ChipSelectConfig, resources::ChipOffers},
+        screen::chip_select::{
+            ChipSelectConfig,
+            resources::{ChipOffering, ChipOffers},
+        },
     };
 
     fn make_offers_3() -> ChipOffers {
         ChipOffers(vec![
-            ChipDefinition::test("A", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
-            ChipDefinition::test("B", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
-            ChipDefinition::test("C", ChipEffect::Amp(AmpEffect::Piercing(1)), 3),
+            ChipOffering::Normal(ChipDefinition::test(
+                "A",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            )),
+            ChipOffering::Normal(ChipDefinition::test(
+                "B",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            )),
+            ChipOffering::Normal(ChipDefinition::test(
+                "C",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            )),
         ])
     }
 
@@ -174,5 +191,56 @@ mod tests {
                 "expected chip '{name}' to have no decay (1.0) when time remains, got {decay}"
             );
         }
+    }
+
+    // --- Evolution decay-skip tests ---
+
+    #[test]
+    fn timer_expiry_applies_decay_only_to_normal_offerings_not_evolution() {
+        // Offers: Normal("A"), Evolution(result: "B+"), Normal("C")
+        // On timer expiry, decay should be applied to "A" (0.8) and "C" (0.8)
+        // but NOT to "B+" (should remain 1.0)
+        let offers = ChipOffers(vec![
+            ChipOffering::Normal(ChipDefinition::test(
+                "A",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            )),
+            ChipOffering::Evolution {
+                ingredients: vec![EvolutionIngredient {
+                    chip_name: "X".to_owned(),
+                    stacks_required: 2,
+                }],
+                result: ChipDefinition::test("B+", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+            },
+            ChipOffering::Normal(ChipDefinition::test(
+                "C",
+                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                3,
+            )),
+        ]);
+
+        let mut app = test_app_with_offers(0.0, offers);
+        app.update();
+
+        let inventory = app.world().resource::<ChipInventory>();
+
+        let decay_a = inventory.weight_decay("A");
+        assert!(
+            (decay_a - 0.8).abs() < f32::EPSILON,
+            "Normal offering 'A' should have decay 0.8 after timer expiry, got {decay_a}"
+        );
+
+        let decay_c = inventory.weight_decay("C");
+        assert!(
+            (decay_c - 0.8).abs() < f32::EPSILON,
+            "Normal offering 'C' should have decay 0.8 after timer expiry, got {decay_c}"
+        );
+
+        let decay_b_plus = inventory.weight_decay("B+");
+        assert!(
+            (decay_b_plus - 1.0).abs() < f32::EPSILON,
+            "Evolution offering 'B+' should NOT have decay applied (expected 1.0), got {decay_b_plus}"
+        );
     }
 }

@@ -12,4 +12,4 @@ pub(crate) mod systems;
 pub(crate) use definition::ChipDefinition;
 pub use definition::{ImpactTarget, TriggerChain};
 pub(crate) use plugin::ChipsPlugin;
-pub(crate) use resources::ChipRegistry;
+pub(crate) use resources::{ChipRegistry, EvolutionRegistry};
