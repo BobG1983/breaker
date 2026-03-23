@@ -1,9 +1,11 @@
 //! Breaker core components.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
 
 /// Marker component identifying the breaker entity.
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
+#[require(Spatial2D, InterpolateTransform2D)]
 pub struct Breaker;
 
 /// Full width of the breaker in world units.
@@ -56,5 +58,59 @@ mod tests {
     fn breaker_height_half_height() {
         let h = BreakerHeight(20.0);
         assert!((h.half_height() - 10.0).abs() < f32::EPSILON);
+    }
+
+    // ── Breaker #[require] tests ─────────────────────────────────
+
+    #[test]
+    fn breaker_require_inserts_spatial2d() {
+        use rantzsoft_spatial2d::components::Spatial2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+        assert!(
+            app.world().get::<Spatial2D>(entity).is_some(),
+            "Breaker should auto-insert Spatial2D via #[require]"
+        );
+    }
+
+    #[test]
+    fn breaker_require_inserts_interpolate_transform2d() {
+        use rantzsoft_spatial2d::components::InterpolateTransform2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+        assert!(
+            app.world().get::<InterpolateTransform2D>(entity).is_some(),
+            "Breaker should auto-insert InterpolateTransform2D via #[require]"
+        );
+    }
+
+    #[test]
+    fn breaker_require_does_not_insert_cleanup_on_run_end() {
+        use crate::shared::CleanupOnRunEnd;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+        assert!(
+            app.world().get::<CleanupOnRunEnd>(entity).is_none(),
+            "Breaker #[require] should NOT auto-insert CleanupOnRunEnd"
+        );
+    }
+
+    #[test]
+    fn breaker_require_does_not_insert_cleanup_on_node_exit() {
+        use crate::shared::CleanupOnNodeExit;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Breaker).id();
+        app.update();
+        assert!(
+            app.world().get::<CleanupOnNodeExit>(entity).is_none(),
+            "Breaker #[require] should NOT auto-insert CleanupOnNodeExit"
+        );
     }
 }

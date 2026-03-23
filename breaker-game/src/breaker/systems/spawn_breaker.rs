@@ -1,9 +1,7 @@
 //! System to spawn the breaker entity.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{
-    InterpolateTransform2D, Position2D, PreviousPosition, Scale2D, Spatial2D,
-};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
 use tracing::debug;
 
 use crate::{
@@ -47,12 +45,14 @@ pub fn spawn_breaker(
         ),
         // Spatial2d components
         (
-            Spatial2D,
-            InterpolateTransform2D,
             GameDrawLayer::Breaker,
             Position2D(Vec2::new(0.0, config.y_position)),
             PreviousPosition(Vec2::new(0.0, config.y_position)),
             Scale2D {
+                x: config.width,
+                y: config.height,
+            },
+            PreviousScale {
                 x: config.width,
                 y: config.height,
             },
@@ -61,7 +61,6 @@ pub fn spawn_breaker(
         (
             Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
             MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
-            Transform::default(),
             CleanupOnRunEnd,
         ),
     ));

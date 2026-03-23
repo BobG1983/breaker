@@ -155,7 +155,7 @@ pub struct EntityScale(pub f32);
 /// as exiting [`GameState::Playing`] — any new transitions out of `Playing`
 /// must account for the fact that all `CleanupOnNodeExit` entities will be
 /// despawned.
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct CleanupOnNodeExit;
 
 /// Marker component for entities that should be despawned when a run ends.

@@ -1,10 +1,12 @@
 //! Wall entity spawning — creates invisible boundary entities for CCD collision.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
+use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
+#[cfg(test)]
+use crate::shared::CleanupOnNodeExit;
 use crate::{
-    shared::{CleanupOnNodeExit, GameDrawLayer, PlayfieldConfig},
+    shared::{GameDrawLayer, PlayfieldConfig},
     wall::{
         components::{Wall, WallSize},
         messages::WallsSpawned,
@@ -31,15 +33,12 @@ pub(crate) fn spawn_walls(
             half_width: wall_ht,
             half_height,
         },
-        Transform::from_xyz(playfield.left() - wall_ht, 0.0, 0.0),
-        Spatial2D,
         Position2D(Vec2::new(playfield.left() - wall_ht, 0.0)),
         Scale2D {
             x: wall_ht,
             y: half_height,
         },
         GameDrawLayer::Wall,
-        CleanupOnNodeExit,
     ));
 
     // Right wall
@@ -49,15 +48,12 @@ pub(crate) fn spawn_walls(
             half_width: wall_ht,
             half_height,
         },
-        Transform::from_xyz(playfield.right() + wall_ht, 0.0, 0.0),
-        Spatial2D,
         Position2D(Vec2::new(playfield.right() + wall_ht, 0.0)),
         Scale2D {
             x: wall_ht,
             y: half_height,
         },
         GameDrawLayer::Wall,
-        CleanupOnNodeExit,
     ));
 
     // Ceiling
@@ -67,15 +63,12 @@ pub(crate) fn spawn_walls(
             half_width,
             half_height: wall_ht,
         },
-        Transform::from_xyz(0.0, playfield.top() + wall_ht, 0.0),
-        Spatial2D,
         Position2D(Vec2::new(0.0, playfield.top() + wall_ht)),
         Scale2D {
             x: half_width,
             y: wall_ht,
         },
         GameDrawLayer::Wall,
-        CleanupOnNodeExit,
     ));
 
     walls_spawned.write(WallsSpawned);
@@ -152,15 +145,17 @@ mod tests {
 
     #[test]
     fn wall_positions_match_playfield() {
+        use rantzsoft_spatial2d::components::Position2D;
+
         let mut app = test_app();
         app.update();
         let playfield = PlayfieldConfig::default();
 
         let walls: Vec<_> = app
             .world_mut()
-            .query::<(&Transform, &WallSize)>()
+            .query::<(&Position2D, &WallSize)>()
             .iter(app.world())
-            .map(|(tf, ws)| (tf.translation, ws.half_width, ws.half_height))
+            .map(|(pos, ws)| (pos.0, ws.half_width, ws.half_height))
             .collect();
 
         // Left wall: x < playfield left

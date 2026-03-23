@@ -1,9 +1,7 @@
 //! System to spawn the bolt entity.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{
-    InterpolateTransform2D, Position2D, PreviousPosition, Scale2D, Spatial2D,
-};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
 use tracing::debug;
 
 use crate::{
@@ -63,12 +61,14 @@ pub(crate) fn spawn_bolt(
     let mut entity = commands.spawn((
         Bolt,
         velocity,
-        Spatial2D,
-        InterpolateTransform2D,
         GameDrawLayer::Bolt,
         Position2D(spawn_pos),
         PreviousPosition(spawn_pos),
         Scale2D {
+            x: config.radius,
+            y: config.radius,
+        },
+        PreviousScale {
             x: config.radius,
             y: config.radius,
         },
@@ -78,7 +78,6 @@ pub(crate) fn spawn_bolt(
                 .1
                 .add(ColorMaterial::from_color(config.color())),
         ),
-        Transform::default(),
         CleanupOnRunEnd,
     ));
     debug!("bolt spawned entity={:?}", entity.id());

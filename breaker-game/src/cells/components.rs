@@ -1,9 +1,13 @@
 //! Cells domain components.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Spatial2D;
+
+use crate::shared::CleanupOnNodeExit;
 
 /// Marker component identifying a cell entity.
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
+#[require(Spatial2D, CleanupOnNodeExit)]
 pub(crate) struct Cell;
 
 /// Marker for cells that count toward node completion.
@@ -289,6 +293,83 @@ mod tests {
             health.fraction() <= 0.0,
             "fraction with negative current should be <= 0.0, got {}",
             health.fraction()
+        );
+    }
+
+    // ── Cell #[require] tests ────────────────────────────────────
+
+    #[test]
+    fn cell_require_inserts_spatial2d() {
+        use rantzsoft_spatial2d::components::Spatial2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Cell).id();
+        app.update();
+        assert!(
+            app.world().get::<Spatial2D>(entity).is_some(),
+            "Cell should auto-insert Spatial2D via #[require]"
+        );
+    }
+
+    #[test]
+    fn cell_require_inserts_cleanup_on_node_exit() {
+        use crate::shared::CleanupOnNodeExit;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Cell).id();
+        app.update();
+        assert!(
+            app.world().get::<CleanupOnNodeExit>(entity).is_some(),
+            "Cell should auto-insert CleanupOnNodeExit via #[require]"
+        );
+    }
+
+    #[test]
+    fn cell_require_does_not_insert_interpolate_transform2d() {
+        use rantzsoft_spatial2d::components::InterpolateTransform2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Cell).id();
+        app.update();
+        assert!(
+            app.world().get::<InterpolateTransform2D>(entity).is_none(),
+            "Cell #[require] should NOT auto-insert InterpolateTransform2D (cells are static)"
+        );
+    }
+
+    #[test]
+    fn cell_explicit_values_override_defaults() {
+        use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app
+            .world_mut()
+            .spawn((
+                Cell,
+                Spatial2D,
+                Position2D(Vec2::new(50.0, 100.0)),
+                Scale2D { x: 70.0, y: 24.0 },
+            ))
+            .id();
+        app.update();
+        let position = app
+            .world()
+            .get::<Position2D>(entity)
+            .expect("Position2D should be present");
+        assert_eq!(
+            position.0,
+            Vec2::new(50.0, 100.0),
+            "explicit Position2D(50.0, 100.0) should be preserved"
+        );
+        let scale = app
+            .world()
+            .get::<Scale2D>(entity)
+            .expect("Scale2D should be present");
+        assert!(
+            (scale.x - 70.0).abs() < f32::EPSILON && (scale.y - 24.0).abs() < f32::EPSILON,
+            "explicit Scale2D {{ x: 70.0, y: 24.0 }} should be preserved, got {{ x: {}, y: {} }}",
+            scale.x,
+            scale.y
         );
     }
 }

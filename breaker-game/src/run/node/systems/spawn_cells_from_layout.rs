@@ -1,9 +1,11 @@
 //! System to spawn cells from the active node layout.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
+use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use tracing::debug;
 
+#[cfg(test)]
+use crate::shared::CleanupOnNodeExit;
 use crate::{
     cells::{
         components::*,
@@ -13,7 +15,7 @@ use crate::{
         node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
         resources::{NodeSequence, RunState},
     },
-    shared::{CleanupOnNodeExit, GameDrawLayer, PlayfieldConfig},
+    shared::{GameDrawLayer, PlayfieldConfig},
 };
 
 /// Total extent of a grid along one axis: `step * count - padding`.
@@ -155,19 +157,12 @@ pub(crate) fn spawn_cells_from_grid(
                 },
                 Mesh2d(rect_mesh.clone()),
                 MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
-                Transform {
-                    translation: Vec3::new(x, y, 0.0),
-                    scale: Vec3::new(cell_width, cell_height, 1.0),
-                    ..default()
-                },
-                Spatial2D,
                 Position2D(Vec2::new(x, y)),
                 Scale2D {
                     x: cell_width,
                     y: cell_height,
                 },
                 GameDrawLayer::Cell,
-                CleanupOnNodeExit,
             ));
 
             if def.required_to_clear {
@@ -342,9 +337,9 @@ mod tests {
     fn collect_sorted_cell_positions(app: &mut App) -> Vec<(f32, f32)> {
         let mut positions: Vec<(f32, f32)> = app
             .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
+            .query_filtered::<&Position2D, With<Cell>>()
             .iter(app.world())
-            .map(|tf| (tf.translation.x, tf.translation.y))
+            .map(|pos| (pos.0.x, pos.0.y))
             .collect();
         positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
         positions
@@ -458,13 +453,13 @@ mod tests {
         let mut app = test_app(layout);
         app.update();
 
-        for transform in app
+        for position in app
             .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
+            .query_filtered::<&Position2D, With<Cell>>()
             .iter(app.world())
         {
-            let x = transform.translation.x;
-            let y = transform.translation.y;
+            let x = position.0.x;
+            let y = position.0.y;
             assert!(
                 x.abs() < playfield.right() + config.width / 2.0,
                 "cell x={x} out of bounds"
@@ -1278,21 +1273,21 @@ mod tests {
         let mut app = scaled_test_app(layout);
         app.update();
 
-        for (_, w, h, tf) in app
+        for (_, w, h, scale) in app
             .world_mut()
-            .query::<(&Cell, &CellWidth, &CellHeight, &Transform)>()
+            .query::<(&Cell, &CellWidth, &CellHeight, &Scale2D)>()
             .iter(app.world())
         {
             assert!(
-                (tf.scale.x - w.0).abs() < f32::EPSILON,
-                "Transform.scale.x={} should match CellWidth={}",
-                tf.scale.x,
+                (scale.x - w.0).abs() < f32::EPSILON,
+                "Scale2D.x={} should match CellWidth={}",
+                scale.x,
                 w.0
             );
             assert!(
-                (tf.scale.y - h.0).abs() < f32::EPSILON,
-                "Transform.scale.y={} should match CellHeight={}",
-                tf.scale.y,
+                (scale.y - h.0).abs() < f32::EPSILON,
+                "Scale2D.y={} should match CellHeight={}",
+                scale.y,
                 h.0
             );
         }
@@ -1313,18 +1308,18 @@ mod tests {
         let mut app = scaled_test_app(layout);
         app.update();
 
-        let cells: Vec<(&CellWidth, &CellHeight, &Transform)> = app
+        let cells: Vec<(&CellWidth, &CellHeight, &Position2D)> = app
             .world_mut()
-            .query::<(&CellWidth, &CellHeight, &Transform)>()
+            .query::<(&CellWidth, &CellHeight, &Position2D)>()
             .iter(app.world())
             .collect();
         assert_eq!(cells.len(), 1, "should spawn exactly 1 cell");
 
-        let (w, h, tf) = cells[0];
+        let (w, h, pos) = cells[0];
         assert!(
-            tf.translation.x.abs() < f32::EPSILON,
+            pos.0.x.abs() < f32::EPSILON,
             "single cell should be centered at x=0.0, got {}",
-            tf.translation.x
+            pos.0.x
         );
         assert!(
             (w.0 - 126.0).abs() < f32::EPSILON,

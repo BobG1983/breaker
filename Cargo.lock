@@ -1900,6 +1900,7 @@ dependencies = [
  "breaker",
  "clap",
  "rand",
+ "rantzsoft_spatial2d",
  "ron 0.12.0",
  "serde",
  "tracing",

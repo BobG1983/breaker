@@ -1,9 +1,11 @@
 //! Bolt domain components.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
 
 /// Marker component identifying the bolt entity.
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
+#[require(Spatial2D, InterpolateTransform2D, BoltVelocity)]
 pub struct Bolt;
 
 /// Marker component indicating the bolt is hovering above the breaker,
@@ -12,7 +14,7 @@ pub struct Bolt;
 pub struct BoltServing;
 
 /// The bolt's velocity in world units per second.
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Default)]
 pub struct BoltVelocity {
     /// Velocity vector (x, y).
     pub value: Vec2,
@@ -179,6 +181,112 @@ mod tests {
         assert!(
             angle >= FRAC_PI_4 - 1e-4,
             "angle should be at least min_angle"
+        );
+    }
+
+    // ── Bolt #[require] tests ────────────────────────────────────
+
+    #[test]
+    fn bolt_require_inserts_spatial2d() {
+        use rantzsoft_spatial2d::components::Spatial2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Bolt).id();
+        app.update();
+        assert!(
+            app.world().get::<Spatial2D>(entity).is_some(),
+            "Bolt should auto-insert Spatial2D via #[require]"
+        );
+    }
+
+    #[test]
+    fn bolt_require_inserts_interpolate_transform2d() {
+        use rantzsoft_spatial2d::components::InterpolateTransform2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Bolt).id();
+        app.update();
+        assert!(
+            app.world().get::<InterpolateTransform2D>(entity).is_some(),
+            "Bolt should auto-insert InterpolateTransform2D via #[require]"
+        );
+    }
+
+    #[test]
+    fn bolt_require_inserts_bolt_velocity_default() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Bolt).id();
+        app.update();
+        let velocity = app
+            .world()
+            .get::<BoltVelocity>(entity)
+            .expect("Bolt should auto-insert BoltVelocity via #[require]");
+        assert_eq!(
+            velocity.value,
+            Vec2::ZERO,
+            "default BoltVelocity should have value Vec2::ZERO"
+        );
+    }
+
+    #[test]
+    fn bolt_explicit_values_override_require_defaults() {
+        use rantzsoft_spatial2d::components::Position2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltVelocity::new(0.0, 400.0),
+                Position2D(Vec2::new(10.0, 20.0)),
+            ))
+            .id();
+        app.update();
+        let velocity = app
+            .world()
+            .get::<BoltVelocity>(entity)
+            .expect("BoltVelocity should be present");
+        assert!(
+            (velocity.value.x - 0.0).abs() < f32::EPSILON
+                && (velocity.value.y - 400.0).abs() < f32::EPSILON,
+            "explicit BoltVelocity(0.0, 400.0) should override the default, got {:?}",
+            velocity.value
+        );
+        let position = app
+            .world()
+            .get::<Position2D>(entity)
+            .expect("Position2D should be present");
+        assert_eq!(
+            position.0,
+            Vec2::new(10.0, 20.0),
+            "explicit Position2D(10.0, 20.0) should override the default"
+        );
+    }
+
+    #[test]
+    fn bolt_require_does_not_insert_cleanup_on_run_end() {
+        use crate::shared::CleanupOnRunEnd;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Bolt).id();
+        app.update();
+        assert!(
+            app.world().get::<CleanupOnRunEnd>(entity).is_none(),
+            "Bolt #[require] should NOT auto-insert CleanupOnRunEnd"
+        );
+    }
+
+    #[test]
+    fn bolt_require_does_not_insert_cleanup_on_node_exit() {
+        use crate::shared::CleanupOnNodeExit;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Bolt).id();
+        app.update();
+        assert!(
+            app.world().get::<CleanupOnNodeExit>(entity).is_none(),
+            "Bolt #[require] should NOT auto-insert CleanupOnNodeExit"
         );
     }
 }

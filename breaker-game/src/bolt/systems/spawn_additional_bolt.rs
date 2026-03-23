@@ -2,9 +2,7 @@
 
 use bevy::prelude::*;
 use rand::Rng;
-use rantzsoft_spatial2d::components::{
-    InterpolateTransform2D, Position2D, PreviousPosition, Scale2D, Spatial2D,
-};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
 
 use crate::{
     bolt::{
@@ -56,12 +54,14 @@ pub fn spawn_additional_bolt(
             Bolt,
             ExtraBolt,
             velocity,
-            Spatial2D,
-            InterpolateTransform2D,
             GameDrawLayer::Bolt,
             Position2D(spawn_pos),
             PreviousPosition(spawn_pos),
             Scale2D {
+                x: bolt_config.radius,
+                y: bolt_config.radius,
+            },
+            PreviousScale {
                 x: bolt_config.radius,
                 y: bolt_config.radius,
             },
@@ -82,7 +82,6 @@ pub fn spawn_additional_bolt(
                     .1
                     .add(ColorMaterial::from_color(bolt_config.color())),
             ),
-            Transform::default(),
             CleanupOnNodeExit,
         ));
     }
