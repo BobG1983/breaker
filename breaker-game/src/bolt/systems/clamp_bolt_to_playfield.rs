@@ -1,6 +1,7 @@
 //! Safety clamp — catches bolts that escape through wall corner overlaps.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
@@ -14,16 +15,16 @@ use crate::{
 /// offending velocity component.
 ///
 /// Runs after all CCD collision systems. Only triggers when a bolt has
-/// already escaped past a wall — a belt-and-suspenders fix for the rare
+/// already escaped past a wall -- a belt-and-suspenders fix for the rare
 /// case where CCD misses due to overlapping expanded AABBs at corners.
 ///
-/// The bottom edge is intentionally open — bolts that fall below the
+/// The bottom edge is intentionally open -- bolts that fall below the
 /// playfield are handled by [`bolt_lost`].
 pub(crate) fn clamp_bolt_to_playfield(
     playfield: Res<PlayfieldConfig>,
     mut bolt_query: Query<
         (
-            &mut Transform,
+            &mut Position2D,
             &mut BoltVelocity,
             &BoltRadius,
             Option<&EntityScale>,
@@ -31,11 +32,9 @@ pub(crate) fn clamp_bolt_to_playfield(
         ActiveFilter,
     >,
 ) {
-    for (mut tf, mut vel, radius, bolt_entity_scale) in &mut bolt_query {
+    for (mut position, mut vel, radius, bolt_entity_scale) in &mut bolt_query {
         let r = radius.0 * bolt_entity_scale.map_or(1.0, |s| s.0);
-        // Read immutably first to avoid triggering Bevy change detection
-        // when no clamping is needed (the common case).
-        let pos = tf.translation;
+        let pos = position.0;
 
         let x_min = playfield.left() + r + CCD_EPSILON;
         let x_max = playfield.right() - r - CCD_EPSILON;
@@ -69,7 +68,7 @@ pub(crate) fn clamp_bolt_to_playfield(
         // No bottom clamp — intentionally open for bolt-lost
 
         if clamped {
-            tf.translation = new_pos;
+            position.0 = new_pos;
             vel.value = new_vel;
         }
     }
@@ -77,8 +76,13 @@ pub(crate) fn clamp_bolt_to_playfield(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Position2D;
+
     use super::*;
-    use crate::bolt::components::{Bolt, BoltServing};
+    use crate::{
+        bolt::components::{Bolt, BoltServing},
+        shared::math::CCD_EPSILON,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -96,55 +100,55 @@ mod tests {
         app.update();
     }
 
-    /// Default playfield: width=800, height=600 → left=-400, right=400, top=300, bottom=-300
+    /// Default playfield: width=800, height=600 -> left=-400, right=400, top=300, bottom=-300
     const RADIUS: f32 = 6.0;
     const TOLERANCE: f32 = 0.001;
 
     #[test]
-    fn bolt_inside_bounds_unchanged() {
+    fn bolt_inside_bounds_position2d_unchanged() {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(100.0, 50.0, 0.0),
+            Position2D(Vec2::new(100.0, 50.0)),
         ));
         tick(&mut app);
 
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!((tf.translation.x - 100.0).abs() < TOLERANCE);
-        assert!((tf.translation.y - 50.0).abs() < TOLERANCE);
+        assert!((pos.0.x - 100.0).abs() < TOLERANCE);
+        assert!((pos.0.y - 50.0).abs() < TOLERANCE);
         assert!((vel.value.x - 300.0).abs() < TOLERANCE);
         assert!((vel.value.y - 400.0).abs() < TOLERANCE);
     }
 
     #[test]
-    fn bolt_past_right_wall_clamped_vx_flipped() {
+    fn bolt_past_right_wall_position2d_clamped_vx_flipped() {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(500.0, 0.0, 0.0),
+            Position2D(Vec2::new(500.0, 0.0)),
         ));
         tick(&mut app);
 
         let expected_x = 400.0 - RADIUS - CCD_EPSILON; // 393.99
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - expected_x).abs() < TOLERANCE,
+            (pos.0.x - expected_x).abs() < TOLERANCE,
             "x should be clamped to {expected_x}, got {}",
-            tf.translation.x
+            pos.0.x
         );
         assert!(
             (vel.value.x - (-300.0)).abs() < TOLERANCE,
@@ -158,27 +162,27 @@ mod tests {
     }
 
     #[test]
-    fn bolt_past_left_wall_clamped_vx_flipped() {
+    fn bolt_past_left_wall_position2d_clamped_vx_flipped() {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(-300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(-500.0, 0.0, 0.0),
+            Position2D(Vec2::new(-500.0, 0.0)),
         ));
         tick(&mut app);
 
         let expected_x = -400.0 + RADIUS + CCD_EPSILON; // -393.99
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - expected_x).abs() < TOLERANCE,
+            (pos.0.x - expected_x).abs() < TOLERANCE,
             "x should be clamped to {expected_x}, got {}",
-            tf.translation.x
+            pos.0.x
         );
         assert!(
             (vel.value.x - 300.0).abs() < TOLERANCE,
@@ -192,27 +196,27 @@ mod tests {
     }
 
     #[test]
-    fn bolt_past_ceiling_clamped_vy_flipped() {
+    fn bolt_past_ceiling_position2d_clamped_vy_flipped() {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(0.0, 400.0, 0.0),
+            Position2D(Vec2::new(0.0, 400.0)),
         ));
         tick(&mut app);
 
         let expected_y = 300.0 - RADIUS - CCD_EPSILON; // 293.99
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.y - expected_y).abs() < TOLERANCE,
+            (pos.0.y - expected_y).abs() < TOLERANCE,
             "y should be clamped to {expected_y}, got {}",
-            tf.translation.y
+            pos.0.y
         );
         assert!(
             (vel.value.y - (-400.0)).abs() < TOLERANCE,
@@ -226,26 +230,26 @@ mod tests {
     }
 
     #[test]
-    fn bolt_below_floor_not_clamped() {
+    fn bolt_below_floor_position2d_not_clamped() {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, -400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(0.0, -500.0, 0.0),
+            Position2D(Vec2::new(0.0, -500.0)),
         ));
         tick(&mut app);
 
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.y - (-500.0)).abs() < TOLERANCE,
+            (pos.0.y - (-500.0)).abs() < TOLERANCE,
             "y should NOT be clamped, got {}",
-            tf.translation.y
+            pos.0.y
         );
         assert!(
             (vel.value.y - (-400.0)).abs() < TOLERANCE,
@@ -257,24 +261,23 @@ mod tests {
     #[test]
     fn velocity_already_inward_not_flipped_right_wall() {
         let mut app = test_app();
-        // Bolt past right wall but velocity already pointing left
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(-300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(500.0, 0.0, 0.0),
+            Position2D(Vec2::new(500.0, 0.0)),
         ));
         tick(&mut app);
 
         let expected_x = 400.0 - RADIUS - CCD_EPSILON;
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - expected_x).abs() < TOLERANCE,
+            (pos.0.x - expected_x).abs() < TOLERANCE,
             "x should be clamped"
         );
         assert!(
@@ -287,24 +290,23 @@ mod tests {
     #[test]
     fn velocity_already_inward_not_flipped_ceiling() {
         let mut app = test_app();
-        // Bolt past ceiling but velocity already pointing down
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, -400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(0.0, 400.0, 0.0),
+            Position2D(Vec2::new(0.0, 400.0)),
         ));
         tick(&mut app);
 
         let expected_y = 300.0 - RADIUS - CCD_EPSILON;
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.y - expected_y).abs() < TOLERANCE,
+            (pos.0.y - expected_y).abs() < TOLERANCE,
             "y should be clamped"
         );
         assert!(
@@ -315,34 +317,33 @@ mod tests {
     }
 
     #[test]
-    fn corner_escape_both_axes_clamped() {
+    fn corner_escape_both_axes_position2d_clamped() {
         let mut app = test_app();
-        // Bolt past both right wall and ceiling simultaneously
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(500.0, 400.0, 0.0),
+            Position2D(Vec2::new(500.0, 400.0)),
         ));
         tick(&mut app);
 
         let expected_x = 400.0 - RADIUS - CCD_EPSILON;
         let expected_y = 300.0 - RADIUS - CCD_EPSILON;
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - expected_x).abs() < TOLERANCE,
+            (pos.0.x - expected_x).abs() < TOLERANCE,
             "x should be clamped to {expected_x}, got {}",
-            tf.translation.x
+            pos.0.x
         );
         assert!(
-            (tf.translation.y - expected_y).abs() < TOLERANCE,
+            (pos.0.y - expected_y).abs() < TOLERANCE,
             "y should be clamped to {expected_y}, got {}",
-            tf.translation.y
+            pos.0.y
         );
         assert!(
             (vel.value.x - (-300.0)).abs() < TOLERANCE,
@@ -364,20 +365,20 @@ mod tests {
             BoltServing,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(RADIUS),
-            Transform::from_xyz(500.0, 0.0, 0.0),
+            Position2D(Vec2::new(500.0, 0.0)),
         ));
         tick(&mut app);
 
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, (With<Bolt>, With<BoltServing>)>()
+            .query_filtered::<&Position2D, (With<Bolt>, With<BoltServing>)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - 500.0).abs() < TOLERANCE,
+            (pos.0.x - 500.0).abs() < TOLERANCE,
             "serving bolt should NOT be clamped, got {}",
-            tf.translation.x
+            pos.0.x
         );
     }
 
@@ -385,61 +386,54 @@ mod tests {
 
     #[test]
     fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
-        // BoltRadius(8.0), EntityScale(0.5) → effective_radius = 4.0.
-        // Bolt at x = 500.0 (past right wall = 400.0).
-        // With effective radius 4.0: x_max = 400.0 - 4.0 - CCD_EPSILON ≈ 395.99
-        // Without scale (radius 8.0): x_max = 400.0 - 8.0 - CCD_EPSILON ≈ 391.99
-        // The difference should be ~4.0.
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(8.0),
             EntityScale(0.5),
-            Transform::from_xyz(500.0, 0.0, 0.0),
+            Position2D(Vec2::new(500.0, 0.0)),
         ));
         tick(&mut app);
 
         let expected_x_scaled = 400.0 - 4.0 - CCD_EPSILON; // ~395.99
         let expected_x_unscaled = 400.0 - 8.0 - CCD_EPSILON; // ~391.99
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - expected_x_scaled).abs() < TOLERANCE,
+            (pos.0.x - expected_x_scaled).abs() < TOLERANCE,
             "scaled bolt should clamp to {expected_x_scaled:.2} (not {expected_x_unscaled:.2}), got {:.2}",
-            tf.translation.x
+            pos.0.x
         );
     }
 
     #[test]
     fn bolt_without_entity_scale_in_clamping_is_backward_compatible() {
-        // Same as bolt_past_right_wall_clamped_vx_flipped but explicitly no EntityScale.
-        // Should behave identically to the existing test.
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(300.0, 400.0),
             BoltRadius(RADIUS),
             // No EntityScale
-            Transform::from_xyz(500.0, 0.0, 0.0),
+            Position2D(Vec2::new(500.0, 0.0)),
         ));
         tick(&mut app);
 
         let expected_x = 400.0 - RADIUS - CCD_EPSILON;
-        let (tf, vel) = app
+        let (pos, vel) = app
             .world_mut()
-            .query::<(&Transform, &BoltVelocity)>()
+            .query::<(&Position2D, &BoltVelocity)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            (tf.translation.x - expected_x).abs() < TOLERANCE,
+            (pos.0.x - expected_x).abs() < TOLERANCE,
             "bolt without EntityScale should clamp to {expected_x:.2}, got {:.2}",
-            tf.translation.x
+            pos.0.x
         );
         assert!(
             (vel.value.x - (-300.0)).abs() < TOLERANCE,

@@ -115,6 +115,14 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **track_node_cleared_stats: no HighlightTriggered emitted for juice VFX**: ClutchClear, NoDamageNode, FastClear, PerfectStreak, SpeedDemon, Untouchable, Comeback, PerfectNode are silently skipped when cap is full with no HighlightTriggered message. Architecture contract says "always emit HighlightTriggered for juice/VFX feedback even if the highlight cap is full." These 8 kinds never emit HighlightTriggered at all — not even when the cap is NOT full. This is inconsistent with the other 6 detection systems. Confidence: HIGH (design inconsistency; all others emit the message).
 
+## Position2D Migration Bugs (2026-03-23, feature/wave-3-offerings-transitions)
+
+- **detect_nail_biter queries Transform instead of Position2D**: `run/systems/detect_nail_biter.rs:21` — queries `&Transform` on bolt entities. After migration, bolt positions are in `Position2D`; `Transform` is only written by `propagate_position` (AfterFixedMainLoop). During FixedUpdate, bolt Transform lags behind actual Position2D. The y-value read is stale/interpolated, not the physics position. Same bug in `detect_close_save.rs:18`. Confidence: HIGH.
+
+- **spawn_walls writes Transform::from_xyz directly**: `wall/systems/spawn_walls.rs:34,52,70` — walls are spawned with `Transform::from_xyz(...)` explicitly set. Walls also have `Spatial2D` + `Position2D`, so `propagate_position` will overwrite Transform on the first tick. The manually-set Transform value is redundant but not incorrect in practice. However it violates the migration contract (only propagation should write Transform for spatial2d entities). Confidence: HIGH (redundant write).
+
+- **spawn_cells_from_layout writes Transform directly**: `run/node/systems/spawn_cells_from_layout.rs:158-162` — cells are spawned with both `Transform { translation, scale }` set manually AND `Position2D`+`Scale2D`. The propagation system will overwrite on first tick. Same redundant-write pattern as walls. No correctness impact since static entities don't need frame-accurate Transform.
+
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 
 - **spawn_chip_select overwrites ChipOffers**: FIXED — verified in current code. `spawn_chip_select` now reads `Res<ChipOffers>` directly (does not touch ChipRegistry or insert ChipOffers). The offering algorithm is no longer bypassed.

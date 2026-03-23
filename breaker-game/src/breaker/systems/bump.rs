@@ -3,14 +3,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::BoltServing,
+    bolt::{components::BoltServing, messages::BoltHitBreaker},
     breaker::{
         components::{Breaker, BreakerState, BreakerStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
         queries::{BumpGradingQuery, BumpTimingQuery},
     },
     input::resources::{GameAction, InputActions},
-    physics::messages::BoltHitBreaker,
 };
 
 /// Determines the forward-window grade based on remaining timer.
@@ -102,7 +101,7 @@ pub(crate) fn update_bump(
 
 /// Grades bump timing on bolt-breaker contact and sends [`BumpPerformed`].
 ///
-/// Must run after `PhysicsSystems::BreakerCollision` to ensure messages are available.
+/// Must run after `BoltSystems::BreakerCollision` to ensure messages are available.
 /// If a forward bump is active, grades immediately. Otherwise, sets `post_hit_timer`
 /// for the retroactive path in `update_bump`.
 ///

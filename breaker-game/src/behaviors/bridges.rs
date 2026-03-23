@@ -12,10 +12,10 @@ use super::{
     events::EffectFired,
 };
 use crate::{
+    bolt::messages::{BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost},
     breaker::messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     cells::messages::CellDestroyed,
     chips::definition::TriggerChain,
-    physics::messages::{BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost},
 };
 
 /// Bridge for `BoltLost` — evaluates chains when a bolt is lost.

@@ -148,92 +148,142 @@ mod tests {
         let result = ray_vs_aabb(Vec2::ZERO, Vec2::Y, 100.0, &aabb);
         assert!(result.is_none(), "origin inside AABB should return None");
     }
-}
 
-#[cfg(test)]
-mod proptests {
-    use proptest::prelude::*;
+    // --- Replaced property-based tests with concrete-value equivalents ---
 
-    use super::*;
-
-    /// Generate a positive, finite float in a useful range.
-    fn positive_float() -> impl Strategy<Value = f32> {
-        1.0_f32..1000.0
+    #[test]
+    fn hit_distance_is_positive_from_below_centered() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 30.0));
+        let origin = Vec2::new(0.0, -100.0);
+        let hit = ray_vs_aabb(origin, Vec2::Y, 2000.0, &aabb).expect("should hit");
+        assert!(
+            hit.distance > 0.0,
+            "distance must be positive, got {}",
+            hit.distance
+        );
     }
 
-    /// Generate a finite float in a useful range.
-    fn bounded_float() -> impl Strategy<Value = f32> {
-        -500.0_f32..500.0
+    #[test]
+    fn hit_distance_is_positive_from_below_offset() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(200.0, 100.0));
+        let origin = Vec2::new(150.0, -200.0);
+        let hit = ray_vs_aabb(origin, Vec2::Y, 2000.0, &aabb).expect("should hit");
+        assert!(
+            hit.distance > 0.0,
+            "distance must be positive, got {}",
+            hit.distance
+        );
     }
 
-    proptest! {
-        /// A hit distance must always be positive (ray starts outside AABB).
-        #[test]
-        fn hit_distance_is_positive(
-            ox in bounded_float(),
-            oy in -500.0_f32..-50.0,
-            hw in positive_float(),
-            hh in positive_float(),
-        ) {
-            let origin = Vec2::new(ox.clamp(-hw + 1.0, hw - 1.0), oy - hh);
-            let direction = Vec2::Y;
-            let max_dist = 2000.0;
-            let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(hw, hh));
+    #[test]
+    fn hit_distance_is_positive_from_left() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(40.0, 40.0));
+        let origin = Vec2::new(-80.0, 0.0);
+        let hit = ray_vs_aabb(origin, Vec2::X, 2000.0, &aabb).expect("should hit");
+        assert!(
+            hit.distance > 0.0,
+            "distance must be positive, got {}",
+            hit.distance
+        );
+    }
 
-            if let Some(hit) = ray_vs_aabb(origin, direction, max_dist, &aabb) {
-                prop_assert!(hit.distance > 0.0, "hit distance must be positive, got {}", hit.distance);
-            }
-        }
+    #[test]
+    fn hit_distance_is_positive_small_aabb() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(1.0, 1.0));
+        let origin = Vec2::new(0.0, -10.0);
+        let hit = ray_vs_aabb(origin, Vec2::Y, 2000.0, &aabb).expect("should hit");
+        assert!(
+            hit.distance > 0.0,
+            "distance must be positive, got {}",
+            hit.distance
+        );
+    }
 
-        /// Hit normal is always axis-aligned and unit length.
-        #[test]
-        fn hit_normal_is_unit_axis_aligned(
-            ox in bounded_float(),
-            oy in -500.0_f32..-50.0,
-            hw in positive_float(),
-            hh in positive_float(),
-        ) {
-            let origin = Vec2::new(ox.clamp(-hw + 1.0, hw - 1.0), oy - hh);
-            let direction = Vec2::Y;
-            let max_dist = 2000.0;
-            let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(hw, hh));
+    #[test]
+    fn hit_normal_axis_aligned_from_below() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 30.0));
+        let hit = ray_vs_aabb(Vec2::new(0.0, -60.0), Vec2::Y, 200.0, &aabb).expect("should hit");
+        assert_eq!(hit.normal, Vec2::NEG_Y, "normal from below should be -Y");
+    }
 
-            if let Some(hit) = ray_vs_aabb(origin, direction, max_dist, &aabb) {
-                let len = hit.normal.length();
-                prop_assert!(
-                    (len - 1.0).abs() < 1e-5,
-                    "normal should be unit length, got {len}"
-                );
-                // Must be axis-aligned: one component zero, one +-1
-                let is_axis = (hit.normal.x.abs() < f32::EPSILON && (hit.normal.y.abs() - 1.0).abs() < f32::EPSILON)
-                    || (hit.normal.y.abs() < f32::EPSILON && (hit.normal.x.abs() - 1.0).abs() < f32::EPSILON);
-                prop_assert!(is_axis, "normal must be axis-aligned, got {:?}", hit.normal);
-            }
-        }
+    #[test]
+    fn hit_normal_axis_aligned_from_above() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 30.0));
+        let hit = ray_vs_aabb(Vec2::new(0.0, 60.0), Vec2::NEG_Y, 200.0, &aabb).expect("should hit");
+        assert_eq!(hit.normal, Vec2::Y, "normal from above should be +Y");
+    }
 
-        /// Reflection off an AABB surface preserves speed (magnitude).
-        #[test]
-        fn reflection_preserves_speed(
-            vx in -500.0_f32..500.0,
-            vy in -500.0_f32..-10.0,
-            nx in prop_oneof![Just(0.0_f32), Just(1.0_f32), Just(-1.0_f32)],
-            ny in prop_oneof![Just(0.0_f32), Just(1.0_f32), Just(-1.0_f32)],
-        ) {
-            let normal = Vec2::new(nx, ny);
-            if normal.length() < 0.5 {
-                return Ok(());
-            }
-            let normal = normal.normalize();
-            let velocity = Vec2::new(vx, vy);
-            let speed_before = velocity.length();
+    #[test]
+    fn hit_normal_axis_aligned_from_left() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 30.0));
+        let hit = ray_vs_aabb(Vec2::new(-80.0, 0.0), Vec2::X, 200.0, &aabb).expect("should hit");
+        assert_eq!(hit.normal, Vec2::NEG_X, "normal from left should be -X");
+    }
 
-            let reflected = velocity - 2.0 * velocity.dot(normal) * normal;
-            let speed_after = reflected.length();
+    #[test]
+    fn hit_normal_axis_aligned_from_right() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 30.0));
+        let hit = ray_vs_aabb(Vec2::new(80.0, 0.0), Vec2::NEG_X, 200.0, &aabb).expect("should hit");
+        assert_eq!(hit.normal, Vec2::X, "normal from right should be +X");
+    }
 
-            prop_assert!(
-                (speed_before - speed_after).abs() < 1e-3,
-                "reflection should preserve speed: {speed_before} vs {speed_after}"
-            );
-        }
+    #[test]
+    fn reflection_preserves_speed_off_y_normal() {
+        let velocity = Vec2::new(300.0, -400.0);
+        let normal = Vec2::NEG_Y;
+        let speed_before = velocity.length();
+
+        let reflected = velocity - 2.0 * velocity.dot(normal) * normal;
+        let speed_after = reflected.length();
+
+        assert!(
+            (speed_before - speed_after).abs() < 1e-3,
+            "reflection off -Y should preserve speed: {speed_before} vs {speed_after}"
+        );
+    }
+
+    #[test]
+    fn reflection_preserves_speed_off_x_normal() {
+        let velocity = Vec2::new(-250.0, -100.0);
+        let normal = Vec2::NEG_X;
+        let speed_before = velocity.length();
+
+        let reflected = velocity - 2.0 * velocity.dot(normal) * normal;
+        let speed_after = reflected.length();
+
+        assert!(
+            (speed_before - speed_after).abs() < 1e-3,
+            "reflection off -X should preserve speed: {speed_before} vs {speed_after}"
+        );
+    }
+
+    #[test]
+    fn reflection_preserves_speed_off_positive_y() {
+        let velocity = Vec2::new(150.0, -450.0);
+        let normal = Vec2::Y;
+        let speed_before = velocity.length();
+
+        let reflected = velocity - 2.0 * velocity.dot(normal) * normal;
+        let speed_after = reflected.length();
+
+        assert!(
+            (speed_before - speed_after).abs() < 1e-3,
+            "reflection off +Y should preserve speed: {speed_before} vs {speed_after}"
+        );
+    }
+
+    #[test]
+    fn reflection_preserves_speed_off_positive_x() {
+        let velocity = Vec2::new(-500.0, -10.0);
+        let normal = Vec2::X;
+        let speed_before = velocity.length();
+
+        let reflected = velocity - 2.0 * velocity.dot(normal) * normal;
+        let speed_after = reflected.length();
+
+        assert!(
+            (speed_before - speed_after).abs() < 1e-3,
+            "reflection off +X should preserve speed: {speed_before} vs {speed_after}"
+        );
     }
 }

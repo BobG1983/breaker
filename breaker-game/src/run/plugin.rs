@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    physics::PhysicsSystems,
     run::{
         messages::{HighlightTriggered, RunLost},
         node::{NodePlugin, NodeSystems},
@@ -101,9 +100,9 @@ mod tests {
             // Messages read by run domain systems
             .add_message::<crate::cells::messages::CellDestroyed>()
             .add_message::<crate::breaker::messages::BumpPerformed>()
-            .add_message::<crate::physics::messages::BoltLost>()
-            .add_message::<crate::physics::messages::BoltHitBreaker>()
-            .add_message::<crate::physics::messages::BoltHitCell>()
+            .add_message::<crate::bolt::messages::BoltLost>()
+            .add_message::<crate::bolt::messages::BoltHitBreaker>()
+            .add_message::<crate::bolt::messages::BoltHitCell>()
             .add_message::<crate::ui::messages::ChipSelected>()
             // Resources required by run domain systems
             .init_resource::<crate::chips::inventory::ChipInventory>()

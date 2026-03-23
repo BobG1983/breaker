@@ -4,8 +4,8 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
+    bolt::messages::{BoltHitBreaker, BoltHitCell},
     cells::messages::CellDestroyed,
-    physics::messages::{BoltHitBreaker, BoltHitCell},
     run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 

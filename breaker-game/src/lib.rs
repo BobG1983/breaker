@@ -26,8 +26,6 @@ pub mod chips;
 pub(crate) mod debug;
 pub(crate) mod fx;
 pub mod input;
-pub(crate) mod interpolate;
-pub mod physics;
 pub mod run;
 pub(crate) mod ui;
 pub(crate) mod wall;

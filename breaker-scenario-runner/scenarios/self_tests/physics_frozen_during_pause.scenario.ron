@@ -4,7 +4,7 @@
     input: Scripted((
         actions: [],
     )),
-    max_frames: 120,
+    max_frames: 300,
     invariants: [PhysicsFrozenDuringPause],
     expected_violations: Some([PhysicsFrozenDuringPause]),
     debug_setup: Some((
@@ -12,6 +12,6 @@
     )),
     frame_mutations: Some([
         (frame: 30, mutation: TogglePause),
-        (frame: 35, mutation: MoveBolt(100.0, 100.0)),
+        (frame: 60, mutation: MoveBolt(100.0, 100.0)),
     ]),
 )

@@ -1884,6 +1884,7 @@ dependencies = [
  "rand",
  "rand_chacha",
  "rantzsoft_defaults",
+ "rantzsoft_spatial2d",
  "ron 0.12.0",
  "serde",
  "tracing",
@@ -4711,7 +4712,6 @@ name = "rantzsoft_physics2d"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "proptest",
  "rantzsoft_spatial2d",
 ]
 

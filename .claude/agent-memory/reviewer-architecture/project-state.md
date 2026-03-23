@@ -6,8 +6,9 @@ type: reference
 
 ## Project Configuration
 - Bevy 0.18.1, bevy_egui 0.39, edition 2024
-- Workspace with three crates (game, derive, scenario-runner), plugin-per-domain, message-driven decoupling
+- Workspace with six crates (breaker-game, rantzsoft_defaults, rantzsoft_defaults_derive, rantzsoft_spatial2d, rantzsoft_physics2d, breaker-scenario-runner), plugin-per-domain, message-driven decoupling
 - Also depends on: bevy_asset_loader 0.25, bevy_common_assets 0.15, iyes_progress 0.16
+- rantzsoft_spatial2d: game-agnostic 2D spatial transform plugin (Position2D, Rotation2D, Scale2D, DrawLayer trait, interpolation, propagation)
 - Architecture docs in `docs/architecture/` (README, layout, messages, ordering, plugins, state, physics, content, standards, data)
 
 ## Audit History
@@ -42,6 +43,7 @@ type: reference
 - **TriggerChain unification Step 1 audit 2026-03-21**: PASS — 0 BLOCKING, 2 IMPORTANT (evaluate.rs missing new trigger variant handling; semantic overlap between behaviors/Trigger+Consequence and TriggerChain leaves), 3 MINOR (content.md stale, new leaves lack stacking fields, bridge_overclock_bump needs Early/Late mapping). 7 new TriggerChain variants (4 leaves: LoseLife, TimePenalty, SpawnBolt, BoltSpeedBoost; 3 triggers: OnEarlyBump, OnLateBump, OnBumpWhiff). Pure type definitions, no runtime wiring yet.
 - **Behaviors unification audit 2026-03-21 (refactor/unify-behaviors)**: bolt/behaviors/ sub-domain deleted, BoltBehaviorsPlugin removed. ActiveOverclocks→ActiveChains. OverclockEffectFired→EffectFired. OverclockTriggerKind→TriggerKind. behaviors/consequences/ deleted; replaced by behaviors/effects/. ConsequenceFired removed; EffectFired is unified dispatch event. All bridge + effect systems now in BehaviorsPlugin. lib.rs visibility: behaviors module now pub.
 - **Memorable moments (highlights) audit 2026-03-23**: 2 BLOCKING, 2 IMPORTANT, 3 MINOR. Domain placement correct (run domain owns highlight detection). BLOCKING: spawn_highlight_text imported but never registered in plugin.rs; double-counting cell_destroyed_times (track_cells_destroyed AND detect_mass_destruction both push timestamps). IMPORTANT: HighlightDefaults RON never loaded at runtime (missing from DefaultsCollection, no seed system); detect_close_save ordering race (.after(PhysicsSystems::BreakerCollision) should be .after(BreakerSystems::GradeBump)). MINOR: unused highlight_writer parameter in track_node_cleared_stats; orphan complete_transition_out.rs; missing RON type annotation on defaults.highlights.ron.
+- **Position2D migration audit 2026-03-23**: PASS — 0 BLOCKING, 2 IMPORTANT, 3 MINOR, 1 doc drift. rantzsoft_spatial2d crate added (game-agnostic 2D spatial transform plugin). Position2D replaces Transform.translation as canonical position for all game entities (bolt, breaker, walls, cells). GameDrawLayer in shared/draw_layer.rs. RantzSpatial2dPlugin<GameDrawLayer> registered in game.rs. IMPORTANT: InterpolatePlugin still registered but dead code (no entities have old components); dual-write Transform+Position2D in static entity spawns (walls, cells) is acceptable for single-frame glitch prevention. All domain boundaries clean — physics writes bolt Position2D (same accepted compromise class). Negative tests confirm no old interpolation components on entities.
 
 ## Debug Domain Structure (Phase 2f — audited 2026-03-17)
 - debug/ restructured into three sub-domains: overlays/, telemetry/, hot_reload/

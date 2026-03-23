@@ -6,30 +6,36 @@ use crate::{
     behaviors::BehaviorSystems,
     bolt::{
         BoltSystems,
-        messages::SpawnAdditionalBolt,
+        messages::{BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost, SpawnAdditionalBolt},
         resources::BoltConfig,
         systems::{
-            apply_entity_scale_to_bolt, bolt_scale_visual, hover_bolt, init_bolt_params,
-            launch_bolt, prepare_bolt_velocity, reset_bolt, spawn_additional_bolt, spawn_bolt,
+            apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
+            bolt_scale_visual, clamp_bolt_to_playfield, hover_bolt, init_bolt_params, launch_bolt,
+            prepare_bolt_velocity, reset_bolt, spawn_additional_bolt, spawn_bolt,
             spawn_bolt_lost_text,
         },
     },
     breaker::BreakerSystems,
     run::node::sets::NodeSystems,
-    shared::{GameState, PlayingState},
+    shared::{GameRng, GameState, PlayingState},
 };
 
 /// Plugin for the bolt domain.
 ///
-/// Owns bolt components, velocity, and speed management.
+/// Owns bolt components, velocity, speed management, and collision detection.
 pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
         use crate::bolt::messages::BoltSpawned;
         app.init_resource::<BoltConfig>()
+            .init_resource::<GameRng>()
             .add_message::<SpawnAdditionalBolt>()
             .add_message::<BoltSpawned>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BoltHitCell>()
+            .add_message::<BoltLost>()
+            .add_message::<BoltHitWall>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -57,6 +63,15 @@ impl Plugin for BoltPlugin {
                         .after(BreakerSystems::Move),
                     spawn_additional_bolt.after(BehaviorSystems::Bridge),
                     spawn_bolt_lost_text,
+                    // Collision systems (moved from PhysicsPlugin)
+                    bolt_cell_collision.after(BoltSystems::PrepareVelocity),
+                    bolt_breaker_collision
+                        .after(bolt_cell_collision)
+                        .in_set(BoltSystems::BreakerCollision),
+                    clamp_bolt_to_playfield.after(bolt_breaker_collision),
+                    bolt_lost
+                        .after(clamp_bolt_to_playfield)
+                        .in_set(BoltSystems::BoltLost),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
@@ -82,9 +97,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BoltPlugin reads messages from physics and cells domains
-            .add_message::<crate::physics::messages::BoltHitCell>()
-            .add_message::<crate::physics::messages::BoltLost>()
+            // BoltPlugin reads messages from cells domain
             .add_message::<crate::cells::messages::CellDestroyed>()
             .add_plugins(BoltPlugin)
             .update();

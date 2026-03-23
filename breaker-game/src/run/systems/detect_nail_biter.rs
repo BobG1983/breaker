@@ -2,6 +2,7 @@
 //! is near the bottom boundary.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::components::{Bolt, BoltServing},
@@ -18,7 +19,7 @@ use crate::{
 /// Records the highlight in [`RunStats`] and emits [`HighlightTriggered`].
 pub(crate) fn detect_nail_biter(
     mut reader: MessageReader<NodeCleared>,
-    bolt_query: Query<&Transform, (With<Bolt>, Without<BoltServing>)>,
+    bolt_query: Query<&Position2D, (With<Bolt>, Without<BoltServing>)>,
     playfield: Res<PlayfieldConfig>,
     config: Res<HighlightConfig>,
     mut stats: ResMut<RunStats>,
@@ -31,7 +32,7 @@ pub(crate) fn detect_nail_biter(
         // Find the closest bolt to the bottom boundary
         let min_distance = bolt_query
             .iter()
-            .map(|transform| transform.translation.y - bottom)
+            .map(|position| position.0.y - bottom)
             .reduce(f32::min);
 
         let Some(min_distance) = min_distance else {
@@ -62,8 +63,13 @@ pub(crate) fn detect_nail_biter(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+
     use super::*;
-    use crate::run::resources::{HighlightKind, RunHighlight};
+    use crate::{
+        run::resources::{HighlightKind, RunHighlight},
+        shared::GameDrawLayer,
+    };
 
     #[derive(Resource)]
     struct TestMessages(Vec<NodeCleared>);
@@ -127,8 +133,12 @@ mod tests {
         // PlayfieldConfig height=1080 → bottom = -540.0
         // Bolt at y=-515.0, distance = -515.0 - (-540.0) = 25.0
         // Default nail_biter_pixels = 30.0, 25.0 < 30.0 → detected
-        app.world_mut()
-            .spawn((Bolt, Transform::from_xyz(50.0, -515.0, 1.0)));
+        app.world_mut().spawn((
+            Bolt,
+            Position2D(Vec2::new(50.0, -515.0)),
+            Spatial2D,
+            GameDrawLayer::Bolt,
+        ));
         app.insert_resource(TestMessages(vec![NodeCleared]));
         tick(&mut app);
 
@@ -160,8 +170,12 @@ mod tests {
         let mut app = test_app();
         // Bolt at y=-400.0, distance = -400.0 - (-540.0) = 140.0
         // Default nail_biter_pixels = 30.0, 140.0 > 30.0 → NOT detected
-        app.world_mut()
-            .spawn((Bolt, Transform::from_xyz(50.0, -400.0, 1.0)));
+        app.world_mut().spawn((
+            Bolt,
+            Position2D(Vec2::new(50.0, -400.0)),
+            Spatial2D,
+            GameDrawLayer::Bolt,
+        ));
         app.insert_resource(TestMessages(vec![NodeCleared]));
         tick(&mut app);
 
@@ -182,10 +196,18 @@ mod tests {
     fn nail_biter_detected_when_any_bolt_within_threshold() {
         let mut app = test_app();
         // bolt_a far from bottom, bolt_b near bottom
-        app.world_mut()
-            .spawn((Bolt, Transform::from_xyz(50.0, -200.0, 1.0)));
-        app.world_mut()
-            .spawn((Bolt, Transform::from_xyz(50.0, -525.0, 1.0)));
+        app.world_mut().spawn((
+            Bolt,
+            Position2D(Vec2::new(50.0, -200.0)),
+            Spatial2D,
+            GameDrawLayer::Bolt,
+        ));
+        app.world_mut().spawn((
+            Bolt,
+            Position2D(Vec2::new(50.0, -525.0)),
+            Spatial2D,
+            GameDrawLayer::Bolt,
+        ));
         app.insert_resource(TestMessages(vec![NodeCleared]));
         tick(&mut app);
 
@@ -206,8 +228,13 @@ mod tests {
     fn nail_biter_excludes_bolt_serving() {
         let mut app = test_app();
         // Bolt with BoltServing at y=-535.0 should be excluded from the query
-        app.world_mut()
-            .spawn((Bolt, BoltServing, Transform::from_xyz(50.0, -535.0, 1.0)));
+        app.world_mut().spawn((
+            Bolt,
+            BoltServing,
+            Position2D(Vec2::new(50.0, -535.0)),
+            Spatial2D,
+            GameDrawLayer::Bolt,
+        ));
         app.insert_resource(TestMessages(vec![NodeCleared]));
         tick(&mut app);
 
@@ -253,8 +280,12 @@ mod tests {
                 value: 20.0,
             });
 
-        app.world_mut()
-            .spawn((Bolt, Transform::from_xyz(50.0, -525.0, 1.0)));
+        app.world_mut().spawn((
+            Bolt,
+            Position2D(Vec2::new(50.0, -525.0)),
+            Spatial2D,
+            GameDrawLayer::Bolt,
+        ));
         app.insert_resource(TestMessages(vec![NodeCleared]));
         tick(&mut app);
 

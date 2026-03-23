@@ -8,8 +8,5 @@ publish = false
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 rantzsoft_spatial2d = { path = "../rantzsoft_spatial2d" }
 
-[dev-dependencies]
-proptest = "1"
-
 [lints]
 workspace = true

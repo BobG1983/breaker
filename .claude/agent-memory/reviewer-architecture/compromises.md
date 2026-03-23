@@ -5,20 +5,20 @@ type: reference
 ---
 
 ## Accepted Architectural Compromises
-- Physics domain mutates bolt Transform + BoltVelocity for collision response (minimum necessary)
+- Physics domain mutates bolt Position2D + BoltVelocity for collision response (minimum necessary). Previously was Transform; migrated to Position2D as canonical position (2026-03-23).
 - Screen domain seeds ALL domain configs during loading (centralized boot sequence)
-- bolt/hover_bolt reads breaker Transform (read-only cross-domain query)
-- bolt/spawn_bolt reads BreakerConfig and RunState (read-only, config access for spawn positioning)
-- physics/bolt_lost reads breaker Transform (read-only, for respawn position)
+- bolt/hover_bolt reads breaker Position2D (read-only cross-domain query). Previously Transform; migrated 2026-03-23.
+- bolt/spawn_bolt reads breaker Position2D, BreakerConfig and RunState (read-only, config access for spawn positioning). Previously Transform; migrated 2026-03-23.
+- physics/bolt_lost reads breaker Position2D (read-only, for respawn position). Previously Transform; migrated 2026-03-23.
 - UI domain reads run::node::NodeTimer (read-only, for timer display)
 - screen/run_end reads run::resources::RunState/RunOutcome (read-only)
 - screen/run_setup reads behaviors::ArchetypeRegistry (read-only)
 - screen/chip_select reads chips::ChipRegistry (read-only)
 - All screen sub-domains read input::InputConfig (read-only, for key bindings)
-- bolt/spawn_additional_bolt reads breaker Transform and ActiveNodeLayout (read-only, same pattern as spawn_bolt)
+- bolt/spawn_additional_bolt reads breaker Position2D and ActiveNodeLayout (read-only, same pattern as spawn_bolt). Previously Transform; migrated 2026-03-23.
 - breaker/apply_entity_scale_to_breaker reads run::node::ActiveNodeLayout (read-only, extracts entity_scale to stamp EntityScale component)
 - bolt/apply_entity_scale_to_bolt reads run::node::ActiveNodeLayout (read-only, same pattern as breaker)
-- Other domains attach interpolate components at spawn (opt-in cross-domain composition)
+- ~~Other domains attach interpolate components at spawn (opt-in cross-domain composition)~~ → OBSOLETE 2026-03-23: Position2D migration replaces old InterpolateTransform/PhysicsTranslation with rantzsoft_spatial2d components (Spatial2D, InterpolateTransform2D, Position2D, PreviousPosition). Old interpolate/ domain is dead code — InterpolatePlugin still registered in game.rs but all its systems are no-ops (no entities have InterpolateTransform/PhysicsTranslation). Pending removal.
 - behaviors/init.rs writes ResMut<BreakerConfig> and inserts breaker-owned components at init time — accepted for archetype config composition
 - behaviors/plugin.rs orders against BreakerSystems::InitParams and UiSystems::SpawnTimerHud
 - behaviors/effects/life_lost.rs reads ui::StatusPanel (read-only, for HUD parenting)

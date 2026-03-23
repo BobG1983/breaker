@@ -3,9 +3,11 @@
 //! Contains passive types only: state enums, cleanup markers, and playfield
 //! configuration. No systems or plugins — those live in domain plugins.
 
+pub mod draw_layer;
 pub mod math;
 
 use bevy::prelude::*;
+pub use draw_layer::GameDrawLayer;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rantzsoft_defaults::GameConfig;

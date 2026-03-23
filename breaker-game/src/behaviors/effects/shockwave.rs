@@ -5,6 +5,7 @@
 //! non-locked cells within range. Damage includes [`DamageBoost`] if present.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     behaviors::events::EffectFired,
@@ -17,7 +18,7 @@ use crate::{
 };
 
 /// Cell data needed by the shockwave effect handler.
-type ShockwaveCellQuery = (Entity, &'static Transform, Has<Locked>);
+type ShockwaveCellQuery = (Entity, &'static Position2D, Has<Locked>);
 
 /// Observer: handles shockwave area damage when an effect fires.
 ///
@@ -27,7 +28,7 @@ type ShockwaveCellQuery = (Entity, &'static Transform, Has<Locked>);
 /// `BASE_BOLT_DAMAGE * (1.0 + DamageBoost)`.
 pub(crate) fn handle_shockwave(
     trigger: On<EffectFired>,
-    bolt_query: Query<(&Transform, Option<&DamageBoost>)>,
+    bolt_query: Query<(&Position2D, Option<&DamageBoost>)>,
     cell_query: Query<ShockwaveCellQuery, With<Cell>>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
@@ -48,18 +49,18 @@ pub(crate) fn handle_shockwave(
     let Some(bolt_entity) = trigger.event().bolt else {
         return;
     };
-    let Ok((bolt_tf, damage_boost)) = bolt_query.get(bolt_entity) else {
+    let Ok((bolt_pos, damage_boost)) = bolt_query.get(bolt_entity) else {
         return;
     };
     let boost = damage_boost.map_or(0.0, |b| b.0);
     let damage = BASE_BOLT_DAMAGE * (1.0 + boost);
-    let center = bolt_tf.translation.truncate();
+    let center = bolt_pos.0;
 
-    for (cell_entity, cell_tf, is_locked) in &cell_query {
+    for (cell_entity, cell_pos, is_locked) in &cell_query {
         if is_locked {
             continue;
         }
-        let dist = (cell_tf.translation.truncate() - center).length();
+        let dist = (cell_pos.0 - center).length();
         if dist <= range {
             damage_writer.write(DamageCell {
                 cell: cell_entity,
@@ -72,6 +73,8 @@ pub(crate) fn handle_shockwave(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+
     use super::*;
     use crate::{
         cells::{
@@ -79,7 +82,7 @@ mod tests {
             messages::DamageCell,
         },
         chips::{components::DamageBoost, definition::TriggerChain},
-        shared::BASE_BOLT_DAMAGE,
+        shared::{BASE_BOLT_DAMAGE, GameDrawLayer},
     };
 
     // --- Test infrastructure ---
@@ -113,18 +116,24 @@ mod tests {
     }
 
     fn spawn_bolt(app: &mut App, x: f32, y: f32) -> Entity {
-        app.world_mut().spawn(Transform::from_xyz(x, y, 0.0)).id()
+        app.world_mut().spawn(Position2D(Vec2::new(x, y))).id()
     }
 
     fn spawn_bolt_with_damage_boost(app: &mut App, x: f32, y: f32, boost: f32) -> Entity {
         app.world_mut()
-            .spawn((Transform::from_xyz(x, y, 0.0), DamageBoost(boost)))
+            .spawn((Position2D(Vec2::new(x, y)), DamageBoost(boost)))
             .id()
     }
 
     fn spawn_cell(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
         app.world_mut()
-            .spawn((Cell, CellHealth::new(hp), Transform::from_xyz(x, y, 0.0)))
+            .spawn((
+                Cell,
+                CellHealth::new(hp),
+                Position2D(Vec2::new(x, y)),
+                Spatial2D,
+                GameDrawLayer::Cell,
+            ))
             .id()
     }
 
@@ -134,7 +143,9 @@ mod tests {
                 Cell,
                 CellHealth::new(hp),
                 Locked,
-                Transform::from_xyz(x, y, 0.0),
+                Position2D(Vec2::new(x, y)),
+                Spatial2D,
+                GameDrawLayer::Cell,
             ))
             .id()
     }

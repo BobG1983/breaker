@@ -20,8 +20,8 @@ use super::{
     sets::BehaviorSystems,
 };
 use crate::{
+    bolt::BoltSystems,
     breaker::BreakerSystems,
-    physics::PhysicsSystems,
     shared::{GameState, PlayingState},
     ui::UiSystems,
 };
@@ -61,7 +61,7 @@ impl Plugin for BehaviorsPlugin {
                 FixedUpdate,
                 (
                     bridge_bolt_lost
-                        .after(PhysicsSystems::BoltLost)
+                        .after(BoltSystems::BoltLost)
                         .in_set(BehaviorSystems::Bridge),
                     bridge_bump
                         .after(BreakerSystems::GradeBump)
@@ -70,13 +70,13 @@ impl Plugin for BehaviorsPlugin {
                         .after(BreakerSystems::GradeBump)
                         .in_set(BehaviorSystems::Bridge),
                     bridge_cell_impact
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BoltSystems::BreakerCollision)
                         .in_set(BehaviorSystems::Bridge),
                     bridge_breaker_impact
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BoltSystems::BreakerCollision)
                         .in_set(BehaviorSystems::Bridge),
                     bridge_wall_impact
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BoltSystems::BreakerCollision)
                         .in_set(BehaviorSystems::Bridge),
                     bridge_cell_destroyed.in_set(BehaviorSystems::Bridge),
                 )
@@ -114,10 +114,10 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            .add_message::<crate::physics::messages::BoltHitBreaker>()
-            .add_message::<crate::physics::messages::BoltHitCell>()
-            .add_message::<crate::physics::messages::BoltHitWall>()
-            .add_message::<crate::physics::messages::BoltLost>()
+            .add_message::<crate::bolt::messages::BoltHitBreaker>()
+            .add_message::<crate::bolt::messages::BoltHitCell>()
+            .add_message::<crate::bolt::messages::BoltHitWall>()
+            .add_message::<crate::bolt::messages::BoltLost>()
             .add_message::<crate::cells::messages::CellDestroyed>()
             .add_message::<crate::breaker::messages::BumpWhiffed>()
             .add_plugins(BreakerPlugin)

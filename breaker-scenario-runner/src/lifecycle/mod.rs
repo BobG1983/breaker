@@ -53,7 +53,7 @@ use crate::{
     },
 };
 
-/// Query alias for bolt entities in [`apply_debug_setup`].
+/// Query alias for bolt entities in [`apply_debug_setup`] and [`deferred_debug_setup`].
 type BoltDebugQuery<'w, 's> = Query<
     'w,
     's,
@@ -65,7 +65,7 @@ type BoltDebugQuery<'w, 's> = Query<
     With<ScenarioTagBolt>,
 >;
 
-/// Query alias for breaker entities in [`apply_debug_setup`].
+/// Query alias for breaker entities in [`apply_debug_setup`] and [`deferred_debug_setup`].
 type BreakerDebugQuery<'w, 's> = Query<
     'w,
     's,
@@ -218,10 +218,12 @@ impl Plugin for ScenarioLifecycle {
                         .run_if(|stats: Option<Res<ScenarioStats>>| {
                             stats.is_some_and(|s| s.entered_playing)
                         })
+                        .after(deferred_debug_setup)
                         .after(tag_game_entities)
                         .after(update_breaker_state)
-                        .before(breaker::physics::PhysicsSystems::BoltLost),
+                        .before(breaker::bolt::BoltSystems::BoltLost),
                     tag_game_entities,
+                    deferred_debug_setup.after(tag_game_entities),
                 ),
             );
 
@@ -392,6 +394,76 @@ pub fn apply_debug_setup(
     {
         prev.0 = Some(map_forced_game_state(forced));
     }
+}
+
+/// Deferred fallback for [`apply_debug_setup`] — runs once in `FixedUpdate` after
+/// [`tag_game_entities`] to catch entities that were not yet spawned when the
+/// `OnEnter(GameState::Playing)` version of `apply_debug_setup` ran.
+///
+/// Under heavy parallel I/O contention (45+ scenarios loading simultaneously),
+/// the `OnEnter` schedule can execute `apply_debug_setup` before spawn systems
+/// have flushed their deferred commands, leaving 0 tagged entities to process.
+/// This system re-applies the entity-dependent parts of debug setup (position
+/// overrides, velocity overrides, and physics freeze) on the first `FixedUpdate`
+/// tick where tagged entities exist.
+///
+/// Uses a [`Local<bool>`] guard so it fires at most once per app lifetime.
+/// Non-entity parts (extra tagged bolts, timer override, forced previous state)
+/// are handled by the `OnEnter` version and are not repeated here.
+pub fn deferred_debug_setup(
+    mut done: Local<bool>,
+    config: Res<ScenarioConfig>,
+    mut bolt_query: BoltDebugQuery,
+    mut breaker_query: BreakerDebugQuery,
+    mut commands: Commands,
+) {
+    if *done {
+        return;
+    }
+
+    let Some(setup) = config.definition.debug_setup.as_ref() else {
+        *done = true;
+        return;
+    };
+
+    // Wait until at least one tagged entity exists before applying.
+    if bolt_query.is_empty() && breaker_query.is_empty() {
+        return;
+    }
+
+    for (entity, mut transform, bolt_vel) in &mut bolt_query {
+        if let Some((x, y)) = setup.bolt_position {
+            transform.translation.x = x;
+            transform.translation.y = y;
+        }
+
+        if let Some((vx, vy)) = setup.bolt_velocity
+            && let Some(mut vel) = bolt_vel
+        {
+            vel.value = Vec2::new(vx, vy);
+        }
+
+        if setup.disable_physics {
+            commands.entity(entity).insert(ScenarioPhysicsFrozen {
+                target: transform.translation,
+            });
+        }
+    }
+
+    for (entity, mut transform) in &mut breaker_query {
+        if let Some((x, y)) = setup.breaker_position {
+            transform.translation.x = x;
+            transform.translation.y = y;
+        }
+
+        if setup.disable_physics {
+            commands.entity(entity).insert(ScenarioPhysicsFrozen {
+                target: transform.translation,
+            });
+        }
+    }
+
+    *done = true;
 }
 
 /// Resets each entity with [`ScenarioPhysicsFrozen`] back to its pinned `target` every tick.

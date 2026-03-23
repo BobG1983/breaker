@@ -17,6 +17,7 @@
 - [pattern_onenter_deferred_resource_chain.md](pattern_onenter_deferred_resource_chain.md) — Chained OnEnter systems using commands.insert_resource() need apply_deferred between producer and consumer
 - [pattern_onexit_stale_resource.md](pattern_onexit_stale_resource.md) — OnExit(StateA) systems read stale resource values if the resource is set during the NEXT state
 - [pattern_pub_struct_refactor_cascade.md](pattern_pub_struct_refactor_cascade.md) — Changing a pub struct's inner type cascades across workspace crates; writer agents can't fix cross-crate breakage
+- [pattern_component_type_migration_cascade.md](pattern_component_type_migration_cascade.md) — Migrating entity position type cascades through query aliases, test construction sites, scenario runner, debug/effect systems
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `physics/messages.rs`

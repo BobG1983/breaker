@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    physics::messages::BoltLost,
+    bolt::messages::BoltLost,
     run::resources::{HighlightTracker, RunStats},
 };
 

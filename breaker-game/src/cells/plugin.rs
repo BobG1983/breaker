@@ -48,8 +48,8 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
-            // CellsPlugin reads BoltHitCell messages from physics domain
-            .add_message::<crate::physics::messages::BoltHitCell>()
+            // CellsPlugin reads BoltHitCell messages from bolt domain
+            .add_message::<crate::bolt::messages::BoltHitCell>()
             .add_plugins(CellsPlugin)
             .update();
     }

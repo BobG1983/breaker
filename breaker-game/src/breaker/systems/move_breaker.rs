@@ -25,7 +25,7 @@ pub(crate) fn move_breaker(
     let dt = time.delta_secs();
 
     for (
-        mut transform,
+        mut position,
         mut velocity,
         state,
         max_speed,
@@ -69,16 +69,16 @@ pub(crate) fn move_breaker(
         }
 
         // Apply velocity to position
-        transform.translation.x = velocity.x.mul_add(dt, transform.translation.x);
+        position.0.x = velocity.x.mul_add(dt, position.0.x);
 
         // Clamp to playfield bounds (accounting for breaker effective half-width)
         let effective_half_w = half_width.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0);
         let min_x = playfield.left() + effective_half_w;
         let max_x = playfield.right() - effective_half_w;
-        transform.translation.x = transform.translation.x.clamp(min_x, max_x);
+        position.0.x = position.0.x.clamp(min_x, max_x);
 
         // Stop velocity if hitting a wall
-        if transform.translation.x <= min_x || transform.translation.x >= max_x {
+        if position.0.x <= min_x || position.0.x >= max_x {
             velocity.x = 0.0;
         }
     }
@@ -95,6 +95,8 @@ fn apply_deceleration(velocity: &mut f32, decel: f32, dt: f32) {
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Position2D;
+
     use super::*;
     use crate::{
         breaker::{
@@ -146,7 +148,7 @@ mod tests {
         app.update();
     }
 
-    fn spawn_breaker(app: &mut App, state: BreakerState) -> Entity {
+    fn spawn_breaker_at(app: &mut App, state: BreakerState, position: Vec2) -> Entity {
         let config = BreakerConfig::default();
         app.world_mut()
             .spawn((
@@ -161,13 +163,22 @@ mod tests {
                     strength: config.decel_ease_strength,
                 },
                 BreakerWidth(config.width),
-                Transform::from_xyz(0.0, config.y_position, 0.0),
+                Position2D(position),
             ))
             .id()
     }
 
+    fn spawn_breaker(app: &mut App, state: BreakerState) -> Entity {
+        let config = BreakerConfig::default();
+        spawn_breaker_at(app, state, Vec2::new(0.0, config.y_position))
+    }
+
     #[test]
     fn right_input_moves_breaker_right() {
+        // Given: Breaker in Idle state, BreakerVelocity { x: 0.0 },
+        //        Position2D(Vec2::new(0.0, -250.0)), dt=1/60
+        // When: move_breaker runs with MoveRight input
+        // Then: Position2D.0.x > 0.0
         let mut app = integration_app();
         let entity = spawn_breaker(&mut app, BreakerState::Idle);
 
@@ -177,11 +188,11 @@ mod tests {
             .push(GameAction::MoveRight);
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
+        let pos = app.world().get::<Position2D>(entity).unwrap();
         assert!(
-            tf.translation.x > 0.0,
-            "breaker should move right, got x={}",
-            tf.translation.x
+            pos.0.x > 0.0,
+            "breaker should move right, got Position2D.x={}",
+            pos.0.x
         );
     }
 
@@ -207,8 +218,17 @@ mod tests {
 
     #[test]
     fn position_clamped_to_playfield_bounds() {
+        // Given: Breaker Position2D(Vec2::new(9999.0, -250.0)), BreakerWidth(120.0),
+        //        playfield right=400
+        // When: move_breaker runs
+        // Then: Position2D.0.x <= 340.0 (400 - 60)
         let mut app = integration_app();
-        let entity = spawn_breaker(&mut app, BreakerState::Idle);
+        let config = BreakerConfig::default();
+        let entity = spawn_breaker_at(
+            &mut app,
+            BreakerState::Idle,
+            Vec2::new(9999.0, config.y_position),
+        );
         let playfield = app.world().resource::<PlayfieldConfig>().clone();
         let half_width = app
             .world()
@@ -216,20 +236,14 @@ mod tests {
             .unwrap()
             .half_width();
 
-        // Push breaker far past right boundary
-        app.world_mut()
-            .get_mut::<Transform>(entity)
-            .unwrap()
-            .translation
-            .x = 9999.0;
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
+        let pos = app.world().get::<Position2D>(entity).unwrap();
         let max_x = playfield.right() - half_width;
         assert!(
-            tf.translation.x <= max_x + f32::EPSILON,
-            "breaker should be clamped to playfield, got x={} max={}",
-            tf.translation.x,
+            pos.0.x <= max_x + f32::EPSILON,
+            "breaker should be clamped to playfield, got Position2D.x={} max={}",
+            pos.0.x,
             max_x
         );
     }
@@ -240,8 +254,6 @@ mod tests {
         //        MoveRight input active (so the acceleration+clamp path runs)
         // When: move_breaker system runs
         // Then: velocity.x NOT clamped to 500 — effective max is 600, so velocity stays > 500
-        //
-        // Current code clamps to max_speed.0 = 500 (ignores BreakerSpeedBoost) → test FAILS
         let mut app = integration_app();
         let config = BreakerConfig::default();
         let entity = app
@@ -259,13 +271,10 @@ mod tests {
                 },
                 BreakerWidth(config.width),
                 BreakerSpeedBoost(100.0),
-                Transform::from_xyz(0.0, config.y_position, 0.0),
+                Position2D(Vec2::new(0.0, config.y_position)),
             ))
             .id();
 
-        // MoveRight input — ensures the acceleration path (and clamp) runs.
-        // Current code: velocity clamped to max_speed.0 = 500 (ignores boost).
-        // Expected: clamped to max_speed.0 + boost = 600, so velocity stays > 500.
         app.world_mut()
             .resource_mut::<InputActions>()
             .0
@@ -283,9 +292,6 @@ mod tests {
     #[test]
     fn no_speed_boost_base_max_speed_clamps_velocity() {
         // Regression guard: without BreakerSpeedBoost, velocity above max_speed IS clamped.
-        // Given: BreakerMaxSpeed(500.0), no BreakerSpeedBoost, velocity.x = 600.0
-        // When: move_breaker runs
-        // Then: velocity.x is clamped to 500.0
         let mut app = integration_app();
         let config = BreakerConfig::default();
         let entity = app
@@ -302,12 +308,10 @@ mod tests {
                     strength: config.decel_ease_strength,
                 },
                 BreakerWidth(config.width),
-                // No BreakerSpeedBoost
-                Transform::from_xyz(0.0, config.y_position, 0.0),
+                Position2D(Vec2::new(0.0, config.y_position)),
             ))
             .id();
 
-        // Provide MoveRight input so the acceleration path (with clamp) runs
         app.world_mut()
             .resource_mut::<InputActions>()
             .0
@@ -328,14 +332,10 @@ mod tests {
         //        effective half_w = (120+40)/2 = 80
         //        Breaker placed far right (9999.0) — position will be clamped during tick
         // When: move_breaker runs
-        // Then: clamped to max_x = 400 - 80 = 320
-        //        (without boost: max_x = 400 - 60 = 340; current code clamps to 340, not 320)
-        //
-        // Current code uses half_width.half_width() (ignores WidthBoost) → clamps to 340 → FAILS
+        // Then: Position2D.0.x clamped to max_x = 400 - 80 = 320
         let mut app = integration_app();
         let config = BreakerConfig::default();
 
-        // PlayfieldConfig default: width=800, so right()=400
         let playfield = app.world().resource::<PlayfieldConfig>().clone();
         assert!(
             (playfield.right() - 400.0).abs() < 1.0,
@@ -358,23 +358,18 @@ mod tests {
                 },
                 BreakerWidth(120.0),
                 WidthBoost(40.0),
-                // Place far right — clamping must apply during tick
-                Transform::from_xyz(9999.0, config.y_position, 0.0),
+                Position2D(Vec2::new(9999.0, config.y_position)),
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
-        // With WidthBoost: effective half_width = (120 + 40) / 2 = 80
-        //   max_x = 400 - 80 = 320
-        // Without WidthBoost (current behavior): max_x = 400 - 60 = 340
-        //   current code clamps to 340, so x = 340, which is > 320 → assertion fails
+        let pos = app.world().get::<Position2D>(entity).unwrap();
         let expected_max_x = 320.0_f32;
         assert!(
-            tf.translation.x <= expected_max_x + f32::EPSILON,
-            "with WidthBoost effective half_w=80, x {:.3} should be clamped to {:.3}, not to base {:.3}",
-            tf.translation.x,
+            pos.0.x <= expected_max_x + f32::EPSILON,
+            "with WidthBoost effective half_w=80, Position2D.x {:.3} should be clamped to {:.3}, not to base {:.3}",
+            pos.0.x,
             expected_max_x,
             400.0 - 60.0
         );

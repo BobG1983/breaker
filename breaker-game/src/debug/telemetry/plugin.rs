@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::systems::{
     bolt_info_ui, breaker_state_ui, debug_ui_system, input_actions_ui, track_bump_result,
 };
-use crate::{debug::resources::DebugOverlays, physics::PhysicsSystems, shared::PlayingState};
+use crate::{bolt::BoltSystems, debug::resources::DebugOverlays, shared::PlayingState};
 
 /// Registers egui telemetry panels and bump result tracking.
 pub(crate) struct TelemetryPlugin;
@@ -25,7 +25,7 @@ impl Plugin for TelemetryPlugin {
         .add_systems(
             FixedUpdate,
             track_bump_result
-                .after(PhysicsSystems::BreakerCollision)
+                .after(BoltSystems::BreakerCollision)
                 .run_if(in_state(PlayingState::Active)),
         );
     }

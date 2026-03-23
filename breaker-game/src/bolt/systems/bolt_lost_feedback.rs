@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{fx::FadeOut, physics::messages::BoltLost, shared::CleanupOnNodeExit};
+use crate::{bolt::messages::BoltLost, fx::FadeOut, shared::CleanupOnNodeExit};
 
 /// Duration of the "BOLT LOST" text fade in seconds.
 const FADE_DURATION: f32 = 1.5;

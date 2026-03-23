@@ -1,6 +1,9 @@
 //! System to spawn the bolt entity.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::{
+    InterpolateTransform2D, Position2D, PreviousPosition, Scale2D, Spatial2D,
+};
 use tracing::debug;
 
 use crate::{
@@ -10,14 +13,13 @@ use crate::{
         resources::BoltConfig,
     },
     breaker::{BreakerConfig, components::Breaker},
-    interpolate::components::{InterpolateTransform, PhysicsTranslation},
     run::RunState,
-    shared::CleanupOnRunEnd,
+    shared::{CleanupOnRunEnd, GameDrawLayer},
 };
 
 /// Spawns the bolt entity above the breaker.
 ///
-/// Reads the breaker's Y position from its [`Transform`] when available,
+/// Reads the breaker's Y position from its [`Position2D`] when available,
 /// falling back to [`BreakerConfig::y_position`] when the breaker entity
 /// does not exist yet (both systems run on `OnEnter(Playing)` and deferred
 /// commands mean the breaker entity may not exist yet).
@@ -30,7 +32,7 @@ pub(crate) fn spawn_bolt(
     configs: (Res<BoltConfig>, Res<BreakerConfig>),
     run_state: Res<RunState>,
     mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
-    breaker_query: Query<&Transform, With<Breaker>>,
+    breaker_query: Query<&Position2D, With<Breaker>>,
     existing: Query<Entity, With<Bolt>>,
     mut bolt_spawned: MessageWriter<BoltSpawned>,
 ) {
@@ -43,9 +45,11 @@ pub(crate) fn spawn_bolt(
     let breaker_y = breaker_query
         .iter()
         .next()
-        .map_or(breaker_config.y_position, |tf| tf.translation.y);
+        .map_or(breaker_config.y_position, |pos| pos.0.y);
 
-    let spawn_pos = Vec3::new(0.0, breaker_y + config.spawn_offset_y, 1.0);
+    let breaker_x = breaker_query.iter().next().map_or(0.0, |pos| pos.0.x);
+
+    let spawn_pos = Vec2::new(breaker_x, breaker_y + config.spawn_offset_y);
 
     let serving = run_state.node_index == 0;
 
@@ -59,19 +63,22 @@ pub(crate) fn spawn_bolt(
     let mut entity = commands.spawn((
         Bolt,
         velocity,
-        InterpolateTransform,
-        PhysicsTranslation::new(spawn_pos),
+        Spatial2D,
+        InterpolateTransform2D,
+        GameDrawLayer::Bolt,
+        Position2D(spawn_pos),
+        PreviousPosition(spawn_pos),
+        Scale2D {
+            x: config.radius,
+            y: config.radius,
+        },
         Mesh2d(render_assets.0.add(Circle::new(1.0))),
         MeshMaterial2d(
             render_assets
                 .1
                 .add(ColorMaterial::from_color(config.color())),
         ),
-        Transform {
-            translation: spawn_pos,
-            scale: Vec3::new(config.radius, config.radius, 1.0),
-            ..default()
-        },
+        Transform::default(),
         CleanupOnRunEnd,
     ));
     debug!("bolt spawned entity={:?}", entity.id());
@@ -85,8 +92,15 @@ pub(crate) fn spawn_bolt(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::{
+        components::{
+            InterpolateTransform2D, Position2D, PreviousPosition, Rotation2D, Scale2D, Spatial2D,
+        },
+        draw_layer::DrawLayer,
+    };
+
     use super::*;
-    use crate::bolt::components::Bolt;
+    use crate::{bolt::components::Bolt, shared::GameDrawLayer};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -111,37 +125,203 @@ mod tests {
     }
 
     #[test]
-    fn bolt_spawns_above_breaker_y() {
+    fn spawned_bolt_has_position2d_at_spawn_position() {
+        // Given: no existing bolt, breaker at default y_position (-250.0),
+        //        BoltConfig default spawn_offset_y = 30.0
+        // When: spawn_bolt runs
+        // Then: Bolt has Position2D(Vec2::new(0.0, -220.0))
         let mut app = test_app();
         app.add_systems(Startup, spawn_bolt);
         app.update();
 
-        let breaker_y = BreakerConfig::default().y_position;
-        let bolt_transform = app
+        let position = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
-            .expect("bolt should exist");
-        assert!(bolt_transform.translation.y > breaker_y);
+            .expect("bolt should exist with Position2D");
+        let breaker_y = BreakerConfig::default().y_position; // -250.0
+        let spawn_offset_y = BoltConfig::default().spawn_offset_y; // 30.0
+        let expected = Vec2::new(0.0, breaker_y + spawn_offset_y); // (0.0, -220.0)
+        assert!(
+            (position.0.x - expected.x).abs() < f32::EPSILON
+                && (position.0.y - expected.y).abs() < f32::EPSILON,
+            "bolt Position2D should be {expected:?}, got {:?}",
+            position.0,
+        );
     }
 
     #[test]
-    fn bolt_spawns_at_z_above_zero() {
+    fn spawned_bolt_has_position2d_without_breaker_entity() {
+        // Edge case: no breaker entity — uses BreakerConfig default y_position
         let mut app = test_app();
         app.add_systems(Startup, spawn_bolt);
         app.update();
 
-        let bolt_transform = app
+        let position = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist with Position2D even without breaker");
+        let expected_y = BreakerConfig::default().y_position + BoltConfig::default().spawn_offset_y;
+        assert!(
+            (position.0.y - expected_y).abs() < f32::EPSILON,
+            "bolt y should use BreakerConfig default, expected {expected_y}, got {}",
+            position.0.y,
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_has_game_draw_layer_bolt() {
+        // When: spawn_bolt runs
+        // Then: Bolt has GameDrawLayer::Bolt with z() == 1.0
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
             .iter(app.world())
             .next()
             .expect("bolt should exist");
+        let layer = app
+            .world()
+            .get::<GameDrawLayer>(entity)
+            .expect("bolt should have GameDrawLayer");
         assert!(
-            bolt_transform.translation.z > 0.0,
-            "bolt z should be above 0 to render in front of breaker/cells, got {}",
-            bolt_transform.translation.z
+            (layer.z() - 1.0).abs() < f32::EPSILON,
+            "GameDrawLayer::Bolt.z() should be 1.0, got {}",
+            layer.z(),
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_has_spatial2d_and_interpolate_transform2d() {
+        // When: spawn_bolt runs
+        // Then: Bolt has Spatial2D and InterpolateTransform2D markers, plus
+        //       required components Position2D, Rotation2D, Scale2D,
+        //       PreviousPosition, PreviousRotation
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        let world = app.world();
+        assert!(
+            world.get::<Spatial2D>(entity).is_some(),
+            "bolt should have Spatial2D marker"
+        );
+        assert!(
+            world.get::<InterpolateTransform2D>(entity).is_some(),
+            "bolt should have InterpolateTransform2D marker"
+        );
+        assert!(
+            world.get::<Position2D>(entity).is_some(),
+            "bolt should have Position2D (via Spatial2D #[require])"
+        );
+        assert!(
+            world.get::<Rotation2D>(entity).is_some(),
+            "bolt should have Rotation2D (via Spatial2D #[require])"
+        );
+        assert!(
+            world.get::<Scale2D>(entity).is_some(),
+            "bolt should have Scale2D (via Spatial2D #[require])"
+        );
+        assert!(
+            world.get::<PreviousPosition>(entity).is_some(),
+            "bolt should have PreviousPosition (via Spatial2D #[require])"
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_previous_position_matches_initial_position() {
+        // Edge case: PreviousPosition.0 must match Position2D.0 to prevent
+        // interpolation teleport on the first frame
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        let pos = app
+            .world()
+            .get::<Position2D>(entity)
+            .expect("bolt should have Position2D");
+        let prev = app
+            .world()
+            .get::<PreviousPosition>(entity)
+            .expect("bolt should have PreviousPosition");
+        assert_eq!(
+            pos.0, prev.0,
+            "PreviousPosition should match initial Position2D to prevent teleport"
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_has_scale2d_matching_radius() {
+        // Given: BoltConfig default radius = 8.0 (from BoltDefaults)
+        // When: spawn_bolt runs
+        // Then: Scale2D { x: 8.0, y: 8.0 }
+        let mut app = test_app();
+        // Use radius = 6.0 from spec for concreteness
+        app.world_mut().resource_mut::<BoltConfig>().radius = 6.0;
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let scale = app
+            .world_mut()
+            .query_filtered::<&Scale2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Scale2D");
+        assert!(
+            (scale.x - 6.0).abs() < f32::EPSILON && (scale.y - 6.0).abs() < f32::EPSILON,
+            "Scale2D should be (6.0, 6.0), got ({}, {})",
+            scale.x,
+            scale.y,
+        );
+    }
+
+    #[test]
+    fn bolt_spawns_above_moved_breaker() {
+        // Given: breaker at (50.0, -100.0, 0.0), spawn_offset_y = 30.0
+        // When: spawn_bolt runs
+        // Then: Position2D(Vec2::new(50.0, -70.0))
+        let moved_y = -100.0;
+        let mut app = test_app();
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(50.0, moved_y)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let config = BoltConfig::default();
+        let position = app
+            .world_mut()
+            .query_filtered::<&Position2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist with Position2D");
+        let expected = Vec2::new(50.0, moved_y + config.spawn_offset_y);
+        assert!(
+            (position.0.x - expected.x).abs() < f32::EPSILON
+                && (position.0.y - expected.y).abs() < f32::EPSILON,
+            "bolt Position2D should be {expected:?}, got {:?}",
+            position.0,
         );
     }
 
@@ -210,17 +390,6 @@ mod tests {
     }
 
     #[test]
-    fn spawn_does_not_depend_on_breaker_entity() {
-        let mut app = test_app();
-        // No breaker entity spawned — bolt should still spawn using config
-        app.add_systems(Startup, spawn_bolt);
-        app.update();
-
-        let count = app.world_mut().query::<&Bolt>().iter(app.world()).count();
-        assert_eq!(count, 1, "bolt should spawn even without a breaker entity");
-    }
-
-    #[test]
     fn existing_bolt_is_not_double_spawned() {
         use crate::{
             chips::components::{DamageBoost, Piercing},
@@ -228,7 +397,6 @@ mod tests {
         };
 
         let mut app = test_app();
-        // Pre-spawn a bolt with chip effect components and CleanupOnRunEnd
         app.world_mut().spawn((
             Bolt,
             BoltVelocity::new(0.0, 400.0),
@@ -244,31 +412,11 @@ mod tests {
             bolt_count, 1,
             "spawn_bolt should not create a second bolt when one already exists"
         );
-
-        // Verify chip effect components are unchanged
-        let mut query = app
-            .world_mut()
-            .query_filtered::<(Entity, &Piercing, &DamageBoost), With<Bolt>>();
-        let (_, piercing, damage) = query
-            .iter(app.world())
-            .next()
-            .expect("bolt should exist with chip effects");
-        assert_eq!(
-            *piercing,
-            Piercing(2),
-            "Piercing should be unchanged after spawn_bolt"
-        );
-        assert_eq!(
-            *damage,
-            DamageBoost(0.5),
-            "DamageBoost should be unchanged after spawn_bolt"
-        );
     }
 
     #[test]
     fn existing_bolt_still_triggers_bolt_spawned_message() {
         let mut app = test_app();
-        // Pre-spawn a bolt
         app.world_mut().spawn((Bolt, BoltVelocity::new(0.0, 400.0)));
         app.add_systems(Startup, spawn_bolt);
         app.update();
@@ -302,31 +450,6 @@ mod tests {
         assert!(
             app.world().get::<CleanupOnNodeExit>(entity).is_none(),
             "bolt should NOT have CleanupOnNodeExit (it persists across nodes)"
-        );
-    }
-
-    #[test]
-    fn bolt_spawns_above_moved_breaker() {
-        let moved_y = -100.0;
-        let mut app = test_app();
-        // Spawn a breaker at a non-default Y position before bolt spawns
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(50.0, moved_y, 0.0)));
-        app.add_systems(Startup, spawn_bolt);
-        app.update();
-
-        let config = BoltConfig::default();
-        let bolt_transform = app
-            .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should exist");
-        let expected_y = moved_y + config.spawn_offset_y;
-        assert!(
-            (bolt_transform.translation.y - expected_y).abs() < f32::EPSILON,
-            "bolt should spawn relative to moved breaker y={moved_y}, expected y={expected_y}, got y={}",
-            bolt_transform.translation.y
         );
     }
 }

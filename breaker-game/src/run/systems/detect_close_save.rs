@@ -1,6 +1,7 @@
 //! System to detect `CloseSave` highlights when a bolt is saved near the bottom boundary.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::components::{Bolt, BoltServing},
@@ -15,7 +16,7 @@ use crate::{
 /// Records the highlight in [`RunStats`] and emits [`HighlightTriggered`].
 pub(crate) fn detect_close_save(
     mut reader: MessageReader<BumpPerformed>,
-    bolt_query: Query<&Transform, (With<Bolt>, Without<BoltServing>)>,
+    bolt_query: Query<&Position2D, (With<Bolt>, Without<BoltServing>)>,
     playfield: Res<PlayfieldConfig>,
     config: Res<HighlightConfig>,
     mut stats: ResMut<RunStats>,
@@ -25,11 +26,11 @@ pub(crate) fn detect_close_save(
     let bottom = playfield.bottom();
 
     for msg in reader.read() {
-        let Ok(transform) = bolt_query.get(msg.bolt) else {
+        let Ok(position) = bolt_query.get(msg.bolt) else {
             continue;
         };
 
-        let bolt_y = transform.translation.y;
+        let bolt_y = position.0.y;
         let distance = bolt_y - bottom;
 
         if distance >= 0.0 && distance < config.close_save_pixels {
@@ -56,10 +57,13 @@ pub(crate) fn detect_close_save(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+
     use super::*;
     use crate::{
         breaker::messages::BumpGrade,
         run::resources::{HighlightKind, RunHighlight},
+        shared::GameDrawLayer,
     };
 
     #[derive(Resource)]
@@ -126,7 +130,12 @@ mod tests {
         // Default close_save_pixels = 20.0, 15.0 < 20.0 → detected
         let bolt_entity = app
             .world_mut()
-            .spawn((Bolt, Transform::from_xyz(100.0, -525.0, 1.0)))
+            .spawn((
+                Bolt,
+                Position2D(Vec2::new(100.0, -525.0)),
+                Spatial2D,
+                GameDrawLayer::Bolt,
+            ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
@@ -170,7 +179,12 @@ mod tests {
         // Default close_save_pixels = 20.0, 30.0 > 20.0 → NOT detected
         let bolt_entity = app
             .world_mut()
-            .spawn((Bolt, Transform::from_xyz(100.0, -510.0, 1.0)))
+            .spawn((
+                Bolt,
+                Position2D(Vec2::new(100.0, -510.0)),
+                Spatial2D,
+                GameDrawLayer::Bolt,
+            ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
@@ -235,7 +249,12 @@ mod tests {
 
         let bolt_entity = app
             .world_mut()
-            .spawn((Bolt, Transform::from_xyz(100.0, -525.0, 1.0)))
+            .spawn((
+                Bolt,
+                Position2D(Vec2::new(100.0, -525.0)),
+                Spatial2D,
+                GameDrawLayer::Bolt,
+            ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
@@ -294,7 +313,12 @@ mod tests {
 
         let bolt_entity = app
             .world_mut()
-            .spawn((Bolt, Transform::from_xyz(100.0, -525.0, 1.0)))
+            .spawn((
+                Bolt,
+                Position2D(Vec2::new(100.0, -525.0)),
+                Spatial2D,
+                GameDrawLayer::Bolt,
+            ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,

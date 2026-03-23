@@ -18,20 +18,20 @@
 //! [`BoltHitWall`] messages for overclock triggers.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    bolt::filters::ActiveFilter,
-    cells::messages::DamageCell,
-    physics::{
-        filters::{CollisionFilterCell, CollisionFilterWall},
+    bolt::{
+        filters::ActiveFilter,
         messages::{BoltHitCell, BoltHitWall},
-        queries::{CollisionQueryBolt, CollisionQueryCell},
+        queries::CollisionQueryBolt,
     },
+    cells::{filters::CollisionFilterCell, messages::DamageCell, queries::CollisionQueryCell},
     shared::{
         BASE_BOLT_DAMAGE,
         math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
     },
-    wall::components::WallSize,
+    wall::{components::WallSize, filters::CollisionFilterWall},
 };
 
 /// Message writers used by the bolt-cell-wall collision system.
@@ -53,7 +53,7 @@ pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
     cell_query: Query<CollisionQueryCell, CollisionFilterCell>,
-    wall_query: Query<(Entity, &Transform, &WallSize), CollisionFilterWall>,
+    wall_query: Query<(Entity, &Position2D, &WallSize), CollisionFilterWall>,
     mut writers: CollisionWriters,
     mut pierced_this_frame: Local<Vec<Entity>>,
 ) {
@@ -62,7 +62,7 @@ pub(crate) fn bolt_cell_collision(
 
     for (
         bolt_entity,
-        mut bolt_tf,
+        mut bolt_position,
         mut bolt_vel,
         _,
         bolt_radius,
@@ -74,12 +74,12 @@ pub(crate) fn bolt_cell_collision(
     {
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
         let r = bolt_radius.0 * bolt_scale;
-        let mut position = bolt_tf.translation.truncate();
+        let mut position = bolt_position.0;
         let mut velocity = bolt_vel.value;
         let mut remaining = velocity.length() * dt;
 
         // Effective damage for pierce lookahead (compared against cell HP).
-        // must match handle_cell_hit damage formula
+        // must match `handle_cell_hit` damage formula
         let effective_damage = BASE_BOLT_DAMAGE * (1.0 + damage_boost.map_or(0.0, |b| b.0));
 
         // Clear per-bolt pierce skip set
@@ -99,12 +99,12 @@ pub(crate) fn bolt_cell_collision(
             let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
 
             // Check cells
-            for (cell_entity, cell_tf, cell_w, cell_h, _cell_health) in &cell_query {
+            for (cell_entity, cell_position, cell_w, cell_h, _cell_health) in &cell_query {
                 // Skip cells already pierced by this bolt this frame
                 if pierced_this_frame.contains(&cell_entity) {
                     continue;
                 }
-                let cell_pos = cell_tf.translation.truncate();
+                let cell_pos = cell_position.0;
                 let cell_half_extents =
                     Vec2::new(cell_w.half_width() + r, cell_h.half_height() + r);
                 if let Some(hit) =
@@ -116,8 +116,8 @@ pub(crate) fn bolt_cell_collision(
             }
 
             // Check walls
-            for (_wall_entity, wall_tf, wall_size) in &wall_query {
-                let wall_pos = wall_tf.translation.truncate();
+            for (_wall_entity, wall_position, wall_size) in &wall_query {
+                let wall_pos = wall_position.0;
                 let wall_half_extents =
                     Vec2::new(wall_size.half_width + r, wall_size.half_height + r);
                 if let Some(hit) =
@@ -170,9 +170,9 @@ pub(crate) fn bolt_cell_collision(
                     source_bolt: bolt_entity,
                 });
             } else {
-                // WALL HIT: reflect and reset PiercingRemaining
+                // WALL HIT: reflect and reset `PiercingRemaining`
                 velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
-                // Reset PiercingRemaining to Piercing.0
+                // Reset `PiercingRemaining` to `Piercing.0`
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
                 }
@@ -180,17 +180,20 @@ pub(crate) fn bolt_cell_collision(
             }
         }
 
-        bolt_tf.translation = position.extend(bolt_tf.translation.z);
+        bolt_position.0 = position;
         bolt_vel.value = velocity;
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+
     use super::*;
     use crate::{
         bolt::{
             components::{Bolt, BoltBaseSpeed, BoltRadius, BoltServing, BoltVelocity},
+            messages::BoltHitWall,
             resources::BoltConfig,
         },
         cells::{
@@ -199,8 +202,7 @@ mod tests {
             resources::CellConfig,
         },
         chips::components::{DamageBoost, Piercing, PiercingRemaining},
-        physics::messages::BoltHitWall,
-        shared::EntityScale,
+        shared::{EntityScale, GameDrawLayer, math::MAX_BOUNCES},
         wall::components::{Wall, WallSize},
     };
 
@@ -235,10 +237,18 @@ mod tests {
         app.update();
     }
 
+    /// Cell entities use `Position2D` as canonical position.
     fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
         let (cw, ch) = default_cell_dims();
         app.world_mut()
-            .spawn((Cell, cw, ch, Transform::from_xyz(x, y, 0.0)))
+            .spawn((
+                Cell,
+                cw,
+                ch,
+                Position2D(Vec2::new(x, y)),
+                Spatial2D,
+                GameDrawLayer::Cell,
+            ))
             .id()
     }
 
@@ -257,22 +267,22 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, speed),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
 
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .unwrap();
         let expected = speed.mul_add(dt, start_y);
         assert!(
-            (tf.translation.y - expected).abs() < 0.1,
+            (pos.0.y - expected).abs() < 0.1,
             "bolt should move full distance: expected {expected}, got {}",
-            tf.translation.y
+            pos.0.y
         );
     }
 
@@ -291,7 +301,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -308,17 +318,17 @@ mod tests {
             vel.value.y
         );
 
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .unwrap();
         let cell_bottom = cell_y - cc.height / 2.0 - bc.radius;
         assert!(
-            tf.translation.y < cell_bottom,
+            pos.0.y < cell_bottom,
             "bolt should be below cell: y={:.2}, cell_bottom={cell_bottom:.2}",
-            tf.translation.y
+            pos.0.y
         );
     }
 
@@ -337,7 +347,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1), // mostly horizontal
-            Transform::from_xyz(start_x, 0.0, 0.0),
+            Position2D(Vec2::new(start_x, 0.0)),
         ));
 
         tick(&mut app);
@@ -372,25 +382,25 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
 
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .unwrap();
 
-        // Bolt should NOT be sitting right at the impact point — it should have
+        // Bolt should NOT be sitting right at the impact point -- it should have
         // continued downward with the remaining distance after reflection
         assert!(
-            tf.translation.y < start_y,
+            pos.0.y < start_y,
             "bolt should have moved past the impact point in reflected direction, \
              got y={:.2}, start={start_y:.2}",
-            tf.translation.y
+            pos.0.y
         );
     }
 
@@ -414,7 +424,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -464,7 +474,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -487,7 +497,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 300.0),
-            Transform::from_xyz(0.0, -100.0, 0.0),
+            Position2D(Vec2::new(0.0, -100.0)),
         ));
 
         tick(&mut app);
@@ -527,10 +537,10 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
-        // Two frames — CCD should prevent cascade
+        // Two frames -- CCD should prevent cascade
         tick(&mut app);
         tick(&mut app);
 
@@ -563,7 +573,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(400.0, 10.0),
-            Transform::from_xyz(start_x, cell_y, 0.0),
+            Position2D(Vec2::new(start_x, cell_y)),
         ));
 
         tick(&mut app);
@@ -586,7 +596,7 @@ mod tests {
         app.insert_resource(HitCells::default())
             .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
-        // 3×2 mini-grid at real spacing
+        // 3x2 mini-grid at real spacing
         let base_y = 100.0;
         for row in 0..2 {
             for col in 0..3 {
@@ -601,7 +611,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(30.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -638,7 +648,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.1, 800.0),
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::new(0.0, 0.0)),
         ));
 
         tick(&mut app);
@@ -669,14 +679,14 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(-100.0, start_y, 0.0),
+            Position2D(Vec2::new(-100.0, start_y)),
         ));
         // Bolt B near cell B
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(100.0, start_y, 0.0),
+            Position2D(Vec2::new(100.0, start_y)),
         ));
 
         tick(&mut app);
@@ -703,17 +713,17 @@ mod tests {
                 BoltServing,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(0.0, 0.0, 0.0),
+                Position2D(Vec2::new(0.0, 0.0)),
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
+        let pos = app.world().get::<Position2D>(entity).unwrap();
         assert!(
-            tf.translation.y.abs() < f32::EPSILON,
+            pos.0.y.abs() < f32::EPSILON,
             "serving bolt should not be moved by CCD, got y={}",
-            tf.translation.y
+            pos.0.y
         );
     }
 
@@ -740,7 +750,7 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -772,7 +782,9 @@ mod tests {
                 half_width,
                 half_height,
             },
-            Transform::from_xyz(x, y, 0.0),
+            Position2D(Vec2::new(x, y)),
+            Spatial2D,
+            GameDrawLayer::Wall,
         ));
     }
 
@@ -790,7 +802,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1),
-            Transform::from_xyz(start_x, 0.0, 0.0),
+            Position2D(Vec2::new(start_x, 0.0)),
         ));
 
         tick(&mut app);
@@ -822,7 +834,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1),
-            Transform::from_xyz(start_x, 0.0, 0.0),
+            Position2D(Vec2::new(start_x, 0.0)),
         ));
 
         tick(&mut app);
@@ -852,7 +864,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -873,7 +885,9 @@ mod tests {
                 cw,
                 ch,
                 CellHealth::new(hp),
-                Transform::from_xyz(x, y, 0.0),
+                Position2D(Vec2::new(x, y)),
+                Spatial2D,
+                GameDrawLayer::Cell,
             ))
             .id()
     }
@@ -898,7 +912,7 @@ mod tests {
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             // No PiercingRemaining or Piercing component
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -943,7 +957,7 @@ mod tests {
                 BoltVelocity::new(0.0, 400.0),
                 Piercing(2),
                 PiercingRemaining(2),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -996,7 +1010,7 @@ mod tests {
                 BoltVelocity::new(0.0, 400.0),
                 Piercing(1),
                 PiercingRemaining(1),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1025,7 +1039,7 @@ mod tests {
     fn piercing_with_damage_boost_uses_boosted_damage_for_lookahead() {
         // Bolt with PiercingRemaining(1), DamageBoost(0.5).
         // Cell with CellHealth(12).
-        // Effective damage = (10 * (1.0 + 0.5)).round() = 15 >= 12 → would destroy.
+        // Effective damage = (10 * (1.0 + 0.5)).round() = 15 >= 12 -> would destroy.
         // Bolt should pierce (velocity.y > 0).
         let mut app = test_app();
         let bc = BoltConfig::default();
@@ -1044,7 +1058,7 @@ mod tests {
                 Piercing(1),
                 PiercingRemaining(1),
                 DamageBoost(0.5),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1092,10 +1106,10 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 10000.0), // 10000/64 ≈ 156 units/frame — covers both cells
+                BoltVelocity::new(0.0, 10000.0), // 10000/64 ~ 156 units/frame -- covers both cells
                 Piercing(2),
                 PiercingRemaining(2),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1141,7 +1155,7 @@ mod tests {
                 BoltVelocity::new(0.0, 400.0),
                 Piercing(1),
                 PiercingRemaining(1),
-                Transform::from_xyz(-100.0, start_y, 0.0),
+                Position2D(Vec2::new(-100.0, start_y)),
             ))
             .id();
 
@@ -1154,7 +1168,7 @@ mod tests {
                 BoltVelocity::new(0.0, 400.0),
                 Piercing(1),
                 PiercingRemaining(1),
-                Transform::from_xyz(100.0, start_y, 0.0),
+                Position2D(Vec2::new(100.0, start_y)),
             ))
             .id();
 
@@ -1201,7 +1215,7 @@ mod tests {
                 BoltVelocity::new(0.0, 400.0),
                 Piercing(2),
                 PiercingRemaining(0),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1250,7 +1264,7 @@ mod tests {
             BoltVelocity::new(0.0, 10000.0), // very fast to cover both cells in one frame
             Piercing(2),
             PiercingRemaining(2),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -1283,7 +1297,7 @@ mod tests {
                 BoltVelocity::new(400.0, 0.1),
                 Piercing(2),
                 PiercingRemaining(0),
-                Transform::from_xyz(start_x, 0.0, 0.0),
+                Position2D(Vec2::new(start_x, 0.0)),
             ))
             .id();
 
@@ -1310,23 +1324,6 @@ mod tests {
 
     #[test]
     fn scaled_bolt_effective_radius_changes_cell_collision_boundary() {
-        // Cell at (0, 100) with CellWidth(70), CellHeight(24).
-        // Bolt with BoltRadius(8), EntityScale(0.5) → effective_radius = 4.0.
-        //
-        // Cell bottom = 100 - 12 = 88.
-        // Expanded bottom with full radius (8): 88 - 8 = 80.
-        // Expanded bottom with scaled radius (4): 88 - 4 = 84.
-        //
-        // Bolt at y = 81.0, moving up slowly (50 u/s).
-        // Per tick: 50/64 ≈ 0.78 units → reaches y ≈ 81.78.
-        //
-        // With full radius (stub): bolt at y=81 >= expanded bottom 80, so bolt starts
-        //   INSIDE expanded AABB → ray_vs_aabb detects at distance 0 → reflects → vy < 0.
-        // With scaled radius: expanded bottom = 84. Bolt at y=81 < 84. Distance to
-        //   expanded bottom = 3. Max travel = 0.78. Does NOT reach → no hit → vy > 0.
-        //
-        // Expected: bolt should NOT hit (scaled radius too small to reach).
-        // Stub: bolt DOES hit (inside full-radius expanded AABB) → test FAILS.
         let mut app = test_app();
 
         let cell_y = 100.0;
@@ -1340,7 +1337,7 @@ mod tests {
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 50.0),
                 EntityScale(0.5),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1372,7 +1369,7 @@ mod tests {
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             // No EntityScale component
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -1440,9 +1437,6 @@ mod tests {
 
     #[test]
     fn cell_collision_emits_damage_cell_with_base_damage() {
-        // Bolt with no DamageBoost hits a cell.
-        // DamageCell should be sent with damage == BASE_BOLT_DAMAGE (10.0),
-        // correct cell entity, and correct source_bolt entity.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -1450,8 +1444,6 @@ mod tests {
         let cell_y = 100.0;
         let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
-        // start_y = cell_y - cell_half_height - bolt_radius - gap
-        // = 100.0 - 12.0 - 8.0 - 2.0 = 78.0
         let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
         let bolt_entity = app
             .world_mut()
@@ -1459,7 +1451,7 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1488,8 +1480,6 @@ mod tests {
 
     #[test]
     fn cell_collision_emits_damage_cell_with_zero_damage_boost() {
-        // Edge case: DamageBoost(0.0) should still produce damage == 10.0
-        // (BASE_BOLT_DAMAGE * (1.0 + 0.0) = 10.0).
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -1503,7 +1493,7 @@ mod tests {
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
             DamageBoost(0.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -1523,8 +1513,6 @@ mod tests {
 
     #[test]
     fn cell_collision_emits_damage_cell_with_boosted_damage() {
-        // Bolt with DamageBoost(0.5) hits a cell.
-        // DamageCell.damage should be 10.0 * 1.5 = 15.0.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -1540,7 +1528,7 @@ mod tests {
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
                 DamageBoost(0.5),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1561,8 +1549,6 @@ mod tests {
 
     #[test]
     fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
-        // Two bolts hitting two separate cells should produce two DamageCell
-        // messages, each with the correct source_bolt.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -1578,7 +1564,7 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(-100.0, start_y, 0.0),
+                Position2D(Vec2::new(-100.0, start_y)),
             ))
             .id();
         let bolt_b = app
@@ -1587,7 +1573,7 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(100.0, start_y, 0.0),
+                Position2D(Vec2::new(100.0, start_y)),
             ))
             .id();
 
@@ -1630,7 +1616,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(400.0, 0.1),
-            Transform::from_xyz(start_x, 0.0, 0.0),
+            Position2D(Vec2::new(start_x, 0.0)),
         ));
 
         tick(&mut app);
@@ -1645,9 +1631,6 @@ mod tests {
 
     #[test]
     fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
-        // Bolt with Piercing(2), PiercingRemaining(2), no DamageBoost.
-        // Two stacked cells with CellHealth(10.0) each.
-        // Should produce two DamageCell messages, each with damage == 10.0.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
 
@@ -1665,7 +1648,7 @@ mod tests {
                 BoltVelocity::new(0.0, 10000.0),
                 Piercing(2),
                 PiercingRemaining(2),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1704,8 +1687,6 @@ mod tests {
 
     #[test]
     fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
-        // A single cell hit should produce exactly one BoltHitCell AND
-        // exactly one DamageCell, both referencing the same cell and bolt.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -1720,7 +1701,7 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(0.0, start_y, 0.0),
+                Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
 
@@ -1745,7 +1726,6 @@ mod tests {
 
     #[test]
     fn wall_hit_emits_bolt_hit_wall_with_correct_bolt_entity() {
-        // Bolt hitting a wall should emit BoltHitWall with the bolt entity.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
 
@@ -1758,7 +1738,7 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(400.0, 0.1),
-                Transform::from_xyz(start_x, 0.0, 0.0),
+                Position2D(Vec2::new(start_x, 0.0)),
             ))
             .id();
 
@@ -1778,7 +1758,6 @@ mod tests {
 
     #[test]
     fn cell_hit_does_not_emit_bolt_hit_wall() {
-        // Bolt hitting a cell (no walls present) should NOT emit BoltHitWall.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -1791,7 +1770,7 @@ mod tests {
             Bolt,
             bolt_param_bundle(),
             BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(0.0, start_y, 0.0),
+            Position2D(Vec2::new(0.0, start_y)),
         ));
 
         tick(&mut app);
@@ -1815,8 +1794,6 @@ mod tests {
 
     #[test]
     fn bolt_hit_wall_identifies_correct_bolt_among_two() {
-        // Two bolts: Bolt A heading toward a wall, Bolt B heading away.
-        // Only Bolt A should produce a BoltHitWall.
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
 
@@ -1830,18 +1807,18 @@ mod tests {
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(400.0, 0.1),
-                Transform::from_xyz(start_x_a, 0.0, 0.0),
+                Position2D(Vec2::new(start_x_a, 0.0)),
             ))
             .id();
 
-        // Bolt B: moving upward, far from wall — will not hit it
+        // Bolt B: moving upward, far from wall -- will not hit it
         let _bolt_b = app
             .world_mut()
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
                 BoltVelocity::new(0.0, 400.0),
-                Transform::from_xyz(-100.0, 0.0, 0.0),
+                Position2D(Vec2::new(-100.0, 0.0)),
             ))
             .id();
 

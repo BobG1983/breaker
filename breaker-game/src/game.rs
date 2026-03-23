@@ -4,12 +4,23 @@ use bevy::{
     app::PluginGroupBuilder, camera::ScalingMode, core_pipeline::tonemapping::Tonemapping,
     post_process::bloom::Bloom, prelude::*,
 };
+use rantzsoft_spatial2d::plugin::RantzSpatial2dPlugin;
 
 use crate::{
-    audio::AudioPlugin, behaviors::BehaviorsPlugin, bolt::BoltPlugin, breaker::BreakerPlugin,
-    cells::CellsPlugin, chips::ChipsPlugin, debug::DebugPlugin, fx::FxPlugin, input::InputPlugin,
-    interpolate::InterpolatePlugin, physics::PhysicsPlugin, run::RunPlugin, screen::ScreenPlugin,
-    shared::PlayfieldConfig, ui::UiPlugin, wall::WallPlugin,
+    audio::AudioPlugin,
+    behaviors::BehaviorsPlugin,
+    bolt::BoltPlugin,
+    breaker::BreakerPlugin,
+    cells::CellsPlugin,
+    chips::ChipsPlugin,
+    debug::DebugPlugin,
+    fx::FxPlugin,
+    input::InputPlugin,
+    run::RunPlugin,
+    screen::ScreenPlugin,
+    shared::{GameDrawLayer, PlayfieldConfig},
+    ui::UiPlugin,
+    wall::WallPlugin,
 };
 
 /// Plugin group that assembles all game domain plugins.
@@ -40,8 +51,7 @@ impl PluginGroup for Game {
         let mut builder = PluginGroupBuilder::start::<Self>()
             .add(InputPlugin)
             .add(ScreenPlugin)
-            .add(InterpolatePlugin)
-            .add(PhysicsPlugin)
+            .add(RantzSpatial2dPlugin::<GameDrawLayer>::default())
             .add(WallPlugin)
             .add(BreakerPlugin)
             .add(BehaviorsPlugin)

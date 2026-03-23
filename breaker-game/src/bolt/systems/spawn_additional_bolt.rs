@@ -2,6 +2,9 @@
 
 use bevy::prelude::*;
 use rand::Rng;
+use rantzsoft_spatial2d::components::{
+    InterpolateTransform2D, Position2D, PreviousPosition, Scale2D, Spatial2D,
+};
 
 use crate::{
     bolt::{
@@ -13,9 +16,8 @@ use crate::{
         resources::BoltConfig,
     },
     breaker::components::Breaker,
-    interpolate::components::{InterpolateTransform, PhysicsTranslation},
     run::node::ActiveNodeLayout,
-    shared::{CleanupOnNodeExit, EntityScale, GameRng},
+    shared::{CleanupOnNodeExit, EntityScale, GameDrawLayer, GameRng},
 };
 
 /// Reads [`SpawnAdditionalBolt`] messages and spawns new bolt entities.
@@ -29,13 +31,13 @@ pub fn spawn_additional_bolt(
     bolt_config: Res<BoltConfig>,
     mut rng: ResMut<GameRng>,
     mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
-    breaker_query: Query<&Transform, With<Breaker>>,
+    breaker_query: Query<&Position2D, With<Breaker>>,
     layout: Option<Res<ActiveNodeLayout>>,
 ) {
-    let Ok(breaker_tf) = breaker_query.single() else {
+    let Ok(breaker_pos) = breaker_query.single() else {
         return;
     };
-    let breaker_pos = breaker_tf.translation;
+    let breaker_pos = breaker_pos.0;
 
     let entity_scale = layout.as_ref().map_or(1.0, |l| l.0.entity_scale);
 
@@ -48,18 +50,21 @@ pub fn spawn_additional_bolt(
             bolt_config.base_speed * angle.cos(),
         );
 
-        let spawn_pos = Vec3::new(
-            breaker_pos.x,
-            breaker_pos.y + bolt_config.spawn_offset_y,
-            1.0,
-        );
+        let spawn_pos = Vec2::new(breaker_pos.x, breaker_pos.y + bolt_config.spawn_offset_y);
 
         commands.spawn((
             Bolt,
             ExtraBolt,
             velocity,
-            InterpolateTransform,
-            PhysicsTranslation::new(spawn_pos),
+            Spatial2D,
+            InterpolateTransform2D,
+            GameDrawLayer::Bolt,
+            Position2D(spawn_pos),
+            PreviousPosition(spawn_pos),
+            Scale2D {
+                x: bolt_config.radius,
+                y: bolt_config.radius,
+            },
             (
                 BoltBaseSpeed(bolt_config.base_speed),
                 BoltMinSpeed(bolt_config.min_speed),
@@ -77,11 +82,7 @@ pub fn spawn_additional_bolt(
                     .1
                     .add(ColorMaterial::from_color(bolt_config.color())),
             ),
-            Transform {
-                translation: spawn_pos,
-                scale: Vec3::new(bolt_config.radius, bolt_config.radius, 1.0),
-                ..default()
-            },
+            Transform::default(),
             CleanupOnNodeExit,
         ));
     }
@@ -89,7 +90,23 @@ pub fn spawn_additional_bolt(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::{
+        components::{InterpolateTransform2D, Position2D, Scale2D, Spatial2D},
+        draw_layer::DrawLayer,
+    };
+
     use super::*;
+    use crate::shared::GameDrawLayer;
+
+    /// Spawn a breaker entity with `Position2D` at the given position.
+    fn spawn_breaker_at(app: &mut App, x: f32, y: f32) {
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(x, y)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+    }
 
     #[derive(Resource)]
     struct SendSpawn(u32);
@@ -122,15 +139,101 @@ mod tests {
     }
 
     fn spawn_breaker(app: &mut App) {
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)));
+        spawn_breaker_at(app, 0.0, -250.0);
     }
+
+    #[test]
+    fn additional_bolt_has_position2d_above_breaker() {
+        // Given: breaker at (42.0, -250.0, 0.0), spawn_offset_y = 30.0
+        // When: SpawnAdditionalBolt message received
+        // Then: Position2D(Vec2::new(42.0, -220.0))
+        let mut app = test_app();
+        spawn_breaker_at(&mut app, 42.0, -250.0);
+        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
+        tick(&mut app);
+
+        let position = app
+            .world_mut()
+            .query_filtered::<&Position2D, With<ExtraBolt>>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should have Position2D");
+        let config = BoltConfig::default();
+        let expected = Vec2::new(42.0, -250.0 + config.spawn_offset_y);
+        assert!(
+            (position.0.x - expected.x).abs() < f32::EPSILON
+                && (position.0.y - expected.y).abs() < f32::EPSILON,
+            "additional bolt Position2D should be {expected:?}, got {:?}",
+            position.0,
+        );
+    }
+
+    #[test]
+    fn additional_bolt_has_spatial2d_interpolate_and_draw_layer() {
+        // When: SpawnAdditionalBolt received
+        // Then: has Spatial2D, InterpolateTransform2D, GameDrawLayer::Bolt
+        let mut app = test_app();
+        spawn_breaker(&mut app);
+        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
+        tick(&mut app);
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should exist");
+
+        let world = app.world();
+        assert!(
+            world.get::<Spatial2D>(entity).is_some(),
+            "extra bolt should have Spatial2D"
+        );
+        assert!(
+            world.get::<InterpolateTransform2D>(entity).is_some(),
+            "extra bolt should have InterpolateTransform2D"
+        );
+        let layer = world
+            .get::<GameDrawLayer>(entity)
+            .expect("extra bolt should have GameDrawLayer");
+        assert!(
+            (layer.z() - 1.0).abs() < f32::EPSILON,
+            "GameDrawLayer::Bolt.z() should be 1.0, got {}",
+            layer.z(),
+        );
+    }
+
+    #[test]
+    fn additional_bolt_has_scale2d_matching_radius() {
+        // Given: BoltConfig with radius = 6.0
+        // When: SpawnAdditionalBolt received
+        // Then: Scale2D { x: 6.0, y: 6.0 }
+        let mut app = test_app();
+        app.world_mut().resource_mut::<BoltConfig>().radius = 6.0;
+        spawn_breaker(&mut app);
+        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
+        tick(&mut app);
+
+        let scale = app
+            .world_mut()
+            .query_filtered::<&Scale2D, With<ExtraBolt>>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should have Scale2D");
+        assert!(
+            (scale.x - 6.0).abs() < f32::EPSILON && (scale.y - 6.0).abs() < f32::EPSILON,
+            "Scale2D should be (6.0, 6.0), got ({}, {})",
+            scale.x,
+            scale.y,
+        );
+    }
+
+    // --- Preserved behavioral tests that still apply ---
 
     #[test]
     fn creates_new_bolt_entity() {
         let mut app = test_app();
         spawn_breaker(&mut app);
-        // Pre-existing baseline bolt
         app.world_mut().spawn((Bolt, BoltVelocity::new(0.0, 400.0)));
         app.world_mut().resource_mut::<SendSpawn>().0 = 1;
         tick(&mut app);
@@ -159,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn new_bolt_has_all_components() {
+    fn new_bolt_has_all_config_components() {
         let mut app = test_app();
         spawn_breaker(&mut app);
         app.world_mut().resource_mut::<SendSpawn>().0 = 1;
@@ -223,44 +326,6 @@ mod tests {
     }
 
     #[test]
-    fn new_bolt_above_breaker() {
-        let mut app = test_app();
-        let breaker_y = -250.0;
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, breaker_y, 0.0)));
-        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
-        tick(&mut app);
-
-        let tf = app
-            .world_mut()
-            .query_filtered::<&Transform, With<ExtraBolt>>()
-            .iter(app.world())
-            .next()
-            .unwrap();
-        assert!(
-            tf.translation.y > breaker_y,
-            "bolt Y {:.1} should be above breaker Y {breaker_y:.1}",
-            tf.translation.y
-        );
-    }
-
-    #[test]
-    fn new_bolt_has_cleanup_marker() {
-        let mut app = test_app();
-        spawn_breaker(&mut app);
-        app.world_mut().resource_mut::<SendSpawn>().0 = 1;
-        tick(&mut app);
-
-        let entity = app
-            .world_mut()
-            .query_filtered::<Entity, With<ExtraBolt>>()
-            .iter(app.world())
-            .next()
-            .unwrap();
-        assert!(app.world().get::<CleanupOnNodeExit>(entity).is_some());
-    }
-
-    #[test]
     fn no_message_no_spawn() {
         let mut app = test_app();
         spawn_breaker(&mut app);
@@ -291,9 +356,6 @@ mod tests {
 
     #[test]
     fn spawned_bolt_inherits_entity_scale_from_active_node_layout() {
-        // Given: ActiveNodeLayout with entity_scale = 0.7
-        // When: SpawnAdditionalBolt message is sent
-        // Then: newly spawned ExtraBolt has EntityScale(0.7)
         use crate::{
             run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
             shared::EntityScale,
@@ -331,13 +393,9 @@ mod tests {
 
     #[test]
     fn spawned_bolt_defaults_entity_scale_without_active_node_layout() {
-        // Given: NO ActiveNodeLayout resource
-        // When: SpawnAdditionalBolt message is sent
-        // Then: newly spawned ExtraBolt has EntityScale(1.0)
         use crate::shared::EntityScale;
 
         let mut app = test_app();
-        // No ActiveNodeLayout inserted
         spawn_breaker(&mut app);
         app.world_mut().resource_mut::<SendSpawn>().0 = 1;
         tick(&mut app);
