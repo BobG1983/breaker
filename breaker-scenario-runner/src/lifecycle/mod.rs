@@ -43,9 +43,9 @@ use crate::{
         check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
         check_breaker_position_clamped, check_chip_stacks_consistent,
         check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-        check_offering_no_duplicates, check_physics_frozen_during_pause,
-        check_run_stats_monotonic, check_timer_monotonically_decreasing, check_timer_non_negative,
-        check_valid_breaker_state, check_valid_state_transitions,
+        check_offering_no_duplicates, check_physics_frozen_during_pause, check_run_stats_monotonic,
+        check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
+        check_valid_state_transitions,
     },
     types::{
         ForcedGameState, GameAction as ScenarioGameAction, MutationKind, RunStatCounter,
