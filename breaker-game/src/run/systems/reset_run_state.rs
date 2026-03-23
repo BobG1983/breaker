@@ -19,11 +19,11 @@ pub(crate) fn reset_run_state(
     seed: Res<RunSeed>,
     archetype: Option<Res<SelectedArchetype>>,
     mut chip_inventory: ResMut<ChipInventory>,
-    mut run_stats: ResMut<RunStats>,
+    mut stats: ResMut<RunStats>,
     mut highlight_tracker: ResMut<HighlightTracker>,
 ) {
     *run_state = RunState::default();
-    *run_stats = RunStats::default();
+    *stats = RunStats::default();
     *highlight_tracker = HighlightTracker::default();
     chip_inventory.clear();
     if let Some(s) = seed.0 {

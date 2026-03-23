@@ -57,8 +57,9 @@ pub(crate) fn track_node_cleared_stats(
         }
 
         // PerfectStreak: flush active streak first, then check
-        tracker.best_perfect_streak =
-            tracker.best_perfect_streak.max(tracker.consecutive_perfect_bumps);
+        tracker.best_perfect_streak = tracker
+            .best_perfect_streak
+            .max(tracker.consecutive_perfect_bumps);
         if tracker.best_perfect_streak >= PERFECT_STREAK_THRESHOLD && stats.highlights.len() < 3 {
             stats.highlights.push(RunHighlight {
                 kind: HighlightKind::PerfectStreak,
