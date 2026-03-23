@@ -1,7 +1,7 @@
 //! UI domain resources — timer display configuration.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 use crate::shared::color_from_rgb;

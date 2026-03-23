@@ -1,7 +1,7 @@
 //! Bolt domain resources.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 /// Bolt defaults loaded from RON.

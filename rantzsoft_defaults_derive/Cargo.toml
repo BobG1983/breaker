@@ -1,5 +1,5 @@
 [package]
-name = "breaker_derive"
+name = "rantzsoft_defaults_derive"
 version = "0.1.0"
 edition = "2024"
 publish = false

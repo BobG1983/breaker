@@ -6,9 +6,9 @@
 pub mod math;
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 /// Base damage dealt by a bolt hit. Fixed game-design constant.

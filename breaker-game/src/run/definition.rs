@@ -1,7 +1,7 @@
 //! Tier-based difficulty curve and highlight thresholds — RON-deserialized content data types.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 /// The type of a node in the run sequence.

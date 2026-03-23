@@ -5,8 +5,8 @@
 //! the animation, then transitions to the next [`GameState`] on completion.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
 use rand::Rng;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 /// Visual style for a node transition.

@@ -1,7 +1,7 @@
 //! Chip selection screen resources.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 use crate::chips::{ChipDefinition, definition::EvolutionIngredient};

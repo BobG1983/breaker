@@ -10,7 +10,7 @@ Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast
 
 ## Workspace
 
-Cargo workspace with `breaker-<name>` crate directories at root: `breaker-game/` (main game), `breaker-derive/` (proc macros). New crates follow this convention.
+Cargo workspace with crate directories at root: `breaker-game/` (main game), `rantzsoft_defaults/` + `rantzsoft_defaults_derive/` (config/defaults pipeline). Game-specific crates use `breaker-<name>` prefix; game-agnostic reusable crates use `rantzsoft_*` prefix (see @.claude/rules/rantzsoft-crates.md).
 
 ## Architecture
 

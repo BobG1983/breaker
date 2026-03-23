@@ -1,7 +1,7 @@
 //! Main menu resources.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 use super::components::MenuItem;
