@@ -294,7 +294,7 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))))
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0)), Velocity2D(Vec2::ZERO)))
         .id();
 
     // First update: system runs and enqueues commands
@@ -410,7 +410,7 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))))
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0)), Velocity2D(Vec2::ZERO)))
         .id();
 
     // First update: system runs
