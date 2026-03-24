@@ -12,6 +12,7 @@ dev = ["dep:bevy_egui", "bevy/file_watcher"]
 bevy = { version = "0.18.1", default-features = false, features = ["2d", "serialize"] }
 bevy_egui = { version = "0.39", optional = true }
 rantzsoft_defaults = { path = "../rantzsoft_defaults" }
+rantzsoft_physics2d = { path = "../rantzsoft_physics2d" }
 rantzsoft_spatial2d = { path = "../rantzsoft_spatial2d" }
 tracing = { version = "0.1", features = ["release_max_level_warn"] }
 tracing-appender = "0.2"

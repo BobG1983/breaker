@@ -1,6 +1,7 @@
 //! System to spawn the bolt entity.
 
 use bevy::prelude::*;
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
 use tracing::debug;
 
@@ -12,7 +13,7 @@ use crate::{
     },
     breaker::{BreakerConfig, components::Breaker},
     run::RunState,
-    shared::{CleanupOnRunEnd, GameDrawLayer},
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnRunEnd, GameDrawLayer, WALL_LAYER},
 };
 
 /// Spawns the bolt entity above the breaker.
@@ -72,6 +73,8 @@ pub(crate) fn spawn_bolt(
             x: config.radius,
             y: config.radius,
         },
+        Aabb2D::new(Vec2::ZERO, Vec2::new(config.radius, config.radius)),
+        CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
         Mesh2d(render_assets.0.add(Circle::new(1.0))),
         MeshMaterial2d(
             render_assets
@@ -410,6 +413,109 @@ mod tests {
         assert_eq!(
             bolt_count, 1,
             "spawn_bolt should not create a second bolt when one already exists"
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_has_aabb2d_with_half_extents_matching_radius() {
+        // Given: BoltConfig default radius = 8.0
+        // When: spawn_bolt runs
+        // Then: bolt entity has Aabb2D { center: Vec2::ZERO, half_extents: Vec2::new(8.0, 8.0) }
+        use rantzsoft_physics2d::aabb::Aabb2D;
+
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        let aabb = app
+            .world()
+            .get::<Aabb2D>(entity)
+            .expect("bolt should have Aabb2D");
+        let config = BoltConfig::default();
+        assert_eq!(
+            aabb.center,
+            Vec2::ZERO,
+            "bolt Aabb2D center should be ZERO (local space)"
+        );
+        assert!(
+            (aabb.half_extents.x - config.radius).abs() < f32::EPSILON
+                && (aabb.half_extents.y - config.radius).abs() < f32::EPSILON,
+            "bolt Aabb2D half_extents should be ({}, {}), got ({}, {})",
+            config.radius,
+            config.radius,
+            aabb.half_extents.x,
+            aabb.half_extents.y,
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_aabb2d_uses_configured_radius() {
+        // Edge case: BoltConfig.radius = 6.0 → Aabb2D half_extents = (6.0, 6.0)
+        use rantzsoft_physics2d::aabb::Aabb2D;
+
+        let mut app = test_app();
+        app.world_mut().resource_mut::<BoltConfig>().radius = 6.0;
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        let aabb = app
+            .world()
+            .get::<Aabb2D>(entity)
+            .expect("bolt should have Aabb2D");
+        assert_eq!(aabb.center, Vec2::ZERO);
+        assert!(
+            (aabb.half_extents.x - 6.0).abs() < f32::EPSILON
+                && (aabb.half_extents.y - 6.0).abs() < f32::EPSILON,
+            "bolt Aabb2D half_extents should be (6.0, 6.0), got ({}, {})",
+            aabb.half_extents.x,
+            aabb.half_extents.y,
+        );
+    }
+
+    #[test]
+    fn spawned_bolt_has_collision_layers_bolt_membership_cell_wall_breaker_mask() {
+        // Given: spawn_bolt runs
+        // Then: CollisionLayers { membership: BOLT_LAYER (0x01), mask: CELL|WALL|BREAKER (0x0E) }
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER};
+
+        let mut app = test_app();
+        app.add_systems(Startup, spawn_bolt);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should exist");
+        let layers = app
+            .world()
+            .get::<CollisionLayers>(entity)
+            .expect("bolt should have CollisionLayers");
+        let expected_mask = CELL_LAYER | WALL_LAYER | BREAKER_LAYER;
+        assert_eq!(
+            layers.membership, BOLT_LAYER,
+            "bolt membership should be BOLT_LAYER (0x{:02X}), got 0x{:02X}",
+            BOLT_LAYER, layers.membership,
+        );
+        assert_eq!(
+            layers.mask, expected_mask,
+            "bolt mask should be CELL|WALL|BREAKER (0x{:02X}), got 0x{:02X}",
+            expected_mask, layers.mask,
         );
     }
 

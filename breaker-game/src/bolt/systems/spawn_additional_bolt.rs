@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use rand::Rng;
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
 
 use crate::{
@@ -15,7 +16,10 @@ use crate::{
     },
     breaker::components::Breaker,
     run::node::ActiveNodeLayout,
-    shared::{CleanupOnNodeExit, EntityScale, GameDrawLayer, GameRng},
+    shared::{
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, EntityScale, GameDrawLayer,
+        GameRng, WALL_LAYER,
+    },
 };
 
 /// Reads [`SpawnAdditionalBolt`] messages and spawns new bolt entities.
@@ -65,6 +69,11 @@ pub fn spawn_additional_bolt(
                 x: bolt_config.radius,
                 y: bolt_config.radius,
             },
+            Aabb2D::new(
+                Vec2::ZERO,
+                Vec2::new(bolt_config.radius, bolt_config.radius),
+            ),
+            CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
             (
                 BoltBaseSpeed(bolt_config.base_speed),
                 BoltMinSpeed(bolt_config.min_speed),

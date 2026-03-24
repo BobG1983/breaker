@@ -1,6 +1,7 @@
 //! System to spawn cells from the active node layout.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use tracing::debug;
 
@@ -15,7 +16,7 @@ use crate::{
         node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
         resources::{NodeSequence, RunState},
     },
-    shared::{GameDrawLayer, PlayfieldConfig},
+    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
 };
 
 /// Total extent of a grid along one axis: `step * count - padding`.
@@ -162,6 +163,11 @@ pub(crate) fn spawn_cells_from_grid(
                     x: cell_width,
                     y: cell_height,
                 },
+                Aabb2D::new(
+                    Vec2::ZERO,
+                    Vec2::new(cell_width / 2.0, cell_height / 2.0),
+                ),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 GameDrawLayer::Cell,
             ));
 
@@ -1554,6 +1560,172 @@ mod tests {
                 "cell {i} Scale2D.y should be {}, got {}",
                 dims.cell_height,
                 scale.y
+            );
+        }
+    }
+
+    // --- Aabb2D + CollisionLayers tests ---
+
+    #[test]
+    fn spawned_cell_has_aabb2d_with_half_extents_matching_cell_dimensions() {
+        // Given: CellConfig default width=70.0, height=24.0, no grid scaling
+        //        (single cell in wide playfield fits at scale 1.0)
+        // When: spawn_cells_from_layout runs
+        // Then: cell entity has Aabb2D { center: Vec2::ZERO, half_extents: Vec2::new(35.0, 12.0) }
+        use rantzsoft_physics2d::aabb::Aabb2D;
+
+        let layout = NodeLayout {
+            name: "aabb_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let config = CellConfig::default(); // width=70.0, height=24.0
+        let mut app = test_app(layout);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Cell>>()
+            .iter(app.world())
+            .next()
+            .expect("cell should exist");
+        let aabb = app
+            .world()
+            .get::<Aabb2D>(entity)
+            .expect("cell should have Aabb2D");
+        assert_eq!(
+            aabb.center,
+            Vec2::ZERO,
+            "cell Aabb2D center should be ZERO (local space)"
+        );
+        let expected_half_w = config.width / 2.0; // 35.0
+        let expected_half_h = config.height / 2.0; // 12.0
+        assert!(
+            (aabb.half_extents.x - expected_half_w).abs() < f32::EPSILON
+                && (aabb.half_extents.y - expected_half_h).abs() < f32::EPSILON,
+            "cell Aabb2D half_extents should be ({expected_half_w}, {expected_half_h}), got ({}, {})",
+            aabb.half_extents.x,
+            aabb.half_extents.y,
+        );
+    }
+
+    #[test]
+    fn spawned_cell_aabb2d_uses_scaled_dimensions_for_large_grid() {
+        // Edge case: scaled grid — Aabb2D half_extents should use scaled cell dimensions
+        use rantzsoft_physics2d::aabb::Aabb2D;
+
+        let layout = uniform_layout(40, 20, 90.0);
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let dims = compute_grid_scale(&config, &playfield, 40, 20, 90.0);
+        assert!(dims.scale < 1.0, "40x20 grid should need scaling");
+
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        let aabbs: Vec<&Aabb2D> = app
+            .world_mut()
+            .query_filtered::<&Aabb2D, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert!(!aabbs.is_empty(), "should have spawned cells");
+        let expected_half_w = dims.cell_width / 2.0;
+        let expected_half_h = dims.cell_height / 2.0;
+        for (i, aabb) in aabbs.iter().enumerate() {
+            assert_eq!(
+                aabb.center,
+                Vec2::ZERO,
+                "cell {i} Aabb2D center should be ZERO"
+            );
+            assert!(
+                (aabb.half_extents.x - expected_half_w).abs() < 0.01
+                    && (aabb.half_extents.y - expected_half_h).abs() < 0.01,
+                "cell {i} Aabb2D half_extents should be ({expected_half_w:.2}, {expected_half_h:.2}), got ({:.2}, {:.2})",
+                aabb.half_extents.x,
+                aabb.half_extents.y,
+            );
+        }
+    }
+
+    #[test]
+    fn spawned_cell_has_collision_layers_cell_membership_bolt_mask() {
+        // Given: spawn_cells_from_layout runs
+        // Then: all cells have CollisionLayers { membership: CELL_LAYER (0x02), mask: BOLT_LAYER (0x01) }
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, CELL_LAYER};
+
+        let layout = full_layout(); // 3x2 = 6 cells
+        let mut app = test_app(layout);
+        app.update();
+
+        let layers_list: Vec<&CollisionLayers> = app
+            .world_mut()
+            .query_filtered::<&CollisionLayers, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(
+            layers_list.len(),
+            6,
+            "all 6 cells should have CollisionLayers"
+        );
+        for (i, layers) in layers_list.iter().enumerate() {
+            assert_eq!(
+                layers.membership, CELL_LAYER,
+                "cell {i} membership should be CELL_LAYER (0x{:02X}), got 0x{:02X}",
+                CELL_LAYER, layers.membership,
+            );
+            assert_eq!(
+                layers.mask, BOLT_LAYER,
+                "cell {i} mask should be BOLT_LAYER (0x{:02X}), got 0x{:02X}",
+                BOLT_LAYER, layers.mask,
+            );
+        }
+    }
+
+    #[test]
+    fn locked_cell_has_same_collision_layers_as_normal_cell() {
+        // Edge case: locked cell has same CollisionLayers (lock is behavioral, not physical)
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, CELL_LAYER};
+
+        let layout = NodeLayout {
+            name: "lock_layers_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['L', 'N']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let layers_list: Vec<(&CollisionLayers, Option<&Locked>)> = app
+            .world_mut()
+            .query_filtered::<(&CollisionLayers, Option<&Locked>), With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(layers_list.len(), 2, "should have 2 cells");
+        for (layers, locked) in &layers_list {
+            let label = if locked.is_some() { "locked" } else { "normal" };
+            assert_eq!(
+                layers.membership, CELL_LAYER,
+                "{label} cell membership should be CELL_LAYER"
+            );
+            assert_eq!(
+                layers.mask, BOLT_LAYER,
+                "{label} cell mask should be BOLT_LAYER"
             );
         }
     }
