@@ -35,7 +35,7 @@ pub(crate) fn seed_node_layout_registry(
     };
 
     let mut node_layout_registry = NodeLayoutRegistry::default();
-    for handle in &collection.layouts {
+    for handle in &collection.nodes {
         let Some(layout) = node_layout_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
@@ -118,19 +118,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![handle],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![handle],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
 
         app.update();
@@ -149,19 +146,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![handle],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![handle],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
         app.world_mut().insert_resource(make_registry());
 

@@ -39,6 +39,7 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 **NEVER do**:
 - Write code directly — always delegate to writer-tests/writer-code sub-agents
 - Run any cargo command directly as the main agent — see @.claude/rules/cargo.md
+- **WAIT, POLL, OR THINK while background agents are running** — end your turn immediately after launching background agents. Do NOT read output files, do NOT analyze speculatively, do NOT "check progress". You will be notified when they complete. Every token spent waiting is wasted.
 
 **Move freely on**:
 - Implementation within existing system boundaries

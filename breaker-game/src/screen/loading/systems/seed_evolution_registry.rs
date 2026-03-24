@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    chips::{ChipDefinition, EvolutionRegistry, definition::EvolutionRecipe},
+    chips::{ChipDefinition, EvolutionRegistry, definition::{EvolutionRecipe, Rarity}},
     screen::loading::resources::DefaultsCollection,
 };
 
@@ -27,10 +27,14 @@ pub(crate) fn seed_evolution_registry(
 
     let mut registry = EvolutionRegistry::default();
 
-    for handle in &collection.evolutions {
+    for handle in &collection.chips {
         let Some(def) = chip_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
+        // Only evolution-rarity chips become recipes
+        if def.rarity != Rarity::Evolution {
+            continue;
+        }
         let recipe = EvolutionRecipe {
             ingredients: def.ingredients.clone().unwrap_or_default(),
             result_definition: def.clone(),
@@ -61,19 +65,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: evolutions,
             difficulty: Handle::default(),
-            evolutions,
         }
     }
 

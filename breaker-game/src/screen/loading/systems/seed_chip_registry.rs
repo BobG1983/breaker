@@ -4,12 +4,13 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    chips::{ChipDefinition, ChipRegistry},
+    chips::{ChipDefinition, ChipRegistry, definition::Rarity},
     screen::loading::resources::DefaultsCollection,
 };
 
-/// Iterates loaded `ChipDefinition` assets from all three collections
-/// (amps, augments, overclocks) and builds the `ChipRegistry` resource.
+/// Iterates loaded `ChipDefinition` assets from all rarity-based chip
+/// collections (common, uncommon, rare, legendary) and builds the
+/// `ChipRegistry` resource.
 pub(crate) fn seed_chip_registry(
     collection: Option<Res<DefaultsCollection>>,
     chip_assets: Res<Assets<ChipDefinition>>,
@@ -26,16 +27,14 @@ pub(crate) fn seed_chip_registry(
 
     let mut registry = ChipRegistry::default();
 
-    let all_handles = collection
-        .amps
-        .iter()
-        .chain(collection.augments.iter())
-        .chain(collection.overclocks.iter());
-
-    for handle in all_handles {
+    for handle in &collection.chips {
         let Some(def) = chip_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
+        // Evolution chips are handled by seed_evolution_registry
+        if def.rarity == Rarity::Evolution {
+            continue;
+        }
         registry.insert(def.clone());
     }
 
@@ -56,28 +55,21 @@ mod tests {
         app
     }
 
-    fn make_collection(
-        amps: Vec<Handle<ChipDefinition>>,
-        augments: Vec<Handle<ChipDefinition>>,
-        overclocks: Vec<Handle<ChipDefinition>>,
-    ) -> DefaultsCollection {
+    fn make_collection(chips: Vec<Handle<ChipDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps,
-            augments,
-            overclocks,
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips,
             difficulty: Handle::default(),
-            evolutions: vec![],
         }
     }
 
@@ -98,7 +90,7 @@ mod tests {
         let overclock = assets.add(ChipDefinition::test_simple("Surge"));
 
         app.world_mut()
-            .insert_resource(make_collection(vec![amp], vec![augment], vec![overclock]));
+            .insert_resource(make_collection(vec![amp, augment, overclock]));
 
         app.update();
 
@@ -114,7 +106,7 @@ mod tests {
         let mut app = test_app();
 
         app.world_mut()
-            .insert_resource(make_collection(vec![], vec![], vec![]));
+            .insert_resource(make_collection(vec![]));
 
         app.update();
 
@@ -128,14 +120,14 @@ mod tests {
 
         // First update: seed with empty collection
         app.world_mut()
-            .insert_resource(make_collection(vec![], vec![], vec![]));
+            .insert_resource(make_collection(vec![]));
         app.update();
 
         // Add a chip AFTER seeding — if the guard works, it won't be picked up
         let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
         let handle = assets.add(ChipDefinition::test_simple("Late Addition"));
         app.world_mut()
-            .insert_resource(make_collection(vec![handle], vec![], vec![]));
+            .insert_resource(make_collection(vec![handle]));
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();

@@ -30,7 +30,7 @@ pub(crate) fn propagate_cell_type_changes(
     // Check if any cell type definition was modified
     let any_modified = events.read().any(|event| {
         collection
-            .cell_types
+            .cells
             .iter()
             .any(|h| event.is_modified(h.id()))
     });
@@ -41,7 +41,7 @@ pub(crate) fn propagate_cell_type_changes(
 
     // Rebuild registry from current asset state
     registry.clear();
-    for handle in &collection.cell_types {
+    for handle in &collection.cells {
         if let Some(def) = assets.get(handle.id()) {
             registry.insert(def.alias, def.clone());
         }
@@ -113,24 +113,21 @@ mod tests {
         app
     }
 
-    fn make_collection(cell_types: Vec<Handle<CellTypeDefinition>>) -> DefaultsCollection {
+    fn make_collection(cells: Vec<Handle<CellTypeDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types,
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells,
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         }
     }
 

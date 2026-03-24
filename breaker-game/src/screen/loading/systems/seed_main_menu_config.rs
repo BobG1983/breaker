@@ -23,7 +23,7 @@ pub(crate) fn seed_main_menu_config(
         return Progress { done: 0, total: 1 };
     };
 
-    let Some(defaults) = assets.get(&collection.mainmenu) else {
+    let Some(defaults) = assets.get(&collection.main_menu) else {
         return Progress { done: 0, total: 1 };
     };
 
@@ -63,19 +63,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: handle,
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: handle,
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
 
         app.update();

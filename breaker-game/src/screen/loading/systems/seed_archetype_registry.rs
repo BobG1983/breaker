@@ -25,7 +25,7 @@ pub(crate) fn seed_archetype_registry(
     };
 
     let mut registry = ArchetypeRegistry::default();
-    for handle in &collection.archetypes {
+    for handle in &collection.breakers {
         let Some(def) = archetype_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
@@ -69,24 +69,21 @@ mod tests {
         }
     }
 
-    fn make_collection(archetypes: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
+    fn make_collection(breakers: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes,
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers,
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         }
     }
 

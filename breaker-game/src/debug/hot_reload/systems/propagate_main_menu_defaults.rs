@@ -16,8 +16,8 @@ pub(crate) fn propagate_main_menu_defaults(
     mut commands: Commands,
 ) {
     for event in events.read() {
-        if event.is_modified(collection.mainmenu.id())
-            && let Some(defaults) = assets.get(collection.mainmenu.id())
+        if event.is_modified(collection.main_menu.id())
+            && let Some(defaults) = assets.get(collection.main_menu.id())
         {
             commands.insert_resource::<MainMenuConfig>(defaults.clone().into());
         }
@@ -37,24 +37,21 @@ mod tests {
         app
     }
 
-    fn make_collection(mainmenu: Handle<MainMenuDefaults>) -> DefaultsCollection {
+    fn make_collection(main_menu: Handle<MainMenuDefaults>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu,
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu,
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         }
     }
 

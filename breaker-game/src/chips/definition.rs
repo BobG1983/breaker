@@ -577,7 +577,7 @@ mod tests {
     fn amp_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/amps/piercing.amp.ron"
+            "/assets/chips/common/piercing.amp.ron"
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("amp RON should parse");
         assert_eq!(def.effects[0], ChipEffect::Amp(AmpEffect::Piercing(1)));
@@ -587,7 +587,7 @@ mod tests {
     fn augment_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/augments/wide_breaker.augment.ron"
+            "/assets/chips/common/wide_breaker.augment.ron"
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("augment RON should parse");
         assert_eq!(
@@ -600,7 +600,7 @@ mod tests {
     fn overclock_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/overclocks/surge.overclock.ron"
+            "/assets/chips/rare/surge.overclock.ron"
         ));
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("overclock RON should parse");
         assert_eq!(

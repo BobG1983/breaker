@@ -25,7 +25,7 @@ pub(crate) fn seed_cell_type_registry(
     };
 
     let mut registry = CellTypeRegistry::default();
-    for handle in &collection.cell_types {
+    for handle in &collection.cells {
         let Some(def) = cell_type_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
@@ -101,19 +101,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![h1, h2],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![h1, h2],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
 
         app.update();
@@ -140,19 +137,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![h_before, h_invalid, h_after],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![h_before, h_invalid, h_after],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
 
         app.update();
@@ -189,19 +183,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![handle],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![handle],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
 
         app.update();
@@ -220,19 +211,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![h1, h2],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![h1, h2],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         });
 
         app.update();

@@ -50,7 +50,7 @@ pub(crate) fn propagate_archetype_changes(
 ) {
     let any_modified = events.read().any(|event| {
         ctx.collection
-            .archetypes
+            .breakers
             .iter()
             .any(|h| event.is_modified(h.id()))
     });
@@ -61,7 +61,7 @@ pub(crate) fn propagate_archetype_changes(
 
     // Rebuild registry
     ctx.registry.clear();
-    for handle in &ctx.collection.archetypes {
+    for handle in &ctx.collection.breakers {
         if let Some(def) = ctx.assets.get(handle.id()) {
             ctx.registry.insert(def.name.clone(), def.clone());
         }
@@ -122,24 +122,21 @@ mod tests {
         app
     }
 
-    fn make_collection(archetypes: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
+    fn make_collection(breakers: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes,
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers,
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         }
     }
 

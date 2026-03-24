@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn aegis_ron_parses() {
-        let ron_str = include_str!("../../assets/archetypes/aegis.archetype.ron");
+        let ron_str = include_str!("../../assets/breakers/aegis.breaker.ron");
         let def: ArchetypeDefinition =
             ron::de::from_str(ron_str).expect("aegis archetype RON should parse");
         assert_eq!(def.name, "Aegis");
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn chrono_ron_file_parses() {
-        let ron_str = include_str!("../../assets/archetypes/chrono.archetype.ron");
+        let ron_str = include_str!("../../assets/breakers/chrono.breaker.ron");
         let def: ArchetypeDefinition =
             ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
         assert_eq!(def.name, "Chrono");
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn prism_ron_file_parses() {
-        let ron_str = include_str!("../../assets/archetypes/prism.archetype.ron");
+        let ron_str = include_str!("../../assets/breakers/prism.breaker.ron");
         let def: ArchetypeDefinition =
             ron::de::from_str(ron_str).expect("prism archetype RON should parse");
         assert_eq!(def.name, "Prism");

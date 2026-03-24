@@ -84,18 +84,17 @@ fn make_collection(bolt: Handle<BoltDefaults>) -> DefaultsCollection {
     DefaultsCollection {
         bolt,
         breaker: Handle::default(),
-        cells: Handle::default(),
+        cell_defaults: Handle::default(),
         playfield: Handle::default(),
         input: Handle::default(),
         mainmenu: Handle::default(),
         timerui: Handle::default(),
         chipselect: Handle::default(),
-        cell_types: vec![],
-        layouts: vec![],
-        archetypes: vec![],
-        amps: vec![],
-        augments: vec![],
-        overclocks: vec![],
+        cells: vec![],
+        nodes: vec![],
+        breakers: vec![],
+        chips: vec![],
+        difficulty: Handle::default(),
     }
 }
 ```

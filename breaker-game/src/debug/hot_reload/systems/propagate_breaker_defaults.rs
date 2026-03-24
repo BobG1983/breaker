@@ -53,20 +53,17 @@ mod tests {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker,
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
             difficulty: Handle::default(),
-            evolutions: vec![],
         }
     }
 
