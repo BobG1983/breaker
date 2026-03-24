@@ -77,6 +77,29 @@ type: reference
 - highlight_cap: 5 — up from spec's 3, good for story-telling (Pillar 9)
 - FadeOut duration for juice popups: 2.0s (code default, not yet in RON)
 
+## Shockwave VFX Parameters (2026-03-24)
+- Annulus inner/outer: 0.85 / 1.0 (thin ring — max spectacle, zero confusion)
+- Color: linear_rgba(0.0, 4.0, 4.0, 0.9) — HDR neon cyan
+- Alpha: fades from 0.9 to 0.0 as wavefront expands (progress-based)
+- Expansion speed: configured per TriggerChain::Shockwave `speed` field
+
+## Chain Bolt Parameters (2026-03-24)
+- Spawns at anchor position + spawn_offset_y
+- Velocity: base_speed, randomized within respawn_angle_spread
+- Tether: DistanceConstraint with configurable max_distance (tether_distance)
+- Position correction: symmetric (half_correction each bolt)
+- Velocity redistribution: momentum conservation along chain axis, only when NOT both converging
+- Marked ExtraBolt — despawns on loss, never respawns
+
+## Shield Cell Parameters (2026-03-24)
+- ShieldBehavior: count (orbit children), radius, speed (rad/s), hp, color_rgb — all RON-configurable
+- Orbit cell dim: 20.0 * scale
+- Radius clamped: max(shield.radius * scale, orbit_half_diag + 1.0)
+- Parent starts Locked with LockAdjacents(orbit_ids) — unlock when all orbits destroyed
+- Orbit cells NOT required_to_clear (but parent IS, forcing engagement)
+- Orbit cell HP scales with hp_mult from difficulty tier
+- Valid shield speeds: 0.0 (stationary) to 2*PI (full rotation per second)
+
 ## Playtest Tuning Knobs (ordered by impact)
 1. perfect_window: 0.15s -> try 0.10-0.12s if too easy
 2. ~~chip_select_timer: 10.0s -> try 8.0s~~ DONE (RON at 8.0s)

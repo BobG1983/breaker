@@ -21,7 +21,7 @@ type: reference
 - `handle_cell_hit` and `check_lock_release` are event-driven (not polling)
 - Debug systems guarded by overlay flags (early return if not active)
 - `tick_cell_regen` query uses `With<Cell>` — correct filter
-- `interpolate_transform` runs PostUpdate, uses `With<InterpolateTransform>` to opt-in — minimal entities
+- ~~`interpolate_transform`~~ DELETED 2026-03-24 (spatial/physics extraction). Replaced by `derive_transform` (AfterFixedMainLoop) which uses `With<DrawLayer>` filter. Interpolation via `InterpolateTransform2D` marker + rantzsoft_spatial2d pipeline.
 - `animate_tilt_visual`, `width_boost_visual`, `animate_bump_visual` run Update, `With<Breaker>` filtered — 1 entity
 - `bolt_lost` uses `Local<Vec<LostBoltEntry>>` for scratch storage — zero allocs after warmup
 - `bolt_cell_collision` uses `Local<Vec<Entity>>` (pierced_this_frame) — zero allocs after warmup
@@ -80,7 +80,7 @@ type: reference
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-20, session 3)
 
-### physics/systems/bolt_cell_collision.rs — 3 MessageWriter params
+### bolt/systems/bolt_cell_collision.rs — 3 MessageWriter params (moved from physics/ 2026-03-24)
 - Added `wall_hit_writer: MessageWriter<BoltHitWall>` alongside existing `hit_writer` and `damage_writer`.
 - In Bevy 0.18 all MessageWriter params share the same deferred command buffer as the system's Commands — no additional per-writer overhead, no new parallelism conflict.
 - System was already serialized by its mutable bolt_query + Commands. Third writer adds zero scheduling cost.
@@ -88,7 +88,7 @@ type: reference
 ### behaviors/bridges.rs — bridge_breaker_impact, bridge_wall_impact (was bolt/behaviors/bridges.rs)
 - Structurally identical to bridge_cell_impact (already clean).
 - MessageReader drains early-exit on no events; armed_query: Query<&mut ArmedTriggers> hits 0–1 entities.
-- All three impact bridges access &mut ArmedTriggers — cannot run in parallel with each other. Correct and expected; they are all ordered after(PhysicsSystems::BreakerCollision).
+- All three impact bridges access &mut ArmedTriggers — cannot run in parallel with each other. Correct and expected; they are all ordered after(BoltSystems::BreakerCollision).
 - No new archetype fragmentation: ArmedTriggers is already tracked as 1-entity add/remove.
 
 ### behaviors/bridges.rs — bridge_bump double evaluation (was bolt/behaviors/bridges.rs)
@@ -172,6 +172,19 @@ DOUBLE-WORK (compute_globals + propagate_position/rotation/scale both running) �
 ANIMATE_SHOCKWAVE material mutation — `materials.get_mut(handle.id())` runs in Update every frame the shockwave exists. Shockwave is a short-lived entity (seconds), so this is brief hot-path material mutation. Each frame causes a dirty flag in Bevy's asset system, triggering re-upload to GPU. The shockwave is 1 entity; negligible at current scale. Watch if multiple simultaneous shockwaves become common.
 
 SHOCKWAVE MESH/MATERIAL SPAWN — meshes.add(Annulus) + materials.add(ColorMaterial) allocated per shockwave trigger in handle_shockwave observer. Event-driven (not per-frame). 1 shockwave at a time in current design. Accepted.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-24, spatial/physics extraction)
+
+### rantzsoft_physics2d — maintain_quadtree, enforce_distance_constraints
+
+MAINTAIN_QUADTREE — FixedUpdate, Changed<GlobalPosition2D> filter prevents per-frame full scan for static entities. Bolt triggers Changed every frame = 1 entity updated per frame (remove + insert). `changed_pos.get(entity)` inside the changed_layers loop is an O(N_changed_layers) HashMap lookup — at current scale (CollisionLayers never change after spawn) the inner body is never entered. Clean. The Added<Aabb2D> / is_added() double-insert guard is correct.
+
+ENFORCE_DISTANCE_CONSTRAINTS — FixedUpdate, iterates all DistanceConstraint entities. Currently 0 constraints in gameplay. If tether mechanic added: 1 constraint = 1 get_many_mut call. Clean at any foreseeable constraint count.
+
+PLUGIN SCHEDULING — both systems in FixedUpdate with named system sets (MaintainQuadtree, EnforceDistanceConstraints). Game collision systems correctly ordered .after(PhysicsSystems::MaintainQuadtree). Clean.
+
+### Archetype note for physics2d
+- Aabb2D + CollisionLayers added at spawn, never removed in normal gameplay. Zero runtime archetype churn from physics components.
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 

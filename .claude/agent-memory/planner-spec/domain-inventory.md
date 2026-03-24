@@ -4,25 +4,21 @@ description: Types, systems, and query aliases per domain — physics, cells, bo
 type: project
 ---
 
-## physics domain (`src/physics/`)
+## ~~physics domain~~ DELETED 2026-03-24 (spatial/physics extraction)
 
-### Query Aliases (`physics/queries.rs`)
-- `CollisionQueryBolt` — (Entity, &mut Transform, &mut BoltVelocity, &BoltBaseSpeed, &BoltRadius)
-- `CollisionQueryBreaker` — (&Transform, &BreakerTilt, &BreakerWidth, &BreakerHeight, &MaxReflectionAngle, &MinAngleFromHorizontal)
-- `CollisionQueryCell` — (Entity, &Transform, &CellWidth, &CellHeight, Option<&CellHealth>)
+Collision systems and messages moved to bolt domain. `physics/` game domain no longer exists.
 
-### Filters (`physics/filters.rs`)
-- `CollisionFilterBreaker` — (With<Breaker>, Without<Bolt>)
-- `CollisionFilterCell` — (With<Cell>, Without<Bolt>, Without<Wall>)
-- `CollisionFilterWall` — (With<Wall>, Without<Bolt>, Without<Cell>)
-
-### Systems
-- `bolt_cell_collision` — CCD sweep bolt vs cells+walls; sends BoltHitCell. Also imports BASE_BOLT_DAMAGE for pierce lookahead effective_damage calculation.
+### Moved to bolt domain (`src/bolt/`)
+- `bolt_cell_collision` — CCD sweep bolt vs cells+walls; sends BoltHitCell, DamageCell, BoltHitWall
 - `bolt_breaker_collision` — CCD sweep bolt vs breaker; sends BoltHitBreaker
+- Query aliases (`bolt/queries.rs`): CollisionQueryBolt uses Position2D (not Transform)
+- Filters (`bolt/filters.rs`): CollisionFilterBreaker, CollisionFilterCell, CollisionFilterWall
 
-### Messages (`physics/messages.rs`)
-- `BoltHitCell { cell: Entity, bolt: Entity }` — sent to cells domain
+### Messages (`bolt/messages.rs`) — moved from physics/messages.rs
+- `BoltHitCell { cell: Entity, bolt: Entity }` — sent to cells/behaviors domain
 - `BoltHitBreaker { bolt: Entity }` — sent to breaker domain
+- `BoltHitWall` — sent to behaviors domain
+- `BoltLost` — sent to bolt/behaviors domain
 
 ## cells domain (`src/cells/`)
 

@@ -61,7 +61,7 @@ type: reference
 - `HighlightConfig` is `init_resource`'d in `RunPlugin.build()` — uses `Default` impl (matches `defaults.highlights.ron` values). Fields: clutch_clear_secs, fast_clear_fraction, perfect_streak_count, mass_destruction_count, mass_destruction_window_secs, combo_king_cells, pinball_wizard_bounces, speed_demon_secs, close_save_pixels, comeback_bolts_lost, nail_biter_pixels, untouchable_nodes, highlight_cap
 - `HighlightTriggered { kind: HighlightKind }` message in `run/messages.rs` — registered by `RunPlugin`; emitted by all detection systems; consumed by `spawn_highlight_text` for in-game popups
 - Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`, `detect_mass_destruction`, `detect_close_save`, `detect_combo_and_pinball`, `detect_nail_biter`
-- `detect_close_save` is `.after(PhysicsSystems::BreakerCollision)` (needs post-collision bolt position)
+- `detect_close_save` is `.after(BoltSystems::BreakerCollision)` (needs post-collision bolt position)
 - `detect_nail_biter` is `.after(NodeSystems::TrackCompletion)` (fires on node clear)
 - `track_chips_collected` + `detect_first_evolution` run in `Update` during `GameState::ChipSelect`
 - `reset_highlight_tracker` + `capture_run_seed` run on `OnEnter(GameState::Playing)` — both unordered
@@ -168,9 +168,9 @@ type: reference
 - `ArchetypeDefinition` now has named root fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`: `Option<TriggerChain>`) + `chains: Vec<TriggerChain>` — no more `BehaviorBinding` vec
 
 ### New bridge systems in BehaviorSystems::Bridge
-- `bridge_cell_impact` — reads `BoltHitCell`, runs `.after(PhysicsSystems::BreakerCollision)`
-- `bridge_breaker_impact` — reads `BoltHitBreaker`, runs `.after(PhysicsSystems::BreakerCollision)`
-- `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(PhysicsSystems::BreakerCollision)`
+- `bridge_cell_impact` — reads `BoltHitCell`, runs `.after(BoltSystems::BreakerCollision)`
+- `bridge_breaker_impact` — reads `BoltHitBreaker`, runs `.after(BoltSystems::BreakerCollision)`
+- `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(BoltSystems::BreakerCollision)`
 - `bridge_cell_destroyed` — reads `CellDestroyed`, unordered (no physics dependency)
 
 ### BumpPerformed carries bolt field only

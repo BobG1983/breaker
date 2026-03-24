@@ -2,10 +2,10 @@
 
 | Message | Defined In | Registered By | Written By | Consumed By (actual) |
 |---------|-----------|---------------|------------|---------------------|
-| `BoltHitBreaker` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_breaker_collision | breaker/grade_bump, behaviors/bridge_breaker_impact, run/detect_combo_and_pinball |
-| `BoltHitCell` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | behaviors/bridge_cell_impact, run/detect_combo_and_pinball |
-| `BoltHitWall` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_cell_collision | behaviors/bridge_wall_impact |
-| `BoltLost` | `physics/messages.rs` | `PhysicsPlugin` | physics/bolt_lost | bolt/spawn_bolt_lost_text, behaviors/bridge_bolt_lost, run/track_bolts_lost |
+| `BoltHitBreaker` | `bolt/messages.rs` | `BoltPlugin` | bolt/bolt_breaker_collision | breaker/grade_bump, behaviors/bridge_breaker_impact, run/detect_combo_and_pinball |
+| `BoltHitCell` | `bolt/messages.rs` | `BoltPlugin` | bolt/bolt_cell_collision | behaviors/bridge_cell_impact, run/detect_combo_and_pinball |
+| `BoltHitWall` | `bolt/messages.rs` | `BoltPlugin` | bolt/bolt_cell_collision | behaviors/bridge_wall_impact |
+| `BoltLost` | `bolt/messages.rs` | `BoltPlugin` | bolt/bolt_lost | bolt/spawn_bolt_lost_text, behaviors/bridge_bolt_lost, run/track_bolts_lost |
 | `DamageCell { cell, damage, source_bolt }` | `cells/messages.rs` | `CellsPlugin` | physics/bolt_cell_collision, behaviors/effects/shockwave | cells/handle_cell_hit |
 | `CellDestroyed` | `cells/messages.rs` | `CellsPlugin` | cells/handle_cell_hit | run/track_node_completion, behaviors/bridge_cell_destroyed, run/track_cells_destroyed, run/detect_mass_destruction, run/detect_combo_and_pinball |
 | `NodeCleared` | `run/node/messages.rs` | `NodePlugin` | run/node/track_node_completion | run/handle_node_cleared, run/track_node_cleared_stats, run/detect_nail_biter |
@@ -24,7 +24,7 @@
 | `SpawnNodeComplete` | `run/node/messages.rs` | `NodePlugin` | run/node/check_spawn_complete | scenario-runner/check_no_entity_leaks |
 
 ## Ownership Note
-`RunLost`, `ApplyTimePenalty`, `SpawnAdditionalBolt`, and `DamageCell` all deviate from the sender-owns convention: each is defined in the consuming domain but sent by other domains. Accepted because the message semantically belongs to the consumer's vocabulary. `DamageCell` is a "command" message — the cells domain defines the damage API, physics and bolt/behaviors/effects/shockwave both call it. This is now a consistent pattern for all command-to-domain messages.
+`RunLost`, `ApplyTimePenalty`, `SpawnAdditionalBolt`, and `DamageCell` all deviate from the sender-owns convention: each is defined in the consuming domain but sent by other domains. Accepted because the message semantically belongs to the consumer's vocabulary. `DamageCell` is a "command" message — the cells domain defines the damage API, bolt/collision systems and bolt/behaviors/effects/shockwave both call it. This is now a consistent pattern for all command-to-domain messages.
 
 ## Observer Events (intra-domain, not Messages)
 | Event | Domain | Triggered By | Observed By |
@@ -33,6 +33,7 @@
 | `ChipEffectApplied { effect, max_stacks }` | chips | apply_chip_effect | effects/* handlers |
 
 NOTE (2026-03-21): ConsequenceFired REMOVED. OverclockEffectFired RENAMED to EffectFired. Both old streams (archetype consequences + overclock effects) now use EffectFired. bolt/behaviors/ DELETED — was the old home of OverclockEffectFired. behaviors/consequences/ DELETED — was the old ConsequenceFired handler home.
+NOTE (2026-03-24): physics/ game domain DELETED. BoltHitBreaker/BoltHitCell/BoltHitWall/BoltLost moved from physics/messages.rs to bolt/messages.rs. PhysicsPlugin → BoltPlugin as registering plugin.
 
 ## Spawn Signal Pattern (added 2026-03-18)
 Four domain-owned spawn signals (`BoltSpawned`, `BreakerSpawned`, `WallsSpawned`, `CellsSpawned`) converge in `run/node/check_spawn_complete`, which aggregates them via a `Local<SpawnChecklist>` bitfield and fires `SpawnNodeComplete` when all four arrive. Currently consumed only by the scenario runner for entity-leak baseline sampling. Known issue: `ScenarioLifecycle` redundantly calls `add_message::<SpawnNodeComplete>()` despite `NodePlugin` already registering it.

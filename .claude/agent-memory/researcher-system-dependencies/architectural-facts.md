@@ -8,11 +8,11 @@ type: reference
 - All gameplay systems run in FixedUpdate gated by `run_if(in_state(PlayingState::Active))`
 - EXCEPTION: `check_spawn_complete` (NodePlugin, FixedUpdate) has NO run_if guard — it must fire in the first tick of Playing before Active is set
 - Visual-only systems run in Update (animate_bump_visual, animate_tilt_visual, update_timer_display, debug overlays, update_lives_display, animate_fade_out)
-- InterpolatePlugin registered BEFORE PhysicsPlugin in game.rs
 - BehaviorsPlugin is STANDALONE, registered between BreakerPlugin and BoltPlugin
-- Interpolation pipeline: `restore_authoritative` (FixedFirst) → [FixedUpdate physics] → `store_authoritative` (FixedPostUpdate) → `interpolate_transform` (PostUpdate)
-- Bolt entities carry InterpolateTransform + PhysicsTranslation; bolt_lost inserts PhysicsTranslation on respawn
-- Physics chain: `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `clamp_bolt_to_playfield` → `bolt_lost`
+- Spatial2d pipeline: `save_previous` (FixedFirst) → [FixedUpdate gameplay/physics] → `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale` (AfterFixedMainLoop, chained in RantzSpatial2dPlugin)
+- InterpolatePlugin and PhysicsPlugin DELETED (2026-03-24 spatial/physics extraction). Replaced by RantzSpatial2dPlugin and RantzPhysics2dPlugin.
+- Bolt entities carry Position2D (canonical) + InterpolateTransform2D (for visual smoothing); bolt_lost no longer inserts PhysicsTranslation (that type is gone)
+- Physics collision chain (bolt domain): `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `clamp_bolt_to_playfield` → `bolt_lost`
 - clamp_bolt_to_playfield: safety clamp for bolts escaping through CCD corner overlaps; no bottom clamp (bolt_lost handles that)
 - apply_bump_velocity: DELETED (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf → handle_speed_boost observer in behaviors/effects/speed_boost.rs
 - spawn_additional_bolt: `.after(BehaviorSystems::Bridge)`
@@ -28,7 +28,7 @@ type: reference
 - NodePlugin OnEnter chain: `set_active_layout` → `spawn_cells_from_layout` → `init_clear_remaining` → `init_node_timer`
 - UiPlugin OnEnter chain: `spawn_side_panels` → ApplyDeferred → `spawn_timer_hud` (in_set(UiSystems::SpawnTimerHud))
 - Spawn coordinator: `check_spawn_complete` waits for BoltSpawned+BreakerSpawned+CellsSpawned+WallsSpawned → sends SpawnNodeComplete; consumed by check_no_entity_leaks for baseline sampling
-- Scenario runner invariant checkers: `.after(tag_game_entities).after(update_breaker_state).before(PhysicsSystems::BoltLost)`
+- Scenario runner invariant checkers: `.after(tag_game_entities).after(update_breaker_state).before(BoltSystems::BoltLost)`
 - toggle_pause reads InputActions/GameAction::TogglePause
 - bolt_breaker_collision: upward-bolt guard at top of bolt loop
 - BoltHitCell carries `{ cell: Entity, bolt: Entity }` — both fields present
@@ -84,6 +84,6 @@ AudioPlugin
 - `WallsSpawned` — WallPlugin, sent by `spawn_walls`
 - `SpawnNodeComplete` — NodePlugin, sent by `check_spawn_complete` coordinator; consumed by scenario runner only
 - `NodeSystems::ApplyTimePenalty` — system set variant in NodeSystems enum
-- `clamp_bolt_to_playfield` — PhysicsPlugin system, safety clamp after bolt_breaker_collision
+- `clamp_bolt_to_playfield` — BoltPlugin system, safety clamp after bolt_breaker_collision
 - `seed_chip_registry` — new LoadingPlugin system (seeds ChipRegistry from chip definition assets)
 - `RecordingPlugin` with `capture_frame` + `write_recording_on_exit` — debug-only input recorder

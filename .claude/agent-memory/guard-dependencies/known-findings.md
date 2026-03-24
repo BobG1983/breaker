@@ -71,15 +71,17 @@ type: project
 ### Unicode-3.0 (unicode-ident) — RESOLVED
 - **Status:** RESOLVED 2026-03-22 — "Unicode-3.0" added to deny.toml allow list.
 
-### Workspace crates unlicensed — OPEN (re-opened 2026-03-23)
-- **Finding:** `cargo deny check licenses` errors on all three workspace crates:
-  `breaker`, `breaker_derive`, `breaker_scenario_runner`.
-- **Status:** OPEN — `private.ignore = true` does NOT suppress this without `publish = false`
-  in each crate's `[package]` section. Previously marked RESOLVED incorrectly.
-- **Fix:** Add `publish = false` to the `[package]` section in each of:
-  - `breaker-game/Cargo.toml`
-  - `breaker-derive/Cargo.toml`
-  - `breaker-scenario-runner/Cargo.toml`
-- **Compliance note:** These are proprietary workspace crates — `publish = false` is correct and
-  also prevents accidental `cargo publish`.
-- **Priority:** LOW — only blocks `cargo deny check licenses` CI gate, not builds or tests.
+### Workspace crates unlicensed — RESOLVED (2026-03-24)
+- **Finding (historical):** `cargo deny check licenses` errors on workspace crates missing `publish = false`.
+- **Status:** RESOLVED — all six workspace crates have `publish = false`. `cargo deny check licenses`
+  passes cleanly with `licenses ok`.
+- **Note:** The `breaker-derive` crate referenced in 2026-03-23 audit no longer exists. It was
+  replaced by `rantzsoft_defaults_derive`, which carries `publish = false`.
+
+### macOS platform dep tree objc2 version split — ACCEPTED (2026-03-24)
+- **Finding:** `cargo tree -d` shows objc2 0.5.2 / 0.6.4, block2 0.5.1 / 0.6.2,
+  objc2-foundation 0.2.2 / 0.3.2, objc2-app-kit 0.2.2 / 0.3.2, core-foundation 0.9.4 / 0.10.1.
+- **Status:** WONTFIX (upstream) — driven by bevy_egui and winit pulling different objc2 generations.
+- **Impact:** Compile time increase on macOS only. No runtime conflict.
+- **Fix:** Resolves when bevy_egui or winit unify their objc2 version pins.
+  Re-evaluate at next Bevy upgrade.

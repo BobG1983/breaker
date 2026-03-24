@@ -6,7 +6,7 @@ type: reference
 
 # Message Flow Map
 
-Last updated: 2026-03-23 (Wave 4+ audit: HighlightTriggered message added — RunPlugin, emitted by 5 detection systems, consumed by spawn_highlight_text. Prior: 2026-03-22 Wave 3 audit — bridge names finalized; 2026-03-21 refactor/unify-behaviors — OverclockEffectFired→EffectFired, etc.)
+Last updated: 2026-03-24 (spatial/physics extraction: PhysicsPlugin→BoltPlugin for BoltHitBreaker/BoltHitCell/BoltHitWall/BoltLost; physics/messages.rs→bolt/messages.rs. Prior: 2026-03-23 Wave 4+ audit.)
 
 ## Registered Messages (by plugin)
 
@@ -16,10 +16,10 @@ Last updated: 2026-03-23 (Wave 4+ audit: HighlightTriggered message added — Ru
 | BumpPerformed | BreakerPlugin |
 | BumpWhiffed | BreakerPlugin |
 | BreakerSpawned | BreakerPlugin |
-| BoltHitBreaker | PhysicsPlugin |
-| BoltHitCell | PhysicsPlugin |
-| BoltHitWall | PhysicsPlugin |
-| BoltLost | PhysicsPlugin |
+| BoltHitBreaker | BoltPlugin |
+| BoltHitCell | BoltPlugin |
+| BoltHitWall | BoltPlugin |
+| BoltLost | BoltPlugin |
 | DamageCell | CellsPlugin |
 | CellDestroyed | CellsPlugin |
 | NodeCleared | NodePlugin (RunPlugin sub-plugin) |
@@ -93,31 +93,31 @@ written in OnEnter are available in the first FixedUpdate tick.
   - `bridge_bump_whiff` (BehaviorsPlugin) — evaluates chains via TriggerKind::BumpWhiff → fires EffectFired
   - `track_bump_result` (DebugPlugin, dev only)
 
-### BoltHitBreaker (PhysicsPlugin → cross-domain)
-- Sender: `bolt_breaker_collision` (PhysicsPlugin)
+### BoltHitBreaker (BoltPlugin → cross-domain)
+- Sender: `bolt_breaker_collision` (BoltPlugin)
 - Receivers:
   - `grade_bump` (BreakerPlugin)
   - `bridge_breaker_impact` (BehaviorsPlugin, FixedUpdate)
 
-### BoltHitCell (PhysicsPlugin → cross-domain)
-- Sender: `bolt_cell_collision` (PhysicsPlugin)
+### BoltHitCell (BoltPlugin → cross-domain)
+- Sender: `bolt_cell_collision` (BoltPlugin)
 - Receivers:
   - `bridge_cell_impact` (BehaviorsPlugin, FixedUpdate) — evaluates overclock trigger chains
 - NOTE: `BoltHitCell` carries `{ cell: Entity, bolt: Entity }`. `handle_cell_hit` now reads `DamageCell` (not BoltHitCell) — see DamageCell entry below.
 
 ### DamageCell (CellsPlugin-owned, sent by physics + shockwave)
 - Senders:
-  - `bolt_cell_collision` (PhysicsPlugin) — one per cell hit (alongside BoltHitCell)
+  - `bolt_cell_collision` (BoltPlugin) — one per cell hit (alongside BoltHitCell)
   - `handle_shockwave` (BehaviorsPlugin) — one per in-range non-locked cell
 - Receiver: `handle_cell_hit` (CellsPlugin, FixedUpdate)
 - NOTE: Consumer-owns pattern — cells defines the damage API, physics and shockwave call it.
 
-### BoltHitWall (PhysicsPlugin → cross-domain)
-- Sender: `bolt_cell_collision` (PhysicsPlugin) — sent when bolt hits a wall entity
+### BoltHitWall (BoltPlugin → cross-domain)
+- Sender: `bolt_cell_collision` (BoltPlugin) — sent when bolt hits a wall entity
 - Receiver: `bridge_wall_impact` (BehaviorsPlugin, FixedUpdate)
 
-### BoltLost (PhysicsPlugin → cross-domain)
-- Sender: `bolt_lost` (PhysicsPlugin, PhysicsSystems::BoltLost) — fires for baseline AND ExtraBolt
+### BoltLost (BoltPlugin → cross-domain)
+- Sender: `bolt_lost` (BoltPlugin, BoltSystems::BoltLost) — fires for baseline AND ExtraBolt
 - Receivers:
   - `spawn_bolt_lost_text` (BoltPlugin)
   - `bridge_bolt_lost` (BehaviorsPlugin, FixedUpdate) — evaluates all chains via TriggerKind::BoltLost → fires EffectFired → effect observers (handles both old bridge_bolt_lost consequence and new overclock chains in one unified bridge)
@@ -199,10 +199,10 @@ written in OnEnter are available in the first FixedUpdate tick.
 | WallPlugin | WallsSpawned | NodePlugin (coordinator) |
 | NodePlugin | CellsSpawned | NodePlugin (coordinator — self-message) |
 | NodePlugin | SpawnNodeComplete | ScenarioRunner |
-| PhysicsPlugin | BoltHitBreaker | BreakerPlugin, BehaviorsPlugin |
-| PhysicsPlugin | BoltHitCell | BehaviorsPlugin |
-| PhysicsPlugin | BoltHitWall | BehaviorsPlugin |
-| PhysicsPlugin | BoltLost | BoltPlugin, BehaviorsPlugin |
+| BoltPlugin | BoltHitBreaker | BreakerPlugin, BehaviorsPlugin |
+| BoltPlugin | BoltHitCell | BehaviorsPlugin |
+| BoltPlugin | BoltHitWall | BehaviorsPlugin |
+| BoltPlugin | BoltLost | BoltPlugin (spawn_bolt_lost_text), BehaviorsPlugin |
 | CellsPlugin | DamageCell | CellsPlugin (handle_cell_hit) |
 | CellsPlugin | CellDestroyed | NodePlugin, BehaviorsPlugin |
 | BehaviorsPlugin | DamageCell (via shockwave) | CellsPlugin |

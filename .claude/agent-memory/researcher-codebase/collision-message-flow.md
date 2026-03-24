@@ -24,14 +24,14 @@ type: reference
 ```
 BoltSystems::PrepareVelocity
   -> bolt_cell_collision (sends BoltHitCell, DamageCell, BoltHitWall)
-    -> bolt_breaker_collision (sends BoltHitBreaker) [PhysicsSystems::BreakerCollision]
+    -> bolt_breaker_collision (sends BoltHitBreaker) [BoltSystems::BreakerCollision]
       -> clamp_bolt_to_playfield
-        -> bolt_lost (sends BoltLost) [PhysicsSystems::BoltLost]
+        -> bolt_lost (sends BoltLost) [BoltSystems::BoltLost]
 ```
 
 handle_cell_hit (cells) has NO ordering relative to physics -- reads DamageCell, writes CellDestroyed.
 
-grade_bump (breaker) runs .after(PhysicsSystems::BreakerCollision) -- reads BoltHitBreaker, writes BumpPerformed.
+grade_bump (breaker) runs .after(BoltSystems::BreakerCollision) -- reads BoltHitBreaker, writes BumpPerformed.
 
 ## Multi-bounce
 bolt_cell_collision uses CCD loop (MAX_BOUNCES=4). One bolt can hit up to 4 cells/walls per frame, each producing its own BoltHitCell + DamageCell.

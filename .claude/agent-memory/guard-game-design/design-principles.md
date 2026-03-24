@@ -101,3 +101,12 @@ type: reference
 - Highlight popup system needs screen shake + particles in Phase 5+ (text-only is placeholder)
 - Future: Flux bonus per highlight, or chip that scales with highlights earned (Phase 8)
 - Flux formula too soft for final balance (bolts_lost * -3 is negligible) — flag for Phase 8 tuning, fine for vertical slice
+- Spreading shockwave (expanding wavefront, not instant) is APPROVED — adds spatial positioning as skill expression; speed param on TriggerChain::Shockwave enables future "Detonation" vs "Pulse" overclock variants (2026-03-24)
+- Chain bolts (tethered pairs via DistanceConstraint) are APPROVED — momentum conservation on taut tether creates slingshot skill ceiling; ExtraBolt despawn on loss is correct (2026-03-24)
+- Chain bolt tether needs visible VFX (neon arc/line between bolts) — invisible tether is unreadable, track for Phase 5 (2026-03-24)
+- Naming collision: "Chain Hit" (amp, cell ricochet) vs "Chain Bolt" (tether spawn) — consider rename for clarity in content pass (2026-03-24)
+- Orbiting shield cells are APPROVED — orbit speed is the difficulty lever, parent Locked until children cleared, synergy showcase with spreading shockwave (2026-03-24)
+- Shield cell unlock moment needs juice (color shift + flash + sound) when last orbit child dies — track for Phase 5 (2026-03-24)
+- Spatial positioning confirmed as skill expression axis: "where to detonate" and "where to aim through orbits" deepen control surface without new inputs (2026-03-24)
+- Multi-shockwave readability: overlapping HDR cyan rings may obscure gameplay — playtest; if problematic, stagger or dim subsequent rings (2026-03-24)
+- Shockwave VFX (Annulus 0.85-1.0, HDR cyan, alpha fade) complies with Pillar 4: thin ring = max spectacle, zero confusion (2026-03-24)
