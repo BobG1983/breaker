@@ -35,10 +35,11 @@ pub fn init_bolt_params(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
     use super::*;
     use crate::bolt::components::{
         BoltInitialAngle, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY,
-        BoltVelocity,
     };
 
     fn test_app() -> App {
@@ -54,7 +55,7 @@ mod tests {
         let mut app = test_app();
         let entity = app
             .world_mut()
-            .spawn((Bolt, BoltVelocity::new(0.0, 400.0)))
+            .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0))))
             .id();
 
         app.update();
@@ -75,7 +76,7 @@ mod tests {
         let mut app = test_app();
         let entity = app
             .world_mut()
-            .spawn((Bolt, BoltVelocity::new(0.0, 400.0)))
+            .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0))))
             .id();
 
         app.update();
@@ -115,7 +116,11 @@ mod tests {
         let mut app = test_app();
         let entity = app
             .world_mut()
-            .spawn((Bolt, BoltVelocity::new(0.0, 400.0), BoltBaseSpeed(999.0)))
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                BoltBaseSpeed(999.0),
+            ))
             .id();
 
         app.update();

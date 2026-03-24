@@ -1,6 +1,11 @@
 //! Derives `Transform` from `GlobalPosition2D`, `GlobalRotation2D`,
 //! `GlobalScale2D` with interpolation and visual offset. Replaces the
 //! old `propagate_position`, `propagate_rotation`, `propagate_scale` systems.
+//!
+//! For child entities, counteracts the parent's global transform so that
+//! Bevy's built-in `TransformPropagate` (which computes
+//! `child.GlobalTransform = parent.GlobalTransform * child.Transform`)
+//! produces the correct world-space result.
 
 use bevy::prelude::*;
 
@@ -27,13 +32,32 @@ type DeriveTransformQuery<'w, 's, D> = Query<
         Option<&'static PreviousRotation>,
         Option<&'static PreviousScale>,
         Option<&'static VisualOffset>,
+        Option<&'static ChildOf>,
+    ),
+>;
+
+/// Query type for reading parent globals during counteraction.
+type ParentGlobalsQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static GlobalPosition2D,
+        &'static GlobalRotation2D,
+        &'static GlobalScale2D,
     ),
 >;
 
 /// Writes `Transform` from `GlobalPosition2D`, `GlobalRotation2D`,
 /// `GlobalScale2D`, with optional interpolation via `Previous*` components
 /// and `VisualOffset`. Only processes entities that have a `DrawLayer`.
-pub fn derive_transform<D: DrawLayer>(time: Res<Time<Fixed>>, mut query: DeriveTransformQuery<D>) {
+///
+/// For child entities, subtracts the parent's global position, rotation, and
+/// scale so that Bevy's `TransformPropagate` adds them back correctly.
+pub fn derive_transform<D: DrawLayer>(
+    time: Res<Time<Fixed>>,
+    mut query: DeriveTransformQuery<D>,
+    parent_query: ParentGlobalsQuery,
+) {
     let alpha = time.overstep_fraction();
 
     for (
@@ -47,6 +71,7 @@ pub fn derive_transform<D: DrawLayer>(time: Res<Time<Fixed>>, mut query: DeriveT
         prev_rot,
         prev_scale,
         offset,
+        child_of,
     ) in &mut query
     {
         // Position: interpolate if markers present, then extend to Vec3 with z.
@@ -61,13 +86,7 @@ pub fn derive_transform<D: DrawLayer>(time: Res<Time<Fixed>>, mut query: DeriveT
         };
         let mut translation = base_pos.extend(layer.z());
 
-        // Apply visual offset.
-        if let Some(offset) = offset {
-            translation += offset.0;
-        }
-        transform.translation = translation;
-
-        // Rotation: interpolate if markers present, convert to Quat.
+        // Rotation: interpolate if markers present.
         let base_rot = if interp.is_some() {
             if let Some(prev) = prev_rot {
                 prev.0.nlerp(g_rot.0, alpha)
@@ -77,10 +96,10 @@ pub fn derive_transform<D: DrawLayer>(time: Res<Time<Fixed>>, mut query: DeriveT
         } else {
             g_rot.0
         };
-        transform.rotation = Quat::from_rotation_z(base_rot.as_radians());
+        let mut rotation_radians = base_rot.as_radians();
 
-        // Scale: interpolate if markers present, extend to Vec3.
-        let (sx, sy) = if interp.is_some() {
+        // Scale: interpolate if markers present.
+        let (mut sx, mut sy) = if interp.is_some() {
             if let Some(prev) = prev_scale {
                 (
                     prev.x + (g_scale.x - prev.x) * alpha,
@@ -92,6 +111,33 @@ pub fn derive_transform<D: DrawLayer>(time: Res<Time<Fixed>>, mut query: DeriveT
         } else {
             (g_scale.x, g_scale.y)
         };
+
+        // Counteract parent globals for children so TransformPropagate
+        // produces the correct world-space result.
+        if let Some(child_of) = child_of
+            && let Ok((parent_pos, parent_rot, parent_scale)) = parent_query.get(child_of.parent())
+        {
+            translation.x -= parent_pos.0.x;
+            translation.y -= parent_pos.0.y;
+
+            rotation_radians -= parent_rot.0.as_radians();
+
+            if parent_scale.x.abs() > f32::EPSILON {
+                sx /= parent_scale.x;
+            }
+            if parent_scale.y.abs() > f32::EPSILON {
+                sy /= parent_scale.y;
+            }
+        }
+
+        // Apply visual offset.
+        if let Some(offset) = offset {
+            translation += offset.0;
+        }
+        transform.translation = translation;
+
+        transform.rotation = Quat::from_rotation_z(rotation_radians);
+
         transform.scale = Vec3::new(sx, sy, 1.0);
     }
 }

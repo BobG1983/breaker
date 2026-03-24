@@ -31,14 +31,11 @@ pub fn hover_bolt(
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
     use super::*;
     use crate::{
-        bolt::{
-            components::{BoltServing, BoltVelocity},
-            resources::BoltConfig,
-        },
+        bolt::{components::BoltServing, resources::BoltConfig},
         shared::GameDrawLayer,
     };
 
@@ -74,7 +71,7 @@ mod tests {
             Bolt,
             BoltServing,
             BoltSpawnOffsetY(config.spawn_offset_y),
-            BoltVelocity::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
             Position2D(Vec2::new(0.0, 0.0)),
         ));
 
@@ -115,7 +112,7 @@ mod tests {
         // Non-serving bolt (no BoltServing marker) with Position2D
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(50.0, 50.0)),
         ));
 

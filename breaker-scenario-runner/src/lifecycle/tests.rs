@@ -5,7 +5,7 @@ use breaker::{
     run::node::resources::NodeTimer,
     shared::{GameState, PlayfieldConfig, PlayingState},
 };
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::*;
 use crate::{
@@ -1141,8 +1141,6 @@ fn invariant_checkers_remain_gated_across_multiple_frames_while_not_playing() {
 /// must set `BoltVelocity.value` to `Vec2::new(0.0, 2000.0)` on the tagged bolt.
 #[test]
 fn apply_debug_setup_sets_bolt_velocity_when_some() {
-    use breaker::bolt::components::BoltVelocity;
-
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -1170,7 +1168,7 @@ fn apply_debug_setup_sets_bolt_velocity_when_some() {
         .spawn((
             ScenarioTagBolt,
             Position2D(Vec2::new(0.0, 0.0)),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
 
@@ -1180,21 +1178,19 @@ fn apply_debug_setup_sets_bolt_velocity_when_some() {
     let vel = app
         .world()
         .entity(entity)
-        .get::<BoltVelocity>()
-        .expect("entity must still have BoltVelocity");
+        .get::<Velocity2D>()
+        .expect("entity must still have Velocity2D");
     assert_eq!(
-        vel.value,
+        vel.0,
         Vec2::new(0.0, 2000.0),
-        "expected BoltVelocity.value == (0.0, 2000.0), got {:?}",
-        vel.value
+        "expected Velocity2D.0 == (0.0, 2000.0), got {:?}",
+        vel.0
     );
 }
 
 /// When `debug_setup` has `bolt_velocity: None`, `BoltVelocity` must remain unchanged.
 #[test]
 fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
-    use breaker::bolt::components::BoltVelocity;
-
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -1222,7 +1218,7 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
         .spawn((
             ScenarioTagBolt,
             Position2D(Vec2::new(0.0, 0.0)),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
 
@@ -1232,13 +1228,13 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
     let vel = app
         .world()
         .entity(entity)
-        .get::<BoltVelocity>()
-        .expect("entity must still have BoltVelocity");
+        .get::<Velocity2D>()
+        .expect("entity must still have Velocity2D");
     assert_eq!(
-        vel.value,
+        vel.0,
         Vec2::new(0.0, 400.0),
-        "expected BoltVelocity unchanged at (0.0, 400.0), got {:?}",
-        vel.value
+        "expected Velocity2D unchanged at (0.0, 400.0), got {:?}",
+        vel.0
     );
 }
 
@@ -1250,8 +1246,6 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
 /// the overridden velocity, not just the first one.
 #[test]
 fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
-    use breaker::bolt::components::BoltVelocity;
-
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -1279,7 +1273,7 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         .spawn((
             ScenarioTagBolt,
             Position2D(Vec2::new(0.0, 0.0)),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
     let e2 = app
@@ -1287,7 +1281,7 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         .spawn((
             ScenarioTagBolt,
             Position2D(Vec2::new(10.0, 10.0)),
-            BoltVelocity::new(300.0, 0.0),
+            Velocity2D(Vec2::new(300.0, 0.0)),
         ))
         .id();
     let e3 = app
@@ -1295,7 +1289,7 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         .spawn((
             ScenarioTagBolt,
             Position2D(Vec2::new(20.0, 20.0)),
-            BoltVelocity::new(-100.0, -100.0),
+            Velocity2D(Vec2::new(-100.0, -100.0)),
         ))
         .id();
 
@@ -1307,12 +1301,12 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         let vel = app
             .world()
             .entity(entity)
-            .get::<BoltVelocity>()
+            .get::<Velocity2D>()
             .unwrap_or_else(|| panic!("{label} must still have BoltVelocity"));
         assert_eq!(
-            vel.value, expected,
+            vel.0, expected,
             "{label}: expected BoltVelocity.value == {expected:?}, got {:?}",
-            vel.value
+            vel.0
         );
     }
 }
@@ -1327,7 +1321,7 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
 /// `BoltMinSpeed`, or `BoltMaxSpeed` components.
 #[test]
 fn apply_debug_setup_spawns_extra_tagged_bolts() {
-    use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity};
+    use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed};
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
@@ -1383,12 +1377,12 @@ fn apply_debug_setup_spawns_extra_tagged_bolts() {
 
     let bolts_with_velocity = app
         .world_mut()
-        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltVelocity>)>()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<Velocity2D>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         bolts_with_velocity, 0,
-        "extra tagged bolts must NOT have BoltVelocity component, found {bolts_with_velocity}"
+        "extra tagged bolts must NOT have Velocity2D component, found {bolts_with_velocity}"
     );
 
     let bolts_with_min_speed = app

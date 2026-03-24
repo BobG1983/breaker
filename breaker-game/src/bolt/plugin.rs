@@ -12,10 +12,9 @@ use crate::{
         resources::BoltConfig,
         systems::{
             apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
-            bolt_scale_visual, break_chain_on_bolt_lost, clamp_bolt_to_playfield,
-            enforce_distance_constraints, hover_bolt, init_bolt_params, launch_bolt,
-            prepare_bolt_velocity, reset_bolt, spawn_additional_bolt, spawn_bolt,
-            spawn_bolt_lost_text, spawn_chain_bolt,
+            bolt_scale_visual, break_chain_on_bolt_lost, clamp_bolt_to_playfield, hover_bolt,
+            init_bolt_params, launch_bolt, prepare_bolt_velocity, reset_bolt,
+            spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text, spawn_chain_bolt,
         },
     },
     breaker::BreakerSystems,
@@ -76,9 +75,11 @@ impl Plugin for BoltPlugin {
                         .after(bolt_cell_collision)
                         .in_set(BoltSystems::BreakerCollision),
                     clamp_bolt_to_playfield.after(bolt_breaker_collision),
-                    enforce_distance_constraints.after(clamp_bolt_to_playfield),
                     bolt_lost
-                        .after(enforce_distance_constraints)
+                        .after(
+                            rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
+                        )
+                        .after(clamp_bolt_to_playfield)
                         .in_set(BoltSystems::BoltLost),
                     break_chain_on_bolt_lost.after(BoltSystems::BoltLost),
                 )

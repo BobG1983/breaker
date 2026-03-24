@@ -1,6 +1,7 @@
 //! System to launch a serving bolt when the player presses the bump button.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{components::*, filters::ServingFilter},
@@ -14,14 +15,14 @@ use crate::{
 pub fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut BoltVelocity, &BoltBaseSpeed, &BoltInitialAngle), ServingFilter>,
+    mut query: Query<(Entity, &mut Velocity2D, &BoltBaseSpeed, &BoltInitialAngle), ServingFilter>,
 ) {
     if !actions.active(GameAction::Bump) {
         return;
     }
 
     for (entity, mut velocity, base_speed, initial_angle) in &mut query {
-        velocity.value = Vec2::new(
+        velocity.0 = Vec2::new(
             base_speed.0 * initial_angle.0.sin(),
             base_speed.0 * initial_angle.0.cos(),
         );
@@ -32,10 +33,7 @@ pub fn launch_bolt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::{
-        components::{Bolt, BoltVelocity},
-        resources::BoltConfig,
-    };
+    use crate::bolt::resources::BoltConfig;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -68,7 +66,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltServing,
-            BoltVelocity::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
             bolt_launch_bundle(),
         ));
 
@@ -92,11 +90,11 @@ mod tests {
         // Velocity should be non-zero and upward
         let velocity = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
-        assert!(velocity.value.y > 0.0, "bolt should launch upward");
+        assert!(velocity.0.y > 0.0, "bolt should launch upward");
         assert!(velocity.speed() > 0.0, "bolt should have non-zero speed");
     }
 
@@ -107,7 +105,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltServing,
-            BoltVelocity::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
             bolt_launch_bundle(),
         ));
 
@@ -125,7 +123,7 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
@@ -143,7 +141,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltServing,
-            BoltVelocity::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
             bolt_launch_bundle(),
         ));
 
@@ -155,7 +153,7 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
@@ -163,14 +161,14 @@ mod tests {
         let expect_x = config.base_speed * config.initial_angle.sin();
         let expect_y = config.base_speed * config.initial_angle.cos();
         assert!(
-            (velocity.value.x - expect_x).abs() < 1e-4,
+            (velocity.0.x - expect_x).abs() < 1e-4,
             "vx should be base_speed * sin(angle), got {} expected {expect_x}",
-            velocity.value.x
+            velocity.0.x
         );
         assert!(
-            (velocity.value.y - expect_y).abs() < 1e-4,
+            (velocity.0.y - expect_y).abs() < 1e-4,
             "vy should be base_speed * cos(angle), got {} expected {expect_y}",
-            velocity.value.y
+            velocity.0.y
         );
     }
 
@@ -180,7 +178,7 @@ mod tests {
 
         // Bolt without BoltServing
         app.world_mut()
-            .spawn((Bolt, BoltVelocity::new(100.0, 300.0)));
+            .spawn((Bolt, Velocity2D(Vec2::new(100.0, 300.0))));
 
         app.world_mut()
             .resource_mut::<InputActions>()
@@ -190,12 +188,12 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
         assert!(
-            (velocity.value.x - 100.0).abs() < f32::EPSILON,
+            (velocity.0.x - 100.0).abs() < f32::EPSILON,
             "non-serving bolt velocity should be unchanged"
         );
     }

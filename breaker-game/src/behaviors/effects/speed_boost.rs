@@ -5,10 +5,11 @@
 //! by `multiplier`, clamped within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     behaviors::events::EffectFired,
-    bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltVelocity},
+    bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
     chips::{
         components::BoltSpeedBoost,
         definition::{SpeedBoostTarget, TriggerChain},
@@ -24,7 +25,7 @@ pub(crate) fn handle_speed_boost(
     trigger: On<EffectFired>,
     mut bolt_query: Query<
         (
-            &mut BoltVelocity,
+            &mut Velocity2D,
             &BoltBaseSpeed,
             &BoltMaxSpeed,
             Option<&BoltSpeedBoost>,
@@ -48,20 +49,20 @@ pub(crate) fn handle_speed_boost(
                 return;
             };
 
-            bolt_velocity.value *= *multiplier;
+            bolt_velocity.0 *= *multiplier;
 
             let boost = speed_boost.map_or(0.0, |b| b.0);
 
             // Floor at effective base speed (base + boost)
             let speed = bolt_velocity.speed();
             if speed > 0.0 && speed < base_speed.0 + boost {
-                bolt_velocity.value = bolt_velocity.direction() * (base_speed.0 + boost);
+                bolt_velocity.0 = bolt_velocity.0.normalize_or_zero() * (base_speed.0 + boost);
             }
 
             // Clamp to effective max speed (max + boost)
             let speed = bolt_velocity.speed();
             if speed > max_speed.0 + boost {
-                bolt_velocity.value = bolt_velocity.direction() * (max_speed.0 + boost);
+                bolt_velocity.0 = bolt_velocity.0.normalize_or_zero() * (max_speed.0 + boost);
             }
         }
         SpeedBoostTarget::Breaker | SpeedBoostTarget::AllBolts => {
@@ -75,7 +76,7 @@ mod tests {
     use super::*;
     use crate::{
         behaviors::events::EffectFired,
-        bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltVelocity},
+        bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
         chips::{
             components::BoltSpeedBoost,
             definition::{SpeedBoostTarget, TriggerChain},
@@ -103,7 +104,7 @@ mod tests {
         app.world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(vx, vy),
+                Velocity2D(Vec2::new(vx, vy)),
                 BoltBaseSpeed(400.0),
                 BoltMaxSpeed(800.0),
             ))
@@ -114,7 +115,7 @@ mod tests {
         app.world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(vx, vy),
+                Velocity2D(Vec2::new(vx, vy)),
                 BoltBaseSpeed(400.0),
                 BoltMaxSpeed(800.0),
                 BoltSpeedBoost(boost),
@@ -134,12 +135,11 @@ mod tests {
         tick(app);
     }
 
-    fn get_bolt_velocity(app: &mut App, entity: Entity) -> BoltVelocity {
-        app.world()
+    fn get_bolt_velocity(app: &mut App, entity: Entity) -> Velocity2D {
+        *app.world()
             .entity(entity)
-            .get::<BoltVelocity>()
-            .expect("bolt should have BoltVelocity")
-            .clone()
+            .get::<Velocity2D>()
+            .expect("bolt should have Velocity2D")
     }
 
     // --- Tests ---
@@ -158,7 +158,7 @@ mod tests {
             "bolt speed should be ~600.0 (400.0 * 1.5), got {:.1}",
             vel.speed()
         );
-        assert!(vel.value.y > 0.0, "direction should be preserved (y > 0)");
+        assert!(vel.0.y > 0.0, "direction should be preserved (y > 0)");
     }
 
     #[test]
@@ -209,7 +209,7 @@ mod tests {
             "bolt speed should floor at base 400.0 (not 300.0), got {:.1}",
             vel.speed()
         );
-        assert!(vel.value.y > 0.0, "direction should be preserved (y > 0)");
+        assert!(vel.0.y > 0.0, "direction should be preserved (y > 0)");
     }
 
     #[test]
@@ -239,14 +239,14 @@ mod tests {
 
         let vel = get_bolt_velocity(&mut app, bolt);
         assert!(
-            (vel.value.x).abs() < f32::EPSILON,
+            (vel.0.x).abs() < f32::EPSILON,
             "x should remain 0.0, got {:.4}",
-            vel.value.x
+            vel.0.x
         );
         assert!(
-            (vel.value.y - 400.0).abs() < 1.0,
+            (vel.0.y - 400.0).abs() < 1.0,
             "y should remain ~400.0, got {:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -285,9 +285,9 @@ mod tests {
 
         let vel = get_bolt_velocity(&mut app, bolt);
         assert!(
-            (vel.value.y - 400.0).abs() < f32::EPSILON,
+            (vel.0.y - 400.0).abs() < f32::EPSILON,
             "non-SpeedBoost effect should not change bolt velocity, got y={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -301,9 +301,9 @@ mod tests {
         // The bolt that exists should be unchanged
         let vel = get_bolt_velocity(&mut app, bolt);
         assert!(
-            (vel.value.y - 400.0).abs() < f32::EPSILON,
+            (vel.0.y - 400.0).abs() < f32::EPSILON,
             "bolt velocity should be unchanged when event bolt is None, got y={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -320,9 +320,9 @@ mod tests {
         // Existing bolt should be unaffected
         let vel = get_bolt_velocity(&mut app, bolt);
         assert!(
-            (vel.value.y - 400.0).abs() < f32::EPSILON,
+            (vel.0.y - 400.0).abs() < f32::EPSILON,
             "existing bolt should be unaffected when target entity is despawned, got y={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -343,9 +343,9 @@ mod tests {
             vel_a.speed()
         );
         assert!(
-            (vel_b.value.y - 500.0).abs() < f32::EPSILON,
+            (vel_b.0.y - 500.0).abs() < f32::EPSILON,
             "bolt B should be unchanged at 500.0, got {:.1}",
-            vel_b.value.y
+            vel_b.0.y
         );
     }
 }

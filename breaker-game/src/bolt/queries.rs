@@ -3,12 +3,11 @@
 //! Query types with 4+ components live here rather than inline in system files.
 
 use bevy::{ecs::query::Has, prelude::Entity};
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use crate::{
     bolt::components::{
-        BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltVelocity,
-        ExtraBolt,
+        BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, ExtraBolt,
     },
     chips::components::{DamageBoost, Piercing, PiercingRemaining, TiltControlBoost, WidthBoost},
     shared::EntityScale,
@@ -18,7 +17,7 @@ use crate::{
 pub(crate) type CollisionQueryBolt = (
     Entity,
     &'static mut Position2D,
-    &'static mut BoltVelocity,
+    &'static mut Velocity2D,
     &'static BoltBaseSpeed,
     &'static BoltRadius,
     Option<&'static mut PiercingRemaining>,
@@ -31,7 +30,7 @@ pub(crate) type CollisionQueryBolt = (
 pub(crate) type ResetBoltQuery = (
     Entity,
     &'static mut Position2D,
-    &'static mut BoltVelocity,
+    &'static mut Velocity2D,
     Option<&'static mut PiercingRemaining>,
     Option<&'static Piercing>,
     Option<&'static mut PreviousPosition>,
@@ -41,7 +40,7 @@ pub(crate) type ResetBoltQuery = (
 pub(crate) type LostQuery = (
     Entity,
     &'static Position2D,
-    &'static BoltVelocity,
+    &'static Velocity2D,
     &'static BoltBaseSpeed,
     &'static BoltRadius,
     &'static BoltRespawnOffsetY,

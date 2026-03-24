@@ -5,7 +5,9 @@ use rand::Rng;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, constraint::DistanceConstraint,
 };
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
+use rantzsoft_spatial2d::components::{
+    Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
+};
 
 use crate::{
     bolt::{components::*, messages::SpawnChainBolt, resources::BoltConfig},
@@ -37,10 +39,10 @@ pub(crate) fn spawn_chain_bolt(
         let angle = rng
             .0
             .random_range(-bolt_config.respawn_angle_spread..=bolt_config.respawn_angle_spread);
-        let velocity = BoltVelocity::new(
+        let velocity = Velocity2D(Vec2::new(
             bolt_config.base_speed * angle.sin(),
             bolt_config.base_speed * angle.cos(),
-        );
+        ));
 
         let spawn_pos = Vec2::new(anchor_pos.0.x, anchor_pos.0.y + bolt_config.spawn_offset_y);
 
@@ -96,12 +98,12 @@ mod tests {
     use rantzsoft_physics2d::{
         aabb::Aabb2D, collision_layers::CollisionLayers, constraint::DistanceConstraint,
     };
-    use rantzsoft_spatial2d::components::Position2D;
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     use super::*;
     use crate::{
         bolt::{
-            components::{Bolt, BoltVelocity, ExtraBolt},
+            components::{Bolt, ExtraBolt},
             messages::SpawnChainBolt,
             resources::BoltConfig,
         },
@@ -153,7 +155,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Position2D(Vec2::new(100.0, 50.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
 
@@ -203,7 +205,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Position2D(Vec2::new(0.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
 
@@ -278,7 +280,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Position2D(Vec2::new(0.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
 
@@ -315,8 +317,8 @@ mod tests {
             "chain bolt should have CollisionLayers"
         );
         assert!(
-            app.world().get::<BoltVelocity>(chain_bolt).is_some(),
-            "chain bolt should have BoltVelocity"
+            app.world().get::<Velocity2D>(chain_bolt).is_some(),
+            "chain bolt should have Velocity2D"
         );
     }
 

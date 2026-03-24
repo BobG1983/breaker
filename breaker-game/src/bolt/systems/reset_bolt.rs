@@ -49,11 +49,11 @@ pub(crate) fn reset_bolt(
         }
 
         if serving {
-            velocity.value = Vec2::ZERO;
+            velocity.0 = Vec2::ZERO;
             commands.entity(entity).insert(BoltServing);
         } else {
             let v = config.initial_velocity();
-            velocity.value = Vec2::new(v.x, v.y);
+            velocity.0 = Vec2::new(v.x, v.y);
             commands.entity(entity).remove::<BoltServing>();
         }
 
@@ -66,12 +66,12 @@ pub(crate) fn reset_bolt(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
-    use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D};
+    use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, Velocity2D};
 
     use super::*;
     use crate::{
         bolt::{
-            components::{Bolt, BoltServing, BoltVelocity, ExtraBolt},
+            components::{Bolt, BoltServing, ExtraBolt},
             resources::BoltConfig,
         },
         breaker::components::Breaker,
@@ -92,7 +92,7 @@ mod tests {
     }
 
     /// Spawns a bolt entity with spatial2d components for reset testing.
-    fn spawn_bolt_entity(app: &mut App, pos: Vec2, velocity: BoltVelocity) -> Entity {
+    fn spawn_bolt_entity(app: &mut App, pos: Vec2, velocity: Velocity2D) -> Entity {
         app.world_mut()
             .spawn((Bolt, velocity, Position2D(pos), PreviousPosition(pos)))
             .id()
@@ -120,7 +120,7 @@ mod tests {
         spawn_bolt_entity(
             &mut app,
             Vec2::new(150.0, 100.0),
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
         );
         spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -154,7 +154,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(300.0, 400.0),
+                Velocity2D(Vec2::new(300.0, 400.0)),
                 Position2D(Vec2::new(150.0, 100.0)),
                 PreviousPosition(Vec2::new(140.0, 90.0)),
             ))
@@ -183,7 +183,7 @@ mod tests {
         spawn_bolt_entity(
             &mut app,
             Vec2::new(0.0, 0.0),
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
         );
         spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -191,15 +191,15 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query_filtered::<&BoltVelocity, With<Bolt>>()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
 
         assert!(
-            velocity.value == Vec2::ZERO,
+            velocity.0 == Vec2::ZERO,
             "velocity should be zero on node 0, got {:?}",
-            velocity.value
+            velocity.0
         );
     }
 
@@ -207,7 +207,11 @@ mod tests {
     fn reset_bolt_sets_initial_velocity_on_subsequent_nodes() {
         let mut app = test_app();
         app.world_mut().resource_mut::<RunState>().node_index = 2;
-        spawn_bolt_entity(&mut app, Vec2::new(0.0, 0.0), BoltVelocity::new(0.0, 0.0));
+        spawn_bolt_entity(
+            &mut app,
+            Vec2::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
+        );
         spawn_breaker(&mut app, 0.0, -250.0);
 
         app.update();
@@ -215,15 +219,15 @@ mod tests {
         let config = BoltConfig::default();
         let velocity = app
             .world_mut()
-            .query_filtered::<&BoltVelocity, With<Bolt>>()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
 
         assert!(
-            velocity.value.y > 0.0,
+            velocity.0.y > 0.0,
             "velocity y should be positive on subsequent node, got {}",
-            velocity.value.y
+            velocity.0.y
         );
         let speed = velocity.speed();
         assert!(
@@ -236,7 +240,11 @@ mod tests {
     #[test]
     fn reset_bolt_inserts_serving_on_node_zero() {
         let mut app = test_app();
-        let bolt_id = spawn_bolt_entity(&mut app, Vec2::new(0.0, 0.0), BoltVelocity::new(0.0, 0.0));
+        let bolt_id = spawn_bolt_entity(
+            &mut app,
+            Vec2::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
+        );
         spawn_breaker(&mut app, 0.0, -250.0);
 
         app.update();
@@ -256,7 +264,7 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
-                BoltVelocity::new(0.0, 0.0),
+                Velocity2D(Vec2::new(0.0, 0.0)),
                 Position2D(Vec2::new(0.0, 0.0)),
                 PreviousPosition(Vec2::new(0.0, 0.0)),
             ))
@@ -278,7 +286,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 0.0),
+                Velocity2D(Vec2::new(0.0, 0.0)),
                 Position2D(Vec2::new(0.0, 0.0)),
                 PreviousPosition(Vec2::new(0.0, 0.0)),
                 Piercing(3),
@@ -307,7 +315,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 0.0),
+                Velocity2D(Vec2::new(0.0, 0.0)),
                 Position2D(Vec2::new(0.0, 0.0)),
                 PreviousPosition(Vec2::new(0.0, 0.0)),
                 Piercing(3),
@@ -372,7 +380,7 @@ mod tests {
         let baseline_id = spawn_bolt_entity(
             &mut app,
             Vec2::new(150.0, 100.0),
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
         );
 
         // Extra bolt at a different position
@@ -381,7 +389,7 @@ mod tests {
             .spawn((
                 Bolt,
                 ExtraBolt,
-                BoltVelocity::new(200.0, 300.0),
+                Velocity2D(Vec2::new(200.0, 300.0)),
                 Position2D(Vec2::new(-100.0, 50.0)),
                 PreviousPosition(Vec2::new(-100.0, 50.0)),
             ))

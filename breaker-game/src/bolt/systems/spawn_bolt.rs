@@ -2,12 +2,14 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
+use rantzsoft_spatial2d::components::{
+    Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
+};
 use tracing::debug;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltServing, BoltVelocity},
+        components::{Bolt, BoltServing},
         messages::BoltSpawned,
         resources::BoltConfig,
     },
@@ -53,10 +55,10 @@ pub(crate) fn spawn_bolt(
     let serving = run_state.node_index == 0;
 
     let velocity = if serving {
-        BoltVelocity::new(0.0, 0.0)
+        Velocity2D(Vec2::new(0.0, 0.0))
     } else {
         let v = config.initial_velocity();
-        BoltVelocity::new(v.x, v.y)
+        Velocity2D(Vec2::new(v.x, v.y))
     };
 
     let mut entity = commands.spawn((
@@ -342,7 +344,7 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
@@ -371,11 +373,11 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
-        assert!(velocity.value.y > 0.0, "bolt should launch upward");
+        assert!(velocity.0.y > 0.0, "bolt should launch upward");
     }
 
     #[test]
@@ -401,7 +403,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             CleanupOnRunEnd,
             Piercing(2),
             DamageBoost(0.5),
@@ -522,7 +524,8 @@ mod tests {
     #[test]
     fn existing_bolt_still_triggers_bolt_spawned_message() {
         let mut app = test_app();
-        app.world_mut().spawn((Bolt, BoltVelocity::new(0.0, 400.0)));
+        app.world_mut()
+            .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0))));
         app.add_systems(Startup, spawn_bolt);
         app.update();
 

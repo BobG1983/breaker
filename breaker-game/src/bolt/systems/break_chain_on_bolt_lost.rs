@@ -29,10 +29,10 @@ pub(crate) fn break_chain_on_bolt_lost(
 mod tests {
     use bevy::prelude::*;
     use rantzsoft_physics2d::constraint::DistanceConstraint;
-    use rantzsoft_spatial2d::components::Position2D;
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     use super::*;
-    use crate::bolt::components::{Bolt, BoltVelocity, ExtraBolt};
+    use crate::bolt::components::{Bolt, ExtraBolt};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -66,7 +66,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Position2D(Vec2::new(0.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
         let b = app
@@ -75,7 +75,7 @@ mod tests {
                 Bolt,
                 ExtraBolt,
                 Position2D(Vec2::new(100.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
         let constraint = app
@@ -121,7 +121,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Position2D(Vec2::new(0.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
         let b = app
@@ -130,7 +130,7 @@ mod tests {
                 Bolt,
                 ExtraBolt,
                 Position2D(Vec2::new(100.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
         let constraint = app
@@ -170,7 +170,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Position2D(Vec2::new(0.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
         let b = app
@@ -179,7 +179,7 @@ mod tests {
                 Bolt,
                 ExtraBolt,
                 Position2D(Vec2::new(100.0, 0.0)),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
             ))
             .id();
         let constraint = app

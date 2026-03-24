@@ -13,10 +13,7 @@ mod tests;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     behaviors::ActiveChains,
-    bolt::{
-        BoltSystems,
-        components::{Bolt, BoltVelocity},
-    },
+    bolt::{BoltSystems, components::Bolt},
     breaker::{
         BreakerSystems,
         components::{Breaker, BreakerState},
@@ -58,12 +55,7 @@ use crate::{
 type BoltDebugQuery<'w, 's> = Query<
     'w,
     's,
-    (
-        Entity,
-        &'static mut Position2D,
-        Option<&'static mut BoltVelocity>,
-        Option<&'static mut Velocity2D>,
-    ),
+    (Entity, &'static mut Position2D, &'static mut Velocity2D),
     With<ScenarioTagBolt>,
 >;
 
@@ -348,19 +340,14 @@ pub fn apply_debug_setup(
         return;
     };
 
-    for (entity, mut position, bolt_vel, velocity2d) in &mut bolt_query {
+    for (entity, mut position, mut velocity) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
             position.0.x = x;
             position.0.y = y;
         }
 
         if let Some((vx, vy)) = setup.bolt_velocity {
-            if let Some(mut vel) = bolt_vel {
-                vel.value = Vec2::new(vx, vy);
-            }
-            if let Some(mut v2d) = velocity2d {
-                v2d.0 = Vec2::new(vx, vy);
-            }
+            velocity.0 = Vec2::new(vx, vy);
         }
 
         if setup.disable_physics {
@@ -437,19 +424,14 @@ pub fn deferred_debug_setup(
         return;
     }
 
-    for (entity, mut position, bolt_vel, velocity2d) in &mut bolt_query {
+    for (entity, mut position, mut velocity) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
             position.0.x = x;
             position.0.y = y;
         }
 
         if let Some((vx, vy)) = setup.bolt_velocity {
-            if let Some(mut vel) = bolt_vel {
-                vel.value = Vec2::new(vx, vy);
-            }
-            if let Some(mut v2d) = velocity2d {
-                v2d.0 = Vec2::new(vx, vy);
-            }
+            velocity.0 = Vec2::new(vx, vy);
         }
 
         if setup.disable_physics {

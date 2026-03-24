@@ -19,8 +19,8 @@ pub enum PhysicsSystems {
 }
 
 /// Game-agnostic 2D physics plugin. Registers the `CollisionQuadtree`
-/// resource, the `maintain_quadtree` system, and the
-/// `enforce_distance_constraints` system in `FixedUpdate`.
+/// resource, the `maintain_quadtree` system, and
+/// `enforce_distance_constraints` in `FixedUpdate`.
 pub struct RantzPhysics2dPlugin;
 
 impl Plugin for RantzPhysics2dPlugin {
@@ -28,11 +28,10 @@ impl Plugin for RantzPhysics2dPlugin {
         app.init_resource::<CollisionQuadtree>();
         app.add_systems(
             FixedUpdate,
-            maintain_quadtree.in_set(PhysicsSystems::MaintainQuadtree),
-        );
-        app.add_systems(
-            FixedUpdate,
-            enforce_distance_constraints.in_set(PhysicsSystems::EnforceDistanceConstraints),
+            (
+                maintain_quadtree.in_set(PhysicsSystems::MaintainQuadtree),
+                enforce_distance_constraints.in_set(PhysicsSystems::EnforceDistanceConstraints),
+            ),
         );
     }
 }

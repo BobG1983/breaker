@@ -1,10 +1,11 @@
 //! Bolt-breaker collision detection and reflection via CCD.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{
-        components::BoltVelocity, filters::ActiveFilter, messages::BoltHitBreaker,
+        components::enforce_min_angle, filters::ActiveFilter, messages::BoltHitBreaker,
         queries::CollisionQueryBolt,
     },
     breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
@@ -21,7 +22,7 @@ use crate::{
 /// - `min_angle_from_horizontal`: minimum angle from horizontal enforced on the result
 fn reflect_top_hit(
     hit_fraction: f32,
-    bolt_velocity: &mut BoltVelocity,
+    bolt_velocity: &mut Velocity2D,
     tilt_angle: f32,
     max_angle: f32,
     base_speed: f32,
@@ -31,11 +32,11 @@ fn reflect_top_hit(
     let total_angle = base_angle + tilt_angle;
     let clamped_angle = total_angle.clamp(-max_angle, max_angle);
     let new_speed = bolt_velocity.speed().max(base_speed);
-    bolt_velocity.value = Vec2::new(
+    bolt_velocity.0 = Vec2::new(
         new_speed * clamped_angle.sin(),
         new_speed * clamped_angle.cos(),
     );
-    bolt_velocity.enforce_min_angle(min_angle_from_horizontal);
+    enforce_min_angle(&mut bolt_velocity.0, min_angle_from_horizontal);
 }
 
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.
@@ -99,7 +100,7 @@ pub(crate) fn bolt_breaker_collision(
 
         if inside {
             bolt_position.0.y = above_y;
-            if bolt_velocity.value.y <= 0.0 {
+            if bolt_velocity.0.y <= 0.0 {
                 let hit_x = bolt_pos
                     .x
                     .clamp(breaker_pos.x - half_w, breaker_pos.x + half_w);
@@ -120,12 +121,12 @@ pub(crate) fn bolt_breaker_collision(
             continue;
         }
 
-        let speed = bolt_velocity.value.length();
+        let speed = bolt_velocity.0.length();
         if speed < f32::EPSILON {
             continue;
         }
 
-        let (direction, max_dist) = (bolt_velocity.value / speed, speed * dt);
+        let (direction, max_dist) = (bolt_velocity.0 / speed, speed * dt);
 
         let Some(hit) = ray_vs_aabb(bolt_pos, direction, max_dist, breaker_pos, expanded_half)
         else {
@@ -133,14 +134,14 @@ pub(crate) fn bolt_breaker_collision(
         };
 
         // Only reflect downward-moving bolts; upward bolts pass through on all faces
-        if bolt_velocity.value.y > 0.0 {
+        if bolt_velocity.0.y > 0.0 {
             continue;
         }
 
         // Determine if this is a side hit or top hit based on the normal
         if hit.normal.x.abs() > hit.normal.y.abs() {
             // Side hit — reflect X only, preserve Y velocity
-            bolt_velocity.value.x = -bolt_velocity.value.x;
+            bolt_velocity.0.x = -bolt_velocity.0.x;
 
             let advance = (hit.distance - CCD_EPSILON).max(0.0);
             let new_pos = bolt_pos + direction * advance;
@@ -179,7 +180,7 @@ mod tests {
     use crate::{
         bolt::{
             BoltConfig,
-            components::{Bolt, BoltBaseSpeed, BoltRadius, BoltVelocity},
+            components::{Bolt, BoltBaseSpeed, BoltRadius},
         },
         breaker::{
             components::{
@@ -261,7 +262,7 @@ mod tests {
         app.world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(vx, vy),
+                Velocity2D(Vec2::new(vx, vy)),
                 bolt_param_bundle(),
                 Position2D(Vec2::new(x, y)),
             ))
@@ -281,11 +282,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.y > 0.0, "bolt should reflect upward");
+        assert!(vel.0.y > 0.0, "bolt should reflect upward");
     }
 
     #[test]
@@ -303,12 +304,12 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.x < 0.0, "left hit should angle bolt leftward");
-        assert!(vel.value.y > 0.0, "bolt should still go upward");
+        assert!(vel.0.x < 0.0, "left hit should angle bolt leftward");
+        assert!(vel.0.y > 0.0, "bolt should still go upward");
     }
 
     #[test]
@@ -326,11 +327,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.x > 0.0, "right hit should angle bolt rightward");
+        assert!(vel.0.x > 0.0, "right hit should angle bolt rightward");
     }
 
     #[test]
@@ -361,12 +362,12 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.x > 0.0,
+            vel.0.x > 0.0,
             "right tilt should push bolt rightward even on center hit"
         );
     }
@@ -382,14 +383,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(
-            vel.value.y < 0.0,
-            "bolt should not be reflected when far above"
-        );
+        assert!(vel.0.y < 0.0, "bolt should not be reflected when far above");
     }
 
     #[test]
@@ -405,14 +403,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(
-            vel.value.y > 0.0,
-            "upward-moving bolt should not be reflected"
-        );
+        assert!(vel.0.y > 0.0, "upward-moving bolt should not be reflected");
     }
 
     #[derive(Resource, Default)]
@@ -443,11 +438,11 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, 0.0, y_pos, 0.0, -400.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "overlap should reflect bolt upward, got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
 
         let pos = app.world().get::<Position2D>(bolt_entity).unwrap();
@@ -481,16 +476,16 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, 0.0, animated_y, 50.0, 400.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "upward bolt should keep moving up, got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
         assert!(
-            (vel.value.x - 50.0).abs() < f32::EPSILON,
+            (vel.0.x - 50.0).abs() < f32::EPSILON,
             "velocity should be unchanged, got vx={:.1}",
-            vel.value.x
+            vel.0.x
         );
 
         let pos = app.world().get::<Position2D>(bolt_entity).unwrap();
@@ -521,16 +516,16 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, -70.0, breaker_y, 200.0, 300.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.x > 0.0,
+            vel.0.x > 0.0,
             "upward side hit should NOT flip X velocity (guard should skip), got vx={:.1}",
-            vel.value.x
+            vel.0.x
         );
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "upward side hit should NOT flip Y velocity, got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
 
         let hits = app.world().resource::<HitBreakers>();
@@ -554,11 +549,11 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, -70.0, breaker_y, 200.0, -300.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.x < 0.0,
+            vel.0.x < 0.0,
             "downward side hit SHOULD flip X velocity, got vx={:.1}",
-            vel.value.x
+            vel.0.x
         );
     }
 
@@ -582,9 +577,9 @@ mod tests {
 
         let velocities: Vec<(Entity, Vec2)> = app
             .world_mut()
-            .query::<(Entity, &BoltVelocity)>()
+            .query::<(Entity, &Velocity2D)>()
             .iter(app.world())
-            .map(|(e, v)| (e, v.value))
+            .map(|(e, v)| (e, v.0))
             .collect();
 
         for (entity, vel) in &velocities {
@@ -669,7 +664,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, -400.0),
+                Velocity2D(Vec2::new(0.0, -400.0)),
                 bolt_param_bundle(),
                 Piercing(3),
                 PiercingRemaining(0),
@@ -679,11 +674,11 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt should have reflected off breaker, got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -706,7 +701,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, -400.0),
+                Velocity2D(Vec2::new(0.0, -400.0)),
                 bolt_param_bundle(),
                 PiercingRemaining(5),
                 Position2D(Vec2::new(0.0, start_y)),
@@ -715,11 +710,11 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt should have reflected off breaker, got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -758,7 +753,7 @@ mod tests {
 
         tick(&mut app);
 
-        let vel_with_boost = app.world().get::<BoltVelocity>(bolt_entity).unwrap().value;
+        let vel_with_boost = app.world().get::<Velocity2D>(bolt_entity).unwrap().0;
         let angle_with_boost = vel_with_boost.x.abs().atan2(vel_with_boost.y);
 
         // Now test without boost for comparison
@@ -779,9 +774,9 @@ mod tests {
 
         let vel_no_boost = app_no_boost
             .world()
-            .get::<BoltVelocity>(bolt_no_boost)
+            .get::<Velocity2D>(bolt_no_boost)
             .unwrap()
-            .value;
+            .0;
         let angle_no_boost = vel_no_boost.x.abs().atan2(vel_no_boost.y);
 
         assert!(
@@ -816,11 +811,11 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt at x=75.0 (inside boosted width) should reflect upward, got vy={}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -852,7 +847,7 @@ mod tests {
         app.world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(vx, vy),
+                Velocity2D(Vec2::new(vx, vy)),
                 bolt_param_bundle(),
                 EntityScale(entity_scale),
                 Position2D(Vec2::new(x, y)),
@@ -869,12 +864,12 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, 0.0, -234.0, 0.0, -1.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "bolt at y=-234 should NOT be inside scaled breaker (scaled expanded top=-235), \
              got vy={:.1} (if positive, overlap resolution fired with unscaled dimensions)",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -890,11 +885,11 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, 55.0, start_y, 0.0, -400.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "bolt at x=55 should miss scaled breaker (expanded half_w=50), got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -922,11 +917,11 @@ mod tests {
         let bolt_entity = spawn_bolt(&mut app, 70.0, start_y, 0.0, -400.0);
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "bolt at x=70 should miss scaled breaker (expanded half_w=64), got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -943,14 +938,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "EntityScale(1.0) should produce identical behavior to no scale, got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -972,14 +967,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt should reflect off breaker at Position2D (50, -250), got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 }

@@ -1,13 +1,10 @@
 //! Safety clamp — catches bolts that escape through wall corner overlaps.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
-    bolt::{
-        components::{BoltRadius, BoltVelocity},
-        filters::ActiveFilter,
-    },
+    bolt::{components::BoltRadius, filters::ActiveFilter},
     shared::{EntityScale, PlayfieldConfig, math::CCD_EPSILON},
 };
 
@@ -25,7 +22,7 @@ pub(crate) fn clamp_bolt_to_playfield(
     mut bolt_query: Query<
         (
             &mut Position2D,
-            &mut BoltVelocity,
+            &mut Velocity2D,
             &BoltRadius,
             Option<&EntityScale>,
         ),
@@ -41,7 +38,7 @@ pub(crate) fn clamp_bolt_to_playfield(
         let y_max = playfield.top() - r - CCD_EPSILON;
 
         let mut new_pos = pos;
-        let mut new_vel = vel.value;
+        let mut new_vel = vel.0;
         let mut clamped = false;
 
         if pos.x < x_min {
@@ -69,7 +66,7 @@ pub(crate) fn clamp_bolt_to_playfield(
 
         if clamped {
             position.0 = new_pos;
-            vel.value = new_vel;
+            vel.0 = new_vel;
         }
     }
 }
@@ -109,7 +106,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(100.0, 50.0)),
         ));
@@ -117,14 +114,14 @@ mod tests {
 
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!((pos.0.x - 100.0).abs() < TOLERANCE);
         assert!((pos.0.y - 50.0).abs() < TOLERANCE);
-        assert!((vel.value.x - 300.0).abs() < TOLERANCE);
-        assert!((vel.value.y - 400.0).abs() < TOLERANCE);
+        assert!((vel.0.x - 300.0).abs() < TOLERANCE);
+        assert!((vel.0.y - 400.0).abs() < TOLERANCE);
     }
 
     #[test]
@@ -132,7 +129,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(500.0, 0.0)),
         ));
@@ -141,7 +138,7 @@ mod tests {
         let expected_x = 400.0 - RADIUS - CCD_EPSILON; // 393.99
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -151,12 +148,12 @@ mod tests {
             pos.0.x
         );
         assert!(
-            (vel.value.x - (-300.0)).abs() < TOLERANCE,
+            (vel.0.x - (-300.0)).abs() < TOLERANCE,
             "vx should be flipped to -300, got {}",
-            vel.value.x
+            vel.0.x
         );
         assert!(
-            (vel.value.y - 400.0).abs() < TOLERANCE,
+            (vel.0.y - 400.0).abs() < TOLERANCE,
             "vy should be unchanged"
         );
     }
@@ -166,7 +163,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(-300.0, 400.0),
+            Velocity2D(Vec2::new(-300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(-500.0, 0.0)),
         ));
@@ -175,7 +172,7 @@ mod tests {
         let expected_x = -400.0 + RADIUS + CCD_EPSILON; // -393.99
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -185,12 +182,12 @@ mod tests {
             pos.0.x
         );
         assert!(
-            (vel.value.x - 300.0).abs() < TOLERANCE,
+            (vel.0.x - 300.0).abs() < TOLERANCE,
             "vx should be flipped to 300, got {}",
-            vel.value.x
+            vel.0.x
         );
         assert!(
-            (vel.value.y - 400.0).abs() < TOLERANCE,
+            (vel.0.y - 400.0).abs() < TOLERANCE,
             "vy should be unchanged"
         );
     }
@@ -200,7 +197,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(0.0, 400.0)),
         ));
@@ -209,7 +206,7 @@ mod tests {
         let expected_y = 300.0 - RADIUS - CCD_EPSILON; // 293.99
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -219,12 +216,12 @@ mod tests {
             pos.0.y
         );
         assert!(
-            (vel.value.y - (-400.0)).abs() < TOLERANCE,
+            (vel.0.y - (-400.0)).abs() < TOLERANCE,
             "vy should be flipped to -400, got {}",
-            vel.value.y
+            vel.0.y
         );
         assert!(
-            (vel.value.x - 300.0).abs() < TOLERANCE,
+            (vel.0.x - 300.0).abs() < TOLERANCE,
             "vx should be unchanged"
         );
     }
@@ -234,7 +231,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, -400.0),
+            Velocity2D(Vec2::new(300.0, -400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(0.0, -500.0)),
         ));
@@ -242,7 +239,7 @@ mod tests {
 
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -252,9 +249,9 @@ mod tests {
             pos.0.y
         );
         assert!(
-            (vel.value.y - (-400.0)).abs() < TOLERANCE,
+            (vel.0.y - (-400.0)).abs() < TOLERANCE,
             "vy should NOT be flipped, got {}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -263,7 +260,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(-300.0, 400.0),
+            Velocity2D(Vec2::new(-300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(500.0, 0.0)),
         ));
@@ -272,7 +269,7 @@ mod tests {
         let expected_x = 400.0 - RADIUS - CCD_EPSILON;
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -281,9 +278,9 @@ mod tests {
             "x should be clamped"
         );
         assert!(
-            (vel.value.x - (-300.0)).abs() < TOLERANCE,
+            (vel.0.x - (-300.0)).abs() < TOLERANCE,
             "vx already pointing inward should NOT be flipped, got {}",
-            vel.value.x
+            vel.0.x
         );
     }
 
@@ -292,7 +289,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, -400.0),
+            Velocity2D(Vec2::new(300.0, -400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(0.0, 400.0)),
         ));
@@ -301,7 +298,7 @@ mod tests {
         let expected_y = 300.0 - RADIUS - CCD_EPSILON;
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -310,9 +307,9 @@ mod tests {
             "y should be clamped"
         );
         assert!(
-            (vel.value.y - (-400.0)).abs() < TOLERANCE,
+            (vel.0.y - (-400.0)).abs() < TOLERANCE,
             "vy already pointing inward should NOT be flipped, got {}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -321,7 +318,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(500.0, 400.0)),
         ));
@@ -331,7 +328,7 @@ mod tests {
         let expected_y = 300.0 - RADIUS - CCD_EPSILON;
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -346,14 +343,14 @@ mod tests {
             pos.0.y
         );
         assert!(
-            (vel.value.x - (-300.0)).abs() < TOLERANCE,
+            (vel.0.x - (-300.0)).abs() < TOLERANCE,
             "vx should be flipped to -300, got {}",
-            vel.value.x
+            vel.0.x
         );
         assert!(
-            (vel.value.y - (-400.0)).abs() < TOLERANCE,
+            (vel.0.y - (-400.0)).abs() < TOLERANCE,
             "vy should be flipped to -400, got {}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -363,7 +360,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltServing,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(RADIUS),
             Position2D(Vec2::new(500.0, 0.0)),
         ));
@@ -389,7 +386,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(8.0),
             EntityScale(0.5),
             Position2D(Vec2::new(500.0, 0.0)),
@@ -416,7 +413,7 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(300.0, 400.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
             BoltRadius(RADIUS),
             // No EntityScale
             Position2D(Vec2::new(500.0, 0.0)),
@@ -426,7 +423,7 @@ mod tests {
         let expected_x = 400.0 - RADIUS - CCD_EPSILON;
         let (pos, vel) = app
             .world_mut()
-            .query::<(&Position2D, &BoltVelocity)>()
+            .query::<(&Position2D, &Velocity2D)>()
             .iter(app.world())
             .next()
             .unwrap();
@@ -436,9 +433,9 @@ mod tests {
             pos.0.x
         );
         assert!(
-            (vel.value.x - (-300.0)).abs() < TOLERANCE,
+            (vel.0.x - (-300.0)).abs() < TOLERANCE,
             "vx should be flipped to -300, got {:.1}",
-            vel.value.x
+            vel.0.x
         );
     }
 }

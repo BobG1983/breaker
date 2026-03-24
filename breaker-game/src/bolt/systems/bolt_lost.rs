@@ -2,12 +2,10 @@
 
 use bevy::prelude::*;
 use rand::Rng;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use crate::{
-    bolt::{
-        components::BoltVelocity, filters::ActiveFilter, messages::BoltLost, queries::LostQuery,
-    },
+    bolt::{filters::ActiveFilter, messages::BoltLost, queries::LostQuery},
     breaker::filters::CollisionFilterBreaker,
     shared::{GameRng, PlayfieldConfig},
 };
@@ -92,9 +90,7 @@ pub(crate) fn bolt_lost(
             commands.entity(entry.entity).insert((
                 Position2D(new_pos),
                 PreviousPosition(new_pos),
-                BoltVelocity {
-                    value: new_velocity,
-                },
+                Velocity2D(new_velocity),
             ));
         }
     }
@@ -102,14 +98,14 @@ pub(crate) fn bolt_lost(
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D};
+    use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, Velocity2D};
 
     use super::*;
     use crate::{
         bolt::{
             components::{
                 Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-                BoltVelocity, ExtraBolt,
+                ExtraBolt,
             },
             resources::BoltConfig,
         },
@@ -163,7 +159,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
         ));
@@ -171,11 +167,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.y > 0.0, "bolt should be relaunched upward");
+        assert!(vel.0.y > 0.0, "bolt should be relaunched upward");
     }
 
     #[test]
@@ -193,7 +189,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(100.0, -400.0),
+            Velocity2D(Vec2::new(100.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(200.0, playfield.bottom() - 100.0)),
         ));
@@ -201,12 +197,12 @@ mod tests {
 
         let (vel, pos) = app
             .world_mut()
-            .query::<(&BoltVelocity, &Position2D)>()
+            .query::<(&Velocity2D, &Position2D)>()
             .iter(app.world())
             .next()
             .unwrap();
 
-        let speed = vel.value.length();
+        let speed = vel.0.length();
         assert!(
             (speed - bolt_config.base_speed).abs() < 1.0,
             "respawn speed should equal base_speed {:.0}, got {:.1}",
@@ -214,14 +210,14 @@ mod tests {
             speed,
         );
 
-        let angle = vel.value.x.atan2(vel.value.y).abs();
+        let angle = vel.0.x.atan2(vel.0.y).abs();
         assert!(
             angle <= bolt_config.respawn_angle_spread + f32::EPSILON,
             "respawn angle {angle:.3} rad should be within spread {:.3} rad",
             bolt_config.respawn_angle_spread,
         );
 
-        assert!(vel.value.y > 0.0, "respawn should launch upward");
+        assert!(vel.0.y > 0.0, "respawn should launch upward");
 
         assert!(
             (pos.0.x - breaker_x).abs() < f32::EPSILON,
@@ -244,7 +240,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(100.0, -400.0),
+            Velocity2D(Vec2::new(100.0, -400.0)),
             (
                 BoltBaseSpeed(bolt_config.base_speed),
                 BoltRadius(bolt_config.radius),
@@ -257,15 +253,15 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
 
         assert!(
-            vel.value.x.abs() < f32::EPSILON,
+            vel.0.x.abs() < f32::EPSILON,
             "zero spread should launch straight up, got vx={:.3}",
-            vel.value.x,
+            vel.0.x,
         );
     }
 
@@ -284,7 +280,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
         ));
@@ -321,7 +317,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
         ));
@@ -363,7 +359,7 @@ mod tests {
             .spawn((
                 Bolt,
                 ExtraBolt,
-                BoltVelocity::new(0.0, -400.0),
+                Velocity2D(Vec2::new(0.0, -400.0)),
                 bolt_lost_bundle(),
                 Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
             ))
@@ -402,7 +398,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             ExtraBolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
         ));
@@ -426,7 +422,7 @@ mod tests {
         // Baseline bolt (no ExtraBolt)
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
         ));
@@ -434,7 +430,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             ExtraBolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(50.0, playfield.bottom() - 100.0)),
         ));
@@ -469,7 +465,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(100.0, -200.0),
+            Velocity2D(Vec2::new(100.0, -200.0)),
             bolt_lost_bundle(),
             Position2D(Vec2::new(0.0, 100.0)),
         ));
@@ -477,11 +473,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.y < 0.0, "bolt above floor should keep going down");
+        assert!(vel.0.y < 0.0, "bolt above floor should keep going down");
     }
 
     // --- EntityScale lost detection tests ---
@@ -500,7 +496,7 @@ mod tests {
         let bolt_y = playfield.bottom() - 4.0 - 1.0; // -305.0
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             EntityScale(0.5),
             Position2D(Vec2::new(0.0, bolt_y)),
@@ -509,14 +505,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "scaled bolt below effective threshold should be respawned (vy > 0), got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -533,7 +529,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, -400.0),
+            Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_lost_bundle(),
             // No EntityScale
             Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
@@ -542,14 +538,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt without EntityScale should be respawned normally, got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 }

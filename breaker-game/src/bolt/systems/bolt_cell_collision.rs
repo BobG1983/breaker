@@ -146,7 +146,7 @@ pub(crate) fn bolt_cell_collision(
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
         let r = bolt_radius.0 * bolt_scale;
         let mut position = bolt_position.0;
-        let mut velocity = bolt_vel.value;
+        let mut velocity = bolt_vel.0;
         let mut remaining = velocity.length() * dt;
 
         // Effective damage for pierce lookahead (compared against cell HP).
@@ -241,7 +241,7 @@ pub(crate) fn bolt_cell_collision(
         }
 
         bolt_position.0 = position;
-        bolt_vel.value = velocity;
+        bolt_vel.0 = velocity;
     }
 }
 
@@ -250,12 +250,12 @@ mod tests {
     use rantzsoft_physics2d::{
         aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
     };
-    use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+    use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
 
     use super::*;
     use crate::{
         bolt::{
-            components::{Bolt, BoltBaseSpeed, BoltRadius, BoltServing, BoltVelocity},
+            components::{Bolt, BoltBaseSpeed, BoltRadius, BoltServing},
             messages::BoltHitWall,
             resources::BoltConfig,
         },
@@ -341,7 +341,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, speed),
+            Velocity2D(Vec2::new(0.0, speed)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -375,7 +375,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -383,14 +383,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "bolt should reflect downward, got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let pos = app
@@ -421,7 +421,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(400.0, 0.1), // mostly horizontal
+            Velocity2D(Vec2::new(400.0, 0.1)), // mostly horizontal
             Position2D(Vec2::new(start_x, 0.0)),
         ));
 
@@ -429,14 +429,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.x < 0.0,
+            vel.0.x < 0.0,
             "bolt should reflect leftward, got vx={}",
-            vel.value.x
+            vel.0.x
         );
     }
 
@@ -456,7 +456,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -498,7 +498,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -548,7 +548,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -571,7 +571,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 300.0),
+            Velocity2D(Vec2::new(0.0, 300.0)),
             Position2D(Vec2::new(0.0, -100.0)),
         ));
 
@@ -579,11 +579,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.y > 0.0, "bolt should still move upward");
+        assert!(vel.0.y > 0.0, "bolt should still move upward");
     }
 
     // --- Cascade prevention tests ---
@@ -611,7 +611,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -647,7 +647,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(400.0, 10.0),
+            Velocity2D(Vec2::new(400.0, 10.0)),
             Position2D(Vec2::new(start_x, cell_y)),
         ));
 
@@ -685,7 +685,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(30.0, 400.0),
+            Velocity2D(Vec2::new(30.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -722,7 +722,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.1, 800.0),
+            Velocity2D(Vec2::new(0.1, 800.0)),
             Position2D(Vec2::new(0.0, 0.0)),
         ));
 
@@ -753,14 +753,14 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(-100.0, start_y)),
         ));
         // Bolt B near cell B
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(100.0, start_y)),
         ));
 
@@ -782,7 +782,7 @@ mod tests {
                 Bolt,
                 BoltServing,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(0.0, 0.0)),
             ))
             .id();
@@ -819,7 +819,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
@@ -875,7 +875,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(400.0, 0.1),
+            Velocity2D(Vec2::new(400.0, 0.1)),
             Position2D(Vec2::new(start_x, 0.0)),
         ));
 
@@ -883,14 +883,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.x < 0.0,
+            vel.0.x < 0.0,
             "bolt should reflect off wall, got vx={}",
-            vel.value.x
+            vel.0.x
         );
     }
 
@@ -907,7 +907,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(400.0, 0.1),
+            Velocity2D(Vec2::new(400.0, 0.1)),
             Position2D(Vec2::new(start_x, 0.0)),
         ));
 
@@ -937,7 +937,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -989,7 +989,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             // No PiercingRemaining or Piercing component
             Position2D(Vec2::new(0.0, start_y)),
         ));
@@ -998,14 +998,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "non-piercing bolt should reflect downward off cell, got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let hits = app.world().resource::<HitCells>();
@@ -1033,7 +1033,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Piercing(2),
                 PiercingRemaining(2),
                 Position2D(Vec2::new(0.0, start_y)),
@@ -1044,14 +1044,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "piercing bolt should pass through cell it would destroy (velocity.y > 0), got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let hits = app.world().resource::<HitCells>();
@@ -1086,7 +1086,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Piercing(1),
                 PiercingRemaining(1),
                 Position2D(Vec2::new(0.0, start_y)),
@@ -1097,14 +1097,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "piercing bolt should reflect off cell it cannot destroy, got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -1133,7 +1133,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Piercing(1),
                 PiercingRemaining(1),
                 DamageBoost(0.5),
@@ -1145,14 +1145,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt with DamageBoost(0.5) should pierce 12-HP cell (boosted damage=15), got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -1185,7 +1185,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 10000.0), // 10000/64 ~ 156 units/frame -- covers both cells
+                Velocity2D(Vec2::new(0.0, 10000.0)), // 10000/64 ~ 156 units/frame -- covers both cells
                 Piercing(2),
                 PiercingRemaining(2),
                 Position2D(Vec2::new(0.0, start_y)),
@@ -1231,7 +1231,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Piercing(1),
                 PiercingRemaining(1),
                 Position2D(Vec2::new(-100.0, start_y)),
@@ -1244,7 +1244,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Piercing(1),
                 PiercingRemaining(1),
                 Position2D(Vec2::new(100.0, start_y)),
@@ -1291,7 +1291,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Piercing(2),
                 PiercingRemaining(0),
                 Position2D(Vec2::new(0.0, start_y)),
@@ -1302,14 +1302,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "bolt with exhausted piercing should reflect (vy < 0), got vy={}",
-            vel.value.y
+            vel.0.y
         );
 
         let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -1340,7 +1340,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 10000.0), // very fast to cover both cells in one frame
+            Velocity2D(Vec2::new(0.0, 10000.0)), // very fast to cover both cells in one frame
             Piercing(2),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
@@ -1373,7 +1373,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(400.0, 0.1),
+                Velocity2D(Vec2::new(400.0, 0.1)),
                 Piercing(2),
                 PiercingRemaining(0),
                 Position2D(Vec2::new(start_x, 0.0)),
@@ -1383,11 +1383,11 @@ mod tests {
         tick(&mut app);
 
         // Verify wall hit occurred (velocity.x < 0)
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.x < 0.0,
+            vel.0.x < 0.0,
             "bolt should have reflected off wall, got vx={}",
-            vel.value.x
+            vel.0.x
         );
 
         // PiercingRemaining should be reset to Piercing.0
@@ -1414,7 +1414,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 50.0),
+                Velocity2D(Vec2::new(0.0, 50.0)),
                 EntityScale(0.5),
                 Position2D(Vec2::new(0.0, start_y)),
             ))
@@ -1422,12 +1422,12 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(bolt_entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "scaled bolt (effective_radius=4) at y=81 should NOT reach cell (expanded bottom=84), \
              got vy={:.1} (if negative, full radius expansion was used instead of scaled)",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -1446,7 +1446,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             // No EntityScale component
             Position2D(Vec2::new(0.0, start_y)),
         ));
@@ -1455,14 +1455,14 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y < 0.0,
+            vel.0.y < 0.0,
             "bolt without EntityScale should reflect normally, got vy={:.1}",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -1534,7 +1534,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
@@ -1575,7 +1575,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             DamageBoost(0.0),
             Position2D(Vec2::new(0.0, start_y)),
         ));
@@ -1610,7 +1610,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 DamageBoost(0.5),
                 Position2D(Vec2::new(0.0, start_y)),
             ))
@@ -1647,7 +1647,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(-100.0, start_y)),
             ))
             .id();
@@ -1656,7 +1656,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(100.0, start_y)),
             ))
             .id();
@@ -1699,7 +1699,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(400.0, 0.1),
+            Velocity2D(Vec2::new(400.0, 0.1)),
             Position2D(Vec2::new(start_x, 0.0)),
         ));
 
@@ -1729,7 +1729,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 10000.0),
+                Velocity2D(Vec2::new(0.0, 10000.0)),
                 Piercing(2),
                 PiercingRemaining(2),
                 Position2D(Vec2::new(0.0, start_y)),
@@ -1784,7 +1784,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(0.0, start_y)),
             ))
             .id();
@@ -1821,7 +1821,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(400.0, 0.1),
+                Velocity2D(Vec2::new(400.0, 0.1)),
                 Position2D(Vec2::new(start_x, 0.0)),
             ))
             .id();
@@ -1853,7 +1853,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 
@@ -1890,7 +1890,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(400.0, 0.1),
+                Velocity2D(Vec2::new(400.0, 0.1)),
                 Position2D(Vec2::new(start_x_a, 0.0)),
             ))
             .id();
@@ -1901,7 +1901,7 @@ mod tests {
             .spawn((
                 Bolt,
                 bolt_param_bundle(),
-                BoltVelocity::new(0.0, 400.0),
+                Velocity2D(Vec2::new(0.0, 400.0)),
                 Position2D(Vec2::new(-100.0, 0.0)),
             ))
             .id();
@@ -1983,7 +1983,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(20.0, start_y)),
         ));
 
@@ -1992,16 +1992,16 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.y > 0.0,
+            vel.0.y > 0.0,
             "bolt at x=20 should miss the cell when CCD reads Aabb2D(5,5) \
              instead of CellWidth(70)/CellHeight(24) — got vy={:.1} \
              (negative means it reflected off the cell using legacy dimensions)",
-            vel.value.y
+            vel.0.y
         );
     }
 
@@ -2040,7 +2040,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(400.0, 0.1),
+            Velocity2D(Vec2::new(400.0, 0.1)),
             Position2D(Vec2::new(start_x, 50.0)),
         ));
 
@@ -2048,16 +2048,16 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .unwrap();
         assert!(
-            vel.value.x > 0.0,
+            vel.0.x > 0.0,
             "bolt at y=50 should miss the wall when CCD reads Aabb2D(5,5) \
              instead of WallSize(50,300) — got vx={:.1} \
              (negative means it reflected off the wall using legacy WallSize)",
-            vel.value.x
+            vel.0.x
         );
     }
 
@@ -2090,7 +2090,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(60.0, start_y)),
         ));
 
@@ -2149,7 +2149,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             bolt_param_bundle(),
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             Position2D(Vec2::new(0.0, start_y)),
         ));
 

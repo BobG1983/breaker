@@ -10,9 +10,7 @@ use crate::{
     propagation::*,
     systems::{
         apply_velocity::apply_velocity, compute_globals::compute_globals,
-        derive_transform::derive_transform, propagate_position::propagate_position,
-        propagate_rotation::propagate_rotation, propagate_scale::propagate_scale,
-        save_previous::save_previous,
+        derive_transform::derive_transform, save_previous::save_previous,
     },
 };
 
@@ -54,13 +52,7 @@ impl<D: DrawLayer> Plugin for RantzSpatial2dPlugin<D> {
             .add_systems(FixedUpdate, apply_velocity)
             .add_systems(
                 RunFixedMainLoop,
-                (
-                    compute_globals,
-                    derive_transform::<D>,
-                    propagate_position::<D>,
-                    propagate_rotation,
-                    propagate_scale,
-                )
+                (compute_globals, derive_transform::<D>)
                     .chain()
                     .in_set(RunFixedMainLoopSystems::AfterFixedMainLoop),
             );

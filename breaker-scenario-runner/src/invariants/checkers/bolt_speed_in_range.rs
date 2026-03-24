@@ -1,42 +1,21 @@
 use bevy::prelude::*;
-use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity};
+use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
-/// Query alias for bolt speed checking — reads both legacy `BoltVelocity` and `Velocity2D`.
-type BoltSpeedQuery<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        Option<&'static BoltVelocity>,
-        Option<&'static Velocity2D>,
-        &'static BoltMinSpeed,
-        &'static BoltMaxSpeed,
-    ),
-    With<ScenarioTagBolt>,
->;
-
 /// Checks that bolt speed stays within configured min/max bounds.
 ///
-/// Reads speed from `Velocity2D` when present, falling back to `BoltVelocity`.
+/// Reads speed from `Velocity2D`.
 /// Skips bolts with zero speed (serving or dead bolts).
 pub fn check_bolt_speed_in_range(
-    bolts: BoltSpeedQuery,
+    bolts: Query<(Entity, &Velocity2D, &BoltMinSpeed, &BoltMaxSpeed), With<ScenarioTagBolt>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
 ) {
     const SPEED_TOLERANCE: f32 = 1.0;
-    for (entity, bolt_velocity, velocity2d, min_speed, max_speed) in &bolts {
-        // Prefer Velocity2D; fall back to BoltVelocity
-        let speed = if let Some(v2d) = velocity2d {
-            v2d.speed()
-        } else if let Some(bv) = bolt_velocity {
-            bv.speed()
-        } else {
-            continue;
-        };
+    for (entity, velocity, min_speed, max_speed) in &bolts {
+        let speed = velocity.speed();
         if speed < f32::EPSILON {
             continue;
         }
@@ -81,7 +60,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBolt,
-            BoltVelocity::new(0.0, 1000.0),
+            Velocity2D(Vec2::new(0.0, 1000.0)),
             BoltMinSpeed(200.0),
             BoltMaxSpeed(800.0),
         ));
@@ -99,7 +78,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBolt,
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             BoltMinSpeed(200.0),
             BoltMaxSpeed(800.0),
         ));
@@ -116,7 +95,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBolt,
-            BoltVelocity::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
             BoltMinSpeed(200.0),
             BoltMaxSpeed(800.0),
         ));
@@ -127,7 +106,7 @@ mod tests {
         assert!(log.0.is_empty(), "zero speed should be skipped");
     }
 
-    /// Bolt speed 800.5 with max=800.0 is within 1.0 tolerance — no violation.
+    /// Bolt speed 800.5 with max=800.0 is within 1.0 tolerance -- no violation.
     #[test]
     fn bolt_speed_in_range_does_not_fire_when_speed_is_slightly_above_max_within_tolerance() {
         let mut app = test_app_bolt_speed();
@@ -135,7 +114,7 @@ mod tests {
         // speed() = Vec2::new(0.0, 800.5).length() = 800.5
         app.world_mut().spawn((
             ScenarioTagBolt,
-            BoltVelocity::new(0.0, 800.5),
+            Velocity2D(Vec2::new(0.0, 800.5)),
             BoltMinSpeed(200.0),
             BoltMaxSpeed(800.0),
         ));
@@ -157,7 +136,7 @@ mod tests {
         );
     }
 
-    /// Bolt speed 802.0 with max=800.0 exceeds tolerance of 1.0 → violation fires.
+    /// Bolt speed 802.0 with max=800.0 exceeds tolerance of 1.0 -- violation fires.
     #[test]
     fn bolt_speed_in_range_fires_when_speed_is_well_above_max_beyond_tolerance() {
         let mut app = test_app_bolt_speed();
@@ -165,7 +144,7 @@ mod tests {
         // speed() = Vec2::new(0.0, 802.0).length() = 802.0
         app.world_mut().spawn((
             ScenarioTagBolt,
-            BoltVelocity::new(0.0, 802.0),
+            Velocity2D(Vec2::new(0.0, 802.0)),
             BoltMinSpeed(200.0),
             BoltMaxSpeed(800.0),
         ));
@@ -189,7 +168,7 @@ mod tests {
         );
     }
 
-    /// Bolt speed 199.5 with min=200.0 is within 1.0 tolerance — no violation.
+    /// Bolt speed 199.5 with min=200.0 is within 1.0 tolerance -- no violation.
     #[test]
     fn bolt_speed_in_range_does_not_fire_when_speed_is_slightly_below_min_within_tolerance() {
         let mut app = test_app_bolt_speed();
@@ -197,7 +176,7 @@ mod tests {
         // speed() = Vec2::new(0.0, 199.5).length() = 199.5
         app.world_mut().spawn((
             ScenarioTagBolt,
-            BoltVelocity::new(0.0, 199.5),
+            Velocity2D(Vec2::new(0.0, 199.5)),
             BoltMinSpeed(200.0),
             BoltMaxSpeed(800.0),
         ));
@@ -220,19 +199,16 @@ mod tests {
     }
 
     // ── Velocity2D migration tests ────────────────────────────────
-    //
-    // After migration, check_bolt_speed_in_range reads Velocity2D instead of
-    // BoltVelocity. These tests will FAIL until the invariant checker is updated.
 
-    /// Bolt with `Velocity2D`(0.0, 1000.0), min=200, max=800 — speed 1000 exceeds max.
-    /// `check_bolt_speed_in_range` should detect this via `Velocity2D`, not `BoltVelocity`.
+    /// Bolt with `Velocity2D`(0.0, 1000.0), min=200, max=800 -- speed 1000 exceeds max.
+    /// `check_bolt_speed_in_range` should detect this via `Velocity2D`.
     #[test]
     fn bolt_speed_in_range_reads_velocity2d_fires_when_above_max() {
         use rantzsoft_spatial2d::components::Velocity2D;
 
         let mut app = test_app_bolt_speed();
 
-        // Spawn with Velocity2D only (no BoltVelocity) to prove the system reads Velocity2D
+        // Spawn with Velocity2D only to prove the system reads Velocity2D
         app.world_mut().spawn((
             ScenarioTagBolt,
             Velocity2D(Vec2::new(0.0, 1000.0)),

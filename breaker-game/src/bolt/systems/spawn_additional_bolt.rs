@@ -3,13 +3,15 @@
 use bevy::prelude::*;
 use rand::Rng;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
+use rantzsoft_spatial2d::components::{
+    Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
+};
 
 use crate::{
     bolt::{
         components::{
             Bolt, BoltBaseSpeed, BoltInitialAngle, BoltMaxSpeed, BoltMinSpeed, BoltRadius,
-            BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY, BoltVelocity, ExtraBolt,
+            BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY, ExtraBolt,
         },
         messages::SpawnAdditionalBolt,
         resources::BoltConfig,
@@ -47,10 +49,10 @@ pub fn spawn_additional_bolt(
         let angle = rng
             .0
             .random_range(-bolt_config.respawn_angle_spread..=bolt_config.respawn_angle_spread);
-        let velocity = BoltVelocity::new(
+        let velocity = Velocity2D(Vec2::new(
             bolt_config.base_speed * angle.sin(),
             bolt_config.base_speed * angle.cos(),
-        );
+        ));
 
         let spawn_pos = Vec2::new(breaker_pos.x, breaker_pos.y + bolt_config.spawn_offset_y);
 
@@ -242,7 +244,8 @@ mod tests {
     fn creates_new_bolt_entity() {
         let mut app = test_app();
         spawn_breaker(&mut app);
-        app.world_mut().spawn((Bolt, BoltVelocity::new(0.0, 400.0)));
+        app.world_mut()
+            .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0))));
         app.world_mut().resource_mut::<SendSpawn>().0 = 1;
         tick(&mut app);
 
@@ -284,7 +287,7 @@ mod tests {
             .expect("extra bolt should exist");
 
         let world = app.world();
-        assert!(world.get::<BoltVelocity>(entity).is_some());
+        assert!(world.get::<Velocity2D>(entity).is_some());
         assert!(world.get::<BoltBaseSpeed>(entity).is_some());
         assert!(world.get::<BoltMinSpeed>(entity).is_some());
         assert!(world.get::<BoltMaxSpeed>(entity).is_some());
@@ -303,11 +306,11 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query_filtered::<&BoltVelocity, With<ExtraBolt>>()
+            .query_filtered::<&Velocity2D, With<ExtraBolt>>()
             .iter(app.world())
             .next()
             .unwrap();
-        assert!(vel.value.y > 0.0, "additional bolt should launch upward");
+        assert!(vel.0.y > 0.0, "additional bolt should launch upward");
     }
 
     #[test]
@@ -322,7 +325,7 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query_filtered::<&BoltVelocity, With<ExtraBolt>>()
+            .query_filtered::<&Velocity2D, With<ExtraBolt>>()
             .iter(app.world())
             .next()
             .unwrap();

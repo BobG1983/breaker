@@ -1,9 +1,10 @@
 //! Gizmo overlay for velocity vectors.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::components::{Bolt, BoltVelocity},
+    bolt::components::Bolt,
     breaker::components::{Breaker, BreakerVelocity},
     debug::resources::{DebugOverlays, Overlay},
 };
@@ -16,7 +17,7 @@ const BREAKER_ARROW_COLOR: Color = Color::srgb(0.0, 0.5, 1.0);
 pub(crate) fn draw_velocity_vectors(
     overlays: Res<DebugOverlays>,
     mut gizmos: Gizmos,
-    bolt_query: Query<(&Transform, &BoltVelocity), With<Bolt>>,
+    bolt_query: Query<(&Transform, &Velocity2D), With<Bolt>>,
     breaker_query: Query<(&Transform, &BreakerVelocity), With<Breaker>>,
 ) {
     if !overlays.is_active(Overlay::VelocityVectors) {
@@ -25,7 +26,7 @@ pub(crate) fn draw_velocity_vectors(
 
     for (transform, velocity) in &bolt_query {
         let start = transform.translation.truncate();
-        let end = start + velocity.value * VELOCITY_ARROW_SCALE;
+        let end = start + velocity.0 * VELOCITY_ARROW_SCALE;
         gizmos.arrow_2d(start, end, BOLT_ARROW_COLOR);
     }
 
