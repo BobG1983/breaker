@@ -89,6 +89,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             }),
             "PerfectBump should match OnPerfectBump(leaf) and fire"
         );
@@ -155,6 +156,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             }),
             "CellImpact should match OnImpact(Cell, leaf) and fire"
         );
@@ -219,6 +221,7 @@ mod tests {
                 base_range: 32.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             }),
             "BoltLost should match OnBoltLost(leaf) and fire"
         );

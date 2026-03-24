@@ -69,7 +69,7 @@ pub enum ImpactTarget {
 /// Trigger chain for Overclock effects — defines when and what happens.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub enum TriggerChain {
-    /// Area damage around impact point.
+    /// Area damage around impact point — expanding wavefront.
     Shockwave {
         /// Base radius of the shockwave effect.
         base_range: f32,
@@ -77,6 +77,8 @@ pub enum TriggerChain {
         range_per_level: f32,
         /// Current stack count (starts at 1, incremented at runtime).
         stacks: u32,
+        /// Expansion speed in world units per second.
+        speed: f32,
     },
     /// Spawns additional bolts on trigger.
     MultiBolt {
@@ -252,12 +254,13 @@ impl ChipDefinition {
 
 #[cfg(test)]
 impl TriggerChain {
-    /// Build a `Shockwave` leaf with `range_per_level: 0.0` and `stacks: 1`.
+    /// Build a `Shockwave` leaf with `range_per_level: 0.0`, `stacks: 1`, and `speed: 400.0`.
     pub(crate) fn test_shockwave(range: f32) -> Self {
         Self::Shockwave {
             base_range: range,
             range_per_level: 0.0,
             stacks: 1,
+            speed: 400.0,
         }
     }
 
@@ -422,7 +425,7 @@ mod tests {
     #[test]
     fn chip_effect_deserializes_overclock() {
         let e: ChipEffect = ron::de::from_str(
-            "Overclock(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))",
+            "Overclock(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))",
         )
         .expect("should parse Overclock(Shockwave)");
         assert_eq!(
@@ -431,6 +434,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             })
         );
     }
@@ -494,6 +498,7 @@ mod tests {
                         base_range: 64.0,
                         range_per_level: 32.0,
                         stacks: 1,
+                        speed: 400.0,
                     })
                 )
             )))
@@ -524,7 +529,7 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_shockwave() {
         let tc: TriggerChain =
-            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1)")
+            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)")
                 .expect("should parse Shockwave");
         assert_eq!(
             tc,
@@ -532,6 +537,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             }
         );
     }
@@ -569,7 +575,7 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_perfect_bump_leaf() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnPerfectBump(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))",
+            "OnPerfectBump(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))",
         )
         .expect("should parse OnPerfectBump wrapping Shockwave");
         assert_eq!(
@@ -578,6 +584,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             }))
         );
     }
@@ -585,7 +592,7 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_nested_two_deep() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1)))",
+            "OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)))",
         )
         .expect("should parse double-nested TriggerChain");
         assert_eq!(
@@ -596,6 +603,7 @@ mod tests {
                     base_range: 64.0,
                     range_per_level: 0.0,
                     stacks: 1,
+                    speed: 400.0,
                 })
             )))
         );
@@ -660,7 +668,7 @@ mod tests {
     #[test]
     fn chip_effect_overclock_with_trigger_chain_deserializes() {
         let e: ChipEffect = ron::de::from_str(
-            "Overclock(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1))",
+            "Overclock(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))",
         )
         .expect("should parse Overclock with TriggerChain");
         assert_eq!(
@@ -669,6 +677,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             })
         );
     }
@@ -676,7 +685,7 @@ mod tests {
     #[test]
     fn full_surge_chain_ron_parses() {
         let e: ChipEffect = ron::de::from_str(
-            "Overclock(OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1))))",
+            "Overclock(OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0))))",
         )
         .expect("should parse full surge chain as ChipEffect");
         assert_eq!(
@@ -688,6 +697,7 @@ mod tests {
                         base_range: 64.0,
                         range_per_level: 32.0,
                         stacks: 1,
+                        speed: 400.0,
                     })
                 )
             )))
@@ -883,7 +893,7 @@ mod tests {
     #[test]
     fn shockwave_ron_deserializes_with_new_fields() {
         let tc: TriggerChain =
-            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1)")
+            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)")
                 .expect("should parse Shockwave with stacking fields");
         assert_eq!(
             tc,
@@ -891,6 +901,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 32.0,
                 stacks: 1,
+                speed: 400.0,
             }
         );
     }
@@ -935,6 +946,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             }
         );
     }
@@ -1052,7 +1064,7 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_early_bump_nested_two_deep() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnEarlyBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1)))",
+            "OnEarlyBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)))",
         )
         .expect("should parse OnEarlyBump nested two deep");
         assert_eq!(
@@ -1063,6 +1075,7 @@ mod tests {
                     base_range: 64.0,
                     range_per_level: 0.0,
                     stacks: 1,
+                    speed: 400.0,
                 })
             )))
         );

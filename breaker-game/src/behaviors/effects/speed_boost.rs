@@ -276,6 +276,7 @@ mod tests {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
+                speed: 400.0,
             },
             bolt: Some(bolt),
         });
