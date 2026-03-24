@@ -163,6 +163,7 @@ mod tests {
             kind,
             node_index: 0,
             value,
+            detail: None,
         }
     }
 

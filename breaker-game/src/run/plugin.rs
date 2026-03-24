@@ -9,11 +9,11 @@ use crate::{
         resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
         systems::{
             advance_node, capture_run_seed, detect_close_save, detect_combo_and_pinball,
-            detect_first_evolution, detect_mass_destruction, detect_nail_biter,
-            generate_node_sequence_system, handle_node_cleared, handle_run_lost,
+            detect_first_evolution, detect_mass_destruction, detect_most_powerful_evolution,
+            detect_nail_biter, generate_node_sequence_system, handle_node_cleared, handle_run_lost,
             handle_timer_expired, reset_highlight_tracker, reset_run_state, spawn_highlight_text,
             track_bolts_lost, track_bumps, track_cells_destroyed, track_chips_collected,
-            track_node_cleared_stats, track_time_elapsed,
+            track_evolution_damage, track_node_cleared_stats, track_time_elapsed,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -51,6 +51,7 @@ impl Plugin for RunPlugin {
                     track_bumps,
                     track_bolts_lost,
                     track_time_elapsed,
+                    track_evolution_damage,
                     track_node_cleared_stats.after(NodeSystems::TrackCompletion),
                     // Highlight detection
                     detect_mass_destruction,
@@ -75,6 +76,7 @@ impl Plugin for RunPlugin {
                 OnEnter(GameState::Playing),
                 (reset_highlight_tracker, capture_run_seed),
             )
+            .add_systems(OnEnter(GameState::RunEnd), detect_most_powerful_evolution)
             .add_systems(OnEnter(GameState::TransitionIn), advance_node)
             .add_systems(
                 OnExit(GameState::MainMenu),
@@ -99,6 +101,7 @@ mod tests {
             .add_sub_state::<PlayingState>()
             // Messages read by run domain systems
             .add_message::<crate::cells::messages::CellDestroyed>()
+            .add_message::<crate::cells::messages::DamageCell>()
             .add_message::<crate::breaker::messages::BumpPerformed>()
             .add_message::<crate::bolt::messages::BoltLost>()
             .add_message::<crate::bolt::messages::BoltHitBreaker>()

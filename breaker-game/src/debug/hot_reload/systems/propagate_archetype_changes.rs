@@ -92,10 +92,7 @@ pub(crate) fn propagate_archetype_changes(
         chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_perfect_bump {
-        chains.push((
-            None,
-            TriggerChain::OnPerfectBump(vec![chain.clone()]),
-        ));
+        chains.push((None, TriggerChain::OnPerfectBump(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_early_bump {
         chains.push((None, TriggerChain::OnEarlyBump(vec![chain.clone()])));

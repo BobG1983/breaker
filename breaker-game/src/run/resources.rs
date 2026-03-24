@@ -166,6 +166,8 @@ pub struct RunHighlight {
     pub node_index: u32,
     /// Associated value (e.g., seconds remaining for `ClutchClear`, streak count).
     pub value: f32,
+    /// Optional human-readable detail (e.g., chip name for `MostPowerfulEvolution`).
+    pub detail: Option<String>,
 }
 
 /// Cumulative statistics for the current run.

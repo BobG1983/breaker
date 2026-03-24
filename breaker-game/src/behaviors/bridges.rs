@@ -714,10 +714,7 @@ mod tests {
         assert_eq!(armed.0.len(), 1);
         assert_eq!(
             armed.0[0].1,
-            TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::test_shockwave(64.0)]
-            )
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)])
         );
     }
 
@@ -750,10 +747,8 @@ mod tests {
 
     #[test]
     fn cell_impact_fires_active_chain() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         let mut app = cell_impact_test_app(vec![chain]);
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -772,10 +767,13 @@ mod tests {
         let mut app = cell_impact_test_app(vec![]);
         let bolt = app
             .world_mut()
-            .spawn(ArmedTriggers(vec![(None, TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::test_shockwave(64.0)],
-            ))]))
+            .spawn(ArmedTriggers(vec![(
+                None,
+                TriggerChain::OnImpact(
+                    ImpactTarget::Cell,
+                    vec![TriggerChain::test_shockwave(64.0)],
+                ),
+            )]))
             .id();
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
             cell: Entity::PLACEHOLDER,
@@ -793,10 +791,8 @@ mod tests {
 
     #[test]
     fn cell_impact_no_message_no_fire() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         let mut app = cell_impact_test_app(vec![chain]);
         tick(&mut app);
 
@@ -808,10 +804,8 @@ mod tests {
 
     #[test]
     fn breaker_impact_fires_active_chain() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Breaker,
-            vec![TriggerChain::test_shield(5.0)],
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Breaker, vec![TriggerChain::test_shield(5.0)]);
         let mut app = breaker_impact_test_app(vec![chain]);
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
@@ -827,10 +821,13 @@ mod tests {
         let mut app = breaker_impact_test_app(vec![]);
         let bolt = app
             .world_mut()
-            .spawn(ArmedTriggers(vec![(None, TriggerChain::OnImpact(
-                ImpactTarget::Breaker,
-                vec![TriggerChain::test_multi_bolt(2)],
-            ))]))
+            .spawn(ArmedTriggers(vec![(
+                None,
+                TriggerChain::OnImpact(
+                    ImpactTarget::Breaker,
+                    vec![TriggerChain::test_multi_bolt(2)],
+                ),
+            )]))
             .id();
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
         tick(&mut app);
@@ -844,10 +841,8 @@ mod tests {
 
     #[test]
     fn wall_impact_fires_active_chain() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Wall,
-            vec![TriggerChain::test_shockwave(32.0)],
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Wall, vec![TriggerChain::test_shockwave(32.0)]);
         let mut app = wall_impact_test_app(vec![chain]);
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
@@ -863,10 +858,10 @@ mod tests {
         let mut app = wall_impact_test_app(vec![]);
         let bolt = app
             .world_mut()
-            .spawn(ArmedTriggers(vec![(None, TriggerChain::OnImpact(
-                ImpactTarget::Wall,
-                vec![TriggerChain::test_shield(5.0)],
-            ))]))
+            .spawn(ArmedTriggers(vec![(
+                None,
+                TriggerChain::OnImpact(ImpactTarget::Wall, vec![TriggerChain::test_shield(5.0)]),
+            )]))
             .id();
         app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
         tick(&mut app);

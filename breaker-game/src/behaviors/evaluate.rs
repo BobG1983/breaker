@@ -150,10 +150,8 @@ mod tests {
 
     #[test]
     fn cell_impact_with_on_impact_cell_leaf_fires() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         let result = evaluate(TriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
@@ -236,10 +234,8 @@ mod tests {
 
     #[test]
     fn perfect_bump_with_on_perfect_bump_non_leaf_arms() {
-        let inner_chain = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let inner_chain =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         let chain = TriggerChain::OnPerfectBump(vec![inner_chain.clone()]);
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
@@ -269,10 +265,8 @@ mod tests {
 
     #[test]
     fn early_bump_with_on_early_bump_non_leaf_arms() {
-        let inner_chain = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let inner_chain =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         let chain = TriggerChain::OnEarlyBump(vec![inner_chain.clone()]);
         let result = evaluate(TriggerKind::EarlyBump, &chain);
         assert_eq!(
@@ -307,10 +301,8 @@ mod tests {
 
     #[test]
     fn perfect_bump_does_not_match_on_impact() {
-        let chain = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let chain =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,

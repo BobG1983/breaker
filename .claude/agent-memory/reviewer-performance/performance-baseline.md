@@ -221,6 +221,35 @@ PLUGIN SCHEDULING — both systems in FixedUpdate with named system sets (Mainta
 ### Archetype note for physics2d
 - Aabb2D + CollisionLayers added at spawn, never removed in normal gameplay. Zero runtime archetype churn from physics components.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-24, feature/spatial-physics-extraction Wave E behaviors)
+
+### behaviors/effects/speed_boost.rs — handle_speed_boost (observer)
+- `SpeedBoostTarget::Bolt` arm: single `bolt_query.get_mut(bolt_entity)` — O(1), correct.
+- `SpeedBoostTarget::AllBolts` arm: `bolt_query.iter()` — iterates all bolt entities. Correct and necessary for the multi-bolt case. At current scale (1–2 bolts) this is O(1). Note: AllBolts is a future multi-bolt chip; if it fires every tick (not event-driven) it would be O(bolts). As-is it fires only on EffectFired (rare event, not per-frame). Clean at current scale.
+- `SpeedBoostTarget::Breaker` arm: no-op stub, no cost. Clean.
+- `apply_speed_scale`: 2 `normalize_or_zero()` calls in the worst case (both clamp branches hit). Each is a sqrt + div — negligible for 1–2 bolts per event. Clean.
+- No allocations. Observer only fires on EffectFired. Clean at any foreseeable scale.
+
+### behaviors/effects/shield.rs — tick_shield (FixedUpdate, PlayingState::Active)
+- Query: `(Entity, &mut ShieldActive)` — no extra `With<>` filter needed because `ShieldActive` itself is the filter (only entities with the component match). Correct.
+- `ShieldActive` is added/removed at runtime: 0 entities in steady state (shield not active), 1 entity when shield is active. Per-frame cost in steady state: Bevy short-circuits the query scan on empty archetype. Zero iteration cost when shield is not active.
+- `remove::<ShieldActive>()` on expiry: 1 structural change per shield lifetime, not per-frame. Acceptable.
+- Correctly gated `run_if(in_state(PlayingState::Active))`. Clean.
+
+### run/systems/track_evolution_damage.rs — track_evolution_damage (FixedUpdate, PlayingState::Active)
+- Reads DamageCell messages. Most ticks: 0 messages → `reader.read()` returns empty iterator → loop body never entered → O(1).
+- Hot path (cell hit tick): `name.clone()` allocates a String per DamageCell with `source_chip: Some(...)`. DamageCell already carries `Option<String>` on the message. The clone is unavoidable given the owned key requirement for HashMap::entry. Frequency: once per cell hit (not per frame in steady state). At 50 cells per node, max ~50 clones total per node. Negligible.
+- `evolution_damage: HashMap<String, f32>` — bounded by distinct chip names equipped (at most 3–5 evolution chips per run). Not an unbounded structure concern.
+- Correctly gated `run_if(in_state(PlayingState::Active))`. Clean.
+
+### screen/run_end/systems/spawn_run_end_screen.rs — spawn_run_end_screen (OnEnter(GameState::RunEnd))
+- Called once at run-end via OnEnter. Not a hot path. All allocations are correct and expected.
+- `select_highlights` called once with the accumulated highlights Vec (bounded: ≤80 entries max). Returns a Vec<usize> of indices. Then `indices.iter().map(|&i| &stats.highlights[i]).collect()` produces `Vec<&RunHighlight>` — 1 allocation of ≤highlight_cap (3–5) pointers. Negligible.
+- `format!()` calls in spawn_highlights_section: 14 match arms, each allocates one String for the Text component. These are spawned entities (not per-frame). Correct.
+- `format!()` in spawn_stats_section: inside loop over `stat_entries` array (4 entries). Allocates 4 Strings. One-time. Correct.
+- `name.clone()` in spawn_chips_section: clones each chip name String for the Text component. At most 3–5 chips. One-time. Correct.
+- No hot-path allocation concerns. Clean.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 
 ### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors — NOW FULLY WIRED)

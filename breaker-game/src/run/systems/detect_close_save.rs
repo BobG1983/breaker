@@ -44,6 +44,7 @@ pub(crate) fn detect_close_save(
                 kind: HighlightKind::CloseSave,
                 node_index: run_state.node_index,
                 value: distance,
+                detail: None,
             });
         }
     }
@@ -239,6 +240,7 @@ mod tests {
                 kind: HighlightKind::CloseSave,
                 node_index: 0,
                 value: 10.0,
+                detail: None,
             });
 
         let bolt_entity = app
@@ -292,6 +294,7 @@ mod tests {
                     kind: HighlightKind::MassDestruction,
                     node_index: i,
                     value: 10.0,
+                    detail: None,
                 });
             }
         }

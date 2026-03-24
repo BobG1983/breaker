@@ -96,10 +96,7 @@ pub(crate) fn init_archetype(
         chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_perfect_bump {
-        chains.push((
-            None,
-            TriggerChain::OnPerfectBump(vec![chain.clone()]),
-        ));
+        chains.push((None, TriggerChain::OnPerfectBump(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_early_bump {
         chains.push((None, TriggerChain::OnEarlyBump(vec![chain.clone()])));
@@ -212,12 +209,10 @@ mod tests {
             on_perfect_bump: None,
             on_early_bump: None,
             on_late_bump: None,
-            chains: vec![TriggerChain::OnPerfectBump(vec![
-                TriggerChain::OnImpact(
-                    crate::chips::definition::ImpactTarget::Cell,
-                    vec![TriggerChain::test_shockwave(64.0)],
-                ),
-            ])],
+            chains: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
+                crate::chips::definition::ImpactTarget::Cell,
+                vec![TriggerChain::test_shockwave(64.0)],
+            )])],
         };
         let mut app = test_app_with_archetype(def);
         app.world_mut().spawn(Breaker);

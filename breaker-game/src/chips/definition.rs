@@ -159,9 +159,7 @@ impl TriggerChain {
             | Self::OnBumpSuccess(effects)
             | Self::OnEarlyBump(effects)
             | Self::OnLateBump(effects)
-            | Self::OnBumpWhiff(effects) => {
-                1 + effects.iter().map(Self::depth).max().unwrap_or(0)
-            }
+            | Self::OnBumpWhiff(effects) => 1 + effects.iter().map(Self::depth).max().unwrap_or(0),
         }
     }
 
@@ -507,17 +505,15 @@ mod tests {
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("overclock RON should parse");
         assert_eq!(
             def.effects[0],
-            ChipEffect::Overclock(TriggerChain::OnPerfectBump(vec![
-                TriggerChain::OnImpact(
-                    ImpactTarget::Cell,
-                    vec![TriggerChain::Shockwave {
-                        base_range: 64.0,
-                        range_per_level: 32.0,
-                        stacks: 1,
-                        speed: 400.0,
-                    }],
-                ),
-            ]))
+            ChipEffect::Overclock(TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                vec![TriggerChain::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 32.0,
+                    stacks: 1,
+                    speed: 400.0,
+                }],
+            ),]))
         );
     }
 
@@ -709,17 +705,15 @@ mod tests {
         .expect("should parse full surge chain as ChipEffect");
         assert_eq!(
             e,
-            ChipEffect::Overclock(TriggerChain::OnPerfectBump(vec![
-                TriggerChain::OnImpact(
-                    ImpactTarget::Cell,
-                    vec![TriggerChain::Shockwave {
-                        base_range: 64.0,
-                        range_per_level: 32.0,
-                        stacks: 1,
-                        speed: 400.0,
-                    }],
-                ),
-            ]))
+            ChipEffect::Overclock(TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
+                ImpactTarget::Cell,
+                vec![TriggerChain::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 32.0,
+                    stacks: 1,
+                    speed: 400.0,
+                }],
+            ),]))
         );
     }
 
@@ -811,10 +805,8 @@ mod tests {
 
     #[test]
     fn on_impact_depth_is_one() {
-        let tc = TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        );
+        let tc =
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
         assert_eq!(tc.depth(), 1);
     }
 
@@ -1007,10 +999,7 @@ mod tests {
     fn trigger_chain_deserializes_lose_life_wrapped_in_on_bolt_lost() {
         let tc: TriggerChain =
             ron::de::from_str("OnBoltLost([LoseLife])").expect("should parse OnBoltLost(LoseLife)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnBoltLost(vec![TriggerChain::LoseLife])
-        );
+        assert_eq!(tc, TriggerChain::OnBoltLost(vec![TriggerChain::LoseLife]));
     }
 
     #[test]
@@ -1073,12 +1062,9 @@ mod tests {
 
     #[test]
     fn trigger_chain_deserializes_on_early_bump_wrapping_leaf() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnEarlyBump([LoseLife])").expect("should parse OnEarlyBump(LoseLife)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife])
-        );
+        let tc: TriggerChain = ron::de::from_str("OnEarlyBump([LoseLife])")
+            .expect("should parse OnEarlyBump(LoseLife)");
+        assert_eq!(tc, TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]));
     }
 
     #[test]
@@ -1115,10 +1101,7 @@ mod tests {
     fn trigger_chain_deserializes_on_bump_whiff_wrapping_spawn_bolt() {
         let tc: TriggerChain = ron::de::from_str("OnBumpWhiff([SpawnBolt])")
             .expect("should parse OnBumpWhiff(SpawnBolt)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnBumpWhiff(vec![TriggerChain::SpawnBolt])
-        );
+        assert_eq!(tc, TriggerChain::OnBumpWhiff(vec![TriggerChain::SpawnBolt]));
     }
 
     #[test]
@@ -1198,8 +1181,7 @@ mod tests {
         assert!(!TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]).is_leaf());
         assert!(!TriggerChain::OnLateBump(vec![TriggerChain::SpawnBolt]).is_leaf());
         assert!(
-            !TriggerChain::OnBumpWhiff(vec![TriggerChain::TimePenalty { seconds: 5.0 }])
-                .is_leaf()
+            !TriggerChain::OnBumpWhiff(vec![TriggerChain::TimePenalty { seconds: 5.0 }]).is_leaf()
         );
     }
 

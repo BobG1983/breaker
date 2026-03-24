@@ -10,7 +10,7 @@ type: reference
 - `BoltHitCell { cell: Entity, bolt: Entity }` -- every cell contact (not just destruction)
 - `BoltHitBreaker { bolt: Entity }` -- every breaker contact
 - `BoltHitWall { bolt: Entity }` -- every wall reflection
-- `DamageCell { cell: Entity, damage: f32, source_bolt: Entity }` -- paired with each BoltHitCell
+- `DamageCell { cell: Entity, damage: f32, source_bolt: Entity, source_chip: Option<String> }` -- paired with each BoltHitCell (source_chip always None from physics; may be Some from shockwave)
 - `BoltLost` -- bolt falls below playfield
 
 ### Cells sends (handle_cell_hit)

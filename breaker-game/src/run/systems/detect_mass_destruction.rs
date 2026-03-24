@@ -51,6 +51,7 @@ pub(crate) fn detect_mass_destruction(
                 kind: HighlightKind::MassDestruction,
                 node_index: run_state.node_index,
                 value: f32::from(u16::try_from(count).unwrap_or(u16::MAX)),
+                detail: None,
             });
         }
     }
@@ -258,6 +259,7 @@ mod tests {
                 kind: HighlightKind::MassDestruction,
                 node_index: 0,
                 value: 10.0,
+                detail: None,
             });
 
         // Advance time to ~5.0s

@@ -54,6 +54,7 @@ pub(crate) fn detect_first_evolution(
                 kind: HighlightKind::FirstEvolution,
                 node_index: run_state.node_index,
                 value: 1.0,
+                detail: None,
             });
         }
     }
@@ -310,6 +311,7 @@ mod tests {
                     kind: HighlightKind::MassDestruction,
                     node_index: i,
                     value: 10.0,
+                    detail: None,
                 });
             }
         }

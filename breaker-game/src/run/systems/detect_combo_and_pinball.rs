@@ -65,6 +65,7 @@ pub(crate) fn detect_combo_and_pinball(
                     kind: HighlightKind::ComboKing,
                     node_index,
                     value: f32::from(u16::try_from(count).unwrap_or(u16::MAX)),
+                    detail: None,
                 });
             }
         }
@@ -93,6 +94,7 @@ pub(crate) fn detect_combo_and_pinball(
                     kind: HighlightKind::PinballWizard,
                     node_index,
                     value: f32::from(u16::try_from(count).unwrap_or(u16::MAX)),
+                    detail: None,
                 });
             }
         }
@@ -478,11 +480,13 @@ mod tests {
                 kind: HighlightKind::ComboKing,
                 node_index: 0,
                 value: 10.0,
+                detail: None,
             });
             stats.highlights.push(RunHighlight {
                 kind: HighlightKind::PinballWizard,
                 node_index: 0,
                 value: 15.0,
+                detail: None,
             });
         }
 

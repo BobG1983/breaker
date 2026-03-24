@@ -166,9 +166,16 @@ type: reference
 - `too_long_first_doc_paragraph` warning (breaker-scenario-runner/src/lifecycle/mod.rs:399): doc comment on `apply_debug_frame_mutations_deferred` spans more than one sentence on the first paragraph. Nursery lint, warning only. First seen 2026-03-23e.
 - `unused_import` warning (wall/systems/spawn_walls.rs:336): `Position2D` imported alongside `Scale2D` in a test-local `use` statement but only `Scale2D` is used. Fix: remove `Position2D` from the import. Warning only. New as of 2026-03-23.
 
-## Active Errors as of 2026-03-23h (feature/wave-3-offerings-transitions — post wave-3 session continuation)
-- `too_many_lines` error (`bolt/systems/bolt_cell_collision.rs:76`): `bolt_cell_collision` function body is 107 lines (limit 100). Error in both `dclippy` and `dsclippy`. Fix: extract a helper function to reduce the body below 100 lines. This function grew past the limit during wave-3 work.
-- `doc_markdown` error (`bolt/systems/bolt_cell_collision.rs:1900`): test helper doc comment has bare `half_extents` without backticks. Error in `dclippy` (lib test) only. Fix: change `half_extents` to `` `half_extents` `` in the doc comment.
+## Active Errors as of 2026-03-24d (feature/spatial-physics-extraction)
+- `doc_markdown` error (`behaviors/effects/multi_bolt.rs:1`): module-level `//!` doc has bare `MultiBolt` without backticks. Fix: change to `` `MultiBolt` ``. Error in both `dclippy` and `dsclippy`.
+- `cast_precision_loss` error (`behaviors/effects/shield.rs:52`): `stacks.saturating_sub(1) as f32` — u32→f32 cast. Fix: `f32::from(stacks.saturating_sub(1))` is NOT valid (f32: From<u32> not implemented). Must go through u16: `f32::from(u16::try_from(stacks.saturating_sub(1)).unwrap_or(u16::MAX))` or cast through intermediate that fits. Alternatively `stacks.saturating_sub(1).min(u32::from(u16::MAX)) as f32` then wrapped. Error in both `dclippy` and `dsclippy`.
+- `too_many_lines` error (`bolt/systems/bolt_breaker_collision.rs:48`): `bolt_breaker_collision` function body 101 lines (limit 100). Fix: extract a helper function to reduce the body by 1+ lines. Error in both `dclippy` and `dsclippy`.
+- `empty_string_literal` error (`bolt/systems/spawn_additional_bolt.rs:509`): `"".to_owned()` — replace with `String::new()`. Test-build only (`dclippy` lib test).
+- `uninlined_format_args` error (`bolt/systems/spawn_additional_bolt.rs:584,589`): `assert!(..., "msg {}", var)` where var can be inlined as `{var}`. Two occurrences. Test-build only (`dclippy` lib test).
+
+## Previously Active — Resolved as of 2026-03-24b
+- `too_many_lines` error (`bolt/systems/bolt_cell_collision.rs:76`): RESOLVED — bolt_cell_collision is now clean.
+- `doc_markdown` error (`bolt/systems/bolt_cell_collision.rs:1900`): RESOLVED.
 
 ## Confirmed Clean as of 2026-03-24b (feature/spatial-physics-extraction — dclippy game crate)
 - All 20 errors recorded in the 2026-03-24 session are resolved.

@@ -2,6 +2,8 @@
 
 pub(crate) mod chain_bolt;
 pub(crate) mod life_lost;
+pub(crate) mod multi_bolt;
+pub(crate) mod shield;
 pub(crate) mod shockwave;
 pub(crate) mod spawn_bolt;
 pub(crate) mod speed_boost;

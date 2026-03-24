@@ -80,6 +80,10 @@ pub(crate) fn spawn_chain_bolt(
             ))
             .id();
 
+        if let Some(name) = &msg.source_chip {
+            commands.entity(new_bolt).insert(SpawnedByEvolution(name.clone()));
+        }
+
         // Standalone constraint entity linking anchor to new bolt
         commands.spawn((
             DistanceConstraint {
@@ -361,6 +365,88 @@ mod tests {
         assert_eq!(
             constraint_count, 0,
             "no constraint should spawn when anchor is missing"
+        );
+    }
+
+    // ── SpawnedByEvolution attribution tests ──────────────────────────
+
+    #[test]
+    fn chain_bolt_receives_spawned_by_evolution_when_source_chip_is_some() {
+        use crate::bolt::components::SpawnedByEvolution;
+
+        let mut app = test_app();
+
+        let anchor = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Position2D(Vec2::new(100.0, 50.0)),
+                Velocity2D(Vec2::new(0.0, 400.0)),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<SendSpawnChain>()
+            .0
+            .push(SpawnChainBolt {
+                anchor,
+                tether_distance: 200.0,
+                source_chip: Some("voltaic_cascade".to_owned()),
+            });
+        tick(&mut app);
+
+        let chain_bolt = app
+            .world_mut()
+            .query_filtered::<Entity, With<ExtraBolt>>()
+            .iter(app.world())
+            .next()
+            .expect("chain bolt should exist");
+
+        let spawned_by = app
+            .world()
+            .get::<SpawnedByEvolution>(chain_bolt)
+            .expect("chain bolt should have SpawnedByEvolution when source_chip is Some");
+        assert_eq!(
+            spawned_by.0, "voltaic_cascade",
+            "SpawnedByEvolution should carry the source chip name"
+        );
+    }
+
+    #[test]
+    fn chain_bolt_has_no_spawned_by_evolution_when_source_chip_is_none() {
+        use crate::bolt::components::SpawnedByEvolution;
+
+        let mut app = test_app();
+
+        let anchor = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Position2D(Vec2::new(100.0, 50.0)),
+                Velocity2D(Vec2::new(0.0, 400.0)),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<SendSpawnChain>()
+            .0
+            .push(SpawnChainBolt {
+                anchor,
+                tether_distance: 200.0,
+                source_chip: None,
+            });
+        tick(&mut app);
+
+        let chain_bolt = app
+            .world_mut()
+            .query_filtered::<Entity, With<ExtraBolt>>()
+            .iter(app.world())
+            .next()
+            .expect("chain bolt should exist");
+
+        assert!(
+            app.world().get::<SpawnedByEvolution>(chain_bolt).is_none(),
+            "chain bolt should NOT have SpawnedByEvolution when source_chip is None"
         );
     }
 }

@@ -79,6 +79,13 @@ type: reference
 - `assert_standard_shockwave_components` helper in shockwave.rs tests — correctly extracted from the first test that spawned with all standard components; reduces duplication within the file only. Not a cross-file utility; do not flag.
 - `ShieldBehavior` field rename: `orbit_count/radius/speed/hp/color_rgb` → `count/radius/speed/hp/color_rgb` — vocabulary simplification approved in simplify pass. RON files must be updated to match; this is a RON-breaking rename.
 
+## Wave E — MultiBolt / Shield / MostPowerfulEvolution (feature/spatial-physics-extraction, 2026-03-24)
+- Two-step `commands.spawn(...).id()` + `commands.entity(id).insert(SpawnedByEvolution(name))` in `spawn_additional_bolt.rs` and `spawn_chain_bolt.rs` — intentional: the conditional `SpawnedByEvolution` cannot be in the initial spawn tuple because it is optional per-message. Do not flag as split-insert antipattern.
+- `if shield.is_some() { continue; }` inside `handle_life_lost` — intentional; the alternative `if let None = shield { ... }` would be awkward; `is_some()` guard is idiomatic here.
+- `config.as_ref()` called twice in `spawn_run_end_screen` (line 90 and 91) — see idiom note below. Flag for review (Option resolves to same ref, second `as_ref()` is redundant — should use `if let Some(c) = config.as_ref()` for the whole block).
+- `node_index: 0` hardcoded in `detect_most_powerful_evolution` — intentional; `MostPowerfulEvolution` is a run-end highlight, not tied to a specific node. The `0` is a sentinel consistent with the spec.
+- `enqueue_messages` in `track_evolution_damage.rs` tests iterates by reference (`for msg in &msg_res.0`) and calls `writer.write(msg.clone())` — intentional; `TestMessages` resource must remain usable after the borrow.
+
 ## Wave E — highlight scoring + popups (feature/spatial-physics-extraction, 2026-03-24)
 - `config_f32(val: u32) -> f32` private helper in `select_highlights.rs` — module-private 2-line helper for lossless u32→f32 via u16::try_from. Consistent with the established `f32::from(u16::try_from(n).unwrap_or(u16::MAX))` pattern throughout the codebase. Do not flag.
 - `_ => unreachable!()` arm in `score_highlight` after the `match highlight.kind` block — the binary-type guard above the match uses an exhaustive early-return, so this arm is structurally unreachable. Intentional invariant enforcer. Do not flag.

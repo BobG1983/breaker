@@ -112,13 +112,13 @@ NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKi
 NOTE: This domain was restructured. The old `behaviors/consequences/` directory is GONE. The old `bolt/behaviors/` sub-domain is GONE. Both were merged here.
 
 ### Resources (`behaviors/active.rs`)
-- `ActiveChains(pub Vec<TriggerChain>)` — runtime active overclock chains (was `ActiveOverclocks` in old `bolt/behaviors/`)
+- `ActiveChains(pub Vec<(Option<String>, TriggerChain)>)` — runtime active overclock chains. Each entry is (chip_name, chain) where chip_name is None for archetype chains and Some(name) for chip/evolution chains.
 
 ### Components (`behaviors/armed.rs`)
 - `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains (was in `bolt/behaviors/armed.rs`)
 
 ### Events (`behaviors/events.rs`)
-- `EffectFired { pub effect: TriggerChain, pub bolt: Option<Entity> }` — fired when chain resolves to leaf (was `OverclockEffectFired` in old `bolt/behaviors/events.rs`)
+- `EffectFired { pub effect: TriggerChain, pub bolt: Option<Entity>, pub source_chip: Option<String> }` — fired when chain resolves to leaf (was `OverclockEffectFired` in old `bolt/behaviors/events.rs`)
 
 ### Pure functions (`behaviors/evaluate.rs`)
 - `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire (was `OverclockTriggerKind` in old `bolt/behaviors/evaluate.rs`)
@@ -134,7 +134,11 @@ NOTE: This domain was restructured. The old `behaviors/consequences/` directory 
 - `handle_time_penalty` in `behaviors/effects/time_penalty.rs`
 - `handle_spawn_bolt` in `behaviors/effects/spawn_bolt.rs`
 - `handle_speed_boost` in `behaviors/effects/speed_boost.rs` — handles TriggerChain::SpeedBoost { target, multiplier }; targets specific bolt from EffectFired.bolt; applies multiplier to bolt velocity
+- `handle_chain_bolt` in `behaviors/effects/chain_bolt.rs`
 All observe `EffectFired` (not `ConsequenceFired`).
+
+### Test convenience constructors (`chips/definition.rs` — #[cfg(test)] impl TriggerChain)
+- `test_shockwave(range: f32)`, `test_multi_bolt(count: u32)`, `test_shield(duration: f32)`, `test_lose_life()`, `test_time_penalty(seconds: f32)`, `test_spawn_bolt()`, `test_speed_boost(multiplier: f32)`, `test_chain_bolt(tether_distance: f32)`
 
 ## rantzsoft_spatial2d (`rantzsoft_spatial2d/src/`)
 

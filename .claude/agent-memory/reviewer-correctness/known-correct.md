@@ -59,6 +59,13 @@ type: reference
 - `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.
 - `RenderSetupPlugin` inserts `ClearColor(PlayfieldConfig::default().background_color())` at plugin-build time using compile-time defaults — intentional; RON default matches Rust default `[0.02, 0.01, 0.04]`.
 
+## feature/spatial-physics-extraction Confirmed Correct (2026-03-24)
+- `handle_multi_bolt` formula `base_count + stacks.saturating_sub(1) * count_per_level` — correct. Operator precedence: `*` binds tighter than `+`; `stacks.saturating_sub(1) * count_per_level` is the extra-level term added to base. Do not re-flag.
+- `detect_most_powerful_evolution` uses `.max_by(|a, b| a.1.total_cmp(b.1))` — correct for NaN-free f32 damage values. `total_cmp` is the right choice here.
+- `spawn_run_end_screen` `spawn_highlights_section` match on `HighlightKind` is exhaustive over all 15 variants. Confirmed correct.
+- `track_evolution_damage` `entry(name.clone()).or_insert(0.0) += msg.damage` — correct accumulation pattern, does not double-count.
+- `tick_shield_removes_at_zero_or_below` test comment says "dt ~0.0167" (wrong — actual fixed delta is 1/64 ≈ 0.015625 s). The test passes correctly because 0.01 - 0.015625 < 0.0. The comment is inaccurate but not a logic bug. Do not re-flag the test as wrong.
+
 ## Wave 2/3 Physics Migration Confirmed Correct (2026-03-24)
 - `maintain_quadtree` double-insert guard: `aabb_ref.is_added()` skip in both `changed_pos` and `changed_layers` loops — correctly prevents double-insert when entity was just added (Added<Aabb2D> fires Changed<GlobalPosition2D> too on the same tick). Do not re-flag.
 - `enforce_distance_constraints` (physics library, rantzsoft_physics2d) `both_converging = dot_a > 0.0 && dot_b < 0.0` — axis = delta = (b - a). `dot_a > 0` means A's velocity has positive component toward B. `dot_b < 0` means B's velocity has negative component (i.e., toward A). Both moving toward each other = converging. The sign convention is correct.

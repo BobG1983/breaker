@@ -39,6 +39,15 @@ fn reflect_top_hit(
     enforce_min_angle(&mut bolt_velocity.0, min_angle_from_horizontal);
 }
 
+/// Returns `true` when `point` lies inside the axis-aligned box centred on
+/// `center` with half-extents `half`.
+fn is_inside_aabb(point: Vec2, center: Vec2, half: Vec2) -> bool {
+    point.x > center.x - half.x
+        && point.x < center.x + half.x
+        && point.y > center.y - half.y
+        && point.y < center.y + half.y
+}
+
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.
 ///
 /// Includes overlap resolution: if the breaker has moved into the bolt (e.g.,
@@ -83,6 +92,7 @@ pub(crate) fn bolt_breaker_collision(
         piercing,
         _damage_boost,
         bolt_entity_scale,
+        _,
     ) in &mut bolt_query
     {
         let bolt_pos = bolt_position.0;
@@ -93,12 +103,7 @@ pub(crate) fn bolt_breaker_collision(
 
         // Overlap resolution: breaker may have moved into the bolt (e.g., bump pop).
         // CCD can't detect this since it only sweeps bolt movement.
-        let inside = bolt_pos.x > breaker_pos.x - expanded_half.x
-            && bolt_pos.x < breaker_pos.x + expanded_half.x
-            && bolt_pos.y > breaker_pos.y - expanded_half.y
-            && bolt_pos.y < breaker_pos.y + expanded_half.y;
-
-        if inside {
+        if is_inside_aabb(bolt_pos, breaker_pos, expanded_half) {
             bolt_position.0.y = above_y;
             if bolt_velocity.0.y <= 0.0 {
                 let hit_x = bolt_pos

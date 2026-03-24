@@ -147,6 +147,12 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **track_node_cleared_stats PerfectStreak re-records every node clear**: `track_node_cleared_stats.rs:64-74` — `best_perfect_streak` is a cross-node field. After the streak threshold is exceeded on node N, every subsequent `NodeCleared` passes `best >= threshold` and pushes another `PerfectStreak` highlight. A 10-node run with one streak on node 1 records 9 duplicate `PerfectStreak` highlights. Fix: check only if this node contributed a NEW best streak (i.e., `consecutive_perfect_bumps > previous_best`) or record once per run using a flag analogous to `first_evolution_recorded`.
 
+## feature/spatial-physics-extraction Code-Reuse Review (2026-03-24)
+
+- **is_inside_aabb boundary semantics diverge from Aabb2D::contains_point**: `bolt_breaker_collision.rs:44` — local helper uses strict `> / <`; library uses inclusive `>= / <=`. Boundary-touching bolts skip overlap resolution. Medium confidence / low practical impact (boundary states are transient). Main agent should decide whether boundary inclusion is intended before fixing.
+- **apply_speed_scale duplicates prepare_bolt_velocity clamping**: `behaviors/effects/speed_boost.rs:69` — two-step floor+ceiling using normalize_or_zero. `prepare_bolt_velocity` uses `clamp_length` (atomic). Equivalent for valid data (base < max), but diverges if clamping contract changes. Code-reuse gap, not a confirmed runtime bug.
+- Confirmed correct: `handle_multi_bolt` formula, `detect_most_powerful_evolution` max_by(total_cmp), all 15 HighlightKind arms in spawn_run_end_screen, track_evolution_damage accumulation. Do not re-flag.
+
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 
 - **spawn_chip_select overwrites ChipOffers**: FIXED — verified in current code. `spawn_chip_select` now reads `Res<ChipOffers>` directly (does not touch ChipRegistry or insert ChipOffers). The offering algorithm is no longer bypassed.

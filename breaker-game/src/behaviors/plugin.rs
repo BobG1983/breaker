@@ -11,6 +11,8 @@ use super::{
     effects::{
         chain_bolt::handle_chain_bolt,
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
+        multi_bolt::handle_multi_bolt,
+        shield::{handle_shield, tick_shield},
         shockwave::{
             ShockwaveRadius, animate_shockwave, handle_shockwave, shockwave_collision,
             tick_shockwave,
@@ -50,6 +52,8 @@ impl Plugin for BehaviorsPlugin {
             .add_observer(handle_shockwave)
             .add_observer(handle_speed_boost)
             .add_observer(handle_chain_bolt)
+            .add_observer(handle_multi_bolt)
+            .add_observer(handle_shield)
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -92,6 +96,13 @@ impl Plugin for BehaviorsPlugin {
                 FixedUpdate,
                 (tick_shockwave, shockwave_collision.after(tick_shockwave))
                     .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            // Shield tick (decrement + remove)
+            .add_systems(
+                FixedUpdate,
+                tick_shield
+                    .after(BehaviorSystems::Bridge)
                     .run_if(in_state(PlayingState::Active)),
             )
             // HUD + shockwave visual update

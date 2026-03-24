@@ -41,6 +41,7 @@ pub(crate) fn track_node_cleared_stats(
                 kind,
                 node_index,
                 value,
+                detail: None,
             });
         };
 
@@ -422,21 +423,25 @@ mod tests {
                 kind: HighlightKind::FastClear,
                 node_index: 0,
                 value: 0.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::NoDamageNode,
                 node_index: 1,
                 value: 0.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::PerfectStreak,
                 node_index: 2,
                 value: 5.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::ClutchClear,
                 node_index: 3,
                 value: 1.0,
+                detail: None,
             },
         ];
 
@@ -470,26 +475,31 @@ mod tests {
                 kind: HighlightKind::FastClear,
                 node_index: 0,
                 value: 0.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::NoDamageNode,
                 node_index: 1,
                 value: 0.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::PerfectStreak,
                 node_index: 2,
                 value: 5.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::ClutchClear,
                 node_index: 3,
                 value: 1.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::FastClear,
                 node_index: 4,
                 value: 0.0,
+                detail: None,
             },
         ];
 
@@ -521,26 +531,31 @@ mod tests {
                 kind: HighlightKind::ClutchClear,
                 node_index: 0,
                 value: 2.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::NoDamageNode,
                 node_index: 1,
                 value: 0.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::PerfectStreak,
                 node_index: 2,
                 value: 5.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::FastClear,
                 node_index: 3,
                 value: 0.0,
+                detail: None,
             },
             RunHighlight {
                 kind: HighlightKind::NoDamageNode,
                 node_index: 4,
                 value: 0.0,
+                detail: None,
             },
         ];
 

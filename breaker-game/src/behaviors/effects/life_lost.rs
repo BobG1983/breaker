@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::events::EffectFired, chips::definition::TriggerChain, run::messages::RunLost,
+    behaviors::{effects::shield::ShieldActive, events::EffectFired},
+    chips::definition::TriggerChain,
+    run::messages::RunLost,
     ui::components::StatusPanel,
 };
 
@@ -16,16 +18,19 @@ pub(crate) struct LivesCount(pub u32);
 pub(crate) struct LivesDisplay;
 
 /// Observer that handles life loss — decrements `LivesCount`, sends [`RunLost`]
-/// when lives reach zero.
+/// when lives reach zero. Skips entities that have [`ShieldActive`].
 pub(crate) fn handle_life_lost(
     trigger: On<EffectFired>,
-    mut lives_query: Query<&mut LivesCount>,
+    mut lives_query: Query<(&mut LivesCount, Option<&ShieldActive>)>,
     mut writer: MessageWriter<RunLost>,
 ) {
     let TriggerChain::LoseLife = &trigger.event().effect else {
         return;
     };
-    for mut lives in &mut lives_query {
+    for (mut lives, shield) in &mut lives_query {
+        if shield.is_some() {
+            continue;
+        }
         if lives.0 == 0 {
             continue;
         }
@@ -183,6 +188,86 @@ mod tests {
         assert_eq!(
             lives.0, 3,
             "TimePenalty effect should not change LivesCount (self-selection)"
+        );
+    }
+
+    // =========================================================================
+    // Shield blocking tests
+    // =========================================================================
+
+    #[test]
+    fn lose_life_skips_when_shield_active_present() {
+        use crate::behaviors::effects::shield::ShieldActive;
+
+        let mut app = test_app();
+        let entity = app
+            .world_mut()
+            .spawn((LivesCount(3), ShieldActive { remaining: 3.0 }))
+            .id();
+
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::LoseLife,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, 3,
+            "LoseLife should be blocked when ShieldActive is present, but lives changed to {}",
+            lives.0
+        );
+    }
+
+    #[test]
+    fn lose_life_works_when_no_shield_active() {
+        let mut app = test_app();
+        let entity = app.world_mut().spawn(LivesCount(3)).id();
+
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::LoseLife,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, 2,
+            "LoseLife without ShieldActive should decrement lives from 3 to 2"
+        );
+    }
+
+    #[test]
+    fn shield_protects_last_life() {
+        use crate::behaviors::effects::shield::ShieldActive;
+
+        let mut app = test_app();
+        let entity = app
+            .world_mut()
+            .spawn((LivesCount(1), ShieldActive { remaining: 2.0 }))
+            .id();
+
+        app.world_mut().commands().trigger(EffectFired {
+            effect: TriggerChain::LoseLife,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, 1,
+            "ShieldActive should protect last life, but lives changed to {}",
+            lives.0
+        );
+
+        let captured = app.world().resource::<CapturedRunLost>();
+        assert_eq!(
+            captured.0, 0,
+            "RunLost should NOT be sent when shield protects last life"
         );
     }
 }

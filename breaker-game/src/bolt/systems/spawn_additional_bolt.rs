@@ -12,6 +12,7 @@ use crate::{
         components::{
             Bolt, BoltBaseSpeed, BoltInitialAngle, BoltMaxSpeed, BoltMinSpeed, BoltRadius,
             BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY, ExtraBolt,
+            SpawnedByEvolution,
         },
         messages::SpawnAdditionalBolt,
         resources::BoltConfig,
@@ -45,7 +46,7 @@ pub fn spawn_additional_bolt(
 
     let entity_scale = layout.as_ref().map_or(1.0, |l| l.0.entity_scale);
 
-    for _msg in reader.read() {
+    for msg in reader.read() {
         let angle = rng
             .0
             .random_range(-bolt_config.respawn_angle_spread..=bolt_config.respawn_angle_spread);
@@ -56,45 +57,51 @@ pub fn spawn_additional_bolt(
 
         let spawn_pos = Vec2::new(breaker_pos.x, breaker_pos.y + bolt_config.spawn_offset_y);
 
-        commands.spawn((
-            Bolt,
-            ExtraBolt,
-            velocity,
-            GameDrawLayer::Bolt,
-            Position2D(spawn_pos),
-            PreviousPosition(spawn_pos),
-            Scale2D {
-                x: bolt_config.radius,
-                y: bolt_config.radius,
-            },
-            PreviousScale {
-                x: bolt_config.radius,
-                y: bolt_config.radius,
-            },
-            Aabb2D::new(
-                Vec2::ZERO,
-                Vec2::new(bolt_config.radius, bolt_config.radius),
-            ),
-            CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
-            (
-                BoltBaseSpeed(bolt_config.base_speed),
-                BoltMinSpeed(bolt_config.min_speed),
-                BoltMaxSpeed(bolt_config.max_speed),
-                BoltRadius(bolt_config.radius),
-                BoltSpawnOffsetY(bolt_config.spawn_offset_y),
-                BoltRespawnOffsetY(bolt_config.respawn_offset_y),
-                BoltRespawnAngleSpread(bolt_config.respawn_angle_spread),
-                BoltInitialAngle(bolt_config.initial_angle),
-            ),
-            EntityScale(entity_scale),
-            Mesh2d(render_assets.0.add(Circle::new(1.0))),
-            MeshMaterial2d(
-                render_assets
-                    .1
-                    .add(ColorMaterial::from_color(bolt_config.color())),
-            ),
-            CleanupOnNodeExit,
-        ));
+        let id = commands
+            .spawn((
+                Bolt,
+                ExtraBolt,
+                velocity,
+                GameDrawLayer::Bolt,
+                Position2D(spawn_pos),
+                PreviousPosition(spawn_pos),
+                Scale2D {
+                    x: bolt_config.radius,
+                    y: bolt_config.radius,
+                },
+                PreviousScale {
+                    x: bolt_config.radius,
+                    y: bolt_config.radius,
+                },
+                Aabb2D::new(
+                    Vec2::ZERO,
+                    Vec2::new(bolt_config.radius, bolt_config.radius),
+                ),
+                CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
+                (
+                    BoltBaseSpeed(bolt_config.base_speed),
+                    BoltMinSpeed(bolt_config.min_speed),
+                    BoltMaxSpeed(bolt_config.max_speed),
+                    BoltRadius(bolt_config.radius),
+                    BoltSpawnOffsetY(bolt_config.spawn_offset_y),
+                    BoltRespawnOffsetY(bolt_config.respawn_offset_y),
+                    BoltRespawnAngleSpread(bolt_config.respawn_angle_spread),
+                    BoltInitialAngle(bolt_config.initial_angle),
+                ),
+                EntityScale(entity_scale),
+                Mesh2d(render_assets.0.add(Circle::new(1.0))),
+                MeshMaterial2d(
+                    render_assets
+                        .1
+                        .add(ColorMaterial::from_color(bolt_config.color())),
+                ),
+                CleanupOnNodeExit,
+            ))
+            .id();
+
+        if let Some(name) = &msg.source_chip {
+            commands.entity(id).insert(SpawnedByEvolution(name.clone()));
+        }
     }
 }
 
@@ -423,6 +430,164 @@ mod tests {
             (scale.0 - 1.0).abs() < f32::EPSILON,
             "EntityScale should default to 1.0, got {}",
             scale.0,
+        );
+    }
+
+    // ── SpawnedByEvolution attribution tests ──────────────────────────
+
+    /// Sends specific `SpawnAdditionalBolt` messages with custom `source_chip` values.
+    #[derive(Resource, Default)]
+    struct SendSpawnWithAttribution(Vec<SpawnAdditionalBolt>);
+
+    fn send_spawn_with_attribution(
+        mut flag: ResMut<SendSpawnWithAttribution>,
+        mut writer: MessageWriter<SpawnAdditionalBolt>,
+    ) {
+        for msg in flag.0.drain(..) {
+            writer.write(msg);
+        }
+    }
+
+    /// Test app variant that uses `SendSpawnWithAttribution` for custom messages.
+    fn test_app_with_attribution() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<BoltConfig>()
+            .init_resource::<GameRng>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_message::<SpawnAdditionalBolt>()
+            .insert_resource(SendSpawnWithAttribution::default())
+            .add_systems(
+                FixedUpdate,
+                (send_spawn_with_attribution, spawn_additional_bolt).chain(),
+            );
+        app
+    }
+
+    #[test]
+    fn additional_bolt_receives_spawned_by_evolution_when_source_chip_is_some() {
+        use crate::bolt::components::SpawnedByEvolution;
+
+        let mut app = test_app_with_attribution();
+        spawn_breaker_at(&mut app, 0.0, -250.0);
+        app.world_mut()
+            .resource_mut::<SendSpawnWithAttribution>()
+            .0
+            .push(SpawnAdditionalBolt {
+                source_chip: Some("chain_lightning".to_owned()),
+            });
+        tick(&mut app);
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should exist");
+
+        let spawned_by = app
+            .world()
+            .get::<SpawnedByEvolution>(entity)
+            .expect("ExtraBolt should have SpawnedByEvolution when source_chip is Some");
+        assert_eq!(
+            spawned_by.0, "chain_lightning",
+            "SpawnedByEvolution should carry the source chip name"
+        );
+    }
+
+    #[test]
+    fn additional_bolt_receives_spawned_by_evolution_with_empty_string() {
+        use crate::bolt::components::SpawnedByEvolution;
+
+        let mut app = test_app_with_attribution();
+        spawn_breaker_at(&mut app, 0.0, -250.0);
+        app.world_mut()
+            .resource_mut::<SendSpawnWithAttribution>()
+            .0
+            .push(SpawnAdditionalBolt {
+                source_chip: Some(String::new()),
+            });
+        tick(&mut app);
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should exist");
+
+        let spawned_by = app
+            .world()
+            .get::<SpawnedByEvolution>(entity)
+            .expect("ExtraBolt should have SpawnedByEvolution even with empty string source_chip");
+        assert_eq!(
+            spawned_by.0, "",
+            "SpawnedByEvolution should carry an empty string when source_chip is empty"
+        );
+    }
+
+    #[test]
+    fn additional_bolt_has_no_spawned_by_evolution_when_source_chip_is_none() {
+        use crate::bolt::components::SpawnedByEvolution;
+
+        let mut app = test_app_with_attribution();
+        spawn_breaker_at(&mut app, 0.0, -250.0);
+        app.world_mut()
+            .resource_mut::<SendSpawnWithAttribution>()
+            .0
+            .push(SpawnAdditionalBolt { source_chip: None });
+        tick(&mut app);
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>()
+            .iter(app.world())
+            .next()
+            .expect("extra bolt should exist");
+
+        assert!(
+            app.world().get::<SpawnedByEvolution>(entity).is_none(),
+            "ExtraBolt should NOT have SpawnedByEvolution when source_chip is None"
+        );
+    }
+
+    #[test]
+    fn multiple_spawns_with_different_attributions_produce_correctly_attributed_bolts() {
+        use crate::bolt::components::SpawnedByEvolution;
+
+        let mut app = test_app_with_attribution();
+        spawn_breaker_at(&mut app, 0.0, -250.0);
+        {
+            let mut res = app.world_mut().resource_mut::<SendSpawnWithAttribution>();
+            res.0.push(SpawnAdditionalBolt {
+                source_chip: Some("alpha".to_owned()),
+            });
+            res.0.push(SpawnAdditionalBolt {
+                source_chip: Some("beta".to_owned()),
+            });
+        }
+        tick(&mut app);
+
+        let attributions: Vec<String> = app
+            .world_mut()
+            .query_filtered::<&SpawnedByEvolution, With<ExtraBolt>>()
+            .iter(app.world())
+            .map(|s| s.0.clone())
+            .collect();
+        assert_eq!(
+            attributions.len(),
+            2,
+            "should have two ExtraBolts with SpawnedByEvolution, got {}",
+            attributions.len()
+        );
+        assert!(
+            attributions.contains(&"alpha".to_owned()),
+            "one bolt should be attributed to 'alpha', got {attributions:?}"
+        );
+        assert!(
+            attributions.contains(&"beta".to_owned()),
+            "one bolt should be attributed to 'beta', got {attributions:?}"
         );
     }
 }

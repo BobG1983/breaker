@@ -55,6 +55,7 @@ pub(crate) fn detect_nail_biter(
                     kind: HighlightKind::NailBiter,
                     node_index: run_state.node_index,
                     value: min_distance,
+                    detail: None,
                 });
             }
         }
@@ -278,6 +279,7 @@ mod tests {
                 kind: HighlightKind::NailBiter,
                 node_index: 0,
                 value: 20.0,
+                detail: None,
             });
 
         app.world_mut().spawn((
