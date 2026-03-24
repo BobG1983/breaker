@@ -55,7 +55,12 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
                 RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
                 RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
-                RonAssetPlugin::<ChipDefinition>::new(&["amp.ron", "augment.ron", "overclock.ron"]),
+                RonAssetPlugin::<ChipDefinition>::new(&[
+                    "amp.ron",
+                    "augment.ron",
+                    "overclock.ron",
+                    "evolution.ron",
+                ]),
                 RonAssetPlugin::<DifficultyCurveDefaults>::new(&["difficulty.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.

@@ -55,6 +55,7 @@ mod tests {
             rarity: Rarity::Common,
             max_stacks,
             effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+            ingredients: None,
         }
     }
 

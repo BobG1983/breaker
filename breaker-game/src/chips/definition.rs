@@ -14,6 +14,8 @@ pub enum Rarity {
     Rare,
     /// Extremely rare, run-defining chips.
     Legendary,
+    /// Evolution-tier chips — produced by combining maxed ingredient chips.
+    Evolution,
 }
 
 /// Effect variants for Amp chips (passive bolt upgrades).
@@ -241,7 +243,10 @@ pub struct EvolutionIngredient {
 }
 
 /// A recipe that combines existing chips into a new evolved chip.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+///
+/// Internal adapter type — constructed at load time from evolution
+/// `ChipDefinition`s. Not loaded directly from RON.
+#[derive(Deserialize, Clone, Debug)]
 pub struct EvolutionRecipe {
     /// Chips consumed by this evolution.
     pub ingredients: Vec<EvolutionIngredient>,
@@ -287,6 +292,9 @@ pub struct ChipDefinition {
     pub max_stacks: u32,
     /// The effects applied when this chip is selected.
     pub effects: Vec<ChipEffect>,
+    /// Evolution ingredients. `None` for non-evolution chips.
+    #[serde(default)]
+    pub ingredients: Option<Vec<EvolutionIngredient>>,
 }
 
 #[cfg(test)]
@@ -299,6 +307,7 @@ impl ChipDefinition {
             rarity: Rarity::Common,
             max_stacks,
             effects: vec![effect],
+            ingredients: None,
         }
     }
 

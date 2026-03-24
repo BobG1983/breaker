@@ -676,6 +676,7 @@ fn apply_inject_duplicate_offers(
         rarity: Rarity::Common,
         max_stacks: 3,
         effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+        ingredients: None,
     };
     let offers = ChipOffers(vec![
         ChipOffering::Normal(def.clone()),
@@ -703,6 +704,7 @@ fn apply_inject_maxed_chip_offer(
         rarity: Rarity::Common,
         max_stacks: 1,
         effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+        ingredients: None,
     };
     if let Some(inventory) = chip_inventory {
         inventory.force_insert_entry(chip_name, 1, 1);

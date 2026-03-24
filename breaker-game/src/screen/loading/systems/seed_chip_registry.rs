@@ -77,6 +77,7 @@ mod tests {
             augments,
             overclocks,
             difficulty: Handle::default(),
+            evolutions: vec![],
         }
     }
 

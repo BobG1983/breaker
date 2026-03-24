@@ -130,6 +130,7 @@ mod tests {
             augments: vec![],
             overclocks: vec![],
             difficulty: Handle::default(),
+            evolutions: vec![],
         });
 
         app.update();
@@ -160,6 +161,7 @@ mod tests {
             augments: vec![],
             overclocks: vec![],
             difficulty: Handle::default(),
+            evolutions: vec![],
         });
         app.world_mut().insert_resource(make_registry());
 

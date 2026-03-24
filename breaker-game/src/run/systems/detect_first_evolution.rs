@@ -109,6 +109,7 @@ mod tests {
                 rarity: Rarity::Legendary,
                 max_stacks: 1,
                 effects: vec![ChipEffect::Amp(AmpEffect::Piercing(5))],
+                ingredients: None,
             },
         });
         registry

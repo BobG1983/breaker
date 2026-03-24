@@ -65,4 +65,7 @@ pub(crate) struct DefaultsCollection {
     /// Handle for difficulty curve defaults.
     #[asset(path = "config/defaults.difficulty.ron")]
     pub difficulty: Handle<DifficultyCurveDefaults>,
+    /// All evolution chip definition handles.
+    #[asset(path = "evolutions", collection(typed))]
+    pub evolutions: Vec<Handle<ChipDefinition>>,
 }

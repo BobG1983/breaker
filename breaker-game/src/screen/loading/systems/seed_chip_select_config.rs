@@ -76,6 +76,7 @@ mod tests {
             augments: vec![],
             overclocks: vec![],
             difficulty: Handle::default(),
+            evolutions: vec![],
         });
 
         app.update();
@@ -107,6 +108,7 @@ mod tests {
             augments: vec![],
             overclocks: vec![],
             difficulty: Handle::default(),
+            evolutions: vec![],
         });
 
         // First update seeds the config
