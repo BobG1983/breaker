@@ -104,6 +104,8 @@ type: reference
 - `cast_precision_loss` errors (quadtree.rs:368,464,496×2,522): in test loops using `(0_u32..).zip(...)`, `f32::from(i)` where `i: u32` is NOT valid — `f32: From<u32>` is not implemented (only up to `u16`). The prior memory entry incorrectly said `i` was `usize` with `i as f32`. The actual broken state (as of 2026-03-23): these tests already tried using `f32::from(i)` but `i` is `u32` — compile errors result. Fix: change `(0_u32..).zip(...)` to `(0_u16..).zip(...)` so `i: u16`, then `f32::from(i)` is valid (`f32: From<u16>` is implemented). All 5 errors are in test-only `#[cfg(test)]` functions. Error under `-D clippy::pedantic`. RESOLVED as of 2026-03-23 — no longer appears.
 - `missing_const_for_fn` warnings (aabb.rs:17, quadtree.rs:216,281,287): four constructor/accessor functions can be `const fn`. Nursery lint, warnings only.
 - `use_self` warning (quadtree.rs:13): `QuadNode` used explicitly inside `impl QuadNode` — clippy suggests `Self`. Nursery lint, warning only.
+- `too_many_arguments` error (quadtree.rs:80): `insert_into_node` private fn has 8 args (limit 7): `node`, `node_bounds`, `entity`, `bounds`, `layers`, `max_items_per_leaf`, `max_depth`, `depth`. Active as of 2026-03-23 (Wave 1 changes). Fix: bundle related args into a helper struct — `max_items_per_leaf`, `max_depth`, and `depth` form a natural `InsertConfig` or `QuadtreeConfig` grouping.
+- `trivially_copy_pass_by_ref` error (quadtree.rs:207): `query_layers: &CollisionLayers` in `query_aabb_filtered_node` — `CollisionLayers` is 8 bytes (Copy), so passing by reference is less efficient than by value. Fix: change parameter to `query_layers: CollisionLayers`. Active as of 2026-03-23 (Wave 1 changes).
 
 ## rantzsoft_spatial2d Crate Patterns (first observed 2026-03-23)
 - `should_panic_without_expect` errors (components.rs:299,305): `#[should_panic]` on two test functions without an `expected = "..."` message. Pedantic lint, errors. Fix: add `expected = "..."` matching the panic message string (e.g., `#[should_panic(expected = "Scale2D components must be non-zero")]`). Recurring pattern for any new `#[should_panic]` test in this crate.
@@ -158,6 +160,10 @@ type: reference
 - `missing_const_for_fn` warnings (breaker-scenario-runner/src/lifecycle/mod.rs:646,657): `apply_set_run_stat` and `apply_decrement_run_stat` private functions can be `const fn`. Nursery lint, warnings only. First seen 2026-03-23e.
 - `too_long_first_doc_paragraph` warning (breaker-scenario-runner/src/lifecycle/mod.rs:399): doc comment on `apply_debug_frame_mutations_deferred` spans more than one sentence on the first paragraph. Nursery lint, warning only. First seen 2026-03-23e.
 - `unused_import` warning (wall/systems/spawn_walls.rs:336): `Position2D` imported alongside `Scale2D` in a test-local `use` statement but only `Scale2D` is used. Fix: remove `Position2D` from the import. Warning only. New as of 2026-03-23.
+
+## Active Errors as of 2026-03-23h (feature/wave-3-offerings-transitions — post wave-3 session continuation)
+- `too_many_lines` error (`bolt/systems/bolt_cell_collision.rs:76`): `bolt_cell_collision` function body is 107 lines (limit 100). Error in both `dclippy` and `dsclippy`. Fix: extract a helper function to reduce the body below 100 lines. This function grew past the limit during wave-3 work.
+- `doc_markdown` error (`bolt/systems/bolt_cell_collision.rs:1900`): test helper doc comment has bare `half_extents` without backticks. Error in `dclippy` (lib test) only. Fix: change `half_extents` to `` `half_extents` `` in the doc comment.
 
 ## Confirmed Clean as of 2026-03-23 (feature/wave-3-offerings-transitions — post wave-3 lint run)
 - All four crates (`dclippy`, `spatial2dclippy`, `physics2dclippy`, `dsclippy`) produced 0 errors.

@@ -109,22 +109,36 @@ fn insert_into_node(
                 };
                 // Re-insert all items
                 for (e, b, l) in old_items {
-                    insert_into_node(node, node_bounds, e, b, l, TreeConfig {
-                        max_items_per_leaf: cfg.max_items_per_leaf,
-                        max_depth: cfg.max_depth,
-                        depth: cfg.depth,
-                    });
+                    insert_into_node(
+                        node,
+                        node_bounds,
+                        e,
+                        b,
+                        l,
+                        TreeConfig {
+                            max_items_per_leaf: cfg.max_items_per_leaf,
+                            max_depth: cfg.max_depth,
+                            depth: cfg.depth,
+                        },
+                    );
                 }
             }
         }
         QuadNode::Branch { children, items } => {
             if let Some(qi) = fitting_quadrant(node_bounds, &bounds) {
                 let cb = child_bounds(node_bounds, qi);
-                insert_into_node(&mut children[qi], &cb, entity, bounds, layers, TreeConfig {
-                    max_items_per_leaf: cfg.max_items_per_leaf,
-                    max_depth: cfg.max_depth,
-                    depth: cfg.depth + 1,
-                });
+                insert_into_node(
+                    &mut children[qi],
+                    &cb,
+                    entity,
+                    bounds,
+                    layers,
+                    TreeConfig {
+                        max_items_per_leaf: cfg.max_items_per_leaf,
+                        max_depth: cfg.max_depth,
+                        depth: cfg.depth + 1,
+                    },
+                );
             } else {
                 // Spans multiple quadrants — store at this branch level
                 items.push((entity, bounds, layers));

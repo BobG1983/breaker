@@ -96,7 +96,7 @@ mod tests {
             messages::DamageCell,
         },
         chips::{components::DamageBoost, definition::TriggerChain},
-        shared::{BASE_BOLT_DAMAGE, CELL_LAYER, BOLT_LAYER, GameDrawLayer},
+        shared::{BASE_BOLT_DAMAGE, BOLT_LAYER, CELL_LAYER, GameDrawLayer},
     };
 
     // --- Test infrastructure ---

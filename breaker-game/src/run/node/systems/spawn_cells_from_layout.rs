@@ -163,10 +163,7 @@ pub(crate) fn spawn_cells_from_grid(
                     x: cell_width,
                     y: cell_height,
                 },
-                Aabb2D::new(
-                    Vec2::ZERO,
-                    Vec2::new(cell_width / 2.0, cell_height / 2.0),
-                ),
+                Aabb2D::new(Vec2::ZERO, Vec2::new(cell_width / 2.0, cell_height / 2.0)),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 GameDrawLayer::Cell,
             ));
