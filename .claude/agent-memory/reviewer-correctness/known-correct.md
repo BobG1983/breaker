@@ -6,6 +6,13 @@ type: reference
 
 ## Known Correct Patterns (Do Not Flag)
 
+### Shockwave VFX (2026-03-23, feature/wave-3-offerings-transitions)
+- `Option<ResMut<Assets<ColorMaterial>>>` in `animate_shockwave` — valid Bevy 0.18 system parameter; returns None in test setups that omit the resource. Confirmed correct.
+- `Annulus::new(0.85, 1.0)` — parameter order is (inner_radius, outer_radius). Correct thin ring at unit scale; Scale2D expands it. Do not re-flag as wrong-order.
+- `materials.get_mut(mat_handle.id())` inside query iterator — safe because Assets<ColorMaterial> is a resource, disjoint from component queries. No borrow conflict.
+- `Color::with_alpha` on `Color::LinearRgba` — sets alpha directly on the LinearRgba inner value; HDR channels (values > 1.0) are preserved. Confirmed from bevy_color source.
+- `animate_shockwave` scheduled in `Update`, `tick_shockwave` in `FixedUpdate` — the scheduling asymmetry is intentional (visual-only in Update, simulation in FixedUpdate). No ordering bug.
+
 ### entity_scale feature (2026-03-20, feature/overclock-trigger-chain)
 - `apply_entity_scale_to_breaker` uses `Option<Res<ActiveNodeLayout>>` and early-returns if None — correct guard. Runs `.after(BreakerSystems::InitParams).after(NodeSystems::Spawn)`. `NodeSystems::Spawn` is in a `.chain()` with `set_active_layout` first, so `ActiveNodeLayout` exists before this system runs. No ordering hazard.
 - `apply_entity_scale_to_bolt` runs `.after(BoltSystems::InitParams).after(NodeSystems::Spawn)` — same correct ordering as breaker.
@@ -94,6 +101,9 @@ type: reference
 - Full-tree review 2026-03-19: no confirmed logic bugs found beyond z=1.0 hardcode in bolt_lost (cosmetic concern for multi-layer games but functionally correct for current single-layer setup).
 - Phase 4 Wave 1 (2026-03-19): `handle_run_setup_input` uses `Option<Res<SeedEntry>>` — always Some at runtime because `spawn_run_setup` (OnEnter) fires before Update. Defensive Option is correct, not a bug.
 - Memorable moments (2026-03-23): `detect_close_save` guards `distance >= 0.0 && distance < threshold` — correct; prevents firing on bolts below the floor. Do not re-flag.
+- spatial2d Wave 1 (2026-03-23): `save_previous` uses `Option<&GlobalPosition2D>` with fallback to local `pos.0` — intentional. An entity can have `InterpolateTransform2D` without `Spatial2D` and thus without `GlobalPosition2D`. The fallback is correct for that case. Do not re-flag.
+- spatial2d Wave 1 (2026-03-23): `Velocity2D::clamped()` has `speed < f32::EPSILON` guard before division — zero-division risk is eliminated. Do not re-flag.
+- spatial2d Wave 1 (2026-03-23): `propagate_position/rotation/scale` still running alongside `derive_transform` — old systems write Transform first, derive_transform (which requires DrawLayer) overwrites. For entities with DrawLayer, derive_transform always wins. For entities without DrawLayer (no rendering), only old systems run. Functionally redundant but not a correctness bug for the dual-write itself. The ordering bug (compute_globals after derive_transform) is separate.
 - Memorable moments (2026-03-23): `spawn_run_end_screen` subtitle index `usize::try_from(seed % 5).unwrap_or(0)` — `seed % 5` in [0,4], `try_from` infallible on all 16-bit+ targets, `.unwrap_or(0)` is dead but harmless. Not a bug.
 - Memorable moments (2026-03-23): `track_node_cleared_stats` early-continue at top of loop before highlight checks — correct for the record path. The system intentionally does not emit HighlightTriggered (design inconsistency with other systems but not a crash).
 - Memorable moments (2026-03-23): `detect_combo_and_pinball` resets counters AFTER threshold check on BoltHitBreaker — correct ordering.

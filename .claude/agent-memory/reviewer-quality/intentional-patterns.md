@@ -70,5 +70,19 @@ type: reference
 - `spawn_bolt.rs` calls `breaker_query.iter().next()` twice to get y and x separately — minor redundancy, but pre-existing; do not flag as new issue introduced by this PR.
 - `Wall` and `Cell` markers are `pub(crate)` — intentional; only spawned internally. Do not flag `pub(crate)` visibility on these markers.
 - `PreviousScale` struct mirrors `Scale2D` field layout (x: f32, y: f32) rather than being a newtype over Vec2 — intentional; matches `Scale2D`'s non-newtype design for easy field-by-field lerp in `propagate_scale`.
-- `save_previous_positions` function name still references only positions — the function now also saves rotation and scale. The name is stale. Flag until renamed.
+- `save_previous_positions` stale name — CLOSED as of Wave 1 spatial2d review (2026-03-23). Function has been renamed to `save_previous` in the current code.
 - The `#[require]` tests for `Bolt`, `Breaker`, `Cell`, and `Wall` all verify negative cases (cleanup components NOT auto-inserted) — intentional regression guard pattern. Do not flag as over-testing.
+
+## Wave 1 + spatial2d VFX (feature/wave-3-offerings-transitions, 2026-03-23, simplify pass)
+- `tick` helper is module-local in every test module (74 files). This is the established pattern for the whole codebase — not a duplication issue. Do not flag per-module `tick` helpers as reuse candidates.
+- `animate_shockwave` in shockwave.rs tests spawns `Assets<ColorMaterial>` directly via `init_resource` — correct; the game's full asset pipeline is not needed in unit tests. The HDR `ColorMaterial` literal `Color::linear_rgba(0.0, 4.0, 4.0, 0.9)` with `AlphaMode2d::Blend` is repeated across 6 VFX tests; this is intentional (each test is self-contained) rather than a shared constant, consistent with test-isolation norms here.
+- `assert_standard_shockwave_components` helper in shockwave.rs tests — correctly extracted from the first test that spawned with all standard components; reduces duplication within the file only. Not a cross-file utility; do not flag.
+- `ShieldBehavior` field rename: `orbit_count/radius/speed/hp/color_rgb` → `count/radius/speed/hp/color_rgb` — vocabulary simplification approved in simplify pass. RON files must be updated to match; this is a RON-breaking rename.
+
+## Wave 1 — spatial2d new systems (feature/wave-3-offerings-transitions, 2026-03-23)
+- `compute_globals` uses a two-pass loop with a `HashMap<Entity, (Vec2, Rot2, (f32, f32))>` parent cache — intentional pattern to avoid conflicting mutable borrows. Do not flag the HashMap allocation as unnecessary.
+- `propagate_position`, `propagate_rotation`, `propagate_scale` still registered in plugin alongside the new `compute_globals` + `derive_transform` — these are NOT dead code; they still write `Transform` components via Bevy's parent hierarchy mechanism. `derive_transform` writes from Global* components and is the *new* path; `propagate_*` remain as the old complementary path. The coexistence is intentional during the migration. Do not flag these as duplicates unless a future wave removes them.
+- `save_previous` (save_previous.rs) splits into four separate sub-queries (query_pos, query_rot, query_scale, query_vel) — intentional; Bevy requires separate queries for separate borrows of the same component family when the filter (`With<InterpolateTransform2D>`) differs. Do not flag as query duplication.
+- Scale interpolation in `derive_transform` uses manual lerp `prev.x + (g_scale.x - prev.x) * alpha` rather than a `lerp` call — intentional; `f32` has no built-in `lerp` in stable Rust at the time of writing; this is the idiomatic manual form. Do not flag.
+- `GlobalScale2D` fields `x: f32, y: f32` match `Scale2D`'s non-newtype layout — intentional symmetry. Do not flag as inconsistent with `GlobalPosition2D(Vec2)` newtype style; scale requires field-level access for the propagation math.
+- `derive_transform` has the interpolation guard `if interp.is_some()` repeated three times (pos, rot, scale) — intentional; each field can be independently interpolated or not (the guard is per-field, not per-entity). Do not flag as duplication.

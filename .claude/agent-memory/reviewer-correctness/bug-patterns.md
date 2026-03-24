@@ -123,6 +123,16 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **spawn_cells_from_layout writes Transform directly**: `run/node/systems/spawn_cells_from_layout.rs:158-162` — cells are spawned with both `Transform { translation, scale }` set manually AND `Position2D`+`Scale2D`. The propagation system will overwrite on first tick. Same redundant-write pattern as walls. No correctness impact since static entities don't need frame-accurate Transform.
 
+## Shockwave VFX Bugs (2026-03-23, feature/wave-3-offerings-transitions)
+
+- **animate_shockwave divides by zero when radius.max = 0.0**: `shockwave.rs:187` — `let progress = (radius.current / radius.max).clamp(0.0, 1.0)`. Rust's `f32::clamp` does NOT eliminate NaN; `0.0 / 0.0 = NaN`, `.clamp(0.0, 1.0)` returns NaN, `material.color.with_alpha(NaN)` corrupts the material. A shockwave with `base_range=0.0, stacks=1` passes the speed guard and spawns. Fix: add `if radius.max <= 0.0 { continue; }` guard before the division. Current RON data presumably has non-zero base_range so this is not triggered at runtime yet, but it is a structural gap.
+
+## spatial2d Wave 1 Bugs (2026-03-23, feature/wave-3-offerings-transitions) — OPEN
+
+- **compute_globals runs AFTER derive_transform**: `plugin.rs:62-63` — chain order is `propagate_position → propagate_rotation → propagate_scale → derive_transform → compute_globals`. `derive_transform` reads Global* before `compute_globals` has updated them from current `Position2D` (updated by `apply_velocity` in FixedUpdate). Result: derive_transform always renders the PREVIOUS tick's position. For the non-interpolation case, this is a one-tick visual lag. For interpolation, derive_transform interpolates between previous and stale globals (both pointing to the same prior state), producing no visible movement. Fix: reorder the chain to `compute_globals → derive_transform` (or at minimum swap those two entries). Confidence: HIGH.
+
+- **compute_globals single-level hierarchy only**: `compute_globals.rs:38-46` — first pass collects only root entities into `parent_cache`. Second pass looks up `child_of.parent()` in that cache. A grandchild's parent is a child (not a root), so it is absent from the cache. Grandchildren fall back to their local position — incorrect global for depth > 1. Fix: build cache incrementally by traversing in parent-first order (topological sort), or run multiple passes until cache stabilizes. Confidence: HIGH.
+
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 
 - **spawn_chip_select overwrites ChipOffers**: FIXED — verified in current code. `spawn_chip_select` now reads `Res<ChipOffers>` directly (does not touch ChipRegistry or insert ChipOffers). The offering algorithm is no longer bypassed.

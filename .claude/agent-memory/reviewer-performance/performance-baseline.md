@@ -38,6 +38,8 @@ type: reference
 
 ## Known Hotspots
 - `bolt_cell_collision` (FixedUpdate): O(bolts × cells × MAX_BOUNCES=4). Watch if multi-bolt upgrades added.
+- `compute_globals` HashMap allocation: 1 HashMap::new() per RunFixedMainLoop call. Trivial at <100 entities. Watch if entity counts grow significantly (16K cell grids would make this O(16K) allocation every visual frame).
+- `propagate_position/rotation/scale` still registered alongside `derive_transform`: both write Transform on the same entities every frame. propagate_* output overwrites derive_transform output — redundant work. The old systems should be removed once derive_transform is validated as the replacement. At current scale (50-60 entities) the redundant work is 3 extra system traversals costing ~microseconds, not a real hitch.
 - `pierced_this_frame.contains()`: linear scan O(n) per cell check in CCD inner loop. Bounded by MAX_BOUNCES=4 — negligible at current scale.
 - `check_lock_release`: runs every FixedUpdate, polls all `With<Locked>` cells unconditionally (not event-triggered after message drain). Fine at <10 locked cells; becomes polling overhead at scale.
 - `despawned.contains()` in `handle_cell_hit`: linear scan O(n). Bounded by MAX_BOUNCES×bolts hits per frame — negligible.
@@ -152,6 +154,24 @@ CONFIRM-EFFICIENT PATTERNS:
 - reset_highlight_tracker runs OnEnter(GameState::Playing) — correct placement, not FixedUpdate.
 
 OPEN ISSUE (correctness, not performance): spawn_highlight_text is exported but not registered in RunPlugin::build. Highlights are detected and HighlightTriggered is emitted correctly, but no text popup is ever spawned.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-23, feature/wave-3-offerings-transitions, spatial2d refactor)
+
+### rantzsoft_spatial2d — compute_globals, derive_transform, apply_velocity, save_previous
+
+COMPUTE_GLOBALS — Per-frame HashMap allocation is the headline concern. HashMap is allocated every RunFixedMainLoop, not per-frame in the game-loop sense, but it runs every visual frame (AfterFixedMainLoop). At current scale: ~50 cells (root) + ~3 orbit children (shield cells) = ~53 entities. HashMap growth is trivial. The while-made_progress loop is O(depth × entity_count); depth = 1 for shield/orbit pattern, so ~2 passes total. This is a Minor/Watch item — see Known Hotspots section. Not critical at current entity counts.
+
+DERIVE_TRANSFORM — Runs AfterFixedMainLoop, filtered by DrawLayer presence. Same entity count as above. Optional field access (Option<&InterpolateTransform2D>, Option<&PreviousPosition>, etc.) adds branch overhead per entity but these are cheap boolean checks. 0 allocations. Clean at current scale.
+
+SAVE_PREVIOUS — Now has 4 separate queries (pos, rot, scale, vel) all filtered With<InterpolateTransform2D>. All 4 share the same archetype filter — Bevy 0.18 caches archetype matches per query. At 1 bolt with InterpolateTransform2D, each query iterates 1 entity. Velocity query runs on entities with both Velocity2D and InterpolateTransform2D — that's exactly the bolt. Confirmed efficient.
+
+APPLY_VELOCITY — Clean. Filtered With<ApplyVelocity> marker. No allocations, O(N) where N = entities with marker (0 or 1 today). Correct FixedUpdate placement.
+
+DOUBLE-WORK (compute_globals + propagate_position/rotation/scale both running) — CONFIRMED ISSUE. All five systems (compute_globals, derive_transform, propagate_position, propagate_rotation, propagate_scale) run every AfterFixedMainLoop in a chain. derive_transform writes Transform from Global*; propagate_position/rotation/scale ALSO write Transform from local Position2D/Rotation2D/Scale2D. Both write the same Transform component on the same entities, with propagate_* overwriting derive_transform's output each frame. This is redundant work — flagged as Moderate in reviews.
+
+ANIMATE_SHOCKWAVE material mutation — `materials.get_mut(handle.id())` runs in Update every frame the shockwave exists. Shockwave is a short-lived entity (seconds), so this is brief hot-path material mutation. Each frame causes a dirty flag in Bevy's asset system, triggering re-upload to GPU. The shockwave is 1 entity; negligible at current scale. Watch if multiple simultaneous shockwaves become common.
+
+SHOCKWAVE MESH/MATERIAL SPAWN — meshes.add(Annulus) + materials.add(ColorMaterial) allocated per shockwave trigger in handle_shockwave observer. Event-driven (not per-frame). 1 shockwave at a time in current design. Accepted.
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 

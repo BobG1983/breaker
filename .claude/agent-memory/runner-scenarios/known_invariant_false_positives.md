@@ -66,65 +66,78 @@ frame 30 were missed because Playing wasn't entered yet.
 **Fix:** Added `.run_if(entered_playing)` to `(tick_scenario_frame, check_frame_limit).chain()`.
 **File:** `breaker-scenario-runner/src/lifecycle/mod.rs`
 
+## entered_playing race condition — SpawnNodeComplete fix (RESOLVED 2026-03-23)
+
+**Bug:** `entered_playing` was set by `tag_game_entities` (OnEnter(Playing)), but bolt/breaker
+entities hadn't been spawned yet under parallel I/O load at that moment. Three self-test
+scenarios were flaky: `bolt_count_exceeded`, `timer_increase`, `physics_frozen_during_pause`.
+**Root cause:** OnEnter(Playing) fires before spawn systems flush deferred commands. Tags were
+applied to entities that didn't exist yet, so `bolts_tagged=0 / breakers_tagged=0` even with
+`entered_playing=true`, causing health-check failures in the verdict evaluator.
+**Fix:** Moved `entered_playing` assignment from `tag_game_entities` to a new system
+`mark_entered_playing_on_spawn_complete` that reads the `SpawnNodeComplete` message. Frame
+counting and invariant checking now only begin once all entities are actually spawned.
+**File:** `breaker-scenario-runner/src/lifecycle/mod.rs`
+**Side effect:** Three unit tests in `lifecycle/tests.rs` are now failing (see below — known
+failing tests). They were written against the old behavior and need to be updated.
+
 ---
 
-## Confirmed Flaky Scenarios (parallel I/O contention only)
+## Confirmed Flaky Scenarios — RESOLVED by SpawnNodeComplete fix (2026-03-23)
 
-These scenarios fail non-deterministically under `--all` parallel mode but pass reliably
-when run individually with `-s <name>`. They are NOT game bugs.
+The three scenarios below were formerly flaky under `--all` parallel mode. The
+`entered_playing` → `SpawnNodeComplete` migration resolved all three. They now pass
+reliably in both `--all` and individual runs.
 
-### bolt_count_exceeded — self-test (FLAKY under --all)
+### bolt_count_exceeded — formerly FLAKY, now STABLE
 
 **Scenario:** `scenarios/self_tests/bolt_count_exceeded.scenario.ron`
-**Failure signature (--all mode):**
-```
-frames=120 violations=0 bolts=0 breakers=0 entered_playing=false
-expected 1 violation(s) matching [BoltCountReasonable], found 0
-no bolts were tagged — bolt invariants are vacuous
-no breakers were tagged — breaker invariants are vacuous
-```
-**Root cause:** `entered_playing=false` — game did not reach `GameState::Playing` within the
-120-frame budget. Under high parallelism, I/O delays during asset loading cause the scenario to
-exhaust its frame count before `bypass_menu_to_playing` fires. Since the invariant block is
-gated on `entered_playing`, no violations are recorded, so the `expected_violations` check fails.
-**Confirmed individual pass:** Yes (two consecutive individual runs both pass).
-**This is NOT a game bug.** It is a timing artifact of running 45+ scenarios simultaneously.
+**Former failure:** `entered_playing=false` race — game didn't reach Playing within frame budget.
+**Status:** RESOLVED. All 47 scenarios including this one passed on 2026-03-23 `--all` run.
 
-### timer_increase — self-test (FLAKY under --all)
+### timer_increase — formerly FLAKY, now STABLE
 
 **Scenario:** `scenarios/self_tests/timer_increase.scenario.ron`
-**Failure signature (--all mode):**
-```
-frames=120 violations=2 bolts=0 breakers=0 entered_playing=true
-TimerMonotonicallyDecreasing   x1   frame 30
-no bolts were tagged — breaker invariants are vacuous
-no invariant checks ran — game loop may not have executed
-```
-**Root cause:** `bolts=0 breakers=0` despite `entered_playing=true` — the `tag_game_entities`
-system ran on `OnEnter(GameState::Playing)` but at that moment the bolt and breaker entities
-hadn't yet been spawned (asset loading was still in progress under I/O contention). The
-`SetTimerRemaining(80.0)` frame mutation at frame 30 fires (explaining the x1 violation), but
-without tagged entities the "no bolts were tagged" failure condition triggers.
-**Confirmed individual pass:** Yes (two consecutive individual runs both pass).
-**This is NOT a game bug.** It is a timing artifact of parallel asset loading.
+**Former failure:** `bolts=0 breakers=0` despite `entered_playing=true` — entities not yet spawned
+when OnEnter(Playing) fired under I/O contention.
+**Status:** RESOLVED. Passed reliably on 2026-03-23 `--all` run.
 
-### physics_frozen_during_pause — self-test (FLAKY under --all)
+### physics_frozen_during_pause — formerly FLAKY, now STABLE
 
 **Scenario:** `scenarios/self_tests/physics_frozen_during_pause.scenario.ron`
-**Failure signature (--all mode):**
-```
-frames=120 actions=0 violations=0 logs=0 bolts=1 breakers=1 entered_playing=true
-expected violation PhysicsFrozenDuringPause never fired
-```
-**Root cause:** Unlike `bolt_count_exceeded` / `timer_increase` where `entered_playing=false` reveals the I/O
-delay, here `entered_playing=true` and `bolts=1` — entities are tagged. However the `TogglePause` frame
-mutation at frame 30 + `MoveBolt` at frame 35 combination apparently does not produce a sampled position
-delta across consecutive `check_physics_frozen_during_pause` ticks under high parallelism. The checker stores
-previous-position in a `Local` keyed per-entity; under I/O contention the fixed-update tick ordering may
-compress or skip the frame window where both a "pre-move" and "post-move" tick are observed while in Paused
-state. Net result: invariant never fires, `expected_violations` check fails.
-**Confirmed individual pass:** Yes (two consecutive individual runs both pass with `violations=2`).
-**This is NOT a game bug.** It is a timing artifact of parallel fixed-update scheduling under high I/O load.
+**Former failure:** invariant never fired — frame mutation window compressed under parallel I/O load.
+**Status:** RESOLVED. Passed reliably on 2026-03-23 `--all` run.
+
+---
+
+## Known Failing Unit Tests (require test updates — NOT game bugs)
+
+As of 2026-03-23, three unit tests in `breaker-scenario-runner/src/lifecycle/tests.rs` fail
+because they were written against the old behavior where `tag_game_entities` set
+`ScenarioStats::entered_playing = true`. That responsibility moved to
+`mark_entered_playing_on_spawn_complete` (reads `SpawnNodeComplete` message).
+
+### Failing tests
+
+1. `lifecycle::tests::scenario_stats_entered_playing_set_by_tag_game_entities` (line 791)
+   - Asserts `entered_playing == true` after running `tag_game_entities` alone.
+   - `tag_game_entities` no longer sets `entered_playing`, so the assertion fails.
+   - Fix: rename to `scenario_stats_entered_playing_set_by_mark_entered_playing_on_spawn_complete`
+     and rewrite to send a `SpawnNodeComplete` message and assert the new system sets the flag.
+
+2. `lifecycle::tests::check_bolt_in_bounds_is_registered_in_scenario_lifecycle` (line 191)
+   - Uses `lifecycle_test_app()` which includes `ScenarioLifecycle`. The invariant block is
+     gated on `entered_playing`. No `SpawnNodeComplete` message is ever sent in the test, so
+     `entered_playing` stays `false`, invariants never run, ViolationLog stays empty.
+   - Fix: send a `SpawnNodeComplete` message before the tick (or manually set
+     `ScenarioStats::entered_playing = true` in the test world before ticking).
+
+3. `lifecycle::tests::check_no_nan_is_registered_in_scenario_lifecycle` (line 229)
+   - Same root cause as #2 — `entered_playing` never becomes `true`.
+   - Fix: same approach as #2.
+
+All three tests are in `breaker-scenario-runner/src/lifecycle/tests.rs`.
+Route to writer-tests with a test revision spec once confirmed. Confidence: high.
 
 ---
 

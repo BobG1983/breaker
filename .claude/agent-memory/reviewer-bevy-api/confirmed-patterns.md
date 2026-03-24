@@ -370,6 +370,24 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `.after(PhysicsSystems::BreakerCollision).after(BehaviorSystems::Bridge)` — same pattern, confirmed valid
 - Bridge systems ordered after both a message-producer set AND the behaviors bridge set — correct for ensuring messages exist before evaluation
 
+## AlphaMode2d Import Path (confirmed 2026-03-23)
+- `use bevy::sprite_render::AlphaMode2d;` — correct import path in Bevy 0.18.1
+- `bevy::sprite_render` is a top-level re-export of `bevy_sprite_render`, which contains `AlphaMode2d`
+- NOT in `bevy::prelude` — must import explicitly; either `bevy::sprite_render::AlphaMode2d` or `bevy::sprite::AlphaMode2d` works
+- Variants: `Opaque`, `Mask(f32)`, `Blend`
+- Confirmed: `bevy::sprite_render::AlphaMode2d::Blend` used in `shockwave.rs` is correct
+
+## ColorMaterial::color.with_alpha + re-assignment (confirmed 2026-03-23)
+- `material.color = material.color.with_alpha(alpha);` — correct pattern
+- `Color::with_alpha(&self, alpha: f32) -> Color` returns a NEW Color value; it does NOT mutate in place
+- Must assign the return value back — the pattern in `animate_shockwave` is correct
+- Same pattern confirmed in `animate_fade_out.rs` and `transition.rs`
+
+## Annulus::new for Mesh2d (confirmed 2026-03-23)
+- `Mesh2d(meshes.add(Annulus::new(inner_radius, outer_radius)))` — confirmed correct
+- `Annulus` is in `bevy::prelude`; `Assets<Mesh>::add` accepts anything `Into<Mesh>`
+- `Annulus::new(0.85, 1.0)` creates a ring with inner radius 0.85, outer radius 1.0
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

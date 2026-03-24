@@ -140,5 +140,45 @@ NOTE: This domain was restructured. The old `behaviors/consequences/` directory 
 - `handle_speed_boost` in `behaviors/effects/speed_boost.rs` — handles TriggerChain::SpeedBoost { target, multiplier }; targets specific bolt from EffectFired.bolt; applies multiplier to bolt velocity
 All observe `EffectFired` (not `ConsequenceFired`).
 
-**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21).
+## rantzsoft_spatial2d (`rantzsoft_spatial2d/src/`)
+
+### Components (`components.rs`)
+- `Position2D(Vec2)` — Deref/DerefMut, distance(), distance_squared(), arithmetic
+- `Rotation2D(Rot2)` — from_degrees, from_radians, as_radians, as_degrees, to_quat
+- `Scale2D { x: f32, y: f32 }` — new(), uniform(), to_vec3()
+- `PreviousPosition(Vec2)`, `PreviousRotation(Rot2)`, `PreviousScale { x, y }`
+- `InterpolateTransform2D` — marker
+- `VisualOffset(Vec3)` — pixel offset added to Transform
+- `Spatial2D` — #[require] marker for all spatial components
+
+### Propagation (`propagation.rs`)
+- `PositionPropagation` — enum { Relative, Absolute }
+- `RotationPropagation` — enum { Relative, Absolute }
+- `ScalePropagation` — enum { Relative, Absolute }
+
+### Systems
+- `save_previous` — FixedFirst — snapshots current to Previous* for InterpolateTransform2D entities
+- `propagate_position<D: DrawLayer>` — AfterFixedMainLoop — writes Transform.translation from Position2D + DrawLayer z + VisualOffset, interpolation, parent/child with counteract hack
+- `propagate_rotation` — AfterFixedMainLoop — writes Transform.rotation
+- `propagate_scale` — AfterFixedMainLoop — writes Transform.scale
+
+### Plugin
+- `RantzSpatial2dPlugin<D: DrawLayer>` — generic over DrawLayer
+
+## rantzsoft_physics2d (`rantzsoft_physics2d/src/`)
+
+### Components
+- `DistanceConstraint { entity_a, entity_b, max_distance }` — in `constraint.rs`
+
+### Resources
+- `CollisionQuadtree` — wraps quadtree spatial index
+
+### Systems
+- `maintain_quadtree` — FixedUpdate, PhysicsSystems::MaintainQuadtree — reads Position2D for AABB center
+
+### Plugin
+- `RantzPhysics2dPlugin` — registers CollisionQuadtree + maintain_quadtree
+- `PhysicsSystems` system set — currently only `MaintainQuadtree` variant
+
+**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21). rantzsoft crates inventoried for Phase 11a (2026-03-23).
 **How to apply:** Use this to avoid re-reading files when writing future specs in these domains.

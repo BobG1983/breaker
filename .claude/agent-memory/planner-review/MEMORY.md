@@ -18,6 +18,8 @@
 - [pattern_onexit_stale_resource.md](pattern_onexit_stale_resource.md) — OnExit(StateA) systems read stale resource values if the resource is set during the NEXT state
 - [pattern_pub_struct_refactor_cascade.md](pattern_pub_struct_refactor_cascade.md) — Changing a pub struct's inner type cascades across workspace crates; writer agents can't fix cross-crate breakage
 - [pattern_component_type_migration_cascade.md](pattern_component_type_migration_cascade.md) — Migrating entity position type cascades through query aliases, test construction sites, scenario runner, debug/effect systems
+- [pattern_scale2d_zero_panic.md](pattern_scale2d_zero_panic.md) — Scale2D::new panics on zero; expanding-radius effects must guard initial frame
+- [pattern_global_component_change_detection.md](pattern_global_component_change_detection.md) — Global* components written every frame make Changed<Global*> always true, defeating incremental quadtree updates
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `physics/messages.rs`

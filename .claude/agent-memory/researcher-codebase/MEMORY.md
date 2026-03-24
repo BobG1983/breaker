@@ -4,6 +4,7 @@
 - [chip-select-flow.md](chip-select-flow.md) -- End-to-end chip offering + selection data flow map
 - [bolt-boundary-and-bump-flow.md](bolt-boundary-and-bump-flow.md) -- Bolt-lost detection, bump grading chain, node completion chain, key coordinates
 - [collision-message-flow.md](collision-message-flow.md) -- Physics collision message types, fields, ordering chain, and consumer map
+- [spatial2d-propagation-flow.md](spatial2d-propagation-flow.md) -- Spatial2d propagation pipeline: save_previous, propagate, interpolation, Absolute/Relative hierarchy, orbit cells
 
 ## Session History
 See [ephemeral/](ephemeral/) -- not committed.
