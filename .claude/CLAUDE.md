@@ -10,11 +10,11 @@ Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast
 
 ## Workspace
 
-Cargo workspace with crate directories at root: `breaker-game/` (main game), `rantzsoft_defaults/` + `rantzsoft_defaults_derive/` (config/defaults pipeline). Game-specific crates use `breaker-<name>` prefix; game-agnostic reusable crates use `rantzsoft_*` prefix (see @.claude/rules/rantzsoft-crates.md).
+Cargo workspace with crate directories at root: `breaker-game/` (main game), `rantzsoft_spatial2d/` (2D spatial transform plugin), `rantzsoft_physics2d/` (2D physics primitives: quadtree, CCD, CollisionLayers, DistanceConstraint), `rantzsoft_defaults/` + `rantzsoft_defaults_derive/` (config/defaults pipeline), `breaker-scenario-runner/` (automated gameplay testing). Game-specific crates use `breaker-<name>` prefix; game-agnostic reusable crates use `rantzsoft_*` prefix (see @.claude/rules/rantzsoft-crates.md).
 
 ## Architecture
 
-**Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, upgrades, run, physics, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. See `docs/architecture/` for full details, file tree, message table, and patterns.
+**Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, chips, behaviors, run, fx, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. `RantzSpatial2dPlugin` and `RantzPhysics2dPlugin` (from `rantzsoft_*` crates) provide shared spatial transform propagation and physics primitives. See `docs/architecture/` for full details, file tree, message table, and patterns.
 
 ## Terminology
 

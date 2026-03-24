@@ -28,6 +28,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - [3e: Structured Logging](done/phase-3/phase-3e-structured-logging.md)
 
 ### Current
+- **Spatial/Physics Extraction** (feature/spatial-physics-extraction) — **Done**. Extracted `rantzsoft_spatial2d` (Position2D, propagation, interpolation pipeline) and `rantzsoft_physics2d` (quadtree, CCD primitives, CollisionLayers, DistanceConstraint) as game-agnostic workspace crates. The `physics/` and `interpolate/` game domains were dissolved; collision systems moved to the bolt domain. Chain bolts (tethered bolt pairs via DistanceConstraint + momentum conservation) and spreading shockwave (entity-based expanding ring via quadtree) were implemented. `breaker-derive/` was replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`.
 - [Phase 4: Vertical Slice — Mini-Run](phase-4/index.md) — 4 waves, 8 sessions
   - **Wave 1 — Foundations** (Sessions 1-2)
     - [~~4a: Seeded RNG & Run Seed~~](done/phase-4/phase-4a-seeded-rng.md) — **Done**
@@ -72,7 +73,7 @@ Documented in full at `../design/decisions/`. Summary:
 | Seeded determinism | Phase 4. Run seed drives all randomness | [seeded-determinism.md](../design/decisions/seeded-determinism.md) |
 | Chip synergies | 30%+ chips must interact with other chips' effects. Web, not list | [chip-synergies.md](../design/decisions/chip-synergies.md) |
 | Breaker archetypes | Proof-of-concept designs, system flexibility over final balance | [breaker-archetypes.md](../design/decisions/breaker-archetypes.md) |
-| Workspace structure | Axum-style — `breaker-game/`, `breaker-derive/`, `breaker-scenario-runner/` as peer directories |
+| Workspace structure | Axum-style — `breaker-game/`, `rantzsoft_spatial2d/`, `rantzsoft_physics2d/`, `rantzsoft_defaults/`, `rantzsoft_defaults_derive/`, `breaker-scenario-runner/` as peer directories |
 | Scenario runner | Separate crate with argh CLI. Visual + headless modes. RON scenario files crate-local |
 
 ## Open Questions

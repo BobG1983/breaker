@@ -43,7 +43,8 @@ Leaf effects are the terminal actions in a trigger chain. They fire via the `Eff
 
 | Effect | Parameters | Handler | Description |
 |--------|-----------|---------|-------------|
-| `Shockwave` | `base_range`, `range_per_level`, `stacks` | `handle_shockwave` | Area damage to all non-locked cells within range of the bolt's position. Damage = `BASE_BOLT_DAMAGE * (1.0 + DamageBoost)`. Effective range = `base_range + (stacks - 1) * range_per_level`. |
+| `Shockwave` | `base_range`, `range_per_level`, `stacks` | `handle_shockwave` | Area damage to all non-locked cells within range. Spawns an expanding ring entity; `shockwave_collision` queries the quadtree each tick. Damage = `BASE_BOLT_DAMAGE * (1.0 + DamageBoost)`. Effective range = `base_range + (stacks - 1) * range_per_level`. |
+| `ChainBolt` | `tether_distance` | `handle_chain_bolt` | Spawns a chain bolt tethered to the triggering bolt via `SpawnChainBolt` message → `spawn_chain_bolt`. The tethered bolt is constrained to `tether_distance` from its anchor via `DistanceConstraint`. Despawned when anchor is lost. |
 | `MultiBolt` | `base_count`, `count_per_level`, `stacks` | *(not yet wired)* | Spawns additional bolts. Effective count = `base_count + (stacks - 1) * count_per_level`. |
 | `Shield` | `base_duration`, `duration_per_level`, `stacks` | *(not yet wired)* | Temporary shield protecting the breaker. Effective duration = `base_duration + (stacks - 1) * duration_per_level`. |
 | `LoseLife` | *(none)* | `handle_life_lost` | Decrements `LivesCount` on the breaker. When lives reach 0, sends `RunLost`. |

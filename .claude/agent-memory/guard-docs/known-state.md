@@ -194,6 +194,39 @@ type: reference
 - `TriggerKind` / `EvalResult` in `behaviors/evaluate.rs`: internal eval types, not glossary-level terms
 - `FrameMutation` / `MutationKind`: added to `docs/design/terminology.md` in 2026-03-21 session
 
+## Spatial/Physics Extraction Architecture (2026-03-24, do not re-flag)
+
+### New crates
+- `rantzsoft_spatial2d` — `Position2D`, `Rotation2D`, `Scale2D`, `Global*`, `Velocity2D`, `PreviousVelocity`, `InterpolateTransform2D`, `VisualOffset`, `ApplyVelocity`, `Spatial2D` marker, `DrawLayer` trait, `PositionPropagation`/`RotationPropagation`/`ScalePropagation` enums. Plugin: `RantzSpatial2dPlugin<D: DrawLayer>`.
+- `rantzsoft_physics2d` — `Aabb2D` (requires Spatial2D), `CollisionLayers`, `DistanceConstraint`, `CollisionQuadtree` resource, quadtree/CCD math, `RantzPhysics2dPlugin`, `rantzsoft_physics2d::plugin::PhysicsSystems` set (MaintainQuadtree, EnforceDistanceConstraints).
+- `rantzsoft_defaults` + `rantzsoft_defaults_derive` — existed before; no game-specific content, re-exports `GameConfig` derive macro.
+
+### What was dissolved
+- `physics/` game domain — deleted. Collision systems (`bolt_cell_collision`, `bolt_breaker_collision`, `bolt_lost`, `clamp_bolt_to_playfield`) moved to **bolt domain**.
+- `interpolate/` game domain — deleted. Replaced by `rantzsoft_spatial2d` AfterFixedMainLoop propagation pipeline.
+- `breaker-derive/` — replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`.
+- Old `PhysicsSystems::BreakerCollision` and `PhysicsSystems::BoltLost` — now `BoltSystems::BreakerCollision` and `BoltSystems::BoltLost` in `bolt/sets.rs`.
+
+### Scheduling changes
+- `FixedFirst`: `save_previous` (spatial2d)
+- `FixedUpdate`: `maintain_quadtree.in_set(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)`, `apply_velocity` — collision now in bolt domain ordering after MaintainQuadtree
+- `AfterFixedMainLoop` (RunFixedMainLoopSystems::AfterFixedMainLoop): `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale` — all chained in rantzsoft_spatial2d
+
+### Chain bolts
+- `TriggerChain::ChainBolt { tether_distance }` — now wired; `handle_chain_bolt` observer sends `SpawnChainBolt` message
+- `spawn_chain_bolt` system in bolt domain; `break_chain_on_bolt_lost` cleans up on anchor loss
+- `DistanceConstraint` component (physics2d) used for tethering; game-level `enforce_distance_constraints` in bolt domain
+
+### Spreading shockwave (not instant)
+- `ShockwaveRadius` component grows via `tick_shockwave` each fixed tick
+- `shockwave_collision` queries `CollisionQuadtree` each tick for newly-entered cells
+- `animate_shockwave` in Update drives visual VFX ring
+
+### Transform is derived, never written
+- `Position2D` is canonical — game systems write Position2D, Transform is derived by `derive_transform`
+- `DrawLayer` trait + `GameDrawLayer` enum in `shared/` sets Transform.translation.z
+- `Aabb2D` has `#[require(Spatial2D)]` — spawning Aabb2D auto-inserts all spatial components
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table

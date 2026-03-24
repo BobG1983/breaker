@@ -29,6 +29,19 @@ type: reference
 - `MutationKind` — enum of mutation operations: `SetBreakerState`, `SetTimerRemaining`, `SpawnExtraEntities`, `MoveBolt`, `TogglePause`
 - Added to `docs/design/terminology.md`
 
+## Terminology Additions (2026-03-24, Spatial/Physics Extraction)
+- `Position2D` — canonical 2D position from rantzsoft_spatial2d; Transform is derived, never written directly
+- `Velocity2D` / `ApplyVelocity` — velocity component and opt-in marker for `apply_velocity`
+- `Spatial2D` — marker that auto-inserts all spatial components via `#[require]`
+- `DrawLayer` — trait mapping game enum to Z value; game provides `GameDrawLayer`
+- `GlobalPosition2D` — resolved world-space position from hierarchy; written by spatial plugin
+- `CollisionLayers` — bitmask pair from rantzsoft_physics2d; Godot-style membership + mask
+- `Aabb2D` — AABB component from rantzsoft_physics2d; `#[require(Spatial2D)]`
+- `DistanceConstraint` — tethered pair constraint from rantzsoft_physics2d; used by chain bolts
+- `ChainBolt` — bolt tethered to anchor via DistanceConstraint; spawned by ChainHit amp effect
+- `SpawnChainBolt` — message from handle_chain_bolt → spawn_chain_bolt (bolt domain)
+- All added to `docs/design/terminology.md`
+
 ## Terminology Additions (2026-03-23, Memorable Moments)
 - `HighlightKind` entry expanded from 6 to 15 variants — do not flag 6-variant list as drift
 - `HighlightDefaults` — new glossary entry for the RON-loaded asset and its `GameConfig` derive

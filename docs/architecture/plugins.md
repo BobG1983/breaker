@@ -12,9 +12,18 @@ brickbreaker/                 # Repository root (workspace)
 │   ├── Cargo.toml            # Package: breaker (lib) / brickbreaker (bin)
 │   ├── src/                  # Game source (see Domain Layout below)
 │   └── assets/               # RON data files, shaders, textures, audio
-├── breaker-derive/           # Proc-macro crate
-│   ├── Cargo.toml            # Package: brickbreaker_derive
-│   └── src/lib.rs            # GameConfig derive macro
+├── rantzsoft_spatial2d/      # Game-agnostic 2D spatial plugin (Position2D, propagation, interpolation)
+│   ├── Cargo.toml            # Package: rantzsoft_spatial2d
+│   └── src/                  # Components, systems, DrawLayer trait, propagation enums
+├── rantzsoft_physics2d/      # Game-agnostic 2D physics primitives (quadtree, CCD, CollisionLayers, DistanceConstraint)
+│   ├── Cargo.toml            # Package: rantzsoft_physics2d
+│   └── src/                  # Aabb2D, CollisionLayers, DistanceConstraint, quadtree, CCD
+├── rantzsoft_defaults/       # Re-exports the GameConfig derive macro
+│   ├── Cargo.toml
+│   └── src/lib.rs
+├── rantzsoft_defaults_derive/ # Proc-macro crate: #[derive(GameConfig)] for RON defaults loading
+│   ├── Cargo.toml
+│   └── src/lib.rs
 ├── breaker-scenario-runner/  # Automated gameplay testing tool (dev-only binary)
 │   ├── Cargo.toml            # Package: breaker_scenario_runner
 │   ├── src/                  # Runner source (types, lifecycle, invariants, input, log_capture)
@@ -22,7 +31,7 @@ brickbreaker/                 # Repository root (workspace)
 └── docs/                     # Design docs, architecture, build plan
 ```
 
-**Naming convention:** Root-level crate directories are named `breaker-<name>`. Cargo package names use underscores (`brickbreaker`, `brickbreaker_derive`, `breaker_scenario_runner`). New crates follow this pattern.
+**Naming convention:** Game-specific crate directories use `breaker-<name>`; game-agnostic reusable crates use `rantzsoft_<name>` (see `.claude/rules/rantzsoft-crates.md`). Cargo package names use underscores (`brickbreaker`, `breaker_scenario_runner`, `rantzsoft_spatial2d`, etc.). `rantzsoft_*` crates contain zero game-specific code and may be extracted to separate repos when reuse is needed.
 
 ## Domain Layout
 
@@ -41,14 +50,12 @@ src/
 ├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system
 ├── behaviors/        # Archetype behavior system — unified TriggerChain evaluation and dispatch (top-level domain)
-├── bolt/             # Bolt physics, reflection model, speed management
+├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
 ├── chips/            # Amps, Augments, Overclocks system — registry, effect types, observer-based application; EvolutionRegistry for evolution recipes
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
 ├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker, highlight detection (10 systems), spawn_highlight_text juice
-├── physics/          # CCD collision detection, collision response
-├── interpolate/      # Transform interpolation for smooth rendering between FixedUpdate ticks
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
 ├── ui/               # HUD, menus, chip selection screen
 └── debug/            # Dev tooling: overlays, telemetry, hot-reload, recording (sub-domains)
@@ -60,7 +67,7 @@ src/
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
-**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins.
+**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. It adds `RantzSpatial2dPlugin::<GameDrawLayer>` and `rantzsoft_physics2d::plugin::RantzPhysics2dPlugin` before the game domain plugins, so spatial propagation and quadtree maintenance are available to all domains.
 
 **Domain plugins** (breaker, bolt, cells, etc.) are self-contained:
 - Each defines its own `Plugin` struct implementing `bevy::app::Plugin`
@@ -71,16 +78,16 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `PhysicsSystems` (`physics/sets.rs`), `BehaviorSystems` (`behaviors/sets.rs`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `BehaviorSystems` (`behaviors/sets.rs`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external `rantzsoft_physics2d::plugin::PhysicsSystems` set (`MaintainQuadtree`, `EnforceDistanceConstraints`) is also used for ordering against the quadtree maintenance system. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 
 The architectural boundary is about **writes** (mutations), not reads. Domains freely **read** other domains' types — components, message types, resources — via standard ECS queries. This is normal Bevy and not a violation:
 
-- **physics** reads `Piercing`, `PiercingRemaining`, `DamageBoost` (chips domain) from bolt entities, `CellHealth`, `CellWidth`, `CellHeight` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. Physics also imports and writes message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — physics is a cross-cutting collision service.
+- **bolt** (collision systems) reads `Piercing`, `PiercingRemaining`, `DamageBoost` (chips domain) from bolt entities, `CellHealth`, `CellWidth`, `CellHeight` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
 - **cells** reads `DamageBoost` (chips domain) from bolt entities in `handle_cell_hit`.
 - **breaker** reads `WidthBoost`, `TiltControlBoost`, `BreakerSpeedBoost`, `BumpForceBoost` (chips domain) from its own entity.
-- **behaviors** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltHitCell`, `BoltHitBreaker`, `BoltHitWall`, `BoltLost` (physics domain), and `CellDestroyed` (cells domain) messages in bridge systems.
+- **behaviors** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltHitCell`, `BoltHitBreaker`, `BoltHitWall`, `BoltLost` (bolt domain), and `CellDestroyed` (cells domain) messages in bridge systems.
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the sole exception (read AND write, compiled out of release builds).
 
