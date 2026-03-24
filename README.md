@@ -39,13 +39,27 @@ cargo install cargo-outdated  # Outdated dependency reporting
 
 ## Tech Stack
 
-- **Bevy 0.18.1** — ECS game engine
-- **Rust 2024 edition** — plugin-per-domain architecture
-- **RON data files** — content definitions (cells, upgrades, layouts)
+- **Bevy 0.18** — ECS game engine
+- **Rust 2024 edition** — plugin-per-domain architecture, message-driven decoupling
+- **RON data files** — all content (chips, evolutions, cells, nodes, breakers, config) is data-driven
+- **Cargo workspace** — `breaker-game`, `rantzsoft_spatial2d`, `rantzsoft_physics2d`, `rantzsoft_defaults`/`_derive`, `breaker-scenario-runner`
 
 ## Project Status
 
-**Phases 0–2b complete, Phase 2c–e in progress.** Core mechanics (breaker, bolt, cells, physics, bump system), level loading, run structure with node timer, main menu, run-end screen, side panel UI with timer HUD and lives display, and the Aegis breaker archetype are all implemented. Next up: remaining Phase 2 work (Chrono & Prism archetypes, screens polish) then Phase 3 dev infrastructure.
+**Phases 0–3 complete. Phase 4 (vertical slice) in progress.**
+
+Core gameplay is fully playable: breaker movement with dash and tilt, bolt physics with CCD collision, bump grading (perfect/early/late/whiff), node timer with penalties, three breaker archetypes (Aegis, Chrono, Prism), six node layouts, four cell types (standard, tough, lock, regen with orbiting shields), and a full run loop (main menu → node sequence → chip select → run-end screen).
+
+### Phase 4 Highlights
+
+- **Chip system**: Amps (bolt upgrades), Augments (breaker upgrades), Overclocks (triggered abilities) — all data-driven via RON, with pool depletion and weight decay for build-crafting depth
+- **Evolution system**: 8 evolution recipes that combine maxed chips into ultimate abilities (Nova Lance, Voltchain, Phantom Breaker, Supernova, Dead Man's Hand, Railgun, Gravity Well, Second Wind)
+- **TriggerChain engine**: Nested trigger→effect chains with multi-step arming (e.g., OnPerfectBump → OnImpact(Cell) → Shockwave). 13 leaf effects, 8 trigger types
+- **Memorable moments**: In-game highlight popups with punch-scale animation, diversity-penalized scoring for run-end display
+- **Spreading shockwaves**: Expanding wavefront area damage with quadtree spatial queries
+- **Chain bolts**: Tethered bolt pairs via distance constraints with momentum conservation
+- **Shield system**: Temporary bolt-loss protection with timed expiry
+- **Spatial extraction**: `rantzsoft_spatial2d` (Position2D, Velocity2D, interpolation, propagation) and `rantzsoft_physics2d` (CCD, quadtree, collision layers, distance constraints) as reusable game-agnostic crates
 
 ## License
 
