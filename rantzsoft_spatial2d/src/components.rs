@@ -177,6 +177,100 @@ pub struct InterpolateTransform2D;
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq, Reflect, Deref, DerefMut)]
 pub struct VisualOffset(pub Vec3);
 
+/// 2D velocity vector.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Reflect, Deref, DerefMut)]
+pub struct Velocity2D(pub Vec2);
+
+impl Velocity2D {
+    /// Returns the speed (magnitude) of this velocity.
+    #[must_use]
+    pub fn speed(&self) -> f32 {
+        self.0.length()
+    }
+
+    /// Returns a new `Velocity2D` with magnitude clamped between `min_speed`
+    /// and `max_speed`, preserving direction. Zero velocity returns zero.
+    #[must_use]
+    pub fn clamped(&self, min_speed: f32, max_speed: f32) -> Self {
+        let speed = self.0.length();
+        if speed < f32::EPSILON {
+            return *self;
+        }
+        let clamped_speed = speed.clamp(min_speed, max_speed);
+        Self(self.0 * (clamped_speed / speed))
+    }
+}
+
+impl Add<Vec2> for Velocity2D {
+    type Output = Self;
+
+    fn add(self, rhs: Vec2) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
+
+impl Sub<Vec2> for Velocity2D {
+    type Output = Self;
+
+    fn sub(self, rhs: Vec2) -> Self::Output {
+        Self(self.0 - rhs)
+    }
+}
+
+impl Mul<f32> for Velocity2D {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self(self.0 * rhs)
+    }
+}
+
+impl Div<f32> for Velocity2D {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self(self.0 / rhs)
+    }
+}
+
+/// Marker: entities with this component have their `Position2D` advanced by
+/// `Velocity2D` each fixed tick via [`apply_velocity`].
+#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
+pub struct ApplyVelocity;
+
+/// Snapshot of the previous frame's velocity for interpolation.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Reflect, Deref, DerefMut)]
+pub struct PreviousVelocity(pub Vec2);
+
+/// Global 2D position computed from parent hierarchy.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Reflect, Deref, DerefMut)]
+pub struct GlobalPosition2D(pub Vec2);
+
+/// Global 2D rotation computed from parent hierarchy.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+pub struct GlobalRotation2D(pub Rot2);
+
+impl Default for GlobalRotation2D {
+    fn default() -> Self {
+        Self(Rot2::IDENTITY)
+    }
+}
+
+/// Global non-uniform 2D scale computed from parent hierarchy.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Reflect)]
+pub struct GlobalScale2D {
+    /// Global horizontal scale factor.
+    pub x: f32,
+    /// Global vertical scale factor.
+    pub y: f32,
+}
+
+impl Default for GlobalScale2D {
+    fn default() -> Self {
+        Self { x: 1.0, y: 1.0 }
+    }
+}
+
 /// Marker that requires all spatial components via Bevy's required components.
 #[derive(Component, Debug, Default)]
 #[require(
@@ -186,6 +280,9 @@ pub struct VisualOffset(pub Vec3);
     PreviousPosition,
     PreviousRotation,
     PreviousScale,
+    GlobalPosition2D,
+    GlobalRotation2D,
+    GlobalScale2D,
     PositionPropagation,
     RotationPropagation,
     ScalePropagation,
@@ -374,6 +471,160 @@ mod tests {
         assert!(app.world().get::<InterpolateTransform2D>(entity).is_some());
     }
 
+    // ── ApplyVelocity ────────────────────────────────────────────
+
+    #[test]
+    fn apply_velocity_marker_is_component() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.update();
+        let entity = app.world_mut().spawn(ApplyVelocity).id();
+        assert!(app.world().get::<ApplyVelocity>(entity).is_some());
+    }
+
+    // ── Velocity2D ─────────────────────────────────────────────
+
+    #[test]
+    fn velocity_default_is_zero() {
+        assert_eq!(Velocity2D::default().0, Vec2::ZERO);
+    }
+
+    #[test]
+    fn velocity_speed_returns_magnitude() {
+        assert!(
+            (Velocity2D(Vec2::new(3.0, 4.0)).speed() - 5.0).abs() < f32::EPSILON,
+            "speed of (3, 4) should be 5.0"
+        );
+    }
+
+    #[test]
+    fn velocity_speed_zero_returns_zero() {
+        assert!(
+            Velocity2D(Vec2::ZERO).speed().abs() < f32::EPSILON,
+            "speed of zero velocity should be 0.0"
+        );
+    }
+
+    #[test]
+    fn velocity_clamped_high_to_max() {
+        let v = Velocity2D(Vec2::new(0.0, 800.0)).clamped(200.0, 600.0);
+        let speed = v.0.length();
+        assert!(
+            (speed - 600.0).abs() < 1e-3,
+            "magnitude should be clamped to 600.0, got {speed}"
+        );
+        // Direction should be preserved (pointing up).
+        let dir = v.0.normalize();
+        assert!(
+            (dir.y - 1.0).abs() < 1e-5,
+            "direction should be (0, 1), got {dir:?}"
+        );
+    }
+
+    #[test]
+    fn velocity_clamped_exactly_at_max_unchanged() {
+        let v = Velocity2D(Vec2::new(0.0, 600.0)).clamped(200.0, 600.0);
+        assert!(
+            (v.0.length() - 600.0).abs() < 1e-3,
+            "velocity exactly at max should remain unchanged"
+        );
+    }
+
+    #[test]
+    fn velocity_clamped_low_to_min() {
+        let v = Velocity2D(Vec2::new(0.0, 100.0)).clamped(200.0, 600.0);
+        let speed = v.0.length();
+        assert!(
+            (speed - 200.0).abs() < 1e-3,
+            "magnitude should be clamped up to 200.0, got {speed}"
+        );
+        let dir = v.0.normalize();
+        assert!(
+            (dir.y - 1.0).abs() < 1e-5,
+            "direction should be preserved as (0, 1), got {dir:?}"
+        );
+    }
+
+    #[test]
+    fn velocity_clamped_exactly_at_min_unchanged() {
+        let v = Velocity2D(Vec2::new(0.0, 200.0)).clamped(200.0, 600.0);
+        assert!(
+            (v.0.length() - 200.0).abs() < 1e-3,
+            "velocity exactly at min should remain unchanged"
+        );
+    }
+
+    #[test]
+    fn velocity_clamped_zero_returns_zero() {
+        let v = Velocity2D(Vec2::ZERO).clamped(200.0, 600.0);
+        assert_eq!(v, Velocity2D(Vec2::ZERO), "zero velocity should stay zero");
+    }
+
+    #[test]
+    fn velocity_add_vec2() {
+        let result = Velocity2D(Vec2::new(1.0, 2.0)) + Vec2::new(3.0, 4.0);
+        assert_eq!(result, Velocity2D(Vec2::new(4.0, 6.0)));
+    }
+
+    #[test]
+    fn velocity_sub_vec2() {
+        let result = Velocity2D(Vec2::new(5.0, 5.0)) - Vec2::new(1.0, 2.0);
+        assert_eq!(result, Velocity2D(Vec2::new(4.0, 3.0)));
+    }
+
+    #[test]
+    fn velocity_mul_f32() {
+        let result = Velocity2D(Vec2::new(2.0, 3.0)) * 2.0;
+        assert_eq!(result, Velocity2D(Vec2::new(4.0, 6.0)));
+    }
+
+    #[test]
+    fn velocity_div_f32() {
+        let result = Velocity2D(Vec2::new(6.0, 8.0)) / 2.0;
+        assert_eq!(result, Velocity2D(Vec2::new(3.0, 4.0)));
+    }
+
+    // ── PreviousVelocity ────────────────────────────────────────
+
+    #[test]
+    fn previous_velocity_default_is_zero() {
+        assert_eq!(PreviousVelocity::default().0, Vec2::ZERO);
+    }
+
+    // ── GlobalPosition2D ────────────────────────────────────────
+
+    #[test]
+    fn global_position_default_is_zero() {
+        assert_eq!(GlobalPosition2D::default().0, Vec2::ZERO);
+    }
+
+    // ── GlobalRotation2D ────────────────────────────────────────
+
+    #[test]
+    fn global_rotation_default_is_identity() {
+        assert!(
+            GlobalRotation2D::default().0.as_radians().abs() < 1e-6,
+            "GlobalRotation2D default should be identity (0 radians)"
+        );
+    }
+
+    // ── GlobalScale2D ───────────────────────────────────────────
+
+    #[test]
+    fn global_scale_default_is_one_one() {
+        let s = GlobalScale2D::default();
+        assert!(
+            (s.x - 1.0).abs() < f32::EPSILON,
+            "GlobalScale2D.x should default to 1.0, got {}",
+            s.x
+        );
+        assert!(
+            (s.y - 1.0).abs() < f32::EPSILON,
+            "GlobalScale2D.y should default to 1.0, got {}",
+            s.y
+        );
+    }
+
     // ── Spatial2D required components ───────────────────────────
 
     #[test]
@@ -446,6 +697,38 @@ mod tests {
             *world.get::<ScalePropagation>(entity).unwrap(),
             ScalePropagation::Relative,
             "ScalePropagation should default to Relative"
+        );
+
+        // Verify Global* components are required by Spatial2D.
+        assert!(
+            world.get::<GlobalPosition2D>(entity).is_some(),
+            "missing GlobalPosition2D"
+        );
+        assert!(
+            world.get::<GlobalRotation2D>(entity).is_some(),
+            "missing GlobalRotation2D"
+        );
+        assert!(
+            world.get::<GlobalScale2D>(entity).is_some(),
+            "missing GlobalScale2D"
+        );
+    }
+
+    #[test]
+    fn spatial2d_does_not_require_velocity() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Spatial2D).id();
+        app.update();
+
+        let world = app.world();
+        assert!(
+            world.get::<Velocity2D>(entity).is_none(),
+            "Spatial2D should NOT require Velocity2D"
+        );
+        assert!(
+            world.get::<PreviousVelocity>(entity).is_none(),
+            "Spatial2D should NOT require PreviousVelocity"
         );
     }
 }
