@@ -118,6 +118,27 @@ pub(crate) struct CellRegen {
     pub rate: f32,
 }
 
+/// Marker component identifying a shield cell (spawns orbiting children).
+#[derive(Component, Debug)]
+pub(crate) struct ShieldParent;
+
+/// Marker component identifying an orbit cell (child of a shield).
+#[derive(Component, Debug)]
+pub(crate) struct OrbitCell;
+
+/// Current angular position of an orbit cell around its parent shield.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct OrbitAngle(pub f32);
+
+/// Configuration for an orbit cell's circular motion.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct OrbitConfig {
+    /// Distance from shield center to orbit cell center.
+    pub radius: f32,
+    /// Angular speed in radians per second.
+    pub speed: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
