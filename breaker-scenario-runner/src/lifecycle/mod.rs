@@ -225,6 +225,7 @@ impl Plugin for ScenarioLifecycle {
                         .before(breaker::bolt::BoltSystems::BoltLost),
                     tag_game_entities,
                     deferred_debug_setup.after(tag_game_entities),
+                    mark_entered_playing_on_spawn_complete,
                 ),
             );
 
@@ -482,8 +483,6 @@ pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut 
 /// Finds all untagged [`Bolt`] entities and inserts [`ScenarioTagBolt`].
 /// Finds all untagged [`Breaker`] entities and inserts [`ScenarioTagBreaker`].
 /// Runs in `OnEnter(GameState::Playing)` before [`apply_debug_setup`].
-///
-/// Also sets [`ScenarioStats::entered_playing`] to `true` when the stats resource is present.
 pub fn tag_game_entities(
     bolt_query: Query<Entity, (With<Bolt>, Without<ScenarioTagBolt>)>,
     breaker_query: Query<Entity, (With<Breaker>, Without<ScenarioTagBreaker>)>,
@@ -503,7 +502,6 @@ pub fn tag_game_entities(
     }
 
     if let Some(ref mut s) = stats {
-        s.entered_playing = true;
         s.bolts_tagged += bolts_tagged;
         s.breakers_tagged += breakers_tagged;
     }
@@ -725,6 +723,22 @@ fn apply_inject_maxed_chip_offer(
         **existing = offers;
     } else {
         commands.insert_resource(offers);
+    }
+}
+
+/// Sets [`ScenarioStats::entered_playing`] to `true` when [`SpawnNodeComplete`]
+/// fires, indicating all game entities are spawned and ready.
+///
+/// Frame counting and invariant checking are gated on `entered_playing`, so
+/// no scenario frames advance until the node is fully loaded and spawned.
+pub fn mark_entered_playing_on_spawn_complete(
+    mut spawn_reader: MessageReader<SpawnNodeComplete>,
+    mut stats: Option<ResMut<ScenarioStats>>,
+) {
+    if spawn_reader.read().next().is_some() {
+        if let Some(ref mut s) = stats {
+            s.entered_playing = true;
+        }
     }
 }
 

@@ -9,7 +9,10 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use super::*;
 use crate::{
-    invariants::{PreviousGameState, ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker},
+    invariants::{
+        PreviousGameState, ScenarioPhysicsFrozen, ScenarioStats, ScenarioTagBolt,
+        ScenarioTagBreaker,
+    },
     types::{
         ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy, InvariantKind,
         InvariantParams, MutationKind, ScenarioBreakerState, ScenarioDefinition, ScriptedParams,
@@ -200,6 +203,11 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
         zone_fraction: 0.667,
     });
 
+    // Set entered_playing so invariant checkers are active
+    app.world_mut()
+        .resource_mut::<ScenarioStats>()
+        .entered_playing = true;
+
     // Spawn bolt well above the top bound
     app.world_mut()
         .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 500.0))));
@@ -228,6 +236,11 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
 #[test]
 fn check_no_nan_is_registered_in_scenario_lifecycle() {
     let mut app = lifecycle_test_app();
+
+    // Set entered_playing so invariant checkers are active
+    app.world_mut()
+        .resource_mut::<ScenarioStats>()
+        .entered_playing = true;
 
     app.world_mut()
         .spawn((ScenarioTagBolt, Position2D(Vec2::new(f32::NAN, 0.0))));
@@ -782,27 +795,34 @@ fn scenario_stats_max_frame_tracked_by_tick_scenario_frame() {
 }
 
 // -------------------------------------------------------------------------
-// ScenarioStats — entered_playing set by tag_game_entities
+// ScenarioStats — entered_playing set by mark_entered_playing_on_spawn_complete
 // -------------------------------------------------------------------------
 
-/// When `tag_game_entities` runs (which happens in `OnEnter(GameState::Playing)`),
-/// `ScenarioStats::entered_playing` must be set to `true`.
+/// When `SpawnNodeComplete` fires, `mark_entered_playing_on_spawn_complete`
+/// sets `ScenarioStats::entered_playing` to `true`.
 #[test]
-fn scenario_stats_entered_playing_set_by_tag_game_entities() {
+fn scenario_stats_entered_playing_set_on_spawn_node_complete() {
+    use breaker::run::node::messages::SpawnNodeComplete;
+
     use crate::invariants::ScenarioStats;
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<ScenarioStats>()
-        .add_systems(Update, tag_game_entities);
+        .add_message::<SpawnNodeComplete>()
+        .add_systems(Update, mark_entered_playing_on_spawn_complete);
 
-    // Run the system (simulates entering Playing)
+    // Send SpawnNodeComplete message
+    app.world_mut()
+        .resource_mut::<Messages<SpawnNodeComplete>>()
+        .write(SpawnNodeComplete);
+
     app.update();
 
     let stats = app.world().resource::<ScenarioStats>();
     assert!(
         stats.entered_playing,
-        "expected entered_playing == true after tag_game_entities ran"
+        "expected entered_playing == true after SpawnNodeComplete"
     );
 }
 
@@ -912,6 +932,7 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
         base_range: 64.0,
         range_per_level: 0.0,
         stacks: 1,
+        speed: 400.0,
     }]);
 
     let mut app = App::new();
@@ -939,7 +960,8 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
         TriggerChain::Shockwave {
             base_range: 64.0,
             range_per_level: 0.0,
-            stacks: 1
+            stacks: 1,
+            speed: 400.0,
         },
         "expected ActiveChains[0] to be Shockwave"
     );
