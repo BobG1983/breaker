@@ -20,6 +20,8 @@
 - [pattern_component_type_migration_cascade.md](pattern_component_type_migration_cascade.md) — Migrating entity position type cascades through query aliases, test construction sites, scenario runner, debug/effect systems
 - [pattern_scale2d_zero_panic.md](pattern_scale2d_zero_panic.md) — Scale2D::new panics on zero; expanding-radius effects must guard initial frame
 - [pattern_global_component_change_detection.md](pattern_global_component_change_detection.md) — Global* components written every frame make Changed<Global*> always true, defeating incremental quadtree updates
+- [pattern_cap_removal_dedup_asymmetry.md](pattern_cap_removal_dedup_asymmetry.md) — Removing highlight cap exposes asymmetric dedup: per-event systems have per-kind checks, track_node_cleared_stats does not
+- [pattern_cross_domain_pure_function_visibility.md](pattern_cross_domain_pure_function_visibility.md) — Pure functions called cross-domain need explicit pub visibility and mod.rs export chain
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)

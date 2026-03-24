@@ -39,18 +39,12 @@ pub(crate) fn detect_close_save(
                 kind: HighlightKind::CloseSave,
             });
 
-            // Only record once in stats
-            let already = stats
-                .highlights
-                .iter()
-                .any(|h| h.kind == HighlightKind::CloseSave);
-            if !already && stats.highlights.len() < config.highlight_cap as usize {
-                stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::CloseSave,
-                    node_index: run_state.node_index,
-                    value: distance,
-                });
-            }
+            // Record in stats — selection happens at run-end
+            stats.highlights.push(RunHighlight {
+                kind: HighlightKind::CloseSave,
+                node_index: run_state.node_index,
+                value: distance,
+            });
         }
     }
 }
@@ -232,12 +226,12 @@ mod tests {
         );
     }
 
-    // --- Behavior 4: Dedup — already has CloseSave but still emits message ---
+    // --- Behavior 4: Multiple CloseSave entries allowed ---
 
     #[test]
-    fn dedup_still_emits_highlight_triggered_when_already_recorded() {
+    fn multiple_close_save_entries_allowed_across_bumps() {
         let mut app = test_app();
-        // Pre-fill highlights with an existing CloseSave
+        // Pre-fill highlights with an existing CloseSave from a previous bump
         app.world_mut()
             .resource_mut::<RunStats>()
             .highlights
@@ -268,12 +262,12 @@ mod tests {
             .iter()
             .filter(|h| h.kind == HighlightKind::CloseSave)
             .count();
-        assert_eq!(
-            close_save_count, 1,
-            "should NOT add a second CloseSave highlight (still 1 from pre-fill)"
+        assert!(
+            close_save_count >= 2,
+            "should allow multiple CloseSave highlights (no dedup — selection happens at run-end). Got {close_save_count}"
         );
 
-        // But HighlightTriggered should STILL be emitted (for juice/VFX)
+        // HighlightTriggered should still be emitted
         let captured = app.world().resource::<CapturedHighlightTriggered>();
         let msg = captured
             .0
@@ -281,34 +275,25 @@ mod tests {
             .find(|h| h.kind == HighlightKind::CloseSave);
         assert!(
             msg.is_some(),
-            "should still emit HighlightTriggered even when not adding to highlights"
+            "should still emit HighlightTriggered for CloseSave"
         );
     }
 
-    // --- Behavior 5: Respects cap ---
+    // --- Behavior 5: No cap during detection — stored beyond old cap ---
 
     #[test]
-    fn respects_highlight_cap() {
+    fn stores_highlight_beyond_old_cap() {
         let mut app = test_app();
-        let config = HighlightConfig {
-            highlight_cap: 2,
-            ..Default::default()
-        };
-        app.insert_resource(config);
-
-        // Fill highlights to cap with different kinds
+        // Pre-fill to old cap of 5 — system previously would not add more
         {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
-            stats.highlights.push(RunHighlight {
-                kind: HighlightKind::MassDestruction,
-                node_index: 0,
-                value: 10.0,
-            });
-            stats.highlights.push(RunHighlight {
-                kind: HighlightKind::PerfectStreak,
-                node_index: 0,
-                value: 5.0,
-            });
+            for i in 0..5 {
+                stats.highlights.push(RunHighlight {
+                    kind: HighlightKind::MassDestruction,
+                    node_index: i,
+                    value: 10.0,
+                });
+            }
         }
 
         let bolt_entity = app
@@ -327,21 +312,21 @@ mod tests {
         tick(&mut app);
 
         let stats = app.world().resource::<RunStats>();
-        assert_eq!(
-            stats.highlights.len(),
-            2,
-            "should not exceed highlight cap of 2"
-        );
         let close_save = stats
             .highlights
             .iter()
             .find(|h| h.kind == HighlightKind::CloseSave);
         assert!(
-            close_save.is_none(),
-            "CloseSave should NOT be added when cap is reached"
+            close_save.is_some(),
+            "CloseSave should be stored even when 5 highlights already exist — selection happens at run-end"
+        );
+        assert!(
+            stats.highlights.len() > 5,
+            "highlight count should grow beyond old cap of 5. Got {}",
+            stats.highlights.len()
         );
 
-        // But HighlightTriggered should STILL be emitted
+        // HighlightTriggered should STILL be emitted
         let captured = app.world().resource::<CapturedHighlightTriggered>();
         let msg = captured
             .0
@@ -349,7 +334,7 @@ mod tests {
             .find(|h| h.kind == HighlightKind::CloseSave);
         assert!(
             msg.is_some(),
-            "should still emit HighlightTriggered even when cap is reached"
+            "should emit HighlightTriggered for CloseSave"
         );
     }
 }

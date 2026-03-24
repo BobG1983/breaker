@@ -54,12 +54,12 @@ pub(crate) fn detect_combo_and_pinball(
                 kind: HighlightKind::ComboKing,
             });
 
-            // Only record once in stats
+            // Record in stats — dedup by kind
             let already = stats
                 .highlights
                 .iter()
                 .any(|h| h.kind == HighlightKind::ComboKing);
-            if !already && stats.highlights.len() < config.highlight_cap as usize {
+            if !already {
                 let count = tracker.cells_since_last_breaker_hit;
                 stats.highlights.push(RunHighlight {
                     kind: HighlightKind::ComboKing,
@@ -82,12 +82,12 @@ pub(crate) fn detect_combo_and_pinball(
                 kind: HighlightKind::PinballWizard,
             });
 
-            // Only record once in stats
+            // Record in stats — dedup by kind
             let already = stats
                 .highlights
                 .iter()
                 .any(|h| h.kind == HighlightKind::PinballWizard);
-            if !already && stats.highlights.len() < config.highlight_cap as usize {
+            if !already {
                 let count = tracker.cell_bounces_since_breaker;
                 stats.highlights.push(RunHighlight {
                     kind: HighlightKind::PinballWizard,

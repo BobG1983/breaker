@@ -41,12 +41,12 @@ pub(crate) fn detect_mass_destruction(
             kind: HighlightKind::MassDestruction,
         });
 
-        // Only record the highlight once
+        // Only record the highlight once — dedup by kind
         let already_recorded = stats
             .highlights
             .iter()
             .any(|h| h.kind == HighlightKind::MassDestruction);
-        if !already_recorded && stats.highlights.len() < config.highlight_cap as usize {
+        if !already_recorded {
             stats.highlights.push(RunHighlight {
                 kind: HighlightKind::MassDestruction,
                 node_index: run_state.node_index,

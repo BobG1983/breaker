@@ -2,7 +2,7 @@
 name: researcher-rust-errors
 description: "Use this agent when cargo check, cargo clippy, cargo build, or cargo test produces compiler errors or warnings that need to be understood and resolved. This agent translates raw Rust compiler output into actionable fix instructions.\\n\\nExamples:\\n\\n- User: \"I'm getting a borrow checker error I don't understand\"\\n  Assistant: \"Let me use the researcher-rust-errors agent to analyze this compiler error and produce a clear explanation with fix suggestions.\"\\n\\n- After running cargo check and seeing errors:\\n  Assistant: \"The build produced errors. Let me use the researcher-rust-errors agent to decode these and determine the fixes needed.\"\\n\\n- When another agent encounters a compilation failure mid-task:\\n  Assistant: \"The code changes caused compiler errors. Let me use the researcher-rust-errors agent to interpret the output and guide the fix.\""
 tools: Bash, Glob, Grep, Read, WebFetch, WebSearch, Skill, TaskCreate, TaskGet, TaskUpdate, TaskList, EnterWorktree, ExitWorktree, ToolSearch
-model: opus
+model: sonnet
 color: blue
 memory: project
 ---

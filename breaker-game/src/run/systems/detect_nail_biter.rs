@@ -45,12 +45,12 @@ pub(crate) fn detect_nail_biter(
                 kind: HighlightKind::NailBiter,
             });
 
-            // Only record once in stats
+            // Record in stats — dedup by kind
             let already = stats
                 .highlights
                 .iter()
                 .any(|h| h.kind == HighlightKind::NailBiter);
-            if !already && stats.highlights.len() < config.highlight_cap as usize {
+            if !already {
                 stats.highlights.push(RunHighlight {
                     kind: HighlightKind::NailBiter,
                     node_index: run_state.node_index,

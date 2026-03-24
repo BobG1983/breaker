@@ -82,6 +82,14 @@ type: reference
 - `check_spawn_complete` uses Local<SpawnChecklist> bitfield — resets after firing, persists across frames for multi-frame arrival. Correct.
 - `update_loading_bar` ratio guard `if global.total > 0` prevents div-by-zero. Correct.
 - `ScriptedInput.actions_for_frame` uses `find()` — O(n) but scripted actions list is short. Correct.
+
+## Memorable Moments Wave E (2026-03-24)
+- `select_highlights` normalization `(raw - 1.0) / (max_expected - 1.0)`: anchors raw=1.0 at score 0.0, raw=max_expected at 1.0; guarded by `max_expected <= 1.0` check. Correct.
+- `spawn_highlight_text` FadeOut timer > duration for staggered popups: alpha = (timer/duration)^2 > 1.0 renders as full opacity. By design — stagger delay before fade begins.
+- `detect_first_evolution` early-return reader drain pattern: drains messages when EvolutionRegistry absent. Correct; prevents stale accumulation.
+- `animate_punch_scale` duration=0.0 guard: `duration <= 0.0` fires before `timer / duration` division. Correct.
+- `detect_close_save` query filter `Without<BoltServing>`: correct — serving bolts cannot be close-saved.
+- `spawn_highlight_text` is registered in `run/plugin.rs` at line 66 (Update, PlayingState::Active). FIXED from prior session note.
 - `ChaosDriver.actions_for_frame` `roll >= action_prob` → no action: roll in [0,1), so `action_prob=1.0` always fires, `action_prob=0.0` never fires. Correct.
 - `lifecycle/mod.rs` `inject_scenario_input` passes `is_active: true` always — documented intentional for pause-toggle testing in chaos scenarios.
 - `tag_game_entities` runs both in OnEnter(Playing) AND FixedUpdate to tag entities spawned mid-play (e.g. ExtraBolt from Prism). Without<ScenarioTagBolt> filter ensures idempotency. Correct.

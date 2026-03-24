@@ -13,3 +13,18 @@ pub(crate) struct FadeOut {
     /// Total duration of the fade animation (seconds).
     pub duration: f32,
 }
+
+/// A scale-overshoot animation that punches in then settles to 1.0.
+///
+/// Entities with this component will have their `Transform.scale` animated
+/// from `overshoot` back to 1.0 over `duration` seconds. When finished the
+/// component is removed (entity is NOT despawned).
+#[derive(Component, Debug)]
+pub(crate) struct PunchScale {
+    /// Remaining time in the animation (seconds).
+    pub timer: f32,
+    /// Total duration of the animation (seconds).
+    pub duration: f32,
+    /// Initial scale multiplier (e.g. 1.15 for a 15% overshoot).
+    pub overshoot: f32,
+}

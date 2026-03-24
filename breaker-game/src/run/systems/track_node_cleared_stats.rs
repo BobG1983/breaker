@@ -29,27 +29,19 @@ pub(crate) fn track_node_cleared_stats(
     mut ctx: NodeClearContext,
     mut highlight_writer: MessageWriter<HighlightTriggered>,
 ) {
-    let cap = ctx.config.highlight_cap as usize;
-
     for _msg in reader.read() {
         ctx.stats.nodes_cleared += 1;
-
-        if ctx.stats.highlights.len() >= cap {
-            continue;
-        }
 
         let node_index = ctx.run_state.node_index;
 
         // Helper: record highlight and emit juice message
         let mut push_highlight = |kind: HighlightKind, value: f32| {
             highlight_writer.write(HighlightTriggered { kind: kind.clone() });
-            if ctx.stats.highlights.len() < cap {
-                ctx.stats.highlights.push(RunHighlight {
-                    kind,
-                    node_index,
-                    value,
-                });
-            }
+            ctx.stats.highlights.push(RunHighlight {
+                kind,
+                node_index,
+                value,
+            });
         };
 
         // ClutchClear: cleared with less than threshold seconds remaining
@@ -68,18 +60,17 @@ pub(crate) fn track_node_cleared_stats(
             push_highlight(HighlightKind::FastClear, 0.0);
         }
 
-        // PerfectStreak: flush active streak first, then check
-        ctx.tracker.best_perfect_streak = ctx
-            .tracker
-            .best_perfect_streak
-            .max(ctx.tracker.consecutive_perfect_bumps);
-        if ctx.tracker.best_perfect_streak >= ctx.config.perfect_streak_count {
-            let streak = ctx.tracker.best_perfect_streak.min(u32::from(u16::MAX));
+        // PerfectStreak: check current node's streak, then flush into cross-node best.
+        // Only fire when the current node actually contributed a qualifying streak.
+        let current_streak = ctx.tracker.consecutive_perfect_bumps;
+        if current_streak >= ctx.config.perfect_streak_count {
+            let streak = current_streak.min(u32::from(u16::MAX));
             push_highlight(
                 HighlightKind::PerfectStreak,
                 f32::from(u16::try_from(streak).unwrap_or(u16::MAX)),
             );
         }
+        ctx.tracker.best_perfect_streak = ctx.tracker.best_perfect_streak.max(current_streak);
 
         // SpeedDemon: node elapsed time below threshold
         let node_elapsed = ctx.time.elapsed_secs() - ctx.tracker.node_start_time;
@@ -421,9 +412,9 @@ mod tests {
     // --- Behavior 7: highlight cap reads from config ---
 
     #[test]
-    fn highlight_cap_from_config_allows_fifth_highlight() {
+    fn highlights_stored_beyond_four_existing() {
         let mut app = test_app();
-        // Config default highlight_cap=5
+        // Cap removed — highlights always stored, selection at run-end
         // Pre-fill 4 highlights
         let mut stats = app.world_mut().resource_mut::<RunStats>();
         stats.highlights = vec![
@@ -461,19 +452,17 @@ mod tests {
         tick(&mut app);
 
         let stats = app.world().resource::<RunStats>();
-        assert_eq!(
-            stats.highlights.len(),
-            5,
-            "with highlight_cap=5, 5th highlight should be added (4 existing + 1 new)"
+        assert!(
+            stats.highlights.len() > 4,
+            "highlights should be stored beyond 4 existing — no cap during detection"
         );
     }
 
-    // --- Behavior 8: cap at 5 enforced ---
+    // --- Behavior 8: sixth highlight stored beyond old cap ---
 
     #[test]
-    fn highlight_cap_at_five_prevents_sixth() {
+    fn sixth_highlight_stored_beyond_old_cap() {
         let mut app = test_app();
-        // Config default highlight_cap=5
         // Pre-fill 5 highlights
         let mut stats = app.world_mut().resource_mut::<RunStats>();
         stats.highlights = vec![
@@ -513,10 +502,66 @@ mod tests {
         tick(&mut app);
 
         let stats = app.world().resource::<RunStats>();
-        assert_eq!(
-            stats.highlights.len(),
-            5,
-            "highlights should be capped at 5, 6th highlight should be dropped"
+        assert!(
+            stats.highlights.len() > 5,
+            "highlights should NOT be capped at 5 — selection happens at run-end, not during detection. Got {}",
+            stats.highlights.len()
+        );
+    }
+
+    // --- Behavior: same kind stored across nodes even beyond old cap ---
+
+    #[test]
+    fn same_kind_stored_across_nodes_beyond_old_cap() {
+        let mut app = test_app();
+        // Pre-fill 5 highlights including a ClutchClear — previously at cap
+        let mut stats = app.world_mut().resource_mut::<RunStats>();
+        stats.highlights = vec![
+            RunHighlight {
+                kind: HighlightKind::ClutchClear,
+                node_index: 0,
+                value: 2.0,
+            },
+            RunHighlight {
+                kind: HighlightKind::NoDamageNode,
+                node_index: 1,
+                value: 0.0,
+            },
+            RunHighlight {
+                kind: HighlightKind::PerfectStreak,
+                node_index: 2,
+                value: 5.0,
+            },
+            RunHighlight {
+                kind: HighlightKind::FastClear,
+                node_index: 3,
+                value: 0.0,
+            },
+            RunHighlight {
+                kind: HighlightKind::NoDamageNode,
+                node_index: 4,
+                value: 0.0,
+            },
+        ];
+
+        // Set up conditions for another ClutchClear on a later node
+        app.world_mut().resource_mut::<RunState>().node_index = 5;
+        app.insert_resource(NodeTimer {
+            remaining: 1.0,
+            total: 30.0,
+        });
+        app.insert_resource(TestNodeCleared(true));
+        tick(&mut app);
+
+        let stats = app.world().resource::<RunStats>();
+        let clutch_count = stats
+            .highlights
+            .iter()
+            .filter(|h| h.kind == HighlightKind::ClutchClear)
+            .count();
+        assert!(
+            clutch_count >= 2,
+            "same kind should be stored multiple times across nodes even beyond old cap of 5, got {clutch_count}"
         );
     }
 
@@ -736,6 +781,46 @@ mod tests {
         assert!(
             perfect_node.is_none(),
             "should NOT detect PerfectNode when non_perfect_bumps_this_node=1"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // Regression: stale best_perfect_streak duplicates on later nodes
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn perfect_streak_not_duplicated_from_stale_cross_node_best() {
+        // Bug: best_perfect_streak is a cross-node field. After node 2
+        // achieves a streak of 7 (above threshold 5), every subsequent
+        // NodeCleared records another PerfectStreak with value=7, even
+        // if the current node had 0 consecutive perfect bumps.
+        //
+        // Correct behavior: PerfectStreak should only fire when the
+        // current node actually contributes to the streak, not when
+        // re-reading a stale cross-node value.
+        let mut app = test_app();
+
+        // Simulate state after a previous node set best_perfect_streak=7,
+        // but the current node has 0 consecutive perfect bumps.
+        let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
+        tracker.best_perfect_streak = 7;
+        tracker.consecutive_perfect_bumps = 0;
+
+        // Default perfect_streak_count = 5, so 7 >= 5 would fire
+        // if the system doesn't guard against stale values.
+
+        app.insert_resource(TestNodeCleared(true));
+        tick(&mut app);
+
+        let stats = app.world().resource::<RunStats>();
+        let streak = stats
+            .highlights
+            .iter()
+            .find(|h| h.kind == HighlightKind::PerfectStreak);
+        assert!(
+            streak.is_none(),
+            "PerfectStreak should NOT fire when the current node had 0 consecutive \
+             perfect bumps, even though best_perfect_streak=7 from a prior node"
         );
     }
 }

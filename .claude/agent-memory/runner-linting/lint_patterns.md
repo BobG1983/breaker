@@ -170,6 +170,14 @@ type: reference
 - `too_many_lines` error (`bolt/systems/bolt_cell_collision.rs:76`): `bolt_cell_collision` function body is 107 lines (limit 100). Error in both `dclippy` and `dsclippy`. Fix: extract a helper function to reduce the body below 100 lines. This function grew past the limit during wave-3 work.
 - `doc_markdown` error (`bolt/systems/bolt_cell_collision.rs:1900`): test helper doc comment has bare `half_extents` without backticks. Error in `dclippy` (lib test) only. Fix: change `half_extents` to `` `half_extents` `` in the doc comment.
 
+## Confirmed Clean as of 2026-03-24b (feature/spatial-physics-extraction — dclippy game crate)
+- All 20 errors recorded in the 2026-03-24 session are resolved.
+- `cast_precision_loss` in `select_highlights.rs`: fixed via `config_f32()` helper (converts u32→u16→f32 losslessly). NOTE: `f32::from(u32)` is NOT valid — `From<u32>` is not implemented for `f32`. Must go through u16.
+- `cast_precision_loss` in `spawn_highlight_text.rs`: fixed.
+- `doc_markdown` (animate_punch_scale.rs, run/definition.rs): fixed.
+- `cast_possible_wrap`, `float_cmp` in select_highlights.rs: fixed.
+- New warning: `unused_import: aabb::Aabb2D` at `bolt/systems/spawn_chain_bolt.rs:99` — first seen 2026-03-24b. Forward-declared import. Not an error.
+
 ## Confirmed Clean as of 2026-03-23 (feature/wave-3-offerings-transitions — post wave-3 lint run)
 - All four crates (`dclippy`, `spatial2dclippy`, `physics2dclippy`, `dsclippy`) produced 0 errors.
 - `cargo fmt --check` also clean (no files changed).
@@ -178,3 +186,20 @@ type: reference
   - `rantzsoft_spatial2d` (spatial2dclippy): `missing_const_for_fn` (Scale2D.to_vec3); `too_long_first_doc_paragraph` (propagate_position.rs:27); `option_if_let_else` (propagate_position.rs:43, propagate_rotation.rs:39); `suboptimal_flops` (propagate_scale.rs:40,41). All nursery warnings.
   - `rantzsoft_physics2d` (physics2dclippy): `use_self` (quadtree.rs:13) — nursery warning only.
   - `breaker-scenario-runner` (dsclippy): `missing_const_for_fn` (check_run_stats_monotonic.rs:17,28; lifecycle/mod.rs:314,517,647,658); `too_long_first_doc_paragraph` (lifecycle/mod.rs:400). All nursery warnings.
+
+## New Patterns as of 2026-03-24 (feature/spatial-physics-extraction)
+- `unnecessary_struct_initialization` warning (rantzsoft_physics2d/src/quadtree.rs:118): `TreeConfig { max_items_per_leaf: cfg.max_items_per_leaf, max_depth: cfg.max_depth, depth: cfg.depth }` copies all fields from `cfg` — clippy suggests replacing with `cfg` directly. Nursery lint, warning only. Appeared after `TreeConfig` struct was introduced for the `insert_into_node` refactor.
+- `redundant_clone` warning (rantzsoft_physics2d/src/constraint.rs:63): test code `let cloned = original.clone()` — `original` is dropped without further use after the clone. Nursery lint, warning only. Fix: remove `.clone()` or use `original` directly.
+- `significant_drop_tightening` warning (rantzsoft_spatial2d/src/plugin.rs:265): test function holds a `registry.read()` guard for the entire test body — clippy suggests dropping it earlier with `drop(registry);` after last use. Nursery lint, warning only (test build only, `significant_drop_tightening`).
+- `unwrap_used` warning (run/systems/spawn_highlight_text.rs:93): `a.1.partial_cmp(&b.1).unwrap()` in `sort_by` closure. `partial_cmp` on `f32` returns `None` only for NaN; the unwrap is intentional but clippy's `-W clippy::unwrap-used` flags it. Fix: use `sort_by(|a, b| a.1.total_cmp(&b.1))` (avoids the Option entirely) or `partial_cmp(...).unwrap_or(Ordering::Equal)`. New as of 2026-03-24 (spatial-physics-extraction branch).
+- `dead_code` warnings — new forward-declared items on feature/spatial-physics-extraction:
+  - `run/systems/select_highlights.rs`: `config_f32` (private fn), `score_highlight` (pub(crate) fn), `select_highlights` (pub(crate) fn) — three functions in a not-yet-wired module. Warning only.
+  - `fx/components.rs:25`: `PunchScale` struct fields (`timer`, `duration`, `overshoot`) — forward-declared for punch scale animation. Warning only.
+  - `fx/systems/animate_punch_scale.rs:9`: `animate_punch_scale` function — not yet wired into the fx plugin. Warning only.
+  - `wall/components.rs:20`: `WallSize` struct fields (`half_width`, `half_height`) — forward-declared. Warning only.
+  - `cells/components.rs:37,48` (dsclippy only): `CellWidth.0` and `CellHeight.0` field values are never read — only appears in test-build profile. Warning only.
+- New `option_if_let_else` + `suboptimal_flops` warnings in `rantzsoft_spatial2d/src/systems/derive_transform.rs` (lines 79,91,103,105,106): two new interpolation `if let Some` blocks for `prev_pos`, `prev_rot`, `prev_scale` in the new `derive_transform` system. Same pattern as `propagate_position.rs` and `propagate_rotation.rs` already in memory. All nursery warnings.
+- `redundant_closure_for_method_calls` errors (run/systems/spawn_highlight_text.rs:567,750): `|a, b| a.total_cmp(b)` used in two `sort_by` calls. Fix: replace with `f32::total_cmp` method reference. Pedantic lint, errors. Appeared 2026-03-24c — the `unwrap_used` fix at spawn_highlight_text.rs:93 that introduced `total_cmp` was cleaned for the unwrap but left redundant closures at two call sites. Pattern: whenever `sort_by(|a, b| a.method(b))` can be written as `sort_by(Type::method)`, clippy requires the latter.
+- `missing_const_for_fn` warnings (rantzsoft_physics2d/src/collision_layers.rs:28, rantzsoft_physics2d/src/resources.rs:17): `CollisionLayers::interacts_with` and `SpatialIndex::new` can be `const fn`. Nursery lint, warnings only. New as of 2026-03-24 (spatial-physics-extraction).
+- `use_self` warning (rantzsoft_physics2d/src/quadtree.rs:13): `Box<[QuadNode; 4]>` inside `impl QuadNode` — replace `QuadNode` with `Self`. Same pattern as noted for prior physics2d crate work. Nursery lint, warning only.
+- `missing_const_for_fn` warnings (breaker-scenario-runner, new functions in lifecycle/mod.rs:634,645): `apply_set_run_stat` and `apply_decrement_run_stat` are new private functions on this branch. Nursery, warnings only. (lifecycle/mod.rs line numbers shifted from prior entries — now 634 and 645 instead of 647 and 658.)

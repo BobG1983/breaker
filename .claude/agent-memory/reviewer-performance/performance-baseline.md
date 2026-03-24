@@ -47,6 +47,8 @@ type: reference
 - `animate_bump_visual`: structural change (remove::<BumpVisual>) on expiry. Once per bump event.
 
 ## Deferred Issues (Fine Now, Watch Later)
+- `RunStats::highlights` Vec is now uncapped during detection. Growth is bounded by nodes_cleared × highlights_per_node (typically 1–3, worst case ~8 per node). At 10 nodes: max ~80 entries. Fine at current run length. If roguelite meta extends runs to 50+ nodes in Phase 7, add a soft trim to prevent degenerate accumulation. Watch at Phase 7.
+- `detect_mass_destruction` / `detect_combo_and_pinball` / `detect_nail_biter` dedup scans: `.iter().any(|h| h.kind == X)` is O(highlights.len()). These run in FixedUpdate (PlayingState::Active). Each scan at ~30 entries max costs ~30 comparisons per check. Fine at current scale; becomes relevant only if highlights grow to 200+, which only happens with 25+ node runs.
 - `update_menu_colors` runs every Update frame in MainMenu state unconditionally. Fine for ~3 items.
 - `bolt_info_ui` / `breaker_state_ui`: String allocations via format!() every frame. Dev-only (feature-gated).
 - `update_chip_display`: format!() every Update frame in ChipSelect state for the timer countdown text. 1 entity, short-lived state — negligible.
@@ -141,7 +143,11 @@ DETECT_NAIL_BITER — bolt_query.iter() inside NodeCleared handler. Called once 
 
 TRACK_NODE_CLEARED_STATS — 8 conditions checked, all against scalar fields in HighlightTracker / NodeTimer. No queries, no allocations. NodeCleared fires once per node. Clean.
 
+TRACK_NODE_CLEARED_STATS (re-reviewed 2026-03-24, uncapped vec change) — No dedup guards in production path. Up to 8 highlights can be pushed per NodeCleared with no dedup check. Growth bounded by nodes_cleared × up-to-8 = ~80 entries at 10 nodes. Fine at current run length. Watch at Phase 7+ if run length reaches 50+ nodes. Captured in Deferred Issues section.
+
 HIGHLIGHTS VEC DEDUP — stats.highlights.iter().any(|h| h.kind == kind) is O(cap) = O(5). Not a scan concern.
+
+SPAWN_HIGHLIGHT_TEXT (re-reviewed 2026-03-24) — Reviewed with double-query traversal in mind. `existing_popups.iter().count()` on line 28 does a full query traversal (≤3 entities). Then the culling path at line 89 does a second traversal of the same query (`existing_popups.iter().map(...).collect()`). Both traversals touch the same ≤3 entities; trivially cheap. The double-traversal could be collapsed to one .collect() that computes both count and sorted vec in one pass, but at ≤3 entities the cost is zero. Pattern is confirmed acceptable at current popup cap. Watch only if popup_max_visible grows significantly (100+). Confirmed clean at current scale.
 
 SPAWN_HIGHLIGHT_TEXT — NOT REGISTERED in any plugin. Function is exported from systems mod but absent from RunPlugin::build. Text popups will never appear in-game. This is a correctness bug, not a performance concern, but noted here because it means the FadeOut entity accumulation concern (entity leak) is moot — no entities are spawned.
 
@@ -153,7 +159,36 @@ CONFIRM-EFFICIENT PATTERNS:
 - No allocations in any hot path. HighlightTracker fields are all primitive scalars or the one Vec<f32> (bounded, cleared per node).
 - reset_highlight_tracker runs OnEnter(GameState::Playing) — correct placement, not FixedUpdate.
 
-OPEN ISSUE (correctness, not performance): spawn_highlight_text is exported but not registered in RunPlugin::build. Highlights are detected and HighlightTriggered is emitted correctly, but no text popup is ever spawned.
+RESOLVED ISSUE: spawn_highlight_text is now registered in RunPlugin::build under Update, run_if(in_state(PlayingState::Active)). The correctness gap noted in the previous session is closed.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-24, feature/spatial-physics-extraction, memorable moments Wave E)
+
+### run/systems/select_highlights.rs — score_highlight + select_highlights (pure functions, not Bevy systems)
+- Called once at run-end, NOT a hot path. Allocations are intentional and appropriate.
+- `scored: Vec<(usize, f32, HighlightCategory)>` — allocated once, O(N) where N = accumulated highlights over run (bounded by dedup caps: MassDestruction/ComboKing/PinballWizard/NailBiter/FirstEvolution are dedup-by-kind; CloseSave + track_node_cleared_stats variants can accumulate N per node). At 10-20 nodes with 5 highlight types each, N ≈ 15–50. Trivial.
+- `category_picks: HashMap<HighlightCategory, u32>` — 4-key HashMap, allocated once per select call. Negligible.
+- `remaining: Vec<usize>` — O(N) allocation, shrinks during selection. Vec::remove O(k) per round but k≤5 and rounds≤5. Total O(25) operations. Clean.
+- `result: Vec::with_capacity(count.min(N))` — pre-allocated to exact size. Clean.
+- `remaining.remove(best_idx_in_remaining)` — O(remaining.len()) shift. At cap=5 and N≤50 this is at most 50×5=250 element moves per run-end call. Negligible.
+
+### run/systems/spawn_highlight_text.rs — spawn_highlight_text (Update, PlayingState::Active)
+- `let messages: Vec<_> = reader.read().cloned().collect()` — allocated to collect messages before spawning. HighlightTriggered carries only a HighlightKind (enum, stack-only). collect() needed because spawning calls commands which requires mutable borrow. At most popup_max_visible=3 messages per frame. Negligible.
+- `existing_popups: Query<(Entity, &FadeOut), With<HighlightPopup>>` — query with With<HighlightPopup> marker. At most popup_max_visible=3 entities match. Clean filter.
+- `existing_count = existing_popups.iter().count()` — first full traversal of the query (≤3 entities). Clean.
+- Culling path: `existing_sorted: Vec<(Entity, f32)>` — allocated only when total_after_spawn > max_visible. At most popup_max_visible=3 entities collected. Negligible.
+- `existing_sorted.sort_by(...)` — sorting ≤3 elements. Negligible.
+- rng.0.random_range() per popup — seeded GameRng, pure arithmetic. No allocation.
+- HighlightTriggered is rare (≤1 per distinct play moment per frame in normal gameplay). System body is mostly skipped when no messages arrive (reader.read() is empty).
+- SCHEDULING: registered in Update, run_if(in_state(PlayingState::Active)). Correct — VFX is visual-only, belongs in Update not FixedUpdate.
+
+### fx/systems/animate_punch_scale.rs — animate_punch_scale (Update)
+- Query: (Entity, &mut PunchScale, &mut Transform) — no filter. But PunchScale is added only at popup spawn time and removed on completion. In steady state: 0–3 entities match (popup_max_visible=3). Negligible.
+- remove::<PunchScale>() on completion — structural change on ≤3 short-lived entities. Acceptable; same pattern as animate_bump_visual.
+- No allocations. Clean.
+
+### Highlights Vec: unbounded growth during run (deferred, watch item added below)
+- The cap enforced during detection is now REMOVED by design. CloseSave entries per run = 1 per BumpPerformed where bolt was close to loss (rare event, but can accumulate across many nodes). track_node_cleared_stats can push multiple highlights per NodeCleared (ClutchClear, SpeedDemon, PerfectNode, etc.) unconditionally.
+- In a 10-node run: at most ~8 highlights per NodeCleared × 10 nodes = 80 entries (degenerate case with all conditions met). In practice: 1–3 per node = 10–30 entries. Bounded by game session length. Not a pathological growth concern. Added to Watch section below.
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-23, feature/wave-3-offerings-transitions, spatial2d refactor)
 

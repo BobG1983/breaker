@@ -82,6 +82,22 @@ pub struct RunState {
     pub transition_queued: bool,
 }
 
+/// Thematic categories for highlight diversity scoring.
+///
+/// Used by the diversity-penalized selection algorithm to ensure the run-end
+/// screen shows a varied mix of highlight types.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum HighlightCategory {
+    /// Combat execution: combos, mass destruction, streaks.
+    Execution,
+    /// Sustained performance: no-damage runs, untouchable streaks.
+    Endurance,
+    /// Build progression: evolutions, most powerful evolution.
+    Progression,
+    /// Clutch moments: close saves, nail biters, speed clears.
+    Clutch,
+}
+
 /// Categories of memorable run moments.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HighlightKind {
@@ -115,6 +131,30 @@ pub enum HighlightKind {
     PerfectNode,
     /// Final cell cleared while a bolt was near the loss boundary.
     NailBiter,
+}
+
+impl HighlightKind {
+    /// Returns the thematic category for this highlight kind.
+    #[must_use]
+    pub fn category(&self) -> HighlightCategory {
+        match self {
+            Self::MassDestruction
+            | Self::ComboKing
+            | Self::PinballWizard
+            | Self::PerfectStreak
+            | Self::PerfectNode => HighlightCategory::Execution,
+
+            Self::NoDamageNode | Self::Untouchable | Self::Comeback => HighlightCategory::Endurance,
+
+            Self::FirstEvolution | Self::MostPowerfulEvolution => HighlightCategory::Progression,
+
+            Self::ClutchClear
+            | Self::FastClear
+            | Self::SpeedDemon
+            | Self::CloseSave
+            | Self::NailBiter => HighlightCategory::Clutch,
+        }
+    }
 }
 
 /// A memorable moment recorded during the run.
@@ -309,6 +349,130 @@ mod tests {
             "flux = (5*10) + (10*2) + (1*25) - (3*3) = 86"
         );
     }
+
+    // -- HighlightKind::category mapping --
+
+    #[test]
+    fn mass_destruction_maps_to_execution() {
+        assert_eq!(
+            HighlightKind::MassDestruction.category(),
+            HighlightCategory::Execution
+        );
+    }
+
+    #[test]
+    fn combo_king_maps_to_execution() {
+        assert_eq!(
+            HighlightKind::ComboKing.category(),
+            HighlightCategory::Execution
+        );
+    }
+
+    #[test]
+    fn pinball_wizard_maps_to_execution() {
+        assert_eq!(
+            HighlightKind::PinballWizard.category(),
+            HighlightCategory::Execution
+        );
+    }
+
+    #[test]
+    fn perfect_streak_maps_to_execution() {
+        assert_eq!(
+            HighlightKind::PerfectStreak.category(),
+            HighlightCategory::Execution
+        );
+    }
+
+    #[test]
+    fn perfect_node_maps_to_execution() {
+        assert_eq!(
+            HighlightKind::PerfectNode.category(),
+            HighlightCategory::Execution
+        );
+    }
+
+    #[test]
+    fn no_damage_node_maps_to_endurance() {
+        assert_eq!(
+            HighlightKind::NoDamageNode.category(),
+            HighlightCategory::Endurance
+        );
+    }
+
+    #[test]
+    fn untouchable_maps_to_endurance() {
+        assert_eq!(
+            HighlightKind::Untouchable.category(),
+            HighlightCategory::Endurance
+        );
+    }
+
+    #[test]
+    fn comeback_maps_to_endurance() {
+        assert_eq!(
+            HighlightKind::Comeback.category(),
+            HighlightCategory::Endurance
+        );
+    }
+
+    #[test]
+    fn first_evolution_maps_to_progression() {
+        assert_eq!(
+            HighlightKind::FirstEvolution.category(),
+            HighlightCategory::Progression
+        );
+    }
+
+    #[test]
+    fn most_powerful_evolution_maps_to_progression() {
+        assert_eq!(
+            HighlightKind::MostPowerfulEvolution.category(),
+            HighlightCategory::Progression
+        );
+    }
+
+    #[test]
+    fn clutch_clear_maps_to_clutch() {
+        assert_eq!(
+            HighlightKind::ClutchClear.category(),
+            HighlightCategory::Clutch
+        );
+    }
+
+    #[test]
+    fn fast_clear_maps_to_clutch() {
+        assert_eq!(
+            HighlightKind::FastClear.category(),
+            HighlightCategory::Clutch
+        );
+    }
+
+    #[test]
+    fn speed_demon_maps_to_clutch() {
+        assert_eq!(
+            HighlightKind::SpeedDemon.category(),
+            HighlightCategory::Clutch
+        );
+    }
+
+    #[test]
+    fn close_save_maps_to_clutch() {
+        assert_eq!(
+            HighlightKind::CloseSave.category(),
+            HighlightCategory::Clutch
+        );
+    }
+
+    #[test]
+    fn nail_biter_maps_to_clutch() {
+        assert_eq!(
+            HighlightKind::NailBiter.category(),
+            HighlightCategory::Clutch
+        );
+    }
+
+    // -- flux_earned calculation --
 
     #[test]
     fn flux_earned_floors_at_zero_when_penalty_exceeds_bonuses() {

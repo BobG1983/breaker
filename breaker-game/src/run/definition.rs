@@ -100,6 +100,52 @@ pub struct HighlightDefaults {
     pub untouchable_nodes: u32,
     /// Maximum highlights recorded per run.
     pub highlight_cap: u32,
+
+    // -- Popup animation --
+    /// Maximum visible highlight popups at once.
+    pub popup_max_visible: u32,
+    /// Popup fade-out duration (seconds).
+    pub popup_fade_duration_secs: f32,
+    /// Popup scale overshoot animation duration (seconds).
+    pub popup_overshoot_duration_secs: f32,
+    /// Popup initial scale overshoot multiplier (e.g. 1.15).
+    pub popup_overshoot_scale: f32,
+    /// Popup base y-position (above playfield center).
+    pub popup_base_y: f32,
+    /// Vertical spacing between stacked popups.
+    pub popup_vertical_spacing: f32,
+    /// Minimum horizontal jitter (pixels, can be negative).
+    pub popup_jitter_min_x: f32,
+    /// Maximum horizontal jitter (pixels, can be positive).
+    pub popup_jitter_max_x: f32,
+    /// Cascade stagger delay between simultaneous popups (seconds).
+    pub popup_cascade_stagger_secs: f32,
+
+    // -- Scoring --
+    /// Diversity penalty base for same-category highlights (0.0–1.0).
+    pub diversity_penalty: f32,
+    /// Max expected raw score for `ClutchClear` normalization.
+    pub max_expected_clutch_clear: f32,
+    /// Max expected raw score for `SpeedDemon` normalization.
+    pub max_expected_speed_demon: f32,
+    /// Max expected raw score for `CloseSave` normalization.
+    pub max_expected_close_save: f32,
+    /// Max expected raw score for `NailBiter` normalization.
+    pub max_expected_nail_biter: f32,
+    /// Max expected raw score for `MassDestruction` normalization.
+    pub max_expected_mass_destruction: f32,
+    /// Max expected raw score for `PerfectStreak` normalization.
+    pub max_expected_perfect_streak: f32,
+    /// Max expected raw score for `ComboKing` normalization.
+    pub max_expected_combo_king: f32,
+    /// Max expected raw score for `PinballWizard` normalization.
+    pub max_expected_pinball_wizard: f32,
+    /// Max expected raw score for `Untouchable` normalization.
+    pub max_expected_untouchable: f32,
+    /// Max expected raw score for `Comeback` normalization.
+    pub max_expected_comeback: f32,
+    /// Max expected raw score for `PerfectNode` normalization.
+    pub max_expected_perfect_node: f32,
 }
 
 impl Default for HighlightDefaults {
@@ -118,6 +164,29 @@ impl Default for HighlightDefaults {
             nail_biter_pixels: 30.0,
             untouchable_nodes: 2,
             highlight_cap: 5,
+            // Popup animation
+            popup_max_visible: 3,
+            popup_fade_duration_secs: 0.8,
+            popup_overshoot_duration_secs: 0.1,
+            popup_overshoot_scale: 1.15,
+            popup_base_y: 100.0,
+            popup_vertical_spacing: 50.0,
+            popup_jitter_min_x: -10.0,
+            popup_jitter_max_x: 10.0,
+            popup_cascade_stagger_secs: 0.1,
+            // Scoring
+            diversity_penalty: 0.5,
+            max_expected_clutch_clear: 10.0,
+            max_expected_speed_demon: 10.0,
+            max_expected_close_save: 10.0,
+            max_expected_nail_biter: 10.0,
+            max_expected_mass_destruction: 5.0,
+            max_expected_perfect_streak: 4.0,
+            max_expected_combo_king: 4.0,
+            max_expected_pinball_wizard: 4.0,
+            max_expected_untouchable: 5.0,
+            max_expected_comeback: 3.0,
+            max_expected_perfect_node: 20.0,
         }
     }
 }
@@ -281,7 +350,7 @@ mod tests {
     // -- HighlightDefaults deserialization --
 
     #[test]
-    fn highlight_defaults_deserializes_all_13_fields_from_ron() {
+    fn highlight_defaults_deserializes_all_34_fields_from_ron() {
         let ron_str = "
 (
     clutch_clear_secs: 4.0,
@@ -297,9 +366,31 @@ mod tests {
     nail_biter_pixels: 35.0,
     untouchable_nodes: 3,
     highlight_cap: 7,
+    popup_max_visible: 5,
+    popup_fade_duration_secs: 1.0,
+    popup_overshoot_duration_secs: 0.2,
+    popup_overshoot_scale: 1.25,
+    popup_base_y: 120.0,
+    popup_vertical_spacing: 60.0,
+    popup_jitter_min_x: -15.0,
+    popup_jitter_max_x: 15.0,
+    popup_cascade_stagger_secs: 0.15,
+    diversity_penalty: 0.6,
+    max_expected_clutch_clear: 12.0,
+    max_expected_speed_demon: 12.0,
+    max_expected_close_save: 12.0,
+    max_expected_nail_biter: 12.0,
+    max_expected_mass_destruction: 6.0,
+    max_expected_perfect_streak: 5.0,
+    max_expected_combo_king: 5.0,
+    max_expected_pinball_wizard: 5.0,
+    max_expected_untouchable: 6.0,
+    max_expected_comeback: 4.0,
+    max_expected_perfect_node: 25.0,
 )";
         let defaults: HighlightDefaults =
             ron::de::from_str(ron_str).expect("HighlightDefaults should deserialize");
+        // Original 13 fields
         assert!((defaults.clutch_clear_secs - 4.0).abs() < f32::EPSILON);
         assert!((defaults.fast_clear_fraction - 0.4).abs() < f32::EPSILON);
         assert_eq!(defaults.perfect_streak_count, 6);
@@ -313,6 +404,29 @@ mod tests {
         assert!((defaults.nail_biter_pixels - 35.0).abs() < f32::EPSILON);
         assert_eq!(defaults.untouchable_nodes, 3);
         assert_eq!(defaults.highlight_cap, 7);
+        // Popup fields (9)
+        assert_eq!(defaults.popup_max_visible, 5);
+        assert!((defaults.popup_fade_duration_secs - 1.0).abs() < f32::EPSILON);
+        assert!((defaults.popup_overshoot_duration_secs - 0.2).abs() < f32::EPSILON);
+        assert!((defaults.popup_overshoot_scale - 1.25).abs() < f32::EPSILON);
+        assert!((defaults.popup_base_y - 120.0).abs() < f32::EPSILON);
+        assert!((defaults.popup_vertical_spacing - 60.0).abs() < f32::EPSILON);
+        assert!((defaults.popup_jitter_min_x - -15.0).abs() < f32::EPSILON);
+        assert!((defaults.popup_jitter_max_x - 15.0).abs() < f32::EPSILON);
+        assert!((defaults.popup_cascade_stagger_secs - 0.15).abs() < f32::EPSILON);
+        // Scoring fields (12)
+        assert!((defaults.diversity_penalty - 0.6).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_clutch_clear - 12.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_speed_demon - 12.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_close_save - 12.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_nail_biter - 12.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_mass_destruction - 6.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_perfect_streak - 5.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_combo_king - 5.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_pinball_wizard - 5.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_untouchable - 6.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_comeback - 4.0).abs() < f32::EPSILON);
+        assert!((defaults.max_expected_perfect_node - 25.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -328,10 +442,32 @@ mod tests {
             defaults.highlight_cap > 0,
             "highlight_cap should be positive"
         );
+        // Popup fields are present and positive
+        assert!(
+            defaults.popup_max_visible > 0,
+            "popup_max_visible should be positive"
+        );
+        assert!(
+            defaults.popup_fade_duration_secs > 0.0,
+            "popup_fade_duration_secs should be positive"
+        );
+        assert!(
+            defaults.popup_vertical_spacing > 0.0,
+            "popup_vertical_spacing should be positive"
+        );
+        // Scoring fields are present and positive
+        assert!(
+            defaults.diversity_penalty > 0.0,
+            "diversity_penalty should be positive"
+        );
+        assert!(
+            defaults.max_expected_clutch_clear > 0.0,
+            "max_expected_clutch_clear should be positive"
+        );
     }
 
     #[test]
-    fn highlight_config_from_defaults_copies_all_fields() {
+    fn highlight_config_from_defaults_copies_all_34_fields() {
         let defaults = HighlightDefaults {
             clutch_clear_secs: 2.5,
             fast_clear_fraction: 0.35,
@@ -346,10 +482,34 @@ mod tests {
             nail_biter_pixels: 25.0,
             untouchable_nodes: 3,
             highlight_cap: 4,
+            // Popup fields
+            popup_max_visible: 5,
+            popup_fade_duration_secs: 1.2,
+            popup_overshoot_duration_secs: 0.15,
+            popup_overshoot_scale: 1.2,
+            popup_base_y: 110.0,
+            popup_vertical_spacing: 55.0,
+            popup_jitter_min_x: -12.0,
+            popup_jitter_max_x: 12.0,
+            popup_cascade_stagger_secs: 0.12,
+            // Scoring fields
+            diversity_penalty: 0.4,
+            max_expected_clutch_clear: 8.0,
+            max_expected_speed_demon: 8.0,
+            max_expected_close_save: 8.0,
+            max_expected_nail_biter: 8.0,
+            max_expected_mass_destruction: 4.0,
+            max_expected_perfect_streak: 3.0,
+            max_expected_combo_king: 3.0,
+            max_expected_pinball_wizard: 3.0,
+            max_expected_untouchable: 4.0,
+            max_expected_comeback: 2.0,
+            max_expected_perfect_node: 15.0,
         };
 
         let config = HighlightConfig::from(defaults);
 
+        // Original 13 fields
         assert!((config.clutch_clear_secs - 2.5).abs() < f32::EPSILON);
         assert!((config.fast_clear_fraction - 0.35).abs() < f32::EPSILON);
         assert_eq!(config.perfect_streak_count, 4);
@@ -363,5 +523,28 @@ mod tests {
         assert!((config.nail_biter_pixels - 25.0).abs() < f32::EPSILON);
         assert_eq!(config.untouchable_nodes, 3);
         assert_eq!(config.highlight_cap, 4);
+        // Popup fields (9)
+        assert_eq!(config.popup_max_visible, 5);
+        assert!((config.popup_fade_duration_secs - 1.2).abs() < f32::EPSILON);
+        assert!((config.popup_overshoot_duration_secs - 0.15).abs() < f32::EPSILON);
+        assert!((config.popup_overshoot_scale - 1.2).abs() < f32::EPSILON);
+        assert!((config.popup_base_y - 110.0).abs() < f32::EPSILON);
+        assert!((config.popup_vertical_spacing - 55.0).abs() < f32::EPSILON);
+        assert!((config.popup_jitter_min_x - -12.0).abs() < f32::EPSILON);
+        assert!((config.popup_jitter_max_x - 12.0).abs() < f32::EPSILON);
+        assert!((config.popup_cascade_stagger_secs - 0.12).abs() < f32::EPSILON);
+        // Scoring fields (12)
+        assert!((config.diversity_penalty - 0.4).abs() < f32::EPSILON);
+        assert!((config.max_expected_clutch_clear - 8.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_speed_demon - 8.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_close_save - 8.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_nail_biter - 8.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_mass_destruction - 4.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_perfect_streak - 3.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_combo_king - 3.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_pinball_wizard - 3.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_untouchable - 4.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_comeback - 2.0).abs() < f32::EPSILON);
+        assert!((config.max_expected_perfect_node - 15.0).abs() < f32::EPSILON);
     }
 }

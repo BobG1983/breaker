@@ -141,6 +141,12 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **bolt_speed_in_range.rs invariant checks Velocity2D first: masks all speed violations**: `breaker-scenario-runner/src/invariants/checkers/bolt_speed_in_range.rs:33-38` — `if let Some(v2d) = velocity2d { v2d.speed() }` short-circuits before checking BoltVelocity. Since Velocity2D is never set by launch/reset/collision systems (all write BoltVelocity), every bolt entity has `Velocity2D(Vec2::ZERO)`, speed = 0.0, hits the `< f32::EPSILON` guard, and is skipped. No BoltSpeedInRange violation ever fires in scenario runs. Confidence: HIGH.
 
+## Memorable Moments Wave E Bugs (2026-03-24, feature/spatial-physics-extraction)
+
+- **spawn_highlight_text culling skips new messages**: `spawn_highlight_text.rs:84-101` — `to_cull = total_after_spawn - max_visible`, but culling only iterates pre-existing popup entities. If `messages.len() > max_visible` with 0 existing popups, `to_cull > 0` but `existing_sorted` is empty, so zero culls happen and all messages spawn unconstrained. Fix: cap the number of messages spawned to `max_visible` in the spawn loop, or factor new-message spawns into the cull candidates.
+
+- **track_node_cleared_stats PerfectStreak re-records every node clear**: `track_node_cleared_stats.rs:64-74` — `best_perfect_streak` is a cross-node field. After the streak threshold is exceeded on node N, every subsequent `NodeCleared` passes `best >= threshold` and pushes another `PerfectStreak` highlight. A 10-node run with one streak on node 1 records 9 duplicate `PerfectStreak` highlights. Fix: check only if this node contributed a NEW best streak (i.e., `consecutive_perfect_bumps > previous_best`) or record once per run using a flag analogous to `first_evolution_recorded`.
+
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 
 - **spawn_chip_select overwrites ChipOffers**: FIXED — verified in current code. `spawn_chip_select` now reads `Res<ChipOffers>` directly (does not touch ChipRegistry or insert ChipOffers). The offering algorithm is no longer bypassed.

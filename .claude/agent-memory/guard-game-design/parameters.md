@@ -75,7 +75,13 @@ type: reference
 - nail_biter_pixels: 30.0 — slightly more generous than CloseSave, appropriate
 - untouchable_nodes: 2 — achievable but meaningful
 - highlight_cap: 5 — up from spec's 3, good for story-telling (Pillar 9)
-- FadeOut duration for juice popups: 2.0s (code default, not yet in RON)
+- FadeOut duration for juice popups: 0.8s target (currently 2.0s in code, not yet in RON)
+- Highlight popup scale overshoot: 1.15x initial, settle to 1.0x over 0.1s
+- Highlight popup max visible: 3 (oldest despawned when exceeded)
+- Highlight popup cascade stagger: 0.1s between simultaneous highlights
+- Highlight popup font size: 48px (down from 64px)
+- Highlight popup horizontal jitter: 2-4px (seeded via GameRng)
+- Highlight popup position: above playfield (top of screen), NOT in gameplay area
 
 ## Shockwave VFX Parameters (2026-03-24)
 - Annulus inner/outer: 0.85 / 1.0 (thin ring — max spectacle, zero confusion)

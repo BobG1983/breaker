@@ -5,6 +5,7 @@
 - [bolt-boundary-and-bump-flow.md](bolt-boundary-and-bump-flow.md) -- Bolt-lost detection, bump grading chain, node completion chain, key coordinates
 - [collision-message-flow.md](collision-message-flow.md) -- Physics collision message types, fields, ordering chain, and consumer map
 - [spatial2d-propagation-flow.md](spatial2d-propagation-flow.md) -- Spatial2d propagation pipeline: save_previous, propagate, interpolation, Absolute/Relative hierarchy, orbit cells
+- [highlight-detection-flow.md](highlight-detection-flow.md) -- Highlight detection, storage, cap, display, and juice flow map (15 HighlightKind variants, 6 detector systems)
 
 ## Session History
 See [ephemeral/](ephemeral/) -- not committed.

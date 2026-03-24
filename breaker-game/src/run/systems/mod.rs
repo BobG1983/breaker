@@ -13,6 +13,7 @@ mod handle_run_lost;
 mod handle_timer_expired;
 mod reset_highlight_tracker;
 mod reset_run_state;
+pub(crate) mod select_highlights;
 mod spawn_highlight_text;
 mod track_bolts_lost;
 mod track_bumps;

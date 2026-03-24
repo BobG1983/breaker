@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     chips::EvolutionRegistry,
-    run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
+    run::{messages::HighlightTriggered, resources::*},
     ui::messages::ChipSelected,
 };
 
@@ -17,7 +17,6 @@ use crate::{
 pub(crate) fn detect_first_evolution(
     mut reader: MessageReader<ChipSelected>,
     evolution_registry: Option<Res<EvolutionRegistry>>,
-    config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
     run_state: Res<RunState>,
@@ -50,18 +49,12 @@ pub(crate) fn detect_first_evolution(
                 kind: HighlightKind::FirstEvolution,
             });
 
-            // Only record once in stats
-            let already = stats
-                .highlights
-                .iter()
-                .any(|h| h.kind == HighlightKind::FirstEvolution);
-            if !already && stats.highlights.len() < config.highlight_cap as usize {
-                stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::FirstEvolution,
-                    node_index: run_state.node_index,
-                    value: 1.0,
-                });
-            }
+            // Record in stats — selection happens at run-end
+            stats.highlights.push(RunHighlight {
+                kind: HighlightKind::FirstEvolution,
+                node_index: run_state.node_index,
+                value: 1.0,
+            });
         }
     }
 }
@@ -73,7 +66,10 @@ mod tests {
         chips::definition::{
             AmpEffect, ChipDefinition, ChipEffect, EvolutionIngredient, EvolutionRecipe, Rarity,
         },
-        run::resources::{HighlightKind, RunHighlight},
+        run::{
+            definition::HighlightConfig,
+            resources::{HighlightKind, RunHighlight},
+        },
     };
 
     #[derive(Resource)]
@@ -300,26 +296,23 @@ mod tests {
         );
     }
 
-    // --- Behavior 25: Respects cap ---
+    // --- Behavior 25: No cap during detection — stored beyond old cap ---
 
     #[test]
-    fn respects_highlight_cap() {
+    fn stores_highlight_beyond_old_cap() {
         let mut app = test_app();
-        let config = HighlightConfig {
-            highlight_cap: 1,
-            ..Default::default()
-        };
-        app.insert_resource(config);
 
-        // Pre-fill highlights to cap with a different kind
-        app.world_mut()
-            .resource_mut::<RunStats>()
-            .highlights
-            .push(RunHighlight {
-                kind: HighlightKind::MassDestruction,
-                node_index: 0,
-                value: 10.0,
-            });
+        // Pre-fill highlights to old cap of 5
+        {
+            let mut stats = app.world_mut().resource_mut::<RunStats>();
+            for i in 0..5 {
+                stats.highlights.push(RunHighlight {
+                    kind: HighlightKind::MassDestruction,
+                    node_index: i,
+                    value: 10.0,
+                });
+            }
+        }
 
         app.insert_resource(TestMessages(vec![ChipSelected {
             name: "Piercing Barrage".to_owned(),
@@ -327,34 +320,34 @@ mod tests {
         app.update();
 
         let stats = app.world().resource::<RunStats>();
-        assert_eq!(
-            stats.highlights.len(),
-            1,
-            "should not exceed highlight cap of 1"
-        );
         let first_evo = stats
             .highlights
             .iter()
             .find(|h| h.kind == HighlightKind::FirstEvolution);
         assert!(
-            first_evo.is_none(),
-            "FirstEvolution should NOT be added when cap is reached"
+            first_evo.is_some(),
+            "FirstEvolution should be stored even when 5 highlights already exist — selection happens at run-end"
+        );
+        assert!(
+            stats.highlights.len() > 5,
+            "highlight count should grow beyond old cap of 5. Got {}",
+            stats.highlights.len()
         );
 
-        // But the flag should still be set
+        // The flag should still be set
         let tracker = app.world().resource::<HighlightTracker>();
         assert!(
             tracker.first_evolution_recorded,
-            "first_evolution_recorded flag should still be set even when cap prevents highlight recording"
+            "first_evolution_recorded flag should still be set"
         );
 
         // evolutions_performed should still increment
         assert_eq!(
             stats.evolutions_performed, 1,
-            "evolutions_performed should still increment even when cap is reached"
+            "evolutions_performed should increment"
         );
 
-        // HighlightTriggered should STILL be emitted
+        // HighlightTriggered should be emitted
         let captured = app.world().resource::<CapturedHighlightTriggered>();
         let msg = captured
             .0
@@ -362,7 +355,7 @@ mod tests {
             .find(|h| h.kind == HighlightKind::FirstEvolution);
         assert!(
             msg.is_some(),
-            "should still emit HighlightTriggered even when cap is reached"
+            "should emit HighlightTriggered for FirstEvolution"
         );
     }
 }
