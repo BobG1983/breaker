@@ -79,6 +79,13 @@ pub fn enforce_min_angle(velocity: &mut Vec2, min_angle: f32) {
 #[derive(Component, Debug)]
 pub struct ExtraBolt;
 
+/// Marks a bolt as having been spawned by an evolution chip.
+///
+/// Used for damage attribution — cell kills by this bolt count toward the
+/// named evolution's cumulative damage for the `MostPowerfulEvolution` highlight.
+#[derive(Component, Debug, Clone)]
+pub struct SpawnedByEvolution(pub String);
+
 #[cfg(test)]
 mod tests {
     use super::*;

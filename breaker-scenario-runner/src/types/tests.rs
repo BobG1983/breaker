@@ -485,7 +485,7 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
         invariants: [],
         expected_violations: None,
         debug_setup: None,
-        initial_overclocks: Some([OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)))]),
+        initial_overclocks: Some([OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)])])]),
     )"#;
     let result: ScenarioDefinition = ron::de::from_str(ron)
         .expect("ScenarioDefinition with initial_overclocks surge chain should parse");
@@ -495,15 +495,15 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
     assert_eq!(overclocks.len(), 1, "expected 1 overclock chain");
     assert_eq!(
         overclocks[0],
-        TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+        TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::Shockwave {
+            vec![TriggerChain::Shockwave {
                 base_range: 64.0,
                 range_per_level: 32.0,
                 stacks: 1,
                 speed: 400.0,
-            })
-        ))),
+            }],
+        )]),
         "overclock chain must match OnPerfectBump(OnImpact(Cell, Shockwave))"
     );
 }

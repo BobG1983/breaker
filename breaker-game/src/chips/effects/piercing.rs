@@ -68,6 +68,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -83,6 +84,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -98,6 +100,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -113,6 +116,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -135,6 +139,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(2)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -156,6 +161,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -177,6 +183,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -199,6 +206,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -220,6 +228,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
             max_stacks: 2,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 

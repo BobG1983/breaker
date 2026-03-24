@@ -165,6 +165,7 @@ mod tests {
             .push(SpawnChainBolt {
                 anchor,
                 tether_distance: 200.0,
+                source_chip: None,
             });
         tick(&mut app);
 
@@ -215,6 +216,7 @@ mod tests {
             .push(SpawnChainBolt {
                 anchor,
                 tether_distance: 200.0,
+                source_chip: None,
             });
         tick(&mut app);
 
@@ -290,6 +292,7 @@ mod tests {
             .push(SpawnChainBolt {
                 anchor,
                 tether_distance: 200.0,
+                source_chip: None,
             });
         tick(&mut app);
 
@@ -339,6 +342,7 @@ mod tests {
             .push(SpawnChainBolt {
                 anchor: stale,
                 tether_distance: 200.0,
+                source_chip: None,
             });
         tick(&mut app);
 

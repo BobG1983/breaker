@@ -14,6 +14,8 @@ pub(crate) struct EffectFired {
     /// The bolt entity that triggered the effect, or `None` for global triggers
     /// (cell destroyed, bolt lost) that have no specific bolt.
     pub bolt: Option<Entity>,
+    /// The chip name that originated this chain, or `None` for archetype chains.
+    pub source_chip: Option<String>,
 }
 
 #[cfg(test)]
@@ -25,6 +27,7 @@ mod tests {
         let event = EffectFired {
             effect: TriggerChain::test_shockwave(64.0),
             bolt: Some(Entity::PLACEHOLDER),
+            source_chip: None,
         };
         assert_eq!(event.bolt, Some(Entity::PLACEHOLDER));
         assert_eq!(
@@ -43,6 +46,7 @@ mod tests {
         let event = EffectFired {
             effect: TriggerChain::test_lose_life(),
             bolt: None,
+            source_chip: None,
         };
         assert_eq!(event.bolt, None);
         assert_eq!(event.effect, TriggerChain::LoseLife);

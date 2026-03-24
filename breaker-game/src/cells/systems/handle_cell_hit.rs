@@ -209,6 +209,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(
             FixedUpdate,
@@ -241,6 +242,7 @@ mod tests {
             cell,
             damage: 15.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(
             FixedUpdate,
@@ -270,6 +272,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
         tick(&mut app);
@@ -297,6 +300,7 @@ mod tests {
             cell,
             damage: 15.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
         tick(&mut app);
@@ -325,6 +329,7 @@ mod tests {
             cell,
             damage: 0.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(
             FixedUpdate,
@@ -364,6 +369,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
         tick(&mut app);
@@ -392,6 +398,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(
             FixedUpdate,
@@ -428,11 +435,13 @@ mod tests {
                 cell,
                 damage: 10.0,
                 source_bolt: Entity::PLACEHOLDER,
+                source_chip: None,
             },
             DamageCell {
                 cell,
                 damage: 10.0,
                 source_bolt: Entity::PLACEHOLDER,
+                source_chip: None,
             },
         ];
         app.add_systems(
@@ -469,11 +478,13 @@ mod tests {
                 cell,
                 damage: 10.0,
                 source_bolt: Entity::PLACEHOLDER,
+                source_chip: None,
             },
             DamageCell {
                 cell,
                 damage: 10.0,
                 source_bolt: Entity::PLACEHOLDER,
+                source_chip: None,
             },
         ];
         app.add_systems(FixedUpdate, enqueue_all.before(handle_cell_hit));
@@ -501,11 +512,13 @@ mod tests {
                 cell: cell_a,
                 damage: 20.0,
                 source_bolt: Entity::PLACEHOLDER,
+                source_chip: None,
             },
             DamageCell {
                 cell: cell_b,
                 damage: 10.0,
                 source_bolt: Entity::PLACEHOLDER,
+                source_chip: None,
             },
         ];
         app.add_systems(FixedUpdate, enqueue_all.before(handle_cell_hit));
@@ -541,6 +554,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         app.add_systems(
             FixedUpdate,

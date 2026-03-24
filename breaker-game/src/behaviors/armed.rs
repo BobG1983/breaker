@@ -9,8 +9,10 @@ use crate::chips::definition::TriggerChain;
 /// When a trigger chain matches but the inner chain is not a leaf,
 /// the inner chain is pushed onto this component's list. Subsequent
 /// triggers evaluate against these armed chains.
+/// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
+/// archetype-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Component, Debug, Default)]
-pub(crate) struct ArmedTriggers(pub Vec<TriggerChain>);
+pub(crate) struct ArmedTriggers(pub Vec<(Option<String>, TriggerChain)>);
 
 #[cfg(test)]
 mod tests {

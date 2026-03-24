@@ -242,6 +242,8 @@ pub struct HighlightTracker {
     pub fastest_node_clear_secs: f32,
     /// Whether the first evolution has been recorded (for `FirstEvolution`).
     pub first_evolution_recorded: bool,
+    /// Cumulative damage dealt per evolution chip name (for `MostPowerfulEvolution`).
+    pub evolution_damage: std::collections::HashMap<String, f32>,
 }
 
 impl Default for HighlightTracker {
@@ -261,6 +263,7 @@ impl Default for HighlightTracker {
             consecutive_no_damage_nodes: 0,
             fastest_node_clear_secs: f32::MAX,
             first_evolution_recorded: false,
+            evolution_damage: std::collections::HashMap::new(),
         }
     }
 }

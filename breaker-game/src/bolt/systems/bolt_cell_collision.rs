@@ -228,6 +228,7 @@ pub(crate) fn bolt_cell_collision(
                     cell: cell_entity,
                     damage: effective_damage,
                     source_bolt: bolt_entity,
+                    source_chip: None,
                 });
             } else {
                 // WALL HIT: reflect and reset `PiercingRemaining`

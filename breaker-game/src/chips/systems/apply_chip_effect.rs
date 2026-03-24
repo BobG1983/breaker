@@ -35,6 +35,7 @@ pub(crate) fn apply_chip_effect(
             commands.trigger(ChipEffectApplied {
                 effect: effect.clone(),
                 max_stacks: chip.max_stacks,
+                chip_name: msg.name.clone(),
             });
         }
     }

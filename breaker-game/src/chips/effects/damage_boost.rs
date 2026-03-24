@@ -52,6 +52,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
             max_stacks: 2,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -67,6 +68,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
             max_stacks: 2,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 

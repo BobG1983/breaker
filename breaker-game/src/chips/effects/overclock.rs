@@ -13,8 +13,11 @@ use crate::{
 ///
 /// Self-selects via pattern matching — ignores `Amp` and `Augment` effects.
 pub(crate) fn handle_overclock(trigger: On<ChipEffectApplied>, mut active: ResMut<ActiveChains>) {
-    if let ChipEffect::Overclock(chain) = &trigger.event().effect {
-        active.0.push(chain.clone());
+    let event = trigger.event();
+    if let ChipEffect::Overclock(chain) = &event.effect {
+        active
+            .0
+            .push((Some(event.chip_name.clone()), chain.clone()));
     }
 }
 
@@ -34,14 +37,15 @@ mod tests {
     #[test]
     fn handle_overclock_pushes_chain_to_active() {
         let mut app = test_app();
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
-        )));
+            vec![TriggerChain::test_shockwave(64.0)],
+        )]);
 
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Overclock(chain.clone()),
             max_stacks: 1,
+            chip_name: "test_chip".to_owned(),
         });
         app.world_mut().flush();
 
@@ -51,7 +55,7 @@ mod tests {
             1,
             "handle_overclock should push the chain into ActiveChains"
         );
-        assert_eq!(active.0[0], chain);
+        assert_eq!(active.0[0].1, chain);
     }
 
     #[test]
@@ -61,6 +65,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 

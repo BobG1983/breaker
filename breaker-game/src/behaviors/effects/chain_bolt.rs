@@ -23,6 +23,7 @@ pub(crate) fn handle_chain_bolt(
     writer.write(SpawnChainBolt {
         anchor: bolt_entity,
         tether_distance: *tether_distance,
+        source_chip: event.source_chip.clone(),
     });
 }
 
@@ -77,6 +78,7 @@ mod tests {
                 tether_distance: 200.0,
             },
             bolt: Some(bolt_entity),
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -110,6 +112,7 @@ mod tests {
                 tether_distance: 200.0,
             },
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -134,6 +137,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::SpawnBolt,
             bolt: Some(bolt_entity),
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -153,6 +157,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::LoseLife,
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);

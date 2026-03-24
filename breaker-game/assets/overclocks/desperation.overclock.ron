@@ -3,5 +3,5 @@
     description: "Losing a bolt speeds up all remaining bolts",
     rarity: Legendary,
     max_stacks: 1,
-    effects: [Overclock(OnBoltLost(SpeedBoost(target: AllBolts, multiplier: 2.0)))],
+    effects: [Overclock(OnBoltLost([SpeedBoost(target: AllBolts, multiplier: 2.0)]))],
 )

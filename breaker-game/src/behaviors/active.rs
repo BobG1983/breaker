@@ -9,8 +9,10 @@ use crate::chips::definition::TriggerChain;
 /// Populated by `init_archetype` from the archetype definition and by
 /// `handle_overclock` when a `ChipEffectApplied` with an `Overclock`
 /// effect is observed.
+/// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
+/// archetype-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Resource, Debug, Default)]
-pub struct ActiveChains(pub Vec<TriggerChain>);
+pub struct ActiveChains(pub Vec<(Option<String>, TriggerChain)>);
 
 #[cfg(test)]
 mod tests {

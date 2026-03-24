@@ -139,6 +139,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::LoseLife,
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -157,6 +158,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::LoseLife,
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -173,6 +175,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::TimePenalty { seconds: 5.0 },
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
 

@@ -93,18 +93,21 @@ pub(crate) fn init_archetype(
     // Build ActiveChains from root fields + chains
     let mut chains = Vec::new();
     if let Some(chain) = &def.on_bolt_lost {
-        chains.push(TriggerChain::OnBoltLost(Box::new(chain.clone())));
+        chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_perfect_bump {
-        chains.push(TriggerChain::OnPerfectBump(Box::new(chain.clone())));
+        chains.push((
+            None,
+            TriggerChain::OnPerfectBump(vec![chain.clone()]),
+        ));
     }
     if let Some(chain) = &def.on_early_bump {
-        chains.push(TriggerChain::OnEarlyBump(Box::new(chain.clone())));
+        chains.push((None, TriggerChain::OnEarlyBump(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_late_bump {
-        chains.push(TriggerChain::OnLateBump(Box::new(chain.clone())));
+        chains.push((None, TriggerChain::OnLateBump(vec![chain.clone()])));
     }
-    chains.extend(def.chains.iter().cloned());
+    chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
     *active = ActiveChains(chains);
 }
 
@@ -175,7 +178,7 @@ mod tests {
         assert_eq!(active.0.len(), 4);
         assert!(matches!(
             &active.0[0],
-            TriggerChain::OnBoltLost(inner) if matches!(**inner, TriggerChain::LoseLife)
+            (None, TriggerChain::OnBoltLost(effects)) if effects.len() == 1 && matches!(effects[0], TriggerChain::LoseLife)
         ));
     }
 
@@ -209,12 +212,12 @@ mod tests {
             on_perfect_bump: None,
             on_early_bump: None,
             on_late_bump: None,
-            chains: vec![TriggerChain::OnPerfectBump(Box::new(
+            chains: vec![TriggerChain::OnPerfectBump(vec![
                 TriggerChain::OnImpact(
                     crate::chips::definition::ImpactTarget::Cell,
-                    Box::new(TriggerChain::test_shockwave(64.0)),
+                    vec![TriggerChain::test_shockwave(64.0)],
                 ),
-            ))],
+            ])],
         };
         let mut app = test_app_with_archetype(def);
         app.world_mut().spawn(Breaker);

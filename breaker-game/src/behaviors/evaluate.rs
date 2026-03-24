@@ -44,32 +44,37 @@ pub(crate) enum EvalResult {
 /// Evaluates whether a runtime trigger event matches the outermost trigger
 /// of a `TriggerChain`.
 ///
-/// Returns `NoMatch` if the chain is a leaf (no trigger wrapper) or if the
-/// trigger kind doesn't match the chain's outermost trigger wrapper.
+/// Returns a `Vec<EvalResult>` with one entry per inner effect in the
+/// matched trigger variant's `Vec<TriggerChain>`. Returns `vec![NoMatch]`
+/// if the chain is a leaf (no trigger wrapper) or if the trigger kind
+/// doesn't match the chain's outermost trigger wrapper.
 ///
-/// Returns `Fire(inner)` if the trigger matches and the inner chain is a leaf.
-///
-/// Returns `Arm(inner)` if the trigger matches but the inner chain is another
-/// trigger wrapper (needs further resolution).
-pub(crate) fn evaluate(trigger: TriggerKind, chain: &TriggerChain) -> EvalResult {
-    let ((TriggerKind::PerfectBump, TriggerChain::OnPerfectBump(inner))
-    | (TriggerKind::CellImpact, TriggerChain::OnImpact(ImpactTarget::Cell, inner))
-    | (TriggerKind::BreakerImpact, TriggerChain::OnImpact(ImpactTarget::Breaker, inner))
-    | (TriggerKind::WallImpact, TriggerChain::OnImpact(ImpactTarget::Wall, inner))
-    | (TriggerKind::BumpSuccess, TriggerChain::OnBumpSuccess(inner))
-    | (TriggerKind::CellDestroyed, TriggerChain::OnCellDestroyed(inner))
-    | (TriggerKind::BoltLost, TriggerChain::OnBoltLost(inner))
-    | (TriggerKind::EarlyBump, TriggerChain::OnEarlyBump(inner))
-    | (TriggerKind::LateBump, TriggerChain::OnLateBump(inner))
-    | (TriggerKind::BumpWhiff, TriggerChain::OnBumpWhiff(inner))) = (trigger, chain)
+/// Each inner effect produces `Fire(inner)` if it is a leaf, or
+/// `Arm(inner)` if it is another trigger wrapper (needs further resolution).
+pub(crate) fn evaluate(trigger: TriggerKind, chain: &TriggerChain) -> Vec<EvalResult> {
+    let ((TriggerKind::PerfectBump, TriggerChain::OnPerfectBump(effects))
+    | (TriggerKind::CellImpact, TriggerChain::OnImpact(ImpactTarget::Cell, effects))
+    | (TriggerKind::BreakerImpact, TriggerChain::OnImpact(ImpactTarget::Breaker, effects))
+    | (TriggerKind::WallImpact, TriggerChain::OnImpact(ImpactTarget::Wall, effects))
+    | (TriggerKind::BumpSuccess, TriggerChain::OnBumpSuccess(effects))
+    | (TriggerKind::CellDestroyed, TriggerChain::OnCellDestroyed(effects))
+    | (TriggerKind::BoltLost, TriggerChain::OnBoltLost(effects))
+    | (TriggerKind::EarlyBump, TriggerChain::OnEarlyBump(effects))
+    | (TriggerKind::LateBump, TriggerChain::OnLateBump(effects))
+    | (TriggerKind::BumpWhiff, TriggerChain::OnBumpWhiff(effects))) = (trigger, chain)
     else {
-        return EvalResult::NoMatch;
+        return vec![EvalResult::NoMatch];
     };
-    if inner.is_leaf() {
-        EvalResult::Fire((**inner).clone())
-    } else {
-        EvalResult::Arm((**inner).clone())
-    }
+    effects
+        .iter()
+        .map(|e| {
+            if e.is_leaf() {
+                EvalResult::Fire(e.clone())
+            } else {
+                EvalResult::Arm(e.clone())
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -81,64 +86,64 @@ mod tests {
 
     #[test]
     fn perfect_bump_with_on_perfect_bump_leaf_fires() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
+        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]);
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shockwave {
+            vec![EvalResult::Fire(TriggerChain::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
-            }),
+            })],
             "PerfectBump should match OnPerfectBump(leaf) and fire"
         );
     }
 
     #[test]
     fn early_bump_with_on_early_bump_lose_life_fires() {
-        let chain = TriggerChain::OnEarlyBump(Box::new(TriggerChain::test_lose_life()));
+        let chain = TriggerChain::OnEarlyBump(vec![TriggerChain::test_lose_life()]);
         let result = evaluate(TriggerKind::EarlyBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::LoseLife),
+            vec![EvalResult::Fire(TriggerChain::LoseLife)],
             "EarlyBump should match OnEarlyBump(LoseLife) and fire"
         );
     }
 
     #[test]
     fn late_bump_with_on_late_bump_time_penalty_fires() {
-        let chain = TriggerChain::OnLateBump(Box::new(TriggerChain::test_time_penalty(3.0)));
+        let chain = TriggerChain::OnLateBump(vec![TriggerChain::test_time_penalty(3.0)]);
         let result = evaluate(TriggerKind::LateBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::TimePenalty { seconds: 3.0 }),
+            vec![EvalResult::Fire(TriggerChain::TimePenalty { seconds: 3.0 })],
             "LateBump should match OnLateBump(TimePenalty) and fire"
         );
     }
 
     #[test]
     fn bump_whiff_with_on_bump_whiff_lose_life_fires() {
-        let chain = TriggerChain::OnBumpWhiff(Box::new(TriggerChain::test_lose_life()));
+        let chain = TriggerChain::OnBumpWhiff(vec![TriggerChain::test_lose_life()]);
         let result = evaluate(TriggerKind::BumpWhiff, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::LoseLife),
+            vec![EvalResult::Fire(TriggerChain::LoseLife)],
             "BumpWhiff should match OnBumpWhiff(LoseLife) and fire"
         );
     }
 
     #[test]
     fn bump_success_with_on_bump_success_leaf_fires() {
-        let chain = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0)));
+        let chain = TriggerChain::OnBumpSuccess(vec![TriggerChain::test_shield(3.0)]);
         let result = evaluate(TriggerKind::BumpSuccess, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shield {
+            vec![EvalResult::Fire(TriggerChain::Shield {
                 base_duration: 3.0,
                 duration_per_level: 0.0,
                 stacks: 1,
-            }),
+            })],
             "BumpSuccess should match OnBumpSuccess(leaf) and fire"
         );
     }
@@ -147,17 +152,17 @@ mod tests {
     fn cell_impact_with_on_impact_cell_leaf_fires() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
+            vec![TriggerChain::test_shockwave(64.0)],
         );
         let result = evaluate(TriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shockwave {
+            vec![EvalResult::Fire(TriggerChain::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
-            }),
+            })],
             "CellImpact should match OnImpact(Cell, leaf) and fire"
         );
     }
@@ -166,16 +171,16 @@ mod tests {
     fn breaker_impact_with_on_impact_breaker_leaf_fires() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Breaker,
-            Box::new(TriggerChain::test_multi_bolt(2)),
+            vec![TriggerChain::test_multi_bolt(2)],
         );
         let result = evaluate(TriggerKind::BreakerImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::MultiBolt {
+            vec![EvalResult::Fire(TriggerChain::MultiBolt {
                 base_count: 2,
                 count_per_level: 0,
                 stacks: 1,
-            }),
+            })],
             "BreakerImpact should match OnImpact(Breaker, leaf) and fire"
         );
     }
@@ -183,46 +188,46 @@ mod tests {
     #[test]
     fn wall_impact_with_on_impact_wall_leaf_fires() {
         let chain =
-            TriggerChain::OnImpact(ImpactTarget::Wall, Box::new(TriggerChain::test_shield(5.0)));
+            TriggerChain::OnImpact(ImpactTarget::Wall, vec![TriggerChain::test_shield(5.0)]);
         let result = evaluate(TriggerKind::WallImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shield {
+            vec![EvalResult::Fire(TriggerChain::Shield {
                 base_duration: 5.0,
                 duration_per_level: 0.0,
                 stacks: 1,
-            }),
+            })],
             "WallImpact should match OnImpact(Wall, leaf) and fire"
         );
     }
 
     #[test]
     fn cell_destroyed_with_on_cell_destroyed_leaf_fires() {
-        let chain = TriggerChain::OnCellDestroyed(Box::new(TriggerChain::test_shield(5.0)));
+        let chain = TriggerChain::OnCellDestroyed(vec![TriggerChain::test_shield(5.0)]);
         let result = evaluate(TriggerKind::CellDestroyed, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shield {
+            vec![EvalResult::Fire(TriggerChain::Shield {
                 base_duration: 5.0,
                 duration_per_level: 0.0,
                 stacks: 1,
-            }),
+            })],
             "CellDestroyed should match OnCellDestroyed(leaf) and fire"
         );
     }
 
     #[test]
     fn bolt_lost_with_on_bolt_lost_leaf_fires() {
-        let chain = TriggerChain::OnBoltLost(Box::new(TriggerChain::test_shockwave(32.0)));
+        let chain = TriggerChain::OnBoltLost(vec![TriggerChain::test_shockwave(32.0)]);
         let result = evaluate(TriggerKind::BoltLost, &chain);
         assert_eq!(
             result,
-            EvalResult::Fire(TriggerChain::Shockwave {
+            vec![EvalResult::Fire(TriggerChain::Shockwave {
                 base_range: 32.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
-            }),
+            })],
             "BoltLost should match OnBoltLost(leaf) and fire"
         );
     }
@@ -233,13 +238,13 @@ mod tests {
     fn perfect_bump_with_on_perfect_bump_non_leaf_arms() {
         let inner_chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
+            vec![TriggerChain::test_shockwave(64.0)],
         );
-        let chain = TriggerChain::OnPerfectBump(Box::new(inner_chain.clone()));
+        let chain = TriggerChain::OnPerfectBump(vec![inner_chain.clone()]);
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Arm(inner_chain),
+            vec![EvalResult::Arm(inner_chain)],
             "PerfectBump with non-leaf inner should return Arm"
         );
     }
@@ -248,16 +253,16 @@ mod tests {
     fn cell_impact_with_on_impact_cell_non_leaf_arms() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::OnCellDestroyed(Box::new(
+            vec![TriggerChain::OnCellDestroyed(vec![
                 TriggerChain::test_shockwave(32.0),
-            ))),
+            ])],
         );
         let result = evaluate(TriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::Arm(TriggerChain::OnCellDestroyed(Box::new(
+            vec![EvalResult::Arm(TriggerChain::OnCellDestroyed(vec![
                 TriggerChain::test_shockwave(32.0)
-            ))),
+            ]))],
             "CellImpact with non-leaf inner should return Arm with inner chain"
         );
     }
@@ -266,34 +271,34 @@ mod tests {
     fn early_bump_with_on_early_bump_non_leaf_arms() {
         let inner_chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
+            vec![TriggerChain::test_shockwave(64.0)],
         );
-        let chain = TriggerChain::OnEarlyBump(Box::new(inner_chain.clone()));
+        let chain = TriggerChain::OnEarlyBump(vec![inner_chain.clone()]);
         let result = evaluate(TriggerKind::EarlyBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Arm(inner_chain),
+            vec![EvalResult::Arm(inner_chain)],
             "EarlyBump with non-leaf inner should return Arm"
         );
     }
 
     #[test]
     fn three_deep_chain_returns_arm_with_two_deep_remaining() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::OnCellDestroyed(Box::new(
+            vec![TriggerChain::OnCellDestroyed(vec![
                 TriggerChain::test_shockwave(64.0),
-            ))),
-        )));
+            ])],
+        )]);
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
-            EvalResult::Arm(TriggerChain::OnImpact(
+            vec![EvalResult::Arm(TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::OnCellDestroyed(Box::new(
+                vec![TriggerChain::OnCellDestroyed(vec![
                     TriggerChain::test_shockwave(64.0),
-                ))),
-            )),
+                ])],
+            ))],
             "3-deep chain should peel off outermost trigger and return Arm with 2-deep remaining"
         );
     }
@@ -304,23 +309,23 @@ mod tests {
     fn perfect_bump_does_not_match_on_impact() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
+            vec![TriggerChain::test_shockwave(64.0)],
         );
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
-            EvalResult::NoMatch,
+            vec![EvalResult::NoMatch],
             "PerfectBump should not match OnImpact -- wrong trigger kind"
         );
     }
 
     #[test]
     fn early_bump_does_not_match_on_perfect_bump() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
+        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]);
         let result = evaluate(TriggerKind::EarlyBump, &chain);
         assert_eq!(
             result,
-            EvalResult::NoMatch,
+            vec![EvalResult::NoMatch],
             "EarlyBump should not match OnPerfectBump -- distinct trigger kinds"
         );
     }
@@ -329,23 +334,23 @@ mod tests {
     fn cell_impact_does_not_match_on_impact_breaker() {
         let chain = TriggerChain::OnImpact(
             ImpactTarget::Breaker,
-            Box::new(TriggerChain::test_shockwave(64.0)),
+            vec![TriggerChain::test_shockwave(64.0)],
         );
         let result = evaluate(TriggerKind::CellImpact, &chain);
         assert_eq!(
             result,
-            EvalResult::NoMatch,
+            vec![EvalResult::NoMatch],
             "CellImpact must NOT match OnImpact(Breaker, ...) -- ImpactTarget discrimination required"
         );
     }
 
     #[test]
     fn bump_success_does_not_match_on_perfect_bump() {
-        let chain = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
+        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]);
         let result = evaluate(TriggerKind::BumpSuccess, &chain);
         assert_eq!(
             result,
-            EvalResult::NoMatch,
+            vec![EvalResult::NoMatch],
             "BumpSuccess must NOT match OnPerfectBump -- distinct trigger kinds"
         );
     }
@@ -356,7 +361,7 @@ mod tests {
         let result = evaluate(TriggerKind::PerfectBump, &chain);
         assert_eq!(
             result,
-            EvalResult::NoMatch,
+            vec![EvalResult::NoMatch],
             "bare leaf (not wrapped in a trigger) should return NoMatch"
         );
     }

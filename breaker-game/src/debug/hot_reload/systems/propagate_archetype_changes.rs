@@ -89,18 +89,21 @@ pub(crate) fn propagate_archetype_changes(
     // Build ActiveChains from root fields + chains
     let mut chains = Vec::new();
     if let Some(chain) = &def.on_bolt_lost {
-        chains.push(TriggerChain::OnBoltLost(Box::new(chain.clone())));
+        chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_perfect_bump {
-        chains.push(TriggerChain::OnPerfectBump(Box::new(chain.clone())));
+        chains.push((
+            None,
+            TriggerChain::OnPerfectBump(vec![chain.clone()]),
+        ));
     }
     if let Some(chain) = &def.on_early_bump {
-        chains.push(TriggerChain::OnEarlyBump(Box::new(chain.clone())));
+        chains.push((None, TriggerChain::OnEarlyBump(vec![chain.clone()])));
     }
     if let Some(chain) = &def.on_late_bump {
-        chains.push(TriggerChain::OnLateBump(Box::new(chain.clone())));
+        chains.push((None, TriggerChain::OnLateBump(vec![chain.clone()])));
     }
-    chains.extend(def.chains.iter().cloned());
+    chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
     *ctx.active = ActiveChains(chains);
 }
 
@@ -421,8 +424,8 @@ mod tests {
         );
         assert!(matches!(
             &active.0[0],
-            TriggerChain::OnPerfectBump(inner) if matches!(
-                **inner,
+            (None, TriggerChain::OnPerfectBump(effects)) if effects.len() == 1 && matches!(
+                effects[0],
                 TriggerChain::SpeedBoost { multiplier, .. } if (multiplier - 2.0).abs() < f32::EPSILON
             )
         ));

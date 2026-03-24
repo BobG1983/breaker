@@ -964,7 +964,7 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
         active.0.len()
     );
     assert_eq!(
-        active.0[0],
+        active.0[0].1,
         TriggerChain::Shockwave {
             base_range: 64.0,
             range_per_level: 0.0,

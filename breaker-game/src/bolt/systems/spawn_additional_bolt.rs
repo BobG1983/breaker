@@ -123,7 +123,7 @@ mod tests {
 
     fn send_spawn(flag: Res<SendSpawn>, mut writer: MessageWriter<SpawnAdditionalBolt>) {
         for _ in 0..flag.0 {
-            writer.write(SpawnAdditionalBolt);
+            writer.write(SpawnAdditionalBolt { source_chip: None });
         }
     }
 

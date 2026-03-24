@@ -130,6 +130,7 @@ mod tests {
                 multiplier,
             },
             bolt,
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(app);
@@ -279,6 +280,7 @@ mod tests {
                 speed: 400.0,
             },
             bolt: Some(bolt),
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);

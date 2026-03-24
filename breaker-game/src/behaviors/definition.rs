@@ -161,7 +161,7 @@ mod tests {
             on_early_bump: None,
             on_late_bump: None,
             chains: [
-                OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])]),
             ],
         )
         "#;

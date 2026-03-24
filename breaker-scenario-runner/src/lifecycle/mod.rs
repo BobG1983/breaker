@@ -253,7 +253,7 @@ fn bypass_menu_to_playing(
     if let Some(ref overclocks) = config.definition.initial_overclocks
         && let Some(ref mut active) = active_overclocks
     {
-        active.0.clone_from(overclocks);
+        active.0 = overclocks.iter().cloned().map(|c| (None, c)).collect();
     }
     next_state.set(GameState::Playing);
 }

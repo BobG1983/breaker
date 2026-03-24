@@ -6,7 +6,10 @@ use bevy::prelude::*;
 ///
 /// Consumed by `spawn_additional_bolt` in the bolt domain.
 #[derive(Message, Clone, Debug)]
-pub struct SpawnAdditionalBolt;
+pub struct SpawnAdditionalBolt {
+    /// The chip name that originated this spawn, for damage attribution.
+    pub source_chip: Option<String>,
+}
 
 /// Sent by `spawn_bolt` after the bolt entity is spawned.
 ///
@@ -58,6 +61,8 @@ pub struct SpawnChainBolt {
     pub anchor: Entity,
     /// Maximum distance the chain bolt can travel from its anchor.
     pub tether_distance: f32,
+    /// The chip name that originated this spawn, for damage attribution.
+    pub source_chip: Option<String>,
 }
 
 #[cfg(test)]
@@ -66,7 +71,7 @@ mod tests {
 
     #[test]
     fn message_debug_format() {
-        let msg = SpawnAdditionalBolt;
+        let msg = SpawnAdditionalBolt { source_chip: None };
         assert!(format!("{msg:?}").contains("SpawnAdditionalBolt"));
 
         let msg = BoltSpawned;
@@ -97,6 +102,7 @@ mod tests {
         let msg = SpawnChainBolt {
             anchor,
             tether_distance: 200.0,
+            source_chip: None,
         };
         assert_eq!(msg.anchor, anchor);
         assert!((msg.tether_distance - 200.0).abs() < f32::EPSILON);
@@ -107,6 +113,7 @@ mod tests {
         let msg = SpawnChainBolt {
             anchor: Entity::PLACEHOLDER,
             tether_distance: 150.0,
+            source_chip: None,
         };
         let debug = format!("{msg:?}");
         assert!(debug.contains("SpawnChainBolt"));

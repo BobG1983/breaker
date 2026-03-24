@@ -41,6 +41,8 @@ pub(crate) struct ShockwaveSpeed(pub f32);
 pub(crate) struct ShockwaveDamage {
     /// Pre-calculated damage amount.
     pub damage: f32,
+    /// The chip name that originated this shockwave, for damage attribution.
+    pub source_chip: Option<String>,
     /// The bolt entity that caused this shockwave (for VFX / `DamageCell`).
     pub source_bolt: Entity,
 }
@@ -96,6 +98,7 @@ pub(crate) fn handle_shockwave(
         ShockwaveSpeed(*speed),
         ShockwaveDamage {
             damage,
+            source_chip: trigger.event().source_chip.clone(),
             source_bolt: bolt_entity,
         },
         ShockwaveAlreadyHit::default(),
@@ -166,6 +169,7 @@ pub(crate) fn shockwave_collision(
                 cell: candidate,
                 damage: dmg.damage,
                 source_bolt: dmg.source_bolt,
+                source_chip: dmg.source_chip.clone(),
             });
             already_hit.0.insert(candidate);
         }
@@ -304,6 +308,7 @@ mod tests {
                 speed,
             },
             bolt: Some(bolt),
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(app);
@@ -387,6 +392,7 @@ mod tests {
                 speed: 400.0,
             },
             bolt: Some(bolt),
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -538,6 +544,7 @@ mod tests {
                 stacks: 1,
             },
             bolt: Some(bolt),
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -644,6 +651,7 @@ mod tests {
             },
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: sw_bolt,
             },
             ShockwaveAlreadyHit::default(),
@@ -692,6 +700,7 @@ mod tests {
             },
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: sw_bolt,
             },
             ShockwaveAlreadyHit(already_hit),
@@ -732,6 +741,7 @@ mod tests {
             },
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: sw_bolt,
             },
             ShockwaveAlreadyHit::default(),
@@ -782,6 +792,7 @@ mod tests {
             },
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: sw_bolt,
             },
             ShockwaveAlreadyHit::default(),
@@ -836,6 +847,7 @@ mod tests {
             },
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: sw_bolt,
             },
             ShockwaveAlreadyHit::default(),
@@ -1040,6 +1052,7 @@ mod tests {
             ShockwaveSpeed(400.0),
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: sw_bolt,
             },
             ShockwaveAlreadyHit::default(),
@@ -1095,6 +1108,7 @@ mod tests {
             },
             ShockwaveDamage {
                 damage: 10.0,
+                source_chip: None,
                 source_bolt: stale_bolt,
             },
             ShockwaveAlreadyHit::default(),

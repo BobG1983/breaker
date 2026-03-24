@@ -119,22 +119,22 @@ pub enum TriggerChain {
         /// Maximum distance the chain bolt can travel from its anchor.
         tether_distance: f32,
     },
-    /// Fires on a perfect bump.
-    OnPerfectBump(Box<Self>),
+    /// Fires on a perfect bump. Inner vec allows multiple effects per trigger.
+    OnPerfectBump(Vec<Self>),
     /// Fires on bolt impact with a specific surface.
-    OnImpact(ImpactTarget, Box<Self>),
+    OnImpact(ImpactTarget, Vec<Self>),
     /// Fires when a cell is destroyed.
-    OnCellDestroyed(Box<Self>),
+    OnCellDestroyed(Vec<Self>),
     /// Fires when a bolt is lost.
-    OnBoltLost(Box<Self>),
+    OnBoltLost(Vec<Self>),
     /// Fires on any non-whiff bump (Early, Late, or Perfect).
-    OnBumpSuccess(Box<Self>),
+    OnBumpSuccess(Vec<Self>),
     /// Fires on an early bump.
-    OnEarlyBump(Box<Self>),
+    OnEarlyBump(Vec<Self>),
     /// Fires on a late bump.
-    OnLateBump(Box<Self>),
+    OnLateBump(Vec<Self>),
     /// Fires when a bump whiffs (misses).
-    OnBumpWhiff(Box<Self>),
+    OnBumpWhiff(Vec<Self>),
 }
 
 impl TriggerChain {
@@ -152,14 +152,16 @@ impl TriggerChain {
             | Self::TimePenalty { .. }
             | Self::SpeedBoost { .. }
             | Self::ChainBolt { .. } => 0,
-            Self::OnPerfectBump(inner)
-            | Self::OnImpact(_, inner)
-            | Self::OnCellDestroyed(inner)
-            | Self::OnBoltLost(inner)
-            | Self::OnBumpSuccess(inner)
-            | Self::OnEarlyBump(inner)
-            | Self::OnLateBump(inner)
-            | Self::OnBumpWhiff(inner) => 1 + inner.depth(),
+            Self::OnPerfectBump(effects)
+            | Self::OnImpact(_, effects)
+            | Self::OnCellDestroyed(effects)
+            | Self::OnBoltLost(effects)
+            | Self::OnBumpSuccess(effects)
+            | Self::OnEarlyBump(effects)
+            | Self::OnLateBump(effects)
+            | Self::OnBumpWhiff(effects) => {
+                1 + effects.iter().map(Self::depth).max().unwrap_or(0)
+            }
         }
     }
 
@@ -219,6 +221,8 @@ pub(crate) struct ChipEffectApplied {
     pub effect: ChipEffect,
     /// Maximum stacks for this chip.
     pub max_stacks: u32,
+    /// The chip name for attribution through the trigger chain pipeline.
+    pub chip_name: String,
 }
 
 /// A single chip definition loaded from RON.
@@ -503,17 +507,17 @@ mod tests {
         let def: ChipDefinition = ron::de::from_str(ron_str).expect("overclock RON should parse");
         assert_eq!(
             def.effects[0],
-            ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
+            ChipEffect::Overclock(TriggerChain::OnPerfectBump(vec![
                 TriggerChain::OnImpact(
                     ImpactTarget::Cell,
-                    Box::new(TriggerChain::Shockwave {
+                    vec![TriggerChain::Shockwave {
                         base_range: 64.0,
                         range_per_level: 32.0,
                         stacks: 1,
                         speed: 400.0,
-                    })
-                )
-            )))
+                    }],
+                ),
+            ]))
         );
     }
 
@@ -588,37 +592,37 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_perfect_bump_leaf() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnPerfectBump(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))",
+            "OnPerfectBump([Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])",
         )
         .expect("should parse OnPerfectBump wrapping Shockwave");
         assert_eq!(
             tc,
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::Shockwave {
+            TriggerChain::OnPerfectBump(vec![TriggerChain::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
-            }))
+            }])
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_nested_two_deep() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)))",
+            "OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])])",
         )
         .expect("should parse double-nested TriggerChain");
         assert_eq!(
             tc,
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+            TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave {
+                vec![TriggerChain::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
                     stacks: 1,
                     speed: 400.0,
-                })
-            )))
+                }],
+            )])
         );
     }
 
@@ -634,27 +638,27 @@ mod tests {
 
     #[test]
     fn trigger_chain_depth_single_trigger_is_one() {
-        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::test_shockwave(64.0)));
+        let tc = TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]);
         assert_eq!(tc.depth(), 1);
     }
 
     #[test]
     fn trigger_chain_depth_nested_is_two() {
-        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+        let tc = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
-        )));
+            vec![TriggerChain::test_shockwave(64.0)],
+        )]);
         assert_eq!(tc.depth(), 2);
     }
 
     #[test]
     fn trigger_chain_depth_three_deep_is_three() {
-        let tc = TriggerChain::OnPerfectBump(Box::new(TriggerChain::OnImpact(
+        let tc = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::OnCellDestroyed(Box::new(
+            vec![TriggerChain::OnCellDestroyed(vec![
                 TriggerChain::test_shockwave(64.0),
-            ))),
-        )));
+            ])],
+        )]);
         assert_eq!(tc.depth(), 3);
     }
 
@@ -671,11 +675,11 @@ mod tests {
     #[test]
     fn trigger_chain_is_leaf_false_for_triggers() {
         let leaf = TriggerChain::test_shockwave(64.0);
-        assert!(!TriggerChain::OnPerfectBump(Box::new(leaf.clone())).is_leaf());
-        assert!(!TriggerChain::OnImpact(ImpactTarget::Cell, Box::new(leaf.clone())).is_leaf());
-        assert!(!TriggerChain::OnCellDestroyed(Box::new(leaf.clone())).is_leaf());
-        assert!(!TriggerChain::OnBoltLost(Box::new(leaf.clone())).is_leaf());
-        assert!(!TriggerChain::OnBumpSuccess(Box::new(leaf)).is_leaf());
+        assert!(!TriggerChain::OnPerfectBump(vec![leaf.clone()]).is_leaf());
+        assert!(!TriggerChain::OnImpact(ImpactTarget::Cell, vec![leaf.clone()]).is_leaf());
+        assert!(!TriggerChain::OnCellDestroyed(vec![leaf.clone()]).is_leaf());
+        assert!(!TriggerChain::OnBoltLost(vec![leaf.clone()]).is_leaf());
+        assert!(!TriggerChain::OnBumpSuccess(vec![leaf]).is_leaf());
     }
 
     // --- ChipEffect with TriggerChain tests ---
@@ -700,22 +704,22 @@ mod tests {
     #[test]
     fn full_surge_chain_ron_parses() {
         let e: ChipEffect = ron::de::from_str(
-            "Overclock(OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0))))",
+            "Overclock(OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)])]))",
         )
         .expect("should parse full surge chain as ChipEffect");
         assert_eq!(
             e,
-            ChipEffect::Overclock(TriggerChain::OnPerfectBump(Box::new(
+            ChipEffect::Overclock(TriggerChain::OnPerfectBump(vec![
                 TriggerChain::OnImpact(
                     ImpactTarget::Cell,
-                    Box::new(TriggerChain::Shockwave {
+                    vec![TriggerChain::Shockwave {
                         base_range: 64.0,
                         range_per_level: 32.0,
                         stacks: 1,
                         speed: 400.0,
-                    })
-                )
-            )))
+                    }],
+                ),
+            ]))
         );
     }
 
@@ -744,18 +748,18 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_impact_breaker_leaf() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnImpact(Breaker, MultiBolt(base_count: 2, count_per_level: 0, stacks: 1))",
+            "OnImpact(Breaker, [MultiBolt(base_count: 2, count_per_level: 0, stacks: 1)])",
         )
         .expect("should parse OnImpact(Breaker, MultiBolt)");
         assert_eq!(
             tc,
             TriggerChain::OnImpact(
                 ImpactTarget::Breaker,
-                Box::new(TriggerChain::MultiBolt {
+                vec![TriggerChain::MultiBolt {
                     base_count: 2,
                     count_per_level: 0,
                     stacks: 1,
-                })
+                }],
             )
         );
     }
@@ -763,18 +767,18 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_impact_wall_leaf() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnImpact(Wall, Shield(base_duration: 5.0, duration_per_level: 0.0, stacks: 1))",
+            "OnImpact(Wall, [Shield(base_duration: 5.0, duration_per_level: 0.0, stacks: 1)])",
         )
         .expect("should parse OnImpact(Wall, Shield)");
         assert_eq!(
             tc,
             TriggerChain::OnImpact(
                 ImpactTarget::Wall,
-                Box::new(TriggerChain::Shield {
+                vec![TriggerChain::Shield {
                     base_duration: 5.0,
                     duration_per_level: 0.0,
                     stacks: 1,
-                })
+                }],
             )
         );
     }
@@ -784,16 +788,16 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_bump_success_leaf() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnBumpSuccess(Shield(base_duration: 3.0, duration_per_level: 0.0, stacks: 1))",
+            "OnBumpSuccess([Shield(base_duration: 3.0, duration_per_level: 0.0, stacks: 1)])",
         )
         .expect("should parse OnBumpSuccess(Shield)");
         assert_eq!(
             tc,
-            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::Shield {
+            TriggerChain::OnBumpSuccess(vec![TriggerChain::Shield {
                 base_duration: 3.0,
                 duration_per_level: 0.0,
                 stacks: 1,
-            }))
+            }])
         );
     }
 
@@ -801,7 +805,7 @@ mod tests {
 
     #[test]
     fn on_bump_success_depth_is_one() {
-        let tc = TriggerChain::OnBumpSuccess(Box::new(TriggerChain::test_shield(3.0)));
+        let tc = TriggerChain::OnBumpSuccess(vec![TriggerChain::test_shield(3.0)]);
         assert_eq!(tc.depth(), 1);
     }
 
@@ -809,7 +813,7 @@ mod tests {
     fn on_impact_depth_is_one() {
         let tc = TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::test_shockwave(64.0)),
+            vec![TriggerChain::test_shockwave(64.0)],
         );
         assert_eq!(tc.depth(), 1);
     }
@@ -1002,10 +1006,10 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_lose_life_wrapped_in_on_bolt_lost() {
         let tc: TriggerChain =
-            ron::de::from_str("OnBoltLost(LoseLife)").expect("should parse OnBoltLost(LoseLife)");
+            ron::de::from_str("OnBoltLost([LoseLife])").expect("should parse OnBoltLost(LoseLife)");
         assert_eq!(
             tc,
-            TriggerChain::OnBoltLost(Box::new(TriggerChain::LoseLife))
+            TriggerChain::OnBoltLost(vec![TriggerChain::LoseLife])
         );
     }
 
@@ -1031,11 +1035,11 @@ mod tests {
 
     #[test]
     fn trigger_chain_deserializes_spawn_bolt_wrapped_in_on_bump_success() {
-        let tc: TriggerChain = ron::de::from_str("OnBumpSuccess(SpawnBolt)")
+        let tc: TriggerChain = ron::de::from_str("OnBumpSuccess([SpawnBolt])")
             .expect("should parse OnBumpSuccess(SpawnBolt)");
         assert_eq!(
             tc,
-            TriggerChain::OnBumpSuccess(Box::new(TriggerChain::SpawnBolt))
+            TriggerChain::OnBumpSuccess(vec![TriggerChain::SpawnBolt])
         );
     }
 
@@ -1070,64 +1074,64 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_on_early_bump_wrapping_leaf() {
         let tc: TriggerChain =
-            ron::de::from_str("OnEarlyBump(LoseLife)").expect("should parse OnEarlyBump(LoseLife)");
+            ron::de::from_str("OnEarlyBump([LoseLife])").expect("should parse OnEarlyBump(LoseLife)");
         assert_eq!(
             tc,
-            TriggerChain::OnEarlyBump(Box::new(TriggerChain::LoseLife))
+            TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife])
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_on_early_bump_nested_two_deep() {
         let tc: TriggerChain = ron::de::from_str(
-            "OnEarlyBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)))",
+            "OnEarlyBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])])",
         )
         .expect("should parse OnEarlyBump nested two deep");
         assert_eq!(
             tc,
-            TriggerChain::OnEarlyBump(Box::new(TriggerChain::OnImpact(
+            TriggerChain::OnEarlyBump(vec![TriggerChain::OnImpact(
                 ImpactTarget::Cell,
-                Box::new(TriggerChain::Shockwave {
+                vec![TriggerChain::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
                     stacks: 1,
                     speed: 400.0,
-                })
-            )))
+                }],
+            )])
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_on_late_bump_wrapping_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnLateBump(TimePenalty(seconds: 3.0))")
+        let tc: TriggerChain = ron::de::from_str("OnLateBump([TimePenalty(seconds: 3.0)])")
             .expect("should parse OnLateBump(TimePenalty)");
         assert_eq!(
             tc,
-            TriggerChain::OnLateBump(Box::new(TriggerChain::TimePenalty { seconds: 3.0 }))
+            TriggerChain::OnLateBump(vec![TriggerChain::TimePenalty { seconds: 3.0 }])
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_on_bump_whiff_wrapping_spawn_bolt() {
-        let tc: TriggerChain = ron::de::from_str("OnBumpWhiff(SpawnBolt)")
+        let tc: TriggerChain = ron::de::from_str("OnBumpWhiff([SpawnBolt])")
             .expect("should parse OnBumpWhiff(SpawnBolt)");
         assert_eq!(
             tc,
-            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::SpawnBolt))
+            TriggerChain::OnBumpWhiff(vec![TriggerChain::SpawnBolt])
         );
     }
 
     #[test]
     fn trigger_chain_deserializes_on_bump_whiff_wrapping_speed_boost() {
         let tc: TriggerChain =
-            ron::de::from_str("OnBumpWhiff(SpeedBoost(target: Bolt, multiplier: 1.5))")
+            ron::de::from_str("OnBumpWhiff([SpeedBoost(target: Bolt, multiplier: 1.5)])")
                 .expect("should parse OnBumpWhiff(SpeedBoost)");
         assert_eq!(
             tc,
-            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::SpeedBoost {
+            TriggerChain::OnBumpWhiff(vec![TriggerChain::SpeedBoost {
                 target: SpeedBoostTarget::Bolt,
                 multiplier: 1.5,
-            }))
+            }])
         );
     }
 
@@ -1151,25 +1155,25 @@ mod tests {
     #[test]
     fn new_triggers_wrapping_leaf_have_depth_one() {
         assert_eq!(
-            TriggerChain::OnEarlyBump(Box::new(TriggerChain::LoseLife)).depth(),
+            TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]).depth(),
             1
         );
         assert_eq!(
-            TriggerChain::OnLateBump(Box::new(TriggerChain::SpawnBolt)).depth(),
+            TriggerChain::OnLateBump(vec![TriggerChain::SpawnBolt]).depth(),
             1
         );
         assert_eq!(
-            TriggerChain::OnBumpWhiff(Box::new(TriggerChain::TimePenalty { seconds: 5.0 })).depth(),
+            TriggerChain::OnBumpWhiff(vec![TriggerChain::TimePenalty { seconds: 5.0 }]).depth(),
             1
         );
     }
 
     #[test]
     fn on_bump_whiff_nested_two_deep_has_depth_two() {
-        let tc = TriggerChain::OnBumpWhiff(Box::new(TriggerChain::OnImpact(
+        let tc = TriggerChain::OnBumpWhiff(vec![TriggerChain::OnImpact(
             ImpactTarget::Cell,
-            Box::new(TriggerChain::LoseLife),
-        )));
+            vec![TriggerChain::LoseLife],
+        )]);
         assert_eq!(tc.depth(), 2);
     }
 
@@ -1191,10 +1195,10 @@ mod tests {
 
     #[test]
     fn new_triggers_return_is_leaf_false() {
-        assert!(!TriggerChain::OnEarlyBump(Box::new(TriggerChain::LoseLife)).is_leaf());
-        assert!(!TriggerChain::OnLateBump(Box::new(TriggerChain::SpawnBolt)).is_leaf());
+        assert!(!TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]).is_leaf());
+        assert!(!TriggerChain::OnLateBump(vec![TriggerChain::SpawnBolt]).is_leaf());
         assert!(
-            !TriggerChain::OnBumpWhiff(Box::new(TriggerChain::TimePenalty { seconds: 5.0 }))
+            !TriggerChain::OnBumpWhiff(vec![TriggerChain::TimePenalty { seconds: 5.0 }])
                 .is_leaf()
         );
     }
@@ -1223,11 +1227,11 @@ mod tests {
 
     #[test]
     fn chip_effect_overclock_with_on_bump_whiff_lose_life() {
-        let e: ChipEffect = ron::de::from_str("Overclock(OnBumpWhiff(LoseLife))")
+        let e: ChipEffect = ron::de::from_str("Overclock(OnBumpWhiff([LoseLife]))")
             .expect("should parse Overclock(OnBumpWhiff(LoseLife))");
         assert_eq!(
             e,
-            ChipEffect::Overclock(TriggerChain::OnBumpWhiff(Box::new(TriggerChain::LoseLife)))
+            ChipEffect::Overclock(TriggerChain::OnBumpWhiff(vec![TriggerChain::LoseLife]))
         );
     }
 
@@ -1269,14 +1273,14 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_speed_boost_wrapped_in_on_perfect_bump() {
         let tc: TriggerChain =
-            ron::de::from_str("OnPerfectBump(SpeedBoost(target: Bolt, multiplier: 1.5))")
+            ron::de::from_str("OnPerfectBump([SpeedBoost(target: Bolt, multiplier: 1.5)])")
                 .expect("should parse OnPerfectBump(SpeedBoost)");
         assert_eq!(
             tc,
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::SpeedBoost {
+            TriggerChain::OnPerfectBump(vec![TriggerChain::SpeedBoost {
                 target: SpeedBoostTarget::Bolt,
                 multiplier: 1.5,
-            }))
+            }])
         );
     }
 
@@ -1389,13 +1393,13 @@ mod tests {
     #[test]
     fn trigger_chain_deserializes_chain_bolt_wrapped_in_on_perfect_bump() {
         let tc: TriggerChain =
-            ron::de::from_str("OnPerfectBump(ChainBolt(tether_distance: 150.0))")
+            ron::de::from_str("OnPerfectBump([ChainBolt(tether_distance: 150.0)])")
                 .expect("should parse OnPerfectBump(ChainBolt)");
         assert_eq!(
             tc,
-            TriggerChain::OnPerfectBump(Box::new(TriggerChain::ChainBolt {
+            TriggerChain::OnPerfectBump(vec![TriggerChain::ChainBolt {
                 tether_distance: 150.0,
-            }))
+            }])
         );
     }
 

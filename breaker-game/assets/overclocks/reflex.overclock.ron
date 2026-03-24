@@ -3,5 +3,5 @@
     description: "Perfect bump spawns an extra bolt",
     rarity: Rare,
     max_stacks: 1,
-    effects: [Overclock(OnPerfectBump(SpawnBolt))],
+    effects: [Overclock(OnPerfectBump([SpawnBolt]))],
 )

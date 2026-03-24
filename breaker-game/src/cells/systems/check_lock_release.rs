@@ -187,6 +187,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         tick(&mut app);
 
@@ -302,6 +303,7 @@ mod tests {
             cell,
             damage: 10.0,
             source_bolt: Entity::PLACEHOLDER,
+            source_chip: None,
         })));
         tick(&mut app);
 

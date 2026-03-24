@@ -53,6 +53,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -68,6 +69,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -88,6 +90,7 @@ mod tests {
         app.world_mut().commands().trigger(ChipEffectApplied {
             effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
             max_stacks: 3,
+            chip_name: String::new(),
         });
         app.world_mut().flush();
 

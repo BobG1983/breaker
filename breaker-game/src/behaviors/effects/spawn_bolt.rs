@@ -15,7 +15,9 @@ pub(crate) fn handle_spawn_bolt(
     let TriggerChain::SpawnBolt = &trigger.event().effect else {
         return;
     };
-    writer.write(SpawnAdditionalBolt);
+    writer.write(SpawnAdditionalBolt {
+        source_chip: trigger.event().source_chip.clone(),
+    });
 }
 
 #[cfg(test)]
@@ -59,6 +61,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::SpawnBolt,
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -77,6 +80,7 @@ mod tests {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::LoseLife,
             bolt: None,
+            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
