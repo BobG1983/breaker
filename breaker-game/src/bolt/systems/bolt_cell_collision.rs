@@ -250,7 +250,7 @@ mod tests {
     use rantzsoft_physics2d::{
         aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
     };
-    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+    use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
     use super::*;
     use crate::{
@@ -311,6 +311,7 @@ mod tests {
     fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
         let (cw, ch) = default_cell_dims();
         let half_extents = Vec2::new(cw.half_width(), ch.half_height());
+        let pos = Vec2::new(x, y);
         app.world_mut()
             .spawn((
                 Cell,
@@ -318,7 +319,8 @@ mod tests {
                 ch,
                 Aabb2D::new(Vec2::ZERO, half_extents),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                Position2D(Vec2::new(x, y)),
+                Position2D(pos),
+                GlobalPosition2D(pos),
                 Spatial2D,
                 GameDrawLayer::Cell,
             ))
@@ -844,6 +846,7 @@ mod tests {
     // --- Wall collision tests ---
 
     fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_height: f32) {
+        let pos = Vec2::new(x, y);
         app.world_mut().spawn((
             Wall,
             WallSize {
@@ -852,7 +855,8 @@ mod tests {
             },
             Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, half_height)),
             CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
-            Position2D(Vec2::new(x, y)),
+            Position2D(pos),
+            GlobalPosition2D(pos),
             Spatial2D,
             GameDrawLayer::Wall,
         ));
@@ -950,6 +954,7 @@ mod tests {
     fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
         let (cw, ch) = default_cell_dims();
         let half_extents = Vec2::new(cw.half_width(), ch.half_height());
+        let pos = Vec2::new(x, y);
         app.world_mut()
             .spawn((
                 Cell,
@@ -958,7 +963,8 @@ mod tests {
                 CellHealth::new(hp),
                 Aabb2D::new(Vec2::ZERO, half_extents),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                Position2D(Vec2::new(x, y)),
+                Position2D(pos),
+                GlobalPosition2D(pos),
                 Spatial2D,
                 GameDrawLayer::Cell,
             ))
@@ -1931,6 +1937,7 @@ mod tests {
         aabb_half_extents: Vec2,
     ) -> Entity {
         let (cw, ch) = default_cell_dims();
+        let pos = Vec2::new(x, y);
         app.world_mut()
             .spawn((
                 Cell,
@@ -1938,7 +1945,8 @@ mod tests {
                 ch,
                 Aabb2D::new(Vec2::ZERO, aabb_half_extents),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                Position2D(Vec2::new(x, y)),
+                Position2D(pos),
+                GlobalPosition2D(pos),
                 Spatial2D,
                 GameDrawLayer::Cell,
             ))
@@ -2021,6 +2029,7 @@ mod tests {
             Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
             CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
             Position2D(Vec2::new(200.0, 0.0)),
+            GlobalPosition2D(Vec2::new(200.0, 0.0)),
             Spatial2D,
             GameDrawLayer::Wall,
         ));
@@ -2128,6 +2137,7 @@ mod tests {
                 Aabb2D::new(Vec2::ZERO, half_extents),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 Position2D(Vec2::new(0.0, cell_y)),
+                GlobalPosition2D(Vec2::new(0.0, cell_y)),
                 Spatial2D,
                 GameDrawLayer::Cell,
             ))

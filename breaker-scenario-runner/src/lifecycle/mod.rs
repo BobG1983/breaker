@@ -34,7 +34,7 @@ use breaker::{
     screen::chip_select::{ChipOffering, ChipOffers},
     shared::{GameState, PlayingState, RunSeed, SelectedArchetype},
 };
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     input::InputDriver,
@@ -62,6 +62,7 @@ type BoltDebugQuery<'w, 's> = Query<
         Entity,
         &'static mut Position2D,
         Option<&'static mut BoltVelocity>,
+        Option<&'static mut Velocity2D>,
     ),
     With<ScenarioTagBolt>,
 >;
@@ -347,16 +348,19 @@ pub fn apply_debug_setup(
         return;
     };
 
-    for (entity, mut position, bolt_vel) in &mut bolt_query {
+    for (entity, mut position, bolt_vel, velocity2d) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
             position.0.x = x;
             position.0.y = y;
         }
 
-        if let Some((vx, vy)) = setup.bolt_velocity
-            && let Some(mut vel) = bolt_vel
-        {
-            vel.value = Vec2::new(vx, vy);
+        if let Some((vx, vy)) = setup.bolt_velocity {
+            if let Some(mut vel) = bolt_vel {
+                vel.value = Vec2::new(vx, vy);
+            }
+            if let Some(mut v2d) = velocity2d {
+                v2d.0 = Vec2::new(vx, vy);
+            }
         }
 
         if setup.disable_physics {
@@ -433,16 +437,19 @@ pub fn deferred_debug_setup(
         return;
     }
 
-    for (entity, mut position, bolt_vel) in &mut bolt_query {
+    for (entity, mut position, bolt_vel, velocity2d) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
             position.0.x = x;
             position.0.y = y;
         }
 
-        if let Some((vx, vy)) = setup.bolt_velocity
-            && let Some(mut vel) = bolt_vel
-        {
-            vel.value = Vec2::new(vx, vy);
+        if let Some((vx, vy)) = setup.bolt_velocity {
+            if let Some(mut vel) = bolt_vel {
+                vel.value = Vec2::new(vx, vy);
+            }
+            if let Some(mut v2d) = velocity2d {
+                v2d.0 = Vec2::new(vx, vy);
+            }
         }
 
         if setup.disable_physics {

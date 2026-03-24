@@ -4,6 +4,7 @@
 //! the CCD system in the physics domain handles position advancement.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{components::*, filters::ActiveFilter},
@@ -13,12 +14,14 @@ use crate::{
 
 /// Prepares the bolt velocity for the current timestep.
 ///
-/// Enforces speed clamping (min/max) and minimum angle from horizontal.
+/// Enforces speed clamping (min/max) and minimum angle from horizontal
+/// on both `BoltVelocity` and `Velocity2D`.
 /// Position advancement is handled by the CCD collision system.
 pub(crate) fn prepare_bolt_velocity(
     mut query: Query<
         (
             &mut BoltVelocity,
+            &mut Velocity2D,
             &BoltMinSpeed,
             &BoltMaxSpeed,
             Option<&BoltSpeedBoost>,
@@ -31,18 +34,27 @@ pub(crate) fn prepare_bolt_velocity(
         return;
     };
 
-    for (mut velocity, min_speed, max_speed, speed_boost) in &mut query {
+    for (mut velocity, mut velocity2d, min_speed, max_speed, speed_boost) in &mut query {
+        let boost = speed_boost.map_or(0.0, |b| b.0);
+        let effective_min = min_speed.0 + boost;
+        let effective_max = max_speed.0 + boost;
+
+        // Clamp BoltVelocity
         let speed = velocity.speed();
         if speed > f32::EPSILON {
-            let boost = speed_boost.map_or(0.0, |b| b.0);
-            let effective_min = min_speed.0 + boost;
-            let effective_max = max_speed.0 + boost;
             let clamped_speed = speed.clamp(effective_min, effective_max);
             if (clamped_speed - speed).abs() > f32::EPSILON {
                 velocity.value = velocity.direction() * clamped_speed;
             }
 
             velocity.enforce_min_angle(min_angle.0);
+        }
+
+        // Clamp Velocity2D
+        let v2d_speed = velocity2d.speed();
+        if v2d_speed > f32::EPSILON {
+            velocity2d.0 = velocity2d.0.clamp_length(effective_min, effective_max);
+            enforce_min_angle(&mut velocity2d.0, min_angle.0);
         }
     }
 }
@@ -342,6 +354,76 @@ mod tests {
         assert!(
             (vel.speed() - 600.0).abs() < 1.0,
             "speed {} should remain at 600.0 when boost is 0.0 (at base max, no effective change)",
+            vel.speed()
+        );
+    }
+
+    // ── Velocity2D migration tests ────────────────────────────────
+    //
+    // After migration, prepare_bolt_velocity reads Velocity2D instead of
+    // BoltVelocity. These tests assert on Velocity2D and will FAIL until
+    // the system is updated to read the new component.
+
+    /// Given: bolt with `Velocity2D`(0.0, 100.0), min=200, max=600.
+    /// When: `prepare_bolt_velocity` runs.
+    /// Then: `Velocity2D` speed clamped up to >= 200.
+    #[test]
+    fn velocity2d_speed_below_min_is_clamped_up() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        let mut app = test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 100.0)),
+                BoltMinSpeed(200.0),
+                BoltMaxSpeed(600.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world()
+            .get::<Velocity2D>(entity)
+            .expect("entity should have Velocity2D");
+        assert!(
+            vel.speed() >= 200.0 - f32::EPSILON,
+            "Velocity2D speed {} should be clamped up to at least min_speed 200.0",
+            vel.speed()
+        );
+    }
+
+    /// Given: bolt with `Velocity2D`(0.0, 800.0), min=200, max=600.
+    /// When: `prepare_bolt_velocity` runs.
+    /// Then: `Velocity2D` speed clamped down to 600.
+    #[test]
+    fn velocity2d_speed_above_max_is_clamped_down() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        let mut app = test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 800.0)),
+                BoltMinSpeed(200.0),
+                BoltMaxSpeed(600.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world()
+            .get::<Velocity2D>(entity)
+            .expect("entity should have Velocity2D");
+        assert!(
+            (vel.speed() - 600.0).abs() < 1.0,
+            "Velocity2D speed {} should be clamped down to max_speed 600.0",
             vel.speed()
         );
     }

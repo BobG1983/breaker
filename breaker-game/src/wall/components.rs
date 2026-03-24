@@ -102,4 +102,34 @@ mod tests {
             scale.y
         );
     }
+
+    // ── CollisionLayers tests ──────────────────────────────────────
+
+    #[test]
+    fn wall_collision_layers_have_correct_values() {
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, WALL_LAYER};
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app
+            .world_mut()
+            .spawn((Wall, CollisionLayers::new(WALL_LAYER, BOLT_LAYER)))
+            .id();
+        app.update();
+        let layers = app
+            .world()
+            .get::<CollisionLayers>(entity)
+            .expect("Wall should have CollisionLayers");
+        assert_eq!(
+            layers.membership, WALL_LAYER,
+            "Wall membership should be WALL_LAYER (0x{WALL_LAYER:02X}), got 0x{:02X}",
+            layers.membership
+        );
+        assert_eq!(
+            layers.mask, BOLT_LAYER,
+            "Wall mask should be BOLT_LAYER (0x{BOLT_LAYER:02X}), got 0x{:02X}",
+            layers.mask
+        );
+    }
 }

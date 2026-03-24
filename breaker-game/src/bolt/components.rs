@@ -1,11 +1,11 @@
 //! Bolt domain components.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
+use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D, Velocity2D};
 
 /// Marker component identifying the bolt entity.
 #[derive(Component, Debug, Default)]
-#[require(Spatial2D, InterpolateTransform2D, BoltVelocity)]
+#[require(Spatial2D, InterpolateTransform2D, BoltVelocity, Velocity2D)]
 pub struct Bolt;
 
 /// Marker component indicating the bolt is hovering above the breaker,
@@ -96,6 +96,33 @@ pub struct BoltRespawnAngleSpread(pub f32);
 /// Initial launch angle from vertical in radians.
 #[derive(Component, Debug)]
 pub struct BoltInitialAngle(pub f32);
+
+/// Adjusts velocity so it never gets too close to horizontal (free-function variant).
+///
+/// If the angle from horizontal is less than `min_angle`, rotates the
+/// vector to the minimum angle while preserving speed and Y sign.
+/// Zero velocity is returned unchanged.
+///
+/// This is the `Velocity2D`-compatible replacement for
+/// `BoltVelocity::enforce_min_angle`.
+pub fn enforce_min_angle(velocity: &mut Vec2, min_angle: f32) {
+    let speed = velocity.length();
+    if speed < f32::EPSILON {
+        return;
+    }
+
+    let angle_from_horizontal = velocity.y.abs().atan2(velocity.x.abs());
+    if angle_from_horizontal < min_angle {
+        let sign_x = velocity.x.signum();
+        let sign_y = if velocity.y.abs() < f32::EPSILON {
+            1.0 // Default to upward if perfectly horizontal
+        } else {
+            velocity.y.signum()
+        };
+        velocity.x = sign_x * speed * min_angle.cos();
+        velocity.y = sign_y * speed * min_angle.sin();
+    }
+}
 
 /// Marker for extra bolts spawned by archetype consequences (e.g. Prism).
 ///
@@ -287,6 +314,127 @@ mod tests {
         assert!(
             app.world().get::<CleanupOnNodeExit>(entity).is_none(),
             "Bolt #[require] should NOT auto-insert CleanupOnNodeExit"
+        );
+    }
+
+    // ── Velocity2D migration tests ────────────────────────────────
+
+    #[test]
+    fn bolt_require_inserts_velocity2d_default() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app.world_mut().spawn(Bolt).id();
+        app.update();
+        let velocity = app
+            .world()
+            .get::<Velocity2D>(entity)
+            .expect("Bolt should auto-insert Velocity2D via #[require]");
+        assert_eq!(
+            velocity.0,
+            Vec2::ZERO,
+            "default Velocity2D should be Vec2::ZERO"
+        );
+    }
+
+    // ── enforce_min_angle free function tests ─────────────────────
+
+    #[test]
+    fn free_enforce_min_angle_corrects_shallow() {
+        use std::f32::consts::FRAC_PI_4;
+        let mut velocity = Vec2::new(10.0, 0.01);
+        let speed_before = velocity.length();
+        enforce_min_angle(&mut velocity, FRAC_PI_4);
+        let speed_after = velocity.length();
+        assert!(
+            (speed_before - speed_after).abs() < 1e-4,
+            "speed should be preserved: before={speed_before}, after={speed_after}"
+        );
+        let angle = velocity.y.abs().atan2(velocity.x.abs());
+        assert!(
+            angle >= FRAC_PI_4 - 1e-4,
+            "angle {angle} should be >= PI/4 ({FRAC_PI_4})"
+        );
+    }
+
+    #[test]
+    fn free_enforce_min_angle_preserves_signs() {
+        use std::f32::consts::FRAC_PI_4;
+        let mut velocity = Vec2::new(-10.0, -0.01);
+        enforce_min_angle(&mut velocity, FRAC_PI_4);
+        assert!(
+            velocity.x < 0.0,
+            "x sign should be negative, got {}",
+            velocity.x
+        );
+        assert!(
+            velocity.y < 0.0,
+            "y sign should be negative, got {}",
+            velocity.y
+        );
+    }
+
+    #[test]
+    fn free_enforce_min_angle_leaves_steep_unchanged() {
+        use crate::breaker::resources::BreakerConfig;
+        let mut velocity = Vec2::new(1.0, 5.0);
+        let original = velocity;
+        enforce_min_angle(
+            &mut velocity,
+            BreakerConfig::default()
+                .min_angle_from_horizontal
+                .to_radians(),
+        );
+        assert!(
+            (velocity.x - original.x).abs() < 1e-6,
+            "steep velocity x should be unchanged"
+        );
+        assert!(
+            (velocity.y - original.y).abs() < 1e-6,
+            "steep velocity y should be unchanged"
+        );
+    }
+
+    #[test]
+    fn free_enforce_min_angle_zero_velocity_unchanged() {
+        use std::f32::consts::FRAC_PI_4;
+        let mut velocity = Vec2::ZERO;
+        enforce_min_angle(&mut velocity, FRAC_PI_4);
+        assert_eq!(velocity, Vec2::ZERO, "zero velocity should remain zero");
+    }
+
+    // ── CollisionLayers tests ──────────────────────────────────────
+
+    #[test]
+    fn bolt_collision_layers_have_correct_values() {
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER};
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
+            ))
+            .id();
+        app.update();
+        let layers = app
+            .world()
+            .get::<CollisionLayers>(entity)
+            .expect("Bolt should have CollisionLayers");
+        assert_eq!(
+            layers.membership, BOLT_LAYER,
+            "Bolt membership should be BOLT_LAYER (0x{BOLT_LAYER:02X}), got 0x{:02X}",
+            layers.membership
+        );
+        assert_eq!(
+            layers.mask,
+            CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
+            "Bolt mask should be CELL|WALL|BREAKER (0x{:02X}), got 0x{:02X}",
+            CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
+            layers.mask
         );
     }
 }

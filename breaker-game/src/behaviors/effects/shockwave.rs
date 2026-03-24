@@ -207,7 +207,7 @@ mod tests {
     use rantzsoft_physics2d::{
         aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
     };
-    use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
+    use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Scale2D, Spatial2D};
 
     use super::*;
     use crate::{
@@ -263,13 +263,15 @@ mod tests {
     }
 
     fn spawn_cell(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
+        let pos = Vec2::new(x, y);
         app.world_mut()
             .spawn((
                 Cell,
                 CellHealth::new(hp),
                 Aabb2D::new(Vec2::ZERO, Vec2::new(35.0, 12.0)),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                Position2D(Vec2::new(x, y)),
+                Position2D(pos),
+                GlobalPosition2D(pos),
                 Spatial2D,
                 GameDrawLayer::Cell,
             ))
@@ -277,6 +279,7 @@ mod tests {
     }
 
     fn spawn_locked_cell(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
+        let pos = Vec2::new(x, y);
         app.world_mut()
             .spawn((
                 Cell,
@@ -284,7 +287,8 @@ mod tests {
                 Locked,
                 Aabb2D::new(Vec2::ZERO, Vec2::new(35.0, 12.0)),
                 CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                Position2D(Vec2::new(x, y)),
+                Position2D(pos),
+                GlobalPosition2D(pos),
                 Spatial2D,
                 GameDrawLayer::Cell,
             ))

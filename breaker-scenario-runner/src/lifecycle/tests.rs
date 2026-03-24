@@ -2240,3 +2240,66 @@ fn check_frame_limit_gated_before_playing_entered() {
         frame.0
     );
 }
+
+// -------------------------------------------------------------------------
+// Velocity2D migration — apply_debug_setup writes Velocity2D
+// -------------------------------------------------------------------------
+
+/// After migration, `apply_debug_setup` must write `Velocity2D` (not `BoltVelocity`)
+/// when `bolt_velocity` is `Some(...)`.
+///
+/// Given: tagged bolt with `Velocity2D(0.0, 400.0)`, `debug_setup` `bolt_velocity: Some((0.0, 2000.0))`
+/// When: `apply_debug_setup` runs
+/// Then: `Velocity2D.0` == `Vec2::new(0.0, 2000.0)`
+///
+/// This test will FAIL until `apply_debug_setup` is updated to write `Velocity2D`.
+#[test]
+fn apply_debug_setup_writes_velocity2d_when_bolt_velocity_some() {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            bolt_velocity: Some((0.0, 2000.0)),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    app.update();
+    app.update();
+
+    let vel = app
+        .world()
+        .entity(entity)
+        .get::<Velocity2D>()
+        .expect("entity must have Velocity2D");
+    assert_eq!(
+        vel.0,
+        Vec2::new(0.0, 2000.0),
+        "expected Velocity2D == (0.0, 2000.0), got {:?}",
+        vel.0
+    );
+}

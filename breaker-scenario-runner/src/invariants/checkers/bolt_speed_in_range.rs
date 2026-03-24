@@ -1,19 +1,42 @@
 use bevy::prelude::*;
 use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity};
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
+/// Query alias for bolt speed checking — reads both legacy `BoltVelocity` and `Velocity2D`.
+type BoltSpeedQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        Option<&'static BoltVelocity>,
+        Option<&'static Velocity2D>,
+        &'static BoltMinSpeed,
+        &'static BoltMaxSpeed,
+    ),
+    With<ScenarioTagBolt>,
+>;
+
 /// Checks that bolt speed stays within configured min/max bounds.
 ///
+/// Reads speed from `Velocity2D` when present, falling back to `BoltVelocity`.
 /// Skips bolts with zero speed (serving or dead bolts).
 pub fn check_bolt_speed_in_range(
-    bolts: Query<(Entity, &BoltVelocity, &BoltMinSpeed, &BoltMaxSpeed), With<ScenarioTagBolt>>,
+    bolts: BoltSpeedQuery,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
 ) {
     const SPEED_TOLERANCE: f32 = 1.0;
-    for (entity, velocity, min_speed, max_speed) in &bolts {
-        let speed = velocity.speed();
+    for (entity, bolt_velocity, velocity2d, min_speed, max_speed) in &bolts {
+        // Prefer Velocity2D; fall back to BoltVelocity
+        let speed = if let Some(v2d) = velocity2d {
+            v2d.speed()
+        } else if let Some(bv) = bolt_velocity {
+            bv.speed()
+        } else {
+            continue;
+        };
         if speed < f32::EPSILON {
             continue;
         }
@@ -188,6 +211,45 @@ mod tests {
                 .any(|v| v.invariant == InvariantKind::BoltSpeedInRange),
             "expected no BoltSpeedInRange violation for speed=199.5 with min=200.0 \
             (within 1.0 tolerance), got: {:?}",
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::BoltSpeedInRange)
+                .map(|e| &e.message)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    // ── Velocity2D migration tests ────────────────────────────────
+    //
+    // After migration, check_bolt_speed_in_range reads Velocity2D instead of
+    // BoltVelocity. These tests will FAIL until the invariant checker is updated.
+
+    /// Bolt with `Velocity2D`(0.0, 1000.0), min=200, max=800 — speed 1000 exceeds max.
+    /// `check_bolt_speed_in_range` should detect this via `Velocity2D`, not `BoltVelocity`.
+    #[test]
+    fn bolt_speed_in_range_reads_velocity2d_fires_when_above_max() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        let mut app = test_app_bolt_speed();
+
+        // Spawn with Velocity2D only (no BoltVelocity) to prove the system reads Velocity2D
+        app.world_mut().spawn((
+            ScenarioTagBolt,
+            Velocity2D(Vec2::new(0.0, 1000.0)),
+            BoltMinSpeed(200.0),
+            BoltMaxSpeed(800.0),
+        ));
+
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::BoltSpeedInRange)
+                .count(),
+            1,
+            "expected 1 BoltSpeedInRange violation for Velocity2D speed=1000 with max=800, got: {:?}",
             log.0
                 .iter()
                 .filter(|v| v.invariant == InvariantKind::BoltSpeedInRange)
