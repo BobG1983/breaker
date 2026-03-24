@@ -1,9 +1,11 @@
 //! Axis-aligned bounding box for 2D collision detection.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Spatial2D;
 
 /// Axis-aligned bounding box defined by center and half-extents.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+#[require(Spatial2D)]
 pub struct Aabb2D {
     /// Center position of the bounding box.
     pub center: Vec2,
@@ -194,5 +196,54 @@ mod tests {
         // Both span [-3, 3] on Y → center=0, half_y=3
         assert_eq!(merged.center, Vec2::new(0.0, 0.0));
         assert_eq!(merged.half_extents, Vec2::new(8.0, 3.0));
+    }
+
+    // ── Behavior 6: Aabb2D as Component with #[require(Spatial2D)] ──
+
+    #[test]
+    fn aabb2d_spawned_alone_gets_spatial2d_required_components() {
+        use rantzsoft_spatial2d::components::{Position2D, Rotation2D, Scale2D};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app
+            .world_mut()
+            .spawn(Aabb2D::new(Vec2::ZERO, Vec2::new(10.0, 10.0)))
+            .id();
+        app.update();
+
+        let world = app.world();
+        assert!(
+            world.get::<Position2D>(entity).is_some(),
+            "missing Position2D"
+        );
+        assert!(
+            world.get::<Rotation2D>(entity).is_some(),
+            "missing Rotation2D"
+        );
+        assert!(world.get::<Scale2D>(entity).is_some(), "missing Scale2D");
+    }
+
+    #[test]
+    fn aabb2d_preserves_explicit_position_when_spawned_alongside() {
+        use rantzsoft_spatial2d::components::Position2D;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let entity = app
+            .world_mut()
+            .spawn((
+                Aabb2D::new(Vec2::ZERO, Vec2::new(10.0, 10.0)),
+                Position2D(Vec2::new(5.0, 5.0)),
+            ))
+            .id();
+        app.update();
+
+        let pos = app.world().get::<Position2D>(entity).unwrap();
+        assert_eq!(
+            pos.0,
+            Vec2::new(5.0, 5.0),
+            "explicit Position2D should not be overwritten by default"
+        );
     }
 }

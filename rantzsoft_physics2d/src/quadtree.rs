@@ -2,18 +2,18 @@
 
 use bevy::{platform::collections::HashSet, prelude::*};
 
-use crate::aabb::Aabb2D;
+use crate::{aabb::Aabb2D, collision_layers::CollisionLayers};
 
 /// Internal node representation for the quadtree.
 enum QuadNode {
     Leaf {
-        items: Vec<(Entity, Aabb2D)>,
+        items: Vec<(Entity, Aabb2D, CollisionLayers)>,
     },
     Branch {
         children: Box<[QuadNode; 4]>,
         /// Items stored at this branch level because they span multiple child
         /// quadrants and cannot be pushed down.
-        items: Vec<(Entity, Aabb2D)>,
+        items: Vec<(Entity, Aabb2D, CollisionLayers)>,
     },
 }
 
@@ -77,21 +77,26 @@ fn fitting_quadrant(parent_bounds: &Aabb2D, item_bounds: &Aabb2D) -> Option<usiz
     }
 }
 
+struct TreeConfig {
+    max_items_per_leaf: usize,
+    max_depth: usize,
+    depth: usize,
+}
+
 fn insert_into_node(
     node: &mut QuadNode,
     node_bounds: &Aabb2D,
     entity: Entity,
     bounds: Aabb2D,
-    max_items_per_leaf: usize,
-    max_depth: usize,
-    depth: usize,
+    layers: CollisionLayers,
+    cfg: TreeConfig,
 ) {
     match node {
         QuadNode::Leaf { items } => {
-            items.push((entity, bounds));
+            items.push((entity, bounds, layers));
             // Split if over capacity and we haven't reached max depth
-            if items.len() > max_items_per_leaf && depth < max_depth {
-                let old_items: Vec<(Entity, Aabb2D)> = std::mem::take(items);
+            if items.len() > cfg.max_items_per_leaf && cfg.depth < cfg.max_depth {
+                let old_items: Vec<(Entity, Aabb2D, CollisionLayers)> = std::mem::take(items);
                 let children = Box::new([
                     QuadNode::Leaf { items: Vec::new() },
                     QuadNode::Leaf { items: Vec::new() },
@@ -103,34 +108,26 @@ fn insert_into_node(
                     items: Vec::new(),
                 };
                 // Re-insert all items
-                for (e, b) in old_items {
-                    insert_into_node(
-                        node,
-                        node_bounds,
-                        e,
-                        b,
-                        max_items_per_leaf,
-                        max_depth,
-                        depth,
-                    );
+                for (e, b, l) in old_items {
+                    insert_into_node(node, node_bounds, e, b, l, TreeConfig {
+                        max_items_per_leaf: cfg.max_items_per_leaf,
+                        max_depth: cfg.max_depth,
+                        depth: cfg.depth,
+                    });
                 }
             }
         }
         QuadNode::Branch { children, items } => {
             if let Some(qi) = fitting_quadrant(node_bounds, &bounds) {
                 let cb = child_bounds(node_bounds, qi);
-                insert_into_node(
-                    &mut children[qi],
-                    &cb,
-                    entity,
-                    bounds,
-                    max_items_per_leaf,
-                    max_depth,
-                    depth + 1,
-                );
+                insert_into_node(&mut children[qi], &cb, entity, bounds, layers, TreeConfig {
+                    max_items_per_leaf: cfg.max_items_per_leaf,
+                    max_depth: cfg.max_depth,
+                    depth: cfg.depth + 1,
+                });
             } else {
                 // Spans multiple quadrants — store at this branch level
-                items.push((entity, bounds));
+                items.push((entity, bounds, layers));
             }
         }
     }
@@ -139,7 +136,7 @@ fn insert_into_node(
 fn remove_from_node(node: &mut QuadNode, entity: Entity) -> bool {
     match node {
         QuadNode::Leaf { items } => {
-            if let Some(pos) = items.iter().position(|(e, _)| *e == entity) {
+            if let Some(pos) = items.iter().position(|(e, ..)| *e == entity) {
                 items.swap_remove(pos);
                 return true;
             }
@@ -147,7 +144,7 @@ fn remove_from_node(node: &mut QuadNode, entity: Entity) -> bool {
         }
         QuadNode::Branch { children, items } => {
             // Check branch-level items first
-            if let Some(pos) = items.iter().position(|(e, _)| *e == entity) {
+            if let Some(pos) = items.iter().position(|(e, ..)| *e == entity) {
                 items.swap_remove(pos);
                 return true;
             }
@@ -175,7 +172,7 @@ fn query_aabb_node(
 
     match node {
         QuadNode::Leaf { items } => {
-            for &(entity, ref item_bounds) in items {
+            for &(entity, ref item_bounds, _) in items {
                 if item_bounds.overlaps(region) && seen.insert(entity) {
                     results.push(entity);
                 }
@@ -183,7 +180,7 @@ fn query_aabb_node(
         }
         QuadNode::Branch { children, items } => {
             // Check branch-level items
-            for &(entity, ref item_bounds) in items {
+            for &(entity, ref item_bounds, _) in items {
                 if item_bounds.overlaps(region) && seen.insert(entity) {
                     results.push(entity);
                 }
@@ -192,6 +189,48 @@ fn query_aabb_node(
             for (i, child) in children.iter().enumerate() {
                 let cb = child_bounds(node_bounds, i);
                 query_aabb_node(child, &cb, region, results, seen);
+            }
+        }
+    }
+}
+
+fn query_aabb_filtered_node(
+    node: &QuadNode,
+    node_bounds: &Aabb2D,
+    region: &Aabb2D,
+    query_layers: CollisionLayers,
+    results: &mut Vec<Entity>,
+    seen: &mut HashSet<Entity>,
+) {
+    if !node_bounds.overlaps(region) {
+        return;
+    }
+
+    match node {
+        QuadNode::Leaf { items } => {
+            for &(entity, ref item_bounds, ref item_layers) in items {
+                if item_bounds.overlaps(region)
+                    && query_layers.interacts_with(item_layers)
+                    && seen.insert(entity)
+                {
+                    results.push(entity);
+                }
+            }
+        }
+        QuadNode::Branch { children, items } => {
+            // Check branch-level items
+            for &(entity, ref item_bounds, ref item_layers) in items {
+                if item_bounds.overlaps(region)
+                    && query_layers.interacts_with(item_layers)
+                    && seen.insert(entity)
+                {
+                    results.push(entity);
+                }
+            }
+            // Recurse into children
+            for (i, child) in children.iter().enumerate() {
+                let cb = child_bounds(node_bounds, i);
+                query_aabb_filtered_node(child, &cb, region, query_layers, results, seen);
             }
         }
     }
@@ -223,16 +262,19 @@ impl Quadtree {
         }
     }
 
-    /// Inserts an entity with the given bounds into the tree.
-    pub fn insert(&mut self, entity: Entity, bounds: Aabb2D) {
+    /// Inserts an entity with the given bounds and collision layers into the tree.
+    pub fn insert(&mut self, entity: Entity, bounds: Aabb2D, layers: CollisionLayers) {
         insert_into_node(
             &mut self.root,
             &self.bounds,
             entity,
             bounds,
-            self.max_items_per_leaf,
-            self.max_depth,
-            0,
+            layers,
+            TreeConfig {
+                max_items_per_leaf: self.max_items_per_leaf,
+                max_depth: self.max_depth,
+                depth: 0,
+            },
         );
         self.len += 1;
     }
@@ -248,11 +290,35 @@ impl Quadtree {
     }
 
     /// Returns all entities whose bounds overlap the given region.
+    ///
+    /// This is the unfiltered query — it ignores `CollisionLayers` entirely
+    /// and returns every spatially overlapping entity.
     #[must_use]
     pub fn query_aabb(&self, region: &Aabb2D) -> Vec<Entity> {
         let mut results = Vec::new();
         let mut seen = HashSet::new();
         query_aabb_node(&self.root, &self.bounds, region, &mut results, &mut seen);
+        results
+    }
+
+    /// Returns entities whose bounds overlap the region AND whose
+    /// `CollisionLayers` interact with the given query layers.
+    ///
+    /// Filtering rule: an entity is returned when
+    /// `query_layers.interacts_with(&entity_layers)` is `true`, i.e.
+    /// `query_layers.mask & entity.membership != 0`.
+    #[must_use]
+    pub fn query_aabb_filtered(&self, region: &Aabb2D, layers: CollisionLayers) -> Vec<Entity> {
+        let mut results = Vec::new();
+        let mut seen = HashSet::new();
+        query_aabb_filtered_node(
+            &self.root,
+            &self.bounds,
+            region,
+            layers,
+            &mut results,
+            &mut seen,
+        );
         results
     }
 
@@ -268,7 +334,30 @@ impl Quadtree {
         // We need the item bounds to do the circle test. Walk the tree to
         // collect (entity, bounds) pairs for the candidates.
         let candidate_set: HashSet<Entity> = candidates.into_iter().collect();
-        collect_matching_items(&self.root, &candidate_set, &mut |entity, item_bounds| {
+        collect_matching_items(&self.root, &candidate_set, &mut |entity, item_bounds, _| {
+            if circle_overlaps_aabb(center, radius, item_bounds) && seen.insert(entity) {
+                results.push(entity);
+            }
+        });
+        results
+    }
+
+    /// Returns entities whose bounds overlap a circle AND whose
+    /// `CollisionLayers` interact with the given query layers.
+    #[must_use]
+    pub fn query_circle_filtered(
+        &self,
+        center: Vec2,
+        radius: f32,
+        layers: CollisionLayers,
+    ) -> Vec<Entity> {
+        // Use AABB broad phase with layer filtering, then refine with circle test
+        let broad_region = Aabb2D::new(center, Vec2::splat(radius));
+        let candidates = self.query_aabb_filtered(&broad_region, layers);
+        let mut results = Vec::new();
+        let mut seen = HashSet::new();
+        let candidate_set: HashSet<Entity> = candidates.into_iter().collect();
+        collect_matching_items(&self.root, &candidate_set, &mut |entity, item_bounds, _| {
             if circle_overlaps_aabb(center, radius, item_bounds) && seen.insert(entity) {
                 results.push(entity);
             }
@@ -298,20 +387,20 @@ impl Quadtree {
 fn collect_matching_items(
     node: &QuadNode,
     candidates: &HashSet<Entity>,
-    callback: &mut impl FnMut(Entity, &Aabb2D),
+    callback: &mut impl FnMut(Entity, &Aabb2D, &CollisionLayers),
 ) {
     match node {
         QuadNode::Leaf { items } => {
-            for &(entity, ref bounds) in items {
+            for &(entity, ref bounds, ref layers) in items {
                 if candidates.contains(&entity) {
-                    callback(entity, bounds);
+                    callback(entity, bounds, layers);
                 }
             }
         }
         QuadNode::Branch { children, items } => {
-            for &(entity, ref bounds) in items {
+            for &(entity, ref bounds, ref layers) in items {
                 if candidates.contains(&entity) {
-                    callback(entity, bounds);
+                    callback(entity, bounds, layers);
                 }
             }
             for child in children.iter() {
@@ -344,6 +433,10 @@ mod tests {
         (0..count).map(|_| world.spawn_empty().id()).collect()
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // Existing tests — updated to 3-arg insert with CollisionLayers::default()
+    // ════════════════════════════════════════════════════════════════
+
     #[test]
     fn new_creates_empty_tree() {
         let tree = test_tree();
@@ -355,7 +448,11 @@ mod tests {
     fn insert_increases_len() {
         let mut tree = test_tree();
         let entities = spawn_entities(1);
-        tree.insert(entities[0], small_aabb(10.0, 10.0));
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::default(),
+        );
         assert_eq!(tree.len(), 1);
         assert!(!tree.is_empty());
     }
@@ -369,7 +466,11 @@ mod tests {
         let mut tree = test_tree();
         let entities = spawn_entities(5);
         for (i, &e) in entities.iter().enumerate() {
-            tree.insert(e, small_aabb(i as f32 * 10.0, 0.0));
+            tree.insert(
+                e,
+                small_aabb(i as f32 * 10.0, 0.0),
+                CollisionLayers::default(),
+            );
         }
         assert_eq!(tree.len(), 5);
     }
@@ -378,9 +479,21 @@ mod tests {
     fn remove_decreases_len() {
         let mut tree = test_tree();
         let entities = spawn_entities(3);
-        tree.insert(entities[0], small_aabb(0.0, 0.0));
-        tree.insert(entities[1], small_aabb(10.0, 0.0));
-        tree.insert(entities[2], small_aabb(20.0, 0.0));
+        tree.insert(
+            entities[0],
+            small_aabb(0.0, 0.0),
+            CollisionLayers::default(),
+        );
+        tree.insert(
+            entities[1],
+            small_aabb(10.0, 0.0),
+            CollisionLayers::default(),
+        );
+        tree.insert(
+            entities[2],
+            small_aabb(20.0, 0.0),
+            CollisionLayers::default(),
+        );
 
         let removed = tree.remove(entities[1]);
         assert!(removed);
@@ -391,7 +504,11 @@ mod tests {
     fn remove_returns_false_for_missing_entity() {
         let mut tree = test_tree();
         let entities = spawn_entities(2);
-        tree.insert(entities[0], small_aabb(0.0, 0.0));
+        tree.insert(
+            entities[0],
+            small_aabb(0.0, 0.0),
+            CollisionLayers::default(),
+        );
         // entities[1] was never inserted
         let removed = tree.remove(entities[1]);
         assert!(!removed);
@@ -402,7 +519,11 @@ mod tests {
     fn query_aabb_finds_overlapping_entity() {
         let mut tree = test_tree();
         let entities = spawn_entities(1);
-        tree.insert(entities[0], small_aabb(10.0, 10.0));
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::default(),
+        );
 
         let query_region = Aabb2D::new(Vec2::new(10.0, 10.0), Vec2::new(5.0, 5.0));
         let results = tree.query_aabb(&query_region);
@@ -414,7 +535,11 @@ mod tests {
     fn query_aabb_misses_distant_entity() {
         let mut tree = test_tree();
         let entities = spawn_entities(1);
-        tree.insert(entities[0], small_aabb(10.0, 10.0));
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::default(),
+        );
 
         let query_region = Aabb2D::new(Vec2::new(100.0, 100.0), Vec2::new(5.0, 5.0));
         let results = tree.query_aabb(&query_region);
@@ -425,9 +550,21 @@ mod tests {
     fn query_aabb_finds_multiple_overlapping_entities() {
         let mut tree = test_tree();
         let entities = spawn_entities(3);
-        tree.insert(entities[0], small_aabb(0.0, 0.0));
-        tree.insert(entities[1], small_aabb(2.0, 0.0));
-        tree.insert(entities[2], small_aabb(0.0, 2.0));
+        tree.insert(
+            entities[0],
+            small_aabb(0.0, 0.0),
+            CollisionLayers::default(),
+        );
+        tree.insert(
+            entities[1],
+            small_aabb(2.0, 0.0),
+            CollisionLayers::default(),
+        );
+        tree.insert(
+            entities[2],
+            small_aabb(0.0, 2.0),
+            CollisionLayers::default(),
+        );
 
         // Query region covering all three
         let query_region = Aabb2D::new(Vec2::new(1.0, 1.0), Vec2::new(5.0, 5.0));
@@ -443,7 +580,11 @@ mod tests {
     fn query_circle_finds_entity_in_range() {
         let mut tree = test_tree();
         let entities = spawn_entities(1);
-        tree.insert(entities[0], small_aabb(5.0, 0.0));
+        tree.insert(
+            entities[0],
+            small_aabb(5.0, 0.0),
+            CollisionLayers::default(),
+        );
 
         let results = tree.query_circle(Vec2::ZERO, 10.0);
         assert_eq!(results.len(), 1);
@@ -454,7 +595,11 @@ mod tests {
     fn query_circle_misses_entity_out_of_range() {
         let mut tree = test_tree();
         let entities = spawn_entities(1);
-        tree.insert(entities[0], small_aabb(100.0, 0.0));
+        tree.insert(
+            entities[0],
+            small_aabb(100.0, 0.0),
+            CollisionLayers::default(),
+        );
 
         let results = tree.query_circle(Vec2::ZERO, 10.0);
         assert!(results.is_empty());
@@ -469,7 +614,11 @@ mod tests {
         let mut tree = test_tree();
         let entities = spawn_entities(5);
         for (i, &e) in entities.iter().enumerate() {
-            tree.insert(e, small_aabb(i as f32 * 10.0, 0.0));
+            tree.insert(
+                e,
+                small_aabb(i as f32 * 10.0, 0.0),
+                CollisionLayers::default(),
+            );
         }
         assert_eq!(tree.len(), 5);
 
@@ -482,7 +631,11 @@ mod tests {
     fn insert_then_remove_then_query_finds_nothing() {
         let mut tree = test_tree();
         let entities = spawn_entities(1);
-        tree.insert(entities[0], small_aabb(10.0, 10.0));
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::default(),
+        );
         tree.remove(entities[0]);
 
         let query_region = Aabb2D::new(Vec2::new(10.0, 10.0), Vec2::new(5.0, 5.0));
@@ -505,7 +658,11 @@ mod tests {
         let entities = spawn_entities(10);
         // Insert 10 entities in the same area to trigger splitting
         for (i, &e) in entities.iter().enumerate() {
-            tree.insert(e, small_aabb(i as f32 * 0.5, i as f32 * 0.5));
+            tree.insert(
+                e,
+                small_aabb(i as f32 * 0.5, i as f32 * 0.5),
+                CollisionLayers::default(),
+            );
         }
         assert_eq!(tree.len(), 10);
 
@@ -531,11 +688,15 @@ mod tests {
 
         // Insert a large entity centered at the origin that spans all four quadrants
         let big_aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(100.0, 100.0));
-        tree.insert(entities[0], big_aabb);
+        tree.insert(entities[0], big_aabb, CollisionLayers::default());
 
         // Also insert some small entities to potentially trigger splits
         for (i, &e) in entities[1..6].iter().enumerate() {
-            tree.insert(e, small_aabb(200.0 + i as f32, 200.0));
+            tree.insert(
+                e,
+                small_aabb(200.0 + i as f32, 200.0),
+                CollisionLayers::default(),
+            );
         }
 
         // Query the area containing the large entity
@@ -547,5 +708,256 @@ mod tests {
             count, 1,
             "entity spanning multiple quadrants should appear exactly once"
         );
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // New tests — behaviors 7-11 (insert with layers, filtered queries)
+    // ════════════════════════════════════════════════════════════════
+
+    // ── Behavior 7: insert takes (Entity, Aabb2D, CollisionLayers) ──
+
+    #[test]
+    fn insert_with_layers_increases_len() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+        let aabb = Aabb2D::new(Vec2::new(10.0, 10.0), Vec2::new(1.0, 1.0));
+        let layers = CollisionLayers::new(0x01, 0x02);
+        tree.insert(entities[0], aabb, layers);
+        assert_eq!(tree.len(), 1);
+    }
+
+    #[test]
+    fn insert_with_default_layers_stores_but_invisible_to_filtered_queries() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+        let aabb = small_aabb(10.0, 10.0);
+        // Insert with default layers (membership=0, mask=0)
+        tree.insert(entities[0], aabb, CollisionLayers::default());
+        assert_eq!(tree.len(), 1);
+
+        // Filtered query with any mask should not return it
+        let region = Aabb2D::new(Vec2::new(10.0, 10.0), Vec2::new(5.0, 5.0));
+        let results = tree.query_aabb_filtered(&region, CollisionLayers::new(0xFF, 0xFF));
+        assert!(
+            results.is_empty(),
+            "entity with default layers (membership=0) should be invisible to filtered queries"
+        );
+    }
+
+    // ── Behavior 8: query_aabb still returns all (unfiltered, backward compat) ──
+
+    #[test]
+    fn query_aabb_unfiltered_returns_all_regardless_of_layers() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(3);
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::new(0x01, 0x02),
+        );
+        tree.insert(
+            entities[1],
+            small_aabb(12.0, 10.0),
+            CollisionLayers::new(0x02, 0x01),
+        );
+        // Entity with default (invisible) layers
+        tree.insert(
+            entities[2],
+            small_aabb(10.0, 12.0),
+            CollisionLayers::default(),
+        );
+
+        let region = Aabb2D::new(Vec2::new(11.0, 11.0), Vec2::new(10.0, 10.0));
+        let mut results = tree.query_aabb(&region);
+        results.sort();
+        let mut expected = vec![entities[0], entities[1], entities[2]];
+        expected.sort();
+        assert_eq!(
+            results, expected,
+            "unfiltered query_aabb should return all spatially overlapping entities"
+        );
+    }
+
+    // ── Behavior 9: query_aabb_filtered returns only matching layers ──
+
+    #[test]
+    fn query_aabb_filtered_returns_only_entities_whose_membership_matches_query_mask() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(2);
+        // entity_a: membership=0x01, mask=0x02
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::new(0x01, 0x02),
+        );
+        // entity_b: membership=0x02, mask=0x00
+        tree.insert(
+            entities[1],
+            small_aabb(12.0, 10.0),
+            CollisionLayers::new(0x02, 0x00),
+        );
+
+        let region = Aabb2D::new(Vec2::new(11.0, 10.0), Vec2::new(10.0, 10.0));
+        // Query with mask=0x02 → should match entity_b (membership=0x02)
+        let results = tree.query_aabb_filtered(&region, CollisionLayers::new(0x00, 0x02));
+        assert_eq!(results.len(), 1, "only entity_b should match mask=0x02");
+        assert_eq!(results[0], entities[1]);
+    }
+
+    #[test]
+    fn query_aabb_filtered_with_zero_mask_returns_empty() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+        tree.insert(
+            entities[0],
+            small_aabb(10.0, 10.0),
+            CollisionLayers::new(0xFF, 0xFF),
+        );
+
+        let region = Aabb2D::new(Vec2::new(10.0, 10.0), Vec2::new(5.0, 5.0));
+        let results = tree.query_aabb_filtered(&region, CollisionLayers::new(0x00, 0x00));
+        assert!(
+            results.is_empty(),
+            "query with mask=0 should return nothing"
+        );
+    }
+
+    // ── Behavior 10: query_aabb_filtered with game-like layer config ──
+
+    #[test]
+    fn query_aabb_filtered_game_like_layers_from_querier_perspective() {
+        // Layer constants (game-agnostic, just bit positions)
+        const LAYER_A: u32 = 1 << 0; // 0x01
+        const LAYER_B: u32 = 1 << 1; // 0x02
+        const LAYER_C: u32 = 1 << 2; // 0x04
+        const LAYER_D: u32 = 1 << 3; // 0x08
+
+        let mut tree = test_tree();
+        let entities = spawn_entities(4);
+
+        // "querier" entity at (0,0) — membership=LAYER_A, mask=LAYER_B|LAYER_C
+        tree.insert(
+            entities[0],
+            small_aabb(0.0, 0.0),
+            CollisionLayers::new(LAYER_A, LAYER_B | LAYER_C),
+        );
+        // "target_b" entity at (5,0) — membership=LAYER_B, mask=LAYER_A
+        tree.insert(
+            entities[1],
+            small_aabb(5.0, 0.0),
+            CollisionLayers::new(LAYER_B, LAYER_A),
+        );
+        // "target_c" entity at (10,0) — membership=LAYER_C, mask=LAYER_A
+        tree.insert(
+            entities[2],
+            small_aabb(10.0, 0.0),
+            CollisionLayers::new(LAYER_C, LAYER_A),
+        );
+        // "unrelated_d" entity at (15,0) — membership=LAYER_D, mask=LAYER_A
+        tree.insert(
+            entities[3],
+            small_aabb(15.0, 0.0),
+            CollisionLayers::new(LAYER_D, LAYER_A),
+        );
+
+        let big_region = Aabb2D::new(Vec2::new(7.5, 0.0), Vec2::new(20.0, 5.0));
+
+        // Query "from querier's perspective": mask = LAYER_B | LAYER_C
+        let mut results = tree.query_aabb_filtered(
+            &big_region,
+            CollisionLayers::new(LAYER_A, LAYER_B | LAYER_C),
+        );
+        results.sort();
+
+        let mut expected = vec![entities[1], entities[2]];
+        expected.sort();
+
+        assert_eq!(
+            results, expected,
+            "should find target_b and target_c but not querier itself or unrelated_d"
+        );
+    }
+
+    #[test]
+    fn query_aabb_filtered_only_one_layer_from_multi_layer_query() {
+        const LAYER_B: u32 = 1 << 1; // 0x02
+        const LAYER_C: u32 = 1 << 2; // 0x04
+
+        let mut tree = test_tree();
+        let entities = spawn_entities(2);
+
+        tree.insert(
+            entities[0],
+            small_aabb(5.0, 0.0),
+            CollisionLayers::new(LAYER_B, 0x01),
+        );
+        tree.insert(
+            entities[1],
+            small_aabb(10.0, 0.0),
+            CollisionLayers::new(LAYER_C, 0x01),
+        );
+
+        let big_region = Aabb2D::new(Vec2::new(7.5, 0.0), Vec2::new(20.0, 5.0));
+
+        // Query with only LAYER_B mask — should only find first entity
+        let results = tree.query_aabb_filtered(&big_region, CollisionLayers::new(0x00, LAYER_B));
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], entities[0]);
+    }
+
+    // ── Behavior 11: query_circle_filtered returns only matching entities in radius ──
+
+    #[test]
+    fn query_circle_filtered_returns_only_interacting_entities_within_radius() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(2);
+
+        // entity_a: membership=0x02, mask=0x01
+        tree.insert(
+            entities[0],
+            small_aabb(5.0, 0.0),
+            CollisionLayers::new(0x02, 0x01),
+        );
+        // entity_b: membership=0x04, mask=0x01
+        tree.insert(
+            entities[1],
+            small_aabb(5.0, 0.0),
+            CollisionLayers::new(0x04, 0x01),
+        );
+
+        // Query with mask=0x02 only — should match entity_a (membership=0x02)
+        let results =
+            tree.query_circle_filtered(Vec2::ZERO, 10.0, CollisionLayers::new(0x01, 0x02));
+        assert_eq!(results.len(), 1, "only entity_a should match");
+        assert_eq!(results[0], entities[0]);
+    }
+
+    #[test]
+    fn query_circle_filtered_excludes_entity_outside_radius_on_correct_layer() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(2);
+
+        // entity_a in range: membership=0x02 at (5,0)
+        tree.insert(
+            entities[0],
+            small_aabb(5.0, 0.0),
+            CollisionLayers::new(0x02, 0x01),
+        );
+        // entity_b far away: membership=0x02 at (200,0)
+        tree.insert(
+            entities[1],
+            small_aabb(200.0, 0.0),
+            CollisionLayers::new(0x02, 0x01),
+        );
+
+        // Both on the right layer, but only entity_a is within radius
+        let results =
+            tree.query_circle_filtered(Vec2::ZERO, 10.0, CollisionLayers::new(0x01, 0x02));
+        assert_eq!(
+            results.len(),
+            1,
+            "only in-range entity_a should be returned"
+        );
+        assert_eq!(results[0], entities[0]);
     }
 }
