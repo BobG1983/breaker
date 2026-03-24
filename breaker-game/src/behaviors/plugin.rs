@@ -10,14 +10,19 @@ use super::{
     },
     effects::{
         chain_bolt::handle_chain_bolt,
+        chain_lightning::handle_chain_lightning,
+        gravity_well::handle_gravity_well,
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
         multi_bolt::handle_multi_bolt,
+        piercing_beam::handle_piercing_beam,
+        second_wind::handle_second_wind,
         shield::{handle_shield, tick_shield},
         shockwave::{
             ShockwaveRadius, animate_shockwave, handle_shockwave, shockwave_collision,
             tick_shockwave,
         },
         spawn_bolt::handle_spawn_bolt,
+        spawn_phantom::handle_spawn_phantom,
         speed_boost::handle_speed_boost,
         time_penalty::handle_time_penalty,
     },
@@ -54,6 +59,11 @@ impl Plugin for BehaviorsPlugin {
             .add_observer(handle_chain_bolt)
             .add_observer(handle_multi_bolt)
             .add_observer(handle_shield)
+            .add_observer(handle_chain_lightning)
+            .add_observer(handle_spawn_phantom)
+            .add_observer(handle_piercing_beam)
+            .add_observer(handle_gravity_well)
+            .add_observer(handle_second_wind)
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),

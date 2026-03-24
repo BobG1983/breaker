@@ -81,7 +81,9 @@ pub(crate) fn spawn_chain_bolt(
             .id();
 
         if let Some(name) = &msg.source_chip {
-            commands.entity(new_bolt).insert(SpawnedByEvolution(name.clone()));
+            commands
+                .entity(new_bolt)
+                .insert(SpawnedByEvolution(name.clone()));
         }
 
         // Standalone constraint entity linking anchor to new bolt

@@ -1,0 +1,7 @@
+(
+    name: "Magnetism",
+    description: "Bolt attracts nearby cells",
+    rarity: Uncommon,
+    max_stacks: 3,
+    effects: [Amp(Attraction(8.0))],
+)

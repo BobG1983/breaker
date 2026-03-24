@@ -1,0 +1,7 @@
+(
+    name: "Last Stand",
+    description: "Losing a bolt boosts all remaining bolts",
+    rarity: Uncommon,
+    max_stacks: 1,
+    effects: [Overclock(OnBoltLost([SpeedBoost(target: AllBolts, multiplier: 1.3)]))],
+)

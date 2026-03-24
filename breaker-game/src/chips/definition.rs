@@ -29,6 +29,8 @@ pub enum AmpEffect {
     ChainHit(u32),
     /// Increases bolt radius by a fraction per stack.
     SizeBoost(f32),
+    /// Bolt attracts nearby cells (attraction force per stack).
+    Attraction(f32),
 }
 
 /// Effect variants for Augment chips (passive breaker upgrades).
@@ -119,6 +121,45 @@ pub enum TriggerChain {
         /// Maximum distance the chain bolt can travel from its anchor.
         tether_distance: f32,
     },
+    /// Chain lightning arcing between nearby cells.
+    ChainLightning {
+        /// Number of arcs from the origin cell.
+        arcs: u32,
+        /// Maximum arc range in world units.
+        range: f32,
+        /// Damage multiplier per arc (applied to base bolt damage).
+        damage_mult: f32,
+    },
+    /// Spawns a temporary phantom breaker entity.
+    SpawnPhantom {
+        /// How long the phantom persists in seconds.
+        duration: f32,
+        /// Maximum active phantoms at once.
+        max_active: u32,
+    },
+    /// Fires a piercing beam through cells in a line.
+    PiercingBeam {
+        /// Damage multiplier for the beam.
+        damage_mult: f32,
+        /// Width of the beam in world units.
+        width: f32,
+    },
+    /// Creates a gravity well that attracts bolts.
+    GravityWell {
+        /// Attraction strength.
+        strength: f32,
+        /// Duration in seconds.
+        duration: f32,
+        /// Effect radius in world units.
+        radius: f32,
+        /// Maximum active wells at once.
+        max: u32,
+    },
+    /// Temporary invulnerability after bolt loss.
+    SecondWind {
+        /// Duration of invulnerability in seconds.
+        invuln_secs: f32,
+    },
     /// Fires on a perfect bump. Inner vec allows multiple effects per trigger.
     OnPerfectBump(Vec<Self>),
     /// Fires on bolt impact with a specific surface.
@@ -151,7 +192,12 @@ impl TriggerChain {
             | Self::SpawnBolt
             | Self::TimePenalty { .. }
             | Self::SpeedBoost { .. }
-            | Self::ChainBolt { .. } => 0,
+            | Self::ChainBolt { .. }
+            | Self::ChainLightning { .. }
+            | Self::SpawnPhantom { .. }
+            | Self::PiercingBeam { .. }
+            | Self::GravityWell { .. }
+            | Self::SecondWind { .. } => 0,
             Self::OnPerfectBump(effects)
             | Self::OnImpact(_, effects)
             | Self::OnCellDestroyed(effects)
@@ -176,6 +222,11 @@ impl TriggerChain {
                 | Self::TimePenalty { .. }
                 | Self::SpeedBoost { .. }
                 | Self::ChainBolt { .. }
+                | Self::ChainLightning { .. }
+                | Self::SpawnPhantom { .. }
+                | Self::PiercingBeam { .. }
+                | Self::GravityWell { .. }
+                | Self::SecondWind { .. }
         )
     }
 }
@@ -317,6 +368,46 @@ impl TriggerChain {
     /// Build a `ChainBolt` leaf with the given tether distance.
     pub(crate) fn test_chain_bolt(tether_distance: f32) -> Self {
         Self::ChainBolt { tether_distance }
+    }
+
+    /// Build a `ChainLightning` leaf with given arcs, range, and `damage_mult: 0.5`.
+    pub(crate) fn test_chain_lightning(arcs: u32, range: f32) -> Self {
+        Self::ChainLightning {
+            arcs,
+            range,
+            damage_mult: 0.5,
+        }
+    }
+
+    /// Build a `SpawnPhantom` leaf with given duration and `max_active: 2`.
+    pub(crate) fn test_spawn_phantom(duration: f32) -> Self {
+        Self::SpawnPhantom {
+            duration,
+            max_active: 2,
+        }
+    }
+
+    /// Build a `PiercingBeam` leaf with given `damage_mult` and `width: 20.0`.
+    pub(crate) fn test_piercing_beam(damage_mult: f32) -> Self {
+        Self::PiercingBeam {
+            damage_mult,
+            width: 20.0,
+        }
+    }
+
+    /// Build a `GravityWell` leaf with given strength, radius, `duration: 5.0`, and `max: 2`.
+    pub(crate) fn test_gravity_well(strength: f32, radius: f32) -> Self {
+        Self::GravityWell {
+            strength,
+            duration: 5.0,
+            radius,
+            max: 2,
+        }
+    }
+
+    /// Build a `SecondWind` leaf with the given invulnerability duration.
+    pub(crate) fn test_second_wind(invuln_secs: f32) -> Self {
+        Self::SecondWind { invuln_secs }
     }
 }
 
@@ -1425,6 +1516,159 @@ mod tests {
             ChipEffect::Overclock(TriggerChain::ChainBolt {
                 tether_distance: 200.0,
             })
+        );
+    }
+
+    // --- ChainLightning leaf variant tests ---
+
+    #[test]
+    fn chain_lightning_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::ChainLightning {
+            arcs: 3,
+            range: 96.0,
+            damage_mult: 0.5,
+        };
+        assert!(tc.is_leaf(), "ChainLightning should be a leaf");
+        assert_eq!(tc.depth(), 0, "ChainLightning depth should be 0");
+    }
+
+    // --- SpawnPhantom leaf variant tests ---
+
+    #[test]
+    fn spawn_phantom_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::SpawnPhantom {
+            duration: 3.0,
+            max_active: 2,
+        };
+        assert!(tc.is_leaf(), "SpawnPhantom should be a leaf");
+        assert_eq!(tc.depth(), 0, "SpawnPhantom depth should be 0");
+    }
+
+    // --- PiercingBeam leaf variant tests ---
+
+    #[test]
+    fn piercing_beam_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::PiercingBeam {
+            damage_mult: 2.0,
+            width: 20.0,
+        };
+        assert!(tc.is_leaf(), "PiercingBeam should be a leaf");
+        assert_eq!(tc.depth(), 0, "PiercingBeam depth should be 0");
+    }
+
+    // --- GravityWell leaf variant tests ---
+
+    #[test]
+    fn gravity_well_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::GravityWell {
+            strength: 500.0,
+            duration: 5.0,
+            radius: 128.0,
+            max: 2,
+        };
+        assert!(tc.is_leaf(), "GravityWell should be a leaf");
+        assert_eq!(tc.depth(), 0, "GravityWell depth should be 0");
+    }
+
+    // --- SecondWind leaf variant tests ---
+
+    #[test]
+    fn second_wind_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::SecondWind { invuln_secs: 2.0 };
+        assert!(tc.is_leaf(), "SecondWind should be a leaf");
+        assert_eq!(tc.depth(), 0, "SecondWind depth should be 0");
+    }
+
+    // --- Trigger wrapping new leaf has depth 1 ---
+
+    #[test]
+    fn on_cell_destroyed_wrapping_chain_lightning_has_depth_one() {
+        let tc = TriggerChain::OnCellDestroyed(vec![TriggerChain::ChainLightning {
+            arcs: 3,
+            range: 96.0,
+            damage_mult: 0.5,
+        }]);
+        assert_eq!(
+            tc.depth(),
+            1,
+            "OnCellDestroyed wrapping ChainLightning should have depth 1"
+        );
+        assert!(
+            !tc.is_leaf(),
+            "OnCellDestroyed wrapping ChainLightning should not be a leaf"
+        );
+    }
+
+    // --- AmpEffect::Attraction pattern match test ---
+
+    #[test]
+    fn amp_effect_attraction_matches_correctly() {
+        let effect = ChipEffect::Amp(AmpEffect::Attraction(8.0));
+        match effect {
+            ChipEffect::Amp(AmpEffect::Attraction(force)) => {
+                assert!(
+                    (force - 8.0).abs() < f32::EPSILON,
+                    "Attraction force should be 8.0, got {force}"
+                );
+            }
+            other => panic!("expected Amp(Attraction(8.0)), got {other:?}"),
+        }
+    }
+
+    // --- New leaf convenience constructor tests ---
+
+    #[test]
+    fn test_chain_lightning_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_chain_lightning(3, 96.0),
+            TriggerChain::ChainLightning {
+                arcs: 3,
+                range: 96.0,
+                damage_mult: 0.5,
+            }
+        );
+    }
+
+    #[test]
+    fn test_spawn_phantom_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_spawn_phantom(3.0),
+            TriggerChain::SpawnPhantom {
+                duration: 3.0,
+                max_active: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn test_piercing_beam_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_piercing_beam(2.0),
+            TriggerChain::PiercingBeam {
+                damage_mult: 2.0,
+                width: 20.0,
+            }
+        );
+    }
+
+    #[test]
+    fn test_gravity_well_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_gravity_well(500.0, 128.0),
+            TriggerChain::GravityWell {
+                strength: 500.0,
+                duration: 5.0,
+                radius: 128.0,
+                max: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn test_second_wind_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_second_wind(2.0),
+            TriggerChain::SecondWind { invuln_secs: 2.0 }
         );
     }
 }
