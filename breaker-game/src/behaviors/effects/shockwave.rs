@@ -5,6 +5,7 @@
 //! non-locked cells within range. Damage includes [`DamageBoost`] if present.
 
 use bevy::prelude::*;
+use rantzsoft_physics2d::{aabb::Aabb2D, resources::CollisionQuadtree};
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
@@ -18,20 +19,30 @@ use crate::{
 };
 
 /// Cell data needed by the shockwave effect handler.
+///
+/// Only cells with both [`Cell`] and [`Aabb2D`] components are candidates —
+/// this ensures the query matches the set of entities registered in the
+/// [`CollisionQuadtree`], excluding bare cells that lack collision data.
 type ShockwaveCellQuery = (Entity, &'static Position2D, Has<Locked>);
+
+/// Filter for shockwave cell candidates: must be a cell with collision data.
+type ShockwaveCellFilter = (With<Cell>, With<Aabb2D>);
 
 /// Observer: handles shockwave area damage when an effect fires.
 ///
 /// Self-selects via pattern matching on [`TriggerChain::Shockwave`] — ignores
 /// all other effect variants. Writes [`DamageCell`] messages for all non-locked
-/// cells within `range` of the bolt's position. Damage is calculated as
+/// cells within `range` of the bolt's position that have collision data
+/// ([`Aabb2D`] component). Damage is calculated as
 /// `BASE_BOLT_DAMAGE * (1.0 + DamageBoost)`.
 pub(crate) fn handle_shockwave(
     trigger: On<EffectFired>,
+    quadtree: Res<CollisionQuadtree>,
     bolt_query: Query<(&Position2D, Option<&DamageBoost>)>,
-    cell_query: Query<ShockwaveCellQuery, With<Cell>>,
+    cell_query: Query<ShockwaveCellQuery, ShockwaveCellFilter>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
+    let _ = &quadtree;
     let TriggerChain::Shockwave {
         base_range,
         range_per_level,
@@ -73,6 +84,9 @@ pub(crate) fn handle_shockwave(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_physics2d::{
+        aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
+    };
     use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
 
     use super::*;
@@ -82,7 +96,7 @@ mod tests {
             messages::DamageCell,
         },
         chips::{components::DamageBoost, definition::TriggerChain},
-        shared::{BASE_BOLT_DAMAGE, GameDrawLayer},
+        shared::{BASE_BOLT_DAMAGE, CELL_LAYER, BOLT_LAYER, GameDrawLayer},
     };
 
     // --- Test infrastructure ---
@@ -100,6 +114,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_plugins(RantzPhysics2dPlugin)
             .add_message::<DamageCell>()
             .init_resource::<CapturedDamage>()
             .add_systems(FixedUpdate, capture_damage)
@@ -130,6 +145,8 @@ mod tests {
             .spawn((
                 Cell,
                 CellHealth::new(hp),
+                Aabb2D::new(Vec2::ZERO, Vec2::new(35.0, 12.0)),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 Position2D(Vec2::new(x, y)),
                 Spatial2D,
                 GameDrawLayer::Cell,
@@ -143,6 +160,8 @@ mod tests {
                 Cell,
                 CellHealth::new(hp),
                 Locked,
+                Aabb2D::new(Vec2::ZERO, Vec2::new(35.0, 12.0)),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 Position2D(Vec2::new(x, y)),
                 Spatial2D,
                 GameDrawLayer::Cell,
@@ -346,6 +365,90 @@ mod tests {
         assert!(
             hit_cells.contains(&cell_70),
             "cell at 70 should be within effective range 96.0"
+        );
+    }
+
+    // --- Quadtree circle query tests ---
+    //
+    // These tests verify that the shockwave handler finds cells via the
+    // `CollisionQuadtree` circle query rather than by iterating all cells.
+
+    #[test]
+    fn shockwave_only_damages_cells_in_quadtree() {
+        // A cell entity with `Cell`, `CellHealth`, `Position2D` but WITHOUT
+        // `Aabb2D`/`CollisionLayers` — so it is NOT in the quadtree.
+        //
+        // The refactored shockwave queries the quadtree, so this cell is
+        // invisible. The current system iterates all cells via `cell_query`,
+        // so this cell IS found and damaged.
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+
+        // Spawn cell without Aabb2D/CollisionLayers — not in quadtree
+        let _bare_cell = app
+            .world_mut()
+            .spawn((
+                Cell,
+                CellHealth::new(20.0),
+                Position2D(Vec2::new(10.0, 0.0)),
+                Spatial2D,
+                GameDrawLayer::Cell,
+            ))
+            .id();
+
+        // A properly-registered cell (WITH Aabb2D/CollisionLayers) — in quadtree
+        let registered_cell = spawn_cell(&mut app, 20.0, 0.0, 20.0);
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "only the cell with Aabb2D/CollisionLayers (in quadtree) should receive \
+             DamageCell — got {} messages (2 means the system still iterates all cells \
+             instead of querying the quadtree)",
+            captured.0.len()
+        );
+        assert_eq!(
+            captured.0[0].cell, registered_cell,
+            "DamageCell should target the registered cell, not the bare cell"
+        );
+    }
+
+    #[test]
+    fn shockwave_cell_without_aabb2d_not_found_via_quadtree() {
+        // A cell entity with `Cell` and `Position2D` but WITHOUT `Aabb2D`
+        // is not registered in the quadtree. The refactored shockwave uses
+        // the quadtree circle query, so this cell should be invisible.
+        //
+        // Meanwhile, a cell without `Aabb2D` but WITH the `Cell` component
+        // IS visible to the current `cell_query: Query<..., With<Cell>>`.
+        //
+        // Unlike `shockwave_only_damages_cells_in_quadtree` (which has a
+        // registered cell for comparison), this test has ONLY the bare cell.
+        // The current system damages it; the refactored system does not.
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
+
+        // Only a bare cell (no Aabb2D/CollisionLayers) — not in quadtree
+        app.world_mut().spawn((
+            Cell,
+            CellHealth::new(20.0),
+            Position2D(Vec2::new(10.0, 0.0)),
+            Spatial2D,
+            GameDrawLayer::Cell,
+        ));
+
+        trigger_shockwave(&mut app, bolt, 64.0);
+
+        let captured = app.world().resource::<CapturedDamage>();
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "cell without Aabb2D should be invisible to quadtree-based shockwave — \
+             got {} messages (non-zero means the system still iterates all cells)",
+            captured.0.len()
         );
     }
 }

@@ -64,7 +64,9 @@ impl Plugin for BoltPlugin {
                     spawn_additional_bolt.after(BehaviorSystems::Bridge),
                     spawn_bolt_lost_text,
                     // Collision systems (moved from PhysicsPlugin)
-                    bolt_cell_collision.after(BoltSystems::PrepareVelocity),
+                    bolt_cell_collision
+                        .after(BoltSystems::PrepareVelocity)
+                        .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
                     bolt_breaker_collision
                         .after(bolt_cell_collision)
                         .in_set(BoltSystems::BreakerCollision),

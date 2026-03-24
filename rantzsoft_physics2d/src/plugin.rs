@@ -4,6 +4,14 @@ use bevy::prelude::*;
 
 use crate::{resources::CollisionQuadtree, systems::maintain_quadtree};
 
+/// System sets for ordering game systems relative to physics maintenance.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PhysicsSystems {
+    /// Incremental quadtree maintenance. Game collision systems should run
+    /// `.after(PhysicsSystems::MaintainQuadtree)`.
+    MaintainQuadtree,
+}
+
 /// Game-agnostic 2D physics plugin. Registers the `CollisionQuadtree`
 /// resource and the `maintain_quadtree` system in `FixedUpdate`.
 pub struct RantzPhysics2dPlugin;
@@ -11,7 +19,10 @@ pub struct RantzPhysics2dPlugin;
 impl Plugin for RantzPhysics2dPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CollisionQuadtree>();
-        app.add_systems(FixedUpdate, maintain_quadtree);
+        app.add_systems(
+            FixedUpdate,
+            maintain_quadtree.in_set(PhysicsSystems::MaintainQuadtree),
+        );
     }
 }
 

@@ -18,6 +18,9 @@
 //! [`BoltHitWall`] messages for overclock triggers.
 
 use bevy::prelude::*;
+use rantzsoft_physics2d::{
+    aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
+};
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
@@ -26,12 +29,15 @@ use crate::{
         messages::{BoltHitCell, BoltHitWall},
         queries::CollisionQueryBolt,
     },
-    cells::{filters::CollisionFilterCell, messages::DamageCell, queries::CollisionQueryCell},
+    cells::{
+        components::{Cell, CellHealth},
+        messages::DamageCell,
+    },
     shared::{
-        BASE_BOLT_DAMAGE,
+        BASE_BOLT_DAMAGE, CELL_LAYER, WALL_LAYER,
         math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
     },
-    wall::{components::WallSize, filters::CollisionFilterWall},
+    wall::components::Wall,
 };
 
 /// Message writers used by the bolt-cell-wall collision system.
@@ -40,6 +46,24 @@ type CollisionWriters<'a> = (
     MessageWriter<'a, DamageCell>,
     MessageWriter<'a, BoltHitWall>,
 );
+
+/// Query for looking up entity `Aabb2D` and `Position2D` by entity ID
+/// after the quadtree broad-phase returns candidate entities.
+///
+/// Excludes bolts to avoid query conflicts with the mutable `bolt_query`.
+type CandidateLookup<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Position2D,
+        &'static Aabb2D,
+        Has<Cell>,
+        Has<Wall>,
+        Option<&'static CellHealth>,
+    ),
+    Without<crate::bolt::components::Bolt>,
+>;
 
 /// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
 ///
@@ -51,9 +75,9 @@ type CollisionWriters<'a> = (
 /// messages for each wall hit.
 pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
+    quadtree: Res<CollisionQuadtree>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
-    cell_query: Query<CollisionQueryCell, CollisionFilterCell>,
-    wall_query: Query<(Entity, &Position2D, &WallSize), CollisionFilterWall>,
+    candidate_lookup: CandidateLookup,
     mut writers: CollisionWriters,
     mut pierced_this_frame: Local<Vec<Entity>>,
 ) {
@@ -95,36 +119,49 @@ pub(crate) fn bolt_cell_collision(
                 break;
             }
 
-            // Find the nearest hit among all cells and walls
+            // Compute swept AABB for this bounce step
+            let end_pos = position + direction * remaining;
+            let sweep_min = position.min(end_pos) - Vec2::splat(r);
+            let sweep_max = position.max(end_pos) + Vec2::splat(r);
+            let swept_aabb = Aabb2D::from_min_max(sweep_min, sweep_max);
+
+            // Query quadtree for candidate cells and walls
+            let candidates = quadtree.quadtree.query_aabb_filtered(
+                &swept_aabb,
+                CollisionLayers::new(0, CELL_LAYER | WALL_LAYER),
+            );
+
+            // Find the nearest hit among all candidates
             let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
 
-            // Check cells
-            for (cell_entity, cell_position, cell_w, cell_h, _cell_health) in &cell_query {
+            for candidate_entity in &candidates {
+                let Ok((_, candidate_pos, candidate_aabb, is_cell, _is_wall, _cell_health)) =
+                    candidate_lookup.get(*candidate_entity)
+                else {
+                    continue;
+                };
+
                 // Skip cells already pierced by this bolt this frame
-                if pierced_this_frame.contains(&cell_entity) {
+                if is_cell && pierced_this_frame.contains(candidate_entity) {
                     continue;
                 }
-                let cell_pos = cell_position.0;
-                let cell_half_extents =
-                    Vec2::new(cell_w.half_width() + r, cell_h.half_height() + r);
-                if let Some(hit) =
-                    ray_vs_aabb(position, direction, remaining, cell_pos, cell_half_extents)
-                    && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
-                {
-                    best = Some((Some(cell_entity), hit));
-                }
-            }
 
-            // Check walls
-            for (_wall_entity, wall_position, wall_size) in &wall_query {
-                let wall_pos = wall_position.0;
-                let wall_half_extents =
-                    Vec2::new(wall_size.half_width + r, wall_size.half_height + r);
-                if let Some(hit) =
-                    ray_vs_aabb(position, direction, remaining, wall_pos, wall_half_extents)
+                let expanded_half_extents = candidate_aabb.half_extents + Vec2::splat(r);
+                if let Some(hit) = ray_vs_aabb(
+                    position,
+                    direction,
+                    remaining,
+                    candidate_pos.0,
+                    expanded_half_extents,
+                )
                     && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
                 {
-                    best = Some((None, hit));
+                    let hit_entity = if is_cell {
+                        Some(*candidate_entity)
+                    } else {
+                        None
+                    };
+                    best = Some((hit_entity, hit));
                 }
             }
 
@@ -142,10 +179,10 @@ pub(crate) fn bolt_cell_collision(
             if let Some(cell_entity) = hit_cell {
                 // Check if this bolt can pierce this cell
                 let can_pierce = piercing_remaining.as_deref().is_some_and(|pr| pr.0 > 0);
-                let cell_hp = cell_query
+                let cell_hp = candidate_lookup
                     .get(cell_entity)
                     .ok()
-                    .and_then(|(_, _, _, _, health)| health)
+                    .and_then(|(_, _, _, _, _, health)| health)
                     .map(|h| h.current);
                 let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
 
@@ -187,6 +224,9 @@ pub(crate) fn bolt_cell_collision(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_physics2d::{
+        aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
+    };
     use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
 
     use super::*;
@@ -202,7 +242,9 @@ mod tests {
             resources::CellConfig,
         },
         chips::components::{DamageBoost, Piercing, PiercingRemaining},
-        shared::{EntityScale, GameDrawLayer, math::MAX_BOUNCES},
+        shared::{
+            BOLT_LAYER, CELL_LAYER, WALL_LAYER, EntityScale, GameDrawLayer, math::MAX_BOUNCES,
+        },
         wall::components::{Wall, WallSize},
     };
 
@@ -211,10 +253,15 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_plugins(RantzPhysics2dPlugin)
             .add_message::<BoltHitCell>()
             .add_message::<DamageCell>()
             .add_message::<BoltHitWall>()
-            .add_systems(FixedUpdate, bolt_cell_collision);
+            .add_systems(
+                FixedUpdate,
+                bolt_cell_collision
+                    .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
+            );
         app
     }
 
@@ -240,11 +287,14 @@ mod tests {
     /// Cell entities use `Position2D` as canonical position.
     fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
         let (cw, ch) = default_cell_dims();
+        let half_extents = Vec2::new(cw.half_width(), ch.half_height());
         app.world_mut()
             .spawn((
                 Cell,
                 cw,
                 ch,
+                Aabb2D::new(Vec2::ZERO, half_extents),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 Position2D(Vec2::new(x, y)),
                 Spatial2D,
                 GameDrawLayer::Cell,
@@ -699,12 +749,7 @@ mod tests {
 
     #[test]
     fn serving_bolt_is_not_advanced() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BoltHitCell>()
-            .add_message::<DamageCell>()
-            .add_message::<BoltHitWall>()
-            .add_systems(FixedUpdate, bolt_cell_collision);
+        let mut app = test_app();
 
         let entity = app
             .world_mut()
@@ -782,6 +827,8 @@ mod tests {
                 half_width,
                 half_height,
             },
+            Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, half_height)),
+            CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
             Position2D(Vec2::new(x, y)),
             Spatial2D,
             GameDrawLayer::Wall,
@@ -879,12 +926,15 @@ mod tests {
     /// Spawns a cell with explicit [`CellHealth`] for piercing lookahead tests.
     fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
         let (cw, ch) = default_cell_dims();
+        let half_extents = Vec2::new(cw.half_width(), ch.half_height());
         app.world_mut()
             .spawn((
                 Cell,
                 cw,
                 ch,
                 CellHealth::new(hp),
+                Aabb2D::new(Vec2::ZERO, half_extents),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
                 Position2D(Vec2::new(x, y)),
                 Spatial2D,
                 GameDrawLayer::Cell,
@@ -1420,13 +1470,18 @@ mod tests {
     fn test_app_with_damage_and_wall_messages() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_plugins(RantzPhysics2dPlugin)
             .add_message::<BoltHitCell>()
             .add_message::<DamageCell>()
             .add_message::<BoltHitWall>()
             .insert_resource(DamageCellMessages::default())
             .insert_resource(WallHitMessages::default())
             .insert_resource(FullHitMessages::default())
-            .add_systems(FixedUpdate, bolt_cell_collision)
+            .add_systems(
+                FixedUpdate,
+                bolt_cell_collision
+                    .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
+            )
             .add_systems(
                 FixedUpdate,
                 (collect_damage_cells, collect_wall_hits, collect_full_hits)
@@ -1834,6 +1889,251 @@ mod tests {
         assert_eq!(
             msgs.0[0].bolt, bolt_a,
             "BoltHitWall.bolt should be bolt A (the one that hit the wall)"
+        );
+    }
+
+    // --- Quadtree broad-phase collision tests ---
+    //
+    // These tests verify that the CCD system reads collision extents from
+    // `Aabb2D.half_extents` (populated by the quadtree broad phase) rather
+    // than from the legacy `CellWidth`/`CellHeight` or `WallSize` components.
+
+    /// Spawns a cell with explicit `Aabb2D` half_extents that differ from the
+    /// legacy `CellWidth`/`CellHeight` dimensions. Used to test which source
+    /// the collision system reads for Minkowski expansion.
+    fn spawn_cell_with_custom_aabb(
+        app: &mut App,
+        x: f32,
+        y: f32,
+        aabb_half_extents: Vec2,
+    ) -> Entity {
+        let (cw, ch) = default_cell_dims();
+        app.world_mut()
+            .spawn((
+                Cell,
+                cw,
+                ch,
+                Aabb2D::new(Vec2::ZERO, aabb_half_extents),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                Position2D(Vec2::new(x, y)),
+                Spatial2D,
+                GameDrawLayer::Cell,
+            ))
+            .id()
+    }
+
+    #[test]
+    fn ccd_reads_cell_half_extents_from_aabb2d_not_cell_dimensions() {
+        // Cell at (0, 100) with standard CellWidth(70)/CellHeight(24)
+        // (half_extents 35.0, 12.0) but Aabb2D half_extents set to (5.0, 5.0).
+        //
+        // Bolt at (20, start_y) moving upward. x=20 is:
+        //  - INSIDE the CellWidth-based expanded AABB (35 + 8 = 43)
+        //  - OUTSIDE the Aabb2D-based expanded AABB (5 + 8 = 13)
+        //
+        // If the system reads from Aabb2D, the bolt misses (no reflection).
+        // If the system reads from CellWidth/CellHeight, the bolt hits and reflects.
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+        let cc = CellConfig::default();
+
+        let cell_y = 100.0;
+        let _cell = spawn_cell_with_custom_aabb(
+            &mut app,
+            0.0,
+            cell_y,
+            Vec2::new(5.0, 5.0), // tiny AABB
+        );
+
+        // Bolt at x=20, well within CellWidth range (half=35) but outside
+        // Aabb2D range (half=5). Place below the cell's bottom.
+        let expanded_bottom = cell_y - cc.height / 2.0 - bc.radius;
+        let start_y = expanded_bottom - 2.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            Position2D(Vec2::new(20.0, start_y)),
+        ));
+
+        // Run one tick to populate quadtree, then another for collision
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.y > 0.0,
+            "bolt at x=20 should miss the cell when CCD reads Aabb2D(5,5) \
+             instead of CellWidth(70)/CellHeight(24) — got vy={:.1} \
+             (negative means it reflected off the cell using legacy dimensions)",
+            vel.value.y
+        );
+    }
+
+    #[test]
+    fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
+        // Wall at (200, 0) with WallSize half_width=50, half_height=300
+        // but Aabb2D half_extents set to (5.0, 5.0).
+        //
+        // Bolt at (137, 50) moving right at (400, 0.1). y=50 is:
+        //  - INSIDE the WallSize-based expanded Y range (-308 to 308)
+        //  - OUTSIDE the Aabb2D-based expanded Y range (-13 to 13)
+        //
+        // If the system reads from WallSize, the bolt hits (y=50 within range).
+        // If the system reads from Aabb2D, the bolt misses (y=50 outside range).
+        let mut app = test_app();
+        let bc = BoltConfig::default();
+
+        // Spawn wall with large WallSize but tiny Aabb2D
+        app.world_mut().spawn((
+            Wall,
+            WallSize {
+                half_width: 50.0,
+                half_height: 300.0,
+            },
+            Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
+            CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
+            Position2D(Vec2::new(200.0, 0.0)),
+            Spatial2D,
+            GameDrawLayer::Wall,
+        ));
+
+        // Bolt outside the expanded AABB on the left (x=137 < 142=200-50-8)
+        // but at y=50 which is inside WallSize range but outside Aabb2D range.
+        let start_x = 200.0 - 50.0 - bc.radius - 5.0; // 137.0
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(400.0, 0.1),
+            Position2D(Vec2::new(start_x, 50.0)),
+        ));
+
+        tick(&mut app);
+
+        let vel = app
+            .world_mut()
+            .query::<&BoltVelocity>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        assert!(
+            vel.value.x > 0.0,
+            "bolt at y=50 should miss the wall when CCD reads Aabb2D(5,5) \
+             instead of WallSize(50,300) — got vx={:.1} \
+             (negative means it reflected off the wall using legacy WallSize)",
+            vel.value.x
+        );
+    }
+
+    #[test]
+    fn ccd_uses_aabb2d_larger_than_cell_dimensions_to_detect_hit() {
+        // Inverse test: cell has small CellWidth(70)/CellHeight(24) but
+        // large Aabb2D half_extents (100.0, 50.0).
+        //
+        // Bolt at (60, start_y) moving upward. x=60 is:
+        //  - OUTSIDE the CellWidth-based expanded AABB (35 + 8 = 43)
+        //  - INSIDE the Aabb2D-based expanded AABB (100 + 8 = 108)
+        //
+        // If the system reads from Aabb2D, the bolt hits and reflects.
+        // If the system reads from CellWidth/CellHeight, the bolt misses.
+        let mut app = test_app();
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+
+        let cell_y = 100.0;
+        let cell_entity = spawn_cell_with_custom_aabb(
+            &mut app,
+            0.0,
+            cell_y,
+            Vec2::new(100.0, 50.0), // large AABB
+        );
+
+        // Place bolt at x=60, outside CellWidth range but inside Aabb2D range
+        // Aabb2D expanded bottom: 100 - 50 - 8 = 42
+        let start_y = 42.0 - 2.0; // just below the Aabb2D expanded bottom
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            Position2D(Vec2::new(60.0, start_y)),
+        ));
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<HitCells>();
+        assert_eq!(
+            hits.0.len(),
+            1,
+            "bolt at x=60 should hit the cell when CCD uses Aabb2D(100,50) — \
+             got {} hits (0 means it used legacy CellWidth/CellHeight instead)",
+            hits.0.len()
+        );
+        assert_eq!(
+            hits.0[0], cell_entity,
+            "the hit entity should be the cell with the large Aabb2D"
+        );
+    }
+
+    #[test]
+    fn cell_with_aabb2d_but_no_cell_dimensions_is_collision_candidate() {
+        // A cell entity with `Cell`, `Aabb2D`, `CollisionLayers`, and
+        // `Position2D` but WITHOUT `CellWidth`/`CellHeight` components.
+        //
+        // The refactored system reads collision extents from `Aabb2D`, so
+        // this cell IS a collision candidate even without the legacy
+        // dimension components.
+        //
+        // The current system uses `Query<CollisionQueryCell>` which requires
+        // `CellWidth`/`CellHeight` — so this cell is invisible to it.
+        let mut app = test_app();
+        app.insert_resource(HitCells::default())
+            .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
+
+        let bc = BoltConfig::default();
+
+        // Spawn a cell with ONLY Aabb2D (no CellWidth/CellHeight)
+        let cell_y = 100.0;
+        let half_extents = Vec2::new(35.0, 12.0);
+        let cell_entity = app
+            .world_mut()
+            .spawn((
+                Cell,
+                Aabb2D::new(Vec2::ZERO, half_extents),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                Position2D(Vec2::new(0.0, cell_y)),
+                Spatial2D,
+                GameDrawLayer::Cell,
+            ))
+            .id();
+
+        // Bolt approaching from below
+        let expanded_bottom = cell_y - half_extents.y - bc.radius;
+        let start_y = expanded_bottom - 2.0;
+        app.world_mut().spawn((
+            Bolt,
+            bolt_param_bundle(),
+            BoltVelocity::new(0.0, 400.0),
+            Position2D(Vec2::new(0.0, start_y)),
+        ));
+
+        tick(&mut app);
+
+        let hits = app.world().resource::<HitCells>();
+        assert_eq!(
+            hits.0.len(),
+            1,
+            "cell with Aabb2D but no CellWidth/CellHeight should still be a collision \
+             candidate when the system reads from Aabb2D — got {} hits \
+             (0 means the system still requires CellWidth/CellHeight)",
+            hits.0.len()
+        );
+        assert_eq!(
+            hits.0[0], cell_entity,
+            "the hit should be the cell with only Aabb2D"
         );
     }
 }

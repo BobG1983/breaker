@@ -52,6 +52,7 @@ impl PluginGroup for Game {
             .add(InputPlugin)
             .add(ScreenPlugin)
             .add(RantzSpatial2dPlugin::<GameDrawLayer>::default())
+            .add(rantzsoft_physics2d::plugin::RantzPhysics2dPlugin)
             .add(WallPlugin)
             .add(BreakerPlugin)
             .add(BehaviorsPlugin)
