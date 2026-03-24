@@ -10,6 +10,7 @@ use super::{
     },
     effects::{
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
+        chain_bolt::handle_chain_bolt,
         shockwave::{
             animate_shockwave, handle_shockwave, shockwave_collision, tick_shockwave,
             ShockwaveRadius,
@@ -48,6 +49,7 @@ impl Plugin for BehaviorsPlugin {
             .add_observer(handle_spawn_bolt)
             .add_observer(handle_shockwave)
             .add_observer(handle_speed_boost)
+            .add_observer(handle_chain_bolt)
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),

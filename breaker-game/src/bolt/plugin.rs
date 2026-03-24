@@ -6,13 +6,17 @@ use crate::{
     behaviors::BehaviorSystems,
     bolt::{
         BoltSystems,
-        messages::{BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost, SpawnAdditionalBolt},
+        messages::{
+            BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost, SpawnAdditionalBolt,
+            SpawnChainBolt,
+        },
         resources::BoltConfig,
         systems::{
             apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
-            bolt_scale_visual, clamp_bolt_to_playfield, hover_bolt, init_bolt_params, launch_bolt,
+            bolt_scale_visual, break_chain_on_bolt_lost, clamp_bolt_to_playfield,
+            enforce_distance_constraints, hover_bolt, init_bolt_params, launch_bolt,
             prepare_bolt_velocity, reset_bolt, spawn_additional_bolt, spawn_bolt,
-            spawn_bolt_lost_text,
+            spawn_bolt_lost_text, spawn_chain_bolt,
         },
     },
     breaker::BreakerSystems,
@@ -36,6 +40,7 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltHitCell>()
             .add_message::<BoltLost>()
             .add_message::<BoltHitWall>()
+            .add_message::<SpawnChainBolt>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -62,6 +67,7 @@ impl Plugin for BoltPlugin {
                     )
                         .after(BreakerSystems::Move),
                     spawn_additional_bolt.after(BehaviorSystems::Bridge),
+                    spawn_chain_bolt.after(BehaviorSystems::Bridge),
                     spawn_bolt_lost_text,
                     // Collision systems (moved from PhysicsPlugin)
                     bolt_cell_collision
@@ -71,9 +77,13 @@ impl Plugin for BoltPlugin {
                         .after(bolt_cell_collision)
                         .in_set(BoltSystems::BreakerCollision),
                     clamp_bolt_to_playfield.after(bolt_breaker_collision),
+                    enforce_distance_constraints
+                        .after(clamp_bolt_to_playfield),
                     bolt_lost
-                        .after(clamp_bolt_to_playfield)
+                        .after(enforce_distance_constraints)
                         .in_set(BoltSystems::BoltLost),
+                    break_chain_on_bolt_lost
+                        .after(BoltSystems::BoltLost),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

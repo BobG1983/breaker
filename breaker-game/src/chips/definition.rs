@@ -114,6 +114,11 @@ pub enum TriggerChain {
         /// Multiplier applied to the current velocity magnitude.
         multiplier: f32,
     },
+    /// Spawns a tethered chain bolt at the anchor bolt's position.
+    ChainBolt {
+        /// Maximum distance the chain bolt can travel from its anchor.
+        tether_distance: f32,
+    },
     /// Fires on a perfect bump.
     OnPerfectBump(Box<Self>),
     /// Fires on bolt impact with a specific surface.
@@ -145,7 +150,8 @@ impl TriggerChain {
             | Self::LoseLife
             | Self::SpawnBolt
             | Self::TimePenalty { .. }
-            | Self::SpeedBoost { .. } => 0,
+            | Self::SpeedBoost { .. }
+            | Self::ChainBolt { .. } => 0,
             Self::OnPerfectBump(inner)
             | Self::OnImpact(_, inner)
             | Self::OnCellDestroyed(inner)
@@ -169,6 +175,7 @@ impl TriggerChain {
                 | Self::SpawnBolt
                 | Self::TimePenalty { .. }
                 | Self::SpeedBoost { .. }
+                | Self::ChainBolt { .. }
         )
     }
 }
@@ -303,6 +310,11 @@ impl TriggerChain {
             target: SpeedBoostTarget::Bolt,
             multiplier,
         }
+    }
+
+    /// Build a `ChainBolt` leaf with the given tether distance.
+    pub(crate) fn test_chain_bolt(tether_distance: f32) -> Self {
+        Self::ChainBolt { tether_distance }
     }
 }
 
@@ -616,6 +628,7 @@ mod tests {
         assert_eq!(TriggerChain::test_shockwave(64.0).depth(), 0);
         assert_eq!(TriggerChain::test_multi_bolt(3).depth(), 0);
         assert_eq!(TriggerChain::test_shield(5.0).depth(), 0);
+        assert_eq!(TriggerChain::test_chain_bolt(200.0).depth(), 0);
     }
 
     #[test]
@@ -651,6 +664,7 @@ mod tests {
         assert!(TriggerChain::test_shockwave(64.0).is_leaf());
         assert!(TriggerChain::test_multi_bolt(3).is_leaf());
         assert!(TriggerChain::test_shield(5.0).is_leaf());
+        assert!(TriggerChain::test_chain_bolt(200.0).is_leaf());
     }
 
     #[test]
@@ -1354,5 +1368,74 @@ mod tests {
         let recipe: EvolutionRecipe = ron::de::from_str(ron_str)
             .expect("should parse EvolutionRecipe with empty ingredients");
         assert_eq!(recipe.ingredients.len(), 0);
+    }
+
+    // --- ChainBolt variant tests ---
+
+    #[test]
+    fn trigger_chain_deserializes_chain_bolt() {
+        let tc: TriggerChain = ron::de::from_str("ChainBolt(tether_distance: 200.0)")
+            .expect("should parse ChainBolt");
+        assert_eq!(
+            tc,
+            TriggerChain::ChainBolt {
+                tether_distance: 200.0,
+            }
+        );
+    }
+
+    #[test]
+    fn trigger_chain_deserializes_chain_bolt_wrapped_in_on_perfect_bump() {
+        let tc: TriggerChain =
+            ron::de::from_str("OnPerfectBump(ChainBolt(tether_distance: 150.0))")
+                .expect("should parse OnPerfectBump(ChainBolt)");
+        assert_eq!(
+            tc,
+            TriggerChain::OnPerfectBump(Box::new(TriggerChain::ChainBolt {
+                tether_distance: 150.0,
+            }))
+        );
+    }
+
+    #[test]
+    fn chain_bolt_depth_is_zero() {
+        assert_eq!(
+            TriggerChain::ChainBolt {
+                tether_distance: 200.0
+            }
+            .depth(),
+            0
+        );
+    }
+
+    #[test]
+    fn chain_bolt_is_leaf_true() {
+        assert!(TriggerChain::ChainBolt {
+            tether_distance: 200.0
+        }
+        .is_leaf());
+    }
+
+    #[test]
+    fn test_chain_bolt_convenience_constructor() {
+        assert_eq!(
+            TriggerChain::test_chain_bolt(200.0),
+            TriggerChain::ChainBolt {
+                tether_distance: 200.0,
+            }
+        );
+    }
+
+    #[test]
+    fn chip_effect_overclock_with_chain_bolt_deserializes() {
+        let e: ChipEffect =
+            ron::de::from_str("Overclock(ChainBolt(tether_distance: 200.0))")
+                .expect("should parse Overclock(ChainBolt)");
+        assert_eq!(
+            e,
+            ChipEffect::Overclock(TriggerChain::ChainBolt {
+                tether_distance: 200.0,
+            })
+        );
     }
 }
