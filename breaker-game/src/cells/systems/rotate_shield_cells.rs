@@ -20,8 +20,10 @@ pub(crate) fn rotate_shield_cells(
 
 #[cfg(test)]
 mod tests {
-    use std::f32::consts::{FRAC_PI_2, PI};
-    use std::time::Duration;
+    use std::{
+        f32::consts::{FRAC_PI_2, PI},
+        time::Duration,
+    };
 
     use super::*;
     use crate::cells::components::*;
@@ -45,11 +47,7 @@ mod tests {
 
     fn spawn_orbit_cell(app: &mut App, angle: f32, radius: f32, speed: f32) -> Entity {
         app.world_mut()
-            .spawn((
-                OrbitCell,
-                OrbitAngle(angle),
-                OrbitConfig { radius, speed },
-            ))
+            .spawn((OrbitCell, OrbitAngle(angle), OrbitConfig { radius, speed }))
             .id()
     }
 

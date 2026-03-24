@@ -540,9 +540,10 @@ mod tests {
 
     #[test]
     fn trigger_chain_deserializes_shockwave() {
-        let tc: TriggerChain =
-            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)")
-                .expect("should parse Shockwave");
+        let tc: TriggerChain = ron::de::from_str(
+            "Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)",
+        )
+        .expect("should parse Shockwave");
         assert_eq!(
             tc,
             TriggerChain::Shockwave {
@@ -906,9 +907,10 @@ mod tests {
 
     #[test]
     fn shockwave_ron_deserializes_with_new_fields() {
-        let tc: TriggerChain =
-            ron::de::from_str("Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)")
-                .expect("should parse Shockwave with stacking fields");
+        let tc: TriggerChain = ron::de::from_str(
+            "Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)",
+        )
+        .expect("should parse Shockwave with stacking fields");
         assert_eq!(
             tc,
             TriggerChain::Shockwave {
@@ -1374,8 +1376,8 @@ mod tests {
 
     #[test]
     fn trigger_chain_deserializes_chain_bolt() {
-        let tc: TriggerChain = ron::de::from_str("ChainBolt(tether_distance: 200.0)")
-            .expect("should parse ChainBolt");
+        let tc: TriggerChain =
+            ron::de::from_str("ChainBolt(tether_distance: 200.0)").expect("should parse ChainBolt");
         assert_eq!(
             tc,
             TriggerChain::ChainBolt {
@@ -1410,10 +1412,12 @@ mod tests {
 
     #[test]
     fn chain_bolt_is_leaf_true() {
-        assert!(TriggerChain::ChainBolt {
-            tether_distance: 200.0
-        }
-        .is_leaf());
+        assert!(
+            TriggerChain::ChainBolt {
+                tether_distance: 200.0
+            }
+            .is_leaf()
+        );
     }
 
     #[test]
@@ -1428,9 +1432,8 @@ mod tests {
 
     #[test]
     fn chip_effect_overclock_with_chain_bolt_deserializes() {
-        let e: ChipEffect =
-            ron::de::from_str("Overclock(ChainBolt(tether_distance: 200.0))")
-                .expect("should parse Overclock(ChainBolt)");
+        let e: ChipEffect = ron::de::from_str("Overclock(ChainBolt(tether_distance: 200.0))")
+            .expect("should parse Overclock(ChainBolt)");
         assert_eq!(
             e,
             ChipEffect::Overclock(TriggerChain::ChainBolt {

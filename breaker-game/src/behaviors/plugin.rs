@@ -9,11 +9,11 @@ use super::{
         bridge_cell_destroyed, bridge_cell_impact, bridge_wall_impact,
     },
     effects::{
-        life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
         chain_bolt::handle_chain_bolt,
+        life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
         shockwave::{
-            animate_shockwave, handle_shockwave, shockwave_collision, tick_shockwave,
-            ShockwaveRadius,
+            ShockwaveRadius, animate_shockwave, handle_shockwave, shockwave_collision,
+            tick_shockwave,
         },
         spawn_bolt::handle_spawn_bolt,
         speed_boost::handle_speed_boost,
@@ -90,10 +90,7 @@ impl Plugin for BehaviorsPlugin {
             // Shockwave expansion + collision
             .add_systems(
                 FixedUpdate,
-                (
-                    tick_shockwave,
-                    shockwave_collision.after(tick_shockwave),
-                )
+                (tick_shockwave, shockwave_collision.after(tick_shockwave))
                     .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
                     .run_if(in_state(PlayingState::Active)),
             )
@@ -101,10 +98,8 @@ impl Plugin for BehaviorsPlugin {
             .add_systems(
                 Update,
                 (
-                    update_lives_display
-                        .run_if(any_with_component::<LivesDisplay>),
-                    animate_shockwave
-                        .run_if(any_with_component::<ShockwaveRadius>),
+                    update_lives_display.run_if(any_with_component::<LivesDisplay>),
+                    animate_shockwave.run_if(any_with_component::<ShockwaveRadius>),
                 )
                     .run_if(in_state(PlayingState::Active)),
             );

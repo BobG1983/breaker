@@ -92,9 +92,13 @@ fn find_nearest_candidate(
         }
 
         let expanded_half_extents = candidate_aabb.half_extents + Vec2::splat(bolt_radius);
-        if let Some(hit) =
-            ray_vs_aabb(position, direction, remaining, candidate_pos.0, expanded_half_extents)
-            && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
+        if let Some(hit) = ray_vs_aabb(
+            position,
+            direction,
+            remaining,
+            candidate_pos.0,
+            expanded_half_extents,
+        ) && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
         {
             let hit_entity = if is_cell {
                 Some(*candidate_entity)

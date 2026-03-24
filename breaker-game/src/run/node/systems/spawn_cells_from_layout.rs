@@ -2,8 +2,10 @@
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
-use rantzsoft_spatial2d::propagation::PositionPropagation;
+use rantzsoft_spatial2d::{
+    components::{Position2D, Scale2D},
+    propagation::PositionPropagation,
+};
 use tracing::debug;
 
 #[cfg(test)]
@@ -11,6 +13,7 @@ use crate::shared::CleanupOnNodeExit;
 use crate::{
     cells::{
         components::*,
+        definition::ShieldBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     run::{
@@ -133,128 +136,137 @@ pub(crate) fn spawn_cells_from_grid(
             if alias == '.' {
                 continue;
             }
-
             let Some(def) = registry.get(alias) else {
                 continue;
             };
-
             let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
             let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
             let x = col_f.mul_add(step_x, start_x);
             let y = row_f.mul_add(-step_y, start_y);
-
             let scaled_hp = def.hp * hp_mult;
 
-            let mut entity = commands.spawn((
-                Cell,
-                CellTypeAlias(alias),
-                CellWidth(cell_width),
-                CellHeight(cell_height),
-                CellHealth::new(scaled_hp),
-                CellDamageVisuals {
-                    hdr_base: def.damage_hdr_base,
-                    green_min: def.damage_green_min,
-                    blue_range: def.damage_blue_range,
-                    blue_base: def.damage_blue_base,
-                },
-                Mesh2d(rect_mesh.clone()),
-                MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
-                Position2D(Vec2::new(x, y)),
-                Scale2D {
-                    x: cell_width,
-                    y: cell_height,
-                },
-                Aabb2D::new(Vec2::ZERO, Vec2::new(cell_width / 2.0, cell_height / 2.0)),
-                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                GameDrawLayer::Cell,
-            ));
+            // Block scope limits EntityCommands borrow so `commands` can
+            // be used for orbit children below.
+            let cell_entity_id = {
+                let mut entity = commands.spawn((
+                    Cell,
+                    CellTypeAlias(alias),
+                    CellWidth(cell_width),
+                    CellHeight(cell_height),
+                    CellHealth::new(scaled_hp),
+                    CellDamageVisuals {
+                        hdr_base: def.damage_hdr_base,
+                        green_min: def.damage_green_min,
+                        blue_range: def.damage_blue_range,
+                        blue_base: def.damage_blue_base,
+                    },
+                    Mesh2d(rect_mesh.clone()),
+                    MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
+                    Position2D(Vec2::new(x, y)),
+                    Scale2D {
+                        x: cell_width,
+                        y: cell_height,
+                    },
+                    Aabb2D::new(Vec2::ZERO, Vec2::new(cell_width / 2.0, cell_height / 2.0)),
+                    CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                    GameDrawLayer::Cell,
+                ));
 
-            if def.required_to_clear {
-                entity.insert(RequiredToClear);
-                required_count += 1;
-            }
-
-            if def.behavior.locked {
-                entity.insert(Locked);
-                entity.insert(LockAdjacents(Vec::new()));
-            }
-
-            if let Some(rate) = def.behavior.regen_rate {
-                entity.insert(CellRegen { rate });
-            }
-
-            // Capture the entity ID before we need to release the
-            // EntityCommands borrow for spawning orbit children.
-            let cell_entity_id = entity.id();
-            let has_shield = def.behavior.shield.is_some();
-            if has_shield {
-                entity.insert((ShieldParent, Locked));
-            }
-
-            // Drop `entity` (EntityCommands) so `commands` is no longer borrowed.
-            drop(entity);
+                if def.required_to_clear {
+                    entity.insert(RequiredToClear);
+                    required_count += 1;
+                }
+                if def.behavior.locked {
+                    entity.insert(Locked);
+                    entity.insert(LockAdjacents(Vec::new()));
+                }
+                if let Some(rate) = def.behavior.regen_rate {
+                    entity.insert(CellRegen { rate });
+                }
+                if def.behavior.shield.is_some() {
+                    entity.insert((ShieldParent, Locked));
+                }
+                entity.id()
+            };
 
             if let Some(ref shield) = def.behavior.shield {
-                let shield_entity = cell_entity_id;
-                let orbit_dim = 20.0 * scale;
-                let orbit_half = orbit_dim / 2.0;
-                let orbit_half_diag = orbit_half * std::f32::consts::SQRT_2;
-                let min_clamp = orbit_half_diag + 1.0;
-                let scaled_radius = (shield.orbit_radius * scale).max(min_clamp);
-
-                let orbit_color =
-                    crate::shared::color_from_rgb(shield.orbit_color_rgb);
-                let orbit_material =
-                    materials.add(ColorMaterial::from_color(orbit_color));
-
-                let orbit_count_f =
-                    f32::from(u16::try_from(shield.orbit_count).unwrap_or(u16::MAX));
-                let mut orbit_ids = Vec::with_capacity(shield.orbit_count as usize);
-                for i in 0..shield.orbit_count {
-                    let i_f = f32::from(u16::try_from(i).unwrap_or(u16::MAX));
-                    let angle = 2.0 * std::f32::consts::PI * i_f / orbit_count_f;
-                    let offset =
-                        Vec2::new(scaled_radius * angle.cos(), scaled_radius * angle.sin());
-                    let orbit_pos = Vec2::new(x, y) + offset;
-
-                    let orbit_entity = commands
-                        .spawn((
-                            Cell,
-                            OrbitCell,
-                            ChildOf(shield_entity),
-                            CellHealth::new(shield.orbit_hp * hp_mult),
-                            CellWidth(orbit_dim),
-                            CellHeight(orbit_dim),
-                            Mesh2d(rect_mesh.clone()),
-                            MeshMaterial2d(orbit_material.clone()),
-                            Position2D(orbit_pos),
-                            PositionPropagation::Absolute,
-                            Scale2D {
-                                x: orbit_dim,
-                                y: orbit_dim,
-                            },
-                            (
-                                Aabb2D::new(Vec2::ZERO, Vec2::new(orbit_half, orbit_half)),
-                                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                                OrbitAngle(angle),
-                                OrbitConfig {
-                                    radius: scaled_radius,
-                                    speed: shield.orbit_speed,
-                                },
-                                GameDrawLayer::Cell,
-                            ),
-                        ))
-                        .id();
-                    orbit_ids.push(orbit_entity);
-                }
-
-                commands
-                    .entity(shield_entity)
-                    .insert(LockAdjacents(orbit_ids));
+                spawn_orbit_children(
+                    commands,
+                    shield,
+                    cell_entity_id,
+                    Vec2::new(x, y),
+                    scale,
+                    hp_mult,
+                    (&rect_mesh, materials),
+                );
             }
         }
     }
     required_count
+}
+
+/// Spawns orbit children around a shield cell and inserts `LockAdjacents`.
+fn spawn_orbit_children(
+    commands: &mut Commands,
+    shield: &ShieldBehavior,
+    shield_entity: Entity,
+    center: Vec2,
+    scale: f32,
+    hp_mult: f32,
+    render: (&Handle<Mesh>, &mut Assets<ColorMaterial>),
+) {
+    let (rect_mesh, materials) = render;
+    let orbit_dim = 20.0 * scale;
+    let orbit_half = orbit_dim / 2.0;
+    let orbit_half_diag = orbit_half * std::f32::consts::SQRT_2;
+    let min_clamp = orbit_half_diag + 1.0;
+    let scaled_radius = (shield.radius * scale).max(min_clamp);
+
+    let orbit_color = crate::shared::color_from_rgb(shield.color_rgb);
+    let orbit_material = materials.add(ColorMaterial::from_color(orbit_color));
+
+    let orbit_count_f = f32::from(u16::try_from(shield.count).unwrap_or(u16::MAX));
+    let mut orbit_ids = Vec::with_capacity(shield.count as usize);
+    for i in 0..shield.count {
+        let i_f = f32::from(u16::try_from(i).unwrap_or(u16::MAX));
+        let angle = 2.0 * std::f32::consts::PI * i_f / orbit_count_f;
+        let offset = Vec2::new(scaled_radius * angle.cos(), scaled_radius * angle.sin());
+        let orbit_pos = center + offset;
+
+        let orbit_entity = commands
+            .spawn((
+                Cell,
+                OrbitCell,
+                ChildOf(shield_entity),
+                CellHealth::new(shield.hp * hp_mult),
+                CellWidth(orbit_dim),
+                CellHeight(orbit_dim),
+                Mesh2d(rect_mesh.clone()),
+                MeshMaterial2d(orbit_material.clone()),
+                Position2D(orbit_pos),
+                PositionPropagation::Absolute,
+                Scale2D {
+                    x: orbit_dim,
+                    y: orbit_dim,
+                },
+                (
+                    Aabb2D::new(Vec2::ZERO, Vec2::new(orbit_half, orbit_half)),
+                    CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                    OrbitAngle(angle),
+                    OrbitConfig {
+                        radius: scaled_radius,
+                        speed: shield.speed,
+                    },
+                    GameDrawLayer::Cell,
+                ),
+            ))
+            .id();
+        orbit_ids.push(orbit_entity);
+    }
+
+    commands
+        .entity(shield_entity)
+        .insert(LockAdjacents(orbit_ids));
 }
 
 /// Resolves the `hp_mult` for the current node from the run state and node
@@ -1802,13 +1814,13 @@ mod tests {
 
     // --- Shield cell spawn tests (Phase 10: Orbiting Cells) ---
 
+    use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
+    use rantzsoft_spatial2d::{components::Scale2D, propagation::PositionPropagation};
+
     use crate::cells::{
         components::{OrbitAngle, OrbitCell, OrbitConfig, ShieldParent},
         definition::ShieldBehavior,
     };
-    use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-    use rantzsoft_spatial2d::components::Scale2D;
-    use rantzsoft_spatial2d::propagation::PositionPropagation;
 
     /// Creates a registry containing a shield cell type ('H') plus a normal cell ('N').
     fn shield_registry() -> CellTypeRegistry {
@@ -1829,11 +1841,11 @@ mod tests {
                     locked: false,
                     regen_rate: None,
                     shield: Some(ShieldBehavior {
-                        orbit_count: 3,
-                        orbit_radius: 60.0,
-                        orbit_speed: std::f32::consts::FRAC_PI_2,
-                        orbit_hp: 10.0,
-                        orbit_color_rgb: [0.5, 0.8, 1.0],
+                        count: 3,
+                        radius: 60.0,
+                        speed: std::f32::consts::FRAC_PI_2,
+                        hp: 10.0,
+                        color_rgb: [0.5, 0.8, 1.0],
                     }),
                 },
             },
@@ -2091,7 +2103,7 @@ mod tests {
             .iter(app.world())
             .map(|a| a.0)
             .collect();
-        angles.sort_by(|a, b| a.total_cmp(b));
+        angles.sort_by(f32::total_cmp);
 
         assert_eq!(angles.len(), 3, "should have 3 orbit angles");
         let expected = [
@@ -2372,11 +2384,11 @@ mod tests {
                     locked: false,
                     regen_rate: None,
                     shield: Some(ShieldBehavior {
-                        orbit_count: 0,
-                        orbit_radius: 60.0,
-                        orbit_speed: std::f32::consts::FRAC_PI_2,
-                        orbit_hp: 10.0,
-                        orbit_color_rgb: [0.5, 0.8, 1.0],
+                        count: 0,
+                        radius: 60.0,
+                        speed: std::f32::consts::FRAC_PI_2,
+                        hp: 10.0,
+                        color_rgb: [0.5, 0.8, 1.0],
                     }),
                 },
             },

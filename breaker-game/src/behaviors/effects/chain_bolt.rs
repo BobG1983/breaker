@@ -30,8 +30,7 @@ pub(crate) fn handle_chain_bolt(
 mod tests {
     use super::*;
     use crate::{
-        behaviors::events::EffectFired,
-        bolt::messages::SpawnChainBolt,
+        behaviors::events::EffectFired, bolt::messages::SpawnChainBolt,
         chips::definition::TriggerChain,
     };
 

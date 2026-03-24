@@ -7,8 +7,7 @@ use crate::{
     bolt::{
         BoltSystems,
         messages::{
-            BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost, SpawnAdditionalBolt,
-            SpawnChainBolt,
+            BoltHitBreaker, BoltHitCell, BoltHitWall, BoltLost, SpawnAdditionalBolt, SpawnChainBolt,
         },
         resources::BoltConfig,
         systems::{
@@ -77,13 +76,11 @@ impl Plugin for BoltPlugin {
                         .after(bolt_cell_collision)
                         .in_set(BoltSystems::BreakerCollision),
                     clamp_bolt_to_playfield.after(bolt_breaker_collision),
-                    enforce_distance_constraints
-                        .after(clamp_bolt_to_playfield),
+                    enforce_distance_constraints.after(clamp_bolt_to_playfield),
                     bolt_lost
                         .after(enforce_distance_constraints)
                         .in_set(BoltSystems::BoltLost),
-                    break_chain_on_bolt_lost
-                        .after(BoltSystems::BoltLost),
+                    break_chain_on_bolt_lost.after(BoltSystems::BoltLost),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

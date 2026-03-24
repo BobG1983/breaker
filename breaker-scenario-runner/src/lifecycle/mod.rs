@@ -735,10 +735,10 @@ pub fn mark_entered_playing_on_spawn_complete(
     mut spawn_reader: MessageReader<SpawnNodeComplete>,
     mut stats: Option<ResMut<ScenarioStats>>,
 ) {
-    if spawn_reader.read().next().is_some() {
-        if let Some(ref mut s) = stats {
-            s.entered_playing = true;
-        }
+    if spawn_reader.read().next().is_some()
+        && let Some(ref mut s) = stats
+    {
+        s.entered_playing = true;
     }
 }
 

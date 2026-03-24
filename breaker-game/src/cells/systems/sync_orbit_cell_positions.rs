@@ -5,6 +5,18 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::cells::components::{OrbitAngle, OrbitCell, OrbitConfig, ShieldParent};
 
+/// Query type for orbit cell data — avoids clippy `type_complexity`.
+type OrbitQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Position2D,
+        &'static OrbitAngle,
+        &'static OrbitConfig,
+    ),
+    (With<OrbitCell>, Without<ShieldParent>),
+>;
+
 /// Writes world-space [`Position2D`] for each orbit cell based on its parent
 /// shield's position, orbit radius, and current angle.
 ///
@@ -14,10 +26,7 @@ use crate::cells::components::{OrbitAngle, OrbitCell, OrbitConfig, ShieldParent}
 /// sees correct world-space coordinates.
 pub(crate) fn sync_orbit_cell_positions(
     parent_query: Query<(&Position2D, &Children), With<ShieldParent>>,
-    mut orbit_query: Query<
-        (&mut Position2D, &OrbitAngle, &OrbitConfig),
-        (With<OrbitCell>, Without<ShieldParent>),
-    >,
+    mut orbit_query: OrbitQuery,
 ) {
     for (parent_pos, children) in &parent_query {
         for child in children.iter() {
@@ -33,10 +42,10 @@ pub(crate) fn sync_orbit_cell_positions(
 mod tests {
     use std::f32::consts::{FRAC_PI_2, PI};
 
+    use rantzsoft_spatial2d::{components::Spatial2D, propagation::PositionPropagation};
+
     use super::*;
     use crate::cells::components::*;
-    use rantzsoft_spatial2d::components::Spatial2D;
-    use rantzsoft_spatial2d::propagation::PositionPropagation;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -54,7 +63,7 @@ mod tests {
     }
 
     /// Spawns a shield parent at the given position, with orbit children at
-    /// specified angles. Returns (shield_entity, vec_of_orbit_entities).
+    /// specified angles. Returns `(shield_entity, vec_of_orbit_entities)`.
     fn spawn_shield_with_orbits(
         app: &mut App,
         shield_pos: Vec2,
@@ -64,12 +73,7 @@ mod tests {
     ) -> (Entity, Vec<Entity>) {
         let shield = app
             .world_mut()
-            .spawn((
-                Cell,
-                ShieldParent,
-                Spatial2D,
-                Position2D(shield_pos),
-            ))
+            .spawn((Cell, ShieldParent, Spatial2D, Position2D(shield_pos)))
             .id();
 
         let mut orbits = Vec::new();
@@ -102,13 +106,8 @@ mod tests {
         // Then: orbit Position2D = (100.0 + 60.0*cos(0), 200.0 + 60.0*sin(0))
         //                        = (160.0, 200.0)
         let mut app = test_app();
-        let (_, orbits) = spawn_shield_with_orbits(
-            &mut app,
-            Vec2::new(100.0, 200.0),
-            60.0,
-            FRAC_PI_2,
-            &[0.0],
-        );
+        let (_, orbits) =
+            spawn_shield_with_orbits(&mut app, Vec2::new(100.0, 200.0), 60.0, FRAC_PI_2, &[0.0]);
 
         tick(&mut app);
 
@@ -134,13 +133,8 @@ mod tests {
         //       = (100.0 + 60.0*(-0.5), 200.0 + 60.0*0.866) = (70.0, 251.96)
         let angle = 2.0 * PI / 3.0;
         let mut app = test_app();
-        let (_, orbits) = spawn_shield_with_orbits(
-            &mut app,
-            Vec2::new(100.0, 200.0),
-            60.0,
-            FRAC_PI_2,
-            &[angle],
-        );
+        let (_, orbits) =
+            spawn_shield_with_orbits(&mut app, Vec2::new(100.0, 200.0), 60.0, FRAC_PI_2, &[angle]);
 
         tick(&mut app);
 
@@ -168,13 +162,8 @@ mod tests {
         //       = (70.0, 148.04)
         let angle = 4.0 * PI / 3.0;
         let mut app = test_app();
-        let (_, orbits) = spawn_shield_with_orbits(
-            &mut app,
-            Vec2::new(100.0, 200.0),
-            60.0,
-            FRAC_PI_2,
-            &[angle],
-        );
+        let (_, orbits) =
+            spawn_shield_with_orbits(&mut app, Vec2::new(100.0, 200.0), 60.0, FRAC_PI_2, &[angle]);
 
         tick(&mut app);
 
@@ -200,13 +189,8 @@ mod tests {
         // Then: all orbit positions are at radius 60.0 from shield center
         let angles = [0.0, 2.0 * PI / 3.0, 4.0 * PI / 3.0];
         let mut app = test_app();
-        let (_, orbits) = spawn_shield_with_orbits(
-            &mut app,
-            Vec2::new(100.0, 200.0),
-            60.0,
-            FRAC_PI_2,
-            &angles,
-        );
+        let (_, orbits) =
+            spawn_shield_with_orbits(&mut app, Vec2::new(100.0, 200.0), 60.0, FRAC_PI_2, &angles);
 
         tick(&mut app);
 
@@ -229,13 +213,8 @@ mod tests {
         // Then: orbit Position2D = (0.0 + 60.0*cos(PI/2), 0.0 + 60.0*sin(PI/2))
         //       = (0.0, 60.0)
         let mut app = test_app();
-        let (_, orbits) = spawn_shield_with_orbits(
-            &mut app,
-            Vec2::ZERO,
-            60.0,
-            FRAC_PI_2,
-            &[FRAC_PI_2],
-        );
+        let (_, orbits) =
+            spawn_shield_with_orbits(&mut app, Vec2::ZERO, 60.0, FRAC_PI_2, &[FRAC_PI_2]);
 
         tick(&mut app);
 

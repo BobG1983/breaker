@@ -27,11 +27,11 @@ pub(crate) fn break_chain_on_bolt_lost(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::prelude::*;
     use rantzsoft_physics2d::constraint::DistanceConstraint;
     use rantzsoft_spatial2d::components::Position2D;
 
+    use super::*;
     use crate::bolt::components::{Bolt, BoltVelocity, ExtraBolt};
 
     fn test_app() -> App {

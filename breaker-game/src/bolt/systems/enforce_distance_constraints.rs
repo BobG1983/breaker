@@ -26,7 +26,7 @@ pub(crate) fn enforce_distance_constraints(
             continue;
         };
 
-        let delta = b.0 .0 - a.0 .0;
+        let delta = b.0.0 - a.0.0;
         let distance = delta.length();
 
         // Skip if same position (can't normalize zero vector) or within slack
@@ -37,32 +37,32 @@ pub(crate) fn enforce_distance_constraints(
         // Taut — apply position correction
         let axis = delta / distance;
         let half_correction = (distance - constraint.max_distance) / 2.0;
-        a.0 .0 += axis * half_correction;
-        b.0 .0 -= axis * half_correction;
+        a.0.0 += axis * half_correction;
+        b.0.0 -= axis * half_correction;
 
         // Velocity redistribution — only when NOT both actively converging.
         // "Both converging" = A moving toward B (positive along axis) AND
         // B moving toward A (negative along axis). In that case both bolts
         // will naturally close the gap and no velocity adjustment is needed.
-        let vel_a_along = a.1.value.dot(axis);
-        let vel_b_along = b.1.value.dot(axis);
-        let both_converging = vel_a_along > 0.0 && vel_b_along < 0.0;
+        let dot_a = a.1.value.dot(axis);
+        let dot_b = b.1.value.dot(axis);
+        let both_converging = dot_a > 0.0 && dot_b < 0.0;
 
         if !both_converging {
-            let avg = (vel_a_along + vel_b_along) / 2.0;
-            a.1.value += (avg - vel_a_along) * axis;
-            b.1.value += (avg - vel_b_along) * axis;
+            let avg = dot_a.midpoint(dot_b);
+            a.1.value += (avg - dot_a) * axis;
+            b.1.value += (avg - dot_b) * axis;
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::prelude::*;
     use rantzsoft_physics2d::constraint::DistanceConstraint;
     use rantzsoft_spatial2d::components::Position2D;
 
+    use super::*;
     use crate::bolt::components::{Bolt, BoltVelocity};
 
     fn test_app() -> App {

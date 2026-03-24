@@ -8,14 +8,8 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
 
 use crate::{
-    bolt::{
-        components::*,
-        messages::SpawnChainBolt,
-        resources::BoltConfig,
-    },
-    shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, GameRng, WALL_LAYER,
-    },
+    bolt::{components::*, messages::SpawnChainBolt, resources::BoltConfig},
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, GameRng, WALL_LAYER},
 };
 
 /// Reads [`SpawnChainBolt`] messages and spawns tethered chain bolt entities.
@@ -48,10 +42,7 @@ pub(crate) fn spawn_chain_bolt(
             bolt_config.base_speed * angle.cos(),
         );
 
-        let spawn_pos = Vec2::new(
-            anchor_pos.0.x,
-            anchor_pos.0.y + bolt_config.spawn_offset_y,
-        );
+        let spawn_pos = Vec2::new(anchor_pos.0.x, anchor_pos.0.y + bolt_config.spawn_offset_y);
 
         let new_bolt = commands
             .spawn((
@@ -68,7 +59,10 @@ pub(crate) fn spawn_chain_bolt(
                     x: bolt_config.radius,
                     y: bolt_config.radius,
                 },
-                Aabb2D::new(Vec2::ZERO, Vec2::new(bolt_config.radius, bolt_config.radius)),
+                Aabb2D::new(
+                    Vec2::ZERO,
+                    Vec2::new(bolt_config.radius, bolt_config.radius),
+                ),
                 CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
                 (
                     BoltBaseSpeed(bolt_config.base_speed),
@@ -98,13 +92,13 @@ pub(crate) fn spawn_chain_bolt(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::prelude::*;
     use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, constraint::DistanceConstraint,
-};
+        aabb::Aabb2D, collision_layers::CollisionLayers, constraint::DistanceConstraint,
+    };
     use rantzsoft_spatial2d::components::Position2D;
 
+    use super::*;
     use crate::{
         bolt::{
             components::{Bolt, BoltVelocity, ExtraBolt},
@@ -163,12 +157,13 @@ mod tests {
             ))
             .id();
 
-        app.world_mut().resource_mut::<SendSpawnChain>().0.push(
-            SpawnChainBolt {
+        app.world_mut()
+            .resource_mut::<SendSpawnChain>()
+            .0
+            .push(SpawnChainBolt {
                 anchor,
                 tether_distance: 200.0,
-            },
-        );
+            });
         tick(&mut app);
 
         // Should have 2 bolts total
@@ -212,12 +207,13 @@ mod tests {
             ))
             .id();
 
-        app.world_mut().resource_mut::<SendSpawnChain>().0.push(
-            SpawnChainBolt {
+        app.world_mut()
+            .resource_mut::<SendSpawnChain>()
+            .0
+            .push(SpawnChainBolt {
                 anchor,
                 tether_distance: 200.0,
-            },
-        );
+            });
         tick(&mut app);
 
         // Find the constraint entity — extract owned data to avoid borrow conflicts
@@ -286,12 +282,13 @@ mod tests {
             ))
             .id();
 
-        app.world_mut().resource_mut::<SendSpawnChain>().0.push(
-            SpawnChainBolt {
+        app.world_mut()
+            .resource_mut::<SendSpawnChain>()
+            .0
+            .push(SpawnChainBolt {
                 anchor,
                 tether_distance: 200.0,
-            },
-        );
+            });
         tick(&mut app);
 
         let chain_bolt = app
@@ -334,12 +331,13 @@ mod tests {
 
         let stale = app.world_mut().spawn_empty().id();
         app.world_mut().despawn(stale);
-        app.world_mut().resource_mut::<SendSpawnChain>().0.push(
-            SpawnChainBolt {
+        app.world_mut()
+            .resource_mut::<SendSpawnChain>()
+            .0
+            .push(SpawnChainBolt {
                 anchor: stale,
                 tether_distance: 200.0,
-            },
-        );
+            });
         tick(&mut app);
 
         let bolt_count = app
