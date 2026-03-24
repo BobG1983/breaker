@@ -65,6 +65,49 @@ type CandidateLookup<'w, 's> = Query<
     Without<crate::bolt::components::Bolt>,
 >;
 
+/// Finds the nearest collision candidate from a set of quadtree results.
+///
+/// Returns `Some((cell_entity_or_none, hit))` for the closest hit, or `None`
+/// if no candidate was hit. Cell entities return `Some(entity)`, walls return `None`.
+fn find_nearest_candidate(
+    candidates: &[Entity],
+    candidate_lookup: &CandidateLookup,
+    pierced_this_frame: &[Entity],
+    position: Vec2,
+    direction: Vec2,
+    remaining: f32,
+    bolt_radius: f32,
+) -> Option<(Option<Entity>, crate::shared::math::RayHit)> {
+    let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
+
+    for candidate_entity in candidates {
+        let Ok((_, candidate_pos, candidate_aabb, is_cell, _is_wall, _cell_health)) =
+            candidate_lookup.get(*candidate_entity)
+        else {
+            continue;
+        };
+
+        if is_cell && pierced_this_frame.contains(candidate_entity) {
+            continue;
+        }
+
+        let expanded_half_extents = candidate_aabb.half_extents + Vec2::splat(bolt_radius);
+        if let Some(hit) =
+            ray_vs_aabb(position, direction, remaining, candidate_pos.0, expanded_half_extents)
+            && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
+        {
+            let hit_entity = if is_cell {
+                Some(*candidate_entity)
+            } else {
+                None
+            };
+            best = Some((hit_entity, hit));
+        }
+    }
+
+    best
+}
+
 /// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
 ///
 /// For each bolt, traces a ray from its current position in the velocity
@@ -131,39 +174,15 @@ pub(crate) fn bolt_cell_collision(
                 CollisionLayers::new(0, CELL_LAYER | WALL_LAYER),
             );
 
-            // Find the nearest hit among all candidates
-            let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
-
-            for candidate_entity in &candidates {
-                let Ok((_, candidate_pos, candidate_aabb, is_cell, _is_wall, _cell_health)) =
-                    candidate_lookup.get(*candidate_entity)
-                else {
-                    continue;
-                };
-
-                // Skip cells already pierced by this bolt this frame
-                if is_cell && pierced_this_frame.contains(candidate_entity) {
-                    continue;
-                }
-
-                let expanded_half_extents = candidate_aabb.half_extents + Vec2::splat(r);
-                if let Some(hit) = ray_vs_aabb(
-                    position,
-                    direction,
-                    remaining,
-                    candidate_pos.0,
-                    expanded_half_extents,
-                )
-                    && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
-                {
-                    let hit_entity = if is_cell {
-                        Some(*candidate_entity)
-                    } else {
-                        None
-                    };
-                    best = Some((hit_entity, hit));
-                }
-            }
+            let best = find_nearest_candidate(
+                &candidates,
+                &candidate_lookup,
+                &pierced_this_frame,
+                position,
+                direction,
+                remaining,
+                r,
+            );
 
             let Some((hit_cell, hit)) = best else {
                 // No target in path — move the full remaining distance
@@ -243,7 +262,7 @@ mod tests {
         },
         chips::components::{DamageBoost, Piercing, PiercingRemaining},
         shared::{
-            BOLT_LAYER, CELL_LAYER, WALL_LAYER, EntityScale, GameDrawLayer, math::MAX_BOUNCES,
+            BOLT_LAYER, CELL_LAYER, EntityScale, GameDrawLayer, WALL_LAYER, math::MAX_BOUNCES,
         },
         wall::components::{Wall, WallSize},
     };
@@ -1898,7 +1917,7 @@ mod tests {
     // `Aabb2D.half_extents` (populated by the quadtree broad phase) rather
     // than from the legacy `CellWidth`/`CellHeight` or `WallSize` components.
 
-    /// Spawns a cell with explicit `Aabb2D` half_extents that differ from the
+    /// Spawns a cell with explicit `Aabb2D` `half_extents` that differ from the
     /// legacy `CellWidth`/`CellHeight` dimensions. Used to test which source
     /// the collision system reads for Minkowski expansion.
     fn spawn_cell_with_custom_aabb(
