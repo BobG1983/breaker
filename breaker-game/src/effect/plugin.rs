@@ -18,12 +18,14 @@ use super::{
         chain_hit::handle_chain_hit,
         chain_lightning::handle_chain_lightning,
         damage_boost::handle_damage_boost,
+        entropy_engine::handle_entropy_engine,
         gravity_well::handle_gravity_well,
         life_lost::{LivesDisplay, handle_life_lost, spawn_lives_display, update_lives_display},
         multi_bolt::handle_multi_bolt,
         piercing::handle_piercing,
         piercing_beam::handle_piercing_beam,
         ramping_damage::{handle_ramping_damage, increment_ramping_damage, reset_ramping_damage},
+        random_effect::handle_random_effect,
         second_wind::handle_second_wind,
         shield::{handle_shield, tick_shield},
         shockwave::{
@@ -35,6 +37,7 @@ use super::{
         speed_boost::handle_speed_boost,
         tilt_control_boost::handle_tilt_control_boost,
         time_penalty::handle_time_penalty,
+        time_pressure_boost::{handle_time_pressure_boost_applied, tick_time_pressure_boost},
         timed_speed_burst::{handle_timed_speed_burst, tick_timed_speed_burst},
         width_boost::handle_width_boost,
     },
@@ -61,34 +64,12 @@ pub(crate) struct EffectPlugin;
 impl Plugin for EffectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BreakerRegistry>()
-            .init_resource::<ActiveEffects>()
-            // Effect observers — triggered effects (fired by bridge systems)
-            .add_observer(handle_life_lost)
-            .add_observer(handle_time_penalty)
-            .add_observer(handle_spawn_bolt)
-            .add_observer(handle_shockwave)
-            .add_observer(handle_speed_boost)
-            .add_observer(handle_chain_bolt)
-            .add_observer(handle_multi_bolt)
-            .add_observer(handle_shield)
-            .add_observer(handle_chain_lightning)
-            .add_observer(handle_spawn_phantom)
-            .add_observer(handle_piercing_beam)
-            .add_observer(handle_gravity_well)
-            .add_observer(handle_second_wind)
-            .add_observer(handle_timed_speed_burst)
-            // Passive handler observers (moved from ChipsPlugin)
-            .add_observer(handle_ramping_damage)
-            .add_observer(handle_piercing)
-            .add_observer(handle_damage_boost)
-            .add_observer(handle_bolt_speed_boost)
-            .add_observer(handle_chain_hit)
-            .add_observer(handle_bolt_size_boost)
-            .add_observer(handle_width_boost)
-            .add_observer(handle_breaker_speed_boost)
-            .add_observer(handle_bump_force_boost)
-            .add_observer(handle_tilt_control_boost)
-            .add_observer(handle_attraction)
+            .init_resource::<ActiveEffects>();
+
+        Self::register_triggered_observers(app);
+        Self::register_passive_observers(app);
+
+        app
             // Init systems — run on entering Playing state
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -147,6 +128,13 @@ impl Plugin for EffectPlugin {
                     .after(EffectSystems::Bridge)
                     .run_if(in_state(PlayingState::Active)),
             )
+            // Time pressure boost tick (apply/remove based on NodeTimer ratio)
+            .add_systems(
+                FixedUpdate,
+                tick_time_pressure_boost
+                    .after(EffectSystems::Bridge)
+                    .run_if(in_state(PlayingState::Active)),
+            )
             // Ramping damage increment + reset
             .add_systems(
                 FixedUpdate,
@@ -165,6 +153,44 @@ impl Plugin for EffectPlugin {
                 )
                     .run_if(in_state(PlayingState::Active)),
             );
+    }
+}
+
+impl EffectPlugin {
+    /// Registers all triggered-effect observers (fired by bridge systems).
+    fn register_triggered_observers(app: &mut App) {
+        app.add_observer(handle_life_lost)
+            .add_observer(handle_time_penalty)
+            .add_observer(handle_spawn_bolt)
+            .add_observer(handle_shockwave)
+            .add_observer(handle_speed_boost)
+            .add_observer(handle_chain_bolt)
+            .add_observer(handle_multi_bolt)
+            .add_observer(handle_shield)
+            .add_observer(handle_chain_lightning)
+            .add_observer(handle_spawn_phantom)
+            .add_observer(handle_piercing_beam)
+            .add_observer(handle_gravity_well)
+            .add_observer(handle_second_wind)
+            .add_observer(handle_timed_speed_burst)
+            .add_observer(handle_time_pressure_boost_applied)
+            .add_observer(handle_random_effect)
+            .add_observer(handle_entropy_engine);
+    }
+
+    /// Registers all passive-effect observers (applied during chip selection).
+    fn register_passive_observers(app: &mut App) {
+        app.add_observer(handle_ramping_damage)
+            .add_observer(handle_piercing)
+            .add_observer(handle_damage_boost)
+            .add_observer(handle_bolt_speed_boost)
+            .add_observer(handle_chain_hit)
+            .add_observer(handle_bolt_size_boost)
+            .add_observer(handle_width_boost)
+            .add_observer(handle_breaker_speed_boost)
+            .add_observer(handle_bump_force_boost)
+            .add_observer(handle_tilt_control_boost)
+            .add_observer(handle_attraction);
     }
 }
 

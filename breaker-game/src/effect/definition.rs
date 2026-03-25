@@ -180,6 +180,25 @@ pub enum Effect {
         /// Duration of the burst in seconds.
         duration_secs: f32,
     },
+    /// Time-pressure speed boost applied to bolts when node timer drops below threshold.
+    TimePressureBoost {
+        /// Speed multiplier applied to bolt velocity when active.
+        speed_mult: f32,
+        /// Timer ratio threshold (remaining/total) below which boost activates.
+        threshold_pct: f32,
+    },
+    /// Selects a random effect from a weighted pool of `TriggerChain` entries.
+    ///
+    /// Pool entries are `TriggerChain` because they may need arming (trigger wrappers)
+    /// or direct firing (leaves).
+    RandomEffect(Vec<(f32, crate::chips::definition::TriggerChain)>),
+    /// Counts cell destructions and fires a random effect from the pool when threshold reached.
+    EntropyEngine {
+        /// Number of cell destructions needed before firing.
+        threshold: u32,
+        /// Weighted pool of `TriggerChain` entries to select from on trigger.
+        pool: Vec<(f32, crate::chips::definition::TriggerChain)>,
+    },
 }
 
 /// A node in the effect tree — either a trigger gate wrapping children,
@@ -280,6 +299,29 @@ impl Effect {
             speed_mult,
             duration_secs,
         }
+    }
+
+    /// Build a `TimePressureBoost` leaf with the given speed multiplier and threshold.
+    pub(crate) fn test_time_pressure_boost(speed_mult: f32, threshold_pct: f32) -> Self {
+        Self::TimePressureBoost {
+            speed_mult,
+            threshold_pct,
+        }
+    }
+
+    /// Build a `RandomEffect` variant with the given pool.
+    pub(crate) fn test_random_effect(
+        pool: Vec<(f32, crate::chips::definition::TriggerChain)>,
+    ) -> Self {
+        Self::RandomEffect(pool)
+    }
+
+    /// Build an `EntropyEngine` variant with the given threshold and pool.
+    pub(crate) fn test_entropy_engine(
+        threshold: u32,
+        pool: Vec<(f32, crate::chips::definition::TriggerChain)>,
+    ) -> Self {
+        Self::EntropyEngine { threshold, pool }
     }
 }
 
@@ -523,8 +565,71 @@ mod tests {
                 speed_mult: 1.5,
                 duration_secs: 3.0,
             },
+            Effect::TimePressureBoost {
+                speed_mult: 2.0,
+                threshold_pct: 0.25,
+            },
+            Effect::RandomEffect(vec![(
+                1.0,
+                crate::chips::definition::TriggerChain::SpawnBolt,
+            )]),
+            Effect::EntropyEngine {
+                threshold: 5,
+                pool: vec![(1.0, crate::chips::definition::TriggerChain::SpawnBolt)],
+            },
         ];
-        assert_eq!(effects.len(), 22, "all 22 Effect variants");
+        assert_eq!(effects.len(), 25, "all 25 Effect variants");
+    }
+
+    // =========================================================================
+    // C5-C6: New Effect variant round-trip tests
+    // =========================================================================
+
+    #[test]
+    fn effect_time_pressure_boost_round_trips() {
+        let effect = Effect::TimePressureBoost {
+            speed_mult: 2.0,
+            threshold_pct: 0.25,
+        };
+        let cloned = effect.clone();
+        assert_eq!(effect, cloned);
+    }
+
+    #[test]
+    fn effect_time_pressure_boost_no_boost_constructable() {
+        let effect = Effect::TimePressureBoost {
+            speed_mult: 1.0,
+            threshold_pct: 0.25,
+        };
+        assert!(matches!(
+            effect,
+            Effect::TimePressureBoost { speed_mult, .. } if (speed_mult - 1.0).abs() < f32::EPSILON
+        ));
+    }
+
+    #[test]
+    fn effect_random_effect_round_trips() {
+        use crate::chips::definition::TriggerChain;
+        let effect = Effect::RandomEffect(vec![
+            (0.6, TriggerChain::SpawnBolt),
+            (0.4, TriggerChain::test_speed_boost(1.2)),
+        ]);
+        let cloned = effect.clone();
+        assert_eq!(effect, cloned);
+    }
+
+    #[test]
+    fn effect_entropy_engine_round_trips() {
+        use crate::chips::definition::TriggerChain;
+        let effect = Effect::EntropyEngine {
+            threshold: 5,
+            pool: vec![
+                (0.5, TriggerChain::SpawnBolt),
+                (0.5, TriggerChain::test_speed_boost(1.3)),
+            ],
+        };
+        let cloned = effect.clone();
+        assert_eq!(effect, cloned);
     }
 
     #[test]

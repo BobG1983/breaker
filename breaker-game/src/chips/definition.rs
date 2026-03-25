@@ -160,6 +160,21 @@ pub enum TriggerChain {
         /// Duration of the burst in seconds.
         duration_secs: f32,
     },
+    /// Time-pressure speed boost applied to bolts when node timer drops below threshold.
+    TimePressureBoost {
+        /// Speed multiplier applied to bolt velocity when active.
+        speed_mult: f32,
+        /// Timer ratio threshold (remaining/total) below which boost activates.
+        threshold_pct: f32,
+    },
+    /// Selects a random effect from a weighted pool of `TriggerChain` entries.
+    ///
+    /// Each entry is `(weight, chain)`. Inner chains may be leaves or trigger wrappers.
+    RandomEffect(Vec<(f32, TriggerChain)>),
+    /// Counts cell destructions and fires a random effect from the pool when threshold is reached.
+    ///
+    /// First field is the threshold count, second is the weighted pool.
+    EntropyEngine(u32, Vec<(f32, TriggerChain)>),
 }
 
 impl TriggerChain {
@@ -190,7 +205,10 @@ impl TriggerChain {
             | Self::BumpForce(_)
             | Self::TiltControl(_)
             | Self::RampingDamage { .. }
-            | Self::TimedSpeedBurst { .. } => 0,
+            | Self::TimedSpeedBurst { .. }
+            | Self::TimePressureBoost { .. }
+            | Self::RandomEffect(_)
+            | Self::EntropyEngine(..) => 0,
             Self::OnPerfectBump(effects)
             | Self::OnImpact(_, effects)
             | Self::OnCellDestroyed(effects)
@@ -458,6 +476,24 @@ impl TriggerChain {
             speed_mult,
             duration_secs,
         }
+    }
+
+    /// Build a `TimePressureBoost` leaf with the given speed multiplier and threshold.
+    pub(crate) fn test_time_pressure_boost(speed_mult: f32, threshold_pct: f32) -> Self {
+        Self::TimePressureBoost {
+            speed_mult,
+            threshold_pct,
+        }
+    }
+
+    /// Build a `RandomEffect` leaf with the given weighted pool entries.
+    pub(crate) fn test_random_effect(pool: Vec<(f32, TriggerChain)>) -> Self {
+        Self::RandomEffect(pool)
+    }
+
+    /// Build an `EntropyEngine` leaf with the given threshold and pool.
+    pub(crate) fn test_entropy_engine(threshold: u32, pool: Vec<(f32, TriggerChain)>) -> Self {
+        Self::EntropyEngine(threshold, pool)
     }
 }
 
@@ -2382,5 +2418,140 @@ mod tests {
         for def in &defs {
             assert_eq!(def.max_stacks, 2);
         }
+    }
+
+    // ======================================================================
+    // C5-C6: TimePressureBoost (Deadline) TriggerChain tests
+    // ======================================================================
+
+    #[test]
+    fn time_pressure_boost_trigger_chain_deserializes() {
+        let tc: TriggerChain =
+            ron::de::from_str("TimePressureBoost(speed_mult: 2.0, threshold_pct: 0.25)")
+                .expect("should parse TimePressureBoost");
+        assert_eq!(
+            tc,
+            TriggerChain::TimePressureBoost {
+                speed_mult: 2.0,
+                threshold_pct: 0.25,
+            }
+        );
+    }
+
+    #[test]
+    fn time_pressure_boost_trigger_chain_zero_threshold_edge_case() {
+        let tc: TriggerChain =
+            ron::de::from_str("TimePressureBoost(speed_mult: 2.0, threshold_pct: 0.0)")
+                .expect("should parse TimePressureBoost with threshold_pct: 0.0");
+        assert_eq!(
+            tc,
+            TriggerChain::TimePressureBoost {
+                speed_mult: 2.0,
+                threshold_pct: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    fn time_pressure_boost_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::TimePressureBoost {
+            speed_mult: 2.0,
+            threshold_pct: 0.25,
+        };
+        assert!(tc.is_leaf(), "TimePressureBoost should be a leaf");
+        assert_eq!(tc.depth(), 0, "TimePressureBoost depth should be 0");
+    }
+
+    // ======================================================================
+    // C5-C6: RandomEffect (Flux) TriggerChain tests
+    // ======================================================================
+
+    #[test]
+    fn random_effect_trigger_chain_deserializes() {
+        let ron_str = "RandomEffect([(0.5, SpeedBoost(target: Bolt, multiplier: 1.1)), (0.5, Shockwave(base_range: 24.0, range_per_level: 0.0, stacks: 1, speed: 400.0))])";
+        let tc: TriggerChain =
+            ron::de::from_str(ron_str).expect("should parse RandomEffect with pool entries");
+        match &tc {
+            TriggerChain::RandomEffect(pool) => {
+                assert_eq!(pool.len(), 2, "pool should contain 2 entries");
+                assert!((pool[0].0 - 0.5).abs() < f32::EPSILON);
+                assert!((pool[1].0 - 0.5).abs() < f32::EPSILON);
+            }
+            other => panic!("expected RandomEffect, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn random_effect_trigger_chain_single_entry_deserializes() {
+        let ron_str = "RandomEffect([(1.0, SpawnBolt)])";
+        let tc: TriggerChain =
+            ron::de::from_str(ron_str).expect("should parse RandomEffect with single entry");
+        match &tc {
+            TriggerChain::RandomEffect(pool) => {
+                assert_eq!(pool.len(), 1);
+                assert!((pool[0].0 - 1.0).abs() < f32::EPSILON);
+                assert_eq!(pool[0].1, TriggerChain::SpawnBolt);
+            }
+            other => panic!("expected RandomEffect, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn random_effect_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::RandomEffect(vec![(1.0, TriggerChain::SpawnBolt)]);
+        assert!(tc.is_leaf(), "RandomEffect should be a leaf");
+        assert_eq!(tc.depth(), 0, "RandomEffect depth should be 0");
+    }
+
+    #[test]
+    fn random_effect_with_non_leaf_inner_is_still_leaf() {
+        let tc = TriggerChain::RandomEffect(vec![(
+            1.0,
+            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(32.0)]),
+        )]);
+        assert!(
+            tc.is_leaf(),
+            "RandomEffect wrapper is a leaf; inner chains may be trigger wrappers for arming"
+        );
+    }
+
+    // ======================================================================
+    // C5-C6: EntropyEngine TriggerChain tests
+    // ======================================================================
+
+    #[test]
+    fn entropy_engine_trigger_chain_deserializes() {
+        let ron_str = "EntropyEngine(5, [(0.3, SpawnBolt), (0.7, SpeedBoost(target: Bolt, multiplier: 1.3))])";
+        let tc: TriggerChain = ron::de::from_str(ron_str).expect("should parse EntropyEngine");
+        match &tc {
+            TriggerChain::EntropyEngine(threshold, pool) => {
+                assert_eq!(*threshold, 5);
+                assert_eq!(pool.len(), 2);
+                assert!((pool[0].0 - 0.3).abs() < f32::EPSILON);
+                assert!((pool[1].0 - 0.7).abs() < f32::EPSILON);
+            }
+            other => panic!("expected EntropyEngine, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn entropy_engine_trigger_chain_threshold_one_edge_case() {
+        let ron_str = "EntropyEngine(1, [(1.0, SpawnBolt)])";
+        let tc: TriggerChain =
+            ron::de::from_str(ron_str).expect("should parse EntropyEngine with threshold 1");
+        match &tc {
+            TriggerChain::EntropyEngine(threshold, pool) => {
+                assert_eq!(*threshold, 1);
+                assert_eq!(pool.len(), 1);
+            }
+            other => panic!("expected EntropyEngine, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn entropy_engine_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::EntropyEngine(5, vec![(1.0, TriggerChain::SpawnBolt)]);
+        assert!(tc.is_leaf(), "EntropyEngine should be a leaf");
+        assert_eq!(tc.depth(), 0, "EntropyEngine depth should be 0");
     }
 }

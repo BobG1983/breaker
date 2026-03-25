@@ -194,6 +194,30 @@ pub(crate) struct TimedSpeedBurstFired {
     pub source_chip: Option<String>,
 }
 
+/// Fired when a random effect pool needs to be resolved.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct RandomEffectFired {
+    /// Weighted pool of `TriggerChain` entries to select from.
+    pub pool: Vec<(f32, crate::chips::definition::TriggerChain)>,
+    /// The bolt entity, or `None` for global triggers.
+    pub bolt: Option<Entity>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
+
+/// Fired when an entropy engine effect needs counting and potential resolution.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct EntropyEngineFired {
+    /// Number of cell destructions needed before firing.
+    pub threshold: u32,
+    /// Weighted pool of `TriggerChain` entries to select from on trigger.
+    pub pool: Vec<(f32, crate::chips::definition::TriggerChain)>,
+    /// The bolt entity, or `None` for global triggers.
+    pub bolt: Option<Entity>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
+
 // ===========================================================================
 // Passive effect events (fired by dispatch_chip_effects)
 // ===========================================================================
@@ -290,6 +314,19 @@ pub(crate) struct TiltControlApplied {
     pub chip_name: String,
 }
 
+/// Fired when a time pressure boost passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct TimePressureBoostApplied {
+    /// Speed multiplier applied to bolt velocity when active.
+    pub speed_mult: f32,
+    /// Timer ratio threshold (remaining/total) below which boost activates.
+    pub threshold_pct: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
+
 /// Fired when a ramping damage passive effect is applied via chip selection.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct RampingDamageApplied {
@@ -316,10 +353,60 @@ pub(crate) struct RampingDamageApplied {
 pub(crate) fn trigger_chain_to_effect(
     chain: &crate::chips::definition::TriggerChain,
 ) -> super::definition::Effect {
+    if let Some(effect) = chain_to_passive_effect(chain) {
+        return effect;
+    }
+    if let Some(effect) = chain_to_triggered_effect(chain) {
+        return effect;
+    }
+    unreachable!("trigger_chain_to_effect called on non-leaf TriggerChain: {chain:?}")
+}
+
+/// Converts passive leaf `TriggerChain` variants into their `Effect` equivalents.
+fn chain_to_passive_effect(
+    chain: &crate::chips::definition::TriggerChain,
+) -> Option<super::definition::Effect> {
     use super::definition::Effect;
     use crate::chips::definition::TriggerChain;
 
-    match chain {
+    Some(match chain {
+        TriggerChain::Piercing(n) => Effect::Piercing(*n),
+        TriggerChain::DamageBoost(f) => Effect::DamageBoost(*f),
+        TriggerChain::SpeedBoost { target, multiplier } => Effect::SpeedBoost {
+            target: *target,
+            multiplier: *multiplier,
+        },
+        TriggerChain::ChainHit(n) => Effect::ChainHit(*n),
+        TriggerChain::SizeBoost(t, f) => Effect::SizeBoost(*t, *f),
+        TriggerChain::Attraction(f) => Effect::Attraction(*f),
+        TriggerChain::BumpForce(f) => Effect::BumpForce(*f),
+        TriggerChain::TiltControl(f) => Effect::TiltControl(*f),
+        TriggerChain::RampingDamage {
+            bonus_per_hit,
+            max_bonus,
+        } => Effect::RampingDamage {
+            bonus_per_hit: *bonus_per_hit,
+            max_bonus: *max_bonus,
+        },
+        TriggerChain::TimePressureBoost {
+            speed_mult,
+            threshold_pct,
+        } => Effect::TimePressureBoost {
+            speed_mult: *speed_mult,
+            threshold_pct: *threshold_pct,
+        },
+        _ => return None,
+    })
+}
+
+/// Converts triggered leaf `TriggerChain` variants into their `Effect` equivalents.
+fn chain_to_triggered_effect(
+    chain: &crate::chips::definition::TriggerChain,
+) -> Option<super::definition::Effect> {
+    use super::definition::Effect;
+    use crate::chips::definition::TriggerChain;
+
+    Some(match chain {
         TriggerChain::Shockwave {
             base_range,
             range_per_level,
@@ -352,10 +439,6 @@ pub(crate) fn trigger_chain_to_effect(
         TriggerChain::LoseLife => Effect::LoseLife,
         TriggerChain::TimePenalty { seconds } => Effect::TimePenalty { seconds: *seconds },
         TriggerChain::SpawnBolt => Effect::SpawnBolt,
-        TriggerChain::SpeedBoost { target, multiplier } => Effect::SpeedBoost {
-            target: *target,
-            multiplier: *multiplier,
-        },
         TriggerChain::ChainBolt { tether_distance } => Effect::ChainBolt {
             tether_distance: *tether_distance,
         },
@@ -393,20 +476,6 @@ pub(crate) fn trigger_chain_to_effect(
         TriggerChain::SecondWind { invuln_secs } => Effect::SecondWind {
             invuln_secs: *invuln_secs,
         },
-        TriggerChain::Piercing(n) => Effect::Piercing(*n),
-        TriggerChain::DamageBoost(f) => Effect::DamageBoost(*f),
-        TriggerChain::ChainHit(n) => Effect::ChainHit(*n),
-        TriggerChain::SizeBoost(t, f) => Effect::SizeBoost(*t, *f),
-        TriggerChain::Attraction(f) => Effect::Attraction(*f),
-        TriggerChain::BumpForce(f) => Effect::BumpForce(*f),
-        TriggerChain::TiltControl(f) => Effect::TiltControl(*f),
-        TriggerChain::RampingDamage {
-            bonus_per_hit,
-            max_bonus,
-        } => Effect::RampingDamage {
-            bonus_per_hit: *bonus_per_hit,
-            max_bonus: *max_bonus,
-        },
         TriggerChain::TimedSpeedBurst {
             speed_mult,
             duration_secs,
@@ -414,9 +483,13 @@ pub(crate) fn trigger_chain_to_effect(
             speed_mult: *speed_mult,
             duration_secs: *duration_secs,
         },
-        // Non-leaf trigger wrappers — invariant violation
-        _ => unreachable!("trigger_chain_to_effect called on non-leaf TriggerChain: {chain:?}"),
-    }
+        TriggerChain::RandomEffect(pool) => Effect::RandomEffect(pool.clone()),
+        TriggerChain::EntropyEngine(threshold, pool) => Effect::EntropyEngine {
+            threshold: *threshold,
+            pool: pool.clone(),
+        },
+        _ => return None,
+    })
 }
 
 // ===========================================================================
@@ -449,7 +522,9 @@ pub(crate) fn fire_typed_event(
         | Effect::PiercingBeam { .. }
         | Effect::GravityWell { .. }
         | Effect::SecondWind { .. }
-        | Effect::TimedSpeedBurst { .. } => {
+        | Effect::TimedSpeedBurst { .. }
+        | Effect::RandomEffect(_)
+        | Effect::EntropyEngine { .. } => {
             fire_triggered_effect(effect, bolt, source_chip, commands);
         }
         // Passive-only effects — should not be fired via triggered dispatch.
@@ -460,7 +535,8 @@ pub(crate) fn fire_typed_event(
         | Effect::Attraction(_)
         | Effect::BumpForce(_)
         | Effect::TiltControl(_)
-        | Effect::RampingDamage { .. } => {
+        | Effect::RampingDamage { .. }
+        | Effect::TimePressureBoost { .. } => {
             warn!(
                 "passive effect dispatched via fire_typed_event — should use fire_passive_event: {effect:?}"
             );
@@ -628,6 +704,21 @@ fn fire_exotic_triggered_effect(
                 source_chip,
             });
         }
+        Effect::RandomEffect(pool) => {
+            commands.trigger(RandomEffectFired {
+                pool,
+                bolt,
+                source_chip,
+            });
+        }
+        Effect::EntropyEngine { threshold, pool } => {
+            commands.trigger(EntropyEngineFired {
+                threshold,
+                pool,
+                bolt,
+                source_chip,
+            });
+        }
         _ => unreachable!("fire_exotic_triggered_effect called with non-exotic effect: {effect:?}"),
     }
 }
@@ -709,6 +800,17 @@ pub(crate) fn fire_passive_event(
             commands.trigger(RampingDamageApplied {
                 bonus_per_hit,
                 max_bonus,
+                max_stacks,
+                chip_name,
+            });
+        }
+        Effect::TimePressureBoost {
+            speed_mult,
+            threshold_pct,
+        } => {
+            commands.trigger(TimePressureBoostApplied {
+                speed_mult,
+                threshold_pct,
                 max_stacks,
                 chip_name,
             });
@@ -1439,5 +1541,260 @@ mod tests {
         };
         assert_eq!(event.bolt, None);
         assert!(event.source_chip.is_none());
+    }
+
+    // =========================================================================
+    // C5-C6: TimePressureBoost conversion and passive dispatch tests
+    // =========================================================================
+
+    #[test]
+    fn trigger_chain_to_effect_converts_time_pressure_boost() {
+        use crate::chips::definition::TriggerChain;
+
+        let chain = TriggerChain::TimePressureBoost {
+            speed_mult: 2.0,
+            threshold_pct: 0.25,
+        };
+        let effect = trigger_chain_to_effect(&chain);
+        assert_eq!(
+            effect,
+            super::super::definition::Effect::TimePressureBoost {
+                speed_mult: 2.0,
+                threshold_pct: 0.25,
+            }
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedTimePressureBoost(Vec<TimePressureBoostApplied>);
+
+    fn capture_time_pressure_boost(
+        trigger: On<TimePressureBoostApplied>,
+        mut captured: ResMut<CapturedTimePressureBoost>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[test]
+    fn fire_passive_event_dispatches_time_pressure_boost() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedTimePressureBoost>()
+            .add_observer(capture_time_pressure_boost);
+
+        let effect = Effect::TimePressureBoost {
+            speed_mult: 2.0,
+            threshold_pct: 0.25,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_passive_event(effect, 1, "Deadline".to_owned(), &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedTimePressureBoost>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "fire_passive_event should dispatch TimePressureBoostApplied for Effect::TimePressureBoost"
+        );
+        assert!(
+            (captured.0[0].speed_mult - 2.0).abs() < f32::EPSILON,
+            "speed_mult should be 2.0"
+        );
+        assert!(
+            (captured.0[0].threshold_pct - 0.25).abs() < f32::EPSILON,
+            "threshold_pct should be 0.25"
+        );
+        assert_eq!(captured.0[0].max_stacks, 1);
+        assert_eq!(captured.0[0].chip_name, "Deadline");
+    }
+
+    // =========================================================================
+    // C5-C6: RandomEffect conversion and triggered dispatch tests
+    // =========================================================================
+
+    #[test]
+    fn trigger_chain_to_effect_converts_random_effect() {
+        use crate::chips::definition::TriggerChain;
+
+        let chain = TriggerChain::RandomEffect(vec![
+            (0.5, TriggerChain::SpawnBolt),
+            (0.5, TriggerChain::test_speed_boost(1.1)),
+        ]);
+        let effect = trigger_chain_to_effect(&chain);
+        match effect {
+            super::super::definition::Effect::RandomEffect(pool) => {
+                assert_eq!(pool.len(), 2, "pool should contain 2 entries");
+                assert!((pool[0].0 - 0.5).abs() < f32::EPSILON);
+                assert_eq!(pool[0].1, TriggerChain::SpawnBolt);
+                assert!((pool[1].0 - 0.5).abs() < f32::EPSILON);
+            }
+            other => panic!("expected RandomEffect, got {other:?}"),
+        }
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedRandomEffect(Vec<RandomEffectFired>);
+
+    fn capture_random_effect(
+        trigger: On<RandomEffectFired>,
+        mut captured: ResMut<CapturedRandomEffect>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[test]
+    fn fire_typed_event_dispatches_random_effect() {
+        use super::super::definition::Effect;
+        use crate::chips::definition::TriggerChain;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedRandomEffect>()
+            .add_observer(capture_random_effect);
+
+        let pool = vec![
+            (0.5, TriggerChain::SpawnBolt),
+            (0.5, TriggerChain::test_speed_boost(1.1)),
+        ];
+        let effect = Effect::RandomEffect(pool);
+        let bolt = Entity::PLACEHOLDER;
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(
+                effect,
+                Some(bolt),
+                Some("Volatile Flux".to_owned()),
+                &mut commands,
+            );
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedRandomEffect>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "fire_typed_event should dispatch RandomEffectFired for Effect::RandomEffect"
+        );
+        assert_eq!(captured.0[0].pool.len(), 2);
+        assert_eq!(captured.0[0].bolt, Some(bolt));
+        assert_eq!(captured.0[0].source_chip, Some("Volatile Flux".to_owned()));
+    }
+
+    // =========================================================================
+    // C5-C6: EntropyEngine conversion and triggered dispatch tests
+    // =========================================================================
+
+    #[test]
+    fn trigger_chain_to_effect_converts_entropy_engine() {
+        use crate::chips::definition::TriggerChain;
+
+        let chain = TriggerChain::EntropyEngine(5, vec![(1.0, TriggerChain::SpawnBolt)]);
+        let effect = trigger_chain_to_effect(&chain);
+        match effect {
+            super::super::definition::Effect::EntropyEngine { threshold, pool } => {
+                assert_eq!(threshold, 5);
+                assert_eq!(pool.len(), 1);
+                assert!((pool[0].0 - 1.0).abs() < f32::EPSILON);
+                assert_eq!(pool[0].1, TriggerChain::SpawnBolt);
+            }
+            other => panic!("expected EntropyEngine, got {other:?}"),
+        }
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedEntropyEngine(Vec<EntropyEngineFired>);
+
+    fn capture_entropy_engine(
+        trigger: On<EntropyEngineFired>,
+        mut captured: ResMut<CapturedEntropyEngine>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[test]
+    fn fire_typed_event_dispatches_entropy_engine() {
+        use super::super::definition::Effect;
+        use crate::chips::definition::TriggerChain;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedEntropyEngine>()
+            .add_observer(capture_entropy_engine);
+
+        let pool = vec![(1.0, TriggerChain::SpawnBolt)];
+        let effect = Effect::EntropyEngine { threshold: 5, pool };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(
+                effect,
+                None,
+                Some("Entropy Engine".to_owned()),
+                &mut commands,
+            );
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedEntropyEngine>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "fire_typed_event should dispatch EntropyEngineFired for Effect::EntropyEngine"
+        );
+        assert_eq!(captured.0[0].threshold, 5);
+        assert_eq!(captured.0[0].pool.len(), 1);
+        assert_eq!(captured.0[0].bolt, None);
+        assert_eq!(captured.0[0].source_chip, Some("Entropy Engine".to_owned()));
+    }
+
+    // =========================================================================
+    // C5-C6: Event struct construction tests
+    // =========================================================================
+
+    #[test]
+    fn time_pressure_boost_applied_carries_all_fields() {
+        let event = TimePressureBoostApplied {
+            speed_mult: 2.0,
+            threshold_pct: 0.25,
+            max_stacks: 1,
+            chip_name: "Deadline".to_owned(),
+        };
+        assert!((event.speed_mult - 2.0).abs() < f32::EPSILON);
+        assert!((event.threshold_pct - 0.25).abs() < f32::EPSILON);
+        assert_eq!(event.max_stacks, 1);
+        assert_eq!(event.chip_name, "Deadline");
+    }
+
+    #[test]
+    fn random_effect_fired_carries_all_fields() {
+        use crate::chips::definition::TriggerChain;
+
+        let event = RandomEffectFired {
+            pool: vec![(1.0, TriggerChain::SpawnBolt)],
+            bolt: Some(Entity::PLACEHOLDER),
+            source_chip: Some("Volatile Flux".to_owned()),
+        };
+        assert_eq!(event.pool.len(), 1);
+        assert_eq!(event.bolt, Some(Entity::PLACEHOLDER));
+        assert_eq!(event.source_chip, Some("Volatile Flux".to_owned()));
+    }
+
+    #[test]
+    fn entropy_engine_fired_carries_all_fields() {
+        use crate::chips::definition::TriggerChain;
+
+        let event = EntropyEngineFired {
+            threshold: 5,
+            pool: vec![(0.5, TriggerChain::SpawnBolt)],
+            bolt: None,
+            source_chip: Some("Entropy Engine".to_owned()),
+        };
+        assert_eq!(event.threshold, 5);
+        assert_eq!(event.pool.len(), 1);
+        assert_eq!(event.bolt, None);
+        assert_eq!(event.source_chip, Some("Entropy Engine".to_owned()));
     }
 }

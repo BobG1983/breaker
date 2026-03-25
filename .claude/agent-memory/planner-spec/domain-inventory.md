@@ -107,35 +107,44 @@ NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKi
 - `BumpForceBoost(f32)` — flat multiplier increase for bump
 - `TiltControlBoost(f32)` — flat angle increase for tilt control
 
-## behaviors domain (`src/behaviors/`) — UNIFIED as of refactor/unify-behaviors
+## effect domain (`src/effect/`) — RENAMED from behaviors (B12 refactor complete)
 
-NOTE: This domain was restructured. The old `behaviors/consequences/` directory is GONE. The old `bolt/behaviors/` sub-domain is GONE. Both were merged here.
+NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, typed events, bridges, evaluate, active chains, armed triggers, and per-effect handlers now live here. EffectPlugin in `effect/plugin.rs`.
 
-### Resources (`behaviors/active.rs`)
-- `ActiveChains(pub Vec<(Option<String>, TriggerChain)>)` — runtime active overclock chains. Each entry is (chip_name, chain) where chip_name is None for archetype chains and Some(name) for chip/evolution chains.
+### Resources
+- `ActiveEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/active.rs` — runtime active trigger chains
+- `BreakerRegistry` in `effect/registry.rs` — name->BreakerDefinition lookup
 
-### Components (`behaviors/armed.rs`)
-- `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains (was in `bolt/behaviors/armed.rs`)
+### Components
+- `ArmedEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/armed.rs` — per-bolt partially resolved chains
+- `EffectTarget` in `effect/definition.rs` — marker for entities that can have effects
 
-### Events (`behaviors/events.rs`)
-- `EffectFired { pub effect: TriggerChain, pub bolt: Option<Entity>, pub source_chip: Option<String> }` — fired when chain resolves to leaf (was `OverclockEffectFired` in old `bolt/behaviors/events.rs`)
+### Typed Events (`effect/typed_events.rs`)
+- Triggered: `ShockwaveFired`, `LoseLifeFired`, `TimePenaltyFired`, `SpawnBoltFired`, `SpeedBoostFired`, `ChainBoltFired`, `MultiBoltFired`, `ShieldFired`, `ChainLightningFired`, `SpawnPhantomFired`, `PiercingBeamFired`, `GravityWellFired`, `SecondWindFired`, `TimedSpeedBurstFired`
+- Passive: `PiercingApplied`, `DamageBoostApplied`, `SpeedBoostApplied`, `ChainHitApplied`, `SizeBoostApplied`, `AttractionApplied`, `BumpForceApplied`, `TiltControlApplied`, `RampingDamageApplied`
+- Dispatch: `trigger_chain_to_effect`, `fire_typed_event`, `fire_passive_event`
 
-### Pure functions (`behaviors/evaluate.rs`)
-- `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire (was `OverclockTriggerKind` in old `bolt/behaviors/evaluate.rs`)
-- `TriggerKind` enum (was `OverclockTriggerKind`) — PerfectBump, EarlyBump, LateBump, BumpWhiff, BumpSuccess, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost
+### Definition types (`effect/definition.rs`)
+- `Effect` enum — 22 variants (Shockwave through TimedSpeedBurst)
+- `EffectNode` enum — `Trigger(Trigger, Vec<EffectNode>)` | `Leaf(Effect)`
+- `Trigger` enum — 10 variants (OnPerfectBump through OnSelected)
+- `Target` — Bolt, Breaker, AllBolts
+- `ImpactTarget` — Cell, Breaker, Wall
+- `BreakerDefinition`, `BreakerStatOverrides`
 
-### Systems (`behaviors/bridges.rs`)
-- All bridge systems now live here (was `bolt/behaviors/bridges.rs`)
+### Pure functions (`effect/evaluate.rs`)
+- `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> Vec<EvalResult>` — NoMatch/Arm/Fire
+- `evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<NodeEvalResult>`
+- `TriggerKind` enum — PerfectBump, BumpSuccess, EarlyBump, LateBump, BumpWhiff, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost
+
+### Bridge systems (`effect/bridges.rs`)
 - `bridge_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_lost`, `bridge_bump_whiff`
+- Helper: `fire_leaf(leaf, bolt, source_chip, commands)` — converts TriggerChain leaf -> Effect -> typed event
 
-### Effects observers (`behaviors/effects/`)
-- `handle_shockwave` in `behaviors/effects/shockwave.rs` (was `bolt/behaviors/effects/shockwave.rs`)
-- `handle_life_lost` in `behaviors/effects/life_lost.rs`
-- `handle_time_penalty` in `behaviors/effects/time_penalty.rs`
-- `handle_spawn_bolt` in `behaviors/effects/spawn_bolt.rs`
-- `handle_speed_boost` in `behaviors/effects/speed_boost.rs` — handles TriggerChain::SpeedBoost { target, multiplier }; targets specific bolt from EffectFired.bolt; applies multiplier to bolt velocity
-- `handle_chain_bolt` in `behaviors/effects/chain_bolt.rs`
-All observe `EffectFired` (not `ConsequenceFired`).
+### Per-effect handlers (`effect/effects/`)
+- Triggered: shockwave, life_lost, time_penalty, spawn_bolt, speed_boost, chain_bolt, multi_bolt, shield, chain_lightning, spawn_phantom, piercing_beam, gravity_well, second_wind, timed_speed_burst
+- Passive: piercing, damage_boost, bolt_speed_boost, chain_hit, bolt_size_boost, width_boost, breaker_speed_boost, bump_force_boost, tilt_control_boost, attraction, ramping_damage
+- Helpers in `effect/effects/mod.rs`: `stack_u32`, `stack_f32`
 
 ### Test convenience constructors (`chips/definition.rs` — #[cfg(test)] impl TriggerChain)
 - `test_shockwave(range: f32)`, `test_multi_bolt(count: u32)`, `test_shield(duration: f32)`, `test_lose_life()`, `test_time_penalty(seconds: f32)`, `test_spawn_bolt()`, `test_speed_boost(multiplier: f32)`, `test_chain_bolt(tether_distance: f32)`
