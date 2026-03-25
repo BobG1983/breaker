@@ -3,6 +3,7 @@
 //! Each handler follows the observer pattern: triggered by [`ChipEffectApplied`],
 //! self-selects via pattern matching, and modifies entity components directly.
 
+mod attraction;
 mod bolt_size_boost;
 mod bolt_speed_boost;
 mod breaker_speed_boost;
@@ -13,6 +14,7 @@ mod piercing;
 mod tilt_control_boost;
 mod width_boost;
 
+pub(crate) use attraction::handle_attraction;
 use bevy::prelude::*;
 pub(crate) use bolt_size_boost::handle_bolt_size_boost;
 pub(crate) use bolt_speed_boost::handle_bolt_speed_boost;

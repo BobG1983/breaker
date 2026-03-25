@@ -35,6 +35,10 @@ pub(crate) struct ChainHit(pub u32);
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct BoltSizeBoost(pub f32);
 
+/// Attraction force magnitude pulling nearby cells toward the bolt.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct AttractionForce(pub f32);
+
 // --- Breaker effect components (applied by Augment chips) ---
 
 /// Adds flat width to the breaker.

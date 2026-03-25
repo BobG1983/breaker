@@ -28,7 +28,8 @@ impl Plugin for ChipsPlugin {
             .add_observer(handle_width_boost)
             .add_observer(handle_breaker_speed_boost)
             .add_observer(handle_bump_force_boost)
-            .add_observer(handle_tilt_control_boost);
+            .add_observer(handle_tilt_control_boost)
+            .add_observer(handle_attraction);
     }
 }
 
