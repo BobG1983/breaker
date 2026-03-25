@@ -124,6 +124,7 @@ mod tests {
             nodes: vec![],
             breakers: vec![],
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

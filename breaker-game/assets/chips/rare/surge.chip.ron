@@ -1,0 +1,8 @@
+(
+    name: "Surge",
+    max_taken: 1,
+    common: None,
+    uncommon: None,
+    rare: Some((prefix: "", effects: [OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)])])])),
+    legendary: None,
+)

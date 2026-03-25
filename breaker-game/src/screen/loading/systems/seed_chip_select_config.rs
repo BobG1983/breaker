@@ -73,6 +73,7 @@ mod tests {
             breakers: vec![],
             chip_select: handle,
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
 
@@ -102,6 +103,7 @@ mod tests {
             breakers: vec![],
             chip_select: handle,
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
 

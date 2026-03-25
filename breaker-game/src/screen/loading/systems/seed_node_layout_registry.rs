@@ -127,6 +127,7 @@ mod tests {
             breakers: vec![],
             chip_select: Handle::default(),
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
 
@@ -155,6 +156,7 @@ mod tests {
             breakers: vec![],
             chip_select: Handle::default(),
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
         app.world_mut().insert_resource(make_registry());

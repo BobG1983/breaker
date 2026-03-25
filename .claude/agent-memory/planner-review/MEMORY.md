@@ -24,6 +24,7 @@
 - [pattern_cross_domain_pure_function_visibility.md](pattern_cross_domain_pure_function_visibility.md) — Pure functions called cross-domain need explicit pub visibility and mod.rs export chain
 - [pattern_dual_semantic_enum_variant.md](pattern_dual_semantic_enum_variant.md) — Enum variant reused across dispatch contexts (triggered vs passive) has ambiguous field semantics
 - [pattern_test_app_resource_mismatch.md](pattern_test_app_resource_mismatch.md) — System gaining new Res/ResMut parameter requires test_app() to also init that resource
+- [pattern_struct_field_addition_crosscrate.md](pattern_struct_field_addition_crosscrate.md) — Adding a field to pub struct breaks ALL struct literal sites across workspace; serde(default) only helps RON
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)

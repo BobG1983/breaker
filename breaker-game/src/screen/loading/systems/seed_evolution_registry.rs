@@ -77,6 +77,7 @@ mod tests {
             breakers: vec![],
             chip_select: Handle::default(),
             chips: evolutions,
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }
@@ -93,6 +94,7 @@ mod tests {
                 chip_name: "Test Chip".to_owned(),
                 stacks_required: 2,
             }]),
+            template_name: None,
         }
     }
 

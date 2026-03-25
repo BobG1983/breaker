@@ -155,6 +155,7 @@ mod tests {
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Piercing Shot");
@@ -186,6 +187,7 @@ mod tests {
                     TriggerChain::DamageBoost(0.5),
                 ])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "MultiEffect");
@@ -235,6 +237,7 @@ mod tests {
                 max_stacks: 1,
                 effects: vec![chain.clone()],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Surge");
@@ -269,14 +272,13 @@ mod tests {
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Piercing Shot");
         tick(&mut app);
 
-        let inventory = app
-            .world()
-            .resource::<ChipInventory>();
+        let inventory = app.world().resource::<ChipInventory>();
         assert_eq!(
             inventory.stacks("Piercing Shot"),
             1,
@@ -292,9 +294,7 @@ mod tests {
         send_chip_selected(&mut app, "Nonexistent");
         tick(&mut app);
 
-        let inventory = app
-            .world()
-            .resource::<ChipInventory>();
+        let inventory = app.world().resource::<ChipInventory>();
         assert_eq!(
             inventory.total_held(),
             0,
@@ -321,6 +321,7 @@ mod tests {
                 max_stacks: 1,
                 effects: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Surge");
@@ -446,6 +447,7 @@ mod tests {
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Piercing Shot");
@@ -479,6 +481,7 @@ mod tests {
                 max_stacks: 1,
                 effects: vec![TriggerChain::OnSelected(vec![])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "EmptyPassive");
@@ -493,9 +496,7 @@ mod tests {
                 .is_none()
         );
         // But inventory still tracks it
-        let inventory = app
-            .world()
-            .resource::<ChipInventory>();
+        let inventory = app.world().resource::<ChipInventory>();
         assert_eq!(inventory.stacks("EmptyPassive"), 1);
     }
 
@@ -520,6 +521,7 @@ mod tests {
                     TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt]),
                 ],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Hybrid");
@@ -570,6 +572,7 @@ mod tests {
                     multiplier: 1.1,
                 }])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "AllBoltsSpeed");
@@ -735,6 +738,7 @@ mod tests {
                     20.0,
                 )])],
                 ingredients: None,
+                template_name: None,
             });
 
         send_chip_selected(&mut app, "Wide Breaker");

@@ -15,24 +15,46 @@ pub(crate) struct ChipEntry {
     pub max_stacks: u32,
     /// Rarity of this chip.
     pub rarity: Rarity,
+    /// Template this chip belongs to, if any.
+    pub template_name: Option<String>,
 }
 
 /// Tracks chips the player has acquired during a run.
 ///
 /// `held` maps chip names to their [`ChipEntry`] (stacks, max, rarity).
 /// `decay_weights` tracks accumulated offering decay per chip name.
+/// `template_taken` tracks how many chips have been taken per template name.
+/// `template_maxes` stores the maximum allowed per template name.
 #[derive(Resource, Debug, Default)]
 pub struct ChipInventory {
     held: HashMap<String, ChipEntry>,
     decay_weights: HashMap<String, f32>,
+    /// Current count of chips taken per template name.
+    template_taken: HashMap<String, u32>,
+    /// Maximum allowed per template name.
+    template_maxes: HashMap<String, u32>,
 }
 
 impl ChipInventory {
     /// Attempt to add one stack of the named chip.
     ///
-    /// Returns `true` if the chip was added, `false` if already at max stacks.
+    /// Returns `true` if the chip was added, `false` if already at max stacks
+    /// or the template cap has been reached.
     #[must_use]
     pub fn add_chip(&mut self, name: &str, def: &ChipDefinition) -> bool {
+        // Check template-level cap first
+        if let Some(tname) = &def.template_name {
+            let taken = self
+                .template_taken
+                .get(tname.as_str())
+                .copied()
+                .unwrap_or(0);
+            if taken >= def.max_stacks {
+                return false;
+            }
+        }
+
+        // Check individual cap
         if let Some(entry) = self.held.get_mut(name) {
             if entry.stacks >= entry.max_stacks {
                 return false;
@@ -45,9 +67,19 @@ impl ChipInventory {
                     stacks: 1,
                     max_stacks: def.max_stacks,
                     rarity: def.rarity,
+                    template_name: def.template_name.clone(),
                 },
             );
         }
+
+        // Update template tracking on successful add
+        if let Some(tname) = &def.template_name {
+            *self.template_taken.entry(tname.clone()).or_insert(0) += 1;
+            self.template_maxes
+                .entry(tname.clone())
+                .or_insert(def.max_stacks);
+        }
+
         true
     }
 
@@ -114,10 +146,22 @@ impl ChipInventory {
         let Some(entry) = self.held.get_mut(name) else {
             return false;
         };
+        let template_name = entry.template_name.clone();
         entry.stacks -= 1;
         if entry.stacks == 0 {
             self.held.remove(name);
         }
+
+        // Decrement template tracking
+        if let Some(tname) = template_name
+            && let Some(taken) = self.template_taken.get_mut(&tname)
+        {
+            *taken = taken.saturating_sub(1);
+            if *taken == 0 {
+                self.template_taken.remove(&tname);
+            }
+        }
+
         true
     }
 
@@ -125,6 +169,8 @@ impl ChipInventory {
     pub fn clear(&mut self) {
         self.held.clear();
         self.decay_weights.clear();
+        self.template_taken.clear();
+        self.template_maxes.clear();
     }
 
     /// Directly insert a chip entry with arbitrary `stacks` and `max_stacks`,
@@ -135,15 +181,60 @@ impl ChipInventory {
     /// testing [`InvariantKind::ChipStacksConsistent`] violation detection.
     ///
     /// Never call this from game logic — `add_chip` enforces the stack cap.
-    pub fn force_insert_entry(&mut self, name: &str, stacks: u32, max_stacks: u32) {
+    // NOTE: does not update template_taken or template_maxes — test-only
+    pub fn force_insert_entry(
+        &mut self,
+        name: &str,
+        stacks: u32,
+        max_stacks: u32,
+        template_name: Option<&str>,
+    ) {
         self.held.insert(
             name.to_owned(),
             ChipEntry {
                 stacks,
                 max_stacks,
                 rarity: Rarity::Common,
+                template_name: template_name.map(str::to_owned),
             },
         );
+    }
+
+    /// Returns `true` if the template's taken count has reached its max.
+    #[must_use]
+    pub fn is_template_maxed(&self, template_name: &str) -> bool {
+        let taken = self.template_taken.get(template_name).copied().unwrap_or(0);
+        let max = self
+            .template_maxes
+            .get(template_name)
+            .copied()
+            .unwrap_or(u32::MAX);
+        taken >= max
+    }
+
+    /// Returns the current taken count for a template, or 0 if unknown.
+    #[must_use]
+    pub fn template_taken(&self, template_name: &str) -> u32 {
+        self.template_taken.get(template_name).copied().unwrap_or(0)
+    }
+
+    /// Returns `true` if this chip can still be added — checks both individual
+    /// and template-level caps.
+    #[must_use]
+    pub fn is_chip_available(&self, def: &ChipDefinition) -> bool {
+        // Check template-level cap
+        if let Some(tname) = &def.template_name {
+            let taken = self
+                .template_taken
+                .get(tname.as_str())
+                .copied()
+                .unwrap_or(0);
+            if taken >= def.max_stacks {
+                return false;
+            }
+        }
+        // Check individual cap
+        !self.is_maxed(&def.name)
     }
 
     /// Record that a chip was offered, multiplying existing decay by the factor.
@@ -821,6 +912,270 @@ mod tests {
             inv.stacks("Single Stack"),
             1,
             "stacks should be 1 after re-adding"
+        );
+    }
+
+    // ======================================================================
+    // B5: Template-based max_taken tracking (spec behaviors 13-22, 27-31)
+    // ======================================================================
+
+    /// Helper: create a chip definition with a `template_name`.
+    fn template_chip_def(name: &str, template_name: &str, max_stacks: u32) -> ChipDefinition {
+        ChipDefinition {
+            template_name: Some(template_name.to_owned()),
+            ..ChipDefinition::test(name, TriggerChain::Piercing(1), max_stacks)
+        }
+    }
+
+    /// Helper: create a chip definition with no template.
+    fn standalone_chip_def(name: &str, max_stacks: u32) -> ChipDefinition {
+        ChipDefinition::test(name, TriggerChain::Piercing(1), max_stacks)
+    }
+
+    // --- Behavior 13: add_chip increments template_taken ---
+
+    #[test]
+    fn add_chip_increments_template_taken_for_templated_chip() {
+        let mut inv = ChipInventory::default();
+        let def = template_chip_def("Basic Piercing", "Piercing", 3);
+        let result = inv.add_chip("Basic Piercing", &def);
+        assert!(result);
+        assert_eq!(inv.template_taken("Piercing"), 1);
+    }
+
+    // --- Behavior 14: Different rarity of same template shares counter ---
+
+    #[test]
+    fn add_chip_different_rarity_same_template_shares_counter() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let keen = template_chip_def("Keen Piercing", "Piercing", 3);
+
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+
+        assert_eq!(inv.template_taken("Piercing"), 2);
+        assert_eq!(inv.stacks("Basic Piercing"), 1);
+        assert_eq!(inv.stacks("Keen Piercing"), 1);
+    }
+
+    // --- Behavior 15: add_chip rejects when template is maxed ---
+
+    #[test]
+    fn add_chip_rejects_when_template_taken_reaches_max() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let keen = template_chip_def("Keen Piercing", "Piercing", 3);
+        let brutal = template_chip_def("Brutal Piercing", "Piercing", 3);
+
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        // template_taken("Piercing") == 3, which equals max_stacks 3
+
+        let result = inv.add_chip("Brutal Piercing", &brutal);
+        assert!(!result, "should reject when template is maxed");
+        assert_eq!(inv.stacks("Brutal Piercing"), 0);
+        assert_eq!(inv.template_taken("Piercing"), 3);
+    }
+
+    // --- Behavior 16: Stacking same chip until both individual + template full ---
+
+    #[test]
+    fn add_chip_stacks_same_chip_until_template_full() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+
+        assert!(inv.add_chip("Basic Piercing", &basic)); // stacks=1, template_taken=1
+        assert!(inv.add_chip("Basic Piercing", &basic)); // stacks=2, template_taken=2
+        assert!(inv.add_chip("Basic Piercing", &basic)); // stacks=3, template_taken=3
+
+        assert_eq!(inv.stacks("Basic Piercing"), 3);
+        assert_eq!(inv.template_taken("Piercing"), 3);
+
+        // Further add should fail
+        assert!(!inv.add_chip("Basic Piercing", &basic));
+    }
+
+    // --- Behavior 17: add_chip with None template doesn't touch template_taken ---
+
+    #[test]
+    fn add_chip_without_template_does_not_touch_template_taken() {
+        let mut inv = ChipInventory::default();
+        let def = standalone_chip_def("Supernova", 1);
+
+        let result = inv.add_chip("Supernova", &def);
+        assert!(result);
+        assert_eq!(inv.template_taken("Supernova"), 0);
+        assert_eq!(inv.stacks("Supernova"), 1);
+    }
+
+    // --- Behavior 18: is_template_maxed ---
+
+    #[test]
+    fn is_template_maxed_true_when_taken_equals_max() {
+        let mut inv = ChipInventory::default();
+        let def = template_chip_def("Basic Piercing", "Piercing", 3);
+        let _ = inv.add_chip("Basic Piercing", &def);
+        let _ = inv.add_chip("Basic Piercing", &def);
+        let _ = inv.add_chip("Basic Piercing", &def);
+        assert!(inv.is_template_maxed("Piercing"));
+    }
+
+    #[test]
+    fn is_template_maxed_false_for_unknown_template() {
+        let inv = ChipInventory::default();
+        assert!(!inv.is_template_maxed("Unknown"));
+    }
+
+    // --- Behavior 19: is_chip_available false when template maxed ---
+
+    #[test]
+    fn is_chip_available_false_when_template_maxed_even_if_individual_not_held() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let keen = template_chip_def("Keen Piercing", "Piercing", 3);
+        let brutal = template_chip_def("Brutal Piercing", "Piercing", 3);
+
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        // template_taken=3, but Brutal is not held at all
+
+        assert!(
+            !inv.is_chip_available(&brutal),
+            "Brutal Piercing should be unavailable when template is maxed"
+        );
+    }
+
+    // --- Behavior 20: remove_chip decrements template_taken ---
+
+    #[test]
+    fn remove_chip_decrements_template_taken() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        assert_eq!(inv.template_taken("Piercing"), 2);
+
+        let _ = inv.remove_chip("Basic Piercing");
+        assert_eq!(inv.stacks("Basic Piercing"), 1);
+        assert_eq!(inv.template_taken("Piercing"), 1);
+    }
+
+    // --- Behavior 21: remove last stack zeroes template counter ---
+
+    #[test]
+    fn remove_last_stack_zeroes_template_counter() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        assert_eq!(inv.template_taken("Piercing"), 1);
+
+        let _ = inv.remove_chip("Basic Piercing");
+        assert_eq!(inv.stacks("Basic Piercing"), 0);
+        assert_eq!(inv.template_taken("Piercing"), 0);
+    }
+
+    // --- Behavior 22: clear resets template_taken and template_maxes ---
+
+    #[test]
+    fn clear_resets_template_tracking() {
+        let mut inv = ChipInventory::default();
+        let def = template_chip_def("Basic Piercing", "Piercing", 3);
+        let _ = inv.add_chip("Basic Piercing", &def);
+        let _ = inv.add_chip("Basic Piercing", &def);
+        let _ = inv.add_chip("Basic Piercing", &def);
+        assert!(inv.is_template_maxed("Piercing"));
+
+        inv.clear();
+
+        assert_eq!(inv.template_taken("Piercing"), 0);
+        assert!(!inv.is_template_maxed("Piercing"));
+    }
+
+    // --- Behavior 27: add_chip rejects when template maxed via OTHER chip names ---
+
+    #[test]
+    fn add_chip_rejects_when_template_maxed_via_other_chip_names() {
+        let mut inv = ChipInventory::default();
+        let keen = template_chip_def("Keen Piercing", "Piercing", 3);
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+
+        // Fill template via Keen only
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        assert_eq!(inv.template_taken("Piercing"), 3);
+
+        // Basic should be rejected even though it has 0 individual stacks
+        let result = inv.add_chip("Basic Piercing", &basic);
+        assert!(
+            !result,
+            "Basic should be rejected when template is maxed via Keen"
+        );
+        assert_eq!(inv.stacks("Basic Piercing"), 0);
+        assert_eq!(inv.template_taken("Piercing"), 3);
+    }
+
+    // --- Behavior 28: remove_chip decrements template when other variants still held ---
+
+    #[test]
+    fn remove_chip_decrements_template_when_other_variants_still_held() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let keen = template_chip_def("Keen Piercing", "Piercing", 3);
+
+        let _ = inv.add_chip("Basic Piercing", &basic);
+        let _ = inv.add_chip("Keen Piercing", &keen);
+        assert_eq!(inv.template_taken("Piercing"), 2);
+
+        let _ = inv.remove_chip("Basic Piercing");
+        assert_eq!(inv.stacks("Basic Piercing"), 0);
+        assert_eq!(
+            inv.template_taken("Piercing"),
+            1,
+            "template_taken should be 1 (Keen still held)"
+        );
+    }
+
+    // --- Behavior 29: is_chip_available false for None-template chip individually maxed ---
+
+    #[test]
+    fn is_chip_available_false_for_individually_maxed_standalone() {
+        let mut inv = ChipInventory::default();
+        let def = standalone_chip_def("Standalone", 1);
+        let _ = inv.add_chip("Standalone", &def);
+
+        assert!(
+            !inv.is_chip_available(&def),
+            "standalone chip at max stacks should be unavailable"
+        );
+    }
+
+    // --- Behavior 30: is_chip_available true when neither maxed ---
+
+    #[test]
+    fn is_chip_available_true_when_neither_individually_nor_template_maxed() {
+        let mut inv = ChipInventory::default();
+        let basic = template_chip_def("Basic Piercing", "Piercing", 3);
+        let _ = inv.add_chip("Basic Piercing", &basic);
+
+        assert!(
+            inv.is_chip_available(&basic),
+            "chip with 1/3 stacks and template 1/3 should be available"
+        );
+    }
+
+    // --- Behavior 31: is_chip_available true for unheld chip with non-maxed template ---
+
+    #[test]
+    fn is_chip_available_true_for_unheld_chip_with_non_maxed_template() {
+        let inv = ChipInventory::default();
+        let def = template_chip_def("Basic Piercing", "Piercing", 3);
+        assert!(
+            inv.is_chip_available(&def),
+            "unheld chip with non-maxed template should be available"
         );
     }
 }

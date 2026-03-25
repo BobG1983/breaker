@@ -139,6 +139,19 @@ type: reference
 - `doc_markdown` error (chips/definition.rs:1): module-level `//!` doc comment `"Chip definition types — TriggerChain variants and content types."` has bare `TriggerChain`. Fix: change to `` `TriggerChain` ``. This is the sole blocking error in both `dclippy` and `dsclippy` for this session.
 - `derive_partial_eq_without_eq` warning (chips/definition.rs:238): `EvolutionRecipe` derives `PartialEq` but not `Eq`. Nursery lint, warning only. New this session.
 
+## New as of 2026-03-24 (feature/spatial-physics-extraction — chips inventory/evolution session)
+- `collapsible_if` error (chips/inventory.rs:154): nested `if let Some(tname) = template_name { if let Some(taken) = self.template_taken.get_mut(&tname) { ... } }` — collapse to `if let Some(tname) = template_name && let Some(taken) = self.template_taken.get_mut(&tname) { ... }`. This was the sole blocking error in both `dclippy` lib and `dsclippy` lib this session; it caused dsclippy to abort before reaching scenario-runner-specific code.
+- `items_after_statements` errors (screen/loading/systems/seed_chip_registry.rs:196,263,312): three test functions with `use crate::chips::definition::TriggerChain;` placed after statements. Fix: move each `use` declaration to the top of its test function body (before any let/statement lines). Three separate errors. New as of this session — test code added for evolution recipe loading.
+- `doc_markdown` errors (chips/definition.rs:1885, chips/inventory.rs:919, chips/offering.rs:505): doc comments on test helpers mention bare identifiers (`ChipTemplate`, `template_name`). Fix: wrap each in backticks. Three separate errors across three files.
+- `dead_code` warning (chips/definition.rs:249): `ChipEffectApplied.chip_name` field (`pub chip_name: String`) is never read — forward-declared for future chip UI consumers. Warning only.
+- `dead_code` warnings (chips/definition.rs:414-424): `TriggerChain::test_piercing`, `test_damage_boost`, `test_size_boost_breaker` associated functions are never used — test helper stubs forward-declared. Warning only (cfg-gated).
+- `unused_imports` warning (chips/mod.rs:12): `ChipTemplate` and `expand_template` re-exported with `pub(crate) use` but have no external callers yet. Forward-declared for future chip loading consumers. Warning only.
+- `redundant_clone` warnings (chips/offering.rs:246,247,425): `.clone()` calls on values that are immediately moved without further use. Three nursery warnings. Same pattern as earlier session (2026-03-22) — values cloned into `registry.insert()`.
+- `dead_code` warning (chips/offering.rs:69): `draw_offerings` function is never called — forward-declared for future offering display. Warning only.
+- `dead_code` warning (screen/chip_select/resources.rs:47-56): four `rarity_color_*_rgb` fields of `ChipSelectConfig` never read — forward-declared for UI wiring. Warning only.
+- `private_interfaces` warning (chips/inventory.rs:110): `ChipInventory::held_chips` is `pub` but its return type includes `ChipEntry` which is `pub(crate)`. Same recurring pattern — either elevate `ChipEntry` to `pub` or downgrade `held_chips` to `pub(crate)`. Warning only.
+- NOTE: dsclippy did NOT reach scenario-runner-specific code in this session — it aborted after the breaker lib error. No new scenario-runner-specific patterns observed.
+
 ## New warnings observed 2026-03-24 (feature/spatial-physics-extraction)
 - `unused_imports` warning (bolt/queries.rs:13): `TiltControlBoost` and `WidthBoost` imported but unused — forward-declared for query filters not yet wired. Warning only.
 - `unused_import` warning (bolt/systems/spawn_chain_bolt.rs:105): `aabb::Aabb2D` imported but unused — forward-declared. Warning only.

@@ -19,7 +19,7 @@ use crate::{
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
-    chips::ChipDefinition,
+    chips::{ChipDefinition, definition::ChipTemplate},
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     shared::{
@@ -55,12 +55,8 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
                 RonAssetPlugin::<ArchetypeDefinition>::new(&["breaker.ron"]),
                 RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
-                RonAssetPlugin::<ChipDefinition>::new(&[
-                    "amp.ron",
-                    "augment.ron",
-                    "overclock.ron",
-                    "evolution.ron",
-                ]),
+                RonAssetPlugin::<ChipDefinition>::new(&["evolution.ron"]),
+                RonAssetPlugin::<ChipTemplate>::new(&["chip.ron"]),
                 RonAssetPlugin::<DifficultyCurveDefaults>::new(&["difficulty.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.

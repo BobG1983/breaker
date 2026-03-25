@@ -249,6 +249,72 @@ pub(crate) struct ChipEffectApplied {
     pub chip_name: String,
 }
 
+/// A rarity slot within a [`ChipTemplate`], defining the prefix and effects
+/// for one rarity tier of a template chip.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub struct RaritySlot {
+    /// Display prefix prepended to the template name (e.g., "Basic", "Keen").
+    pub prefix: String,
+    /// The effects applied when this rarity variant is selected.
+    pub effects: Vec<TriggerChain>,
+}
+
+/// A chip template loaded from RON (`.chip.ron`).
+///
+/// Each template defines up to four rarity variants. At load time,
+/// [`expand_template`] converts each non-`None` slot into a [`ChipDefinition`].
+#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+pub struct ChipTemplate {
+    /// Base name shared by all rarity variants.
+    pub name: String,
+    /// Maximum total chips from this template the player may hold.
+    pub max_taken: u32,
+    /// Common-rarity variant, if any.
+    pub common: Option<RaritySlot>,
+    /// Uncommon-rarity variant, if any.
+    pub uncommon: Option<RaritySlot>,
+    /// Rare-rarity variant, if any.
+    pub rare: Option<RaritySlot>,
+    /// Legendary-rarity variant, if any.
+    pub legendary: Option<RaritySlot>,
+}
+
+/// Expand a [`ChipTemplate`] into one [`ChipDefinition`] per non-`None` rarity slot.
+///
+/// Each slot's prefix is prepended to the template name. An empty or
+/// whitespace-only prefix causes the expanded name to equal the template name
+/// (no prefix prepended).
+#[must_use]
+pub(crate) fn expand_template(template: &ChipTemplate) -> Vec<ChipDefinition> {
+    let slots: [(Rarity, &Option<RaritySlot>); 4] = [
+        (Rarity::Common, &template.common),
+        (Rarity::Uncommon, &template.uncommon),
+        (Rarity::Rare, &template.rare),
+        (Rarity::Legendary, &template.legendary),
+    ];
+
+    slots
+        .iter()
+        .filter_map(|(rarity, slot_opt)| {
+            let slot = slot_opt.as_ref()?;
+            let name = if slot.prefix.trim().is_empty() {
+                template.name.clone()
+            } else {
+                format!("{} {}", slot.prefix, template.name)
+            };
+            Some(ChipDefinition {
+                name,
+                description: String::new(),
+                rarity: *rarity,
+                max_stacks: template.max_taken,
+                effects: slot.effects.clone(),
+                ingredients: None,
+                template_name: Some(template.name.clone()),
+            })
+        })
+        .collect()
+}
+
 /// A single chip definition loaded from RON.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct ChipDefinition {
@@ -265,6 +331,9 @@ pub struct ChipDefinition {
     /// Evolution ingredients. `None` for non-evolution chips.
     #[serde(default)]
     pub ingredients: Option<Vec<EvolutionIngredient>>,
+    /// Template this chip was expanded from, if any.
+    #[serde(default)]
+    pub template_name: Option<String>,
 }
 
 #[cfg(test)]
@@ -278,6 +347,7 @@ impl ChipDefinition {
             max_stacks,
             effects: vec![effect],
             ingredients: None,
+            template_name: None,
         }
     }
 
@@ -1740,5 +1810,261 @@ mod tests {
             TriggerChain::test_second_wind(2.0),
             TriggerChain::SecondWind { invuln_secs: 2.0 }
         );
+    }
+
+    // ======================================================================
+    // B4: ChipTemplate + RaritySlot deserialization (spec behaviors 1-3)
+    // ======================================================================
+
+    // --- Behavior 1: ChipTemplate deserializes with all four rarity slots ---
+
+    #[test]
+    fn chip_template_deserializes_with_all_rarity_slots() {
+        let ron_str = r#"(name: "Piercing", max_taken: 3, common: Some((prefix: "Basic", effects: [OnSelected([Piercing(1)])])), uncommon: Some((prefix: "Keen", effects: [OnSelected([Piercing(2)])])), rare: Some((prefix: "Brutal", effects: [OnSelected([Piercing(3), DamageBoost(0.1)])])), legendary: None)"#;
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("should parse ChipTemplate with all slots");
+        assert_eq!(template.name, "Piercing");
+        assert_eq!(template.max_taken, 3);
+        assert!(template.common.is_some());
+        assert!(template.uncommon.is_some());
+        assert!(template.rare.is_some());
+        assert!(template.legendary.is_none());
+    }
+
+    #[test]
+    fn chip_template_deserializes_with_all_none_slots() {
+        let ron_str = r#"(name: "Empty", max_taken: 1, common: None, uncommon: None, rare: None, legendary: None)"#;
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("should parse ChipTemplate with all None slots");
+        assert_eq!(template.name, "Empty");
+        assert_eq!(template.max_taken, 1);
+        assert!(template.common.is_none());
+        assert!(template.uncommon.is_none());
+        assert!(template.rare.is_none());
+        assert!(template.legendary.is_none());
+    }
+
+    #[test]
+    fn chip_template_max_taken_zero_is_valid_ron() {
+        let ron_str = r#"(name: "Zero", max_taken: 0, common: Some((prefix: "X", effects: [])), uncommon: None, rare: None, legendary: None)"#;
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("should parse ChipTemplate with max_taken 0");
+        assert_eq!(template.max_taken, 0);
+    }
+
+    // --- Behavior 2: ChipTemplate with only legendary slot ---
+
+    #[test]
+    fn chip_template_deserializes_legendary_only() {
+        let ron_str = r#"(name: "Glass Cannon", max_taken: 1, common: None, uncommon: None, rare: None, legendary: Some((prefix: "", effects: [OnSelected([DamageBoost(1.0), SizeBoost(Breaker, -0.3)])])))"#;
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("should parse legendary-only ChipTemplate");
+        assert_eq!(template.name, "Glass Cannon");
+        assert_eq!(template.max_taken, 1);
+        assert!(template.common.is_none());
+        assert!(template.uncommon.is_none());
+        assert!(template.rare.is_none());
+        assert!(template.legendary.is_some());
+        let slot = template.legendary.unwrap();
+        assert_eq!(slot.prefix, "");
+    }
+
+    // --- Behavior 3: RaritySlot stores prefix and effects ---
+
+    #[test]
+    fn rarity_slot_deserializes_prefix_and_effects() {
+        let ron_str = r#"(prefix: "Basic", effects: [OnSelected([Piercing(1)])])"#;
+        let slot: RaritySlot = ron::de::from_str(ron_str).expect("should parse RaritySlot");
+        assert_eq!(slot.prefix, "Basic");
+        assert_eq!(
+            slot.effects,
+            vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])]
+        );
+    }
+
+    // ======================================================================
+    // B4: expand_template pure function (spec behaviors 4-9)
+    // ======================================================================
+
+    /// Helper: build a `ChipTemplate` with specific slots for testing.
+    fn make_template(
+        name: &str,
+        max_taken: u32,
+        common: Option<RaritySlot>,
+        uncommon: Option<RaritySlot>,
+        rare: Option<RaritySlot>,
+        legendary: Option<RaritySlot>,
+    ) -> ChipTemplate {
+        ChipTemplate {
+            name: name.to_owned(),
+            max_taken,
+            common,
+            uncommon,
+            rare,
+            legendary,
+        }
+    }
+
+    fn slot(prefix: &str, effects: Vec<TriggerChain>) -> RaritySlot {
+        RaritySlot {
+            prefix: prefix.to_owned(),
+            effects,
+        }
+    }
+
+    // --- Behavior 4: expand_template produces one ChipDefinition per non-None slot ---
+
+    #[test]
+    fn expand_template_produces_one_def_per_non_none_slot() {
+        let template = make_template(
+            "Piercing",
+            3,
+            Some(slot("Basic", vec![TriggerChain::Piercing(1)])),
+            Some(slot("Keen", vec![TriggerChain::Piercing(2)])),
+            None,
+            None,
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 2);
+    }
+
+    #[test]
+    fn expand_template_all_none_returns_empty() {
+        let template = make_template("Empty", 1, None, None, None, None);
+        let defs = expand_template(&template);
+        assert!(defs.is_empty());
+    }
+
+    // --- Behavior 5: Expanded name is "{prefix} {template_name}" ---
+
+    #[test]
+    fn expanded_chip_name_is_prefix_space_template_name() {
+        let template = make_template(
+            "Piercing",
+            3,
+            Some(slot(
+                "Basic",
+                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            )),
+            None,
+            None,
+            None,
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "Basic Piercing");
+        assert_eq!(defs[0].rarity, Rarity::Common);
+        assert_eq!(defs[0].max_stacks, 3);
+        assert_eq!(
+            defs[0].effects,
+            vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])]
+        );
+        assert_eq!(defs[0].template_name, Some("Piercing".to_owned()));
+        assert_eq!(defs[0].description, "");
+    }
+
+    // --- Behavior 6: Empty prefix uses template name directly ---
+
+    #[test]
+    fn expanded_chip_empty_prefix_uses_template_name() {
+        let template = make_template(
+            "Glass Cannon",
+            1,
+            None,
+            None,
+            None,
+            Some(slot("", vec![TriggerChain::DamageBoost(1.0)])),
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "Glass Cannon");
+        assert_eq!(defs[0].rarity, Rarity::Legendary);
+        assert_eq!(defs[0].template_name, Some("Glass Cannon".to_owned()));
+    }
+
+    #[test]
+    fn expanded_chip_whitespace_prefix_uses_template_name() {
+        let template = make_template(
+            "Glass Cannon",
+            1,
+            None,
+            None,
+            None,
+            Some(slot("  ", vec![TriggerChain::DamageBoost(1.0)])),
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
+        assert_eq!(
+            defs[0].name, "Glass Cannon",
+            "whitespace-only prefix should be treated as empty"
+        );
+    }
+
+    // --- Behavior 7: Each expanded definition gets the correct rarity ---
+
+    #[test]
+    fn expanded_defs_have_correct_rarities() {
+        let template = make_template(
+            "AllSlots",
+            5,
+            Some(slot("C", vec![TriggerChain::Piercing(1)])),
+            Some(slot("U", vec![TriggerChain::Piercing(2)])),
+            Some(slot("R", vec![TriggerChain::Piercing(3)])),
+            Some(slot("L", vec![TriggerChain::Piercing(4)])),
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 4);
+        assert_eq!(defs[0].rarity, Rarity::Common);
+        assert_eq!(defs[1].rarity, Rarity::Uncommon);
+        assert_eq!(defs[2].rarity, Rarity::Rare);
+        assert_eq!(defs[3].rarity, Rarity::Legendary);
+    }
+
+    // --- Behavior 8: All expanded definitions share max_stacks ---
+
+    #[test]
+    fn expanded_defs_share_max_stacks_from_template() {
+        let template = make_template(
+            "Piercing",
+            3,
+            Some(slot("Basic", vec![TriggerChain::Piercing(1)])),
+            Some(slot("Keen", vec![TriggerChain::Piercing(2)])),
+            Some(slot("Brutal", vec![TriggerChain::Piercing(3)])),
+            None,
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 3);
+        for def in &defs {
+            assert_eq!(
+                def.max_stacks, 3,
+                "all expanded defs should share max_stacks=3, got {} for {}",
+                def.max_stacks, def.name
+            );
+        }
+    }
+
+    // --- Behavior 9: All expanded definitions share the same template_name ---
+
+    #[test]
+    fn expanded_defs_share_template_name() {
+        let template = make_template(
+            "Piercing",
+            3,
+            Some(slot("Basic", vec![TriggerChain::Piercing(1)])),
+            Some(slot("Keen", vec![TriggerChain::Piercing(2)])),
+            Some(slot("Brutal", vec![TriggerChain::Piercing(3)])),
+            None,
+        );
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 3);
+        for def in &defs {
+            assert_eq!(
+                def.template_name,
+                Some("Piercing".to_owned()),
+                "all expanded defs should have template_name 'Piercing', got {:?} for {}",
+                def.template_name,
+                def.name
+            );
+        }
     }
 }

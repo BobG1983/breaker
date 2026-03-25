@@ -325,6 +325,7 @@ mod tests {
                 max_stacks: 1,
                 effects: vec![TriggerChain::Piercing(5)],
                 ingredients: None,
+                template_name: None,
             },
         });
 

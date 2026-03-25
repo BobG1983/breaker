@@ -13,6 +13,18 @@ use crate::chips::{
     resources::ChipRegistry,
 };
 
+/// A single entry in the weighted offering pool, carrying template metadata
+/// for deduplication.
+#[derive(Clone, Debug)]
+pub(crate) struct PoolEntry {
+    /// Chip name.
+    pub name: String,
+    /// Effective weight for weighted draw.
+    pub weight: f32,
+    /// Template this chip belongs to, if any.
+    pub template_name: Option<String>,
+}
+
 /// Configuration for the offering algorithm.
 #[derive(Debug, Clone)]
 pub(crate) struct OfferingConfig {
@@ -37,7 +49,7 @@ pub(crate) fn build_active_pool(
 ) -> Vec<(String, f32)> {
     let mut pool = Vec::new();
     for chip in registry.ordered_values() {
-        if inventory.is_maxed(&chip.name) {
+        if !inventory.is_chip_available(chip) {
             continue;
         }
         let base_weight = config
@@ -52,6 +64,8 @@ pub(crate) fn build_active_pool(
     pool
 }
 
+/// Lower-level draw primitive — prefer [`generate_offerings`] for template-aware deduplication.
+///
 /// Draws `count` chip names from the weighted pool without replacement.
 #[must_use]
 pub(crate) fn draw_offerings(
@@ -81,6 +95,11 @@ pub(crate) fn draw_offerings(
 }
 
 /// Top-level: generates chip offerings for the current node.
+///
+/// Performs template-aware deduplication: after each draw, any remaining pool
+/// entries sharing the same `template_name` are removed so no two offerings
+/// come from the same template. Chips with `template_name: None` are never
+/// deduplicated against each other.
 #[must_use]
 pub(crate) fn generate_offerings(
     registry: &ChipRegistry,
@@ -88,11 +107,51 @@ pub(crate) fn generate_offerings(
     config: &OfferingConfig,
     rng: &mut impl Rng,
 ) -> Vec<ChipDefinition> {
-    let pool = build_active_pool(registry, inventory, config);
-    let names = draw_offerings(&pool, config.offers_per_node, rng);
-    names
+    let base_pool = build_active_pool(registry, inventory, config);
+
+    // Build pool entries with template info from the registry
+    let mut pool: Vec<PoolEntry> = base_pool
+        .into_iter()
+        .filter_map(|(name, weight)| {
+            let def = registry.get(&name)?;
+            Some(PoolEntry {
+                name,
+                weight,
+                template_name: def.template_name.clone(),
+            })
+        })
+        .collect();
+
+    let draws = config.offers_per_node.min(pool.len());
+    let mut results = Vec::with_capacity(draws);
+
+    for _ in 0..draws {
+        if pool.is_empty() {
+            break;
+        }
+        let weights: Vec<f32> = pool.iter().map(|e| e.weight).collect();
+        let Ok(dist) = WeightedIndex::new(&weights) else {
+            break;
+        };
+        let idx = dist.sample(rng);
+        let chosen = pool.swap_remove(idx);
+
+        // Remove all other entries sharing the same template_name (if Some)
+        if let Some(ref tname) = chosen.template_name {
+            pool.retain(|e| e.template_name.as_deref() != Some(tname));
+        }
+
+        results.push(chosen.name);
+    }
+
+    results
         .iter()
-        .filter_map(|name| registry.get(name).cloned())
+        .map(|name| {
+            registry
+                .get(name)
+                .expect("drawn name must be in registry")
+                .clone()
+        })
         .collect()
 }
 
@@ -441,6 +500,230 @@ mod tests {
         assert_eq!(result.len(), 3, "should draw exactly 3");
         let names: HashSet<&str> = result.iter().map(String::as_str).collect();
         assert_eq!(names.len(), 3, "all 3 should be distinct");
+        assert!(names.contains("A"));
+        assert!(names.contains("B"));
+        assert!(names.contains("C"));
+    }
+
+    // ======================================================================
+    // B6: Template-aware offering pool and deduplication (behaviors 23-26, 32)
+    // ======================================================================
+
+    /// Helper: create a chip def with a `template_name` for offering tests.
+    fn test_chip_template(
+        name: &str,
+        template_name: Option<&str>,
+        max_stacks: u32,
+    ) -> ChipDefinition {
+        ChipDefinition {
+            template_name: template_name.map(str::to_owned),
+            ..ChipDefinition::test(name, TriggerChain::Piercing(1), max_stacks)
+        }
+    }
+
+    // --- Behavior 23: build_active_pool excludes chips whose template is maxed ---
+
+    #[test]
+    fn build_active_pool_excludes_template_maxed_chips() {
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_template("Basic Piercing", Some("Piercing"), 3));
+        registry.insert(test_chip_template("Keen Piercing", Some("Piercing"), 3));
+        registry.insert(test_chip_template("Damage Up", None, 5));
+
+        let mut inventory = ChipInventory::default();
+        // Fill template "Piercing" to max
+        let basic_def = test_chip_template("Basic Piercing", Some("Piercing"), 3);
+        let keen_def = test_chip_template("Keen Piercing", Some("Piercing"), 3);
+        let _ = inventory.add_chip("Basic Piercing", &basic_def);
+        let _ = inventory.add_chip("Keen Piercing", &keen_def);
+        let _ = inventory.add_chip("Keen Piercing", &keen_def);
+        // template_taken "Piercing" = 3, template maxed
+
+        // Damage Up at 1 stack (not maxed)
+        let damage_def = test_chip_template("Damage Up", None, 5);
+        let _ = inventory.add_chip("Damage Up", &damage_def);
+
+        let config = test_config();
+        let pool = build_active_pool(&registry, &inventory, &config);
+
+        // Pool should only contain Damage Up
+        let pool_names: Vec<&str> = pool.iter().map(|(name, _)| name.as_str()).collect();
+        assert!(
+            !pool_names.contains(&"Basic Piercing"),
+            "template-maxed Basic Piercing should be excluded"
+        );
+        assert!(
+            !pool_names.contains(&"Keen Piercing"),
+            "template-maxed Keen Piercing should be excluded"
+        );
+        assert!(
+            pool_names.contains(&"Damage Up"),
+            "non-maxed Damage Up should be in pool"
+        );
+    }
+
+    #[test]
+    fn build_active_pool_excludes_none_template_only_when_individually_maxed() {
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_template("Solo", None, 1));
+
+        let mut inventory = ChipInventory::default();
+        let solo_def = test_chip_template("Solo", None, 1);
+        let _ = inventory.add_chip("Solo", &solo_def); // 1/1 maxed
+
+        let config = test_config();
+        let pool = build_active_pool(&registry, &inventory, &config);
+
+        assert!(
+            !pool.iter().any(|(name, _)| name == "Solo"),
+            "individually maxed None-template chip should be excluded"
+        );
+    }
+
+    // --- Behavior 24: No duplicate template_name in a single offering ---
+
+    #[test]
+    fn generate_offerings_no_duplicate_template_in_offering() {
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_template("Basic Piercing", Some("Piercing"), 3));
+        registry.insert(test_chip_template("Keen Piercing", Some("Piercing"), 3));
+        registry.insert(test_chip_template("Basic Damage", Some("Damage"), 3));
+        registry.insert(test_chip_template("Keen Damage", Some("Damage"), 3));
+        registry.insert(test_chip_template("Standalone", None, 3));
+
+        let inventory = ChipInventory::default();
+        let mut config = test_config();
+        config.offers_per_node = 3;
+
+        let mut rng = GameRng::from_seed(42);
+        let result = generate_offerings(&registry, &inventory, &config, &mut rng.0);
+
+        // Check no two results share the same template_name
+        let template_names: Vec<Option<&str>> =
+            result.iter().map(|d| d.template_name.as_deref()).collect();
+        for (i, tname) in template_names.iter().enumerate() {
+            if let Some(name) = tname {
+                for (j, other) in template_names.iter().enumerate() {
+                    if i != j {
+                        assert_ne!(
+                            Some(*name),
+                            *other,
+                            "two offerings share template '{name}': {} and {}",
+                            result[i].name,
+                            result[j].name
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn generate_offerings_none_template_chips_never_deduplicated() {
+        // Chips with template_name: None should never be considered duplicates
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_template("Solo A", None, 3));
+        registry.insert(test_chip_template("Solo B", None, 3));
+        registry.insert(test_chip_template("Solo C", None, 3));
+
+        let inventory = ChipInventory::default();
+        let mut config = test_config();
+        config.offers_per_node = 3;
+
+        let mut rng = GameRng::from_seed(42);
+        let result = generate_offerings(&registry, &inventory, &config, &mut rng.0);
+
+        assert_eq!(
+            result.len(),
+            3,
+            "all 3 None-template chips should be offered"
+        );
+    }
+
+    // --- Behavior 25: Template deduplication returns correct count ---
+
+    #[test]
+    fn generate_offerings_correct_count_with_unique_templates() {
+        let mut registry = ChipRegistry::default();
+        for i in 0..5 {
+            registry.insert(test_chip_template(
+                &format!("Chip{i}"),
+                Some(&format!("Tmpl{i}")),
+                3,
+            ));
+        }
+
+        let inventory = ChipInventory::default();
+        let mut config = test_config();
+        config.offers_per_node = 3;
+
+        let mut rng = GameRng::from_seed(42);
+        let result = generate_offerings(&registry, &inventory, &config, &mut rng.0);
+
+        assert_eq!(
+            result.len(),
+            3,
+            "should return exactly 3 offerings from 5 unique templates"
+        );
+        // All from different templates
+        let template_names: HashSet<&str> = result
+            .iter()
+            .filter_map(|d| d.template_name.as_deref())
+            .collect();
+        assert_eq!(
+            template_names.len(),
+            3,
+            "all 3 offerings should be from different templates"
+        );
+    }
+
+    // --- Behavior 26: Fewer unique templates than slots ---
+
+    #[test]
+    fn generate_offerings_fewer_templates_than_slots() {
+        let mut registry = ChipRegistry::default();
+        // 4 chips across 2 templates
+        registry.insert(test_chip_template("Basic Piercing", Some("Piercing"), 3));
+        registry.insert(test_chip_template("Keen Piercing", Some("Piercing"), 3));
+        registry.insert(test_chip_template("Basic Damage", Some("Damage"), 3));
+        registry.insert(test_chip_template("Keen Damage", Some("Damage"), 3));
+
+        let inventory = ChipInventory::default();
+        let mut config = test_config();
+        config.offers_per_node = 3;
+
+        let mut rng = GameRng::from_seed(42);
+        let result = generate_offerings(&registry, &inventory, &config, &mut rng.0);
+
+        assert_eq!(
+            result.len(),
+            2,
+            "only 2 unique templates exist, so at most 2 offerings"
+        );
+    }
+
+    // --- Behavior 32: Template deduplication allows all None-template chips ---
+
+    #[test]
+    fn generate_offerings_all_none_template_chips_offered() {
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_template("A", None, 3));
+        registry.insert(test_chip_template("B", None, 3));
+        registry.insert(test_chip_template("C", None, 3));
+
+        let inventory = ChipInventory::default();
+        let mut config = test_config();
+        config.offers_per_node = 3;
+
+        let mut rng = GameRng::from_seed(42);
+        let result = generate_offerings(&registry, &inventory, &config, &mut rng.0);
+
+        assert_eq!(
+            result.len(),
+            3,
+            "3 None-template chips should all be offered, no deduplication"
+        );
+        let names: HashSet<&str> = result.iter().map(|d| d.name.as_str()).collect();
         assert!(names.contains("A"));
         assert!(names.contains("B"));
         assert!(names.contains("C"));

@@ -107,9 +107,7 @@ pub(crate) fn propagate_archetype_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        behaviors::definition::BreakerStatOverrides, chips::definition::Target,
-    };
+    use crate::{behaviors::definition::BreakerStatOverrides, chips::definition::Target};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -138,6 +136,7 @@ mod tests {
             nodes: vec![],
             breakers,
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

@@ -1,0 +1,8 @@
+(
+    name: "Damage Boost",
+    max_taken: 5,
+    common: Some((prefix: "", effects: [OnSelected([DamageBoost(0.25)])])),
+    uncommon: None,
+    rare: None,
+    legendary: None,
+)

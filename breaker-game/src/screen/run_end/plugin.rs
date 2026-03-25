@@ -18,9 +18,6 @@ impl Plugin for RunEndPlugin {
                 Update,
                 handle_run_end_input.run_if(in_state(GameState::RunEnd)),
             )
-            .add_systems(
-                OnExit(GameState::RunEnd),
-                cleanup_entities::<RunEndScreen>,
-            );
+            .add_systems(OnExit(GameState::RunEnd), cleanup_entities::<RunEndScreen>);
     }
 }

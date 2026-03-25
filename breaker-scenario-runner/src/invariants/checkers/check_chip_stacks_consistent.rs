@@ -57,6 +57,7 @@ mod tests {
             max_stacks,
             effects: vec![TriggerChain::Piercing(1)],
             ingredients: None,
+            template_name: None,
         }
     }
 
@@ -187,7 +188,7 @@ mod tests {
         let mut app = test_app();
 
         let mut inventory = ChipInventory::default();
-        inventory.force_insert_entry("OverStacked", 3, 2); // stacks=3 > max=2
+        inventory.force_insert_entry("OverStacked", 3, 2, None); // stacks=3 > max=2
         app.insert_resource(inventory);
 
         tick(&mut app);
@@ -216,9 +217,9 @@ mod tests {
         let mut app = test_app();
 
         let mut inventory = ChipInventory::default();
-        inventory.force_insert_entry("ChipA", 5, 3); // 5 > 3
-        inventory.force_insert_entry("ChipB", 2, 1); // 2 > 1
-        inventory.force_insert_entry("ChipC", 1, 2); // 1 <= 2 — valid
+        inventory.force_insert_entry("ChipA", 5, 3, None); // 5 > 3
+        inventory.force_insert_entry("ChipB", 2, 1, None); // 2 > 1
+        inventory.force_insert_entry("ChipC", 1, 2, None); // 1 <= 2 — valid
         app.insert_resource(inventory);
 
         tick(&mut app);

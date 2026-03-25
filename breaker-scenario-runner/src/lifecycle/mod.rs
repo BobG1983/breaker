@@ -608,7 +608,7 @@ pub fn apply_debug_frame_mutations(
                 max_stacks,
             } => {
                 if let Some(ref mut inventory) = targets.chip_inventory {
-                    inventory.force_insert_entry(chip_name, *stacks, *max_stacks);
+                    inventory.force_insert_entry(chip_name, *stacks, *max_stacks, None);
                 }
             }
             MutationKind::InjectDuplicateOffers { chip_name } => {
@@ -677,6 +677,7 @@ fn apply_inject_duplicate_offers(
         max_stacks: 3,
         effects: vec![TriggerChain::Piercing(1)],
         ingredients: None,
+        template_name: None,
     };
     let offers = ChipOffers(vec![
         ChipOffering::Normal(def.clone()),
@@ -705,9 +706,10 @@ fn apply_inject_maxed_chip_offer(
         max_stacks: 1,
         effects: vec![TriggerChain::Piercing(1)],
         ingredients: None,
+        template_name: None,
     };
     if let Some(inventory) = chip_inventory {
-        inventory.force_insert_entry(chip_name, 1, 1);
+        inventory.force_insert_entry(chip_name, 1, 1, None);
     }
     let offers = ChipOffers(vec![ChipOffering::Normal(def)]);
     if let Some(existing) = chip_offers {

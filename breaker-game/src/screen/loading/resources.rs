@@ -8,7 +8,7 @@ use crate::{
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
-    chips::ChipDefinition,
+    chips::{ChipDefinition, definition::ChipTemplate},
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
@@ -53,9 +53,12 @@ pub(crate) struct DefaultsCollection {
     /// Handle for chip select defaults.
     #[asset(path = "config/defaults.chipselect.ron")]
     pub chip_select: Handle<ChipSelectDefaults>,
-    /// All chip definitions (amps, augments, overclocks, evolutions) — recurses through rarity subdirectories.
+    /// All chip definitions (evolutions only) — recurses through rarity subdirectories.
     #[asset(path = "chips", collection(typed))]
     pub chips: Vec<Handle<ChipDefinition>>,
+    /// All chip template handles (`.chip.ron` files).
+    #[asset(path = "chips", collection(typed))]
+    pub chip_templates: Vec<Handle<ChipTemplate>>,
     /// Handle for difficulty curve defaults.
     #[asset(path = "config/defaults.difficulty.ron")]
     pub difficulty: Handle<DifficultyCurveDefaults>,

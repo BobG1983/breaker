@@ -1,0 +1,8 @@
+(
+    name: "Breaker Speed",
+    max_taken: 4,
+    common: Some((prefix: "", effects: [OnSelected([SpeedBoost(target: Breaker, multiplier: 1.1)])])),
+    uncommon: None,
+    rare: None,
+    legendary: None,
+)

@@ -83,6 +83,7 @@ mod tests {
             breakers,
             chip_select: Handle::default(),
             chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

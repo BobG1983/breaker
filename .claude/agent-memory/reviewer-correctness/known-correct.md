@@ -59,6 +59,17 @@ type: reference
 - `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.
 - `RenderSetupPlugin` inserts `ClearColor(PlayfieldConfig::default().background_color())` at plugin-build time using compile-time defaults — intentional; RON default matches Rust default `[0.02, 0.01, 0.04]`.
 
+## B4-B6 Template/Inventory/Offering Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
+- `expand_template` sets `max_stacks = template.max_taken` on all rarity variants — all variants from the same template always share the same cap value. Do not flag as inconsistency.
+- `template_taken` counts total stacks across all rarity variants (one increment per `add_chip` call, one decrement per `remove_chip` call). This is intentional and correct.
+- `remove_chip` grabs `template_name` from the entry BEFORE decrementing stacks. Even when stacks hit 0 and the entry is removed, the local `template_name` binding is still valid for the subsequent template_taken decrement. Safe.
+- `generate_offerings` dedup loop produces fewer than `offers_per_node` results when fewer unique templates exist. This is intentional and tested by `generate_offerings_fewer_templates_than_slots`. Do not flag as count bug.
+- `is_template_maxed` is test-only (not called in production code). Production pool gate is `is_chip_available`. The two separate sources (`template_maxes` vs `def.max_stacks`) do not diverge in production because `expand_template` guarantees uniform `max_stacks` per template.
+- `seed_chip_registry` skips `Rarity::Evolution` chips from the `chips` collection — intentional; evolutions are handled by `seed_evolution_registry`.
+- `seed_chip_registry` `Local<bool>` guard: persists for app lifetime. Seeding only runs once — correct.
+- `add_chip` template cap check comes BEFORE individual cap check — correct ordering per spec (prevent template overflow before allowing individual increment).
+- `or_insert(def.max_stacks)` in template_maxes is a first-write-wins register for the template's max. Since all chips from the same template have identical max_stacks (guaranteed by expand_template), any write order produces the same value.
+
 ## B1-B3 TriggerChain Flatten Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
 - `apply_chip_effect` match order `OnSelected` → `is_leaf()` → catchall: `OnSelected` is not a leaf so it is correctly intercepted by arm 1 before reaching the catchall that pushes to `ActiveChains`. Correct arm ordering.
 - Bare leaf fallback arm (line 51-57): `chain if chain.is_leaf()` fires `ChipEffectApplied` immediately. `OnPerfectBump` etc. are not leaves, so they correctly fall through to the `ActiveChains` push arm. No OnSelected variant can erroneously reach `ActiveChains`.

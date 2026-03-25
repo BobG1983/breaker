@@ -4,16 +4,21 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    chips::{ChipDefinition, ChipRegistry, definition::Rarity},
+    chips::{
+        ChipDefinition, ChipRegistry,
+        definition::{ChipTemplate, Rarity, expand_template},
+    },
     screen::loading::resources::DefaultsCollection,
 };
 
-/// Iterates loaded `ChipDefinition` assets from all rarity-based chip
-/// collections (common, uncommon, rare, legendary) and builds the
-/// `ChipRegistry` resource.
+/// Iterates loaded `ChipTemplate` assets from the chip templates collection,
+/// expands each into `ChipDefinition`s, and builds the `ChipRegistry` resource.
+///
+/// Evolution chips are excluded (they are handled by `seed_evolution_registry`).
 pub(crate) fn seed_chip_registry(
     collection: Option<Res<DefaultsCollection>>,
     chip_assets: Res<Assets<ChipDefinition>>,
+    template_assets: Res<Assets<ChipTemplate>>,
     mut commands: Commands,
     mut seeded: Local<bool>,
 ) -> Progress {
@@ -27,11 +32,23 @@ pub(crate) fn seed_chip_registry(
 
     let mut registry = ChipRegistry::default();
 
+    // Expand chip templates into definitions
+    for handle in &collection.chip_templates {
+        let Some(template) = template_assets.get(handle) else {
+            return Progress { done: 0, total: 1 };
+        };
+        for def in expand_template(template) {
+            registry.insert(def);
+        }
+    }
+
+    // Also load non-evolution ChipDefinition assets (for backward compatibility —
+    // evolution chips are handled by seed_evolution_registry.
+    // Remove this block once all non-evolution chips are defined as ChipTemplates.)
     for handle in &collection.chips {
         let Some(def) = chip_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
-        // Evolution chips are handled by seed_evolution_registry
         if def.rarity == Rarity::Evolution {
             continue;
         }
@@ -51,11 +68,15 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<ChipDefinition>()
+            .init_asset::<ChipTemplate>()
             .add_systems(Update, seed_chip_registry.map(drop));
         app
     }
 
-    fn make_collection(chips: Vec<Handle<ChipDefinition>>) -> DefaultsCollection {
+    fn make_collection(
+        chips: Vec<Handle<ChipDefinition>>,
+        chip_templates: Vec<Handle<ChipTemplate>>,
+    ) -> DefaultsCollection {
         DefaultsCollection {
             playfield: Handle::default(),
             bolt: Handle::default(),
@@ -69,6 +90,7 @@ mod tests {
             breakers: vec![],
             chip_select: Handle::default(),
             chips,
+            chip_templates,
             difficulty: Handle::default(),
         }
     }
@@ -90,7 +112,7 @@ mod tests {
         let overclock = assets.add(ChipDefinition::test_simple("Surge"));
 
         app.world_mut()
-            .insert_resource(make_collection(vec![amp, augment, overclock]));
+            .insert_resource(make_collection(vec![amp, augment, overclock], vec![]));
 
         app.update();
 
@@ -105,7 +127,8 @@ mod tests {
     fn empty_collections_produce_empty_registry() {
         let mut app = test_app();
 
-        app.world_mut().insert_resource(make_collection(vec![]));
+        app.world_mut()
+            .insert_resource(make_collection(vec![], vec![]));
 
         app.update();
 
@@ -118,14 +141,15 @@ mod tests {
         let mut app = test_app();
 
         // First update: seed with empty collection
-        app.world_mut().insert_resource(make_collection(vec![]));
+        app.world_mut()
+            .insert_resource(make_collection(vec![], vec![]));
         app.update();
 
         // Add a chip AFTER seeding — if the guard works, it won't be picked up
         let mut assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
         let handle = assets.add(ChipDefinition::test_simple("Late Addition"));
         app.world_mut()
-            .insert_resource(make_collection(vec![handle]));
+            .insert_resource(make_collection(vec![handle], vec![]));
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
@@ -133,6 +157,209 @@ mod tests {
             registry.ordered_values().count(),
             0,
             "guard should prevent re-seeding"
+        );
+    }
+
+    // ======================================================================
+    // B4 Part C: seed_chip_registry template loading (spec behaviors 10-12)
+    // ======================================================================
+
+    /// Helper: build a `ChipTemplate` with given slots.
+    fn make_test_template(
+        name: &str,
+        max_taken: u32,
+        common: Option<(&str, Vec<crate::chips::definition::TriggerChain>)>,
+        uncommon: Option<(&str, Vec<crate::chips::definition::TriggerChain>)>,
+    ) -> ChipTemplate {
+        use crate::chips::definition::RaritySlot;
+        ChipTemplate {
+            name: name.to_owned(),
+            max_taken,
+            common: common.map(|(prefix, effects)| RaritySlot {
+                prefix: prefix.to_owned(),
+                effects,
+            }),
+            uncommon: uncommon.map(|(prefix, effects)| RaritySlot {
+                prefix: prefix.to_owned(),
+                effects,
+            }),
+            rare: None,
+            legendary: None,
+        }
+    }
+
+    // --- Behavior 10: seed_chip_registry expands templates into registry ---
+
+    #[test]
+    fn seed_chip_registry_expands_templates_into_registry() {
+        use crate::chips::definition::TriggerChain;
+
+        let mut app = test_app();
+
+        let template = make_test_template(
+            "Piercing",
+            3,
+            Some((
+                "Basic",
+                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            )),
+            Some((
+                "Keen",
+                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(2)])],
+            )),
+        );
+        let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
+        let template_handle = template_assets.add(template);
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![], vec![template_handle]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert!(
+            registry.get("Basic Piercing").is_some(),
+            "registry should contain 'Basic Piercing'"
+        );
+        assert!(
+            registry.get("Keen Piercing").is_some(),
+            "registry should contain 'Keen Piercing'"
+        );
+        assert_eq!(registry.ordered_values().count(), 2);
+    }
+
+    #[test]
+    fn seed_chip_registry_empty_template_adds_zero_entries() {
+        let mut app = test_app();
+
+        let template = ChipTemplate {
+            name: "Empty".to_owned(),
+            max_taken: 1,
+            common: None,
+            uncommon: None,
+            rare: None,
+            legendary: None,
+        };
+        let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
+        let template_handle = template_assets.add(template);
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![], vec![template_handle]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert_eq!(
+            registry.ordered_values().count(),
+            0,
+            "template with all None slots should add 0 entries"
+        );
+    }
+
+    // --- Behavior 11: template chips come from chip_templates, not chips ---
+
+    #[test]
+    fn seed_chip_registry_loads_templates_not_evolution_chips() {
+        use crate::chips::definition::TriggerChain;
+
+        let mut app = test_app();
+
+        // Add a template
+        let template = make_test_template(
+            "Piercing",
+            3,
+            Some((
+                "Basic",
+                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            )),
+            None,
+        );
+        let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
+        let template_handle = template_assets.add(template);
+
+        // Add an evolution chip to the chips collection
+        let mut chip_assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let evo_handle = chip_assets.add(ChipDefinition {
+            name: "Barrage".to_owned(),
+            description: "Evolution".to_owned(),
+            rarity: Rarity::Evolution,
+            max_stacks: 1,
+            effects: vec![TriggerChain::Piercing(5)],
+            ingredients: None,
+            template_name: None,
+        });
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![evo_handle], vec![template_handle]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert!(
+            registry.get("Basic Piercing").is_some(),
+            "template-expanded chip should be in registry"
+        );
+        assert!(
+            registry.get("Barrage").is_none(),
+            "evolution chip should NOT be in chip registry (handled by seed_evolution_registry)"
+        );
+    }
+
+    // --- Behavior 12: seed_chip_registry is idempotent ---
+
+    #[test]
+    fn seed_chip_registry_only_seeds_once_with_templates() {
+        use crate::chips::definition::TriggerChain;
+
+        let mut app = test_app();
+
+        // First seeding with 1 template (1 slot = 1 chip)
+        let template = make_test_template(
+            "Piercing",
+            3,
+            Some((
+                "Basic",
+                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            )),
+            None,
+        );
+        let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
+        let t1 = template_assets.add(template);
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![], vec![t1]));
+        app.update();
+
+        // Replace collection with 2 templates and re-update
+        let template2 = make_test_template(
+            "Damage",
+            2,
+            Some(("Basic", vec![TriggerChain::DamageBoost(0.5)])),
+            None,
+        );
+        let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
+        let t2 = template_assets.add(template2);
+
+        let template_redo = make_test_template(
+            "Piercing",
+            3,
+            Some((
+                "Basic",
+                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            )),
+            None,
+        );
+        let t1_redo = template_assets.add(template_redo);
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![], vec![t1_redo, t2]));
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert_eq!(
+            registry.ordered_values().count(),
+            1,
+            "guard should prevent re-seeding — still only 1 chip from first seed"
         );
     }
 }
