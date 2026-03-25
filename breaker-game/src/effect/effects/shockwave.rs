@@ -13,7 +13,7 @@ use rantzsoft_physics2d::{collision_layers::CollisionLayers, resources::Collisio
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 
 use crate::{
-    behaviors::events::EffectFired,
+    effect::events::EffectFired,
     cells::{components::Locked, messages::DamageCell},
     chips::{components::DamageBoost, definition::TriggerChain},
     shared::{BASE_BOLT_DAMAGE, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},

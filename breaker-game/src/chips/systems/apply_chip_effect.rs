@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    behaviors::ActiveChains,
+    effect::ActiveEffects,
     chips::{
         definition::{ChipEffectApplied, TriggerChain},
         inventory::ChipInventory,
@@ -23,7 +23,7 @@ pub(crate) fn apply_chip_effect(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
     mut inventory: Option<ResMut<ChipInventory>>,
-    mut active_chains: Option<ResMut<ActiveChains>>,
+    mut active_chains: Option<ResMut<ActiveEffects>>,
     mut commands: Commands,
 ) {
     let Some(registry) = registry else {
@@ -56,7 +56,7 @@ pub(crate) fn apply_chip_effect(
                     });
                 }
                 // Any trigger-wrapper variant (OnPerfectBump, OnBump, OnImpact, etc.)
-                // is pushed to ActiveChains for runtime evaluation by bridge systems.
+                // is pushed to ActiveEffects for runtime evaluation by bridge systems.
                 chain => {
                     if let Some(ref mut active) = active_chains {
                         active.0.push((Some(msg.name.clone()), chain.clone()));
@@ -73,7 +73,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        behaviors::ActiveChains,
+        effect::ActiveEffects,
         bolt::components::Bolt,
         breaker::components::Breaker,
         chips::{
@@ -109,7 +109,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<ChipSelected>()
             .init_resource::<ChipRegistry>()
-            .init_resource::<ActiveChains>()
+            .init_resource::<ActiveEffects>()
             .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain())
             .add_observer(handle_piercing)
             .add_observer(handle_damage_boost)
@@ -212,7 +212,7 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: Triggered chain pushes to ActiveChains (30)
+    // B3: Triggered chain pushes to ActiveEffects (30)
     // ---------------------------------------------------------------------------
 
     #[test]
@@ -243,11 +243,11 @@ mod tests {
         send_chip_selected(&mut app, "Surge");
         tick(&mut app);
 
-        let active = app.world().resource::<ActiveChains>();
+        let active = app.world().resource::<ActiveEffects>();
         assert_eq!(
             active.0.len(),
             1,
-            "triggered chain should be pushed to ActiveChains"
+            "triggered chain should be pushed to ActiveEffects"
         );
         assert_eq!(active.0[0].0, Some("Surge".to_owned()));
         assert_eq!(active.0[0].1, chain);
@@ -421,11 +421,11 @@ mod tests {
             .expect("bolt should have Piercing from bare leaf ChipEffectApplied");
         assert_eq!(piercing.0, 1);
 
-        // ActiveChains should NOT have the leaf
-        let active = app.world().resource::<ActiveChains>();
+        // ActiveEffects should NOT have the leaf
+        let active = app.world().resource::<ActiveEffects>();
         assert!(
             active.0.is_empty(),
-            "bare leaf should NOT be pushed to ActiveChains"
+            "bare leaf should NOT be pushed to ActiveEffects"
         );
     }
 
@@ -536,12 +536,12 @@ mod tests {
             .expect("bolt should have Piercing from OnSelected dispatch");
         assert_eq!(piercing.0, 1);
 
-        // ActiveChains has the triggered chain
-        let active = app.world().resource::<ActiveChains>();
+        // ActiveEffects has the triggered chain
+        let active = app.world().resource::<ActiveEffects>();
         assert_eq!(
             active.0.len(),
             1,
-            "triggered chain should be pushed to ActiveChains"
+            "triggered chain should be pushed to ActiveEffects"
         );
         assert_eq!(active.0[0].0, Some("Hybrid".to_owned()));
         assert_eq!(

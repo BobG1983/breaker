@@ -12,7 +12,7 @@ mod tests;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    behaviors::ActiveChains,
+    effect::ActiveEffects,
     bolt::{BoltSystems, components::Bolt},
     breaker::{
         BreakerSystems,
@@ -244,7 +244,7 @@ fn bypass_menu_to_playing(
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
-    mut active_overclocks: Option<ResMut<ActiveChains>>,
+    mut active_overclocks: Option<ResMut<ActiveEffects>>,
 ) {
     selected.0.clone_from(&config.definition.breaker);
     layout_override.0 = Some(config.definition.layout.clone());

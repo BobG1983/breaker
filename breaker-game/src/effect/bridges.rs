@@ -1,13 +1,13 @@
 //! Per-trigger bridge systems — translate messages into effect events.
 //!
 //! Each bridge reads one message type, evaluates all active chains,
-//! and either fires `EffectFired` or arms the bolt with `ArmedTriggers`.
+//! and either fires `EffectFired` or arms the bolt with `ArmedEffects`.
 
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveChains,
-    armed::ArmedTriggers,
+    active::ActiveEffects,
+    armed::ArmedEffects,
     evaluate::{EvalResult, TriggerKind, evaluate},
     events::EffectFired,
 };
@@ -24,8 +24,8 @@ use crate::{
 /// and evaluates armed triggers on ALL bolt entities.
 pub(crate) fn bridge_bolt_lost(
     mut reader: MessageReader<BoltLost>,
-    active: Res<ActiveChains>,
-    armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    active: Res<ActiveEffects>,
+    armed_query: Query<(Entity, &mut ArmedEffects)>,
     mut commands: Commands,
 ) {
     if reader.read().count() == 0 {
@@ -43,8 +43,8 @@ pub(crate) fn bridge_bolt_lost(
 /// 2. `BumpSuccess`: all non-whiff bumps evaluate `OnBump` chains.
 pub(crate) fn bridge_bump(
     mut reader: MessageReader<BumpPerformed>,
-    active: Res<ActiveChains>,
-    mut armed_query: Query<&mut ArmedTriggers>,
+    active: Res<ActiveEffects>,
+    mut armed_query: Query<&mut ArmedEffects>,
     mut commands: Commands,
 ) {
     for performed in reader.read() {
@@ -119,8 +119,8 @@ pub(crate) fn bridge_bump(
 /// armed triggers on ALL bolt entities.
 pub(crate) fn bridge_bump_whiff(
     mut reader: MessageReader<BumpWhiffed>,
-    active: Res<ActiveChains>,
-    armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    active: Res<ActiveEffects>,
+    armed_query: Query<(Entity, &mut ArmedEffects)>,
     mut commands: Commands,
 ) {
     if reader.read().count() == 0 {
@@ -134,8 +134,8 @@ pub(crate) fn bridge_bump_whiff(
 /// Bridge for `BoltHitCell` — evaluates chains and armed triggers on cell impact.
 pub(crate) fn bridge_cell_impact(
     mut reader: MessageReader<BoltHitCell>,
-    active: Res<ActiveChains>,
-    mut armed_query: Query<&mut ArmedTriggers>,
+    active: Res<ActiveEffects>,
+    mut armed_query: Query<&mut ArmedEffects>,
     mut commands: Commands,
 ) {
     for hit in reader.read() {
@@ -176,8 +176,8 @@ pub(crate) fn bridge_cell_impact(
 /// breaker impact.
 pub(crate) fn bridge_breaker_impact(
     mut reader: MessageReader<BoltHitBreaker>,
-    active: Res<ActiveChains>,
-    mut armed_query: Query<&mut ArmedTriggers>,
+    active: Res<ActiveEffects>,
+    mut armed_query: Query<&mut ArmedEffects>,
     mut commands: Commands,
 ) {
     for hit in reader.read() {
@@ -218,8 +218,8 @@ pub(crate) fn bridge_breaker_impact(
 /// wall impact.
 pub(crate) fn bridge_wall_impact(
     mut reader: MessageReader<BoltHitWall>,
-    active: Res<ActiveChains>,
-    mut armed_query: Query<&mut ArmedTriggers>,
+    active: Res<ActiveEffects>,
+    mut armed_query: Query<&mut ArmedEffects>,
     mut commands: Commands,
 ) {
     for hit in reader.read() {
@@ -262,8 +262,8 @@ pub(crate) fn bridge_wall_impact(
 /// armed triggers on ALL bolt entities.
 pub(crate) fn bridge_cell_destroyed(
     mut reader: MessageReader<CellDestroyed>,
-    active: Res<ActiveChains>,
-    armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    active: Res<ActiveEffects>,
+    armed_query: Query<(Entity, &mut ArmedEffects)>,
     mut commands: Commands,
 ) {
     if reader.read().count() == 0 {
@@ -280,7 +280,7 @@ pub(crate) fn bridge_cell_destroyed(
 /// results are actioned. Arming requires a specific bolt entity, which global
 /// triggers (cell destroyed, bolt lost, bump whiff) don't provide.
 fn evaluate_active_chains(
-    active: &ActiveChains,
+    active: &ActiveEffects,
     trigger_kind: TriggerKind,
     bolt: Option<Entity>,
     commands: &mut Commands,
@@ -301,9 +301,9 @@ fn evaluate_active_chains(
     }
 }
 
-/// Evaluates armed triggers on all bolt entities that have `ArmedTriggers`.
+/// Evaluates armed triggers on all bolt entities that have `ArmedEffects`.
 fn evaluate_armed_all(
-    mut armed_query: Query<(Entity, &mut ArmedTriggers)>,
+    mut armed_query: Query<(Entity, &mut ArmedEffects)>,
     trigger_kind: TriggerKind,
     commands: &mut Commands,
 ) {
@@ -314,10 +314,10 @@ fn evaluate_armed_all(
 
 /// Arms a bolt entity with a remaining trigger chain.
 ///
-/// If the bolt already has `ArmedTriggers`, pushes to the existing vec.
-/// Otherwise, inserts a new `ArmedTriggers` component.
+/// If the bolt already has `ArmedEffects`, pushes to the existing vec.
+/// Otherwise, inserts a new `ArmedEffects` component.
 fn arm_bolt(
-    armed_query: &mut Query<&mut ArmedTriggers>,
+    armed_query: &mut Query<&mut ArmedEffects>,
     commands: &mut Commands,
     bolt_entity: Entity,
     chip_name: Option<String>,
@@ -328,13 +328,13 @@ fn arm_bolt(
     } else {
         commands
             .entity(bolt_entity)
-            .insert(ArmedTriggers(vec![(chip_name, remaining)]));
+            .insert(ArmedEffects(vec![(chip_name, remaining)]));
     }
 }
 
 /// Evaluates armed triggers on a specific bolt entity.
 fn evaluate_armed(
-    armed_query: &mut Query<&mut ArmedTriggers>,
+    armed_query: &mut Query<&mut ArmedEffects>,
     commands: &mut Commands,
     bolt_entity: Entity,
     trigger_kind: TriggerKind,
@@ -346,7 +346,7 @@ fn evaluate_armed(
 
 /// Resolves armed trigger chains: fires leaves, re-arms non-leaves, retains non-matches.
 fn resolve_armed(
-    armed: &mut ArmedTriggers,
+    armed: &mut ArmedEffects,
     trigger_kind: TriggerKind,
     bolt: Option<Entity>,
     commands: &mut Commands,
@@ -383,7 +383,7 @@ fn resolve_armed(
 mod tests {
     use super::*;
     use crate::{
-        behaviors::events::EffectFired,
+        effect::events::EffectFired,
         breaker::messages::BumpGrade,
         chips::definition::{ImpactTarget, TriggerChain},
     };
@@ -475,7 +475,7 @@ mod tests {
 
     // --- Per-bridge test app builders ---
 
-    /// Wraps a list of `TriggerChain`s as `(None, chain)` tuples for `ActiveChains`.
+    /// Wraps a list of `TriggerChain`s as `(None, chain)` tuples for `ActiveEffects`.
     fn wrap_chains(chains: Vec<TriggerChain>) -> Vec<(Option<String>, TriggerChain)> {
         chains.into_iter().map(|c| (None, c)).collect()
     }
@@ -484,7 +484,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltLostFlag(false))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -496,7 +496,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -508,7 +508,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpWhiffed>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBumpWhiffFlag(false))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -520,7 +520,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -535,7 +535,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitBreaker>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitBreaker(None))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -550,7 +550,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitWall>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitWall(None))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -565,7 +565,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<CellDestroyed>()
-            .insert_resource(ActiveChains(wrap_chains(active_chains)))
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendCellDestroyed(None))
             .init_resource::<CapturedEffects>()
             .add_observer(capture_effects)
@@ -710,7 +710,7 @@ mod tests {
         let captured = app.world().resource::<CapturedEffects>();
         assert!(captured.0.is_empty(), "non-leaf inner should arm, not fire");
 
-        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        let armed = app.world().get::<ArmedEffects>(bolt).unwrap();
         assert_eq!(armed.0.len(), 1);
         assert_eq!(
             armed.0[0].1,
@@ -767,7 +767,7 @@ mod tests {
         let mut app = cell_impact_test_app(vec![]);
         let bolt = app
             .world_mut()
-            .spawn(ArmedTriggers(vec![(
+            .spawn(ArmedEffects(vec![(
                 None,
                 TriggerChain::OnImpact(
                     ImpactTarget::Cell,
@@ -785,7 +785,7 @@ mod tests {
         assert_eq!(captured.0.len(), 1);
         assert_eq!(captured.0[0].0, TriggerChain::test_shockwave(64.0));
 
-        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        let armed = app.world().get::<ArmedEffects>(bolt).unwrap();
         assert!(armed.0.is_empty());
     }
 
@@ -821,7 +821,7 @@ mod tests {
         let mut app = breaker_impact_test_app(vec![]);
         let bolt = app
             .world_mut()
-            .spawn(ArmedTriggers(vec![(
+            .spawn(ArmedEffects(vec![(
                 None,
                 TriggerChain::OnImpact(
                     ImpactTarget::Breaker,
@@ -858,7 +858,7 @@ mod tests {
         let mut app = wall_impact_test_app(vec![]);
         let bolt = app
             .world_mut()
-            .spawn(ArmedTriggers(vec![(
+            .spawn(ArmedEffects(vec![(
                 None,
                 TriggerChain::OnImpact(ImpactTarget::Wall, vec![TriggerChain::test_shield(5.0)]),
             )]))
@@ -910,7 +910,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveChains(vec![(None, chain)]))
+            .insert_resource(ActiveEffects(vec![(None, chain)]))
             .insert_resource(SendBump(None))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedEffects>()
@@ -938,7 +938,7 @@ mod tests {
         let captured = app.world().resource::<CapturedEffects>();
         assert!(captured.0.is_empty(), "step 1: should arm, not fire");
         assert!(
-            app.world().get::<ArmedTriggers>(bolt).is_some(),
+            app.world().get::<ArmedEffects>(bolt).is_some(),
             "step 1: bolt should be armed"
         );
 
@@ -970,7 +970,7 @@ mod tests {
             .add_message::<BumpPerformed>()
             .add_message::<BoltHitCell>()
             .add_message::<CellDestroyed>()
-            .insert_resource(ActiveChains(vec![(None, chain)]))
+            .insert_resource(ActiveEffects(vec![(None, chain)]))
             .insert_resource(SendBump(None))
             .insert_resource(SendBoltHitCell(None))
             .insert_resource(SendCellDestroyed(None))
@@ -1003,7 +1003,7 @@ mod tests {
             captured.0.is_empty(),
             "step 1: should arm, not fire any effect"
         );
-        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        let armed = app.world().get::<ArmedEffects>(bolt).unwrap();
         assert_eq!(
             armed.0.len(),
             1,
@@ -1034,7 +1034,7 @@ mod tests {
             captured.0.is_empty(),
             "step 2: should re-arm, not fire any effect"
         );
-        let armed = app.world().get::<ArmedTriggers>(bolt).unwrap();
+        let armed = app.world().get::<ArmedEffects>(bolt).unwrap();
         assert_eq!(
             armed.0.len(),
             1,
@@ -1072,7 +1072,7 @@ mod tests {
     #[test]
     fn bridge_bolt_lost_plus_life_lost_observer_decrements_lives() {
         use crate::{
-            behaviors::effects::life_lost::{handle_life_lost, LivesCount},
+            effect::effects::life_lost::{LivesCount, handle_life_lost},
             run::messages::RunLost,
         };
 
@@ -1081,7 +1081,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
             .add_message::<RunLost>()
-            .insert_resource(ActiveChains(vec![(None, chain)]))
+            .insert_resource(ActiveEffects(vec![(None, chain)]))
             .insert_resource(SendBoltLostFlag(false))
             .add_observer(capture_effects)
             .add_observer(handle_life_lost)

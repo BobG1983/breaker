@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use tracing::warn;
 
 use super::{
-    active::ActiveChains, definition::BreakerStatOverrides, effects::life_lost::LivesCount,
+    active::ActiveEffects, definition::BreakerStatOverrides, effects::life_lost::LivesCount,
     registry::ArchetypeRegistry,
 };
 use crate::{
@@ -66,17 +66,17 @@ pub(crate) fn apply_archetype_config_overrides(
     apply_stat_overrides(&mut config, &def.stat_overrides);
 }
 
-/// Stamps init-time behavior components and builds `ActiveChains`.
+/// Stamps init-time behavior components and builds `ActiveEffects`.
 ///
 /// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
 /// - Inserts `LivesCount` if archetype has `life_pool`
-/// - Builds `ActiveChains` from root fields and `chains`
+/// - Builds `ActiveEffects` from root fields and `chains`
 pub(crate) fn init_archetype(
     mut commands: Commands,
     selected: Res<SelectedArchetype>,
     registry: Res<ArchetypeRegistry>,
     breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
-    mut active: ResMut<ActiveChains>,
+    mut active: ResMut<ActiveEffects>,
 ) {
     let Some(def) = registry.get(&selected.0) else {
         warn!("Archetype '{}' not found in registry", selected.0);
@@ -90,7 +90,7 @@ pub(crate) fn init_archetype(
         }
     }
 
-    // Build ActiveChains from root fields + chains
+    // Build ActiveEffects from root fields + chains
     let mut chains = Vec::new();
     if let Some(chain) = &def.on_bolt_lost {
         chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
@@ -105,14 +105,14 @@ pub(crate) fn init_archetype(
         chains.push((None, TriggerChain::OnLateBump(vec![chain.clone()])));
     }
     chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
-    *active = ActiveChains(chains);
+    *active = ActiveEffects(chains);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides},
+        effect::definition::{ArchetypeDefinition, BreakerStatOverrides},
         chips::definition::{ImpactTarget, Target},
     };
 
@@ -147,7 +147,7 @@ mod tests {
         registry.insert(def.name.clone(), def);
         app.insert_resource(registry)
             .insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()))
-            .init_resource::<ActiveChains>()
+            .init_resource::<ActiveEffects>()
             .add_systems(Update, init_archetype);
         app
     }
@@ -168,7 +168,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.update();
 
-        let active = app.world().resource::<ActiveChains>();
+        let active = app.world().resource::<ActiveEffects>();
         // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
         // on_perfect_bump=SpeedBoost → OnPerfectBump(SpeedBoost{...})
         // on_early_bump=SpeedBoost → OnEarlyBump(SpeedBoost{...})
@@ -196,7 +196,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.update();
 
-        let active = app.world().resource::<ActiveChains>();
+        let active = app.world().resource::<ActiveEffects>();
         assert_eq!(active.0.len(), 2);
     }
 
@@ -219,7 +219,7 @@ mod tests {
         app.world_mut().spawn(Breaker);
         app.update();
 
-        let active = app.world().resource::<ActiveChains>();
+        let active = app.world().resource::<ActiveEffects>();
         assert_eq!(active.0.len(), 1);
     }
 

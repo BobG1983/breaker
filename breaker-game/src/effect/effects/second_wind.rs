@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::{behaviors::events::EffectFired, chips::definition::TriggerChain};
+use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
 
 /// Observer: handles second wind — temporary invulnerability.
 ///
@@ -20,7 +20,7 @@ pub(crate) fn handle_second_wind(trigger: On<EffectFired>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{behaviors::events::EffectFired, chips::definition::TriggerChain};
+    use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
 
     fn test_app() -> App {
         let mut app = App::new();

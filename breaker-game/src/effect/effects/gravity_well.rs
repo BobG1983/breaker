@@ -1,17 +1,17 @@
-//! Piercing beam effect handler — fires a beam through cells in a line.
+//! Gravity well effect handler — creates a gravity well that attracts bolts.
 //!
 //! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::PiercingBeam`], and damages cells along the beam path.
+//! [`TriggerChain::GravityWell`], and spawns a gravity well entity.
 
 use bevy::prelude::*;
 
-use crate::{behaviors::events::EffectFired, chips::definition::TriggerChain};
+use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
 
-/// Observer: handles piercing beam — fires a beam through cells.
+/// Observer: handles gravity well creation.
 ///
-/// Self-selects via pattern matching on [`TriggerChain::PiercingBeam`].
-pub(crate) fn handle_piercing_beam(trigger: On<EffectFired>) {
-    let TriggerChain::PiercingBeam { .. } = &trigger.event().effect else {
+/// Self-selects via pattern matching on [`TriggerChain::GravityWell`].
+pub(crate) fn handle_gravity_well(trigger: On<EffectFired>) {
+    let TriggerChain::GravityWell { .. } = &trigger.event().effect else {
         return;
     };
     // Stub: no implementation yet
@@ -20,12 +20,12 @@ pub(crate) fn handle_piercing_beam(trigger: On<EffectFired>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{behaviors::events::EffectFired, chips::definition::TriggerChain};
+    use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_observer(handle_piercing_beam);
+            .add_observer(handle_gravity_well);
         app
     }
 
@@ -38,7 +38,7 @@ mod tests {
     }
 
     #[test]
-    fn handle_piercing_beam_ignores_non_piercing_beam_effects() {
+    fn handle_gravity_well_ignores_non_gravity_well_effects() {
         let mut app = test_app();
 
         app.world_mut().commands().trigger(EffectFired {

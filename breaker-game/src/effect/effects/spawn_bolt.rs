@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::events::EffectFired, bolt::messages::SpawnAdditionalBolt,
+    effect::events::EffectFired, bolt::messages::SpawnAdditionalBolt,
     chips::definition::TriggerChain,
 };
 

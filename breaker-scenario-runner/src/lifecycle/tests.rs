@@ -926,14 +926,14 @@ fn restart_run_on_end_transitions_to_main_menu() {
 }
 
 // -------------------------------------------------------------------------
-// bypass_menu_to_playing — populates ActiveChains from initial_overclocks
+// bypass_menu_to_playing — populates ActiveEffects from initial_overclocks
 // -------------------------------------------------------------------------
 
 /// When `initial_overclocks` is `Some` with one chain, `bypass_menu_to_playing`
-/// must populate `ActiveChains` with that chain.
+/// must populate `ActiveEffects` with that chain.
 #[test]
 fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
-    use breaker::{behaviors::ActiveChains, chips::TriggerChain};
+    use breaker::{effect::ActiveEffects, chips::TriggerChain};
 
     let mut definition = make_scenario(100);
     definition.initial_overclocks = Some(vec![TriggerChain::Shockwave {
@@ -949,18 +949,18 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
         .insert_resource(breaker::shared::SelectedArchetype::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveChains>()
+        .init_resource::<ActiveEffects>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
     app.update();
 
-    let active = app.world().resource::<ActiveChains>();
+    let active = app.world().resource::<ActiveEffects>();
     assert_eq!(
         active.0.len(),
         1,
-        "expected ActiveChains to contain 1 chain when initial_overclocks is Some, got {}",
+        "expected ActiveEffects to contain 1 chain when initial_overclocks is Some, got {}",
         active.0.len()
     );
     assert_eq!(
@@ -971,15 +971,15 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
             stacks: 1,
             speed: 400.0,
         },
-        "expected ActiveChains[0] to be Shockwave"
+        "expected ActiveEffects[0] to be Shockwave"
     );
 }
 
 /// When `initial_overclocks` is `None`, `bypass_menu_to_playing` must leave
-/// `ActiveChains` at its default (empty vec).
+/// `ActiveEffects` at its default (empty vec).
 #[test]
 fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
-    use breaker::behaviors::ActiveChains;
+    use breaker::effect::ActiveEffects;
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -989,17 +989,17 @@ fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
         .insert_resource(breaker::shared::SelectedArchetype::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveChains>()
+        .init_resource::<ActiveEffects>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
     app.update();
 
-    let active = app.world().resource::<ActiveChains>();
+    let active = app.world().resource::<ActiveEffects>();
     assert!(
         active.0.is_empty(),
-        "expected ActiveChains to be empty when initial_overclocks is None, got {} entries",
+        "expected ActiveEffects to be empty when initial_overclocks is None, got {} entries",
         active.0.len()
     );
 }

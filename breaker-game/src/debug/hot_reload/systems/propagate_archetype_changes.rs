@@ -3,8 +3,8 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
-    behaviors::{
-        active::ActiveChains, definition::ArchetypeDefinition, effects::life_lost::LivesCount,
+    effect::{
+        active::ActiveEffects, definition::ArchetypeDefinition, effects::life_lost::LivesCount,
         init::apply_stat_overrides, registry::ArchetypeRegistry,
     },
     breaker::{
@@ -32,7 +32,7 @@ pub(crate) struct ArchetypeChangeContext<'w, 's> {
     /// Mutable breaker configuration.
     config: ResMut<'w, BreakerConfig>,
     /// Mutable active chains.
-    active: ResMut<'w, ActiveChains>,
+    active: ResMut<'w, ActiveEffects>,
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
     /// Command buffer for entity modifications.
@@ -43,7 +43,7 @@ pub(crate) struct ArchetypeChangeContext<'w, 's> {
 /// `ArchetypeRegistry`, and if the selected archetype was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
 /// 2. Resets `LivesCount` if archetype has `life_pool`
-/// 3. Rebuilds `ActiveChains`
+/// 3. Rebuilds `ActiveEffects`
 pub(crate) fn propagate_archetype_changes(
     mut events: MessageReader<AssetEvent<ArchetypeDefinition>>,
     mut ctx: ArchetypeChangeContext,
@@ -86,7 +86,7 @@ pub(crate) fn propagate_archetype_changes(
         }
     }
 
-    // Build ActiveChains from root fields + chains
+    // Build ActiveEffects from root fields + chains
     let mut chains = Vec::new();
     if let Some(chain) = &def.on_bolt_lost {
         chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
@@ -101,13 +101,13 @@ pub(crate) fn propagate_archetype_changes(
         chains.push((None, TriggerChain::OnLateBump(vec![chain.clone()])));
     }
     chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
-    *ctx.active = ActiveChains(chains);
+    *ctx.active = ActiveEffects(chains);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{behaviors::definition::BreakerStatOverrides, chips::definition::Target};
+    use crate::{effect::definition::BreakerStatOverrides, chips::definition::Target};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -117,7 +117,7 @@ mod tests {
             .init_resource::<BreakerConfig>()
             .init_resource::<ArchetypeRegistry>()
             .init_resource::<SelectedArchetype>()
-            .init_resource::<ActiveChains>()
+            .init_resource::<ActiveEffects>()
             .add_systems(Update, propagate_archetype_changes);
         app
     }
@@ -294,7 +294,7 @@ mod tests {
         app.update();
         app.update();
 
-        let active = app.world().resource::<ActiveChains>();
+        let active = app.world().resource::<ActiveEffects>();
         // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
         // on_perfect_bump=SpeedBoost → OnPerfectBump(SpeedBoost{...})
         // on_early_bump=SpeedBoost → OnEarlyBump(SpeedBoost{...})
@@ -407,7 +407,7 @@ mod tests {
         app.update();
         app.update();
 
-        let active = app.world().resource::<ActiveChains>();
+        let active = app.world().resource::<ActiveEffects>();
         assert_eq!(
             active.0.len(),
             1,

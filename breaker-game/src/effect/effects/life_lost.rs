@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::{effects::shield::ShieldActive, events::EffectFired},
+    effect::{effects::shield::ShieldActive, events::EffectFired},
     chips::definition::TriggerChain,
     run::messages::RunLost,
     ui::components::StatusPanel,
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn lose_life_skips_when_shield_active_present() {
-        use crate::behaviors::effects::shield::ShieldActive;
+        use crate::effect::effects::shield::ShieldActive;
 
         let mut app = test_app();
         let entity = app
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn shield_protects_last_life() {
-        use crate::behaviors::effects::shield::ShieldActive;
+        use crate::effect::effects::shield::ShieldActive;
 
         let mut app = test_app();
         let entity = app

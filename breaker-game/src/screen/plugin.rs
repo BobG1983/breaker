@@ -15,7 +15,7 @@ use super::{
     systems::cleanup_entities,
 };
 use crate::{
-    behaviors::ArchetypeDefinition,
+    effect::ArchetypeDefinition,
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},

@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::{behaviors::events::EffectFired, chips::definition::TriggerChain};
+use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
 
 /// Observer: handles phantom breaker spawning.
 ///
@@ -20,7 +20,7 @@ pub(crate) fn handle_spawn_phantom(trigger: On<EffectFired>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{behaviors::events::EffectFired, chips::definition::TriggerChain};
+    use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
 
     fn test_app() -> App {
         let mut app = App::new();

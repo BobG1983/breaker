@@ -1,4 +1,4 @@
-//! `ArmedTriggers` component for the unified behaviors system.
+//! `ArmedEffects` component for the unified effect system.
 
 use bevy::prelude::*;
 
@@ -12,18 +12,18 @@ use crate::chips::definition::TriggerChain;
 /// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
 /// archetype-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Component, Debug, Default)]
-pub(crate) struct ArmedTriggers(pub Vec<(Option<String>, TriggerChain)>);
+pub(crate) struct ArmedEffects(pub Vec<(Option<String>, TriggerChain)>);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn armed_triggers_default_is_empty() {
-        let armed = ArmedTriggers::default();
+    fn armed_effects_default_is_empty() {
+        let armed = ArmedEffects::default();
         assert!(
             armed.0.is_empty(),
-            "ArmedTriggers::default() should produce an empty vec"
+            "ArmedEffects::default() should produce an empty vec"
         );
     }
 }

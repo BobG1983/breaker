@@ -8,7 +8,7 @@ use rantzsoft_spatial2d::plugin::RantzSpatial2dPlugin;
 
 use crate::{
     audio::AudioPlugin,
-    behaviors::BehaviorsPlugin,
+    effect::EffectPlugin,
     bolt::BoltPlugin,
     breaker::BreakerPlugin,
     cells::CellsPlugin,
@@ -55,7 +55,7 @@ impl PluginGroup for Game {
             .add(rantzsoft_physics2d::plugin::RantzPhysics2dPlugin)
             .add(WallPlugin)
             .add(BreakerPlugin)
-            .add(BehaviorsPlugin)
+            .add(EffectPlugin)
             .add(BoltPlugin)
             .add(CellsPlugin)
             .add(ChipsPlugin)

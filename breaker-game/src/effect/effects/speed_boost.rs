@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    behaviors::events::EffectFired,
+    effect::events::EffectFired,
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
     chips::{
         components::BoltSpeedBoost,
@@ -91,7 +91,7 @@ fn apply_speed_scale(vel: &mut Velocity2D, multiplier: f32, base: f32, max: f32,
 mod tests {
     use super::*;
     use crate::{
-        behaviors::events::EffectFired,
+        effect::events::EffectFired,
         bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
         chips::{
             components::BoltSpeedBoost,

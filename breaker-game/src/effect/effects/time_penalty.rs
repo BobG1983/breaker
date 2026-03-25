@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::{effects::shield::ShieldActive, events::EffectFired},
+    effect::{effects::shield::ShieldActive, events::EffectFired},
     chips::definition::TriggerChain,
     run::node::messages::ApplyTimePenalty,
 };
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn time_penalty_skips_when_shield_active_present() {
-        use crate::behaviors::effects::shield::ShieldActive;
+        use crate::effect::effects::shield::ShieldActive;
 
         let mut app = test_app();
         // Spawn an entity with ShieldActive so the handler can detect it

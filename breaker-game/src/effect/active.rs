@@ -1,4 +1,4 @@
-//! `ActiveChains` resource — runtime list of active trigger chains.
+//! `ActiveEffects` resource — runtime list of active trigger chains.
 
 use bevy::prelude::*;
 
@@ -11,18 +11,18 @@ use crate::chips::definition::TriggerChain;
 /// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
 /// archetype-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Resource, Debug, Default)]
-pub struct ActiveChains(pub Vec<(Option<String>, TriggerChain)>);
+pub struct ActiveEffects(pub Vec<(Option<String>, TriggerChain)>);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn active_chains_default_is_empty() {
-        let active = ActiveChains::default();
+    fn active_effects_default_is_empty() {
+        let active = ActiveEffects::default();
         assert!(
             active.0.is_empty(),
-            "ActiveChains::default() should produce an empty vec"
+            "ActiveEffects::default() should produce an empty vec"
         );
     }
 }

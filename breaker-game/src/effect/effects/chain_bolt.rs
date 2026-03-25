@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::events::EffectFired, bolt::messages::SpawnChainBolt,
-    chips::definition::TriggerChain,
+    effect::events::EffectFired, bolt::messages::SpawnChainBolt, chips::definition::TriggerChain,
 };
 
 /// Observer that handles chain bolt — writes [`SpawnChainBolt`] message.
@@ -16,8 +15,7 @@ pub(crate) fn handle_chain_bolt(
     mut writer: MessageWriter<SpawnChainBolt>,
 ) {
     let event = trigger.event();
-    let TriggerChain::ChainBolt { tether_distance } = &event.effect
-    else {
+    let TriggerChain::ChainBolt { tether_distance } = &event.effect else {
         return;
     };
     let Some(bolt_entity) = event.bolt else {
@@ -34,7 +32,7 @@ pub(crate) fn handle_chain_bolt(
 mod tests {
     use super::*;
     use crate::{
-        behaviors::events::EffectFired, bolt::messages::SpawnChainBolt,
+        effect::events::EffectFired, bolt::messages::SpawnChainBolt,
         chips::definition::TriggerChain,
     };
 

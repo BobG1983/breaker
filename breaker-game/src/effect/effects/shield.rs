@@ -8,7 +8,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::events::EffectFired, breaker::components::Breaker, chips::definition::TriggerChain,
+    effect::events::EffectFired, breaker::components::Breaker, chips::definition::TriggerChain,
 };
 
 // ---------------------------------------------------------------------------

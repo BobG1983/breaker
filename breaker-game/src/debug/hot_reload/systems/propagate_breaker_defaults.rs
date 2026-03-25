@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::{init::apply_stat_overrides, registry::ArchetypeRegistry},
+    effect::{init::apply_stat_overrides, registry::ArchetypeRegistry},
     breaker::{BreakerConfig, BreakerDefaults},
     screen::loading::resources::DefaultsCollection,
     shared::SelectedArchetype,
@@ -36,7 +36,7 @@ pub(crate) fn propagate_breaker_defaults(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::effect::definition::{ArchetypeDefinition, BreakerStatOverrides};
 
     fn test_app() -> App {
         let mut app = App::new();

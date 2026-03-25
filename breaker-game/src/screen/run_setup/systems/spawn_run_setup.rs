@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::ArchetypeRegistry,
+    effect::ArchetypeRegistry,
     screen::run_setup::{
         components::{BreakerCard, RunSetupScreen, SeedDisplay},
         resources::{RunSetupSelection, SeedEntry},
@@ -130,7 +130,7 @@ fn description_for(name: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::effect::definition::{ArchetypeDefinition, BreakerStatOverrides};
 
     fn make_archetype(name: &str) -> ArchetypeDefinition {
         ArchetypeDefinition {

@@ -1,4 +1,4 @@
-//! Behavior system — data-driven trigger→effect dispatch.
+//! Effect system — data-driven trigger→effect dispatch.
 
 pub(crate) mod active;
 pub(crate) mod armed;
@@ -12,8 +12,8 @@ mod plugin;
 pub(crate) mod registry;
 pub(crate) mod sets;
 
-pub use active::ActiveChains;
+pub use active::ActiveEffects;
 pub(crate) use definition::ArchetypeDefinition;
-pub(crate) use plugin::BehaviorsPlugin;
+pub(crate) use plugin::EffectPlugin;
 pub(crate) use registry::ArchetypeRegistry;
-pub(crate) use sets::BehaviorSystems;
+pub(crate) use sets::EffectSystems;

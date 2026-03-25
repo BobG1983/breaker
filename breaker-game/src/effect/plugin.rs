@@ -1,9 +1,9 @@
-//! `BehaviorsPlugin` — wires archetype init, bridge systems, and observers.
+//! `EffectPlugin` — wires archetype init, bridge systems, and observers.
 
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveChains,
+    active::ActiveEffects,
     bridges::{
         bridge_bolt_lost, bridge_breaker_impact, bridge_bump, bridge_bump_whiff,
         bridge_cell_destroyed, bridge_cell_impact, bridge_wall_impact,
@@ -28,7 +28,7 @@ use super::{
     },
     init::{apply_archetype_config_overrides, init_archetype},
     registry::ArchetypeRegistry,
-    sets::BehaviorSystems,
+    sets::EffectSystems,
 };
 use crate::{
     bolt::BoltSystems,
@@ -37,19 +37,19 @@ use crate::{
     ui::UiSystems,
 };
 
-/// Plugin for the behavior system.
+/// Plugin for the effect system.
 ///
 /// Registers:
 /// - Archetype init systems (config overrides, component stamping)
 /// - Per-trigger bridge systems (message → effect event)
 /// - Effect observers (event → game effect)
 /// - Lives HUD
-pub(crate) struct BehaviorsPlugin;
+pub(crate) struct EffectPlugin;
 
-impl Plugin for BehaviorsPlugin {
+impl Plugin for EffectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ArchetypeRegistry>()
-            .init_resource::<ActiveChains>()
+            .init_resource::<ActiveEffects>()
             // Effect observers
             .add_observer(handle_life_lost)
             .add_observer(handle_time_penalty)
@@ -81,23 +81,23 @@ impl Plugin for BehaviorsPlugin {
                 (
                     bridge_bolt_lost
                         .after(BoltSystems::BoltLost)
-                        .in_set(BehaviorSystems::Bridge),
+                        .in_set(EffectSystems::Bridge),
                     bridge_bump
                         .after(BreakerSystems::GradeBump)
-                        .in_set(BehaviorSystems::Bridge),
+                        .in_set(EffectSystems::Bridge),
                     bridge_bump_whiff
                         .after(BreakerSystems::GradeBump)
-                        .in_set(BehaviorSystems::Bridge),
+                        .in_set(EffectSystems::Bridge),
                     bridge_cell_impact
                         .after(BoltSystems::BreakerCollision)
-                        .in_set(BehaviorSystems::Bridge),
+                        .in_set(EffectSystems::Bridge),
                     bridge_breaker_impact
                         .after(BoltSystems::BreakerCollision)
-                        .in_set(BehaviorSystems::Bridge),
+                        .in_set(EffectSystems::Bridge),
                     bridge_wall_impact
                         .after(BoltSystems::BreakerCollision)
-                        .in_set(BehaviorSystems::Bridge),
-                    bridge_cell_destroyed.in_set(BehaviorSystems::Bridge),
+                        .in_set(EffectSystems::Bridge),
+                    bridge_cell_destroyed.in_set(EffectSystems::Bridge),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
@@ -112,7 +112,7 @@ impl Plugin for BehaviorsPlugin {
             .add_systems(
                 FixedUpdate,
                 tick_shield
-                    .after(BehaviorSystems::Bridge)
+                    .after(EffectSystems::Bridge)
                     .run_if(in_state(PlayingState::Active)),
             )
             // HUD + shockwave visual update
@@ -156,7 +156,7 @@ mod tests {
             .add_message::<crate::cells::messages::CellDestroyed>()
             .add_message::<crate::breaker::messages::BumpWhiffed>()
             .add_plugins(BreakerPlugin)
-            .add_plugins(BehaviorsPlugin)
+            .add_plugins(EffectPlugin)
             .update();
     }
 }

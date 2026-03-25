@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::BehaviorSystems,
+    effect::EffectSystems,
     bolt::{
         BoltSystems,
         messages::{
@@ -64,8 +64,8 @@ impl Plugin for BoltPlugin {
                         prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity),
                     )
                         .after(BreakerSystems::Move),
-                    spawn_additional_bolt.after(BehaviorSystems::Bridge),
-                    spawn_chain_bolt.after(BehaviorSystems::Bridge),
+                    spawn_additional_bolt.after(EffectSystems::Bridge),
+                    spawn_chain_bolt.after(EffectSystems::Bridge),
                     spawn_bolt_lost_text,
                     // Collision systems (moved from PhysicsPlugin)
                     bolt_cell_collision

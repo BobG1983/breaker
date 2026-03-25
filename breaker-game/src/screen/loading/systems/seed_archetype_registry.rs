@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    behaviors::{ArchetypeDefinition, ArchetypeRegistry},
+    effect::{ArchetypeDefinition, ArchetypeRegistry},
     screen::loading::resources::DefaultsCollection,
 };
 
@@ -46,7 +46,7 @@ pub(crate) fn seed_archetype_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::BreakerStatOverrides;
+    use crate::effect::definition::BreakerStatOverrides;
 
     fn test_app() -> App {
         let mut app = App::new();

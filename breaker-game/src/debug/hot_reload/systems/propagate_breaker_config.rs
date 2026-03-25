@@ -73,7 +73,7 @@ pub(crate) fn propagate_breaker_config(
 mod tests {
     use super::*;
     use crate::{
-        behaviors::effects::life_lost::LivesCount,
+        effect::effects::life_lost::LivesCount,
         breaker::{
             components::{
                 BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
