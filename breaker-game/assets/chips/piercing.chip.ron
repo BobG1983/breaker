@@ -1,0 +1,8 @@
+(
+    name: "Piercing Shot",
+    max_taken: 3,
+    common: Some((prefix: "Basic", effects: [OnSelected([Piercing(1)])])),
+    uncommon: Some((prefix: "Keen", effects: [OnSelected([Piercing(2)])])),
+    rare: Some((prefix: "Brutal", effects: [OnSelected([Piercing(3), DamageBoost(0.1)])])),
+    legendary: None,
+)

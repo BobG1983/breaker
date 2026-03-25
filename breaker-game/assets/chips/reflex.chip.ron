@@ -1,0 +1,8 @@
+(
+    name: "Reflex",
+    max_taken: 1,
+    common: None,
+    uncommon: Some((prefix: "Quick", effects: [OnPerfectBump([SpawnBolt])])),
+    rare: Some((prefix: "Lightning", effects: [OnPerfectBump([SpawnBolt, SpeedBoost(target: Bolt, multiplier: 1.2)])])),
+    legendary: None,
+)

@@ -1,8 +1,0 @@
-(
-    name: "Reflex",
-    max_taken: 1,
-    common: None,
-    uncommon: None,
-    rare: Some((prefix: "", effects: [OnPerfectBump([SpawnBolt])])),
-    legendary: None,
-)

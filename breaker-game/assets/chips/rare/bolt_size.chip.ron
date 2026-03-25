@@ -1,8 +1,0 @@
-(
-    name: "Bolt Size",
-    max_taken: 3,
-    common: None,
-    uncommon: None,
-    rare: Some((prefix: "", effects: [OnSelected([SizeBoost(Bolt, 0.3)])])),
-    legendary: None,
-)

@@ -768,7 +768,7 @@ mod tests {
     fn piercing_chip_template_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/common/piercing.chip.ron"
+            "/assets/chips/piercing.chip.ron"
         ));
         let template: ChipTemplate =
             ron::de::from_str(ron_str).expect("chip template RON should parse");
@@ -776,7 +776,8 @@ mod tests {
         assert_eq!(template.max_taken, 3);
         assert!(template.common.is_some());
         let defs = expand_template(&template);
-        assert_eq!(defs.len(), 1);
+        assert_eq!(defs.len(), 3);
+        assert_eq!(defs[0].name, "Basic Piercing Shot");
         assert_eq!(
             defs[0].effects[0],
             TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])
@@ -787,16 +788,16 @@ mod tests {
     fn wide_breaker_chip_template_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/common/wide_breaker.chip.ron"
+            "/assets/chips/wide_breaker.chip.ron"
         ));
         let template: ChipTemplate =
             ron::de::from_str(ron_str).expect("chip template RON should parse");
         assert_eq!(template.name, "Wide Breaker");
         let defs = expand_template(&template);
-        assert_eq!(defs.len(), 1);
+        assert_eq!(defs.len(), 3);
         assert_eq!(
             defs[0].effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Breaker, 20.0)])
+            TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Breaker, 10.0)])
         );
     }
 
@@ -804,24 +805,19 @@ mod tests {
     fn surge_chip_template_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/rare/surge.chip.ron"
+            "/assets/chips/surge.chip.ron"
         ));
         let template: ChipTemplate =
             ron::de::from_str(ron_str).expect("chip template RON should parse");
         assert_eq!(template.name, "Surge");
         let defs = expand_template(&template);
-        assert_eq!(defs.len(), 1);
+        assert_eq!(defs.len(), 3);
         assert_eq!(
             defs[0].effects[0],
-            TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 32.0,
-                    stacks: 1,
-                    speed: 400.0,
-                }],
-            )])
+            TriggerChain::OnPerfectBump(vec![TriggerChain::SpeedBoost {
+                target: Target::Bolt,
+                multiplier: 1.2,
+            }])
         );
     }
 

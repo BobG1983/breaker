@@ -1,8 +1,0 @@
-(
-    name: "Last Stand",
-    max_taken: 1,
-    common: None,
-    uncommon: Some((prefix: "", effects: [OnBoltLost([SpeedBoost(target: AllBolts, multiplier: 1.3)])])),
-    rare: None,
-    legendary: None,
-)
