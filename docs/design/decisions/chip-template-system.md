@@ -10,16 +10,16 @@ Each template defines the chip concept (name, max_taken) and up to four rarity s
 (
     name: "Piercing",
     max_taken: 3,
-    common: Some((prefix: "Basic", effects: [OnSelected([Piercing(1)])])),
-    uncommon: Some((prefix: "Keen", effects: [OnSelected([Piercing(2)])])),
-    rare: Some((prefix: "Brutal", effects: [OnSelected([Piercing(3), DamageBoost(0.1)])])),
+    common: Some((prefix: "Basic", effects: [When(trigger: OnSelected, then: [Do(Piercing(1))])])),
+    uncommon: Some((prefix: "Keen", effects: [When(trigger: OnSelected, then: [Do(Piercing(2))])])),
+    rare: Some((prefix: "Brutal", effects: [When(trigger: OnSelected, then: [Do(Piercing(3)), Do(DamageBoost(0.1))])])),
     legendary: None,
 )
 ```
 
 Each slot is `Option<RaritySlot>` where `RaritySlot` has:
 - `prefix: String` — adjective prepended to the template name (e.g., "Basic Piercing")
-- `effects: Vec<TriggerChain>` — full effect list for that rarity (no magic scaling, no inheritance)
+- `effects: Vec<EffectNode>` — full effect list for that rarity (no magic scaling, no inheritance)
 
 ## Structural Guarantees
 

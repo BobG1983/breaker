@@ -8,9 +8,9 @@ Evolutions are the payoff for maxing out specific chip combinations. They repres
 
 An evolution should feel like unlocking an ultimate ability, not applying another stat buff. The player should notice an immediate, dramatic change in how the game plays. If you can't put big VFX on it, it's not an evolution — it's a chip.
 
-**Good**: OnPerfectBump → bolt permanently splits into 2 bolts with piercing and new vfx. Every perfect bump now produces a visible, lasting power escalation.
+**Good**: OnPerfectBump — bolt permanently splits into 2 bolts with piercing and new vfx. Every perfect bump now produces a visible, lasting power escalation.
 
-**Bad**: OnPerfectBump → SpeedBoost. This feels like an amp with extra steps.
+**Bad**: OnPerfectBump — SpeedBoost. This feels like an amp with extra steps.
 
 ### VFX-Worthy
 
@@ -49,6 +49,69 @@ Each evolution tracks cumulative damage dealt across the run. At run-end, the ev
 - Area damage from evolution-triggered shockwaves
 - Any other cell destruction attributable to the evolution's effects
 
-## Integration with TriggerChain
+## Integration with EffectNode
 
-Evolutions are implemented as chips with TriggerChain effects. The chip's trigger chains are pushed to ActiveChains when selected and evaluated by bridge systems on matching game events. Each evolution carries its chip name through the evaluation pipeline for damage attribution.
+Evolutions are implemented as chips with `EffectNode` effect trees. The chip's effect nodes are pushed to the entity's `EffectChains` when selected and evaluated by bridge systems on matching game events. Each evolution carries its chip name through the evaluation pipeline for damage attribution.
+
+## Evolution Catalog
+
+### Entropy Engine
+**Ingredients**: Cascade + Flux
+
+Counter-gated random effect — every 5th cell destroyed, roll from weighted pool. Cascade provides the trigger domain, Flux provides the randomness mechanic, evolution adds the counter gate.
+
+### Chain Reaction
+**Ingredients**: Cascade x3 + Splinter x2 + Piercing x3
+
+Recursive bolt spawning with effect inheritance. Destroyed cells spawn temporary bolts that inherit the parent's effects — including piercing and cascading shockwaves. Creates exponential chain reactions that spread across the field.
+
+**Design notes**: This is the evolution that most dramatically changes the feel of the game. A well-built Chain Reaction setup can clear an entire field from a single cell destruction. The inheritance mechanic means every chip the player has invested in amplifies the chain.
+
+### Feedback Loop
+**Ingredients**: TBD
+
+3 perfect bumps trigger bolt spawn + shockwave. Counter-gated burst that rewards consistent precision over time rather than single-hit spikes.
+
+### Nova Lance
+**Ingredients**: Damage Boost x2 + Bolt Speed x2
+
+Perfect bumps unleash devastating shockwaves on cell impact.
+
+### Voltchain
+**Ingredients**: Chain Hit x2 + Damage Boost x2
+
+Destroying cells unleashes chain lightning to nearby targets.
+
+### Phantom Breaker
+**Ingredients**: Wide Breaker x2 + Bump Force x2
+
+Successful bumps summon a phantom breaker that mirrors your moves.
+
+### Supernova
+**Ingredients**: Piercing Shot x3 + Surge x1
+
+Perfect bumps trigger chain explosions — cells destroyed spawn bolts and shockwaves.
+
+### Dead Man's Hand
+**Ingredients**: Damage Boost x3 + Last Stand x1
+
+Losing a bolt triggers a shockwave and boosts all remaining bolts.
+
+**Redesign note (C7)**: Planned rework to Pulse effect — all bolts shockwave on bolt lost, creating a distributed damage response across the field rather than a single point-source shockwave.
+
+### Railgun
+**Ingredients**: Piercing Shot x3 + Bolt Speed x4
+
+Perfect bumps fire a devastating piercing beam through all cells in the bolt's path.
+
+### Gravity Well
+**Ingredients**: Bolt Size x2 + Magnetism x2
+
+Destroying cells creates gravity wells that pull bolts toward the destruction point.
+
+### Second Wind
+**Ingredients**: Wide Breaker x3 + Breaker Speed x3
+
+Invisible wall that bounces the bolt once per node. Cheat death once.
+
+**Redesign note (C7)**: Now uses `Once` node type instead of a custom one-shot mechanism. The invisible wall effect is placed on the breaker's `EffectChains`, not as a global resource. Fires exactly once per node, then the `Once` node is permanently consumed from the chain.

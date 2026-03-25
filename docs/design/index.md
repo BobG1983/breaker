@@ -15,7 +15,7 @@ This identity is non-negotiable. Every system, every visual, every sound, every 
 | [pillars/](pillars/) | The 9 design pillars — individually filed |
 | [litmus-tests.md](litmus-tests.md) | 6 questions to validate any design decision |
 | [decisions/](decisions/) | Resolved design decisions — one per file |
-| [triggers-and-effects.md](triggers-and-effects.md) | Complete TriggerChain reference — triggers, effects, archetype usage |
+| [triggers-and-effects.md](triggers-and-effects.md) | Complete EffectNode reference — triggers, effects, breaker usage |
 | [evolutions.md](evolutions.md) | Evolution design principles and categories |
 | [chip-catalog.md](chip-catalog.md) | Full chip catalog with all rarity variants |
 

@@ -2,6 +2,6 @@
 
 | Term | Meaning | Code Examples |
 |------|---------|---------------|
-| **Aegis** | Lives-based breaker archetype | `aegis.archetype.ron`, `TriggerChain::LoseLife` |
-| **Chrono** | Time-penalty breaker archetype | `chrono.archetype.ron`, `TriggerChain::TimePenalty` |
-| **Prism** | Multi-bolt breaker archetype | `prism.archetype.ron`, `TriggerChain::SpawnBolt` |
+| **Aegis** | Lives-based breaker | `aegis.breaker.ron`, `Do(LoseLife)` |
+| **Chrono** | Time-penalty breaker | `chrono.breaker.ron`, `Do(TimePenalty)` |
+| **Prism** | Multi-bolt breaker | `prism.breaker.ron`, `Do(SpawnBolts {})` |
