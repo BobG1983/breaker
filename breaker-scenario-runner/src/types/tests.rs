@@ -475,7 +475,7 @@ fn scenario_definition_stress_some_empty_uses_defaults() {
 
 #[test]
 fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
-    use breaker::{chips::TriggerChain, effect::ImpactTarget};
+    use breaker::effect::{Effect, EffectNode, ImpactTarget, Trigger};
 
     let ron = r#"(
         breaker: "aegis",
@@ -485,7 +485,7 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
         invariants: [],
         expected_violations: None,
         debug_setup: None,
-        initial_overclocks: Some([OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)])])]),
+        initial_overclocks: Some([When(trigger: OnPerfectBump, then: [When(trigger: OnImpact(Cell), then: [Do(Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0))])])]),
     )"#;
     let result: ScenarioDefinition = ron::de::from_str(ron)
         .expect("ScenarioDefinition with initial_overclocks surge chain should parse");
@@ -495,22 +495,25 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
     assert_eq!(overclocks.len(), 1, "expected 1 overclock chain");
     assert_eq!(
         overclocks[0],
-        TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 32.0,
-                stacks: 1,
-                speed: 400.0,
+        EffectNode::When {
+            trigger: Trigger::OnPerfectBump,
+            then: vec![EffectNode::When {
+                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                then: vec![EffectNode::Do(Effect::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 32.0,
+                    stacks: 1,
+                    speed: 400.0,
+                })],
             }],
-        )]),
-        "overclock chain must match OnPerfectBump(OnImpact(Cell, Shockwave))"
+        },
+        "overclock chain must match When(OnPerfectBump, When(OnImpact(Cell), Do(Shockwave)))"
     );
 }
 
 #[test]
 fn scenario_definition_initial_overclocks_multiple_parses() {
-    use breaker::chips::TriggerChain;
+    use breaker::effect::{Effect, EffectNode};
 
     let ron = r#"(
         breaker: "aegis",
@@ -520,7 +523,7 @@ fn scenario_definition_initial_overclocks_multiple_parses() {
         invariants: [],
         expected_violations: None,
         debug_setup: None,
-        initial_overclocks: Some([Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0), MultiBolt(base_count: 3, count_per_level: 0, stacks: 1)]),
+        initial_overclocks: Some([Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)), Do(MultiBolt(base_count: 3, count_per_level: 0, stacks: 1))]),
     )"#;
     let result: ScenarioDefinition = ron::de::from_str(ron)
         .expect("ScenarioDefinition with multiple initial_overclocks should parse");
@@ -530,22 +533,22 @@ fn scenario_definition_initial_overclocks_multiple_parses() {
     assert_eq!(overclocks.len(), 2, "expected 2 overclock chains");
     assert_eq!(
         overclocks[0],
-        TriggerChain::Shockwave {
+        EffectNode::Do(Effect::Shockwave {
             base_range: 64.0,
             range_per_level: 0.0,
             stacks: 1,
             speed: 400.0,
-        },
-        "first overclock must be Shockwave"
+        }),
+        "first overclock must be Do(Shockwave)"
     );
     assert_eq!(
         overclocks[1],
-        TriggerChain::MultiBolt {
+        EffectNode::Do(Effect::MultiBolt {
             base_count: 3,
             count_per_level: 0,
             stacks: 1
-        },
-        "second overclock must be MultiBolt"
+        }),
+        "second overclock must be Do(MultiBolt)"
     );
 }
 

@@ -31,7 +31,7 @@ mod tests {
         app.world_mut().commands().trigger(SpawnPhantomFired {
             duration: 5.0,
             max_active: 2,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

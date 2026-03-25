@@ -30,7 +30,7 @@ mod tests {
 
         app.world_mut().commands().trigger(SecondWindFired {
             invuln_secs: 3.0,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

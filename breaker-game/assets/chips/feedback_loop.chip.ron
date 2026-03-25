@@ -1,0 +1,8 @@
+(
+    name: "Feedback Loop",
+    max_taken: 1,
+    common: None,
+    uncommon: None,
+    rare: None,
+    legendary: Some((prefix: "", effects: [OnPerfectBump([OnImpact(Cell, [OnCellDestroyed([TimedSpeedBurst(speed_mult: 1.5, duration_secs: 3.0)])])])])),
+)

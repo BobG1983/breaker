@@ -12,7 +12,10 @@ pub(crate) fn handle_chain_bolt(
     mut writer: MessageWriter<SpawnChainBolt>,
 ) {
     let event = trigger.event();
-    let Some(bolt_entity) = event.bolt else {
+    let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
+        crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
+        _ => None,
+    }) else {
         return;
     };
     writer.write(SpawnChainBolt {
@@ -68,7 +71,7 @@ mod tests {
 
         app.world_mut().commands().trigger(ChainBoltFired {
             tether_distance: 200.0,
-            bolt: Some(bolt_entity),
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt_entity)],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -102,7 +105,7 @@ mod tests {
 
         app.world_mut().commands().trigger(ChainBoltFired {
             tether_distance: 200.0,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

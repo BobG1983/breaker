@@ -4,5 +4,5 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [OnImpact(Wall, [OnImpact(Cell, [DamageBoost(2.0)])])])),
+    legendary: Some((prefix: "", effects: [OnImpact(Wall, [OneShotDamageBoost(2.0)])])),
 )

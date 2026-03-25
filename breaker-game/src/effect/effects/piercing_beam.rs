@@ -31,7 +31,7 @@ mod tests {
         app.world_mut().commands().trigger(PiercingBeamFired {
             damage_mult: 1.5,
             width: 10.0,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

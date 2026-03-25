@@ -71,7 +71,10 @@ pub(crate) fn handle_shockwave(
         return;
     }
 
-    let Some(bolt_entity) = event.bolt else {
+    let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
+        crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
+        _ => None,
+    }) else {
         return;
     };
 
@@ -298,7 +301,7 @@ mod tests {
             range_per_level: 0.0,
             stacks: 1,
             speed,
-            bolt: Some(bolt),
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -382,7 +385,7 @@ mod tests {
             range_per_level: 32.0,
             stacks: 2,
             speed: 400.0,
-            bolt: Some(bolt),
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -1649,7 +1652,7 @@ mod tests {
             range_per_level: 0.0,
             stacks: 1,
             speed: 400.0,
-            bolt: Some(bolt),
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -1680,7 +1683,7 @@ mod tests {
             range_per_level: 0.0,
             stacks: 1,
             speed: 400.0,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

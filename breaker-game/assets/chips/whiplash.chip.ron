@@ -1,0 +1,8 @@
+(
+    name: "Whiplash",
+    max_taken: 1,
+    common: None,
+    uncommon: None,
+    rare: None,
+    legendary: Some((prefix: "", effects: [OnBumpWhiff([OnImpact(Cell, [OneShotDamageBoost(1.5), Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 500.0)])])])),
+)

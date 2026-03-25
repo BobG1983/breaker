@@ -17,8 +17,9 @@ Collision systems and messages moved to bolt domain. `physics/` game domain no l
 ### Messages (`bolt/messages.rs`) — moved from physics/messages.rs
 - `BoltHitCell { cell: Entity, bolt: Entity }` — sent to cells/behaviors domain
 - `BoltHitBreaker { bolt: Entity }` — sent to breaker domain
-- `BoltHitWall` — sent to behaviors domain
-- `BoltLost` — sent to bolt/behaviors domain
+- `BoltHitWall { bolt: Entity }` — sent to effect domain (wall: Entity field planned for C7 Wave 2a)
+- `BoltLost` — sent to bolt/effect domain
+- NOTE (C7 Wave 2a): `RequestBoltDestroyed { bolt: Entity }` and `BoltDestroyedAt { position: Vec2 }` planned for two-phase destruction
 
 ## cells domain (`src/cells/`)
 
@@ -43,6 +44,7 @@ Collision systems and messages moved to bolt domain. `physics/` game domain no l
 
 ### Systems
 - `handle_cell_hit` — reads DamageCell (NOT BoltHitCell), calls take_damage(msg.damage), sends CellDestroyed. DamageCell.damage already includes DamageBoost calculation from the sender (bolt_cell_collision or shockwave).
+- NOTE (C7 Wave 2a): `CellDestroyed` replaced by two-phase `RequestCellDestroyed { cell }` + `CellDestroyedAt { position, was_required_to_clear }`. handle_cell_hit will write RequestCellDestroyed instead of despawning; cleanup system despawns later.
 
 ### Cell type RON files (`assets/cells/`)
 - `standard.cell.ron` — `hp: 10.0`
@@ -118,16 +120,21 @@ NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, t
 ### Components
 - `ArmedEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/armed.rs` — per-bolt partially resolved chains
 - `EffectTarget` in `effect/definition.rs` — marker for entities that can have effects
+- NOTE (C7 Wave 2a): `EffectChains(Vec<EffectNode>)` planned in `effect/components.rs` — entity-local effect chains
+- NOTE (C7 Wave 2a): `UntilTimers`, `UntilTriggers` planned in `effect/effects/until.rs`
+- NOTE (C7 Wave 2b): `AttractionState { active_types: HashSet<AttractionType> }` planned in `effect/effects/attraction.rs`
+- NOTE (C7 Wave 2b): `SecondWindWall` marker planned in `effect/effects/second_wind.rs`
 
 ### Typed Events (`effect/typed_events.rs`)
-- Triggered: `ShockwaveFired`, `LoseLifeFired`, `TimePenaltyFired`, `SpawnBoltFired`, `SpeedBoostFired`, `ChainBoltFired`, `MultiBoltFired`, `ShieldFired`, `ChainLightningFired`, `SpawnPhantomFired`, `PiercingBeamFired`, `GravityWellFired`, `SecondWindFired`, `TimedSpeedBurstFired`
+- Triggered: `ShockwaveFired`, `LoseLifeFired`, `TimePenaltyFired`, `SpawnBoltsFired`, `SpeedBoostFired`, `ChainBoltFired`, `MultiBoltFired`, `ShieldFired`, `ChainLightningFired`, `SpawnPhantomFired`, `PiercingBeamFired`, `GravityWellFired`, `SecondWindFired`, `RandomEffectFired`, `EntropyEngineFired`
+- DELETED (C7 Wave 1): `TimedSpeedBurstFired`, `OneShotDamageBoostFired`, `TimePressureBoostApplied` — replaced by Until/When(OnTimerThreshold) EffectNode trees
 - Passive: `PiercingApplied`, `DamageBoostApplied`, `SpeedBoostApplied`, `ChainHitApplied`, `SizeBoostApplied`, `AttractionApplied`, `BumpForceApplied`, `TiltControlApplied`, `RampingDamageApplied`
-- Dispatch: `trigger_chain_to_effect`, `fire_typed_event`, `fire_passive_event`
+- Dispatch: `fire_typed_event`, `fire_passive_event` (NOTE: `trigger_chain_to_effect`, `chain_to_passive_effect`, `chain_to_triggered_effect` DELETED in C7 Wave 1)
 
 ### Definition types (`effect/definition.rs`)
-- `Effect` enum — 22 variants (Shockwave through TimedSpeedBurst)
-- `EffectNode` enum — `Trigger(Trigger, Vec<EffectNode>)` | `Leaf(Effect)`
-- `Trigger` enum — 10 variants (OnPerfectBump through OnSelected)
+- `Effect` enum — 23 variants (Shockwave through EntropyEngine; TimedSpeedBurst/TimePressureBoost/OneShotDamageBoost DELETED in C7 Wave 1, SpawnBolt replaced by SpawnBolts)
+- `EffectNode` enum — `When { trigger, then }` | `Do(Effect)` | `Until { until, then }` | `Once(Vec<EffectNode>)` (migrated in C7 Wave 1)
+- `Trigger` enum — 12 variants (OnPerfectBump through OnSelected, plus TimeExpires(f32), OnDeath, OnTimerThreshold(f32); does NOT derive Eq; KEEPS Copy)
 - `Target` — Bolt, Breaker, AllBolts
 - `ImpactTarget` — Cell, Breaker, Wall
 - `BreakerDefinition`, `BreakerStatOverrides`
@@ -135,14 +142,15 @@ NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, t
 ### Pure functions (`effect/evaluate.rs`)
 - `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> Vec<EvalResult>` — NoMatch/Arm/Fire
 - `evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<NodeEvalResult>`
-- `TriggerKind` enum — PerfectBump, BumpSuccess, EarlyBump, LateBump, BumpWhiff, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost
+- `TriggerKind` enum — PerfectBump, BumpSuccess, EarlyBump, LateBump, BumpWhiff, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost. Wave 2a adds: Death
 
 ### Bridge systems (`effect/bridges.rs`)
 - `bridge_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_lost`, `bridge_bump_whiff`
 - Helper: `fire_leaf(leaf, bolt, source_chip, commands)` — converts TriggerChain leaf -> Effect -> typed event
 
 ### Per-effect handlers (`effect/effects/`)
-- Triggered: shockwave, life_lost, time_penalty, spawn_bolt, speed_boost, chain_bolt, multi_bolt, shield, chain_lightning, spawn_phantom, piercing_beam, gravity_well, second_wind, timed_speed_burst
+- Triggered: shockwave, life_lost, time_penalty, spawn_bolt, speed_boost, chain_bolt, multi_bolt, shield, chain_lightning, spawn_phantom, piercing_beam, gravity_well, second_wind, random_effect, entropy_engine
+- DELETED (C7 Wave 1): timed_speed_burst, time_pressure_boost, one_shot_damage_boost — replaced by Until/When(OnTimerThreshold) EffectNode trees
 - Passive: piercing, damage_boost, bolt_speed_boost, chain_hit, bolt_size_boost, width_boost, breaker_speed_boost, bump_force_boost, tilt_control_boost, attraction, ramping_damage
 - Helpers in `effect/effects/mod.rs`: `stack_u32`, `stack_f32`
 

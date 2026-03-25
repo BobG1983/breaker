@@ -32,7 +32,7 @@ mod tests {
             arcs: 3,
             range: 100.0,
             damage_mult: 1.0,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

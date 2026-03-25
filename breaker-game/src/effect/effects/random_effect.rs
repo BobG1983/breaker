@@ -10,7 +10,8 @@ use rand::Rng;
 use crate::{
     effect::{
         armed::ArmedEffects,
-        typed_events::{RandomEffectFired, fire_typed_event, trigger_chain_to_effect},
+        definition::{EffectNode, EffectTarget},
+        typed_events::{RandomEffectFired, fire_typed_event},
     },
     shared::GameRng,
 };
@@ -46,23 +47,36 @@ pub(crate) fn handle_random_effect(
         }
     }
 
-    let (_, chain) = &pool[selected_idx];
+    let (_, node) = &pool[selected_idx];
 
-    if chain.is_leaf() {
-        let effect = trigger_chain_to_effect(chain);
-        fire_typed_event(effect, event.bolt, event.source_chip.clone(), &mut commands);
-    } else if let Some(bolt_entity) = event.bolt {
-        // Non-leaf: arm the bolt
-        if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
-            armed.0.push((event.source_chip.clone(), chain.clone()));
-        } else {
-            commands.entity(bolt_entity).insert(ArmedEffects(vec![(
+    match node {
+        EffectNode::Do(effect) => {
+            fire_typed_event(
+                effect.clone(),
+                event.targets.clone(),
                 event.source_chip.clone(),
-                chain.clone(),
-            )]));
+                &mut commands,
+            );
         }
-    } else {
-        warn!("RandomEffect selected non-leaf chain but no bolt entity to arm");
+        _ => {
+            // Non-leaf: arm the bolt if there is one in targets
+            let bolt_entity = event.targets.iter().find_map(|t| match t {
+                EffectTarget::Entity(e) => Some(*e),
+                _ => None,
+            });
+            if let Some(bolt_entity) = bolt_entity {
+                if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
+                    armed.0.push((event.source_chip.clone(), node.clone()));
+                } else {
+                    commands.entity(bolt_entity).insert(ArmedEffects(vec![(
+                        event.source_chip.clone(),
+                        node.clone(),
+                    )]));
+                }
+            } else {
+                warn!("RandomEffect selected non-leaf chain but no bolt entity to arm");
+            }
+        }
     }
 }
 
@@ -70,9 +84,9 @@ pub(crate) fn handle_random_effect(
 mod tests {
     use super::*;
     use crate::{
-        chips::definition::TriggerChain,
         effect::{
             armed::ArmedEffects,
+            definition::{Effect, EffectNode, EffectTarget, Trigger},
             typed_events::{RandomEffectFired, ShockwaveFired, SpawnBoltFired},
         },
         shared::GameRng,
@@ -132,8 +146,15 @@ mod tests {
         let bolt = app.world_mut().spawn_empty().id();
 
         app.world_mut().commands().trigger(RandomEffectFired {
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: Some(bolt),
+            pool: vec![(
+                1.0,
+                EffectNode::Do(Effect::SpawnBolts {
+                    count: 1,
+                    lifespan: None,
+                    inherit: false,
+                }),
+            )],
+            targets: vec![EffectTarget::Entity(bolt)],
             source_chip: Some("Flux".to_owned()),
         });
         app.world_mut().flush();
@@ -142,9 +163,9 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             1,
-            "single-entry pool with weight 1.0 should always fire SpawnBoltFired"
+            "single-entry pool with weight 1.0 should always fire SpawnBoltsFired"
         );
-        assert_eq!(captured.0[0].bolt, Some(bolt));
+        assert_eq!(captured.0[0].targets, vec![EffectTarget::Entity(bolt)]);
     }
 
     // =========================================================================
@@ -163,14 +184,14 @@ mod tests {
         app.world_mut().commands().trigger(RandomEffectFired {
             pool: vec![(
                 1.0,
-                TriggerChain::Shockwave {
+                EffectNode::Do(Effect::Shockwave {
                     base_range: 32.0,
                     range_per_level: 0.0,
                     stacks: 1,
                     speed: 400.0,
-                },
+                }),
             )],
-            bolt: Some(bolt),
+            targets: vec![EffectTarget::Entity(bolt)],
             source_chip: Some("Flux".to_owned()),
         });
         app.world_mut().flush();
@@ -198,15 +219,15 @@ mod tests {
         app.init_resource::<CapturedShockwave>()
             .add_observer(capture_shockwave);
 
-        let chain = TriggerChain::OnImpact(
-            crate::effect::definition::ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(32.0)],
-        );
+        let chain = EffectNode::When {
+            trigger: Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
+            then: vec![EffectNode::Do(Effect::test_shockwave(32.0))],
+        };
         let bolt = app.world_mut().spawn(ArmedEffects::default()).id();
 
         app.world_mut().commands().trigger(RandomEffectFired {
             pool: vec![(1.0, chain)],
-            bolt: Some(bolt),
+            targets: vec![EffectTarget::Entity(bolt)],
             source_chip: Some("Flux".to_owned()),
         });
         app.world_mut().flush();
@@ -244,7 +265,7 @@ mod tests {
 
         app.world_mut().commands().trigger(RandomEffectFired {
             pool: vec![],
-            bolt: Some(bolt),
+            targets: vec![EffectTarget::Entity(bolt)],
             source_chip: Some("Flux".to_owned()),
         });
         app.world_mut().flush();
@@ -259,8 +280,6 @@ mod tests {
 
     #[test]
     fn handle_random_effect_deterministic_with_same_seed() {
-        // Run the same scenario in two separate apps with the same seed
-        // and verify they select the same outcome.
         fn run_with_seed(seed: u64) -> usize {
             let mut app = App::new();
             app.add_plugins(MinimalPlugins)
@@ -273,10 +292,17 @@ mod tests {
 
             app.world_mut().commands().trigger(RandomEffectFired {
                 pool: vec![
-                    (0.5, TriggerChain::SpawnBolt),
-                    (0.5, TriggerChain::test_speed_boost(1.1)),
+                    (
+                        0.5,
+                        EffectNode::Do(Effect::SpawnBolts {
+                            count: 1,
+                            lifespan: None,
+                            inherit: false,
+                        }),
+                    ),
+                    (0.5, EffectNode::Do(Effect::test_speed_boost(1.1))),
                 ],
-                bolt: Some(bolt),
+                targets: vec![EffectTarget::Entity(bolt)],
                 source_chip: None,
             });
             app.world_mut().flush();

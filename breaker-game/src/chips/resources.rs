@@ -107,9 +107,10 @@ mod tests {
     // --- ChipRegistry recipe tests (B12d behaviors 1-7) ---
 
     use crate::chips::{
-        definition::{EvolutionIngredient, TriggerChain},
+        definition::EvolutionIngredient,
         inventory::ChipInventory,
     };
+    use crate::effect::definition::{Effect, EffectNode};
 
     fn ingredient(name: &str, stacks: u32) -> EvolutionIngredient {
         EvolutionIngredient {
@@ -187,8 +188,8 @@ mod tests {
         });
 
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
-        let du_def = ChipDefinition::test("Damage Up", TriggerChain::DamageBoost(0.5), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
+        let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -207,7 +208,7 @@ mod tests {
         });
 
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def); // exactly 2
 
@@ -230,7 +231,7 @@ mod tests {
         });
 
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -270,7 +271,7 @@ mod tests {
         });
 
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def); // only 1 stack, need 2
 
         let eligible = registry.eligible_recipes(&inventory);
@@ -311,7 +312,7 @@ mod tests {
         });
 
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -337,8 +338,8 @@ mod tests {
         });
 
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
-        let du_def = ChipDefinition::test("Damage Up", TriggerChain::DamageBoost(0.5), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
+        let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Damage Up", &du_def);
 
@@ -350,7 +351,7 @@ mod tests {
     fn eligible_recipes_empty_for_default_registry_with_any_inventory() {
         let registry = ChipRegistry::default(); // no recipes
         let mut inventory = ChipInventory::default();
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
 
         let eligible = registry.eligible_recipes(&inventory);

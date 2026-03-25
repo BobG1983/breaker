@@ -5,10 +5,11 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    chips::{definition::TriggerChain, inventory::ChipInventory, resources::ChipRegistry},
+    chips::{inventory::ChipInventory, resources::ChipRegistry},
     effect::{
         ActiveEffects,
-        typed_events::{fire_passive_event, trigger_chain_to_effect},
+        definition::{EffectNode, Trigger},
+        typed_events::fire_passive_event,
     },
     ui::messages::ChipSelected,
 };
@@ -37,21 +38,34 @@ pub(crate) fn dispatch_chip_effects(
         }
         for effect in &chip.effects {
             match effect {
-                TriggerChain::OnSelected(inner) => {
-                    for leaf in inner {
-                        let eff = trigger_chain_to_effect(leaf);
-                        fire_passive_event(eff, chip.max_stacks, msg.name.clone(), &mut commands);
+                EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then,
+                } => {
+                    for child in then {
+                        if let EffectNode::Do(eff) = child {
+                            fire_passive_event(
+                                eff.clone(),
+                                chip.max_stacks,
+                                msg.name.clone(),
+                                &mut commands,
+                            );
+                        }
                     }
                 }
-                chain if chain.is_leaf() => {
-                    let eff = trigger_chain_to_effect(chain);
-                    fire_passive_event(eff, chip.max_stacks, msg.name.clone(), &mut commands);
+                EffectNode::Do(eff) => {
+                    fire_passive_event(
+                        eff.clone(),
+                        chip.max_stacks,
+                        msg.name.clone(),
+                        &mut commands,
+                    );
                 }
-                // Any trigger-wrapper variant (OnPerfectBump, OnBump, OnImpact, etc.)
+                // Any trigger-wrapper variant (When with non-OnSelected trigger, Until, Once)
                 // is pushed to ActiveEffects for runtime evaluation by bridge systems.
-                chain => {
+                node => {
                     if let Some(ref mut active) = active_chains {
-                        active.0.push((Some(msg.name.clone()), chain.clone()));
+                        active.0.push((Some(msg.name.clone()), node.clone()));
                     }
                 }
             }
@@ -69,13 +83,13 @@ mod tests {
         breaker::components::Breaker,
         chips::{
             components::*,
-            definition::{ChipDefinition, Rarity, TriggerChain},
+            definition::{ChipDefinition, Rarity},
             inventory::ChipInventory,
             resources::ChipRegistry,
         },
         effect::{
             ActiveEffects,
-            definition::{ImpactTarget, Target},
+            definition::{Effect, EffectNode, ImpactTarget, Target, Trigger},
             effects::*,
         },
         ui::messages::ChipSelected,
@@ -151,7 +165,7 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -180,10 +194,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![
-                    TriggerChain::Piercing(1),
-                    TriggerChain::DamageBoost(0.5),
-                ])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![
+                    EffectNode::Do(Effect::Piercing(1)),
+                    EffectNode::Do(Effect::DamageBoost(0.5)),
+                ] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -217,15 +231,18 @@ mod tests {
     fn triggered_chain_pushes_to_active_chains() {
         let mut app = test_app();
 
-        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 32.0,
-                stacks: 1,
-                speed: 400.0,
+        let chain = EffectNode::When {
+            trigger: Trigger::OnPerfectBump,
+            then: vec![EffectNode::When {
+                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                then: vec![EffectNode::Do(Effect::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 32.0,
+                    stacks: 1,
+                    speed: 400.0,
+                })],
             }],
-        )]);
+        };
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
@@ -268,7 +285,7 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -317,7 +334,7 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Rare,
                 max_stacks: 1,
-                effects: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -403,7 +420,7 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "BareLeaf",
-                TriggerChain::Piercing(1),
+                EffectNode::Do(Effect::Piercing(1)),
                 3,
             ));
 
@@ -443,7 +460,7 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -477,7 +494,7 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 1,
-                effects: vec![TriggerChain::OnSelected(vec![])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -515,8 +532,8 @@ mod tests {
                 rarity: Rarity::Rare,
                 max_stacks: 1,
                 effects: vec![
-                    TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)]),
-                    TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt]),
+                    EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] },
+                    EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })] },
                 ],
                 ingredients: None,
                 template_name: None,
@@ -544,7 +561,7 @@ mod tests {
         assert_eq!(active.0[0].0, Some("Hybrid".to_owned()));
         assert_eq!(
             active.0[0].1,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])
+            EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })] }
         );
     }
 
@@ -565,10 +582,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SpeedBoost {
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::SpeedBoost {
                     target: Target::AllBolts,
                     multiplier: 1.1,
-                }])],
+                })] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -607,7 +624,7 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                TriggerChain::Piercing(1),
+                EffectNode::Do(Effect::Piercing(1)),
                 3,
             ));
 
@@ -631,7 +648,7 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                TriggerChain::Piercing(1),
+                EffectNode::Do(Effect::Piercing(1)),
                 3,
             ));
 
@@ -658,10 +675,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::SizeBoost(
                     Target::Breaker,
                     20.0,
-                )])],
+                ))] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -724,27 +741,28 @@ mod tests {
             evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
         };
 
-        // After migration, dispatch_chip_effects will match on
-        // EffectNode::Trigger(Trigger::OnSelected, inner) and fire
-        // ChipEffectApplied for each inner Leaf's Effect.
-        let node = EffectNode::Trigger(
-            Trigger::OnSelected,
-            vec![EffectNode::Leaf(Effect::Piercing(1))],
-        );
+        // dispatch_chip_effects matches on
+        // EffectNode::When { trigger: OnSelected, then } and fires
+        // passive events for each inner Do's Effect.
+        let node = EffectNode::When {
+            trigger: Trigger::OnSelected,
+            then: vec![EffectNode::Do(Effect::Piercing(1))],
+        };
         // Verify EffectNode structure and inner extraction
         match &node {
-            EffectNode::Trigger(Trigger::OnSelected, inner) => {
-                assert_eq!(inner.len(), 1);
-                match &inner[0] {
-                    EffectNode::Leaf(effect) => {
+            EffectNode::When {
+                trigger: Trigger::OnSelected,
+                then,
+            } => {
+                assert_eq!(then.len(), 1);
+                match &then[0] {
+                    EffectNode::Do(effect) => {
                         assert_eq!(*effect, Effect::Piercing(1));
                     }
-                    EffectNode::Trigger(..) => panic!("expected Leaf, got Trigger"),
+                    other => panic!("expected Do, got {other:?}"),
                 }
             }
-            EffectNode::Trigger(..) | EffectNode::Leaf(..) => {
-                panic!("expected Trigger(OnSelected, _)")
-            }
+            other => panic!("expected When(OnSelected, _), got {other:?}"),
         }
         // evaluate_node should return NoMatch for OnSelected — it's handled
         // by dispatch_chip_effects, not by bridges
@@ -759,22 +777,23 @@ mod tests {
             evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
         };
 
-        let node = EffectNode::Trigger(
-            Trigger::OnSelected,
-            vec![
-                EffectNode::Leaf(Effect::Piercing(1)),
-                EffectNode::Leaf(Effect::DamageBoost(0.5)),
+        let node = EffectNode::When {
+            trigger: Trigger::OnSelected,
+            then: vec![
+                EffectNode::Do(Effect::Piercing(1)),
+                EffectNode::Do(Effect::DamageBoost(0.5)),
             ],
-        );
+        };
         match &node {
-            EffectNode::Trigger(Trigger::OnSelected, inner) => {
-                assert_eq!(inner.len(), 2);
-                assert_eq!(inner[0], EffectNode::Leaf(Effect::Piercing(1)));
-                assert_eq!(inner[1], EffectNode::Leaf(Effect::DamageBoost(0.5)));
+            EffectNode::When {
+                trigger: Trigger::OnSelected,
+                then,
+            } => {
+                assert_eq!(then.len(), 2);
+                assert_eq!(then[0], EffectNode::Do(Effect::Piercing(1)));
+                assert_eq!(then[1], EffectNode::Do(Effect::DamageBoost(0.5)));
             }
-            EffectNode::Trigger(..) | EffectNode::Leaf(..) => {
-                panic!("expected Trigger(OnSelected, 2 children)")
-            }
+            other => panic!("expected When(OnSelected, 2 children), got {other:?}"),
         }
         // OnSelected always returns NoMatch from evaluate_node (fails with todo!)
         let result = evaluate_node(TriggerKind::BumpSuccess, &node);
@@ -790,16 +809,16 @@ mod tests {
 
         // After migration, dispatch_chip_effects pushes non-OnSelected triggers
         // to ActiveEffects. Verify this EffectNode evaluates as expected.
-        let node = EffectNode::Trigger(
-            Trigger::OnPerfectBump,
-            vec![EffectNode::Leaf(Effect::SpawnBolt)],
-        );
+        let node = EffectNode::When {
+            trigger: Trigger::OnPerfectBump,
+            then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })],
+        };
         // Should NOT match OnSelected — bridge evaluation handles it
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Fire(Effect::SpawnBolt)],
-            "OnPerfectBump with Leaf(SpawnBolt) should fire on PerfectBump"
+            vec![NodeEvalResult::Fire(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })],
+            "OnPerfectBump with Do(SpawnBolts) should fire on PerfectBump"
         );
     }
 
@@ -810,16 +829,15 @@ mod tests {
             evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
         };
 
-        // After migration, a bare EffectNode::Leaf is treated as an immediate
-        // passive — dispatched via ChipEffectApplied directly (replacing
-        // the old is_leaf() check).
-        let node = EffectNode::Leaf(Effect::Piercing(1));
+        // A bare EffectNode::Do is treated as an immediate
+        // passive — dispatched via fire_passive_event directly.
+        let node = EffectNode::Do(Effect::Piercing(1));
         assert!(
-            matches!(&node, EffectNode::Leaf(_)),
-            "bare Leaf should be directly dispatchable"
+            matches!(&node, EffectNode::Do(_)),
+            "bare Do should be directly dispatchable"
         );
         // Verify it extracts correctly
-        if let EffectNode::Leaf(effect) = &node {
+        if let EffectNode::Do(effect) = &node {
             assert_eq!(*effect, Effect::Piercing(1));
         }
         // Bare leaf returns NoMatch from evaluate_node (fails with todo!)
@@ -892,7 +910,7 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -923,10 +941,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::SizeBoost(
                     Target::Bolt,
                     5.0,
-                )])],
+                ))] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -959,16 +977,16 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![TriggerChain::OnSelected(vec![
-                    TriggerChain::SpeedBoost {
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![
+                    EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Bolt,
                         multiplier: 0.1,
-                    },
-                    TriggerChain::SpeedBoost {
+                    }),
+                    EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Breaker,
                         multiplier: 0.2,
-                    },
-                ])],
+                    }),
+                ] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -1014,7 +1032,7 @@ mod tests {
                 description: "Evolution chip".to_owned(),
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
-                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(5)])],
+                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(5))] }],
                 ingredients: Some(vec![crate::chips::definition::EvolutionIngredient {
                     chip_name: "Piercing Shot".to_owned(),
                     stacks_required: 2,
@@ -1060,12 +1078,12 @@ mod tests {
                 description: "Evolution with triggered effect".to_owned(),
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
-                effects: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::Shockwave {
+                effects: vec![EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
                     stacks: 1,
                     speed: 400.0,
-                }])],
+                })] }],
                 ingredients: None,
                 template_name: None,
             });
@@ -1086,12 +1104,12 @@ mod tests {
         );
         assert_eq!(
             active.0[0].1,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::Shockwave {
+            EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
-            }]),
+            })] },
             "ActiveEffects chain should match the evolution chip's triggered effect"
         );
     }

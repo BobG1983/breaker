@@ -325,7 +325,7 @@ pub struct ScenarioDefinition {
     pub seed: Option<u64>,
     /// Optional overclock chains to pre-populate at scenario start.
     #[serde(default)]
-    pub initial_overclocks: Option<Vec<breaker::chips::TriggerChain>>,
+    pub initial_overclocks: Option<Vec<breaker::effect::EffectNode>>,
     /// Optional per-frame mutations for self-test scenarios.
     ///
     /// When `Some`, each [`FrameMutation`] is applied at its specified frame

@@ -97,8 +97,9 @@ mod tests {
     use crate::{
         chips::{
             ChipDefinition,
-            definition::{EvolutionIngredient, Rarity, TriggerChain},
+            definition::{EvolutionIngredient, Rarity},
         },
+        effect::definition::{Effect, EffectNode},
         run::{
             definition::NodeType,
             resources::{NodeAssignment, NodeSequence, RunState},
@@ -111,7 +112,7 @@ mod tests {
         for i in 0..count {
             registry.insert(ChipDefinition::test(
                 &format!("Chip_{i}"),
-                TriggerChain::Piercing(1),
+                EffectNode::Do(Effect::Piercing(1)),
                 3,
             ));
         }
@@ -124,12 +125,12 @@ mod tests {
         for i in 0..3 {
             registry.insert(ChipDefinition {
                 rarity: Rarity::Common,
-                ..ChipDefinition::test(&format!("Common_{i}"), TriggerChain::Piercing(1), 3)
+                ..ChipDefinition::test(&format!("Common_{i}"), EffectNode::Do(Effect::Piercing(1)), 3)
             });
         }
         registry.insert(ChipDefinition {
             rarity: Rarity::Legendary,
-            ..ChipDefinition::test("Legendary_0", TriggerChain::Piercing(1), 3)
+            ..ChipDefinition::test("Legendary_0", EffectNode::Do(Effect::Piercing(1)), 3)
         });
         registry
     }
@@ -198,11 +199,11 @@ mod tests {
         let mut registry = ChipRegistry::default();
         let chip_a = ChipDefinition::test(
             "MaxedChip",
-            TriggerChain::Piercing(1),
+            EffectNode::Do(Effect::Piercing(1)),
             1, // max_stacks = 1
         );
-        let chip_b = ChipDefinition::test("AvailableChip_0", TriggerChain::Piercing(1), 3);
-        let chip_c = ChipDefinition::test("AvailableChip_1", TriggerChain::Piercing(1), 3);
+        let chip_b = ChipDefinition::test("AvailableChip_0", EffectNode::Do(Effect::Piercing(1)), 3);
+        let chip_c = ChipDefinition::test("AvailableChip_1", EffectNode::Do(Effect::Piercing(1)), 3);
         registry.insert(chip_a.clone());
         registry.insert(chip_b);
         registry.insert(chip_c);
@@ -296,7 +297,7 @@ mod tests {
             seq.assignments[node_index as usize].node_type = node_type_at_index;
         }
 
-        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
         let mut inventory = ChipInventory::default();
         if evolution_eligible {
             let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -311,7 +312,7 @@ mod tests {
             description: "Combined piercing power".into(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![TriggerChain::Piercing(5)],
+            effects: vec![EffectNode::Do(Effect::Piercing(5))],
             ingredients: Some(vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".into(),
                 stacks_required: 2,

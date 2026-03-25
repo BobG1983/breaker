@@ -48,6 +48,7 @@ mod tests {
         let non_bolt = app.world_mut().spawn_empty().id();
 
         app.world_mut().commands().trigger(AttractionApplied {
+            attraction_type: crate::effect::definition::AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
             chip_name: String::new(),
@@ -76,6 +77,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, AttractionForce(8.0))).id();
 
         app.world_mut().commands().trigger(AttractionApplied {
+            attraction_type: crate::effect::definition::AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
             chip_name: String::new(),
@@ -97,6 +99,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, AttractionForce(24.0))).id();
 
         app.world_mut().commands().trigger(AttractionApplied {
+            attraction_type: crate::effect::definition::AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
             chip_name: String::new(),

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::chips::definition::TriggerChain;
+use crate::effect::definition::EffectNode;
 
 /// All trigger chains currently active for the run.
 ///
@@ -11,7 +11,7 @@ use crate::chips::definition::TriggerChain;
 /// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
 /// breaker-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Resource, Debug, Default)]
-pub struct ActiveEffects(pub Vec<(Option<String>, TriggerChain)>);
+pub struct ActiveEffects(pub Vec<(Option<String>, EffectNode)>);
 
 #[cfg(test)]
 mod tests {
@@ -30,31 +30,34 @@ mod tests {
     // =========================================================================
     // B12b: ActiveEffects should store (Option<String>, EffectNode) (behavior 15)
     // These tests verify the EffectNode types that ActiveEffects will hold
-    // after migration. They exercise evaluate_node which fails with todo!().
+    // after migration. They exercise evaluate_node.
     // =========================================================================
 
     #[test]
     fn effect_node_for_active_effects_with_chip_name() {
         use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
-        // Verify the shape of what ActiveEffects will store after migration:
-        // (Some("Surge"), EffectNode::Trigger(OnPerfectBump, [Leaf(Shockwave {...})]))
+        // Verify the shape of what ActiveEffects stores:
+        // (Some("Surge"), EffectNode::When { trigger: OnPerfectBump, then: [Do(Shockwave)] })
         let chip_name: Option<String> = Some("Surge".to_owned());
-        let node = EffectNode::Trigger(
-            Trigger::OnPerfectBump,
-            vec![EffectNode::Leaf(Effect::Shockwave {
+        let node = EffectNode::When {
+            trigger: Trigger::OnPerfectBump,
+            then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
             })],
-        );
+        };
         assert_eq!(chip_name, Some("Surge".to_owned()));
         assert!(matches!(
             &node,
-            EffectNode::Trigger(Trigger::OnPerfectBump, _)
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                ..
+            }
         ));
-        // Verify evaluate_node works with this node (fails with todo!)
+        // Verify evaluate_node works with this node
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(result.len(), 1);
     }
@@ -67,7 +70,7 @@ mod tests {
         let chip_name: Option<String> = None;
         let node = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
         assert!(chip_name.is_none());
-        // Verify evaluate_node works (fails with todo!)
+        // Verify evaluate_node works
         let result = evaluate_node(TriggerKind::BoltLost, &node);
         assert_eq!(result, vec![NodeEvalResult::Fire(Effect::LoseLife)]);
     }

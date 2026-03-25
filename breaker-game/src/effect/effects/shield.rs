@@ -113,7 +113,7 @@ mod tests {
             base_duration,
             duration_per_level,
             stacks,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

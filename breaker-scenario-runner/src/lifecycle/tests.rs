@@ -933,15 +933,15 @@ fn restart_run_on_end_transitions_to_main_menu() {
 /// must populate `ActiveEffects` with that chain.
 #[test]
 fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
-    use breaker::{chips::TriggerChain, effect::ActiveEffects};
+    use breaker::effect::{ActiveEffects, Effect, EffectNode};
 
     let mut definition = make_scenario(100);
-    definition.initial_overclocks = Some(vec![TriggerChain::Shockwave {
+    definition.initial_overclocks = Some(vec![EffectNode::Do(Effect::Shockwave {
         base_range: 64.0,
         range_per_level: 0.0,
         stacks: 1,
         speed: 400.0,
-    }]);
+    })]);
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -965,13 +965,13 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
     );
     assert_eq!(
         active.0[0].1,
-        TriggerChain::Shockwave {
+        EffectNode::Do(Effect::Shockwave {
             base_range: 64.0,
             range_per_level: 0.0,
             stacks: 1,
             speed: 400.0,
-        },
-        "expected ActiveEffects[0] to be Shockwave"
+        }),
+        "expected ActiveEffects[0] to be Do(Shockwave)"
     );
 }
 

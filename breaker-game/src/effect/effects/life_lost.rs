@@ -140,7 +140,7 @@ mod tests {
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -160,7 +160,7 @@ mod tests {
         app.world_mut().spawn(LivesCount(1));
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -185,7 +185,7 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -206,7 +206,7 @@ mod tests {
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -229,7 +229,7 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -271,7 +271,7 @@ mod tests {
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -291,7 +291,7 @@ mod tests {
         app.world_mut().spawn(LivesCount(1));
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -315,7 +315,7 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

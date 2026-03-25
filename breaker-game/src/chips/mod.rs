@@ -8,7 +8,6 @@ mod plugin;
 mod resources;
 pub(crate) mod systems;
 
-pub use definition::TriggerChain;
-pub(crate) use definition::{ChipDefinition, ChipTemplate, expand_template};
+pub(crate) use definition::{ChipDefinition, ChipTemplate, TriggerChain, expand_template};
 pub(crate) use plugin::ChipsPlugin;
 pub(crate) use resources::{ChipRegistry, Recipe};

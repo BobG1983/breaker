@@ -114,9 +114,10 @@ mod tests {
     use crate::{
         chips::{
             ChipDefinition,
-            definition::{EvolutionIngredient, TriggerChain},
+            definition::EvolutionIngredient,
             inventory::ChipInventory,
         },
+        effect::definition::{Effect, EffectNode},
         screen::chip_select::{
             ChipSelectConfig,
             resources::{ChipOffering, ChipOffers},
@@ -125,9 +126,9 @@ mod tests {
 
     fn make_offers_3() -> ChipOffers {
         ChipOffers(vec![
-            ChipOffering::Normal(ChipDefinition::test("A", TriggerChain::Piercing(1), 3)),
-            ChipOffering::Normal(ChipDefinition::test("B", TriggerChain::Piercing(1), 3)),
-            ChipOffering::Normal(ChipDefinition::test("C", TriggerChain::Piercing(1), 3)),
+            ChipOffering::Normal(ChipDefinition::test("A", EffectNode::Do(Effect::Piercing(1)), 3)),
+            ChipOffering::Normal(ChipDefinition::test("B", EffectNode::Do(Effect::Piercing(1)), 3)),
+            ChipOffering::Normal(ChipDefinition::test("C", EffectNode::Do(Effect::Piercing(1)), 3)),
         ])
     }
 
@@ -189,15 +190,15 @@ mod tests {
         // On timer expiry, decay should be applied to "A" (0.8) and "C" (0.8)
         // but NOT to "B+" (should remain 1.0)
         let offers = ChipOffers(vec![
-            ChipOffering::Normal(ChipDefinition::test("A", TriggerChain::Piercing(1), 3)),
+            ChipOffering::Normal(ChipDefinition::test("A", EffectNode::Do(Effect::Piercing(1)), 3)),
             ChipOffering::Evolution {
                 ingredients: vec![EvolutionIngredient {
                     chip_name: "X".to_owned(),
                     stacks_required: 2,
                 }],
-                result: ChipDefinition::test("B+", TriggerChain::Piercing(5), 1),
+                result: ChipDefinition::test("B+", EffectNode::Do(Effect::Piercing(5)), 1),
             },
-            ChipOffering::Normal(ChipDefinition::test("C", TriggerChain::Piercing(1), 3)),
+            ChipOffering::Normal(ChipDefinition::test("C", EffectNode::Do(Effect::Piercing(1)), 3)),
         ]);
 
         let mut app = test_app_with_offers(0.0, offers);

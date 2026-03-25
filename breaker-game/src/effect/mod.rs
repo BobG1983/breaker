@@ -1,4 +1,4 @@
-//! Effect system — data-driven trigger→effect dispatch.
+//! Effect system — data-driven trigger->effect dispatch.
 
 pub(crate) mod active;
 pub(crate) mod armed;
@@ -14,7 +14,10 @@ pub(crate) mod typed_events;
 
 pub use active::ActiveEffects;
 pub(crate) use definition::BreakerDefinition;
-pub use definition::{Effect, EffectNode, EffectTarget, ImpactTarget, Target, Trigger};
+pub use definition::{
+    AttractionType, Effect, EffectChains, EffectEntity, EffectNode, EffectTarget, ImpactTarget,
+    Target, Trigger,
+};
 pub(crate) use plugin::EffectPlugin;
 pub(crate) use registry::BreakerRegistry;
 pub(crate) use sets::EffectSystems;

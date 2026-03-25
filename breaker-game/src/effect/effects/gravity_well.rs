@@ -33,7 +33,7 @@ mod tests {
             duration: 5.0,
             radius: 100.0,
             max: 2,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveEffects,
     bridges::{
         bridge_bolt_lost, bridge_breaker_impact, bridge_bump, bridge_bump_whiff,
         bridge_cell_destroyed, bridge_cell_impact, bridge_wall_impact,
@@ -37,8 +36,6 @@ use super::{
         speed_boost::handle_speed_boost,
         tilt_control_boost::handle_tilt_control_boost,
         time_penalty::handle_time_penalty,
-        time_pressure_boost::{handle_time_pressure_boost_applied, tick_time_pressure_boost},
-        timed_speed_burst::{handle_timed_speed_burst, tick_timed_speed_burst},
         width_boost::handle_width_boost,
     },
     init::{apply_breaker_config_overrides, init_breaker},
@@ -64,7 +61,7 @@ pub(crate) struct EffectPlugin;
 impl Plugin for EffectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BreakerRegistry>()
-            .init_resource::<ActiveEffects>();
+            .init_resource::<crate::effect::active::ActiveEffects>();
 
         Self::register_triggered_observers(app);
         Self::register_passive_observers(app);
@@ -121,20 +118,6 @@ impl Plugin for EffectPlugin {
                     .after(EffectSystems::Bridge)
                     .run_if(in_state(PlayingState::Active)),
             )
-            // Timed speed burst tick (decrement + restore speed on expiry)
-            .add_systems(
-                FixedUpdate,
-                tick_timed_speed_burst
-                    .after(EffectSystems::Bridge)
-                    .run_if(in_state(PlayingState::Active)),
-            )
-            // Time pressure boost tick (apply/remove based on NodeTimer ratio)
-            .add_systems(
-                FixedUpdate,
-                tick_time_pressure_boost
-                    .after(EffectSystems::Bridge)
-                    .run_if(in_state(PlayingState::Active)),
-            )
             // Ramping damage increment + reset
             .add_systems(
                 FixedUpdate,
@@ -172,8 +155,6 @@ impl EffectPlugin {
             .add_observer(handle_piercing_beam)
             .add_observer(handle_gravity_well)
             .add_observer(handle_second_wind)
-            .add_observer(handle_timed_speed_burst)
-            .add_observer(handle_time_pressure_boost_applied)
             .add_observer(handle_random_effect)
             .add_observer(handle_entropy_engine);
     }

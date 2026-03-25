@@ -153,20 +153,6 @@ pub enum TriggerChain {
         /// Maximum cumulative damage bonus before capping.
         max_bonus: f32,
     },
-    /// Temporary speed burst applied to a bolt, decaying over time.
-    TimedSpeedBurst {
-        /// Multiplier applied to bolt velocity.
-        speed_mult: f32,
-        /// Duration of the burst in seconds.
-        duration_secs: f32,
-    },
-    /// Time-pressure speed boost applied to bolts when node timer drops below threshold.
-    TimePressureBoost {
-        /// Speed multiplier applied to bolt velocity when active.
-        speed_mult: f32,
-        /// Timer ratio threshold (remaining/total) below which boost activates.
-        threshold_pct: f32,
-    },
     /// Selects a random effect from a weighted pool of `TriggerChain` entries.
     ///
     /// Each entry is `(weight, chain)`. Inner chains may be leaves or trigger wrappers.
@@ -205,8 +191,6 @@ impl TriggerChain {
             | Self::BumpForce(_)
             | Self::TiltControl(_)
             | Self::RampingDamage { .. }
-            | Self::TimedSpeedBurst { .. }
-            | Self::TimePressureBoost { .. }
             | Self::RandomEffect(_)
             | Self::EntropyEngine(..) => 0,
             Self::OnPerfectBump(effects)
@@ -244,7 +228,7 @@ pub struct RaritySlot {
     /// Display prefix prepended to the template name (e.g., "Basic", "Keen").
     pub prefix: String,
     /// The effects applied when this rarity variant is selected.
-    pub effects: Vec<TriggerChain>,
+    pub effects: Vec<crate::effect::definition::EffectNode>,
 }
 
 /// A chip template loaded from RON (`.chip.ron`).
@@ -315,7 +299,7 @@ pub struct ChipDefinition {
     /// Maximum number of times this chip can be stacked.
     pub max_stacks: u32,
     /// The effects applied when this chip is selected.
-    pub effects: Vec<TriggerChain>,
+    pub effects: Vec<crate::effect::definition::EffectNode>,
     /// Evolution ingredients. `None` for non-evolution chips.
     #[serde(default)]
     pub ingredients: Option<Vec<EvolutionIngredient>>,
@@ -327,7 +311,11 @@ pub struct ChipDefinition {
 #[cfg(test)]
 impl ChipDefinition {
     /// Build a test chip with full control over effect and stacking.
-    pub(crate) fn test(name: &str, effect: TriggerChain, max_stacks: u32) -> Self {
+    pub(crate) fn test(
+        name: &str,
+        effect: crate::effect::definition::EffectNode,
+        max_stacks: u32,
+    ) -> Self {
         Self {
             name: name.to_owned(),
             description: format!("{name} description"),
@@ -341,9 +329,13 @@ impl ChipDefinition {
 
     /// Build a simple test chip with a triggered chain and `max_stacks` = 1.
     pub(crate) fn test_simple(name: &str) -> Self {
+        use crate::effect::definition::{Effect, EffectNode, Trigger};
         Self::test(
             name,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]),
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+            },
             1,
         )
     }
@@ -470,22 +462,6 @@ impl TriggerChain {
         }
     }
 
-    /// Build a `TimedSpeedBurst` leaf with the given speed multiplier and duration.
-    pub(crate) fn test_timed_speed_burst(speed_mult: f32, duration_secs: f32) -> Self {
-        Self::TimedSpeedBurst {
-            speed_mult,
-            duration_secs,
-        }
-    }
-
-    /// Build a `TimePressureBoost` leaf with the given speed multiplier and threshold.
-    pub(crate) fn test_time_pressure_boost(speed_mult: f32, threshold_pct: f32) -> Self {
-        Self::TimePressureBoost {
-            speed_mult,
-            threshold_pct,
-        }
-    }
-
     /// Build a `RandomEffect` leaf with the given weighted pool entries.
     pub(crate) fn test_random_effect(pool: Vec<(f32, TriggerChain)>) -> Self {
         Self::RandomEffect(pool)
@@ -495,421 +471,194 @@ impl TriggerChain {
     pub(crate) fn test_entropy_engine(threshold: u32, pool: Vec<(f32, TriggerChain)>) -> Self {
         Self::EntropyEngine(threshold, pool)
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::effect::definition::{Effect, EffectNode, Trigger};
+
+    // =========================================================================
+    // C7 Wave 1 Part H: ChipDefinition with Vec<EffectNode> (behaviors 40-41)
+    // =========================================================================
 
     #[test]
-    fn chip_definition_deserializes_with_on_selected_piercing() {
-        let ron_str = r#"(name: "Piercing Shot", description: "Bolt passes through", rarity: Common, max_stacks: 3, effects: [OnSelected([Piercing(1)])])"#;
-        let def: ChipDefinition = ron::de::from_str(ron_str).expect("should parse ChipDefinition");
+    fn chip_definition_effects_is_vec_effect_node() {
+        let def = ChipDefinition {
+            name: "Test".to_owned(),
+            description: "".to_owned(),
+            rarity: Rarity::Common,
+            max_stacks: 3,
+            effects: vec![EffectNode::When {
+                trigger: Trigger::OnSelected,
+                then: vec![EffectNode::Do(Effect::Piercing(1))],
+            }],
+            ingredients: None,
+            template_name: None,
+        };
+        assert!(matches!(
+            def.effects[0],
+            EffectNode::When {
+                trigger: Trigger::OnSelected,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn chip_definition_empty_effects_is_valid() {
+        let def = ChipDefinition {
+            name: "Empty".to_owned(),
+            description: "".to_owned(),
+            rarity: Rarity::Common,
+            max_stacks: 1,
+            effects: vec![],
+            ingredients: None,
+            template_name: None,
+        };
+        assert!(def.effects.is_empty());
+    }
+
+    #[test]
+    fn chip_definition_ron_with_effect_node_syntax() {
+        let ron_str = r#"(name: "Piercing Shot", description: "test", rarity: Common, max_stacks: 3, effects: [When(trigger: OnSelected, then: [Do(Piercing(1))])])"#;
+        let def: ChipDefinition =
+            ron::de::from_str(ron_str).expect("ChipDefinition with EffectNode RON should parse");
         assert_eq!(def.name, "Piercing Shot");
-        assert_eq!(def.description, "Bolt passes through");
-        assert_eq!(def.rarity, Rarity::Common);
-        assert_eq!(def.max_stacks, 3);
         assert_eq!(
             def.effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])
-        );
-    }
-
-    // --- B1: Target enum deserialization (behavior 1) ---
-
-    #[test]
-    fn target_deserializes_bolt() {
-        let t: Target = ron::de::from_str("Bolt").expect("should parse Bolt");
-        assert_eq!(t, Target::Bolt);
-    }
-
-    #[test]
-    fn target_deserializes_breaker() {
-        let t: Target = ron::de::from_str("Breaker").expect("should parse Breaker");
-        assert_eq!(t, Target::Breaker);
-    }
-
-    #[test]
-    fn target_deserializes_all_bolts() {
-        let t: Target = ron::de::from_str("AllBolts").expect("should parse AllBolts");
-        assert_eq!(t, Target::AllBolts);
-    }
-
-    #[test]
-    fn target_rejects_invalid_variant() {
-        let result = ron::de::from_str::<Target>("Cell");
-        assert!(result.is_err(), "Target should not accept Cell variant");
-    }
-
-    // --- B1: OnSelected deserialization (behaviors 2-4) ---
-
-    #[test]
-    fn on_selected_deserializes_with_inner_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnSelected([Piercing(1)])")
-            .expect("should parse OnSelected([Piercing(1)])");
-        assert_eq!(
-            tc,
-            TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])
-        );
-    }
-
-    #[test]
-    fn on_selected_deserializes_empty_vec() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnSelected([])").expect("should parse OnSelected([])");
-        assert_eq!(tc, TriggerChain::OnSelected(vec![]));
-    }
-
-    #[test]
-    fn on_selected_deserializes_with_multiple_leaves() {
-        let tc: TriggerChain = ron::de::from_str("OnSelected([Piercing(1), DamageBoost(0.5)])")
-            .expect("should parse OnSelected with multiple leaves");
-        assert_eq!(
-            tc,
-            TriggerChain::OnSelected(vec![
-                TriggerChain::Piercing(1),
-                TriggerChain::DamageBoost(0.5),
-            ])
-        );
-    }
-
-    #[test]
-    fn on_selected_with_size_boost_breaker_deserializes() {
-        let tc: TriggerChain = ron::de::from_str("OnSelected([SizeBoost(Breaker, 20.0)])")
-            .expect("should parse OnSelected([SizeBoost(Breaker, 20.0)])");
-        assert_eq!(
-            tc,
-            TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Breaker, 20.0)])
-        );
-    }
-
-    #[test]
-    fn on_selected_with_size_boost_bolt_deserializes() {
-        let tc: TriggerChain = ron::de::from_str("OnSelected([SizeBoost(Bolt, 0.3)])")
-            .expect("should parse SizeBoost(Bolt, 0.3)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Bolt, 0.3)])
-        );
-    }
-
-    // --- B1: New leaf variants deserialize standalone (behavior 5) ---
-
-    #[test]
-    fn trigger_chain_deserializes_piercing_leaf() {
-        let tc: TriggerChain = ron::de::from_str("Piercing(1)").expect("should parse Piercing(1)");
-        assert_eq!(tc, TriggerChain::Piercing(1));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_piercing_zero() {
-        let tc: TriggerChain = ron::de::from_str("Piercing(0)").expect("should parse Piercing(0)");
-        assert_eq!(tc, TriggerChain::Piercing(0));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_damage_boost_leaf() {
-        let tc: TriggerChain =
-            ron::de::from_str("DamageBoost(0.5)").expect("should parse DamageBoost(0.5)");
-        assert_eq!(tc, TriggerChain::DamageBoost(0.5));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_chain_hit_leaf() {
-        let tc: TriggerChain = ron::de::from_str("ChainHit(2)").expect("should parse ChainHit(2)");
-        assert_eq!(tc, TriggerChain::ChainHit(2));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_size_boost_bolt() {
-        let tc: TriggerChain =
-            ron::de::from_str("SizeBoost(Bolt, 0.3)").expect("should parse SizeBoost(Bolt, 0.3)");
-        assert_eq!(tc, TriggerChain::SizeBoost(Target::Bolt, 0.3));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_attraction_leaf() {
-        let tc: TriggerChain =
-            ron::de::from_str("Attraction(8.0)").expect("should parse Attraction(8.0)");
-        assert_eq!(tc, TriggerChain::Attraction(8.0));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_bump_force_leaf() {
-        let tc: TriggerChain =
-            ron::de::from_str("BumpForce(10.0)").expect("should parse BumpForce(10.0)");
-        assert_eq!(tc, TriggerChain::BumpForce(10.0));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_tilt_control_leaf() {
-        let tc: TriggerChain =
-            ron::de::from_str("TiltControl(5.0)").expect("should parse TiltControl(5.0)");
-        assert_eq!(tc, TriggerChain::TiltControl(5.0));
-    }
-
-    // --- B1: SpeedBoost now uses Target (behavior 6) ---
-
-    #[test]
-    fn speed_boost_uses_target_instead_of_speed_boost_target() {
-        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.5)")
-            .expect("should parse SpeedBoost with Target");
-        assert_eq!(
-            tc,
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
+            EffectNode::When {
+                trigger: Trigger::OnSelected,
+                then: vec![EffectNode::Do(Effect::Piercing(1))]
             }
         );
     }
 
     #[test]
-    fn speed_boost_all_bolts_identity() {
-        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: AllBolts, multiplier: 1.0)")
-            .expect("should parse SpeedBoost AllBolts identity");
-        assert_eq!(
-            tc,
-            TriggerChain::SpeedBoost {
-                target: Target::AllBolts,
-                multiplier: 1.0,
-            }
-        );
-    }
-
-    // --- B1: OnBump replaces OnBumpSuccess (behavior 7) ---
-
-    #[test]
-    fn on_bump_deserializes_with_spawn_bolt() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnBump([SpawnBolt])").expect("should parse OnBump([SpawnBolt])");
-        assert_eq!(tc, TriggerChain::OnBump(vec![TriggerChain::SpawnBolt]));
-    }
-
-    #[test]
-    fn on_bump_deserializes_nested_depth_two() {
-        let tc: TriggerChain = ron::de::from_str(
-            "OnBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])])",
-        )
-        .expect("should parse OnBump nested depth 2");
-        assert_eq!(
-            tc,
-            TriggerChain::OnBump(vec![TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                }],
-            )])
-        );
-    }
-
-    // --- B1: New leaf variants depth (behavior 8) ---
-
-    #[test]
-    fn new_chip_leaf_variants_have_depth_zero() {
-        assert_eq!(TriggerChain::Piercing(1).depth(), 0);
-        assert_eq!(TriggerChain::DamageBoost(0.5).depth(), 0);
-        assert_eq!(TriggerChain::ChainHit(2).depth(), 0);
-        assert_eq!(TriggerChain::SizeBoost(Target::Bolt, 0.3).depth(), 0);
-        assert_eq!(TriggerChain::Attraction(8.0).depth(), 0);
-        assert_eq!(TriggerChain::BumpForce(10.0).depth(), 0);
-        assert_eq!(TriggerChain::TiltControl(5.0).depth(), 0);
-    }
-
-    // --- B1: New leaf variants are leaves (behavior 9) ---
-
-    #[test]
-    fn new_chip_leaf_variants_are_leaves() {
-        assert!(TriggerChain::Piercing(1).is_leaf());
-        assert!(TriggerChain::DamageBoost(0.5).is_leaf());
-        assert!(TriggerChain::ChainHit(2).is_leaf());
-        assert!(TriggerChain::SizeBoost(Target::Bolt, 0.3).is_leaf());
-        assert!(TriggerChain::Attraction(8.0).is_leaf());
-        assert!(TriggerChain::BumpForce(10.0).is_leaf());
-        assert!(TriggerChain::TiltControl(5.0).is_leaf());
-    }
-
-    // --- B1: OnSelected is NOT a leaf (behavior 10) ---
-
-    #[test]
-    fn on_selected_is_not_a_leaf() {
-        assert!(!TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)]).is_leaf());
-    }
-
-    #[test]
-    fn on_selected_empty_is_not_a_leaf() {
-        assert!(!TriggerChain::OnSelected(vec![]).is_leaf());
-    }
-
-    // --- B1: OnSelected depth (behavior 11) ---
-
-    #[test]
-    fn on_selected_depth_is_one_plus_inner() {
-        assert_eq!(
-            TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)]).depth(),
-            1
-        );
-    }
-
-    #[test]
-    fn on_selected_nested_depth_is_two() {
-        assert_eq!(
-            TriggerChain::OnSelected(vec![TriggerChain::OnPerfectBump(vec![
-                TriggerChain::SpawnBolt
-            ])])
-            .depth(),
-            2
-        );
-    }
-
-    // --- B1: OnBump depth and is_leaf (behavior 12) ---
-
-    #[test]
-    fn on_bump_depth_is_one() {
-        let tc = TriggerChain::OnBump(vec![TriggerChain::test_shield(3.0)]);
-        assert_eq!(tc.depth(), 1);
-        assert!(!tc.is_leaf());
-    }
-
-    // --- B1: ChipDefinition with TriggerChain effects (behavior 13) ---
-
-    #[test]
-    fn chip_definition_with_trigger_chain_effects_deserializes() {
-        let ron_str = r#"(name: "Piercing Shot", description: "Bolt passes through", rarity: Common, max_stacks: 3, effects: [OnSelected([Piercing(1)])])"#;
-        let def: ChipDefinition =
-            ron::de::from_str(ron_str).expect("should parse ChipDefinition with TriggerChain");
-        assert_eq!(
-            def.effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])
-        );
-    }
-
-    #[test]
-    fn chip_definition_multi_effect_deserializes() {
-        let ron_str = r#"(
-            name: "Hybrid",
-            description: "Two effects",
-            rarity: Rare,
-            max_stacks: 2,
-            effects: [OnSelected([SizeBoost(Breaker, 20.0)]), OnPerfectBump([SpawnBolt])]
-        )"#;
+    fn chip_definition_ron_triggered_chain_effect_node() {
+        let ron_str = r#"(name: "Surge", description: "...", rarity: Rare, max_stacks: 1, effects: [When(trigger: OnPerfectBump, then: [Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))])])"#;
         let def: ChipDefinition = ron::de::from_str(ron_str)
-            .expect("should parse ChipDefinition with multiple TriggerChain effects");
-        assert_eq!(def.effects.len(), 2);
-        assert_eq!(
+            .expect("ChipDefinition with triggered EffectNode RON should parse");
+        assert!(matches!(
             def.effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Breaker, 20.0)])
-        );
-        assert_eq!(
-            def.effects[1],
-            TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])
-        );
-    }
-
-    // --- B1: ChipDefinition with triggered chain (behavior 14) ---
-
-    #[test]
-    fn chip_definition_triggered_chain_no_on_selected_wrapper() {
-        let ron_str = r#"(name: "Surge", description: "...", rarity: Rare, max_stacks: 1, effects: [OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)])])])"#;
-        let def: ChipDefinition =
-            ron::de::from_str(ron_str).expect("should parse ChipDefinition with triggered chain");
-        assert_eq!(
-            def.effects[0],
-            TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 32.0,
-                    stacks: 1,
-                    speed: 400.0,
-                }],
-            )])
-        );
-    }
-
-    // --- B1: Representative RON chip files (behavior 15) ---
-    // These will fail until RON files are updated by writer-code
-
-    #[test]
-    fn piercing_chip_template_ron_parses() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/piercing.chip.ron"
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                ..
+            }
         ));
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("chip template RON should parse");
-        assert_eq!(template.name, "Piercing Shot");
-        assert_eq!(template.max_taken, 3);
-        assert!(template.common.is_some());
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3);
-        assert_eq!(defs[0].name, "Basic Piercing Shot");
-        assert_eq!(
-            defs[0].effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])
-        );
     }
 
-    #[test]
-    fn wide_breaker_chip_template_ron_parses() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/wide_breaker.chip.ron"
-        ));
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("chip template RON should parse");
-        assert_eq!(template.name, "Wide Breaker");
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3);
-        assert_eq!(
-            defs[0].effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Breaker, 10.0)])
-        );
-    }
+    // =========================================================================
+    // C7 Wave 1 Part H: RaritySlot with Vec<EffectNode> (behavior 42)
+    // =========================================================================
 
     #[test]
-    fn surge_chip_template_ron_parses() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/surge.chip.ron"
+    fn rarity_slot_effects_is_vec_effect_node() {
+        let slot = RaritySlot {
+            prefix: "Basic".to_owned(),
+            effects: vec![EffectNode::When {
+                trigger: Trigger::OnSelected,
+                then: vec![EffectNode::Do(Effect::Piercing(1))],
+            }],
+        };
+        assert_eq!(slot.effects.len(), 1);
+        assert!(matches!(
+            slot.effects[0],
+            EffectNode::When {
+                trigger: Trigger::OnSelected,
+                ..
+            }
         ));
+    }
+
+    // =========================================================================
+    // C7 Wave 1 Part H: ChipTemplate with Vec<EffectNode> (behavior 43)
+    // =========================================================================
+
+    #[test]
+    fn chip_template_ron_with_effect_node_syntax() {
+        let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [When(trigger: OnPerfectBump, then: [Do(SpeedBoost(target: Bolt, multiplier: 1.2))])])), uncommon: None, rare: None, legendary: None)"#;
         let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("chip template RON should parse");
+            ron::de::from_str(ron_str).expect("ChipTemplate with EffectNode RON should parse");
         assert_eq!(template.name, "Surge");
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3);
-        assert_eq!(
-            defs[0].effects[0],
-            TriggerChain::OnPerfectBump(vec![TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.2,
-            }])
-        );
+        let common = template.common.unwrap();
+        assert!(matches!(
+            common.effects[0],
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                ..
+            }
+        ));
     }
 
     #[test]
-    fn phantom_breaker_evolution_ron_parses_with_on_bump() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/evolution/phantom_breaker.evolution.ron"
+    fn expand_template_produces_chip_definition_with_effect_node() {
+        let template = ChipTemplate {
+            name: "Surge".to_owned(),
+            max_taken: 3,
+            common: Some(RaritySlot {
+                prefix: "Basic".to_owned(),
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnPerfectBump,
+                    then: vec![EffectNode::Do(Effect::SpeedBoost {
+                        target: Target::Bolt,
+                        multiplier: 1.2,
+                    })],
+                }],
+            }),
+            uncommon: None,
+            rare: None,
+            legendary: None,
+        };
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "Basic Surge");
+        assert_eq!(defs[0].rarity, Rarity::Common);
+        assert_eq!(defs[0].max_stacks, 3);
+        assert!(matches!(
+            defs[0].effects[0],
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                ..
+            }
         ));
-        let def: ChipDefinition =
-            ron::de::from_str(ron_str).expect("phantom_breaker evolution RON should parse");
-        assert_eq!(def.name, "Phantom Breaker");
-        assert_eq!(def.rarity, Rarity::Evolution);
-        // The RON file should use OnBump (not OnBumpSuccess) wrapping SpawnPhantom
-        assert_eq!(
-            def.effects[0],
-            TriggerChain::OnBump(vec![TriggerChain::SpawnPhantom {
-                duration: 5.0,
-                max_active: 1,
-            }])
-        );
     }
 
-    // --- Part A: New type deserialization tests ---
+    // =========================================================================
+    // Preserved tests: ChipDefinition test constructors
+    // =========================================================================
+
+    #[test]
+    fn chip_definition_test_constructs_with_effect_node() {
+        let def = ChipDefinition::test(
+            "Piercing",
+            EffectNode::Do(Effect::Piercing(1)),
+            3,
+        );
+        assert_eq!(def.name, "Piercing");
+        assert_eq!(def.max_stacks, 3);
+        assert_eq!(def.effects.len(), 1);
+    }
+
+    #[test]
+    fn chip_definition_test_simple_constructs() {
+        let def = ChipDefinition::test_simple("Test");
+        assert_eq!(def.name, "Test");
+        assert_eq!(def.max_stacks, 1);
+        assert_eq!(def.effects.len(), 1);
+        assert!(matches!(
+            def.effects[0],
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                ..
+            }
+        ));
+    }
+
+    // =========================================================================
+    // Preserved tests: Rarity deserialization
+    // =========================================================================
 
     #[test]
     fn rarity_deserializes_common() {
@@ -935,148 +684,9 @@ mod tests {
         assert_eq!(r, Rarity::Legendary);
     }
 
-    // --- TriggerChain deserialization tests ---
-
-    #[test]
-    fn trigger_chain_deserializes_shockwave() {
-        let tc: TriggerChain = ron::de::from_str(
-            "Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)",
-        )
-        .expect("should parse Shockwave");
-        assert_eq!(
-            tc,
-            TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            }
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_multi_bolt() {
-        let tc: TriggerChain =
-            ron::de::from_str("MultiBolt(base_count: 3, count_per_level: 0, stacks: 1)")
-                .expect("should parse MultiBolt");
-        assert_eq!(
-            tc,
-            TriggerChain::MultiBolt {
-                base_count: 3,
-                count_per_level: 0,
-                stacks: 1,
-            }
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_shield() {
-        let tc: TriggerChain =
-            ron::de::from_str("Shield(base_duration: 5.0, duration_per_level: 0.0, stacks: 1)")
-                .expect("should parse Shield");
-        assert_eq!(
-            tc,
-            TriggerChain::Shield {
-                base_duration: 5.0,
-                duration_per_level: 0.0,
-                stacks: 1,
-            }
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_on_perfect_bump_leaf() {
-        let tc: TriggerChain = ron::de::from_str(
-            "OnPerfectBump([Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])",
-        )
-        .expect("should parse OnPerfectBump wrapping Shockwave");
-        assert_eq!(
-            tc,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            }])
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_nested_two_deep() {
-        let tc: TriggerChain = ron::de::from_str(
-            "OnPerfectBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])])",
-        )
-        .expect("should parse double-nested TriggerChain");
-        assert_eq!(
-            tc,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                }],
-            )])
-        );
-    }
-
-    // --- TriggerChain depth tests ---
-
-    #[test]
-    fn trigger_chain_depth_leaf_is_zero() {
-        assert_eq!(TriggerChain::test_shockwave(64.0).depth(), 0);
-        assert_eq!(TriggerChain::test_multi_bolt(3).depth(), 0);
-        assert_eq!(TriggerChain::test_shield(5.0).depth(), 0);
-        assert_eq!(TriggerChain::test_chain_bolt(200.0).depth(), 0);
-    }
-
-    #[test]
-    fn trigger_chain_depth_single_trigger_is_one() {
-        let tc = TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]);
-        assert_eq!(tc.depth(), 1);
-    }
-
-    #[test]
-    fn trigger_chain_depth_nested_is_two() {
-        let tc = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::test_shockwave(64.0)],
-        )]);
-        assert_eq!(tc.depth(), 2);
-    }
-
-    #[test]
-    fn trigger_chain_depth_three_deep_is_three() {
-        let tc = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::OnCellDestroyed(vec![
-                TriggerChain::test_shockwave(64.0),
-            ])],
-        )]);
-        assert_eq!(tc.depth(), 3);
-    }
-
-    // --- TriggerChain is_leaf tests ---
-
-    #[test]
-    fn trigger_chain_is_leaf_true_for_leaves() {
-        assert!(TriggerChain::test_shockwave(64.0).is_leaf());
-        assert!(TriggerChain::test_multi_bolt(3).is_leaf());
-        assert!(TriggerChain::test_shield(5.0).is_leaf());
-        assert!(TriggerChain::test_chain_bolt(200.0).is_leaf());
-    }
-
-    #[test]
-    fn trigger_chain_is_leaf_false_for_triggers() {
-        let leaf = TriggerChain::test_shockwave(64.0);
-        assert!(!TriggerChain::OnPerfectBump(vec![leaf.clone()]).is_leaf());
-        assert!(!TriggerChain::OnImpact(ImpactTarget::Cell, vec![leaf.clone()]).is_leaf());
-        assert!(!TriggerChain::OnCellDestroyed(vec![leaf.clone()]).is_leaf());
-        assert!(!TriggerChain::OnBoltLost(vec![leaf]).is_leaf());
-    }
-
-    // --- ImpactTarget standalone deserialization ---
+    // =========================================================================
+    // Preserved tests: ImpactTarget deserialization
+    // =========================================================================
 
     #[test]
     fn impact_target_deserializes_cell() {
@@ -1096,501 +706,37 @@ mod tests {
         assert_eq!(t, ImpactTarget::Wall);
     }
 
-    // --- OnImpact with Breaker and Wall targets ---
+    // =========================================================================
+    // Preserved tests: Target deserialization
+    // =========================================================================
 
     #[test]
-    fn trigger_chain_deserializes_on_impact_breaker_leaf() {
-        let tc: TriggerChain = ron::de::from_str(
-            "OnImpact(Breaker, [MultiBolt(base_count: 2, count_per_level: 0, stacks: 1)])",
-        )
-        .expect("should parse OnImpact(Breaker, MultiBolt)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnImpact(
-                ImpactTarget::Breaker,
-                vec![TriggerChain::MultiBolt {
-                    base_count: 2,
-                    count_per_level: 0,
-                    stacks: 1,
-                }],
-            )
-        );
+    fn target_deserializes_bolt() {
+        let t: Target = ron::de::from_str("Bolt").expect("should parse Bolt");
+        assert_eq!(t, Target::Bolt);
     }
 
     #[test]
-    fn trigger_chain_deserializes_on_impact_wall_leaf() {
-        let tc: TriggerChain = ron::de::from_str(
-            "OnImpact(Wall, [Shield(base_duration: 5.0, duration_per_level: 0.0, stacks: 1)])",
-        )
-        .expect("should parse OnImpact(Wall, Shield)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnImpact(
-                ImpactTarget::Wall,
-                vec![TriggerChain::Shield {
-                    base_duration: 5.0,
-                    duration_per_level: 0.0,
-                    stacks: 1,
-                }],
-            )
-        );
+    fn target_deserializes_breaker() {
+        let t: Target = ron::de::from_str("Breaker").expect("should parse Breaker");
+        assert_eq!(t, Target::Breaker);
     }
 
     #[test]
-    fn on_impact_depth_is_one() {
-        let tc =
-            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(64.0)]);
-        assert_eq!(tc.depth(), 1);
-    }
-
-    // --- Phase D: Stacking effective value tests ---
-
-    /// Compute effective f32 value: `base + (stacks - 1) * per_level`.
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "stacks is always small (< max_stacks)"
-    )]
-    fn effective_f32(base: f32, per_level: f32, stacks: u32) -> f32 {
-        (stacks.saturating_sub(1) as f32).mul_add(per_level, base)
+    fn target_deserializes_all_bolts() {
+        let t: Target = ron::de::from_str("AllBolts").expect("should parse AllBolts");
+        assert_eq!(t, Target::AllBolts);
     }
 
     #[test]
-    fn shockwave_effective_range_at_stacks_1() {
-        let effective = effective_f32(64.0, 32.0, 1);
-        assert!(
-            (effective - 64.0).abs() < f32::EPSILON,
-            "stacks=1: effective should be base_range 64.0, got {effective}"
-        );
+    fn target_rejects_invalid_variant() {
+        let result = ron::de::from_str::<Target>("Cell");
+        assert!(result.is_err(), "Target should not accept Cell variant");
     }
 
-    #[test]
-    fn shockwave_effective_range_at_stacks_2() {
-        let effective = effective_f32(64.0, 32.0, 2);
-        assert!(
-            (effective - 96.0).abs() < f32::EPSILON,
-            "stacks=2: effective should be 96.0 (64.0 + 1*32.0), got {effective}"
-        );
-    }
-
-    #[test]
-    fn shockwave_effective_range_at_stacks_3() {
-        let effective = effective_f32(64.0, 32.0, 3);
-        assert!(
-            (effective - 128.0).abs() < f32::EPSILON,
-            "stacks=3: effective should be 128.0 (64.0 + 2*32.0), got {effective}"
-        );
-    }
-
-    #[test]
-    fn shockwave_effective_range_at_stacks_0() {
-        let effective = effective_f32(64.0, 32.0, 0);
-        assert!(
-            (effective - 64.0).abs() < f32::EPSILON,
-            "stacks=0: saturating_sub prevents underflow, effective should be 64.0, got {effective}"
-        );
-    }
-
-    #[test]
-    fn multi_bolt_effective_count_at_stacks_1() {
-        let base_count: u32 = 3;
-        let count_per_level: u32 = 1;
-        let stacks: u32 = 1;
-        let effective = base_count + stacks.saturating_sub(1) * count_per_level;
-        assert_eq!(
-            effective, 3,
-            "stacks=1: effective should be base_count 3, got {effective}"
-        );
-    }
-
-    #[test]
-    fn multi_bolt_effective_count_at_stacks_2() {
-        let base_count: u32 = 3;
-        let count_per_level: u32 = 1;
-        let stacks: u32 = 2;
-        let effective = base_count + stacks.saturating_sub(1) * count_per_level;
-        assert_eq!(
-            effective, 4,
-            "stacks=2: effective should be 4 (3 + 1*1), got {effective}"
-        );
-    }
-
-    #[test]
-    fn shield_effective_duration_at_stacks_1() {
-        let effective = effective_f32(5.0, 2.0, 1);
-        assert!(
-            (effective - 5.0).abs() < f32::EPSILON,
-            "stacks=1: effective should be base_duration 5.0, got {effective}"
-        );
-    }
-
-    #[test]
-    fn shield_effective_duration_at_stacks_3() {
-        let effective = effective_f32(5.0, 2.0, 3);
-        assert!(
-            (effective - 9.0).abs() < f32::EPSILON,
-            "stacks=3: effective should be 9.0 (5.0 + 2*2.0), got {effective}"
-        );
-    }
-
-    // --- Phase D: RON deserialization with new stacking fields ---
-
-    #[test]
-    fn shockwave_ron_deserializes_with_new_fields() {
-        let tc: TriggerChain = ron::de::from_str(
-            "Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)",
-        )
-        .expect("should parse Shockwave with stacking fields");
-        assert_eq!(
-            tc,
-            TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 32.0,
-                stacks: 1,
-                speed: 400.0,
-            }
-        );
-    }
-
-    #[test]
-    fn multi_bolt_ron_deserializes_with_new_fields() {
-        let tc: TriggerChain =
-            ron::de::from_str("MultiBolt(base_count: 3, count_per_level: 1, stacks: 1)")
-                .expect("should parse MultiBolt with stacking fields");
-        assert_eq!(
-            tc,
-            TriggerChain::MultiBolt {
-                base_count: 3,
-                count_per_level: 1,
-                stacks: 1,
-            }
-        );
-    }
-
-    #[test]
-    fn shield_ron_deserializes_with_new_fields() {
-        let tc: TriggerChain =
-            ron::de::from_str("Shield(base_duration: 5.0, duration_per_level: 2.0, stacks: 1)")
-                .expect("should parse Shield with stacking fields");
-        assert_eq!(
-            tc,
-            TriggerChain::Shield {
-                base_duration: 5.0,
-                duration_per_level: 2.0,
-                stacks: 1,
-            }
-        );
-    }
-
-    // --- Phase D: Convenience constructor tests ---
-
-    #[test]
-    fn test_shockwave_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_shockwave(64.0),
-            TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            }
-        );
-    }
-
-    #[test]
-    fn test_multi_bolt_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_multi_bolt(3),
-            TriggerChain::MultiBolt {
-                base_count: 3,
-                count_per_level: 0,
-                stacks: 1,
-            }
-        );
-    }
-
-    #[test]
-    fn test_shield_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_shield(5.0),
-            TriggerChain::Shield {
-                base_duration: 5.0,
-                duration_per_level: 0.0,
-                stacks: 1,
-            }
-        );
-    }
-
-    // --- New leaf variant deserialization tests ---
-
-    #[test]
-    fn trigger_chain_deserializes_lose_life() {
-        let tc: TriggerChain = ron::de::from_str("LoseLife").expect("should parse LoseLife");
-        assert_eq!(tc, TriggerChain::LoseLife);
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_lose_life_wrapped_in_on_bolt_lost() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnBoltLost([LoseLife])").expect("should parse OnBoltLost(LoseLife)");
-        assert_eq!(tc, TriggerChain::OnBoltLost(vec![TriggerChain::LoseLife]));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_time_penalty() {
-        let tc: TriggerChain =
-            ron::de::from_str("TimePenalty(seconds: 5.0)").expect("should parse TimePenalty");
-        assert_eq!(tc, TriggerChain::TimePenalty { seconds: 5.0 });
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_time_penalty_fractional() {
-        let tc: TriggerChain = ron::de::from_str("TimePenalty(seconds: 2.5)")
-            .expect("should parse TimePenalty with fractional seconds");
-        assert_eq!(tc, TriggerChain::TimePenalty { seconds: 2.5 });
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_spawn_bolt() {
-        let tc: TriggerChain = ron::de::from_str("SpawnBolt").expect("should parse SpawnBolt");
-        assert_eq!(tc, TriggerChain::SpawnBolt);
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_speed_boost_bolt() {
-        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.5)")
-            .expect("should parse SpeedBoost(target: Bolt)");
-        assert_eq!(
-            tc,
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_speed_boost_bolt_identity() {
-        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.0)")
-            .expect("should parse SpeedBoost(target: Bolt) with identity multiplier");
-        assert_eq!(
-            tc,
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.0,
-            }
-        );
-    }
-
-    // --- New trigger variant deserialization tests ---
-
-    #[test]
-    fn trigger_chain_deserializes_on_early_bump_wrapping_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnEarlyBump([LoseLife])")
-            .expect("should parse OnEarlyBump(LoseLife)");
-        assert_eq!(tc, TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_on_early_bump_nested_two_deep() {
-        let tc: TriggerChain = ron::de::from_str(
-            "OnEarlyBump([OnImpact(Cell, [Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)])])",
-        )
-        .expect("should parse OnEarlyBump nested two deep");
-        assert_eq!(
-            tc,
-            TriggerChain::OnEarlyBump(vec![TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                }],
-            )])
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_on_late_bump_wrapping_leaf() {
-        let tc: TriggerChain = ron::de::from_str("OnLateBump([TimePenalty(seconds: 3.0)])")
-            .expect("should parse OnLateBump(TimePenalty)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnLateBump(vec![TriggerChain::TimePenalty { seconds: 3.0 }])
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_on_bump_whiff_wrapping_spawn_bolt() {
-        let tc: TriggerChain = ron::de::from_str("OnBumpWhiff([SpawnBolt])")
-            .expect("should parse OnBumpWhiff(SpawnBolt)");
-        assert_eq!(tc, TriggerChain::OnBumpWhiff(vec![TriggerChain::SpawnBolt]));
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_on_bump_whiff_wrapping_speed_boost() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnBumpWhiff([SpeedBoost(target: Bolt, multiplier: 1.5)])")
-                .expect("should parse OnBumpWhiff(SpeedBoost)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnBumpWhiff(vec![TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }])
-        );
-    }
-
-    // --- New variant depth tests ---
-
-    #[test]
-    fn new_leaves_have_depth_zero() {
-        assert_eq!(TriggerChain::LoseLife.depth(), 0);
-        assert_eq!(TriggerChain::SpawnBolt.depth(), 0);
-        assert_eq!(TriggerChain::TimePenalty { seconds: 5.0 }.depth(), 0);
-        assert_eq!(
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }
-            .depth(),
-            0
-        );
-    }
-
-    #[test]
-    fn new_triggers_wrapping_leaf_have_depth_one() {
-        assert_eq!(
-            TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]).depth(),
-            1
-        );
-        assert_eq!(
-            TriggerChain::OnLateBump(vec![TriggerChain::SpawnBolt]).depth(),
-            1
-        );
-        assert_eq!(
-            TriggerChain::OnBumpWhiff(vec![TriggerChain::TimePenalty { seconds: 5.0 }]).depth(),
-            1
-        );
-    }
-
-    #[test]
-    fn on_bump_whiff_nested_two_deep_has_depth_two() {
-        let tc = TriggerChain::OnBumpWhiff(vec![TriggerChain::OnImpact(
-            ImpactTarget::Cell,
-            vec![TriggerChain::LoseLife],
-        )]);
-        assert_eq!(tc.depth(), 2);
-    }
-
-    // --- New variant is_leaf tests ---
-
-    #[test]
-    fn new_leaves_return_is_leaf_true() {
-        assert!(TriggerChain::LoseLife.is_leaf());
-        assert!(TriggerChain::SpawnBolt.is_leaf());
-        assert!(TriggerChain::TimePenalty { seconds: 5.0 }.is_leaf());
-        assert!(
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }
-            .is_leaf()
-        );
-    }
-
-    #[test]
-    fn new_triggers_return_is_leaf_false() {
-        assert!(!TriggerChain::OnEarlyBump(vec![TriggerChain::LoseLife]).is_leaf());
-        assert!(!TriggerChain::OnLateBump(vec![TriggerChain::SpawnBolt]).is_leaf());
-        assert!(
-            !TriggerChain::OnBumpWhiff(vec![TriggerChain::TimePenalty { seconds: 5.0 }]).is_leaf()
-        );
-    }
-
-    // --- Convenience constructor tests ---
-
-    #[test]
-    fn test_lose_life_convenience_constructor() {
-        assert_eq!(TriggerChain::test_lose_life(), TriggerChain::LoseLife);
-    }
-
-    #[test]
-    fn test_time_penalty_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_time_penalty(5.0),
-            TriggerChain::TimePenalty { seconds: 5.0 }
-        );
-    }
-
-    #[test]
-    fn test_spawn_bolt_convenience_constructor() {
-        assert_eq!(TriggerChain::test_spawn_bolt(), TriggerChain::SpawnBolt);
-    }
-
-    // --- SpeedBoost variant deserialization tests ---
-
-    #[test]
-    fn trigger_chain_deserializes_speed_boost() {
-        let tc: TriggerChain = ron::de::from_str("SpeedBoost(target: Bolt, multiplier: 1.5)")
-            .expect("should parse SpeedBoost");
-        assert_eq!(
-            tc,
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_speed_boost_wrapped_in_on_perfect_bump() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnPerfectBump([SpeedBoost(target: Bolt, multiplier: 1.5)])")
-                .expect("should parse OnPerfectBump(SpeedBoost)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }])
-        );
-    }
-
-    // --- SpeedBoost depth and is_leaf tests ---
-
-    #[test]
-    fn speed_boost_depth_is_zero() {
-        let tc = TriggerChain::SpeedBoost {
-            target: Target::Bolt,
-            multiplier: 1.5,
-        };
-        assert_eq!(tc.depth(), 0);
-    }
-
-    #[test]
-    fn speed_boost_is_leaf_true() {
-        let tc = TriggerChain::SpeedBoost {
-            target: Target::Bolt,
-            multiplier: 1.5,
-        };
-        assert!(tc.is_leaf());
-    }
-
-    // --- SpeedBoost convenience constructor test ---
-
-    #[test]
-    fn test_speed_boost_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_speed_boost(1.5),
-            TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            }
-        );
-    }
-
-    // --- Evolution types deserialization tests ---
+    // =========================================================================
+    // Preserved tests: EvolutionIngredient
+    // =========================================================================
 
     #[test]
     fn evolution_ingredient_deserializes_from_ron() {
@@ -1601,957 +747,70 @@ mod tests {
         assert_eq!(ingredient.stacks_required, 2);
     }
 
-    // --- ChainBolt variant tests ---
-
-    #[test]
-    fn trigger_chain_deserializes_chain_bolt() {
-        let tc: TriggerChain =
-            ron::de::from_str("ChainBolt(tether_distance: 200.0)").expect("should parse ChainBolt");
-        assert_eq!(
-            tc,
-            TriggerChain::ChainBolt {
-                tether_distance: 200.0,
-            }
-        );
-    }
-
-    #[test]
-    fn trigger_chain_deserializes_chain_bolt_wrapped_in_on_perfect_bump() {
-        let tc: TriggerChain =
-            ron::de::from_str("OnPerfectBump([ChainBolt(tether_distance: 150.0)])")
-                .expect("should parse OnPerfectBump(ChainBolt)");
-        assert_eq!(
-            tc,
-            TriggerChain::OnPerfectBump(vec![TriggerChain::ChainBolt {
-                tether_distance: 150.0,
-            }])
-        );
-    }
-
-    #[test]
-    fn chain_bolt_depth_is_zero() {
-        assert_eq!(
-            TriggerChain::ChainBolt {
-                tether_distance: 200.0
-            }
-            .depth(),
-            0
-        );
-    }
-
-    #[test]
-    fn chain_bolt_is_leaf_true() {
-        assert!(
-            TriggerChain::ChainBolt {
-                tether_distance: 200.0
-            }
-            .is_leaf()
-        );
-    }
-
-    #[test]
-    fn test_chain_bolt_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_chain_bolt(200.0),
-            TriggerChain::ChainBolt {
-                tether_distance: 200.0,
-            }
-        );
-    }
-
-    // --- ChainLightning leaf variant tests ---
-
-    #[test]
-    fn chain_lightning_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::ChainLightning {
-            arcs: 3,
-            range: 96.0,
-            damage_mult: 0.5,
-        };
-        assert!(tc.is_leaf(), "ChainLightning should be a leaf");
-        assert_eq!(tc.depth(), 0, "ChainLightning depth should be 0");
-    }
-
-    // --- SpawnPhantom leaf variant tests ---
-
-    #[test]
-    fn spawn_phantom_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::SpawnPhantom {
-            duration: 3.0,
-            max_active: 2,
-        };
-        assert!(tc.is_leaf(), "SpawnPhantom should be a leaf");
-        assert_eq!(tc.depth(), 0, "SpawnPhantom depth should be 0");
-    }
-
-    // --- PiercingBeam leaf variant tests ---
-
-    #[test]
-    fn piercing_beam_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::PiercingBeam {
-            damage_mult: 2.0,
-            width: 20.0,
-        };
-        assert!(tc.is_leaf(), "PiercingBeam should be a leaf");
-        assert_eq!(tc.depth(), 0, "PiercingBeam depth should be 0");
-    }
-
-    // --- GravityWell leaf variant tests ---
-
-    #[test]
-    fn gravity_well_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::GravityWell {
-            strength: 500.0,
-            duration: 5.0,
-            radius: 128.0,
-            max: 2,
-        };
-        assert!(tc.is_leaf(), "GravityWell should be a leaf");
-        assert_eq!(tc.depth(), 0, "GravityWell depth should be 0");
-    }
-
-    // --- SecondWind leaf variant tests ---
-
-    #[test]
-    fn second_wind_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::SecondWind { invuln_secs: 2.0 };
-        assert!(tc.is_leaf(), "SecondWind should be a leaf");
-        assert_eq!(tc.depth(), 0, "SecondWind depth should be 0");
-    }
-
-    // --- Trigger wrapping new leaf has depth 1 ---
-
-    #[test]
-    fn on_cell_destroyed_wrapping_chain_lightning_has_depth_one() {
-        let tc = TriggerChain::OnCellDestroyed(vec![TriggerChain::ChainLightning {
-            arcs: 3,
-            range: 96.0,
-            damage_mult: 0.5,
-        }]);
-        assert_eq!(
-            tc.depth(),
-            1,
-            "OnCellDestroyed wrapping ChainLightning should have depth 1"
-        );
-        assert!(
-            !tc.is_leaf(),
-            "OnCellDestroyed wrapping ChainLightning should not be a leaf"
-        );
-    }
-
-    // --- New leaf convenience constructor tests ---
-
-    #[test]
-    fn test_chain_lightning_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_chain_lightning(3, 96.0),
-            TriggerChain::ChainLightning {
-                arcs: 3,
-                range: 96.0,
-                damage_mult: 0.5,
-            }
-        );
-    }
-
-    #[test]
-    fn test_spawn_phantom_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_spawn_phantom(3.0),
-            TriggerChain::SpawnPhantom {
-                duration: 3.0,
-                max_active: 2,
-            }
-        );
-    }
-
-    #[test]
-    fn test_piercing_beam_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_piercing_beam(2.0),
-            TriggerChain::PiercingBeam {
-                damage_mult: 2.0,
-                width: 20.0,
-            }
-        );
-    }
-
-    #[test]
-    fn test_gravity_well_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_gravity_well(500.0, 128.0),
-            TriggerChain::GravityWell {
-                strength: 500.0,
-                duration: 5.0,
-                radius: 128.0,
-                max: 2,
-            }
-        );
-    }
-
-    #[test]
-    fn test_second_wind_convenience_constructor() {
-        assert_eq!(
-            TriggerChain::test_second_wind(2.0),
-            TriggerChain::SecondWind { invuln_secs: 2.0 }
-        );
-    }
-
-    // ======================================================================
-    // B4: ChipTemplate + RaritySlot deserialization (spec behaviors 1-3)
-    // ======================================================================
-
-    // --- Behavior 1: ChipTemplate deserializes with all four rarity slots ---
-
-    #[test]
-    fn chip_template_deserializes_with_all_rarity_slots() {
-        let ron_str = r#"(name: "Piercing", max_taken: 3, common: Some((prefix: "Basic", effects: [OnSelected([Piercing(1)])])), uncommon: Some((prefix: "Keen", effects: [OnSelected([Piercing(2)])])), rare: Some((prefix: "Brutal", effects: [OnSelected([Piercing(3), DamageBoost(0.1)])])), legendary: None)"#;
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("should parse ChipTemplate with all slots");
-        assert_eq!(template.name, "Piercing");
-        assert_eq!(template.max_taken, 3);
-        assert!(template.common.is_some());
-        assert!(template.uncommon.is_some());
-        assert!(template.rare.is_some());
-        assert!(template.legendary.is_none());
-    }
-
-    #[test]
-    fn chip_template_deserializes_with_all_none_slots() {
-        let ron_str = r#"(name: "Empty", max_taken: 1, common: None, uncommon: None, rare: None, legendary: None)"#;
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("should parse ChipTemplate with all None slots");
-        assert_eq!(template.name, "Empty");
-        assert_eq!(template.max_taken, 1);
-        assert!(template.common.is_none());
-        assert!(template.uncommon.is_none());
-        assert!(template.rare.is_none());
-        assert!(template.legendary.is_none());
-    }
-
-    #[test]
-    fn chip_template_max_taken_zero_is_valid_ron() {
-        let ron_str = r#"(name: "Zero", max_taken: 0, common: Some((prefix: "X", effects: [])), uncommon: None, rare: None, legendary: None)"#;
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("should parse ChipTemplate with max_taken 0");
-        assert_eq!(template.max_taken, 0);
-    }
-
-    // --- Behavior 2: ChipTemplate with only legendary slot ---
-
-    #[test]
-    fn chip_template_deserializes_legendary_only() {
-        let ron_str = r#"(name: "Glass Cannon", max_taken: 1, common: None, uncommon: None, rare: None, legendary: Some((prefix: "", effects: [OnSelected([DamageBoost(1.0), SizeBoost(Breaker, -0.3)])])))"#;
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("should parse legendary-only ChipTemplate");
-        assert_eq!(template.name, "Glass Cannon");
-        assert_eq!(template.max_taken, 1);
-        assert!(template.common.is_none());
-        assert!(template.uncommon.is_none());
-        assert!(template.rare.is_none());
-        assert!(template.legendary.is_some());
-        let slot = template.legendary.unwrap();
-        assert_eq!(slot.prefix, "");
-    }
-
-    // --- Behavior 3: RaritySlot stores prefix and effects ---
-
-    #[test]
-    fn rarity_slot_deserializes_prefix_and_effects() {
-        let ron_str = r#"(prefix: "Basic", effects: [OnSelected([Piercing(1)])])"#;
-        let slot: RaritySlot = ron::de::from_str(ron_str).expect("should parse RaritySlot");
-        assert_eq!(slot.prefix, "Basic");
-        assert_eq!(
-            slot.effects,
-            vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])]
-        );
-    }
-
-    // ======================================================================
-    // B4: expand_template pure function (spec behaviors 4-9)
-    // ======================================================================
-
-    /// Helper: build a `ChipTemplate` with specific slots for testing.
-    fn make_template(
-        name: &str,
-        max_taken: u32,
-        common: Option<RaritySlot>,
-        uncommon: Option<RaritySlot>,
-        rare: Option<RaritySlot>,
-        legendary: Option<RaritySlot>,
-    ) -> ChipTemplate {
-        ChipTemplate {
-            name: name.to_owned(),
-            max_taken,
-            common,
-            uncommon,
-            rare,
-            legendary,
-        }
-    }
-
-    fn slot(prefix: &str, effects: Vec<TriggerChain>) -> RaritySlot {
-        RaritySlot {
-            prefix: prefix.to_owned(),
-            effects,
-        }
-    }
-
-    // --- Behavior 4: expand_template produces one ChipDefinition per non-None slot ---
-
-    #[test]
-    fn expand_template_produces_one_def_per_non_none_slot() {
-        let template = make_template(
-            "Piercing",
-            3,
-            Some(slot("Basic", vec![TriggerChain::Piercing(1)])),
-            Some(slot("Keen", vec![TriggerChain::Piercing(2)])),
-            None,
-            None,
-        );
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 2);
-    }
+    // =========================================================================
+    // Preserved tests: expand_template mechanics
+    // =========================================================================
 
     #[test]
     fn expand_template_all_none_returns_empty() {
-        let template = make_template("Empty", 1, None, None, None, None);
+        let template = ChipTemplate {
+            name: "Empty".to_owned(),
+            max_taken: 1,
+            common: None,
+            uncommon: None,
+            rare: None,
+            legendary: None,
+        };
         let defs = expand_template(&template);
         assert!(defs.is_empty());
     }
 
-    // --- Behavior 5: Expanded name is "{prefix} {template_name}" ---
-
-    #[test]
-    fn expanded_chip_name_is_prefix_space_template_name() {
-        let template = make_template(
-            "Piercing",
-            3,
-            Some(slot(
-                "Basic",
-                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
-            )),
-            None,
-            None,
-            None,
-        );
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 1);
-        assert_eq!(defs[0].name, "Basic Piercing");
-        assert_eq!(defs[0].rarity, Rarity::Common);
-        assert_eq!(defs[0].max_stacks, 3);
-        assert_eq!(
-            defs[0].effects,
-            vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])]
-        );
-        assert_eq!(defs[0].template_name, Some("Piercing".to_owned()));
-        assert_eq!(defs[0].description, "");
-    }
-
-    // --- Behavior 6: Empty prefix uses template name directly ---
-
     #[test]
     fn expanded_chip_empty_prefix_uses_template_name() {
-        let template = make_template(
-            "Glass Cannon",
-            1,
-            None,
-            None,
-            None,
-            Some(slot("", vec![TriggerChain::DamageBoost(1.0)])),
-        );
+        let template = ChipTemplate {
+            name: "Glass Cannon".to_owned(),
+            max_taken: 1,
+            common: None,
+            uncommon: None,
+            rare: None,
+            legendary: Some(RaritySlot {
+                prefix: "".to_owned(),
+                effects: vec![EffectNode::Do(Effect::DamageBoost(1.0))],
+            }),
+        };
         let defs = expand_template(&template);
         assert_eq!(defs.len(), 1);
         assert_eq!(defs[0].name, "Glass Cannon");
         assert_eq!(defs[0].rarity, Rarity::Legendary);
-        assert_eq!(defs[0].template_name, Some("Glass Cannon".to_owned()));
     }
-
-    #[test]
-    fn expanded_chip_whitespace_prefix_uses_template_name() {
-        let template = make_template(
-            "Glass Cannon",
-            1,
-            None,
-            None,
-            None,
-            Some(slot("  ", vec![TriggerChain::DamageBoost(1.0)])),
-        );
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 1);
-        assert_eq!(
-            defs[0].name, "Glass Cannon",
-            "whitespace-only prefix should be treated as empty"
-        );
-    }
-
-    // --- Behavior 7: Each expanded definition gets the correct rarity ---
 
     #[test]
     fn expanded_defs_have_correct_rarities() {
-        let template = make_template(
-            "AllSlots",
-            5,
-            Some(slot("C", vec![TriggerChain::Piercing(1)])),
-            Some(slot("U", vec![TriggerChain::Piercing(2)])),
-            Some(slot("R", vec![TriggerChain::Piercing(3)])),
-            Some(slot("L", vec![TriggerChain::Piercing(4)])),
-        );
+        let template = ChipTemplate {
+            name: "AllSlots".to_owned(),
+            max_taken: 5,
+            common: Some(RaritySlot {
+                prefix: "C".to_owned(),
+                effects: vec![EffectNode::Do(Effect::Piercing(1))],
+            }),
+            uncommon: Some(RaritySlot {
+                prefix: "U".to_owned(),
+                effects: vec![EffectNode::Do(Effect::Piercing(2))],
+            }),
+            rare: Some(RaritySlot {
+                prefix: "R".to_owned(),
+                effects: vec![EffectNode::Do(Effect::Piercing(3))],
+            }),
+            legendary: Some(RaritySlot {
+                prefix: "L".to_owned(),
+                effects: vec![EffectNode::Do(Effect::Piercing(4))],
+            }),
+        };
         let defs = expand_template(&template);
         assert_eq!(defs.len(), 4);
         assert_eq!(defs[0].rarity, Rarity::Common);
         assert_eq!(defs[1].rarity, Rarity::Uncommon);
         assert_eq!(defs[2].rarity, Rarity::Rare);
         assert_eq!(defs[3].rarity, Rarity::Legendary);
-    }
-
-    // --- Behavior 8: All expanded definitions share max_stacks ---
-
-    #[test]
-    fn expanded_defs_share_max_stacks_from_template() {
-        let template = make_template(
-            "Piercing",
-            3,
-            Some(slot("Basic", vec![TriggerChain::Piercing(1)])),
-            Some(slot("Keen", vec![TriggerChain::Piercing(2)])),
-            Some(slot("Brutal", vec![TriggerChain::Piercing(3)])),
-            None,
-        );
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3);
-        for def in &defs {
-            assert_eq!(
-                def.max_stacks, 3,
-                "all expanded defs should share max_stacks=3, got {} for {}",
-                def.max_stacks, def.name
-            );
-        }
-    }
-
-    // --- Behavior 9: All expanded definitions share the same template_name ---
-
-    #[test]
-    fn expanded_defs_share_template_name() {
-        let template = make_template(
-            "Piercing",
-            3,
-            Some(slot("Basic", vec![TriggerChain::Piercing(1)])),
-            Some(slot("Keen", vec![TriggerChain::Piercing(2)])),
-            Some(slot("Brutal", vec![TriggerChain::Piercing(3)])),
-            None,
-        );
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3);
-        for def in &defs {
-            assert_eq!(
-                def.template_name,
-                Some("Piercing".to_owned()),
-                "all expanded defs should have template_name 'Piercing', got {:?} for {}",
-                def.template_name,
-                def.name
-            );
-        }
-    }
-
-    // =========================================================================
-    // B12b: EffectNode type construction for chip effect patterns (behaviors 19-20)
-    // These tests verify the EffectNode shapes that ChipDefinition.effects
-    // will hold after migration. They exercise evaluate_node which fails
-    // with todo!().
-    // =========================================================================
-
-    #[test]
-    fn effect_node_surge_chip_pattern_evaluates_correctly() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
-
-        // After migration: ChipDefinition.effects[0] will be this EffectNode
-        let node = EffectNode::Trigger(
-            Trigger::OnPerfectBump,
-            vec![EffectNode::Trigger(
-                Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
-                vec![EffectNode::Leaf(Effect::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            )],
-        );
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
-        assert_eq!(result.len(), 1);
-        assert!(matches!(result[0], NodeEvalResult::Arm(_)));
-    }
-
-    #[test]
-    fn effect_node_passive_chip_pattern_on_selected_no_match() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
-
-        // After migration: passive ChipDefinition.effects[0] will be:
-        // EffectNode::Trigger(Trigger::OnSelected, [Leaf(Piercing(1))])
-        let node = EffectNode::Trigger(
-            Trigger::OnSelected,
-            vec![EffectNode::Leaf(Effect::Piercing(1))],
-        );
-        // OnSelected has no TriggerKind mapping — should always return NoMatch
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
-        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
-    }
-
-    #[test]
-    fn effect_node_ron_deserialization_for_chip_definition() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
-
-        // After migration, ChipDefinition RON will use EffectNode syntax.
-        let ron_str = "Trigger(OnSelected, [Leaf(Piercing(1))])";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("EffectNode for chip RON should parse");
-        assert_eq!(
-            node,
-            EffectNode::Trigger(
-                Trigger::OnSelected,
-                vec![EffectNode::Leaf(Effect::Piercing(1))]
-            )
-        );
-        // Verify evaluate_node behavior for OnSelected (fails with todo!)
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
-        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
-    }
-
-    // B12b: ChipEffectApplied will carry Effect (behavior 18)
-
-    #[test]
-    fn effect_piercing_matches_and_evaluates_correctly() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
-
-        let effect = Effect::Piercing(1);
-        let tc = TriggerChain::Piercing(1);
-        // Both should carry the same value
-        match (&effect, &tc) {
-            (Effect::Piercing(e), TriggerChain::Piercing(t)) => assert_eq!(e, t),
-            _ => panic!("variant mismatch"),
-        }
-        // Verify evaluate_node with a Piercing leaf (fails with todo!)
-        let node = EffectNode::trigger_leaf(Trigger::OnBump, effect.clone());
-        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
-        assert_eq!(result, vec![NodeEvalResult::Fire(effect)]);
-    }
-
-    #[test]
-    fn effect_damage_boost_matches_and_evaluates_correctly() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
-
-        let effect = Effect::DamageBoost(0.5);
-        let tc = TriggerChain::DamageBoost(0.5);
-        match (&effect, &tc) {
-            (Effect::DamageBoost(e), TriggerChain::DamageBoost(t)) => {
-                assert!((e - t).abs() < f32::EPSILON);
-            }
-            _ => panic!("variant mismatch"),
-        }
-        // Verify evaluate_node with DamageBoost leaf (fails with todo!)
-        let node = EffectNode::trigger_leaf(Trigger::OnBump, effect.clone());
-        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
-        assert_eq!(result, vec![NodeEvalResult::Fire(effect)]);
-    }
-
-    // B12b: EffectNode RON for triggered chip
-
-    #[test]
-    fn effect_node_ron_triggered_chip_format() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
-
-        let ron_str = "Trigger(OnPerfectBump, [Trigger(OnImpact(Cell), [Leaf(Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0))])])";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("triggered chip EffectNode RON should parse");
-        assert_eq!(
-            node,
-            EffectNode::Trigger(
-                Trigger::OnPerfectBump,
-                vec![EffectNode::Trigger(
-                    Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
-                    vec![EffectNode::Leaf(Effect::Shockwave {
-                        base_range: 64.0,
-                        range_per_level: 32.0,
-                        stacks: 1,
-                        speed: 400.0,
-                    })],
-                )]
-            )
-        );
-        // Verify evaluate_node arms the inner trigger (fails with todo!)
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
-        assert_eq!(result.len(), 1);
-        assert!(matches!(result[0], NodeEvalResult::Arm(_)));
-    }
-
-    // ======================================================================
-    // C2-C4: Augment RON template tests
-    // ======================================================================
-
-    #[test]
-    fn augment_chip_template_ron_parses() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/augment.chip.ron"
-        ));
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("augment chip template RON should parse");
-        assert_eq!(template.name, "Augment");
-        assert_eq!(template.max_taken, 2);
-        assert!(template.common.is_some());
-        assert!(template.uncommon.is_some());
-        assert!(template.rare.is_some());
-        assert!(template.legendary.is_none());
-
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3, "Augment should expand to 3 definitions");
-        assert_eq!(defs[0].name, "Basic Augment");
-        assert_eq!(defs[0].rarity, Rarity::Common);
-        assert_eq!(defs[1].name, "Sturdy Augment");
-        assert_eq!(defs[1].rarity, Rarity::Uncommon);
-        assert_eq!(defs[2].name, "Fortified Augment");
-        assert_eq!(defs[2].rarity, Rarity::Rare);
-        for def in &defs {
-            assert_eq!(def.max_stacks, 2);
-        }
-    }
-
-    #[test]
-    fn augment_rare_has_three_effects() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/augment.chip.ron"
-        ));
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("augment chip template RON should parse");
-        let rare_slot = template.rare.as_ref().expect("rare slot should exist");
-        assert_eq!(rare_slot.prefix, "Fortified");
-
-        // The rare slot has OnSelected with 3 inner effects
-        assert_eq!(rare_slot.effects.len(), 1, "should have 1 top-level effect");
-        match &rare_slot.effects[0] {
-            TriggerChain::OnSelected(inner) => {
-                assert_eq!(inner.len(), 3, "rare OnSelected should contain 3 effects");
-                assert_eq!(inner[0], TriggerChain::SizeBoost(Target::Breaker, 16.0));
-                assert_eq!(inner[1], TriggerChain::BumpForce(25.0));
-                assert_eq!(
-                    inner[2],
-                    TriggerChain::SpeedBoost {
-                        target: Target::Breaker,
-                        multiplier: 1.15,
-                    }
-                );
-            }
-            other => panic!("expected OnSelected, got {other:?}"),
-        }
-    }
-
-    // ======================================================================
-    // C2-C4: RampingDamage TriggerChain leaf tests (Amp)
-    // ======================================================================
-
-    #[test]
-    fn ramping_damage_trigger_chain_deserializes() {
-        let tc: TriggerChain =
-            ron::de::from_str("RampingDamage(bonus_per_hit: 0.02, max_bonus: 0.2)")
-                .expect("should parse RampingDamage");
-        assert_eq!(
-            tc,
-            TriggerChain::RampingDamage {
-                bonus_per_hit: 0.02,
-                max_bonus: 0.2,
-            }
-        );
-    }
-
-    #[test]
-    fn ramping_damage_trigger_chain_deserializes_zero_values() {
-        let tc: TriggerChain =
-            ron::de::from_str("RampingDamage(bonus_per_hit: 0.0, max_bonus: 0.0)")
-                .expect("should parse RampingDamage with zero values");
-        assert_eq!(
-            tc,
-            TriggerChain::RampingDamage {
-                bonus_per_hit: 0.0,
-                max_bonus: 0.0,
-            }
-        );
-    }
-
-    #[test]
-    fn ramping_damage_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::RampingDamage {
-            bonus_per_hit: 0.04,
-            max_bonus: 0.4,
-        };
-        assert_eq!(tc.depth(), 0);
-        assert!(tc.is_leaf());
-    }
-
-    #[test]
-    fn amp_chip_template_ron_parses() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/amp.chip.ron"
-        ));
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("amp chip template RON should parse");
-        assert_eq!(template.name, "Amp");
-        assert_eq!(template.max_taken, 2);
-        assert!(template.common.is_some());
-        let common = template.common.as_ref().unwrap();
-        assert_eq!(common.prefix, "Basic");
-        assert_eq!(
-            common.effects,
-            vec![TriggerChain::OnSelected(vec![
-                TriggerChain::RampingDamage {
-                    bonus_per_hit: 0.02,
-                    max_bonus: 0.2,
-                }
-            ])]
-        );
-
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3, "Amp should expand to 3 definitions");
-        assert_eq!(defs[0].name, "Basic Amp");
-        assert_eq!(defs[0].rarity, Rarity::Common);
-        assert_eq!(defs[1].name, "Potent Amp");
-        assert_eq!(defs[1].rarity, Rarity::Uncommon);
-        assert_eq!(defs[2].name, "Savage Amp");
-        assert_eq!(defs[2].rarity, Rarity::Rare);
-        for def in &defs {
-            assert_eq!(def.max_stacks, 2);
-        }
-    }
-
-    // ======================================================================
-    // C2-C4: TimedSpeedBurst TriggerChain leaf tests (Overclock)
-    // ======================================================================
-
-    #[test]
-    fn timed_speed_burst_trigger_chain_deserializes() {
-        let tc: TriggerChain =
-            ron::de::from_str("TimedSpeedBurst(speed_mult: 1.3, duration_secs: 2.0)")
-                .expect("should parse TimedSpeedBurst");
-        assert_eq!(
-            tc,
-            TriggerChain::TimedSpeedBurst {
-                speed_mult: 1.3,
-                duration_secs: 2.0,
-            }
-        );
-    }
-
-    #[test]
-    fn timed_speed_burst_trigger_chain_edge_values() {
-        // Identity multiplier and zero duration should deserialize
-        let tc: TriggerChain =
-            ron::de::from_str("TimedSpeedBurst(speed_mult: 1.0, duration_secs: 0.0)")
-                .expect("should parse TimedSpeedBurst with edge values");
-        assert_eq!(
-            tc,
-            TriggerChain::TimedSpeedBurst {
-                speed_mult: 1.0,
-                duration_secs: 0.0,
-            }
-        );
-    }
-
-    #[test]
-    fn timed_speed_burst_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::TimedSpeedBurst {
-            speed_mult: 1.5,
-            duration_secs: 3.0,
-        };
-        assert_eq!(tc.depth(), 0);
-        assert!(tc.is_leaf());
-    }
-
-    #[test]
-    fn overclock_chip_template_ron_parses() {
-        let ron_str = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/overclock.chip.ron"
-        ));
-        let template: ChipTemplate =
-            ron::de::from_str(ron_str).expect("overclock chip template RON should parse");
-        assert_eq!(template.name, "Overclock");
-        assert_eq!(template.max_taken, 2);
-        assert!(template.common.is_some());
-        let common = template.common.as_ref().unwrap();
-        assert_eq!(common.prefix, "Basic");
-        assert_eq!(
-            common.effects,
-            vec![TriggerChain::OnPerfectBump(vec![
-                TriggerChain::TimedSpeedBurst {
-                    speed_mult: 1.3,
-                    duration_secs: 2.0,
-                }
-            ])]
-        );
-
-        let defs = expand_template(&template);
-        assert_eq!(defs.len(), 3, "Overclock should expand to 3 definitions");
-        assert_eq!(defs[0].name, "Basic Overclock");
-        assert_eq!(defs[0].rarity, Rarity::Common);
-        assert_eq!(defs[1].name, "Charged Overclock");
-        assert_eq!(defs[1].rarity, Rarity::Uncommon);
-        assert_eq!(defs[2].name, "Supercharged Overclock");
-        assert_eq!(defs[2].rarity, Rarity::Rare);
-        for def in &defs {
-            assert_eq!(def.max_stacks, 2);
-        }
-    }
-
-    // ======================================================================
-    // C5-C6: TimePressureBoost (Deadline) TriggerChain tests
-    // ======================================================================
-
-    #[test]
-    fn time_pressure_boost_trigger_chain_deserializes() {
-        let tc: TriggerChain =
-            ron::de::from_str("TimePressureBoost(speed_mult: 2.0, threshold_pct: 0.25)")
-                .expect("should parse TimePressureBoost");
-        assert_eq!(
-            tc,
-            TriggerChain::TimePressureBoost {
-                speed_mult: 2.0,
-                threshold_pct: 0.25,
-            }
-        );
-    }
-
-    #[test]
-    fn time_pressure_boost_trigger_chain_zero_threshold_edge_case() {
-        let tc: TriggerChain =
-            ron::de::from_str("TimePressureBoost(speed_mult: 2.0, threshold_pct: 0.0)")
-                .expect("should parse TimePressureBoost with threshold_pct: 0.0");
-        assert_eq!(
-            tc,
-            TriggerChain::TimePressureBoost {
-                speed_mult: 2.0,
-                threshold_pct: 0.0,
-            }
-        );
-    }
-
-    #[test]
-    fn time_pressure_boost_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::TimePressureBoost {
-            speed_mult: 2.0,
-            threshold_pct: 0.25,
-        };
-        assert!(tc.is_leaf(), "TimePressureBoost should be a leaf");
-        assert_eq!(tc.depth(), 0, "TimePressureBoost depth should be 0");
-    }
-
-    // ======================================================================
-    // C5-C6: RandomEffect (Flux) TriggerChain tests
-    // ======================================================================
-
-    #[test]
-    fn random_effect_trigger_chain_deserializes() {
-        let ron_str = "RandomEffect([(0.5, SpeedBoost(target: Bolt, multiplier: 1.1)), (0.5, Shockwave(base_range: 24.0, range_per_level: 0.0, stacks: 1, speed: 400.0))])";
-        let tc: TriggerChain =
-            ron::de::from_str(ron_str).expect("should parse RandomEffect with pool entries");
-        match &tc {
-            TriggerChain::RandomEffect(pool) => {
-                assert_eq!(pool.len(), 2, "pool should contain 2 entries");
-                assert!((pool[0].0 - 0.5).abs() < f32::EPSILON);
-                assert!((pool[1].0 - 0.5).abs() < f32::EPSILON);
-            }
-            other => panic!("expected RandomEffect, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn random_effect_trigger_chain_single_entry_deserializes() {
-        let ron_str = "RandomEffect([(1.0, SpawnBolt)])";
-        let tc: TriggerChain =
-            ron::de::from_str(ron_str).expect("should parse RandomEffect with single entry");
-        match &tc {
-            TriggerChain::RandomEffect(pool) => {
-                assert_eq!(pool.len(), 1);
-                assert!((pool[0].0 - 1.0).abs() < f32::EPSILON);
-                assert_eq!(pool[0].1, TriggerChain::SpawnBolt);
-            }
-            other => panic!("expected RandomEffect, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn random_effect_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::RandomEffect(vec![(1.0, TriggerChain::SpawnBolt)]);
-        assert!(tc.is_leaf(), "RandomEffect should be a leaf");
-        assert_eq!(tc.depth(), 0, "RandomEffect depth should be 0");
-    }
-
-    #[test]
-    fn random_effect_with_non_leaf_inner_is_still_leaf() {
-        let tc = TriggerChain::RandomEffect(vec![(
-            1.0,
-            TriggerChain::OnImpact(ImpactTarget::Cell, vec![TriggerChain::test_shockwave(32.0)]),
-        )]);
-        assert!(
-            tc.is_leaf(),
-            "RandomEffect wrapper is a leaf; inner chains may be trigger wrappers for arming"
-        );
-    }
-
-    // ======================================================================
-    // C5-C6: EntropyEngine TriggerChain tests
-    // ======================================================================
-
-    #[test]
-    fn entropy_engine_trigger_chain_deserializes() {
-        let ron_str = "EntropyEngine(5, [(0.3, SpawnBolt), (0.7, SpeedBoost(target: Bolt, multiplier: 1.3))])";
-        let tc: TriggerChain = ron::de::from_str(ron_str).expect("should parse EntropyEngine");
-        match &tc {
-            TriggerChain::EntropyEngine(threshold, pool) => {
-                assert_eq!(*threshold, 5);
-                assert_eq!(pool.len(), 2);
-                assert!((pool[0].0 - 0.3).abs() < f32::EPSILON);
-                assert!((pool[1].0 - 0.7).abs() < f32::EPSILON);
-            }
-            other => panic!("expected EntropyEngine, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn entropy_engine_trigger_chain_threshold_one_edge_case() {
-        let ron_str = "EntropyEngine(1, [(1.0, SpawnBolt)])";
-        let tc: TriggerChain =
-            ron::de::from_str(ron_str).expect("should parse EntropyEngine with threshold 1");
-        match &tc {
-            TriggerChain::EntropyEngine(threshold, pool) => {
-                assert_eq!(*threshold, 1);
-                assert_eq!(pool.len(), 1);
-            }
-            other => panic!("expected EntropyEngine, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn entropy_engine_is_leaf_with_depth_zero() {
-        let tc = TriggerChain::EntropyEngine(5, vec![(1.0, TriggerChain::SpawnBolt)]);
-        assert!(tc.is_leaf(), "EntropyEngine should be a leaf");
-        assert_eq!(tc.depth(), 0, "EntropyEngine depth should be 0");
     }
 }

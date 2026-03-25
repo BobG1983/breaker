@@ -55,7 +55,10 @@ mod tests {
         let mut app = test_app();
 
         app.world_mut().commands().trigger(SpawnBoltFired {
-            bolt: None,
+            count: 1,
+            lifespan: None,
+            inherit: false,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -84,7 +87,10 @@ mod tests {
             .add_systems(FixedUpdate, capture_spawn);
 
         app.world_mut().commands().trigger(SpawnBoltFired {
-            bolt: None,
+            count: 1,
+            lifespan: None,
+            inherit: false,
+            targets: vec![],
             source_chip: Some("Reflex".to_owned()),
         });
         app.world_mut().flush();

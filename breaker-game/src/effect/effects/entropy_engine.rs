@@ -9,7 +9,10 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    effect::typed_events::{EntropyEngineFired, fire_typed_event, trigger_chain_to_effect},
+    effect::{
+        definition::EffectNode,
+        typed_events::{EntropyEngineFired, fire_typed_event},
+    },
     shared::GameRng,
 };
 
@@ -73,15 +76,23 @@ pub(crate) fn handle_entropy_engine(
             }
         }
 
-        let (_, chain) = &pool[selected_idx];
+        let (_, node) = &pool[selected_idx];
 
-        if chain.is_leaf() {
-            let effect = trigger_chain_to_effect(chain);
-            fire_typed_event(effect, event.bolt, event.source_chip.clone(), &mut commands);
-        } else {
-            warn!(
-                "EntropyEngine selected non-leaf chain — arming not yet supported in this handler"
-            );
+        match node {
+            EffectNode::Do(effect) => {
+                fire_typed_event(
+                    effect.clone(),
+                    event.targets.clone(),
+                    event.source_chip.clone(),
+                    &mut commands,
+                );
+            }
+            _ => {
+                // TODO(C7W2): arm non-leaf chains on bolt entity
+                warn!(
+                    "EntropyEngine selected non-leaf chain — arming not yet supported in this handler"
+                );
+            }
         }
     } else if counter.is_none() {
         // Counter didn't exist, insert with new count
@@ -93,8 +104,10 @@ pub(crate) fn handle_entropy_engine(
 mod tests {
     use super::*;
     use crate::{
-        chips::definition::TriggerChain,
-        effect::typed_events::{EntropyEngineFired, SpawnBoltFired},
+        effect::{
+            definition::{Effect, EffectNode, EffectTarget},
+            typed_events::{EntropyEngineFired, SpawnBoltFired},
+        },
         shared::GameRng,
     };
 
@@ -116,6 +129,14 @@ mod tests {
         captured.0.push(trigger.event().clone());
     }
 
+    fn spawn_bolts_node() -> EffectNode {
+        EffectNode::Do(Effect::SpawnBolts {
+            count: 1,
+            lifespan: None,
+            inherit: false,
+        })
+    }
+
     // =========================================================================
     // Behavior 6: below threshold does not fire
     // =========================================================================
@@ -130,8 +151,8 @@ mod tests {
 
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 5,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -161,8 +182,8 @@ mod tests {
 
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 5,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -171,7 +192,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             1,
-            "counter at 4 + 1 = 5, equals threshold — should fire SpawnBoltFired"
+            "counter at 4 + 1 = 5, equals threshold — should fire SpawnBoltsFired"
         );
     }
 
@@ -189,8 +210,8 @@ mod tests {
 
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 5,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -213,8 +234,8 @@ mod tests {
         // First trigger — reaches threshold, fires, resets
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 5,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -222,8 +243,8 @@ mod tests {
         // Second trigger — counter is at 0, increments to 1, does not fire
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 5,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -256,8 +277,8 @@ mod tests {
 
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 1,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -290,8 +311,8 @@ mod tests {
 
         app.world_mut().commands().trigger(EntropyEngineFired {
             threshold: 5,
-            pool: vec![(1.0, TriggerChain::SpawnBolt)],
-            bolt: None,
+            pool: vec![(1.0, spawn_bolts_node())],
+            targets: vec![],
             source_chip: Some("Entropy Engine".to_owned()),
         });
         app.world_mut().flush();
@@ -322,8 +343,8 @@ mod tests {
         for _ in 0..3 {
             app.world_mut().commands().trigger(EntropyEngineFired {
                 threshold: 5,
-                pool: vec![(1.0, TriggerChain::SpawnBolt)],
-                bolt: None,
+                pool: vec![(1.0, spawn_bolts_node())],
+                targets: vec![],
                 source_chip: Some("Entropy Engine".to_owned()),
             });
             app.world_mut().flush();

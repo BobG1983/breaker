@@ -73,7 +73,7 @@ mod tests {
             base_count,
             count_per_level,
             stacks,
-            bolt: None,
+            targets: vec![],
             source_chip,
         });
         app.world_mut().flush();

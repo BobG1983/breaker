@@ -669,13 +669,14 @@ fn apply_inject_duplicate_offers(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{ChipDefinition, Rarity, TriggerChain};
+    use breaker::chips::definition::{ChipDefinition, Rarity};
+    use breaker::effect::{Effect, EffectNode};
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![TriggerChain::Piercing(1)],
+        effects: vec![EffectNode::Do(Effect::Piercing(1))],
         ingredients: None,
         template_name: None,
     };
@@ -698,13 +699,14 @@ fn apply_inject_maxed_chip_offer(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{ChipDefinition, Rarity, TriggerChain};
+    use breaker::chips::definition::{ChipDefinition, Rarity};
+    use breaker::effect::{Effect, EffectNode};
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 1,
-        effects: vec![TriggerChain::Piercing(1)],
+        effects: vec![EffectNode::Do(Effect::Piercing(1))],
         ingredients: None,
         template_name: None,
     };

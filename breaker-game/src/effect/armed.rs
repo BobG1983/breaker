@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::chips::definition::TriggerChain;
+use crate::effect::definition::EffectNode;
 
 /// Partially-resolved trigger chains attached to a specific bolt entity.
 ///
@@ -12,7 +12,7 @@ use crate::chips::definition::TriggerChain;
 /// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
 /// breaker-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Component, Debug, Default)]
-pub(crate) struct ArmedEffects(pub Vec<(Option<String>, TriggerChain)>);
+pub(crate) struct ArmedEffects(pub Vec<(Option<String>, EffectNode)>);
 
 #[cfg(test)]
 mod tests {
@@ -31,29 +31,32 @@ mod tests {
     // =========================================================================
     // B12b: ArmedEffects should store (Option<String>, EffectNode) (behavior 16)
     // These tests verify the EffectNode types that ArmedEffects will hold
-    // after migration. They exercise evaluate_node which fails with todo!().
+    // after migration. They exercise evaluate_node.
     // =========================================================================
 
     #[test]
     fn effect_node_for_armed_effects_impact_trigger() {
         use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
-        // Verify the shape of what ArmedEffects will store after migration:
-        // (None, EffectNode::Trigger(OnImpact(Cell), [Leaf(Shockwave {...})]))
-        let node = EffectNode::Trigger(
-            Trigger::OnImpact(ImpactTarget::Cell),
-            vec![EffectNode::Leaf(Effect::Shockwave {
+        // Verify the shape of what ArmedEffects stores:
+        // (None, EffectNode::When { trigger: OnImpact(Cell), then: [Do(Shockwave)] })
+        let node = EffectNode::When {
+            trigger: Trigger::OnImpact(ImpactTarget::Cell),
+            then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
                 stacks: 1,
                 speed: 400.0,
             })],
-        );
+        };
         assert!(matches!(
             &node,
-            EffectNode::Trigger(Trigger::OnImpact(ImpactTarget::Cell), _)
+            EffectNode::When {
+                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                ..
+            }
         ));
-        // Verify evaluate_node resolves this armed trigger (fails with todo!)
+        // Verify evaluate_node resolves this armed trigger
         let result = evaluate_node(TriggerKind::CellImpact, &node);
         assert_eq!(
             result,

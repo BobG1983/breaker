@@ -33,7 +33,10 @@ pub(crate) fn handle_speed_boost(
 
     match event.target {
         Target::Bolt => {
-            let Some(bolt_entity) = event.bolt else {
+            let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
+                crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
+                _ => None,
+            }) else {
                 return;
             };
 
@@ -129,12 +132,15 @@ mod tests {
     }
 
     fn trigger_speed_boost(app: &mut App, bolt: Option<Entity>, multiplier: f32) {
-        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
 
+        let targets = bolt
+            .map(|e| vec![crate::effect::definition::EffectTarget::Entity(e)])
+            .unwrap_or_default();
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffectTarget::Bolt,
+            target: EffTarget::Bolt,
             multiplier,
-            bolt,
+            targets,
             source_chip: None,
         });
         app.world_mut().flush();
@@ -334,12 +340,12 @@ mod tests {
     // =========================================================================
 
     fn trigger_all_bolts_speed_boost(app: &mut App, multiplier: f32) {
-        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffectTarget::AllBolts,
+            target: EffTarget::AllBolts,
             multiplier,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -483,7 +489,7 @@ mod tests {
         app.world_mut().commands().trigger(SpeedBoostFired {
             target: EffectTarget::Bolt,
             multiplier: 1.5,
-            bolt: Some(bolt),
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -508,7 +514,7 @@ mod tests {
         app.world_mut().commands().trigger(SpeedBoostFired {
             target: EffectTarget::AllBolts,
             multiplier: 1.3,
-            bolt: None,
+            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -539,7 +545,7 @@ mod tests {
         app.world_mut().commands().trigger(SpeedBoostFired {
             target: EffectTarget::Bolt,
             multiplier: 1.5,
-            bolt: Some(bolt),
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
         });
         app.world_mut().flush();

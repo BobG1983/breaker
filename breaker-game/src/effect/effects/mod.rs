@@ -27,8 +27,6 @@ pub(crate) mod spawn_phantom;
 pub(crate) mod speed_boost;
 pub(crate) mod tilt_control_boost;
 pub(crate) mod time_penalty;
-pub(crate) mod time_pressure_boost;
-pub(crate) mod timed_speed_burst;
 pub(crate) mod width_boost;
 
 pub(crate) use attraction::handle_attraction;

@@ -172,8 +172,8 @@ mod tests {
     fn make_test_template(
         name: &str,
         max_taken: u32,
-        common: Option<(&str, Vec<crate::chips::definition::TriggerChain>)>,
-        uncommon: Option<(&str, Vec<crate::chips::definition::TriggerChain>)>,
+        common: Option<(&str, Vec<crate::effect::definition::EffectNode>)>,
+        uncommon: Option<(&str, Vec<crate::effect::definition::EffectNode>)>,
     ) -> ChipTemplate {
         use crate::chips::definition::RaritySlot;
         ChipTemplate {
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_expands_templates_into_registry() {
-        use crate::chips::definition::TriggerChain;
+        use crate::effect::definition::{Effect, EffectNode, Trigger};
 
         let mut app = test_app();
 
@@ -205,11 +205,11 @@ mod tests {
             3,
             Some((
                 "Basic",
-                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
             )),
             Some((
                 "Keen",
-                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(2)])],
+                vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(2))] }],
             )),
         );
         let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
@@ -268,7 +268,8 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_inserts_evolution_chips_into_registry() {
-        use crate::chips::definition::{EvolutionIngredient, TriggerChain};
+        use crate::chips::definition::EvolutionIngredient;
+        use crate::effect::definition::{Effect, EffectNode, Trigger};
 
         let mut app = test_app();
 
@@ -279,7 +280,7 @@ mod tests {
             description: "Common chip".to_owned(),
             rarity: Rarity::Common,
             max_stacks: 3,
-            effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
             ingredients: None,
             template_name: None,
         });
@@ -288,7 +289,7 @@ mod tests {
             description: "Evolution chip".to_owned(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![TriggerChain::Piercing(5)],
+            effects: vec![EffectNode::Do(Effect::Piercing(5))],
             ingredients: Some(vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".to_owned(),
                 stacks_required: 2,
@@ -314,7 +315,7 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_evolution_only_collection() {
-        use crate::chips::definition::TriggerChain;
+        use crate::effect::definition::{Effect, EffectNode};
 
         let mut app = test_app();
 
@@ -324,7 +325,7 @@ mod tests {
             description: "Evolution".to_owned(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![TriggerChain::Piercing(5)],
+            effects: vec![EffectNode::Do(Effect::Piercing(5))],
             ingredients: None,
             template_name: None,
         });
@@ -349,7 +350,8 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_extracts_recipes_from_evolution_chips() {
-        use crate::chips::definition::{EvolutionIngredient, TriggerChain};
+        use crate::chips::definition::EvolutionIngredient;
+        use crate::effect::definition::{Effect, EffectNode};
 
         let mut app = test_app();
 
@@ -359,7 +361,7 @@ mod tests {
             description: "Evolution chip".to_owned(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![TriggerChain::Piercing(5)],
+            effects: vec![EffectNode::Do(Effect::Piercing(5))],
             ingredients: Some(vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".to_owned(),
                 stacks_required: 2,
@@ -391,7 +393,8 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_non_evolution_chips_no_recipes() {
-        use crate::chips::definition::{EvolutionIngredient, TriggerChain};
+        use crate::chips::definition::EvolutionIngredient;
+        use crate::effect::definition::{Effect, EffectNode};
 
         let mut app = test_app();
 
@@ -401,7 +404,7 @@ mod tests {
             description: "Common".to_owned(),
             rarity: Rarity::Common,
             max_stacks: 3,
-            effects: vec![TriggerChain::Piercing(1)],
+            effects: vec![EffectNode::Do(Effect::Piercing(1))],
             ingredients: None,
             template_name: None,
         });
@@ -410,7 +413,7 @@ mod tests {
             description: "Common".to_owned(),
             rarity: Rarity::Common,
             max_stacks: 3,
-            effects: vec![TriggerChain::DamageBoost(0.5)],
+            effects: vec![EffectNode::Do(Effect::DamageBoost(0.5))],
             ingredients: None,
             template_name: None,
         });
@@ -419,7 +422,7 @@ mod tests {
             description: "Evolution".to_owned(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![TriggerChain::Piercing(5)],
+            effects: vec![EffectNode::Do(Effect::Piercing(5))],
             ingredients: Some(vec![EvolutionIngredient {
                 chip_name: "Common A".to_owned(),
                 stacks_required: 2,
@@ -447,7 +450,7 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_zero_evolution_chips_no_recipes() {
-        use crate::chips::definition::TriggerChain;
+        use crate::effect::definition::{Effect, EffectNode};
 
         let mut app = test_app();
 
@@ -457,7 +460,7 @@ mod tests {
             description: "Common".to_owned(),
             rarity: Rarity::Common,
             max_stacks: 3,
-            effects: vec![TriggerChain::Piercing(1)],
+            effects: vec![EffectNode::Do(Effect::Piercing(1))],
             ingredients: None,
             template_name: None,
         });
@@ -483,7 +486,7 @@ mod tests {
 
     #[test]
     fn seed_chip_registry_only_seeds_once_with_templates() {
-        use crate::chips::definition::TriggerChain;
+        use crate::effect::definition::{Effect, EffectNode, Trigger};
 
         let mut app = test_app();
 
@@ -493,7 +496,7 @@ mod tests {
             3,
             Some((
                 "Basic",
-                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
             )),
             None,
         );
@@ -508,7 +511,7 @@ mod tests {
         let template2 = make_test_template(
             "Damage",
             2,
-            Some(("Basic", vec![TriggerChain::DamageBoost(0.5)])),
+            Some(("Basic", vec![EffectNode::Do(Effect::DamageBoost(0.5))])),
             None,
         );
         let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
@@ -519,7 +522,7 @@ mod tests {
             3,
             Some((
                 "Basic",
-                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
             )),
             None,
         );

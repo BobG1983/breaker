@@ -12,7 +12,7 @@ use crate::{
         components::Breaker,
         resources::{BreakerConfig, BreakerDefaults},
     },
-    chips::definition::TriggerChain,
+    effect::definition::{EffectNode, Trigger},
     shared::SelectedBreaker,
 };
 
@@ -91,17 +91,41 @@ pub(crate) fn init_breaker(
 
     // Build ActiveEffects from root fields + chains
     let mut chains = Vec::new();
-    if let Some(chain) = &def.on_bolt_lost {
-        chains.push((None, TriggerChain::OnBoltLost(vec![chain.clone()])));
+    if let Some(node) = &def.on_bolt_lost {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::OnBoltLost,
+                then: vec![node.clone()],
+            },
+        ));
     }
-    if let Some(chain) = &def.on_perfect_bump {
-        chains.push((None, TriggerChain::OnPerfectBump(vec![chain.clone()])));
+    if let Some(node) = &def.on_perfect_bump {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                then: vec![node.clone()],
+            },
+        ));
     }
-    if let Some(chain) = &def.on_early_bump {
-        chains.push((None, TriggerChain::OnEarlyBump(vec![chain.clone()])));
+    if let Some(node) = &def.on_early_bump {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::OnEarlyBump,
+                then: vec![node.clone()],
+            },
+        ));
     }
-    if let Some(chain) = &def.on_late_bump {
-        chains.push((None, TriggerChain::OnLateBump(vec![chain.clone()])));
+    if let Some(node) = &def.on_late_bump {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::OnLateBump,
+                then: vec![node.clone()],
+            },
+        ));
     }
     chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
     *active = ActiveEffects(chains);
@@ -111,7 +135,7 @@ pub(crate) fn init_breaker(
 mod tests {
     use super::*;
     use crate::effect::definition::{
-        BreakerDefinition, BreakerStatOverrides, ImpactTarget, Target,
+        BreakerDefinition, BreakerStatOverrides, Effect, EffectNode, ImpactTarget, Target, Trigger,
     };
 
     const TEST_BREAKER_NAME: &str = "TestBreaker";
@@ -121,19 +145,19 @@ mod tests {
             name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            on_bolt_lost: Some(TriggerChain::LoseLife),
-            on_perfect_bump: Some(TriggerChain::SpeedBoost {
+            on_bolt_lost: Some(EffectNode::Do(Effect::LoseLife)),
+            on_perfect_bump: Some(EffectNode::Do(Effect::SpeedBoost {
                 target: Target::Bolt,
                 multiplier: 1.5,
-            }),
-            on_early_bump: Some(TriggerChain::SpeedBoost {
+            })),
+            on_early_bump: Some(EffectNode::Do(Effect::SpeedBoost {
                 target: Target::Bolt,
                 multiplier: 1.1,
-            }),
-            on_late_bump: Some(TriggerChain::SpeedBoost {
+            })),
+            on_late_bump: Some(EffectNode::Do(Effect::SpeedBoost {
                 target: Target::Bolt,
                 multiplier: 1.1,
-            }),
+            })),
             chains: vec![],
         }
     }
@@ -167,14 +191,14 @@ mod tests {
         app.update();
 
         let active = app.world().resource::<ActiveEffects>();
-        // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
-        // on_perfect_bump=SpeedBoost → OnPerfectBump(SpeedBoost{...})
-        // on_early_bump=SpeedBoost → OnEarlyBump(SpeedBoost{...})
-        // on_late_bump=SpeedBoost → OnLateBump(SpeedBoost{...})
+        // on_bolt_lost=Do(LoseLife) → When { OnBoltLost, [Do(LoseLife)] }
+        // on_perfect_bump=Do(SpeedBoost) → When { OnPerfectBump, [Do(SpeedBoost)] }
+        // on_early_bump=Do(SpeedBoost) → When { OnEarlyBump, [Do(SpeedBoost)] }
+        // on_late_bump=Do(SpeedBoost) → When { OnLateBump, [Do(SpeedBoost)] }
         assert_eq!(active.0.len(), 4);
         assert!(matches!(
             &active.0[0],
-            (None, TriggerChain::OnBoltLost(effects)) if effects.len() == 1 && matches!(effects[0], TriggerChain::LoseLife)
+            (None, EffectNode::When { trigger: Trigger::OnBoltLost, then }) if then.len() == 1 && matches!(then[0], EffectNode::Do(Effect::LoseLife))
         ));
     }
 
@@ -184,8 +208,12 @@ mod tests {
             name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: Some(TriggerChain::TimePenalty { seconds: 5.0 }),
-            on_perfect_bump: Some(TriggerChain::SpawnBolt),
+            on_bolt_lost: Some(EffectNode::Do(Effect::TimePenalty { seconds: 5.0 })),
+            on_perfect_bump: Some(EffectNode::Do(Effect::SpawnBolts {
+                count: 1,
+                lifespan: None,
+                inherit: false,
+            })),
             on_early_bump: None,
             on_late_bump: None,
             chains: vec![],
@@ -208,10 +236,13 @@ mod tests {
             on_perfect_bump: None,
             on_early_bump: None,
             on_late_bump: None,
-            chains: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-                ImpactTarget::Cell,
-                vec![TriggerChain::test_shockwave(64.0)],
-            )])],
+            chains: vec![EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                }],
+            }],
         };
         let mut app = test_app_with_breaker(def);
         app.world_mut().spawn(Breaker);
@@ -346,25 +377,17 @@ mod tests {
 
     // =========================================================================
     // B12b: init_breaker pass-through behavior with EffectNode (behavior 22)
-    // These tests verify the EffectNode shapes that init_breaker will push
-    // to ActiveEffects after migration. They exercise evaluate_node which
-    // fails with todo!().
     // =========================================================================
 
     #[test]
     fn effect_node_pass_through_bolt_lost_fires_correctly() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
+        use crate::effect::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
-        // After migration, init_breaker will push EffectNode directly
-        // (no re-wrapping). Verify the node shape evaluates correctly.
-        let node = EffectNode::Trigger(
-            Trigger::OnBoltLost,
-            vec![EffectNode::Leaf(Effect::LoseLife)],
-        );
-        // evaluate_node should return Fire(LoseLife) for BoltLost trigger
+        // After migration, init_breaker pushes EffectNode directly
+        let node = EffectNode::When {
+            trigger: Trigger::OnBoltLost,
+            then: vec![EffectNode::Do(Effect::LoseLife)],
+        };
         let result = evaluate_node(TriggerKind::BoltLost, &node);
         assert_eq!(
             result,
@@ -375,18 +398,15 @@ mod tests {
 
     #[test]
     fn effect_node_pass_through_perfect_bump_fires_correctly() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
+        use crate::effect::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
-        let node = EffectNode::Trigger(
-            Trigger::OnPerfectBump,
-            vec![EffectNode::Leaf(Effect::SpeedBoost {
+        let node = EffectNode::When {
+            trigger: Trigger::OnPerfectBump,
+            then: vec![EffectNode::Do(Effect::SpeedBoost {
                 target: crate::effect::definition::Target::Bolt,
                 multiplier: 1.5,
             })],
-        );
+        };
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(
             result,
@@ -400,25 +420,22 @@ mod tests {
 
     #[test]
     fn effect_node_pass_through_chains_field_evaluates_correctly() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
-        };
+        use crate::effect::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
         // chains field entries are already full EffectNode trees — verify evaluation
-        let node = EffectNode::Trigger(
-            Trigger::OnPerfectBump,
-            vec![EffectNode::Trigger(
-                Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
-                vec![EffectNode::Leaf(Effect::test_shockwave(64.0))],
-            )],
-        );
+        let node = EffectNode::When {
+            trigger: Trigger::OnPerfectBump,
+            then: vec![EffectNode::When {
+                trigger: Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
+                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+            }],
+        };
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(result.len(), 1);
         assert!(
             matches!(
                 &result[0],
-                NodeEvalResult::Arm(EffectNode::Trigger(Trigger::OnImpact(..), _))
+                NodeEvalResult::Arm(EffectNode::When { trigger: Trigger::OnImpact(..), .. })
             ),
             "nested EffectNode should arm on first trigger match"
         );
