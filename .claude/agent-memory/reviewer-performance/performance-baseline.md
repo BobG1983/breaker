@@ -250,6 +250,24 @@ PLUGIN SCHEDULING — both systems in FixedUpdate with named system sets (Mainta
 - `name.clone()` in spawn_chips_section: clones each chip name String for the Text component. At most 3–5 chips. One-time. Correct.
 - No hot-path allocation concerns. Clean.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-24, B12c typed events refactor)
+
+### effect/typed_events.rs + effect/bridges.rs — typed per-effect event dispatch
+
+FAN-OUT ELIMINATION — Correct and verified. Bevy 0.18 global observers are keyed by event type. `commands.trigger(ShockwaveFired {...})` invokes ONLY `handle_shockwave`; none of the other 12 effect handlers run. Fan-out is zero. This is the correct pattern.
+
+21 NEW EVENT TYPES — Events are NOT ECS components in Bevy 0.18. They live in event queues and the observer registry. Zero archetype fragmentation from adding 21 typed event structs.
+
+`fire_typed_event()` 20-ARM MATCH — Compile-time dispatch, not a runtime loop. O(1). Clean.
+
+`trigger_chain_to_effect()` INTERMEDIATE CONVERSION — Two matches on the same data per fire path (TriggerChain → Effect → typed event). At 1–5 fires per game event this is zero cost. Future simplification: eliminate the Effect intermediate and match TriggerChain directly in fire_typed_event. Not worth doing now.
+
+`evaluate()` VEC ALLOCATION — `Vec<EvalResult>` allocated per call in tight bridge loops. At 3–5 active chains with 1-effect each: 3–5 1-element Vecs per game event. Negligible at current chip cap. Watch only if chain counts grow to 20+.
+
+`chip_name.clone()` IN BRIDGE LOOPS — `Option<String>` cloned per EvalResult::Fire/Arm. 3 clones per impact hit at 3-chip run. Trivial at current scale.
+
+BRIDGE EARLY-EXIT GUARDS — `reader.read().count() == 0` pattern on global-trigger bridges: correct (drains reader, which is fine since count is the only needed info). Pattern confirmed clean in prior session; remains correct post-B12c.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 
 ### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors — NOW FULLY WIRED)

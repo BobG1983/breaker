@@ -4,23 +4,19 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    bolt::components::Bolt,
-    chips::{
-        components::DamageBoost,
-        definition::{ChipEffectApplied, TriggerChain},
-    },
+    bolt::components::Bolt, chips::components::DamageBoost,
+    effect::typed_events::DamageBoostApplied,
 };
 
 /// Observer: applies damage boost stacking to all bolt entities.
 pub(crate) fn handle_damage_boost(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<DamageBoostApplied>,
     mut query: Query<(Entity, Option<&mut DamageBoost>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::DamageBoost(per_stack) = &trigger.event().effect else {
-        return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    let event = trigger.event();
+    let per_stack = event.per_stack;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_f32(
             entity,
@@ -49,8 +45,8 @@ mod tests {
         let mut app = test_app();
         let bolt = app.world_mut().spawn(Bolt).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::DamageBoost(1.5),
+        app.world_mut().commands().trigger(DamageBoostApplied {
+            per_stack: 1.5,
             max_stacks: 2,
             chip_name: String::new(),
         });
@@ -65,8 +61,8 @@ mod tests {
         let mut app = test_app();
         let bolt = app.world_mut().spawn((Bolt, DamageBoost(1.5))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::DamageBoost(1.5),
+        app.world_mut().commands().trigger(DamageBoostApplied {
+            per_stack: 1.5,
             max_stacks: 2,
             chip_name: String::new(),
         });
@@ -74,5 +70,64 @@ mod tests {
 
         let d = app.world().entity(bolt).get::<DamageBoost>().unwrap();
         assert!((d.0 - 3.0).abs() < f32::EPSILON);
+    }
+
+    // =========================================================================
+    // B12c: handle_damage_boost observes DamageBoostApplied (not ChipEffectApplied)
+    // =========================================================================
+
+    fn typed_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_observer(handle_damage_boost);
+        app
+    }
+
+    #[test]
+    fn damage_boost_applied_inserts_on_bolt() {
+        use crate::effect::typed_events::DamageBoostApplied;
+
+        let mut app = typed_test_app();
+        let bolt = app.world_mut().spawn(Bolt).id();
+
+        app.world_mut().commands().trigger(DamageBoostApplied {
+            per_stack: 0.5,
+            max_stacks: 3,
+            chip_name: "Damage Up".to_owned(),
+        });
+        app.world_mut().flush();
+
+        let d = app
+            .world()
+            .entity(bolt)
+            .get::<DamageBoost>()
+            .expect("DamageBoostApplied should insert DamageBoost on bolt");
+        assert!(
+            (d.0 - 0.5).abs() < f32::EPSILON,
+            "DamageBoost should be 0.5, got {}",
+            d.0
+        );
+    }
+
+    #[test]
+    fn damage_boost_applied_stacks() {
+        use crate::effect::typed_events::DamageBoostApplied;
+
+        let mut app = typed_test_app();
+        let bolt = app.world_mut().spawn((Bolt, DamageBoost(0.5))).id();
+
+        app.world_mut().commands().trigger(DamageBoostApplied {
+            per_stack: 0.5,
+            max_stacks: 3,
+            chip_name: "Damage Up".to_owned(),
+        });
+        app.world_mut().flush();
+
+        let d = app.world().entity(bolt).get::<DamageBoost>().unwrap();
+        assert!(
+            (d.0 - 1.0).abs() < f32::EPSILON,
+            "DamageBoostApplied should stack from 0.5 to 1.0, got {}",
+            d.0
+        );
     }
 }

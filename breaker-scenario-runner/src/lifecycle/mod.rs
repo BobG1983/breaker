@@ -12,7 +12,6 @@ mod tests;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    effect::ActiveEffects,
     bolt::{BoltSystems, components::Bolt},
     breaker::{
         BreakerSystems,
@@ -20,6 +19,7 @@ use breaker::{
         systems::update_breaker_state,
     },
     chips::inventory::ChipInventory,
+    effect::ActiveEffects,
     input::resources::InputActions,
     run::{
         RunStats,

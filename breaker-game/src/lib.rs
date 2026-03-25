@@ -18,12 +18,12 @@ pub mod screen;
 pub mod shared;
 
 pub(crate) mod audio;
-pub mod effect;
 pub mod bolt;
 pub mod breaker;
 pub(crate) mod cells;
 pub mod chips;
 pub(crate) mod debug;
+pub mod effect;
 pub(crate) mod fx;
 pub mod input;
 pub mod run;

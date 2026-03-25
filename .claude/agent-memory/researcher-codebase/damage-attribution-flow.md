@@ -1,6 +1,6 @@
 ---
 name: damage-attribution-flow
-description: End-to-end source_chip threading from ActiveChains through EffectFired to DamageCell, bolt spawn messages, and the incomplete evolution_damage pipeline
+description: End-to-end damage attribution pipeline from ActiveChains through EffectFired to DamageCell to MostPowerfulEvolution highlight -- fully wired as of b9a5fb4
 type: reference
 ---
 
@@ -17,19 +17,28 @@ type: reference
 All bridge systems (bridge_bump, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_bolt_lost, bridge_bump_whiff, bridge_cell_destroyed) iterate `active.0` and pass `chip_name.clone()` as `source_chip` on every `EffectFired` they trigger.
 
 ## Effect handlers pass source_chip downstream
-- `handle_shockwave` -> stores `trigger.event().source_chip` into `ShockwaveDamage.source_chip`
-- `handle_spawn_bolt` -> writes `SpawnAdditionalBolt { source_chip: trigger.event().source_chip.clone() }`
-- `handle_chain_bolt` -> writes `SpawnChainBolt { source_chip: event.source_chip.clone() }`
+- `handle_shockwave` -> stores into `ShockwaveDamage.source_chip`
+- `handle_spawn_bolt` -> writes `SpawnAdditionalBolt { source_chip }`
+- `handle_multi_bolt` -> writes N x `SpawnAdditionalBolt { source_chip }`
+- `handle_chain_bolt` -> writes `SpawnChainBolt { source_chip }`
+
+## Bolt spawn systems insert SpawnedByEvolution
+- `spawn_additional_bolt`: if `msg.source_chip` is `Some`, inserts `SpawnedByEvolution(name)` on the new bolt entity
+- `spawn_chain_bolt`: if `msg.source_chip` is `Some`, inserts `SpawnedByEvolution(name)` on the new bolt entity
 
 ## Two DamageCell producers
-1. **bolt_cell_collision** -- always writes `source_chip: None` (direct bolt-cell CCD hits)
-2. **shockwave_collision** -- writes `source_chip: dmg.source_chip.clone()` (from ShockwaveDamage)
+1. **bolt_cell_collision** -- reads `Option<&SpawnedByEvolution>` from `CollisionQueryBolt`, writes `source_chip: spawned_by_evo.map(|s| s.0.clone())`
+2. **shockwave_collision** -- writes `source_chip: dmg.source_chip.clone()` (from `ShockwaveDamage`)
 
-## DamageCell.source_chip is NOT consumed
-`handle_cell_hit` reads DamageCell messages but ignores `source_chip`. It writes `CellDestroyed { was_required_to_clear }` with no chip attribution.
+## Two DamageCell consumers
+1. **handle_cell_hit** -- applies damage, may despawn cell + write `CellDestroyed`. Ignores `source_chip` (not needed here).
+2. **track_evolution_damage** -- accumulates `damage` into `HighlightTracker.evolution_damage[source_chip]` when `source_chip` is `Some`.
 
-## Incomplete pipeline pieces
-- `SpawnedByEvolution(String)` component: defined but never attached to any entity
-- `HighlightTracker.evolution_damage: HashMap<String, f32>`: defined, default-initialized, never written to
-- `MostPowerfulEvolution` highlight kind: exists as enum variant, has display text, scoring, and run-end text, but no detection system
-- `SpawnAdditionalBolt.source_chip` and `SpawnChainBolt.source_chip`: carried in messages but `spawn_additional_bolt` and `spawn_chain_bolt` systems do NOT insert `SpawnedByEvolution` on the spawned bolt entity
+## Run-end detection
+- `detect_most_powerful_evolution` runs on `OnEnter(GameState::RunEnd)`, finds max-damage chip in `evolution_damage`, pushes `RunHighlight { kind: MostPowerfulEvolution, value, detail: Some(name) }` to `RunStats.highlights`.
+
+## Cross-node persistence
+- `evolution_damage` is a cross-node field in `HighlightTracker` -- NOT cleared by `reset_highlight_tracker`.
+
+## Design note: CellDestroyed has no attribution
+`CellDestroyed { was_required_to_clear }` carries no chip info. This is fine because damage tracking reads `DamageCell` directly, not `CellDestroyed`. If future features need "which chip killed this cell", the field would need adding.

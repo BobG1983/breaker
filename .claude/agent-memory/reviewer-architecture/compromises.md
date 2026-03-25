@@ -28,7 +28,13 @@ type: reference
 
 - **run/reset_run_state mutates ChipInventory**: run domain clears chips/ domain's ChipInventory resource at run start. Same class as screen/loading seeding all domain configs — centralized boot/reset sequence. No alternative consumer-owns pattern makes sense for a cross-domain reset.
 
-- **chips/apply_chip_effect writes ResMut<ActiveChains>**: chips domain pushes triggered (non-OnSelected, non-leaf) chains to behaviors-domain's `ActiveChains` resource when a chip is selected. Same class as behaviors/init.rs writing ResMut<BreakerConfig> — tight authoring relationship where chips defines TriggerChain and behaviors evaluates it. Pre-existed the B1-B3 refactor (formerly handle_overclock observer did the same write). Message alternative (PushActiveChain) rejected — adds indirection with no decoupling benefit since both domains already share the TriggerChain type.
+- **chips/apply_chip_effect writes ResMut<ActiveEffects>**: chips domain pushes triggered chains to effect domain's `ActiveEffects` resource. Same class as effect/init.rs writing ResMut<BreakerConfig>. Pre-existed B1-B3 refactor.
+
+- **B12c dual type system**: effect/definition.rs defines Trigger/Effect/EffectNode parallel to chips/definition.rs TriggerChain. trigger_chain_to_effect() converts between them. Target and ImpactTarget duplicated in both domains. Transitional — resolves when TriggerChain is replaced by EffectNode as canonical runtime type. The conversion layer MUST NOT become permanent.
+
+- **B12c typed_events.rs non-canonical file**: Centralized typed event definitions violate per-effect co-location rule. Planned dissolution: move events to co-located handler files, move dispatch functions to bridges.rs.
+
+- **B12c passive events in wrong domain**: PiercingApplied, DamageBoostApplied, etc. defined in effect/typed_events.rs but conceptually belong to chips/ domain. Planned fix: move to chips/effects/<handler>.rs.
 
 ## Active Violations (pending resolution)
 (none)

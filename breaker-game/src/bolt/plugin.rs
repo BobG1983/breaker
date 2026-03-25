@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::EffectSystems,
     bolt::{
         BoltSystems,
         messages::{
@@ -18,6 +17,7 @@ use crate::{
         },
     },
     breaker::BreakerSystems,
+    effect::EffectSystems,
     run::node::sets::NodeSystems,
     shared::{GameRng, GameState, PlayingState},
 };

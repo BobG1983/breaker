@@ -8,12 +8,12 @@ use rantzsoft_spatial2d::plugin::RantzSpatial2dPlugin;
 
 use crate::{
     audio::AudioPlugin,
-    effect::EffectPlugin,
     bolt::BoltPlugin,
     breaker::BreakerPlugin,
     cells::CellsPlugin,
     chips::ChipsPlugin,
     debug::DebugPlugin,
+    effect::EffectPlugin,
     fx::FxPlugin,
     input::InputPlugin,
     run::RunPlugin,

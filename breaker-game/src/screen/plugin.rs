@@ -15,11 +15,11 @@ use super::{
     systems::cleanup_entities,
 };
 use crate::{
-    effect::ArchetypeDefinition,
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
     chips::{ChipDefinition, definition::ChipTemplate},
+    effect::ArchetypeDefinition,
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     shared::{

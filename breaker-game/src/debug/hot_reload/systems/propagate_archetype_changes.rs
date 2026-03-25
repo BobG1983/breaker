@@ -3,15 +3,15 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
-    effect::{
-        active::ActiveEffects, definition::ArchetypeDefinition, effects::life_lost::LivesCount,
-        init::apply_stat_overrides, registry::ArchetypeRegistry,
-    },
     breaker::{
         components::Breaker,
         resources::{BreakerConfig, BreakerDefaults},
     },
     chips::definition::TriggerChain,
+    effect::{
+        active::ActiveEffects, definition::ArchetypeDefinition, effects::life_lost::LivesCount,
+        init::apply_stat_overrides, registry::ArchetypeRegistry,
+    },
     screen::loading::resources::DefaultsCollection,
     shared::SelectedArchetype,
 };
@@ -107,7 +107,7 @@ pub(crate) fn propagate_archetype_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{effect::definition::BreakerStatOverrides, chips::definition::Target};
+    use crate::{chips::definition::Target, effect::definition::BreakerStatOverrides};
 
     fn test_app() -> App {
         let mut app = App::new();

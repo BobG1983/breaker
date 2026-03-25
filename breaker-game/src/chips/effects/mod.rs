@@ -1,7 +1,8 @@
 //! Per-effect observer handlers for chip effects.
 //!
-//! Each handler follows the observer pattern: triggered by [`ChipEffectApplied`],
-//! self-selects via pattern matching, and modifies entity components directly.
+//! Each handler follows the observer pattern: triggered by their respective typed
+//! event (e.g. `PiercingApplied`, `SpeedBoostApplied`), and modifies entity
+//! components directly.
 
 mod attraction;
 mod bolt_size_boost;

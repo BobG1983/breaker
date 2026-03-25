@@ -3,25 +3,23 @@
 use bevy::prelude::*;
 
 use crate::{
-    chips::definition::TriggerChain,
-    effect::{effects::shield::ShieldActive, events::EffectFired},
+    effect::{effects::shield::ShieldActive, typed_events::TimePenaltyFired},
     run::node::messages::ApplyTimePenalty,
 };
 
 /// Observer that handles time penalty — writes [`ApplyTimePenalty`] message.
 /// Skips when any entity has [`ShieldActive`].
 pub(crate) fn handle_time_penalty(
-    trigger: On<EffectFired>,
+    trigger: On<TimePenaltyFired>,
     mut writer: MessageWriter<ApplyTimePenalty>,
     shield_query: Query<(), With<ShieldActive>>,
 ) {
-    let TriggerChain::TimePenalty { seconds } = &trigger.event().effect else {
-        return;
-    };
     if !shield_query.is_empty() {
         return;
     }
-    writer.write(ApplyTimePenalty { seconds: *seconds });
+    writer.write(ApplyTimePenalty {
+        seconds: trigger.event().seconds,
+    });
 }
 
 #[cfg(test)]
@@ -60,10 +58,12 @@ mod tests {
 
     #[test]
     fn handle_time_penalty_sends_apply_message() {
+        use crate::effect::typed_events::TimePenaltyFired;
+
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::TimePenalty { seconds: 5.0 },
+        app.world_mut().commands().trigger(TimePenaltyFired {
+            seconds: 5.0,
             bolt: None,
             source_chip: None,
         });
@@ -79,40 +79,20 @@ mod tests {
         );
     }
 
-    #[test]
-    fn non_time_penalty_effect_does_not_send_message() {
-        let mut app = test_app();
-
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
-            bolt: None,
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedApplyTimePenalty>();
-        assert_eq!(
-            captured.0.len(),
-            0,
-            "LoseLife effect should not produce ApplyTimePenalty (self-selection)"
-        );
-    }
-
     // =========================================================================
     // Shield blocking tests
     // =========================================================================
 
     #[test]
     fn time_penalty_skips_when_shield_active_present() {
-        use crate::effect::effects::shield::ShieldActive;
+        use crate::effect::{effects::shield::ShieldActive, typed_events::TimePenaltyFired};
 
         let mut app = test_app();
         // Spawn an entity with ShieldActive so the handler can detect it
         app.world_mut().spawn(ShieldActive { remaining: 3.0 });
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::TimePenalty { seconds: 5.0 },
+        app.world_mut().commands().trigger(TimePenaltyFired {
+            seconds: 5.0,
             bolt: None,
             source_chip: None,
         });
@@ -130,11 +110,13 @@ mod tests {
 
     #[test]
     fn time_penalty_works_when_no_shield_active() {
+        use crate::effect::typed_events::TimePenaltyFired;
+
         let mut app = test_app();
         // No ShieldActive present
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::TimePenalty { seconds: 5.0 },
+        app.world_mut().commands().trigger(TimePenaltyFired {
+            seconds: 5.0,
             bolt: None,
             source_chip: None,
         });
@@ -151,6 +133,70 @@ mod tests {
             (captured.0[0] - 5.0).abs() < f32::EPSILON,
             "ApplyTimePenalty.seconds should be 5.0, got {}",
             captured.0[0]
+        );
+    }
+
+    // =========================================================================
+    // B12c: handle_time_penalty observes TimePenaltyFired (not EffectFired)
+    // =========================================================================
+
+    fn typed_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<ApplyTimePenalty>()
+            .init_resource::<CapturedApplyTimePenalty>()
+            .add_observer(handle_time_penalty)
+            .add_systems(FixedUpdate, capture_apply);
+        app
+    }
+
+    #[test]
+    fn time_penalty_fired_sends_apply_message() {
+        use crate::effect::typed_events::TimePenaltyFired;
+
+        let mut app = typed_test_app();
+
+        app.world_mut().commands().trigger(TimePenaltyFired {
+            seconds: 5.0,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedApplyTimePenalty>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "TimePenaltyFired typed event should write one ApplyTimePenalty"
+        );
+        assert!(
+            (captured.0[0] - 5.0).abs() < f32::EPSILON,
+            "ApplyTimePenalty.seconds should be 5.0, got {}",
+            captured.0[0]
+        );
+    }
+
+    #[test]
+    fn time_penalty_fired_skips_when_shield_active() {
+        use crate::effect::{effects::shield::ShieldActive, typed_events::TimePenaltyFired};
+
+        let mut app = typed_test_app();
+        app.world_mut().spawn(ShieldActive { remaining: 3.0 });
+
+        app.world_mut().commands().trigger(TimePenaltyFired {
+            seconds: 5.0,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedApplyTimePenalty>();
+        assert_eq!(
+            captured.0.len(),
+            0,
+            "TimePenaltyFired should be blocked when ShieldActive is present"
         );
     }
 }

@@ -1,26 +1,19 @@
 //! Chain lightning effect handler — arcs lightning between nearby cells.
 //!
-//! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::ChainLightning`], and damages nearby cells in an arc.
+//! Observes [`ChainLightningFired`] and damages nearby cells in an arc.
 
 use bevy::prelude::*;
 
-use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
+use crate::effect::typed_events::ChainLightningFired;
 
 /// Observer: handles chain lightning — arcs damage between cells.
-///
-/// Self-selects via pattern matching on [`TriggerChain::ChainLightning`].
-pub(crate) fn handle_chain_lightning(trigger: On<EffectFired>) {
-    let TriggerChain::ChainLightning { .. } = &trigger.event().effect else {
-        return;
-    };
+pub(crate) fn handle_chain_lightning(_trigger: On<ChainLightningFired>) {
     // Stub: no implementation yet
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -29,27 +22,21 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
-
     #[test]
-    fn handle_chain_lightning_ignores_non_chain_lightning_effects() {
+    fn handle_chain_lightning_does_not_panic() {
+        use crate::effect::typed_events::ChainLightningFired;
+
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(ChainLightningFired {
+            arcs: 3,
+            range: 100.0,
+            damage_mult: 1.0,
             bolt: None,
             source_chip: None,
         });
         app.world_mut().flush();
-        tick(&mut app);
 
-        // If the handler incorrectly panics or processes non-matching effects,
-        // this test catches it. A no-op return for non-matching variants is correct.
+        // Stub handler should not panic when receiving its typed event.
     }
 }

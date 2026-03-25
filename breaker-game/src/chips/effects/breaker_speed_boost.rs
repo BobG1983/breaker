@@ -4,27 +4,22 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    breaker::components::Breaker,
-    chips::{
-        components::BreakerSpeedBoost,
-        definition::{ChipEffectApplied, Target, TriggerChain},
-    },
+    breaker::components::Breaker, chips::components::BreakerSpeedBoost,
+    effect::typed_events::SpeedBoostApplied,
 };
 
 /// Observer: applies breaker speed boost stacking to all breaker entities.
 pub(crate) fn handle_breaker_speed_boost(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<SpeedBoostApplied>,
     mut query: Query<(Entity, Option<&mut BreakerSpeedBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::SpeedBoost {
-        target: Target::Breaker,
-        multiplier: per_stack,
-    } = &trigger.event().effect
-    else {
+    let event = trigger.event();
+    if event.target != crate::effect::definition::Target::Breaker {
         return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    }
+    let per_stack = event.multiplier;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_f32(
             entity,
@@ -53,11 +48,9 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn(Breaker).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::Breaker,
-                multiplier: 1.1,
-            },
+        app.world_mut().commands().trigger(SpeedBoostApplied {
+            target: crate::effect::definition::Target::Breaker,
+            multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -79,11 +72,9 @@ mod tests {
             .spawn((Breaker, BreakerSpeedBoost(1.1)))
             .id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::Breaker,
-                multiplier: 1.1,
-            },
+        app.world_mut().commands().trigger(SpeedBoostApplied {
+            target: crate::effect::definition::Target::Breaker,
+            multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -109,11 +100,9 @@ mod tests {
             .spawn((Breaker, BreakerSpeedBoost(3.3)))
             .id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::Breaker,
-                multiplier: 1.1,
-            },
+        app.world_mut().commands().trigger(SpeedBoostApplied {
+            target: crate::effect::definition::Target::Breaker,
+            multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -136,11 +125,9 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn(Breaker);
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            },
+        app.world_mut().commands().trigger(SpeedBoostApplied {
+            target: crate::effect::definition::Target::Bolt,
+            multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
         });

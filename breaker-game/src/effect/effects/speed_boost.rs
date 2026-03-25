@@ -1,7 +1,6 @@
 //! Speed boost effect handler — scales bolt velocity on trigger.
 //!
-//! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::SpeedBoost`], and scales the specific bolt's velocity
+//! Observes [`SpeedBoostFired`] and scales the specific bolt's velocity
 //! by `multiplier`, clamped within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
 
 use bevy::prelude::*;
@@ -9,21 +8,17 @@ use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
-    chips::{
-        components::BoltSpeedBoost,
-        definition::{Target, TriggerChain},
-    },
-    effect::events::EffectFired,
+    chips::components::BoltSpeedBoost,
+    effect::{definition::Target, typed_events::SpeedBoostFired},
 };
 
-/// Observer: handles speed boost when an effect fires.
+/// Observer: handles speed boost when a `SpeedBoostFired` event fires.
 ///
-/// Self-selects via pattern matching on [`TriggerChain::SpeedBoost`].
 /// For `Bolt` target: scales the specific bolt's velocity by `multiplier`.
 /// For `AllBolts` target: scales every bolt's velocity by `multiplier`.
 /// Both clamp within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
 pub(crate) fn handle_speed_boost(
-    trigger: On<EffectFired>,
+    trigger: On<SpeedBoostFired>,
     mut bolt_query: Query<
         (
             &mut Velocity2D,
@@ -34,13 +29,11 @@ pub(crate) fn handle_speed_boost(
         With<Bolt>,
     >,
 ) {
-    let TriggerChain::SpeedBoost { target, multiplier } = &trigger.event().effect else {
-        return;
-    };
+    let event = trigger.event();
 
-    match target {
+    match event.target {
         Target::Bolt => {
-            let Some(bolt_entity) = trigger.event().bolt else {
+            let Some(bolt_entity) = event.bolt else {
                 return;
             };
 
@@ -50,12 +43,12 @@ pub(crate) fn handle_speed_boost(
             };
 
             let boost = speed_boost.map_or(0.0, |b| b.0);
-            apply_speed_scale(&mut vel, *multiplier, base_speed.0, max_speed.0, boost);
+            apply_speed_scale(&mut vel, event.multiplier, base_speed.0, max_speed.0, boost);
         }
         Target::AllBolts => {
             for (mut vel, base_speed, max_speed, speed_boost) in &mut bolt_query {
                 let boost = speed_boost.map_or(0.0, |b| b.0);
-                apply_speed_scale(&mut vel, *multiplier, base_speed.0, max_speed.0, boost);
+                apply_speed_scale(&mut vel, event.multiplier, base_speed.0, max_speed.0, boost);
             }
         }
         Target::Breaker => {
@@ -92,11 +85,7 @@ mod tests {
     use super::*;
     use crate::{
         bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
-        chips::{
-            components::BoltSpeedBoost,
-            definition::{Target, TriggerChain},
-        },
-        effect::events::EffectFired,
+        chips::components::BoltSpeedBoost,
     };
 
     // --- Test infrastructure ---
@@ -140,11 +129,11 @@ mod tests {
     }
 
     fn trigger_speed_boost(app: &mut App, bolt: Option<Entity>, multiplier: f32) {
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::Bolt,
-                multiplier,
-            },
+        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffectTarget::Bolt,
+            multiplier,
             bolt,
             source_chip: None,
         });
@@ -283,33 +272,6 @@ mod tests {
     }
 
     #[test]
-    fn handle_speed_boost_ignores_non_speed_boost_effects() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 400.0);
-
-        // Trigger a Shockwave effect instead of SpeedBoost
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            },
-            bolt: Some(bolt),
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        let vel = get_bolt_velocity(&mut app, bolt);
-        assert!(
-            (vel.0.y - 400.0).abs() < f32::EPSILON,
-            "non-SpeedBoost effect should not change bolt velocity, got y={:.1}",
-            vel.0.y
-        );
-    }
-
-    #[test]
     fn handle_speed_boost_no_ops_when_bolt_is_none() {
         let mut app = test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 400.0);
@@ -372,11 +334,11 @@ mod tests {
     // =========================================================================
 
     fn trigger_all_bolts_speed_boost(app: &mut App, multiplier: f32) {
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::AllBolts,
-                multiplier,
-            },
+        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffectTarget::AllBolts,
+            multiplier,
             bolt: None,
             source_chip: None,
         });
@@ -500,16 +462,27 @@ mod tests {
         // Should not panic — the test passing without panic is the assertion.
     }
 
+    // =========================================================================
+    // B12c: handle_speed_boost observes SpeedBoostFired (not EffectFired) (behavior 23)
+    // =========================================================================
+
+    fn typed_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_observer(handle_speed_boost);
+        app
+    }
+
     #[test]
-    fn breaker_target_remains_no_op() {
-        let mut app = test_app();
+    fn speed_boost_fired_scales_bolt_velocity() {
+        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+
+        let mut app = typed_test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 400.0);
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::SpeedBoost {
-                target: Target::Breaker,
-                multiplier: 1.5,
-            },
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffectTarget::Bolt,
+            multiplier: 1.5,
             bolt: Some(bolt),
             source_chip: None,
         });
@@ -518,9 +491,65 @@ mod tests {
 
         let vel = get_bolt_velocity(&mut app, bolt);
         assert!(
-            (vel.0.y - 400.0).abs() < f32::EPSILON,
-            "Breaker target should be no-op, bolt velocity should be unchanged, got y={:.1}",
-            vel.0.y
+            (vel.speed() - 600.0).abs() < 1.0,
+            "SpeedBoostFired should scale bolt speed to ~600.0 (400.0 * 1.5), got {:.1}",
+            vel.speed()
+        );
+    }
+
+    #[test]
+    fn speed_boost_fired_all_bolts_scales_all() {
+        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+
+        let mut app = typed_test_app();
+        let bolt_a = spawn_bolt(&mut app, 0.0, 400.0);
+        let bolt_b = spawn_bolt(&mut app, 300.0, 400.0);
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffectTarget::AllBolts,
+            multiplier: 1.3,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let vel_a = get_bolt_velocity(&mut app, bolt_a);
+        let vel_b = get_bolt_velocity(&mut app, bolt_b);
+
+        assert!(
+            (vel_a.speed() - 520.0).abs() < 1.0,
+            "AllBolts SpeedBoostFired: bolt A speed should be ~520.0, got {:.1}",
+            vel_a.speed()
+        );
+        assert!(
+            (vel_b.speed() - 650.0).abs() < 1.0,
+            "AllBolts SpeedBoostFired: bolt B speed should be ~650.0, got {:.1}",
+            vel_b.speed()
+        );
+    }
+
+    #[test]
+    fn speed_boost_fired_clamps_to_max() {
+        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+
+        let mut app = typed_test_app();
+        let bolt = spawn_bolt(&mut app, 0.0, 700.0);
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffectTarget::Bolt,
+            multiplier: 1.5,
+            bolt: Some(bolt),
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let vel = get_bolt_velocity(&mut app, bolt);
+        assert!(
+            (vel.speed() - 800.0).abs() < 1.0,
+            "SpeedBoostFired should clamp to max 800.0, got {:.1}",
+            vel.speed()
         );
     }
 }

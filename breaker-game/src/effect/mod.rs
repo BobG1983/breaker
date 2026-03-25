@@ -11,6 +11,7 @@ pub(crate) mod init;
 mod plugin;
 pub(crate) mod registry;
 pub(crate) mod sets;
+pub(crate) mod typed_events;
 
 pub use active::ActiveEffects;
 pub(crate) use definition::ArchetypeDefinition;

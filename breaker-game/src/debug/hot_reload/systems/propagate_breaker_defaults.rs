@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{init::apply_stat_overrides, registry::ArchetypeRegistry},
     breaker::{BreakerConfig, BreakerDefaults},
+    effect::{init::apply_stat_overrides, registry::ArchetypeRegistry},
     screen::loading::resources::DefaultsCollection,
     shared::SelectedArchetype,
 };

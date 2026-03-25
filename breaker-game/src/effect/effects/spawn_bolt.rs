@@ -2,19 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::messages::SpawnAdditionalBolt, chips::definition::TriggerChain,
-    effect::events::EffectFired,
-};
+use crate::{bolt::messages::SpawnAdditionalBolt, effect::typed_events::SpawnBoltFired};
 
 /// Observer that handles spawn-bolt — writes [`SpawnAdditionalBolt`] message.
 pub(crate) fn handle_spawn_bolt(
-    trigger: On<EffectFired>,
+    trigger: On<SpawnBoltFired>,
     mut writer: MessageWriter<SpawnAdditionalBolt>,
 ) {
-    let TriggerChain::SpawnBolt = &trigger.event().effect else {
-        return;
-    };
     writer.write(SpawnAdditionalBolt {
         source_chip: trigger.event().source_chip.clone(),
     });
@@ -56,10 +50,11 @@ mod tests {
 
     #[test]
     fn handle_spawn_bolt_sends_message() {
+        use crate::effect::typed_events::SpawnBoltFired;
+
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::SpawnBolt,
+        app.world_mut().commands().trigger(SpawnBoltFired {
             bolt: None,
             source_chip: None,
         });
@@ -73,22 +68,32 @@ mod tests {
         );
     }
 
-    #[test]
-    fn non_spawn_bolt_effect_does_not_send_message() {
-        let mut app = test_app();
+    // =========================================================================
+    // B12c: handle_spawn_bolt observes SpawnBoltFired (not EffectFired)
+    // =========================================================================
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+    #[test]
+    fn spawn_bolt_fired_sends_spawn_message() {
+        use crate::effect::typed_events::SpawnBoltFired;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<SpawnAdditionalBolt>()
+            .init_resource::<CapturedSpawnBolt>()
+            .add_observer(handle_spawn_bolt)
+            .add_systems(FixedUpdate, capture_spawn);
+
+        app.world_mut().commands().trigger(SpawnBoltFired {
             bolt: None,
-            source_chip: None,
+            source_chip: Some("Reflex".to_owned()),
         });
         app.world_mut().flush();
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedSpawnBolt>();
         assert_eq!(
-            captured.0, 0,
-            "LoseLife effect should not produce SpawnAdditionalBolt (self-selection)"
+            captured.0, 1,
+            "SpawnBoltFired typed event should write one SpawnAdditionalBolt message"
         );
     }
 }

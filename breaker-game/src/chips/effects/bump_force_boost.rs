@@ -4,23 +4,19 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    breaker::components::Breaker,
-    chips::{
-        components::BumpForceBoost,
-        definition::{ChipEffectApplied, TriggerChain},
-    },
+    breaker::components::Breaker, chips::components::BumpForceBoost,
+    effect::typed_events::BumpForceApplied,
 };
 
 /// Observer: applies bump force boost stacking to all breaker entities.
 pub(crate) fn handle_bump_force_boost(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<BumpForceApplied>,
     mut query: Query<(Entity, Option<&mut BumpForceBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::BumpForce(per_stack) = &trigger.event().effect else {
-        return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    let event = trigger.event();
+    let per_stack = event.per_stack;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_f32(
             entity,
@@ -49,8 +45,8 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn(Breaker).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::BumpForce(10.0),
+        app.world_mut().commands().trigger(BumpForceApplied {
+            per_stack: 10.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -65,8 +61,8 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn((Breaker, BumpForceBoost(10.0))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::BumpForce(10.0),
+        app.world_mut().commands().trigger(BumpForceApplied {
+            per_stack: 10.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -85,8 +81,8 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn((Breaker, BumpForceBoost(30.0))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::BumpForce(10.0),
+        app.world_mut().commands().trigger(BumpForceApplied {
+            per_stack: 10.0,
             max_stacks: 3,
             chip_name: String::new(),
         });

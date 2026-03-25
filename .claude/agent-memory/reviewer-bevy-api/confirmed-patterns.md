@@ -389,6 +389,15 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `Annulus` is in `bevy::prelude`; `Assets<Mesh>::add` accepts anything `Into<Mesh>`
 - `Annulus::new(0.85, 1.0)` creates a ring with inner radius 0.85, outer radius 1.0
 
+## B12c Typed Events Pattern (confirmed 2026-03-24)
+- `#[derive(Event, Clone, Debug)]` on per-effect typed event structs — correct; `Clone` needed for test capture observers, `Debug` for diagnostics
+- `fn handle_x(trigger: On<XFired>, ...)` observer signature — correct; typed `On<XFired>` replaces old `On<EffectFired>` with self-selection
+- `trigger.event()` — returns `&XFired`; correct accessor on `On<E>` in 0.18.1
+- `commands.trigger(XFired { ... })` from schedule systems (bridges) — deferred, correct; observers run at command flush
+- Observer chaining is NOT used here: bridge systems are schedule systems (not observers), so `commands.trigger()` inside them is plain deferred dispatch — no re-entrancy
+- Old `EffectFired` / `ChipEffectApplied` kept as `#[derive(Event)]` types; used ONLY in legacy test self-selection tests (no production observer registered for them in B12c-migrated handlers) — the tests that trigger these are checking that the old untyped event does NOT trigger the new typed handler (self-selection correctness tests)
+- `trigger.event().clone()` in test capture observers for `Vec<XFired>` push — valid; `Clone` on event struct is required and derived
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

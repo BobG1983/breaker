@@ -1,29 +1,23 @@
-//! Chain bolt effect handler — observer that translates `ChainBolt` effect into a message.
+//! Chain bolt effect handler — observer that translates `ChainBoltFired` into a message.
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::messages::SpawnChainBolt, chips::definition::TriggerChain, effect::events::EffectFired,
-};
+use crate::{bolt::messages::SpawnChainBolt, effect::typed_events::ChainBoltFired};
 
 /// Observer that handles chain bolt — writes [`SpawnChainBolt`] message.
 ///
-/// Self-selects on `TriggerChain::ChainBolt`. If the bolt entity is `None`,
-/// no spawn occurs.
+/// If the bolt entity is `None`, no spawn occurs.
 pub(crate) fn handle_chain_bolt(
-    trigger: On<EffectFired>,
+    trigger: On<ChainBoltFired>,
     mut writer: MessageWriter<SpawnChainBolt>,
 ) {
     let event = trigger.event();
-    let TriggerChain::ChainBolt { tether_distance } = &event.effect else {
-        return;
-    };
     let Some(bolt_entity) = event.bolt else {
         return;
     };
     writer.write(SpawnChainBolt {
         anchor: bolt_entity,
-        tether_distance: *tether_distance,
+        tether_distance: event.tether_distance,
         source_chip: event.source_chip.clone(),
     });
 }
@@ -31,10 +25,6 @@ pub(crate) fn handle_chain_bolt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        bolt::messages::SpawnChainBolt, chips::definition::TriggerChain,
-        effect::events::EffectFired,
-    };
 
     #[derive(Resource, Default)]
     struct CapturedSpawnChainBolt(Vec<SpawnChainBolt>);
@@ -70,14 +60,14 @@ mod tests {
 
     #[test]
     fn handle_chain_bolt_sends_spawn_chain_bolt_message() {
+        use crate::effect::typed_events::ChainBoltFired;
+
         let mut app = test_app();
 
         let bolt_entity = app.world_mut().spawn_empty().id();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::ChainBolt {
-                tether_distance: 200.0,
-            },
+        app.world_mut().commands().trigger(ChainBoltFired {
+            tether_distance: 200.0,
             bolt: Some(bolt_entity),
             source_chip: None,
         });
@@ -103,15 +93,15 @@ mod tests {
 
     #[test]
     fn handle_chain_bolt_with_none_bolt_does_not_spawn() {
-        // Given: EffectFired with ChainBolt effect but bolt=None
+        use crate::effect::typed_events::ChainBoltFired;
+
+        // Given: ChainBoltFired with bolt=None
         // When: handle_chain_bolt runs
         // Then: no SpawnChainBolt message is written
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::ChainBolt {
-                tether_distance: 200.0,
-            },
+        app.world_mut().commands().trigger(ChainBoltFired {
+            tether_distance: 200.0,
             bolt: None,
             source_chip: None,
         });
@@ -123,51 +113,6 @@ mod tests {
             captured.0.len(),
             0,
             "ChainBolt with bolt=None should not write any message"
-        );
-    }
-
-    // ── Behavior 14: Non-ChainBolt effects ignored ──
-
-    #[test]
-    fn non_chain_bolt_effect_does_not_send_message() {
-        let mut app = test_app();
-
-        let bolt_entity = app.world_mut().spawn_empty().id();
-
-        // Fire a SpawnBolt effect (not ChainBolt)
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::SpawnBolt,
-            bolt: Some(bolt_entity),
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpawnChainBolt>();
-        assert_eq!(
-            captured.0.len(),
-            0,
-            "SpawnBolt effect should not produce SpawnChainBolt message (self-selection)"
-        );
-    }
-
-    #[test]
-    fn lose_life_effect_does_not_send_message() {
-        let mut app = test_app();
-
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
-            bolt: None,
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpawnChainBolt>();
-        assert_eq!(
-            captured.0.len(),
-            0,
-            "LoseLife effect should not produce SpawnChainBolt message"
         );
     }
 }

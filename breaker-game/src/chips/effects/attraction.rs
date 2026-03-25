@@ -4,23 +4,19 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    bolt::components::Bolt,
-    chips::{
-        components::AttractionForce,
-        definition::{ChipEffectApplied, TriggerChain},
-    },
+    bolt::components::Bolt, chips::components::AttractionForce,
+    effect::typed_events::AttractionApplied,
 };
 
 /// Observer: applies attraction force stacking to all bolt entities.
 pub(crate) fn handle_attraction(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<AttractionApplied>,
     mut query: Query<(Entity, Option<&mut AttractionForce>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::Attraction(per_stack) = &trigger.event().effect else {
-        return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    let event = trigger.event();
+    let per_stack = event.per_stack;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_f32(
             entity,
@@ -51,8 +47,8 @@ mod tests {
         // Non-bolt entity should NOT receive the component.
         let non_bolt = app.world_mut().spawn_empty().id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::Attraction(8.0),
+        app.world_mut().commands().trigger(AttractionApplied {
+            per_stack: 8.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -79,8 +75,8 @@ mod tests {
         let mut app = test_app();
         let bolt = app.world_mut().spawn((Bolt, AttractionForce(8.0))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::Attraction(8.0),
+        app.world_mut().commands().trigger(AttractionApplied {
+            per_stack: 8.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -100,8 +96,8 @@ mod tests {
         // 3 stacks at 8.0 per stack = 24.0, which is at the cap of max_stacks: 3.
         let bolt = app.world_mut().spawn((Bolt, AttractionForce(24.0))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::Attraction(8.0),
+        app.world_mut().commands().trigger(AttractionApplied {
+            per_stack: 8.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -112,24 +108,6 @@ mod tests {
             (a.0 - 24.0).abs() < f32::EPSILON,
             "AttractionForce should not exceed max_stacks cap, got {}",
             a.0
-        );
-    }
-
-    #[test]
-    fn ignores_non_attraction_variant() {
-        let mut app = test_app();
-        let bolt = app.world_mut().spawn(Bolt).id();
-
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::DamageBoost(1.5),
-            max_stacks: 2,
-            chip_name: String::new(),
-        });
-        app.world_mut().flush();
-
-        assert!(
-            app.world().entity(bolt).get::<AttractionForce>().is_none(),
-            "bolt should NOT have AttractionForce when non-Attraction variant is triggered"
         );
     }
 }

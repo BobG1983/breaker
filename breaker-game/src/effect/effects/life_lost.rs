@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    chips::definition::TriggerChain,
-    effect::{effects::shield::ShieldActive, events::EffectFired},
+    effect::{effects::shield::ShieldActive, typed_events::LoseLifeFired},
     run::messages::RunLost,
     ui::components::StatusPanel,
 };
@@ -20,13 +19,10 @@ pub(crate) struct LivesDisplay;
 /// Observer that handles life loss — decrements `LivesCount`, sends [`RunLost`]
 /// when lives reach zero. Skips entities that have [`ShieldActive`].
 pub(crate) fn handle_life_lost(
-    trigger: On<EffectFired>,
+    trigger: On<LoseLifeFired>,
     mut lives_query: Query<(&mut LivesCount, Option<&ShieldActive>)>,
     mut writer: MessageWriter<RunLost>,
 ) {
-    let TriggerChain::LoseLife = &trigger.event().effect else {
-        return;
-    };
     for (mut lives, shield) in &mut lives_query {
         if shield.is_some() {
             continue;
@@ -138,11 +134,12 @@ mod tests {
 
     #[test]
     fn lose_life_decrements_count() {
+        use crate::effect::typed_events::LoseLifeFired;
+
         let mut app = test_app();
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(LoseLifeFired {
             bolt: None,
             source_chip: None,
         });
@@ -157,11 +154,12 @@ mod tests {
 
     #[test]
     fn lose_last_life_sends_run_lost() {
+        use crate::effect::typed_events::LoseLifeFired;
+
         let mut app = test_app();
         app.world_mut().spawn(LivesCount(1));
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(LoseLifeFired {
             bolt: None,
             source_chip: None,
         });
@@ -172,32 +170,13 @@ mod tests {
         assert_eq!(captured.0, 1, "should send RunLost when lives reach zero");
     }
 
-    #[test]
-    fn non_lose_life_effect_does_not_decrement_lives() {
-        let mut app = test_app();
-        let entity = app.world_mut().spawn(LivesCount(3)).id();
-
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::TimePenalty { seconds: 5.0 },
-            bolt: None,
-            source_chip: None,
-        });
-        app.world_mut().flush();
-
-        let lives = app.world().get::<LivesCount>(entity).unwrap();
-        assert_eq!(
-            lives.0, 3,
-            "TimePenalty effect should not change LivesCount (self-selection)"
-        );
-    }
-
     // =========================================================================
     // Shield blocking tests
     // =========================================================================
 
     #[test]
     fn lose_life_skips_when_shield_active_present() {
-        use crate::effect::effects::shield::ShieldActive;
+        use crate::effect::{effects::shield::ShieldActive, typed_events::LoseLifeFired};
 
         let mut app = test_app();
         let entity = app
@@ -205,8 +184,7 @@ mod tests {
             .spawn((LivesCount(3), ShieldActive { remaining: 3.0 }))
             .id();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(LoseLifeFired {
             bolt: None,
             source_chip: None,
         });
@@ -222,11 +200,12 @@ mod tests {
 
     #[test]
     fn lose_life_works_when_no_shield_active() {
+        use crate::effect::typed_events::LoseLifeFired;
+
         let mut app = test_app();
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(LoseLifeFired {
             bolt: None,
             source_chip: None,
         });
@@ -241,7 +220,7 @@ mod tests {
 
     #[test]
     fn shield_protects_last_life() {
-        use crate::effect::effects::shield::ShieldActive;
+        use crate::effect::{effects::shield::ShieldActive, typed_events::LoseLifeFired};
 
         let mut app = test_app();
         let entity = app
@@ -249,8 +228,7 @@ mod tests {
             .spawn((LivesCount(1), ShieldActive { remaining: 2.0 }))
             .id();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(LoseLifeFired {
             bolt: None,
             source_chip: None,
         });
@@ -268,6 +246,84 @@ mod tests {
         assert_eq!(
             captured.0, 0,
             "RunLost should NOT be sent when shield protects last life"
+        );
+    }
+
+    // =========================================================================
+    // B12c: handle_life_lost observes LoseLifeFired (not EffectFired) (behavior 21/16)
+    // =========================================================================
+
+    fn typed_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<RunLost>()
+            .init_resource::<CapturedRunLost>()
+            .add_observer(handle_life_lost)
+            .add_systems(FixedUpdate, capture_run_lost);
+        app
+    }
+
+    #[test]
+    fn lose_life_fired_decrements_count_via_typed_event() {
+        use crate::effect::typed_events::LoseLifeFired;
+
+        let mut app = typed_test_app();
+        let entity = app.world_mut().spawn(LivesCount(3)).id();
+
+        app.world_mut().commands().trigger(LoseLifeFired {
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, 2,
+            "LoseLifeFired typed event should decrement LivesCount from 3 to 2"
+        );
+    }
+
+    #[test]
+    fn lose_life_fired_sends_run_lost_when_last_life() {
+        use crate::effect::typed_events::LoseLifeFired;
+
+        let mut app = typed_test_app();
+        app.world_mut().spawn(LivesCount(1));
+
+        app.world_mut().commands().trigger(LoseLifeFired {
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedRunLost>();
+        assert_eq!(
+            captured.0, 1,
+            "LoseLifeFired should send RunLost when lives reach zero"
+        );
+    }
+
+    #[test]
+    fn lose_life_fired_skips_when_shield_active() {
+        use crate::effect::{effects::shield::ShieldActive, typed_events::LoseLifeFired};
+
+        let mut app = typed_test_app();
+        let entity = app
+            .world_mut()
+            .spawn((LivesCount(3), ShieldActive { remaining: 3.0 }))
+            .id();
+
+        app.world_mut().commands().trigger(LoseLifeFired {
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, 3,
+            "LoseLifeFired should be blocked when ShieldActive is present"
         );
     }
 }

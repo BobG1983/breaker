@@ -1,37 +1,25 @@
 //! `MultiBolt` effect handler — spawns additional bolts on trigger.
 //!
-//! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::MultiBolt`], and writes [`SpawnAdditionalBolt`]
+//! Observes [`MultiBoltFired`] and writes [`SpawnAdditionalBolt`]
 //! messages equal to `base_count + (stacks - 1) * count_per_level`.
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::messages::SpawnAdditionalBolt, chips::definition::TriggerChain,
-    effect::events::EffectFired,
-};
+use crate::{bolt::messages::SpawnAdditionalBolt, effect::typed_events::MultiBoltFired};
 
 /// Observer: handles multi-bolt effect — writes multiple [`SpawnAdditionalBolt`] messages.
 ///
-/// Self-selects via pattern matching on [`TriggerChain::MultiBolt`].
 /// Spawn count formula: `base_count + (stacks.saturating_sub(1)) * count_per_level`.
 pub(crate) fn handle_multi_bolt(
-    trigger: On<EffectFired>,
+    trigger: On<MultiBoltFired>,
     mut writer: MessageWriter<SpawnAdditionalBolt>,
 ) {
-    let TriggerChain::MultiBolt {
-        base_count,
-        count_per_level,
-        stacks,
-    } = &trigger.event().effect
-    else {
-        return;
-    };
+    let event = trigger.event();
 
-    let total = base_count + stacks.saturating_sub(1) * count_per_level;
+    let total = event.base_count + event.stacks.saturating_sub(1) * event.count_per_level;
     for _ in 0..total {
         writer.write(SpawnAdditionalBolt {
-            source_chip: trigger.event().source_chip.clone(),
+            source_chip: event.source_chip.clone(),
         });
     }
 }
@@ -79,12 +67,12 @@ mod tests {
         stacks: u32,
         source_chip: Option<String>,
     ) {
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::MultiBolt {
-                base_count,
-                count_per_level,
-                stacks,
-            },
+        use crate::effect::typed_events::MultiBoltFired;
+
+        app.world_mut().commands().trigger(MultiBoltFired {
+            base_count,
+            count_per_level,
+            stacks,
             bolt: None,
             source_chip,
         });
@@ -129,26 +117,6 @@ mod tests {
             8,
             "MultiBolt base=2, per_level=3, stacks=3 should spawn 8 bolts (2 + 2*3), got {}",
             captured.0.len()
-        );
-    }
-
-    #[test]
-    fn multi_bolt_self_selects_ignores_non_multi_bolt() {
-        let mut app = test_app();
-
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
-            bolt: None,
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpawnBolt>();
-        assert_eq!(
-            captured.0.len(),
-            0,
-            "LoseLife effect should not produce SpawnAdditionalBolt (self-selection)"
         );
     }
 

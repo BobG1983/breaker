@@ -4,23 +4,19 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    breaker::components::Breaker,
-    chips::{
-        components::TiltControlBoost,
-        definition::{ChipEffectApplied, TriggerChain},
-    },
+    breaker::components::Breaker, chips::components::TiltControlBoost,
+    effect::typed_events::TiltControlApplied,
 };
 
 /// Observer: applies tilt control boost stacking to all breaker entities.
 pub(crate) fn handle_tilt_control_boost(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<TiltControlApplied>,
     mut query: Query<(Entity, Option<&mut TiltControlBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::TiltControl(per_stack) = &trigger.event().effect else {
-        return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    let event = trigger.event();
+    let per_stack = event.per_stack;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_f32(
             entity,
@@ -49,8 +45,8 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn(Breaker).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::TiltControl(5.0),
+        app.world_mut().commands().trigger(TiltControlApplied {
+            per_stack: 5.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -69,8 +65,8 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn((Breaker, TiltControlBoost(5.0))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::TiltControl(5.0),
+        app.world_mut().commands().trigger(TiltControlApplied {
+            per_stack: 5.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -96,8 +92,8 @@ mod tests {
             .spawn((Breaker, TiltControlBoost(15.0)))
             .id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::TiltControl(5.0),
+        app.world_mut().commands().trigger(TiltControlApplied {
+            per_stack: 5.0,
             max_stacks: 3,
             chip_name: String::new(),
         });

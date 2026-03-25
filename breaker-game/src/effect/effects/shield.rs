@@ -1,15 +1,12 @@
 //! Shield effect handler — temporary protection for the breaker.
 //!
-//! Observes [`EffectFired`], pattern-matches on [`TriggerChain::Shield`],
-//! and inserts or extends [`ShieldActive`] on the breaker entity.
-//! [`tick_shield`] decrements the remaining time each fixed tick and
-//! removes the component when it expires.
+//! Observes [`ShieldFired`] and inserts or extends [`ShieldActive`] on the
+//! breaker entity. [`tick_shield`] decrements the remaining time each fixed tick
+//! and removes the component when it expires.
 
 use bevy::prelude::*;
 
-use crate::{
-    breaker::components::Breaker, chips::definition::TriggerChain, effect::events::EffectFired,
-};
+use crate::{breaker::components::Breaker, effect::typed_events::ShieldFired};
 
 // ---------------------------------------------------------------------------
 // Components
@@ -31,27 +28,19 @@ pub(crate) struct ShieldActive {
 /// Observer: handles shield activation — inserts or extends [`ShieldActive`]
 /// on the breaker entity.
 ///
-/// Self-selects via pattern matching on [`TriggerChain::Shield`].
 /// Duration formula: `base_duration + (stacks.saturating_sub(1)) * duration_per_level`.
 /// If the breaker already has `ShieldActive`, the computed duration is added
 /// to the existing `remaining` time (additive extension).
 pub(crate) fn handle_shield(
-    trigger: On<EffectFired>,
+    trigger: On<ShieldFired>,
     mut breaker_query: Query<(Entity, Option<&mut ShieldActive>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let TriggerChain::Shield {
-        base_duration,
-        duration_per_level,
-        stacks,
-    } = &trigger.event().effect
-    else {
-        return;
-    };
+    let event = trigger.event();
 
-    let duration = base_duration
-        + f32::from(u16::try_from(stacks.saturating_sub(1)).unwrap_or(u16::MAX))
-            * duration_per_level;
+    let duration = event.base_duration
+        + f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX))
+            * event.duration_per_level;
 
     let Ok((breaker_entity, existing_shield)) = breaker_query.single_mut() else {
         return;
@@ -88,7 +77,6 @@ pub(crate) fn tick_shield(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::TriggerChain;
 
     // --- Test infrastructure ---
 
@@ -119,12 +107,12 @@ mod tests {
     }
 
     fn trigger_shield(app: &mut App, base_duration: f32, duration_per_level: f32, stacks: u32) {
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::Shield {
-                base_duration,
-                duration_per_level,
-                stacks,
-            },
+        use crate::effect::typed_events::ShieldFired;
+
+        app.world_mut().commands().trigger(ShieldFired {
+            base_duration,
+            duration_per_level,
+            stacks,
             bolt: None,
             source_chip: None,
         });
@@ -213,25 +201,6 @@ mod tests {
         assert_eq!(
             count, 0,
             "no ShieldActive should exist when there is no breaker"
-        );
-    }
-
-    #[test]
-    fn shield_self_selects_ignores_non_shield() {
-        let mut app = test_app();
-        let breaker = spawn_breaker(&mut app);
-
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::SpawnBolt,
-            bolt: None,
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        assert!(
-            app.world().get::<ShieldActive>(breaker).is_none(),
-            "SpawnBolt effect should not insert ShieldActive on breaker (self-selection)"
         );
     }
 

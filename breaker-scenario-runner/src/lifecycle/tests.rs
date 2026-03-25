@@ -933,7 +933,7 @@ fn restart_run_on_end_transitions_to_main_menu() {
 /// must populate `ActiveEffects` with that chain.
 #[test]
 fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
-    use breaker::{effect::ActiveEffects, chips::TriggerChain};
+    use breaker::{chips::TriggerChain, effect::ActiveEffects};
 
     let mut definition = make_scenario(100);
     definition.initial_overclocks = Some(vec![TriggerChain::Shockwave {

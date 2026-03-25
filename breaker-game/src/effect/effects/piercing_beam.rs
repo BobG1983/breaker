@@ -1,26 +1,19 @@
 //! Piercing beam effect handler — fires a beam through cells in a line.
 //!
-//! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::PiercingBeam`], and damages cells along the beam path.
+//! Observes [`PiercingBeamFired`] and damages cells along the beam path.
 
 use bevy::prelude::*;
 
-use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
+use crate::effect::typed_events::PiercingBeamFired;
 
 /// Observer: handles piercing beam — fires a beam through cells.
-///
-/// Self-selects via pattern matching on [`TriggerChain::PiercingBeam`].
-pub(crate) fn handle_piercing_beam(trigger: On<EffectFired>) {
-    let TriggerChain::PiercingBeam { .. } = &trigger.event().effect else {
-        return;
-    };
+pub(crate) fn handle_piercing_beam(_trigger: On<PiercingBeamFired>) {
     // Stub: no implementation yet
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -29,27 +22,20 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
-
     #[test]
-    fn handle_piercing_beam_ignores_non_piercing_beam_effects() {
+    fn handle_piercing_beam_does_not_panic() {
+        use crate::effect::typed_events::PiercingBeamFired;
+
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(PiercingBeamFired {
+            damage_mult: 1.5,
+            width: 10.0,
             bolt: None,
             source_chip: None,
         });
         app.world_mut().flush();
-        tick(&mut app);
 
-        // If the handler incorrectly panics or processes non-matching effects,
-        // this test catches it. A no-op return for non-matching variants is correct.
+        // Stub handler should not panic when receiving its typed event.
     }
 }

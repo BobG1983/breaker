@@ -1,10 +1,9 @@
 //! Shockwave effect handler — expanding wavefront area damage.
 //!
-//! Observes [`EffectFired`], pattern-matches on [`TriggerChain::Shockwave`],
-//! and spawns a [`ShockwaveRadius`] entity that expands over time. Collision
-//! with cells is handled by [`shockwave_collision`], which writes [`DamageCell`]
-//! messages. The visual is driven by [`animate_shockwave`] which scales the
-//! entity based on the current radius.
+//! Observes [`ShockwaveFired`] and spawns a [`ShockwaveRadius`] entity that
+//! expands over time. Collision with cells is handled by [`shockwave_collision`],
+//! which writes [`DamageCell`] messages. The visual is driven by
+//! [`animate_shockwave`] which scales the entity based on the current radius.
 
 use std::collections::HashSet;
 
@@ -14,8 +13,8 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 
 use crate::{
     cells::{components::Locked, messages::DamageCell},
-    chips::{components::DamageBoost, definition::TriggerChain},
-    effect::events::EffectFired,
+    chips::components::DamageBoost,
+    effect::typed_events::ShockwaveFired,
     shared::{BASE_BOLT_DAMAGE, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
 };
 
@@ -55,32 +54,24 @@ pub(crate) struct ShockwaveAlreadyHit(pub HashSet<Entity>);
 // Observer — spawns shockwave entity
 // ---------------------------------------------------------------------------
 
-/// Observer: spawns a shockwave wavefront entity when an [`EffectFired`] event
-/// carries a [`TriggerChain::Shockwave`] leaf.
+/// Observer: spawns a shockwave wavefront entity when a [`ShockwaveFired`] event
+/// fires.
 ///
 /// Does NOT write [`DamageCell`] — that is handled by [`shockwave_collision`].
 pub(crate) fn handle_shockwave(
-    trigger: On<EffectFired>,
+    trigger: On<ShockwaveFired>,
     mut commands: Commands,
     bolt_query: Query<(&Position2D, Option<&DamageBoost>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let TriggerChain::Shockwave {
-        base_range,
-        range_per_level,
-        stacks,
-        speed,
-    } = &trigger.event().effect
-    else {
-        return;
-    };
+    let event = trigger.event();
 
-    if *speed <= 0.0 {
+    if event.speed <= 0.0 {
         return;
     }
 
-    let Some(bolt_entity) = trigger.event().bolt else {
+    let Some(bolt_entity) = event.bolt else {
         return;
     };
 
@@ -88,17 +79,17 @@ pub(crate) fn handle_shockwave(
         return;
     };
 
-    let extra_stacks = f32::from(u16::try_from(stacks.saturating_sub(1)).unwrap_or(u16::MAX));
-    let max = base_range + extra_stacks * range_per_level;
+    let extra_stacks = f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX));
+    let max = event.base_range + extra_stacks * event.range_per_level;
     let damage = BASE_BOLT_DAMAGE * (1.0 + damage_boost.map_or(0.0, |b| b.0));
 
     commands.spawn((
         Position2D(bolt_pos.0),
         ShockwaveRadius { current: 0.0, max },
-        ShockwaveSpeed(*speed),
+        ShockwaveSpeed(event.speed),
         ShockwaveDamage {
             damage,
-            source_chip: trigger.event().source_chip.clone(),
+            source_chip: event.source_chip.clone(),
             source_bolt: bolt_entity,
         },
         ShockwaveAlreadyHit::default(),
@@ -219,7 +210,7 @@ mod tests {
             components::{Cell, CellHealth, Locked},
             messages::DamageCell,
         },
-        chips::{components::DamageBoost, definition::TriggerChain},
+        chips::components::DamageBoost,
         shared::{BASE_BOLT_DAMAGE, BOLT_LAYER, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
     };
 
@@ -300,13 +291,13 @@ mod tests {
     }
 
     fn trigger_shockwave(app: &mut App, bolt: Entity, range: f32, speed: f32) {
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::Shockwave {
-                base_range: range,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed,
-            },
+        use crate::effect::typed_events::ShockwaveFired;
+
+        app.world_mut().commands().trigger(ShockwaveFired {
+            base_range: range,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed,
             bolt: Some(bolt),
             source_chip: None,
         });
@@ -380,17 +371,17 @@ mod tests {
     /// with correct components. Max = `base_range` + (stacks-1) * `range_per_level`.
     #[test]
     fn observer_spawns_shockwave_entity_at_bolt_position() {
+        use crate::effect::typed_events::ShockwaveFired;
+
         let mut app = test_app();
         let bolt = spawn_bolt(&mut app, 50.0, 100.0);
 
         // base_range=64, range_per_level=32, stacks=2 -> max = 64 + (2-1)*32 = 96
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 32.0,
-                stacks: 2,
-                speed: 400.0,
-            },
+        app.world_mut().commands().trigger(ShockwaveFired {
+            base_range: 64.0,
+            range_per_level: 32.0,
+            stacks: 2,
+            speed: 400.0,
             bolt: Some(bolt),
             source_chip: None,
         });
@@ -528,31 +519,6 @@ mod tests {
             shockwave_entity_count(&mut app),
             0,
             "zero speed should result in no ShockwaveRadius entity"
-        );
-    }
-
-    /// Behavior 4: Non-Shockwave effect does not spawn entity.
-    #[test]
-    fn observer_ignores_non_shockwave_effects() {
-        let mut app = test_app();
-        let bolt = spawn_bolt(&mut app, 0.0, 0.0);
-
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::MultiBolt {
-                base_count: 3,
-                count_per_level: 0,
-                stacks: 1,
-            },
-            bolt: Some(bolt),
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        assert_eq!(
-            shockwave_entity_count(&mut app),
-            0,
-            "MultiBolt effect should not spawn a ShockwaveRadius entity"
         );
     }
 
@@ -1664,6 +1630,66 @@ mod tests {
             (linear_b.alpha - 0.225).abs() < 0.01,
             "entity B alpha should be ~0.225 (75% progress), got {}",
             linear_b.alpha
+        );
+    }
+
+    // =========================================================================
+    // B12c: handle_shockwave observes ShockwaveFired (not EffectFired) (behavior 21)
+    // =========================================================================
+
+    #[test]
+    fn shockwave_fired_spawns_entity_at_bolt_position() {
+        use crate::effect::typed_events::ShockwaveFired;
+
+        let mut app = test_app();
+        let bolt = spawn_bolt(&mut app, 50.0, 100.0);
+
+        app.world_mut().commands().trigger(ShockwaveFired {
+            base_range: 64.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 400.0,
+            bolt: Some(bolt),
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        assert_eq!(
+            shockwave_entity_count(&mut app),
+            1,
+            "ShockwaveFired should spawn a ShockwaveRadius entity"
+        );
+        let sw = get_shockwave_entity(&mut app);
+        let radius = app.world().get::<ShockwaveRadius>(sw).unwrap();
+        assert!(
+            (radius.max - 64.0).abs() < f32::EPSILON,
+            "ShockwaveRadius.max should be 64.0, got {}",
+            radius.max
+        );
+    }
+
+    #[test]
+    fn shockwave_fired_no_bolt_does_not_spawn() {
+        use crate::effect::typed_events::ShockwaveFired;
+
+        let mut app = test_app();
+
+        app.world_mut().commands().trigger(ShockwaveFired {
+            base_range: 64.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 400.0,
+            bolt: None,
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        assert_eq!(
+            shockwave_entity_count(&mut app),
+            0,
+            "ShockwaveFired with bolt: None should not spawn a shockwave"
         );
     }
 }

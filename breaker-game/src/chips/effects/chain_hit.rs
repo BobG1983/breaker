@@ -4,23 +4,18 @@ use bevy::prelude::*;
 
 use super::stack_u32;
 use crate::{
-    bolt::components::Bolt,
-    chips::{
-        components::ChainHit,
-        definition::{ChipEffectApplied, TriggerChain},
-    },
+    bolt::components::Bolt, chips::components::ChainHit, effect::typed_events::ChainHitApplied,
 };
 
 /// Observer: applies chain hit stacking to all bolt entities.
 pub(crate) fn handle_chain_hit(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<ChainHitApplied>,
     mut query: Query<(Entity, Option<&mut ChainHit>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::ChainHit(per_stack) = &trigger.event().effect else {
-        return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    let event = trigger.event();
+    let per_stack = event.per_stack;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_u32(
             entity,
@@ -49,8 +44,8 @@ mod tests {
         let mut app = test_app();
         let bolt = app.world_mut().spawn(Bolt).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::ChainHit(2),
+        app.world_mut().commands().trigger(ChainHitApplied {
+            per_stack: 2,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -65,8 +60,8 @@ mod tests {
         let mut app = test_app();
         let bolt = app.world_mut().spawn((Bolt, ChainHit(2))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::ChainHit(2),
+        app.world_mut().commands().trigger(ChainHitApplied {
+            per_stack: 2,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -81,8 +76,8 @@ mod tests {
         let mut app = test_app();
         let bolt = app.world_mut().spawn((Bolt, ChainHit(6))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::ChainHit(2),
+        app.world_mut().commands().trigger(ChainHitApplied {
+            per_stack: 2,
             max_stacks: 3,
             chip_name: String::new(),
         });

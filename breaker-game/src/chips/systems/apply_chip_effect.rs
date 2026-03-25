@@ -1,24 +1,25 @@
 //! Thin dispatcher: reads [`ChipSelected`] messages, looks up the chip in the
-//! [`ChipRegistry`], and triggers [`ChipEffectApplied`] for per-effect observers.
+//! [`ChipRegistry`], and fires typed passive events for per-effect observers.
 
 use bevy::prelude::*;
 use tracing::debug;
 
+// Re-export for old tests that access ChipEffectApplied via `use super::*`.
+#[cfg(test)]
+pub(super) use crate::chips::definition::ChipEffectApplied;
 use crate::{
-    chips::{
-        definition::{ChipEffectApplied, TriggerChain},
-        inventory::ChipInventory,
-        resources::ChipRegistry,
+    chips::{definition::TriggerChain, inventory::ChipInventory, resources::ChipRegistry},
+    effect::{
+        ActiveEffects,
+        typed_events::{fire_passive_event, trigger_chain_to_effect},
     },
-    effect::ActiveEffects,
     ui::messages::ChipSelected,
 };
 
 /// Reads [`ChipSelected`] messages, looks up the chip definition in the
-/// [`ChipRegistry`], and triggers [`ChipEffectApplied`] for each selected chip.
+/// [`ChipRegistry`], and fires typed passive events for each selected chip.
 ///
 /// Per-effect observers handle the actual stacking logic.
-/// Overclock chips trigger the event too — observers self-select.
 pub(crate) fn apply_chip_effect(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
@@ -41,19 +42,13 @@ pub(crate) fn apply_chip_effect(
             match effect {
                 TriggerChain::OnSelected(inner) => {
                     for leaf in inner {
-                        commands.trigger(ChipEffectApplied {
-                            effect: leaf.clone(),
-                            max_stacks: chip.max_stacks,
-                            chip_name: msg.name.clone(),
-                        });
+                        let eff = trigger_chain_to_effect(leaf);
+                        fire_passive_event(eff, chip.max_stacks, msg.name.clone(), &mut commands);
                     }
                 }
                 chain if chain.is_leaf() => {
-                    commands.trigger(ChipEffectApplied {
-                        effect: chain.clone(),
-                        max_stacks: chip.max_stacks,
-                        chip_name: msg.name.clone(),
-                    });
+                    let eff = trigger_chain_to_effect(chain);
+                    fire_passive_event(eff, chip.max_stacks, msg.name.clone(), &mut commands);
                 }
                 // Any trigger-wrapper variant (OnPerfectBump, OnBump, OnImpact, etc.)
                 // is pushed to ActiveEffects for runtime evaluation by bridge systems.
@@ -794,8 +789,10 @@ mod tests {
 
     #[test]
     fn effect_node_on_selected_dispatches_leaf_effects() {
-        use crate::effect::definition::{Effect, EffectNode, Trigger};
-        use crate::effect::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
 
         // After migration, apply_chip_effect will match on
         // EffectNode::Trigger(Trigger::OnSelected, inner) and fire
@@ -898,5 +895,167 @@ mod tests {
         // Bare leaf returns NoMatch from evaluate_node (fails with todo!)
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(result, vec![NodeEvalResult::NoMatch]);
+    }
+
+    // =========================================================================
+    // B12c: dispatch fires typed passive events (behaviors 18-20)
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct CapturedPiercingApplied(Vec<crate::effect::typed_events::PiercingApplied>);
+
+    fn capture_piercing_applied(
+        trigger: On<crate::effect::typed_events::PiercingApplied>,
+        mut captured: ResMut<CapturedPiercingApplied>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedSizeBoostApplied(Vec<crate::effect::typed_events::SizeBoostApplied>);
+
+    fn capture_size_boost_applied(
+        trigger: On<crate::effect::typed_events::SizeBoostApplied>,
+        mut captured: ResMut<CapturedSizeBoostApplied>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedSpeedBoostApplied(Vec<crate::effect::typed_events::SpeedBoostApplied>);
+
+    fn capture_speed_boost_applied(
+        trigger: On<crate::effect::typed_events::SpeedBoostApplied>,
+        mut captured: ResMut<CapturedSpeedBoostApplied>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    fn typed_dispatch_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<ChipSelected>()
+            .init_resource::<ChipRegistry>()
+            .init_resource::<ActiveEffects>()
+            .init_resource::<CapturedPiercingApplied>()
+            .init_resource::<CapturedSizeBoostApplied>()
+            .init_resource::<CapturedSpeedBoostApplied>()
+            .add_observer(capture_piercing_applied)
+            .add_observer(capture_size_boost_applied)
+            .add_observer(capture_speed_boost_applied)
+            .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain());
+        app
+    }
+
+    #[test]
+    fn dispatch_fires_piercing_applied_for_on_selected_piercing() {
+        let mut app = typed_dispatch_test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Piercing Shot".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Piercing Shot");
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedPiercingApplied>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "dispatch should fire PiercingApplied (not ChipEffectApplied) for OnSelected Piercing"
+        );
+        assert_eq!(captured.0[0].per_stack, 1);
+        assert_eq!(captured.0[0].max_stacks, 3);
+        assert_eq!(captured.0[0].chip_name, "Piercing Shot");
+    }
+
+    #[test]
+    fn dispatch_fires_size_boost_applied_for_on_selected_size_boost() {
+        let mut app = typed_dispatch_test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Big Shot".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(
+                    Target::Bolt,
+                    5.0,
+                )])],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Big Shot");
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedSizeBoostApplied>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "dispatch should fire SizeBoostApplied for OnSelected SizeBoost"
+        );
+        assert_eq!(
+            captured.0[0].target,
+            crate::effect::definition::Target::Bolt
+        );
+        assert!((captured.0[0].per_stack - 5.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn dispatch_fires_speed_boost_applied_for_both_bolt_and_breaker() {
+        let mut app = typed_dispatch_test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Speed Mix".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![
+                    TriggerChain::SpeedBoost {
+                        target: Target::Bolt,
+                        multiplier: 0.1,
+                    },
+                    TriggerChain::SpeedBoost {
+                        target: Target::Breaker,
+                        multiplier: 0.2,
+                    },
+                ])],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Speed Mix");
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedSpeedBoostApplied>();
+        assert_eq!(
+            captured.0.len(),
+            2,
+            "dispatch should fire two SpeedBoostApplied events for both Bolt and Breaker targets"
+        );
+        assert_eq!(
+            captured.0[0].target,
+            crate::effect::definition::Target::Bolt
+        );
+        assert_eq!(
+            captured.0[1].target,
+            crate::effect::definition::Target::Breaker
+        );
     }
 }

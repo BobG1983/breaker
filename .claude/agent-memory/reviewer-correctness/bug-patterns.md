@@ -141,6 +141,14 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **bolt_speed_in_range.rs invariant checks Velocity2D first: masks all speed violations**: `breaker-scenario-runner/src/invariants/checkers/bolt_speed_in_range.rs:33-38` — `if let Some(v2d) = velocity2d { v2d.speed() }` short-circuits before checking BoltVelocity. Since Velocity2D is never set by launch/reset/collision systems (all write BoltVelocity), every bolt entity has `Velocity2D(Vec2::ZERO)`, speed = 0.0, hits the `< f32::EPSILON` guard, and is skipped. No BoltSpeedInRange violation ever fires in scenario runs. Confidence: HIGH.
 
+## B12c Typed Events — Vacuous Max-Stacks / Ignore-Variant Tests (2026-03-24)
+
+- **Recurring pattern**: After migrating observers from a generic event to a typed event, legacy
+  tests that `trigger(OldEvent {...})` pass vacuously — the observer never fires, so assertions
+  about "should not be affected" or "should not exceed cap" are trivially true regardless of the
+  handler's correctness. Check all `#[cfg(test)]` blocks in migrated handler files for uses of
+  the old event type. Flag any test that still triggers the old event against the migrated handler.
+
 ## B1-B3 TriggerChain Flatten Bugs (feature/spatial-physics-extraction, 2026-03-24)
 
 - **Attraction leaf has no ChipEffectApplied handler**: `TriggerChain::Attraction` is correctly classified as a leaf by `is_leaf()` (definition.rs:230), so `apply_chip_effect` routes it through `ChipEffectApplied` (bare-leaf arm, line 52). However no observer in `ChipsPlugin` (plugin.rs:23-31) or anywhere in the codebase pattern-matches `TriggerChain::Attraction`. The `magnetism.amp.ron` chip (`Magnetism`, Uncommon, `OnSelected([Attraction(8.0)])`) fires `ChipEffectApplied` on selection and the event is silently discarded. No attraction component is inserted. Confidence: HIGH.

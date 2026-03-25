@@ -1,26 +1,19 @@
 //! Phantom breaker effect handler — spawns a temporary phantom breaker entity.
 //!
-//! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::SpawnPhantom`], and spawns a phantom breaker.
+//! Observes [`SpawnPhantomFired`] and spawns a phantom breaker.
 
 use bevy::prelude::*;
 
-use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
+use crate::effect::typed_events::SpawnPhantomFired;
 
 /// Observer: handles phantom breaker spawning.
-///
-/// Self-selects via pattern matching on [`TriggerChain::SpawnPhantom`].
-pub(crate) fn handle_spawn_phantom(trigger: On<EffectFired>) {
-    let TriggerChain::SpawnPhantom { .. } = &trigger.event().effect else {
-        return;
-    };
+pub(crate) fn handle_spawn_phantom(_trigger: On<SpawnPhantomFired>) {
     // Stub: no implementation yet
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -29,27 +22,20 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
-
     #[test]
-    fn handle_spawn_phantom_ignores_non_spawn_phantom_effects() {
+    fn handle_spawn_phantom_does_not_panic() {
+        use crate::effect::typed_events::SpawnPhantomFired;
+
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(SpawnPhantomFired {
+            duration: 5.0,
+            max_active: 2,
             bolt: None,
             source_chip: None,
         });
         app.world_mut().flush();
-        tick(&mut app);
 
-        // If the handler incorrectly panics or processes non-matching effects,
-        // this test catches it. A no-op return for non-matching variants is correct.
+        // Stub handler should not panic when receiving its typed event.
     }
 }

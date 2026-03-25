@@ -1,26 +1,19 @@
 //! Gravity well effect handler — creates a gravity well that attracts bolts.
 //!
-//! Observes [`EffectFired`], pattern-matches on
-//! [`TriggerChain::GravityWell`], and spawns a gravity well entity.
+//! Observes [`GravityWellFired`] and spawns a gravity well entity.
 
 use bevy::prelude::*;
 
-use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
+use crate::effect::typed_events::GravityWellFired;
 
 /// Observer: handles gravity well creation.
-///
-/// Self-selects via pattern matching on [`TriggerChain::GravityWell`].
-pub(crate) fn handle_gravity_well(trigger: On<EffectFired>) {
-    let TriggerChain::GravityWell { .. } = &trigger.event().effect else {
-        return;
-    };
+pub(crate) fn handle_gravity_well(_trigger: On<GravityWellFired>) {
     // Stub: no implementation yet
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -29,27 +22,22 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
-
     #[test]
-    fn handle_gravity_well_ignores_non_gravity_well_effects() {
+    fn handle_gravity_well_does_not_panic() {
+        use crate::effect::typed_events::GravityWellFired;
+
         let mut app = test_app();
 
-        app.world_mut().commands().trigger(EffectFired {
-            effect: TriggerChain::LoseLife,
+        app.world_mut().commands().trigger(GravityWellFired {
+            strength: 50.0,
+            duration: 5.0,
+            radius: 100.0,
+            max: 2,
             bolt: None,
             source_chip: None,
         });
         app.world_mut().flush();
-        tick(&mut app);
 
-        // If the handler incorrectly panics or processes non-matching effects,
-        // this test catches it. A no-op return for non-matching variants is correct.
+        // Stub handler should not panic when receiving its typed event.
     }
 }

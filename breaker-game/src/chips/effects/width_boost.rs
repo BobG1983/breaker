@@ -4,23 +4,22 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    breaker::components::Breaker,
-    chips::{
-        components::WidthBoost,
-        definition::{ChipEffectApplied, Target, TriggerChain},
-    },
+    breaker::components::Breaker, chips::components::WidthBoost,
+    effect::typed_events::SizeBoostApplied,
 };
 
 /// Observer: applies width boost stacking to all breaker entities.
 pub(crate) fn handle_width_boost(
-    trigger: On<ChipEffectApplied>,
+    trigger: On<SizeBoostApplied>,
     mut query: Query<(Entity, Option<&mut WidthBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let &TriggerChain::SizeBoost(Target::Breaker, per_stack) = &trigger.event().effect else {
+    let event = trigger.event();
+    if event.target != crate::effect::definition::Target::Breaker {
         return;
-    };
-    let max_stacks = trigger.event().max_stacks;
+    }
+    let per_stack = event.per_stack;
+    let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
         stack_f32(
             entity,
@@ -49,8 +48,9 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn(Breaker).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SizeBoost(Target::Breaker, 20.0),
+        app.world_mut().commands().trigger(SizeBoostApplied {
+            target: crate::effect::definition::Target::Breaker,
+            per_stack: 20.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -65,8 +65,9 @@ mod tests {
         let mut app = test_app();
         let breaker = app.world_mut().spawn((Breaker, WidthBoost(20.0))).id();
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SizeBoost(Target::Breaker, 20.0),
+        app.world_mut().commands().trigger(SizeBoostApplied {
+            target: crate::effect::definition::Target::Breaker,
+            per_stack: 20.0,
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -81,8 +82,9 @@ mod tests {
         let mut app = test_app();
         app.world_mut().spawn(Breaker);
 
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::SizeBoost(Target::Bolt, 0.3),
+        app.world_mut().commands().trigger(SizeBoostApplied {
+            target: crate::effect::definition::Target::Bolt,
+            per_stack: 0.3,
             max_stacks: 3,
             chip_name: String::new(),
         });
