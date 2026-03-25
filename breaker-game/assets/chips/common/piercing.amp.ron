@@ -1,7 +1,0 @@
-(
-    name: "Piercing Shot",
-    description: "Bolt passes through the first cell it hits",
-    rarity: Common,
-    max_stacks: 3,
-    effects: [OnSelected([Piercing(1)])],
-)

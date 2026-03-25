@@ -1,7 +1,0 @@
-(
-    name: "Wide Breaker",
-    description: "Breaker width increased",
-    rarity: Common,
-    max_stacks: 3,
-    effects: [OnSelected([SizeBoost(Breaker, 20.0)])],
-)

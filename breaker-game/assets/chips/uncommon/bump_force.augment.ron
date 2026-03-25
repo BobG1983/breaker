@@ -1,7 +1,0 @@
-(
-    name: "Bump Force",
-    description: "Bumps apply more force to the bolt",
-    rarity: Uncommon,
-    max_stacks: 3,
-    effects: [OnSelected([BumpForce(8.0)])],
-)

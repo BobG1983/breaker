@@ -811,40 +811,54 @@ mod tests {
     // These will fail until RON files are updated by writer-code
 
     #[test]
-    fn piercing_amp_ron_parses_new_format() {
+    fn piercing_chip_template_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/common/piercing.amp.ron"
+            "/assets/chips/common/piercing.chip.ron"
         ));
-        let def: ChipDefinition = ron::de::from_str(ron_str).expect("amp RON should parse");
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("chip template RON should parse");
+        assert_eq!(template.name, "Piercing Shot");
+        assert_eq!(template.max_taken, 3);
+        assert!(template.common.is_some());
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
         assert_eq!(
-            def.effects[0],
+            defs[0].effects[0],
             TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])
         );
     }
 
     #[test]
-    fn wide_breaker_augment_ron_parses_new_format() {
+    fn wide_breaker_chip_template_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/common/wide_breaker.augment.ron"
+            "/assets/chips/common/wide_breaker.chip.ron"
         ));
-        let def: ChipDefinition = ron::de::from_str(ron_str).expect("augment RON should parse");
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("chip template RON should parse");
+        assert_eq!(template.name, "Wide Breaker");
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
         assert_eq!(
-            def.effects[0],
+            defs[0].effects[0],
             TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(Target::Breaker, 20.0)])
         );
     }
 
     #[test]
-    fn surge_overclock_ron_parses_new_format() {
+    fn surge_chip_template_ron_parses() {
         let ron_str = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/chips/rare/surge.overclock.ron"
+            "/assets/chips/rare/surge.chip.ron"
         ));
-        let def: ChipDefinition = ron::de::from_str(ron_str).expect("overclock RON should parse");
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("chip template RON should parse");
+        assert_eq!(template.name, "Surge");
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 1);
         assert_eq!(
-            def.effects[0],
+            defs[0].effects[0],
             TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
                 ImpactTarget::Cell,
                 vec![TriggerChain::Shockwave {
