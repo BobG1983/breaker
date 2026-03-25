@@ -475,7 +475,7 @@ fn scenario_definition_stress_some_empty_uses_defaults() {
 
 #[test]
 fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
-    use breaker::chips::{ImpactTarget, TriggerChain};
+    use breaker::{chips::TriggerChain, effect::ImpactTarget};
 
     let ron = r#"(
         breaker: "aegis",

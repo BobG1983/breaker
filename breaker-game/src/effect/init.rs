@@ -111,9 +111,8 @@ pub(crate) fn init_archetype(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        chips::definition::{ImpactTarget, Target},
-        effect::definition::{ArchetypeDefinition, BreakerStatOverrides},
+    use crate::effect::definition::{
+        ArchetypeDefinition, BreakerStatOverrides, ImpactTarget, Target,
     };
 
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";

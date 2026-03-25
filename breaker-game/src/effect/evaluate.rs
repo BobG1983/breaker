@@ -3,8 +3,8 @@
 //! Unified version covering all trigger kinds including bump grades
 //! (`EarlyBump`, `LateBump`, `BumpWhiff`).
 
-use super::definition::{Effect, EffectNode, ImpactTarget as EffectImpactTarget, Trigger};
-use crate::chips::definition::{ImpactTarget, TriggerChain};
+use super::definition::{Effect, EffectNode, ImpactTarget, Trigger};
+use crate::chips::definition::TriggerChain;
 
 /// The kind of trigger event that occurred at runtime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,15 +119,15 @@ pub(crate) fn evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<Node
             | (TriggerKind::BumpWhiff, Trigger::OnBumpWhiff)
             | (
                 TriggerKind::CellImpact,
-                Trigger::OnImpact(EffectImpactTarget::Cell)
+                Trigger::OnImpact(ImpactTarget::Cell)
             )
             | (
                 TriggerKind::BreakerImpact,
-                Trigger::OnImpact(EffectImpactTarget::Breaker)
+                Trigger::OnImpact(ImpactTarget::Breaker)
             )
             | (
                 TriggerKind::WallImpact,
-                Trigger::OnImpact(EffectImpactTarget::Wall)
+                Trigger::OnImpact(ImpactTarget::Wall)
             )
             | (TriggerKind::CellDestroyed, Trigger::OnCellDestroyed)
             | (TriggerKind::BoltLost, Trigger::OnBoltLost)
@@ -147,7 +147,7 @@ pub(crate) fn evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<Node
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::ImpactTarget;
+    use crate::effect::definition::ImpactTarget;
 
     // --- Fire tests: trigger matches and inner chain is a leaf ---
 

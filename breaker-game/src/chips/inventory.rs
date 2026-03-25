@@ -258,7 +258,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::chips::definition::{Target, TriggerChain};
+    use crate::{chips::definition::TriggerChain, effect::definition::Target};
 
     /// Helper: create a Piercing Shot definition with `max_stacks=3`, Common rarity.
     fn piercing_shot_def() -> ChipDefinition {

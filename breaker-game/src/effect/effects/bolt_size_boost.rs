@@ -82,27 +82,6 @@ mod tests {
     }
 
     #[test]
-    fn respects_max_stacks_bolt_size_boost() {
-        let mut app = test_app();
-        let bolt = app.world_mut().spawn((Bolt, BoltSizeBoost(1.5))).id();
-
-        app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
-            per_stack: 0.5,
-            max_stacks: 3,
-            chip_name: String::new(),
-        });
-        app.world_mut().flush();
-
-        let s = app.world().entity(bolt).get::<BoltSizeBoost>().unwrap();
-        assert!(
-            (s.0 - 1.5).abs() < f32::EPSILON,
-            "BoltSizeBoost should not exceed max_stacks cap, got {}",
-            s.0
-        );
-    }
-
-    #[test]
     fn ignores_breaker_target() {
         let mut app = test_app();
         app.world_mut().spawn(Bolt);

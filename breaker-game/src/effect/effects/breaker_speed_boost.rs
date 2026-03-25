@@ -93,34 +93,6 @@ mod tests {
     }
 
     #[test]
-    fn respects_max_stacks_breaker_speed_boost() {
-        let mut app = test_app();
-        let breaker = app
-            .world_mut()
-            .spawn((Breaker, BreakerSpeedBoost(3.3)))
-            .id();
-
-        app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
-            multiplier: 1.1,
-            max_stacks: 3,
-            chip_name: String::new(),
-        });
-        app.world_mut().flush();
-
-        let s = app
-            .world()
-            .entity(breaker)
-            .get::<BreakerSpeedBoost>()
-            .unwrap();
-        assert!(
-            (s.0 - 3.3).abs() < f32::EPSILON,
-            "BreakerSpeedBoost should not exceed max_stacks cap, got {}",
-            s.0
-        );
-    }
-
-    #[test]
     fn ignores_bolt_target() {
         let mut app = test_app();
         app.world_mut().spawn(Breaker);

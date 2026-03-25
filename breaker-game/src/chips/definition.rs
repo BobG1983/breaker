@@ -3,6 +3,8 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+pub use crate::effect::definition::{ImpactTarget, Target};
+
 /// How rare a chip is — controls appearance weight in the selection pool.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Rarity {
@@ -16,28 +18,6 @@ pub enum Rarity {
     Legendary,
     /// Evolution-tier chips — produced by combining maxed ingredient chips.
     Evolution,
-}
-
-/// Discriminates which entity an effect targets.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Target {
-    /// Target the specific bolt that triggered the effect.
-    Bolt,
-    /// Target the breaker entity.
-    Breaker,
-    /// Target all bolt entities in play.
-    AllBolts,
-}
-
-/// Discriminates which surface triggered an impact event.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ImpactTarget {
-    /// Bolt hit a cell.
-    Cell,
-    /// Bolt bounced off the breaker.
-    Breaker,
-    /// Bolt bounced off a wall.
-    Wall,
 }
 
 /// Recursive enum encoding all chip effect logic — trigger wrapper variants nest
@@ -221,32 +201,6 @@ pub struct EvolutionIngredient {
     pub chip_name: String,
     /// Minimum stacks the player must hold.
     pub stacks_required: u32,
-}
-
-/// A recipe that combines existing chips into a new evolved chip.
-///
-/// Internal adapter type — constructed at load time from evolution
-/// `ChipDefinition`s. Not loaded directly from RON.
-#[derive(Deserialize, Clone, Debug)]
-pub struct EvolutionRecipe {
-    /// Chips consumed by this evolution.
-    pub ingredients: Vec<EvolutionIngredient>,
-    /// The chip produced when this recipe is fulfilled.
-    pub result_definition: ChipDefinition,
-}
-
-/// Triggered when a chip effect should be applied.
-///
-/// Dispatched by `apply_chip_effect` for each selected chip.
-/// Each per-effect observer self-selects via pattern matching on `effect`.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ChipEffectApplied {
-    /// The effect to apply.
-    pub effect: TriggerChain,
-    /// Maximum stacks for this chip.
-    pub max_stacks: u32,
-    /// The chip name for attribution through the trigger chain pipeline.
-    pub chip_name: String,
 }
 
 /// A rarity slot within a [`ChipTemplate`], defining the prefix and effects
@@ -1581,54 +1535,6 @@ mod tests {
             ron::de::from_str(ron_str).expect("should parse EvolutionIngredient");
         assert_eq!(ingredient.chip_name, "Piercing Shot");
         assert_eq!(ingredient.stacks_required, 2);
-    }
-
-    #[test]
-    fn evolution_recipe_deserializes_with_full_result_definition() {
-        let ron_str = r#"(
-            ingredients: [
-                (chip_name: "Piercing Shot", stacks_required: 2),
-                (chip_name: "Damage Up", stacks_required: 1),
-            ],
-            result_definition: (
-                name: "Piercing Barrage",
-                description: "Evolved piercing",
-                rarity: Legendary,
-                max_stacks: 1,
-                effects: [OnSelected([Piercing(5)])],
-            ),
-        )"#;
-        let recipe: EvolutionRecipe =
-            ron::de::from_str(ron_str).expect("should parse EvolutionRecipe");
-        assert_eq!(recipe.ingredients.len(), 2);
-        assert_eq!(recipe.ingredients[0].chip_name, "Piercing Shot");
-        assert_eq!(recipe.ingredients[0].stacks_required, 2);
-        assert_eq!(recipe.ingredients[1].chip_name, "Damage Up");
-        assert_eq!(recipe.ingredients[1].stacks_required, 1);
-        assert_eq!(recipe.result_definition.name, "Piercing Barrage");
-        assert_eq!(recipe.result_definition.rarity, Rarity::Legendary);
-        assert_eq!(recipe.result_definition.max_stacks, 1);
-        assert_eq!(
-            recipe.result_definition.effects[0],
-            TriggerChain::OnSelected(vec![TriggerChain::Piercing(5)])
-        );
-    }
-
-    #[test]
-    fn evolution_recipe_with_empty_ingredients_deserializes() {
-        let ron_str = r#"(
-            ingredients: [],
-            result_definition: (
-                name: "Empty Recipe",
-                description: "No ingredients",
-                rarity: Common,
-                max_stacks: 1,
-                effects: [OnSelected([Piercing(1)])],
-            ),
-        )"#;
-        let recipe: EvolutionRecipe = ron::de::from_str(ron_str)
-            .expect("should parse EvolutionRecipe with empty ingredients");
-        assert_eq!(recipe.ingredients.len(), 0);
     }
 
     // --- ChainBolt variant tests ---

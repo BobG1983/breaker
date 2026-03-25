@@ -107,7 +107,7 @@ pub(crate) fn propagate_archetype_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{chips::definition::Target, effect::definition::BreakerStatOverrides};
+    use crate::effect::definition::{BreakerStatOverrides, Target};
 
     fn test_app() -> App {
         let mut app = App::new();

@@ -49,6 +49,9 @@ pub(crate) fn build_active_pool(
 ) -> Vec<(String, f32)> {
     let mut pool = Vec::new();
     for chip in registry.ordered_values() {
+        if chip.rarity == Rarity::Evolution {
+            continue;
+        }
         if !inventory.is_chip_available(chip) {
             continue;
         }
@@ -346,6 +349,46 @@ mod tests {
     fn compute_weight_with_zero_base() {
         let result = compute_weight(0.0, 0.5);
         assert!(result.abs() < f32::EPSILON, "expected 0.0, got {result}");
+    }
+
+    // --- B12d Behavior 12: build_active_pool excludes Evolution-rarity chips ---
+
+    #[test]
+    fn build_active_pool_excludes_evolution_rarity_chips() {
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_rarity("Normal Chip", Rarity::Common, 3));
+        registry.insert(test_chip_rarity("Barrage", Rarity::Evolution, 1));
+
+        let inventory = ChipInventory::default();
+        let config = test_config();
+
+        let pool = build_active_pool(&registry, &inventory, &config);
+
+        let pool_names: Vec<&str> = pool.iter().map(|(name, _)| name.as_str()).collect();
+        assert!(
+            pool_names.contains(&"Normal Chip"),
+            "Common chip should be in pool"
+        );
+        assert!(
+            !pool_names.contains(&"Barrage"),
+            "Evolution-rarity chip 'Barrage' should NOT be in pool"
+        );
+    }
+
+    #[test]
+    fn build_active_pool_only_evolution_chips_produces_empty_pool() {
+        let mut registry = ChipRegistry::default();
+        registry.insert(test_chip_rarity("Evo A", Rarity::Evolution, 1));
+        registry.insert(test_chip_rarity("Evo B", Rarity::Evolution, 1));
+
+        let inventory = ChipInventory::default();
+        let config = test_config();
+
+        let pool = build_active_pool(&registry, &inventory, &config);
+        assert!(
+            pool.is_empty(),
+            "pool should be empty when only Evolution chips in registry"
+        );
     }
 
     // --- Behavior 8: Same seed same offerings ---

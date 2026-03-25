@@ -5,7 +5,7 @@ use iyes_progress::prelude::*;
 
 use crate::{
     chips::{
-        ChipDefinition, ChipRegistry,
+        ChipDefinition, ChipRegistry, Recipe,
         definition::{ChipTemplate, Rarity, expand_template},
     },
     screen::loading::resources::DefaultsCollection,
@@ -14,7 +14,8 @@ use crate::{
 /// Iterates loaded `ChipTemplate` assets from the chip templates collection,
 /// expands each into `ChipDefinition`s, and builds the `ChipRegistry` resource.
 ///
-/// Evolution chips are excluded (they are handled by `seed_evolution_registry`).
+/// Evolution chips are inserted alongside normal chips and also have their
+/// recipes extracted into `ChipRegistry::insert_recipe`.
 pub(crate) fn seed_chip_registry(
     collection: Option<Res<DefaultsCollection>>,
     chip_assets: Res<Assets<ChipDefinition>>,
@@ -42,15 +43,18 @@ pub(crate) fn seed_chip_registry(
         }
     }
 
-    // Also load non-evolution ChipDefinition assets (for backward compatibility —
-    // evolution chips are handled by seed_evolution_registry.
-    // Remove this block once all non-evolution chips are defined as ChipTemplates.)
+    // Also load ChipDefinition assets (for backward compatibility —
+    // remove this block once all non-evolution chips are defined as ChipTemplates.)
     for handle in &collection.chips {
         let Some(def) = chip_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
         if def.rarity == Rarity::Evolution {
-            continue;
+            let recipe = Recipe {
+                ingredients: def.ingredients.clone().unwrap_or_default(),
+                result_name: def.name.clone(),
+            };
+            registry.insert_recipe(recipe);
         }
         registry.insert(def.clone());
     }
@@ -256,31 +260,67 @@ mod tests {
         );
     }
 
-    // --- Behavior 11: template chips come from chip_templates, not chips ---
+    // ======================================================================
+    // B12d: seed_chip_registry includes evolution chips + extracts recipes
+    // ======================================================================
+
+    // --- Behavior 8: seed_chip_registry inserts ALL chip definitions including Evolution rarity ---
 
     #[test]
-    fn seed_chip_registry_loads_templates_not_evolution_chips() {
+    fn seed_chip_registry_inserts_evolution_chips_into_registry() {
+        use crate::chips::definition::{EvolutionIngredient, TriggerChain};
+
+        let mut app = test_app();
+
+        // Add a Common chip and an Evolution chip to the chips collection
+        let mut chip_assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let common_handle = chip_assets.add(ChipDefinition {
+            name: "Piercing Shot".to_owned(),
+            description: "Common chip".to_owned(),
+            rarity: Rarity::Common,
+            max_stacks: 3,
+            effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+            ingredients: None,
+            template_name: None,
+        });
+        let evo_handle = chip_assets.add(ChipDefinition {
+            name: "Barrage".to_owned(),
+            description: "Evolution chip".to_owned(),
+            rarity: Rarity::Evolution,
+            max_stacks: 1,
+            effects: vec![TriggerChain::Piercing(5)],
+            ingredients: Some(vec![EvolutionIngredient {
+                chip_name: "Piercing Shot".to_owned(),
+                stacks_required: 2,
+            }]),
+            template_name: None,
+        });
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![common_handle, evo_handle], vec![]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert!(
+            registry.get("Barrage").is_some(),
+            "evolution chip 'Barrage' should be in the unified ChipRegistry"
+        );
+        assert!(
+            registry.get("Piercing Shot").is_some(),
+            "common chip 'Piercing Shot' should be in the unified ChipRegistry"
+        );
+    }
+
+    #[test]
+    fn seed_chip_registry_evolution_only_collection() {
         use crate::chips::definition::TriggerChain;
 
         let mut app = test_app();
 
-        // Add a template
-        let template = make_test_template(
-            "Piercing",
-            3,
-            Some((
-                "Basic",
-                vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
-            )),
-            None,
-        );
-        let mut template_assets = app.world_mut().resource_mut::<Assets<ChipTemplate>>();
-        let template_handle = template_assets.add(template);
-
-        // Add an evolution chip to the chips collection
         let mut chip_assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
         let evo_handle = chip_assets.add(ChipDefinition {
-            name: "Barrage".to_owned(),
+            name: "Solo Evo".to_owned(),
             description: "Evolution".to_owned(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
@@ -290,18 +330,152 @@ mod tests {
         });
 
         app.world_mut()
-            .insert_resource(make_collection(vec![evo_handle], vec![template_handle]));
+            .insert_resource(make_collection(vec![evo_handle], vec![]));
 
         app.update();
 
         let registry = app.world().resource::<ChipRegistry>();
         assert!(
-            registry.get("Basic Piercing").is_some(),
-            "template-expanded chip should be in registry"
+            registry.get("Solo Evo").is_some(),
+            "evolution-only collection should have the evolution in registry"
         );
         assert!(
-            registry.get("Barrage").is_none(),
-            "evolution chip should NOT be in chip registry (handled by seed_evolution_registry)"
+            registry.ordered_values().count() >= 1,
+            "registry should have at least 1 entry"
+        );
+    }
+
+    // --- Behavior 9: seed_chip_registry extracts evolution recipes ---
+
+    #[test]
+    fn seed_chip_registry_extracts_recipes_from_evolution_chips() {
+        use crate::chips::definition::{EvolutionIngredient, TriggerChain};
+
+        let mut app = test_app();
+
+        let mut chip_assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let evo_handle = chip_assets.add(ChipDefinition {
+            name: "Piercing Barrage".to_owned(),
+            description: "Evolution chip".to_owned(),
+            rarity: Rarity::Evolution,
+            max_stacks: 1,
+            effects: vec![TriggerChain::Piercing(5)],
+            ingredients: Some(vec![EvolutionIngredient {
+                chip_name: "Piercing Shot".to_owned(),
+                stacks_required: 2,
+            }]),
+            template_name: None,
+        });
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![evo_handle], vec![]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert_eq!(
+            registry.recipes().len(),
+            1,
+            "should extract 1 recipe from evolution chip"
+        );
+        assert_eq!(registry.recipes()[0].result_name, "Piercing Barrage");
+        assert_eq!(registry.recipes()[0].ingredients.len(), 1);
+        assert_eq!(
+            registry.recipes()[0].ingredients[0].chip_name,
+            "Piercing Shot"
+        );
+        assert_eq!(registry.recipes()[0].ingredients[0].stacks_required, 2);
+    }
+
+    // --- Behavior 11: non-evolution chips do not produce recipes ---
+
+    #[test]
+    fn seed_chip_registry_non_evolution_chips_no_recipes() {
+        use crate::chips::definition::{EvolutionIngredient, TriggerChain};
+
+        let mut app = test_app();
+
+        let mut chip_assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let c1 = chip_assets.add(ChipDefinition {
+            name: "Common A".to_owned(),
+            description: "Common".to_owned(),
+            rarity: Rarity::Common,
+            max_stacks: 3,
+            effects: vec![TriggerChain::Piercing(1)],
+            ingredients: None,
+            template_name: None,
+        });
+        let c2 = chip_assets.add(ChipDefinition {
+            name: "Common B".to_owned(),
+            description: "Common".to_owned(),
+            rarity: Rarity::Common,
+            max_stacks: 3,
+            effects: vec![TriggerChain::DamageBoost(0.5)],
+            ingredients: None,
+            template_name: None,
+        });
+        let evo = chip_assets.add(ChipDefinition {
+            name: "Evo Chip".to_owned(),
+            description: "Evolution".to_owned(),
+            rarity: Rarity::Evolution,
+            max_stacks: 1,
+            effects: vec![TriggerChain::Piercing(5)],
+            ingredients: Some(vec![EvolutionIngredient {
+                chip_name: "Common A".to_owned(),
+                stacks_required: 2,
+            }]),
+            template_name: None,
+        });
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![c1, c2, evo], vec![]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert_eq!(
+            registry.recipes().len(),
+            1,
+            "only 1 recipe from the single Evolution chip"
+        );
+        assert_eq!(
+            registry.ordered_values().count(),
+            3,
+            "all 3 chips (2 common + 1 evolution) should be in registry"
+        );
+    }
+
+    #[test]
+    fn seed_chip_registry_zero_evolution_chips_no_recipes() {
+        use crate::chips::definition::TriggerChain;
+
+        let mut app = test_app();
+
+        let mut chip_assets = app.world_mut().resource_mut::<Assets<ChipDefinition>>();
+        let c1 = chip_assets.add(ChipDefinition {
+            name: "Common A".to_owned(),
+            description: "Common".to_owned(),
+            rarity: Rarity::Common,
+            max_stacks: 3,
+            effects: vec![TriggerChain::Piercing(1)],
+            ingredients: None,
+            template_name: None,
+        });
+
+        app.world_mut()
+            .insert_resource(make_collection(vec![c1], vec![]));
+
+        app.update();
+
+        let registry = app.world().resource::<ChipRegistry>();
+        assert_eq!(
+            registry.recipes().len(),
+            0,
+            "0 evolution chips means 0 recipes"
+        );
+        assert!(
+            registry.get("Common A").is_some(),
+            "common chip should still be present"
         );
     }
 

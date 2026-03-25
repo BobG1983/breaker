@@ -278,19 +278,8 @@ pub(crate) struct TiltControlApplied {
 }
 
 // ===========================================================================
-// TriggerChain → Effect conversion (for bridge + apply_chip_effect call sites)
+// TriggerChain → Effect conversion (for bridge + dispatch_chip_effects call sites)
 // ===========================================================================
-
-/// Converts a `chips::definition::Target` to `effect::definition::Target`.
-fn convert_target(t: crate::chips::definition::Target) -> Target {
-    use crate::chips::definition::Target as ChipsTarget;
-
-    match t {
-        ChipsTarget::Bolt => Target::Bolt,
-        ChipsTarget::Breaker => Target::Breaker,
-        ChipsTarget::AllBolts => Target::AllBolts,
-    }
-}
 
 /// Converts a `TriggerChain` leaf into the corresponding `Effect`.
 ///
@@ -338,7 +327,7 @@ pub(crate) fn trigger_chain_to_effect(
         TriggerChain::TimePenalty { seconds } => Effect::TimePenalty { seconds: *seconds },
         TriggerChain::SpawnBolt => Effect::SpawnBolt,
         TriggerChain::SpeedBoost { target, multiplier } => Effect::SpeedBoost {
-            target: convert_target(*target),
+            target: *target,
             multiplier: *multiplier,
         },
         TriggerChain::ChainBolt { tether_distance } => Effect::ChainBolt {
@@ -381,7 +370,7 @@ pub(crate) fn trigger_chain_to_effect(
         TriggerChain::Piercing(n) => Effect::Piercing(*n),
         TriggerChain::DamageBoost(f) => Effect::DamageBoost(*f),
         TriggerChain::ChainHit(n) => Effect::ChainHit(*n),
-        TriggerChain::SizeBoost(t, f) => Effect::SizeBoost(convert_target(*t), *f),
+        TriggerChain::SizeBoost(t, f) => Effect::SizeBoost(*t, *f),
         TriggerChain::Attraction(f) => Effect::Attraction(*f),
         TriggerChain::BumpForce(f) => Effect::BumpForce(*f),
         TriggerChain::TiltControl(f) => Effect::TiltControl(*f),
@@ -592,8 +581,7 @@ fn fire_exotic_triggered_effect(
 
 /// Converts a resolved passive `Effect` leaf into the appropriate typed passive event trigger.
 ///
-/// Called by `apply_chip_effect` after extracting leaf effects from `OnSelected` nodes.
-/// Replaces all `commands.trigger(ChipEffectApplied { ... })` calls.
+/// Called by `dispatch_chip_effects` after extracting leaf effects from `OnSelected` nodes.
 pub(crate) fn fire_passive_event(
     effect: super::definition::Effect,
     max_stacks: u32,

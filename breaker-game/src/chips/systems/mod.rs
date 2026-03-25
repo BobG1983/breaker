@@ -1,5 +1,5 @@
 //! Systems for the chips domain.
 
-pub(crate) mod apply_chip_effect;
+pub(crate) mod dispatch_chip_effects;
 
-pub(crate) use apply_chip_effect::apply_chip_effect;
+pub(crate) use dispatch_chip_effects::dispatch_chip_effects;

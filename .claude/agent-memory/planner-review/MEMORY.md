@@ -27,6 +27,7 @@
 - [pattern_struct_field_addition_crosscrate.md](pattern_struct_field_addition_crosscrate.md) — Adding a field to pub struct breaks ALL struct literal sites across workspace; serde(default) only helps RON
 - [pattern_dead_code_directory_vs_live.md](pattern_dead_code_directory_vs_live.md) — Module rename creates new directory but lib.rs still declares old one; specs targeting new dir won't compile
 - [pattern_field_type_change_semantic_shift.md](pattern_field_type_change_semantic_shift.md) — Field type change from leaf to tree type means consuming logic (wrapping) must also change, not just types
+- [pattern_file_move_test_import_cascade.md](pattern_file_move_test_import_cascade.md) — Moving handler files between modules breaks test imports in files that registered those handlers via glob imports
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)

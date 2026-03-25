@@ -1,6 +1,6 @@
 //! Chip effect components stamped onto bolt and breaker entities.
 //!
-//! These components are inserted by `apply_chip_effect` and read by gameplay
+//! These components are inserted by `dispatch_chip_effects` and read by gameplay
 //! systems (physics, bump, spawn) to modify entity behaviour.
 
 use bevy::prelude::*;

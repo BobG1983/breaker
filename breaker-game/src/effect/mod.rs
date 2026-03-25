@@ -6,7 +6,6 @@ pub(crate) mod bridges;
 pub(crate) mod definition;
 pub(crate) mod effects;
 pub(crate) mod evaluate;
-pub(crate) mod events;
 pub(crate) mod init;
 mod plugin;
 pub(crate) mod registry;

@@ -368,20 +368,11 @@ mod tests {
     use super::*;
     use crate::{
         breaker::messages::BumpGrade,
-        chips::definition::{ImpactTarget, TriggerChain},
-        effect::{events::EffectFired, typed_events::*},
+        chips::definition::TriggerChain,
+        effect::{definition::ImpactTarget, typed_events::*},
     };
 
     // --- Test infrastructure ---
-
-    #[derive(Resource, Default)]
-    struct CapturedEffects(Vec<(TriggerChain, Option<Entity>)>);
-
-    fn capture_effects(trigger: On<EffectFired>, mut captured: ResMut<CapturedEffects>) {
-        captured
-            .0
-            .push((trigger.event().effect.clone(), trigger.event().bolt));
-    }
 
     #[derive(Resource, Default)]
     struct CapturedShockwaveFired(Vec<ShockwaveFired>);
@@ -1143,9 +1134,7 @@ mod tests {
             .add_message::<RunLost>()
             .insert_resource(ActiveEffects(vec![(None, chain)]))
             .insert_resource(SendBoltLostFlag(false))
-            .add_observer(capture_effects)
             .add_observer(handle_life_lost)
-            .init_resource::<CapturedEffects>()
             .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
 
         let entity = app.world_mut().spawn(LivesCount(3)).id();
@@ -1349,7 +1338,7 @@ mod tests {
 
     #[test]
     fn bridge_bump_fires_speed_boost_fired_on_perfect_bump() {
-        use crate::chips::definition::Target as ChipTarget;
+        use crate::effect::definition::Target as ChipTarget;
 
         let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::SpeedBoost {
             target: ChipTarget::Bolt,

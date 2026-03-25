@@ -4,9 +4,6 @@
 use bevy::prelude::*;
 use tracing::debug;
 
-// Re-export for old tests that access ChipEffectApplied via `use super::*`.
-#[cfg(test)]
-pub(super) use crate::chips::definition::ChipEffectApplied;
 use crate::{
     chips::{definition::TriggerChain, inventory::ChipInventory, resources::ChipRegistry},
     effect::{
@@ -20,7 +17,7 @@ use crate::{
 /// [`ChipRegistry`], and fires typed passive events for each selected chip.
 ///
 /// Per-effect observers handle the actual stacking logic.
-pub(crate) fn apply_chip_effect(
+pub(crate) fn dispatch_chip_effects(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
     mut inventory: Option<ResMut<ChipInventory>>,
@@ -72,12 +69,15 @@ mod tests {
         breaker::components::Breaker,
         chips::{
             components::*,
-            definition::{ChipDefinition, ImpactTarget, Rarity, Target, TriggerChain},
-            effects::*,
+            definition::{ChipDefinition, Rarity, TriggerChain},
             inventory::ChipInventory,
             resources::ChipRegistry,
         },
-        effect::ActiveEffects,
+        effect::{
+            ActiveEffects,
+            definition::{ImpactTarget, Target},
+            effects::*,
+        },
         ui::messages::ChipSelected,
     };
 
@@ -105,7 +105,10 @@ mod tests {
             .add_message::<ChipSelected>()
             .init_resource::<ChipRegistry>()
             .init_resource::<ActiveEffects>()
-            .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain())
+            .add_systems(
+                Update,
+                (enqueue_chip_selected, dispatch_chip_effects).chain(),
+            )
             .add_observer(handle_piercing)
             .add_observer(handle_damage_boost)
             .add_observer(handle_bolt_speed_boost)
@@ -249,11 +252,11 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: apply_chip_effect updates ChipInventory (32)
+    // B3: dispatch_chip_effects updates ChipInventory (32)
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn apply_chip_effect_adds_chip_to_inventory_on_chip_selected() {
+    fn dispatch_chip_effects_adds_chip_to_inventory_on_chip_selected() {
         let mut app = test_app();
         app.init_resource::<ChipInventory>();
 
@@ -282,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_chip_effect_does_not_add_inventory_entry_for_unknown_chip() {
+    fn dispatch_chip_effects_does_not_add_inventory_entry_for_unknown_chip() {
         let mut app = test_app();
         app.init_resource::<ChipInventory>();
 
@@ -592,79 +595,6 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: Handlers ignore non-matching variants (28)
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn shockwave_via_chip_effect_applied_inserts_no_passive_components() {
-        let mut app = test_app();
-
-        let bolt = app.world_mut().spawn(Bolt).id();
-        let breaker = app.world_mut().spawn(Breaker).id();
-
-        app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: TriggerChain::Shockwave {
-                base_range: 64.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            },
-            max_stacks: 1,
-            chip_name: "test".to_owned(),
-        });
-        app.world_mut().flush();
-
-        // Bolt should have no passive components
-        assert!(
-            app.world().entity(bolt).get::<Piercing>().is_none(),
-            "Shockwave should not insert Piercing on bolt"
-        );
-        assert!(
-            app.world().entity(bolt).get::<DamageBoost>().is_none(),
-            "Shockwave should not insert DamageBoost on bolt"
-        );
-        assert!(
-            app.world().entity(bolt).get::<BoltSpeedBoost>().is_none(),
-            "Shockwave should not insert BoltSpeedBoost on bolt"
-        );
-        assert!(
-            app.world().entity(bolt).get::<ChainHit>().is_none(),
-            "Shockwave should not insert ChainHit on bolt"
-        );
-        assert!(
-            app.world().entity(bolt).get::<BoltSizeBoost>().is_none(),
-            "Shockwave should not insert BoltSizeBoost on bolt"
-        );
-
-        // Breaker should have no passive components
-        assert!(
-            app.world().entity(breaker).get::<WidthBoost>().is_none(),
-            "Shockwave should not insert WidthBoost on breaker"
-        );
-        assert!(
-            app.world()
-                .entity(breaker)
-                .get::<BreakerSpeedBoost>()
-                .is_none(),
-            "Shockwave should not insert BreakerSpeedBoost on breaker"
-        );
-        assert!(
-            app.world()
-                .entity(breaker)
-                .get::<BumpForceBoost>()
-                .is_none(),
-            "Shockwave should not insert BumpForceBoost on breaker"
-        );
-        assert!(
-            app.world()
-                .entity(breaker)
-                .get::<TiltControlBoost>()
-                .is_none(),
-            "Shockwave should not insert TiltControlBoost on breaker"
-        );
-    }
-
-    // ---------------------------------------------------------------------------
     // Existing integration tests rewritten with new types
     // ---------------------------------------------------------------------------
 
@@ -781,8 +711,8 @@ mod tests {
     }
 
     // =========================================================================
-    // B12b: apply_chip_effect dispatch patterns with EffectNode (behaviors 25-26)
-    // These tests verify the EffectNode dispatch logic that apply_chip_effect
+    // B12b: dispatch_chip_effects dispatch patterns with EffectNode (behaviors 25-26)
+    // These tests verify the EffectNode dispatch logic that dispatch_chip_effects
     // will use after migration. They exercise evaluate_node which fails
     // with todo!().
     // =========================================================================
@@ -794,7 +724,7 @@ mod tests {
             evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
         };
 
-        // After migration, apply_chip_effect will match on
+        // After migration, dispatch_chip_effects will match on
         // EffectNode::Trigger(Trigger::OnSelected, inner) and fire
         // ChipEffectApplied for each inner Leaf's Effect.
         let node = EffectNode::Trigger(
@@ -817,7 +747,7 @@ mod tests {
             }
         }
         // evaluate_node should return NoMatch for OnSelected — it's handled
-        // by apply_chip_effect, not by bridges
+        // by dispatch_chip_effects, not by bridges
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
@@ -858,7 +788,7 @@ mod tests {
             evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
         };
 
-        // After migration, apply_chip_effect pushes non-OnSelected triggers
+        // After migration, dispatch_chip_effects pushes non-OnSelected triggers
         // to ActiveEffects. Verify this EffectNode evaluates as expected.
         let node = EffectNode::Trigger(
             Trigger::OnPerfectBump,
@@ -943,7 +873,10 @@ mod tests {
             .add_observer(capture_piercing_applied)
             .add_observer(capture_size_boost_applied)
             .add_observer(capture_speed_boost_applied)
-            .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain());
+            .add_systems(
+                Update,
+                (enqueue_chip_selected, dispatch_chip_effects).chain(),
+            );
         app
     }
 
@@ -1056,6 +989,133 @@ mod tests {
         assert_eq!(
             captured.0[1].target,
             crate::effect::definition::Target::Breaker
+        );
+    }
+
+    // =========================================================================
+    // B12d: dispatch_chip_effects finds evolution chip in registry (B7 fix)
+    // Behaviors 19-20
+    // =========================================================================
+
+    /// Behavior 19: Evolution chip is found in unified `ChipRegistry` and
+    /// `OnSelected` effects fire. Before B12d, evolution chips were excluded
+    /// from `ChipRegistry` (stored only in `EvolutionRegistry`), so
+    /// `registry.get("Barrage")` returned None — this is the B7 fix.
+    #[test]
+    fn dispatch_finds_evolution_chip_in_registry_and_applies_effects() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        // Insert an Evolution-rarity chip into the unified ChipRegistry
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Barrage".to_owned(),
+                description: "Evolution chip".to_owned(),
+                rarity: Rarity::Evolution,
+                max_stacks: 1,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(5)])],
+                ingredients: Some(vec![crate::chips::definition::EvolutionIngredient {
+                    chip_name: "Piercing Shot".to_owned(),
+                    stacks_required: 2,
+                }]),
+                template_name: None,
+            });
+        app.init_resource::<ChipInventory>();
+
+        send_chip_selected(&mut app, "Barrage");
+        tick(&mut app);
+
+        // Bolt should have Piercing(5) from the evolution chip's OnSelected effect
+        let piercing = app
+            .world_mut()
+            .query::<&Piercing>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Piercing component after evolution chip selected (B7 fix)");
+        assert_eq!(
+            piercing.0, 5,
+            "Piercing value should be 5 from evolution chip's OnSelected(Piercing(5))"
+        );
+
+        // ChipInventory should track the evolution chip
+        let inventory = app.world().resource::<ChipInventory>();
+        assert_eq!(
+            inventory.stacks("Barrage"),
+            1,
+            "ChipInventory should have 1 stack of 'Barrage'"
+        );
+    }
+
+    /// Behavior 20: Evolution chip with triggered chain pushes to `ActiveEffects`.
+    #[test]
+    fn dispatch_handles_triggered_chain_for_evolution_chip() {
+        let mut app = test_app();
+
+        // Insert an Evolution chip with a triggered chain (OnPerfectBump → Shockwave)
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Evo Surge".to_owned(),
+                description: "Evolution with triggered effect".to_owned(),
+                rarity: Rarity::Evolution,
+                max_stacks: 1,
+                effects: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 0.0,
+                    stacks: 1,
+                    speed: 400.0,
+                }])],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Evo Surge");
+        tick(&mut app);
+
+        let active = app.world().resource::<ActiveEffects>();
+        assert_eq!(
+            active.0.len(),
+            1,
+            "evolution chip's triggered chain should be pushed to ActiveEffects"
+        );
+        assert_eq!(
+            active.0[0].0,
+            Some("Evo Surge".to_owned()),
+            "ActiveEffects entry should carry the evolution chip name"
+        );
+        assert_eq!(
+            active.0[0].1,
+            TriggerChain::OnPerfectBump(vec![TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 400.0,
+            }]),
+            "ActiveEffects chain should match the evolution chip's triggered effect"
+        );
+    }
+
+    /// Edge case for behavior 20: unknown evolution chip name is skipped.
+    #[test]
+    fn dispatch_skips_unknown_evolution_chip_name() {
+        let mut app = test_app();
+        app.init_resource::<ChipInventory>();
+
+        // Don't add any chip named "Unknown Evo" to the registry
+        send_chip_selected(&mut app, "Unknown Evo");
+        tick(&mut app);
+
+        let inventory = app.world().resource::<ChipInventory>();
+        assert_eq!(
+            inventory.total_held(),
+            0,
+            "unknown chip name should be skipped, inventory remains empty"
+        );
+        let active = app.world().resource::<ActiveEffects>();
+        assert!(
+            active.0.is_empty(),
+            "unknown chip name should not push to ActiveEffects"
         );
     }
 }

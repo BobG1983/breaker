@@ -6,7 +6,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     chips::{
-        ChipRegistry, EvolutionRegistry,
+        ChipRegistry,
         definition::Rarity,
         inventory::ChipInventory,
         offering::{OfferingConfig, generate_offerings},
@@ -32,7 +32,6 @@ pub(crate) struct ChipOfferingParams<'w, 's> {
     rng: ResMut<'w, GameRng>,
     run_state: Option<Res<'w, RunState>>,
     node_sequence: Option<Res<'w, NodeSequence>>,
-    evolution_registry: Option<Res<'w, EvolutionRegistry>>,
 }
 
 /// Generates chip offerings using weighted random selection and inserts `ChipOffers`.
@@ -51,21 +50,19 @@ pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
 
     // Check for boss node with eligible evolutions
     let mut evolution_offers: Vec<ChipOffering> = Vec::new();
-    if let (Some(run_state), Some(node_sequence), Some(evo_reg)) = (
-        &params.run_state,
-        &params.node_sequence,
-        &params.evolution_registry,
-    ) {
+    if let (Some(run_state), Some(node_sequence)) = (&params.run_state, &params.node_sequence) {
         let idx = run_state.node_index as usize;
         if idx < node_sequence.assignments.len()
             && node_sequence.assignments[idx].node_type == NodeType::Boss
         {
-            let eligible = evo_reg.eligible_evolutions(&params.inventory);
+            let eligible = params.registry.eligible_recipes(&params.inventory);
             for recipe in eligible.iter().take(params.config.offers_per_node) {
-                evolution_offers.push(ChipOffering::Evolution {
-                    ingredients: recipe.ingredients.clone(),
-                    result: recipe.result_definition.clone(),
-                });
+                if let Some(result_def) = params.registry.get(&recipe.result_name) {
+                    evolution_offers.push(ChipOffering::Evolution {
+                        ingredients: recipe.ingredients.clone(),
+                        result: result_def.clone(),
+                    });
+                }
             }
         }
     }
@@ -99,8 +96,8 @@ mod tests {
     use super::*;
     use crate::{
         chips::{
-            ChipDefinition, EvolutionRegistry,
-            definition::{EvolutionIngredient, EvolutionRecipe, Rarity, TriggerChain},
+            ChipDefinition,
+            definition::{EvolutionIngredient, Rarity, TriggerChain},
         },
         run::{
             definition::NodeType,
@@ -251,7 +248,9 @@ mod tests {
         );
     }
 
-    // --- Evolution offering generation tests ---
+    // --- B12d: Evolution offering generation tests using ChipRegistry ---
+
+    use crate::chips::Recipe;
 
     /// Creates a `NodeSequence` with a single boss node at the given index
     /// and active nodes at all other positions.
@@ -273,15 +272,12 @@ mod tests {
         NodeSequence { assignments }
     }
 
-    /// Test app with `RunState`, `NodeSequence`, and pre-populated
-    /// `ChipInventory` for evolution eligibility testing.
+    /// Test app for evolution offering tests using unified `ChipRegistry`.
     ///
-    /// NOTE: `EvolutionRegistry` is not yet re-exported from `chips/mod.rs`
-    /// (it is `pub(crate)` in `chips/resources.rs` behind a private module).
-    /// The main agent must add `pub(crate) use resources::EvolutionRegistry;`
-    /// to `chips/mod.rs` before the GREEN phase. The system will need it as
-    /// a parameter. For the RED phase, the test still fails correctly because
-    /// the system does not yet generate `Evolution` offerings.
+    /// The `ChipRegistry` contains 5 normal chips plus the "Barrage" evolution
+    /// chip definition and a recipe requiring "Piercing Shot" x2.
+    /// No `EvolutionRegistry` resource is inserted — the system must use
+    /// `ChipRegistry::eligible_recipes` instead.
     fn test_app_for_evolution(
         node_index: u32,
         node_type_at_index: NodeType,
@@ -292,12 +288,10 @@ mod tests {
         let boss_index = if node_type_at_index == NodeType::Boss {
             node_index as usize
         } else {
-            // Put boss somewhere else so the queried node is not boss
             99
         };
         let total = (boss_index + 1).max(node_index as usize + 1);
         let mut seq = make_node_sequence_with_boss(boss_index, total);
-        // Override the specific node if it's not the boss
         if node_type_at_index != NodeType::Boss {
             seq.assignments[node_index as usize].node_type = node_type_at_index;
         }
@@ -305,34 +299,37 @@ mod tests {
         let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
         let mut inventory = ChipInventory::default();
         if evolution_eligible {
-            // Add 2+ stacks so the recipe's ingredient requirement is met
             let _ = inventory.add_chip("Piercing Shot", &ps_def);
             let _ = inventory.add_chip("Piercing Shot", &ps_def);
             let _ = inventory.add_chip("Piercing Shot", &ps_def);
         }
 
-        // Build evolution registry with a recipe requiring Piercing Shot x2
-        let mut evo_registry = EvolutionRegistry::default();
-        evo_registry.insert(EvolutionRecipe {
+        // Build unified ChipRegistry with 5 normal chips + Barrage evolution + recipe
+        let mut registry = make_registry(5);
+        registry.insert(ChipDefinition {
+            name: "Barrage".into(),
+            description: "Combined piercing power".into(),
+            rarity: Rarity::Evolution,
+            max_stacks: 1,
+            effects: vec![TriggerChain::Piercing(5)],
+            ingredients: Some(vec![EvolutionIngredient {
+                chip_name: "Piercing Shot".into(),
+                stacks_required: 2,
+            }]),
+            template_name: None,
+        });
+        registry.insert_recipe(Recipe {
             ingredients: vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".into(),
                 stacks_required: 2,
             }],
-            result_definition: ChipDefinition {
-                name: "Barrage".into(),
-                description: "Combined piercing power".into(),
-                rarity: Rarity::Legendary,
-                max_stacks: 1,
-                effects: vec![TriggerChain::Piercing(5)],
-                ingredients: None,
-                template_name: None,
-            },
+            result_name: "Barrage".to_owned(),
         });
 
         app.add_plugins(MinimalPlugins)
-            .insert_resource(make_registry(5))
+            .insert_resource(registry)
             .insert_resource(inventory)
-            .insert_resource(evo_registry)
+            // No EvolutionRegistry inserted — system must use ChipRegistry.eligible_recipes
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(GameRng::from_seed(42))
             .insert_resource(RunState {
@@ -343,6 +340,8 @@ mod tests {
             .add_systems(Update, generate_chip_offerings);
         app
     }
+
+    // --- Behavior 13: generate_chip_offerings on boss node with eligible recipe ---
 
     #[test]
     fn boss_node_eligible_evolution_appears_in_offers() {
@@ -360,7 +359,6 @@ mod tests {
             offers.0.iter().map(ChipOffering::name).collect::<Vec<_>>()
         );
 
-        // Verify the evolution result name matches the recipe
         let evo_names: Vec<&str> = offers
             .0
             .iter()
@@ -374,6 +372,8 @@ mod tests {
             "evolution offering should have result name 'Barrage', got: {evo_names:?}"
         );
     }
+
+    // --- Behavior 14: generate_chip_offerings on non-boss node has no evolution ---
 
     #[test]
     fn non_boss_node_has_no_evolution_offerings() {
@@ -391,7 +391,6 @@ mod tests {
             offers.0.iter().map(ChipOffering::name).collect::<Vec<_>>()
         );
 
-        // All should be Normal
         assert!(
             offers
                 .0
@@ -403,7 +402,6 @@ mod tests {
 
     #[test]
     fn boss_node_no_eligible_evolutions_all_normal() {
-        // Boss node but evolution not eligible (insufficient stacks)
         let mut app = test_app_for_evolution(5, NodeType::Boss, false);
         app.update();
 
@@ -417,9 +415,10 @@ mod tests {
         );
     }
 
+    // --- Behavior 15: remaining slots filled with normal offerings ---
+
     #[test]
     fn boss_node_remaining_slots_filled_with_normal() {
-        // Boss node, 1 eligible evolution, offers_per_node=3 → 1 Evo + 2 Normal = 3 total
         let mut app = test_app_for_evolution(5, NodeType::Boss, true);
         app.update();
 

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    chips::EvolutionRegistry,
+    chips::ChipRegistry,
     run::{messages::HighlightTriggered, resources::*},
     ui::messages::ChipSelected,
 };
@@ -16,13 +16,13 @@ use crate::{
 /// [`RunStats::evolutions_performed`].
 pub(crate) fn detect_first_evolution(
     mut reader: MessageReader<ChipSelected>,
-    evolution_registry: Option<Res<EvolutionRegistry>>,
+    registry: Option<Res<ChipRegistry>>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
     run_state: Res<RunState>,
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
-    let Some(registry) = evolution_registry else {
+    let Some(registry) = registry else {
         // Drain reader to avoid stale messages
         for _msg in reader.read() {}
         return;
@@ -33,7 +33,7 @@ pub(crate) fn detect_first_evolution(
         let is_evolution = registry
             .recipes()
             .iter()
-            .any(|recipe| recipe.result_definition.name == msg.name);
+            .any(|recipe| recipe.result_name == msg.name);
 
         if !is_evolution {
             continue;
@@ -64,9 +64,7 @@ pub(crate) fn detect_first_evolution(
 mod tests {
     use super::*;
     use crate::{
-        chips::definition::{
-            ChipDefinition, EvolutionIngredient, EvolutionRecipe, Rarity, TriggerChain,
-        },
+        chips::{ChipRegistry, Recipe, definition::EvolutionIngredient},
         run::{
             definition::HighlightConfig,
             resources::{HighlightKind, RunHighlight},
@@ -94,24 +92,16 @@ mod tests {
         }
     }
 
-    /// Creates a test `EvolutionRegistry` with one recipe producing
+    /// Creates a test `ChipRegistry` with one recipe producing
     /// `"Piercing Barrage"`.
-    fn test_evolution_registry() -> EvolutionRegistry {
-        let mut registry = EvolutionRegistry::default();
-        registry.insert(EvolutionRecipe {
+    fn test_chip_registry() -> ChipRegistry {
+        let mut registry = ChipRegistry::default();
+        registry.insert_recipe(Recipe {
             ingredients: vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".to_owned(),
                 stacks_required: 2,
             }],
-            result_definition: ChipDefinition {
-                name: "Piercing Barrage".to_owned(),
-                description: "Test evolution chip".to_owned(),
-                rarity: Rarity::Legendary,
-                max_stacks: 1,
-                effects: vec![TriggerChain::Piercing(5)],
-                ingredients: None,
-                template_name: None,
-            },
+            result_name: "Piercing Barrage".to_owned(),
         });
         registry
     }
@@ -127,7 +117,7 @@ mod tests {
             .init_resource::<HighlightTracker>()
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
-            .insert_resource(test_evolution_registry())
+            .insert_resource(test_chip_registry())
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 Update,
@@ -259,10 +249,10 @@ mod tests {
         );
     }
 
-    // --- Behavior 24: Graceful without EvolutionRegistry ---
+    // --- Behavior 18: Graceful without ChipRegistry ---
 
     #[test]
-    fn graceful_without_evolution_registry() {
+    fn graceful_without_chip_registry() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<ChipSelected>()
@@ -271,7 +261,7 @@ mod tests {
             .init_resource::<HighlightTracker>()
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
-            // NOTE: No EvolutionRegistry inserted — Option<Res<EvolutionRegistry>> is None
+            // NOTE: No ChipRegistry inserted — Option<Res<ChipRegistry>> is None
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 Update,
@@ -291,7 +281,7 @@ mod tests {
         let stats = app.world().resource::<RunStats>();
         assert!(
             stats.highlights.is_empty(),
-            "should not detect any highlight without EvolutionRegistry"
+            "should not detect any highlight without ChipRegistry"
         );
         assert_eq!(
             stats.evolutions_performed, 0,
