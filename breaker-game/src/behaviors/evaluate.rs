@@ -56,7 +56,7 @@ pub(crate) fn evaluate(trigger: TriggerKind, chain: &TriggerChain) -> Vec<EvalRe
     | (TriggerKind::CellImpact, TriggerChain::OnImpact(ImpactTarget::Cell, effects))
     | (TriggerKind::BreakerImpact, TriggerChain::OnImpact(ImpactTarget::Breaker, effects))
     | (TriggerKind::WallImpact, TriggerChain::OnImpact(ImpactTarget::Wall, effects))
-    | (TriggerKind::BumpSuccess, TriggerChain::OnBumpSuccess(effects))
+    | (TriggerKind::BumpSuccess, TriggerChain::OnBump(effects))
     | (TriggerKind::CellDestroyed, TriggerChain::OnCellDestroyed(effects))
     | (TriggerKind::BoltLost, TriggerChain::OnBoltLost(effects))
     | (TriggerKind::EarlyBump, TriggerChain::OnEarlyBump(effects))
@@ -134,8 +134,8 @@ mod tests {
     }
 
     #[test]
-    fn bump_success_with_on_bump_success_leaf_fires() {
-        let chain = TriggerChain::OnBumpSuccess(vec![TriggerChain::test_shield(3.0)]);
+    fn bump_success_with_on_bump_leaf_fires() {
+        let chain = TriggerChain::OnBump(vec![TriggerChain::test_shield(3.0)]);
         let result = evaluate(TriggerKind::BumpSuccess, &chain);
         assert_eq!(
             result,
@@ -144,7 +144,7 @@ mod tests {
                 duration_per_level: 0.0,
                 stacks: 1,
             })],
-            "BumpSuccess should match OnBumpSuccess(leaf) and fire"
+            "BumpSuccess should match OnBump(leaf) and fire"
         );
     }
 
@@ -344,6 +344,17 @@ mod tests {
             result,
             vec![EvalResult::NoMatch],
             "BumpSuccess must NOT match OnPerfectBump -- distinct trigger kinds"
+        );
+    }
+
+    #[test]
+    fn perfect_bump_does_not_match_on_bump() {
+        let chain = TriggerChain::OnBump(vec![TriggerChain::test_shield(3.0)]);
+        let result = evaluate(TriggerKind::PerfectBump, &chain);
+        assert_eq!(
+            result,
+            vec![EvalResult::NoMatch],
+            "PerfectBump should not match OnBump -- distinct trigger kinds"
         );
     }
 

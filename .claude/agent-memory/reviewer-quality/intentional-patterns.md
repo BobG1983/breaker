@@ -86,6 +86,12 @@ type: reference
 - `node_index: 0` hardcoded in `detect_most_powerful_evolution` — intentional; `MostPowerfulEvolution` is a run-end highlight, not tied to a specific node. The `0` is a sentinel consistent with the spec.
 - `enqueue_messages` in `track_evolution_damage.rs` tests iterates by reference (`for msg in &msg_res.0`) and calls `writer.write(msg.clone())` — intentional; `TestMessages` resource must remain usable after the borrow.
 
+## B1-B3 — Flatten ChipEffect into TriggerChain (feature/spatial-physics-extraction, 2026-03-24)
+- `.clone()` on `trigger.event().effect` in all 9 handler files — necessary because `On<T>` gives a shared reference to the event; binding-by-ref in the `let … else` pattern is not possible when destructuring to extract a `Copy` or non-ref field. This is the established pattern; do not flag as an unnecessary clone.
+- `result_definition: ChipDefinition` field name on `EvolutionRecipe` — "result" is a valid data-bag field name here because it refers to the output of a recipe transformation, not a `Result<_>` error type. Not a vocabulary violation. Established and documented in `terminology/chips.md`.
+- `damage_boost.rs` tests have only 2 tests (insert + stack), missing `respects_max_stacks` and `ignores_non_matching` — confirmed gap as of this review (2026-03-24).
+- `chain_hit.rs`, `bump_force_boost.rs`, `tilt_control_boost.rs`, `width_boost.rs` all have 3 tests (insert + stack + cap) but NO `ignores_non_matching` variant — confirmed gap as of this review (2026-03-24). Only `piercing.rs`, `damage_boost.rs` (partial), `bolt_speed_boost.rs`, `bolt_size_boost.rs`, `breaker_speed_boost.rs` have negative-variant tests. See `coverage-standards.md` for tracking note (4) under "Chips domain".
+
 ## Wave E — highlight scoring + popups (feature/spatial-physics-extraction, 2026-03-24)
 - `config_f32(val: u32) -> f32` private helper in `select_highlights.rs` — module-private 2-line helper for lossless u32→f32 via u16::try_from. Consistent with the established `f32::from(u16::try_from(n).unwrap_or(u16::MAX))` pattern throughout the codebase. Do not flag.
 - `_ => unreachable!()` arm in `score_highlight` after the `match highlight.kind` block — the binary-type guard above the match uses an exhaustive early-return, so this arm is structurally unreachable. Intentional invariant enforcer. Do not flag.

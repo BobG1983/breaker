@@ -7,7 +7,7 @@ use crate::{
     bolt::components::Bolt,
     chips::{
         components::ChainHit,
-        definition::{AmpEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, TriggerChain},
     },
 };
 
@@ -17,7 +17,7 @@ pub(crate) fn handle_chain_hit(
     mut query: Query<(Entity, Option<&mut ChainHit>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::ChainHit(per_stack)) = trigger.event().effect.clone() else {
+    let &TriggerChain::ChainHit(per_stack) = &trigger.event().effect else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -50,7 +50,7 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::ChainHit(2)),
+            effect: TriggerChain::ChainHit(2),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -66,7 +66,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, ChainHit(2))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::ChainHit(2)),
+            effect: TriggerChain::ChainHit(2),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -79,11 +79,10 @@ mod tests {
     #[test]
     fn respects_max_stacks_chain_hit() {
         let mut app = test_app();
-        // 3 stacks of 2 = 6 (at cap)
         let bolt = app.world_mut().spawn((Bolt, ChainHit(6))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::ChainHit(2)),
+            effect: TriggerChain::ChainHit(2),
             max_stacks: 3,
             chip_name: String::new(),
         });

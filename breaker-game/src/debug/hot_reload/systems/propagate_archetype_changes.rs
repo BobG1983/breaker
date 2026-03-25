@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn active_chains_rebuilt_on_archetype_change() {
-        use crate::chips::definition::SpeedBoostTarget;
+        use crate::chips::definition::Target;
 
         let mut app = test_app();
 
@@ -253,7 +253,7 @@ mod tests {
             life_pool: None,
             on_bolt_lost: None,
             on_perfect_bump: Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.5,
             }),
             on_early_bump: None,
@@ -283,11 +283,11 @@ mod tests {
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.on_bolt_lost = Some(TriggerChain::LoseLife);
             asset.on_early_bump = Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.1,
             });
             asset.on_late_bump = Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.1,
             });
         }
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn speed_boost_chains_appear_in_active_chains_on_archetype_change() {
-        use crate::chips::definition::SpeedBoostTarget;
+        use crate::chips::definition::Target;
 
         let mut app = test_app();
 
@@ -371,7 +371,7 @@ mod tests {
             life_pool: None,
             on_bolt_lost: None,
             on_perfect_bump: Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.5,
             }),
             on_early_bump: None,
@@ -402,7 +402,7 @@ mod tests {
                 .resource_mut::<Assets<ArchetypeDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.on_perfect_bump = Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 2.0,
             });
         }

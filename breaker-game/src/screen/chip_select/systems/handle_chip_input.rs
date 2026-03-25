@@ -101,7 +101,7 @@ mod tests {
     use crate::{
         chips::{
             ChipDefinition,
-            definition::{AmpEffect, ChipEffect, EvolutionIngredient},
+            definition::{EvolutionIngredient, TriggerChain},
         },
         screen::chip_select::resources::ChipOffering,
     };
@@ -119,7 +119,7 @@ mod tests {
         let all = vec![
             ChipOffering::Normal(ChipDefinition::test(
                 "Piercing Shot",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                TriggerChain::Piercing(1),
                 3,
             )),
             ChipOffering::Normal(ChipDefinition::test_simple("Wide Breaker")),
@@ -344,7 +344,7 @@ mod tests {
                     stacks_required: 1,
                 },
             ],
-            result: ChipDefinition::test("Barrage", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+            result: ChipDefinition::test("Barrage", TriggerChain::Piercing(5), 1),
         }
     }
 
@@ -353,10 +353,8 @@ mod tests {
         let mut app = test_app_with_offers(offers);
 
         // Seed inventory with ingredient stacks
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
-        let du_def =
-            ChipDefinition::test("Damage Up", ChipEffect::Amp(AmpEffect::DamageBoost(0.5)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let du_def = ChipDefinition::test("Damage Up", TriggerChain::DamageBoost(0.5), 5);
         let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -418,14 +416,13 @@ mod tests {
         // Set up a Normal offering with inventory pre-populated
         let offers = ChipOffers(vec![ChipOffering::Normal(ChipDefinition::test(
             "Piercing Shot",
-            ChipEffect::Amp(AmpEffect::Piercing(1)),
+            TriggerChain::Piercing(1),
             3,
         ))]);
         let mut app = test_app_with_offers(offers);
 
         // Pre-populate inventory with Piercing Shot at 3 stacks
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
         let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);

@@ -3,5 +3,5 @@
     description: "Breaker width increased",
     rarity: Common,
     max_stacks: 3,
-    effects: [Augment(WidthBoost(20.0))],
+    effects: [OnSelected([SizeBoost(Breaker, 20.0)])],
 )

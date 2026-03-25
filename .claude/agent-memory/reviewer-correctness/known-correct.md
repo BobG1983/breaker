@@ -59,6 +59,14 @@ type: reference
 - `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.
 - `RenderSetupPlugin` inserts `ClearColor(PlayfieldConfig::default().background_color())` at plugin-build time using compile-time defaults — intentional; RON default matches Rust default `[0.02, 0.01, 0.04]`.
 
+## B1-B3 TriggerChain Flatten Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
+- `apply_chip_effect` match order `OnSelected` → `is_leaf()` → catchall: `OnSelected` is not a leaf so it is correctly intercepted by arm 1 before reaching the catchall that pushes to `ActiveChains`. Correct arm ordering.
+- Bare leaf fallback arm (line 51-57): `chain if chain.is_leaf()` fires `ChipEffectApplied` immediately. `OnPerfectBump` etc. are not leaves, so they correctly fall through to the `ActiveChains` push arm. No OnSelected variant can erroneously reach `ActiveChains`.
+- 9 handlers (`handle_piercing`, `handle_damage_boost`, `handle_bolt_speed_boost`, `handle_chain_hit`, `handle_bolt_size_boost`, `handle_width_boost`, `handle_breaker_speed_boost`, `handle_bump_force_boost`, `handle_tilt_control_boost`) all correctly early-return via `let TriggerChain::Variant = ... else { return; }` pattern. No cross-contamination.
+- `handle_bolt_speed_boost` matches `Target::Bolt` only; `handle_breaker_speed_boost` matches `Target::Breaker` only; `Target::AllBolts` routes to `handle_speed_boost` (behaviors/effects/speed_boost.rs) which observes `EffectFired`, not `ChipEffectApplied` — so `AllBolts` used in `OnSelected` is a silent no-op. This is INTENTIONAL per test `speed_boost_all_bolts_via_on_selected_is_silent_noop` (apply_chip_effect.rs:492). AllBolts is only meaningful at trigger-fire time, not chip-select time.
+- `evaluate()` in behaviors/evaluate.rs: or-pattern covers all 10 trigger variants (PerfectBump, CellImpact, BreakerImpact, WallImpact, BumpSuccess, CellDestroyed, BoltLost, EarlyBump, LateBump, BumpWhiff). `OnSelected` is intentionally absent — it's not a runtime trigger. Correct.
+- `behaviors/active.rs` doc update: `None` for archetype chains, `Some(name)` for chip/evolution chains. Correct; `apply_chip_effect` pushes `Some(msg.name.clone())`.
+
 ## feature/spatial-physics-extraction Confirmed Correct (2026-03-24)
 - `handle_multi_bolt` formula `base_count + stacks.saturating_sub(1) * count_per_level` — correct. Operator precedence: `*` binds tighter than `+`; `stacks.saturating_sub(1) * count_per_level` is the extra-level term added to base. Do not re-flag.
 - `detect_most_powerful_evolution` uses `.max_by(|a, b| a.1.total_cmp(b.1))` — correct for NaN-free f32 damage values. `total_cmp` is the right choice here.

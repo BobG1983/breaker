@@ -12,7 +12,7 @@ use crate::{
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
     chips::{
         components::BoltSpeedBoost,
-        definition::{SpeedBoostTarget, TriggerChain},
+        definition::{Target, TriggerChain},
     },
 };
 
@@ -39,7 +39,7 @@ pub(crate) fn handle_speed_boost(
     };
 
     match target {
-        SpeedBoostTarget::Bolt => {
+        Target::Bolt => {
             let Some(bolt_entity) = trigger.event().bolt else {
                 return;
             };
@@ -52,13 +52,13 @@ pub(crate) fn handle_speed_boost(
             let boost = speed_boost.map_or(0.0, |b| b.0);
             apply_speed_scale(&mut vel, *multiplier, base_speed.0, max_speed.0, boost);
         }
-        SpeedBoostTarget::AllBolts => {
+        Target::AllBolts => {
             for (mut vel, base_speed, max_speed, speed_boost) in &mut bolt_query {
                 let boost = speed_boost.map_or(0.0, |b| b.0);
                 apply_speed_scale(&mut vel, *multiplier, base_speed.0, max_speed.0, boost);
             }
         }
-        SpeedBoostTarget::Breaker => {
+        Target::Breaker => {
             // Future feature — no-op for now
         }
     }
@@ -95,7 +95,7 @@ mod tests {
         bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
         chips::{
             components::BoltSpeedBoost,
-            definition::{SpeedBoostTarget, TriggerChain},
+            definition::{Target, TriggerChain},
         },
     };
 
@@ -142,7 +142,7 @@ mod tests {
     fn trigger_speed_boost(app: &mut App, bolt: Option<Entity>, multiplier: f32) {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier,
             },
             bolt,
@@ -374,7 +374,7 @@ mod tests {
     fn trigger_all_bolts_speed_boost(app: &mut App, multiplier: f32) {
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::AllBolts,
+                target: Target::AllBolts,
                 multiplier,
             },
             bolt: None,
@@ -507,7 +507,7 @@ mod tests {
 
         app.world_mut().commands().trigger(EffectFired {
             effect: TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Breaker,
+                target: Target::Breaker,
                 multiplier: 1.5,
             },
             bolt: Some(bolt),

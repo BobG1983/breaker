@@ -7,7 +7,7 @@ use crate::{
     bolt::components::Bolt,
     chips::{
         components::BoltSpeedBoost,
-        definition::{AmpEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, Target, TriggerChain},
     },
 };
 
@@ -17,7 +17,11 @@ pub(crate) fn handle_bolt_speed_boost(
     mut query: Query<(Entity, Option<&mut BoltSpeedBoost>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::SpeedBoost(per_stack)) = trigger.event().effect.clone() else {
+    let &TriggerChain::SpeedBoost {
+        target: Target::Bolt,
+        multiplier: per_stack,
+    } = &trigger.event().effect
+    else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -50,23 +54,29 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Bolt,
+                multiplier: 1.1,
+            },
             max_stacks: 3,
             chip_name: String::new(),
         });
         app.world_mut().flush();
 
         let s = app.world().entity(bolt).get::<BoltSpeedBoost>().unwrap();
-        assert!((s.0 - 50.0).abs() < f32::EPSILON);
+        assert!((s.0 - 1.1).abs() < f32::EPSILON);
     }
 
     #[test]
     fn stacks_bolt_speed_boost() {
         let mut app = test_app();
-        let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(50.0))).id();
+        let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(1.1))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Bolt,
+                multiplier: 1.1,
+            },
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -74,8 +84,8 @@ mod tests {
 
         let s = app.world().entity(bolt).get::<BoltSpeedBoost>().unwrap();
         assert!(
-            (s.0 - 100.0).abs() < f32::EPSILON,
-            "BoltSpeedBoost should stack from 50.0 to 100.0, got {}",
+            (s.0 - 2.2).abs() < f32::EPSILON,
+            "BoltSpeedBoost should stack from 1.1 to 2.2, got {}",
             s.0
         );
     }
@@ -83,11 +93,13 @@ mod tests {
     #[test]
     fn respects_max_stacks_bolt_speed_boost() {
         let mut app = test_app();
-        // 3 stacks of 50.0 = 150.0 (at cap)
-        let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(150.0))).id();
+        let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(3.3))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Bolt,
+                multiplier: 1.1,
+            },
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -95,9 +107,34 @@ mod tests {
 
         let s = app.world().entity(bolt).get::<BoltSpeedBoost>().unwrap();
         assert!(
-            (s.0 - 150.0).abs() < f32::EPSILON,
+            (s.0 - 3.3).abs() < f32::EPSILON,
             "BoltSpeedBoost should not exceed max_stacks cap, got {}",
             s.0
+        );
+    }
+
+    #[test]
+    fn ignores_breaker_target() {
+        let mut app = test_app();
+        app.world_mut().spawn(Bolt);
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Breaker,
+                multiplier: 1.1,
+            },
+            max_stacks: 3,
+            chip_name: String::new(),
+        });
+        app.world_mut().flush();
+
+        assert!(
+            app.world_mut()
+                .query::<&BoltSpeedBoost>()
+                .iter(app.world())
+                .next()
+                .is_none(),
+            "handle_bolt_speed_boost should ignore Target::Breaker"
         );
     }
 }

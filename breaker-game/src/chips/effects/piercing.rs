@@ -7,7 +7,7 @@ use crate::{
     bolt::components::Bolt,
     chips::{
         components::{Piercing, PiercingRemaining},
-        definition::{AmpEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, TriggerChain},
     },
 };
 
@@ -17,7 +17,7 @@ pub(crate) fn handle_piercing(
     mut query: Query<(Entity, Option<&mut Piercing>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::Piercing(per_stack)) = trigger.event().effect.clone() else {
+    let &TriggerChain::Piercing(per_stack) = &trigger.event().effect else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -51,7 +51,7 @@ pub(crate) fn handle_piercing(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::{components::PiercingRemaining, definition::AmpEffect};
+    use crate::chips::components::PiercingRemaining;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -66,7 +66,7 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            effect: TriggerChain::Piercing(1),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -82,7 +82,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, Piercing(1))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            effect: TriggerChain::Piercing(1),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -98,7 +98,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, Piercing(3))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            effect: TriggerChain::Piercing(1),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -114,7 +114,7 @@ mod tests {
         app.world_mut().spawn(Bolt);
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
+            effect: TriggerChain::DamageBoost(1.5),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -137,7 +137,7 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(2)),
+            effect: TriggerChain::Piercing(2),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -152,14 +152,13 @@ mod tests {
     #[test]
     fn stacking_updates_piercing_remaining_to_new_value() {
         let mut app = test_app();
-        // Bolt has used all its pierces: PiercingRemaining is 0 but Piercing is 1
         let bolt = app
             .world_mut()
             .spawn((Bolt, Piercing(1), PiercingRemaining(0)))
             .id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            effect: TriggerChain::Piercing(1),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -174,14 +173,13 @@ mod tests {
     #[test]
     fn max_stacks_leaves_piercing_remaining_unchanged() {
         let mut app = test_app();
-        // At cap: Piercing(3) with per_stack=1 and max_stacks=3
         let bolt = app
             .world_mut()
             .spawn((Bolt, Piercing(3), PiercingRemaining(1)))
             .id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            effect: TriggerChain::Piercing(1),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -195,8 +193,6 @@ mod tests {
 
     #[test]
     fn stacking_with_partial_remaining_refreshes_remaining() {
-        // Bolt has 1 pierce remaining out of 1 max. Stacking adds another stack.
-        // PiercingRemaining should refresh to the new Piercing total (2).
         let mut app = test_app();
         let bolt = app
             .world_mut()
@@ -204,7 +200,7 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::Piercing(1)),
+            effect: TriggerChain::Piercing(1),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -226,7 +222,7 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
+            effect: TriggerChain::DamageBoost(1.5),
             max_stacks: 2,
             chip_name: String::new(),
         });

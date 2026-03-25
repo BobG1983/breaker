@@ -28,6 +28,8 @@ type: reference
 
 - **run/reset_run_state mutates ChipInventory**: run domain clears chips/ domain's ChipInventory resource at run start. Same class as screen/loading seeding all domain configs — centralized boot/reset sequence. No alternative consumer-owns pattern makes sense for a cross-domain reset.
 
+- **chips/apply_chip_effect writes ResMut<ActiveChains>**: chips domain pushes triggered (non-OnSelected, non-leaf) chains to behaviors-domain's `ActiveChains` resource when a chip is selected. Same class as behaviors/init.rs writing ResMut<BreakerConfig> — tight authoring relationship where chips defines TriggerChain and behaviors evaluates it. Pre-existed the B1-B3 refactor (formerly handle_overclock observer did the same write). Message alternative (PushActiveChain) rejected — adds indirection with no decoupling benefit since both domains already share the TriggerChain type.
+
 ## Active Violations (pending resolution)
 (none)
 

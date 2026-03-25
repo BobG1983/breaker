@@ -65,7 +65,7 @@ mod tests {
     use super::*;
     use crate::{
         chips::definition::{
-            AmpEffect, ChipDefinition, ChipEffect, EvolutionIngredient, EvolutionRecipe, Rarity,
+            ChipDefinition, EvolutionIngredient, EvolutionRecipe, Rarity, TriggerChain,
         },
         run::{
             definition::HighlightConfig,
@@ -108,7 +108,7 @@ mod tests {
                 description: "Test evolution chip".to_owned(),
                 rarity: Rarity::Legendary,
                 max_stacks: 1,
-                effects: vec![ChipEffect::Amp(AmpEffect::Piercing(5))],
+                effects: vec![TriggerChain::Piercing(5)],
                 ingredients: None,
             },
         });

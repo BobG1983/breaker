@@ -5,7 +5,12 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    chips::{definition::ChipEffectApplied, inventory::ChipInventory, resources::ChipRegistry},
+    behaviors::ActiveChains,
+    chips::{
+        definition::{ChipEffectApplied, TriggerChain},
+        inventory::ChipInventory,
+        resources::ChipRegistry,
+    },
     ui::messages::ChipSelected,
 };
 
@@ -18,6 +23,7 @@ pub(crate) fn apply_chip_effect(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
     mut inventory: Option<ResMut<ChipInventory>>,
+    mut active_chains: Option<ResMut<ActiveChains>>,
     mut commands: Commands,
 ) {
     let Some(registry) = registry else {
@@ -32,11 +38,31 @@ pub(crate) fn apply_chip_effect(
             let _ = inv.add_chip(&msg.name, chip);
         }
         for effect in &chip.effects {
-            commands.trigger(ChipEffectApplied {
-                effect: effect.clone(),
-                max_stacks: chip.max_stacks,
-                chip_name: msg.name.clone(),
-            });
+            match effect {
+                TriggerChain::OnSelected(inner) => {
+                    for leaf in inner {
+                        commands.trigger(ChipEffectApplied {
+                            effect: leaf.clone(),
+                            max_stacks: chip.max_stacks,
+                            chip_name: msg.name.clone(),
+                        });
+                    }
+                }
+                chain if chain.is_leaf() => {
+                    commands.trigger(ChipEffectApplied {
+                        effect: chain.clone(),
+                        max_stacks: chip.max_stacks,
+                        chip_name: msg.name.clone(),
+                    });
+                }
+                // Any trigger-wrapper variant (OnPerfectBump, OnBump, OnImpact, etc.)
+                // is pushed to ActiveChains for runtime evaluation by bridge systems.
+                chain => {
+                    if let Some(ref mut active) = active_chains {
+                        active.0.push((Some(msg.name.clone()), chain.clone()));
+                    }
+                }
+            }
         }
     }
 }
@@ -47,11 +73,12 @@ mod tests {
 
     use super::*;
     use crate::{
+        behaviors::ActiveChains,
         bolt::components::Bolt,
         breaker::components::Breaker,
         chips::{
             components::*,
-            definition::{AmpEffect, AugmentEffect, ChipDefinition, ChipEffect, TriggerChain},
+            definition::{ChipDefinition, ImpactTarget, Target, TriggerChain},
             effects::*,
             resources::ChipRegistry,
         },
@@ -81,6 +108,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<ChipSelected>()
             .init_resource::<ChipRegistry>()
+            .init_resource::<ActiveChains>()
             .add_systems(Update, (enqueue_chip_selected, apply_chip_effect).chain())
             .add_observer(handle_piercing)
             .add_observer(handle_damage_boost)
@@ -109,21 +137,24 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // Tests: Amp — Piercing
+    // B3: OnSelected effects fire ChipEffectApplied for each inner leaf (29)
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn piercing_inserts_on_bolt_when_amp_piercing_selected() {
+    fn on_selected_piercing_inserts_on_bolt() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Piercing Shot",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            ));
+            .insert(ChipDefinition {
+                name: "Piercing Shot".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                ingredients: None,
+            });
 
         send_chip_selected(&mut app, "Piercing Shot");
         tick(&mut app);
@@ -133,12 +164,513 @@ mod tests {
             .query::<&Piercing>()
             .iter(app.world())
             .next()
-            .expect("bolt should have Piercing component after chip selected");
+            .expect("bolt should have Piercing component after OnSelected chip selected");
         assert_eq!(piercing.0, 1);
     }
 
     #[test]
-    fn piercing_stacks_from_1_to_2_on_reselection() {
+    fn on_selected_multiple_leaves_fires_all() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "MultiEffect".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![
+                    TriggerChain::Piercing(1),
+                    TriggerChain::DamageBoost(0.5),
+                ])],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "MultiEffect");
+        tick(&mut app);
+
+        assert!(
+            app.world_mut()
+                .query::<&Piercing>()
+                .iter(app.world())
+                .next()
+                .is_some(),
+            "bolt should have Piercing from OnSelected with multiple leaves"
+        );
+        assert!(
+            app.world_mut()
+                .query::<&DamageBoost>()
+                .iter(app.world())
+                .next()
+                .is_some(),
+            "bolt should have DamageBoost from OnSelected with multiple leaves"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: Triggered chain pushes to ActiveChains (30)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn triggered_chain_pushes_to_active_chains() {
+        let mut app = test_app();
+
+        let chain = TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
+            ImpactTarget::Cell,
+            vec![TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 32.0,
+                stacks: 1,
+                speed: 400.0,
+            }],
+        )]);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Surge".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![chain.clone()],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "Surge");
+        tick(&mut app);
+
+        let active = app.world().resource::<ActiveChains>();
+        assert_eq!(
+            active.0.len(),
+            1,
+            "triggered chain should be pushed to ActiveChains"
+        );
+        assert_eq!(active.0[0].0, Some("Surge".to_owned()));
+        assert_eq!(active.0[0].1, chain);
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: apply_chip_effect updates ChipInventory (32)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn apply_chip_effect_adds_chip_to_inventory_on_chip_selected() {
+        let mut app = test_app();
+        app.init_resource::<crate::chips::inventory::ChipInventory>();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Piercing Shot".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "Piercing Shot");
+        tick(&mut app);
+
+        let inventory = app
+            .world()
+            .resource::<crate::chips::inventory::ChipInventory>();
+        assert_eq!(
+            inventory.stacks("Piercing Shot"),
+            1,
+            "ChipInventory should track the selected chip at 1 stack"
+        );
+    }
+
+    #[test]
+    fn apply_chip_effect_does_not_add_inventory_entry_for_unknown_chip() {
+        let mut app = test_app();
+        app.init_resource::<crate::chips::inventory::ChipInventory>();
+
+        send_chip_selected(&mut app, "Nonexistent");
+        tick(&mut app);
+
+        let inventory = app
+            .world()
+            .resource::<crate::chips::inventory::ChipInventory>();
+        assert_eq!(
+            inventory.total_held(),
+            0,
+            "ChipInventory should remain empty for unknown chip"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: Triggered chip adds no passive components (33)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn triggered_chip_adds_no_passive_components() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut().spawn(Breaker);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Surge".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "Surge");
+        tick(&mut app);
+
+        assert!(
+            app.world_mut()
+                .query::<&Piercing>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&DamageBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&BoltSpeedBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&ChainHit>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&BoltSizeBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&WidthBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&BreakerSpeedBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&BumpForceBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world_mut()
+                .query::<&TiltControlBoost>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: Bare leaf at top level is treated as immediate passive (34)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn bare_leaf_fires_chip_effect_applied_not_active_chains() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition::test(
+                "BareLeaf",
+                TriggerChain::Piercing(1),
+                3,
+            ));
+
+        send_chip_selected(&mut app, "BareLeaf");
+        tick(&mut app);
+
+        // Bolt should have Piercing(1) from direct ChipEffectApplied
+        let piercing = app
+            .world_mut()
+            .query::<&Piercing>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Piercing from bare leaf ChipEffectApplied");
+        assert_eq!(piercing.0, 1);
+
+        // ActiveChains should NOT have the leaf
+        let active = app.world().resource::<ActiveChains>();
+        assert!(
+            active.0.is_empty(),
+            "bare leaf should NOT be pushed to ActiveChains"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: OnSelected integration via registry (36)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn on_selected_via_registry_inserts_piercing() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Piercing Shot".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "Piercing Shot");
+        tick(&mut app);
+
+        let piercing = app
+            .world_mut()
+            .query::<&Piercing>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Piercing via OnSelected from registry");
+        assert_eq!(piercing.0, 1);
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: OnSelected with empty inner vec is a no-op (37)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn on_selected_empty_vec_is_noop() {
+        let mut app = test_app();
+        app.init_resource::<crate::chips::inventory::ChipInventory>();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "EmptyPassive".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 1,
+                effects: vec![TriggerChain::OnSelected(vec![])],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "EmptyPassive");
+        tick(&mut app);
+
+        // No components inserted
+        assert!(
+            app.world_mut()
+                .query::<&Piercing>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        // But inventory still tracks it
+        let inventory = app
+            .world()
+            .resource::<crate::chips::inventory::ChipInventory>();
+        assert_eq!(inventory.stacks("EmptyPassive"), 1);
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: Mixed effects: OnSelected + triggered chain on same chip (38)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn mixed_effects_on_selected_and_triggered() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Hybrid".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![
+                    TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)]),
+                    TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt]),
+                ],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "Hybrid");
+        tick(&mut app);
+
+        // Piercing from OnSelected dispatch
+        let piercing = app
+            .world_mut()
+            .query::<&Piercing>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Piercing from OnSelected dispatch");
+        assert_eq!(piercing.0, 1);
+
+        // ActiveChains has the triggered chain
+        let active = app.world().resource::<ActiveChains>();
+        assert_eq!(
+            active.0.len(),
+            1,
+            "triggered chain should be pushed to ActiveChains"
+        );
+        assert_eq!(active.0[0].0, Some("Hybrid".to_owned()));
+        assert_eq!(
+            active.0[0].1,
+            TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: SpeedBoost Target::AllBolts via ChipEffectApplied is silent no-op (39)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn speed_boost_all_bolts_via_on_selected_is_silent_noop() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut().spawn(Breaker);
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "AllBoltsSpeed".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SpeedBoost {
+                    target: Target::AllBolts,
+                    multiplier: 1.1,
+                }])],
+                ingredients: None,
+            });
+
+        send_chip_selected(&mut app, "AllBoltsSpeed");
+        tick(&mut app);
+
+        assert!(
+            app.world_mut()
+                .query::<&BoltSpeedBoost>()
+                .iter(app.world())
+                .next()
+                .is_none(),
+            "no BoltSpeedBoost should exist for AllBolts passive"
+        );
+        assert!(
+            app.world_mut()
+                .query::<&BreakerSpeedBoost>()
+                .iter(app.world())
+                .next()
+                .is_none(),
+            "no BreakerSpeedBoost should exist for AllBolts passive"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // B3: Handlers ignore non-matching variants (28)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn shockwave_via_chip_effect_applied_inserts_no_passive_components() {
+        let mut app = test_app();
+
+        let bolt = app.world_mut().spawn(Bolt).id();
+        let breaker = app.world_mut().spawn(Breaker).id();
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: TriggerChain::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 400.0,
+            },
+            max_stacks: 1,
+            chip_name: "test".to_owned(),
+        });
+        app.world_mut().flush();
+
+        // Bolt should have no passive components
+        assert!(
+            app.world().entity(bolt).get::<Piercing>().is_none(),
+            "Shockwave should not insert Piercing on bolt"
+        );
+        assert!(
+            app.world().entity(bolt).get::<DamageBoost>().is_none(),
+            "Shockwave should not insert DamageBoost on bolt"
+        );
+        assert!(
+            app.world().entity(bolt).get::<BoltSpeedBoost>().is_none(),
+            "Shockwave should not insert BoltSpeedBoost on bolt"
+        );
+        assert!(
+            app.world().entity(bolt).get::<ChainHit>().is_none(),
+            "Shockwave should not insert ChainHit on bolt"
+        );
+        assert!(
+            app.world().entity(bolt).get::<BoltSizeBoost>().is_none(),
+            "Shockwave should not insert BoltSizeBoost on bolt"
+        );
+
+        // Breaker should have no passive components
+        assert!(
+            app.world().entity(breaker).get::<WidthBoost>().is_none(),
+            "Shockwave should not insert WidthBoost on breaker"
+        );
+        assert!(
+            app.world()
+                .entity(breaker)
+                .get::<BreakerSpeedBoost>()
+                .is_none(),
+            "Shockwave should not insert BreakerSpeedBoost on breaker"
+        );
+        assert!(
+            app.world()
+                .entity(breaker)
+                .get::<BumpForceBoost>()
+                .is_none(),
+            "Shockwave should not insert BumpForceBoost on breaker"
+        );
+        assert!(
+            app.world()
+                .entity(breaker)
+                .get::<TiltControlBoost>()
+                .is_none(),
+            "Shockwave should not insert TiltControlBoost on breaker"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Existing integration tests rewritten with new types
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn piercing_stacks_from_1_to_2_via_bare_leaf() {
         let mut app = test_app();
 
         let bolt = app.world_mut().spawn((Bolt, Piercing(1))).id();
@@ -146,7 +678,7 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                TriggerChain::Piercing(1),
                 3,
             ));
 
@@ -170,7 +702,7 @@ mod tests {
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
                 "Piercing Shot",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
+                TriggerChain::Piercing(1),
                 3,
             ));
 
@@ -185,22 +717,24 @@ mod tests {
         assert_eq!(piercing.0, 3, "Piercing should not exceed max_stacks=3 cap");
     }
 
-    // ---------------------------------------------------------------------------
-    // Tests: Augment — WidthBoost
-    // ---------------------------------------------------------------------------
-
     #[test]
-    fn width_boost_inserts_on_breaker_when_augment_width_boost_selected() {
+    fn width_boost_inserts_on_breaker_via_on_selected_size_boost() {
         let mut app = test_app();
 
         app.world_mut().spawn(Breaker);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Wide Breaker",
-                ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
-                3,
-            ));
+            .insert(ChipDefinition {
+                name: "Wide Breaker".to_owned(),
+                description: "test".to_owned(),
+                rarity: crate::chips::definition::Rarity::Common,
+                max_stacks: 3,
+                effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(
+                    Target::Breaker,
+                    20.0,
+                )])],
+                ingredients: None,
+            });
 
         send_chip_selected(&mut app, "Wide Breaker");
         tick(&mut app);
@@ -210,7 +744,7 @@ mod tests {
             .query::<&WidthBoost>()
             .iter(app.world())
             .next()
-            .expect("breaker should have WidthBoost component after chip selected");
+            .expect("breaker should have WidthBoost component after OnSelected SizeBoost(Breaker)");
         assert!(
             (wb.0 - 20.0).abs() < f32::EPSILON,
             "WidthBoost should be 20.0, got {}",
@@ -219,49 +753,15 @@ mod tests {
     }
 
     #[test]
-    fn width_boost_stacks_from_20_to_40_on_reselection() {
-        let mut app = test_app();
-
-        let breaker = app.world_mut().spawn((Breaker, WidthBoost(20.0))).id();
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Wide Breaker",
-                ChipEffect::Augment(AugmentEffect::WidthBoost(20.0)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Wide Breaker");
-        tick(&mut app);
-
-        let wb = app
-            .world()
-            .entity(breaker)
-            .get::<WidthBoost>()
-            .expect("breaker should still have WidthBoost component");
-        assert!(
-            (wb.0 - 40.0).abs() < f32::EPSILON,
-            "WidthBoost should stack 20.0 → 40.0, got {}",
-            wb.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Unknown chip name
-    // ---------------------------------------------------------------------------
-
-    #[test]
     fn no_components_added_for_unknown_chip_name() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
         app.world_mut().spawn(Breaker);
-        // Registry is empty — no chips registered
 
         send_chip_selected(&mut app, "Nonexistent");
         tick(&mut app);
 
-        // No bolt effect components should be inserted
         assert!(
             app.world_mut()
                 .query::<&Piercing>()
@@ -277,440 +777,6 @@ mod tests {
                 .next()
                 .is_none(),
             "no DamageBoost should exist for unknown chip"
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Amp — DamageBoost
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn damage_boost_inserts_on_first_selection() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Damage Up",
-                ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
-                2,
-            ));
-
-        send_chip_selected(&mut app, "Damage Up");
-        tick(&mut app);
-
-        let db = app
-            .world_mut()
-            .query::<&DamageBoost>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have DamageBoost component");
-        assert!(
-            (db.0 - 1.5).abs() < f32::EPSILON,
-            "DamageBoost should be 1.5, got {}",
-            db.0
-        );
-    }
-
-    #[test]
-    fn damage_boost_stacks_from_1_5_to_3_0_on_second_selection() {
-        let mut app = test_app();
-
-        app.world_mut().spawn((Bolt, DamageBoost(1.5)));
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Damage Up",
-                ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
-                2,
-            ));
-
-        send_chip_selected(&mut app, "Damage Up");
-        tick(&mut app);
-
-        let db = app
-            .world_mut()
-            .query::<&DamageBoost>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should still have DamageBoost component");
-        assert!(
-            (db.0 - 3.0).abs() < f32::EPSILON,
-            "DamageBoost should stack 1.5 → 3.0, got {}",
-            db.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Amp — BoltSpeedBoost
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn bolt_speed_boost_inserts_on_bolt() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Speed Up",
-                ChipEffect::Amp(AmpEffect::SpeedBoost(50.0)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Speed Up");
-        tick(&mut app);
-
-        let sb = app
-            .world_mut()
-            .query::<&BoltSpeedBoost>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have BoltSpeedBoost component");
-        assert!(
-            (sb.0 - 50.0).abs() < f32::EPSILON,
-            "BoltSpeedBoost should be 50.0, got {}",
-            sb.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Amp — ChainHit
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn chain_hit_inserts_on_bolt() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Chain",
-                ChipEffect::Amp(AmpEffect::ChainHit(2)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Chain");
-        tick(&mut app);
-
-        let ch = app
-            .world_mut()
-            .query::<&ChainHit>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have ChainHit component");
-        assert_eq!(ch.0, 2, "ChainHit should be 2, got {}", ch.0);
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Amp — BoltSizeBoost
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn bolt_size_boost_inserts_on_bolt() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Big Bolt",
-                ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Big Bolt");
-        tick(&mut app);
-
-        let bsb = app
-            .world_mut()
-            .query::<&BoltSizeBoost>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have BoltSizeBoost component");
-        assert!(
-            (bsb.0 - 0.5).abs() < f32::EPSILON,
-            "BoltSizeBoost should be 0.5, got {}",
-            bsb.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Augment — BreakerSpeedBoost
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn breaker_speed_boost_inserts_on_breaker() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Breaker);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Fast Breaker",
-                ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Fast Breaker");
-        tick(&mut app);
-
-        let bsb = app
-            .world_mut()
-            .query::<&BreakerSpeedBoost>()
-            .iter(app.world())
-            .next()
-            .expect("breaker should have BreakerSpeedBoost component");
-        assert!(
-            (bsb.0 - 30.0).abs() < f32::EPSILON,
-            "BreakerSpeedBoost should be 30.0, got {}",
-            bsb.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Augment — BumpForceBoost
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn bump_force_boost_inserts_on_breaker() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Breaker);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Power Bump",
-                ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Power Bump");
-        tick(&mut app);
-
-        let bfb = app
-            .world_mut()
-            .query::<&BumpForceBoost>()
-            .iter(app.world())
-            .next()
-            .expect("breaker should have BumpForceBoost component");
-        assert!(
-            (bfb.0 - 10.0).abs() < f32::EPSILON,
-            "BumpForceBoost should be 10.0, got {}",
-            bfb.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Augment — TiltControlBoost
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn tilt_control_boost_inserts_on_breaker() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Breaker);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Tilt Control",
-                ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Tilt Control");
-        tick(&mut app);
-
-        let tcb = app
-            .world_mut()
-            .query::<&TiltControlBoost>()
-            .iter(app.world())
-            .next()
-            .expect("breaker should have TiltControlBoost component");
-        assert!(
-            (tcb.0 - 5.0).abs() < f32::EPSILON,
-            "TiltControlBoost should be 5.0, got {}",
-            tcb.0
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: apply_chip_effect updates ChipInventory
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn apply_chip_effect_adds_chip_to_inventory_on_chip_selected() {
-        let mut app = test_app();
-        app.init_resource::<crate::chips::inventory::ChipInventory>();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Piercing Shot",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Piercing Shot");
-        tick(&mut app);
-
-        let inventory = app
-            .world()
-            .resource::<crate::chips::inventory::ChipInventory>();
-        assert_eq!(
-            inventory.stacks("Piercing Shot"),
-            1,
-            "ChipInventory should track the selected chip at 1 stack"
-        );
-    }
-
-    #[test]
-    fn apply_chip_effect_does_not_add_inventory_entry_for_unknown_chip() {
-        let mut app = test_app();
-        app.init_resource::<crate::chips::inventory::ChipInventory>();
-
-        // Registry is empty — no chips registered
-        send_chip_selected(&mut app, "Nonexistent");
-        tick(&mut app);
-
-        let inventory = app
-            .world()
-            .resource::<crate::chips::inventory::ChipInventory>();
-        assert_eq!(
-            inventory.total_held(),
-            0,
-            "ChipInventory should remain empty for unknown chip"
-        );
-    }
-
-    #[test]
-    fn apply_chip_effect_does_not_add_when_already_maxed() {
-        let mut app = test_app();
-        app.init_resource::<crate::chips::inventory::ChipInventory>();
-
-        let single_def = ChipDefinition::test("Single", ChipEffect::Amp(AmpEffect::Piercing(1)), 1);
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(single_def.clone());
-
-        // Pre-fill inventory to max
-        let _ = app
-            .world_mut()
-            .resource_mut::<crate::chips::inventory::ChipInventory>()
-            .add_chip("Single", &single_def);
-
-        send_chip_selected(&mut app, "Single");
-        tick(&mut app);
-
-        let inventory = app
-            .world()
-            .resource::<crate::chips::inventory::ChipInventory>();
-        assert_eq!(
-            inventory.stacks("Single"),
-            1,
-            "ChipInventory should not exceed max_stacks"
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // Tests: Overclock — no components added
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn overclock_chip_adds_no_effect_components() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut().spawn(Breaker);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Surge",
-                ChipEffect::Overclock(TriggerChain::test_shockwave(64.0)),
-                1,
-            ));
-
-        send_chip_selected(&mut app, "Surge");
-        tick(&mut app);
-
-        // No bolt effect components
-        assert!(
-            app.world_mut()
-                .query::<&Piercing>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add Piercing"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&DamageBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add DamageBoost"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BoltSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add BoltSpeedBoost"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&ChainHit>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add ChainHit"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BoltSizeBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add BoltSizeBoost"
-        );
-        // No breaker effect components
-        assert!(
-            app.world_mut()
-                .query::<&WidthBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add WidthBoost"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BreakerSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add BreakerSpeedBoost"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BumpForceBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add BumpForceBoost"
-        );
-        assert!(
-            app.world_mut()
-                .query::<&TiltControlBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "Overclock should not add TiltControlBoost"
         );
     }
 }

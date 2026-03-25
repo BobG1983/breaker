@@ -167,11 +167,11 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::chips::definition::{AmpEffect, ChipEffect};
+    use crate::chips::definition::{Target, TriggerChain};
 
     /// Helper: create a Piercing Shot definition with `max_stacks=3`, Common rarity.
     fn piercing_shot_def() -> ChipDefinition {
-        ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3)
+        ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 3)
     }
 
     /// Helper: create a Wide Breaker definition with `max_stacks=3`, Rare rarity.
@@ -180,7 +180,7 @@ mod tests {
             rarity: Rarity::Rare,
             ..ChipDefinition::test(
                 "Wide Breaker",
-                ChipEffect::Augment(crate::chips::definition::AugmentEffect::WidthBoost(20.0)),
+                TriggerChain::SizeBoost(Target::Breaker, 20.0),
                 3,
             )
         }
@@ -188,12 +188,12 @@ mod tests {
 
     /// Helper: create a Damage Up definition with `max_stacks=2`, Common rarity.
     fn damage_up_def() -> ChipDefinition {
-        ChipDefinition::test("Damage Up", ChipEffect::Amp(AmpEffect::DamageBoost(0.5)), 2)
+        ChipDefinition::test("Damage Up", TriggerChain::DamageBoost(0.5), 2)
     }
 
     /// Helper: create a chip definition with `max_stacks=1`, Common rarity.
     fn single_stack_def() -> ChipDefinition {
-        ChipDefinition::test("Single Stack", ChipEffect::Amp(AmpEffect::Piercing(1)), 1)
+        ChipDefinition::test("Single Stack", TriggerChain::Piercing(1), 1)
     }
 
     // --- Behavior 1: Default inventory is empty ---

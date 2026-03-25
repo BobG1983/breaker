@@ -101,10 +101,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::{
-        chips::definition::{AmpEffect, ChipEffect},
-        shared::GameRng,
-    };
+    use crate::{chips::definition::TriggerChain, shared::GameRng};
 
     fn test_config() -> OfferingConfig {
         let mut rarity_weights = HashMap::new();
@@ -119,13 +116,13 @@ mod tests {
     }
 
     fn test_chip(name: &str, max_stacks: u32) -> ChipDefinition {
-        ChipDefinition::test(name, ChipEffect::Amp(AmpEffect::Piercing(1)), max_stacks)
+        ChipDefinition::test(name, TriggerChain::Piercing(1), max_stacks)
     }
 
     fn test_chip_rarity(name: &str, rarity: Rarity, max_stacks: u32) -> ChipDefinition {
         ChipDefinition {
             rarity,
-            ..ChipDefinition::test(name, ChipEffect::Amp(AmpEffect::Piercing(1)), max_stacks)
+            ..ChipDefinition::test(name, TriggerChain::Piercing(1), max_stacks)
         }
     }
 

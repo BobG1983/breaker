@@ -37,7 +37,7 @@ pub fn check_chip_stacks_consistent(
 
 #[cfg(test)]
 mod tests {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::chips::definition::{ChipDefinition, Rarity, TriggerChain};
 
     use super::*;
 
@@ -55,7 +55,7 @@ mod tests {
             description: format!("{name} test description"),
             rarity: Rarity::Common,
             max_stacks,
-            effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+            effects: vec![TriggerChain::Piercing(1)],
             ingredients: None,
         }
     }

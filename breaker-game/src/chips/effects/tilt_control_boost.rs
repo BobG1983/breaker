@@ -7,7 +7,7 @@ use crate::{
     breaker::components::Breaker,
     chips::{
         components::TiltControlBoost,
-        definition::{AugmentEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, TriggerChain},
     },
 };
 
@@ -17,8 +17,7 @@ pub(crate) fn handle_tilt_control_boost(
     mut query: Query<(Entity, Option<&mut TiltControlBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Augment(AugmentEffect::TiltControl(per_stack)) = trigger.event().effect.clone()
-    else {
+    let &TriggerChain::TiltControl(per_stack) = &trigger.event().effect else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -51,7 +50,7 @@ mod tests {
         let breaker = app.world_mut().spawn(Breaker).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
+            effect: TriggerChain::TiltControl(5.0),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -71,7 +70,7 @@ mod tests {
         let breaker = app.world_mut().spawn((Breaker, TiltControlBoost(5.0))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
+            effect: TriggerChain::TiltControl(5.0),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -92,14 +91,13 @@ mod tests {
     #[test]
     fn respects_max_stacks_tilt_control_boost() {
         let mut app = test_app();
-        // 3 stacks of 5.0 = 15.0 (at cap)
         let breaker = app
             .world_mut()
             .spawn((Breaker, TiltControlBoost(15.0)))
             .id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::TiltControl(5.0)),
+            effect: TriggerChain::TiltControl(5.0),
             max_stacks: 3,
             chip_name: String::new(),
         });

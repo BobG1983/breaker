@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    chips::{ChipDefinition, EvolutionRegistry, definition::{EvolutionRecipe, Rarity}},
+    chips::{
+        ChipDefinition, EvolutionRegistry,
+        definition::{EvolutionRecipe, Rarity},
+    },
     screen::loading::resources::DefaultsCollection,
 };
 
@@ -50,7 +53,7 @@ pub(crate) fn seed_evolution_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::{AmpEffect, ChipEffect, EvolutionIngredient, Rarity};
+    use crate::chips::definition::{EvolutionIngredient, Rarity, TriggerChain};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -85,7 +88,7 @@ mod tests {
             description: format!("{name} description"),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![ChipEffect::Amp(AmpEffect::Piercing(5))],
+            effects: vec![TriggerChain::Piercing(5)],
             ingredients: Some(vec![EvolutionIngredient {
                 chip_name: "Test Chip".to_owned(),
                 stacks_required: 2,

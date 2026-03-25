@@ -107,7 +107,7 @@ mod tests {
     // --- EvolutionRegistry tests ---
 
     use crate::chips::{
-        definition::{AmpEffect, ChipEffect, EvolutionIngredient, EvolutionRecipe, Rarity},
+        definition::{EvolutionIngredient, EvolutionRecipe, Rarity, TriggerChain},
         inventory::ChipInventory,
     };
 
@@ -121,7 +121,7 @@ mod tests {
                 description: format!("{name} description"),
                 rarity: Rarity::Legendary,
                 max_stacks: 1,
-                effects: vec![ChipEffect::Amp(AmpEffect::Piercing(5))],
+                effects: vec![TriggerChain::Piercing(5)],
                 ingredients: None,
             },
         }
@@ -166,10 +166,8 @@ mod tests {
         ));
 
         let mut inventory = ChipInventory::default();
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
-        let du_def =
-            ChipDefinition::test("Damage Up", ChipEffect::Amp(AmpEffect::DamageBoost(0.5)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let du_def = ChipDefinition::test("Damage Up", TriggerChain::DamageBoost(0.5), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -188,8 +186,7 @@ mod tests {
         ));
 
         let mut inventory = ChipInventory::default();
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -211,8 +208,7 @@ mod tests {
         ));
 
         let mut inventory = ChipInventory::default();
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def); // only 1 stack, need 2
 
         let eligible = registry.eligible_evolutions(&inventory);
@@ -232,8 +228,7 @@ mod tests {
         registry.insert(test_recipe("Recipe B", vec![ingredient("Wide Breaker", 1)]));
 
         let mut inventory = ChipInventory::default();
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -254,10 +249,8 @@ mod tests {
         registry.insert(test_recipe("Recipe B", vec![ingredient("Damage Up", 1)]));
 
         let mut inventory = ChipInventory::default();
-        let ps_def =
-            ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 5);
-        let du_def =
-            ChipDefinition::test("Damage Up", ChipEffect::Amp(AmpEffect::DamageBoost(0.5)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", TriggerChain::Piercing(1), 5);
+        let du_def = ChipDefinition::test("Damage Up", TriggerChain::DamageBoost(0.5), 5);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Damage Up", &du_def);
 

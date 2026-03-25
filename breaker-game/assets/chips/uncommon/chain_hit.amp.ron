@@ -3,5 +3,5 @@
     description: "Bolt chains to an additional cell on hit",
     rarity: Uncommon,
     max_stacks: 3,
-    effects: [Amp(ChainHit(1))],
+    effects: [OnSelected([ChainHit(1)])],
 )

@@ -7,7 +7,7 @@ use crate::{
     bolt::components::Bolt,
     chips::{
         components::DamageBoost,
-        definition::{AmpEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, TriggerChain},
     },
 };
 
@@ -17,7 +17,7 @@ pub(crate) fn handle_damage_boost(
     mut query: Query<(Entity, Option<&mut DamageBoost>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::DamageBoost(per_stack)) = trigger.event().effect.clone() else {
+    let &TriggerChain::DamageBoost(per_stack) = &trigger.event().effect else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -50,7 +50,7 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
+            effect: TriggerChain::DamageBoost(1.5),
             max_stacks: 2,
             chip_name: String::new(),
         });
@@ -66,7 +66,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, DamageBoost(1.5))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::DamageBoost(1.5)),
+            effect: TriggerChain::DamageBoost(1.5),
             max_stacks: 2,
             chip_name: String::new(),
         });

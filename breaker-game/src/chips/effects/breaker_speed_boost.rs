@@ -7,7 +7,7 @@ use crate::{
     breaker::components::Breaker,
     chips::{
         components::BreakerSpeedBoost,
-        definition::{AugmentEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, Target, TriggerChain},
     },
 };
 
@@ -17,7 +17,10 @@ pub(crate) fn handle_breaker_speed_boost(
     mut query: Query<(Entity, Option<&mut BreakerSpeedBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Augment(AugmentEffect::SpeedBoost(per_stack)) = trigger.event().effect.clone()
+    let &TriggerChain::SpeedBoost {
+        target: Target::Breaker,
+        multiplier: per_stack,
+    } = &trigger.event().effect
     else {
         return;
     };
@@ -51,7 +54,10 @@ mod tests {
         let breaker = app.world_mut().spawn(Breaker).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Breaker,
+                multiplier: 1.1,
+            },
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -62,7 +68,7 @@ mod tests {
             .entity(breaker)
             .get::<BreakerSpeedBoost>()
             .unwrap();
-        assert!((s.0 - 30.0).abs() < f32::EPSILON);
+        assert!((s.0 - 1.1).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -70,11 +76,14 @@ mod tests {
         let mut app = test_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, BreakerSpeedBoost(30.0)))
+            .spawn((Breaker, BreakerSpeedBoost(1.1)))
             .id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Breaker,
+                multiplier: 1.1,
+            },
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -86,8 +95,8 @@ mod tests {
             .get::<BreakerSpeedBoost>()
             .unwrap();
         assert!(
-            (s.0 - 60.0).abs() < f32::EPSILON,
-            "BreakerSpeedBoost should stack from 30.0 to 60.0, got {}",
+            (s.0 - 2.2).abs() < f32::EPSILON,
+            "BreakerSpeedBoost should stack from 1.1 to 2.2, got {}",
             s.0
         );
     }
@@ -95,14 +104,16 @@ mod tests {
     #[test]
     fn respects_max_stacks_breaker_speed_boost() {
         let mut app = test_app();
-        // 3 stacks of 30.0 = 90.0 (at cap)
         let breaker = app
             .world_mut()
-            .spawn((Breaker, BreakerSpeedBoost(90.0)))
+            .spawn((Breaker, BreakerSpeedBoost(3.3)))
             .id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::SpeedBoost(30.0)),
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Breaker,
+                multiplier: 1.1,
+            },
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -114,9 +125,34 @@ mod tests {
             .get::<BreakerSpeedBoost>()
             .unwrap();
         assert!(
-            (s.0 - 90.0).abs() < f32::EPSILON,
+            (s.0 - 3.3).abs() < f32::EPSILON,
             "BreakerSpeedBoost should not exceed max_stacks cap, got {}",
             s.0
+        );
+    }
+
+    #[test]
+    fn ignores_bolt_target() {
+        let mut app = test_app();
+        app.world_mut().spawn(Breaker);
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: TriggerChain::SpeedBoost {
+                target: Target::Bolt,
+                multiplier: 1.1,
+            },
+            max_stacks: 3,
+            chip_name: String::new(),
+        });
+        app.world_mut().flush();
+
+        assert!(
+            app.world_mut()
+                .query::<&BreakerSpeedBoost>()
+                .iter(app.world())
+                .next()
+                .is_none(),
+            "handle_breaker_speed_boost should ignore Target::Bolt"
         );
     }
 }

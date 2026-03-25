@@ -40,7 +40,7 @@ pub(crate) fn bridge_bolt_lost(
 ///
 /// For each bump message, evaluates two trigger kinds:
 /// 1. Grade-specific: Perfect→`PerfectBump`, Early→`EarlyBump`, Late→`LateBump`
-/// 2. `BumpSuccess`: all non-whiff bumps evaluate `OnBumpSuccess` chains.
+/// 2. `BumpSuccess`: all non-whiff bumps evaluate `OnBump` chains.
 pub(crate) fn bridge_bump(
     mut reader: MessageReader<BumpPerformed>,
     active: Res<ActiveChains>,
@@ -624,7 +624,7 @@ mod tests {
     fn perfect_bump_fires_both_on_perfect_bump_and_on_bump_success() {
         let chains = vec![
             TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]),
-            TriggerChain::OnBumpSuccess(vec![TriggerChain::test_shield(3.0)]),
+            TriggerChain::OnBump(vec![TriggerChain::test_shield(3.0)]),
         ];
         let mut app = bump_test_app(chains);
         let bolt = app.world_mut().spawn_empty().id();
@@ -638,7 +638,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             2,
-            "perfect bump should fire BOTH OnPerfectBump and OnBumpSuccess chains"
+            "perfect bump should fire BOTH OnPerfectBump and OnBump chains"
         );
         let effects: Vec<&TriggerChain> = captured.0.iter().map(|(e, _)| e).collect();
         assert!(effects.contains(&&TriggerChain::test_shockwave(64.0)));
@@ -650,7 +650,7 @@ mod tests {
         let chains = vec![
             TriggerChain::OnPerfectBump(vec![TriggerChain::test_shockwave(64.0)]),
             TriggerChain::OnEarlyBump(vec![TriggerChain::test_lose_life()]),
-            TriggerChain::OnBumpSuccess(vec![TriggerChain::test_shield(3.0)]),
+            TriggerChain::OnBump(vec![TriggerChain::test_shield(3.0)]),
         ];
         let mut app = bump_test_app(chains);
         let bolt = app.world_mut().spawn_empty().id();
@@ -664,7 +664,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             2,
-            "early bump should fire OnEarlyBump and OnBumpSuccess, not OnPerfectBump"
+            "early bump should fire OnEarlyBump and OnBump, not OnPerfectBump"
         );
         let effects: Vec<&TriggerChain> = captured.0.iter().map(|(e, _)| e).collect();
         assert!(effects.contains(&&TriggerChain::LoseLife));
@@ -676,7 +676,7 @@ mod tests {
     fn late_bump_fires_on_late_bump_and_on_bump_success() {
         let chains = vec![
             TriggerChain::OnLateBump(vec![TriggerChain::test_time_penalty(3.0)]),
-            TriggerChain::OnBumpSuccess(vec![TriggerChain::test_shield(3.0)]),
+            TriggerChain::OnBump(vec![TriggerChain::test_shield(3.0)]),
         ];
         let mut app = bump_test_app(chains);
         let bolt = app.world_mut().spawn_empty().id();

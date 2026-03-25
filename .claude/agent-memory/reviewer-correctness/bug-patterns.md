@@ -141,6 +141,12 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 
 - **bolt_speed_in_range.rs invariant checks Velocity2D first: masks all speed violations**: `breaker-scenario-runner/src/invariants/checkers/bolt_speed_in_range.rs:33-38` — `if let Some(v2d) = velocity2d { v2d.speed() }` short-circuits before checking BoltVelocity. Since Velocity2D is never set by launch/reset/collision systems (all write BoltVelocity), every bolt entity has `Velocity2D(Vec2::ZERO)`, speed = 0.0, hits the `< f32::EPSILON` guard, and is skipped. No BoltSpeedInRange violation ever fires in scenario runs. Confidence: HIGH.
 
+## B1-B3 TriggerChain Flatten Bugs (feature/spatial-physics-extraction, 2026-03-24)
+
+- **Attraction leaf has no ChipEffectApplied handler**: `TriggerChain::Attraction` is correctly classified as a leaf by `is_leaf()` (definition.rs:230), so `apply_chip_effect` routes it through `ChipEffectApplied` (bare-leaf arm, line 52). However no observer in `ChipsPlugin` (plugin.rs:23-31) or anywhere in the codebase pattern-matches `TriggerChain::Attraction`. The `magnetism.amp.ron` chip (`Magnetism`, Uncommon, `OnSelected([Attraction(8.0)])`) fires `ChipEffectApplied` on selection and the event is silently discarded. No attraction component is inserted. Confidence: HIGH.
+
+- **OnSelected with non-leaf inner: silently drops the trigger chain** (structural gap, no current RON file hits it): `apply_chip_effect` lines 43-49 iterate `inner` vec and fire `ChipEffectApplied` for each item without checking `is_leaf()`. If a RON file used `OnSelected([OnPerfectBump([...])])`, the inner trigger chain would reach all 9 handler observers, all would early-return (none match trigger variants), and the chain would be permanently lost — never pushed to `ActiveChains`. Depth test `on_selected_nested_depth_is_two` (definition.rs:684) suggests this configuration is considered valid. No current RON file triggers this path.
+
 ## Memorable Moments Wave E Bugs (2026-03-24, feature/spatial-physics-extraction)
 
 - **spawn_highlight_text culling skips new messages**: `spawn_highlight_text.rs:84-101` — `to_cull = total_after_spawn - max_visible`, but culling only iterates pre-existing popup entities. If `messages.len() > max_visible` with 0 existing popups, `to_cull > 0` but `existing_sorted` is empty, so zero culls happen and all messages spawn unconstrained. Fix: cap the number of messages spawned to `max_visible` in the spawn loop, or factor new-message spawns into the cull candidates.

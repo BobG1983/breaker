@@ -3,5 +3,5 @@
     description: "Bolt moves faster",
     rarity: Common,
     max_stacks: 4,
-    effects: [Amp(SpeedBoost(40.0))],
+    effects: [OnSelected([SpeedBoost(target: Bolt, multiplier: 1.1)])],
 )

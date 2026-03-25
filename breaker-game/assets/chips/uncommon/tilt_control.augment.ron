@@ -3,5 +3,5 @@
     description: "Breaker tilt is more responsive",
     rarity: Uncommon,
     max_stacks: 3,
-    effects: [Augment(TiltControl(3.0))],
+    effects: [OnSelected([TiltControl(3.0)])],
 )

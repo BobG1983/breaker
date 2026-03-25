@@ -114,7 +114,7 @@ mod tests {
     use crate::{
         chips::{
             ChipDefinition,
-            definition::{AmpEffect, ChipEffect, EvolutionIngredient},
+            definition::{EvolutionIngredient, TriggerChain},
             inventory::ChipInventory,
         },
         screen::chip_select::{
@@ -125,21 +125,9 @@ mod tests {
 
     fn make_offers_3() -> ChipOffers {
         ChipOffers(vec![
-            ChipOffering::Normal(ChipDefinition::test(
-                "A",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            )),
-            ChipOffering::Normal(ChipDefinition::test(
-                "B",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            )),
-            ChipOffering::Normal(ChipDefinition::test(
-                "C",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            )),
+            ChipOffering::Normal(ChipDefinition::test("A", TriggerChain::Piercing(1), 3)),
+            ChipOffering::Normal(ChipDefinition::test("B", TriggerChain::Piercing(1), 3)),
+            ChipOffering::Normal(ChipDefinition::test("C", TriggerChain::Piercing(1), 3)),
         ])
     }
 
@@ -201,23 +189,15 @@ mod tests {
         // On timer expiry, decay should be applied to "A" (0.8) and "C" (0.8)
         // but NOT to "B+" (should remain 1.0)
         let offers = ChipOffers(vec![
-            ChipOffering::Normal(ChipDefinition::test(
-                "A",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            )),
+            ChipOffering::Normal(ChipDefinition::test("A", TriggerChain::Piercing(1), 3)),
             ChipOffering::Evolution {
                 ingredients: vec![EvolutionIngredient {
                     chip_name: "X".to_owned(),
                     stacks_required: 2,
                 }],
-                result: ChipDefinition::test("B+", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+                result: ChipDefinition::test("B+", TriggerChain::Piercing(5), 1),
             },
-            ChipOffering::Normal(ChipDefinition::test(
-                "C",
-                ChipEffect::Amp(AmpEffect::Piercing(1)),
-                3,
-            )),
+            ChipOffering::Normal(ChipDefinition::test("C", TriggerChain::Piercing(1), 3)),
         ]);
 
         let mut app = test_app_with_offers(0.0, offers);

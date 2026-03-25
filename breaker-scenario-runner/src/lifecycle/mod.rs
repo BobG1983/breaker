@@ -669,13 +669,13 @@ fn apply_inject_duplicate_offers(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::chips::definition::{ChipDefinition, Rarity, TriggerChain};
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+        effects: vec![TriggerChain::Piercing(1)],
         ingredients: None,
     };
     let offers = ChipOffers(vec![
@@ -697,13 +697,13 @@ fn apply_inject_maxed_chip_offer(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::chips::definition::{ChipDefinition, Rarity, TriggerChain};
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 1,
-        effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+        effects: vec![TriggerChain::Piercing(1)],
         ingredients: None,
     };
     if let Some(inventory) = chip_inventory {

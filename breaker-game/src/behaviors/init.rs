@@ -116,7 +116,7 @@ mod tests {
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
 
     fn make_test_archetype() -> ArchetypeDefinition {
-        use crate::chips::definition::SpeedBoostTarget;
+        use crate::chips::definition::Target;
 
         ArchetypeDefinition {
             name: TEST_ARCHETYPE_NAME.to_owned(),
@@ -124,15 +124,15 @@ mod tests {
             life_pool: Some(3),
             on_bolt_lost: Some(TriggerChain::LoseLife),
             on_perfect_bump: Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.5,
             }),
             on_early_bump: Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.1,
             }),
             on_late_bump: Some(TriggerChain::SpeedBoost {
-                target: SpeedBoostTarget::Bolt,
+                target: Target::Bolt,
                 multiplier: 1.1,
             }),
             chains: vec![],

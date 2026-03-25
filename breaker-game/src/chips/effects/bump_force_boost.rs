@@ -7,7 +7,7 @@ use crate::{
     breaker::components::Breaker,
     chips::{
         components::BumpForceBoost,
-        definition::{AugmentEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, TriggerChain},
     },
 };
 
@@ -17,8 +17,7 @@ pub(crate) fn handle_bump_force_boost(
     mut query: Query<(Entity, Option<&mut BumpForceBoost>), With<Breaker>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Augment(AugmentEffect::BumpForce(per_stack)) = trigger.event().effect.clone()
-    else {
+    let &TriggerChain::BumpForce(per_stack) = &trigger.event().effect else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -51,7 +50,7 @@ mod tests {
         let breaker = app.world_mut().spawn(Breaker).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
+            effect: TriggerChain::BumpForce(10.0),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -67,7 +66,7 @@ mod tests {
         let breaker = app.world_mut().spawn((Breaker, BumpForceBoost(10.0))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
+            effect: TriggerChain::BumpForce(10.0),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -84,11 +83,10 @@ mod tests {
     #[test]
     fn respects_max_stacks_bump_force_boost() {
         let mut app = test_app();
-        // 3 stacks of 10.0 = 30.0 (at cap)
         let breaker = app.world_mut().spawn((Breaker, BumpForceBoost(30.0))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Augment(AugmentEffect::BumpForce(10.0)),
+            effect: TriggerChain::BumpForce(10.0),
             max_stacks: 3,
             chip_name: String::new(),
         });

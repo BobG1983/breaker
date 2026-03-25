@@ -3,5 +3,5 @@
     description: "Bumps apply more force to the bolt",
     rarity: Uncommon,
     max_stacks: 3,
-    effects: [Augment(BumpForce(8.0))],
+    effects: [OnSelected([BumpForce(8.0)])],
 )

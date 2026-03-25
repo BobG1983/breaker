@@ -105,8 +105,7 @@ mod tests {
     fn empty_collections_produce_empty_registry() {
         let mut app = test_app();
 
-        app.world_mut()
-            .insert_resource(make_collection(vec![]));
+        app.world_mut().insert_resource(make_collection(vec![]));
 
         app.update();
 
@@ -119,8 +118,7 @@ mod tests {
         let mut app = test_app();
 
         // First update: seed with empty collection
-        app.world_mut()
-            .insert_resource(make_collection(vec![]));
+        app.world_mut().insert_resource(make_collection(vec![]));
         app.update();
 
         // Add a chip AFTER seeding — if the guard works, it won't be picked up

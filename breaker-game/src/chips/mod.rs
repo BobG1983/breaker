@@ -1,4 +1,4 @@
-//! Chips domain plugin — Amps, Augments, and Overclocks system.
+//! Chips domain plugin — passive and triggered chip effects.
 
 pub(crate) mod components;
 pub mod definition;
@@ -10,6 +10,6 @@ mod resources;
 pub(crate) mod systems;
 
 pub(crate) use definition::ChipDefinition;
-pub use definition::{ImpactTarget, TriggerChain};
+pub use definition::{ImpactTarget, Target, TriggerChain};
 pub(crate) use plugin::ChipsPlugin;
 pub(crate) use resources::{ChipRegistry, EvolutionRegistry};

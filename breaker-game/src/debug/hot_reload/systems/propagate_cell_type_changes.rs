@@ -28,12 +28,9 @@ pub(crate) fn propagate_cell_type_changes(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Check if any cell type definition was modified
-    let any_modified = events.read().any(|event| {
-        collection
-            .cells
-            .iter()
-            .any(|h| event.is_modified(h.id()))
-    });
+    let any_modified = events
+        .read()
+        .any(|event| collection.cells.iter().any(|h| event.is_modified(h.id())));
 
     if !any_modified {
         return;

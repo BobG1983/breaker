@@ -7,7 +7,7 @@ use crate::{
     bolt::components::Bolt,
     chips::{
         components::BoltSizeBoost,
-        definition::{AmpEffect, ChipEffect, ChipEffectApplied},
+        definition::{ChipEffectApplied, Target, TriggerChain},
     },
 };
 
@@ -17,7 +17,7 @@ pub(crate) fn handle_bolt_size_boost(
     mut query: Query<(Entity, Option<&mut BoltSizeBoost>), With<Bolt>>,
     mut commands: Commands,
 ) {
-    let ChipEffect::Amp(AmpEffect::SizeBoost(per_stack)) = trigger.event().effect.clone() else {
+    let &TriggerChain::SizeBoost(Target::Bolt, per_stack) = &trigger.event().effect else {
         return;
     };
     let max_stacks = trigger.event().max_stacks;
@@ -50,7 +50,7 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
+            effect: TriggerChain::SizeBoost(Target::Bolt, 0.5),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -66,7 +66,7 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, BoltSizeBoost(0.5))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
+            effect: TriggerChain::SizeBoost(Target::Bolt, 0.5),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -83,11 +83,10 @@ mod tests {
     #[test]
     fn respects_max_stacks_bolt_size_boost() {
         let mut app = test_app();
-        // 3 stacks of 0.5 = 1.5 (at cap)
         let bolt = app.world_mut().spawn((Bolt, BoltSizeBoost(1.5))).id();
 
         app.world_mut().commands().trigger(ChipEffectApplied {
-            effect: ChipEffect::Amp(AmpEffect::SizeBoost(0.5)),
+            effect: TriggerChain::SizeBoost(Target::Bolt, 0.5),
             max_stacks: 3,
             chip_name: String::new(),
         });
@@ -98,6 +97,28 @@ mod tests {
             (s.0 - 1.5).abs() < f32::EPSILON,
             "BoltSizeBoost should not exceed max_stacks cap, got {}",
             s.0
+        );
+    }
+
+    #[test]
+    fn ignores_breaker_target() {
+        let mut app = test_app();
+        app.world_mut().spawn(Bolt);
+
+        app.world_mut().commands().trigger(ChipEffectApplied {
+            effect: TriggerChain::SizeBoost(Target::Breaker, 20.0),
+            max_stacks: 3,
+            chip_name: String::new(),
+        });
+        app.world_mut().flush();
+
+        assert!(
+            app.world_mut()
+                .query::<&BoltSizeBoost>()
+                .iter(app.world())
+                .next()
+                .is_none(),
+            "handle_bolt_size_boost should ignore Target::Breaker"
         );
     }
 }
