@@ -166,6 +166,20 @@ pub enum Effect {
         /// Duration of invulnerability in seconds.
         invuln_secs: f32,
     },
+    /// Ramping damage bonus that accumulates per cell hit and resets on breaker bounce.
+    RampingDamage {
+        /// Damage bonus added per cell hit.
+        bonus_per_hit: f32,
+        /// Maximum cumulative damage bonus before capping.
+        max_bonus: f32,
+    },
+    /// Temporary speed burst applied to a bolt, decaying over time.
+    TimedSpeedBurst {
+        /// Multiplier applied to bolt velocity.
+        speed_mult: f32,
+        /// Duration of the burst in seconds.
+        duration_secs: f32,
+    },
 }
 
 /// A node in the effect tree — either a trigger gate wrapping children,
@@ -250,6 +264,22 @@ impl Effect {
     /// Build a `DamageBoost` leaf with the given boost value.
     pub(crate) fn test_damage_boost(boost: f32) -> Self {
         Self::DamageBoost(boost)
+    }
+
+    /// Build a `RampingDamage` leaf with the given per-hit bonus and max bonus.
+    pub(crate) fn test_ramping_damage(bonus_per_hit: f32, max_bonus: f32) -> Self {
+        Self::RampingDamage {
+            bonus_per_hit,
+            max_bonus,
+        }
+    }
+
+    /// Build a `TimedSpeedBurst` leaf with the given speed multiplier and duration.
+    pub(crate) fn test_timed_speed_burst(speed_mult: f32, duration_secs: f32) -> Self {
+        Self::TimedSpeedBurst {
+            speed_mult,
+            duration_secs,
+        }
     }
 }
 
@@ -485,8 +515,16 @@ mod tests {
                 max: 2,
             },
             Effect::SecondWind { invuln_secs: 3.0 },
+            Effect::RampingDamage {
+                bonus_per_hit: 0.04,
+                max_bonus: 0.4,
+            },
+            Effect::TimedSpeedBurst {
+                speed_mult: 1.5,
+                duration_secs: 3.0,
+            },
         ];
-        assert_eq!(effects.len(), 20, "all 20 Effect variants");
+        assert_eq!(effects.len(), 22, "all 22 Effect variants");
     }
 
     #[test]

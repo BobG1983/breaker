@@ -181,6 +181,19 @@ pub(crate) struct SecondWindFired {
     pub source_chip: Option<String>,
 }
 
+/// Fired when a timed speed burst effect resolves via a triggered chain.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct TimedSpeedBurstFired {
+    /// Multiplier applied to bolt velocity.
+    pub speed_mult: f32,
+    /// Duration of the burst in seconds.
+    pub duration_secs: f32,
+    /// The bolt entity, or `None` for global triggers.
+    pub bolt: Option<Entity>,
+    /// The originating chip name, or `None` for archetype chains.
+    pub source_chip: Option<String>,
+}
+
 // ===========================================================================
 // Passive effect events (fired by dispatch_chip_effects)
 // ===========================================================================
@@ -271,6 +284,19 @@ pub(crate) struct BumpForceApplied {
 pub(crate) struct TiltControlApplied {
     /// Tilt control sensitivity increase per stack.
     pub per_stack: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
+
+/// Fired when a ramping damage passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct RampingDamageApplied {
+    /// Damage bonus added per cell hit.
+    pub bonus_per_hit: f32,
+    /// Maximum cumulative damage bonus before capping.
+    pub max_bonus: f32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
     /// Name of the chip that applied this effect.
@@ -374,6 +400,20 @@ pub(crate) fn trigger_chain_to_effect(
         TriggerChain::Attraction(f) => Effect::Attraction(*f),
         TriggerChain::BumpForce(f) => Effect::BumpForce(*f),
         TriggerChain::TiltControl(f) => Effect::TiltControl(*f),
+        TriggerChain::RampingDamage {
+            bonus_per_hit,
+            max_bonus,
+        } => Effect::RampingDamage {
+            bonus_per_hit: *bonus_per_hit,
+            max_bonus: *max_bonus,
+        },
+        TriggerChain::TimedSpeedBurst {
+            speed_mult,
+            duration_secs,
+        } => Effect::TimedSpeedBurst {
+            speed_mult: *speed_mult,
+            duration_secs: *duration_secs,
+        },
         // Non-leaf trigger wrappers — invariant violation
         _ => unreachable!("trigger_chain_to_effect called on non-leaf TriggerChain: {chain:?}"),
     }
@@ -408,7 +448,8 @@ pub(crate) fn fire_typed_event(
         | Effect::SpawnPhantom { .. }
         | Effect::PiercingBeam { .. }
         | Effect::GravityWell { .. }
-        | Effect::SecondWind { .. } => {
+        | Effect::SecondWind { .. }
+        | Effect::TimedSpeedBurst { .. } => {
             fire_triggered_effect(effect, bolt, source_chip, commands);
         }
         // Passive-only effects — should not be fired via triggered dispatch.
@@ -418,7 +459,8 @@ pub(crate) fn fire_typed_event(
         | Effect::SizeBoost(..)
         | Effect::Attraction(_)
         | Effect::BumpForce(_)
-        | Effect::TiltControl(_) => {
+        | Effect::TiltControl(_)
+        | Effect::RampingDamage { .. } => {
             warn!(
                 "passive effect dispatched via fire_typed_event — should use fire_passive_event: {effect:?}"
             );
@@ -575,6 +617,17 @@ fn fire_exotic_triggered_effect(
                 source_chip,
             });
         }
+        Effect::TimedSpeedBurst {
+            speed_mult,
+            duration_secs,
+        } => {
+            commands.trigger(TimedSpeedBurstFired {
+                speed_mult,
+                duration_secs,
+                bolt,
+                source_chip,
+            });
+        }
         _ => unreachable!("fire_exotic_triggered_effect called with non-exotic effect: {effect:?}"),
     }
 }
@@ -645,6 +698,17 @@ pub(crate) fn fire_passive_event(
         Effect::TiltControl(per_stack) => {
             commands.trigger(TiltControlApplied {
                 per_stack,
+                max_stacks,
+                chip_name,
+            });
+        }
+        Effect::RampingDamage {
+            bonus_per_hit,
+            max_bonus,
+        } => {
+            commands.trigger(RampingDamageApplied {
+                bonus_per_hit,
+                max_bonus,
                 max_stacks,
                 chip_name,
             });
@@ -1184,5 +1248,196 @@ mod tests {
         );
         assert_eq!(captured.0[0].target, Target::Bolt);
         assert_eq!(captured.0[1].target, Target::Breaker);
+    }
+
+    // =========================================================================
+    // C2-C4: RampingDamage conversion and passive dispatch tests
+    // =========================================================================
+
+    #[test]
+    fn trigger_chain_to_effect_converts_ramping_damage() {
+        use crate::chips::definition::TriggerChain;
+
+        let chain = TriggerChain::RampingDamage {
+            bonus_per_hit: 0.04,
+            max_bonus: 0.4,
+        };
+        let effect = trigger_chain_to_effect(&chain);
+        assert_eq!(
+            effect,
+            super::super::definition::Effect::RampingDamage {
+                bonus_per_hit: 0.04,
+                max_bonus: 0.4,
+            }
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedRampingDamage(Vec<RampingDamageApplied>);
+
+    fn capture_ramping_damage(
+        trigger: On<RampingDamageApplied>,
+        mut captured: ResMut<CapturedRampingDamage>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[test]
+    fn fire_passive_event_dispatches_ramping_damage() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedRampingDamage>()
+            .add_observer(capture_ramping_damage);
+
+        let effect = Effect::RampingDamage {
+            bonus_per_hit: 0.02,
+            max_bonus: 0.2,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_passive_event(effect, 2, "Basic Amp".to_owned(), &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedRampingDamage>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "fire_passive_event should dispatch RampingDamageApplied for Effect::RampingDamage"
+        );
+        assert!(
+            (captured.0[0].bonus_per_hit - 0.02).abs() < f32::EPSILON,
+            "bonus_per_hit should be 0.02"
+        );
+        assert!(
+            (captured.0[0].max_bonus - 0.2).abs() < f32::EPSILON,
+            "max_bonus should be 0.2"
+        );
+        assert_eq!(captured.0[0].max_stacks, 2);
+        assert_eq!(captured.0[0].chip_name, "Basic Amp");
+    }
+
+    // =========================================================================
+    // C2-C4: TimedSpeedBurst conversion and triggered dispatch tests
+    // =========================================================================
+
+    #[test]
+    fn trigger_chain_to_effect_converts_timed_speed_burst() {
+        use crate::chips::definition::TriggerChain;
+
+        let chain = TriggerChain::TimedSpeedBurst {
+            speed_mult: 1.5,
+            duration_secs: 3.0,
+        };
+        let effect = trigger_chain_to_effect(&chain);
+        assert_eq!(
+            effect,
+            super::super::definition::Effect::TimedSpeedBurst {
+                speed_mult: 1.5,
+                duration_secs: 3.0,
+            }
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedTimedSpeedBurst(Vec<TimedSpeedBurstFired>);
+
+    fn capture_timed_speed_burst(
+        trigger: On<TimedSpeedBurstFired>,
+        mut captured: ResMut<CapturedTimedSpeedBurst>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[test]
+    fn fire_typed_event_dispatches_timed_speed_burst() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedTimedSpeedBurst>()
+            .add_observer(capture_timed_speed_burst);
+
+        let bolt = Entity::PLACEHOLDER;
+        let effect = Effect::TimedSpeedBurst {
+            speed_mult: 1.3,
+            duration_secs: 2.0,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(
+                effect,
+                Some(bolt),
+                Some("Basic Overclock".to_owned()),
+                &mut commands,
+            );
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedTimedSpeedBurst>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "fire_typed_event should dispatch TimedSpeedBurstFired for Effect::TimedSpeedBurst"
+        );
+        assert!(
+            (captured.0[0].speed_mult - 1.3).abs() < f32::EPSILON,
+            "speed_mult should be 1.3"
+        );
+        assert!(
+            (captured.0[0].duration_secs - 2.0).abs() < f32::EPSILON,
+            "duration_secs should be 2.0"
+        );
+        assert_eq!(captured.0[0].bolt, Some(bolt));
+        assert_eq!(
+            captured.0[0].source_chip,
+            Some("Basic Overclock".to_owned())
+        );
+    }
+
+    // =========================================================================
+    // C2-C4: Event struct construction tests
+    // =========================================================================
+
+    #[test]
+    fn ramping_damage_applied_carries_all_fields() {
+        let event = RampingDamageApplied {
+            bonus_per_hit: 0.04,
+            max_bonus: 0.4,
+            max_stacks: 2,
+            chip_name: "Potent Amp".to_owned(),
+        };
+        assert!((event.bonus_per_hit - 0.04).abs() < f32::EPSILON);
+        assert!((event.max_bonus - 0.4).abs() < f32::EPSILON);
+        assert_eq!(event.max_stacks, 2);
+        assert_eq!(event.chip_name, "Potent Amp");
+    }
+
+    #[test]
+    fn timed_speed_burst_fired_carries_all_fields() {
+        let event = TimedSpeedBurstFired {
+            speed_mult: 1.5,
+            duration_secs: 3.0,
+            bolt: Some(Entity::PLACEHOLDER),
+            source_chip: Some("Charged Overclock".to_owned()),
+        };
+        assert!((event.speed_mult - 1.5).abs() < f32::EPSILON);
+        assert!((event.duration_secs - 3.0).abs() < f32::EPSILON);
+        assert_eq!(event.bolt, Some(Entity::PLACEHOLDER));
+        assert_eq!(event.source_chip, Some("Charged Overclock".to_owned()));
+    }
+
+    #[test]
+    fn timed_speed_burst_fired_none_bolt() {
+        let event = TimedSpeedBurstFired {
+            speed_mult: 1.3,
+            duration_secs: 2.0,
+            bolt: None,
+            source_chip: None,
+        };
+        assert_eq!(event.bolt, None);
+        assert!(event.source_chip.is_none());
     }
 }

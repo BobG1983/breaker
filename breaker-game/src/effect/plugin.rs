@@ -23,6 +23,7 @@ use super::{
         multi_bolt::handle_multi_bolt,
         piercing::handle_piercing,
         piercing_beam::handle_piercing_beam,
+        ramping_damage::{handle_ramping_damage, increment_ramping_damage, reset_ramping_damage},
         second_wind::handle_second_wind,
         shield::{handle_shield, tick_shield},
         shockwave::{
@@ -34,6 +35,7 @@ use super::{
         speed_boost::handle_speed_boost,
         tilt_control_boost::handle_tilt_control_boost,
         time_penalty::handle_time_penalty,
+        timed_speed_burst::{handle_timed_speed_burst, tick_timed_speed_burst},
         width_boost::handle_width_boost,
     },
     init::{apply_archetype_config_overrides, init_archetype},
@@ -74,7 +76,9 @@ impl Plugin for EffectPlugin {
             .add_observer(handle_piercing_beam)
             .add_observer(handle_gravity_well)
             .add_observer(handle_second_wind)
+            .add_observer(handle_timed_speed_burst)
             // Passive handler observers (moved from ChipsPlugin)
+            .add_observer(handle_ramping_damage)
             .add_observer(handle_piercing)
             .add_observer(handle_damage_boost)
             .add_observer(handle_bolt_speed_boost)
@@ -134,6 +138,22 @@ impl Plugin for EffectPlugin {
                 FixedUpdate,
                 tick_shield
                     .after(EffectSystems::Bridge)
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            // Timed speed burst tick (decrement + restore speed on expiry)
+            .add_systems(
+                FixedUpdate,
+                tick_timed_speed_burst
+                    .after(EffectSystems::Bridge)
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            // Ramping damage increment + reset
+            .add_systems(
+                FixedUpdate,
+                (
+                    increment_ramping_damage.after(EffectSystems::Bridge),
+                    reset_ramping_damage.after(BreakerSystems::GradeBump),
+                )
                     .run_if(in_state(PlayingState::Active)),
             )
             // HUD + shockwave visual update

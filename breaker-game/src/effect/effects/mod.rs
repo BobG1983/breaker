@@ -16,6 +16,7 @@ pub(crate) mod life_lost;
 pub(crate) mod multi_bolt;
 pub(crate) mod piercing;
 pub(crate) mod piercing_beam;
+pub(crate) mod ramping_damage;
 pub(crate) mod second_wind;
 pub(crate) mod shield;
 pub(crate) mod shockwave;
@@ -24,6 +25,7 @@ pub(crate) mod spawn_phantom;
 pub(crate) mod speed_boost;
 pub(crate) mod tilt_control_boost;
 pub(crate) mod time_penalty;
+pub(crate) mod timed_speed_burst;
 pub(crate) mod width_boost;
 
 pub(crate) use attraction::handle_attraction;

@@ -146,6 +146,20 @@ pub enum TriggerChain {
     BumpForce(f32),
     /// Flat tilt control sensitivity increase per stack.
     TiltControl(f32),
+    /// Ramping damage bonus that accumulates per cell hit and resets on breaker bounce.
+    RampingDamage {
+        /// Damage bonus added per cell hit.
+        bonus_per_hit: f32,
+        /// Maximum cumulative damage bonus before capping.
+        max_bonus: f32,
+    },
+    /// Temporary speed burst applied to a bolt, decaying over time.
+    TimedSpeedBurst {
+        /// Multiplier applied to bolt velocity.
+        speed_mult: f32,
+        /// Duration of the burst in seconds.
+        duration_secs: f32,
+    },
 }
 
 impl TriggerChain {
@@ -174,7 +188,9 @@ impl TriggerChain {
             | Self::SizeBoost(..)
             | Self::Attraction(_)
             | Self::BumpForce(_)
-            | Self::TiltControl(_) => 0,
+            | Self::TiltControl(_)
+            | Self::RampingDamage { .. }
+            | Self::TimedSpeedBurst { .. } => 0,
             Self::OnPerfectBump(effects)
             | Self::OnImpact(_, effects)
             | Self::OnCellDestroyed(effects)
@@ -426,6 +442,22 @@ impl TriggerChain {
     /// Build a `SecondWind` leaf with the given invulnerability duration.
     pub(crate) fn test_second_wind(invuln_secs: f32) -> Self {
         Self::SecondWind { invuln_secs }
+    }
+
+    /// Build a `RampingDamage` leaf with the given per-hit bonus and max bonus.
+    pub(crate) fn test_ramping_damage(bonus_per_hit: f32, max_bonus: f32) -> Self {
+        Self::RampingDamage {
+            bonus_per_hit,
+            max_bonus,
+        }
+    }
+
+    /// Build a `TimedSpeedBurst` leaf with the given speed multiplier and duration.
+    pub(crate) fn test_timed_speed_burst(speed_mult: f32, duration_secs: f32) -> Self {
+        Self::TimedSpeedBurst {
+            speed_mult,
+            duration_secs,
+        }
     }
 }
 
@@ -2131,5 +2163,224 @@ mod tests {
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(result.len(), 1);
         assert!(matches!(result[0], NodeEvalResult::Arm(_)));
+    }
+
+    // ======================================================================
+    // C2-C4: Augment RON template tests
+    // ======================================================================
+
+    #[test]
+    fn augment_chip_template_ron_parses() {
+        let ron_str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/chips/augment.chip.ron"
+        ));
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("augment chip template RON should parse");
+        assert_eq!(template.name, "Augment");
+        assert_eq!(template.max_taken, 2);
+        assert!(template.common.is_some());
+        assert!(template.uncommon.is_some());
+        assert!(template.rare.is_some());
+        assert!(template.legendary.is_none());
+
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 3, "Augment should expand to 3 definitions");
+        assert_eq!(defs[0].name, "Basic Augment");
+        assert_eq!(defs[0].rarity, Rarity::Common);
+        assert_eq!(defs[1].name, "Sturdy Augment");
+        assert_eq!(defs[1].rarity, Rarity::Uncommon);
+        assert_eq!(defs[2].name, "Fortified Augment");
+        assert_eq!(defs[2].rarity, Rarity::Rare);
+        for def in &defs {
+            assert_eq!(def.max_stacks, 2);
+        }
+    }
+
+    #[test]
+    fn augment_rare_has_three_effects() {
+        let ron_str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/chips/augment.chip.ron"
+        ));
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("augment chip template RON should parse");
+        let rare_slot = template.rare.as_ref().expect("rare slot should exist");
+        assert_eq!(rare_slot.prefix, "Fortified");
+
+        // The rare slot has OnSelected with 3 inner effects
+        assert_eq!(rare_slot.effects.len(), 1, "should have 1 top-level effect");
+        match &rare_slot.effects[0] {
+            TriggerChain::OnSelected(inner) => {
+                assert_eq!(inner.len(), 3, "rare OnSelected should contain 3 effects");
+                assert_eq!(inner[0], TriggerChain::SizeBoost(Target::Breaker, 16.0));
+                assert_eq!(inner[1], TriggerChain::BumpForce(25.0));
+                assert_eq!(
+                    inner[2],
+                    TriggerChain::SpeedBoost {
+                        target: Target::Breaker,
+                        multiplier: 1.15,
+                    }
+                );
+            }
+            other => panic!("expected OnSelected, got {other:?}"),
+        }
+    }
+
+    // ======================================================================
+    // C2-C4: RampingDamage TriggerChain leaf tests (Amp)
+    // ======================================================================
+
+    #[test]
+    fn ramping_damage_trigger_chain_deserializes() {
+        let tc: TriggerChain =
+            ron::de::from_str("RampingDamage(bonus_per_hit: 0.02, max_bonus: 0.2)")
+                .expect("should parse RampingDamage");
+        assert_eq!(
+            tc,
+            TriggerChain::RampingDamage {
+                bonus_per_hit: 0.02,
+                max_bonus: 0.2,
+            }
+        );
+    }
+
+    #[test]
+    fn ramping_damage_trigger_chain_deserializes_zero_values() {
+        let tc: TriggerChain =
+            ron::de::from_str("RampingDamage(bonus_per_hit: 0.0, max_bonus: 0.0)")
+                .expect("should parse RampingDamage with zero values");
+        assert_eq!(
+            tc,
+            TriggerChain::RampingDamage {
+                bonus_per_hit: 0.0,
+                max_bonus: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    fn ramping_damage_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::RampingDamage {
+            bonus_per_hit: 0.04,
+            max_bonus: 0.4,
+        };
+        assert_eq!(tc.depth(), 0);
+        assert!(tc.is_leaf());
+    }
+
+    #[test]
+    fn amp_chip_template_ron_parses() {
+        let ron_str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/chips/amp.chip.ron"
+        ));
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("amp chip template RON should parse");
+        assert_eq!(template.name, "Amp");
+        assert_eq!(template.max_taken, 2);
+        assert!(template.common.is_some());
+        let common = template.common.as_ref().unwrap();
+        assert_eq!(common.prefix, "Basic");
+        assert_eq!(
+            common.effects,
+            vec![TriggerChain::OnSelected(vec![
+                TriggerChain::RampingDamage {
+                    bonus_per_hit: 0.02,
+                    max_bonus: 0.2,
+                }
+            ])]
+        );
+
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 3, "Amp should expand to 3 definitions");
+        assert_eq!(defs[0].name, "Basic Amp");
+        assert_eq!(defs[0].rarity, Rarity::Common);
+        assert_eq!(defs[1].name, "Potent Amp");
+        assert_eq!(defs[1].rarity, Rarity::Uncommon);
+        assert_eq!(defs[2].name, "Savage Amp");
+        assert_eq!(defs[2].rarity, Rarity::Rare);
+        for def in &defs {
+            assert_eq!(def.max_stacks, 2);
+        }
+    }
+
+    // ======================================================================
+    // C2-C4: TimedSpeedBurst TriggerChain leaf tests (Overclock)
+    // ======================================================================
+
+    #[test]
+    fn timed_speed_burst_trigger_chain_deserializes() {
+        let tc: TriggerChain =
+            ron::de::from_str("TimedSpeedBurst(speed_mult: 1.3, duration_secs: 2.0)")
+                .expect("should parse TimedSpeedBurst");
+        assert_eq!(
+            tc,
+            TriggerChain::TimedSpeedBurst {
+                speed_mult: 1.3,
+                duration_secs: 2.0,
+            }
+        );
+    }
+
+    #[test]
+    fn timed_speed_burst_trigger_chain_edge_values() {
+        // Identity multiplier and zero duration should deserialize
+        let tc: TriggerChain =
+            ron::de::from_str("TimedSpeedBurst(speed_mult: 1.0, duration_secs: 0.0)")
+                .expect("should parse TimedSpeedBurst with edge values");
+        assert_eq!(
+            tc,
+            TriggerChain::TimedSpeedBurst {
+                speed_mult: 1.0,
+                duration_secs: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    fn timed_speed_burst_is_leaf_with_depth_zero() {
+        let tc = TriggerChain::TimedSpeedBurst {
+            speed_mult: 1.5,
+            duration_secs: 3.0,
+        };
+        assert_eq!(tc.depth(), 0);
+        assert!(tc.is_leaf());
+    }
+
+    #[test]
+    fn overclock_chip_template_ron_parses() {
+        let ron_str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/chips/overclock.chip.ron"
+        ));
+        let template: ChipTemplate =
+            ron::de::from_str(ron_str).expect("overclock chip template RON should parse");
+        assert_eq!(template.name, "Overclock");
+        assert_eq!(template.max_taken, 2);
+        assert!(template.common.is_some());
+        let common = template.common.as_ref().unwrap();
+        assert_eq!(common.prefix, "Basic");
+        assert_eq!(
+            common.effects,
+            vec![TriggerChain::OnPerfectBump(vec![
+                TriggerChain::TimedSpeedBurst {
+                    speed_mult: 1.3,
+                    duration_secs: 2.0,
+                }
+            ])]
+        );
+
+        let defs = expand_template(&template);
+        assert_eq!(defs.len(), 3, "Overclock should expand to 3 definitions");
+        assert_eq!(defs[0].name, "Basic Overclock");
+        assert_eq!(defs[0].rarity, Rarity::Common);
+        assert_eq!(defs[1].name, "Charged Overclock");
+        assert_eq!(defs[1].rarity, Rarity::Uncommon);
+        assert_eq!(defs[2].name, "Supercharged Overclock");
+        assert_eq!(defs[2].rarity, Rarity::Rare);
+        for def in &defs {
+            assert_eq!(def.max_stacks, 2);
+        }
     }
 }

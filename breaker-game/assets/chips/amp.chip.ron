@@ -1,0 +1,8 @@
+(
+    name: "Amp",
+    max_taken: 2,
+    common: Some((prefix: "Basic", effects: [OnSelected([RampingDamage(bonus_per_hit: 0.02, max_bonus: 0.2)])])),
+    uncommon: Some((prefix: "Potent", effects: [OnSelected([RampingDamage(bonus_per_hit: 0.04, max_bonus: 0.4)])])),
+    rare: Some((prefix: "Savage", effects: [OnSelected([RampingDamage(bonus_per_hit: 0.06, max_bonus: 0.6)])])),
+    legendary: None,
+)
