@@ -930,8 +930,6 @@ mod tests {
 
     #[test]
     fn highlight_cap_reads_from_config() {
-        use crate::run::definition::HighlightConfig;
-
         let stats = RunStats {
             highlights: make_highlights(6),
             ..Default::default()
@@ -971,8 +969,6 @@ mod tests {
 
     #[test]
     fn highlight_cap_shows_fewer_when_fewer_exist() {
-        use crate::run::definition::HighlightConfig;
-
         let stats = RunStats {
             highlights: make_highlights(2),
             ..Default::default()
@@ -1004,8 +1000,6 @@ mod tests {
 
     #[test]
     fn highlights_displayed_in_diversity_penalized_order_with_config() {
-        use crate::run::definition::HighlightConfig;
-
         // 4 highlights in FIFO order (input order):
         // idx 0: PerfectStreak (Execution, score ~0.333)
         // idx 1: ComboKing (Execution, score ~0.333)
@@ -1148,8 +1142,6 @@ mod tests {
 
     #[test]
     fn respects_highlight_cap_from_config_with_diversity_selection() {
-        use crate::run::definition::HighlightConfig;
-
         // 6 highlights, cap=2 → exactly 2 shown
         let stats = RunStats {
             highlights: vec![
@@ -1210,8 +1202,6 @@ mod tests {
 
     #[test]
     fn empty_highlights_with_config_produces_no_highlight_text() {
-        use crate::run::definition::HighlightConfig;
-
         let stats = RunStats {
             highlights: vec![],
             ..Default::default()
@@ -1229,8 +1219,6 @@ mod tests {
 
     #[test]
     fn highlight_cap_zero_produces_no_highlights() {
-        use crate::run::definition::HighlightConfig;
-
         let stats = RunStats {
             highlights: vec![
                 RunHighlight {
@@ -1270,8 +1258,6 @@ mod tests {
 
     #[test]
     fn single_highlight_with_config_uses_selection() {
-        use crate::run::definition::HighlightConfig;
-
         let stats = RunStats {
             highlights: vec![RunHighlight {
                 kind: HighlightKind::NoDamageNode,
@@ -1301,8 +1287,6 @@ mod tests {
 
     #[test]
     fn most_powerful_evolution_shows_chip_name_from_run_stats() {
-        use crate::run::definition::HighlightConfig;
-
         let stats = RunStats {
             highlights: vec![RunHighlight {
                 kind: HighlightKind::MostPowerfulEvolution,

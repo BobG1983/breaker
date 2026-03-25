@@ -14,7 +14,7 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 
 use crate::{
     behaviors::events::EffectFired,
-    cells::messages::DamageCell,
+    cells::{components::Locked, messages::DamageCell},
     chips::{components::DamageBoost, definition::TriggerChain},
     shared::{BASE_BOLT_DAMAGE, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
 };
@@ -142,7 +142,7 @@ pub(crate) fn shockwave_collision(
         &ShockwaveDamage,
         &mut ShockwaveAlreadyHit,
     )>,
-    cell_query: Query<Has<crate::cells::components::Locked>>,
+    cell_query: Query<Has<Locked>>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     for (pos, radius, dmg, mut already_hit) in &mut shockwave_query {

@@ -25,6 +25,7 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
+        components::Bolt,
         filters::ActiveFilter,
         messages::{BoltHitCell, BoltHitWall},
         queries::CollisionQueryBolt,
@@ -62,7 +63,7 @@ type CandidateLookup<'w, 's> = Query<
         Has<Wall>,
         Option<&'static CellHealth>,
     ),
-    Without<crate::bolt::components::Bolt>,
+    Without<Bolt>,
 >;
 
 /// Finds the nearest collision candidate from a set of quadtree results.
@@ -257,7 +258,7 @@ mod tests {
     use super::*;
     use crate::{
         bolt::{
-            components::{Bolt, BoltBaseSpeed, BoltRadius, BoltServing},
+            components::{Bolt, BoltBaseSpeed, BoltRadius, BoltServing, SpawnedByEvolution},
             messages::BoltHitWall,
             resources::BoltConfig,
         },
@@ -2176,8 +2177,6 @@ mod tests {
 
     #[test]
     fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();
@@ -2249,8 +2248,6 @@ mod tests {
 
     #[test]
     fn multiple_bolts_with_different_attributions_produce_correctly_attributed_damage_cells() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app_with_damage_and_wall_messages();
         let bc = BoltConfig::default();
         let cc = CellConfig::default();

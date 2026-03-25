@@ -9,7 +9,7 @@ use super::{
         update_chip_display,
     },
 };
-use crate::shared::GameState;
+use crate::{screen::systems::cleanup_entities, shared::GameState};
 
 /// Plugin for the between-node chip selection screen.
 pub(crate) struct ChipSelectPlugin;
@@ -28,7 +28,7 @@ impl Plugin for ChipSelectPlugin {
         )
         .add_systems(
             OnExit(GameState::ChipSelect),
-            crate::screen::systems::cleanup_entities::<ChipSelectScreen>,
+            cleanup_entities::<ChipSelectScreen>,
         );
     }
 }

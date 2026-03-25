@@ -13,7 +13,7 @@ use super::{
         spawn_loading_screen, update_loading_bar,
     },
 };
-use crate::shared::GameState;
+use crate::{screen::systems::cleanup_entities, shared::GameState};
 
 /// Plugin for the loading screen — UI and config seeding.
 pub(crate) struct LoadingPlugin;
@@ -47,7 +47,7 @@ impl Plugin for LoadingPlugin {
         )
         .add_systems(
             OnExit(GameState::Loading),
-            crate::screen::systems::cleanup_entities::<LoadingScreen>,
+            cleanup_entities::<LoadingScreen>,
         );
     }
 }

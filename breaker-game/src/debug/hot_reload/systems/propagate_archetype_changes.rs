@@ -107,7 +107,9 @@ pub(crate) fn propagate_archetype_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::BreakerStatOverrides;
+    use crate::{
+        behaviors::definition::BreakerStatOverrides, chips::definition::Target,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -243,8 +245,6 @@ mod tests {
 
     #[test]
     fn active_chains_rebuilt_on_archetype_change() {
-        use crate::chips::definition::Target;
-
         let mut app = test_app();
 
         let def = ArchetypeDefinition {
@@ -361,8 +361,6 @@ mod tests {
 
     #[test]
     fn speed_boost_chains_appear_in_active_chains_on_archetype_change() {
-        use crate::chips::definition::Target;
-
         let mut app = test_app();
 
         let def = ArchetypeDefinition {

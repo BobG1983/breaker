@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     run::{
+        definition::HighlightConfig,
         messages::{HighlightTriggered, RunLost},
         node::{NodePlugin, NodeSystems},
         resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
@@ -31,7 +32,7 @@ impl Plugin for RunPlugin {
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
             .init_resource::<RunStats>()
-            .init_resource::<crate::run::definition::HighlightConfig>()
+            .init_resource::<HighlightConfig>()
             .init_resource::<HighlightTracker>()
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
@@ -91,6 +92,14 @@ impl Plugin for RunPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        bolt::messages::{BoltHitBreaker, BoltHitCell, BoltLost},
+        breaker::messages::BumpPerformed,
+        cells::messages::{CellDestroyed, DamageCell},
+        chips::inventory::ChipInventory,
+        shared::PlayfieldConfig,
+        ui::messages::ChipSelected,
+    };
 
     #[test]
     fn plugin_builds() {
@@ -100,16 +109,16 @@ mod tests {
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             // Messages read by run domain systems
-            .add_message::<crate::cells::messages::CellDestroyed>()
-            .add_message::<crate::cells::messages::DamageCell>()
-            .add_message::<crate::breaker::messages::BumpPerformed>()
-            .add_message::<crate::bolt::messages::BoltLost>()
-            .add_message::<crate::bolt::messages::BoltHitBreaker>()
-            .add_message::<crate::bolt::messages::BoltHitCell>()
-            .add_message::<crate::ui::messages::ChipSelected>()
+            .add_message::<CellDestroyed>()
+            .add_message::<DamageCell>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BoltLost>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BoltHitCell>()
+            .add_message::<ChipSelected>()
             // Resources required by run domain systems
-            .init_resource::<crate::chips::inventory::ChipInventory>()
-            .init_resource::<crate::shared::PlayfieldConfig>()
+            .init_resource::<ChipInventory>()
+            .init_resource::<PlayfieldConfig>()
             .add_plugins(RunPlugin)
             .update();
     }

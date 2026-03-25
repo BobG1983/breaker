@@ -6,7 +6,10 @@ use super::{
     PauseMenuScreen,
     systems::{handle_pause_input, spawn_pause_menu, toggle_pause},
 };
-use crate::shared::{GameState, PlayingState};
+use crate::{
+    screen::systems::cleanup_entities,
+    shared::{GameState, PlayingState},
+};
 
 /// Plugin for the pause menu overlay.
 pub(crate) struct PauseMenuPlugin;
@@ -21,7 +24,7 @@ impl Plugin for PauseMenuPlugin {
             )
             .add_systems(
                 OnExit(PlayingState::Paused),
-                crate::screen::systems::cleanup_entities::<PauseMenuScreen>,
+                cleanup_entities::<PauseMenuScreen>,
             );
     }
 }

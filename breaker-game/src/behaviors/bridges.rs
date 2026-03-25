@@ -1071,7 +1071,10 @@ mod tests {
 
     #[test]
     fn bridge_bolt_lost_plus_life_lost_observer_decrements_lives() {
-        use crate::{behaviors::effects::life_lost::LivesCount, run::messages::RunLost};
+        use crate::{
+            behaviors::effects::life_lost::{handle_life_lost, LivesCount},
+            run::messages::RunLost,
+        };
 
         let chain = TriggerChain::OnBoltLost(vec![TriggerChain::LoseLife]);
         let mut app = App::new();
@@ -1081,7 +1084,7 @@ mod tests {
             .insert_resource(ActiveChains(vec![(None, chain)]))
             .insert_resource(SendBoltLostFlag(false))
             .add_observer(capture_effects)
-            .add_observer(crate::behaviors::effects::life_lost::handle_life_lost)
+            .add_observer(handle_life_lost)
             .init_resource::<CapturedEffects>()
             .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
 

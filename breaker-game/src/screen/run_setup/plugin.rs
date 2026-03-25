@@ -9,7 +9,7 @@ use super::{
         update_seed_display,
     },
 };
-use crate::shared::GameState;
+use crate::{screen::systems::cleanup_entities, shared::GameState};
 
 /// Plugin for the breaker selection screen.
 pub(crate) struct RunSetupPlugin;
@@ -30,7 +30,7 @@ impl Plugin for RunSetupPlugin {
             )
             .add_systems(
                 OnExit(GameState::RunSetup),
-                crate::screen::systems::cleanup_entities::<RunSetupScreen>,
+                cleanup_entities::<RunSetupScreen>,
             );
     }
 }

@@ -6,7 +6,7 @@ use super::{
     MainMenuScreen,
     systems::{handle_main_menu_input, spawn_main_menu, update_menu_colors},
 };
-use crate::shared::GameState;
+use crate::{screen::systems::cleanup_entities, shared::GameState};
 
 /// Plugin for the main menu screen.
 pub(crate) struct MainMenuPlugin;
@@ -22,7 +22,7 @@ impl Plugin for MainMenuPlugin {
             )
             .add_systems(
                 OnExit(GameState::MainMenu),
-                crate::screen::systems::cleanup_entities::<MainMenuScreen>,
+                cleanup_entities::<MainMenuScreen>,
             );
     }
 }

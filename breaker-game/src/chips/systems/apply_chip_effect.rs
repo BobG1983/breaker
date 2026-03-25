@@ -78,8 +78,9 @@ mod tests {
         breaker::components::Breaker,
         chips::{
             components::*,
-            definition::{ChipDefinition, ImpactTarget, Target, TriggerChain},
+            definition::{ChipDefinition, ImpactTarget, Rarity, Target, TriggerChain},
             effects::*,
+            inventory::ChipInventory,
             resources::ChipRegistry,
         },
         ui::messages::ChipSelected,
@@ -150,7 +151,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Piercing Shot".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
                 ingredients: None,
@@ -178,7 +179,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "MultiEffect".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![
                     TriggerChain::Piercing(1),
@@ -230,7 +231,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Surge".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Rare,
+                rarity: Rarity::Rare,
                 max_stacks: 1,
                 effects: vec![chain.clone()],
                 ingredients: None,
@@ -256,7 +257,7 @@ mod tests {
     #[test]
     fn apply_chip_effect_adds_chip_to_inventory_on_chip_selected() {
         let mut app = test_app();
-        app.init_resource::<crate::chips::inventory::ChipInventory>();
+        app.init_resource::<ChipInventory>();
 
         app.world_mut().spawn(Bolt);
         app.world_mut()
@@ -264,7 +265,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Piercing Shot".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
                 ingredients: None,
@@ -275,7 +276,7 @@ mod tests {
 
         let inventory = app
             .world()
-            .resource::<crate::chips::inventory::ChipInventory>();
+            .resource::<ChipInventory>();
         assert_eq!(
             inventory.stacks("Piercing Shot"),
             1,
@@ -286,14 +287,14 @@ mod tests {
     #[test]
     fn apply_chip_effect_does_not_add_inventory_entry_for_unknown_chip() {
         let mut app = test_app();
-        app.init_resource::<crate::chips::inventory::ChipInventory>();
+        app.init_resource::<ChipInventory>();
 
         send_chip_selected(&mut app, "Nonexistent");
         tick(&mut app);
 
         let inventory = app
             .world()
-            .resource::<crate::chips::inventory::ChipInventory>();
+            .resource::<ChipInventory>();
         assert_eq!(
             inventory.total_held(),
             0,
@@ -316,7 +317,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Surge".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Rare,
+                rarity: Rarity::Rare,
                 max_stacks: 1,
                 effects: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::SpawnBolt])],
                 ingredients: None,
@@ -441,7 +442,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Piercing Shot".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)])],
                 ingredients: None,
@@ -466,7 +467,7 @@ mod tests {
     #[test]
     fn on_selected_empty_vec_is_noop() {
         let mut app = test_app();
-        app.init_resource::<crate::chips::inventory::ChipInventory>();
+        app.init_resource::<ChipInventory>();
 
         app.world_mut().spawn(Bolt);
         app.world_mut()
@@ -474,7 +475,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "EmptyPassive".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 1,
                 effects: vec![TriggerChain::OnSelected(vec![])],
                 ingredients: None,
@@ -494,7 +495,7 @@ mod tests {
         // But inventory still tracks it
         let inventory = app
             .world()
-            .resource::<crate::chips::inventory::ChipInventory>();
+            .resource::<ChipInventory>();
         assert_eq!(inventory.stacks("EmptyPassive"), 1);
     }
 
@@ -512,7 +513,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Hybrid".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Rare,
+                rarity: Rarity::Rare,
                 max_stacks: 1,
                 effects: vec![
                     TriggerChain::OnSelected(vec![TriggerChain::Piercing(1)]),
@@ -562,7 +563,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "AllBoltsSpeed".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SpeedBoost {
                     target: Target::AllBolts,
@@ -727,7 +728,7 @@ mod tests {
             .insert(ChipDefinition {
                 name: "Wide Breaker".to_owned(),
                 description: "test".to_owned(),
-                rarity: crate::chips::definition::Rarity::Common,
+                rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![TriggerChain::OnSelected(vec![TriggerChain::SizeBoost(
                     Target::Breaker,

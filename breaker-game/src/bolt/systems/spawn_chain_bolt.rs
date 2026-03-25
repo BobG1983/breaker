@@ -374,8 +374,6 @@ mod tests {
 
     #[test]
     fn chain_bolt_receives_spawned_by_evolution_when_source_chip_is_some() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app();
 
         let anchor = app
@@ -416,8 +414,6 @@ mod tests {
 
     #[test]
     fn chain_bolt_has_no_spawned_by_evolution_when_source_chip_is_none() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app();
 
         let anchor = app

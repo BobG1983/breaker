@@ -111,13 +111,14 @@ pub(crate) fn init_archetype(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::{
+        behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides},
+        chips::definition::{ImpactTarget, Target},
+    };
 
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
 
     fn make_test_archetype() -> ArchetypeDefinition {
-        use crate::chips::definition::Target;
-
         ArchetypeDefinition {
             name: TEST_ARCHETYPE_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
@@ -210,7 +211,7 @@ mod tests {
             on_early_bump: None,
             on_late_bump: None,
             chains: vec![TriggerChain::OnPerfectBump(vec![TriggerChain::OnImpact(
-                crate::chips::definition::ImpactTarget::Cell,
+                ImpactTarget::Cell,
                 vec![TriggerChain::test_shockwave(64.0)],
             )])],
         };

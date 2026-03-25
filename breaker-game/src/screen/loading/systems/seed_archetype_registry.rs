@@ -46,6 +46,7 @@ pub(crate) fn seed_archetype_registry(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::behaviors::definition::BreakerStatOverrides;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -56,7 +57,6 @@ mod tests {
     }
 
     fn make_archetype(name: &str) -> ArchetypeDefinition {
-        use crate::behaviors::definition::BreakerStatOverrides;
         ArchetypeDefinition {
             name: name.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),

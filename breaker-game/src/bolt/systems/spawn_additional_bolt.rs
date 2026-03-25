@@ -467,8 +467,6 @@ mod tests {
 
     #[test]
     fn additional_bolt_receives_spawned_by_evolution_when_source_chip_is_some() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app_with_attribution();
         spawn_breaker_at(&mut app, 0.0, -250.0);
         app.world_mut()
@@ -498,8 +496,6 @@ mod tests {
 
     #[test]
     fn additional_bolt_receives_spawned_by_evolution_with_empty_string() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app_with_attribution();
         spawn_breaker_at(&mut app, 0.0, -250.0);
         app.world_mut()
@@ -529,8 +525,6 @@ mod tests {
 
     #[test]
     fn additional_bolt_has_no_spawned_by_evolution_when_source_chip_is_none() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app_with_attribution();
         spawn_breaker_at(&mut app, 0.0, -250.0);
         app.world_mut()
@@ -554,8 +548,6 @@ mod tests {
 
     #[test]
     fn multiple_spawns_with_different_attributions_produce_correctly_attributed_bolts() {
-        use crate::bolt::components::SpawnedByEvolution;
-
         let mut app = test_app_with_attribution();
         spawn_breaker_at(&mut app, 0.0, -250.0);
         {

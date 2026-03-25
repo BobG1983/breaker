@@ -6,7 +6,7 @@ use super::{
     RunEndScreen,
     systems::{handle_run_end_input, spawn_run_end_screen},
 };
-use crate::shared::GameState;
+use crate::{screen::systems::cleanup_entities, shared::GameState};
 
 /// Plugin for the run-end screen.
 pub(crate) struct RunEndPlugin;
@@ -20,7 +20,7 @@ impl Plugin for RunEndPlugin {
             )
             .add_systems(
                 OnExit(GameState::RunEnd),
-                crate::screen::systems::cleanup_entities::<RunEndScreen>,
+                cleanup_entities::<RunEndScreen>,
             );
     }
 }

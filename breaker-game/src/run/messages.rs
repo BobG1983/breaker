@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+use crate::run::resources::HighlightKind;
+
 /// Sent when the run is lost (e.g. all lives depleted).
 ///
 /// Consumed by the run state machine to set [`RunOutcome::LivesDepleted`] and transition
@@ -15,7 +17,7 @@ pub struct RunLost;
 #[derive(Message, Clone, Debug)]
 pub struct HighlightTriggered {
     /// Which kind of memorable moment was detected.
-    pub kind: crate::run::resources::HighlightKind,
+    pub kind: HighlightKind,
 }
 
 #[cfg(test)]
