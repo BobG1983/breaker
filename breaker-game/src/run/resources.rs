@@ -65,7 +65,7 @@ pub enum RunOutcome {
     Won,
     /// Timer expired before clearing all nodes.
     TimerExpired,
-    /// All lives depleted (Aegis archetype).
+    /// All lives depleted (Aegis breaker).
     LivesDepleted,
 }
 

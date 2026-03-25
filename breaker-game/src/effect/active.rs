@@ -6,10 +6,10 @@ use crate::chips::definition::TriggerChain;
 
 /// All trigger chains currently active for the run.
 ///
-/// Populated by `init_archetype` from the archetype definition and by
+/// Populated by `init_breaker` from the breaker definition and by
 /// `dispatch_chip_effects` when a chip with a triggered chain is selected.
 /// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
-/// archetype-originating chains and `Some(name)` for chip/evolution chains.
+/// breaker-originating chains and `Some(name)` for chip/evolution chains.
 #[derive(Resource, Debug, Default)]
 pub struct ActiveEffects(pub Vec<(Option<String>, TriggerChain)>);
 
@@ -60,10 +60,10 @@ mod tests {
     }
 
     #[test]
-    fn effect_node_for_active_effects_archetype_chain_none_chip_name() {
+    fn effect_node_for_active_effects_breaker_chain_none_chip_name() {
         use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
-        // Archetype chains have None chip name
+        // Breaker chains have None chip name
         let chip_name: Option<String> = None;
         let node = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
         assert!(chip_name.is_none());

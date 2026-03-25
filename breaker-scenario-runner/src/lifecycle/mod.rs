@@ -29,7 +29,7 @@ use breaker::{
         },
     },
     screen::chip_select::{ChipOffering, ChipOffers},
-    shared::{GameState, PlayingState, RunSeed, SelectedArchetype},
+    shared::{GameState, PlayingState, RunSeed, SelectedBreaker},
 };
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
@@ -234,13 +234,13 @@ impl Plugin for ScenarioLifecycle {
     }
 }
 
-/// Sets the archetype and layout override, then immediately enters `Playing`.
+/// Sets the breaker and layout override, then immediately enters `Playing`.
 ///
-/// This bypasses `RunSetup` entirely — the scenario controls which archetype
+/// This bypasses `RunSetup` entirely — the scenario controls which breaker
 /// and layout are used without any user interaction.
 fn bypass_menu_to_playing(
     config: Res<ScenarioConfig>,
-    mut selected: ResMut<SelectedArchetype>,
+    mut selected: ResMut<SelectedBreaker>,
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,

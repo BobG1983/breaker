@@ -292,7 +292,7 @@ impl Default for StressConfig {
 /// Full scenario definition loaded from a `.scenario.ron` file.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ScenarioDefinition {
-    /// Breaker archetype name (e.g. `"aegis"`, `"prism"`, `"chrono"`).
+    /// Breaker name (e.g. `"Aegis"`, `"Prism"`, `"Chrono"`).
     pub breaker: String,
     /// Layout name to look up via `NodeLayoutRegistry::get_by_name`.
     pub layout: String,

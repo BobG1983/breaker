@@ -16,7 +16,7 @@ use crate::{
         },
     },
     run::node::sets::NodeSystems,
-    shared::{GameState, PlayingState, SelectedArchetype},
+    shared::{GameState, PlayingState, SelectedBreaker},
 };
 
 /// Plugin for the breaker domain.
@@ -31,7 +31,7 @@ impl Plugin for BreakerPlugin {
             .add_message::<BumpWhiffed>()
             .add_message::<BreakerSpawned>()
             .init_resource::<BreakerConfig>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<SelectedBreaker>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (

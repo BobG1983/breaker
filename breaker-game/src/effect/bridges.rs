@@ -1275,7 +1275,7 @@ mod tests {
         );
         assert!(
             captured.0[0].source_chip.is_none(),
-            "source_chip should be None for archetype chains"
+            "source_chip should be None for breaker chains"
         );
     }
 

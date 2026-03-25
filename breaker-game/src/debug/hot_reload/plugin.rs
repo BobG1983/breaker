@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::{
     sets::HotReloadSystems,
     systems::{
-        propagate_archetype_changes, propagate_bolt_config, propagate_bolt_defaults,
+        propagate_bolt_config, propagate_bolt_defaults, propagate_breaker_changes,
         propagate_breaker_config, propagate_breaker_defaults, propagate_cell_defaults,
         propagate_cell_type_changes, propagate_chip_select_defaults, propagate_input_defaults,
         propagate_main_menu_defaults, propagate_node_layout_changes, propagate_playfield_defaults,
@@ -47,7 +47,7 @@ impl Plugin for HotReloadPlugin {
                 propagate_chip_select_defaults,
                 propagate_cell_type_changes.before(propagate_node_layout_changes),
                 propagate_node_layout_changes,
-                propagate_archetype_changes,
+                propagate_breaker_changes,
             )
                 .in_set(HotReloadSystems::PropagateDefaults),
         );

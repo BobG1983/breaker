@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::ArchetypeRegistry,
+    effect::BreakerRegistry,
     screen::run_setup::{
         components::{BreakerCard, RunSetupScreen, SeedDisplay},
         resources::{RunSetupSelection, SeedEntry},
@@ -12,8 +12,8 @@ use crate::{
 
 /// Spawns the breaker selection UI.
 ///
-/// Reads [`ArchetypeRegistry`] to display one card per available breaker.
-pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeRegistry>) {
+/// Reads [`BreakerRegistry`] to display one card per available breaker.
+pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<BreakerRegistry>) {
     let mut names: Vec<&String> = registry.names().collect();
     names.sort();
 
@@ -59,7 +59,7 @@ pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeReg
                         cards
                             .spawn((
                                 BreakerCard {
-                                    archetype_name: (*name).clone(),
+                                    breaker_name: (*name).clone(),
                                 },
                                 Button,
                                 Node {
@@ -116,24 +116,24 @@ pub(crate) fn spawn_run_setup(mut commands: Commands, registry: Res<ArchetypeReg
         });
 }
 
-/// Returns a brief description for a known archetype name.
-// TODO(phase-7): load descriptions from ArchetypeDefinition RON field
+/// Returns a brief description for a known breaker name.
+// TODO(phase-7): load descriptions from BreakerDefinition RON field
 fn description_for(name: &str) -> &'static str {
     match name {
         "Aegis" => "Lives-based. Lose a life on bolt-loss. Bump boosts bolt speed.",
         "Chrono" => "Time-penalty. Bolt-loss costs time. Bump boosts bolt speed.",
         "Prism" => "Multi-bolt. Perfect bump spawns extra bolts.",
-        _ => "Unknown breaker archetype.",
+        _ => "Unknown breaker.",
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::effect::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::effect::definition::{BreakerDefinition, BreakerStatOverrides};
 
-    fn make_archetype(name: &str) -> ArchetypeDefinition {
-        ArchetypeDefinition {
+    fn make_breaker(name: &str) -> BreakerDefinition {
+        BreakerDefinition {
             name: name.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
@@ -145,15 +145,15 @@ mod tests {
         }
     }
 
-    fn test_registry(names: &[&str]) -> ArchetypeRegistry {
-        let mut registry = ArchetypeRegistry::default();
+    fn test_breaker_registry(names: &[&str]) -> BreakerRegistry {
+        let mut registry = BreakerRegistry::default();
         for name in names {
-            registry.insert((*name).to_owned(), make_archetype(name));
+            registry.insert((*name).to_owned(), make_breaker(name));
         }
         registry
     }
 
-    fn test_app(registry: ArchetypeRegistry) -> App {
+    fn test_app(registry: BreakerRegistry) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(registry)
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn spawn_creates_screen_entity() {
-        let mut app = test_app(test_registry(&["Aegis"]));
+        let mut app = test_app(test_breaker_registry(&["Aegis"]));
         app.update();
 
         let count = app
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn cards_match_registry_count() {
-        let mut app = test_app(test_registry(&["Aegis", "Chrono"]));
+        let mut app = test_app(test_breaker_registry(&["Aegis", "Chrono"]));
         app.update();
 
         let count = app
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn selection_resource_inserted() {
-        let mut app = test_app(test_registry(&["Aegis"]));
+        let mut app = test_app(test_breaker_registry(&["Aegis"]));
         app.update();
 
         let selection = app.world().resource::<RunSetupSelection>();
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn empty_registry_spawns_no_cards() {
-        let mut app = test_app(ArchetypeRegistry::default());
+        let mut app = test_app(BreakerRegistry::default());
         app.update();
 
         let count = app

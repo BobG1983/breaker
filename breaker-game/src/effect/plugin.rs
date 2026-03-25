@@ -1,4 +1,4 @@
-//! `EffectPlugin` — wires archetype init, bridge systems, and observers.
+//! `EffectPlugin` — wires breaker init, bridge systems, and observers.
 
 use bevy::prelude::*;
 
@@ -38,8 +38,8 @@ use super::{
         timed_speed_burst::{handle_timed_speed_burst, tick_timed_speed_burst},
         width_boost::handle_width_boost,
     },
-    init::{apply_archetype_config_overrides, init_archetype},
-    registry::ArchetypeRegistry,
+    init::{apply_breaker_config_overrides, init_breaker},
+    registry::BreakerRegistry,
     sets::EffectSystems,
 };
 use crate::{
@@ -52,7 +52,7 @@ use crate::{
 /// Plugin for the effect system.
 ///
 /// Registers:
-/// - Archetype init systems (config overrides, component stamping)
+/// - Breaker init systems (config overrides, component stamping)
 /// - Per-trigger bridge systems (message → effect event)
 /// - Effect observers (event → game effect)
 /// - Lives HUD
@@ -60,7 +60,7 @@ pub(crate) struct EffectPlugin;
 
 impl Plugin for EffectPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ArchetypeRegistry>()
+        app.init_resource::<BreakerRegistry>()
             .init_resource::<ActiveEffects>()
             // Effect observers — triggered effects (fired by bridge systems)
             .add_observer(handle_life_lost)
@@ -93,10 +93,10 @@ impl Plugin for EffectPlugin {
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
-                    apply_archetype_config_overrides.before(BreakerSystems::InitParams),
-                    init_archetype.after(BreakerSystems::InitParams),
+                    apply_breaker_config_overrides.before(BreakerSystems::InitParams),
+                    init_breaker.after(BreakerSystems::InitParams),
                     spawn_lives_display
-                        .after(init_archetype)
+                        .after(init_breaker)
                         .after(UiSystems::SpawnTimerHud),
                 ),
             )
@@ -173,7 +173,7 @@ mod tests {
     use super::*;
     use crate::{
         breaker::BreakerPlugin,
-        shared::{PlayfieldConfig, SelectedArchetype},
+        shared::{PlayfieldConfig, SelectedBreaker},
     };
 
     #[test]
@@ -186,7 +186,7 @@ mod tests {
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             .init_resource::<PlayfieldConfig>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<SelectedBreaker>()
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
@@ -223,7 +223,7 @@ mod tests {
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             .init_resource::<PlayfieldConfig>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<SelectedBreaker>()
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
@@ -267,7 +267,7 @@ mod tests {
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             .init_resource::<PlayfieldConfig>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<SelectedBreaker>()
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)

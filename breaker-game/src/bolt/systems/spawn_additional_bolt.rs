@@ -1,4 +1,4 @@
-//! System to spawn additional bolt entities from archetype consequences.
+//! System to spawn additional bolt entities from breaker consequences.
 
 use bevy::prelude::*;
 use rand::Rng;

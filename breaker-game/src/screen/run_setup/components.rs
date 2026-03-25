@@ -9,8 +9,8 @@ pub(crate) struct RunSetupScreen;
 /// Identifies a breaker card in the selection screen.
 #[derive(Component, Debug)]
 pub(super) struct BreakerCard {
-    /// The archetype name this card represents.
-    pub archetype_name: String,
+    /// The breaker name this card represents.
+    pub breaker_name: String,
 }
 
 /// Marker component on the seed display text entity.

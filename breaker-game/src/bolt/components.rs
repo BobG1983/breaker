@@ -72,7 +72,7 @@ pub fn enforce_min_angle(velocity: &mut Vec2, min_angle: f32) {
     }
 }
 
-/// Marker for extra bolts spawned by archetype consequences (e.g. Prism).
+/// Marker for extra bolts spawned by breaker consequences (e.g. Prism).
 ///
 /// Extra bolts are despawned on loss rather than respawned. Only the
 /// baseline bolt (without this marker) respawns.

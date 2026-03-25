@@ -202,14 +202,14 @@ impl Default for GameRng {
 #[derive(Resource, Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RunSeed(pub Option<u64>);
 
-/// The archetype selected for the current run.
+/// The breaker selected for the current run.
 ///
-/// Set at run start; read by `init_archetype` to look up the archetype
+/// Set at run start; read by `init_breaker` to look up the breaker
 /// definition from the registry.
 #[derive(Resource, Debug, Clone)]
-pub struct SelectedArchetype(pub String);
+pub struct SelectedBreaker(pub String);
 
-impl Default for SelectedArchetype {
+impl Default for SelectedBreaker {
     fn default() -> Self {
         Self("Aegis".to_owned())
     }

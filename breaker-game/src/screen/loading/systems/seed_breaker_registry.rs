@@ -1,18 +1,18 @@
-//! Seeds `ArchetypeRegistry` from loaded `ArchetypeDefinition` assets.
+//! Seeds `BreakerRegistry` from loaded `BreakerDefinition` assets.
 
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 
 use crate::{
-    effect::{ArchetypeDefinition, ArchetypeRegistry},
+    effect::{BreakerDefinition, BreakerRegistry},
     screen::loading::resources::DefaultsCollection,
 };
 
-/// Iterates loaded `ArchetypeDefinition` assets, validates names,
-/// and builds the `ArchetypeRegistry` resource.
-pub(crate) fn seed_archetype_registry(
+/// Iterates loaded `BreakerDefinition` assets, validates names,
+/// and builds the `BreakerRegistry` resource.
+pub(crate) fn seed_breaker_registry(
     collection: Option<Res<DefaultsCollection>>,
-    archetype_assets: Res<Assets<ArchetypeDefinition>>,
+    breaker_assets: Res<Assets<BreakerDefinition>>,
     mut commands: Commands,
     mut seeded: Local<bool>,
 ) -> Progress {
@@ -24,15 +24,15 @@ pub(crate) fn seed_archetype_registry(
         return Progress { done: 0, total: 1 };
     };
 
-    let mut registry = ArchetypeRegistry::default();
+    let mut registry = BreakerRegistry::default();
     for handle in &collection.breakers {
-        let Some(def) = archetype_assets.get(handle) else {
+        let Some(def) = breaker_assets.get(handle) else {
             return Progress { done: 0, total: 1 };
         };
         // Invariant: asset pipeline enforces unique IDs before loading; a duplicate here is a data authoring error, not a recoverable runtime condition.
         assert!(
             !registry.contains(&def.name),
-            "duplicate archetype name '{}'",
+            "duplicate breaker name '{}'",
             def.name
         );
         registry.insert(def.name.clone(), def.clone());
@@ -51,13 +51,13 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-            .init_asset::<ArchetypeDefinition>()
-            .add_systems(Update, seed_archetype_registry.map(drop));
+            .init_asset::<BreakerDefinition>()
+            .add_systems(Update, seed_breaker_registry.map(drop));
         app
     }
 
-    fn make_archetype(name: &str) -> ArchetypeDefinition {
-        ArchetypeDefinition {
+    fn make_breaker(name: &str) -> BreakerDefinition {
+        BreakerDefinition {
             name: name.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
@@ -69,7 +69,7 @@ mod tests {
         }
     }
 
-    fn make_collection(breakers: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
+    fn make_collection(breakers: Vec<Handle<BreakerDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
             playfield: Handle::default(),
             bolt: Handle::default(),
@@ -92,40 +92,36 @@ mod tests {
     fn returns_zero_progress_without_collection() {
         let mut app = test_app();
         app.update();
-        assert!(app.world().get_resource::<ArchetypeRegistry>().is_none());
+        assert!(app.world().get_resource::<BreakerRegistry>().is_none());
     }
 
     #[test]
-    fn builds_registry_from_archetypes() {
+    fn builds_registry_from_breakers() {
         let mut app = test_app();
 
-        let mut assets = app
-            .world_mut()
-            .resource_mut::<Assets<ArchetypeDefinition>>();
-        let h1 = assets.add(make_archetype("Aegis"));
-        let h2 = assets.add(make_archetype("Vortex"));
+        let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
+        let h1 = assets.add(make_breaker("Aegis"));
+        let h2 = assets.add(make_breaker("Vortex"));
 
         app.world_mut()
             .insert_resource(make_collection(vec![h1, h2]));
 
         app.update();
 
-        let registry = app.world().resource::<ArchetypeRegistry>();
+        let registry = app.world().resource::<BreakerRegistry>();
         assert_eq!(registry.len(), 2);
         assert!(registry.contains("Aegis"));
         assert!(registry.contains("Vortex"));
     }
 
     #[test]
-    #[should_panic(expected = "duplicate archetype name")]
+    #[should_panic(expected = "duplicate breaker name")]
     fn panics_on_duplicate_name() {
         let mut app = test_app();
 
-        let mut assets = app
-            .world_mut()
-            .resource_mut::<Assets<ArchetypeDefinition>>();
-        let h1 = assets.add(make_archetype("Aegis"));
-        let h2 = assets.add(make_archetype("Aegis"));
+        let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
+        let h1 = assets.add(make_breaker("Aegis"));
+        let h2 = assets.add(make_breaker("Aegis"));
 
         app.world_mut()
             .insert_resource(make_collection(vec![h1, h2]));

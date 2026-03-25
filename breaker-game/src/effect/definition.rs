@@ -1,4 +1,4 @@
-//! Archetype and effect type definitions — RON-deserialized data structures.
+//! Breaker and effect type definitions — RON-deserialized data structures.
 
 use bevy::prelude::*;
 use serde::Deserialize;
@@ -296,21 +296,21 @@ impl EffectNode {
 }
 
 // ---------------------------------------------------------------------------
-// Archetype definition (still uses TriggerChain — writer-code will migrate)
+// Breaker definition (still uses TriggerChain — writer-code will migrate)
 // ---------------------------------------------------------------------------
 
-/// A breaker archetype definition loaded from a RON file.
+/// A breaker definition loaded from a RON file.
 ///
 /// Uses unified `TriggerChain` for all behavior bindings.
-/// Adding a new archetype = new RON file. Adding a new behavior type =
+/// Adding a new breaker = new RON file. Adding a new behavior type =
 /// new `TriggerChain` variant + handler.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub(crate) struct ArchetypeDefinition {
-    /// Display name of the archetype.
+pub(crate) struct BreakerDefinition {
+    /// Display name of the breaker.
     pub name: String,
     /// Optional stat overrides applied on top of `BreakerDefaults`.
     pub stat_overrides: BreakerStatOverrides,
-    /// Number of lives, if the archetype uses a life pool.
+    /// Number of lives, if the breaker uses a life pool.
     pub life_pool: Option<u32>,
     /// Chain fired when a bolt is lost.
     pub on_bolt_lost: Option<TriggerChain>,
@@ -648,14 +648,14 @@ mod tests {
     }
 
     // =========================================================================
-    // B12b: ArchetypeDefinition EffectNode RON format (behavior 21)
-    // These tests verify the EffectNode shapes that ArchetypeDefinition
+    // B12b: BreakerDefinition EffectNode RON format (behavior 21)
+    // These tests verify the EffectNode shapes that BreakerDefinition
     // fields will hold after migration. They exercise evaluate_node which
     // fails with todo!().
     // =========================================================================
 
     #[test]
-    fn effect_node_archetype_bolt_lost_evaluates_correctly() {
+    fn effect_node_breaker_bolt_lost_evaluates_correctly() {
         use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
 
         // After migration: on_bolt_lost: Some(Trigger(OnBoltLost, [Leaf(LoseLife)]))
@@ -667,16 +667,16 @@ mod tests {
         assert_eq!(
             result,
             vec![NodeEvalResult::Fire(Effect::LoseLife)],
-            "archetype on_bolt_lost EffectNode should fire LoseLife on BoltLost"
+            "breaker on_bolt_lost EffectNode should fire LoseLife on BoltLost"
         );
     }
 
     #[test]
-    fn effect_node_archetype_ron_format_deserializes() {
-        // Verify the new RON format for ArchetypeDefinition fields
+    fn effect_node_breaker_ron_format_deserializes() {
+        // Verify the new RON format for BreakerDefinition fields
         let ron_str = "Trigger(OnBoltLost, [Leaf(LoseLife)])";
         let node: EffectNode =
-            ron::de::from_str(ron_str).expect("archetype EffectNode RON should parse");
+            ron::de::from_str(ron_str).expect("breaker EffectNode RON should parse");
         assert_eq!(
             node,
             EffectNode::Trigger(
@@ -687,11 +687,11 @@ mod tests {
     }
 
     #[test]
-    fn effect_node_archetype_chains_ron_format_deserializes() {
+    fn effect_node_breaker_chains_ron_format_deserializes() {
         // Verify chains field new format: full EffectNode trees
         let ron_str = "Trigger(OnPerfectBump, [Leaf(SpeedBoost(target: Bolt, multiplier: 1.3))])";
         let node: EffectNode =
-            ron::de::from_str(ron_str).expect("archetype chains EffectNode RON should parse");
+            ron::de::from_str(ron_str).expect("breaker chains EffectNode RON should parse");
         assert_eq!(
             node,
             EffectNode::Trigger(
@@ -706,14 +706,14 @@ mod tests {
 
     // =========================================================================
     // Existing tests (preserved — will be updated by writer-code when
-    // ArchetypeDefinition migrates from TriggerChain to EffectNode)
+    // BreakerDefinition migrates from TriggerChain to EffectNode)
     // =========================================================================
 
     #[test]
     fn aegis_ron_parses() {
         let ron_str = include_str!("../../assets/breakers/aegis.breaker.ron");
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("aegis archetype RON should parse");
+        let def: BreakerDefinition =
+            ron::de::from_str(ron_str).expect("aegis breaker RON should parse");
         assert_eq!(def.name, "Aegis");
         assert_eq!(def.life_pool, Some(3));
         assert!(matches!(def.on_bolt_lost, Some(TriggerChain::LoseLife)));
@@ -726,8 +726,8 @@ mod tests {
     #[test]
     fn chrono_ron_file_parses() {
         let ron_str = include_str!("../../assets/breakers/chrono.breaker.ron");
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
+        let def: BreakerDefinition =
+            ron::de::from_str(ron_str).expect("chrono breaker RON should parse");
         assert_eq!(def.name, "Chrono");
         assert!(def.life_pool.is_none());
         assert!(matches!(
@@ -739,8 +739,8 @@ mod tests {
     #[test]
     fn prism_ron_file_parses() {
         let ron_str = include_str!("../../assets/breakers/prism.breaker.ron");
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("prism archetype RON should parse");
+        let def: BreakerDefinition =
+            ron::de::from_str(ron_str).expect("prism breaker RON should parse");
         assert_eq!(def.name, "Prism");
         assert!(def.life_pool.is_none());
         assert!(matches!(def.on_perfect_bump, Some(TriggerChain::SpawnBolt)));
@@ -766,8 +766,8 @@ mod tests {
             chains: [],
         )
         "#;
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("prism archetype RON should parse");
+        let def: BreakerDefinition =
+            ron::de::from_str(ron_str).expect("prism breaker RON should parse");
         assert_eq!(def.name, "Prism");
         assert!(def.life_pool.is_none());
         assert!(matches!(def.on_perfect_bump, Some(TriggerChain::SpawnBolt)));
@@ -797,8 +797,8 @@ mod tests {
             chains: [],
         )
         "#;
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("chrono archetype RON should parse");
+        let def: BreakerDefinition =
+            ron::de::from_str(ron_str).expect("chrono breaker RON should parse");
         assert_eq!(def.name, "Chrono");
         assert!(def.life_pool.is_none());
         assert!(matches!(
@@ -808,7 +808,7 @@ mod tests {
     }
 
     #[test]
-    fn archetype_with_chains_parses() {
+    fn breaker_with_chains_parses() {
         let ron_str = r#"
         (
             name: "Test",
@@ -823,8 +823,8 @@ mod tests {
             ],
         )
         "#;
-        let def: ArchetypeDefinition =
-            ron::de::from_str(ron_str).expect("archetype with chains should parse");
+        let def: BreakerDefinition =
+            ron::de::from_str(ron_str).expect("breaker with chains should parse");
         assert_eq!(def.chains.len(), 1);
     }
 

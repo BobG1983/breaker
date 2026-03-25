@@ -1,4 +1,4 @@
-/* @[brickbreaker::behaviors::definition::ArchetypeDefinition] */
+/* @[brickbreaker::effect::definition::BreakerDefinition] */
 (
     name: "Prism",
     stat_overrides: (),

@@ -8,7 +8,7 @@ use crate::{
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
     chips::{ChipDefinition, definition::ChipTemplate},
-    effect::ArchetypeDefinition,
+    effect::BreakerDefinition,
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
@@ -47,9 +47,9 @@ pub(crate) struct DefaultsCollection {
     /// All node layout handles.
     #[asset(path = "nodes", collection(typed))]
     pub nodes: Vec<Handle<NodeLayout>>,
-    /// All breaker archetype definition handles.
+    /// All breaker definition handles.
     #[asset(path = "breakers", collection(typed))]
-    pub breakers: Vec<Handle<ArchetypeDefinition>>,
+    pub breakers: Vec<Handle<BreakerDefinition>>,
     /// Handle for chip select defaults.
     #[asset(path = "config/defaults.chipselect.ron")]
     pub chip_select: Handle<ChipSelectDefaults>,

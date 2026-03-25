@@ -25,7 +25,7 @@ pub(crate) struct ShockwaveFired {
     pub speed: f32,
     /// The bolt entity that triggered the effect, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The chip name that originated this chain, or `None` for archetype chains.
+    /// The chip name that originated this chain, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -34,7 +34,7 @@ pub(crate) struct ShockwaveFired {
 pub(crate) struct LoseLifeFired {
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -45,7 +45,7 @@ pub(crate) struct TimePenaltyFired {
     pub seconds: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -54,7 +54,7 @@ pub(crate) struct TimePenaltyFired {
 pub(crate) struct SpawnBoltFired {
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -67,7 +67,7 @@ pub(crate) struct SpeedBoostFired {
     pub multiplier: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -78,7 +78,7 @@ pub(crate) struct ChainBoltFired {
     pub tether_distance: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -93,7 +93,7 @@ pub(crate) struct MultiBoltFired {
     pub stacks: u32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -108,7 +108,7 @@ pub(crate) struct ShieldFired {
     pub stacks: u32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -123,7 +123,7 @@ pub(crate) struct ChainLightningFired {
     pub damage_mult: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -136,7 +136,7 @@ pub(crate) struct SpawnPhantomFired {
     pub max_active: u32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -149,7 +149,7 @@ pub(crate) struct PiercingBeamFired {
     pub width: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -166,7 +166,7 @@ pub(crate) struct GravityWellFired {
     pub max: u32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -177,7 +177,7 @@ pub(crate) struct SecondWindFired {
     pub invuln_secs: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 
@@ -190,7 +190,7 @@ pub(crate) struct TimedSpeedBurstFired {
     pub duration_secs: f32,
     /// The bolt entity, or `None` for global triggers.
     pub bolt: Option<Entity>,
-    /// The originating chip name, or `None` for archetype chains.
+    /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
 

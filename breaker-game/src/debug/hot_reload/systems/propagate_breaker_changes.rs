@@ -1,4 +1,4 @@
-//! System to propagate `ArchetypeDefinition` asset changes to live game state.
+//! System to propagate `BreakerDefinition` asset changes to live game state.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 
@@ -9,26 +9,26 @@ use crate::{
     },
     chips::definition::TriggerChain,
     effect::{
-        active::ActiveEffects, definition::ArchetypeDefinition, effects::life_lost::LivesCount,
-        init::apply_stat_overrides, registry::ArchetypeRegistry,
+        active::ActiveEffects, definition::BreakerDefinition, effects::life_lost::LivesCount,
+        init::apply_stat_overrides, registry::BreakerRegistry,
     },
     screen::loading::resources::DefaultsCollection,
-    shared::SelectedArchetype,
+    shared::SelectedBreaker,
 };
 
-/// Bundled system parameters for the archetype change propagation system.
+/// Bundled system parameters for the breaker change propagation system.
 #[derive(SystemParam)]
-pub(crate) struct ArchetypeChangeContext<'w, 's> {
+pub(crate) struct BreakerChangeContext<'w, 's> {
     /// Asset collection handles.
     collection: Res<'w, DefaultsCollection>,
-    /// Loaded archetype definition assets.
-    assets: Res<'w, Assets<ArchetypeDefinition>>,
+    /// Loaded breaker definition assets.
+    assets: Res<'w, Assets<BreakerDefinition>>,
     /// Loaded breaker defaults assets.
     defaults_assets: Res<'w, Assets<BreakerDefaults>>,
-    /// Currently selected archetype name.
-    selected: Res<'w, SelectedArchetype>,
-    /// Mutable archetype registry.
-    registry: ResMut<'w, ArchetypeRegistry>,
+    /// Currently selected breaker name.
+    selected: Res<'w, SelectedBreaker>,
+    /// Mutable breaker registry.
+    registry: ResMut<'w, BreakerRegistry>,
     /// Mutable breaker configuration.
     config: ResMut<'w, BreakerConfig>,
     /// Mutable active chains.
@@ -39,14 +39,14 @@ pub(crate) struct ArchetypeChangeContext<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
-/// Detects `AssetEvent::Modified` on any `ArchetypeDefinition`, rebuilds
-/// `ArchetypeRegistry`, and if the selected archetype was modified:
+/// Detects `AssetEvent::Modified` on any `BreakerDefinition`, rebuilds
+/// `BreakerRegistry`, and if the selected breaker was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
-/// 2. Resets `LivesCount` if archetype has `life_pool`
+/// 2. Resets `LivesCount` if breaker has `life_pool`
 /// 3. Rebuilds `ActiveEffects`
-pub(crate) fn propagate_archetype_changes(
-    mut events: MessageReader<AssetEvent<ArchetypeDefinition>>,
-    mut ctx: ArchetypeChangeContext,
+pub(crate) fn propagate_breaker_changes(
+    mut events: MessageReader<AssetEvent<BreakerDefinition>>,
+    mut ctx: BreakerChangeContext,
 ) {
     let any_modified = events.read().any(|event| {
         ctx.collection
@@ -67,7 +67,7 @@ pub(crate) fn propagate_archetype_changes(
         }
     }
 
-    // Check if the selected archetype was modified
+    // Check if the selected breaker was modified
     let Some(def) = ctx.registry.get(&ctx.selected.0) else {
         return;
     };
@@ -112,17 +112,17 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-            .init_asset::<ArchetypeDefinition>()
+            .init_asset::<BreakerDefinition>()
             .init_asset::<BreakerDefaults>()
             .init_resource::<BreakerConfig>()
-            .init_resource::<ArchetypeRegistry>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<BreakerRegistry>()
+            .init_resource::<SelectedBreaker>()
             .init_resource::<ActiveEffects>()
-            .add_systems(Update, propagate_archetype_changes);
+            .add_systems(Update, propagate_breaker_changes);
         app
     }
 
-    fn make_collection(breakers: Vec<Handle<ArchetypeDefinition>>) -> DefaultsCollection {
+    fn make_collection(breakers: Vec<Handle<BreakerDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
@@ -145,7 +145,7 @@ mod tests {
     fn registry_rebuilt_on_modified() {
         let mut app = test_app();
 
-        let def = ArchetypeDefinition {
+        let def = BreakerDefinition {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
@@ -156,25 +156,21 @@ mod tests {
             chains: vec![],
         };
         let handle = {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             assets.add(def)
         };
 
         app.world_mut()
-            .insert_resource(SelectedArchetype("Test".to_owned()));
+            .insert_resource(SelectedBreaker("Test".to_owned()));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
         app.update();
         app.update();
 
-        // Modify the archetype
+        // Modify the breaker definition
         {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.life_pool = Some(5);
         }
@@ -182,16 +178,16 @@ mod tests {
         app.update();
         app.update();
 
-        let registry = app.world().resource::<ArchetypeRegistry>();
+        let registry = app.world().resource::<BreakerRegistry>();
         let rebuilt = registry.get("Test").unwrap();
         assert_eq!(rebuilt.life_pool, Some(5));
     }
 
     #[test]
-    fn config_reset_with_overrides_on_archetype_change() {
+    fn config_reset_with_overrides_on_breaker_change() {
         let mut app = test_app();
 
-        let def = ArchetypeDefinition {
+        let def = BreakerDefinition {
             name: "Wide".to_owned(),
             stat_overrides: BreakerStatOverrides {
                 width: Some(200.0),
@@ -205,14 +201,12 @@ mod tests {
             chains: vec![],
         };
         let handle = {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             assets.add(def)
         };
 
         app.world_mut()
-            .insert_resource(SelectedArchetype("Wide".to_owned()));
+            .insert_resource(SelectedBreaker("Wide".to_owned()));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
@@ -222,11 +216,9 @@ mod tests {
         app.update();
         app.update();
 
-        // Modify archetype override to 250
+        // Modify breaker override to 250
         {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.stat_overrides.width = Some(250.0);
         }
@@ -237,16 +229,16 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>();
         assert!(
             (config.width - 250.0).abs() < f32::EPSILON,
-            "BreakerConfig.width should be 250.0 after archetype override change, got {}",
+            "BreakerConfig.width should be 250.0 after breaker override change, got {}",
             config.width
         );
     }
 
     #[test]
-    fn active_chains_rebuilt_on_archetype_change() {
+    fn active_chains_rebuilt_on_breaker_change() {
         let mut app = test_app();
 
-        let def = ArchetypeDefinition {
+        let def = BreakerDefinition {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
@@ -260,14 +252,12 @@ mod tests {
             chains: vec![],
         };
         let handle = {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             assets.add(def)
         };
 
         app.world_mut()
-            .insert_resource(SelectedArchetype("Test".to_owned()));
+            .insert_resource(SelectedBreaker("Test".to_owned()));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
@@ -276,9 +266,7 @@ mod tests {
 
         // Modify: add bolt_lost and early/late bump
         {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.on_bolt_lost = Some(TriggerChain::LoseLife);
             asset.on_early_bump = Some(TriggerChain::SpeedBoost {
@@ -295,10 +283,10 @@ mod tests {
         app.update();
 
         let active = app.world().resource::<ActiveEffects>();
-        // on_bolt_lost=LoseLife → OnBoltLost(LoseLife)
-        // on_perfect_bump=SpeedBoost → OnPerfectBump(SpeedBoost{...})
-        // on_early_bump=SpeedBoost → OnEarlyBump(SpeedBoost{...})
-        // on_late_bump=SpeedBoost → OnLateBump(SpeedBoost{...})
+        // on_bolt_lost=LoseLife -> OnBoltLost(LoseLife)
+        // on_perfect_bump=SpeedBoost -> OnPerfectBump(SpeedBoost{...})
+        // on_early_bump=SpeedBoost -> OnEarlyBump(SpeedBoost{...})
+        // on_late_bump=SpeedBoost -> OnLateBump(SpeedBoost{...})
         assert_eq!(
             active.0.len(),
             4,
@@ -308,10 +296,10 @@ mod tests {
     }
 
     #[test]
-    fn lives_count_reset_on_archetype_change() {
+    fn lives_count_reset_on_breaker_change() {
         let mut app = test_app();
 
-        let def = ArchetypeDefinition {
+        let def = BreakerDefinition {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
@@ -322,14 +310,12 @@ mod tests {
             chains: vec![],
         };
         let handle = {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             assets.add(def)
         };
 
         app.world_mut()
-            .insert_resource(SelectedArchetype("Test".to_owned()));
+            .insert_resource(SelectedBreaker("Test".to_owned()));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
@@ -339,11 +325,9 @@ mod tests {
         app.update();
         app.update();
 
-        // Modify archetype to 5 lives
+        // Modify breaker to 5 lives
         {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.life_pool = Some(5);
         }
@@ -359,10 +343,10 @@ mod tests {
     }
 
     #[test]
-    fn speed_boost_chains_appear_in_active_chains_on_archetype_change() {
+    fn speed_boost_chains_appear_in_active_chains_on_breaker_change() {
         let mut app = test_app();
 
-        let def = ArchetypeDefinition {
+        let def = BreakerDefinition {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
@@ -376,14 +360,12 @@ mod tests {
             chains: vec![],
         };
         let handle = {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             assets.add(def)
         };
 
         app.world_mut()
-            .insert_resource(SelectedArchetype("Test".to_owned()));
+            .insert_resource(SelectedBreaker("Test".to_owned()));
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
@@ -394,9 +376,7 @@ mod tests {
 
         // Modify multiplier
         {
-            let mut assets = app
-                .world_mut()
-                .resource_mut::<Assets<ArchetypeDefinition>>();
+            let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
             asset.on_perfect_bump = Some(TriggerChain::SpeedBoost {
                 target: Target::Bolt,

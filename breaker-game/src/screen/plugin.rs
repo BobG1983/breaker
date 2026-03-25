@@ -19,7 +19,7 @@ use crate::{
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
     chips::{ChipDefinition, definition::ChipTemplate},
-    effect::ArchetypeDefinition,
+    effect::BreakerDefinition,
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     shared::{
@@ -53,7 +53,7 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<CellTypeDefinition>::new(&["cell.ron"]),
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
-                RonAssetPlugin::<ArchetypeDefinition>::new(&["breaker.ron"]),
+                RonAssetPlugin::<BreakerDefinition>::new(&["breaker.ron"]),
                 RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
                 RonAssetPlugin::<ChipDefinition>::new(&["evolution.ron"]),
                 RonAssetPlugin::<ChipTemplate>::new(&["chip.ron"]),

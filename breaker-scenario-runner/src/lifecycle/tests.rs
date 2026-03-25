@@ -78,7 +78,7 @@ fn lifecycle_test_app() -> App {
             zone_fraction: 0.667,
         });
     // Resources required by bypass_menu_to_playing
-    app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()))
+    app.insert_resource(breaker::shared::SelectedBreaker("Aegis".to_owned()))
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>();
     // Resources required by inject_scenario_input
@@ -847,7 +847,7 @@ fn bypass_menu_to_playing_sets_run_seed_default_zero() {
         .insert_resource(ScenarioConfig {
             definition: make_scenario(100),
         })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .add_plugins(StatesPlugin)
@@ -875,7 +875,7 @@ fn bypass_menu_to_playing_sets_run_seed_from_scenario() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(ScenarioConfig { definition })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .add_plugins(StatesPlugin)
@@ -946,7 +946,7 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(ScenarioConfig { definition })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .init_resource::<ActiveEffects>()
@@ -986,7 +986,7 @@ fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
         .insert_resource(ScenarioConfig {
             definition: make_scenario(100),
         })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .init_resource::<ActiveEffects>()

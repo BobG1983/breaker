@@ -5,7 +5,7 @@ use crate::{invariants::*, types::InvariantKind};
 
 /// Checks that [`NodeTimer::remaining`] never goes negative.
 ///
-/// Only runs when the `NodeTimer` resource exists (Chrono archetype).
+/// Only runs when the `NodeTimer` resource exists (Chrono breaker).
 pub fn check_timer_non_negative(
     timer: Option<Res<NodeTimer>>,
     frame: Res<ScenarioFrame>,

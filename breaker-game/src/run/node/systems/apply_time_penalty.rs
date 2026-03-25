@@ -1,4 +1,4 @@
-//! System to apply time penalties from archetype consequences.
+//! System to apply time penalties from breaker consequences.
 
 use bevy::prelude::*;
 

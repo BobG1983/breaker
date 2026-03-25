@@ -1,11 +1,11 @@
-//! Archetype initialization systems — config overrides and component stamping.
+//! Breaker initialization systems — config overrides and component stamping.
 
 use bevy::prelude::*;
 use tracing::warn;
 
 use super::{
     active::ActiveEffects, definition::BreakerStatOverrides, effects::life_lost::LivesCount,
-    registry::ArchetypeRegistry,
+    registry::BreakerRegistry,
 };
 use crate::{
     breaker::{
@@ -13,14 +13,13 @@ use crate::{
         resources::{BreakerConfig, BreakerDefaults},
     },
     chips::definition::TriggerChain,
-    shared::SelectedArchetype,
+    shared::SelectedBreaker,
 };
 
 /// Applies optional stat overrides to a `BreakerConfig`.
 ///
 /// Each `Some` field in `overrides` replaces the corresponding field in `config`.
-/// Used by both `apply_archetype_config_overrides` (at init) and hot-reload
-/// propagation (at runtime).
+/// Used by both `apply_breaker_config_overrides` (at init) and hot-reload propagation (at runtime).
 pub(crate) const fn apply_stat_overrides(
     config: &mut BreakerConfig,
     overrides: &BreakerStatOverrides,
@@ -42,13 +41,13 @@ pub(crate) const fn apply_stat_overrides(
     }
 }
 
-/// Resets `BreakerConfig` from defaults and applies archetype stat overrides.
+/// Resets `BreakerConfig` from defaults and applies breaker stat overrides.
 ///
 /// Runs `OnEnter(GameState::Playing)` BEFORE `init_breaker_params` so that
 /// stamped components reflect the overridden config values.
-pub(crate) fn apply_archetype_config_overrides(
-    selected: Res<SelectedArchetype>,
-    registry: Res<ArchetypeRegistry>,
+pub(crate) fn apply_breaker_config_overrides(
+    selected: Res<SelectedBreaker>,
+    registry: Res<BreakerRegistry>,
     defaults: Res<Assets<BreakerDefaults>>,
     mut config: ResMut<BreakerConfig>,
 ) {
@@ -57,9 +56,9 @@ pub(crate) fn apply_archetype_config_overrides(
         *config = BreakerConfig::from(loaded.clone());
     }
 
-    // Apply archetype overrides
+    // Apply breaker overrides
     let Some(def) = registry.get(&selected.0) else {
-        warn!("Archetype '{}' not found in registry", selected.0);
+        warn!("Breaker '{}' not found in registry", selected.0);
         return;
     };
 
@@ -69,17 +68,17 @@ pub(crate) fn apply_archetype_config_overrides(
 /// Stamps init-time behavior components and builds `ActiveEffects`.
 ///
 /// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
-/// - Inserts `LivesCount` if archetype has `life_pool`
+/// - Inserts `LivesCount` if breaker has `life_pool`
 /// - Builds `ActiveEffects` from root fields and `chains`
-pub(crate) fn init_archetype(
+pub(crate) fn init_breaker(
     mut commands: Commands,
-    selected: Res<SelectedArchetype>,
-    registry: Res<ArchetypeRegistry>,
+    selected: Res<SelectedBreaker>,
+    registry: Res<BreakerRegistry>,
     breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
     mut active: ResMut<ActiveEffects>,
 ) {
     let Some(def) = registry.get(&selected.0) else {
-        warn!("Archetype '{}' not found in registry", selected.0);
+        warn!("Breaker '{}' not found in registry", selected.0);
         return;
     };
 
@@ -112,14 +111,14 @@ pub(crate) fn init_archetype(
 mod tests {
     use super::*;
     use crate::effect::definition::{
-        ArchetypeDefinition, BreakerStatOverrides, ImpactTarget, Target,
+        BreakerDefinition, BreakerStatOverrides, ImpactTarget, Target,
     };
 
-    const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
+    const TEST_BREAKER_NAME: &str = "TestBreaker";
 
-    fn make_test_archetype() -> ArchetypeDefinition {
-        ArchetypeDefinition {
-            name: TEST_ARCHETYPE_NAME.to_owned(),
+    fn make_test_breaker() -> BreakerDefinition {
+        BreakerDefinition {
+            name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
             on_bolt_lost: Some(TriggerChain::LoseLife),
@@ -139,21 +138,21 @@ mod tests {
         }
     }
 
-    fn test_app_with_archetype(def: ArchetypeDefinition) -> App {
+    fn test_app_with_breaker(def: BreakerDefinition) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let mut registry = ArchetypeRegistry::default();
+        let mut registry = BreakerRegistry::default();
         registry.insert(def.name.clone(), def);
         app.insert_resource(registry)
-            .insert_resource(SelectedArchetype(TEST_ARCHETYPE_NAME.to_owned()))
+            .insert_resource(SelectedBreaker(TEST_BREAKER_NAME.to_owned()))
             .init_resource::<ActiveEffects>()
-            .add_systems(Update, init_archetype);
+            .add_systems(Update, init_breaker);
         app
     }
 
     #[test]
-    fn init_archetype_stamps_lives_count() {
-        let mut app = test_app_with_archetype(make_test_archetype());
+    fn init_breaker_stamps_lives_count() {
+        let mut app = test_app_with_breaker(make_test_breaker());
         let entity = app.world_mut().spawn(Breaker).id();
         app.update();
 
@@ -162,8 +161,8 @@ mod tests {
     }
 
     #[test]
-    fn init_archetype_builds_active_chains() {
-        let mut app = test_app_with_archetype(make_test_archetype());
+    fn init_breaker_builds_active_chains() {
+        let mut app = test_app_with_breaker(make_test_breaker());
         app.world_mut().spawn(Breaker);
         app.update();
 
@@ -180,9 +179,9 @@ mod tests {
     }
 
     #[test]
-    fn init_archetype_builds_active_chains_with_non_speed_boost() {
-        let def = ArchetypeDefinition {
-            name: TEST_ARCHETYPE_NAME.to_owned(),
+    fn init_breaker_builds_active_chains_with_non_speed_boost() {
+        let def = BreakerDefinition {
+            name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             on_bolt_lost: Some(TriggerChain::TimePenalty { seconds: 5.0 }),
@@ -191,7 +190,7 @@ mod tests {
             on_late_bump: None,
             chains: vec![],
         };
-        let mut app = test_app_with_archetype(def);
+        let mut app = test_app_with_breaker(def);
         app.world_mut().spawn(Breaker);
         app.update();
 
@@ -200,9 +199,9 @@ mod tests {
     }
 
     #[test]
-    fn init_archetype_includes_chains_field() {
-        let def = ArchetypeDefinition {
-            name: TEST_ARCHETYPE_NAME.to_owned(),
+    fn init_breaker_includes_chains_field() {
+        let def = BreakerDefinition {
+            name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             on_bolt_lost: None,
@@ -214,7 +213,7 @@ mod tests {
                 vec![TriggerChain::test_shockwave(64.0)],
             )])],
         };
-        let mut app = test_app_with_archetype(def);
+        let mut app = test_app_with_breaker(def);
         app.world_mut().spawn(Breaker);
         app.update();
 
@@ -223,8 +222,8 @@ mod tests {
     }
 
     #[test]
-    fn init_archetype_skips_already_initialized() {
-        let mut app = test_app_with_archetype(make_test_archetype());
+    fn init_breaker_skips_already_initialized() {
+        let mut app = test_app_with_breaker(make_test_breaker());
         let entity = app.world_mut().spawn((Breaker, LivesCount(99))).id();
         app.update();
 
@@ -298,7 +297,7 @@ mod tests {
             .init_asset::<BreakerDefaults>()
             .init_resource::<BreakerConfig>();
 
-        let def = ArchetypeDefinition {
+        let def = BreakerDefinition {
             name: "Wide".to_owned(),
             stat_overrides: BreakerStatOverrides {
                 width: Some(200.0),
@@ -312,11 +311,11 @@ mod tests {
             chains: vec![],
         };
 
-        let mut registry = ArchetypeRegistry::default();
+        let mut registry = BreakerRegistry::default();
         registry.insert("Wide".to_owned(), def);
         app.insert_resource(registry)
-            .insert_resource(SelectedArchetype("Wide".to_owned()))
-            .add_systems(Update, apply_archetype_config_overrides);
+            .insert_resource(SelectedBreaker("Wide".to_owned()))
+            .add_systems(Update, apply_breaker_config_overrides);
         app.update();
 
         let config = app.world().resource::<BreakerConfig>();
@@ -327,8 +326,8 @@ mod tests {
 
     #[test]
     fn no_life_pool_no_lives_count() {
-        let def = ArchetypeDefinition {
-            name: TEST_ARCHETYPE_NAME.to_owned(),
+        let def = BreakerDefinition {
+            name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             on_bolt_lost: None,
@@ -338,7 +337,7 @@ mod tests {
             chains: vec![],
         };
 
-        let mut app = test_app_with_archetype(def);
+        let mut app = test_app_with_breaker(def);
         let entity = app.world_mut().spawn(Breaker).id();
         app.update();
 
@@ -346,8 +345,8 @@ mod tests {
     }
 
     // =========================================================================
-    // B12b: init_archetype pass-through behavior with EffectNode (behavior 22)
-    // These tests verify the EffectNode shapes that init_archetype will push
+    // B12b: init_breaker pass-through behavior with EffectNode (behavior 22)
+    // These tests verify the EffectNode shapes that init_breaker will push
     // to ActiveEffects after migration. They exercise evaluate_node which
     // fails with todo!().
     // =========================================================================
@@ -359,7 +358,7 @@ mod tests {
             evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
         };
 
-        // After migration, init_archetype will push EffectNode directly
+        // After migration, init_breaker will push EffectNode directly
         // (no re-wrapping). Verify the node shape evaluates correctly.
         let node = EffectNode::Trigger(
             Trigger::OnBoltLost,
