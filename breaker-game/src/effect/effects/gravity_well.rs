@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
+use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
 
 /// Observer: handles gravity well creation.
 ///
@@ -20,7 +20,7 @@ pub(crate) fn handle_gravity_well(trigger: On<EffectFired>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{effect::events::EffectFired, chips::definition::TriggerChain};
+    use crate::{chips::definition::TriggerChain, effect::events::EffectFired};
 
     fn test_app() -> App {
         let mut app = App::new();

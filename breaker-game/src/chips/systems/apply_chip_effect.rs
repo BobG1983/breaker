@@ -5,12 +5,12 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
-    effect::ActiveEffects,
     chips::{
         definition::{ChipEffectApplied, TriggerChain},
         inventory::ChipInventory,
         resources::ChipRegistry,
     },
+    effect::ActiveEffects,
     ui::messages::ChipSelected,
 };
 
@@ -73,7 +73,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        effect::ActiveEffects,
         bolt::components::Bolt,
         breaker::components::Breaker,
         chips::{
@@ -83,6 +82,7 @@ mod tests {
             inventory::ChipInventory,
             resources::ChipRegistry,
         },
+        effect::ActiveEffects,
         ui::messages::ChipSelected,
     };
 
@@ -783,5 +783,120 @@ mod tests {
                 .is_none(),
             "no DamageBoost should exist for unknown chip"
         );
+    }
+
+    // =========================================================================
+    // B12b: apply_chip_effect dispatch patterns with EffectNode (behaviors 25-26)
+    // These tests verify the EffectNode dispatch logic that apply_chip_effect
+    // will use after migration. They exercise evaluate_node which fails
+    // with todo!().
+    // =========================================================================
+
+    #[test]
+    fn effect_node_on_selected_dispatches_leaf_effects() {
+        use crate::effect::definition::{Effect, EffectNode, Trigger};
+        use crate::effect::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
+
+        // After migration, apply_chip_effect will match on
+        // EffectNode::Trigger(Trigger::OnSelected, inner) and fire
+        // ChipEffectApplied for each inner Leaf's Effect.
+        let node = EffectNode::Trigger(
+            Trigger::OnSelected,
+            vec![EffectNode::Leaf(Effect::Piercing(1))],
+        );
+        // Verify EffectNode structure and inner extraction
+        match &node {
+            EffectNode::Trigger(Trigger::OnSelected, inner) => {
+                assert_eq!(inner.len(), 1);
+                match &inner[0] {
+                    EffectNode::Leaf(effect) => {
+                        assert_eq!(*effect, Effect::Piercing(1));
+                    }
+                    EffectNode::Trigger(..) => panic!("expected Leaf, got Trigger"),
+                }
+            }
+            EffectNode::Trigger(..) | EffectNode::Leaf(..) => {
+                panic!("expected Trigger(OnSelected, _)")
+            }
+        }
+        // evaluate_node should return NoMatch for OnSelected — it's handled
+        // by apply_chip_effect, not by bridges
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
+    }
+
+    #[test]
+    fn effect_node_on_selected_multiple_leaves_extracts_all() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let node = EffectNode::Trigger(
+            Trigger::OnSelected,
+            vec![
+                EffectNode::Leaf(Effect::Piercing(1)),
+                EffectNode::Leaf(Effect::DamageBoost(0.5)),
+            ],
+        );
+        match &node {
+            EffectNode::Trigger(Trigger::OnSelected, inner) => {
+                assert_eq!(inner.len(), 2);
+                assert_eq!(inner[0], EffectNode::Leaf(Effect::Piercing(1)));
+                assert_eq!(inner[1], EffectNode::Leaf(Effect::DamageBoost(0.5)));
+            }
+            EffectNode::Trigger(..) | EffectNode::Leaf(..) => {
+                panic!("expected Trigger(OnSelected, 2 children)")
+            }
+        }
+        // OnSelected always returns NoMatch from evaluate_node (fails with todo!)
+        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
+        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
+    }
+
+    #[test]
+    fn effect_node_trigger_wrapper_pushed_to_active_effects_pattern() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // After migration, apply_chip_effect pushes non-OnSelected triggers
+        // to ActiveEffects. Verify this EffectNode evaluates as expected.
+        let node = EffectNode::Trigger(
+            Trigger::OnPerfectBump,
+            vec![EffectNode::Leaf(Effect::SpawnBolt)],
+        );
+        // Should NOT match OnSelected — bridge evaluation handles it
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::SpawnBolt)],
+            "OnPerfectBump with Leaf(SpawnBolt) should fire on PerfectBump"
+        );
+    }
+
+    #[test]
+    fn effect_node_bare_leaf_pattern_for_direct_dispatch() {
+        use crate::effect::{
+            definition::{Effect, EffectNode},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // After migration, a bare EffectNode::Leaf is treated as an immediate
+        // passive — dispatched via ChipEffectApplied directly (replacing
+        // the old is_leaf() check).
+        let node = EffectNode::Leaf(Effect::Piercing(1));
+        assert!(
+            matches!(&node, EffectNode::Leaf(_)),
+            "bare Leaf should be directly dispatchable"
+        );
+        // Verify it extracts correctly
+        if let EffectNode::Leaf(effect) = &node {
+            assert_eq!(*effect, Effect::Piercing(1));
+        }
+        // Bare leaf returns NoMatch from evaluate_node (fails with todo!)
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
 }

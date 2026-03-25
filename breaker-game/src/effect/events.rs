@@ -21,6 +21,7 @@ pub(crate) struct EffectFired {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::effect::definition::Effect;
 
     #[test]
     fn effect_fired_with_some_bolt() {
@@ -50,5 +51,62 @@ mod tests {
         };
         assert_eq!(event.bolt, None);
         assert_eq!(event.effect, TriggerChain::LoseLife);
+    }
+
+    // =========================================================================
+    // B12b: EffectFired should carry Effect (not TriggerChain) (behavior 17)
+    // These tests verify the Effect type matches what EffectFired will carry
+    // after migration. They exercise evaluate_node which fails with todo!().
+    // =========================================================================
+
+    #[test]
+    fn effect_type_matches_shockwave_for_effect_fired() {
+        use super::super::{
+            definition::{EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // Verify Effect::Shockwave has the same shape as TriggerChain::Shockwave
+        // so it can replace TriggerChain in EffectFired.effect after migration.
+        let effect = Effect::Shockwave {
+            base_range: 64.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 400.0,
+        };
+        // After migration: EffectFired { effect, bolt, source_chip }
+        // For now, verify Effect equality works (used by handlers for matching)
+        assert_eq!(
+            effect,
+            Effect::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 400.0,
+            }
+        );
+        // This assertion will fail — evaluate_node fires Effect, not TriggerChain
+        let node = EffectNode::Trigger(Trigger::OnBoltLost, vec![EffectNode::Leaf(effect.clone())]);
+        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        assert_eq!(result, vec![NodeEvalResult::Fire(effect)]);
+    }
+
+    #[test]
+    fn effect_type_lose_life_for_effect_fired_with_source_chip() {
+        use super::super::{
+            definition::{EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // Verify Effect::LoseLife exists and works with source_chip pattern
+        let effect = Effect::LoseLife;
+        let source = Some("Aegis".to_owned());
+        // After migration: EffectFired { effect: Effect::LoseLife, bolt: None, source_chip }
+        assert_eq!(effect, Effect::LoseLife);
+        assert_eq!(source, Some("Aegis".to_owned()));
+        // This assertion will fail — evaluate_node not implemented
+        let node = EffectNode::trigger_leaf(Trigger::OnBoltLost, effect.clone());
+        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        assert_eq!(result, vec![NodeEvalResult::Fire(effect)]);
     }
 }

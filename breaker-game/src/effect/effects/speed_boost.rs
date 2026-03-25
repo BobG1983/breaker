@@ -8,12 +8,12 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    effect::events::EffectFired,
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
     chips::{
         components::BoltSpeedBoost,
         definition::{Target, TriggerChain},
     },
+    effect::events::EffectFired,
 };
 
 /// Observer: handles speed boost when an effect fires.
@@ -91,12 +91,12 @@ fn apply_speed_scale(vel: &mut Velocity2D, multiplier: f32, base: f32, max: f32,
 mod tests {
     use super::*;
     use crate::{
-        effect::events::EffectFired,
         bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
         chips::{
             components::BoltSpeedBoost,
             definition::{Target, TriggerChain},
         },
+        effect::events::EffectFired,
     };
 
     // --- Test infrastructure ---

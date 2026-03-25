@@ -14,6 +14,7 @@ pub(crate) mod sets;
 
 pub use active::ActiveEffects;
 pub(crate) use definition::ArchetypeDefinition;
+pub use definition::{Effect, EffectNode, EffectTarget, ImpactTarget, Target, Trigger};
 pub(crate) use plugin::EffectPlugin;
 pub(crate) use registry::ArchetypeRegistry;
 pub(crate) use sets::EffectSystems;

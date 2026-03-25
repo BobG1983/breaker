@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{effects::shield::ShieldActive, events::EffectFired},
     chips::definition::TriggerChain,
+    effect::{effects::shield::ShieldActive, events::EffectFired},
     run::messages::RunLost,
     ui::components::StatusPanel,
 };

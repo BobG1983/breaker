@@ -112,8 +112,8 @@ pub(crate) fn init_archetype(
 mod tests {
     use super::*;
     use crate::{
-        effect::definition::{ArchetypeDefinition, BreakerStatOverrides},
         chips::definition::{ImpactTarget, Target},
+        effect::definition::{ArchetypeDefinition, BreakerStatOverrides},
     };
 
     const TEST_ARCHETYPE_NAME: &str = "TestArchetype";
@@ -344,5 +344,85 @@ mod tests {
         app.update();
 
         assert!(app.world().get::<LivesCount>(entity).is_none());
+    }
+
+    // =========================================================================
+    // B12b: init_archetype pass-through behavior with EffectNode (behavior 22)
+    // These tests verify the EffectNode shapes that init_archetype will push
+    // to ActiveEffects after migration. They exercise evaluate_node which
+    // fails with todo!().
+    // =========================================================================
+
+    #[test]
+    fn effect_node_pass_through_bolt_lost_fires_correctly() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // After migration, init_archetype will push EffectNode directly
+        // (no re-wrapping). Verify the node shape evaluates correctly.
+        let node = EffectNode::Trigger(
+            Trigger::OnBoltLost,
+            vec![EffectNode::Leaf(Effect::LoseLife)],
+        );
+        // evaluate_node should return Fire(LoseLife) for BoltLost trigger
+        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::LoseLife)],
+            "pass-through EffectNode should evaluate to Fire(LoseLife) on BoltLost"
+        );
+    }
+
+    #[test]
+    fn effect_node_pass_through_perfect_bump_fires_correctly() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let node = EffectNode::Trigger(
+            Trigger::OnPerfectBump,
+            vec![EffectNode::Leaf(Effect::SpeedBoost {
+                target: crate::effect::definition::Target::Bolt,
+                multiplier: 1.5,
+            })],
+        );
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::SpeedBoost {
+                target: crate::effect::definition::Target::Bolt,
+                multiplier: 1.5,
+            })],
+            "pass-through EffectNode should evaluate to Fire(SpeedBoost) on PerfectBump"
+        );
+    }
+
+    #[test]
+    fn effect_node_pass_through_chains_field_evaluates_correctly() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // chains field entries are already full EffectNode trees — verify evaluation
+        let node = EffectNode::Trigger(
+            Trigger::OnPerfectBump,
+            vec![EffectNode::Trigger(
+                Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
+                vec![EffectNode::Leaf(Effect::test_shockwave(64.0))],
+            )],
+        );
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result.len(), 1);
+        assert!(
+            matches!(
+                &result[0],
+                NodeEvalResult::Arm(EffectNode::Trigger(Trigger::OnImpact(..), _))
+            ),
+            "nested EffectNode should arm on first trigger match"
+        );
     }
 }

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::events::EffectFired, bolt::messages::SpawnChainBolt, chips::definition::TriggerChain,
+    bolt::messages::SpawnChainBolt, chips::definition::TriggerChain, effect::events::EffectFired,
 };
 
 /// Observer that handles chain bolt — writes [`SpawnChainBolt`] message.
@@ -32,8 +32,8 @@ pub(crate) fn handle_chain_bolt(
 mod tests {
     use super::*;
     use crate::{
-        effect::events::EffectFired, bolt::messages::SpawnChainBolt,
-        chips::definition::TriggerChain,
+        bolt::messages::SpawnChainBolt, chips::definition::TriggerChain,
+        effect::events::EffectFired,
     };
 
     #[derive(Resource, Default)]

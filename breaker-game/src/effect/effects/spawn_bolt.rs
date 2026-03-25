@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::events::EffectFired, bolt::messages::SpawnAdditionalBolt,
-    chips::definition::TriggerChain,
+    bolt::messages::SpawnAdditionalBolt, chips::definition::TriggerChain,
+    effect::events::EffectFired,
 };
 
 /// Observer that handles spawn-bolt — writes [`SpawnAdditionalBolt`] message.

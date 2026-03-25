@@ -383,9 +383,9 @@ fn resolve_armed(
 mod tests {
     use super::*;
     use crate::{
-        effect::events::EffectFired,
         breaker::messages::BumpGrade,
         chips::definition::{ImpactTarget, TriggerChain},
+        effect::events::EffectFired,
     };
 
     // --- Test infrastructure ---
@@ -1096,6 +1096,87 @@ mod tests {
         assert_eq!(
             lives.0, 2,
             "bolt lost should decrement LivesCount via unified bridge"
+        );
+    }
+
+    // =========================================================================
+    // B12b: Bridge evaluation with EffectNode types (behaviors 23-24)
+    // These tests verify the EffectNode shapes that bridges will process
+    // after migration. They exercise evaluate_node which fails with todo!().
+    // =========================================================================
+
+    #[test]
+    fn evaluate_node_fires_effect_for_bolt_lost_bridge() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // Bridges will call evaluate_node(BoltLost, &node) and get Fire(Effect::Shockwave)
+        let node = EffectNode::Trigger(
+            Trigger::OnBoltLost,
+            vec![EffectNode::Leaf(Effect::Shockwave {
+                base_range: 32.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
+        );
+        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::Shockwave {
+                base_range: 32.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
+            "bridge_bolt_lost should get Fire(Shockwave) from evaluate_node"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_arms_effect_node_for_bump_bridge_non_leaf() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let inner_node = EffectNode::Trigger(
+            Trigger::OnImpact(super::super::definition::ImpactTarget::Cell),
+            vec![EffectNode::Leaf(Effect::Shockwave {
+                base_range: 64.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
+        );
+        let node = EffectNode::Trigger(Trigger::OnPerfectBump, vec![inner_node.clone()]);
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Arm(inner_node)],
+            "bridge_bump should get Arm(inner_node) for non-leaf resolution"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_no_match_for_wrong_trigger_in_bridge() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let node = EffectNode::Trigger(
+            Trigger::OnPerfectBump,
+            vec![EffectNode::Leaf(Effect::test_shockwave(64.0))],
+        );
+        // BoltLost should not match OnPerfectBump
+        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "BoltLost trigger should not match OnPerfectBump node"
         );
     }
 }

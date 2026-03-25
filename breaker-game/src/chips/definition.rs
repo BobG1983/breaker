@@ -2081,4 +2081,153 @@ mod tests {
             );
         }
     }
+
+    // =========================================================================
+    // B12b: EffectNode type construction for chip effect patterns (behaviors 19-20)
+    // These tests verify the EffectNode shapes that ChipDefinition.effects
+    // will hold after migration. They exercise evaluate_node which fails
+    // with todo!().
+    // =========================================================================
+
+    #[test]
+    fn effect_node_surge_chip_pattern_evaluates_correctly() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // After migration: ChipDefinition.effects[0] will be this EffectNode
+        let node = EffectNode::Trigger(
+            Trigger::OnPerfectBump,
+            vec![EffectNode::Trigger(
+                Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
+                vec![EffectNode::Leaf(Effect::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 0.0,
+                    stacks: 1,
+                    speed: 400.0,
+                })],
+            )],
+        );
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result.len(), 1);
+        assert!(matches!(result[0], NodeEvalResult::Arm(_)));
+    }
+
+    #[test]
+    fn effect_node_passive_chip_pattern_on_selected_no_match() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // After migration: passive ChipDefinition.effects[0] will be:
+        // EffectNode::Trigger(Trigger::OnSelected, [Leaf(Piercing(1))])
+        let node = EffectNode::Trigger(
+            Trigger::OnSelected,
+            vec![EffectNode::Leaf(Effect::Piercing(1))],
+        );
+        // OnSelected has no TriggerKind mapping — should always return NoMatch
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
+    }
+
+    #[test]
+    fn effect_node_ron_deserialization_for_chip_definition() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        // After migration, ChipDefinition RON will use EffectNode syntax.
+        let ron_str = "Trigger(OnSelected, [Leaf(Piercing(1))])";
+        let node: EffectNode =
+            ron::de::from_str(ron_str).expect("EffectNode for chip RON should parse");
+        assert_eq!(
+            node,
+            EffectNode::Trigger(
+                Trigger::OnSelected,
+                vec![EffectNode::Leaf(Effect::Piercing(1))]
+            )
+        );
+        // Verify evaluate_node behavior for OnSelected (fails with todo!)
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
+    }
+
+    // B12b: ChipEffectApplied will carry Effect (behavior 18)
+
+    #[test]
+    fn effect_piercing_matches_and_evaluates_correctly() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let effect = Effect::Piercing(1);
+        let tc = TriggerChain::Piercing(1);
+        // Both should carry the same value
+        match (&effect, &tc) {
+            (Effect::Piercing(e), TriggerChain::Piercing(t)) => assert_eq!(e, t),
+            _ => panic!("variant mismatch"),
+        }
+        // Verify evaluate_node with a Piercing leaf (fails with todo!)
+        let node = EffectNode::trigger_leaf(Trigger::OnBump, effect.clone());
+        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
+        assert_eq!(result, vec![NodeEvalResult::Fire(effect)]);
+    }
+
+    #[test]
+    fn effect_damage_boost_matches_and_evaluates_correctly() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let effect = Effect::DamageBoost(0.5);
+        let tc = TriggerChain::DamageBoost(0.5);
+        match (&effect, &tc) {
+            (Effect::DamageBoost(e), TriggerChain::DamageBoost(t)) => {
+                assert!((e - t).abs() < f32::EPSILON);
+            }
+            _ => panic!("variant mismatch"),
+        }
+        // Verify evaluate_node with DamageBoost leaf (fails with todo!)
+        let node = EffectNode::trigger_leaf(Trigger::OnBump, effect.clone());
+        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
+        assert_eq!(result, vec![NodeEvalResult::Fire(effect)]);
+    }
+
+    // B12b: EffectNode RON for triggered chip
+
+    #[test]
+    fn effect_node_ron_triggered_chip_format() {
+        use crate::effect::{
+            definition::{Effect, EffectNode, Trigger},
+            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+        };
+
+        let ron_str = "Trigger(OnPerfectBump, [Trigger(OnImpact(Cell), [Leaf(Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0))])])";
+        let node: EffectNode =
+            ron::de::from_str(ron_str).expect("triggered chip EffectNode RON should parse");
+        assert_eq!(
+            node,
+            EffectNode::Trigger(
+                Trigger::OnPerfectBump,
+                vec![EffectNode::Trigger(
+                    Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
+                    vec![EffectNode::Leaf(Effect::Shockwave {
+                        base_range: 64.0,
+                        range_per_level: 32.0,
+                        stacks: 1,
+                        speed: 400.0,
+                    })],
+                )]
+            )
+        );
+        // Verify evaluate_node arms the inner trigger (fails with todo!)
+        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        assert_eq!(result.len(), 1);
+        assert!(matches!(result[0], NodeEvalResult::Arm(_)));
+    }
 }

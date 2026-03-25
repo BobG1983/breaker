@@ -7,8 +7,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::events::EffectFired, bolt::messages::SpawnAdditionalBolt,
-    chips::definition::TriggerChain,
+    bolt::messages::SpawnAdditionalBolt, chips::definition::TriggerChain,
+    effect::events::EffectFired,
 };
 
 /// Observer: handles multi-bolt effect — writes multiple [`SpawnAdditionalBolt`] messages.
