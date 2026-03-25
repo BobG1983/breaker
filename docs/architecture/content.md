@@ -2,60 +2,109 @@
 
 **Behaviors** are Rust enums. **Content instances** are RON files that compose and tune those behaviors.
 
-## Chip Content System (Implemented — Phase 4b)
+## Chip Content System
 
-All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers Amps, Augments, and Overclocks. Each chip can have one or more `ChipEffect` entries, which wrap an `AmpEffect` (bolt), `AugmentEffect` (breaker), or `Overclock(TriggerChain)` (triggered ability).
+All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers all chips. Every chip effect — whether passive (applied on selection) or triggered (fired on game events) — is expressed as a `TriggerChain` variant. There is no separate `ChipEffect`, `AmpEffect`, or `AugmentEffect` enum.
+
+### Template-Based Authoring
+
+Chips are authored as **templates** — one RON file per chip concept with per-rarity slots. The loader expands templates into individual `ChipDefinition`s at load time.
+
+```ron
+// assets/chips/piercing.chip.ron
+(
+    name: "Piercing",
+    max_taken: 3,
+    common: Some((prefix: "Basic", effects: [OnSelected([Piercing(1)])])),
+    uncommon: Some((prefix: "Keen", effects: [OnSelected([Piercing(2)])])),
+    rare: Some((prefix: "Brutal", effects: [OnSelected([Piercing(3), DamageBoost(0.1)])])),
+    legendary: None,
+)
+```
+
+Each slot is `Option<RaritySlot>` where `RaritySlot` has `prefix` (adjective prepended to the name) and `effects` (full effect list — no inheritance from lower rarities). `max_taken` is shared across all rarities structurally.
+
+See `docs/design/decisions/chip-template-system.md` for the full design decision.
+
+### Unified Effect Model
 
 ```rust
 // chips/definition.rs
 
-// Behavior enums — exhaustive, matchable, compiler-checked
-pub(crate) enum AmpEffect {
-    Piercing(u32),      // bolt passes through N cells before stopping
-    DamageBoost(f32),   // fractional bonus damage per stack
-    SpeedBoost(f32),    // flat bolt speed increase per stack
-    ChainHit(u32),      // chains to N additional cells on hit
-    SizeBoost(f32),     // increases bolt radius by a fraction per stack
+// ALL chip effects are TriggerChain variants — no wrapper enums
+pub enum TriggerChain {
+    // Trigger wrappers (nest inner chains)
+    OnPerfectBump(Box<TriggerChain>),
+    OnBump(Box<TriggerChain>),        // was OnBumpSuccess
+    OnImpact(ImpactTarget, Box<TriggerChain>),
+    OnCellDestroyed(Box<TriggerChain>),
+    OnBoltLost(Box<TriggerChain>),
+    OnSelected(Vec<TriggerChain>),     // passive — immediate on chip selection
+
+    // Leaf effects — passive (via OnSelected)
+    Piercing(u32),
+    DamageBoost(f32),
+    SpeedBoost(Target, f32),           // Target: Bolt | Breaker | AllBolts
+    ChainHit(u32),
+    SizeBoost(Target, f32),            // Bolt = radius, Breaker = width
+    Attraction(f32),
+    BumpForce(f32),
+    TiltControl(f32),
+
+    // Leaf effects — triggered (via bridge systems)
+    Shockwave { base_range: f32, range_per_level: f32, stacks: u32 },
+    ChainBolt { tether_distance: f32 },
+    LoseLife,
+    TimePenalty { seconds: f32 },
+    SpawnBolt,
+    RandomEffect(Vec<(f32, TriggerChain)>),
+    EntropyEngine(u32, Vec<(f32, TriggerChain)>),
+    RampingDamage { bonus_per_hit: f32, max_bonus: f32 },
+    TimedSpeedBurst { speed_mult: f32, duration_secs: f32 },
+    // ...
 }
 
-pub(crate) enum AugmentEffect {
-    WidthBoost(f32),    // flat breaker width increase per stack
-    SpeedBoost(f32),    // flat breaker speed increase per stack
-    BumpForce(f32),     // flat bump force increase per stack
-    TiltControl(f32),   // flat tilt sensitivity increase per stack
-}
-
-pub(crate) enum ChipEffect {
-    Amp(AmpEffect),
-    Augment(AugmentEffect),
-    Overclock(TriggerChain), // triggered ability with recursive trigger chain
-}
+pub enum Target { Bolt, Breaker, AllBolts }
 
 // Content instance — data-driven, no recompile to add
 #[derive(Asset, TypePath, Deserialize)]
-pub(crate) struct ChipDefinition {
+pub struct ChipDefinition {
     pub name: String,
     pub description: String,
-    pub rarity: Rarity,         // Common | Uncommon | Rare | Legendary
-    pub max_stacks: u32,
-    pub effects: Vec<ChipEffect>,
+    pub rarity: Rarity,
+    pub max_taken: u32,
+    pub effects: Vec<TriggerChain>,
+    pub template_name: Option<String>,  // back-ref for shared max enforcement
 }
 ```
 
-```ron
-// assets/amps/piercing.amp.ron
-(
-    name: "Piercing Shot",
-    description: "Bolt passes through the first cell it hits",
-    rarity: Common,
-    max_stacks: 3,
-    effects: [Amp(Piercing(1))],
-)
+### Effect Application
+
+When a player selects a chip, `apply_chip_effect` dispatches based on the effect type:
+
+- **`OnSelected` chains**: Evaluated immediately. Each leaf in the vec fires a `ChipEffectApplied` observer event. Per-effect observer handlers in `chips/effects/` insert or update flat components on bolt or breaker entities.
+- **Other trigger chains** (OnPerfectBump, OnBump, etc.): Pushed to `ActiveChains` for evaluation by bridge systems on matching game events.
+
+```rust
+// Passive effects land as flat components on entities
+struct Piercing(pub u32);           // bolt: max pierces
+struct DamageBoost(pub f32);        // bolt: accumulated damage bonus
+struct BoltSpeedBoost(pub f32);     // bolt: accumulated flat speed bonus
+struct BoltSizeBoost(pub f32);      // bolt: accumulated fractional radius bonus
+struct ChainHit(pub u32);           // bolt: chain hit count
+struct BreakerSpeedBoost(pub f32);  // breaker: accumulated flat speed bonus
+struct BumpForceBoost(pub f32);     // breaker: accumulated flat bump force bonus
+struct TiltControlBoost(pub f32);   // breaker: accumulated flat tilt sensitivity bonus
 ```
 
-**Adding new content:** new RON file, no recompile. **Adding new behavior types:** new enum variant, requires recompile (appropriate — new behavior means new code).
+Stacking increments the existing component's value. Production systems query for these components directly — if absent, the system uses the base value.
 
-The `ChipRegistry` (`Resource`) loads all chip RON definitions at boot. Game logic looks up definitions through the registry by name string. A paired `Vec<String>` preserves insertion order for deterministic chip offers.
+**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `TriggerChain` variant, requires recompile (appropriate — new behavior means new code).
+
+### Registries
+
+- **`ChipRegistry`** (`Resource`) loads all chip template RON files and expands them into `ChipDefinition`s at boot. Game logic looks up definitions through the registry.
+- **`EvolutionRegistry`** (`Resource`) loads evolution recipe RON files separately. Evolution recipes combine chip ingredients into evolved chips at boss nodes.
 
 ## Cell Type Content System (Implemented — Phase 2)
 
@@ -84,37 +133,16 @@ pub struct CellBehavior {
 }
 ```
 
-## Effect Application — Flat Components on Entities
-
-When a player selects a chip, `apply_chip_effect` fires a `ChipEffectApplied` observer event. Per-effect observer handlers in `chips/effects/` insert or update a flat component on the bolt or breaker entity:
-
-```rust
-// Amp effects land on the bolt entity
-struct Piercing(pub u32);           // max pierces (reset on wall hit)
-struct PiercingRemaining(pub u32);  // remaining pierces this wall-bounce cycle
-struct DamageBoost(pub f32);        // accumulated fractional damage bonus
-struct BoltSpeedBoost(pub f32);     // accumulated flat speed bonus
-struct BoltSizeBoost(pub f32);      // accumulated fractional radius bonus
-struct ChainHit(pub u32);           // chain hit count
-
-// Augment effects land on the breaker entity
-struct WidthBoost(pub f32);         // accumulated flat width bonus
-struct BreakerSpeedBoost(pub f32);  // accumulated flat speed bonus
-struct BumpForceBoost(pub f32);     // accumulated flat bump force bonus
-struct TiltControlBoost(pub f32);   // accumulated flat tilt sensitivity bonus
-```
-
-Stacking increments the existing component's value. Production systems query for these components directly — if absent, the system uses the base value. No wrapper struct or registry lookup at gameplay time.
-
 ## RON Validation — ron-lsp
 
 Every RON file MUST include a type annotation comment on the first line linking it to the Rust type it deserializes into:
 
 ```ron
-// assets/amps/piercing.amp.ron
-/* @[brickbreaker::chips::ChipDefinition] */
+// assets/chips/piercing.chip.ron
+/* @[brickbreaker::chips::ChipTemplate] */
 (
-    name: "Piercing Shot",
+    name: "Piercing",
+    max_taken: 3,
     ...
 )
 ```

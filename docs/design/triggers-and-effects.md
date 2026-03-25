@@ -1,6 +1,8 @@
 # Triggers and Effects
 
-Complete reference of the TriggerChain system — triggers (when), effects (what), and chip effects (passive).
+Complete reference of the TriggerChain system — the unified model for ALL chip effects and archetype behaviors.
+
+All chip effects — whether passive (applied on selection), triggered (fired on game events), or archetype-defined — are expressed as `TriggerChain` variants. There is no separate `ChipEffect`, `AmpEffect`, or `AugmentEffect` enum.
 
 ## Triggers
 
@@ -11,13 +13,30 @@ Triggers wrap an inner chain (another trigger or a leaf effect). When the trigge
 | `OnPerfectBump` | Bump timed within the perfect window | Specific bolt from bump |
 | `OnEarlyBump` | Bump pressed before the perfect zone | Specific bolt from bump |
 | `OnLateBump` | Bump pressed after the bolt hit | Specific bolt from bump |
-| `OnBumpSuccess` | Any non-whiff bump (Early, Late, or Perfect) | Specific bolt from bump |
+| `OnBump` | Any non-whiff bump (Early, Late, or Perfect) | Specific bolt from bump |
 | `OnBumpWhiff` | Forward bump window expired without contact | Global (no specific bolt) |
 | `OnImpact(Cell)` | Bolt hit a cell | Specific bolt from impact |
 | `OnImpact(Breaker)` | Bolt bounced off the breaker | Specific bolt from impact |
 | `OnImpact(Wall)` | Bolt bounced off a wall | Specific bolt from impact |
 | `OnCellDestroyed` | A cell was destroyed | Global (no specific bolt) |
 | `OnBoltLost` | A bolt was lost (fell off screen) | Global (no specific bolt) |
+| `OnSelected` | Chip was selected on the upgrade screen | N/A — immediate evaluation |
+
+### OnSelected — Passive Effects
+
+`OnSelected` is a special trigger that evaluates immediately when a chip is selected, rather than waiting for a game event. It replaces the old `Amp(AmpEffect::...)` and `Augment(AugmentEffect::...)` wrappers:
+
+```ron
+// Old: effects: [Amp(Piercing(1))]
+// New:
+effects: [OnSelected([Piercing(1)])]
+
+// Old: effects: [Augment(WidthBoost(8.0))]
+// New:
+effects: [OnSelected([SizeBoost(Breaker, 8.0)])]
+```
+
+`OnSelected` takes a `Vec<TriggerChain>` — multiple passive effects can be applied in a single chip selection.
 
 ### Trigger Chaining
 
@@ -41,59 +60,57 @@ When a trigger matches but the inner chain is another trigger (not a leaf), the 
 
 Leaf effects are the terminal actions in a trigger chain. They fire via the `EffectFired` event and are handled by dedicated observer systems.
 
+### Triggered Effects
+
+These fire through the bridge system when their trigger condition is met.
+
 | Effect | Parameters | Handler | Description |
 |--------|-----------|---------|-------------|
-| `Shockwave` | `base_range`, `range_per_level`, `stacks` | `handle_shockwave` | Area damage to all non-locked cells within range. Spawns an expanding ring entity; `shockwave_collision` queries the quadtree each tick. Damage = `BASE_BOLT_DAMAGE * (1.0 + DamageBoost)`. Effective range = `base_range + (stacks - 1) * range_per_level`. |
-| `ChainBolt` | `tether_distance` | `handle_chain_bolt` | Spawns a chain bolt tethered to the triggering bolt via `SpawnChainBolt` message → `spawn_chain_bolt`. The tethered bolt is constrained to `tether_distance` from its anchor via `DistanceConstraint`. Despawned when anchor is lost. |
+| `Shockwave` | `base_range`, `range_per_level`, `stacks` | `handle_shockwave` | Area damage within range. Effective range = `base_range + (stacks - 1) * range_per_level`. |
+| `ChainBolt` | `tether_distance` | `handle_chain_bolt` | Spawns a chain bolt tethered to the triggering bolt via `DistanceConstraint`. |
 | `MultiBolt` | `base_count`, `count_per_level`, `stacks` | *(not yet wired)* | Spawns additional bolts. Effective count = `base_count + (stacks - 1) * count_per_level`. |
-| `Shield` | `base_duration`, `duration_per_level`, `stacks` | *(not yet wired)* | Temporary shield protecting the breaker. Effective duration = `base_duration + (stacks - 1) * duration_per_level`. |
-| `LoseLife` | *(none)* | `handle_life_lost` | Decrements `LivesCount` on the breaker. When lives reach 0, sends `RunLost`. |
+| `Shield` | `base_duration`, `duration_per_level`, `stacks` | *(not yet wired)* | Temporary shield. Effective duration = `base_duration + (stacks - 1) * duration_per_level`. |
+| `LoseLife` | *(none)* | `handle_life_lost` | Decrements `LivesCount`. When lives reach 0, sends `RunLost`. |
 | `TimePenalty` | `seconds` | `handle_time_penalty` | Subtracts time from the node timer. |
-| `SpawnBolt` | *(none)* | `handle_spawn_bolt` | Spawns one additional bolt into play. |
-| `SpeedBoost` | `target`, `multiplier` | `handle_speed_boost` | Scales velocity of the target by `multiplier`, clamped within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`. |
+| `SpawnBolt` | *(none)* | `handle_spawn_bolt` | Spawns one additional bolt. |
+| `SpeedBoost` | `target: Target`, `multiplier: f32` | `handle_speed_boost` | Scales velocity of the target by `multiplier`. |
+| `RandomEffect` | `Vec<(f32, TriggerChain)>` | `handle_random_effect` | Weighted random selection from a pool of effects. |
+| `EntropyEngine` | `counter: u32`, `Vec<(f32, TriggerChain)>` | `handle_entropy_engine` | Counter-gated `RandomEffect` — every Nth trigger, roll from pool. |
+| `RampingDamage` | `bonus_per_hit: f32`, `max_bonus: f32` | `handle_ramping_damage` | Stacking damage bonus on cell hits, resets on non-bump breaker impact. |
+| `TimedSpeedBurst` | `speed_mult: f32`, `duration_secs: f32` | `handle_timed_speed_burst` | Temporary speed multiplier that decays after duration. |
 
-### SpeedBoost Targets
+### Passive Effects (OnSelected Leaves)
+
+These fire immediately when a chip is selected and modify entity components directly.
+
+| Effect | Parameters | Target | Description |
+|--------|-----------|--------|-------------|
+| `Piercing` | `count: u32` | Bolt | Bolt passes through N cells before stopping |
+| `DamageBoost` | `boost: f32` | Bolt | Fractional bonus damage per stack |
+| `SpeedBoost` | `target: Target`, `multiplier: f32` | Bolt or Breaker | Percentage-based speed multiplier per stack (e.g., 1.1 = 10% boost) |
+| `ChainHit` | `count: u32` | Bolt | Chains to N additional cells on hit |
+| `SizeBoost` | `target: Target`, `value: f32` | Bolt (radius) or Breaker (width) | Size increase per stack |
+| `Attraction` | `force: f32` | Bolt | Attracts nearby cells |
+| `BumpForce` | `force: f32` | Breaker | Flat bump force increase per stack |
+| `TiltControl` | `sensitivity: f32` | Breaker | Flat tilt control sensitivity increase per stack |
+
+### Target Enum
+
+Effects that can target multiple entity types use the `Target` enum:
 
 | Target | Behavior |
 |--------|----------|
-| `Bolt` | Scales the specific triggering bolt's velocity |
-| `Breaker` | *(future — no-op)* |
-| `AllBolts` | *(future — no-op)* |
+| `Bolt` | Affects the specific triggering bolt entity |
+| `Breaker` | Affects the breaker entity |
+| `AllBolts` | Affects all bolt entities in play |
+
+`SizeBoost` interpretation varies by target: on `Bolt` it adjusts radius, on `Breaker` it adjusts width.
 
 ### Stacking
 
-Shockwave, MultiBolt, and Shield support stacking via `stacks` and `*_per_level` fields. Each stack beyond the first adds the per-level bonus. Stacks are incremented at runtime when the same overclock chip is selected again.
+Shockwave, MultiBolt, and Shield support stacking via `stacks` and `*_per_level` fields. Each stack beyond the first adds the per-level bonus. Stacks are incremented at runtime when the same chip is selected again.
 
-## Chip Effects (Passive)
-
-Chip effects are applied when a chip is selected during the upgrade screen. They modify entity components directly rather than firing through the trigger chain system.
-
-### Amp Effects (Bolt Passives)
-
-Applied to bolt entities. Stack additively.
-
-| Effect | Parameter | Description |
-|--------|-----------|-------------|
-| `Piercing` | `count: u32` | Bolt passes through N cells before stopping |
-| `DamageBoost` | `boost: f32` | Fractional bonus damage per stack. `damage = BASE_BOLT_DAMAGE * (1.0 + boost)` |
-| `SpeedBoost` | `flat_speed: f32` | Adds flat speed to bolt's base and max speed per stack |
-| `ChainHit` | `count: u32` | Bolt chains to N additional cells on hit |
-| `SizeBoost` | `fraction: f32` | Increases bolt radius by a fraction per stack |
-
-### Augment Effects (Breaker Passives)
-
-Applied to the breaker entity. Stack additively.
-
-| Effect | Parameter | Description |
-|--------|-----------|-------------|
-| `WidthBoost` | `flat_width: f32` | Adds flat width to the breaker per stack |
-| `SpeedBoost` | `flat_speed: f32` | Adds flat speed to breaker max speed per stack |
-| `BumpForce` | `force: f32` | Adds flat bump force per stack |
-| `TiltControl` | `sensitivity: f32` | Adds flat tilt control sensitivity per stack |
-
-### Overclock Effects (Triggered Abilities)
-
-Overclocks are trigger chains. When selected as a chip, the chain is pushed to `ActiveChains` and evaluated by the bridge systems on each matching event. See **Triggers** and **Effects** above.
+Passive effects (Piercing, DamageBoost, etc.) stack by incrementing the flat component on the entity.
 
 ## Archetype Usage
 

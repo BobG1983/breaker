@@ -35,7 +35,7 @@ cargo install cargo-outdated  # Outdated dependency reporting
 | [Design Principles](docs/design/) | Core design pillars, identity, and design decisions |
 | [Architecture](docs/architecture/) | Plugin structure, code standards, message table, patterns |
 | [Build Plan](docs/plan/) | Phased roadmap from scaffolding through polish |
-| [Terminology](docs/design/terminology.md) | Game vocabulary used in all code and docs |
+| [Terminology](docs/design/terminology/) | Game vocabulary used in all code and docs |
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ Core gameplay is fully playable: breaker movement with dash and tilt, bolt physi
 
 ### Phase 4 Highlights
 
-- **Chip system**: Amps (bolt upgrades), Augments (breaker upgrades), Overclocks (triggered abilities) — all data-driven via RON, with pool depletion and weight decay for build-crafting depth
+- **Chip system**: Unified TriggerChain-based effects (passive bolt/breaker upgrades and triggered abilities) — all data-driven via RON templates with per-rarity variants, pool depletion, and weight decay for build-crafting depth
 - **Evolution system**: 8 evolution recipes that combine maxed chips into ultimate abilities (Nova Lance, Voltchain, Phantom Breaker, Supernova, Dead Man's Hand, Railgun, Gravity Well, Second Wind)
 - **TriggerChain engine**: Nested trigger→effect chains with multi-step arming (e.g., OnPerfectBump → OnImpact(Cell) → Shockwave). 13 leaf effects, 8 trigger types
 - **Memorable moments**: In-game highlight popups with punch-scale animation, diversity-penalized scoring for run-end display

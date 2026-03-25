@@ -53,7 +53,7 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── chips/            # Amps, Augments, Overclocks system — registry, effect types, observer-based application; EvolutionRegistry for evolution recipes
+├── chips/            # Chip system — template loading, unified TriggerChain effects, observer-based application; EvolutionRegistry for evolution recipes
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
 ├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker, highlight detection (10 systems), spawn_highlight_text juice
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
@@ -86,7 +86,7 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 - **bolt** (collision systems) reads `Piercing`, `PiercingRemaining`, `DamageBoost` (chips domain) from bolt entities, `CellHealth`, `CellWidth`, `CellHeight` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
 - **cells** reads `DamageBoost` (chips domain) from bolt entities in `handle_cell_hit`.
-- **breaker** reads `WidthBoost`, `TiltControlBoost`, `BreakerSpeedBoost`, `BumpForceBoost` (chips domain) from its own entity.
+- **breaker** reads `TiltControlBoost`, `BreakerSpeedBoost`, `BumpForceBoost` (chips domain) from its own entity.
 - **behaviors** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltHitCell`, `BoltHitBreaker`, `BoltHitWall`, `BoltLost` (bolt domain), and `CellDestroyed` (cells domain) messages in bridge systems.
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the sole exception (read AND write, compiled out of release builds).

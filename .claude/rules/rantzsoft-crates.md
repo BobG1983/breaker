@@ -4,7 +4,7 @@
 
 `rantzsoft_*` crates must contain **ZERO** game-specific code:
 
-- No references to bolt, breaker, cell, node, bump, flux, or any game vocabulary from `docs/design/terminology.md`
+- No references to bolt, breaker, cell, node, bump, flux, or any game vocabulary from `docs/design/terminology/`
 - No references to `breaker-game` types, messages, or resources
 - No game-specific enums, constants, or configurations
 - Only generic 2D spatial/physics/config types and systems

@@ -12,12 +12,11 @@
 
 ## Scope
 
-Phase 4 (vertical slice) targets 3-4 evolutions across mixed chip kinds:
-- Amp + Amp -> evolved Amp
-- Augment + Augment -> evolved Augment
-- Amp + Overclock -> evolved Overclock (cross-kind)
+Phase 4 (vertical slice) targets 3-4 evolutions across mixed chip combinations:
+- Passive + Passive -> evolved chip
+- Passive + Triggered -> evolved chip (cross-type)
 
-This proves the architecture handles same-kind and cross-kind evolutions.
+This proves the architecture handles same-type and cross-type evolutions.
 
 ## Rationale
 

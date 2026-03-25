@@ -16,7 +16,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 ## First Step — Always
 
 1. Read `CLAUDE.md` for project conventions
-2. Read `docs/design/terminology.md` for required vocabulary
+2. Read `docs/design/terminology/` for required vocabulary
 3. Read `docs/architecture/layout.md` for domain structure
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards

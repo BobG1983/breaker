@@ -17,7 +17,7 @@ You receive an **implementation spec** from the orchestrating agent that identif
 
 1. Read `CLAUDE.md` for project conventions
 2. Read `.claude/rules/tdd.md` for TDD cycle boundaries (you are the GREEN phase)
-3. Read `docs/design/terminology.md` for required vocabulary
+3. Read `docs/design/terminology/` for required vocabulary
 4. Read `docs/architecture/layout.md` for domain folder structure
 5. Read `docs/architecture/messages.md` for inter-domain communication patterns
 6. Read `docs/architecture/standards.md` for code standards

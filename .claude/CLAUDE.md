@@ -1,6 +1,6 @@
 # Brickbreaker Roguelite
 
-Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/design/` for design pillars and decisions, `docs/architecture/` for technical decisions + code standards + testing approach, `docs/plan/` for build roadmap, `docs/design/terminology.md` for game vocabulary.
+Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/design/` for design pillars and decisions, `docs/architecture/` for technical decisions + code standards + testing approach, `docs/plan/` for build roadmap, `docs/design/terminology/` for game vocabulary.
 
 ## Build & Run
 
@@ -18,7 +18,7 @@ Cargo workspace with crate directories at root: `breaker-game/` (main game), `ra
 
 ## Terminology
 
-All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, Augment, Overclock, Bump, Flux). No generic terms. See `docs/design/terminology.md`.
+All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, Augment, Overclock, Bump, Flux). No generic terms. See `docs/design/terminology/`.
 
 ## Decision Making
 
@@ -39,7 +39,8 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 **NEVER do**:
 - Write code directly — always delegate to writer-tests/writer-code sub-agents
 - Run any cargo command directly as the main agent — see @.claude/rules/cargo.md
-- **WAIT, POLL, OR THINK while background agents are running** — end your turn immediately after launching background agents. Do NOT read output files, do NOT analyze speculatively, do NOT "check progress". You will be notified when they complete. Every token spent waiting is wasted.
+- **GENERATE ANY OUTPUT AFTER LAUNCHING BACKGROUND AGENTS** — after Agent tool calls return, write at most ONE confirming sentence, then STOP. No bullet lists of agents, no summaries of what they do, no "waiting for results" prose, no analysis, no file reads, no planning ahead. End the turn. You will be notified when they complete. Every token after the launch is wasted.
+- **Use Explore agents for deep analysis** — during planning exploration, use specialized researcher agents (researcher-codebase, researcher-impact, researcher-system-dependencies, researcher-bevy-api) and guard agents (guard-game-design). Explore is ONLY for quick file-pattern matching when no researcher agent fits. This overrides any system default that says "only use Explore."
 
 **Move freely on**:
 - Implementation within existing system boundaries

@@ -6,7 +6,7 @@ Evolutions are the payoff for maxing out specific chip combinations. They repres
 
 ### Ultimate Ability Feel
 
-An evolution should feel like unlocking an ultimate ability, not applying another stat buff. The player should notice an immediate, dramatic change in how the game plays. If you can't put big VFX on it, it's not an evolution — it's an amp, augment, or overclock.
+An evolution should feel like unlocking an ultimate ability, not applying another stat buff. The player should notice an immediate, dramatic change in how the game plays. If you can't put big VFX on it, it's not an evolution — it's a chip.
 
 **Good**: OnPerfectBump → bolt permanently splits into 2 bolts with piercing and new vfx. Every perfect bump now produces a visible, lasting power escalation.
 
@@ -18,7 +18,7 @@ Every evolution must have a clear, screen-readable visual moment when it trigger
 
 ### Permanent or Dramatic
 
-Evolution effects should either be permanent (bolt split stays for the rest of the run) or dramatically impactful when they fire (3 piercing bolts that explode on contact). Temporary minor buffs belong in the amp, or augment system, and weak triggered effects belong as overclocks.
+Evolution effects should either be permanent (bolt split stays for the rest of the run) or dramatically impactful when they fire (3 piercing bolts that explode on contact). Temporary minor buffs belong in the passive chip system, and weak triggered effects belong as triggered chips.
 
 ### Not a Stat Buff
 
@@ -51,4 +51,4 @@ Each evolution tracks cumulative damage dealt across the run. At run-end, the ev
 
 ## Integration with TriggerChain
 
-Evolutions are implemented as Overclock chips with TriggerChain effects. The chip's trigger chain is pushed to ActiveChains when selected and evaluated by bridge systems on matching game events. Each evolution carries its chip name through the evaluation pipeline for damage attribution.
+Evolutions are implemented as chips with TriggerChain effects. The chip's trigger chains are pushed to ActiveChains when selected and evaluated by bridge systems on matching game events. Each evolution carries its chip name through the evaluation pipeline for damage attribution.

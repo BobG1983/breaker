@@ -3,7 +3,7 @@
 ## Context
 Building a roguelite Arkanoid clone in Bevy (Rust). Solo dev, architecture-first approach validated through a vertical slice. Stylized shader-driven visuals, custom physics, hybrid data model (mechanics in code, content in data files), audio planned from the start.
 
-See `../design/` for core design principles and decisions, `../architecture/` for technical decisions, and `../design/terminology.md` for game vocabulary.
+See `../design/` for core design principles and decisions, `../architecture/` for technical decisions, and `../design/terminology/` for game vocabulary.
 
 ## Phases
 
@@ -72,6 +72,8 @@ Documented in full at `../design/decisions/`. Summary:
 | Node escalation | Procedural tiers from seed, passive -> active -> boss cadence | [node-escalation.md](../design/decisions/node-escalation.md) |
 | Seeded determinism | Phase 4. Run seed drives all randomness | [seeded-determinism.md](../design/decisions/seeded-determinism.md) |
 | Chip synergies | 30%+ chips must interact with other chips' effects. Web, not list | [chip-synergies.md](../design/decisions/chip-synergies.md) |
+| Chip templates | One RON file per chip concept with per-rarity slots, shared max_taken | [chip-template-system.md](../design/decisions/chip-template-system.md) |
+| Chip rarity | Design Rare first, derive weaker Common/Uncommon; Legendaries are niche max:1 | [chip-rarity-rework.md](../design/decisions/chip-rarity-rework.md) |
 | Breaker archetypes | Proof-of-concept designs, system flexibility over final balance | [breaker-archetypes.md](../design/decisions/breaker-archetypes.md) |
 | Workspace structure | Axum-style — `breaker-game/`, `rantzsoft_spatial2d/`, `rantzsoft_physics2d/`, `rantzsoft_defaults/`, `rantzsoft_defaults_derive/`, `breaker-scenario-runner/` as peer directories |
 | Scenario runner | Separate crate with argh CLI. Visual + headless modes. RON scenario files crate-local |

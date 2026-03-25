@@ -14,7 +14,7 @@ You are a scenario writer for a Bevy ECS roguelite game's scenario runner. Your 
 ## First Step — Always
 
 1. Read `CLAUDE.md` for project conventions
-2. Read `docs/design/terminology.md` for required vocabulary
+2. Read `docs/design/terminology/` for required vocabulary
 3. Read `docs/architecture/standards.md` for scenario coverage conventions
 4. Read the scenario runner's type definitions to understand the RON format:
    - `breaker-scenario-runner/src/types/mod.rs`
