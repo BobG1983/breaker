@@ -29,6 +29,20 @@ type: reference
 - `MutationKind` — enum of mutation operations: `SetBreakerState`, `SetTimerRemaining`, `SpawnExtraEntities`, `MoveBolt`, `TogglePause`
 - Added to `docs/design/terminology.md`
 
+## Terminology Additions (2026-03-25, C7-R Effect Domain)
+- `EffectNode` — 4-variant tree enum (`When`, `Do`, `Until`, `Once`) in `effect/definition.rs`; replaces role of `TriggerChain` for breakers and chips
+- `Effect` — leaf enum in `effect/definition.rs` with ~20 variants (triggered + passive)
+- `Trigger` — enum in `effect/definition.rs`; Rust variants are unprefixed (`PerfectBump`, `Bump`); serde renames keep RON syntax backward-compat (`OnPerfectBump` in RON)
+- `ActiveEffects` — resource `Vec<(Option<String>, EffectNode)>` in `effect/active.rs`; global breaker+chip triggered chains
+- `ArmedEffects` — component on bolt entities; partially-resolved `When` trees waiting for deeper trigger
+- `EffectSystems::Bridge` — system set in `effect/sets.rs`; replaces `BehaviorSystems::Bridge`
+- `EffectPlugin` — top-level domain plugin replacing `BehaviorsPlugin`; `effect/` domain registered in `game.rs`
+- `NoBump` — trigger variant: bolt passed breaker without bump attempt
+- `PerfectBumped`, `Bumped`, `EarlyBumped`, `LateBumped` — bolt-perspective variants of bump triggers (post-bump events on bolt entity, distinct from `PerfectBump` etc. on breaker)
+- `fire_typed_event` / `fire_passive_event` — dispatch helpers in `effect/typed_events.rs`; convert `Effect` to typed observer events
+- `NodeTimerThreshold(f32)` — trigger variant: fires when node timer ratio drops below threshold
+- All added to `docs/design/triggers-and-effects.md` trigger table (2026-03-25)
+
 ## Terminology Additions (2026-03-24, Spatial/Physics Extraction)
 - `Position2D` — canonical 2D position from rantzsoft_spatial2d; Transform is derived, never written directly
 - `Velocity2D` / `ApplyVelocity` — velocity component and opt-in marker for `apply_velocity`

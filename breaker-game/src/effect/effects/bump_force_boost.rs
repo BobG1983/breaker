@@ -244,11 +244,7 @@ mod tests {
 
         tick(&mut app);
 
-        let b = app
-            .world()
-            .entity(breaker)
-            .get::<BumpForceBoost>()
-            .unwrap();
+        let b = app.world().entity(breaker).get::<BumpForceBoost>().unwrap();
         assert!(
             (b.0 - 25.0).abs() < f32::EPSILON,
             "BumpForceBoost should be recalculated to 25.0 (sum of [10.0, 15.0]), got {}",
@@ -266,20 +262,12 @@ mod tests {
 
         let breaker = app
             .world_mut()
-            .spawn((
-                Breaker,
-                BumpForceBoost(20.0),
-                ActiveBumpForces(vec![]),
-            ))
+            .spawn((Breaker, BumpForceBoost(20.0), ActiveBumpForces(vec![])))
             .id();
 
         tick(&mut app);
 
-        let b = app
-            .world()
-            .entity(breaker)
-            .get::<BumpForceBoost>()
-            .unwrap();
+        let b = app.world().entity(breaker).get::<BumpForceBoost>().unwrap();
         assert!(
             (b.0).abs() < f32::EPSILON,
             "BumpForceBoost should be 0.0 with empty ActiveBumpForces, got {}",

@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use super::stack_f32;
 use crate::{
-    bolt::components::Bolt, chips::components::AttractionForce,
-    effect::definition::AttractionType,
+    bolt::components::Bolt, chips::components::AttractionForce, effect::definition::AttractionType,
 };
 
 // ---------------------------------------------------------------------------

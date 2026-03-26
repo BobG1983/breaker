@@ -32,7 +32,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::BoltLost` | `bolt/sets.rs` | `bolt_lost` |
 | `rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree` | `rantzsoft_physics2d/src/plugin.rs` | `maintain_quadtree` (incremental quadtree update — game collision systems order `.after` this) |
 | `rantzsoft_physics2d::PhysicsSystems::EnforceDistanceConstraints` | `rantzsoft_physics2d/src/plugin.rs` | `enforce_distance_constraints` in external crate (game-level `bolt::enforce_distance_constraints` also uses this name — intra-domain) |
-| `BehaviorSystems::Bridge` | `behaviors/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed` |
+| `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_death`, `bridge_bolt_death`, `bridge_timer_threshold` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
@@ -66,17 +66,17 @@ The actual cross-domain ordering constraints in the codebase:
 ### OnEnter(GameState::Playing)
 
 ```
-apply_archetype_config_overrides       [behaviors domain]
+apply_breaker_config_overrides         [effect domain]
   .before(BreakerSystems::InitParams)
     BreakerSystems::InitParams
     (init_breaker_params)              [breaker domain]
-      <- init_archetype .after(BreakerSystems::InitParams)   [behaviors domain]
+      <- init_breaker .after(BreakerSystems::InitParams)     [effect domain]
       <- reset_breaker .after(BreakerSystems::InitParams)
          BreakerSystems::Reset                                [breaker domain]
       <- UiSystems::SpawnTimerHud
          (spawn_timer_hud)             [ui domain]
-           <- spawn_lives_display .after(init_archetype)
-                                  .after(UiSystems::SpawnTimerHud)  [behaviors domain]
+           <- spawn_lives_display .after(init_breaker)
+                                  .after(UiSystems::SpawnTimerHud)  [effect domain]
 
 spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
   BoltSystems::InitParams
@@ -109,29 +109,35 @@ BreakerSystems::Move
               BreakerSystems::GradeBump
                 <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
                 <- bridge_bump .after(BreakerSystems::GradeBump)
-                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                   .in_set(EffectSystems::Bridge)              [effect domain]
                 <- bridge_bump_whiff .after(BreakerSystems::GradeBump)
-                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                   .in_set(EffectSystems::Bridge)              [effect domain]
+                <- bridge_no_bump .after(bridge_breaker_impact).after(bridge_bump)
+                   .in_set(EffectSystems::Bridge)              [effect domain]
                 <- bridge_cell_impact .after(BoltSystems::BreakerCollision)
-                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                   .in_set(EffectSystems::Bridge)              [effect domain]
                 <- bridge_breaker_impact .after(BoltSystems::BreakerCollision)
-                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                   .in_set(EffectSystems::Bridge)              [effect domain]
                 <- bridge_wall_impact .after(BoltSystems::BreakerCollision)
-                   .in_set(BehaviorSystems::Bridge)              [behaviors domain]
+                   .in_set(EffectSystems::Bridge)              [effect domain]
             <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
             <- enforce_distance_constraints .after(clamp_bolt_to_playfield)  [bolt domain]
             <- bolt_lost .after(enforce_distance_constraints)
               BoltSystems::BoltLost
                 <- bridge_bolt_lost .after(BoltSystems::BoltLost)
-                   .in_set(BehaviorSystems::Bridge)          [behaviors domain]
+                   .in_set(EffectSystems::Bridge)          [effect domain]
                 <- break_chain_on_bolt_lost .after(BoltSystems::BoltLost)  [bolt domain]
-            <- bridge_cell_destroyed .in_set(BehaviorSystems::Bridge)
-               [behaviors domain, unordered relative to physics chain]
-            <- spawn_additional_bolt .after(BehaviorSystems::Bridge)  [bolt domain]
-            <- spawn_chain_bolt .after(BehaviorSystems::Bridge)       [bolt domain]
+            <- bridge_cell_death .in_set(EffectSystems::Bridge)
+               [effect domain, unordered relative to physics chain]
+            <- bridge_bolt_death .in_set(EffectSystems::Bridge)
+               [effect domain, unordered relative to physics chain]
+            <- bridge_timer_threshold .in_set(EffectSystems::Bridge)
+               [effect domain, unordered relative to physics chain]
+            <- spawn_additional_bolt .after(EffectSystems::Bridge)  [bolt domain]
+            <- spawn_chain_bolt .after(EffectSystems::Bridge)       [bolt domain]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted), then breaker moves, then bolt velocity is prepared, then cell collisions run (reading quadtree for broad-phase), then breaker collision (tagged `BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All behavior bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_bolt_lost`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`) run in `BehaviorSystems::Bridge` (exported from `behaviors/sets.rs`) — downstream consumers order `.after(BehaviorSystems::Bridge)`.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted), then breaker moves, then bolt velocity is prepared, then cell collisions run (reading quadtree for broad-phase), then breaker collision (tagged `BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_bolt_lost`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_death`, `bridge_bolt_death`, `bridge_timer_threshold`) run in `EffectSystems::Bridge` (exported from `effect/sets.rs`) — downstream consumers order `.after(EffectSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion

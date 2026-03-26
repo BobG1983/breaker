@@ -94,9 +94,7 @@ pub(crate) fn increment_ramping_damage(
 
 /// Registers all observers and systems for the ramping damage effect.
 pub(crate) fn register(app: &mut App) {
-    use crate::{
-        breaker::BreakerSystems, effect::sets::EffectSystems, shared::PlayingState,
-    };
+    use crate::{breaker::BreakerSystems, effect::sets::EffectSystems, shared::PlayingState};
 
     app.add_observer(handle_ramping_damage);
 

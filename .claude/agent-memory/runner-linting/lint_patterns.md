@@ -151,6 +151,15 @@ type: reference
 - `unnecessary_struct_initialization` warning (quadtree.rs:118): building `TreeConfig { max_items_per_leaf: cfg.max_items_per_leaf, ... }` where all fields copy from `cfg` — replace with just `cfg`. Nursery lint, warning only.
 - `redundant_clone` warning (constraint.rs:63): `let cloned = original.clone()` where `cloned` is never read after the clone. Nursery lint, warning only.
 
+## New as of 2026-03-25f (feature/spatial-physics-extraction — full lint verification, all PASS)
+- No errors in any crate. All warnings are nursery/restriction lints.
+- New `unused_imports` warnings in `effect/` domain (forward-declared for future wiring): `super::triggers::*` (bridges.rs:6), `BreakerStatOverrides` (definition.rs:415), `ImpactTarget` (evaluate.rs:6), `apply_breaker_config_overrides`/`init_breaker` (init.rs:9), `EffectNode` (triggers/on_bump.rs:13, triggers/on_impact.rs:10), `apply_once_nodes` (triggers/mod.rs:14), `Target`/`SpawnBoltFired` (typed_events.rs), `NodeEvalResult` (active.rs:38), `EffectTarget` (entropy_engine.rs:130). All warning-only.
+- New `unused_imports` in `bolt/queries.rs:13` (`TiltControlBoost`, `WidthBoost`) and `breaker/systems/mod.rs:21` (`apply_stat_overrides`) and `breaker/mod.rs:14` (`BreakerDefinition`) and `bolt/systems/spawn_chain_bolt.rs:105` (`Aabb2D`). Warning-only.
+- New `dead_code` warnings in typed effect event structs across `effect/effects/` — `chip_name`, `targets`, `source_chip`, `arcs`, `range`, `damage_mult`, `strength`, `duration`, `radius`, `max`, `invuln_secs`, `count`, `lifespan`, `inherit`, `damage_mult`, `width`, `max_active`, `max_stacks` fields. All forward-declared, warning-only.
+- New `dead_code` warnings: `apply_once_nodes` function (effect/triggers/on_death.rs:118), `tick` function (effect/effects/random_effect.rs:121), `multiplier` method (effect/effects/damage_boost.rs:46), `WallSize.half_width`/`half_height` (wall/components.rs:20). Warning-only.
+- New `unreachable_pub` warnings (4 total): `bolt_size_boost.rs:75` (`total`), `bump_force_boost.rs:70` (`total`), `damage_boost.rs:46` (`multiplier`), `piercing.rs:88` (`total`) — all `pub` methods that should be `pub(crate)`. Warning-only.
+- Scenario runner new warning: `lifecycle/mod.rs:392` — `too_long_first_doc_paragraph` on `apply_debug_frame_mutations`. Nursery, warning-only.
+
 ## New as of 2026-03-25b (feature/spatial-physics-extraction — post-clippy-fix verification)
 - `E0107` compile errors (run/systems/detect_combo_and_pinball.rs:14,15,16): `MessageReader<'w, CellDestroyedAt>` etc. use only 1 lifetime arg — `MessageReader` in Bevy 0.18.1 takes `'w` and `'s`. Compiler hint says to add `'w` as second arg: `MessageReader<'w, 'w, CellDestroyedAt>`. This is inside a `#[derive(SystemParam)]` struct `ComboReaders<'w>`. Fix: change all three fields to `MessageReader<'w, 'w, T>`. Three errors, same file, same pattern. Sole blocking error this session — all other errors/warnings are carry-overs from prior sessions already logged.
 

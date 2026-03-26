@@ -4,10 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::messages::BoltHitBreaker,
-    breaker::{
-        components::Breaker,
-        messages::BumpPerformed,
-    },
+    breaker::{components::Breaker, messages::BumpPerformed},
     effect::{
         active::ActiveEffects,
         definition::{EffectChains, Trigger},

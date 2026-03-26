@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use super::stack_f32;
-use crate::{
-    bolt::components::Bolt, chips::components::BoltSizeBoost,
-    effect::definition::Target,
-};
+use crate::{bolt::components::Bolt, chips::components::BoltSizeBoost, effect::definition::Target};
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -201,10 +198,7 @@ mod tests {
     #[test]
     fn handle_bolt_size_boost_pushes_to_active_size_boosts() {
         let mut app = test_app();
-        let bolt = app
-            .world_mut()
-            .spawn((Bolt, ActiveSizeBoosts(vec![])))
-            .id();
+        let bolt = app.world_mut().spawn((Bolt, ActiveSizeBoosts(vec![]))).id();
 
         app.world_mut().commands().trigger(SizeBoostApplied {
             target: crate::effect::definition::Target::Bolt,
@@ -249,11 +243,7 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn((
-                Bolt,
-                BoltSizeBoost(99.0),
-                ActiveSizeBoosts(vec![0.5, 0.3]),
-            ))
+            .spawn((Bolt, BoltSizeBoost(99.0), ActiveSizeBoosts(vec![0.5, 0.3])))
             .id();
 
         tick(&mut app);
@@ -276,11 +266,7 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn((
-                Bolt,
-                BoltSizeBoost(1.0),
-                ActiveSizeBoosts(vec![]),
-            ))
+            .spawn((Bolt, BoltSizeBoost(1.0), ActiveSizeBoosts(vec![])))
             .id();
 
         tick(&mut app);

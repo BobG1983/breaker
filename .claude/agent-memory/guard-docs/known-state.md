@@ -61,7 +61,7 @@ type: reference
 - `HighlightConfig` is `init_resource`'d in `RunPlugin.build()` — uses `Default` impl (matches `defaults.highlights.ron` values). Fields: clutch_clear_secs, fast_clear_fraction, perfect_streak_count, mass_destruction_count, mass_destruction_window_secs, combo_king_cells, pinball_wizard_bounces, speed_demon_secs, close_save_pixels, comeback_bolts_lost, nail_biter_pixels, untouchable_nodes, highlight_cap
 - `HighlightTriggered { kind: HighlightKind }` message in `run/messages.rs` — registered by `RunPlugin`; emitted by all detection systems; consumed by `spawn_highlight_text` for in-game popups
 - Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`, `detect_mass_destruction`, `detect_close_save`, `detect_combo_and_pinball`, `detect_nail_biter`
-- `detect_close_save` is `.after(BoltSystems::BreakerCollision)` (needs post-collision bolt position)
+- `detect_close_save` is `.after(BreakerSystems::GradeBump)` (updated in C7-R; previously was .after(BoltSystems::BreakerCollision))
 - `detect_nail_biter` is `.after(NodeSystems::TrackCompletion)` (fires on node clear)
 - `track_chips_collected` + `detect_first_evolution` run in `Update` during `GameState::ChipSelect`
 - `reset_highlight_tracker` + `capture_run_seed` run on `OnEnter(GameState::Playing)` — both unordered
@@ -227,6 +227,71 @@ type: reference
 - `DrawLayer` trait + `GameDrawLayer` enum in `shared/` sets Transform.translation.z
 - `Aabb2D` has `#[require(Spatial2D)]` — spawning Aabb2D auto-inserts all spatial components
 
+## C7-R Effect Domain Architecture (2026-03-25, do not re-flag)
+
+### behaviors/ → effect/ domain rename
+- `behaviors/` domain DELETED. Replaced by `effect/` top-level domain.
+- `BehaviorsPlugin` → `EffectPlugin` (in `effect/plugin.rs`)
+- `BehaviorSystems::Bridge` → `EffectSystems::Bridge` (in `effect/sets.rs`)
+- `ActiveChains(Vec<TriggerChain>)` → `ActiveEffects(Vec<(Option<String>, EffectNode)>)` (in `effect/active.rs`)
+- `ArmedTriggers` → `ArmedEffects` (in `effect/armed.rs`)
+- `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` DELETED → replaced by typed per-effect events (ShockwaveFired, LoseLifeFired, etc.) dispatched via `fire_typed_event` in `typed_events.rs`
+- `behaviors/bridges.rs` → `effect/triggers/` (on_bolt_lost, on_bump, on_no_bump, on_impact, on_death, on_timer)
+- `behaviors/effects/` → `effect/effects/` (~20 files, each with `register(app)`)
+- `behaviors/evaluate.rs` → `effect/evaluate.rs` (`TriggerKind` deleted — `Trigger` enum used directly)
+- `behaviors/events.rs` → `effect/typed_events.rs` (complete redesign)
+- `behaviors/active.rs` → `effect/active.rs`
+- `behaviors/armed.rs` → `effect/armed.rs`
+- `helpers.rs` (new in `effect/`) — shared bridge helpers
+
+### BreakerDefinition / BreakerRegistry moved
+- `effect/definition.rs` no longer owns `BreakerDefinition`
+- `BreakerDefinition` → `breaker/definition.rs` (canonical; uses `EffectNode` directly)
+- `BreakerRegistry` → `breaker/registry.rs` (canonical; re-exported from `effect/`)
+- `init_breaker` → `breaker/systems/init_breaker.rs`
+- `apply_breaker_config_overrides` → `breaker/systems/init_breaker.rs`
+
+### New triggers added
+- `NoBump` — bolt passed breaker without bump attempt; owner: breaker
+- `PerfectBumped`, `Bumped`, `EarlyBumped`, `LateBumped` — bolt-perspective post-bump triggers; owner: specific bolt
+- `NodeTimerThreshold(f32)` — fires when node timer ratio drops below threshold
+
+### New bridge systems added
+- `bridge_no_bump` (in `effect/triggers/on_no_bump.rs`)
+- `bridge_cell_death`, `bridge_bolt_death`, `cleanup_destroyed_cells`, `cleanup_destroyed_bolts`, `apply_once_nodes` (in `effect/triggers/on_death.rs`)
+- `bridge_timer_threshold` (in `effect/triggers/on_timer.rs`)
+
+### EffectNode/Effect split
+- `EffectNode` (the tree): 4 variants: `When`, `Do`, `Until`, `Once` — NO `On` variant
+- `Effect` (the leaf enum): ~20 variants covering triggered + passive effects
+- `EffectChains` component exists (entity-local chains); `ActiveEffects` resource also exists (global breaker+chip chains)
+- `RootEffect` DOES NOT EXIST — was a forward-looking design not implemented
+- `ChipDefinition.effects: Vec<EffectNode>` (not Vec<TriggerChain>, not Vec<RootEffect>)
+- `BreakerDefinition` has named fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump: Option<EffectNode>`) + `chains: Vec<EffectNode>` — no `effects` field
+
+### run/highlights/ sub-domain
+- `run/highlights/systems/` holds: `detect_close_save`, `detect_combo_king`, `detect_mass_destruction`, `detect_pinball_wizard`
+- Previously at `run/systems/detect_*.rs`; now moved to highlight sub-domain
+- `detect_combo_and_pinball.rs` split into `detect_combo_king.rs` + `detect_pinball_wizard.rs`
+- `detect_close_save` now orders `.after(BreakerSystems::GradeBump)` (not `.after(BoltSystems::BreakerCollision)`)
+- `spawn_highlight_text` IS registered in RunPlugin (Update, PlayingState::Active)
+- `HighlightConfig` IS init_resource'd in RunPlugin
+
+### RampingDamage max_bonus removed
+- `RampingDamage` now only has `bonus_per_hit: f32` — no `max_bonus` field
+
+### TriggerChain still exists in chips/definition.rs
+- `TriggerChain` enum in `chips/definition.rs` is a legacy/parallel chip-side tree (using `On*` wrappers)
+- `ChipDefinition.effects: Vec<EffectNode>` (not Vec<TriggerChain>) — chips have migrated to EffectNode
+- Do NOT re-flag `TriggerChain` in chips/definition.rs as drift — it may be used by the chip dispatch pipeline
+
+### Three Effect Stores (do not re-flag after 2026-03-25 fix)
+- `ActiveEffects` — global Resource, populated by `init_breaker` and `dispatch_chip_effects`. Bridge helpers sweep for global triggers.
+- `ArmedEffects` — component on bolt entities. Partially-resolved When trees awaiting deeper trigger.
+- `EffectChains` — component on individual entities. Entity-local chains (used for Once/SecondWind-style effects on cells/bolts).
+- NOTE: `effect/definition.rs` code comment on `EffectChains` is misleading — says "Replaces both `ActiveEffects` and `ArmedEffects`" but that's wrong; all three types coexist. This is a code comment error (cannot be fixed by docs guard). Documentation has been corrected to accurately describe the three-store model.
+- RON chip files use shorthand `OnSelected([...])` syntax (serde alias) rather than `When(trigger: OnSelected, then: [...])` — both are valid; doc examples show both forms intentionally.
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table
@@ -236,3 +301,5 @@ type: reference
 - CellTypeDefinition.hp field: always `f32` (not `u32`) — check content.md and data.md on each wave
 - `standards.md` scenario runner section: use `cargo scenario` alias (not `dscenario`) for all standard usage; runner is headless by default (`--visual` to open window, no `--headless` flag)
 - New chip effect observers land in `chips/effects/` but content.md covers them via the flat component list — don't re-flag observer names as missing unless new component types are added
+- Effect domain uses `EffectSystems::Bridge` (not `BehaviorSystems::Bridge`) — check ordering.md and messages.md after any bridge refactor
+- `TriggerChain` in chips/definition.rs coexists with `EffectNode` in effect/definition.rs — these are separate types serving different subsystems; don't flag as redundancy

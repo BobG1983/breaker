@@ -1,13 +1,13 @@
 //! Breaker initialization re-exports (canonical location: `breaker/systems/init_breaker.rs`).
 
 // Re-export production functions (canonical location: breaker/systems/init_breaker.rs)
-pub(crate) use crate::breaker::systems::init_breaker::{
-    apply_breaker_config_overrides, apply_stat_overrides, init_breaker,
-};
-
 // Re-exports for test module compatibility (tests use `super::*`)
 #[cfg(test)]
 pub(crate) use bevy::prelude::*;
+
+pub(crate) use crate::breaker::systems::init_breaker::{
+    apply_breaker_config_overrides, apply_stat_overrides, init_breaker,
+};
 #[cfg(test)]
 pub(crate) use crate::{
     breaker::{
@@ -15,10 +15,7 @@ pub(crate) use crate::{
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
-    effect::{
-        active::ActiveEffects,
-        effects::life_lost::LivesCount,
-    },
+    effect::{active::ActiveEffects, effects::life_lost::LivesCount},
     shared::SelectedBreaker,
 };
 

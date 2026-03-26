@@ -3,15 +3,14 @@
 use bevy::prelude::*;
 
 use super::{
-    effects,
-    triggers::{
-        bridge_bolt_death, bridge_bolt_lost, bridge_breaker_impact, bridge_bump,
-        bridge_bump_whiff, bridge_cell_death, bridge_cell_impact, bridge_no_bump,
-        bridge_timer_threshold, bridge_wall_impact, cleanup_destroyed_bolts,
-        cleanup_destroyed_cells,
-    },
     effect_nodes::until::{check_until_triggers, tick_until_timers},
+    effects,
     sets::EffectSystems,
+    triggers::{
+        bridge_bolt_death, bridge_bolt_lost, bridge_breaker_impact, bridge_bump, bridge_bump_whiff,
+        bridge_cell_death, bridge_cell_impact, bridge_no_bump, bridge_timer_threshold,
+        bridge_wall_impact, cleanup_destroyed_bolts, cleanup_destroyed_cells,
+    },
 };
 use crate::{
     bolt::BoltSystems,

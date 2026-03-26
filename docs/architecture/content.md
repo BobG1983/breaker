@@ -4,7 +4,7 @@
 
 ## Chip Content System
 
-All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers all chips. Every chip effect — whether passive (applied on selection) or triggered (fired on game events) — is expressed as a `TriggerChain` variant. There is no separate `ChipEffect`, `AmpEffect`, or `AugmentEffect` enum.
+All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers all chips. Every chip effect — whether passive (applied on selection) or triggered (fired on game events) — is expressed as an `EffectNode` tree. There is no separate `ChipEffect`, `AmpEffect`, or `AugmentEffect` enum.
 
 ### Template-Based Authoring
 
@@ -29,61 +29,71 @@ See `docs/design/decisions/chip-template-system.md` for the full design decision
 ### Unified Effect Model
 
 ```rust
-// chips/definition.rs
+// effect/definition.rs (canonical location for Effect types)
 
-// ALL chip effects are TriggerChain variants — no wrapper enums
-pub enum TriggerChain {
-    // Trigger wrappers (nest inner chains)
-    OnPerfectBump(Box<TriggerChain>),
-    OnBump(Box<TriggerChain>),        // was OnBumpSuccess
-    OnImpact(ImpactTarget, Box<TriggerChain>),
-    OnCellDestroyed(Box<TriggerChain>),
-    OnBoltLost(Box<TriggerChain>),
-    OnSelected(Vec<TriggerChain>),     // passive — immediate on chip selection
+// ALL chip and breaker effects are EffectNode trees — no wrapper enums
+pub enum EffectNode {
+    When { trigger: Trigger, then: Vec<EffectNode> },  // trigger gate
+    Do(Effect),                                          // leaf action
+    Until { until: Trigger, then: Vec<EffectNode> },   // conditional removal
+    Once(Vec<EffectNode>),                              // one-shot fire
+}
 
-    // Leaf effects — passive (via OnSelected)
+pub enum Trigger {
+    PerfectBump, Bump, EarlyBump, LateBump, BumpWhiff, NoBump,
+    PerfectBumped, Bumped, EarlyBumped, LateBumped,
+    Impact(ImpactTarget), CellDestroyed, BoltLost, Death,
+    Selected, TimeExpires(f32), NodeTimerThreshold(f32),
+    // serde renames keep RON files backward-compatible (e.g., OnPerfectBump → PerfectBump)
+}
+
+pub enum Effect {
+    // Passive effects (via OnSelected / When(Selected, ...))
     Piercing(u32),
     DamageBoost(f32),
-    SpeedBoost(Target, f32),           // Target: Bolt | Breaker | AllBolts
+    SpeedBoost { target: Target, multiplier: f32 },
     ChainHit(u32),
     SizeBoost(Target, f32),            // Bolt = radius, Breaker = width
-    Attraction(f32),
+    Attraction(AttractionType, f32),
     BumpForce(f32),
     TiltControl(f32),
+    RampingDamage { bonus_per_hit: f32 },  // no max_bonus — uncapped accumulation
 
-    // Leaf effects — triggered (via bridge systems)
-    Shockwave { base_range: f32, range_per_level: f32, stacks: u32 },
+    // Triggered effects (via bridge systems)
+    Shockwave { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
     ChainBolt { tether_distance: f32 },
     LoseLife,
     TimePenalty { seconds: f32 },
-    SpawnBolt,
-    RandomEffect(Vec<(f32, TriggerChain)>),
-    EntropyEngine(u32, Vec<(f32, TriggerChain)>),
-    RampingDamage { bonus_per_hit: f32, max_bonus: f32 },
-    TimedSpeedBurst { speed_mult: f32, duration_secs: f32 },
-    // ...
+    SpawnBolts { count: u32, lifespan: Option<f32>, inherit: bool },
+    SpeedBoost { target: Target, multiplier: f32 },
+    RandomEffect(Vec<(f32, EffectNode)>),
+    EntropyEngine { threshold: u32, pool: Vec<(f32, EffectNode)> },
+    // ... (see effect/definition.rs for full list)
 }
 
 pub enum Target { Bolt, Breaker, AllBolts }
+pub enum ImpactTarget { Cell, Breaker, Wall }
+pub enum AttractionType { Cell, Wall, Breaker }
 
-// Content instance — data-driven, no recompile to add
+// chips/definition.rs — chip content uses EffectNode directly
 #[derive(Asset, TypePath, Deserialize)]
 pub struct ChipDefinition {
     pub name: String,
     pub description: String,
     pub rarity: Rarity,
-    pub max_taken: u32,
-    pub effects: Vec<TriggerChain>,
-    pub template_name: Option<String>,  // back-ref for shared max enforcement
+    pub max_stacks: u32,              // renamed from max_taken
+    pub effects: Vec<EffectNode>,     // EffectNode trees (not TriggerChain)
+    pub ingredients: Option<Vec<EvolutionIngredient>>,
+    pub template_name: Option<String>,
 }
 ```
 
 ### Effect Application
 
-When a player selects a chip, `apply_chip_effect` dispatches based on the effect type:
+When a player selects a chip, `dispatch_chip_effects` dispatches based on the effect type:
 
-- **`OnSelected` chains**: Evaluated immediately. Each leaf in the vec fires a `ChipEffectApplied` observer event. Per-effect observer handlers in `chips/effects/` insert or update flat components on bolt or breaker entities.
-- **Other trigger chains** (OnPerfectBump, OnBump, etc.): Pushed to `ActiveChains` for evaluation by bridge systems on matching game events.
+- **`When(trigger: OnSelected, ...)` nodes**: Evaluated immediately. Each `Do(effect)` leaf fires a typed passive event (e.g., `PiercingApplied`, `DamageBoostApplied`) via `fire_passive_event`. Per-effect observer handlers in `effect/effects/` insert or update flat components on bolt or breaker entities.
+- **Other `EffectNode` trees** (When(OnPerfectBump, ...), Until(...), etc.): Pushed to `ActiveEffects` resource for evaluation by bridge systems on matching game events.
 
 ```rust
 // Passive effects land as flat components on entities
@@ -99,7 +109,7 @@ struct TiltControlBoost(pub f32);   // breaker: accumulated flat tilt sensitivit
 
 Stacking increments the existing component's value. Production systems query for these components directly — if absent, the system uses the base value.
 
-**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `TriggerChain` variant, requires recompile (appropriate — new behavior means new code).
+**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `Effect` variant in `effect/definition.rs` + new file in `effect/effects/` + `register()` call in `EffectPlugin`, requires recompile (appropriate — new behavior means new code).
 
 ### Registries
 

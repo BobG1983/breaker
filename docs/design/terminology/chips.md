@@ -29,8 +29,9 @@
 | **Do** | EffectNode variant — leaf effect. Terminal action in the tree. | `Do(Shockwave(...))`, `Do(DamageBoost(2.0))` |
 | **Until** | EffectNode variant — applies children, auto-removes when `until` trigger fires. Used for timed buffs (`TimeExpires(3.0)`), trigger-based removal (`OnImpact(Breaker)`). | `Until { until: TimeExpires(3.0), then: [Do(DamageBoost(2.0))] }` |
 | **Once** | EffectNode variant — fires children once ever, then permanently consumed from the chain. Used for SecondWind-style one-time saves. | `Once([Do(SecondWind(...))])` |
-| **EffectChains** | Component (`EffectChains(Vec<EffectNode>)`) attached to any entity (bolts, cells, breakers). Replaces both the old `ActiveEffects` resource and `ArmedEffects` component. Bridge systems evaluate each entity's chains based on triggers. | `EffectChains` |
-| **EffectFired** | Observer event fired by bridge systems when an `EffectNode` fully resolves to a `Do` leaf. Carries the leaf effect and an optional bolt entity | `EffectFired` |
+| **EffectChains** | Component (`EffectChains(Vec<EffectNode>)`) on individual entities (bolts, cells). Entity-local chains, evaluated by bridge systems based on triggers. | `EffectChains`, `effect/definition.rs` |
+| **ActiveEffects** | Global resource (`Vec<(Option<String>, EffectNode)>`) holding all breaker-definition and triggered-chip chains. Bridge helpers sweep it for global and breaker-owned triggers. | `ActiveEffects`, `effect/active.rs` |
+| **ArmedEffects** | Component on bolt entities holding partially-resolved `When` trees waiting for a deeper trigger. Consumed on Fire, replaced on re-Arm. | `ArmedEffects`, `effect/armed.rs` |
 | **OnSelected** | Trigger variant for passive effects — evaluated immediately when a chip is selected, rather than waiting for a game event trigger | `When { trigger: OnSelected, then: [...] }` |
 | **OnBump** | Trigger variant that fires on any non-whiff bump (Early, Late, or Perfect) | `When { trigger: OnBump, then: [...] }` |
 | **Target** | Enum discriminating which entity type an effect targets: `Bolt`, `Breaker`, or `AllBolts`. Used by `SpeedBoost(Target, val)` and `SizeBoost(Target, val)`. | `Target::Bolt`, `Target::Breaker`, `Target::AllBolts` |

@@ -12,7 +12,6 @@ pub enum EffectNode {
     Do(Effect),
     Until { until: Trigger, then: Vec<EffectNode> },
     Once(Vec<EffectNode>),
-    On { target: Target, then: Vec<EffectNode> },  // mandatory at top level, also used for runtime chain transfer
 }
 ```
 
@@ -24,7 +23,6 @@ pub enum EffectNode {
 | `Do` | Leaf effect — terminal action | N/A |
 | `Until` | Applies children, auto-removes when `until` trigger fires | No — removed on trigger |
 | `Once` | Fires children once ever, then permanently consumed from the chain | No — consumed after first fire |
-| `On` | Transfers children onto a target entity's `EffectChains` at evaluation time | N/A — modifies target entity |
 
 **`When`** — trigger gate. Fires children when the trigger condition is met. Re-fires on each subsequent activation. This is the primary mechanism for recurring triggered effects.
 
@@ -33,8 +31,6 @@ pub enum EffectNode {
 **`Until`** — applies children immediately, then auto-removes them when the `until` trigger fires. Used for timed buffs (`TimeExpires(3.0)`), trigger-based removal (`Impact(Breaker)`), or any effect that should end on a specific condition.
 
 **`Once`** — fires children once ever, then permanently consumed from the chain. Used for SecondWind-style one-time saves where the effect fires exactly once per run (or per node) and never again.
-
-**`On`** — transfers children onto a target entity's `EffectChains` at runtime. The `target` is the `Target` enum (`Bolt`, `Breaker`, `Cell`) in RON. The bridge resolves it to a concrete entity from the trigger context (e.g., `On(Cell, ...)` resolves to the cell from `BoltHitCell { bolt, cell }`). Used for effects that dynamically modify other entities' chains, like PowderKeg adding an OnDeath shockwave to a hit cell.
 
 ### Examples
 
@@ -65,12 +61,10 @@ When(trigger: OnBumpWhiff, then: [
     ])
 ])
 
-// PowderKeg: perfect bump → cell hit → add OnDeath shockwave to that cell
+// PowderKeg concept: perfect bump → cell hit → shockwave on cell destruction
 When(trigger: OnPerfectBump, then: [
     When(trigger: OnImpact(Cell), then: [
-        On(target: Cell, then: [
-            When(trigger: OnDeath, then: [Do(Shockwave(base_range: 48.0, ...))])
-        ])
+        When(trigger: OnCellDestroyed, then: [Do(Shockwave(base_range: 48.0, ...))])
     ])
 ])
 ```
@@ -79,21 +73,27 @@ When(trigger: OnPerfectBump, then: [
 
 Triggers are conditions that gate child node evaluation. Used inside `When` and `Until` nodes.
 
-| Trigger | Condition | Bolt Context |
-|---------|-----------|-------------|
-| `OnPerfectBump` | Bump timed within the perfect window | Specific bolt from bump |
-| `OnEarlyBump` | Bump pressed before the perfect zone | Specific bolt from bump |
-| `OnLateBump` | Bump pressed after the bolt hit | Specific bolt from bump |
-| `OnBump` | Any non-whiff bump (Early, Late, or Perfect) | Specific bolt from bump |
-| `OnBumpWhiff` | Forward bump window expired without contact | Global (no specific bolt) |
-| `OnImpact(Cell)` | Bolt hit a cell | Specific bolt from impact |
-| `OnImpact(Breaker)` | Bolt bounced off the breaker | Specific bolt from impact |
-| `OnImpact(Wall)` | Bolt bounced off a wall | Specific bolt from impact |
-| `OnCellDestroyed` | A cell was destroyed | Global (no specific bolt) |
-| `OnBoltLost` | A bolt was lost (fell off screen) | Global (no specific bolt) |
-| `OnDeath` | Breaker lost all lives or timer expired | Global |
-| `OnSelected` | Chip was selected on the upgrade screen | N/A — immediate evaluation |
-| `TimeExpires(f32)` | Elapsed seconds since the node was applied | N/A — timer-based removal |
+| Trigger (RON name) | Rust variant | Condition | Bolt Context |
+|--------------------|-------------|-----------|-------------|
+| `OnPerfectBump` | `PerfectBump` | Bump timed within the perfect window | Breaker entity |
+| `OnEarlyBump` | `EarlyBump` | Bump pressed before the perfect zone | Breaker entity |
+| `OnLateBump` | `LateBump` | Bump pressed after the bolt hit | Breaker entity |
+| `OnBump` | `Bump` | Any non-whiff bump (Early, Late, or Perfect) | Breaker entity |
+| `OnBumpWhiff` | `BumpWhiff` | Forward bump window expired without contact | Global (no specific bolt) |
+| `NoBump` | `NoBump` | Bolt passed the breaker without any bump attempt | Breaker entity |
+| `PerfectBumped` | `PerfectBumped` | "I was perfect-bumped" — bolt-perspective trigger | Specific bolt |
+| `Bumped` | `Bumped` | "I was bumped" — bolt-perspective, any non-whiff | Specific bolt |
+| `EarlyBumped` | `EarlyBumped` | "I was early-bumped" — bolt-perspective | Specific bolt |
+| `LateBumped` | `LateBumped` | "I was late-bumped" — bolt-perspective | Specific bolt |
+| `OnImpact(Cell)` | `Impact(Cell)` | Bolt hit a cell | Specific bolt from impact |
+| `OnImpact(Breaker)` | `Impact(Breaker)` | Bolt bounced off the breaker | Specific bolt from impact |
+| `OnImpact(Wall)` | `Impact(Wall)` | Bolt bounced off a wall | Specific bolt from impact |
+| `OnCellDestroyed` | `CellDestroyed` | A cell was destroyed | Global (no specific bolt) |
+| `OnBoltLost` | `BoltLost` | A bolt was lost (fell off screen) | Global (no specific bolt) |
+| `OnDeath` | `Death` | Breaker lost all lives or timer expired | Global |
+| `OnSelected` | `Selected` | Chip was selected on the upgrade screen | N/A — immediate evaluation |
+| `TimeExpires(f32)` | `TimeExpires(f32)` | Elapsed seconds since the node was applied | N/A — timer-based removal |
+| `OnNodeTimerThreshold(f32)` | `NodeTimerThreshold(f32)` | Node timer ratio drops below threshold | Breaker entity |
 
 ### OnSelected — Passive Effects
 
@@ -129,12 +129,13 @@ The evaluate/arm/resolve cycle is depth-agnostic: `evaluate()` peels the outermo
 
 ## Chain Ownership Model
 
-Chains live on the entity whose events trigger them. The `Target` enum in effects handles cross-entity targeting at handler time. `On` enables runtime chain transfer to other entities.
+Chains live on the entity whose events trigger them. The `Target` enum in effects handles cross-entity targeting at handler time.
 
 ### Two Stores Per Entity
 
-- **`EffectChains`** — permanent source of truth. Populated by breaker init, chip dispatch, and `On` node evaluation. Never modified by trigger evaluation.
-- **`ArmedEffects`** — temporary working set. Partially resolved `When` trees waiting for deeper triggers. Consumed on Fire, replaced on re-Arm.
+- **`EffectChains`** — entity-local component (`EffectChains(Vec<EffectNode>)`). Populated by breaker init and chip dispatch. Never modified by trigger evaluation.
+- **`ActiveEffects`** — global resource (`Vec<(Option<String>, EffectNode)>`). Holds all breaker-definition and triggered-chip chains. Bridge helpers sweep it for global triggers.
+- **`ArmedEffects`** — component on bolt entities. Partially resolved `When` trees waiting for deeper triggers. Consumed on Fire, replaced on re-Arm.
 
 ### Which Entity Owns Which Chains
 
@@ -147,38 +148,23 @@ Chains live on the entity whose events trigger them. The `Target` enum in effect
 | Selected | N/A | Fires immediately |
 | TimeExpires | N/A | Managed by Until timer system |
 
-**Global triggers** — `CellDestroyed` and `BoltLost` are global events. During evaluation, bridges sweep ALL entities with `EffectChains` and evaluate matching chains wherever they live. The `CellDestroyed` bridge reads `RequestCellDestroyed` (entity still alive) so effects can access the cell's components. It also evaluates the cell's own `Death` trigger. Then writes `CellDestroyedAt` as aftermath for location-only consumers. Chip authors control which entity the chain lives on using `On`:
+**Global triggers** — `CellDestroyed` and `BoltLost` are global events. During evaluation, bridges call `evaluate_active_chains` which sweeps all chains in `ActiveEffects`. The `bridge_cell_death` bridge reads `RequestCellDestroyed` (entity still alive) so effects can access the cell's components. It also evaluates the cell's own `Death` trigger. Then `cleanup_destroyed_cells` despawns the entity.
 
+`ChipDefinition.effects` is `Vec<EffectNode>` (not a restricted wrapper). `BreakerDefinition` uses named root fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump: Option<EffectNode>`) plus `chains: Vec<EffectNode>` for multi-step chains — there is no `effects` vec on `BreakerDefinition`.
+
+Example — Aegis breaker definition (named root fields, not an `effects` vec):
 ```ron
-// CellDestroyed chain on bolt (Cascade — shockwave at bolt position)
-On(target: Bolt, then: [When(trigger: CellDestroyed, then: [Do(Shockwave(...))])])
-
-// CellDestroyed chain on breaker (scoring/global reaction)
-On(target: Breaker, then: [When(trigger: CellDestroyed, then: [Do(SpawnBolts(...))])])
-```
-
-Effects are pure data — they describe WHAT to do, not WHO to do it to. `Target` enum (`Bolt`, `Breaker`, `Cell`, `Wall`, `AllBolts`, `AllCells`) lives only on `On`, not on effects.
-
-`On` is **mandatory** at the top level of every chip and breaker definition. Enforced at compile time via `RootEffect` — a single-variant enum wrapper that deserializes identically to `EffectNode::On` in RON:
-
-```rust
-pub enum RootEffect {
-    On { target: Target, then: Vec<EffectNode> },
-}
-
-// ChipDefinition.effects: Vec<RootEffect>
-// BreakerDefinition.effects: Vec<RootEffect>
-```
-
-Bare `When(...)` or `Do(...)` at the top level is a compile error.
-
-Example — Aegis breaker effects:
-```ron
-effects: [
-    On(Breaker, [When(trigger: BoltLost, then: [Do(LoseLife)])]),
-    On(Bolt, [When(trigger: PerfectBumped, then: [Do(SpeedBoost(1.5))])]),
-    On(Bolt, [When(trigger: Bumped, then: [Do(SpeedBoost(1.1))])]),
-]
+// assets/breakers/aegis.breaker.ron
+(
+    name: "Aegis",
+    stat_overrides: (),
+    life_pool: Some(3),
+    on_bolt_lost: Some(Do(LoseLife)),
+    on_perfect_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.5))),
+    on_early_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
+    on_late_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
+    chains: [],
+)
 ```
 
 ### Bump / Bumped Trigger Split
@@ -199,10 +185,9 @@ This eliminates cross-entity arm routing for the common bump→bolt-effect case.
 
 ### Chip Dispatch
 
-When a chip is selected, each chain is routed to an entity:
-- **`On(target, children)` at top level**: push children to the specified target entity. This gives chip authors explicit control over chain ownership.
-- **`When(trigger, ...)` at top level**: push to the entity that owns the trigger (see table above). `When(PerfectBump, ...)` → breaker. `When(Impact(Cell), ...)` → all bolts.
-- **`When(Selected, ...)`**: fires immediately, not stored.
+When a chip is selected, `dispatch_chip_effects` processes each `EffectNode` in `ChipDefinition.effects`:
+- **`When(trigger: OnSelected, ...)` at top level**: evaluates immediately, fires passive effects via `fire_passive_event`.
+- **Other `When`/`Until`/`Once` nodes**: pushed to `ActiveEffects` for evaluation by bridge systems on matching game events.
 
 ### Evaluation Routing
 
@@ -214,24 +199,9 @@ Different triggers evaluate different entity sets:
 
 When evaluation produces an Arm result and the inner trigger belongs to a different entity type, the armed chain moves to that entity's `ArmedEffects`. Example: `When(PerfectBump, [When(Impact(Wall), [Do(Shockwave)])])` — first Arm stays on breaker, second Arm moves to bolt (Impact is a bolt event).
 
-### Runtime Chain Transfer (`On`)
-
-`On(target, children)` pushes children onto a target entity's `EffectChains` at evaluation time. The target entity is resolved from the trigger context. This is how effects like PowderKeg dynamically add chains to other entities:
-
-```ron
-// PowderKeg: perfect bump → cell hit → add OnDeath shockwave to THAT cell
-When(trigger: PerfectBump, then: [
-    When(trigger: Impact(Cell), then: [
-        On(target: Cell, then: [
-            When(trigger: Death, then: [Do(Shockwave(...))])
-        ])
-    ])
-])
-```
-
 ## Effects (Leaves)
 
-Leaf effects are the terminal `Do(...)` actions in an EffectNode tree. They fire via the `EffectFired` event and are handled by dedicated observer systems.
+Leaf effects are the terminal `Do(...)` actions in an EffectNode tree. Bridge systems call `fire_typed_event` which dispatches the appropriate typed event (e.g., `ShockwaveFired`, `LoseLifeFired`). Each effect's observer handler in `effect/effects/` receives the typed event and executes the game action.
 
 ### Triggered Effects
 
@@ -249,7 +219,7 @@ These fire through the bridge system when their trigger condition is met.
 | `SpeedBoost` | `target: Target`, `multiplier: f32` | `handle_speed_boost` | Scales velocity of the target by `multiplier`. Uses 1.x format: 2.0 = 2x speed, 0.5 = 50% speed. |
 | `RandomEffect` | `Vec<(f32, EffectNode)>` | `handle_random_effect` | Weighted random selection from a pool of effects. |
 | `EntropyEngine` | `counter: u32`, `Vec<(f32, EffectNode)>` | `handle_entropy_engine` | Counter-gated `RandomEffect` — every Nth trigger, roll from pool. |
-| `RampingDamage` | `bonus_per_hit: f32`, `max_bonus: f32` | `handle_ramping_damage` | Stacking damage bonus on cell hits, resets on non-bump breaker impact. |
+| `RampingDamage` | `bonus_per_hit: f32` | `handle_ramping_damage` | Stacking damage bonus on cell hits, resets on non-bump breaker impact. No maximum cap. |
 | `TimedSpeedBurst` | `speed_mult: f32`, `duration_secs: f32` | `handle_timed_speed_burst` | Temporary speed multiplier that decays after duration. |
 | `SecondWind` | `invuln_secs: f32` | `handle_second_wind` | Invisible wall that bounces the bolt once per node. Applied to the breaker's `EffectChains`. Consumed after use via `Once`. |
 | `ChainLightning` | `arcs: u32`, `range: f32`, `damage_mult: f32` | `handle_chain_lightning` | Arc damage jumping between nearby cells. |
@@ -337,4 +307,4 @@ Each breaker defines root effect chains for bump events:
 | **Chrono** | `Do(TimePenalty(5.0))` | `Do(SpeedBoost(Bolt, 1.5))` | `Do(SpeedBoost(Bolt, 1.1))` | `Do(SpeedBoost(Bolt, 1.1))` |
 | **Prism** | `Do(TimePenalty(7.0))` | `Do(SpawnBolts { count: 1 })` | *(none)* | *(none)* |
 
-Breakers can also define additional chains in the `chains` field for more complex trigger combinations. These chains are loaded into the breaker entity's `EffectChains` at run start.
+Breakers can also define additional chains in the `chains` field for more complex trigger combinations. All root fields and `chains` are loaded into `ActiveEffects` at run start by `init_breaker`.

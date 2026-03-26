@@ -9,6 +9,7 @@ pub(crate) use super::triggers::*;
 mod tests {
     use bevy::prelude::*;
 
+    use super::{bridge_bump, bridge_cell_death, bridge_cell_impact};
     use crate::{
         bolt::messages::BoltHitCell,
         breaker::messages::{BumpGrade, BumpPerformed},
@@ -23,8 +24,6 @@ mod tests {
             typed_events::*,
         },
     };
-
-    use super::{bridge_bump, bridge_cell_death, bridge_cell_impact};
 
     // --- Test infrastructure ---
 

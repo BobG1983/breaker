@@ -136,10 +136,7 @@ pub(crate) fn init_breaker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        breaker::definition::BreakerDefinition,
-        effect::definition::*,
-    };
+    use crate::{breaker::definition::BreakerDefinition, effect::definition::*};
 
     const TEST_BREAKER_NAME: &str = "TestBreaker";
 

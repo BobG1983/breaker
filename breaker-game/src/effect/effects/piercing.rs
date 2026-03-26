@@ -96,14 +96,7 @@ impl ActivePiercings {
 /// Runs after bridge dispatch and Until reversal to keep piercing values
 /// consistent with the active stack vec.
 pub(crate) fn apply_active_piercings(
-    mut query: Query<
-        (
-            &mut Piercing,
-            &mut PiercingRemaining,
-            &ActivePiercings,
-        ),
-        With<Bolt>,
-    >,
+    mut query: Query<(&mut Piercing, &mut PiercingRemaining, &ActivePiercings), With<Bolt>>,
 ) {
     for (mut piercing, mut remaining, active) in &mut query {
         let total = active.total();
@@ -296,10 +289,7 @@ mod tests {
     #[test]
     fn handle_piercing_pushes_to_active_piercings() {
         let mut app = test_app();
-        let bolt = app
-            .world_mut()
-            .spawn((Bolt, ActivePiercings(vec![])))
-            .id();
+        let bolt = app.world_mut().spawn((Bolt, ActivePiercings(vec![]))).id();
 
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 2,
@@ -327,10 +317,7 @@ mod tests {
     fn active_piercings_total_returns_sum() {
         let piercings = ActivePiercings(vec![2, 1, 3]);
         let total = piercings.total();
-        assert_eq!(
-            total, 6,
-            "total of [2, 1, 3] should be 6, got {total}"
-        );
+        assert_eq!(total, 6, "total of [2, 1, 3] should be 6, got {total}");
     }
 
     // --- Test 3: apply_active_piercings recalculates from vec ---

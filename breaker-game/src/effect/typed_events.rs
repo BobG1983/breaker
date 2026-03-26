@@ -8,40 +8,38 @@ use bevy::prelude::*;
 use tracing::warn;
 
 use super::definition::{EffectTarget, Target};
-
-// ===========================================================================
-// Re-exports — triggered effect events (canonical location: effects/<name>.rs)
-// ===========================================================================
-
-pub(crate) use super::effects::chain_bolt::ChainBoltFired;
-pub(crate) use super::effects::chain_lightning::ChainLightningFired;
-pub(crate) use super::effects::entropy_engine::EntropyEngineFired;
-pub(crate) use super::effects::gravity_well::GravityWellFired;
-pub(crate) use super::effects::life_lost::LoseLifeFired;
-pub(crate) use super::effects::multi_bolt::MultiBoltFired;
-pub(crate) use super::effects::piercing_beam::PiercingBeamFired;
-pub(crate) use super::effects::random_effect::RandomEffectFired;
-pub(crate) use super::effects::second_wind::SecondWindFired;
-pub(crate) use super::effects::shield::ShieldFired;
-pub(crate) use super::effects::shockwave::ShockwaveFired;
-pub(crate) use super::effects::spawn_bolt::{SpawnBoltFired, SpawnBoltsFired};
-pub(crate) use super::effects::spawn_phantom::SpawnPhantomFired;
-pub(crate) use super::effects::speed_boost::SpeedBoostFired;
-pub(crate) use super::effects::time_penalty::TimePenaltyFired;
-
 // ===========================================================================
 // Re-exports — passive effect events (canonical location: effects/<name>.rs)
 // ===========================================================================
-
 pub(crate) use super::effects::attraction::AttractionApplied;
-pub(crate) use super::effects::bolt_size_boost::SizeBoostApplied;
-pub(crate) use super::effects::bolt_speed_boost::SpeedBoostApplied;
-pub(crate) use super::effects::bump_force_boost::BumpForceApplied;
-pub(crate) use super::effects::chain_hit::ChainHitApplied;
-pub(crate) use super::effects::damage_boost::DamageBoostApplied;
-pub(crate) use super::effects::piercing::PiercingApplied;
-pub(crate) use super::effects::ramping_damage::RampingDamageApplied;
-pub(crate) use super::effects::tilt_control_boost::TiltControlApplied;
+// ===========================================================================
+// Re-exports — triggered effect events (canonical location: effects/<name>.rs)
+// ===========================================================================
+pub(crate) use super::effects::chain_bolt::ChainBoltFired;
+pub(crate) use super::effects::{
+    bolt_size_boost::SizeBoostApplied,
+    bolt_speed_boost::SpeedBoostApplied,
+    bump_force_boost::BumpForceApplied,
+    chain_hit::ChainHitApplied,
+    chain_lightning::ChainLightningFired,
+    damage_boost::DamageBoostApplied,
+    entropy_engine::EntropyEngineFired,
+    gravity_well::GravityWellFired,
+    life_lost::LoseLifeFired,
+    multi_bolt::MultiBoltFired,
+    piercing::PiercingApplied,
+    piercing_beam::PiercingBeamFired,
+    ramping_damage::RampingDamageApplied,
+    random_effect::RandomEffectFired,
+    second_wind::SecondWindFired,
+    shield::ShieldFired,
+    shockwave::ShockwaveFired,
+    spawn_bolt::{SpawnBoltFired, SpawnBoltsFired},
+    spawn_phantom::SpawnPhantomFired,
+    speed_boost::SpeedBoostFired,
+    tilt_control_boost::TiltControlApplied,
+    time_penalty::TimePenaltyFired,
+};
 
 // ===========================================================================
 // Bridge dispatch — converts Effect -> typed event

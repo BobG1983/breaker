@@ -14,10 +14,8 @@ use crate::{
     effect::{
         definition::{Effect, EffectNode, ImpactTarget, Trigger},
         effects::{
-            bolt_size_boost::ActiveSizeBoosts,
-            bump_force_boost::ActiveBumpForces,
-            damage_boost::ActiveDamageBoosts,
-            piercing::ActivePiercings,
+            bolt_size_boost::ActiveSizeBoosts, bump_force_boost::ActiveBumpForces,
+            damage_boost::ActiveDamageBoosts, piercing::ActivePiercings,
             speed_boost::ActiveSpeedBoosts,
         },
     },
