@@ -4698,7 +4698,9 @@ name = "rantzsoft_defaults"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "iyes_progress",
  "rantzsoft_defaults_derive",
+ "ron 0.12.0",
  "serde",
 ]
 

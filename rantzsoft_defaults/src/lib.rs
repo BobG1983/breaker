@@ -5,8 +5,12 @@
 // this crate's own test module.
 extern crate self as rantzsoft_defaults;
 
+pub mod handle;
+pub mod loader;
+pub mod plugin;
 pub mod prelude;
 pub mod seedable;
+pub mod systems;
 
 pub use rantzsoft_defaults_derive::GameConfig;
 pub use seedable::SeedableConfig;
@@ -250,5 +254,23 @@ mod tests {
             <TestDefaults3 as SeedableConfig>::asset_path(),
             "config/test.ron"
         );
+    }
+
+    /// Prelude re-exports `DefaultsHandle`, `RonAssetLoader`, `DefaultsSystems`,
+    /// `RantzDefaultsPlugin`, and `RantzDefaultsPluginBuilder`.
+    #[test]
+    fn prelude_reexports_new_types() {
+        use crate::prelude::{
+            DefaultsHandle, DefaultsSystems, RantzDefaultsPlugin,
+            RantzDefaultsPluginBuilder, RonAssetLoader,
+        };
+
+        // If this compiles, the prelude re-exports all new types.
+        // Exercise type names so they are considered used.
+        let _ = std::mem::size_of::<DefaultsHandle<TestDefaults3>>();
+        let _ = std::mem::size_of::<RonAssetLoader<TestDefaults3>>();
+        let _ = std::mem::size_of::<DefaultsSystems>();
+        let _ = std::mem::size_of::<RantzDefaultsPlugin>();
+        let _ = std::mem::size_of::<RantzDefaultsPluginBuilder>();
     }
 }
