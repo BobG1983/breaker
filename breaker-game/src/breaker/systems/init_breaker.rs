@@ -1,32 +1,144 @@
-//! Breaker initialization re-exports (canonical location: `breaker/systems/init_breaker.rs`).
+//! Breaker initialization systems — config overrides and component stamping.
 
-// Re-export production functions (canonical location: breaker/systems/init_breaker.rs)
-pub(crate) use crate::breaker::systems::init_breaker::{
-    apply_breaker_config_overrides, apply_stat_overrides, init_breaker,
-};
+use bevy::prelude::*;
+use tracing::warn;
 
-// Re-exports for test module compatibility (tests use `super::*`)
-#[cfg(test)]
-pub(crate) use bevy::prelude::*;
-#[cfg(test)]
-pub(crate) use crate::{
+use crate::{
     breaker::{
         components::Breaker,
+        definition::BreakerStatOverrides,
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
     effect::{
         active::ActiveEffects,
+        definition::{EffectNode, Trigger},
         effects::life_lost::LivesCount,
     },
     shared::SelectedBreaker,
 };
 
+/// Applies optional stat overrides to a `BreakerConfig`.
+///
+/// Each `Some` field in `overrides` replaces the corresponding field in `config`.
+/// Used by both `apply_breaker_config_overrides` (at init) and hot-reload propagation (at runtime).
+pub(crate) const fn apply_stat_overrides(
+    config: &mut BreakerConfig,
+    overrides: &BreakerStatOverrides,
+) {
+    if let Some(width) = overrides.width {
+        config.width = width;
+    }
+    if let Some(height) = overrides.height {
+        config.height = height;
+    }
+    if let Some(max_speed) = overrides.max_speed {
+        config.max_speed = max_speed;
+    }
+    if let Some(acceleration) = overrides.acceleration {
+        config.acceleration = acceleration;
+    }
+    if let Some(deceleration) = overrides.deceleration {
+        config.deceleration = deceleration;
+    }
+}
+
+/// Resets `BreakerConfig` from defaults and applies breaker stat overrides.
+///
+/// Runs `OnEnter(GameState::Playing)` BEFORE `init_breaker_params` so that
+/// stamped components reflect the overridden config values.
+pub(crate) fn apply_breaker_config_overrides(
+    selected: Res<SelectedBreaker>,
+    registry: Res<BreakerRegistry>,
+    defaults: Res<Assets<BreakerDefaults>>,
+    mut config: ResMut<BreakerConfig>,
+) {
+    // Reset config from loaded RON defaults (not code defaults)
+    if let Some(loaded) = defaults.iter().next().map(|(_, d)| d) {
+        *config = BreakerConfig::from(loaded.clone());
+    }
+
+    // Apply breaker overrides
+    let Some(def) = registry.get(&selected.0) else {
+        warn!("Breaker '{}' not found in registry", selected.0);
+        return;
+    };
+
+    apply_stat_overrides(&mut config, &def.stat_overrides);
+}
+
+/// Stamps init-time behavior components and builds `ActiveEffects`.
+///
+/// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
+/// - Inserts `LivesCount` if breaker has `life_pool`
+/// - Builds `ActiveEffects` from root fields and `chains`
+pub(crate) fn init_breaker(
+    mut commands: Commands,
+    selected: Res<SelectedBreaker>,
+    registry: Res<BreakerRegistry>,
+    breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
+    mut active: ResMut<ActiveEffects>,
+) {
+    let Some(def) = registry.get(&selected.0) else {
+        warn!("Breaker '{}' not found in registry", selected.0);
+        return;
+    };
+
+    // Stamp init-time components on breaker entity
+    for entity in &breaker_query {
+        if let Some(life_pool) = def.life_pool {
+            commands.entity(entity).insert(LivesCount(life_pool));
+        }
+    }
+
+    // Build ActiveEffects from root fields + chains
+    let mut chains = Vec::new();
+    if let Some(node) = &def.on_bolt_lost {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::BoltLost,
+                then: vec![node.clone()],
+            },
+        ));
+    }
+    if let Some(node) = &def.on_perfect_bump {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::PerfectBump,
+                then: vec![node.clone()],
+            },
+        ));
+    }
+    if let Some(node) = &def.on_early_bump {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::EarlyBump,
+                then: vec![node.clone()],
+            },
+        ));
+    }
+    if let Some(node) = &def.on_late_bump {
+        chains.push((
+            None,
+            EffectNode::When {
+                trigger: Trigger::LateBump,
+                then: vec![node.clone()],
+            },
+        ));
+    }
+    chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
+    *active = ActiveEffects(chains);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::effect::definition::{
-        BreakerDefinition, BreakerStatOverrides, Effect, EffectNode, ImpactTarget, Target, Trigger,
+    use crate::{
+        breaker::definition::BreakerDefinition,
+        effect::definition::*,
     };
 
     const TEST_BREAKER_NAME: &str = "TestBreaker";
@@ -82,10 +194,10 @@ mod tests {
         app.update();
 
         let active = app.world().resource::<ActiveEffects>();
-        // on_bolt_lost=Do(LoseLife) → When { BoltLost, [Do(LoseLife)] }
-        // on_perfect_bump=Do(SpeedBoost) → When { PerfectBump, [Do(SpeedBoost)] }
-        // on_early_bump=Do(SpeedBoost) → When { EarlyBump, [Do(SpeedBoost)] }
-        // on_late_bump=Do(SpeedBoost) → When { LateBump, [Do(SpeedBoost)] }
+        // on_bolt_lost=Do(LoseLife) -> When { BoltLost, [Do(LoseLife)] }
+        // on_perfect_bump=Do(SpeedBoost) -> When { PerfectBump, [Do(SpeedBoost)] }
+        // on_early_bump=Do(SpeedBoost) -> When { EarlyBump, [Do(SpeedBoost)] }
+        // on_late_bump=Do(SpeedBoost) -> When { LateBump, [Do(SpeedBoost)] }
         assert_eq!(active.0.len(), 4);
         assert!(matches!(
             &active.0[0],

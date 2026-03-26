@@ -4,6 +4,7 @@ pub(crate) mod active;
 pub(crate) mod armed;
 pub(crate) mod bridges;
 pub(crate) mod definition;
+pub(crate) mod effect_nodes;
 pub(crate) mod effects;
 pub(crate) mod evaluate;
 pub(crate) mod init;

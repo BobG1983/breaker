@@ -38,16 +38,17 @@ use super::{
         speed_boost::{apply_speed_boosts, handle_speed_boost},
         tilt_control_boost::handle_tilt_control_boost,
         time_penalty::handle_time_penalty,
-        until::{check_until_triggers, tick_until_timers},
         width_boost::handle_width_boost,
     },
-    init::{apply_breaker_config_overrides, init_breaker},
-    registry::BreakerRegistry,
+    effect_nodes::until::{check_until_triggers, tick_until_timers},
     sets::EffectSystems,
 };
 use crate::{
     bolt::BoltSystems,
-    breaker::BreakerSystems,
+    breaker::{
+        BreakerRegistry, BreakerSystems,
+        systems::{apply_breaker_config_overrides, init_breaker},
+    },
     shared::{GameState, PlayingState},
     ui::UiSystems,
 };

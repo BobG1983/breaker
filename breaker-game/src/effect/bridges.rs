@@ -10,7 +10,7 @@ use super::{
     active::ActiveEffects,
     armed::ArmedEffects,
     definition::{EffectChains, EffectNode, EffectTarget, ImpactTarget, Trigger},
-    effects::until::{UntilTimers, UntilTriggers},
+    effect_nodes::until::{UntilTimers, UntilTriggers},
     evaluate::{NodeEvalResult, evaluate_node},
     typed_events::fire_typed_event,
 };
@@ -2702,7 +2702,7 @@ mod tests {
 
     #[test]
     fn bridge_cell_impact_evaluates_until_timer_children() {
-        use crate::effect::effects::until::{UntilTimerEntry, UntilTimers};
+        use crate::effect::effect_nodes::until::{UntilTimerEntry, UntilTimers};
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -2793,7 +2793,7 @@ mod tests {
 
     #[test]
     fn bridge_cell_impact_evaluates_until_trigger_children() {
-        use crate::effect::effects::until::{UntilTriggerEntry, UntilTriggers};
+        use crate::effect::effect_nodes::until::{UntilTriggerEntry, UntilTriggers};
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -2851,7 +2851,7 @@ mod tests {
 
     #[test]
     fn bridge_wall_impact_evaluates_until_timer_children() {
-        use crate::effect::effects::until::{UntilTimerEntry, UntilTimers};
+        use crate::effect::effect_nodes::until::{UntilTimerEntry, UntilTimers};
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
