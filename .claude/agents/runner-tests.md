@@ -94,6 +94,15 @@ For build-level failures (missing impl, wrong type, compile error — not a test
 - The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/runner-tests/`
 If changes are needed for the build to pass, **describe** the exact changes needed (file, line, what to change) in your report — but do NOT apply them.
 
+⚠️ **ABSOLUTE RULE — DO NOT DIAGNOSE BUILD FAILURES** ⚠️
+When a cargo command produces a build error (compiler error, linker error, etc.):
+- **Return the compiler error output immediately** in a Fix spec hint block
+- Do NOT read source files to understand why the error occurred
+- Do NOT trace imports, check module structure, or investigate root causes
+- Do NOT speculate about what went wrong or suggest detailed fixes
+- The main orchestrating agent handles diagnosis — your job is to report the raw error, nothing more
+- Include the exact error messages, file paths, and line numbers from the compiler output
+
 - Be concise. The caller is a developer who just wants to know what broke.
 - If everything passes, the report should be short — don't pad with noise.
 - If cargo commands fail to run at all (missing toolchain, etc.), report the infrastructure issue clearly.

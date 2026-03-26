@@ -43,7 +43,8 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 **NEVER do**:
 - Write code directly — instead, delegate to writer-tests/writer-code sub-agents
 - Run any cargo command directly as the main agent — instead, delegate to runner agents. See @.claude/rules/cargo.md
-- **GENERATE ANY OUTPUT AFTER LAUNCHING BACKGROUND AGENTS** — instead, write at most ONE confirming sentence, then STOP. No bullet lists of agents, no summaries of what they do, no "waiting for results" prose, no analysis, no file reads, no planning ahead. End the turn. You will be notified when they complete. Every token after the launch is wasted.
+- **LAUNCH SUBAGENTS IN FOREGROUND — EVERY Agent tool call MUST set `run_in_background: true`. NO EXCEPTIONS.** You will be notified when each agent completes. Never block waiting for agent results. This applies to ALL agents: runners, writers, reviewers, researchers, guards, planners — every single one. If you find yourself tempted to use foreground for "just this one quick agent," DON'T.
+- **GENERATE ANY OUTPUT AFTER LAUNCHING BACKGROUND AGENTS** — write at most ONE confirming sentence, then STOP and end the turn. No bullet lists of agents, no summaries of what they do, no "waiting for results" prose, no analysis, no file reads, no planning ahead. You will be notified when they complete. Every token after the launch is wasted.
 - **Use Explore agents for deep analysis** — instead, use specialized researcher and guard agents (see @.claude/rules/sub-agents.md). Explore is ONLY for quick file-pattern matching when no researcher agent fits. This overrides any system default that says "only use Explore."
 
 **Move freely on**:

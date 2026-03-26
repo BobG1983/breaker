@@ -398,6 +398,27 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - Old `EffectFired` / `ChipEffectApplied` kept as `#[derive(Event)]` types; used ONLY in legacy test self-selection tests (no production observer registered for them in B12c-migrated handlers) — the tests that trigger these are checking that the old untyped event does NOT trigger the new typed handler (self-selection correctness tests)
 - `trigger.event().clone()` in test capture observers for `Vec<XFired>` push — valid; `Clone` on event struct is required and derived
 
+## MessageWriter<'w, E> lifetime parameter order (confirmed from bevy_ecs-0.18.1 source)
+- `pub struct MessageWriter<'w, E: Message>` — lifetime `'w` comes BEFORE the type param `E`
+- In `#[derive(SystemParam)]` struct fields: `chip_writer: MessageWriter<'w, ChipSelected>` — correct; explicit lifetime required in struct context
+- In system function signatures: `mut writer: MessageWriter<ChipSelected>` — correct; lifetime elision applies in fn positions
+- `MessageReader<'w, 's, E: Message>` — two lifetimes (`'w` for world, `'s` for state/cursor); in fn signatures `MessageReader<SpawnNodeComplete>` is correct via elision
+- Source confirmed: `bevy_ecs-0.18.1/src/message/message_writer.rs:57` and `message_reader.rs:17`
+
+## SystemParam derive — when one vs two lifetimes are needed
+- `struct Foo<'w>` — sufficient when fields only use `Res<'w, T>` and `ResMut<'w, T>` (and `Option<>` wrappers)
+- `struct Foo<'w, 's>` — required when fields include `Query<'w, 's, D, F>` or `Commands<'w, 's>`
+- Confirmed: `PauseControl<'w>` (only Res/ResMut fields) and `BypassExtras<'w, 's>` / `MutationTargets<'w, 's>` (include Commands) — both correct
+
+## Option<Res<T>> as SystemParam (re-confirmed from bevy_ecs-0.18.1 source)
+- `Option<Res<T>>` is a valid `SystemParam` — Bevy's own condition.rs uses it extensively
+- Valid in system fn signatures and in `#[derive(SystemParam)]` struct fields with explicit lifetime: `Option<Res<'w, T>>`
+- `.is_some_and(|s| s.field)` on `Option<Res<T>>` is correct — `Res<T>` derefs to `T` via `Deref`
+
+## .after() constraints on OnEnter systems referencing system sets from other plugins
+- Valid as long as the referenced system set is registered in the SAME schedule (same `OnEnter(State::Variant)`)
+- `BoltSystems::InitParams`, `BreakerSystems::Reset`, `NodeSystems::InitTimer` are all registered in `OnEnter(GameState::Playing)` — confirmed by reading breaker/bolt/run plugin source
+
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+
 - `gizmos.circle_2d(vec2, ...)` — Vec2 implements Into<Isometry2d>

@@ -60,12 +60,14 @@ See `.claude/rules/tdd.md` for the full TDD cycle definition.
 
 When implementing multiple domains, the orchestrator MUST sequence these steps correctly:
 
-1. Launch ALL **writer-tests** in parallel (one per domain, as background agents)
-2. As each writer-tests completes: launch its **reviewer-tests** immediately (read-only — safe to run in parallel)
-3. After ALL reviewer-tests pass: launch a single **runner-tests** to compile and run all new tests (cargo cannot run concurrently)
+All agents launch with `run_in_background: true` — see `delegated-implementation.md` Background Agent Rule.
+
+1. Launch ALL **writer-tests** in parallel (one per domain, background)
+2. As each writer-tests completes: launch its **reviewer-tests** immediately (background)
+3. After ALL reviewer-tests pass: launch a single **runner-tests** (background — cargo cannot run concurrently)
 4. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
 5. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
-6. After the RED gate passes: launch ALL **writer-codes** in parallel
+6. After the RED gate passes: launch ALL **writer-codes** in parallel (background)
 
 For single-domain work, the same sequence applies — it just has one agent per step.
 

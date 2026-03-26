@@ -13,7 +13,7 @@ You are a file structure reviewer for a Bevy ECS roguelite game. Your job is to 
 
 ## First Step — Always
 
-Then scan for large files.
+Scan for large files.
 
 ## Detection
 
@@ -99,9 +99,9 @@ domain/
 | ... | ... | ... | ... | ... | ... | ... |
 
 ### Priority Guide
-- **HIGH**: 1000+ lines, or 800+ test lines (biggest context pollution impact)
-- **MEDIUM**: 600-999 lines (noticeable but manageable)
-- **LOW**: 400-599 lines (flag for awareness, split when next modified)
+- **HIGH**: 1000+ lines, or 800+ test lines (biggest context pollution impact, split immediately, across 2+ files)
+- **MEDIUM**: 501-999 lines (noticeable, split at least once)
+- **LOW**: 400-500 lines (flag for awareness, will need splitting soon)
 ```
 
 ### Refactor Specs
@@ -138,6 +138,7 @@ For LOW priority files, just list them in the table — no refactor spec needed.
 - **DO flag shared test utilities** that multiple test files will need — recommend where to put them (usually a `test_helpers.rs` in the module).
 - When analyzing test groups, read the actual test function names and bodies. Group by the *behavior* they test, not alphabetically.
 - The `#[cfg(test)]` gate on `mod tests;` in `mod.rs` is sufficient — sub-modules inside the tests directory do NOT need their own `#[cfg(test)]` attributes.
+- Also flag any `mod.rs` that contains ANYTHING other than exports, ie. mod.rs contains production or test code, as HIGH PRIORITY splits.
 
 ⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 

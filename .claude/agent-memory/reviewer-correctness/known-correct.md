@@ -98,7 +98,7 @@ type: reference
 
 ## refactor/rantzsoft-prelude-and-defaults lifecycle.rs Confirmed Correct (2026-03-26)
 - `apply_perfect_tracking` bump condition `bolt_position.y > breaker_position.0.y && distance <= PERFECT_TRACKING_BUMP_THRESHOLD` — correct; fires while bolt is above breaker and within 20 world units of contact. Bolt travels downward (y < 0), so condition is only reachable for the relevant hemisphere.
-- `BumpMode::AlwaysWhiff` → `force_grade.0 = None` combined with no Bump injection in proximity check — correct compound behavior. No Bump action injected + no grade override → bolt passes breaker naturally without entering a bump window. `BumpWhiffed` only fires if a forward bump was somehow already open, which won't happen when `AlwaysWhiff` suppresses injection.
+- `BumpMode::AlwaysWhiff` → `force_grade.0 = None` AND Bump IS injected by proximity check (AlwaysWhiff is NOT excluded by the NeverBump guard) — correct compound behavior. Bump action fires (opens the window) but ForceBumpGrade=None grades it as a whiff. The test `perfect_tracking_always_whiff_mode_writes_bump` confirms Bump is written. Do not flag the NeverBump guard exclusion as missing AlwaysWhiff.
 - `BumpMode::NeverBump` → `force_grade.0 = None` + no Bump injection — correct; bolt never triggers a bump window.
 - `BumpMode::Random` `choices.choose(&mut perfect.rng)` — `choices` is a non-empty 3-element slice; `choose()` always returns `Some`. `if let Some(&chosen)` always matches. Correct.
 - `ChipSelectionIndex` reset in `bypass_menu_to_playing` + increment in `auto_skip_chip_select` — correct; index resets on each run restart (OnEnter MainMenu), then advances once per chip select node. Maps node N chip select to `chip_selections[N-1]`.

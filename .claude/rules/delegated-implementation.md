@@ -81,8 +81,10 @@ Before planner-spec runs, launch research agents in parallel to surface conflict
 
 **Why**: pitfalls that surface late (during planner-review revision loops or post-implementation review) cost 2-10x more than catching them before spec writing. This gets proactive conflict detection without a new agent.
 
-## Background Agent Efficiency
+## Background Agent Rule
 
-When a background agent is running, the main agent should **not** fill time with unnecessary analysis or speculation. Background agents notify on completion — end your turn with a brief status message and wait. Don't read files, don't plan ahead, don't analyze speculatively while waiting.
+**ALL agents MUST be launched with `run_in_background: true`. No exceptions.** Every Agent tool call — runners, writers, reviewers, researchers, guards, planners — runs in the background. You will be notified when each completes.
+
+When background agents are running, the main agent must **not** fill time with unnecessary analysis or speculation. End your turn with at most one brief status sentence and wait for notifications. Don't read files, don't plan ahead, don't analyze speculatively while waiting.
 
 

@@ -202,3 +202,41 @@ NOTE: `TriggerChain` was deleted in C7-R (2026-03-25). Entries referencing it ar
 - `cargo dclippy`: PASS — 0 errors
 - `cargo dsclippy`: PASS — 0 errors
 - All warnings are nursery/restriction lints (dead_code forward declarations, unused_imports for pre-wired re-exports, option_if_let_else, suboptimal_flops, missing_const_for_fn, redundant_clone, etc.)
+
+## Confirmed Clean as of 2026-03-26 (develop branch, post-phase-4b chip effects)
+- `cargo fmt --check`: PASS (0 files changed)
+- `cargo dclippy`: PASS — 0 errors (104 lib warnings + 84 lib-test warnings, all nursery/restriction)
+- `cargo dsclippy`: PASS — 0 errors (9 lib warnings + 19 lib-test warnings, all nursery/restriction)
+- Note: user requested errors-only report — `spatial2dclippy` and `physics2dclippy` were not run this session
+
+## New as of 2026-03-26 (develop branch — post-file-split refactor, ~48 files restructured)
+- `cargo dclippy`: FAIL — 354 errors (lib-test), 4 errors (lib). Root causes are 5 distinct structural problems (see below).
+- `cargo dsclippy`: FAIL — same 5 `module_inception` errors from game crate; no scenario-runner-specific errors.
+- `cargo spatial2dclippy`: PASS — 0 errors
+- `cargo physics2dclippy`: PASS — 0 errors
+- `cargo fmt`: PASS (0 files changed)
+
+### Root error clusters (post-file-split):
+
+1. **`module_inception` (5 errors)** — `mod.rs` files declaring a submodule with the SAME name as the directory (e.g., `cells/components/mod.rs` does `mod components;`). Fix: rename the inner file to something other than the directory name (e.g., `types.rs`, `data.rs`) OR rename the directory.
+   - `breaker-game/src/cells/components/mod.rs:3` — `mod components;`
+   - `breaker-game/src/chips/inventory/mod.rs:3` — `mod inventory;`
+   - `breaker-game/src/effect/evaluate/mod.rs:3` — `mod evaluate;`
+   - `breaker-game/src/effect/helpers/mod.rs:5` — `mod helpers;`
+   - `breaker-game/src/fx/transition/mod.rs:7` — `mod transition;`
+
+2. **Missing `use bevy::prelude::*` in split test files (bulk cascade — 350+ errors)** — `tests.rs` files extracted from larger files use `use super::*;` which brings in the parent `mod.rs`'s re-exports, but NOT `bevy::prelude`. Files need their own `use bevy::prelude::*;` (and other imports). Affected test files:
+   - `bolt/systems/bolt_lost/tests.rs` — needs `use bevy::prelude::*;`
+   - `bolt/systems/spawn_additional_bolt/tests.rs` — needs `use bevy::prelude::*;`
+   - `cells/systems/handle_cell_hit/tests.rs` — needs `use bevy::prelude::*;`
+
+3. **Private function re-exported as pub(super) from sub-directory mod.rs** — function is `pub` in `system.rs` but `mod.rs` re-exports it as `pub(super)`. When another file in the parent does `super::dash::eased_decel(...)`, clippy/rustc says "private". Two locations:
+   - `breaker/systems/bump_visual/mod.rs:8` — `pub(super) use system::bump_offset;` — `bump_offset` is `pub` in `system.rs` but re-exported with restrictive visibility; used by tests.
+   - `breaker/systems/dash/mod.rs:8` — `pub(super) use system::eased_decel;` — `eased_decel` is `pub` in `system.rs`; called as `super::dash::eased_decel(...)` at `move_breaker.rs:60` which is a sibling module (needs at least `pub(super)` FROM dash mod, which IT HAS — the error is E0603 at the call site meaning `move_breaker` can't see it). Actually: `pub(super)` in `dash/mod.rs` means visible to `dash`'s parent (i.e., `breaker/systems/`), which IS where `move_breaker.rs` lives. Need to re-check.
+   - E0364 in `bump_visual/mod.rs:8`: `bump_offset` is `pub` in `system.rs` but `pub(super)` in mod.rs re-export — the inner `system.rs` is a PRIVATE module (`mod system;`), so `pub(super) use system::bump_offset` re-exports from a private module. Fix: make `mod system` public (`pub(crate) mod system`) OR don't re-export at all.
+
+4. **`ChipEntry` re-export from private module (E0365)** — `chips/inventory/mod.rs` declares `mod inventory;` (private) then `pub use inventory::{ChipEntry, ChipInventory}`. Cannot re-export publicly from a private module. Fix: change `mod inventory;` to `pub(crate) mod inventory;`, or change `pub use` to `pub(crate) use`.
+   - `breaker-game/src/chips/inventory/mod.rs:5`
+
+5. **E0603 private function import** — `move_breaker.rs:60` calls `super::dash::eased_decel(...)` but `eased_decel` is re-exported as `pub(super)` from `dash/mod.rs`, making it visible only to `breaker/systems/` (the parent of `dash/`). `move_breaker.rs` IS in `breaker/systems/`, so this SHOULD work — unless `dash/system.rs` defines `eased_decel` as non-pub and the `pub(super)` re-export fails. Needs deeper check: `system.rs` has `pub fn eased_decel` but `mod system` in `dash/mod.rs` is PRIVATE. So `pub(super) use system::eased_decel` is re-exporting from a private module — same E0364 pattern as #3.
+

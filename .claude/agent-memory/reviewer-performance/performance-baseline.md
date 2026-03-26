@@ -190,6 +190,45 @@ RESOLVED ISSUE: spawn_highlight_text is now registered in RunPlugin::build under
 - The cap enforced during detection is now REMOVED by design. CloseSave entries per run = 1 per BumpPerformed where bolt was close to loss (rare event, but can accumulate across many nodes). track_node_cleared_stats can push multiple highlights per NodeCleared (ClutchClear, SpeedDemon, PerfectNode, etc.) unconditionally.
 - In a 10-node run: at most ~8 highlights per NodeCleared × 10 nodes = 80 entries (degenerate case with all conditions met). In practice: 1–3 per node = 10–30 entries. Bounded by game session length. Not a pathological growth concern. Added to Watch section below.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-26, scenario-runner lifecycle)
+
+### breaker-scenario-runner/src/lifecycle/mod.rs
+
+APPLY_PERFECT_TRACKING (FixedPreUpdate, no run_if guard):
+- Early-returns on missing ScenarioInputDriver (Option<ResMut> guard). Returns immediately for non-Perfect strategies via InputDriver enum match.
+- bolt_query: (Position2D, Velocity2D) With<ScenarioTagBolt> — 1 entity. bolt_query.iter().next() takes only the first; no full iteration.
+- breaker_query: BreakerTrackingQuery = (Position2D, BreakerWidth) With<ScenarioTagBreaker> Without<ScenarioTagBolt> — 1 entity.
+- No allocations in hot path. `actions.0.push(...)` is a Vec push on existing capacity (InputActions is cleared each tick by game code, so cap is stable after warmup). Confirmed clean.
+
+UPDATE_FORCE_BUMP_GRADE (FixedPreUpdate, no run_if guard):
+- Early-returns on missing ScenarioInputDriver or non-Perfect strategy.
+- `mut force_grade: ResMut<ForceBumpGrade>` taken unconditionally — marks resource as changed every tick (Bevy 0.18: ResMut always marks changed on access, even if value is unchanged). grade_bump reads ForceBumpGrade via `Option<Res<...>>` — no change-detection dependency, so the spurious change-marking has zero downstream cost in this codebase. Confirmed acceptable. Would matter if any system used change_detection on ForceBumpGrade, but none do.
+- `choices.choose(&mut perfect.rng)` in Random branch: single array lookup, no allocation. Clean.
+
+APPLY_PENDING_BOLT_EFFECTS (FixedUpdate, no run_if guard):
+- Local<bool> done guard: exits immediately after first successful application — correct deferred pattern.
+- Option<ResMut<PendingBoltEffects>> guard: exits if resource absent (resource is only inserted when initial_effects has Bolt targets).
+- bolt_query.is_empty() guard: waits for tagged entities before applying.
+- Cloning path: `pending.0.iter().cloned()` clones EffectNode values. This runs exactly once per scenario lifetime (first tick where bolt entities exist). Not a hot path concern.
+- After application: pending.0.clear() + *done = true. Subsequent ticks: first guard exits immediately. Zero cost steady-state. Confirmed clean.
+
+BYPASS_MENU_TO_PLAYING (OnEnter(GameState::MainMenu), one-shot):
+- `Vec::new()` for bolt_entries (line ~337): allocated once per run start when initial_effects is present with Bolt targets. One-shot. Not a hot path.
+- `then.iter().cloned()`: clones EffectNode entries (stack-allocated enum variants). Count bounded by scenario definition (typically ≤5 effects). Negligible.
+- breaker_query iteration for non-Bolt targets: 1 entity. Clean.
+- `chip_name.clone()` in initial_chips loop: one String clone per chip, at scenario start only. Negligible.
+- `config.definition.layout.clone()` — one String clone at scenario start. Negligible.
+- All allocations are intentional one-shot setup. Confirmed clean.
+
+DEFERRED_DEBUG_SETUP (FixedUpdate):
+- Local<bool> done guard exits immediately after first successful run. Fast path once armed.
+- Waits for is_empty() before applying. Runs at most once per app lifetime. Confirmed clean.
+
+ARCHETYPE NOTE (ScenarioTagBolt, ScenarioTagBreaker):
+- Marker components added to bolt/breaker entities once per run via tag_game_entities. This creates two additional archetypes per tagged entity type (untagged → tagged transition). At 1 bolt + 1 breaker, these are single one-time structural changes. Negligible.
+- ScenarioPhysicsFrozen added by apply_debug_setup to bolts/breakers when disable_physics=true. One-time structural change per scenario. Negligible.
+- PendingBoltEffects: resource inserted conditionally, cleared after use. No archetype impact (it's a Resource, not a Component).
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-23, feature/wave-3-offerings-transitions, spatial2d refactor)
 
 ### rantzsoft_spatial2d — compute_globals, derive_transform, apply_velocity, save_previous
