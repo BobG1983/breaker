@@ -8,7 +8,7 @@
 |-------|------|-----------|------|------|
 | ~~4a~~ | ~~Seeded RNG & Run Seed~~ | — | ~~Small~~ | **DONE** |
 | ~~[4b](phase-4b-chip-effects.md)~~ | ~~Chip Effect System~~ | — | ~~Medium-Large~~ | **DONE** |
-| [4c](phase-4c-chip-pool.md) | Chip Pool & Rarity (~~4c.1~~ ~~4c.2~~ done, 4c.3 pending) | 4b | Large (content-heavy) | Low technical, high design |
+| ~~[4c](phase-4c-chip-pool.md)~~ | ~~Chip Pool & Rarity~~ | ~~4b~~ | ~~Large~~ | **DONE** |
 | ~~[4d](phase-4d-trigger-effect.md)~~ | ~~Trigger/Effect Architecture~~ | ~~4b~~ | ~~Large~~ | **DONE** |
 | ~~[4e](phase-4e-node-escalation.md)~~ | ~~Node Sequence & Escalation~~ | ~~4a~~ | ~~Very Large~~ | **DONE** |
 | ~~[4f](phase-4f-chip-offerings.md)~~ | ~~Chip Offering System~~ | ~~4a, 4c~~ | ~~Medium~~ | **DONE** |
@@ -16,7 +16,7 @@
 | ~~[4h](phase-4h-chip-evolution.md)~~ | ~~Chip Evolution~~ | ~~4c, 4d, 4e~~ | ~~Medium~~ | **DONE** |
 | ~~[4i](phase-4i-run-stats.md)~~ | ~~Run Stats & Summary~~ | ~~4e, 4f~~ | ~~Medium~~ | **DONE** |
 | ~~[4j](phase-4j-release-infrastructure.md)~~ | ~~Release Infrastructure~~ | ~~—~~ | ~~Small~~ | **DONE** |
-| 4k | Render Plugin Separation | Phase 4 complete | Medium | Low — refactor only |
+| ~~4k~~ | ~~Render Plugin Separation~~ | ~~Phase 4 complete~~ | ~~Medium~~ | **Moved to Phase 5 prerequisite** |
 
 ## Dependency Graph
 
@@ -71,10 +71,10 @@ Three stages unlock. **4c**, **4d**, and **4e** can all parallelize since they d
     - Regen cells → cells/ domain
   - **4e.4**: Layout pool reorganization (assets/nodes/passive/, active/, boss/) + loader updates
 
-- **4c (Chip Pool & Rarity)** — large, split into:
-  - **4c.1**: Rarity enum + ChipInventory resource + max_stacks tracking (chips/ domain)
-  - **4c.2**: Author 16-20 chip RON files (content, can batch)
-  - **4c.3**: Synergy design review (guard-game-design validation)
+- **~~4c (Chip Pool & Rarity)~~** — **DONE**. Split into:
+  - **~~4c.1~~**: Rarity enum + ChipInventory resource + max_stacks tracking (chips/ domain)
+  - **~~4c.2~~**: Author 16-20 chip RON files (content, can batch)
+  - **~~4c.3~~**: Synergy design review (guard-game-design validation)
 
 - **~~4d (Trigger/Effect Architecture)~~** — **DONE**. Split into:
   - **~~4d.1~~**: TriggerChain enum + RON parsing (in chips/definition.rs)

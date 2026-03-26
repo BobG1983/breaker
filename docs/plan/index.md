@@ -26,27 +26,24 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - [3c: RON Hot-Reload](done/phase-3/phase-3c-hot-reload.md)
   - [3d: Scenario Runner](done/phase-3/phase-3d-scenario-runner.md)
   - [3e: Structured Logging](done/phase-3/phase-3e-structured-logging.md)
+- [Phase 4: Vertical Slice — Mini-Run](done/phase-4/index.md)
+  - [4a: Seeded RNG & Run Seed](done/phase-4/phase-4a-seeded-rng.md)
+  - [4b: Chip Effect System](done/phase-4/phase-4b-chip-effects.md)
+  - [4c: Chip Pool & Rarity](done/phase-4/phase-4c-chip-pool.md)
+  - [4d: Trigger/Effect Architecture](done/phase-4/phase-4d-trigger-effect.md)
+  - [4e: Node Sequence & Escalation](done/phase-4/phase-4e-node-escalation.md)
+  - [4f: Chip Offering System](done/phase-4/phase-4f-chip-offerings.md)
+  - [4g: Node Transitions & VFX](done/phase-4/phase-4g-node-transitions.md)
+  - [4h: Chip Evolution](done/phase-4/phase-4h-chip-evolution.md)
+  - [4i: Run Stats & Summary](done/phase-4/phase-4i-run-stats.md)
+  - [4j: Release Infrastructure](done/phase-4/phase-4j-release-infrastructure.md)
 
 ### Current
-- **Spatial/Physics Extraction** (feature/spatial-physics-extraction) — **Done**. Extracted `rantzsoft_spatial2d` (Position2D, propagation, interpolation pipeline) and `rantzsoft_physics2d` (quadtree, CCD primitives, CollisionLayers, DistanceConstraint) as game-agnostic workspace crates. The `physics/` and `interpolate/` game domains were dissolved; collision systems moved to the bolt domain. Chain bolts (tethered bolt pairs via DistanceConstraint + momentum conservation) and spreading shockwave (entity-based expanding ring via quadtree) were implemented. `breaker-derive/` was replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`.
-- [Phase 4: Vertical Slice — Mini-Run](phase-4/index.md) — 4 waves, 8 sessions
-  - **Wave 1 — Foundations** (Sessions 1-2)
-    - [~~4a: Seeded RNG & Run Seed~~](done/phase-4/phase-4a-seeded-rng.md) — **Done**
-    - [~~4b: Chip Effect System~~](phase-4/phase-4b-chip-effects.md) — **Done** (~~4b.1 types/stacking~~, ~~4b.2 per-domain effects~~)
-  - **Wave 2 — Core Systems** (Sessions 3-6)
-    - [4c: Chip Pool & Rarity](phase-4/phase-4c-chip-pool.md) (~~4c.1 rarity/inventory~~, ~~4c.2 RON authoring~~, 4c.3 synergy review)
-    - [4d: Trigger/Effect Architecture](phase-4/phase-4d-trigger-effect.md) (~~4d.1 types~~, ~~4d.2 unified chain evaluation~~, ~~4d.3 shockwave~~, ~~4d.4 Surge POC~~) — **Done**
-    - [~~4e: Node Sequence & Escalation~~](phase-4/phase-4e-node-escalation.md) (~~4e.1 tiers~~, ~~4e.2 proc-gen~~, ~~4e.3 cell types~~, ~~4e.4 layout pools~~) — **Done**
-  - **Wave 3 — Integration** (Session 7)
-    - [~~4f: Chip Offering System~~](phase-4/phase-4f-chip-offerings.md) — **Done**
-    - [~~4g: Node Transitions & VFX~~](phase-4/phase-4g-node-transitions.md) — **Done**
-  - **Wave 4 — Capstones** (Session 8)
-    - [~~4h: Chip Evolution~~](phase-4/phase-4h-chip-evolution.md) — **Done**
-    - [~~4i: Run Stats & Summary~~](phase-4/phase-4i-run-stats.md) — **Done**
-    - [~~4j: Release Infrastructure~~](phase-4/phase-4j-release-infrastructure.md) — **Done**
+- **Spatial/Physics Extraction** — **Done**. Extracted `rantzsoft_spatial2d` and `rantzsoft_physics2d` as game-agnostic workspace crates. Chain bolts and spreading shockwave implemented. `breaker-derive/` replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`.
 
 ### Upcoming
-- [Phase 5: Visual Identity](phase-5-visual-identity.md)
+- Graphics & Sound Audit — Full scan of every entity, effect, cell type, breaker, and event to catalog missing graphics and sounds. Produces the work list for Phases 5 and 6 - to be stored under design/ as a markdown, with a table for every missing asset.
+- [Phase 5: Visual Identity](phase-5-visual-identity.md) — Prerequisite: Render Plugin Separation — extract visual-only concerns from gameplay plugins before adding new visual systems
 - [Phase 6: Audio Foundation](phase-6-audio.md)
 - [Phase 7: Content & Variety](phase-7-content.md)
 - [Phase 8: Roguelite Progression](phase-8-roguelite.md)
