@@ -82,13 +82,7 @@ mod tests {
     /// Helper struct used by the reversed-macro tests.
     /// `GameConfig` with `defaults = "TestDefaults2"` should generate
     /// `TestDefaults2` from this config struct.
-    #[derive(
-        ::bevy::prelude::Resource,
-        Debug,
-        Clone,
-        PartialEq,
-        crate::GameConfig,
-    )]
+    #[derive(::bevy::prelude::Resource, Debug, Clone, PartialEq, crate::GameConfig)]
     #[game_config(defaults = "TestDefaults2")]
     struct TestConfig2 {
         speed: f32,
@@ -180,27 +174,14 @@ mod tests {
             "config.speed should be 200.0 after merge, got {}",
             config.speed
         );
-        assert_eq!(
-            config.count, 10,
-            "config.count should be 10 after merge"
-        );
+        assert_eq!(config.count, 10, "config.count should be 10 after merge");
     }
 
     // ── SeedableConfig tests ───────────────────────────────────────────
 
     /// Helper struct for `SeedableConfig` tests. Uses `path` and `ext` attributes.
-    #[derive(
-        ::bevy::prelude::Resource,
-        Debug,
-        Clone,
-        PartialEq,
-        crate::GameConfig,
-    )]
-    #[game_config(
-        defaults = "TestDefaults3",
-        path = "config/test.ron",
-        ext = "test.ron"
-    )]
+    #[derive(::bevy::prelude::Resource, Debug, Clone, PartialEq, crate::GameConfig)]
+    #[game_config(defaults = "TestDefaults3", path = "config/test.ron", ext = "test.ron")]
     struct TestConfig3 {
         value: f32,
     }
@@ -261,8 +242,8 @@ mod tests {
     #[test]
     fn prelude_reexports_new_types() {
         use crate::prelude::{
-            DefaultsHandle, DefaultsSystems, RantzDefaultsPlugin,
-            RantzDefaultsPluginBuilder, RonAssetLoader,
+            DefaultsHandle, DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder,
+            RonAssetLoader,
         };
 
         // If this compiles, the prelude re-exports all new types.

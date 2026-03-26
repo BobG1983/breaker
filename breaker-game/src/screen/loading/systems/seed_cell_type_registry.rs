@@ -98,17 +98,9 @@ mod tests {
         let h2 = assets.add(make_cell_type("tough", 'T'));
 
         app.world_mut().insert_resource(DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![h1, h2],
             nodes: vec![],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips: vec![],
             chip_templates: vec![],
             difficulty: Handle::default(),
@@ -135,17 +127,9 @@ mod tests {
         let h_after = assets.add(make_cell_type("after", 'C'));
 
         app.world_mut().insert_resource(DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![h_before, h_invalid, h_after],
             nodes: vec![],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips: vec![],
             chip_templates: vec![],
             difficulty: Handle::default(),
@@ -182,17 +166,9 @@ mod tests {
         let handle = assets.add(make_cell_type("bad", '.'));
 
         app.world_mut().insert_resource(DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![handle],
             nodes: vec![],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips: vec![],
             chip_templates: vec![],
             difficulty: Handle::default(),
@@ -211,17 +187,9 @@ mod tests {
         let h2 = assets.add(make_cell_type("second", 'A'));
 
         app.world_mut().insert_resource(DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![h1, h2],
             nodes: vec![],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips: vec![],
             chip_templates: vec![],
             difficulty: Handle::default(),

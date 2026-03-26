@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
 use super::components::MenuItem;
 
@@ -13,10 +12,14 @@ pub(crate) struct MainMenuSelection {
     pub selected: MenuItem,
 }
 
-/// Main menu defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "MainMenuConfig")]
-pub(crate) struct MainMenuDefaults {
+/// Main menu configuration resource.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "MainMenuDefaults",
+    path = "config/defaults.mainmenu.ron",
+    ext = "mainmenu.ron"
+)]
+pub(crate) struct MainMenuConfig {
     /// Font size for the title text.
     pub title_font_size: f32,
     /// Font size for menu item text.
@@ -39,7 +42,7 @@ pub(crate) struct MainMenuDefaults {
     pub menu_font_path: String,
 }
 
-impl Default for MainMenuDefaults {
+impl Default for MainMenuConfig {
     fn default() -> Self {
         Self {
             title_font_size: 96.0,

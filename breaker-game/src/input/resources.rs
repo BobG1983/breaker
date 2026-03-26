@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
 /// Tracks timestamps for double-tap dash detection.
 ///
@@ -67,10 +66,14 @@ impl InputActions {
     }
 }
 
-/// Input defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "InputConfig")]
-pub struct InputDefaults {
+/// Input configuration resource.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "InputDefaults",
+    path = "config/defaults.input.ron",
+    ext = "input.ron"
+)]
+pub struct InputConfig {
     /// Keys that move the breaker left.
     pub move_left: Vec<KeyCode>,
     /// Keys that move the breaker right.
@@ -91,7 +94,7 @@ pub struct InputDefaults {
     pub double_tap_window: f32,
 }
 
-impl Default for InputDefaults {
+impl Default for InputConfig {
     fn default() -> Self {
         Self {
             move_left: vec![KeyCode::ArrowLeft, KeyCode::KeyA],

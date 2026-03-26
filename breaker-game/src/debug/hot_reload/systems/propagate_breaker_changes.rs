@@ -128,14 +128,6 @@ mod tests {
 
     fn make_collection(breakers: Vec<Handle<BreakerDefinition>>) -> DefaultsCollection {
         DefaultsCollection {
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            playfield: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
-            chip_select: Handle::default(),
             cells: vec![],
             nodes: vec![],
             breakers,

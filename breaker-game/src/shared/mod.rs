@@ -11,7 +11,6 @@ pub use draw_layer::GameDrawLayer;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
 /// Base damage dealt by a bolt hit. Fixed game-design constant.
 pub const BASE_BOLT_DAMAGE: f32 = 10.0;
@@ -31,10 +30,14 @@ pub const fn color_from_rgb(rgb: [f32; 3]) -> Color {
     Color::srgb(rgb[0], rgb[1], rgb[2])
 }
 
-/// Playfield defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "PlayfieldConfig")]
-pub struct PlayfieldDefaults {
+/// Playfield configuration resource.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "PlayfieldDefaults",
+    path = "config/defaults.playfield.ron",
+    ext = "playfield.ron"
+)]
+pub struct PlayfieldConfig {
     /// Width of the playfield in world units.
     pub width: f32,
     /// Height of the playfield in world units.
@@ -44,23 +47,17 @@ pub struct PlayfieldDefaults {
     /// Thickness of boundary walls in world units.
     pub wall_thickness: f32,
     /// Fraction of height reserved for the cell zone (0.0 to 1.0).
-    #[serde(default = "default_zone_fraction")]
     pub zone_fraction: f32,
 }
 
-/// Default value for `zone_fraction` used by serde when the field is absent.
-fn default_zone_fraction() -> f32 {
-    0.667
-}
-
-impl Default for PlayfieldDefaults {
+impl Default for PlayfieldConfig {
     fn default() -> Self {
         Self {
             width: 800.0,
             height: 600.0,
             background_color_rgb: [0.02, 0.01, 0.04],
             wall_thickness: 180.0,
-            zone_fraction: default_zone_fraction(),
+            zone_fraction: 0.667,
         }
     }
 }

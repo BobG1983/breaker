@@ -2,12 +2,15 @@
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
-/// Breaker defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "BreakerConfig")]
-pub struct BreakerDefaults {
+/// Breaker configuration resource.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "BreakerDefaults",
+    path = "config/defaults.breaker.ron",
+    ext = "breaker.ron"
+)]
+pub struct BreakerConfig {
     /// Full width of the breaker in world units.
     pub width: f32,
     /// Full height of the breaker in world units.
@@ -72,7 +75,7 @@ pub struct BreakerDefaults {
     pub min_angle_from_horizontal: f32,
 }
 
-impl Default for BreakerDefaults {
+impl Default for BreakerConfig {
     fn default() -> Self {
         Self {
             width: 120.0,

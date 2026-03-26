@@ -2,14 +2,17 @@
 
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
 use crate::shared::color_from_rgb;
 
-/// Timer UI defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "TimerUiConfig")]
-pub(crate) struct TimerUiDefaults {
+/// Timer UI configuration resource.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "TimerUiDefaults",
+    path = "config/defaults.timerui.ron",
+    ext = "timerui.ron"
+)]
+pub(crate) struct TimerUiConfig {
     /// Font size for the timer display.
     pub font_size: f32,
     /// Asset path for the timer font.
@@ -26,7 +29,7 @@ pub(crate) struct TimerUiDefaults {
     pub urgent_threshold: f32,
 }
 
-impl Default for TimerUiDefaults {
+impl Default for TimerUiConfig {
     fn default() -> Self {
         Self {
             font_size: 48.0,

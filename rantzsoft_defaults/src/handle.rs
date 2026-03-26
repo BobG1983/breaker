@@ -11,8 +11,9 @@ pub struct DefaultsHandle<D: Asset>(pub Handle<D>);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde::Deserialize;
+
+    use super::*;
 
     #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
     struct TestAsset {

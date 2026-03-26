@@ -45,9 +45,12 @@ impl RantzDefaultsPluginBuilder {
     /// This will set up the RON asset loader, startup handle initialization,
     /// seed system, and propagate system for the given `SeedableConfig` type.
     #[must_use]
-    pub fn register_config<D: crate::seedable::SeedableConfig>(mut self) -> Self {
+    pub fn register_config<D: crate::seedable::SeedableConfig + serde::de::DeserializeOwned>(
+        mut self,
+    ) -> Self {
         self.registrations.push(Box::new(|app: &mut App| {
             app.init_asset::<D>();
+            app.register_asset_loader(crate::loader::RonAssetLoader::<D>::new(D::extensions()));
             app.add_systems(Startup, crate::systems::init_defaults_handle::<D>);
             #[cfg(feature = "progress")]
             app.add_systems(

@@ -82,17 +82,9 @@ mod tests {
         chip_templates: Vec<Handle<ChipTemplate>>,
     ) -> DefaultsCollection {
         DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![],
             nodes: vec![],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips,
             chip_templates,
             difficulty: Handle::default(),

@@ -2,12 +2,15 @@
 
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
-/// Bolt defaults loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "BoltConfig")]
-pub struct BoltDefaults {
+/// Bolt configuration resource.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "BoltDefaults",
+    path = "config/defaults.bolt.ron",
+    ext = "bolt.ron"
+)]
+pub struct BoltConfig {
     /// Base speed in world units per second.
     pub base_speed: f32,
     /// Minimum speed cap.
@@ -31,7 +34,7 @@ pub struct BoltDefaults {
     pub color_rgb: [f32; 3],
 }
 
-impl Default for BoltDefaults {
+impl Default for BoltConfig {
     fn default() -> Self {
         Self {
             base_speed: 400.0,
