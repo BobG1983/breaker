@@ -42,27 +42,26 @@ fn parse_game_config_attrs(input: &DeriveInput) -> GameConfigAttrs {
         let Meta::List(meta_list) = &attr.meta else {
             continue;
         };
-        let Ok(nested) = meta_list
-            .parse_args_with(syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated)
-        else {
+        let Ok(nested) = meta_list.parse_args_with(
+            syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+        ) else {
             continue;
         };
         for meta in &nested {
-            if let Meta::NameValue(nv) = meta {
-                if let syn::Expr::Lit(syn::ExprLit {
+            if let Meta::NameValue(nv) = meta
+                && let syn::Expr::Lit(syn::ExprLit {
                     lit: syn::Lit::Str(s),
                     ..
                 }) = &nv.value
-                {
-                    if nv.path.is_ident("name") {
-                        attrs.name = Some(syn::Ident::new(&s.value(), s.span()));
-                    } else if nv.path.is_ident("defaults") {
-                        attrs.defaults = Some(syn::Ident::new(&s.value(), s.span()));
-                    } else if nv.path.is_ident("path") {
-                        attrs.path = Some(s.value());
-                    } else if nv.path.is_ident("ext") {
-                        attrs.ext = Some(s.value());
-                    }
+            {
+                if nv.path.is_ident("name") {
+                    attrs.name = Some(syn::Ident::new(&s.value(), s.span()));
+                } else if nv.path.is_ident("defaults") {
+                    attrs.defaults = Some(syn::Ident::new(&s.value(), s.span()));
+                } else if nv.path.is_ident("path") {
+                    attrs.path = Some(s.value());
+                } else if nv.path.is_ident("ext") {
+                    attrs.ext = Some(s.value());
                 }
             }
         }
@@ -247,7 +246,9 @@ fn derive_reversed_path(input: &DeriveInput, attrs: &GameConfigAttrs) -> TokenSt
 }
 
 /// Extracts field definitions and field names from a struct's named fields.
-fn extract_fields(input: &DeriveInput) -> (Vec<proc_macro2::TokenStream>, Vec<&Option<syn::Ident>>) {
+fn extract_fields(
+    input: &DeriveInput,
+) -> (Vec<proc_macro2::TokenStream>, Vec<&Option<syn::Ident>>) {
     let syn::Data::Struct(data_struct) = &input.data else {
         panic!("GameConfig only supports structs");
     };
