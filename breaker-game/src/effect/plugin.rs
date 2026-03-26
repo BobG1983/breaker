@@ -90,8 +90,8 @@ impl Plugin for EffectPlugin {
 mod tests {
     use super::*;
     use crate::{
-        breaker::BreakerPlugin,
-        shared::{PlayfieldConfig, SelectedBreaker},
+        breaker::{BreakerPlugin, SelectedBreaker},
+        shared::PlayfieldConfig,
     };
 
     #[test]

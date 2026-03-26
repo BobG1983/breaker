@@ -3,6 +3,9 @@
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
 
+/// Base damage dealt by a bolt hit. Fixed game-design constant.
+pub const BASE_BOLT_DAMAGE: f32 = 10.0;
+
 /// Bolt configuration resource.
 #[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
 #[game_config(
@@ -83,5 +86,10 @@ mod tests {
         let ron_str = include_str!("../../assets/config/defaults.bolt.ron");
         let result: BoltDefaults = ron::de::from_str(ron_str).expect("bolt RON should parse");
         assert!(result.base_speed > 0.0);
+    }
+
+    #[test]
+    fn base_bolt_damage_equals_10() {
+        assert!((BASE_BOLT_DAMAGE - 10.0_f32).abs() < f32::EPSILON);
     }
 }

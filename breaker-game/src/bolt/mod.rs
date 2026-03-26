@@ -10,5 +10,5 @@ pub mod sets;
 pub mod systems;
 
 pub use plugin::BoltPlugin;
-pub use resources::{BoltConfig, BoltDefaults};
+pub use resources::{BASE_BOLT_DAMAGE, BoltConfig, BoltDefaults};
 pub use sets::BoltSystems;

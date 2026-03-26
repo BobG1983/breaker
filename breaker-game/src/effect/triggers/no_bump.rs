@@ -153,8 +153,8 @@ mod tests {
         );
     }
 
-    /// M1: NoBump bridge does NOT evaluate ArmedEffects — bolt with armed NoBump
-    /// chain does not fire when BoltHitBreaker arrives without BumpPerformed.
+    /// M1: `NoBump` bridge does NOT evaluate `ArmedEffects` — bolt with armed `NoBump`
+    /// chain does not fire when `BoltHitBreaker` arrives without `BumpPerformed`.
     #[test]
     fn bridge_no_bump_does_not_evaluate_armed_effects() {
         use crate::effect::armed::ArmedEffects;

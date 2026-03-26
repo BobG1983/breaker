@@ -137,8 +137,8 @@ mod tests {
         assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
     }
 
-    /// M12: chip_name propagation through chains — EffectChains entry with
-    /// Some("Surge") produces ShockwaveFired with source_chip: Some("Surge").
+    /// M12: `chip_name` propagation through chains — `EffectChains` entry with
+    /// Some("Surge") produces `ShockwaveFired` with `source_chip`: Some("Surge").
     #[test]
     fn bridge_bump_propagates_chip_name_to_shockwave_fired() {
         let mut app = bump_test_app();

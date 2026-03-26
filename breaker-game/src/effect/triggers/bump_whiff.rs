@@ -109,7 +109,7 @@ mod tests {
         );
     }
 
-    /// M2: BumpWhiff passes empty targets vec to ShockwaveFired.
+    /// M2: `BumpWhiff` passes empty targets vec to `ShockwaveFired`.
     #[test]
     fn bridge_bump_whiff_passes_empty_targets() {
         let mut app = bump_whiff_test_app();

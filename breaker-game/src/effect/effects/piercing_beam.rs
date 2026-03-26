@@ -6,13 +6,13 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
+    bolt::BASE_BOLT_DAMAGE,
     cells::{
         components::{Cell, Locked},
         messages::DamageCell,
     },
     chips::components::DamageBoost,
     effect::definition::EffectTarget,
-    shared::BASE_BOLT_DAMAGE,
 };
 
 // ---------------------------------------------------------------------------

@@ -153,7 +153,7 @@ mod tests {
     // M9: Basic test — single-entry shockwave pool fires ShockwaveFired
     // =========================================================================
 
-    /// M9: RandomEffect with single-entry Shockwave(64.0) pool fires
+    /// M9: `RandomEffect` with single-entry Shockwave(64.0) pool fires
     /// ShockwaveFired(64.0) deterministically.
     #[test]
     fn handle_random_effect_fires_shockwave_from_single_entry() {

@@ -8,7 +8,7 @@ use bevy::{prelude::*, sprite_render::AlphaMode2d};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 
 use crate::{
-    bolt::components::Bolt,
+    bolt::{BASE_BOLT_DAMAGE, components::Bolt},
     chips::components::DamageBoost,
     effect::{
         definition::EffectTarget,
@@ -16,7 +16,7 @@ use crate::{
             ShockwaveAlreadyHit, ShockwaveDamage, ShockwaveRadius, ShockwaveSpeed,
         },
     },
-    shared::{BASE_BOLT_DAMAGE, CleanupOnNodeExit, GameDrawLayer},
+    shared::{CleanupOnNodeExit, GameDrawLayer},
 };
 
 // ---------------------------------------------------------------------------
@@ -99,10 +99,9 @@ mod tests {
 
     use super::*;
     use crate::{
-        bolt::components::Bolt,
+        bolt::{BASE_BOLT_DAMAGE, components::Bolt},
         chips::components::DamageBoost,
         effect::effects::shockwave::{ShockwaveDamage, ShockwaveRadius, ShockwaveSpeed},
-        shared::BASE_BOLT_DAMAGE,
     };
 
     // --- Test infrastructure ---

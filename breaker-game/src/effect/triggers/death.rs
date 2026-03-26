@@ -210,7 +210,7 @@ mod tests {
 
     /// M7: Breaker entity with When(Death) chains does NOT fire when a cell is
     /// destroyed — Death evaluates ONLY the dying entity's chains, not globally.
-    /// CellDestroyedAt is still written.
+    /// `CellDestroyedAt` is still written.
     #[test]
     fn bridge_cell_death_does_not_evaluate_other_entity_chains() {
         #[derive(Resource)]
@@ -234,6 +234,8 @@ mod tests {
             }
         }
 
+        use crate::breaker::components::Breaker;
+
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<RequestCellDestroyed>()
@@ -247,7 +249,6 @@ mod tests {
             );
 
         // Breaker entity with When(Death) chain — should NOT be evaluated
-        use crate::breaker::components::Breaker;
         app.world_mut().spawn((
             Breaker,
             EffectChains(vec![(

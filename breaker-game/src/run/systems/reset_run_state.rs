@@ -6,9 +6,10 @@ use rand_chacha::ChaCha8Rng;
 use tracing::info;
 
 use crate::{
+    breaker::SelectedBreaker,
     chips::inventory::ChipInventory,
     run::resources::{HighlightTracker, RunState, RunStats},
-    shared::{GameRng, RunSeed, SelectedBreaker},
+    shared::{GameRng, RunSeed},
 };
 
 /// Resets [`RunState`] to defaults and reseeds [`GameRng`] when leaving the

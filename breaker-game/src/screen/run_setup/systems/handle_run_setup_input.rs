@@ -3,13 +3,14 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
+    breaker::SelectedBreaker,
     effect::BreakerRegistry,
     input::InputConfig,
     screen::run_setup::{
         components::BreakerCard,
         resources::{RunSetupSelection, SeedEntry},
     },
-    shared::{GameState, RunSeed, SelectedBreaker},
+    shared::{GameState, RunSeed},
 };
 
 /// Bundled parameters for run confirmation (breaker, state transition, seed).

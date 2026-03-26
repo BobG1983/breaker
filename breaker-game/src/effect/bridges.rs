@@ -237,14 +237,8 @@ mod tests {
         let bolt = app
             .world_mut()
             .spawn(EffectChains(wrap_chains(vec![
-                EffectNode::trigger_leaf(
-                    Trigger::Bumped,
-                    Effect::test_shockwave(16.0),
-                ),
-                EffectNode::trigger_leaf(
-                    Trigger::PerfectBumped,
-                    Effect::test_shockwave(8.0),
-                ),
+                EffectNode::trigger_leaf(Trigger::Bumped, Effect::test_shockwave(16.0)),
+                EffectNode::trigger_leaf(Trigger::PerfectBumped, Effect::test_shockwave(8.0)),
             ])))
             .id();
 
@@ -252,14 +246,8 @@ mod tests {
         app.world_mut().spawn((
             Breaker,
             EffectChains(wrap_chains(vec![
-                EffectNode::trigger_leaf(
-                    Trigger::Bump,
-                    Effect::test_shockwave(64.0),
-                ),
-                EffectNode::trigger_leaf(
-                    Trigger::PerfectBump,
-                    Effect::test_shockwave(32.0),
-                ),
+                EffectNode::trigger_leaf(Trigger::Bump, Effect::test_shockwave(64.0)),
+                EffectNode::trigger_leaf(Trigger::PerfectBump, Effect::test_shockwave(32.0)),
             ])),
         ));
 
@@ -284,16 +272,12 @@ mod tests {
             captured.0.len()
         );
 
-        // Verify all 4 ranges are present
-        let mut ranges: Vec<u32> = captured
-            .0
-            .iter()
-            .map(|s| s.base_range as u32)
-            .collect();
-        ranges.sort();
+        // Verify all 4 ranges are present (compare as sorted f32 to avoid float→int cast lints)
+        let mut ranges: Vec<f32> = captured.0.iter().map(|s| s.base_range).collect();
+        ranges.sort_unstable_by(f32::total_cmp);
         assert_eq!(
             ranges,
-            vec![8, 16, 32, 64],
+            vec![8.0, 16.0, 32.0, 64.0],
             "expected ranges [8, 16, 32, 64] — got {ranges:?}"
         );
     }

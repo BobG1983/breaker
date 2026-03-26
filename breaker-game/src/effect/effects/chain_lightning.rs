@@ -9,10 +9,11 @@ use rantzsoft_physics2d::{collision_layers::CollisionLayers, resources::Collisio
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
+    bolt::BASE_BOLT_DAMAGE,
     cells::{components::Locked, messages::DamageCell},
     chips::components::DamageBoost,
     effect::definition::EffectTarget,
-    shared::{BASE_BOLT_DAMAGE, CELL_LAYER},
+    shared::CELL_LAYER,
 };
 
 // ---------------------------------------------------------------------------
@@ -115,12 +116,13 @@ mod tests {
 
     use super::*;
     use crate::{
+        bolt::BASE_BOLT_DAMAGE,
         cells::{
             components::{Cell, CellHealth, Locked},
             messages::DamageCell,
         },
         chips::components::DamageBoost,
-        shared::{BASE_BOLT_DAMAGE, BOLT_LAYER, CELL_LAYER, GameDrawLayer},
+        shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
     };
 
     // --- Test infrastructure ---

@@ -11,12 +11,12 @@ pub(crate) use crate::breaker::systems::init_breaker::{
 #[cfg(test)]
 pub(crate) use crate::{
     breaker::{
+        SelectedBreaker,
         components::Breaker,
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
     effect::{definition::EffectChains, effects::life_lost::LivesCount},
-    shared::SelectedBreaker,
 };
 
 #[cfg(test)]
