@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 rantzsoft_defaults_derive = { path = "../rantzsoft_defaults_derive" }
+bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 
 [dev-dependencies]
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
