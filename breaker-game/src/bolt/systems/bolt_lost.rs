@@ -1,14 +1,30 @@
 //! Bolt-lost detection — bolt falls below the playfield.
 
-use bevy::prelude::*;
+use bevy::{
+    ecs::system::{SystemParam, SystemParamValidationError},
+    prelude::*,
+};
 use rand::Rng;
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use crate::{
-    bolt::{filters::ActiveFilter, messages::BoltLost, queries::LostQuery},
+    bolt::{
+        filters::ActiveFilter,
+        messages::{BoltLost, RequestBoltDestroyed},
+        queries::LostQuery,
+    },
     breaker::filters::CollisionFilterBreaker,
     shared::{GameRng, PlayfieldConfig},
 };
+
+/// Bundled message writers for `bolt_lost` to satisfy clippy's
+/// `too_many_arguments` lint.
+#[derive(SystemParam)]
+pub(crate) struct BoltLostWriters<'w> {
+    writer: MessageWriter<'w, BoltLost>,
+    request_destroyed_writer:
+        Result<MessageWriter<'w, RequestBoltDestroyed>, SystemParamValidationError>,
+}
 
 /// Collected data for a single lost bolt, used as scratch storage between
 /// the filter pass and the command-application pass.
@@ -32,7 +48,7 @@ pub(crate) fn bolt_lost(
     mut rng: ResMut<GameRng>,
     bolt_query: Query<LostQuery, ActiveFilter>,
     breaker_query: Query<&Position2D, CollisionFilterBreaker>,
-    mut writer: MessageWriter<BoltLost>,
+    mut writers: BoltLostWriters,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
     let Ok(breaker_position) = breaker_query.single() else {
@@ -74,10 +90,16 @@ pub(crate) fn bolt_lost(
     );
 
     for entry in &*lost_bolts {
-        writer.write(BoltLost);
+        writers.writer.write(BoltLost);
 
         if entry.is_extra {
-            commands.entity(entry.entity).despawn();
+            if let Ok(ref mut destroyed_writer) = writers.request_destroyed_writer {
+                // Two-phase destruction: write request (entity stays alive for bridge evaluation)
+                destroyed_writer.write(RequestBoltDestroyed { bolt: entry.entity });
+            } else {
+                // Legacy path: despawn directly when RequestBoltDestroyed is not registered
+                commands.entity(entry.entity).despawn();
+            }
         } else {
             // Respawn above breaker
             let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);
@@ -451,6 +473,149 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(extra_count, 0, "extra bolt should be gone");
+    }
+
+    // =========================================================================
+    // C7 Wave 2a: Two-Phase Destruction — bolt_lost writes
+    // RequestBoltDestroyed for ExtraBolt only (behaviors 33, 33a)
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct CapturedRequestBoltDestroyed(Vec<crate::bolt::messages::RequestBoltDestroyed>);
+
+    fn capture_request_bolt_destroyed(
+        mut reader: MessageReader<crate::bolt::messages::RequestBoltDestroyed>,
+        mut captured: ResMut<CapturedRequestBoltDestroyed>,
+    ) {
+        for msg in reader.read() {
+            captured.0.push(msg.clone());
+        }
+    }
+
+    #[test]
+    fn extra_bolt_writes_request_bolt_destroyed_instead_of_despawning() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<GameRng>()
+            .add_message::<BoltLost>()
+            .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
+            .init_resource::<CapturedRequestBoltDestroyed>()
+            .add_systems(
+                FixedUpdate,
+                (bolt_lost, capture_request_bolt_destroyed).chain(),
+            );
+
+        let playfield = PlayfieldConfig::default();
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(0.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                ExtraBolt,
+                Velocity2D(Vec2::new(0.0, -400.0)),
+                bolt_lost_bundle(),
+                Position2D(Vec2::new(50.0, playfield.bottom() - 100.0)),
+            ))
+            .id();
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "extra bolt should write RequestBoltDestroyed"
+        );
+        assert_eq!(
+            captured.0[0].bolt, entity,
+            "RequestBoltDestroyed should carry the bolt entity"
+        );
+
+        // Entity should STILL BE ALIVE (two-phase flow — no immediate despawn)
+        assert!(
+            app.world().get_entity(entity).is_ok(),
+            "extra bolt entity should still be alive — bridge evaluates before cleanup despawns"
+        );
+    }
+
+    #[test]
+    fn baseline_bolt_does_not_write_request_bolt_destroyed() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<GameRng>()
+            .add_message::<BoltLost>()
+            .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
+            .init_resource::<CapturedRequestBoltDestroyed>()
+            .add_systems(
+                FixedUpdate,
+                (bolt_lost, capture_request_bolt_destroyed).chain(),
+            );
+
+        let playfield = PlayfieldConfig::default();
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(0.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+
+        // Baseline bolt (no ExtraBolt marker)
+        app.world_mut().spawn((
+            Bolt,
+            Velocity2D(Vec2::new(0.0, -400.0)),
+            bolt_lost_bundle(),
+            Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
+        ));
+
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
+        assert!(
+            captured.0.is_empty(),
+            "baseline bolt should NOT write RequestBoltDestroyed — it gets respawned"
+        );
+    }
+
+    #[test]
+    fn baseline_bolt_still_sends_bolt_lost_message() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<GameRng>()
+            .add_message::<BoltLost>()
+            .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
+            .init_resource::<BoltLostCount>()
+            .add_systems(FixedUpdate, (bolt_lost, count_bolt_lost).chain());
+
+        let playfield = PlayfieldConfig::default();
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(0.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+
+        app.world_mut().spawn((
+            Bolt,
+            Velocity2D(Vec2::new(0.0, -400.0)),
+            bolt_lost_bundle(),
+            Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
+        ));
+
+        tick(&mut app);
+
+        let count = app.world().resource::<BoltLostCount>();
+        assert_eq!(
+            count.0, 1,
+            "baseline bolt should still send BoltLost for game-logic purposes"
+        );
     }
 
     #[test]

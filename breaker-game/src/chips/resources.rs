@@ -106,11 +106,10 @@ mod tests {
 
     // --- ChipRegistry recipe tests (B12d behaviors 1-7) ---
 
-    use crate::chips::{
-        definition::EvolutionIngredient,
-        inventory::ChipInventory,
+    use crate::{
+        chips::{definition::EvolutionIngredient, inventory::ChipInventory},
+        effect::definition::{Effect, EffectNode},
     };
-    use crate::effect::definition::{Effect, EffectNode};
 
     fn ingredient(name: &str, stacks: u32) -> EvolutionIngredient {
         EvolutionIngredient {

@@ -165,7 +165,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::Piercing(1))],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -194,10 +197,13 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![
-                    EffectNode::Do(Effect::Piercing(1)),
-                    EffectNode::Do(Effect::DamageBoost(0.5)),
-                ] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![
+                        EffectNode::Do(Effect::Piercing(1)),
+                        EffectNode::Do(Effect::DamageBoost(0.5)),
+                    ],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -285,7 +291,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::Piercing(1))],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -334,7 +343,14 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Rare,
                 max_stacks: 1,
-                effects: vec![EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnPerfectBump,
+                    then: vec![EffectNode::Do(Effect::SpawnBolts {
+                        count: 1,
+                        lifespan: None,
+                        inherit: false,
+                    })],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -460,7 +476,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::Piercing(1))],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -494,7 +513,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 1,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -532,8 +554,18 @@ mod tests {
                 rarity: Rarity::Rare,
                 max_stacks: 1,
                 effects: vec![
-                    EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] },
-                    EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })] },
+                    EffectNode::When {
+                        trigger: Trigger::OnSelected,
+                        then: vec![EffectNode::Do(Effect::Piercing(1))],
+                    },
+                    EffectNode::When {
+                        trigger: Trigger::OnPerfectBump,
+                        then: vec![EffectNode::Do(Effect::SpawnBolts {
+                            count: 1,
+                            lifespan: None,
+                            inherit: false,
+                        })],
+                    },
                 ],
                 ingredients: None,
                 template_name: None,
@@ -561,7 +593,14 @@ mod tests {
         assert_eq!(active.0[0].0, Some("Hybrid".to_owned()));
         assert_eq!(
             active.0[0].1,
-            EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })] }
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                then: vec![EffectNode::Do(Effect::SpawnBolts {
+                    count: 1,
+                    lifespan: None,
+                    inherit: false
+                })]
+            }
         );
     }
 
@@ -582,10 +621,13 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    target: Target::AllBolts,
-                    multiplier: 1.1,
-                })] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::SpeedBoost {
+                        target: Target::AllBolts,
+                        multiplier: 1.1,
+                    })],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -675,10 +717,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::SizeBoost(
-                    Target::Breaker,
-                    20.0,
-                ))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::SizeBoost(Target::Breaker, 20.0))],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -811,13 +853,21 @@ mod tests {
         // to ActiveEffects. Verify this EffectNode evaluates as expected.
         let node = EffectNode::When {
             trigger: Trigger::OnPerfectBump,
-            then: vec![EffectNode::Do(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })],
+            then: vec![EffectNode::Do(Effect::SpawnBolts {
+                count: 1,
+                lifespan: None,
+                inherit: false,
+            })],
         };
         // Should NOT match OnSelected — bridge evaluation handles it
         let result = evaluate_node(TriggerKind::PerfectBump, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Fire(Effect::SpawnBolts { count: 1, lifespan: None, inherit: false })],
+            vec![NodeEvalResult::Fire(Effect::SpawnBolts {
+                count: 1,
+                lifespan: None,
+                inherit: false
+            })],
             "OnPerfectBump with Do(SpawnBolts) should fire on PerfectBump"
         );
     }
@@ -910,7 +960,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(1))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::Piercing(1))],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -941,10 +994,10 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::SizeBoost(
-                    Target::Bolt,
-                    5.0,
-                ))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::SizeBoost(Target::Bolt, 5.0))],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -977,16 +1030,19 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![
-                    EffectNode::Do(Effect::SpeedBoost {
-                        target: Target::Bolt,
-                        multiplier: 0.1,
-                    }),
-                    EffectNode::Do(Effect::SpeedBoost {
-                        target: Target::Breaker,
-                        multiplier: 0.2,
-                    }),
-                ] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![
+                        EffectNode::Do(Effect::SpeedBoost {
+                            target: Target::Bolt,
+                            multiplier: 0.1,
+                        }),
+                        EffectNode::Do(Effect::SpeedBoost {
+                            target: Target::Breaker,
+                            multiplier: 0.2,
+                        }),
+                    ],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -1032,7 +1088,10 @@ mod tests {
                 description: "Evolution chip".to_owned(),
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
-                effects: vec![EffectNode::When { trigger: Trigger::OnSelected, then: vec![EffectNode::Do(Effect::Piercing(5))] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnSelected,
+                    then: vec![EffectNode::Do(Effect::Piercing(5))],
+                }],
                 ingredients: Some(vec![crate::chips::definition::EvolutionIngredient {
                     chip_name: "Piercing Shot".to_owned(),
                     stacks_required: 2,
@@ -1078,12 +1137,15 @@ mod tests {
                 description: "Evolution with triggered effect".to_owned(),
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
-                effects: vec![EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })] }],
+                effects: vec![EffectNode::When {
+                    trigger: Trigger::OnPerfectBump,
+                    then: vec![EffectNode::Do(Effect::Shockwave {
+                        base_range: 64.0,
+                        range_per_level: 0.0,
+                        stacks: 1,
+                        speed: 400.0,
+                    })],
+                }],
                 ingredients: None,
                 template_name: None,
             });
@@ -1104,12 +1166,15 @@ mod tests {
         );
         assert_eq!(
             active.0[0].1,
-            EffectNode::When { trigger: Trigger::OnPerfectBump, then: vec![EffectNode::Do(Effect::Shockwave {
-                base_range: 64.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            })] },
+            EffectNode::When {
+                trigger: Trigger::OnPerfectBump,
+                then: vec![EffectNode::Do(Effect::Shockwave {
+                    base_range: 64.0,
+                    range_per_level: 0.0,
+                    stacks: 1,
+                    speed: 400.0,
+                })]
+            },
             "ActiveEffects chain should match the evolution chip's triggered effect"
         );
     }

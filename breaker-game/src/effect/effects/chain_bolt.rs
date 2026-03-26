@@ -14,7 +14,7 @@ pub(crate) fn handle_chain_bolt(
     let event = trigger.event();
     let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
         crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
-        _ => None,
+        crate::effect::definition::EffectTarget::Location(_) => None,
     }) else {
         return;
     };

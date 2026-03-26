@@ -35,8 +35,10 @@ pub fn check_offering_no_duplicates(
 
 #[cfg(test)]
 mod tests {
-    use breaker::chips::definition::{ChipDefinition, Rarity};
-    use breaker::effect::{Effect, EffectNode};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
 
     use super::*;
 

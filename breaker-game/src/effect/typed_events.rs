@@ -344,6 +344,62 @@ pub(crate) fn fire_typed_event(
     use super::definition::Effect;
 
     match effect {
+        // -- Bolt combat effects --
+        effect @ (Effect::Shockwave { .. }
+        | Effect::SpeedBoost { .. }
+        | Effect::ChainBolt { .. }
+        | Effect::MultiBolt { .. }
+        | Effect::ChainLightning { .. }
+        | Effect::PiercingBeam { .. }) => {
+            fire_bolt_effect(effect, targets, source_chip, commands);
+        }
+
+        // -- Life, penalty, spawn, and defensive effects --
+        effect @ (Effect::LoseLife
+        | Effect::TimePenalty { .. }
+        | Effect::SpawnBolts { .. }
+        | Effect::SpawnPhantom { .. }
+        | Effect::Shield { .. }
+        | Effect::GravityWell { .. }
+        | Effect::SecondWind { .. }) => {
+            fire_global_effect(effect, targets, source_chip, commands);
+        }
+
+        // -- Pool / random effects --
+        effect @ (Effect::RandomEffect(_) | Effect::EntropyEngine { .. }) => {
+            fire_pool_effect(effect, targets, source_chip, commands);
+        }
+
+        // Passive-only effects should not be fired via bridge dispatch.
+        // If they end up here, it's a data error — log and skip.
+        effect @ (Effect::Piercing(_)
+        | Effect::DamageBoost(_)
+        | Effect::ChainHit(_)
+        | Effect::SizeBoost(..)
+        | Effect::Attraction(..)
+        | Effect::BumpForce(_)
+        | Effect::TiltControl(_)
+        | Effect::RampingDamage { .. }) => {
+            #[cfg(debug_assertions)]
+            {
+                warn!(
+                    "fire_typed_event called with passive-only effect {effect:?} — should use fire_passive_event"
+                );
+            }
+        }
+    }
+}
+
+/// Dispatches bolt combat effects (shockwave, speed boost, chain bolt, etc.).
+fn fire_bolt_effect(
+    effect: super::definition::Effect,
+    targets: Vec<EffectTarget>,
+    source_chip: Option<String>,
+    commands: &mut Commands,
+) {
+    use super::definition::Effect;
+
+    match effect {
         Effect::Shockwave {
             base_range,
             range_per_level,
@@ -355,32 +411,6 @@ pub(crate) fn fire_typed_event(
                 range_per_level,
                 stacks,
                 speed,
-                targets,
-                source_chip,
-            });
-        }
-        Effect::LoseLife => {
-            commands.trigger(LoseLifeFired {
-                targets,
-                source_chip,
-            });
-        }
-        Effect::TimePenalty { seconds } => {
-            commands.trigger(TimePenaltyFired {
-                seconds,
-                targets,
-                source_chip,
-            });
-        }
-        Effect::SpawnBolts {
-            count,
-            lifespan,
-            inherit,
-        } => {
-            commands.trigger(SpawnBoltsFired {
-                count,
-                lifespan,
-                inherit,
                 targets,
                 source_chip,
             });
@@ -413,19 +443,6 @@ pub(crate) fn fire_typed_event(
                 source_chip,
             });
         }
-        Effect::Shield {
-            base_duration,
-            duration_per_level,
-            stacks,
-        } => {
-            commands.trigger(ShieldFired {
-                base_duration,
-                duration_per_level,
-                stacks,
-                targets,
-                source_chip,
-            });
-        }
         Effect::ChainLightning {
             arcs,
             range,
@@ -435,6 +452,54 @@ pub(crate) fn fire_typed_event(
                 arcs,
                 range,
                 damage_mult,
+                targets,
+                source_chip,
+            });
+        }
+        Effect::PiercingBeam { damage_mult, width } => {
+            commands.trigger(PiercingBeamFired {
+                damage_mult,
+                width,
+                targets,
+                source_chip,
+            });
+        }
+        _ => {}
+    }
+}
+
+/// Dispatches life, penalty, spawn, and defensive effects.
+fn fire_global_effect(
+    effect: super::definition::Effect,
+    targets: Vec<EffectTarget>,
+    source_chip: Option<String>,
+    commands: &mut Commands,
+) {
+    use super::definition::Effect;
+
+    match effect {
+        Effect::LoseLife => {
+            commands.trigger(LoseLifeFired {
+                targets,
+                source_chip,
+            });
+        }
+        Effect::TimePenalty { seconds } => {
+            commands.trigger(TimePenaltyFired {
+                seconds,
+                targets,
+                source_chip,
+            });
+        }
+        Effect::SpawnBolts {
+            count,
+            lifespan,
+            inherit,
+        } => {
+            commands.trigger(SpawnBoltsFired {
+                count,
+                lifespan,
+                inherit,
                 targets,
                 source_chip,
             });
@@ -450,10 +515,15 @@ pub(crate) fn fire_typed_event(
                 source_chip,
             });
         }
-        Effect::PiercingBeam { damage_mult, width } => {
-            commands.trigger(PiercingBeamFired {
-                damage_mult,
-                width,
+        Effect::Shield {
+            base_duration,
+            duration_per_level,
+            stacks,
+        } => {
+            commands.trigger(ShieldFired {
+                base_duration,
+                duration_per_level,
+                stacks,
                 targets,
                 source_chip,
             });
@@ -480,12 +550,23 @@ pub(crate) fn fire_typed_event(
                 source_chip,
             });
         }
+        _ => {}
+    }
+}
+
+/// Dispatches pool / random effects (`RandomEffect`, `EntropyEngine`).
+fn fire_pool_effect(
+    effect: super::definition::Effect,
+    targets: Vec<EffectTarget>,
+    source_chip: Option<String>,
+    commands: &mut Commands,
+) {
+    use super::definition::Effect;
+
+    match effect {
         Effect::RandomEffect(pool) => {
             commands.trigger(RandomEffectFired {
-                pool: pool
-                    .into_iter()
-                    .map(|(w, node)| (w, node))
-                    .collect(),
+                pool: pool.into_iter().collect(),
                 targets,
                 source_chip,
             });
@@ -493,31 +574,12 @@ pub(crate) fn fire_typed_event(
         Effect::EntropyEngine { threshold, pool } => {
             commands.trigger(EntropyEngineFired {
                 threshold,
-                pool: pool
-                    .into_iter()
-                    .map(|(w, node)| (w, node))
-                    .collect(),
+                pool: pool.into_iter().collect(),
                 targets,
                 source_chip,
             });
         }
-        // Passive-only effects should not be fired via bridge dispatch.
-        // If they end up here, it's a data error — log and skip.
-        Effect::Piercing(_)
-        | Effect::DamageBoost(_)
-        | Effect::ChainHit(_)
-        | Effect::SizeBoost(..)
-        | Effect::Attraction(..)
-        | Effect::BumpForce(_)
-        | Effect::TiltControl(_)
-        | Effect::RampingDamage { .. } => {
-            #[cfg(debug_assertions)]
-            {
-                warn!(
-                    "fire_typed_event called with passive-only effect {effect:?} — should use fire_passive_event"
-                );
-            }
-        }
+        _ => {}
     }
 }
 
@@ -617,8 +679,10 @@ pub(crate) fn fire_passive_event(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::super::definition::{AttractionType, EffectNode, EffectTarget};
+    use super::{
+        super::definition::{AttractionType, EffectNode, EffectTarget},
+        *,
+    };
 
     // =========================================================================
     // C7 Wave 1 Part E: Typed events with targets: Vec<EffectTarget> (behaviors 29-30)
@@ -889,5 +953,4 @@ mod tests {
         assert!((event.base_duration - 3.0).abs() < f32::EPSILON);
         assert_eq!(event.stacks, 2);
     }
-
 }

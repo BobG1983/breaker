@@ -4,24 +4,23 @@ use bevy::prelude::*;
 
 use crate::cells::{
     components::Cell,
-    messages::{CellDestroyed, DamageCell},
+    messages::{DamageCell, RequestCellDestroyed},
     queries::DamageVisualQuery,
 };
 
 /// Handles cell damage in response to [`DamageCell`] messages.
 ///
 /// Decrements cell health, updates visual feedback via material color,
-/// and despawns cells that reach zero HP. Sends [`CellDestroyed`] on destruction.
+/// and sends [`RequestCellDestroyed`] when cells reach zero HP.
 ///
 /// Guards against the same cell appearing in multiple messages in one frame
 /// (e.g., two bolts hitting the same cell simultaneously): only the first hit
-/// that destroys the cell is processed; subsequent messages for an already-despawned
-/// cell are skipped to prevent duplicate [`CellDestroyed`] messages.
+/// that destroys the cell is processed; subsequent messages for an already-destroyed
+/// cell are skipped to prevent duplicate [`RequestCellDestroyed`] messages.
 pub(crate) fn handle_cell_hit(
     mut reader: MessageReader<DamageCell>,
     mut cell_query: Query<DamageVisualQuery, With<Cell>>,
-    mut commands: Commands,
-    mut destroyed_writer: MessageWriter<CellDestroyed>,
+    mut request_destroyed_writer: MessageWriter<RequestCellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut despawned: Local<Vec<Entity>>,
 ) {
@@ -32,7 +31,7 @@ pub(crate) fn handle_cell_hit(
         if despawned.contains(&msg.cell) {
             continue;
         }
-        let Ok((mut health, material_handle, visuals, is_required, is_locked)) =
+        let Ok((mut health, material_handle, visuals, _is_required, is_locked)) =
             cell_query.get_mut(msg.cell)
         else {
             continue;
@@ -46,10 +45,8 @@ pub(crate) fn handle_cell_hit(
         let destroyed = health.take_damage(msg.damage);
 
         if destroyed {
-            commands.entity(msg.cell).despawn();
-            destroyed_writer.write(CellDestroyed {
-                was_required_to_clear: is_required,
-            });
+            // Two-phase destruction: write request (entity stays alive for bridge evaluation)
+            request_destroyed_writer.write(RequestCellDestroyed { cell: msg.cell });
             despawned.push(msg.cell);
         } else {
             // Visual feedback — dim HDR intensity based on remaining health
@@ -78,7 +75,7 @@ mod tests {
     struct TestMessages(Vec<DamageCell>);
 
     #[derive(Resource, Default)]
-    struct CapturedDestroyed(Vec<CellDestroyed>);
+    struct CapturedDestroyed(Vec<RequestCellDestroyed>);
 
     fn enqueue_from_resource(msg_res: Res<TestMessage>, mut writer: MessageWriter<DamageCell>) {
         if let Some(msg) = msg_res.0.clone() {
@@ -93,7 +90,7 @@ mod tests {
     }
 
     fn capture_destroyed(
-        mut reader: MessageReader<CellDestroyed>,
+        mut reader: MessageReader<RequestCellDestroyed>,
         mut captured: ResMut<CapturedDestroyed>,
     ) {
         for msg in reader.read() {
@@ -107,7 +104,7 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<DamageCell>()
-            .add_message::<CellDestroyed>()
+            .add_message::<RequestCellDestroyed>()
             .add_systems(FixedUpdate, handle_cell_hit);
         app
     }
@@ -197,7 +194,7 @@ mod tests {
             .id()
     }
 
-    // --- Behavior 1: DamageCell destroys cell at exact HP ---
+    // --- Behavior 1: DamageCell sends RequestCellDestroyed at exact HP ---
 
     #[test]
     fn damage_cell_10_destroys_10hp_cell() {
@@ -208,7 +205,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(
@@ -220,15 +217,16 @@ mod tests {
         );
         tick(&mut app);
 
-        assert!(
-            app.world().get_entity(cell).is_err(),
-            "10.0 damage on 10-HP cell should destroy it"
-        );
+        // Two-phase destruction: entity stays alive, RequestCellDestroyed sent
         let captured = app.world().resource::<CapturedDestroyed>();
-        assert_eq!(captured.0.len(), 1, "exactly one CellDestroyed expected");
-        assert!(
-            captured.0[0].was_required_to_clear,
-            "RequiredToClear cell should set was_required_to_clear = true"
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "exactly one RequestCellDestroyed expected"
+        );
+        assert_eq!(
+            captured.0[0].cell, cell,
+            "RequestCellDestroyed should carry the destroyed cell entity"
         );
     }
 
@@ -241,7 +239,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 15.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(
@@ -253,12 +251,13 @@ mod tests {
         );
         tick(&mut app);
 
-        assert!(
-            app.world().get_entity(cell).is_err(),
-            "overkill (15 damage on 10-HP cell) should destroy the cell"
-        );
+        // Two-phase destruction: entity stays alive, RequestCellDestroyed sent
         let captured = app.world().resource::<CapturedDestroyed>();
-        assert_eq!(captured.0.len(), 1, "exactly one CellDestroyed expected");
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "exactly one RequestCellDestroyed expected"
+        );
     }
 
     // --- Behavior 2: DamageCell leaves cell alive with reduced HP ---
@@ -271,7 +270,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -299,7 +298,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 15.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -328,7 +327,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 0.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(
@@ -354,7 +353,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             0,
-            "zero damage should not send CellDestroyed"
+            "zero damage should not send RequestCellDestroyed"
         );
     }
 
@@ -368,7 +367,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -389,7 +388,7 @@ mod tests {
     // --- Behavior 6: was_required_to_clear false for non-required cell ---
 
     #[test]
-    fn destroyed_non_required_cell_sets_was_required_to_clear_false() {
+    fn destroyed_non_required_cell_sends_request_cell_destroyed() {
         let mut app = test_app();
         let cell = spawn_optional_cell(&mut app, 10.0, false);
 
@@ -397,7 +396,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(
@@ -409,22 +408,23 @@ mod tests {
         );
         tick(&mut app);
 
-        assert!(
-            app.world().get_entity(cell).is_err(),
-            "non-required 10-HP cell should be destroyed by 10 damage"
-        );
+        // Two-phase destruction: entity stays alive, RequestCellDestroyed sent
         let captured = app.world().resource::<CapturedDestroyed>();
-        assert_eq!(captured.0.len(), 1, "exactly one CellDestroyed expected");
-        assert!(
-            !captured.0[0].was_required_to_clear,
-            "non-required cell should set was_required_to_clear = false"
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "exactly one RequestCellDestroyed expected"
+        );
+        assert_eq!(
+            captured.0[0].cell, cell,
+            "RequestCellDestroyed should carry the destroyed cell entity"
         );
     }
 
-    // --- Behavior 7: Dedup — two DamageCell same cell, only one CellDestroyed ---
+    // --- Behavior 7: Dedup — two DamageCell same cell, only one RequestCellDestroyed ---
 
     #[test]
-    fn double_damage_cell_same_cell_only_one_cell_destroyed() {
+    fn double_damage_cell_same_cell_only_one_request_cell_destroyed() {
         let mut app = test_app();
         let cell = spawn_optional_cell(&mut app, 10.0, true);
 
@@ -434,13 +434,13 @@ mod tests {
             DamageCell {
                 cell,
                 damage: 10.0,
-                source_bolt: Entity::PLACEHOLDER,
+                source_bolt: None,
                 source_chip: None,
             },
             DamageCell {
                 cell,
                 damage: 10.0,
-                source_bolt: Entity::PLACEHOLDER,
+                source_bolt: None,
                 source_chip: None,
             },
         ];
@@ -453,15 +453,146 @@ mod tests {
         );
         tick(&mut app);
 
-        assert!(
-            app.world().get_entity(cell).is_err(),
-            "cell should be destroyed"
-        );
+        // Two-phase destruction: entity stays alive, only one RequestCellDestroyed
         let captured = app.world().resource::<CapturedDestroyed>();
         assert_eq!(
             captured.0.len(),
             1,
-            "two DamageCell on same 10-HP cell should produce exactly one CellDestroyed"
+            "two DamageCell on same 10-HP cell should produce exactly one RequestCellDestroyed"
+        );
+    }
+
+    // =========================================================================
+    // C7 Wave 2a: Two-Phase Destruction — handle_cell_hit writes
+    // RequestCellDestroyed instead of despawning (behaviors 29, 32)
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct CapturedRequestCellDestroyed(Vec<crate::cells::messages::RequestCellDestroyed>);
+
+    fn capture_request_cell_destroyed(
+        mut reader: MessageReader<crate::cells::messages::RequestCellDestroyed>,
+        mut captured: ResMut<CapturedRequestCellDestroyed>,
+    ) {
+        for msg in reader.read() {
+            captured.0.push(msg.clone());
+        }
+    }
+
+    fn test_app_two_phase() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_message::<DamageCell>()
+            .add_message::<RequestCellDestroyed>()
+            .add_systems(FixedUpdate, handle_cell_hit);
+        app
+    }
+
+    #[test]
+    fn handle_cell_hit_writes_request_cell_destroyed_instead_of_despawning() {
+        let mut app = test_app_two_phase();
+        let cell = spawn_cell(&mut app, 10.0);
+
+        app.init_resource::<CapturedRequestCellDestroyed>();
+        app.insert_resource(TestMessage(Some(DamageCell {
+            cell,
+            damage: 10.0,
+            source_bolt: None,
+            source_chip: None,
+        })));
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_from_resource.before(handle_cell_hit),
+                capture_request_cell_destroyed.after(handle_cell_hit),
+            ),
+        );
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedRequestCellDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "handle_cell_hit should write RequestCellDestroyed when cell HP reaches 0"
+        );
+        assert_eq!(
+            captured.0[0].cell, cell,
+            "RequestCellDestroyed should carry the cell entity"
+        );
+
+        // Entity should STILL BE ALIVE (no immediate despawn in two-phase flow)
+        assert!(
+            app.world().get_entity(cell).is_ok(),
+            "cell entity should still be alive — bridge evaluates before cleanup despawns"
+        );
+    }
+
+    #[test]
+    fn handle_cell_hit_dedup_produces_one_request_cell_destroyed() {
+        let mut app = test_app_two_phase();
+        let cell = spawn_optional_cell(&mut app, 10.0, true);
+
+        app.init_resource::<CapturedRequestCellDestroyed>();
+        app.init_resource::<TestMessages>();
+        app.world_mut().resource_mut::<TestMessages>().0 = vec![
+            DamageCell {
+                cell,
+                damage: 10.0,
+                source_bolt: None,
+                source_chip: None,
+            },
+            DamageCell {
+                cell,
+                damage: 10.0,
+                source_bolt: None,
+                source_chip: None,
+            },
+        ];
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_all.before(handle_cell_hit),
+                capture_request_cell_destroyed.after(handle_cell_hit),
+            ),
+        );
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedRequestCellDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "dedup should produce exactly one RequestCellDestroyed for same cell hit twice"
+        );
+    }
+
+    #[test]
+    fn handle_cell_hit_non_required_cell_produces_request_cell_destroyed() {
+        let mut app = test_app_two_phase();
+        let cell = spawn_optional_cell(&mut app, 10.0, false);
+
+        app.init_resource::<CapturedRequestCellDestroyed>();
+        app.insert_resource(TestMessage(Some(DamageCell {
+            cell,
+            damage: 10.0,
+            source_bolt: None,
+            source_chip: None,
+        })));
+        app.add_systems(
+            FixedUpdate,
+            (
+                enqueue_from_resource.before(handle_cell_hit),
+                capture_request_cell_destroyed.after(handle_cell_hit),
+            ),
+        );
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedRequestCellDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "non-required cell should also produce RequestCellDestroyed"
         );
     }
 
@@ -477,13 +608,13 @@ mod tests {
             DamageCell {
                 cell,
                 damage: 10.0,
-                source_bolt: Entity::PLACEHOLDER,
+                source_bolt: None,
                 source_chip: None,
             },
             DamageCell {
                 cell,
                 damage: 10.0,
-                source_bolt: Entity::PLACEHOLDER,
+                source_bolt: None,
                 source_chip: None,
             },
         ];
@@ -511,13 +642,13 @@ mod tests {
             DamageCell {
                 cell: cell_a,
                 damage: 20.0,
-                source_bolt: Entity::PLACEHOLDER,
+                source_bolt: None,
                 source_chip: None,
             },
             DamageCell {
                 cell: cell_b,
                 damage: 10.0,
-                source_bolt: Entity::PLACEHOLDER,
+                source_bolt: None,
                 source_chip: None,
             },
         ];
@@ -553,7 +684,7 @@ mod tests {
         app.insert_resource(TestMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         })));
         app.add_systems(
@@ -569,7 +700,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             0,
-            "DamageCell for despawned entity should not produce CellDestroyed"
+            "DamageCell for despawned entity should not produce RequestCellDestroyed"
         );
     }
 }

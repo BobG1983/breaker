@@ -4,8 +4,9 @@ use bevy::prelude::*;
 
 use super::{
     bridges::{
-        bridge_bolt_lost, bridge_breaker_impact, bridge_bump, bridge_bump_whiff,
-        bridge_cell_destroyed, bridge_cell_impact, bridge_wall_impact,
+        apply_once_nodes, bridge_bolt_death, bridge_bolt_lost, bridge_breaker_impact, bridge_bump,
+        bridge_bump_whiff, bridge_cell_death, bridge_cell_impact, bridge_timer_threshold,
+        bridge_wall_impact, cleanup_destroyed_bolts, cleanup_destroyed_cells,
     },
     effects::{
         attraction::handle_attraction,
@@ -33,9 +34,10 @@ use super::{
         },
         spawn_bolt::handle_spawn_bolt,
         spawn_phantom::handle_spawn_phantom,
-        speed_boost::handle_speed_boost,
+        speed_boost::{apply_speed_boosts, handle_speed_boost},
         tilt_control_boost::handle_tilt_control_boost,
         time_penalty::handle_time_penalty,
+        until::{check_until_triggers, tick_until_timers},
         width_boost::handle_width_boost,
     },
     init::{apply_breaker_config_overrides, init_breaker},
@@ -100,8 +102,33 @@ impl Plugin for EffectPlugin {
                     bridge_wall_impact
                         .after(BoltSystems::BreakerCollision)
                         .in_set(EffectSystems::Bridge),
-                    bridge_cell_destroyed.in_set(EffectSystems::Bridge),
+                    bridge_cell_death.in_set(EffectSystems::Bridge),
+                    bridge_bolt_death.in_set(EffectSystems::Bridge),
+                    bridge_timer_threshold.in_set(EffectSystems::Bridge),
                 )
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            // Until timer/trigger systems
+            .add_systems(
+                FixedUpdate,
+                (tick_until_timers, check_until_triggers)
+                    .after(EffectSystems::Bridge)
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            // Speed boost recalculation — after bridge and Until reversal
+            .add_systems(
+                FixedUpdate,
+                apply_speed_boosts
+                    .after(EffectSystems::Bridge)
+                    .after(tick_until_timers)
+                    .after(check_until_triggers)
+                    .run_if(in_state(PlayingState::Active)),
+            )
+            // Cleanup systems — despawn entities after bridges evaluate
+            .add_systems(
+                FixedUpdate,
+                (cleanup_destroyed_cells, cleanup_destroyed_bolts)
+                    .after(EffectSystems::Bridge)
                     .run_if(in_state(PlayingState::Active)),
             )
             // Shockwave expansion + collision
@@ -201,7 +228,8 @@ mod tests {
             .add_message::<crate::bolt::messages::BoltHitCell>()
             .add_message::<crate::bolt::messages::BoltHitWall>()
             .add_message::<crate::bolt::messages::BoltLost>()
-            .add_message::<crate::cells::messages::CellDestroyed>()
+            .add_message::<crate::cells::messages::CellDestroyedAt>()
+            .add_message::<crate::cells::messages::RequestCellDestroyed>()
             .add_message::<crate::breaker::messages::BumpWhiffed>()
             .add_plugins(BreakerPlugin)
             .add_plugins(EffectPlugin)
@@ -238,7 +266,8 @@ mod tests {
             .add_message::<crate::bolt::messages::BoltHitCell>()
             .add_message::<crate::bolt::messages::BoltHitWall>()
             .add_message::<crate::bolt::messages::BoltLost>()
-            .add_message::<crate::cells::messages::CellDestroyed>()
+            .add_message::<crate::cells::messages::CellDestroyedAt>()
+            .add_message::<crate::cells::messages::RequestCellDestroyed>()
             .add_message::<crate::breaker::messages::BumpWhiffed>()
             .add_plugins(BreakerPlugin)
             .add_plugins(EffectPlugin);
@@ -282,7 +311,8 @@ mod tests {
             .add_message::<crate::bolt::messages::BoltHitCell>()
             .add_message::<crate::bolt::messages::BoltHitWall>()
             .add_message::<crate::bolt::messages::BoltLost>()
-            .add_message::<crate::cells::messages::CellDestroyed>()
+            .add_message::<crate::cells::messages::CellDestroyedAt>()
+            .add_message::<crate::cells::messages::RequestCellDestroyed>()
             .add_message::<crate::breaker::messages::BumpWhiffed>()
             .add_plugins(BreakerPlugin)
             .add_plugins(EffectPlugin);

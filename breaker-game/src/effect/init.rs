@@ -435,7 +435,10 @@ mod tests {
         assert!(
             matches!(
                 &result[0],
-                NodeEvalResult::Arm(EffectNode::When { trigger: Trigger::OnImpact(..), .. })
+                NodeEvalResult::Arm(EffectNode::When {
+                    trigger: Trigger::OnImpact(..),
+                    ..
+                })
             ),
             "nested EffectNode should arm on first trigger match"
         );

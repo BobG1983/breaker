@@ -268,6 +268,41 @@ FAN-OUT ELIMINATION — Correct and verified. Bevy 0.18 global observers are key
 
 BRIDGE EARLY-EXIT GUARDS — `reader.read().count() == 0` pattern on global-trigger bridges: correct (drains reader, which is fine since count is the only needed info). Pattern confirmed clean in prior session; remains correct post-B12c.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-25, C7 Wave 2a — Two-Phase Destruction + EffectChains bridges)
+
+### effect/bridges.rs — bridge_cell_death, bridge_bolt_death, cleanup_destroyed_cells, cleanup_destroyed_bolts
+- `bridge_cell_death` / `bridge_bolt_death`: event-driven (drain `RequestCellDestroyed` / `RequestBoltDestroyed`). Early-exit via empty reader iteration (no messages = no work). `any_destroyed` flag prevents `evaluate_active_chains` / `evaluate_armed_all` from firing when no messages arrive. Correct.
+- `cleanup_destroyed_cells` / `cleanup_destroyed_bolts`: separate MessageReader instances from `bridge_cell_death` — both drain the same message type independently (Bevy message readers are independent cursors). Each reader sees the full message set. Intentional design (bridge reads first for OnDeath eval, cleanup reads for despawn). Correct — not a double-drain concern.
+- `cell_query` in `bridge_cell_death`: `(Option<&EffectChains>, &Position2D, Has<RequiredToClear>)` — `Has<>` is a zero-cost archetype flag check, no component data fetched. Correct use.
+
+### effect/bridges.rs — bridge_bump + bridge_bolt_lost: breaker_query loop
+- `for mut chains in &mut breaker_query` runs per bump/bolt-lost message. Query matches 1 entity (the breaker). Zero cost when no EffectChains on breaker. When EffectChains present: evaluates O(chains.len()) per bump. Fine at ≤5 chip stacks.
+- `evaluate_entity_chains` call twice per bump message (grade trigger + BumpSuccess): 2 calls × 1 entity × ≤5 chains = ≤10 evaluations per bump. Negligible.
+
+### effect/bridges.rs — evaluate_until_children (bridge_cell_impact, bridge_wall_impact)
+- `until_query.get(bolt_entity)`: O(1) entity lookup. Only called per hit message (event-driven). In steady state (no Until chips), `until_timers` and `until_triggers` are both None — inner loops skipped. Clean.
+- `targets.to_vec()` inside the nested loop: Vec allocation per fire path. In steady state (no Until + matching When child): never reached. Acceptable.
+
+### effect/effects/speed_boost.rs — apply_speed_boosts
+- Runs every FixedUpdate with `With<Bolt>` + `&ActiveSpeedBoosts` filter. When no bolt has `ActiveSpeedBoosts` (no speed boost chip equipped): Bevy short-circuits on empty archetype. Zero iteration cost. When bolt has `ActiveSpeedBoosts`: runs product() on Vec — O(entries). At ≤5 stack entries: O(5) per tick. Fine.
+- Does NOT short-circuit for identity case (empty boosts vec or product=1.0). Minor watch item for Phase 7+ if multi-stack speed chips become common.
+
+### New archetype note — ActiveSpeedBoosts, ActiveDamageBoosts
+- Two new optional components added to bolts. Each creates a new bolt archetype variant. At 1 bolt: negligible fragmentation. Pattern is correct (added at chip-select time via observer, not per-frame). Same category as existing chip-effect components in baseline.
+
+## WATCH ITEMS from Wave 2a (2026-03-25)
+
+### bridges.rs:428 — bridge_timer_threshold: unconditional Vec allocation every FixedUpdate
+- `indices_to_remove: Vec::new()` allocated every tick, even when `active.0` is empty or has no `OnNodeTimerThreshold` variants.
+- Severity: Moderate. Not hitch-producing at current scale. Fix: early-exit if active.0 is empty, or use SmallVec<[usize; 1]>.
+- When to fix: before adding a second OnNodeTimerThreshold chip type or if FixedUpdate rate increases.
+
+### bridges.rs:510 — evaluate_entity_chains: Vec allocation per call in hot bridge path
+- `consumed_indices: Vec::new()` allocated per call (once per hit message per bridge, called from cell/wall/breaker impact bridges).
+- Severity: Moderate. In steady state (no Once nodes to consume): Vec allocated but empty. At 1 bolt with typical impact frequency: O(60 allocations/sec). Not hitch-producing but wrong for a hot path.
+- Fix: use SmallVec<[usize; 4]> or restructure to avoid the index-collection pass.
+- When to fix: before Phase 7+ multi-bolt scale.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-21, session on feature/overclock-trigger-chain)
 
 ### chips/definition.rs — 7 new TriggerChain variants (branch: refactor/unify-behaviors — NOW FULLY WIRED)

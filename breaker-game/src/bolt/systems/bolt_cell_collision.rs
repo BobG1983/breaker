@@ -229,7 +229,7 @@ pub(crate) fn bolt_cell_collision(
                 damage_writer.write(DamageCell {
                     cell: cell_entity,
                     damage: effective_damage,
-                    source_bolt: bolt_entity,
+                    source_bolt: Some(bolt_entity),
                     source_chip: spawned_by_evo.map(|s| s.0.clone()),
                 });
             } else {
@@ -1560,7 +1560,8 @@ mod tests {
             msgs.0[0].damage
         );
         assert_eq!(
-            msgs.0[0].source_bolt, bolt_entity,
+            msgs.0[0].source_bolt,
+            Some(bolt_entity),
             "DamageCell.source_bolt should match the bolt entity"
         );
     }
@@ -1629,7 +1630,8 @@ mod tests {
             msgs.0[0].damage
         );
         assert_eq!(
-            msgs.0[0].source_bolt, bolt_entity,
+            msgs.0[0].source_bolt,
+            Some(bolt_entity),
             "DamageCell.source_bolt should match bolt entity"
         );
     }
@@ -1680,12 +1682,12 @@ mod tests {
         assert!(msg_b.is_some(), "DamageCell for cell B should exist");
         assert_eq!(
             msg_a.unwrap().source_bolt,
-            bolt_a,
+            Some(bolt_a),
             "DamageCell for cell A should have source_bolt == bolt A"
         );
         assert_eq!(
             msg_b.unwrap().source_bolt,
-            bolt_b,
+            Some(bolt_b),
             "DamageCell for cell B should have source_bolt == bolt B"
         );
     }
@@ -1756,7 +1758,8 @@ mod tests {
                 msg.damage
             );
             assert_eq!(
-                msg.source_bolt, bolt_entity,
+                msg.source_bolt,
+                Some(bolt_entity),
                 "each DamageCell.source_bolt should match the bolt entity"
             );
         }
@@ -1806,7 +1809,7 @@ mod tests {
             "should emit exactly one DamageCell alongside BoltHitCell"
         );
         assert_eq!(dmg_msgs.0[0].cell, cell_entity);
-        assert_eq!(dmg_msgs.0[0].source_bolt, bolt_entity);
+        assert_eq!(dmg_msgs.0[0].source_bolt, Some(bolt_entity));
     }
 
     // --- BoltHitWall emission tests ---

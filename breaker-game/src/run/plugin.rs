@@ -95,7 +95,7 @@ mod tests {
     use crate::{
         bolt::messages::{BoltHitBreaker, BoltHitCell, BoltLost},
         breaker::messages::BumpPerformed,
-        cells::messages::{CellDestroyed, DamageCell},
+        cells::messages::DamageCell,
         chips::inventory::ChipInventory,
         shared::PlayfieldConfig,
         ui::messages::ChipSelected,
@@ -109,7 +109,6 @@ mod tests {
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             // Messages read by run domain systems
-            .add_message::<CellDestroyed>()
             .add_message::<DamageCell>()
             .add_message::<BumpPerformed>()
             .add_message::<BoltLost>()

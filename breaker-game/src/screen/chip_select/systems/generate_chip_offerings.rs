@@ -125,7 +125,11 @@ mod tests {
         for i in 0..3 {
             registry.insert(ChipDefinition {
                 rarity: Rarity::Common,
-                ..ChipDefinition::test(&format!("Common_{i}"), EffectNode::Do(Effect::Piercing(1)), 3)
+                ..ChipDefinition::test(
+                    &format!("Common_{i}"),
+                    EffectNode::Do(Effect::Piercing(1)),
+                    3,
+                )
             });
         }
         registry.insert(ChipDefinition {
@@ -202,8 +206,10 @@ mod tests {
             EffectNode::Do(Effect::Piercing(1)),
             1, // max_stacks = 1
         );
-        let chip_b = ChipDefinition::test("AvailableChip_0", EffectNode::Do(Effect::Piercing(1)), 3);
-        let chip_c = ChipDefinition::test("AvailableChip_1", EffectNode::Do(Effect::Piercing(1)), 3);
+        let chip_b =
+            ChipDefinition::test("AvailableChip_0", EffectNode::Do(Effect::Piercing(1)), 3);
+        let chip_c =
+            ChipDefinition::test("AvailableChip_1", EffectNode::Do(Effect::Piercing(1)), 3);
         registry.insert(chip_a.clone());
         registry.insert(chip_b);
         registry.insert(chip_c);

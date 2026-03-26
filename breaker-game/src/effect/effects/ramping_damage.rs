@@ -89,7 +89,7 @@ pub(crate) fn reset_ramping_damage(
     mut bump_reader: MessageReader<BumpPerformed>,
     mut query: Query<&mut RampingDamageState>,
 ) {
-    let bumped: HashSet<Entity> = bump_reader.read().map(|msg| msg.bolt).collect();
+    let bumped: HashSet<Entity> = bump_reader.read().filter_map(|msg| msg.bolt).collect();
     for msg in breaker_reader.read() {
         if !bumped.contains(&msg.bolt)
             && let Ok(mut state) = query.get_mut(msg.bolt)
@@ -416,7 +416,7 @@ mod tests {
             .0
             .push(BumpPerformed {
                 grade: crate::breaker::messages::BumpGrade::Perfect,
-                bolt,
+                bolt: Some(bolt),
             });
 
         tick(&mut app);

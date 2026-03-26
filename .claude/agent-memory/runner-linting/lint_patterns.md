@@ -139,6 +139,18 @@ type: reference
 - `doc_markdown` error (chips/definition.rs:1): module-level `//!` doc comment `"Chip definition types — TriggerChain variants and content types."` has bare `TriggerChain`. Fix: change to `` `TriggerChain` ``. This is the sole blocking error in both `dclippy` and `dsclippy` for this session.
 - `derive_partial_eq_without_eq` warning (chips/definition.rs:238): `EvolutionRecipe` derives `PartialEq` but not `Eq`. Nursery lint, warning only. New this session.
 
+## New as of 2026-03-25 (feature/spatial-physics-extraction — CellDestroyed deletion + clippy fixes)
+- `E0107` compile error (bolt/systems/bolt_lost.rs:24,26): `MessageWriter<'w, 's, T>` used with 2 lifetime args, but Bevy 0.18.1's `MessageWriter` takes only 1 lifetime (`'w`). The `'s` arg is stale — remove it. Fix: change `MessageWriter<'w, 's, BoltLost>` → `MessageWriter<'w, BoltLost>` and same for `RequestBoltDestroyed`. This is the sole blocking compile error in both `dclippy` and `dsclippy` for this session.
+- `fmt` changes (2026-03-25): auto-formatted 6 files — `effect/bridges.rs` (collapsed 2-tuple spawns and long assignments), `effect/evaluate.rs` (expanded tuple match arms with ImpactTarget), `run/node/systems/track_node_completion.rs` (blank line after `use super::*`), `run/systems/detect_combo_and_pinball.rs` (merged two separate `use` lines into one block), `run/systems/detect_mass_destruction.rs` (expanded use block), `run/systems/track_cells_destroyed.rs` (blank line after `use super::*`).
+- `unused_variable` warning (effect/effects/life_lost.rs:22): system parameter `trigger: On<LoseLifeFired>` is unused. Fix: prefix with underscore → `_trigger: On<LoseLifeFired>`. Warning only.
+- `unused_imports` warnings (effect/effects/mod.rs:33-42): 8 effect handler re-exports (`handle_attraction`, `handle_bolt_size_boost`, etc.) and `effect/plugin.rs:7` (`apply_once_nodes`) are forward-declared for future wiring. Not errors.
+- `rantzsoft_spatial2d` new warnings (derive_transform.rs): new `derive_transform.rs` system introduced in spatial-physics-extraction has `too_long_first_doc_paragraph` (×2), `option_if_let_else` (×3), and `suboptimal_flops` (×2) nursery warnings. Same patterns as the existing `propagate_position.rs` and `propagate_rotation.rs` warnings — nursery lints, not errors.
+- `unnecessary_struct_initialization` warning (quadtree.rs:118): building `TreeConfig { max_items_per_leaf: cfg.max_items_per_leaf, ... }` where all fields copy from `cfg` — replace with just `cfg`. Nursery lint, warning only.
+- `redundant_clone` warning (constraint.rs:63): `let cloned = original.clone()` where `cloned` is never read after the clone. Nursery lint, warning only.
+
+## New as of 2026-03-25b (feature/spatial-physics-extraction — post-clippy-fix verification)
+- `E0107` compile errors (run/systems/detect_combo_and_pinball.rs:14,15,16): `MessageReader<'w, CellDestroyedAt>` etc. use only 1 lifetime arg — `MessageReader` in Bevy 0.18.1 takes `'w` and `'s`. Compiler hint says to add `'w` as second arg: `MessageReader<'w, 'w, CellDestroyedAt>`. This is inside a `#[derive(SystemParam)]` struct `ComboReaders<'w>`. Fix: change all three fields to `MessageReader<'w, 'w, T>`. Three errors, same file, same pattern. Sole blocking error this session — all other errors/warnings are carry-overs from prior sessions already logged.
+
 ## New as of 2026-03-24 (feature/spatial-physics-extraction — chips inventory/evolution session)
 - `collapsible_if` error (chips/inventory.rs:154): nested `if let Some(tname) = template_name { if let Some(taken) = self.template_taken.get_mut(&tname) { ... } }` — collapse to `if let Some(tname) = template_name && let Some(taken) = self.template_taken.get_mut(&tname) { ... }`. This was the sole blocking error in both `dclippy` lib and `dsclippy` lib this session; it caused dsclippy to abort before reaching scenario-runner-specific code.
 - `items_after_statements` errors (screen/loading/systems/seed_chip_registry.rs:196,263,312): three test functions with `use crate::chips::definition::TriggerChain;` placed after statements. Fix: move each `use` declaration to the top of its test function body (before any let/statement lines). Three separate errors. New as of this session — test code added for evolution recipe loading.
@@ -153,6 +165,9 @@ type: reference
 - New `missing_const_for_fn` warnings (scenario runner, `breaker-scenario-runner/src/invariants/checkers/check_run_stats_monotonic.rs:17,28` and `lifecycle/mod.rs:634,645`): two new functions `apply_set_run_stat` and `apply_decrement_run_stat` (plus checker methods `from_run_stats` and `is_default`) are flagged as potentially `const fn`. Nursery warnings only. The `map_forced_game_state` (308) and `map_scenario_breaker_state` (504) warnings persist from previous session (2026-03-21).
 - `rantzsoft_physics2d`: new `unnecessary_struct_initialization` warning (quadtree.rs:118): `TreeConfig { max_items_per_leaf: cfg.max_items_per_leaf, max_depth: cfg.max_depth, depth: cfg.depth }` — replace with just `cfg`. Nursery warning.
 - `rantzsoft_physics2d`: `missing_const_for_fn` for `SpatialIndex::new` (resources.rs:17) — new this session. Nursery warning.
+
+## New as of 2026-03-25c (feature/spatial-physics-extraction — combo/pinball detect session)
+- `private_interfaces` error (run/systems/detect_combo_and_pinball.rs:13 → run/plugin.rs:42): `ComboReaders<'w, 's>` is a `#[derive(SystemParam)]` struct defined without a visibility keyword (private to the module) inside `detect_combo_and_pinball.rs`. The function `detect_combo_and_pinball` is `pub(crate)`, and when Bevy schedules it from `run/plugin.rs`, the scheduler references the `SystemParam` type — causing `private_interfaces` to be a hard error at the `plugin.rs` registration site. Fix: add `pub(crate)` visibility to `ComboReaders` struct definition at `breaker-game/src/run/systems/detect_combo_and_pinball.rs:13`. This is the sole blocking error in both `dclippy` and `dsclippy` for this session. Pattern: any `#[derive(SystemParam)]` struct used by a `pub(crate)` system must itself be at least `pub(crate)` — private structs will compile within their own module but fail when the scheduler references them from outside.
 - `rantzsoft_spatial2d`: 4 new `too_long_first_doc_paragraph` warnings from new `derive_transform.rs` and `save_previous.rs` doc comments. `option_if_let_else` warnings remain in `derive_transform.rs:79,91,103` (same pattern as the older `propagate_position.rs`/`propagate_rotation.rs` warnings). `suboptimal_flops` warnings in `derive_transform.rs:105,106` mirror existing `propagate_scale.rs:40,41` warnings. `significant_drop_tightening` warning in `plugin.rs:265` (test code). New `missing_const_for_fn` warning in `collision_layers.rs` in the physics2d crate — `interacts_with` can be `const`. All nursery, no errors.
 
 ## New as of 2026-03-24h (feature/spatial-physics-extraction — B12c typed events refactor)
@@ -168,6 +183,13 @@ type: reference
 - `too_many_lines` error (effect/typed_events.rs:353): `trigger_chain_to_effect` grew to 111 lines (was ~101 in the prior session). The new TriggerChain variants for time_pressure_boost, chain_lightning, gravity_well, random_effect, etc. added more match arms. Fix: extract arm groups into private helper fns (e.g., `chain_to_bolt_effect`, `chain_to_cell_effect`, `chain_to_global_effect`). Error in both `dclippy` and `dsclippy`. Note: `fire_typed_event` (previously 137 lines) is no longer an error — it was resolved.
 - `items_after_statements` error (effect/effects/random_effect.rs:264): test-only struct `CapturedSpawn(Vec<SpawnBoltFired>)` is defined after earlier `let` statements inside a test function. Fix: move the struct definition to the top of the test function body, before any `let` statements. Only in `dclippy` (test code, not compiled in scenario runner build).
 - NOTE: `too_many_lines` and `unnecessary_wraps` errors on `effect/typed_events.rs` (B12c entry above) are RESOLVED as of 2026-03-25 — no longer appear in dclippy or dsclippy.
+
+## New as of 2026-03-25 (feature/spatial-physics-extraction — Wave 2a CellDestroyed deletion session)
+- `no_effect.used_underscore_binding` error (effect/typed_events.rs:386): underscore-prefixed binding `_effect` used in a format string inside a `panic!`. Clippy forbids using `_`-prefixed bindings in format args — they are intended for "this binding is intentionally unused" but the format arg reads it. Fix: rename `_effect` to `effect` (removing the underscore). Error in `dclippy` lib only (panic path is production code).
+- `too_many_arguments` error (run/systems/detect_combo_and_pinball.rs:18): `detect_combo_and_pinball` has 8 args (limit 7): `cell_destroyed_reader`, `bolt_hit_cell_reader`, `bolt_hit_breaker_reader`, `bolt_lost_reader`, `wall_hit_reader`, `cell_damaged_reader`, `writer` — likely added as `CellDestroyed` was replaced by `CellDestroyedAt`. Fix: bundle related readers into a SystemParam (e.g., `ComboEventReaders` grouping the 5-6 `MessageReader` args). Error in both `dclippy` and `dsclippy` (dsclippy fails to compile breaker lib so scenario runner is not reached).
+- `useless_vec` error (effect/definition.rs:1253): test function `effect_target_multiple_entities` uses `vec![...]` but the Vec is never passed to a function requiring heap allocation — clippy requires an array literal instead (`[...]`). Fix: change `let targets = vec![...]` to `let targets = [...]`. Error in `dclippy` lib test only.
+- NOTE: `too_many_lines` errors in `effect/plugin.rs` and `effect/typed_events.rs` from the previous session are RESOLVED as of this run — no longer appear.
+- NOTE: dsclippy aborts at `breaker` (lib) compilation due to the two lib errors above — scenario runner code is never reached. No new scenario-runner-specific errors this session.
 - NOTE: `items_after_statements` errors in `effect/typed_events.rs` (B12c entry above) are RESOLVED as of 2026-03-25 — no longer appear.
 
 ## New as of 2026-03-25 (feature/spatial-physics-extraction — B13 Archetype → Breaker rename)
@@ -195,6 +217,37 @@ type: reference
 - `unused_import` warning (bolt/systems/spawn_chain_bolt.rs:105): `aabb::Aabb2D` imported but unused — forward-declared. Warning only.
 - `dead_code` warnings (cells/components.rs): `CellWidth::half_width` and `CellHeight::half_height` methods are never used — forward-declared. Warning only. New as of spatial-physics extraction.
 - `dead_code` warnings (wall/components.rs:20,22): `WallSize.half_width` and `WallSize.half_height` fields are never read — forward-declared. Warning only. New as of spatial-physics extraction.
+
+## New errors as of 2026-03-25 (feature/spatial-physics-extraction — current session)
+- `doc_markdown` error (bolt/messages.rs:57): `OnDeath` in doc comment without backticks. Fix: `OnDeath` → `` `OnDeath` ``. Same pattern.
+- `doc_markdown` error (cells/messages.rs:16): same `OnDeath` bare identifier. Fix: wrap in backticks.
+- `too_many_arguments` error (bolt/systems/bolt_lost.rs:33): `bolt_lost` has 8 args — `commands`, `playfield`, `rng`, `bolt_query`, `breaker_query`, `writer`, `request_destroyed_writer`, `lost_bolts`. Fix: bundle into a SystemParam.
+- `doc_lazy_continuation` error (effect/bridges.rs:62): doc list item continuation line without indentation. Fix: add blank line before the continuation, OR indent it with `///   `.
+- `collapsible_if` error (effect/bridges.rs:433): nested `if let EffectNode::When { .. }` with inner `if let EffectNode::Do` — collapse to single `if let`.
+- `single_match_else` error (effect/bridges.rs:441): `match child { EffectNode::Do(effect) => ..., _ => ... }` — replace with `if let EffectNode::Do(effect) = child`.
+- `match_wildcard_for_single_variants` errors (effect/effects/chain_bolt.rs:17, random_effect.rs:65, shockwave.rs:76, speed_boost.rs:79, effect/definition.rs:1219,1230): `_ => ` wildcard in match over `EffectTarget` or similar enum with only one remaining variant. Fix per each: replace `_` with explicit variant pattern (e.g. `EffectTarget::Location(_) => ...`).
+- `type_complexity` errors (effect/effects/damage_boost.rs:38, speed_boost.rs:62, until.rs:104, until.rs:151): inline `Query<(...)>` tuples with 5+ elements. Fix: extract named type aliases to the file or a queries.rs.
+- `single_match_else` error (effect/effects/random_effect.rs:52): `match node { EffectNode::Do(effect) => ..., _ => ... }` — replace with `if let EffectNode::Do(effect) = node`.
+- `match_same_arms` error (effect/evaluate.rs:79): three arms all return `vec![NodeEvalResult::NoMatch]` — merge with `|` patterns.
+- `match_like_matches_macro` error (effect/evaluate.rs:89): `match (kind, trigger) { ... => true, _ => false }` — replace with `matches!(...)`.
+- `too_many_lines` error (effect/typed_events.rs:338): `fire_typed_event` is 169 lines (limit 100). Fix: split into helper fns grouped by effect category.
+- `map_identity` errors (effect/typed_events.rs:485, 493): `.map(|(w, node)| (w, node))` is identity — remove the `.map(...)` call entirely.
+- `too_many_arguments` error (run/systems/detect_mass_destruction.rs:16): 8 args. Fix: bundle into SystemParam.
+- `manual_string_new` errors (chips/definition.rs:489, 512, 772): `"".to_owned()` — replace with `String::new()`.
+- `used_underscore_binding` errors (effect/bridges.rs:2401, 2402): `_req` bound then used in `format!("{_req:?}")` — rename to `req` (without underscore) since it IS used.
+- `no_effect_underscore_binding` errors (effect/definition.rs:895, 896): `let _copied = t; let _also = t;` — these bindings have no side-effect. Fix: either remove them or use them meaningfully.
+- `match_wildcard_for_single_variants` errors (effect/definition.rs:1219, 1230): `other =>` wildcard in test helpers — replace with explicit `other @ EffectTarget::Location(_) =>` / `other @ EffectTarget::Entity(_) =>`.
+- `useless_vec` error (effect/definition.rs:1248): `vec![...]` in test — replace with array `[...]` since it's not passed to a `Vec`-requiring API.
+- `cast_precision_loss` error (run/systems/detect_mass_destruction.rs:153): `i as f32` where `i: usize` in test. Fix: `i as f32` in test loop — change loop variable to `u16` and use `f32::from(i)`, or use `u32::try_from(i).map_or(f32::MAX, f32::from)`.
+- `items_after_statements` errors (effect/effects/speed_boost.rs:658, 683, 810 — 9 errors total): `use crate::effect::{...}` inside test functions after statements. Fix: move each `use` block to the top of its test function, before any `let` statements.
+- `items_after_statements` errors (effect/effects/until.rs:325, 377, 427, 612, 669, 930, 1030): struct definitions (`struct SendMsg(...)`) inside test functions after statements. Fix: move struct defs to before any statements (top of test fn, or hoist to module level).
+- `fmt` formatted 12 files this session: `bolt/systems/bolt_lost.rs`, `cells/systems/check_lock_release.rs`, `cells/systems/handle_cell_hit.rs`, `chips/definition.rs`, `chips/offering.rs`, `chips/resources.rs`, `effect/bridges.rs`, `effect/effects/entropy_engine.rs`, `effect/effects/life_lost.rs` (and several others). Pattern: `Result<MessageWriter<T>, SystemParamValidationError>` wrapping now requires line breaks after fmt formats the outer `Result<..., ...>` form.
+
+## New as of 2026-03-25 (feature/spatial-physics-extraction — post-README vertical-slice)
+- All four clippy passes (dclippy, spatial2dclippy embedded in dclippy, physics2dclippy embedded in dclippy, dsclippy) report 0 errors. Only nursery/warning-level lints remain.
+- `unused_import` warning (effect/effects/entropy_engine.rs:108): `EffectTarget` imported inside a `#[cfg(test)]` block but unused. Forward-declared. Warning only.
+- `needless_collect` warning (run/node/systems/spawn_cells_from_layout.rs:1465): intermediate `.collect()` before `.chain()` — clippy suggests chaining directly without collecting. Nursery lint, warning only. Fix: use the original iterator instead of collecting and re-producing.
+- `fmt` triggered 0 changes this session (clean).
 
 ## Confirmed Clean as of 2026-03-23 (wave-3 post-fix verify)
 - All physics2d errors (`manual_midpoint`, `drain_collect`, test `cast_precision_loss`) resolved.

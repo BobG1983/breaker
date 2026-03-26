@@ -26,7 +26,10 @@ pub(crate) fn detect_close_save(
     let bottom = playfield.bottom();
 
     for msg in reader.read() {
-        let Ok(position) = bolt_query.get(msg.bolt) else {
+        let Some(bolt_entity) = msg.bolt else {
+            continue;
+        };
+        let Ok(position) = bolt_query.get(bolt_entity) else {
             continue;
         };
 
@@ -134,7 +137,7 @@ mod tests {
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: bolt_entity,
+            bolt: Some(bolt_entity),
         }]));
         tick(&mut app);
 
@@ -183,7 +186,7 @@ mod tests {
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: bolt_entity,
+            bolt: Some(bolt_entity),
         }]));
         tick(&mut app);
 
@@ -213,10 +216,10 @@ mod tests {
     #[test]
     fn skips_when_bolt_entity_not_found() {
         let mut app = test_app();
-        // BumpPerformed with Entity::PLACEHOLDER — no matching bolt entity exists
+        // BumpPerformed with no bolt — no matching bolt entity exists
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         }]));
         tick(&mut app);
 
@@ -254,7 +257,7 @@ mod tests {
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: bolt_entity,
+            bolt: Some(bolt_entity),
         }]));
         tick(&mut app);
 
@@ -310,7 +313,7 @@ mod tests {
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: bolt_entity,
+            bolt: Some(bolt_entity),
         }]));
         tick(&mut app);
 

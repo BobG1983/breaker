@@ -33,6 +33,7 @@
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)
 - `CellHealth::new()` and `is_destroyed()` are `const fn` — new methods on the same impl should follow suit where possible
 - chips domain does NOT currently consume `BoltHitCell` despite messages.md listing it as a consumer
+- [pattern_nodetimer_field_names.md](pattern_nodetimer_field_names.md) — NodeTimer uses 'remaining' and 'total', not 'duration'; specs commonly get this wrong
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

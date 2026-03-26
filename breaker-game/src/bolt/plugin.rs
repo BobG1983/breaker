@@ -29,7 +29,7 @@ pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
-        use crate::bolt::messages::BoltSpawned;
+        use crate::bolt::messages::{BoltDestroyedAt, BoltSpawned, RequestBoltDestroyed};
         app.init_resource::<BoltConfig>()
             .init_resource::<GameRng>()
             .add_message::<SpawnAdditionalBolt>()
@@ -38,6 +38,8 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltHitCell>()
             .add_message::<BoltLost>()
             .add_message::<BoltHitWall>()
+            .add_message::<RequestBoltDestroyed>()
+            .add_message::<BoltDestroyedAt>()
             .add_message::<SpawnChainBolt>()
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -107,8 +109,6 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BoltPlugin reads messages from cells domain
-            .add_message::<crate::cells::messages::CellDestroyed>()
             .add_plugins(BoltPlugin)
             .update();
     }

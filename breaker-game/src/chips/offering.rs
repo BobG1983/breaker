@@ -163,7 +163,10 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::{effect::definition::{Effect, EffectNode}, shared::GameRng};
+    use crate::{
+        effect::definition::{Effect, EffectNode},
+        shared::GameRng,
+    };
 
     fn test_config() -> OfferingConfig {
         let mut rarity_weights = HashMap::new();

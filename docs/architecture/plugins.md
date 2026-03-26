@@ -101,3 +101,110 @@ The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domai
 - All debug code is compiled out of release builds — it cannot introduce production coupling
 
 This exception does **not** extend to other domains. Production code still communicates through messages only.
+
+## Effect Domain — Self-Registration Pattern
+
+The `effect/` domain uses a self-registration pattern where each leaf effect is fully self-contained in a single file and registers itself with the app.
+
+### Target Structure
+
+```
+effect/
+  effect_nodes/        # EffectNode tree logic
+    until.rs           # UntilTimers, tick_until_timers, check_until_triggers
+    once.rs            # apply_once_nodes, Once consumption
+    when.rs            # When evaluation logic
+  effects/             # Leaf effect handlers (one file per effect)
+    speed_boost.rs     # ActiveSpeedBoosts, apply_speed_boosts, handle_speed_boost, SpeedBoostFired, RemoveSpeedBoost, register()
+    damage_boost.rs    # ActiveDamageBoosts, handle_damage_boost, DamageBoostApplied, RemoveDamageBoost, register()
+    shockwave.rs       # ShockwaveFired, handle_shockwave, register()
+    ...
+  triggers/            # Bridge systems (one file per trigger event)
+    on_impact.rs       # bridge_cell_impact, bridge_wall_impact, bridge_breaker_impact
+    on_bump.rs         # bridge_bump (all bump grades)
+    on_perfect_bump.rs # bridge_perfect_bump
+    on_bolt_lost.rs    # bridge_bolt_lost
+    on_cell_destroyed.rs  # bridge_cell_destroyed
+    on_death.rs        # bridge_cell_death, bridge_bolt_death
+    on_node_timer_threshold.rs  # bridge_timer_threshold
+    on_selected.rs     # dispatch_chip_effects (chip selection)
+  helpers.rs           # Shared bridge helpers (evaluate_entity_chains, etc.)
+  definition.rs        # EffectNode, Trigger, Effect, EffectTarget, EffectChains, Target enums
+  evaluate.rs          # evaluate_node — pure trigger matching
+  plugin.rs            # EffectPlugin — calls each effect's register() and wires triggers
+```
+
+### Effect File Pattern
+
+Each leaf effect file in `effects/` owns its complete lifecycle:
+
+```rust
+// effect/effects/speed_boost.rs
+
+// Typed event (what gets fired by bridges)
+pub(crate) struct SpeedBoostFired { ... }
+
+// Active state (vec of applied multipliers on the entity)
+pub(crate) struct ActiveSpeedBoosts(pub Vec<f32>);
+
+// Removal message (fired by Until on expiry)
+pub(crate) struct RemoveSpeedBoost { pub entity: Entity, pub multiplier: f32 }
+
+// Apply observer (pushes to vec when typed event fires)
+fn handle_speed_boost(trigger: On<SpeedBoostFired>, ...) { ... }
+
+// Recalculation system (recalculates stat from vec every tick)
+fn apply_speed_boosts(query: Query<(&mut Velocity2D, &BoltBaseSpeed, &ActiveSpeedBoosts), ...>) { ... }
+
+// Removal observer (removes entry from vec, end-of-frame)
+fn handle_remove_speed_boost(trigger: On<RemoveSpeedBoost>, ...) { ... }
+
+// Self-registration
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_speed_boost)
+       .add_message::<RemoveSpeedBoost>()
+       .add_observer(handle_remove_speed_boost)
+       .add_systems(FixedUpdate, apply_speed_boosts.in_set(EffectSystems::Apply));
+}
+```
+
+`EffectPlugin::build()` calls each effect's `register()`:
+
+```rust
+fn build(&self, app: &mut App) {
+    speed_boost::register(app);
+    damage_boost::register(app);
+    shockwave::register(app);
+    piercing::register(app);
+    // ...
+}
+```
+
+### Passive Effects and Until Integration
+
+Passive effects (SpeedBoost, DamageBoost, Piercing, SizeBoost, BumpForce) track state in per-entity vecs. The actual stat is **recalculated from the vec** — no incremental mutation.
+
+**Until removal**: `Until` nodes have zero knowledge of effect internals. On expiry, they fire `Remove*` messages for each passive child they applied. Each effect's own removal observer handles cleanup. The recalculation system picks up the change next tick.
+
+**Non-passive children in Until**: `When`/`Once` nodes nested inside `Until` live in the `UntilTimers`/`UntilTriggers` container. Bridges evaluate them while the Until is alive. When the Until expires, the container is removed — armed triggers are gone. No removal message needed.
+
+### Chain Ownership Model
+
+Chains live on the entity whose events trigger them. Two stores per entity:
+
+- **`EffectChains`** — permanent source of truth. Populated by breaker init, chip dispatch, and `On` node. Never modified by trigger evaluation.
+- **`ArmedEffects`** — temporary working set. Partially resolved `When` trees. Consumed on Fire, replaced on re-Arm.
+
+**Chip dispatch**: If outermost node is `On(target, children)`, push children to specified target entity (explicit control). Otherwise push to the entity that owns the outermost trigger: bump triggers → breaker, impact triggers → bolt, death → dying entity, selected → fire immediately.
+
+**Evaluation routing**: Entity-specific triggers (Impact, Bump, Death) evaluate only the relevant entity. Global triggers (CellDestroyed, BoltLost) sweep ALL entities with EffectChains — chains fire wherever they were dispatched to.
+
+**Note**: `CellDestroyed` is a trigger (evaluated by the effect system), not a message. The bridge reads `RequestCellDestroyed` (entity still alive) and evaluates: (1) `CellDestroyed` trigger on all entities via global sweep, (2) `Death` trigger on the cell's own EffectChains. Then writes `CellDestroyedAt` as aftermath for location-only consumers.
+
+**Arm routing**: When an Arm result's inner trigger belongs to a different entity type, the armed chain moves to that entity's `ArmedEffects`. E.g., `When(PerfectBump, [When(Impact(Wall), ...)])` — first Arm on breaker, second Arm moves to bolt.
+
+**`On` node**: `EffectNode::On { target: Target, then: Vec<EffectNode> }` redirects effect execution to a target entity. For `Do` children, fires the effect targeting that entity. For `When`/`Until`/`Once` children, pushes them onto the target entity's `EffectChains`. Target resolved from trigger context (e.g., `On(Cell)` → cell entity from `BoltHitCell` message).
+
+**Effects are pure data**: No `Target` field on any effect. `Target` enum (`Bolt`, `Breaker`, `Cell`, `Wall`, `AllBolts`, `AllCells`) lives only on `On`. Top-level `On` is enforced at compile time via `RootEffect` single-variant wrapper — `ChipDefinition.effects: Vec<RootEffect>`, `BreakerDefinition.effects: Vec<RootEffect>`.
+
+**`ActiveEffects` (global resource)**: Deleted. All chains are entity-local.

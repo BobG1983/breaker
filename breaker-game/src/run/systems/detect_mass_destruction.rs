@@ -3,17 +3,17 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::messages::CellDestroyed,
+    cells::messages::CellDestroyedAt,
     run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
-/// Reads [`CellDestroyed`] messages and detects `MassDestruction` highlights
+/// Reads [`CellDestroyedAt`] messages and detects `MassDestruction` highlights
 /// when enough cells are destroyed within the configured time window.
 ///
 /// Prunes stale timestamps, checks the count threshold, records the highlight
 /// in [`RunStats`], and emits [`HighlightTriggered`].
 pub(crate) fn detect_mass_destruction(
-    mut reader: MessageReader<CellDestroyed>,
+    mut reader: MessageReader<CellDestroyedAt>,
     time: Res<Time<Fixed>>,
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
@@ -60,12 +60,15 @@ pub(crate) fn detect_mass_destruction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::resources::{HighlightKind, RunHighlight};
+    use crate::{
+        cells::messages::CellDestroyedAt,
+        run::resources::{HighlightKind, RunHighlight},
+    };
 
     #[derive(Resource)]
-    struct TestMessages(Vec<CellDestroyed>);
+    struct TestMessages(Vec<CellDestroyedAt>);
 
-    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<CellDestroyed>) {
+    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<CellDestroyedAt>) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
         }
@@ -86,7 +89,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyed>()
+            .add_message::<CellDestroyedAt>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
@@ -113,12 +116,90 @@ mod tests {
         app.update();
     }
 
-    fn make_cell_destroyed_batch(count: usize) -> Vec<CellDestroyed> {
-        (0..count)
-            .map(|_| CellDestroyed {
+    fn make_cell_destroyed_batch(count: usize) -> Vec<CellDestroyedAt> {
+        (0..u16::try_from(count).expect("count fits in u16"))
+            .map(|i| CellDestroyedAt {
+                position: Vec2::new(f32::from(i) * 10.0, 100.0),
                 was_required_to_clear: true,
             })
             .collect()
+    }
+
+    // =========================================================================
+    // C7 Wave 2a: CellDestroyed -> CellDestroyedAt migration (behavior 32c)
+    // =========================================================================
+
+    #[derive(Resource)]
+    struct TestCellDestroyedAtMsgs(Vec<crate::cells::messages::CellDestroyedAt>);
+
+    fn enqueue_cell_destroyed_at(
+        msg_res: Res<TestCellDestroyedAtMsgs>,
+        mut writer: MessageWriter<crate::cells::messages::CellDestroyedAt>,
+    ) {
+        for msg in &msg_res.0 {
+            writer.write(msg.clone());
+        }
+    }
+
+    fn make_cell_destroyed_at_batch(count: usize) -> Vec<crate::cells::messages::CellDestroyedAt> {
+        (0..u16::try_from(count).expect("count fits in u16"))
+            .map(|i| crate::cells::messages::CellDestroyedAt {
+                position: Vec2::new(f32::from(i) * 10.0, 100.0),
+                was_required_to_clear: true,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn detect_mass_destruction_reads_cell_destroyed_at() {
+        use crate::cells::messages::CellDestroyedAt;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellDestroyedAt>()
+            .add_message::<HighlightTriggered>()
+            .init_resource::<RunStats>()
+            .init_resource::<HighlightTracker>()
+            .init_resource::<RunState>()
+            .insert_resource(HighlightConfig {
+                mass_destruction_count: 10,
+                mass_destruction_window_secs: 2.0,
+                ..Default::default()
+            })
+            .init_resource::<CapturedHighlightTriggered>()
+            .add_systems(
+                FixedUpdate,
+                (
+                    enqueue_cell_destroyed_at,
+                    detect_mass_destruction,
+                    collect_highlight_triggered,
+                )
+                    .chain(),
+            );
+
+        // Advance time so window math works
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        let advance_ticks =
+            u32::try_from(std::time::Duration::from_secs(5).as_micros() / timestep.as_micros())
+                .expect("tick count fits in u32");
+        app.insert_resource(TestCellDestroyedAtMsgs(vec![]));
+        for _ in 0..advance_ticks {
+            tick(&mut app);
+        }
+
+        // Send 10 CellDestroyedAt messages
+        app.insert_resource(TestCellDestroyedAtMsgs(make_cell_destroyed_at_batch(10)));
+        tick(&mut app);
+
+        let stats = app.world().resource::<RunStats>();
+        let mass = stats
+            .highlights
+            .iter()
+            .find(|h| h.kind == HighlightKind::MassDestruction);
+        assert!(
+            mass.is_some(),
+            "detect_mass_destruction should work with CellDestroyedAt messages"
+        );
     }
 
     // --- Behavior 16: MassDestruction detected with enough cells in window ---
@@ -186,7 +267,8 @@ mod tests {
         }
 
         // Send 1 cell destroyed to trigger pruning
-        app.insert_resource(TestMessages(vec![CellDestroyed {
+        app.insert_resource(TestMessages(vec![CellDestroyedAt {
+            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);

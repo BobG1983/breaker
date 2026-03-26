@@ -37,8 +37,10 @@ pub fn check_chip_stacks_consistent(
 
 #[cfg(test)]
 mod tests {
-    use breaker::chips::definition::{ChipDefinition, Rarity};
-    use breaker::effect::{Effect, EffectNode};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
 
     use super::*;
 

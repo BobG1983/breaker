@@ -35,8 +35,10 @@ pub fn check_maxed_chip_never_offered(
 
 #[cfg(test)]
 mod tests {
-    use breaker::chips::definition::{ChipDefinition, Rarity};
-    use breaker::effect::{Effect, EffectNode};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
 
     use super::*;
 

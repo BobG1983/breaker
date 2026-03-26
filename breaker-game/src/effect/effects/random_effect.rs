@@ -49,33 +49,30 @@ pub(crate) fn handle_random_effect(
 
     let (_, node) = &pool[selected_idx];
 
-    match node {
-        EffectNode::Do(effect) => {
-            fire_typed_event(
-                effect.clone(),
-                event.targets.clone(),
-                event.source_chip.clone(),
-                &mut commands,
-            );
-        }
-        _ => {
-            // Non-leaf: arm the bolt if there is one in targets
-            let bolt_entity = event.targets.iter().find_map(|t| match t {
-                EffectTarget::Entity(e) => Some(*e),
-                _ => None,
-            });
-            if let Some(bolt_entity) = bolt_entity {
-                if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
-                    armed.0.push((event.source_chip.clone(), node.clone()));
-                } else {
-                    commands.entity(bolt_entity).insert(ArmedEffects(vec![(
-                        event.source_chip.clone(),
-                        node.clone(),
-                    )]));
-                }
+    if let EffectNode::Do(effect) = node {
+        fire_typed_event(
+            effect.clone(),
+            event.targets.clone(),
+            event.source_chip.clone(),
+            &mut commands,
+        );
+    } else {
+        // Non-leaf: arm the bolt if there is one in targets
+        let bolt_entity = event.targets.iter().find_map(|t| match t {
+            EffectTarget::Entity(e) => Some(*e),
+            EffectTarget::Location(_) => None,
+        });
+        if let Some(bolt_entity) = bolt_entity {
+            if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
+                armed.0.push((event.source_chip.clone(), node.clone()));
             } else {
-                warn!("RandomEffect selected non-leaf chain but no bolt entity to arm");
+                commands.entity(bolt_entity).insert(ArmedEffects(vec![(
+                    event.source_chip.clone(),
+                    node.clone(),
+                )]));
             }
+        } else {
+            warn!("RandomEffect selected non-leaf chain but no bolt entity to arm");
         }
     }
 }

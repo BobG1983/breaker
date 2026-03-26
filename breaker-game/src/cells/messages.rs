@@ -2,11 +2,23 @@
 
 use bevy::prelude::*;
 
-/// Sent when a cell is destroyed.
+/// Sent by `handle_cell_hit` when a cell's HP reaches 0. The entity is still alive.
 ///
-/// Consumed by run (progress tracking) and chips (overclock triggers).
+/// Consumed by `bridge_cell_death` (evaluates `OnDeath` `EffectChains` while entity
+/// is still alive) and `cleanup_destroyed_cells` (despawns the entity).
 #[derive(Message, Clone, Debug)]
-pub(crate) struct CellDestroyed {
+pub(crate) struct RequestCellDestroyed {
+    /// The cell entity to be destroyed.
+    pub cell: Entity,
+}
+
+/// Sent by `bridge_cell_death` after extracting entity data from the still-alive cell.
+///
+/// Replaces `CellDestroyed` for all downstream consumers (run tracking, lock release, etc.).
+#[derive(Message, Clone, Debug)]
+pub(crate) struct CellDestroyedAt {
+    /// World-space position of the destroyed cell.
+    pub position: Vec2,
     /// Whether this cell counted toward node completion.
     pub was_required_to_clear: bool,
 }
@@ -23,8 +35,8 @@ pub(crate) struct DamageCell {
     pub cell: Entity,
     /// Pre-calculated damage amount.
     pub damage: f32,
-    /// The bolt entity that caused this damage (for VFX attachment).
-    pub source_bolt: Entity,
+    /// The bolt entity that caused this damage (for VFX attachment), if any.
+    pub source_bolt: Option<Entity>,
     /// The chip name that originated this damage, for evolution attribution.
     pub source_chip: Option<String>,
 }
@@ -33,12 +45,39 @@ pub(crate) struct DamageCell {
 mod tests {
     use super::*;
 
+    // =========================================================================
+    // C7 Wave 2a: Two-Phase Destruction cell message types
+    // =========================================================================
+
     #[test]
-    fn cell_destroyed_debug_format() {
-        let msg = CellDestroyed {
+    fn request_cell_destroyed_debug_format() {
+        let msg = RequestCellDestroyed {
+            cell: Entity::PLACEHOLDER,
+        };
+        let debug = format!("{msg:?}");
+        assert!(debug.contains("RequestCellDestroyed"));
+        assert!(debug.contains("cell"));
+    }
+
+    #[test]
+    fn cell_destroyed_at_debug_format() {
+        let msg = CellDestroyedAt {
+            position: Vec2::new(100.0, 200.0),
             was_required_to_clear: true,
         };
-        assert!(format!("{msg:?}").contains("CellDestroyed"));
+        let debug = format!("{msg:?}");
+        assert!(debug.contains("CellDestroyedAt"));
+        assert!(debug.contains("position"));
+        assert!(debug.contains("was_required_to_clear"));
+    }
+
+    #[test]
+    fn cell_destroyed_at_non_required() {
+        let msg = CellDestroyedAt {
+            position: Vec2::new(50.0, 75.0),
+            was_required_to_clear: false,
+        };
+        assert!(!msg.was_required_to_clear);
     }
 
     #[test]
@@ -46,7 +85,7 @@ mod tests {
         let msg = DamageCell {
             cell: Entity::PLACEHOLDER,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
             source_chip: None,
         };
         assert!(format!("{msg:?}").contains("DamageCell"));

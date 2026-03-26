@@ -52,6 +52,23 @@ pub(crate) struct BoltHitWall {
     pub bolt: Entity,
 }
 
+/// Sent by `bolt_lost` when an extra bolt falls off screen. Entity is still alive.
+///
+/// Consumed by `bridge_bolt_death` (evaluates `OnDeath` `EffectChains`) and
+/// `cleanup_destroyed_bolts` (despawns the entity).
+#[derive(Message, Clone, Debug)]
+pub(crate) struct RequestBoltDestroyed {
+    /// The bolt entity to be destroyed.
+    pub bolt: Entity,
+}
+
+/// Sent by `bridge_bolt_death` after extracting entity data from the still-alive bolt.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct BoltDestroyedAt {
+    /// World-space position of the destroyed bolt.
+    pub position: Vec2,
+}
+
 /// Sent by the chain bolt effect handler to spawn a tethered chain bolt.
 ///
 /// Consumed by `spawn_chain_bolt` in the bolt domain.
@@ -94,6 +111,30 @@ mod tests {
             msg.bolt, bolt_entity,
             "BoltHitCell.bolt should be accessible and match the entity passed in"
         );
+    }
+
+    // =========================================================================
+    // C7 Wave 2a: Two-Phase Destruction bolt message types
+    // =========================================================================
+
+    #[test]
+    fn request_bolt_destroyed_debug_format() {
+        let msg = RequestBoltDestroyed {
+            bolt: Entity::PLACEHOLDER,
+        };
+        let debug = format!("{msg:?}");
+        assert!(debug.contains("RequestBoltDestroyed"));
+        assert!(debug.contains("bolt"));
+    }
+
+    #[test]
+    fn bolt_destroyed_at_debug_format() {
+        let msg = BoltDestroyedAt {
+            position: Vec2::new(50.0, -100.0),
+        };
+        let debug = format!("{msg:?}");
+        assert!(debug.contains("BoltDestroyedAt"));
+        assert!(debug.contains("position"));
     }
 
     #[test]

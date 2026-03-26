@@ -76,9 +76,9 @@ pub(crate) fn evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<Node
                 vec![NodeEvalResult::NoMatch]
             }
         }
-        EffectNode::Do(_) => vec![NodeEvalResult::NoMatch],
-        EffectNode::Until { .. } => vec![NodeEvalResult::NoMatch],
-        EffectNode::Once(_) => vec![NodeEvalResult::NoMatch],
+        EffectNode::Do(_) | EffectNode::Until { .. } | EffectNode::Once(_) => {
+            vec![NodeEvalResult::NoMatch]
+        }
     }
 }
 
@@ -86,20 +86,29 @@ pub(crate) fn evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<Node
 ///
 /// `OnSelected` and `TimeExpires` have no runtime trigger mapping and always return `false`.
 fn trigger_matches(kind: TriggerKind, trigger: Trigger) -> bool {
-    match (kind, trigger) {
-        (TriggerKind::PerfectBump, Trigger::OnPerfectBump) => true,
-        (TriggerKind::BumpSuccess, Trigger::OnBump) => true,
-        (TriggerKind::EarlyBump, Trigger::OnEarlyBump) => true,
-        (TriggerKind::LateBump, Trigger::OnLateBump) => true,
-        (TriggerKind::BumpWhiff, Trigger::OnBumpWhiff) => true,
-        (TriggerKind::CellImpact, Trigger::OnImpact(ImpactTarget::Cell)) => true,
-        (TriggerKind::BreakerImpact, Trigger::OnImpact(ImpactTarget::Breaker)) => true,
-        (TriggerKind::WallImpact, Trigger::OnImpact(ImpactTarget::Wall)) => true,
-        (TriggerKind::CellDestroyed, Trigger::OnCellDestroyed) => true,
-        (TriggerKind::BoltLost, Trigger::OnBoltLost) => true,
-        (TriggerKind::Death, Trigger::OnDeath) => true,
-        _ => false,
-    }
+    matches!(
+        (kind, trigger),
+        (TriggerKind::PerfectBump, Trigger::OnPerfectBump)
+            | (TriggerKind::BumpSuccess, Trigger::OnBump)
+            | (TriggerKind::EarlyBump, Trigger::OnEarlyBump)
+            | (TriggerKind::LateBump, Trigger::OnLateBump)
+            | (TriggerKind::BumpWhiff, Trigger::OnBumpWhiff)
+            | (
+                TriggerKind::CellImpact,
+                Trigger::OnImpact(ImpactTarget::Cell)
+            )
+            | (
+                TriggerKind::BreakerImpact,
+                Trigger::OnImpact(ImpactTarget::Breaker)
+            )
+            | (
+                TriggerKind::WallImpact,
+                Trigger::OnImpact(ImpactTarget::Wall)
+            )
+            | (TriggerKind::CellDestroyed, Trigger::OnCellDestroyed)
+            | (TriggerKind::BoltLost, Trigger::OnBoltLost)
+            | (TriggerKind::Death, Trigger::OnDeath)
+    )
 }
 
 #[cfg(test)]
@@ -316,7 +325,11 @@ mod tests {
             ],
         };
         let result = evaluate_node(TriggerKind::BumpSuccess, &node);
-        assert_eq!(result.len(), 2, "should return 2 Fire results for 2 Do children");
+        assert_eq!(
+            result.len(),
+            2,
+            "should return 2 Fire results for 2 Do children"
+        );
         assert!(matches!(
             result[0],
             NodeEvalResult::Fire(Effect::SpawnBolts { .. })

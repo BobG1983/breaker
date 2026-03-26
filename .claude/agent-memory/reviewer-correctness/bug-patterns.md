@@ -167,6 +167,27 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 - **apply_speed_scale duplicates prepare_bolt_velocity clamping**: `behaviors/effects/speed_boost.rs:69` — two-step floor+ceiling using normalize_or_zero. `prepare_bolt_velocity` uses `clamp_length` (atomic). Equivalent for valid data (base < max), but diverges if clamping contract changes. Code-reuse gap, not a confirmed runtime bug.
 - Confirmed correct: `handle_multi_bolt` formula, `detect_most_powerful_evolution` max_by(total_cmp), all 15 HighlightKind arms in spawn_run_end_screen, track_evolution_damage accumulation. Do not re-flag.
 
+## Wave 2a (feature/spatial-physics-extraction, 2026-03-25) — UPDATED AFTER CODE-REUSE REVIEW
+
+- **Double-counting cells_destroyed**: RESOLVED — `CellDestroyed` type is completely removed; only `RequestCellDestroyed` (internal) + `CellDestroyedAt` (downstream) exist. No dual-reader path. Do not re-flag.
+
+- **bridge_timer_threshold fires on zero-total timer**: FIXED — `bridges.rs` now explicitly handles `timer.total == 0.0` by assigning `ratio = 0.0`. The zero-total path treats all thresholds as satisfied (ratio < threshold for any positive threshold). This is the documented design: no timer = immediate trigger. Do not re-flag.
+
+- **ActiveDamageBoosts.0 grows past max_stacks cap**: CONFIRMED STILL OPEN — `damage_boost.rs` — `handle_damage_boost` calls `stack_f32` (capped) but always pushes `per_stack` to `ActiveDamageBoosts.0` even after cap is reached. `multiplier()` returns an ever-growing product past `max_stacks`. Until reversal also affected. Confidence: HIGH.
+
+- **bridge_bump skips breaker EffectChains when BumpPerformed.bolt is None**: NEW (2026-03-25) — `bridges.rs:72-74` — `let Some(bolt_entity) = performed.bolt else { continue; }` exits the entire loop iteration including the breaker entity `EffectChains` evaluation block at lines 130-138. A retroactive bump with `bolt: None` silently skips any `OnBump` / `OnPerfectBump` chip on the breaker. Regression spec hint written. Confidence: HIGH.
+
+- **chains_query missing With<Bolt> filter**: NEW (2026-03-25) — `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact` all use `Query<&mut EffectChains>` with no entity filter. Access is via `.get_mut(bolt_entity)` today (safe), but query matches cell entities with `EffectChains` too. Latent risk if code ever iterates the query. Medium priority.
+
+- **Until machinery not end-to-end wired** (observation): `tick_until_timers`, `check_until_triggers`, `apply_speed_boosts`, `reverse_children` all function correctly but are inert in production (no code inserts `UntilTimers`/`UntilTriggers` outside tests). This is Wave 2b scope. Do not re-flag.
+
+## Wave 2a Confirmed Correct Patterns (2026-03-25)
+- `bridge_cell_death` / `cleanup_destroyed_cells` ordering: cleanup runs `.after(EffectSystems::Bridge)`. Entity lives through bridge evaluation. Correct.
+- `bridge_timer_threshold` index-based removal in reverse order: correct.
+- `BoltLostWriters` `Result<MessageWriter<RequestBoltDestroyed>>` fallback: the `Err` arm (legacy despawn) runs only when `RequestBoltDestroyed` is not registered; in production it is always registered. Low-impact design choice, not a bug.
+- `apply_speed_boosts` empty-vec product = 1.0: idempotent at base speed. Correct.
+- `bridge_cell_death` + `bridge_bolt_death` near-duplicate structure: intentional; no shared helper. Do not re-flag as wrong — flag as code-reuse gap only.
+
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 
 - **spawn_chip_select overwrites ChipOffers**: FIXED — verified in current code. `spawn_chip_select` now reads `Res<ChipOffers>` directly (does not touch ChipRegistry or insert ChipOffers). The offering algorithm is no longer bypassed.

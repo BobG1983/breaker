@@ -26,10 +26,14 @@ pub struct BreakerPlugin;
 
 impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
-        use crate::breaker::messages::BreakerSpawned;
+        use crate::breaker::messages::{
+            BreakerDestroyedAt, BreakerSpawned, RequestBreakerDestroyed,
+        };
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
             .add_message::<BreakerSpawned>()
+            .add_message::<RequestBreakerDestroyed>()
+            .add_message::<BreakerDestroyedAt>()
             .init_resource::<BreakerConfig>()
             .init_resource::<SelectedBreaker>()
             .add_systems(

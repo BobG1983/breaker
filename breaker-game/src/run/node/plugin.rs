@@ -25,6 +25,7 @@ impl Plugin for NodePlugin {
         app.init_resource::<ClearRemainingCount>()
             .init_resource::<NodeTimer>()
             .init_resource::<ScenarioLayoutOverride>()
+            .add_message::<crate::cells::messages::CellDestroyedAt>()
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_message::<ApplyTimePenalty>()
@@ -67,7 +68,6 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
-            .add_message::<crate::cells::messages::CellDestroyed>()
             .add_plugins(NodePlugin)
             .update();
     }

@@ -112,11 +112,7 @@ mod tests {
     // --- Decay-on-expiry tests ---
 
     use crate::{
-        chips::{
-            ChipDefinition,
-            definition::EvolutionIngredient,
-            inventory::ChipInventory,
-        },
+        chips::{ChipDefinition, definition::EvolutionIngredient, inventory::ChipInventory},
         effect::definition::{Effect, EffectNode},
         screen::chip_select::{
             ChipSelectConfig,
@@ -126,9 +122,21 @@ mod tests {
 
     fn make_offers_3() -> ChipOffers {
         ChipOffers(vec![
-            ChipOffering::Normal(ChipDefinition::test("A", EffectNode::Do(Effect::Piercing(1)), 3)),
-            ChipOffering::Normal(ChipDefinition::test("B", EffectNode::Do(Effect::Piercing(1)), 3)),
-            ChipOffering::Normal(ChipDefinition::test("C", EffectNode::Do(Effect::Piercing(1)), 3)),
+            ChipOffering::Normal(ChipDefinition::test(
+                "A",
+                EffectNode::Do(Effect::Piercing(1)),
+                3,
+            )),
+            ChipOffering::Normal(ChipDefinition::test(
+                "B",
+                EffectNode::Do(Effect::Piercing(1)),
+                3,
+            )),
+            ChipOffering::Normal(ChipDefinition::test(
+                "C",
+                EffectNode::Do(Effect::Piercing(1)),
+                3,
+            )),
         ])
     }
 
@@ -190,7 +198,11 @@ mod tests {
         // On timer expiry, decay should be applied to "A" (0.8) and "C" (0.8)
         // but NOT to "B+" (should remain 1.0)
         let offers = ChipOffers(vec![
-            ChipOffering::Normal(ChipDefinition::test("A", EffectNode::Do(Effect::Piercing(1)), 3)),
+            ChipOffering::Normal(ChipDefinition::test(
+                "A",
+                EffectNode::Do(Effect::Piercing(1)),
+                3,
+            )),
             ChipOffering::Evolution {
                 ingredients: vec![EvolutionIngredient {
                     chip_name: "X".to_owned(),
@@ -198,7 +210,11 @@ mod tests {
                 }],
                 result: ChipDefinition::test("B+", EffectNode::Do(Effect::Piercing(5)), 1),
             },
-            ChipOffering::Normal(ChipDefinition::test("C", EffectNode::Do(Effect::Piercing(1)), 3)),
+            ChipOffering::Normal(ChipDefinition::test(
+                "C",
+                EffectNode::Do(Effect::Piercing(1)),
+                3,
+            )),
         ]);
 
         let mut app = test_app_with_offers(0.0, offers);

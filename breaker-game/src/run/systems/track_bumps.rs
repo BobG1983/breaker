@@ -67,7 +67,7 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Early,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         }]));
         tick(&mut app);
 
@@ -83,7 +83,7 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         }]));
         tick(&mut app);
 
@@ -105,7 +105,7 @@ mod tests {
         for _ in 0..3 {
             app.insert_resource(TestMessages(vec![BumpPerformed {
                 grade: BumpGrade::Perfect,
-                bolt: Entity::PLACEHOLDER,
+                bolt: None,
             }]));
             tick(&mut app);
         }
@@ -127,7 +127,7 @@ mod tests {
 
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Early,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         }]));
         tick(&mut app);
 
@@ -152,7 +152,7 @@ mod tests {
 
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Late,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         }]));
         tick(&mut app);
 
@@ -175,11 +175,11 @@ mod tests {
         app.insert_resource(TestMessages(vec![
             BumpPerformed {
                 grade: BumpGrade::Early,
-                bolt: Entity::PLACEHOLDER,
+                bolt: None,
             },
             BumpPerformed {
                 grade: BumpGrade::Late,
-                bolt: Entity::PLACEHOLDER,
+                bolt: None,
             },
         ]));
         tick(&mut app);
@@ -199,15 +199,15 @@ mod tests {
         app.insert_resource(TestMessages(vec![
             BumpPerformed {
                 grade: BumpGrade::Perfect,
-                bolt: Entity::PLACEHOLDER,
+                bolt: None,
             },
             BumpPerformed {
                 grade: BumpGrade::Early,
-                bolt: Entity::PLACEHOLDER,
+                bolt: None,
             },
             BumpPerformed {
                 grade: BumpGrade::Late,
-                bolt: Entity::PLACEHOLDER,
+                bolt: None,
             },
         ]));
         tick(&mut app);

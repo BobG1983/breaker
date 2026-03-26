@@ -169,8 +169,10 @@ pub struct ChipOffers(pub Vec<ChipOffering>);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::EvolutionIngredient;
-    use crate::effect::definition::{Effect, EffectNode};
+    use crate::{
+        chips::definition::EvolutionIngredient,
+        effect::definition::{Effect, EffectNode},
+    };
 
     #[test]
     fn default_config_has_positive_timer() {

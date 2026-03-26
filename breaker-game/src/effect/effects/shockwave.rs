@@ -42,8 +42,8 @@ pub(crate) struct ShockwaveDamage {
     pub damage: f32,
     /// The chip name that originated this shockwave, for damage attribution.
     pub source_chip: Option<String>,
-    /// The bolt entity that caused this shockwave (for VFX / `DamageCell`).
-    pub source_bolt: Entity,
+    /// The bolt entity that caused this shockwave (for VFX / `DamageCell`), if any.
+    pub source_bolt: Option<Entity>,
 }
 
 /// Tracks which cell entities have already been hit by this shockwave.
@@ -73,7 +73,7 @@ pub(crate) fn handle_shockwave(
 
     let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
         crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
-        _ => None,
+        crate::effect::definition::EffectTarget::Location(_) => None,
     }) else {
         return;
     };
@@ -93,7 +93,7 @@ pub(crate) fn handle_shockwave(
         ShockwaveDamage {
             damage,
             source_chip: event.source_chip.clone(),
-            source_bolt: bolt_entity,
+            source_bolt: Some(bolt_entity),
         },
         ShockwaveAlreadyHit::default(),
         GameDrawLayer::Fx,
@@ -452,7 +452,8 @@ mod tests {
             dmg.damage
         );
         assert_eq!(
-            dmg.source_bolt, bolt,
+            dmg.source_bolt,
+            Some(bolt),
             "source_bolt should be the triggering bolt"
         );
 
@@ -621,7 +622,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: sw_bolt,
+                source_bolt: Some(sw_bolt),
             },
             ShockwaveAlreadyHit::default(),
         ));
@@ -670,7 +671,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: sw_bolt,
+                source_bolt: Some(sw_bolt),
             },
             ShockwaveAlreadyHit(already_hit),
         ));
@@ -711,7 +712,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: sw_bolt,
+                source_bolt: Some(sw_bolt),
             },
             ShockwaveAlreadyHit::default(),
         ));
@@ -762,7 +763,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: sw_bolt,
+                source_bolt: Some(sw_bolt),
             },
             ShockwaveAlreadyHit::default(),
         ));
@@ -817,7 +818,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: sw_bolt,
+                source_bolt: Some(sw_bolt),
             },
             ShockwaveAlreadyHit::default(),
         ));
@@ -1022,7 +1023,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: sw_bolt,
+                source_bolt: Some(sw_bolt),
             },
             ShockwaveAlreadyHit::default(),
         ));
@@ -1078,7 +1079,7 @@ mod tests {
             ShockwaveDamage {
                 damage: 10.0,
                 source_chip: None,
-                source_bolt: stale_bolt,
+                source_bolt: Some(stale_bolt),
             },
             ShockwaveAlreadyHit::default(),
         ));
@@ -1095,7 +1096,8 @@ mod tests {
         );
         assert_eq!(captured.0[0].cell, cell);
         assert_eq!(
-            captured.0[0].source_bolt, stale_bolt,
+            captured.0[0].source_bolt,
+            Some(stale_bolt),
             "DamageCell.source_bolt should carry the stale entity (no panic)"
         );
     }

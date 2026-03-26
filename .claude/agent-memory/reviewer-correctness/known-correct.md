@@ -59,6 +59,17 @@ type: reference
 - `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.
 - `RenderSetupPlugin` inserts `ClearColor(PlayfieldConfig::default().background_color())` at plugin-build time using compile-time defaults — intentional; RON default matches Rust default `[0.02, 0.01, 0.04]`.
 
+## Wave 2a Two-Phase Destruction Correct Patterns (feature/spatial-physics-extraction, 2026-03-25)
+- `cleanup_destroyed_cells` ordering `.after(EffectSystems::Bridge)` — cleanup runs after the entire Bridge set, including `bridge_cell_death` (which is inside Bridge). Order is correct: entity lives during bridge evaluation, is despawned after.
+- `tick_until_timers` / `check_until_triggers` / `reverse_children` — systems are correctly implemented. `UntilTimers`/`UntilTriggers` components are intentionally only populated by test code in Wave 2a; Until wiring is Wave 2b scope.
+- `apply_speed_boosts` empty-vec path: `product()` of empty iterator returns 1.0, so `base_speed * 1.0 = base_speed`. Only runs on entities with `ActiveSpeedBoosts` — not auto-inserted in production, so this runs on zero entities. Do not flag as "always overrides velocity."
+- `bridge_timer_threshold` index-based removal in reverse order — correct; indices collected ascending, removed descending to preserve validity.
+- `bridge_cell_death` `any_destroyed` flag: fires global `OnCellDestroyed` evaluation once per frame (not per cell). This matches the pre-existing `bridge_cell_destroyed` semantics. Intentional fire-once-if-any pattern. Do not re-flag.
+- `bridge_bump` `BumpSuccess` evaluation uses `targets = vec![EffectTarget::Entity(bolt_entity)]`: targets set to bolt entity. Correct — `BumpSuccess` and grade-specific triggers both use the bolt as the effect target.
+- `CellDestroyed` type is entirely removed in Wave 2a. `RequestCellDestroyed` (internal bridge trigger) + `CellDestroyedAt` (downstream consumers) are the two-phase replacement. No dual-read path exists.
+- `bridge_timer_threshold` zero-total: `ratio = 0.0` when `timer.total == 0.0`. All positive thresholds are satisfied immediately. Design intent: a node with no timer fires threshold chains immediately. Do not re-flag as zero-division.
+- `BoltLostWriters` `Result<MessageWriter<RequestBoltDestroyed>, SystemParamValidationError>` fallback: the `Err` arm runs only when the message is not registered. In production it is always registered. Legacy graceful-degradation pattern. Do not flag as bug.
+
 ## B4-B6 Template/Inventory/Offering Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
 - `expand_template` sets `max_stacks = template.max_taken` on all rarity variants — all variants from the same template always share the same cap value. Do not flag as inconsistency.
 - `template_taken` counts total stacks across all rarity variants (one increment per `add_chip` call, one decrement per `remove_chip` call). This is intentional and correct.

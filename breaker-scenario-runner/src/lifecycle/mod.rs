@@ -669,8 +669,10 @@ fn apply_inject_duplicate_offers(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{ChipDefinition, Rarity};
-    use breaker::effect::{Effect, EffectNode};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
@@ -699,8 +701,10 @@ fn apply_inject_maxed_chip_offer(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{ChipDefinition, Rarity};
-    use breaker::effect::{Effect, EffectNode};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),

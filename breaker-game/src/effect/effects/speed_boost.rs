@@ -1,7 +1,8 @@
 //! Speed boost effect handler — scales bolt velocity on trigger.
 //!
-//! Observes [`SpeedBoostFired`] and scales the specific bolt's velocity
-//! by `multiplier`, clamped within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
+//! Observes [`SpeedBoostFired`] and pushes a multiplier onto the bolt's
+//! [`ActiveSpeedBoosts`] vec. The [`apply_speed_boosts`] system recalculates
+//! velocity from base speed * product(boosts), clamped to max.
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
@@ -12,22 +13,63 @@ use crate::{
     effect::{definition::Target, typed_events::SpeedBoostFired},
 };
 
+/// Query for bolts needing speed boost handling (velocity, base/max speed, optional boost amp,
+/// optional active boost tracking).
+type SpeedBoostQuery = (
+    &'static mut Velocity2D,
+    &'static BoltBaseSpeed,
+    &'static BoltMaxSpeed,
+    Option<&'static BoltSpeedBoost>,
+    Option<&'static mut ActiveSpeedBoosts>,
+);
+
+/// Per-bolt tracking of active speed boost multipliers.
+///
+/// Each entry is a multiplier (e.g. 1.5 for 50% speed increase). The
+/// [`apply_speed_boosts`] system recalculates velocity as
+/// `base_speed * product(boosts)`, clamped to `[base_speed, max_speed]`.
+/// Until reversal removes entries from the vec.
+#[derive(Component, Debug, Default, Clone, PartialEq)]
+pub(crate) struct ActiveSpeedBoosts(pub Vec<f32>);
+
+/// Recalculates bolt velocity from `BoltBaseSpeed` * product(`ActiveSpeedBoosts`),
+/// clamped within [`BoltBaseSpeed`, `BoltMaxSpeed`], preserving direction.
+///
+/// Skips bolts with zero velocity (cannot determine direction).
+pub(crate) fn apply_speed_boosts(
+    mut query: Query<
+        (
+            &mut Velocity2D,
+            &BoltBaseSpeed,
+            &BoltMaxSpeed,
+            &ActiveSpeedBoosts,
+        ),
+        With<Bolt>,
+    >,
+) {
+    for (mut vel, base_speed, max_speed, active_boosts) in &mut query {
+        let current_speed = vel.speed();
+        if current_speed < f32::EPSILON {
+            continue;
+        }
+
+        let direction = vel.0.normalize();
+        let product: f32 = active_boosts.0.iter().product();
+        let target_speed = (base_speed.0 * product).clamp(base_speed.0, max_speed.0);
+        vel.0 = direction * target_speed;
+    }
+}
+
 /// Observer: handles speed boost when a `SpeedBoostFired` event fires.
 ///
 /// For `Bolt` target: scales the specific bolt's velocity by `multiplier`.
 /// For `AllBolts` target: scales every bolt's velocity by `multiplier`.
 /// Both clamp within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
+/// Also pushes the multiplier onto each bolt's [`ActiveSpeedBoosts`] vec
+/// (if present) so that Until reversal can remove individual entries.
 pub(crate) fn handle_speed_boost(
     trigger: On<SpeedBoostFired>,
-    mut bolt_query: Query<
-        (
-            &mut Velocity2D,
-            &BoltBaseSpeed,
-            &BoltMaxSpeed,
-            Option<&BoltSpeedBoost>,
-        ),
-        With<Bolt>,
-    >,
+    mut bolt_query: Query<SpeedBoostQuery, With<Bolt>>,
 ) {
     let event = trigger.event();
 
@@ -35,23 +77,31 @@ pub(crate) fn handle_speed_boost(
         Target::Bolt => {
             let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
                 crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
-                _ => None,
+                crate::effect::definition::EffectTarget::Location(_) => None,
             }) else {
                 return;
             };
 
-            let Ok((mut vel, base_speed, max_speed, speed_boost)) = bolt_query.get_mut(bolt_entity)
+            let Ok((mut vel, base_speed, max_speed, speed_boost, mut active_boosts)) =
+                bolt_query.get_mut(bolt_entity)
             else {
                 return;
             };
 
             let boost = speed_boost.map_or(0.0, |b| b.0);
             apply_speed_scale(&mut vel, event.multiplier, base_speed.0, max_speed.0, boost);
+            if let Some(ref mut boosts) = active_boosts {
+                boosts.0.push(event.multiplier);
+            }
         }
         Target::AllBolts => {
-            for (mut vel, base_speed, max_speed, speed_boost) in &mut bolt_query {
+            for (mut vel, base_speed, max_speed, speed_boost, mut active_boosts) in &mut bolt_query
+            {
                 let boost = speed_boost.map_or(0.0, |b| b.0);
                 apply_speed_scale(&mut vel, event.multiplier, base_speed.0, max_speed.0, boost);
+                if let Some(ref mut boosts) = active_boosts {
+                    boosts.0.push(event.multiplier);
+                }
             }
         }
         Target::Breaker => {
@@ -556,6 +606,232 @@ mod tests {
             (vel.speed() - 800.0).abs() < 1.0,
             "SpeedBoostFired should clamp to max 800.0, got {:.1}",
             vel.speed()
+        );
+    }
+
+    // =========================================================================
+    // ActiveSpeedBoosts — vec-based speed boost management
+    // =========================================================================
+
+    fn boost_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_observer(handle_speed_boost)
+            .add_systems(FixedUpdate, apply_speed_boosts);
+        app
+    }
+
+    fn spawn_bolt_with_active_boosts(
+        app: &mut App,
+        vx: f32,
+        vy: f32,
+        base: f32,
+        max: f32,
+        boosts: Vec<f32>,
+    ) -> Entity {
+        app.world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(vx, vy)),
+                BoltBaseSpeed(base),
+                BoltMaxSpeed(max),
+                ActiveSpeedBoosts(boosts),
+            ))
+            .id()
+    }
+
+    fn get_active_speed_boosts(app: &App, entity: Entity) -> Vec<f32> {
+        app.world()
+            .entity(entity)
+            .get::<ActiveSpeedBoosts>()
+            .expect("bolt should have ActiveSpeedBoosts")
+            .0
+            .clone()
+    }
+
+    // --- Test 1: handle_speed_boost pushes to ActiveSpeedBoosts ---
+
+    #[test]
+    fn handle_speed_boost_pushes_to_active_speed_boosts() {
+        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+
+        let mut app = boost_test_app();
+        let bolt = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 800.0, vec![]);
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffTarget::Bolt,
+            multiplier: 1.5,
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let boosts = get_active_speed_boosts(&app, bolt);
+        assert_eq!(
+            boosts,
+            vec![1.5],
+            "ActiveSpeedBoosts should contain [1.5] after SpeedBoostFired, got {boosts:?}"
+        );
+    }
+
+    // --- Test 2: handle_speed_boost stacks multiple boosts ---
+
+    #[test]
+    fn handle_speed_boost_stacks_multiple_boosts() {
+        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+
+        let mut app = boost_test_app();
+        let bolt = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 800.0, vec![1.5]);
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffTarget::Bolt,
+            multiplier: 2.0,
+            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let boosts = get_active_speed_boosts(&app, bolt);
+        assert_eq!(
+            boosts,
+            vec![1.5, 2.0],
+            "ActiveSpeedBoosts should contain [1.5, 2.0] after stacking, got {boosts:?}"
+        );
+    }
+
+    // --- Test 3: apply_speed_boosts recalculates velocity from vec ---
+
+    #[test]
+    fn apply_speed_boosts_recalculates_velocity_from_vec() {
+        let mut app = boost_test_app();
+        let bolt =
+            spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 2000.0, vec![1.5, 2.0]);
+
+        tick(&mut app);
+
+        let vel = get_bolt_velocity(&mut app, bolt);
+        // 400.0 * 1.5 * 2.0 = 1200.0, direction preserved (0, 1)
+        assert!(
+            (vel.speed() - 1200.0).abs() < 1.0,
+            "velocity magnitude should be 1200.0 (400.0 * 1.5 * 2.0), got {:.1}",
+            vel.speed()
+        );
+        assert!(
+            (vel.0.y - 1200.0).abs() < 1.0,
+            "velocity y should be ~1200.0, got {:.1}",
+            vel.0.y
+        );
+        assert!(
+            vel.0.x.abs() < f32::EPSILON,
+            "velocity x should be ~0.0, got {:.4}",
+            vel.0.x
+        );
+    }
+
+    // --- Test 4: apply_speed_boosts clamps to max ---
+
+    #[test]
+    fn apply_speed_boosts_clamps_to_max() {
+        let mut app = boost_test_app();
+        let bolt = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 800.0, vec![3.0]);
+
+        tick(&mut app);
+
+        let vel = get_bolt_velocity(&mut app, bolt);
+        // 400.0 * 3.0 = 1200.0, clamped to max 800.0
+        assert!(
+            (vel.speed() - 800.0).abs() < 1.0,
+            "velocity should be clamped to max 800.0, got {:.1}",
+            vel.speed()
+        );
+    }
+
+    // --- Test 5: apply_speed_boosts with empty vec uses base speed ---
+
+    #[test]
+    fn apply_speed_boosts_empty_vec_uses_base_speed() {
+        let mut app = boost_test_app();
+        // Velocity is currently 600.0, but with empty boosts, apply should
+        // recalculate to base_speed * 1.0 = 400.0
+        let bolt = spawn_bolt_with_active_boosts(&mut app, 0.0, 600.0, 400.0, 800.0, vec![]);
+
+        tick(&mut app);
+
+        let vel = get_bolt_velocity(&mut app, bolt);
+        // product of empty vec = 1.0, so 400.0 * 1.0 = 400.0
+        assert!(
+            (vel.speed() - 400.0).abs() < 1.0,
+            "with empty boosts vec, velocity should be base_speed 400.0, got {:.1}",
+            vel.speed()
+        );
+    }
+
+    // --- Test 6: apply_speed_boosts preserves direction ---
+
+    #[test]
+    fn apply_speed_boosts_preserves_direction() {
+        let mut app = boost_test_app();
+        // Diagonal velocity: (300.0, 400.0) -> magnitude 500.0
+        let bolt = spawn_bolt_with_active_boosts(&mut app, 300.0, 400.0, 400.0, 2000.0, vec![2.0]);
+
+        tick(&mut app);
+
+        let vel = get_bolt_velocity(&mut app, bolt);
+        // base_speed * 2.0 = 800.0
+        assert!(
+            (vel.speed() - 800.0).abs() < 1.0,
+            "velocity magnitude should be 800.0 (400.0 * 2.0), got {:.1}",
+            vel.speed()
+        );
+        // Direction should be normalized(300, 400) = (0.6, 0.8)
+        let dir = vel.0.normalize();
+        let expected_dir = Vec2::new(300.0, 400.0).normalize();
+        assert!(
+            (dir.x - expected_dir.x).abs() < 0.01,
+            "direction x should be ~{:.3}, got {:.3}",
+            expected_dir.x,
+            dir.x
+        );
+        assert!(
+            (dir.y - expected_dir.y).abs() < 0.01,
+            "direction y should be ~{:.3}, got {:.3}",
+            expected_dir.y,
+            dir.y
+        );
+    }
+
+    // --- Test 7: handle_speed_boost AllBolts target pushes to all bolts ---
+
+    #[test]
+    fn handle_speed_boost_all_bolts_pushes_to_all_active_speed_boosts() {
+        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+
+        let mut app = boost_test_app();
+        let bolt_a = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 2000.0, vec![1.5]);
+        let bolt_b = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 2000.0, vec![1.5]);
+
+        app.world_mut().commands().trigger(SpeedBoostFired {
+            target: EffTarget::AllBolts,
+            multiplier: 2.0,
+            targets: vec![],
+            source_chip: None,
+        });
+        app.world_mut().flush();
+        tick(&mut app);
+
+        let boosts_a = get_active_speed_boosts(&app, bolt_a);
+        let boosts_b = get_active_speed_boosts(&app, bolt_b);
+        assert_eq!(
+            boosts_a,
+            vec![1.5, 2.0],
+            "bolt A ActiveSpeedBoosts should be [1.5, 2.0], got {boosts_a:?}"
+        );
+        assert_eq!(
+            boosts_b,
+            vec![1.5, 2.0],
+            "bolt B ActiveSpeedBoosts should be [1.5, 2.0], got {boosts_b:?}"
         );
     }
 }

@@ -471,7 +471,6 @@ impl TriggerChain {
     pub(crate) fn test_entropy_engine(threshold: u32, pool: Vec<(f32, TriggerChain)>) -> Self {
         Self::EntropyEngine(threshold, pool)
     }
-
 }
 
 #[cfg(test)]
@@ -487,7 +486,7 @@ mod tests {
     fn chip_definition_effects_is_vec_effect_node() {
         let def = ChipDefinition {
             name: "Test".to_owned(),
-            description: "".to_owned(),
+            description: String::new(),
             rarity: Rarity::Common,
             max_stacks: 3,
             effects: vec![EffectNode::When {
@@ -510,7 +509,7 @@ mod tests {
     fn chip_definition_empty_effects_is_valid() {
         let def = ChipDefinition {
             name: "Empty".to_owned(),
-            description: "".to_owned(),
+            description: String::new(),
             rarity: Rarity::Common,
             max_stacks: 1,
             effects: vec![],
@@ -631,11 +630,7 @@ mod tests {
 
     #[test]
     fn chip_definition_test_constructs_with_effect_node() {
-        let def = ChipDefinition::test(
-            "Piercing",
-            EffectNode::Do(Effect::Piercing(1)),
-            3,
-        );
+        let def = ChipDefinition::test("Piercing", EffectNode::Do(Effect::Piercing(1)), 3);
         assert_eq!(def.name, "Piercing");
         assert_eq!(def.max_stacks, 3);
         assert_eq!(def.effects.len(), 1);
@@ -774,7 +769,7 @@ mod tests {
             uncommon: None,
             rare: None,
             legendary: Some(RaritySlot {
-                prefix: "".to_owned(),
+                prefix: String::new(),
                 effects: vec![EffectNode::Do(Effect::DamageBoost(1.0))],
             }),
         };

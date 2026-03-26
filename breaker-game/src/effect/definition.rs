@@ -375,7 +375,6 @@ impl Effect {
     pub(crate) fn test_entropy_engine(threshold: u32, pool: Vec<(f32, EffectNode)>) -> Self {
         Self::EntropyEngine { threshold, pool }
     }
-
 }
 
 // ---------------------------------------------------------------------------
@@ -582,10 +581,7 @@ mod tests {
                     trigger: Trigger::OnImpact(ImpactTarget::Cell),
                     then: inner,
                 } => {
-                    assert!(matches!(
-                        inner[0],
-                        EffectNode::Do(Effect::Shockwave { .. })
-                    ));
+                    assert!(matches!(inner[0], EffectNode::Do(Effect::Shockwave { .. })));
                 }
                 other => panic!("expected inner When(OnImpact(Cell), _), got {other:?}"),
             },
@@ -638,12 +634,10 @@ mod tests {
         match &node {
             EffectNode::When { then, .. } => match &then[0] {
                 EffectNode::When { then: inner, .. } => match &inner[0] {
-                    EffectNode::Until { then: until_kids, .. } => {
-                        assert_eq!(
-                            until_kids.len(),
-                            2,
-                            "Until node should contain 2 Do leaves"
-                        );
+                    EffectNode::Until {
+                        then: until_kids, ..
+                    } => {
+                        assert_eq!(until_kids.len(), 2, "Until node should contain 2 Do leaves");
                     }
                     other => panic!("expected Until, got {other:?}"),
                 },
@@ -679,16 +673,14 @@ mod tests {
     #[test]
     fn effect_node_ron_bare_do_lose_life() {
         let ron_str = "Do(LoseLife)";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("bare Do(LoseLife) should parse");
+        let node: EffectNode = ron::de::from_str(ron_str).expect("bare Do(LoseLife) should parse");
         assert_eq!(node, EffectNode::Do(Effect::LoseLife));
     }
 
     #[test]
     fn effect_node_ron_until_node() {
         let ron_str = "Until(until: TimeExpires(3.0), then: [Do(DamageBoost(2.0))])";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("Until node RON should parse");
+        let node: EffectNode = ron::de::from_str(ron_str).expect("Until node RON should parse");
         assert_eq!(
             node,
             EffectNode::Until {
@@ -715,8 +707,7 @@ mod tests {
     #[test]
     fn effect_node_ron_once_node() {
         let ron_str = "Once([Do(SecondWind(invuln_secs: 3.0))])";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("Once node RON should parse");
+        let node: EffectNode = ron::de::from_str(ron_str).expect("Once node RON should parse");
         assert_eq!(
             node,
             EffectNode::Once(vec![EffectNode::Do(Effect::SecondWind {
@@ -728,8 +719,7 @@ mod tests {
     #[test]
     fn effect_node_ron_once_empty() {
         let ron_str = "Once([])";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("Once([]) should parse");
+        let node: EffectNode = ron::de::from_str(ron_str).expect("Once([]) should parse");
         assert_eq!(node, EffectNode::Once(vec![]));
     }
 
@@ -835,15 +825,42 @@ mod tests {
 
     #[test]
     fn trigger_ron_on_death() {
-        let t: Trigger =
-            ron::de::from_str("OnDeath").expect("OnDeath RON should parse");
+        let t: Trigger = ron::de::from_str("OnDeath").expect("OnDeath RON should parse");
         assert_eq!(t, Trigger::OnDeath);
+    }
+
+    // =========================================================================
+    // C7 Wave 2a: OnNodeTimerThreshold RON deserialization (behavior 12)
+    // =========================================================================
+
+    #[test]
+    fn trigger_ron_on_node_timer_threshold() {
+        let t: Trigger = ron::de::from_str("OnNodeTimerThreshold(0.25)")
+            .expect("OnNodeTimerThreshold(0.25) RON should parse");
+        assert_eq!(t, Trigger::OnNodeTimerThreshold(0.25));
+    }
+
+    #[test]
+    fn trigger_ron_on_node_timer_threshold_zero() {
+        let t: Trigger = ron::de::from_str("OnNodeTimerThreshold(0.0)")
+            .expect("OnNodeTimerThreshold(0.0) RON should parse");
+        assert_eq!(t, Trigger::OnNodeTimerThreshold(0.0));
+    }
+
+    #[test]
+    fn trigger_ron_on_node_timer_threshold_one() {
+        let t: Trigger = ron::de::from_str("OnNodeTimerThreshold(1.0)")
+            .expect("OnNodeTimerThreshold(1.0) RON should parse");
+        assert_eq!(t, Trigger::OnNodeTimerThreshold(1.0));
     }
 
     #[test]
     fn trigger_ron_invalid_variant_fails() {
         let result = ron::de::from_str::<Trigger>("OnGameEnd");
-        assert!(result.is_err(), "invalid trigger variant should fail to parse");
+        assert!(
+            result.is_err(),
+            "invalid trigger variant should fail to parse"
+        );
     }
 
     #[test]
@@ -875,8 +892,9 @@ mod tests {
     fn trigger_is_copy_but_not_eq() {
         // Verify Copy works (f32 is Copy)
         let t = Trigger::TimeExpires(3.0);
-        let _copied = t; // Copy, not move
-        let _also = t; // still usable — proves Copy
+        let copied = t; // Copy, not move
+        let also = t; // still usable — proves Copy
+        assert_eq!(copied, also);
 
         // Eq is NOT derived because f32 doesn't implement Eq.
         // We can only verify PartialEq works:
@@ -951,8 +969,7 @@ mod tests {
     #[test]
     fn effect_spawn_bolts_ron_full_form() {
         let ron_str = "SpawnBolts(count: 2, lifespan: Some(5.0), inherit: true)";
-        let e: Effect =
-            ron::de::from_str(ron_str).expect("SpawnBolts full form should parse");
+        let e: Effect = ron::de::from_str(ron_str).expect("SpawnBolts full form should parse");
         assert_eq!(
             e,
             Effect::SpawnBolts {
@@ -966,8 +983,7 @@ mod tests {
     #[test]
     fn effect_spawn_bolts_ron_bare_parens_defaults_count_to_one() {
         let ron_str = "SpawnBolts()";
-        let e: Effect =
-            ron::de::from_str(ron_str).expect("SpawnBolts() bare parens should parse");
+        let e: Effect = ron::de::from_str(ron_str).expect("SpawnBolts() bare parens should parse");
         match e {
             Effect::SpawnBolts {
                 count,
@@ -985,8 +1001,7 @@ mod tests {
     #[test]
     fn effect_spawn_bolts_ron_count_override() {
         let ron_str = "SpawnBolts(count: 5)";
-        let e: Effect =
-            ron::de::from_str(ron_str).expect("SpawnBolts(count: 5) should parse");
+        let e: Effect = ron::de::from_str(ron_str).expect("SpawnBolts(count: 5) should parse");
         match e {
             Effect::SpawnBolts { count, .. } => {
                 assert_eq!(count, 5, "count should be overridden to 5");
@@ -1018,15 +1033,15 @@ mod tests {
 
     #[test]
     fn attraction_type_ron_deserialization() {
-        let e: Effect = ron::de::from_str("Attraction(Cell, 1.0)")
-            .expect("Attraction(Cell, 1.0) should parse");
+        let e: Effect =
+            ron::de::from_str("Attraction(Cell, 1.0)").expect("Attraction(Cell, 1.0) should parse");
         assert_eq!(e, Effect::Attraction(AttractionType::Cell, 1.0));
     }
 
     #[test]
     fn attraction_type_ron_wall() {
-        let e: Effect = ron::de::from_str("Attraction(Wall, 0.5)")
-            .expect("Attraction(Wall, 0.5) should parse");
+        let e: Effect =
+            ron::de::from_str("Attraction(Wall, 0.5)").expect("Attraction(Wall, 0.5) should parse");
         assert_eq!(e, Effect::Attraction(AttractionType::Wall, 0.5));
     }
 
@@ -1161,10 +1176,7 @@ mod tests {
     fn effect_chains_is_queryable_component() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let entity = app
-            .world_mut()
-            .spawn(EffectChains::default())
-            .id();
+        let entity = app.world_mut().spawn(EffectChains::default()).id();
         let found = app
             .world()
             .entity(entity)
@@ -1205,7 +1217,9 @@ mod tests {
         let target = EffectTarget::Entity(entity);
         match target {
             EffectTarget::Entity(e) => assert_eq!(e, entity),
-            other => panic!("expected EffectTarget::Entity, got {other:?}"),
+            other @ EffectTarget::Location(_) => {
+                panic!("expected EffectTarget::Entity, got {other:?}")
+            }
         }
     }
 
@@ -1216,7 +1230,9 @@ mod tests {
             EffectTarget::Location(pos) => {
                 assert_eq!(pos, Vec2::new(100.0, 200.0));
             }
-            other => panic!("expected EffectTarget::Location, got {other:?}"),
+            other @ EffectTarget::Entity(_) => {
+                panic!("expected EffectTarget::Location, got {other:?}")
+            }
         }
     }
 
@@ -1228,13 +1244,13 @@ mod tests {
 
     #[test]
     fn effect_target_empty_vec_is_valid() {
-        let targets: Vec<EffectTarget> = vec![];
+        let targets: Vec<EffectTarget> = Vec::new();
         assert!(targets.is_empty());
     }
 
     #[test]
     fn effect_target_multiple_entities() {
-        let targets = vec![
+        let targets = [
             EffectTarget::Entity(Entity::PLACEHOLDER),
             EffectTarget::Entity(Entity::PLACEHOLDER),
         ];
@@ -1405,8 +1421,12 @@ mod tests {
             target: Target::Bolt,
             multiplier: 0.5,
         };
-        assert!(matches!(fast, Effect::SpeedBoost { multiplier, .. } if (multiplier - 1.5).abs() < f32::EPSILON));
-        assert!(matches!(slow, Effect::SpeedBoost { multiplier, .. } if (multiplier - 0.5).abs() < f32::EPSILON));
+        assert!(
+            matches!(fast, Effect::SpeedBoost { multiplier, .. } if (multiplier - 1.5).abs() < f32::EPSILON)
+        );
+        assert!(
+            matches!(slow, Effect::SpeedBoost { multiplier, .. } if (multiplier - 0.5).abs() < f32::EPSILON)
+        );
     }
 
     // =========================================================================

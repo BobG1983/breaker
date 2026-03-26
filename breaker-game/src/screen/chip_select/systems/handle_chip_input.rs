@@ -99,10 +99,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        chips::{
-            ChipDefinition,
-            definition::EvolutionIngredient,
-        },
+        chips::{ChipDefinition, definition::EvolutionIngredient},
         effect::definition::{Effect, EffectNode},
         screen::chip_select::resources::ChipOffering,
     };

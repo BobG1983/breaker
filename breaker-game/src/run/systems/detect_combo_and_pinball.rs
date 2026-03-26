@@ -5,26 +5,25 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     bolt::messages::{BoltHitBreaker, BoltHitCell},
-    cells::messages::CellDestroyed,
+    cells::messages::CellDestroyedAt,
     run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
-/// Bundled collision message readers for combo/pinball detection.
 #[derive(SystemParam)]
-pub(crate) struct ComboMessages<'w, 's> {
-    cell_destroyed: MessageReader<'w, 's, CellDestroyed>,
+pub(crate) struct ComboReaders<'w, 's> {
+    cell_destroyed: MessageReader<'w, 's, CellDestroyedAt>,
     bolt_hit_cell: MessageReader<'w, 's, BoltHitCell>,
     bolt_hit_breaker: MessageReader<'w, 's, BoltHitBreaker>,
 }
 
-/// Reads [`CellDestroyed`], [`BoltHitCell`], and [`BoltHitBreaker`] messages to
-/// detect `ComboKing` and `PinballWizard` highlights.
+/// Reads [`CellDestroyedAt`], [`BoltHitCell`], and [`BoltHitBreaker`] messages
+/// to detect `ComboKing` and `PinballWizard` highlights.
 ///
-/// - `CellDestroyed` increments `cells_since_last_breaker_hit`.
+/// - `CellDestroyedAt` increments `cells_since_last_breaker_hit`.
 /// - `BoltHitCell` increments `cell_bounces_since_breaker`.
 /// - `BoltHitBreaker` checks thresholds, records highlights, and resets counters.
 pub(crate) fn detect_combo_and_pinball(
-    mut messages: ComboMessages,
+    mut readers: ComboReaders,
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
@@ -32,17 +31,17 @@ pub(crate) fn detect_combo_and_pinball(
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     // Increment cells destroyed since last breaker hit
-    for _msg in messages.cell_destroyed.read() {
+    for _msg in readers.cell_destroyed.read() {
         tracker.cells_since_last_breaker_hit += 1;
     }
 
     // Increment cell bounces since breaker contact
-    for _msg in messages.bolt_hit_cell.read() {
+    for _msg in readers.bolt_hit_cell.read() {
         tracker.cell_bounces_since_breaker += 1;
     }
 
     // On breaker hit: check thresholds, record highlights, reset counters
-    for _msg in messages.bolt_hit_breaker.read() {
+    for _msg in readers.bolt_hit_breaker.read() {
         let node_index = run_state.node_index;
 
         // --- ComboKing ---
@@ -106,12 +105,15 @@ pub(crate) fn detect_combo_and_pinball(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::resources::{HighlightKind, RunHighlight};
+    use crate::{
+        cells::messages::CellDestroyedAt,
+        run::resources::{HighlightKind, RunHighlight},
+    };
 
     // --- TestMessages resources for each message type ---
 
     #[derive(Resource, Default)]
-    struct TestCellDestroyed(Vec<CellDestroyed>);
+    struct TestCellDestroyed(Vec<CellDestroyedAt>);
 
     #[derive(Resource, Default)]
     struct TestBoltHitCell(Vec<BoltHitCell>);
@@ -121,7 +123,7 @@ mod tests {
 
     fn enqueue_cell_destroyed(
         msg_res: Res<TestCellDestroyed>,
-        mut writer: MessageWriter<CellDestroyed>,
+        mut writer: MessageWriter<CellDestroyedAt>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -161,7 +163,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyed>()
+            .add_message::<CellDestroyedAt>()
             .add_message::<BoltHitCell>()
             .add_message::<BoltHitBreaker>()
             .add_message::<HighlightTriggered>()
@@ -197,19 +199,89 @@ mod tests {
         app.update();
     }
 
-    // --- Behavior 6: CellDestroyed increments cells_since_last_breaker_hit ---
+    // =========================================================================
+    // C7 Wave 2a: CellDestroyed -> CellDestroyedAt migration (behavior 32d)
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct TestCellDestroyedAt(Vec<crate::cells::messages::CellDestroyedAt>);
+
+    fn enqueue_cell_destroyed_at(
+        msg_res: Res<TestCellDestroyedAt>,
+        mut writer: MessageWriter<crate::cells::messages::CellDestroyedAt>,
+    ) {
+        for msg in &msg_res.0 {
+            writer.write(msg.clone());
+        }
+    }
+
+    #[test]
+    fn detect_combo_reads_cell_destroyed_at() {
+        use crate::cells::messages::CellDestroyedAt;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellDestroyedAt>()
+            .add_message::<BoltHitCell>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<HighlightTriggered>()
+            .init_resource::<RunStats>()
+            .init_resource::<HighlightTracker>()
+            .init_resource::<RunState>()
+            .insert_resource(HighlightConfig::default())
+            .init_resource::<TestCellDestroyedAt>()
+            .init_resource::<TestBoltHitCell>()
+            .init_resource::<TestBoltHitBreaker>()
+            .init_resource::<CapturedHighlightTriggered>()
+            .add_systems(
+                FixedUpdate,
+                (
+                    (
+                        enqueue_cell_destroyed_at,
+                        enqueue_bolt_hit_cell,
+                        enqueue_bolt_hit_breaker,
+                    ),
+                    detect_combo_and_pinball,
+                    collect_highlight_triggered,
+                )
+                    .chain(),
+            );
+
+        app.insert_resource(TestCellDestroyedAt(vec![
+            CellDestroyedAt {
+                position: Vec2::new(10.0, 20.0),
+                was_required_to_clear: true,
+            },
+            CellDestroyedAt {
+                position: Vec2::new(30.0, 40.0),
+                was_required_to_clear: false,
+            },
+        ]));
+        tick(&mut app);
+
+        let tracker = app.world().resource::<HighlightTracker>();
+        assert_eq!(
+            tracker.cells_since_last_breaker_hit, 2,
+            "CellDestroyedAt messages should increment cells_since_last_breaker_hit"
+        );
+    }
+
+    // --- Behavior 6: CellDestroyedAt increments cells_since_last_breaker_hit ---
 
     #[test]
     fn cell_destroyed_increments_cells_since_last_breaker_hit() {
         let mut app = test_app();
         app.insert_resource(TestCellDestroyed(vec![
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(10.0, 20.0),
                 was_required_to_clear: true,
             },
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(30.0, 40.0),
                 was_required_to_clear: true,
             },
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(50.0, 60.0),
                 was_required_to_clear: false,
             },
         ]));
@@ -218,7 +290,7 @@ mod tests {
         let tracker = app.world().resource::<HighlightTracker>();
         assert_eq!(
             tracker.cells_since_last_breaker_hit, 3,
-            "3 CellDestroyed messages should set counter to 3"
+            "3 CellDestroyedAt messages should set counter to 3"
         );
     }
 
