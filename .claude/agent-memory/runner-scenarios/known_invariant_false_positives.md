@@ -1,6 +1,6 @@
 ---
 name: resolved_checker_bugs
-description: Past scenario runner bugs that caused incorrect invariant results — fixed, kept as regression reference. Also documents confirmed flaky scenarios.
+description: Past scenario runner bugs that caused incorrect invariant results — fixed, kept as regression reference. Also documents confirmed flaky scenarios and active known bugs.
 type: project
 ---
 
@@ -151,3 +151,30 @@ Route to writer-tests with a test revision spec once confirmed. Confidence: high
 bounds for sustained period. Root cause not yet confirmed — likely degenerate reflection
 state in bolt physics under Scatter layout with many cells destroyed.
 **This is NOT a scenario runner bug.** The runner correctly detects it.
+
+---
+
+## Active Known Flaky Failures (fail --all, pass individually and --serial)
+
+### TypeId panic — all scenarios fail under --all default parallelism (2026-03-26)
+
+**Symptom:** All 47 scenarios fail under `--all` with default 32-worker parallelism.
+Panic: `The target Handle<breaker::chips::definition::ChipDefinition>'s TypeId does not match the TypeId of this UntypedHandle`
+
+**Passes:** `--serial`, `-p 4`, individual `-s` runs. Fails: `--all` (≥32 workers), or `--all -p all`.
+
+**Root cause:** `DefaultsCollection` has `chip_templates: Vec<Handle<ChipTemplate>>` with
+`path = "chips"` (line 60 of `resources.rs`). Bevy's `load_folder("chips")` recursively scans
+`chips/evolution/*.evolution.ron` (typed as `ChipDefinition`). Under high concurrency (79
+simultaneous subprocesses), `bevy_asset_loader`'s generated `create()` calls `.typed::<ChipTemplate>()`
+on those `ChipDefinition` handles → TypeId mismatch → panic.
+
+**Design flaw:** `chip_templates` path should be `"chips/templates"` not `"chips"` to avoid
+scanning `chips/evolution/`. This would eliminate the TypeId collision.
+
+**File:** `breaker-game/src/screen/loading/resources.rs:60`
+**Suggested fix:** Change `#[asset(path = "chips", collection(typed))]` above `chip_templates`
+to `#[asset(path = "chips/templates", collection(typed))]`
+
+**Workaround:** Use `cargo scenario -- --all -p 4` for scenario validation until fixed.
+Do NOT use `--all` alone for scenario validation while this is unresolved.

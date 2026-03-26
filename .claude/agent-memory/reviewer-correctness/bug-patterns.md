@@ -40,7 +40,7 @@ type: reference
 
 ## Phase 4b.2 Bolt Persistence Bugs (2026-03-19, feature/phase4b2-effect-consumption) — FIXED
 - **reset_bolt spawns bolt at stale breaker x**: FIXED — `reset_bolt` now has `.after(BreakerSystems::Reset)` in `bolt/plugin.rs`. Confirmed in code.
-- **bridge_bump_whiff can miss BumpWhiffed in same frame**: FIXED — `bridge_bump_whiff` now has `.after(BreakerSystems::GradeBump)` in `behaviors/plugin.rs`. Confirmed in code.
+- **bridge_bump_whiff can miss BumpWhiffed in same frame**: FIXED — `bridge_bump_whiff` now has `.after(BreakerSystems::GradeBump)` in `effect/plugin.rs` (was `behaviors/plugin.rs` before C7-R). Confirmed in code.
 
 ## Phase 4 Wave 2 OPEN Bugs — ALL FIXED (2026-03-19 second session)
 All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in current codebase:
@@ -74,23 +74,23 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## refactor/unify-behaviors Confirmed Bugs (2026-03-21) — RESOLVED BY UNIFICATION
 
-NOTE: The following bugs were opened when new TriggerChain variants were added as type-only in refactor/unify-behaviors Step 1. The full unification (bolt/behaviors/ merged into behaviors/) resolved the structural issues by wiring evaluate.rs (now TriggerKind in behaviors/evaluate.rs with EarlyBump, LateBump, BumpWhiff variants) and adding handlers in behaviors/effects/. Verify against current code before re-flagging.
+NOTE: The following bugs were opened when new TriggerChain variants were added as type-only in refactor/unify-behaviors Step 1. The full unification (bolt/behaviors/ merged into behaviors/, then renamed to effect/ in C7-R) resolved the structural issues. Verify against current code before re-flagging.
 
-- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` (was `OverclockTriggerKind`) in `behaviors/evaluate.rs` now includes EarlyBump, LateBump, BumpWhiff variants. The evaluate() function's or-pattern now covers all 10 trigger kinds. VERIFY: check behaviors/evaluate.rs — if TriggerKind has EarlyBump/LateBump/BumpWhiff variants and evaluate() handles them, this is fixed.
+- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` in `effect/evaluate.rs` (was `behaviors/evaluate.rs` before C7-R) now includes EarlyBump, LateBump, BumpWhiff variants. VERIFY: check effect/evaluate.rs — if TriggerKind has these variants and evaluate() handles them, this is fixed.
 
-- **No bridge for BumpWhiffed**: `bridge_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_bump_whiff system exists in behaviors/bridges.rs.
+- **No bridge for BumpWhiffed**: VERIFY: check if bridge_bump_whiff system exists in `effect/triggers/on_bump.rs` (was `behaviors/bridges.rs` before C7-R).
 
-- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: The unification confirmed `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` observers all exist in `behaviors/effects/` and observe `EffectFired`. All four leaf types are fully wired. BoltSpeedBoost renamed to SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } in refactor/unify-behaviors.
+- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: Handlers `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` exist in `effect/effects/` (was `behaviors/effects/` before C7-R) and observe per-effect typed events (was EffectFired before C7-R). All four leaf types are fully wired. SpeedBoost target field removed in C7-R (Effect::SpeedBoost { multiplier: f32 } — no target).
 
 - **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) TriggerKind + evaluate(), (3) bridge system + effect handler. This three-part requirement is now well-documented in the codebase.
 
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 
-- **ActiveOverclocks (now ActiveChains) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveChains.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveChains. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveChains.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: type renamed from ActiveOverclocks to ActiveChains in refactor/unify-behaviors.
+- **ActiveOverclocks (→ActiveChains→ActiveEffects) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` (now `dispatch_chip_effects`) pushes to `ActiveEffects` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but may not clear ActiveEffects. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveEffects.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: renamed from ActiveOverclocks to ActiveChains (refactor/unify-behaviors) to ActiveEffects (C7-R 2026-03-25).
 
 ## SpeedBoost Generalization Bugs (2026-03-21, refactor/unify-behaviors or follow-on branch)
 
-- **init_archetype wipes overclock chains on every node entry**: `behaviors/init.rs:108` — `*active = ActiveChains(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `handle_overclock` pushes overclock chip chains to `ActiveChains` during ChipSelect state. State flow: Playing→TransitionOut→ChipSelect (handle_overclock adds chain)→TransitionIn→Playing (init_archetype resets). Overclock chains selected between nodes are silently discarded on the next node entry. Fix: `init_archetype` should EXTEND `active.0` with the archetype chains rather than replacing the entire resource. Or separate "archetype chains" from "overclock chains" so only archetype chains are reset. Confidence: HIGH.
+- **init_archetype wipes overclock chains on every node entry**: Was at `behaviors/init.rs:108` (now `breaker/systems/init_breaker.rs` after C7-R) — `*active = ActiveEffects(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `dispatch_chip_effects` pushes chip chains to `ActiveEffects` during ChipSelect state. State flow: Playing→TransitionOut→ChipSelect (dispatch adds chain)→TransitionIn→Playing (init_breaker resets). Overclock chains selected between nodes may be silently discarded. Fix: `init_breaker` should EXTEND `active.0` with archetype chains rather than replacing. Or separate "archetype chains" from "chip chains" so only archetype chains are reset. Confidence: HIGH (verify against current init_breaker.rs).
 
 ## BumpForceBoost Dead Code (confirmed 2026-03-21)
 - `BumpForceBoost` component is stamped by `handle_bump_force_boost` (chips/effects/bump_force_boost.rs) but no system reads it to affect bump behavior. The chip effect observer correctly stacks the value on the breaker, but the value is never consumed. This is a pre-existing gap, not introduced by the SpeedBoost refactor. The PR description notes it as "intentional — left for future use."

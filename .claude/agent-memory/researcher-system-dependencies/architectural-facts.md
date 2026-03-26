@@ -8,17 +8,18 @@ type: reference
 - All gameplay systems run in FixedUpdate gated by `run_if(in_state(PlayingState::Active))`
 - EXCEPTION: `check_spawn_complete` (NodePlugin, FixedUpdate) has NO run_if guard — it must fire in the first tick of Playing before Active is set
 - Visual-only systems run in Update (animate_bump_visual, animate_tilt_visual, update_timer_display, debug overlays, update_lives_display, animate_fade_out)
-- BehaviorsPlugin is STANDALONE, registered between BreakerPlugin and BoltPlugin
+- EffectPlugin (renamed from BehaviorsPlugin in C7-R, 2026-03-25) is STANDALONE, registered between BreakerPlugin and BoltPlugin
 - Spatial2d pipeline: `save_previous` (FixedFirst) → [FixedUpdate gameplay/physics] → `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale` (AfterFixedMainLoop, chained in RantzSpatial2dPlugin)
 - InterpolatePlugin and PhysicsPlugin DELETED (2026-03-24 spatial/physics extraction). Replaced by RantzSpatial2dPlugin and RantzPhysics2dPlugin.
 - Bolt entities carry Position2D (canonical) + InterpolateTransform2D (for visual smoothing); bolt_lost no longer inserts PhysicsTranslation (that type is gone)
 - Physics collision chain (bolt domain): `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `clamp_bolt_to_playfield` → `bolt_lost`
 - clamp_bolt_to_playfield: safety clamp for bolts escaping through CCD corner overlaps; no bottom clamp (bolt_lost handles that)
-- apply_bump_velocity: DELETED (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf → handle_speed_boost observer in behaviors/effects/speed_boost.rs
-- spawn_additional_bolt: `.after(BehaviorSystems::Bridge)`
-- NOTE (2026-03-21): bolt/behaviors/ sub-domain DELETED. BoltBehaviorsPlugin REMOVED. ActiveOverclocks→ActiveChains. OverclockEffectFired→EffectFired. OverclockTriggerKind→TriggerKind. behaviors/consequences/→behaviors/effects/. All bridge/effect logic unified in BehaviorsPlugin.
+- apply_bump_velocity: DELETED (2026-03-21) — velocity scaling now via Effect::SpeedBoost { multiplier } leaf → handle_speed_boost observer in effect/effects/speed_boost.rs
+- spawn_additional_bolt: `.after(EffectSystems::Bridge)`
+- NOTE (2026-03-21): bolt/behaviors/ sub-domain DELETED. BoltBehaviorsPlugin REMOVED. behaviors/consequences/→behaviors/effects/. All bridge/effect logic unified in BehaviorsPlugin (since renamed EffectPlugin in C7-R, 2026-03-25).
+- NOTE (2026-03-25, C7-R): behaviors/ domain → effect/ domain. BehaviorsPlugin→EffectPlugin. BehaviorSystems→EffectSystems. ActiveChains→ActiveEffects. ArmedTriggers→ArmedEffects. EffectFired (unified trigger) DELETED → replaced by per-effect typed events (ShockwaveFired, LoseLifeFired, etc.) in effect/typed_events.rs.
 - ExtraBolt: despawned permanently when lost (not respawned); still sends BoltLost message
-- Behavior observer chain: bridge systems fire commands.trigger(EffectFired) → effect observers run immediately (ConsequenceFired REMOVED; EffectFired is the unified trigger for all leaf effects including old consequences)
+- Effect dispatch chain: bridge systems fire typed events (e.g., ShockwaveFired, LoseLifeFired) via fire_typed_event() → per-effect observers run immediately
 - apply_time_penalty: `NodeSystems::ApplyTimePenalty` set, `.after(NodeSystems::TickTimer)` — can also send TimerExpired
 - handle_timer_expired: now `.after(NodeSystems::ApplyTimePenalty)` (was `.after(NodeSystems::TickTimer)`) — same-tick penalty-induced expiry guaranteed
 - handle_run_lost: `.after(handle_node_cleared).after(handle_timer_expired)` — win takes priority
@@ -42,7 +43,7 @@ type: reference
 - Set 2 `PropagateConfig` (2 systems): `.after(PropagateDefaults)`, gated by `resource_changed::<T>`
 - Breaker path: direct `ResMut<BreakerConfig>` write → same-frame propagation
 - Bolt/cell/etc.: `commands.insert_resource` → next-frame propagation
-- `propagate_archetype_changes` also writes `ResMut<BreakerConfig>` and `ResMut<ActiveChains>` (was ActiveBehaviors before refactor/unify-behaviors)
+- `propagate_archetype_changes` also writes `ResMut<BreakerConfig>` and `ResMut<ActiveEffects>` (was ActiveBehaviors before refactor/unify-behaviors; renamed to ActiveChains, then ActiveEffects in C7-R)
 - `propagate_breaker_defaults` and `propagate_archetype_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
 
 ## Scenario Runner (breaker-scenario-runner)
@@ -72,7 +73,7 @@ AudioPlugin
 - OnEnter(TransitionIn): advance_node
 - OnExit(MainMenu): reset_run_state → generate_node_sequence_system
 - Registered: HighlightTriggered message; HighlightConfig, HighlightTracker, RunStats init_resource'd
-- NOT registered: spawn_highlight_text (imported but not wired into schedule — wiring gap as of 2026-03-23)
+- spawn_highlight_text IS registered in RunPlugin (Update, PlayingState::Active) — wiring gap resolved in C7-R (2026-03-25)
 
 ## Orphan Messages
 - None at current phase. `ChipSelected` (UiPlugin) is now received by `chips/apply_chip_effect`.

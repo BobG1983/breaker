@@ -14,7 +14,6 @@
 - [pattern_refactor_atomicity.md](pattern_refactor_atomicity.md) — Multi-unit refactors that move/rename types cannot compile independently; must be atomic or use re-export bridge
 - [pattern_observer_mutation_vs_message.md](pattern_observer_mutation_vs_message.md) — Observers that mutate components need different query patterns than observers that write messages; spec must specify exact query
 - [pattern_message_field_removal_cascade.md](pattern_message_field_removal_cascade.md) — Removing a field from a Message struct breaks ALL construction sites; specs must enumerate every file
-- [pattern_onenter_deferred_resource_chain.md](pattern_onenter_deferred_resource_chain.md) — Chained OnEnter systems using commands.insert_resource() need apply_deferred between producer and consumer
 - [pattern_onexit_stale_resource.md](pattern_onexit_stale_resource.md) — OnExit(StateA) systems read stale resource values if the resource is set during the NEXT state
 - [pattern_pub_struct_refactor_cascade.md](pattern_pub_struct_refactor_cascade.md) — Changing a pub struct's inner type cascades across workspace crates; writer agents can't fix cross-crate breakage
 - [pattern_component_type_migration_cascade.md](pattern_component_type_migration_cascade.md) — Migrating entity position type cascades through query aliases, test construction sites, scenario runner, debug/effect systems

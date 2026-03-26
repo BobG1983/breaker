@@ -10,16 +10,17 @@ Last updated: 2026-03-21 — refactor/unify-behaviors (see above). PARTIAL UPDAT
 
 ## Plugin Registration Order (game.rs)
 InputPlugin → ScreenPlugin → RantzSpatial2dPlugin → RantzPhysics2dPlugin → WallPlugin → BreakerPlugin →
-BehaviorsPlugin → BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin →
+EffectPlugin (was BehaviorsPlugin — renamed C7-R 2026-03-25) → BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin →
 UiPlugin → DebugPlugin
 
 NOTE (2026-03-24): InterpolatePlugin and PhysicsPlugin (game domains) DELETED. Replaced by
 RantzSpatial2dPlugin<GameDrawLayer> and RantzPhysics2dPlugin (from rantzsoft_spatial2d /
 rantzsoft_physics2d workspace crates). Collision systems moved to bolt domain.
-Note: BehaviorsPlugin is a STANDALONE domain, registered between BreakerPlugin and BoltPlugin.
+Note: EffectPlugin (was BehaviorsPlugin) is a STANDALONE domain, registered between BreakerPlugin and BoltPlugin.
 BreakerPlugin no longer contains any behavior sub-plugin.
 NOTE (2026-03-21): BoltBehaviorsPlugin has been REMOVED — it was a sub-plugin of BoltPlugin that
-contained the overclock bridge systems. Those systems are now registered directly in BehaviorsPlugin.
+contained the overclock bridge systems. Those systems are now registered directly in EffectPlugin.
+NOTE (2026-03-25, C7-R): BehaviorsPlugin renamed to EffectPlugin; BehaviorSystems renamed to EffectSystems; src/behaviors/ renamed to src/effect/.
 
 ---
 
@@ -187,16 +188,17 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 
 ---
 
-## BehaviorsPlugin (src/behaviors/ — standalone domain, UNIFIED 2026-03-21)
+## EffectPlugin (src/effect/ — standalone domain, renamed from behaviors/ in C7-R 2026-03-25)
 
-Resources owned: ArchetypeRegistry, ActiveChains (was ActiveBehaviors+ActiveOverclocks)
-System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
+Resources owned: BreakerRegistry, ActiveEffects (was ActiveChains → was ActiveBehaviors+ActiveOverclocks)
+Components owned: ArmedEffects (was ArmedTriggers), EffectChains
+System set exported: EffectSystems::Bridge (FixedUpdate — bridge systems)
 
-NOTE (2026-03-21 refactor/unify-behaviors): behaviors/consequences/ is GONE. behaviors/effects/ replaces it.
-ConsequenceFired event is GONE. EffectFired (was OverclockEffectFired in bolt/behaviors/) is the unified trigger.
-ActiveBehaviors (old archetype trigger/consequence logic) merged into ActiveChains.
-All bridge systems (overclock + archetype consequence) now live in behaviors/bridges.rs.
-All effect observers (shockwave + life_lost + time_penalty + spawn_bolt) in behaviors/effects/.
+NOTE (2026-03-21 refactor/unify-behaviors): behaviors/consequences/ DELETED. behaviors/effects/ replaced it.
+ConsequenceFired DELETED. EffectFired (was OverclockEffectFired) was unified trigger.
+NOTE (2026-03-25 C7-R): EffectFired DELETED. Per-effect typed events (ShockwaveFired, LoseLifeFired, etc.) replace it.
+Bridge systems now in effect/triggers/ (not behaviors/bridges.rs). Handlers in effect/effects/.
+BreakerDefinition/BreakerRegistry moved from effect/definition.rs to breaker/definition.rs + breaker/registry.rs.
 
 ### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), .before(init_breaker_params)
 - Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>, Res<Assets<BreakerDefaults>>

@@ -67,9 +67,9 @@ Not worth fixing unless the asymmetry causes confusion.
 
 ---
 
-## HOT-RELOAD NO CONFLICT — propagate_archetype_changes writes BreakerConfig AND ActiveBehaviors in same system
+## HOT-RELOAD NO CONFLICT — propagate_archetype_changes writes BreakerConfig AND ActiveEffects in same system
 
-`propagate_archetype_changes` holds both `ResMut<BreakerConfig>` and `ResMut<ActiveBehaviors>`.
+`propagate_archetype_changes` holds both `ResMut<BreakerConfig>` and `ResMut<ActiveEffects>` (was `ActiveBehaviors` before refactor/unify-behaviors; then `ActiveChains`; then `ActiveEffects` in C7-R).
 No other system in PropagateDefaults touches either of these resources (the breaker defaults system
 also takes `ResMut<BreakerConfig>`, but they are UNORDERED within PropagateDefaults).
 
@@ -96,7 +96,7 @@ mutable access forcing serialization between propagate_breaker_defaults and prop
 Each system guards itself with an asset event check and returns early if no matching Modified event
 was seen. They act on disjoint resources (BoltConfig, BreakerConfig, CellConfig, PlayfieldConfig,
 InputConfig, TimerUiConfig, MainMenuConfig, ChipSelectConfig, CellTypeRegistry, NodeLayoutRegistry,
-ArchetypeRegistry/ActiveBehaviors). No logical dependency between them.
+BreakerRegistry/ActiveEffects — was ArchetypeRegistry/ActiveBehaviors). No logical dependency between them.
 
 ---
 

@@ -1,20 +1,20 @@
 ---
 name: damage-attribution-flow
-description: End-to-end damage attribution pipeline from ActiveChains through EffectFired to DamageCell to MostPowerfulEvolution highlight -- fully wired as of b9a5fb4
+description: End-to-end damage attribution pipeline from ActiveEffects through typed events to DamageCell to MostPowerfulEvolution highlight -- fully wired as of b9a5fb4; updated for C7-R (2026-03-25)
 type: reference
 ---
 
 # Damage Attribution Flow Map
 
-## ActiveChains tuple structure
-`ActiveChains(Vec<(Option<String>, TriggerChain)>)` -- chip_name is `None` for archetype chains, `Some(name)` for chip/evolution chains.
+## ActiveEffects tuple structure
+`ActiveEffects(Vec<(Option<String>, EffectNode)>)` -- chip_name is `None` for archetype/breaker chains, `Some(name)` for chip/evolution chains. (Was `ActiveChains(Vec<(Option<String>, TriggerChain)>)` before C7-R.)
 
 ## Two populations
-1. **Archetype init** (`init_archetype`): pushes with `(None, chain)` -- no chip attribution
-2. **Chip overclock** (`handle_overclock`): pushes with `(Some(event.chip_name.clone()), chain)` -- has chip name
+1. **Breaker init** (`init_breaker`): pushes with `(None, node)` -- no chip attribution (was `init_archetype` before C7-R)
+2. **Chip effect dispatch** (`dispatch_chip_effects`): pushes with `(Some(event.chip_name.clone()), node)` -- has chip name (was `handle_overclock` before C7-R)
 
-## Bridge systems thread chip_name into EffectFired.source_chip
-All bridge systems (bridge_bump, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_bolt_lost, bridge_bump_whiff, bridge_cell_destroyed) iterate `active.0` and pass `chip_name.clone()` as `source_chip` on every `EffectFired` they trigger.
+## Bridge systems thread chip_name into typed event source_chip
+All bridge systems in effect/triggers/ (bridge_bump, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_bolt_lost, bridge_bump_whiff, bridge_cell_destroyed) iterate `active.0` and pass `chip_name.clone()` as `source_chip` on every typed event they fire. (Was EffectFired.source_chip before C7-R — EffectFired deleted in C7-R.)
 
 ## Effect handlers pass source_chip downstream
 - `handle_shockwave` -> stores into `ShockwaveDamage.source_chip`

@@ -4,7 +4,8 @@ description: Staleness patterns and cross-agent duplication patterns observed ac
 type: reference
 ---
 
-## Last Full Audit
+## Audit History
+2026-03-25 (pre-merge: feature/spatial-physics-extraction) — 22 directories audited. 40+ stale references fixed across 14 files. Key changes: behaviors/ domain → effect/ domain (C7-R): BehaviorsPlugin→EffectPlugin, BehaviorSystems→EffectSystems, ActiveChains→ActiveEffects, ArmedTriggers→ArmedEffects, EffectFired (unified trigger) DELETED → per-effect typed events via fire_typed_event(). BreakerDefinition/BreakerRegistry moved from effect/ to breaker/. effect-fired-pipeline.md retired (stale). researcher-impact/MEMORY.md fixed (ephemeral links in stable section). planner-review/MEMORY.md fixed (duplicate link). Agents affected: researcher-system-dependencies (architectural-facts.md, system-map.md, message-flow.md, known-conflicts.md), reviewer-architecture (ordering-chain.md, message-inventory.md, patterns.md, compromises.md), guard-docs (terminology.md), reviewer-correctness (bug-patterns.md), runner-linting (lint_patterns.md), researcher-codebase (effect-fired-pipeline.md retired, damage-attribution-flow.md updated), planner-review (MEMORY.md duplicate), researcher-impact (MEMORY.md placement).
 2026-03-19 (run 1-2) — 26 agent directories each. Run 1: 10 issues, 10 fixed. Run 2: 8 issues, 8 fixed.
 2026-03-19 (run 3) — 26 directories. 6 issues found, 6 fixed. Key: stale cast-pattern memories, orphaned writer-tests file, entity_scale duplication, planner-review stale method name.
 2026-03-20 (targeted: session 7 overclock-trigger-chain changes) — 12 directories audited. 20 issues found, 20 fixed. Key: ChipKind removal, OverclockEffectFired.bolt Entity→Option<Entity>, TriggerChain stacking fields, shockwave violation resolution (DamageCell pattern), handle_cell_hit consumer migration from BoltHitCell to DamageCell, performance-baseline stale cell query.
@@ -57,6 +58,12 @@ When a BLOCKING violation is fixed (e.g., shockwave cross-domain mutation → Da
 ### Event/message field type changes cascade to multiple memories
 When a field type changes (e.g., `OverclockEffectFired.bolt: Entity → Option<Entity>`), all memories that describe usage patterns for that field become stale: domain-inventory.md (field description), known-correct.md (usage correctness notes), bug-patterns.md (bugs that depended on the old type), and message-flow/message-inventory tables.
 **Watch:** planner-spec/domain-inventory.md, reviewer-correctness/known-correct.md, reviewer-correctness/bug-patterns.md, reviewer-architecture/message-inventory.md, researcher-system-dependencies/message-flow.md — all describe message/event struct shapes.
+
+### Domain rename (not just deletion) cascades across all memory files
+When an entire domain is RENAMED (not deleted) — e.g., behaviors/ → effect/ — ALL references to old plugin name (BehaviorsPlugin), old set name (BehaviorSystems::Bridge), old resource names (ActiveChains→ActiveEffects, ArmedTriggers→ArmedEffects), old file paths (behaviors/evaluate.rs, behaviors/effects/*.rs), and old type names (EffectFired if also redesigned) must be updated. Rename cascades are often harder to detect than deletions because old code patterns that still compile-reference-check appear valid.
+Observed: C7-R (2026-03-25) renamed behaviors/ → effect/. Despite prior audits, 14 memory files across 8 agent directories still had stale behaviors/ references on pre-merge audit.
+**Action:** When a domain is renamed, grep ALL agent memories for BOTH old names (plugin, sets, resources, file paths, type names). Use the audit ephemeral log to track what was changed.
+**Watch:** message-flow.md cross-plugin summary table, ordering-chain.md set table, and known-correct.md (which references implementation files by path) are the most likely to accumulate path references.
 
 ### Domain deletion / consolidation cascades across all memory files
 When an entire subdomain is deleted and its systems consolidated elsewhere (e.g., bolt/behaviors/ deleted, behaviors/consequences/ deleted, all content merged into behaviors/), every agent that recorded file paths, type names, or system names from the deleted domain holds stale data. This is the highest-impact staleness event — it touches file paths, type names, bridge system names, and plugin registration in every agent that covered the deleted domain.
@@ -112,3 +119,6 @@ These files are legitimately large due to the scope of their content:
 - `runner-linting/lint_patterns.md` (~122 lines, as of 2026-03-23 memorable moments wave) — warning range; grows ~10-15 lines per wave. Consider splitting into resolved-patterns.md (RESOLVED items) and active-patterns.md (open items) if it reaches 150.
 
 Split these only if the content becomes domain-segmentable (e.g., scenario runner vs gameplay systems).
+
+## Recurring Ephemeral-in-Stable Placement Issue
+researcher-impact MEMORY.md has repeatedly placed ephemeral file links in the stable section (above Session History). The correct location is under Session History as a prose note, not as stable links. Check researcher-impact MEMORY.md on each audit.

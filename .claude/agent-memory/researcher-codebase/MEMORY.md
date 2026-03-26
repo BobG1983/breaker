@@ -8,7 +8,7 @@
 - [collision-message-flow.md](collision-message-flow.md) -- Physics collision message types, fields, ordering chain, and consumer map
 - [spatial2d-propagation-flow.md](spatial2d-propagation-flow.md) -- Spatial2d propagation pipeline: save_previous, propagate, interpolation, Absolute/Relative hierarchy, orbit cells
 - [highlight-detection-flow.md](highlight-detection-flow.md) -- Highlight detection, storage, cap, display, and juice flow map (15 HighlightKind variants, 6 detector systems)
-- [effect-fired-pipeline.md](effect-fired-pipeline.md) -- EffectFired emission (bridges), observer handler pattern, 6 existing handlers, unhandled variants (MultiBolt, Shield)
+- ~~effect-fired-pipeline.md~~ — RETIRED 2026-03-25: EffectFired deleted in C7-R; replaced by per-effect typed events. File left in place for history but no longer accurate.
 - [damage-attribution-flow.md](damage-attribution-flow.md) -- source_chip threading from ActiveChains through EffectFired to DamageCell, bolt spawns, and incomplete evolution_damage pipeline
 
 ## Session History

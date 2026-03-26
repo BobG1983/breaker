@@ -1,8 +1,10 @@
 ---
 name: effect-fired-pipeline
-description: End-to-end EffectFired data flow -- emission (bridges + armed triggers), observer handler pattern, TriggerChain leaf variants, registration, and unhandled variants (MultiBolt, Shield)
+description: STALE — EffectFired was deleted in C7-R (2026-03-25). Replaced by per-effect typed events in effect/typed_events.rs. Do not use this file.
 type: reference
 ---
+
+> **RETIRED 2026-03-25**: `EffectFired` was deleted in the C7-R refactor. The behaviors/ domain was renamed to effect/, and the unified EffectFired event was replaced by per-effect typed events (ShockwaveFired, LoseLifeFired, SpeedBoostFired, etc.) dispatched via fire_typed_event() in effect/typed_events.rs. See planner-spec/domain-inventory.md effect domain section for current state. The content below is historical only.
 
 # EffectFired Pipeline
 

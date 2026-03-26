@@ -8,8 +8,8 @@ type: reference
 - `BumpPerformed` consumers in breaker domain: system names are `spawn_bump_grade_text` and `perfect_bump_dash_cancel` (not `bump_feedback` which is only a module name)
 - Bolt lost feedback: system is `spawn_bolt_lost_text` in module `bolt/systems/bolt_lost_feedback.rs`
 - Archetypes (Aegis, Chrono, Prism) are purely data-driven via RON files — no `AegisPlugin`, `ChronoPlugin`, or `PrismPlugin` exist. Do not flag as a gap.
-- `behaviors/` is a top-level domain (not nested under `breaker/`). Plugin is `BehaviorsPlugin`. System set is `BehaviorSystems::Bridge`.
-- `ConsequenceFired(Consequence)` DELETED in refactor/unify-behaviors (2026-03-21). Replaced by `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` in `behaviors/events.rs`. Do not flag `ConsequenceFired` absence as drift.
+- `effect/` is a top-level domain (renamed from `behaviors/` in C7-R, 2026-03-25). Plugin is `EffectPlugin`. System set is `EffectSystems::Bridge`.
+- `ConsequenceFired(Consequence)` DELETED in refactor/unify-behaviors (2026-03-21). `EffectFired` was the unified replacement, but itself DELETED in C7-R (2026-03-25). Replaced by per-effect typed events (`ShockwaveFired`, `LoseLifeFired`, etc.) in `effect/typed_events.rs`. Do not flag `ConsequenceFired` or `EffectFired` absence as drift.
 - `handle_spawn_bolt` replaced `handle_spawn_bolt_requested`.
 - `BreakerSystems::InitParams` tags `init_breaker_params` — alongside `BreakerSystems::Move`.
 - `UiSystems::SpawnTimerHud` tags `spawn_timer_hud`.
