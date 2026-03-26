@@ -8,12 +8,9 @@ use crate::{
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     },
     effect::{
-        active::ActiveEffects,
         armed::ArmedEffects,
-        definition::{EffectChains, EffectNode, EffectTarget, Trigger},
-        evaluate::{NodeEvalResult, evaluate_node},
+        definition::{EffectChains, EffectTarget, Trigger},
         helpers::*,
-        typed_events::fire_typed_event,
     },
 };
 
@@ -26,7 +23,6 @@ use crate::{
 /// Also evaluates breaker entity `EffectChains`.
 pub(crate) fn bridge_bump(
     mut reader: MessageReader<BumpPerformed>,
-    active: Res<ActiveEffects>,
     mut armed_query: Query<&mut ArmedEffects>,
     mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
     mut bolt_chains_query: Query<&mut EffectChains, Without<Breaker>>,
@@ -42,55 +38,6 @@ pub(crate) fn bridge_bump(
         // Bolt-targeted evaluation requires a real bolt entity
         if let Some(bolt_entity) = performed.bolt {
             let targets = vec![EffectTarget::Entity(bolt_entity)];
-
-            for (chip_name, chain) in &active.0 {
-                // Grade-specific evaluation
-                for result in evaluate_node(grade_trigger, chain) {
-                    match result {
-                        NodeEvalResult::Fire(effect) => {
-                            fire_typed_event(
-                                effect,
-                                targets.clone(),
-                                chip_name.clone(),
-                                &mut commands,
-                            );
-                        }
-                        NodeEvalResult::Arm(remaining) => {
-                            arm_bolt(
-                                &mut armed_query,
-                                &mut commands,
-                                bolt_entity,
-                                chip_name.clone(),
-                                remaining,
-                            );
-                        }
-                        NodeEvalResult::NoMatch => {}
-                    }
-                }
-                // BumpSuccess evaluation (all grades)
-                for result in evaluate_node(Trigger::Bump, chain) {
-                    match result {
-                        NodeEvalResult::Fire(effect) => {
-                            fire_typed_event(
-                                effect,
-                                targets.clone(),
-                                chip_name.clone(),
-                                &mut commands,
-                            );
-                        }
-                        NodeEvalResult::Arm(remaining) => {
-                            arm_bolt(
-                                &mut armed_query,
-                                &mut commands,
-                                bolt_entity,
-                                chip_name.clone(),
-                                remaining,
-                            );
-                        }
-                        NodeEvalResult::NoMatch => {}
-                    }
-                }
-            }
 
             // Evaluate armed triggers on the specific bolt
             evaluate_armed(&mut armed_query, &mut commands, bolt_entity, grade_trigger);
@@ -129,20 +76,23 @@ pub(crate) fn bridge_bump(
 
 /// Bridge for `BumpWhiffed` — evaluates chains when a bump whiffs.
 ///
-/// Global trigger: evaluates active chains once per frame and evaluates
-/// armed triggers on ALL bolt entities.
+/// Global trigger: evaluates breaker entity `EffectChains` and armed triggers
+/// on ALL bolt entities.
 pub(crate) fn bridge_bump_whiff(
     mut reader: MessageReader<BumpWhiffed>,
-    active: Res<ActiveEffects>,
     armed_query: Query<(Entity, &mut ArmedEffects)>,
+    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
     mut commands: Commands,
 ) {
     if reader.read().count() == 0 {
         return;
     }
     let trigger_kind = Trigger::BumpWhiff;
-    evaluate_active_chains(&active, trigger_kind, vec![], &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
+
+    for mut chains in &mut breaker_query {
+        evaluate_entity_chains(&mut chains, trigger_kind, vec![], &mut commands);
+    }
 }
 
 #[cfg(test)]
@@ -151,7 +101,6 @@ mod tests {
     use crate::{
         breaker::messages::BumpGrade,
         effect::{
-            active::ActiveEffects,
             armed::ArmedEffects,
             definition::{Effect, EffectNode, ImpactTarget, Trigger},
             typed_events::*,
@@ -233,16 +182,15 @@ mod tests {
         app.update();
     }
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `ActiveEffects`.
+    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `EffectChains`.
     fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
         chains.into_iter().map(|c| (None, c)).collect()
     }
 
-    fn bump_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn bump_test_app(breaker_chains: Vec<EffectNode>) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()
             .init_resource::<CapturedShieldFired>()
@@ -253,18 +201,27 @@ mod tests {
             .add_observer(capture_lose_life_fired)
             .add_observer(capture_time_penalty_fired)
             .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
+        // Place chains on breaker entity EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(breaker_chains)),
+        ));
         app
     }
 
-    fn bump_whiff_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn bump_whiff_test_app(breaker_chains: Vec<EffectNode>) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpWhiffed>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBumpWhiffFlag(false))
             .init_resource::<CapturedLoseLifeFired>()
             .add_observer(capture_lose_life_fired)
             .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
+        // Place chains on breaker entity EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(breaker_chains)),
+        ));
         app
     }
 
@@ -379,8 +336,20 @@ mod tests {
                 then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
             }],
         };
-        let mut app = bump_test_app(vec![chain]);
-        let bolt = app.world_mut().spawn_empty().id();
+        // NOTE: Previously this armed from ActiveEffects. Now bump chains on
+        // breaker entity cannot arm bolts (Arm results are discarded by
+        // evaluate_entity_chains). Place on bolt ArmedEffects to test arming.
+        let mut app = bump_test_app(vec![]);
+        let bolt = app.world_mut().spawn(ArmedEffects(vec![(
+            None,
+            EffectNode::When {
+                trigger: Trigger::PerfectBump,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                }],
+            },
+        )])).id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt),
@@ -434,7 +403,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
@@ -478,7 +446,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -518,7 +485,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -559,7 +525,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -596,7 +561,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)

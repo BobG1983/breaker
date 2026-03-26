@@ -5,10 +5,11 @@ use bevy::prelude::*;
 use tracing::debug;
 
 use crate::{
+    bolt::components::Bolt,
+    breaker::components::Breaker,
     chips::{inventory::ChipInventory, resources::ChipRegistry},
     effect::{
-        ActiveEffects,
-        definition::{EffectNode, Trigger},
+        definition::{EffectChains, EffectNode, ImpactTarget, Trigger},
         typed_events::fire_passive_event,
     },
     ui::messages::ChipSelected,
@@ -17,12 +18,15 @@ use crate::{
 /// Reads [`ChipSelected`] messages, looks up the chip definition in the
 /// [`ChipRegistry`], and fires typed passive events for each selected chip.
 ///
-/// Per-effect observers handle the actual stacking logic.
+/// For triggered chains (non-Selected), pushes to the appropriate entity's
+/// `EffectChains` based on trigger type. Per-effect observers handle the
+/// actual stacking logic.
 pub(crate) fn dispatch_chip_effects(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
     mut inventory: Option<ResMut<ChipInventory>>,
-    mut active_chains: Option<ResMut<ActiveEffects>>,
+    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
+    mut bolt_query: Query<&mut EffectChains, (With<Bolt>, Without<Breaker>)>,
     mut commands: Commands,
 ) {
     let Some(registry) = registry else {
@@ -62,13 +66,52 @@ pub(crate) fn dispatch_chip_effects(
                     );
                 }
                 // Any trigger-wrapper variant (When with non-Selected trigger, Until, Once)
-                // is pushed to ActiveEffects for runtime evaluation by bridge systems.
+                // is pushed to the appropriate entity's EffectChains based on trigger type.
                 node => {
-                    if let Some(ref mut active) = active_chains {
-                        active.0.push((Some(msg.name.clone()), node.clone()));
+                    let entry = (Some(msg.name.clone()), node.clone());
+                    // Determine the default entity based on the outermost trigger
+                    match outermost_trigger(node) {
+                        Some(
+                            Trigger::PerfectBump
+                            | Trigger::Bump
+                            | Trigger::EarlyBump
+                            | Trigger::LateBump
+                            | Trigger::BumpWhiff
+                            | Trigger::NoBump
+                            | Trigger::NodeTimerThreshold(_)
+                            | Trigger::BoltLost,
+                        ) => {
+                            for mut chains in &mut breaker_query {
+                                chains.0.push(entry.clone());
+                            }
+                        }
+                        Some(Trigger::Impact(ImpactTarget::Cell))
+                        | Some(Trigger::Impact(ImpactTarget::Wall))
+                        | Some(Trigger::Impact(ImpactTarget::Breaker))
+                        | Some(Trigger::CellDestroyed) => {
+                            for mut chains in &mut bolt_query {
+                                chains.0.push(entry.clone());
+                            }
+                        }
+                        _ => {
+                            // Default: push to breaker entity
+                            for mut chains in &mut breaker_query {
+                                chains.0.push(entry.clone());
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+/// Returns the outermost trigger of an `EffectNode`, if it has one.
+fn outermost_trigger(node: &EffectNode) -> Option<Trigger> {
+    match node {
+        EffectNode::When { trigger, .. } => Some(*trigger),
+        EffectNode::Until { .. } | EffectNode::Once(_) | EffectNode::Do(_) | EffectNode::On { .. } => {
+            None
         }
     }
 }
@@ -88,8 +131,7 @@ mod tests {
             resources::ChipRegistry,
         },
         effect::{
-            ActiveEffects,
-            definition::{Effect, EffectNode, ImpactTarget, Target, Trigger},
+            definition::{Effect, EffectChains, EffectNode, ImpactTarget, Target, Trigger},
             effects::*,
         },
         ui::messages::ChipSelected,
@@ -118,7 +160,6 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<ChipSelected>()
             .init_resource::<ChipRegistry>()
-            .init_resource::<ActiveEffects>()
             .add_systems(
                 Update,
                 (enqueue_chip_selected, dispatch_chip_effects).chain(),
@@ -230,11 +271,11 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: Triggered chain pushes to ActiveEffects (30)
+    // B3: Triggered chain pushes to entity EffectChains (30)
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn triggered_chain_pushes_to_active_chains() {
+    fn triggered_chain_pushes_to_breaker_entity_effect_chains() {
         let mut app = test_app();
 
         let chain = EffectNode::When {
@@ -261,17 +302,20 @@ mod tests {
                 template_name: None,
             });
 
+        // Spawn breaker entity with EffectChains for dispatch to push to
+        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+
         send_chip_selected(&mut app, "Surge");
         tick(&mut app);
 
-        let active = app.world().resource::<ActiveEffects>();
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert_eq!(
-            active.0.len(),
+            chains.0.len(),
             1,
-            "triggered chain should be pushed to ActiveEffects"
+            "triggered chain should be pushed to breaker entity EffectChains"
         );
-        assert_eq!(active.0[0].0, Some("Surge".to_owned()));
-        assert_eq!(active.0[0].1, chain);
+        assert_eq!(chains.0[0].0, Some("Surge".to_owned()));
+        assert_eq!(chains.0[0].1, chain);
     }
 
     // ---------------------------------------------------------------------------
@@ -428,10 +472,12 @@ mod tests {
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn bare_leaf_fires_chip_effect_applied_not_active_chains() {
+    fn bare_leaf_fires_chip_effect_applied_not_entity_chains() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
+        // Spawn breaker with empty EffectChains to verify bare leaf is not pushed
+        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
@@ -452,11 +498,11 @@ mod tests {
             .expect("bolt should have Piercing from bare leaf ChipEffectApplied");
         assert_eq!(piercing.0, 1);
 
-        // ActiveEffects should NOT have the leaf
-        let active = app.world().resource::<ActiveEffects>();
+        // Breaker EffectChains should NOT have the leaf
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert!(
-            active.0.is_empty(),
-            "bare leaf should NOT be pushed to ActiveEffects"
+            chains.0.is_empty(),
+            "bare leaf should NOT be pushed to entity EffectChains"
         );
     }
 
@@ -546,6 +592,8 @@ mod tests {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
+        // Spawn breaker entity with EffectChains
+        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
@@ -583,16 +631,16 @@ mod tests {
             .expect("bolt should have Piercing from Selected dispatch");
         assert_eq!(piercing.0, 1);
 
-        // ActiveEffects has the triggered chain
-        let active = app.world().resource::<ActiveEffects>();
+        // Breaker EffectChains has the triggered chain
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert_eq!(
-            active.0.len(),
+            chains.0.len(),
             1,
-            "triggered chain should be pushed to ActiveEffects"
+            "triggered chain should be pushed to breaker entity EffectChains"
         );
-        assert_eq!(active.0[0].0, Some("Hybrid".to_owned()));
+        assert_eq!(chains.0[0].0, Some("Hybrid".to_owned()));
         assert_eq!(
-            active.0[0].1,
+            chains.0[0].1,
             EffectNode::When {
                 trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::SpawnBolts {
@@ -930,7 +978,6 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<ChipSelected>()
             .init_resource::<ChipRegistry>()
-            .init_resource::<ActiveEffects>()
             .init_resource::<CapturedPiercingApplied>()
             .init_resource::<CapturedSizeBoostApplied>()
             .init_resource::<CapturedSpeedBoostApplied>()
@@ -1109,10 +1156,13 @@ mod tests {
         );
     }
 
-    /// Behavior 20: Evolution chip with triggered chain pushes to `ActiveEffects`.
+    /// Behavior 20: Evolution chip with triggered chain pushes to entity `EffectChains`.
     #[test]
     fn dispatch_handles_triggered_chain_for_evolution_chip() {
         let mut app = test_app();
+
+        // Spawn breaker entity with EffectChains
+        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
 
         // Insert an Evolution chip with a triggered chain (PerfectBump → Shockwave)
         app.world_mut()
@@ -1138,19 +1188,19 @@ mod tests {
         send_chip_selected(&mut app, "Evo Surge");
         tick(&mut app);
 
-        let active = app.world().resource::<ActiveEffects>();
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert_eq!(
-            active.0.len(),
+            chains.0.len(),
             1,
-            "evolution chip's triggered chain should be pushed to ActiveEffects"
+            "evolution chip's triggered chain should be pushed to breaker entity EffectChains"
         );
         assert_eq!(
-            active.0[0].0,
+            chains.0[0].0,
             Some("Evo Surge".to_owned()),
-            "ActiveEffects entry should carry the evolution chip name"
+            "EffectChains entry should carry the evolution chip name"
         );
         assert_eq!(
-            active.0[0].1,
+            chains.0[0].1,
             EffectNode::When {
                 trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::Shockwave {
@@ -1160,7 +1210,7 @@ mod tests {
                     speed: 400.0,
                 })]
             },
-            "ActiveEffects chain should match the evolution chip's triggered effect"
+            "EffectChains chain should match the evolution chip's triggered effect"
         );
     }
 
@@ -1169,6 +1219,9 @@ mod tests {
     fn dispatch_skips_unknown_evolution_chip_name() {
         let mut app = test_app();
         app.init_resource::<ChipInventory>();
+
+        // Spawn breaker entity with EffectChains
+        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
 
         // Don't add any chip named "Unknown Evo" to the registry
         send_chip_selected(&mut app, "Unknown Evo");
@@ -1180,10 +1233,10 @@ mod tests {
             0,
             "unknown chip name should be skipped, inventory remains empty"
         );
-        let active = app.world().resource::<ActiveEffects>();
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert!(
-            active.0.is_empty(),
-            "unknown chip name should not push to ActiveEffects"
+            chains.0.is_empty(),
+            "unknown chip name should not push to entity EffectChains"
         );
     }
 }

@@ -33,8 +33,7 @@ pub(crate) struct EffectPlugin;
 
 impl Plugin for EffectPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<BreakerRegistry>()
-            .init_resource::<crate::effect::active::ActiveEffects>();
+        app.init_resource::<BreakerRegistry>();
 
         // ── Effect self-registration ────────────────────────────────────
         // Each effect file owns its observer and system registrations.

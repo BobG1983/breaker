@@ -6,21 +6,19 @@ use crate::{
     bolt::messages::BoltLost,
     breaker::components::Breaker,
     effect::{
-        active::ActiveEffects,
         armed::ArmedEffects,
         definition::{EffectChains, Trigger},
-        helpers::{evaluate_active_chains, evaluate_armed_all, evaluate_entity_chains},
+        helpers::{evaluate_armed_all, evaluate_entity_chains},
     },
 };
 
 /// Bridge for `BoltLost` — evaluates chains when a bolt is lost.
 ///
-/// Global trigger: evaluates active chains once per frame (not per message)
-/// and evaluates armed triggers on ALL bolt entities.
-/// Also evaluates breaker entity `EffectChains` (for `SecondWind` etc.).
+/// Global trigger: evaluates entity `EffectChains` and armed triggers on
+/// ALL bolt entities. Also evaluates breaker entity `EffectChains`
+/// (for `SecondWind` etc.).
 pub(crate) fn bridge_bolt_lost(
     mut reader: MessageReader<BoltLost>,
-    active: Res<ActiveEffects>,
     armed_query: Query<(Entity, &mut ArmedEffects)>,
     mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
     mut commands: Commands,
@@ -29,7 +27,6 @@ pub(crate) fn bridge_bolt_lost(
         return;
     }
     let trigger_kind = Trigger::BoltLost;
-    evaluate_active_chains(&active, trigger_kind, vec![], &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 
     // Evaluate breaker entity EffectChains
@@ -44,7 +41,6 @@ mod tests {
     use crate::{
         bolt::messages::BoltLost,
         effect::{
-            active::ActiveEffects,
             definition::{Effect, EffectNode, Trigger},
             typed_events::*,
         },
@@ -89,16 +85,10 @@ mod tests {
         app.update();
     }
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `ActiveEffects`.
-    fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
-        chains.into_iter().map(|c| (None, c)).collect()
-    }
-
-    fn bolt_lost_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn bolt_lost_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltLostFlag(false))
             .init_resource::<CapturedLoseLifeFired>()
             .init_resource::<CapturedShockwaveFired>()
@@ -113,7 +103,12 @@ mod tests {
     #[test]
     fn bolt_lost_fires_active_chains() {
         let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
-        let mut app = bolt_lost_test_app(vec![chain]);
+        let mut app = bolt_lost_test_app();
+        // Place chain on breaker entity EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(vec![(None, chain)]),
+        ));
         app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
         tick(&mut app);
 
@@ -125,7 +120,11 @@ mod tests {
     #[test]
     fn bolt_lost_no_message_no_fire() {
         let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
-        let mut app = bolt_lost_test_app(vec![chain]);
+        let mut app = bolt_lost_test_app();
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(vec![(None, chain)]),
+        ));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedLoseLifeFired>();
@@ -146,11 +145,15 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
             .add_message::<RunLost>()
-            .insert_resource(ActiveEffects(vec![(None, chain)]))
             .insert_resource(SendBoltLostFlag(false))
             .add_observer(handle_life_lost)
             .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
 
+        // Place chain on breaker entity EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(vec![(None, chain)]),
+        ));
         let entity = app.world_mut().spawn(LivesCount(3)).id();
         app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
         tick(&mut app);
@@ -181,7 +184,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltLostFlag(false))
             .init_resource::<CapturedSecondWindFired>()
             .add_observer(capture_second_wind)
@@ -233,7 +235,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltLostFlag(false))
             .init_resource::<CapturedSecondWindFired2>()
             .add_observer(capture_second_wind2)

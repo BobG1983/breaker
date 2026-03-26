@@ -3,64 +3,54 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{
-        active::ActiveEffects,
-        definition::{EffectNode, Trigger},
-        typed_events::fire_typed_event,
-    },
+    breaker::components::Breaker,
+    effect::definition::{EffectChains, EffectNode, Trigger},
     run::node::resources::NodeTimer,
 };
 
 /// Bridge for `NodeTimer` — fires `When(NodeTimerThreshold(t))` chains
 /// when the timer ratio crosses below the threshold. Fires once only.
+///
+/// Threshold chains live on breaker entity `EffectChains`.
 pub(crate) fn bridge_timer_threshold(
     timer: Res<NodeTimer>,
-    mut active: ResMut<ActiveEffects>,
+    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
     mut commands: Commands,
 ) {
-    // Early return if no threshold chains exist
-    let has_threshold = active.0.iter().any(|(_, chain)| {
-        matches!(
-            chain,
-            EffectNode::When {
-                trigger: Trigger::NodeTimerThreshold(_),
-                ..
-            }
-        )
-    });
-    if !has_threshold {
-        return;
-    }
-
     let ratio = if timer.total == 0.0 {
         0.0
     } else {
         timer.remaining / timer.total
     };
 
-    // Find and fire matching threshold chains, then remove them (fire-once).
-    let mut indices_to_remove = Vec::new();
-    for (i, (_chip_name, chain)) in active.0.iter().enumerate() {
-        if let EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(threshold),
-            then,
-        } = chain
-            && ratio < *threshold
-        {
-            // Fire children
-            for child in then {
-                if let EffectNode::Do(effect) = child {
-                    fire_typed_event(effect.clone(), vec![], None, &mut commands);
+    for mut chains in &mut breaker_query {
+        let mut indices_to_remove = Vec::new();
+        for (i, (_chip_name, chain)) in chains.0.iter().enumerate() {
+            if let EffectNode::When {
+                trigger: Trigger::NodeTimerThreshold(threshold),
+                then,
+            } = chain
+                && ratio < *threshold
+            {
+                // Fire children
+                for child in then {
+                    if let EffectNode::Do(effect) = child {
+                        crate::effect::typed_events::fire_typed_event(
+                            effect.clone(),
+                            vec![],
+                            None,
+                            &mut commands,
+                        );
+                    }
                 }
-                // Non-leaf children from timer threshold — skip for now
+                indices_to_remove.push(i);
             }
-            indices_to_remove.push(i);
         }
-    }
 
-    // Remove fired chains in reverse order to preserve indices
-    for &i in indices_to_remove.iter().rev() {
-        active.0.remove(i);
+        // Remove fired chains in reverse order to preserve indices
+        for &i in indices_to_remove.iter().rev() {
+            chains.0.remove(i);
+        }
     }
 }
 
@@ -68,21 +58,17 @@ pub(crate) fn bridge_timer_threshold(
 mod tests {
     use super::*;
     use crate::{
-        effect::{
-            active::ActiveEffects,
-            definition::{Effect, EffectNode, Target, Trigger},
-            typed_events::*,
-        },
+        effect::definition::{Effect, EffectNode, Trigger},
         run::node::resources::NodeTimer,
     };
 
     // --- Test infrastructure ---
 
     #[derive(Resource, Default)]
-    struct CapturedSpeedBoostFired(Vec<SpeedBoostFired>);
+    struct CapturedSpeedBoostFired(Vec<crate::effect::typed_events::SpeedBoostFired>);
 
     fn capture_speed_boost_fired(
-        trigger: On<SpeedBoostFired>,
+        trigger: On<crate::effect::typed_events::SpeedBoostFired>,
         mut captured: ResMut<CapturedSpeedBoostFired>,
     ) {
         captured.0.push(trigger.event().clone());
@@ -96,7 +82,7 @@ mod tests {
         app.update();
     }
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `ActiveEffects`.
+    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `EffectChains`.
     fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
         chains.into_iter().map(|c| (None, c)).collect()
     }
@@ -113,7 +99,6 @@ mod tests {
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(ActiveEffects(wrap_chains(vec![chain])))
             .insert_resource(NodeTimer {
                 remaining: 14.9,
                 total: 60.0,
@@ -121,6 +106,12 @@ mod tests {
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
+
+        // Place threshold chain on breaker entity EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(vec![chain])),
+        ));
 
         tick(&mut app);
 
@@ -146,7 +137,6 @@ mod tests {
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(ActiveEffects(wrap_chains(vec![chain])))
             .insert_resource(NodeTimer {
                 remaining: 30.0,
                 total: 60.0,
@@ -154,6 +144,11 @@ mod tests {
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
+
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(vec![chain])),
+        ));
 
         tick(&mut app);
 
@@ -174,7 +169,6 @@ mod tests {
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(ActiveEffects(wrap_chains(vec![chain])))
             .insert_resource(NodeTimer {
                 remaining: 12.0,
                 total: 60.0,
@@ -182,6 +176,11 @@ mod tests {
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
+
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(vec![chain])),
+        ));
 
         // First tick: fires
         tick(&mut app);
@@ -208,7 +207,6 @@ mod tests {
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(ActiveEffects(wrap_chains(vec![chain])))
             .insert_resource(NodeTimer {
                 remaining: 10.0,
                 total: 0.0, // Edge case: total is zero
@@ -216,6 +214,11 @@ mod tests {
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
+
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(vec![chain])),
+        ));
 
         tick(&mut app);
 

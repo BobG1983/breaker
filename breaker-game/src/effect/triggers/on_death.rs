@@ -10,11 +10,10 @@ use crate::{
         messages::{CellDestroyedAt, RequestCellDestroyed},
     },
     effect::{
-        active::ActiveEffects,
         armed::ArmedEffects,
         definition::{EffectChains, EffectNode, Trigger},
         evaluate::{NodeEvalResult, evaluate_node},
-        helpers::{evaluate_active_chains, evaluate_armed_all},
+        helpers::evaluate_armed_all,
         typed_events::fire_typed_event,
     },
 };
@@ -42,7 +41,6 @@ fn evaluate_ondeath_chains(entity: Entity, chains: Option<&EffectChains>, comman
 pub(crate) fn bridge_cell_death(
     mut reader: MessageReader<RequestCellDestroyed>,
     cell_query: Query<(Option<&EffectChains>, &Position2D, Has<RequiredToClear>)>,
-    active: Res<ActiveEffects>,
     armed_query: Query<(Entity, &mut ArmedEffects)>,
     mut destroyed_writer: MessageWriter<CellDestroyedAt>,
     mut commands: Commands,
@@ -63,7 +61,6 @@ pub(crate) fn bridge_cell_death(
     }
 
     if any_destroyed {
-        evaluate_active_chains(&active, Trigger::CellDestroyed, vec![], &mut commands);
         evaluate_armed_all(armed_query, Trigger::CellDestroyed, &mut commands);
     }
 }
@@ -147,7 +144,6 @@ mod tests {
     use crate::{
         cells::messages::RequestCellDestroyed,
         effect::{
-            active::ActiveEffects,
             definition::{Effect, EffectNode, Trigger},
             typed_events::*,
         },
@@ -185,17 +181,11 @@ mod tests {
         app.update();
     }
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `ActiveEffects`.
-    fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
-        chains.into_iter().map(|c| (None, c)).collect()
-    }
-
-    fn cell_destroyed_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn cell_destroyed_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<RequestCellDestroyed>()
             .add_message::<CellDestroyedAt>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendCellDestroyed(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -209,9 +199,11 @@ mod tests {
     // --- Cell destroyed bridge tests ---
 
     #[test]
-    fn cell_destroyed_fires_active_chain() {
+    fn cell_destroyed_fires_armed_chain() {
         let chain = EffectNode::trigger_leaf(Trigger::CellDestroyed, Effect::test_shockwave(32.0));
-        let mut app = cell_destroyed_test_app(vec![chain]);
+        let mut app = cell_destroyed_test_app();
+        // Spawn a bolt with armed CellDestroyed chain
+        app.world_mut().spawn(crate::effect::armed::ArmedEffects(vec![(None, chain)]));
         // Spawn a cell entity with Position2D for bridge_cell_death to query
         let cell = app
             .world_mut()
@@ -223,13 +215,13 @@ mod tests {
         let captured = app.world().resource::<CapturedShockwaveFired>();
         assert_eq!(captured.0.len(), 1);
         assert!((captured.0[0].base_range - 32.0).abs() < f32::EPSILON);
-        assert!(captured.0[0].targets.is_empty());
     }
 
     #[test]
     fn cell_destroyed_no_message_no_fire() {
         let chain = EffectNode::trigger_leaf(Trigger::CellDestroyed, Effect::test_shockwave(32.0));
-        let mut app = cell_destroyed_test_app(vec![chain]);
+        let mut app = cell_destroyed_test_app();
+        app.world_mut().spawn(crate::effect::armed::ArmedEffects(vec![(None, chain)]));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShockwaveFired>();
@@ -278,7 +270,6 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<RequestCellDestroyed>()
             .add_message::<CellDestroyedAt>()
-            .init_resource::<ActiveEffects>()
             .init_resource::<CapturedShockwaveFired>()
             .init_resource::<CapturedCellDestroyedAt>()
             .add_observer(capture_shockwave_fired)
@@ -371,7 +362,6 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<RequestCellDestroyed>()
             .add_message::<CellDestroyedAt>()
-            .init_resource::<ActiveEffects>()
             .init_resource::<CapturedCDA>()
             .add_systems(
                 FixedUpdate,

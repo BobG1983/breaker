@@ -5,36 +5,12 @@
 use bevy::prelude::*;
 
 use super::{
-    active::ActiveEffects,
     armed::ArmedEffects,
     definition::{EffectChains, EffectNode, EffectTarget, Trigger},
     effect_nodes::until::{UntilTimers, UntilTriggers},
     evaluate::{NodeEvalResult, evaluate_node},
     typed_events::fire_typed_event,
 };
-
-/// Evaluates all active chains against a trigger kind.
-///
-/// `Arm` results are intentionally discarded for global triggers — only `Fire`
-/// results are actioned. Arming requires a specific bolt entity, which global
-/// triggers (cell destroyed, bolt lost, bump whiff) don't provide.
-pub(super) fn evaluate_active_chains(
-    active: &ActiveEffects,
-    trigger_kind: Trigger,
-    targets: Vec<EffectTarget>,
-    commands: &mut Commands,
-) {
-    for (chip_name, chain) in &active.0 {
-        for result in evaluate_node(trigger_kind, chain) {
-            match result {
-                NodeEvalResult::Fire(effect) => {
-                    fire_typed_event(effect, targets.clone(), chip_name.clone(), commands);
-                }
-                NodeEvalResult::Arm(_) | NodeEvalResult::NoMatch => {}
-            }
-        }
-    }
-}
 
 /// Evaluates armed triggers on all bolt entities that have `ArmedEffects`.
 pub(super) fn evaluate_armed_all(

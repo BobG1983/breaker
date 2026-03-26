@@ -6,21 +6,18 @@ use crate::{
     bolt::messages::BoltHitBreaker,
     breaker::{components::Breaker, messages::BumpPerformed},
     effect::{
-        active::ActiveEffects,
         definition::{EffectChains, Trigger},
-        helpers::{evaluate_active_chains, evaluate_entity_chains},
+        helpers::evaluate_entity_chains,
     },
 };
 
 /// Bridge for `NoBump` — fires when `BoltHitBreaker` arrives without
 /// any `BumpPerformed` in the same frame.
 ///
-/// Evaluates active chains and breaker entity `EffectChains` with
-/// `Trigger::NoBump`.
+/// Evaluates breaker entity `EffectChains` with `Trigger::NoBump`.
 pub(crate) fn bridge_no_bump(
     mut hit_reader: MessageReader<BoltHitBreaker>,
     mut bump_reader: MessageReader<BumpPerformed>,
-    active: Res<ActiveEffects>,
     mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
     mut commands: Commands,
 ) {
@@ -30,8 +27,6 @@ pub(crate) fn bridge_no_bump(
     if hit_count == 0 || bump_count > 0 {
         return;
     }
-
-    evaluate_active_chains(&active, Trigger::NoBump, vec![], &mut commands);
 
     for mut chains in &mut breaker_query {
         evaluate_entity_chains(&mut chains, Trigger::NoBump, vec![], &mut commands);
@@ -45,7 +40,6 @@ mod tests {
         bolt::messages::BoltHitBreaker,
         breaker::messages::{BumpGrade, BumpPerformed},
         effect::{
-            active::ActiveEffects,
             definition::{Effect, EffectNode, Trigger},
             typed_events::*,
         },
@@ -92,17 +86,16 @@ mod tests {
         app.update();
     }
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `ActiveEffects`.
+    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `EffectChains`.
     fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
         chains.into_iter().map(|c| (None, c)).collect()
     }
 
-    fn no_bump_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn no_bump_test_app(breaker_chains: Vec<EffectNode>) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitBreaker>()
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitBreaker(None))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()
@@ -111,6 +104,11 @@ mod tests {
                 FixedUpdate,
                 (send_bolt_hit_breaker, send_bump, bridge_no_bump).chain(),
             );
+        // Place chains on breaker entity EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(breaker_chains)),
+        ));
         app
     }
 
@@ -179,7 +177,6 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitBreaker>()
             .add_message::<BumpPerformed>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitBreaker(None))
             .insert_resource(SendBump(None))
             .init_resource::<CapturedShockwaveFired>()

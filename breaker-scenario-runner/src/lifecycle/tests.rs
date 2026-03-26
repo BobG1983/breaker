@@ -926,14 +926,14 @@ fn restart_run_on_end_transitions_to_main_menu() {
 }
 
 // -------------------------------------------------------------------------
-// bypass_menu_to_playing — populates ActiveEffects from initial_overclocks
+// bypass_menu_to_playing — populates breaker EffectChains from initial_overclocks
 // -------------------------------------------------------------------------
 
 /// When `initial_overclocks` is `Some` with one chain, `bypass_menu_to_playing`
-/// must populate `ActiveEffects` with that chain.
+/// must populate breaker entity `EffectChains` with that chain.
 #[test]
 fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
-    use breaker::effect::{ActiveEffects, Effect, EffectNode};
+    use breaker::effect::{Effect, EffectChains, EffectNode};
 
     let mut definition = make_scenario(100);
     definition.initial_overclocks = Some(vec![EffectNode::Do(Effect::Shockwave {
@@ -949,37 +949,42 @@ fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
         .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveEffects>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
+    // Spawn a breaker entity with EffectChains for the system to push to
+    let breaker = app
+        .world_mut()
+        .spawn((Breaker, EffectChains::default()))
+        .id();
+
     app.update();
 
-    let active = app.world().resource::<ActiveEffects>();
+    let chains = app.world().get::<EffectChains>(breaker).unwrap();
     assert_eq!(
-        active.0.len(),
+        chains.0.len(),
         1,
-        "expected ActiveEffects to contain 1 chain when initial_overclocks is Some, got {}",
-        active.0.len()
+        "expected breaker EffectChains to contain 1 chain when initial_overclocks is Some, got {}",
+        chains.0.len()
     );
     assert_eq!(
-        active.0[0].1,
+        chains.0[0].1,
         EffectNode::Do(Effect::Shockwave {
             base_range: 64.0,
             range_per_level: 0.0,
             stacks: 1,
             speed: 400.0,
         }),
-        "expected ActiveEffects[0] to be Do(Shockwave)"
+        "expected EffectChains[0] to be Do(Shockwave)"
     );
 }
 
 /// When `initial_overclocks` is `None`, `bypass_menu_to_playing` must leave
-/// `ActiveEffects` at its default (empty vec).
+/// breaker entity `EffectChains` at its default (empty vec).
 #[test]
 fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
-    use breaker::effect::ActiveEffects;
+    use breaker::effect::EffectChains;
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -989,18 +994,23 @@ fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
         .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveEffects>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
+    // Spawn a breaker entity with EffectChains
+    let breaker = app
+        .world_mut()
+        .spawn((Breaker, EffectChains::default()))
+        .id();
+
     app.update();
 
-    let active = app.world().resource::<ActiveEffects>();
+    let chains = app.world().get::<EffectChains>(breaker).unwrap();
     assert!(
-        active.0.is_empty(),
-        "expected ActiveEffects to be empty when initial_overclocks is None, got {} entries",
-        active.0.len()
+        chains.0.is_empty(),
+        "expected breaker EffectChains to be empty when initial_overclocks is None, got {} entries",
+        chains.0.len()
     );
 }
 

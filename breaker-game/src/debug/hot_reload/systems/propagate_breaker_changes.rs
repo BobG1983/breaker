@@ -8,7 +8,6 @@ use crate::{
         resources::{BreakerConfig, BreakerDefaults},
     },
     effect::{
-        active::ActiveEffects,
         definition::{BreakerDefinition, EffectChains, RootEffect, Target},
         effects::life_lost::LivesCount,
         init::apply_stat_overrides,
@@ -33,8 +32,6 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
     registry: ResMut<'w, BreakerRegistry>,
     /// Mutable breaker configuration.
     config: ResMut<'w, BreakerConfig>,
-    /// Mutable active chains (legacy — kept for backward compatibility).
-    active: ResMut<'w, ActiveEffects>,
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
     /// Breaker `EffectChains` for populating from definition.
@@ -47,7 +44,7 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
 /// `BreakerRegistry`, and if the selected breaker was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
 /// 2. Resets `LivesCount` if breaker has `life_pool`
-/// 3. Rebuilds `ActiveEffects`
+/// 3. Rebuilds breaker entity `EffectChains`
 pub(crate) fn propagate_breaker_changes(
     mut events: MessageReader<AssetEvent<BreakerDefinition>>,
     mut ctx: BreakerChangeContext,
@@ -108,8 +105,6 @@ pub(crate) fn propagate_breaker_changes(
             Target::Bolt | Target::AllBolts | Target::Cell | Target::Wall | Target::AllCells => {}
         }
     }
-    // Clear ActiveEffects (legacy — no longer populated from breaker definition)
-    ctx.active.0.clear();
 }
 
 #[cfg(test)]
@@ -127,7 +122,6 @@ mod tests {
             .init_resource::<BreakerConfig>()
             .init_resource::<BreakerRegistry>()
             .init_resource::<SelectedBreaker>()
-            .init_resource::<ActiveEffects>()
             .add_systems(Update, propagate_breaker_changes);
         app
     }

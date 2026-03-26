@@ -340,13 +340,12 @@ pub enum EffectTarget {
 // EffectChains component
 // ---------------------------------------------------------------------------
 
-/// Entity-local effect chains (e.g., `OnDeath` chains on cells, breaker-specific triggers).
+/// Entity-local effect chains — the primary source of truth for all trigger chains.
 ///
-/// Coexists with `ActiveEffects` (global resource) and `ArmedEffects` (bolt component).
+/// Coexists with `ArmedEffects` (bolt component for partially-resolved chains).
 /// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
 /// breaker-originating chains and `Some(name)` for chip/evolution chains.
-/// Populated by `bridge_cell_death` evaluation, `init_breaker`, `dispatch_chip_effects`,
-/// and future `On` node dispatch.
+/// Populated by `init_breaker`, `dispatch_chip_effects`, and `On` node dispatch.
 #[derive(Component, Debug, Default, Clone)]
 pub struct EffectChains(pub Vec<(Option<String>, EffectNode)>);
 

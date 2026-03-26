@@ -5,22 +5,18 @@ use bevy::prelude::*;
 use crate::{
     bolt::messages::{BoltHitBreaker, BoltHitCell, BoltHitWall},
     effect::{
-        active::ActiveEffects,
         armed::ArmedEffects,
-        definition::{EffectChains, EffectNode, EffectTarget, ImpactTarget, Trigger},
+        definition::{EffectChains, EffectTarget, ImpactTarget, Trigger},
         effect_nodes::until::{UntilTimers, UntilTriggers},
-        evaluate::{NodeEvalResult, evaluate_node},
         helpers::*,
-        typed_events::fire_typed_event,
     },
 };
 
-/// Bridge for `BoltHitCell` — evaluates chains and armed triggers on cell impact.
+/// Bridge for `BoltHitCell` — evaluates armed triggers on cell impact.
 /// Also evaluates bolt entity `EffectChains` and `When` children inside
 /// `UntilTimers`/`UntilTriggers`.
 pub(crate) fn bridge_cell_impact(
     mut reader: MessageReader<BoltHitCell>,
-    active: Res<ActiveEffects>,
     mut armed_query: Query<&mut ArmedEffects>,
     mut chains_query: Query<&mut EffectChains>,
     until_query: Query<(Option<&UntilTimers>, Option<&UntilTriggers>)>,
@@ -29,25 +25,7 @@ pub(crate) fn bridge_cell_impact(
     for hit in reader.read() {
         let bolt_entity = hit.bolt;
         let targets = vec![EffectTarget::Entity(bolt_entity)];
-        for (chip_name, chain) in &active.0 {
-            for result in evaluate_node(Trigger::Impact(ImpactTarget::Cell), chain) {
-                match result {
-                    NodeEvalResult::Fire(effect) => {
-                        fire_typed_event(effect, targets.clone(), chip_name.clone(), &mut commands);
-                    }
-                    NodeEvalResult::Arm(remaining) => {
-                        arm_bolt(
-                            &mut armed_query,
-                            &mut commands,
-                            bolt_entity,
-                            chip_name.clone(),
-                            remaining,
-                        );
-                    }
-                    NodeEvalResult::NoMatch => {}
-                }
-            }
-        }
+
         evaluate_armed(
             &mut armed_query,
             &mut commands,
@@ -76,11 +54,10 @@ pub(crate) fn bridge_cell_impact(
     }
 }
 
-/// Bridge for `BoltHitBreaker` — evaluates chains and armed triggers on
+/// Bridge for `BoltHitBreaker` — evaluates armed triggers on
 /// breaker impact. Also evaluates bolt entity `EffectChains`.
 pub(crate) fn bridge_breaker_impact(
     mut reader: MessageReader<BoltHitBreaker>,
-    active: Res<ActiveEffects>,
     mut armed_query: Query<&mut ArmedEffects>,
     mut chains_query: Query<&mut EffectChains>,
     mut commands: Commands,
@@ -88,25 +65,7 @@ pub(crate) fn bridge_breaker_impact(
     for hit in reader.read() {
         let bolt_entity = hit.bolt;
         let targets = vec![EffectTarget::Entity(bolt_entity)];
-        for (chip_name, chain) in &active.0 {
-            for result in evaluate_node(Trigger::Impact(ImpactTarget::Breaker), chain) {
-                match result {
-                    NodeEvalResult::Fire(effect) => {
-                        fire_typed_event(effect, targets.clone(), chip_name.clone(), &mut commands);
-                    }
-                    NodeEvalResult::Arm(remaining) => {
-                        arm_bolt(
-                            &mut armed_query,
-                            &mut commands,
-                            bolt_entity,
-                            chip_name.clone(),
-                            remaining,
-                        );
-                    }
-                    NodeEvalResult::NoMatch => {}
-                }
-            }
-        }
+
         evaluate_armed(
             &mut armed_query,
             &mut commands,
@@ -126,12 +85,11 @@ pub(crate) fn bridge_breaker_impact(
     }
 }
 
-/// Bridge for `BoltHitWall` — evaluates chains and armed triggers on
+/// Bridge for `BoltHitWall` — evaluates armed triggers on
 /// wall impact. Also evaluates bolt entity `EffectChains` and `When`
 /// children inside `UntilTimers`/`UntilTriggers`.
 pub(crate) fn bridge_wall_impact(
     mut reader: MessageReader<BoltHitWall>,
-    active: Res<ActiveEffects>,
     mut armed_query: Query<&mut ArmedEffects>,
     mut chains_query: Query<&mut EffectChains>,
     until_query: Query<(Option<&UntilTimers>, Option<&UntilTriggers>)>,
@@ -140,25 +98,7 @@ pub(crate) fn bridge_wall_impact(
     for hit in reader.read() {
         let bolt_entity = hit.bolt;
         let targets = vec![EffectTarget::Entity(bolt_entity)];
-        for (chip_name, chain) in &active.0 {
-            for result in evaluate_node(Trigger::Impact(ImpactTarget::Wall), chain) {
-                match result {
-                    NodeEvalResult::Fire(effect) => {
-                        fire_typed_event(effect, targets.clone(), chip_name.clone(), &mut commands);
-                    }
-                    NodeEvalResult::Arm(remaining) => {
-                        arm_bolt(
-                            &mut armed_query,
-                            &mut commands,
-                            bolt_entity,
-                            chip_name.clone(),
-                            remaining,
-                        );
-                    }
-                    NodeEvalResult::NoMatch => {}
-                }
-            }
-        }
+
         evaluate_armed(
             &mut armed_query,
             &mut commands,
@@ -193,7 +133,6 @@ mod tests {
     use crate::{
         bolt::messages::{BoltHitBreaker, BoltHitCell, BoltHitWall},
         effect::{
-            active::ActiveEffects,
             armed::ArmedEffects,
             definition::{Effect, EffectNode, ImpactTarget, Trigger},
             typed_events::*,
@@ -277,16 +216,15 @@ mod tests {
         app.update();
     }
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `ActiveEffects`.
+    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `EffectChains`.
     fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
         chains.into_iter().map(|c| (None, c)).collect()
     }
 
-    fn cell_impact_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn cell_impact_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -297,11 +235,10 @@ mod tests {
         app
     }
 
-    fn breaker_impact_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn breaker_impact_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitBreaker>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitBreaker(None))
             .init_resource::<CapturedShieldFired>()
             .init_resource::<CapturedMultiBoltFired>()
@@ -314,11 +251,10 @@ mod tests {
         app
     }
 
-    fn wall_impact_test_app(active_chains: Vec<EffectNode>) -> App {
+    fn wall_impact_test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitWall>()
-            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
             .insert_resource(SendBoltHitWall(None))
             .init_resource::<CapturedShockwaveFired>()
             .init_resource::<CapturedShieldFired>()
@@ -334,13 +270,14 @@ mod tests {
     // --- Cell impact bridge tests ---
 
     #[test]
-    fn cell_impact_fires_active_chain() {
+    fn cell_impact_fires_entity_chain() {
         let chain = EffectNode::trigger_leaf(
             Trigger::Impact(ImpactTarget::Cell),
             Effect::test_shockwave(64.0),
         );
-        let mut app = cell_impact_test_app(vec![chain]);
-        let bolt = app.world_mut().spawn_empty().id();
+        let mut app = cell_impact_test_app();
+        // Place chain on bolt entity EffectChains
+        let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
             cell: Entity::PLACEHOLDER,
             bolt,
@@ -354,7 +291,7 @@ mod tests {
 
     #[test]
     fn cell_impact_fires_armed_trigger() {
-        let mut app = cell_impact_test_app(vec![]);
+        let mut app = cell_impact_test_app();
         let bolt = app
             .world_mut()
             .spawn(ArmedEffects(vec![(
@@ -385,7 +322,8 @@ mod tests {
             Trigger::Impact(ImpactTarget::Cell),
             Effect::test_shockwave(64.0),
         );
-        let mut app = cell_impact_test_app(vec![chain]);
+        let mut app = cell_impact_test_app();
+        app.world_mut().spawn(EffectChains(vec![(None, chain)]));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShockwaveFired>();
@@ -395,13 +333,14 @@ mod tests {
     // --- Breaker impact bridge tests ---
 
     #[test]
-    fn breaker_impact_fires_active_chain() {
+    fn breaker_impact_fires_entity_chain() {
         let chain = EffectNode::trigger_leaf(
             Trigger::Impact(ImpactTarget::Breaker),
             Effect::test_shield(5.0),
         );
-        let mut app = breaker_impact_test_app(vec![chain]);
-        let bolt = app.world_mut().spawn_empty().id();
+        let mut app = breaker_impact_test_app();
+        // Place chain on bolt entity EffectChains
+        let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
         tick(&mut app);
 
@@ -412,7 +351,7 @@ mod tests {
 
     #[test]
     fn breaker_impact_fires_armed_trigger() {
-        let mut app = breaker_impact_test_app(vec![]);
+        let mut app = breaker_impact_test_app();
         let bolt = app
             .world_mut()
             .spawn(ArmedEffects(vec![(
@@ -434,13 +373,14 @@ mod tests {
     // --- Wall impact bridge tests ---
 
     #[test]
-    fn wall_impact_fires_active_chain() {
+    fn wall_impact_fires_entity_chain() {
         let chain = EffectNode::trigger_leaf(
             Trigger::Impact(ImpactTarget::Wall),
             Effect::test_shockwave(32.0),
         );
-        let mut app = wall_impact_test_app(vec![chain]);
-        let bolt = app.world_mut().spawn_empty().id();
+        let mut app = wall_impact_test_app();
+        // Place chain on bolt entity EffectChains
+        let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
         app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
         tick(&mut app);
 
@@ -451,7 +391,7 @@ mod tests {
 
     #[test]
     fn wall_impact_fires_armed_trigger() {
-        let mut app = wall_impact_test_app(vec![]);
+        let mut app = wall_impact_test_app();
         let bolt = app
             .world_mut()
             .spawn(ArmedEffects(vec![(
@@ -479,7 +419,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -526,7 +465,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitBreaker>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitBreaker(None))
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
@@ -567,7 +505,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitWall>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitWall(None))
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
@@ -608,7 +545,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -661,7 +597,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
@@ -704,25 +639,15 @@ mod tests {
         );
     }
 
-    // --- ActiveEffects + EffectChains both fire ---
+    // --- Multiple chains on entity EffectChains both fire ---
 
     #[test]
-    fn bridge_cell_impact_fires_both_active_effects_and_entity_effect_chains() {
+    fn bridge_cell_impact_fires_multiple_entity_effect_chains() {
         use crate::effect::definition::EffectChains;
-
-        // ActiveEffects has a Shockwave chain on Impact(Cell)
-        let active_chain = EffectNode::trigger_leaf(
-            Trigger::Impact(ImpactTarget::Cell),
-            Effect::test_shockwave(64.0),
-        );
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(vec![(
-                Some("chip1".to_string()),
-                active_chain,
-            )]))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .init_resource::<CapturedSpeedBoostFired>()
@@ -733,15 +658,21 @@ mod tests {
                 (send_bolt_hit_cell, bridge_cell_impact).chain(),
             );
 
-        // Bolt with entity-level EffectChains containing SpeedBoost on cell impact
+        // Bolt with two chains on entity EffectChains: Shockwave + SpeedBoost
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::Impact(ImpactTarget::Cell),
-                then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    multiplier: 1.5,
-                })],
-            })]))
+            .spawn(EffectChains(vec![
+                (Some("chip1".to_string()), EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                }),
+                (None, EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::Do(Effect::SpeedBoost {
+                        multiplier: 1.5,
+                    })],
+                }),
+            ]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -751,21 +682,20 @@ mod tests {
 
         tick(&mut app);
 
-        // ActiveEffects should fire Shockwave
+        // Both chains on entity EffectChains should fire
         let shockwaves = app.world().resource::<CapturedShockwaveFired>();
         assert_eq!(
             shockwaves.0.len(),
             1,
-            "ActiveEffects Shockwave chain should fire on cell impact"
+            "Shockwave chain on entity EffectChains should fire on cell impact"
         );
         assert!((shockwaves.0[0].base_range - 64.0).abs() < f32::EPSILON);
 
-        // Entity EffectChains should fire SpeedBoost
         let speed_boosts = app.world().resource::<CapturedSpeedBoostFired>();
         assert_eq!(
             speed_boosts.0.len(),
             1,
-            "entity EffectChains SpeedBoost should also fire on cell impact"
+            "SpeedBoost chain on entity EffectChains should also fire on cell impact"
         );
         assert!((speed_boosts.0[0].multiplier - 1.5).abs() < f32::EPSILON);
     }
@@ -779,7 +709,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -833,7 +762,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -866,7 +794,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitCell>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitCell(None))
             .init_resource::<CapturedShockwaveFired>()
             .add_observer(capture_shockwave_fired)
@@ -922,7 +849,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltHitWall>()
-            .insert_resource(ActiveEffects(wrap_chains(vec![])))
             .insert_resource(SendBoltHitWall(None))
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)

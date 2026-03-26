@@ -19,7 +19,7 @@ use breaker::{
         systems::update_breaker_state,
     },
     chips::inventory::ChipInventory,
-    effect::ActiveEffects,
+    effect::EffectChains,
     input::resources::InputActions,
     run::{
         RunStats,
@@ -244,16 +244,18 @@ fn bypass_menu_to_playing(
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
-    mut active_overclocks: Option<ResMut<ActiveEffects>>,
+    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
 ) {
     selected.0.clone_from(&config.definition.breaker);
     layout_override.0 = Some(config.definition.layout.clone());
     // Scenarios always use deterministic seed (default 0 when not specified)
     run_seed.0 = Some(config.definition.seed.unwrap_or(0));
-    if let Some(ref overclocks) = config.definition.initial_overclocks
-        && let Some(ref mut active) = active_overclocks
-    {
-        active.0 = overclocks.iter().cloned().map(|c| (None, c)).collect();
+    if let Some(ref overclocks) = config.definition.initial_overclocks {
+        for mut chains in &mut breaker_query {
+            chains
+                .0
+                .extend(overclocks.iter().cloned().map(|c| (None, c)));
+        }
     }
     next_state.set(GameState::Playing);
 }
