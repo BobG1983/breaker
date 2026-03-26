@@ -5,16 +5,19 @@ use bevy::prelude::*;
 use crate::{
     run::{
         definition::HighlightConfig,
+        highlights::systems::{
+            detect_close_save, detect_combo_king, detect_mass_destruction, detect_pinball_wizard,
+        },
         messages::{HighlightTriggered, RunLost},
         node::{NodePlugin, NodeSystems},
         resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
         systems::{
-            advance_node, capture_run_seed, detect_close_save, detect_combo_and_pinball,
-            detect_first_evolution, detect_mass_destruction, detect_most_powerful_evolution,
-            detect_nail_biter, generate_node_sequence_system, handle_node_cleared, handle_run_lost,
-            handle_timer_expired, reset_highlight_tracker, reset_run_state, spawn_highlight_text,
-            track_bolts_lost, track_bumps, track_cells_destroyed, track_chips_collected,
-            track_evolution_damage, track_node_cleared_stats, track_time_elapsed,
+            advance_node, capture_run_seed, detect_first_evolution,
+            detect_most_powerful_evolution, detect_nail_biter, generate_node_sequence_system,
+            handle_node_cleared, handle_run_lost, handle_timer_expired, reset_highlight_tracker,
+            reset_run_state, spawn_highlight_text, track_bolts_lost, track_bumps,
+            track_cells_destroyed, track_chips_collected, track_evolution_damage,
+            track_node_cleared_stats, track_time_elapsed,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -57,7 +60,8 @@ impl Plugin for RunPlugin {
                     // Highlight detection
                     detect_mass_destruction,
                     detect_close_save.after(crate::breaker::BreakerSystems::GradeBump),
-                    detect_combo_and_pinball,
+                    detect_combo_king,
+                    detect_pinball_wizard,
                     detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )
                     .run_if(in_state(PlayingState::Active)),

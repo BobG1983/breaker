@@ -1,29 +1,21 @@
-//! System to detect `ComboKing` and `PinballWizard` highlights from cell destruction
-//! and cell bounce streaks between breaker contacts.
+//! System to detect `ComboKing` highlights from cell destruction streaks between breaker contacts.
 
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::{BoltHitBreaker, BoltHitCell},
+    bolt::messages::BoltHitBreaker,
     cells::messages::CellDestroyedAt,
     run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
-#[derive(SystemParam)]
-pub(crate) struct ComboReaders<'w, 's> {
-    cell_destroyed: MessageReader<'w, 's, CellDestroyedAt>,
-    bolt_hit_cell: MessageReader<'w, 's, BoltHitCell>,
-    bolt_hit_breaker: MessageReader<'w, 's, BoltHitBreaker>,
-}
-
-/// Reads [`CellDestroyedAt`], [`BoltHitCell`], and [`BoltHitBreaker`] messages
-/// to detect `ComboKing` and `PinballWizard` highlights.
+/// Reads [`CellDestroyedAt`] and [`BoltHitBreaker`] messages
+/// to detect `ComboKing` highlights.
 ///
 /// - `CellDestroyedAt` increments `cells_since_last_breaker_hit`.
-/// - `BoltHitCell` increments `cell_bounces_since_breaker`.
-/// - `BoltHitBreaker` checks thresholds, records highlights, and resets counters.
-pub(crate) fn detect_combo_and_pinball(
-    mut readers: ComboReaders,
+/// - `BoltHitBreaker` checks the combo threshold, records the highlight, and resets the counter.
+pub(crate) fn detect_combo_king(
+    mut cell_destroyed_reader: MessageReader<CellDestroyedAt>,
+    mut bolt_hit_breaker_reader: MessageReader<BoltHitBreaker>,
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
@@ -31,20 +23,14 @@ pub(crate) fn detect_combo_and_pinball(
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     // Increment cells destroyed since last breaker hit
-    for _msg in readers.cell_destroyed.read() {
+    for _msg in cell_destroyed_reader.read() {
         tracker.cells_since_last_breaker_hit += 1;
     }
 
-    // Increment cell bounces since breaker contact
-    for _msg in readers.bolt_hit_cell.read() {
-        tracker.cell_bounces_since_breaker += 1;
-    }
-
-    // On breaker hit: check thresholds, record highlights, reset counters
-    for _msg in readers.bolt_hit_breaker.read() {
+    // On breaker hit: check threshold, record highlight, reset counter
+    for _msg in bolt_hit_breaker_reader.read() {
         let node_index = run_state.node_index;
 
-        // --- ComboKing ---
         tracker.best_combo = tracker.best_combo.max(tracker.cells_since_last_breaker_hit);
 
         if tracker.cells_since_last_breaker_hit >= config.combo_king_cells {
@@ -70,35 +56,6 @@ pub(crate) fn detect_combo_and_pinball(
         }
 
         tracker.cells_since_last_breaker_hit = 0;
-
-        // --- PinballWizard ---
-        tracker.best_pinball_rally = tracker
-            .best_pinball_rally
-            .max(tracker.cell_bounces_since_breaker);
-
-        if tracker.cell_bounces_since_breaker >= config.pinball_wizard_bounces {
-            // Always emit for juice
-            writer.write(HighlightTriggered {
-                kind: HighlightKind::PinballWizard,
-            });
-
-            // Record in stats — dedup by kind
-            let already = stats
-                .highlights
-                .iter()
-                .any(|h| h.kind == HighlightKind::PinballWizard);
-            if !already {
-                let count = tracker.cell_bounces_since_breaker;
-                stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::PinballWizard,
-                    node_index,
-                    value: f32::from(u16::try_from(count).unwrap_or(u16::MAX)),
-                    detail: None,
-                });
-            }
-        }
-
-        tracker.cell_bounces_since_breaker = 0;
     }
 }
 
@@ -116,23 +73,11 @@ mod tests {
     struct TestCellDestroyed(Vec<CellDestroyedAt>);
 
     #[derive(Resource, Default)]
-    struct TestBoltHitCell(Vec<BoltHitCell>);
-
-    #[derive(Resource, Default)]
     struct TestBoltHitBreaker(Vec<BoltHitBreaker>);
 
     fn enqueue_cell_destroyed(
         msg_res: Res<TestCellDestroyed>,
         mut writer: MessageWriter<CellDestroyedAt>,
-    ) {
-        for msg in &msg_res.0 {
-            writer.write(msg.clone());
-        }
-    }
-
-    fn enqueue_bolt_hit_cell(
-        msg_res: Res<TestBoltHitCell>,
-        mut writer: MessageWriter<BoltHitCell>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -164,7 +109,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<CellDestroyedAt>()
-            .add_message::<BoltHitCell>()
             .add_message::<BoltHitBreaker>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
@@ -172,18 +116,13 @@ mod tests {
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestCellDestroyed>()
-            .init_resource::<TestBoltHitCell>()
             .init_resource::<TestBoltHitBreaker>()
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 FixedUpdate,
                 (
-                    (
-                        enqueue_cell_destroyed,
-                        enqueue_bolt_hit_cell,
-                        enqueue_bolt_hit_breaker,
-                    ),
-                    detect_combo_and_pinball,
+                    (enqueue_cell_destroyed, enqueue_bolt_hit_breaker),
+                    detect_combo_king,
                     collect_highlight_triggered,
                 )
                     .chain(),
@@ -222,7 +161,6 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<CellDestroyedAt>()
-            .add_message::<BoltHitCell>()
             .add_message::<BoltHitBreaker>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
@@ -230,18 +168,13 @@ mod tests {
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestCellDestroyedAt>()
-            .init_resource::<TestBoltHitCell>()
             .init_resource::<TestBoltHitBreaker>()
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 FixedUpdate,
                 (
-                    (
-                        enqueue_cell_destroyed_at,
-                        enqueue_bolt_hit_cell,
-                        enqueue_bolt_hit_breaker,
-                    ),
-                    detect_combo_and_pinball,
+                    (enqueue_cell_destroyed_at, enqueue_bolt_hit_breaker),
+                    detect_combo_king,
                     collect_highlight_triggered,
                 )
                     .chain(),
@@ -394,158 +327,12 @@ mod tests {
         );
     }
 
-    // --- Behavior 10: BoltHitCell increments cell_bounces_since_breaker ---
+    // --- Behavior 14: Dedup — only one ComboKing in RunStats ---
 
     #[test]
-    fn bolt_hit_cell_increments_cell_bounces_since_breaker() {
+    fn dedup_only_one_combo_king_in_run_stats() {
         let mut app = test_app();
-        app.insert_resource(TestBoltHitCell(vec![
-            BoltHitCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
-            },
-            BoltHitCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
-            },
-            BoltHitCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
-            },
-            BoltHitCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
-            },
-        ]));
-        tick(&mut app);
-
-        let tracker = app.world().resource::<HighlightTracker>();
-        assert_eq!(
-            tracker.cell_bounces_since_breaker, 4,
-            "4 BoltHitCell messages should set counter to 4"
-        );
-    }
-
-    // --- Behavior 11: PinballWizard detected when bounces >= 12 ---
-
-    #[test]
-    fn pinball_wizard_detected_when_bounces_reach_threshold() {
-        let mut app = test_app();
-        // Default pinball_wizard_bounces = 12
-        // Pre-set counter to 12 (at threshold), then send BoltHitBreaker
-        app.world_mut()
-            .resource_mut::<HighlightTracker>()
-            .cell_bounces_since_breaker = 12;
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        }]));
-        tick(&mut app);
-
-        let stats = app.world().resource::<RunStats>();
-        let pinball = stats
-            .highlights
-            .iter()
-            .find(|h| h.kind == HighlightKind::PinballWizard);
-        assert!(
-            pinball.is_some(),
-            "should detect PinballWizard when cell_bounces=12 >= pinball_wizard_bounces=12"
-        );
-
-        let captured = app.world().resource::<CapturedHighlightTriggered>();
-        let msg = captured
-            .0
-            .iter()
-            .find(|h| h.kind == HighlightKind::PinballWizard);
-        assert!(
-            msg.is_some(),
-            "should emit HighlightTriggered with PinballWizard kind"
-        );
-    }
-
-    // --- Behavior 12: PinballWizard NOT detected when bounces < 12 ---
-
-    #[test]
-    fn pinball_wizard_not_detected_when_bounces_below_threshold() {
-        let mut app = test_app();
-        // Pre-set counter to 11 (below threshold of 12)
-        app.world_mut()
-            .resource_mut::<HighlightTracker>()
-            .cell_bounces_since_breaker = 11;
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        }]));
-        tick(&mut app);
-
-        let stats = app.world().resource::<RunStats>();
-        let pinball = stats
-            .highlights
-            .iter()
-            .find(|h| h.kind == HighlightKind::PinballWizard);
-        assert!(
-            pinball.is_none(),
-            "should NOT detect PinballWizard when bounces=11 < threshold=12"
-        );
-
-        let tracker = app.world().resource::<HighlightTracker>();
-        assert_eq!(
-            tracker.cell_bounces_since_breaker, 0,
-            "counter should reset to 0 after BoltHitBreaker"
-        );
-        assert_eq!(
-            tracker.best_pinball_rally, 11,
-            "best_pinball_rally should be updated to 11 even when below threshold"
-        );
-    }
-
-    // --- Behavior 13: Both ComboKing + PinballWizard can fire on same BoltHitBreaker ---
-
-    #[test]
-    fn both_combo_king_and_pinball_wizard_fire_on_same_breaker_hit() {
-        let mut app = test_app();
-        {
-            let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
-            tracker.cells_since_last_breaker_hit = 10; // >= 8
-            tracker.cell_bounces_since_breaker = 15; // >= 12
-        }
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
-            bolt: Entity::PLACEHOLDER,
-        }]));
-        tick(&mut app);
-
-        let stats = app.world().resource::<RunStats>();
-        let combo = stats
-            .highlights
-            .iter()
-            .any(|h| h.kind == HighlightKind::ComboKing);
-        let pinball = stats
-            .highlights
-            .iter()
-            .any(|h| h.kind == HighlightKind::PinballWizard);
-        assert!(combo, "should detect ComboKing");
-        assert!(pinball, "should detect PinballWizard");
-
-        let captured = app.world().resource::<CapturedHighlightTriggered>();
-        let combo_msg = captured
-            .0
-            .iter()
-            .any(|h| h.kind == HighlightKind::ComboKing);
-        let pinball_msg = captured
-            .0
-            .iter()
-            .any(|h| h.kind == HighlightKind::PinballWizard);
-        assert!(combo_msg, "should emit HighlightTriggered for ComboKing");
-        assert!(
-            pinball_msg,
-            "should emit HighlightTriggered for PinballWizard"
-        );
-    }
-
-    // --- Behavior 14: Dedup — only one of each kind in RunStats ---
-
-    #[test]
-    fn dedup_only_one_of_each_kind_in_run_stats() {
-        let mut app = test_app();
-        // Pre-fill with existing ComboKing and PinballWizard
+        // Pre-fill with existing ComboKing
         {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             stats.highlights.push(RunHighlight {
@@ -554,18 +341,11 @@ mod tests {
                 value: 10.0,
                 detail: None,
             });
-            stats.highlights.push(RunHighlight {
-                kind: HighlightKind::PinballWizard,
-                node_index: 0,
-                value: 15.0,
-                detail: None,
-            });
         }
 
         {
             let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
             tracker.cells_since_last_breaker_hit = 10;
-            tracker.cell_bounces_since_breaker = 15;
         }
         app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
             bolt: Entity::PLACEHOLDER,
@@ -578,18 +358,9 @@ mod tests {
             .iter()
             .filter(|h| h.kind == HighlightKind::ComboKing)
             .count();
-        let pinball_count = stats
-            .highlights
-            .iter()
-            .filter(|h| h.kind == HighlightKind::PinballWizard)
-            .count();
         assert_eq!(
             combo_count, 1,
             "should NOT add a second ComboKing highlight"
-        );
-        assert_eq!(
-            pinball_count, 1,
-            "should NOT add a second PinballWizard highlight"
         );
     }
 }

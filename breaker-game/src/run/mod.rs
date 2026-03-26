@@ -2,6 +2,7 @@
 
 pub(crate) mod components;
 pub mod definition;
+pub(crate) mod highlights;
 pub mod messages;
 pub mod node;
 mod plugin;
