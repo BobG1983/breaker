@@ -73,7 +73,7 @@ mod tests {
     #[test]
     fn insert_and_lookup() {
         let mut registry = BreakerRegistry::default();
-        let ron_str = include_str!("../../assets/breakers/aegis.breaker.ron");
+        let ron_str = include_str!("../../assets/breakers/aegis.bdef.ron");
         let def: BreakerDefinition = ron::de::from_str(ron_str).expect("aegis RON should parse");
         registry.insert(def.name.clone(), def);
         assert!(registry.contains("Aegis"));
