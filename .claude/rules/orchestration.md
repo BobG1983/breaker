@@ -97,6 +97,7 @@ Launch: **runner-linting** + **runner-tests** + **reviewer-correctness** + **rev
 | New dependencies added or security-sensitive code | **guard-security** |
 | New dependencies added or before release | **guard-dependencies** |
 | New mechanic needs adversarial scenario coverage | **writer-scenarios** |
+| Exhaustive coverage audit or post-refactor scenario gap analysis | **reviewer-scenarios** |
 | Phase complete or multiple sessions since last audit | **guard-agent-memory** |
 | Choosing a new dependency | **researcher-crates** |
 | Modifying code with non-obvious history | **researcher-git** |

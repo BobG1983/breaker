@@ -96,6 +96,13 @@ type: reference
 - `track_evolution_damage` `entry(name.clone()).or_insert(0.0) += msg.damage` — correct accumulation pattern, does not double-count.
 - `tick_shield_removes_at_zero_or_below` test comment says "dt ~0.0167" (wrong — actual fixed delta is 1/64 ≈ 0.015625 s). The test passes correctly because 0.01 - 0.015625 < 0.0. The comment is inaccurate but not a logic bug. Do not re-flag the test as wrong.
 
+## C7-R RootEffect Migration Confirmed Correct (2026-03-26)
+- `RootEffect::On { target, then }` irrefutable let destructure in `dispatch_chip_effects` line 43 — safe; `RootEffect` has exactly one variant. Correct.
+- `From<RootEffect> for EffectNode` in `definition.rs:320-324` — correctly converts to `EffectNode::On`. Do not re-flag.
+- `evaluate_node` returns `NoMatch` for `EffectNode::On` (definition.rs line 52) — correct; `On` is dispatch-time, not runtime trigger. Do not re-flag.
+- `init_breaker` pushes archetype chains without clearing: safe because `spawn_breaker` runs first and creates fresh `EffectChains::default()` on every `OnEnter(GameState::Playing)`. No accumulation bug for archetype chains. Do not re-flag.
+- `trigger_has_runtime_variants` count comment says "5 new targeted added" but only 3 are new to C7-R (Impacted, Died, DestroyedCell); the other 5 (NoBump, PerfectBumped, Bumped, EarlyBumped, LateBumped) were pre-existing. Count of 21 is correct. Comment is wrong but not a logic bug.
+
 ## Wave 2/3 Physics Migration Confirmed Correct (2026-03-24)
 - `maintain_quadtree` double-insert guard: `aabb_ref.is_added()` skip in both `changed_pos` and `changed_layers` loops — correctly prevents double-insert when entity was just added (Added<Aabb2D> fires Changed<GlobalPosition2D> too on the same tick). Do not re-flag.
 - `enforce_distance_constraints` (physics library, rantzsoft_physics2d) `both_converging = dot_a > 0.0 && dot_b < 0.0` — axis = delta = (b - a). `dot_a > 0` means A's velocity has positive component toward B. `dot_b < 0` means B's velocity has negative component (i.e., toward A). Both moving toward each other = converging. The sign convention is correct.

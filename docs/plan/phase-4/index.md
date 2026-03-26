@@ -117,6 +117,24 @@ All three are independent and can parallelize.
   - **Trigger**: Do this when Phase 5 (Visual Identity) adds enough new visual systems that the separation pays for itself. Not worth doing before then.
   - **Scope**: ~14 spawn/feedback systems to split, plus screen plugin restructuring.
 
+### Post-Wave 4 — Graphics & Sound Audit (after Phase 4, feeds into Phases 5 + 6)
+
+- **4L (Graphics & Sound Audit)** — Comprehensive audit of every game entity, chip effect, breaker behavior, cell type, and triggered effect to catalog what graphics and sound each one needs. This audit produces the work list for Phase 5 (Visual Identity) and Phase 6 (Audio). Scope:
+  - **Breakers**: Each breaker archetype (Aegis, Chrono, Prism) — visual identity, bump feedback VFX, dash/settle/brake animations, bump grade flash effects, sound effects for bump grades
+  - **Bolt**: Base bolt, extra bolts, flail bolts — motion trails, impact flashes, speed-dependent visual intensity, wall/cell/breaker impact sounds
+  - **Cells**: Per-cell-type visual identity (Standard, Lock, Regen, Shield/Orbit, Armored, Explosive) — idle animations, damage states, destruction VFX (dissolve/shatter/explode), hit sounds, destruction sounds
+  - **Chip effects**: Every `Effect` enum variant — triggered VFX (shockwave rings, chain lightning arcs, piercing beams, gravity well distortion, phantom breaker ghost), activation sounds, stacking visual feedback
+  - **Chip selection**: Rarity-based card glow, selection confirmation VFX, evolution unlock fanfare
+  - **Node transitions**: Flash/sweep animations (already partially implemented), level-complete/level-start sounds
+  - **UI**: Timer urgency escalation (visual + audio), score display, chip HUD icons, run summary screen
+  - **Background**: Animated backdrop responding to game state intensity
+  - **Screen effects**: Screen shake, chromatic aberration, vignette
+  - **Multi-shockwave readability**: Color shift per source (hue rotation) so overlapping shockwaves are distinguishable
+  - **Flail tether visual**: Chain/tether rendering between flail bolt pairs (segmented line mesh, catenary curve, neon glow)
+  - **Shield unlock shatter**: Fragment VFX on shield cell unlock
+  - **Trigger**: After Phase 4 gameplay is complete. The audit itself is design work, not code.
+  - **Output**: Work list feeding Phase 5 (visual) and Phase 6 (audio) implementation plans.
+
 ## Session Summary
 
 | Session | Stages | Focus | Domains Touched |

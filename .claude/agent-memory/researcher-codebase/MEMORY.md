@@ -9,6 +9,7 @@
 - [spatial2d-propagation-flow.md](spatial2d-propagation-flow.md) -- Spatial2d propagation pipeline: save_previous, compute_globals, derive_transform, interpolation, Absolute/Relative hierarchy, orbit cells
 - [highlight-detection-flow.md](highlight-detection-flow.md) -- Highlight detection, storage, cap, display, and juice flow map (15 HighlightKind variants, 6 detector systems)
 - [damage-attribution-flow.md](damage-attribution-flow.md) -- source_chip threading from ActiveEffects through bridge systems to DamageCell, bolt spawns, and evolution_damage pipeline
+- [scenario-runner-flow.md](scenario-runner-flow.md) -- Scenario runner lifecycle, input injection, breaker/layout setup, overclock injection, state transitions, seed architecture, invariant checking flow
 
 ## Session History
 See [ephemeral/](ephemeral/) -- not committed.

@@ -193,3 +193,9 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 - **spawn_chip_select overwrites ChipOffers**: FIXED — verified in current code. `spawn_chip_select` now reads `Res<ChipOffers>` directly (does not touch ChipRegistry or insert ChipOffers). The offering algorithm is no longer bypassed.
 
 - **advance_node short-circuits TransitionIn animation**: FIXED — `advance_node` no longer calls `NextState(Playing)`. It only increments `run_state.node_index` and resets `transition_queued`. The `animate_transition` system in FxPlugin drives the `TransitionIn → Playing` state change on timer completion.
+
+## C7-R RootEffect Migration Bugs (2026-03-26, refactor/rantzsoft-prelude-and-defaults)
+
+- **Trigger::Impacted(*), Trigger::Died, Trigger::DestroyedCell have no bridge systems**: `effect/triggers/on_impact.rs` fires only `Impact(ImpactTarget::*)`. `effect/triggers/on_death.rs` fires only `Death` (on cell/bolt EffectChains) and `CellDestroyed` (on armed effects). No bridge fires `Impacted(*)`, `Died`, or `DestroyedCell`. These three trigger variants added in C7-R exist in the type system and are matched by `trigger_matches` (evaluate.rs:78-80) but are inert at runtime — any chip chain using these triggers silently never fires. Confidence: HIGH.
+
+- **dispatch_chip_effects passive Do ignores target field (medium confidence)**: `dispatch_chip_effects.rs:46-52` calls `fire_passive_event(eff, max_stacks, name, &mut commands)` without passing `target`. `SizeBoostApplied` is observed by both `handle_bolt_size_boost` (With<Bolt>) and `handle_width_boost` (With<Breaker>), so `Effect::SizeBoost` always applies to both entity types regardless of the declared `target` field. The `target` field on `RootEffect::On` is semantically irrelevant for passive `Do` children. May be intentional dual-application design — main agent should verify design intent before filing as bug.
