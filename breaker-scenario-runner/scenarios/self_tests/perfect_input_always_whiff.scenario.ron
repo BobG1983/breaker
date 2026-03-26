@@ -1,0 +1,14 @@
+// Verifies Perfect(AlwaysWhiff) runs without crash. Breaker tracks bolt and
+// attempts to bump, but every bump is graded as a whiff (ForceBumpGrade = None).
+// The bolt still bounces off the breaker via physics collision.
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(AlwaysWhiff),
+    max_frames: 1000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(42),
+)

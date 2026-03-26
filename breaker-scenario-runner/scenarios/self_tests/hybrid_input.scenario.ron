@@ -1,0 +1,15 @@
+// Smoke test: Hybrid input strategy (scripted warmup -> chaos phase).
+// Verifies the strategy switch at scripted_frames boundary does not crash,
+// and that invariants hold across both phases. No expected violations —
+// allow_early_end: false forces the full 500-frame run.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Hybrid((scripted_frames: 100, action_prob: 0.3)),
+    max_frames: 500,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(42),
+)

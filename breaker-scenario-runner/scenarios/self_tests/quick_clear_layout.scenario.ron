@@ -1,0 +1,15 @@
+// Smoke test: quick_clear sentinel layout (1x1 single-cell grid).
+// The single cell should be destroyed quickly under moderate chaos input.
+// allow_early_end: true lets the scenario exit when the node clears naturally.
+// Verifies the quick_clear sentinel is registered and the layout parses correctly.
+(
+    breaker: "Aegis",
+    layout: "quick_clear",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 2000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: true,
+    seed: Some(42),
+)

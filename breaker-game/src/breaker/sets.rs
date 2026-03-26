@@ -13,6 +13,8 @@ pub enum BreakerSystems {
     Reset,
     /// The `grade_bump` system — grades bump timing and writes `BumpPerformed`/`BumpWhiffed`.
     GradeBump,
+    /// The `update_breaker_state` system — updates breaker state machine each tick.
+    UpdateState,
 }
 
 #[cfg(test)]

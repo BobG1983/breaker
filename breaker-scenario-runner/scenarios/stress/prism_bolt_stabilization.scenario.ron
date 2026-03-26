@@ -1,14 +1,12 @@
 (
     breaker: "Prism",
     layout: "Corridor",
-    input: Chaos((
-        seed: 77,
-        action_prob: 0.6,
-    )),
+    input: Chaos((action_prob: 0.6)),
     max_frames: 15000,
     invariants: [BoltInBounds, NoNaN, NoEntityLeaks, BoltSpeedInRange],
     expected_violations: None,
     debug_setup: None,
     invariant_params: (max_bolt_count: 8),
     allow_early_end: false,
+    seed: Some(77),
 )

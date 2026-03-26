@@ -5,19 +5,19 @@
 (
     breaker: "Aegis",
     layout: "Corridor",
-    input: Chaos((
-        seed: 2048,
-        action_prob: 0.9,
-    )),
+    input: Chaos((action_prob: 0.9)),
     max_frames: 10000,
     invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
     stress: Some((runs: 32, parallelism: 32)),
-    initial_overclocks: Some([
-        When(trigger: PerfectBumped, then: [
-            Do(SpeedBoost(multiplier: 1.3)),
+    seed: Some(2048),
+    initial_effects: Some([
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                Do(SpeedBoost(multiplier: 1.3)),
+            ]),
         ]),
     ]),
 )

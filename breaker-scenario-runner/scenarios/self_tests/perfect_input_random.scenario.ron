@@ -1,0 +1,15 @@
+// Smoke test: Perfect(Random) input strategy.
+// Bump grade is randomly selected each frame from the full BumpMode set.
+// Godmode + quick_clear sustains continuous play across varied bump outcomes.
+// Verifies no crash and speed invariants hold under random grade oscillation.
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(Random),
+    max_frames: 1000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(99),
+)

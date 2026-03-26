@@ -6,10 +6,7 @@
 (
     breaker: "Prism",
     layout: "Scatter",
-    input: Chaos((
-        seed: 5050,
-        action_prob: 0.8,
-    )),
+    input: Chaos((action_prob: 0.8)),
     max_frames: 5000,
     invariants: [BoltCountReasonable, NoEntityLeaks, BoltInBounds, NoNaN],
     expected_violations: None,
@@ -17,9 +14,12 @@
     invariant_params: (max_bolt_count: 16),
     allow_early_end: false,
     stress: Some((runs: 16, parallelism: 16)),
-    initial_overclocks: Some([
-        When(trigger: PerfectBumped, then: [
-            Do(SpawnBolts(count: 1, lifespan: Some(3.0), inherit: true)),
+    seed: Some(5050),
+    initial_effects: Some([
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                Do(SpawnBolts(count: 1, lifespan: Some(3.0), inherit: true)),
+            ]),
         ]),
     ]),
 )

@@ -1,12 +1,10 @@
 (
     breaker: "Aegis",
     layout: "Fortress",
-    input: Chaos((
-        seed: 400,
-        action_prob: 0.5,
-    )),
+    input: Chaos((action_prob: 0.5)),
     max_frames: 10000,
     invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
     expected_violations: None,
     debug_setup: None,
+    seed: Some(400),
 )

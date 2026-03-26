@@ -1,13 +1,11 @@
 (
     breaker: "Chrono",
     layout: "Gauntlet",
-    input: Chaos((
-        seed: 5555,
-        action_prob: 0.35,
-    )),
+    input: Chaos((action_prob: 0.35)),
     max_frames: 15000,
     invariants: [BoltInBounds, BoltSpeedInRange, BreakerInBounds, NoNaN, NoEntityLeaks, TimerNonNegative, TimerMonotonicallyDecreasing],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
+    seed: Some(5555),
 )

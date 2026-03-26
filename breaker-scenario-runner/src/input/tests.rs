@@ -11,9 +11,7 @@ use crate::types::{BumpMode, ChaosParams, HybridParams, ScriptedFrame, ScriptedP
 /// between 230 and 370 (30% ± 10%).
 #[test]
 fn chaos_driver_fires_at_correct_statistical_probability() {
-    let params = ChaosParams {
-        action_prob: 0.3,
-    };
+    let params = ChaosParams { action_prob: 0.3 };
     let mut driver = ChaosDriver::new(0, &params);
 
     let fired_count = (0_u32..1000)
@@ -33,9 +31,7 @@ fn chaos_driver_fires_at_correct_statistical_probability() {
 /// Two `ChaosDriver` instances seeded identically produce identical output sequences.
 #[test]
 fn chaos_driver_produces_reproducible_output_for_same_seed() {
-    let params = ChaosParams {
-        action_prob: 0.5,
-    };
+    let params = ChaosParams { action_prob: 0.5 };
 
     let mut driver_a = ChaosDriver::new(42, &params);
     let mut driver_b = ChaosDriver::new(42, &params);
@@ -63,9 +59,7 @@ fn chaos_driver_produces_reproducible_output_for_same_seed() {
 /// empty `Vec` when `is_active` is false.
 #[test]
 fn chaos_driver_does_not_fire_when_inactive() {
-    let params = ChaosParams {
-        action_prob: 1.0,
-    };
+    let params = ChaosParams { action_prob: 1.0 };
     let mut driver = ChaosDriver::new(0, &params);
 
     let result = driver.actions_for_frame(0, false);
@@ -86,9 +80,7 @@ fn chaos_driver_does_not_fire_when_inactive() {
 /// of `[MoveLeft, MoveRight, Bump, DashLeft, DashRight]`.
 #[test]
 fn chaos_driver_only_picks_gameplay_actions() {
-    let params = ChaosParams {
-        action_prob: 1.0,
-    };
+    let params = ChaosParams { action_prob: 1.0 };
     let mut driver = ChaosDriver::new(1, &params);
 
     let menu_actions = [
@@ -280,9 +272,7 @@ fn hybrid_input_respects_is_active_false_in_chaos_phase() {
 /// (empty or not — exact content depends on the RNG seed).
 #[test]
 fn input_driver_from_chaos_strategy_constructs_without_panic() {
-    let strategy = InputStrategy::Chaos(ChaosParams {
-        action_prob: 0.5,
-    });
+    let strategy = InputStrategy::Chaos(ChaosParams { action_prob: 0.5 });
     let mut driver = InputDriver::from_strategy(&strategy, 42);
 
     // Must not panic — return type is Vec<GameAction>

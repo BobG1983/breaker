@@ -1,13 +1,11 @@
 (
     breaker: "Aegis",
     layout: "Dense",
-    input: Chaos((
-        seed: 9001,
-        action_prob: 0.3,
-    )),
+    input: Chaos((action_prob: 0.3)),
     max_frames: 15000,
     invariants: [BoltInBounds, BoltSpeedInRange, BreakerInBounds, NoNaN, NoEntityLeaks, TimerNonNegative, ValidStateTransitions],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
+    seed: Some(9001),
 )

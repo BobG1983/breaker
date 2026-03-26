@@ -6,10 +6,7 @@
 (
     breaker: "Aegis",
     layout: "Scatter",
-    input: Chaos((
-        seed: 8080,
-        action_prob: 0.6,
-    )),
+    input: Chaos((action_prob: 0.6)),
     max_frames: 5000,
     invariants: [BoltCountReasonable, NoEntityLeaks, BoltInBounds, NoNaN],
     expected_violations: None,
@@ -17,10 +14,13 @@
     invariant_params: (max_bolt_count: 12),
     allow_early_end: false,
     stress: Some((runs: 16, parallelism: 16)),
-    initial_overclocks: Some([
-        When(trigger: PerfectBumped, then: [
-            When(trigger: Impacted(Cell), then: [
-                Do(ChainBolt(tether_distance: 120.0)),
+    seed: Some(8080),
+    initial_effects: Some([
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                When(trigger: Impacted(Cell), then: [
+                    Do(ChainBolt(tether_distance: 120.0)),
+                ]),
             ]),
         ]),
     ]),

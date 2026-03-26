@@ -1,0 +1,16 @@
+// Smoke test: chip_selections injection mechanism.
+// "Surge" is injected via auto_skip_chip_select when ChipSelect state is entered.
+// Godmode + quick_clear drives rapid node clearing to reach the ChipSelect state.
+// Verifies the chip_selections field is consumed and does not crash the runner.
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 2000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(42),
+    chip_selections: Some(["Surge"]),
+)

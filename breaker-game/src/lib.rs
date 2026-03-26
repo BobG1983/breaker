@@ -27,5 +27,5 @@ pub mod effect;
 pub(crate) mod fx;
 pub mod input;
 pub mod run;
-pub(crate) mod ui;
+pub mod ui;
 pub(crate) mod wall;

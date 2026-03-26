@@ -7,18 +7,18 @@
 (
     breaker: "Aegis",
     layout: "Corridor",
-    input: Chaos((
-        seed: 2718,
-        action_prob: 0.3,
-    )),
+    input: Chaos((action_prob: 0.3)),
     max_frames: 8000,
     invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    initial_overclocks: Some([
-        When(trigger: Impacted(Wall), then: [
-            Do(SpeedBoost(multiplier: 1.1)),
+    seed: Some(2718),
+    initial_effects: Some([
+        On(target: Bolt, then: [
+            When(trigger: Impacted(Wall), then: [
+                Do(SpeedBoost(multiplier: 1.1)),
+            ]),
         ]),
     ]),
 )

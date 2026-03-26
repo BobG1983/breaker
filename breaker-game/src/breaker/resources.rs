@@ -189,3 +189,16 @@ mod tests {
         );
     }
 }
+
+/// The breaker selected for the current run.
+///
+/// Set at run start; read by `init_breaker` to look up the breaker
+/// definition from the registry.
+#[derive(Resource, Debug, Clone)]
+pub struct SelectedBreaker(pub String);
+
+impl Default for SelectedBreaker {
+    fn default() -> Self {
+        Self("Aegis".to_owned())
+    }
+}

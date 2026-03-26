@@ -1,0 +1,22 @@
+// Smoke test: initial_effects bolt targeting via PendingBoltEffects.
+// SpeedBoost(1.1) is applied to the bolt on each Bumped event.
+// BoltSpeedInRange verifies the speed remains within configured bounds despite
+// the boost, confirming the effect dispatches without corrupting bolt state.
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 1000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(42),
+    initial_effects: Some([
+        On(target: Bolt, then: [
+            When(trigger: Bumped, then: [
+                Do(SpeedBoost(multiplier: 1.1)),
+            ]),
+        ]),
+    ]),
+)

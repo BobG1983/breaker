@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::BoltSystems,
     breaker::{
-        BreakerSystems,
+        BreakerSystems, ForceBumpGrade, SelectedBreaker,
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
@@ -16,7 +16,7 @@ use crate::{
         },
     },
     run::node::sets::NodeSystems,
-    shared::{GameState, PlayingState, SelectedBreaker},
+    shared::{GameState, PlayingState},
 };
 
 /// Plugin for the breaker domain.
@@ -36,6 +36,7 @@ impl Plugin for BreakerPlugin {
             .add_message::<BreakerDestroyedAt>()
             .init_resource::<BreakerConfig>()
             .init_resource::<SelectedBreaker>()
+            .init_resource::<ForceBumpGrade>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -62,7 +63,9 @@ impl Plugin for BreakerPlugin {
                 (
                     update_bump,
                     move_breaker.after(update_bump).in_set(BreakerSystems::Move),
-                    update_breaker_state.after(move_breaker),
+                    update_breaker_state
+                        .after(move_breaker)
+                        .in_set(BreakerSystems::UpdateState),
                     grade_bump
                         .after(update_bump)
                         .after(BoltSystems::BreakerCollision)

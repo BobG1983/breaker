@@ -1,0 +1,16 @@
+// Smoke test: godmode sentinel breaker (life_pool: None).
+// Low action_prob means the breaker mostly ignores the bolt, causing frequent bolt_lost.
+// A normal breaker would exhaust its life_pool and trigger RunEnd early.
+// Godmode has no life_pool, so the run must survive all 3000 frames.
+// Verifies the godmode sentinel is wired correctly and bolt_lost does not end the run.
+(
+    breaker: "godmode",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.1)),
+    max_frames: 3000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(7),
+)

@@ -33,9 +33,7 @@ fn make_chaos_definition() -> ScenarioDefinition {
     ScenarioDefinition {
         breaker: "aegis".to_owned(),
         layout: "corridor".to_owned(),
-        input: InputStrategy::Chaos(ChaosParams {
-            action_prob: 0.3,
-        }),
+        input: InputStrategy::Chaos(ChaosParams { action_prob: 0.3 }),
         max_frames: 1000,
         invariants: vec![],
         ..Default::default()

@@ -1,10 +1,7 @@
 (
     breaker: "Prism",
     layout: "Scatter",
-    input: Chaos((
-        seed: 50,
-        action_prob: 0.9,
-    )),
+    input: Chaos((action_prob: 0.9)),
     max_frames: 20000,
     invariants: [BoltCountReasonable, NoEntityLeaks, NoNaN],
     expected_violations: None,
@@ -13,4 +10,5 @@
         max_bolt_count: 12,
     ),
     allow_early_end: false,
+    seed: Some(50),
 )

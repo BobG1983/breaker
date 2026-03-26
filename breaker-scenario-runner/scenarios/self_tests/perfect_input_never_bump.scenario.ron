@@ -1,0 +1,15 @@
+// Smoke test: Perfect(NeverBump) input strategy.
+// Breaker tracks bolt position but never issues a Bump action.
+// Bolt will eventually fall past the breaker and trigger bolt_lost.
+// allow_early_end: true lets the run end naturally (bolt_lost -> RunEnd).
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(NeverBump),
+    max_frames: 500,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: true,
+    seed: Some(42),
+)

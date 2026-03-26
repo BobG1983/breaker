@@ -1,25 +1,25 @@
 // Adversarial: passive chip effects (Piercing, DamageBoost, SpeedBoost, SizeBoost) loaded via
-// initial_overclocks. Dense layout maximises cell hits. Chaos input at moderate action probability
+// initial_effects. Dense layout maximises cell hits. Chaos input at moderate action probability
 // drives rapid bump sequences to trigger repeated effect application. If any passive effect handler
 // corrupts bolt state (speed, position, NaN) under sustained load this scenario will catch it.
 (
     breaker: "Aegis",
     layout: "Dense",
-    input: Chaos((
-        seed: 7331,
-        action_prob: 0.5,
-    )),
+    input: Chaos((action_prob: 0.5)),
     max_frames: 5000,
     invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    initial_overclocks: Some([
-        When(trigger: OnBump, then: [
-            Do(Piercing(1)),
-            Do(DamageBoost(0.5)),
-            Do(SpeedBoost(multiplier: 1.2)),
-            Do(SizeBoost(0.2)),
+    seed: Some(7331),
+    initial_effects: Some([
+        On(target: Bolt, then: [
+            When(trigger: Bumped, then: [
+                Do(Piercing(1)),
+                Do(DamageBoost(0.5)),
+                Do(SpeedBoost(multiplier: 1.2)),
+                Do(SizeBoost(0.2)),
+            ]),
         ]),
     ]),
 )

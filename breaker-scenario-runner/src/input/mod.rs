@@ -116,9 +116,12 @@ impl HybridInput {
     pub fn new(seed: u64, params: &HybridParams) -> Self {
         Self {
             scripted_frames: params.scripted_frames,
-            chaos: ChaosDriver::new(seed, &ChaosParams {
-                action_prob: params.action_prob,
-            }),
+            chaos: ChaosDriver::new(
+                seed,
+                &ChaosParams {
+                    action_prob: params.action_prob,
+                },
+            ),
         }
     }
 

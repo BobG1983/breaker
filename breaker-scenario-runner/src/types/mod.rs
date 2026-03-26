@@ -342,9 +342,12 @@ pub struct ScenarioDefinition {
     /// seed 0 for determinism. Override in RON to test different seeds.
     #[serde(default)]
     pub seed: Option<u64>,
-    /// Optional overclock chains to pre-populate at scenario start.
+    /// Optional chip names to pre-select at scenario start.
+    ///
+    /// Each string is a chip name dispatched via [`ChipSelected`] in
+    /// [`crate::lifecycle::bypass_menu_to_playing`].
     #[serde(default)]
-    pub initial_overclocks: Option<Vec<breaker::effect::EffectNode>>,
+    pub initial_chips: Option<Vec<String>>,
     /// Optional per-frame mutations for self-test scenarios.
     ///
     /// When `Some`, each [`FrameMutation`] is applied at its specified frame
@@ -385,7 +388,7 @@ impl Default for ScenarioDefinition {
             allow_early_end: true,
             stress: None,
             seed: None,
-            initial_overclocks: None,
+            initial_chips: None,
             frame_mutations: None,
             chip_selections: None,
             initial_effects: None,

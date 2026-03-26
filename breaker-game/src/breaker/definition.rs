@@ -12,7 +12,7 @@ use crate::effect::definition::RootEffect;
 /// Adding a new breaker = new RON file. Adding a new behavior type =
 /// new `Effect` variant + handler.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
-pub(crate) struct BreakerDefinition {
+pub struct BreakerDefinition {
     /// Display name of the breaker.
     pub name: String,
     /// Optional stat overrides applied on top of `BreakerDefaults`.
@@ -27,7 +27,7 @@ pub(crate) struct BreakerDefinition {
 ///
 /// Each `Some` field replaces the corresponding base value.
 #[derive(Deserialize, Clone, Debug, Default)]
-pub(crate) struct BreakerStatOverrides {
+pub struct BreakerStatOverrides {
     /// Override breaker width.
     pub width: Option<f32>,
     /// Override breaker height.

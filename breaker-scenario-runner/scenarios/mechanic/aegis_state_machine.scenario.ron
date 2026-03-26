@@ -1,12 +1,10 @@
 (
     breaker: "Aegis",
     layout: "Corridor",
-    input: Chaos((
-        seed: 300,
-        action_prob: 0.95,
-    )),
+    input: Chaos((action_prob: 0.95)),
     max_frames: 10000,
     invariants: [ValidBreakerState, BreakerInBounds, BreakerPositionClamped, NoNaN],
     expected_violations: None,
     debug_setup: None,
+    seed: Some(300),
 )

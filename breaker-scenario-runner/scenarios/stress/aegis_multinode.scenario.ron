@@ -1,13 +1,11 @@
 (
     breaker: "Aegis",
     layout: "Scatter",
-    input: Chaos((
-        seed: 100,
-        action_prob: 0.9,
-    )),
+    input: Chaos((action_prob: 0.9)),
     max_frames: 30000,
     invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions, NoEntityLeaks, ValidBreakerState],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
+    seed: Some(100),
 )

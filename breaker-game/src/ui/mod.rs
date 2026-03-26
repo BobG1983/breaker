@@ -1,7 +1,7 @@
 //! UI domain plugin — HUD, menus, chip selection screen.
 
 pub(crate) mod components;
-pub(crate) mod messages;
+pub mod messages;
 mod plugin;
 pub(crate) mod resources;
 pub(crate) mod sets;

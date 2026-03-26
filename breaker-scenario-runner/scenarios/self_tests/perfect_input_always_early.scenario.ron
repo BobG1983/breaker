@@ -1,0 +1,13 @@
+// Verifies Perfect(AlwaysEarly) runs without crash. Every bump is graded Early.
+// Godmode + quick_clear sustains play across many early-bump cycles.
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(AlwaysEarly),
+    max_frames: 1000,
+    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: Some(42),
+)

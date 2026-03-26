@@ -6,7 +6,7 @@ use bevy::prelude::*;
 ///
 /// Consumed by the chips plugin (applies effects).
 #[derive(Message, Clone, Debug)]
-pub(crate) struct ChipSelected {
+pub struct ChipSelected {
     /// Display name of the selected chip.
     pub name: String,
 }

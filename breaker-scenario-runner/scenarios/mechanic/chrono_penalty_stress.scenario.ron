@@ -1,12 +1,10 @@
 (
     breaker: "Chrono",
     layout: "Fortress",
-    input: Chaos((
-        seed: 200,
-        action_prob: 0.02,
-    )),
+    input: Chaos((action_prob: 0.02)),
     max_frames: 15000,
     invariants: [TimerNonNegative, TimerMonotonicallyDecreasing, BoltInBounds, ValidStateTransitions],
     expected_violations: None,
     debug_setup: None,
+    seed: Some(200),
 )
