@@ -66,6 +66,7 @@ pub(crate) fn bridge_bump(
     active: Res<ActiveEffects>,
     mut armed_query: Query<&mut ArmedEffects>,
     mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
+    mut bolt_chains_query: Query<&mut EffectChains, Without<Breaker>>,
     mut commands: Commands,
 ) {
     for performed in reader.read() {
@@ -137,6 +138,22 @@ pub(crate) fn bridge_bump(
                 evaluate_entity_chains(&mut chains, grade_trigger, targets.clone(), &mut commands);
                 evaluate_entity_chains(&mut chains, Trigger::Bump, targets.clone(), &mut commands);
             }
+
+            // Evaluate bolt entity EffectChains with Bumped triggers
+            if let Ok(mut bolt_chains) = bolt_chains_query.get_mut(bolt_entity) {
+                let bumped_grade = match performed.grade {
+                    BumpGrade::Perfect => Trigger::PerfectBumped,
+                    BumpGrade::Early => Trigger::EarlyBumped,
+                    BumpGrade::Late => Trigger::LateBumped,
+                };
+                evaluate_entity_chains(
+                    &mut bolt_chains,
+                    bumped_grade,
+                    targets.clone(),
+                    &mut commands,
+                );
+                evaluate_entity_chains(&mut bolt_chains, Trigger::Bumped, targets, &mut commands);
+            }
         } else {
             // No bolt — still evaluate breaker entity EffectChains with empty targets
             for mut chains in &mut breaker_query {
@@ -144,6 +161,32 @@ pub(crate) fn bridge_bump(
                 evaluate_entity_chains(&mut chains, Trigger::Bump, vec![], &mut commands);
             }
         }
+    }
+}
+
+/// Bridge for `NoBump` — fires when `BoltHitBreaker` arrives without
+/// any `BumpPerformed` in the same frame.
+///
+/// Evaluates active chains and breaker entity `EffectChains` with
+/// `Trigger::NoBump`.
+pub(crate) fn bridge_no_bump(
+    mut hit_reader: MessageReader<BoltHitBreaker>,
+    mut bump_reader: MessageReader<BumpPerformed>,
+    active: Res<ActiveEffects>,
+    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
+    mut commands: Commands,
+) {
+    let hit_count = hit_reader.read().count();
+    let bump_count = bump_reader.read().count();
+
+    if hit_count == 0 || bump_count > 0 {
+        return;
+    }
+
+    evaluate_active_chains(&active, Trigger::NoBump, vec![], &mut commands);
+
+    for mut chains in &mut breaker_query {
+        evaluate_entity_chains(&mut chains, Trigger::NoBump, vec![], &mut commands);
     }
 }
 
@@ -2852,5 +2895,288 @@ mod tests {
             "fired SpeedBoost should have multiplier 1.3, got {}",
             captured.0[0].multiplier
         );
+    }
+
+    // =========================================================================
+    // NoBump bridge tests (behaviors 1-4)
+    // =========================================================================
+
+    /// Test app for `bridge_no_bump` — registers both `BoltHitBreaker` and
+    /// `BumpPerformed` messages so the bridge can detect `NoBump` conditions.
+    fn no_bump_test_app(active_chains: Vec<EffectNode>) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveEffects(wrap_chains(active_chains)))
+            .insert_resource(SendBoltHitBreaker(None))
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(
+                FixedUpdate,
+                (send_bolt_hit_breaker, send_bump, bridge_no_bump).chain(),
+            );
+        app
+    }
+
+    #[test]
+    fn bridge_no_bump_fires_when_bolt_hits_breaker_without_bump() {
+        let chain = EffectNode::trigger_leaf(Trigger::NoBump, Effect::test_shockwave(64.0));
+        let mut app = no_bump_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+
+        // BoltHitBreaker present, NO BumpPerformed
+        app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "NoBump chain should fire when BoltHitBreaker arrives without BumpPerformed"
+        );
+        assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn bridge_no_bump_does_not_fire_when_bump_performed_also_arrives() {
+        let chain = EffectNode::trigger_leaf(Trigger::NoBump, Effect::test_shockwave(64.0));
+        let mut app = no_bump_test_app(vec![chain]);
+        let bolt = app.world_mut().spawn_empty().id();
+
+        // Both BoltHitBreaker AND BumpPerformed present
+        app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert!(
+            captured.0.is_empty(),
+            "NoBump chain should NOT fire when BumpPerformed is also present"
+        );
+    }
+
+    #[test]
+    fn bridge_no_bump_does_not_fire_when_no_bolt_hit_breaker() {
+        let chain = EffectNode::trigger_leaf(Trigger::NoBump, Effect::test_shockwave(64.0));
+        let mut app = no_bump_test_app(vec![chain]);
+
+        // Neither BoltHitBreaker nor BumpPerformed
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert!(
+            captured.0.is_empty(),
+            "NoBump chain should NOT fire when no BoltHitBreaker arrives"
+        );
+    }
+
+    #[test]
+    fn bridge_no_bump_evaluates_breaker_entity_effect_chains() {
+        use crate::{breaker::components::Breaker, effect::definition::EffectChains};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveEffects(wrap_chains(vec![])))
+            .insert_resource(SendBoltHitBreaker(None))
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(
+                FixedUpdate,
+                (send_bolt_hit_breaker, send_bump, bridge_no_bump).chain(),
+            );
+
+        // Breaker entity with NoBump EffectChain
+        let _breaker = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                EffectChains(vec![EffectNode::When {
+                    trigger: Trigger::NoBump,
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                }]),
+            ))
+            .id();
+
+        let bolt = app.world_mut().spawn_empty().id();
+
+        // BoltHitBreaker present, NO BumpPerformed
+        app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "bridge_no_bump should evaluate breaker entity EffectChains with Trigger::NoBump"
+        );
+        assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
+    }
+
+    // =========================================================================
+    // Bumped split in bridge_bump tests (behaviors 5-8)
+    // =========================================================================
+
+    #[test]
+    fn bridge_bump_fires_perfect_bumped_on_bolt_entity_effect_chains() {
+        use crate::{breaker::components::Breaker, effect::definition::EffectChains};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveEffects(wrap_chains(vec![])))
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
+
+        // Bolt entity with PerfectBumped EffectChain
+        let bolt = app
+            .world_mut()
+            .spawn(EffectChains(vec![EffectNode::When {
+                trigger: Trigger::PerfectBumped,
+                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+            }]))
+            .id();
+
+        // Spawn breaker entity so breaker_query has something
+        app.world_mut().spawn((Breaker, EffectChains::default()));
+
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "PerfectBumped chain on bolt entity should fire on Perfect bump"
+        );
+        assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn bridge_bump_fires_generic_bumped_on_bolt_entity_for_any_grade() {
+        use crate::{breaker::components::Breaker, effect::definition::EffectChains};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveEffects(wrap_chains(vec![])))
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
+
+        // Bolt entity with generic Bumped EffectChain
+        let bolt = app
+            .world_mut()
+            .spawn(EffectChains(vec![EffectNode::When {
+                trigger: Trigger::Bumped,
+                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+            }]))
+            .id();
+
+        // Spawn breaker entity so breaker_query has something
+        app.world_mut().spawn((Breaker, EffectChains::default()));
+
+        // Send Early bump — Bumped should match any non-whiff grade
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Early,
+            bolt: Some(bolt),
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "Bumped chain on bolt entity should fire for Early grade (matches any non-whiff)"
+        );
+        assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn bridge_bump_perfect_bumped_does_not_fire_on_breaker_entity() {
+        use crate::{breaker::components::Breaker, effect::definition::EffectChains};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveEffects(wrap_chains(vec![])))
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
+
+        // Breaker entity with PerfectBumped EffectChain — should NOT fire
+        // (PerfectBumped is bolt-perspective only)
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(vec![EffectNode::When {
+                trigger: Trigger::PerfectBumped,
+                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+            }]),
+        ));
+
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert!(
+            captured.0.is_empty(),
+            "PerfectBumped on breaker entity should NOT fire — Bumped is bolt-perspective only"
+        );
+    }
+
+    #[test]
+    fn bridge_bump_perfect_bump_still_fires_on_breaker_entity() {
+        use crate::{breaker::components::Breaker, effect::definition::EffectChains};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .insert_resource(ActiveEffects(wrap_chains(vec![])))
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
+
+        // Breaker entity with PerfectBump (breaker-perspective) EffectChain
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(vec![EffectNode::When {
+                trigger: Trigger::PerfectBump,
+                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+            }]),
+        ));
+
+        let bolt = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "PerfectBump (breaker-perspective) on breaker entity should still fire"
+        );
+        assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
     }
 }

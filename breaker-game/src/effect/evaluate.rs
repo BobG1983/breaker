@@ -61,6 +61,7 @@ pub(crate) fn evaluate_node(trigger: Trigger, node: &EffectNode) -> Vec<NodeEval
 /// and always return `false`.
 fn trigger_matches(runtime: Trigger, declared: Trigger) -> bool {
     match (runtime, declared) {
+        (Trigger::Impact(a), Trigger::Impact(b)) => a == b,
         (Trigger::PerfectBump, Trigger::PerfectBump)
         | (Trigger::Bump, Trigger::Bump)
         | (Trigger::EarlyBump, Trigger::EarlyBump)
@@ -68,8 +69,12 @@ fn trigger_matches(runtime: Trigger, declared: Trigger) -> bool {
         | (Trigger::BumpWhiff, Trigger::BumpWhiff)
         | (Trigger::CellDestroyed, Trigger::CellDestroyed)
         | (Trigger::BoltLost, Trigger::BoltLost)
-        | (Trigger::Death, Trigger::Death) => true,
-        (Trigger::Impact(a), Trigger::Impact(b)) => a == b,
+        | (Trigger::Death, Trigger::Death)
+        | (Trigger::NoBump, Trigger::NoBump)
+        | (Trigger::PerfectBumped, Trigger::PerfectBumped)
+        | (Trigger::Bumped, Trigger::Bumped)
+        | (Trigger::EarlyBumped, Trigger::EarlyBumped)
+        | (Trigger::LateBumped, Trigger::LateBumped) => true,
         _ => false,
     }
 }
@@ -347,5 +352,166 @@ mod tests {
             11,
             "Trigger should have 11 runtime variants"
         );
+    }
+
+    // =========================================================================
+    // NoBump + Bumped trigger variant tests
+    // =========================================================================
+
+    #[test]
+    fn evaluate_node_no_bump_trigger_fires_do_leaf() {
+        let node = EffectNode::When {
+            trigger: Trigger::NoBump,
+            then: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
+        };
+        let result = evaluate_node(Trigger::NoBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::DamageBoost(2.0))],
+            "NoBump should match When(NoBump) and fire Do leaf"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_no_bump_does_not_match_perfect_bump() {
+        let node = EffectNode::When {
+            trigger: Trigger::NoBump,
+            then: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
+        };
+        let result = evaluate_node(Trigger::PerfectBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "PerfectBump should not match When(NoBump)"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_perfect_bumped_fires_do_leaf() {
+        let node = EffectNode::When {
+            trigger: Trigger::PerfectBumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::PerfectBumped, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::test_shockwave(64.0))],
+            "PerfectBumped should match When(PerfectBumped) and fire Do leaf"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_perfect_bumped_does_not_match_perfect_bump() {
+        let node = EffectNode::When {
+            trigger: Trigger::PerfectBumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::PerfectBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "PerfectBump should not match When(PerfectBumped) — Bump != Bumped"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_bumped_fires_do_leaf() {
+        let node = EffectNode::When {
+            trigger: Trigger::Bumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::Bumped, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::test_shockwave(64.0))],
+            "Bumped should match When(Bumped) and fire Do leaf"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_bumped_does_not_match_bump() {
+        let node = EffectNode::When {
+            trigger: Trigger::Bumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::Bump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "Bump should not match When(Bumped) — Bump != Bumped"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_early_bumped_fires_do_leaf() {
+        let node = EffectNode::When {
+            trigger: Trigger::EarlyBumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::EarlyBumped, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::test_shockwave(64.0))],
+            "EarlyBumped should match When(EarlyBumped) and fire Do leaf"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_early_bumped_does_not_match_early_bump() {
+        let node = EffectNode::When {
+            trigger: Trigger::EarlyBumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::EarlyBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "EarlyBump should not match When(EarlyBumped) — Bump != Bumped"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_late_bumped_fires_do_leaf() {
+        let node = EffectNode::When {
+            trigger: Trigger::LateBumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::LateBumped, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::Fire(Effect::test_shockwave(64.0))],
+            "LateBumped should match When(LateBumped) and fire Do leaf"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_late_bumped_does_not_match_late_bump() {
+        let node = EffectNode::When {
+            trigger: Trigger::LateBumped,
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let result = evaluate_node(Trigger::LateBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "LateBump should not match When(LateBumped) — Bump != Bumped"
+        );
+    }
+
+    #[test]
+    fn evaluate_node_no_bump_does_not_match_any_bump_variant() {
+        let bump_triggers = [Trigger::PerfectBump, Trigger::Bump, Trigger::BumpWhiff];
+        for bump_trigger in bump_triggers {
+            let node = EffectNode::When {
+                trigger: bump_trigger,
+                then: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
+            };
+            let result = evaluate_node(Trigger::NoBump, &node);
+            assert_eq!(
+                result,
+                vec![NodeEvalResult::NoMatch],
+                "NoBump should not match When({bump_trigger:?})"
+            );
+        }
     }
 }

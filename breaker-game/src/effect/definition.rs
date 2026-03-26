@@ -77,6 +77,16 @@ pub enum Trigger {
     /// Fires when the breaker dies (all lives lost or timer expired).
     #[serde(rename = "OnDeath")]
     Death,
+    /// Fires when the bolt passes the breaker without being bumped.
+    NoBump,
+    /// Fires after a perfect bump completes (post-bump event, not the bump itself).
+    PerfectBumped,
+    /// Fires after any non-whiff bump completes (post-bump event).
+    Bumped,
+    /// Fires after an early bump completes (post-bump event).
+    EarlyBumped,
+    /// Fires after a late bump completes (post-bump event).
+    LateBumped,
     /// Passive effects: evaluated immediately on chip selection.
     #[serde(rename = "OnSelected")]
     Selected,

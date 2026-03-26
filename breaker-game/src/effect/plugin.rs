@@ -5,8 +5,9 @@ use bevy::prelude::*;
 use super::{
     bridges::{
         apply_once_nodes, bridge_bolt_death, bridge_bolt_lost, bridge_breaker_impact, bridge_bump,
-        bridge_bump_whiff, bridge_cell_death, bridge_cell_impact, bridge_timer_threshold,
-        bridge_wall_impact, cleanup_destroyed_bolts, cleanup_destroyed_cells,
+        bridge_bump_whiff, bridge_cell_death, bridge_cell_impact, bridge_no_bump,
+        bridge_timer_threshold, bridge_wall_impact, cleanup_destroyed_bolts,
+        cleanup_destroyed_cells,
     },
     effects::{
         attraction::handle_attraction,
@@ -101,6 +102,10 @@ impl Plugin for EffectPlugin {
                         .in_set(EffectSystems::Bridge),
                     bridge_wall_impact
                         .after(BoltSystems::BreakerCollision)
+                        .in_set(EffectSystems::Bridge),
+                    bridge_no_bump
+                        .after(bridge_breaker_impact)
+                        .after(bridge_bump)
                         .in_set(EffectSystems::Bridge),
                     bridge_cell_death.in_set(EffectSystems::Bridge),
                     bridge_bolt_death.in_set(EffectSystems::Bridge),
