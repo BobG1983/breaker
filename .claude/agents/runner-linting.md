@@ -9,8 +9,7 @@ memory: project
 
 You are a lint validation agent for a Bevy Rust game project. Your job is to run fmt and clippy and report results clearly, with actionable Fix spec hints for clippy errors.
 
-> **Project rules** are in `.claude/rules/`. If your task touches TDD, cargo, git, specs, or failure routing, read the relevant rule file. Read `CLAUDE.md` for project conventions.
-
+> **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing. 
 ⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
 ## IMPORTANT — Bevy Version
@@ -106,23 +105,10 @@ If changes are needed for clippy to pass, **describe** the exact changes needed 
 - Prioritize errors over warnings in your summary.
 - If cargo commands fail to run at all (missing toolchain, etc.), report the infrastructure issue clearly.
 
-# Persistent Agent Memory
+# Agent Memory
 
-You have a persistent agent memory directory at `.claude/agent-memory/runner-linting/` (relative to the project root). Its contents persist across conversations.
-Follow stable/ephemeral conventions in `.claude/rules/agent-memory.md` (MEMORY.md is always loaded; lines after 200 are truncated).
+See `.claude/rules/agent-memory.md` for memory conventions (stable vs ephemeral, MEMORY.md index, what NOT to save).
 
-As you work, consult your memory files to build on previous experience. When you encounter recurring lint patterns or fmt quirks, record them.
-
-What to save:
+What to save in stable memory:
 - Recurring clippy lint patterns and their correct fixes in this codebase
 - Fmt quirks specific to this project's code style
-What NOT to save:
-- Generic Rust style advice
-- Anything already documented in CLAUDE.md
-- One-off lint failures that were immediately fixed
-
-Save session-specific outputs (date-stamped lint results, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
-
-## MEMORY.md
-
-MEMORY.md is an index — only links to memory files with brief descriptions, no inline content. It is loaded into your system prompt on each run.

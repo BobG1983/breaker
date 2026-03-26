@@ -1,6 +1,6 @@
 # Failure Routing
 
-Read this when a Phase 2 agent reports a failure. Each failure type routes to a different fix path.
+Read this when a verification agent reports a failure. Each failure type routes to a different fix path.
 
 See `.claude/rules/hint-formats.md` for the standardized hint block formats that agents emit.
 See `.claude/rules/orchestration.md` for circuit breaking (3 attempts → Stuck) and context pruning.
@@ -63,6 +63,14 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | Outdated (feature update) | Main agent evaluates and bumps if appropriate |
 | License issue | Main agent evaluates — may need to replace the crate |
 | Duplicate transitive | Main agent evaluates — may need to pin or unify |
+
+## reviewer-file-length findings
+
+| Priority | Route |
+|---|---|
+| HIGH (1000+ lines or 800+ test lines) | Refactor spec hint → **writer-code** (mechanical split, no tests needed) |
+| MEDIUM (600-999 lines) | Queue for next refactor opportunity — not urgent |
+| LOW (400-599 lines) | Note only — split when file is next modified |
 
 ## reviewer-tests findings
 

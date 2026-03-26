@@ -1,6 +1,6 @@
 # Delegated Implementation
 
-All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, routes failures, and handles shared wiring. The **planner-spec** → **planner-review** → **writer-tests** → **writer-code** pipeline produces the code.
+All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The **planner-spec** → **planner-review** → **writer-tests** → **writer-code** pipeline produces the code.
 
 ## The Flow
 
@@ -9,27 +9,32 @@ See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6).
 See `.claude/rules/spec-formats.md` for spec templates and quality rules.
 See `.claude/rules/git.md` for git usage and rules.
 
+Verification tiers are defined in `.claude/rules/verification-tiers.md`.
+
 ```
 1. Main agent describes the feature, identifies parallel waves
-2. Research wave (when triggered — see below)                      ── optional
-3. Launch planner-specs per wave (in parallel)                      ── SPEC phase
+2. Research wave (when triggered — see below)                                  ── optional
+3. Launch planner-specs per wave (in parallel)                                  ── SPEC phase
 4. Launch planner-reviews as each spec completes (in parallel)
 5. Main agent triages reviews, sends revisions back to planner-spec
 6. Repeat 4–5 until planner-review confirms specs are clean
 7. Main agent reviews final specs, creates shared prerequisites
-8. Launch writer-tests as each spec is finalized (in parallel)      ── RED phase
+8. Launch writer-tests as each spec is finalized (in parallel)                  ── RED phase
 9. Launch reviewer-tests as each writer-tests completes (in parallel)
-10. After ALL reviewer-tests pass: single runner-tests               ── RED gate (cargo — serialized)
-11. Launch ALL writer-codes in parallel                              ── GREEN phase
-12. After ALL writer-codes complete: single runner-tests             ── GREEN gate (cargo — serialized)
-13. Launch verification wave (lint, reviewers, scenarios)           ─┐
-14. Route failures through fix agents                                │ REFACTOR phase
-15. Run /simplify on changed code                                    │
-16. Repeat 13–15 until all agents pass and /simplify is clean        │
-17. Main agent handles wiring (lib.rs, game.rs, shared.rs)          ─┘
-18. Update session-state.md
-19. Run the full verification suite (all lints, tests, reviewers, and guards)  ── BUG IDENTIFICATION AND FIX phase
-20. Commit and Merge according to git rules. 
+10. After ALL reviewer-tests pass: single runner-tests                          ── RED gate
+11. Launch ALL writer-codes in parallel                                         ── GREEN phase
+12. After ALL writer-codes complete: single runner-tests                        ── GREEN gate
+13. Basic Verification Tier                                                    ─┐
+14. Route failures → fix agents → Basic Verification Tier after each fix        │ REFACTOR
+15. /simplify on changed code → Basic Verification Tier if changes              │
+16. Repeat 13–15 until Basic Verification Tier is clean and /simplify is clean  │
+17. Wiring (lib.rs, game.rs, shared.rs) → Basic Verification Tier             ─┘
+18. Standard Verification Tier                                                  ── commit gate
+19. Route failures → fix agents → Basic Verification Tier → repeat from 13
+20. Commit
+21. Full Verification Tier                                                      ── pre-merge gate
+22. Route failures → fix agents → Basic Verification Tier → Standard → Full
+23. Merge according to git rules
 ```
 
 ### Key principle: maximize parallelism, serialize only cargo
@@ -41,7 +46,7 @@ See `.claude/rules/git.md` for git usage and rules.
 - **RED gate**: single `runner-tests` after ALL reviewer-tests pass (cargo — serialized)
 - **Writer-codes**: run in parallel after RED gate (no cargo)
 - **GREEN gate**: single `runner-tests` after ALL writer-codes complete (cargo — serialized)
-- **Verification**: lint + reviewers + scenarios (cargo steps serialized)
+- **Basic → Standard → Full Verification Tiers**: see `.claude/rules/verification-tiers.md`
 - **Planning ahead**: launch planner-spec/planner-review for upcoming phases while current implementation is in flight
 
 ## Parallel Waves
@@ -65,18 +70,12 @@ Each wave runs its own spec → review → writer-tests → reviewer-tests pipel
 
 ## Research Wave (Step 2)
 
-Before planner-spec runs, launch research agents in parallel to surface conflicts early. This is optional — skip it for single-domain features with familiar APIs.
+Before planner-spec runs, launch research agents in parallel to surface conflicts early. This is optional — skip it for single-domain features with familiar APIs. See `.claude/rules/sub-agents.md` (Research Agents) for the full agent list and when each applies.
 
 **Triggers** (any of these):
 - Feature touches 2+ domains
 - Feature uses unfamiliar Bevy 0.18 APIs
 - Feature adds new messages, state transitions, or cross-plugin data flow
-
-**Agents to launch** (in parallel):
-- **researcher-system-dependencies** — "Analyze potential conflicts for a feature that adds [X] to [domain A] and [domain B]. Focus on query conflicts, message flow gaps, and ordering issues."
-- **researcher-bevy-api** — only when unfamiliar APIs are involved
-- **researcher-impact** — when modifying existing types/systems/messages
-- **researcher-codebase** — when modifying existing behavior (need to understand current flow)
 
 **Feed results into planner-spec**: include the research reports in the planner-spec feature description so specs account for known conflicts and correct API patterns from the start.
 

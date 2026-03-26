@@ -36,8 +36,8 @@ type: reference
 - Added to ordering.md defined sets table with note "intra-domain only"
 
 ## Chips Domain Architecture (do not re-flag)
-- `chips/` has `definition.rs` (content data types: ChipDefinition, AmpEffect, AugmentEffect, ChipEffect, TriggerChain, ImpactTarget, Rarity, ChipEffectApplied)
-- `chips/effects/` promoted directory with per-effect observer handlers (mirrors behaviors/effects/ pattern — note: behaviors/consequences/ was deleted in refactor/unify-behaviors; behaviors/effects/ is the current name)
+- `chips/` has `definition.rs` (content data types: ChipDefinition, ChipTemplate, RaritySlot, EvolutionIngredient, EvolutionRecipe, Rarity — TriggerChain/AmpEffect/AugmentEffect/ChipEffectApplied all deleted in C7-R)
+- `chips/effects/` promoted directory with per-effect observer handlers (mirrors `effect/effects/` pattern — note: `behaviors/effects/` was renamed to `effect/effects/` in C7-R)
 - `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
 - `ChipEffectApplied` documented in messages.md Observer Events table
 
@@ -116,13 +116,12 @@ type: reference
 
 ### BreakerSystems::GradeBump (do not re-flag)
 - `BreakerSystems::GradeBump` is a real set variant in `breaker/sets.rs` — tags `grade_bump` system
-- Cross-domain consumers: `behaviors/plugin.rs` orders `bridge_bump` and `bridge_bump_whiff` `.after(BreakerSystems::GradeBump)`
+- Cross-domain consumers: `effect/plugin.rs` orders `bridge_bump` and `bridge_bump_whiff` `.after(BreakerSystems::GradeBump)`
 - Added to ordering.md defined sets table and FixedUpdate chain
 
 ### bridge_bump_whiff (do not re-flag)
-- `bridge_bump_whiff` is a real bridge system in `behaviors/bridges.rs` — reads `BumpWhiffed`, fires `EffectFired`
-- Runs `.after(BreakerSystems::GradeBump).in_set(BehaviorSystems::Bridge)`
-- NOTE: previously fired `ConsequenceFired` — now fires `EffectFired` after TriggerChain unification
+- `bridge_bump_whiff` is a real bridge system in `effect/triggers/on_bump.rs` — reads `BumpWhiffed`, fires `NoBumpFired` typed event
+- Runs `.after(BreakerSystems::GradeBump).in_set(EffectSystems::Bridge)`
 
 ### Phase 4 Wave 2 Completion (as of 2026-03-19)
 - 4c.1 (Rarity enum + ChipInventory): DONE — `Rarity` in `chips/definition.rs`, `ChipInventory` in `chips/inventory.rs`
@@ -140,59 +139,14 @@ type: reference
 - Registered in `ChipsPlugin` as `init_resource::<ChipInventory>()`
 - Also cleared in `reset_run_state` — chips domain resource touched by run domain at run start (intentional cross-domain resource write in init system)
 
-## New Chip Effects (as of 2026-03-19 session 5) (do not re-flag)
-- `AmpEffect::ChainHit(u32)` and `AmpEffect::SizeBoost(f32)` added to `chips/definition.rs`
-- `ChainHit` and `BoltSizeBoost` components in `chips/components.rs`
-- `handle_chain_hit` and `handle_bolt_size_boost` observers registered in `ChipsPlugin`
-- `ChainHit` and `BoltSizeBoost` are stamped by observers but NOT yet consumed by any production gameplay system (physics, cells, bolt) — NOT cross-domain reads yet, not added to plugins.md cross-domain section
-- `content.md` already documents these correctly (AmpEffect enum and component list updated)
-- SUPERSEDED BY TRIGGERCHAIN UNIFICATION: `behaviors/consequences/` directory deleted; replaced by `behaviors/effects/` with `life_lost`, `time_penalty`, `spawn_bolt`, `shockwave` handlers
-- `BoltSpeedBoost` is now a `TriggerChain` leaf variant — no longer a separate file
-
 ## SpeedBoost Generalization (merged into develop 2026-03-21) (do not re-flag)
-- `TriggerChain::BoltSpeedBoost` renamed to `TriggerChain::SpeedBoost { target: SpeedBoostTarget, multiplier: f32 }`
-- `BumpPerformed.multiplier` field deleted — message is now `{ grade: BumpGrade, bolt: Entity }` only
 - `apply_bump_velocity` system deleted from bolt domain entirely
 - `BumpPerfectMultiplier` and `BumpWeakMultiplier` components deleted from breaker domain
-- SpeedBoost is now a normal `TriggerChain` leaf effect handled by `handle_speed_boost` observer in `behaviors/effects/speed_boost.rs`
-- `SpeedBoostTarget` enum in `chips/definition.rs`: variants `Bolt`, `Breaker`, `AllBolts` (Breaker and AllBolts are no-ops for now)
+- SpeedBoost is now `Effect::SpeedBoost { multiplier: f32 }` in `effect/effects/speed_boost.rs`
+- `BumpPerformed.multiplier` field deleted — message is now `{ grade: BumpGrade, bolt: Entity }` only
 
-## TriggerChain Unification (refactor/unify-behaviors, as of 2026-03-21) (do not re-flag)
-
-### Core architectural changes
-- `ActiveBehaviors` + `ActiveOverclocks` → single `ActiveChains(Vec<TriggerChain>)` resource in `behaviors/active.rs`
-- `ConsequenceFired(Consequence)` + `OverclockEffectFired` → single `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` in `behaviors/events.rs`
-- `behaviors/consequences/` directory deleted → replaced by `behaviors/effects/` (life_lost, time_penalty, spawn_bolt, shockwave)
-- `bolt/behaviors/` directory deleted — all bridges now live in `behaviors/bridges.rs`
-- New files: `behaviors/armed.rs` (ArmedTriggers component), `behaviors/evaluate.rs` (TriggerKind + evaluate() fn), `behaviors/events.rs` (EffectFired)
-- `ArchetypeDefinition` now has named root fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`: `Option<TriggerChain>`) + `chains: Vec<TriggerChain>` — no more `BehaviorBinding` vec
-
-### New bridge systems in BehaviorSystems::Bridge
-- `bridge_cell_impact` — reads `BoltHitCell`, runs `.after(BoltSystems::BreakerCollision)`
-- `bridge_breaker_impact` — reads `BoltHitBreaker`, runs `.after(BoltSystems::BreakerCollision)`
-- `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(BoltSystems::BreakerCollision)`
-- `bridge_cell_destroyed` — reads `CellDestroyed`, unordered (no physics dependency)
-
-### BumpPerformed carries bolt field only
-- `BumpPerformed { grade, bolt: Entity }` — no multiplier field; bridge_bump uses bolt to arm specific bolt
-- SpeedBoost generalization refactor (refactor/unify-behaviors) removed `multiplier` from BumpPerformed and deleted `apply_bump_velocity` system from bolt domain
-- Bump velocity scaling is now handled through `TriggerChain::SpeedBoost { target, multiplier }` fired through `EffectFired`, not through BumpPerformed
-
-### Scenario runner new field
-- `ScenarioDefinition.initial_overclocks: Option<Vec<TriggerChain>>` — injects overclock chains at scenario start without going through chip selection UI. Used in `surge_overclock.scenario.ron`.
-
-### Phase 4d status
-- 4d is complete on feature/overclock-trigger-chain branch. Plan updated to mark all 4d sub-stages done.
-
-## refactor/unify-behaviors Branch New Content (as of 2026-03-21, do not re-flag)
-- `chips/effects/bolt_speed_boost.rs` + `handle_bolt_speed_boost` observer: handles `AmpEffect::SpeedBoost`
-- `chips/effects/breaker_speed_boost.rs` + `handle_breaker_speed_boost` observer: handles `AugmentEffect::SpeedBoost`
-- `chips/effects/bump_force_boost.rs` + `handle_bump_force_boost` observer: handles `AugmentEffect::BumpForce`
-- `chips/effects/tilt_control_boost.rs` + `handle_tilt_control_boost` observer: handles `AugmentEffect::TiltControl`
-- `BreakerSpeedBoost`, `BumpForceBoost`, `TiltControlBoost` components in `chips/components.rs` — all already documented in content.md and plugins.md
-- `TriggerChain::MultiBolt` and `TriggerChain::Shield` leaf variants: in code and already documented in `docs/design/triggers-and-effects.md` (marked "not yet wired")
-- `TriggerKind` / `EvalResult` in `behaviors/evaluate.rs`: internal eval types, not glossary-level terms
-- `FrameMutation` / `MutationKind`: added to `docs/design/terminology.md` in 2026-03-21 session
+## refactor/unify-behaviors / C7-R Architecture (superseded — do not re-flag)
+All TriggerChain/ActiveChains/ActiveEffects/BehaviorSystems references are historical. The final state is documented in the "C7-R Effect Domain Architecture" section above. Do NOT re-flag `behaviors/` paths, `TriggerChain` types, `EffectFired` (unified type), `ActiveChains`, or `BehaviorSystems::Bridge`.
 
 ## Spatial/Physics Extraction Architecture (2026-03-24, do not re-flag)
 
@@ -282,10 +236,10 @@ type: reference
 ### RampingDamage max_bonus removed
 - `RampingDamage` now only has `bonus_per_hit: f32` — no `max_bonus` field
 
-### TriggerChain still exists in chips/definition.rs
-- `TriggerChain` enum in `chips/definition.rs` is a legacy/parallel chip-side tree (using `On*` wrappers)
-- `ChipDefinition.effects: Vec<EffectNode>` (not Vec<TriggerChain>) — chips have migrated to EffectNode
-- Do NOT re-flag `TriggerChain` in chips/definition.rs as drift — it may be used by the chip dispatch pipeline
+### TriggerChain removed from chips/definition.rs (2026-03-25, C7-R)
+- `TriggerChain` enum is DELETED from `chips/definition.rs` — fully replaced by `EffectNode`/`Effect`/`Trigger` tree
+- `ChipDefinition.effects: Vec<EffectNode>` — chips use the same EffectNode tree as BreakerDefinition
+- `dispatch_chip_effects` routes via `RootEffect::On` → `EffectNode` → typed per-effect events
 
 ### Three Effect Stores (do not re-flag after 2026-03-25 fix)
 - `ActiveEffects` — global Resource, populated by `init_breaker` and `dispatch_chip_effects`. Bridge helpers sweep for global triggers.
@@ -332,4 +286,4 @@ type: reference
 - `standards.md` scenario runner section: use `cargo scenario` alias (not `dscenario`) for all standard usage; runner is headless by default (`--visual` to open window, no `--headless` flag)
 - New chip effect observers land in `chips/effects/` but content.md covers them via the flat component list — don't re-flag observer names as missing unless new component types are added
 - Effect domain uses `EffectSystems::Bridge` (not `BehaviorSystems::Bridge`) — check ordering.md and messages.md after any bridge refactor
-- `TriggerChain` in chips/definition.rs coexists with `EffectNode` in effect/definition.rs — these are separate types serving different subsystems; don't flag as redundancy
+- `TriggerChain` is DELETED from all source files — do not reference it; only `EffectNode`/`Effect`/`Trigger` exist now

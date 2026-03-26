@@ -76,7 +76,7 @@ NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKi
 - `MovementQuery` — (&mut Transform, &mut BreakerVelocity, &BreakerState, &BreakerMaxSpeed, &BreakerAcceleration, &BreakerDeceleration, &DecelEasing, &BreakerWidth)
 - `BumpTimingQuery` — (&mut BumpState, &BumpPerfectWindow, &BumpEarlyWindow, &BumpLateWindow, &BumpPerfectCooldown, &BumpWeakCooldown)
 - `BumpGradingQuery` — (&mut BumpState, &BumpPerfectWindow, &BumpLateWindow, &BumpPerfectCooldown, &BumpWeakCooldown)
-- NOTE (2026-03-21): BumpPerfectMultiplier and BumpWeakMultiplier DELETED from both queries. Multiplier logic moved to TriggerChain::SpeedBoost leaves in archetype RON.
+- NOTE (2026-03-21, still current): BumpPerfectMultiplier and BumpWeakMultiplier DELETED. Multiplier logic now in EffectNode trees in archetype RON (TriggerChain::SpeedBoost was the intermediate step; fully replaced by C7-R EffectNode design).
 
 ### Components (core.rs)
 - `Breaker` — marker (pub)
@@ -114,16 +114,14 @@ NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKi
 NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, typed events, bridges, evaluate, active chains, armed triggers, and per-effect handlers now live here. EffectPlugin in `effect/plugin.rs`.
 
 ### Resources
-- `ActiveEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/active.rs` — runtime active trigger chains
-- `BreakerRegistry` in `effect/registry.rs` — name->BreakerDefinition lookup
+- `BreakerRegistry` in `breaker/registry.rs` — name->BreakerDefinition lookup (moved from effect/ in C7-R)
+- NOTE: `ActiveEffects` DELETED in C7-R — replaced by `EffectChains` component per entity
 
 ### Components
-- `ArmedEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/armed.rs` — per-bolt partially resolved chains
+- `ArmedEffects(pub Vec<(Option<String>, EffectNode)>)` in `effect/armed.rs` — per-bolt partially resolved chains (was TriggerChain before C7-R)
+- `EffectChains(Vec<EffectNode>)` in `breaker/mod.rs` (or bolt) — entity-local effect chains (C7-R: implemented, not planned)
 - `EffectTarget` in `effect/definition.rs` — marker for entities that can have effects
-- NOTE (C7 Wave 2a): `EffectChains(Vec<EffectNode>)` planned in `effect/components.rs` — entity-local effect chains
-- NOTE (C7 Wave 2a): `UntilTimers`, `UntilTriggers` planned in `effect/effects/until.rs`
-- NOTE (C7 Wave 2b): `AttractionState { active_types: HashSet<AttractionType> }` planned in `effect/effects/attraction.rs`
-- NOTE (C7 Wave 2b): `SecondWindWall` marker planned in `effect/effects/second_wind.rs`
+- NOTE: `UntilTimers`, `UntilTriggers` in `effect/effects/until.rs`
 
 ### Typed Events (`effect/typed_events.rs`)
 - Triggered: `ShockwaveFired`, `LoseLifeFired`, `TimePenaltyFired`, `SpawnBoltsFired`, `SpeedBoostFired`, `ChainBoltFired`, `MultiBoltFired`, `ShieldFired`, `ChainLightningFired`, `SpawnPhantomFired`, `PiercingBeamFired`, `GravityWellFired`, `SecondWindFired`, `RandomEffectFired`, `EntropyEngineFired`
@@ -140,13 +138,14 @@ NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, t
 - `BreakerDefinition`, `BreakerStatOverrides`
 
 ### Pure functions (`effect/evaluate.rs`)
-- `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> Vec<EvalResult>` — NoMatch/Arm/Fire
-- `evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<NodeEvalResult>`
-- `TriggerKind` enum — PerfectBump, BumpSuccess, EarlyBump, LateBump, BumpWhiff, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost. Wave 2a adds: Death
+- `evaluate_node(trigger: Trigger, node: &EffectNode) -> Option<&[EffectNode]>` — returns matching children or None
+- NOTE: Old `evaluate(trigger: TriggerKind, chain: &TriggerChain)`, `TriggerKind` enum, and `EvalResult`/`NodeEvalResult` DELETED in C7-R
+- Helpers in `effect/helpers.rs`: `evaluate_armed`, `evaluate_armed_all`, `evaluate_entity_chains`, `evaluate_until_children`
 
-### Bridge systems (`effect/bridges.rs`)
-- `bridge_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_lost`, `bridge_bump_whiff`
-- Helper: `fire_leaf(leaf, bolt, source_chip, commands)` — converts TriggerChain leaf -> Effect -> typed event
+### Bridge systems (`effect/bridges.rs` and `effect/triggers/`)
+- C7-R restructured bridges: one-trigger-per-file in `effect/triggers/` with self-registration
+- `bridge_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_lost`, `bridge_bump_whiff`, etc.
+- NOTE: `fire_leaf(leaf, bolt, source_chip, commands)` DELETED in C7-R — replaced by `evaluate_entity_chains` + typed event dispatch per trigger file
 
 ### Per-effect handlers (`effect/effects/`)
 - Triggered: shockwave, life_lost, time_penalty, spawn_bolt, speed_boost, chain_bolt, multi_bolt, shield, chain_lightning, spawn_phantom, piercing_beam, gravity_well, second_wind, random_effect, entropy_engine
@@ -154,8 +153,9 @@ NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, t
 - Passive: piercing, damage_boost, bolt_speed_boost, chain_hit, bolt_size_boost, width_boost, breaker_speed_boost, bump_force_boost, tilt_control_boost, attraction, ramping_damage
 - Helpers in `effect/effects/mod.rs`: `stack_u32`, `stack_f32`
 
-### Test convenience constructors (`chips/definition.rs` — #[cfg(test)] impl TriggerChain)
-- `test_shockwave(range: f32)`, `test_multi_bolt(count: u32)`, `test_shield(duration: f32)`, `test_lose_life()`, `test_time_penalty(seconds: f32)`, `test_spawn_bolt()`, `test_speed_boost(multiplier: f32)`, `test_chain_bolt(tether_distance: f32)`
+### Test convenience constructors (`effect/definition.rs` — #[cfg(test)] impl Effect or EffectNode)
+- NOTE: TriggerChain and `chips/definition.rs` impl TriggerChain DELETED in C7-R
+- Test helpers now in `effect/definition.rs` using EffectNode/Effect types directly
 
 ## rantzsoft_spatial2d (`rantzsoft_spatial2d/src/`)
 

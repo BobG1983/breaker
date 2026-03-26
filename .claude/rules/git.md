@@ -96,15 +96,9 @@ rm .git/gitflow/state/merge.json
 
 ## Pre-Merge Guard Gate
 
-Before `git flow <type> finish` (merging to `develop`), run ALL guard agents:
+Before `git flow <type> finish` (merging to `develop`), run the **Full Verification Tier** — see `.claude/rules/verification-tiers.md` for the complete agent list.
 
-- **guard-security**
-- **guard-docs**
-- **guard-game-design**
-- **guard-dependencies**
-- **guard-agent-memory**
-
-All guards must pass before finishing the branch. Fix any findings before merging.
+The Full Verification Tier includes the Standard Verification Tier (which must already be passing from pre-commit) plus all guards, scenarios, and structural reviewers. All agents must pass before finishing the branch. Fix any findings before merging.
 
 ## History Hygiene
 

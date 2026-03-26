@@ -67,13 +67,13 @@ Not worth fixing unless the asymmetry causes confusion.
 
 ---
 
-## HOT-RELOAD NO CONFLICT — propagate_archetype_changes writes BreakerConfig AND ActiveEffects in same system
+## HOT-RELOAD NO CONFLICT — propagate_breaker_changes writes BreakerConfig AND EffectChains in same system
 
-`propagate_archetype_changes` holds both `ResMut<BreakerConfig>` and `ResMut<ActiveEffects>` (was `ActiveBehaviors` before refactor/unify-behaviors; then `ActiveChains`; then `ActiveEffects` in C7-R).
+`propagate_breaker_changes` (was `propagate_archetype_changes` before C7-R) holds both `ResMut<BreakerConfig>` and `Query<&mut EffectChains, With<Breaker>>` (was `ResMut<ActiveEffects>` before C7-R).
 No other system in PropagateDefaults touches either of these resources (the breaker defaults system
 also takes `ResMut<BreakerConfig>`, but they are UNORDERED within PropagateDefaults).
 
-**Potential Bevy conflict:** `propagate_breaker_defaults` and `propagate_archetype_changes` both take
+**Potential Bevy conflict:** `propagate_breaker_defaults` and `propagate_breaker_changes` both take
 `ResMut<BreakerConfig>`. They are in the same PropagateDefaults set with no ordering between them.
 Bevy will serialize them (cannot run in parallel) due to the mutable resource access.
 
@@ -86,6 +86,8 @@ but the effect is stable (both write the same BreakerConfig structure from their
 **Note:** No ordering constraint is needed or recommended — the asset events that trigger each system
 come from different file-watching sources.
 
+NOTE (C7-R 2026-03-25): propagate_archetype_changes renamed to propagate_breaker_changes; writes EffectChains component (not ActiveEffects global resource).
+
 ---
 
 ## HOT-RELOAD NO CONFLICT — PropagateDefaults systems within the same set are unordered but independent
@@ -96,7 +98,7 @@ mutable access forcing serialization between propagate_breaker_defaults and prop
 Each system guards itself with an asset event check and returns early if no matching Modified event
 was seen. They act on disjoint resources (BoltConfig, BreakerConfig, CellConfig, PlayfieldConfig,
 InputConfig, TimerUiConfig, MainMenuConfig, ChipSelectConfig, CellTypeRegistry, NodeLayoutRegistry,
-BreakerRegistry/ActiveEffects — was ArchetypeRegistry/ActiveBehaviors). No logical dependency between them.
+BreakerRegistry/EffectChains-component — was ArchetypeRegistry/ActiveBehaviors → ActiveChains → ActiveEffects). No logical dependency between them.
 
 ---
 
@@ -160,7 +162,8 @@ tick after Update frame N. The latency is at most 1 fixed tick (~16ms at 60Hz) �
 
 ## DELETED — apply_bump_velocity (was: ordering vs bolt_lost)
 
-`apply_bump_velocity` was DELETED in refactor/unify-behaviors (2026-03-21). Velocity scaling is now handled by TriggerChain::SpeedBoost leaf via EffectFired → handle_speed_boost. No ordering constraint remains.
+`apply_bump_velocity` was DELETED in refactor/unify-behaviors (2026-03-21). Velocity scaling is now handled by the `SpeedBoost` effect (EffectNode::Do(Effect::SpeedBoost)) via the effect trigger pipeline → handle_speed_boost observer. No ordering constraint remains.
+NOTE (C7-R 2026-03-25): TriggerChain::SpeedBoost and EffectFired are also DELETED — replaced by SpeedBoostFired typed event dispatched by trigger systems in effect/triggers/.
 
 ---
 
@@ -263,15 +266,15 @@ This is correct: the new bolt appears on the next tick, which is the intended be
 
 ---
 
-## RESOLVED — spawn_additional_bolt now orders after BehaviorSystems::Bridge
+## RESOLVED — spawn_additional_bolt now orders after EffectSystems::Bridge
 
 `spawn_additional_bolt` previously ordered `.after(BoltSystems::BreakerCollision)` (was `PhysicsSystems::BreakerCollision` before extraction).
-It now orders `.after(BehaviorSystems::Bridge)` — which runs after BreakerCollision.
-This guarantees the SpawnAdditionalBolt message written by the bridge observer is readable
+It now orders `.after(EffectSystems::Bridge)` (was `.after(EffectSystems::Bridge)` before C7-R 2026-03-25) — which runs after BreakerCollision.
+This guarantees the SpawnAdditionalBolt message written by the bridge trigger is readable
 in the same tick.
 
 `apply_bump_velocity` is DELETED (2026-03-21).
-`spawn_additional_bolt` orders `.after(BehaviorSystems::Bridge)`.
+`spawn_additional_bolt` orders `.after(EffectSystems::Bridge)`.
 No explicit ordering between them — but no conflict because spawn_additional_bolt uses
 only Commands (deferred). The spawned entity is not visible in the current tick.
 
@@ -299,15 +302,15 @@ FixedUpdate:
                 → bolt_breaker_collision (.after(bolt_cell_collision), BreakerCollision set)
                     → clamp_bolt_to_playfield (.after(bolt_breaker_collision))  [NEW — safety clamp]
                     → grade_bump (.after(update_bump) AND .after(BreakerCollision))
-                    → bridge_bump (.after(BreakerCollision), BehaviorSystems::Bridge, conditional)
+                    → bridge_bump (.after(BreakerCollision), EffectSystems::Bridge, conditional)
                         → [observer: handle_time_penalty] → ApplyTimePenalty message
                         → [observer: handle_spawn_bolt] → SpawnAdditionalBolt message
                     → track_bump_result (.after(BreakerCollision), dev only)
                     → bolt_lost (.after(clamp_bolt_to_playfield), BoltLost set)  [was .after(bolt_breaker_collision)]
-                        → bridge_bolt_lost (.after(BoltLost), BehaviorSystems::Bridge, conditional)
+                        → bridge_bolt_lost (.after(BoltLost), EffectSystems::Bridge, conditional)
                             → [observer: handle_life_lost] → RunLost message
                             → [observer: handle_time_penalty] → ApplyTimePenalty message
-                    → spawn_additional_bolt (.after(BehaviorSystems::Bridge))
+                    → spawn_additional_bolt (.after(EffectSystems::Bridge))
                         [reads SpawnAdditionalBolt message written by bridge observer — Commands only]
               → grade_bump continuations: perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text (.after(grade_bump))
 

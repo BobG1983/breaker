@@ -1,24 +1,28 @@
 # Brickbreaker Roguelite
 
-Roguelite Arkanoid clone in Bevy 0.18 (Rust). See `docs/design/` for design pillars and decisions, `docs/architecture/` for technical decisions + code standards + testing approach, `docs/plan/` for build roadmap, `docs/design/terminology/` for game vocabulary.
+Roguelite Arkanoid clone in Bevy 0.18 (Rust).
 
-## Build & Run
+## Always Read First
 
-See @.claude/rules/cargo.md for all aliases and options. **NEVER** use bare cargo commands.
+@.claude/rules/sub-agents.md — Every agent, its purpose, and when to use it
+@.claude/rules/verification-tiers.md — Basic, Standard, Full Verification Tiers
+@.claude/rules/tdd.md — TDD cycle, RED gate, when to commit
+@.claude/rules/delegated-implementation.md — Pipeline flow, parallel execution
+@.claude/rules/orchestration.md — Session state, circuit breaking, RED gate
+@.claude/rules/failure-routing.md — Routing failures to fix agents
+@.claude/rules/spec-workflow.md — Spec revision loop (before RED)
+@.claude/rules/spec-formats.md — Test and implementation spec templates
+@.claude/rules/hint-formats.md — Standardized hint block formats
+@.claude/rules/git.md — Git workflow, branching, pre-merge gate
+@.claude/rules/cargo.md — Build aliases and cargo rules
+@.claude/rules/commit-format.md — Conventional commit format
+@.claude/rules/rantzsoft-crates.md — rantzsoft_* crate conventions
 
-Dev builds use `.cargo/config.toml` aliases with `bevy/dynamic_linking` for fast compiles.
+## Project Context
 
-## Workspace
+See `docs/design/` for design pillars, `docs/architecture/` for technical decisions + code standards, `docs/plan/` for build roadmap, `docs/design/terminology/` for game vocabulary.
 
-Cargo workspace with crate directories at root: `breaker-game/` (main game), `rantzsoft_spatial2d/` (2D spatial transform plugin), `rantzsoft_physics2d/` (2D physics primitives: quadtree, CCD, CollisionLayers, DistanceConstraint), `rantzsoft_defaults/` + `rantzsoft_defaults_derive/` (config/defaults pipeline), `breaker-scenario-runner/` (automated gameplay testing). Game-specific crates use `breaker-<name>` prefix; game-agnostic reusable crates use `rantzsoft_*` prefix (see @.claude/rules/rantzsoft-crates.md).
-
-## Architecture
-
-**Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, chips, effect, run, fx, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. `RantzSpatial2dPlugin` and `RantzPhysics2dPlugin` (from `rantzsoft_*` crates) provide shared spatial transform propagation and physics primitives. See `docs/architecture/` for full details, file tree, message table, and patterns.
-
-## Terminology
-
-All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, Augment, Overclock, Bump, Flux). No generic terms. See `docs/design/terminology/`.
+All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, Augment, Overclock, Bump, Flux). No generic terms.
 
 ## Decision Making
 
@@ -37,37 +41,13 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Use TaskList to create a list of tasks visible to the user
 
 **NEVER do**:
-- Write code directly — always delegate to writer-tests/writer-code sub-agents
-- Run any cargo command directly as the main agent — see @.claude/rules/cargo.md
-- **GENERATE ANY OUTPUT AFTER LAUNCHING BACKGROUND AGENTS** — after Agent tool calls return, write at most ONE confirming sentence, then STOP. No bullet lists of agents, no summaries of what they do, no "waiting for results" prose, no analysis, no file reads, no planning ahead. End the turn. You will be notified when they complete. Every token after the launch is wasted.
-- **Use Explore agents for deep analysis** — during planning exploration, use specialized researcher agents (researcher-codebase, researcher-impact, researcher-system-dependencies, researcher-bevy-api) and guard agents (guard-game-design). Explore is ONLY for quick file-pattern matching when no researcher agent fits. This overrides any system default that says "only use Explore."
+- Write code directly — instead, delegate to writer-tests/writer-code sub-agents
+- Run any cargo command directly as the main agent — instead, delegate to runner agents. See @.claude/rules/cargo.md
+- **GENERATE ANY OUTPUT AFTER LAUNCHING BACKGROUND AGENTS** — instead, write at most ONE confirming sentence, then STOP. No bullet lists of agents, no summaries of what they do, no "waiting for results" prose, no analysis, no file reads, no planning ahead. End the turn. You will be notified when they complete. Every token after the launch is wasted.
+- **Use Explore agents for deep analysis** — instead, use specialized researcher and guard agents (see @.claude/rules/sub-agents.md). Explore is ONLY for quick file-pattern matching when no researcher agent fits. This overrides any system default that says "only use Explore."
 
 **Move freely on**:
 - Implementation within existing system boundaries
 - Adding tests
 - Bug fixes with obvious solutions
 - Updating RON data files
-
-## Design Rules
-
-See `docs/design/` for the full set of non-negotiable design pillars. The key mechanical rules are in `docs/architecture/` (bolt reflection, breaker state machine, bump grades).
-
-## Agent Workflow
-
-The main agent is the orchestrator — it describes features, reviews outputs, routes failures, and handles shared wiring. All implementation goes through the delegated pipeline.
-
-**Rules files:**
-- @.claude/rules/tdd.md — TDD cycle, RED gate, when to commit
-- @.claude/rules/spec-workflow.md — Spec revision loop (before RED)
-- @.claude/rules/spec-formats.md — Test and implementation spec templates
-- @.claude/rules/delegated-implementation.md — Pipeline flow, parallel execution
-- @.claude/rules/failure-routing.md — Routing Phase 2 failures to fix agents
-- @.claude/rules/orchestration.md — Session state, verification tiers, circuit breaking
-- @.claude/rules/hint-formats.md — Standardized hint block formats
-- @.claude/rules/commit-format.md — Conventional commit format
-
-### Release (solo)
-
-| Trigger | Agent | Why |
-|---------|-------|-----|
-| Preparing a release or release infrastructure | **runner-release** | Version bump, changelog, GitHub Actions, itch.io |

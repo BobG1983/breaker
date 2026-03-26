@@ -15,7 +15,7 @@
 | `RunLost` | `run/messages.rs` | `RunPlugin` | effect/handle_life_lost | run/handle_run_lost |
 | `BumpPerformed { grade, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, effect/bridge_bump, run/track_bumps, run/detect_close_save |
 | `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text, effect/bridge_bump_whiff |
-| `ChipSelected { name }` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/apply_chip_effect, run/track_chips_collected, run/detect_first_evolution |
+| `ChipSelected { name }` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/dispatch_chip_effects (enqueue), run/track_chips_collected, run/detect_first_evolution |
 | `HighlightTriggered { kind }` | `run/messages.rs` | `RunPlugin` | run/detect_mass_destruction, run/detect_close_save, run/detect_combo_and_pinball, run/detect_nail_biter, run/detect_first_evolution, run/track_node_cleared_stats (declared but unused) | run/spawn_highlight_text (imported but NOT registered — BLOCKING) |
 | `BoltSpawned` | `bolt/messages.rs` | `BoltPlugin` | bolt/spawn_bolt | run/node/check_spawn_complete |
 | `BreakerSpawned` | `breaker/messages.rs` | `BreakerPlugin` | breaker/spawn_breaker | run/node/check_spawn_complete |
@@ -30,7 +30,8 @@
 | Event | Domain | Triggered By | Observed By |
 |-------|--------|-------------|-------------|
 | Per-effect typed events (ShockwaveFired, LoseLifeFired, TimePenaltyFired, SpawnBoltsFired, SpeedBoostFired, ChainBoltFired, MultiBoltFired, ShieldFired, etc.) | effect | bridge_* systems via fire_typed_event() in effect/triggers/ | effect/effects/* handlers (one handler per event type) |
-| `ChipEffectApplied { effect, max_stacks }` | chips | apply_chip_effect | chips/effects/* passive handlers |
+| Passive typed events (PiercingApplied, DamageBoostApplied, SpeedBoostApplied, etc.) | effect | chips/dispatch_chip_effects (via fire_passive_event()) | effect/effects/* passive handlers |
+| NOTE: `ChipEffectApplied { effect, max_stacks }` DELETED in C7-R — replaced by passive typed events via dispatch_chip_effects |
 
 NOTE (2026-03-21): ConsequenceFired REMOVED. OverclockEffectFired unified into EffectFired. bolt/behaviors/ DELETED. behaviors/consequences/ DELETED.
 NOTE (2026-03-24): physics/ game domain DELETED. BoltHitBreaker/BoltHitCell/BoltHitWall/BoltLost moved from physics/messages.rs to bolt/messages.rs. PhysicsPlugin → BoltPlugin as registering plugin.

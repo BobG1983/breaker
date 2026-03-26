@@ -96,6 +96,17 @@ type: reference
 - `track_evolution_damage` `entry(name.clone()).or_insert(0.0) += msg.damage` — correct accumulation pattern, does not double-count.
 - `tick_shield_removes_at_zero_or_below` test comment says "dt ~0.0167" (wrong — actual fixed delta is 1/64 ≈ 0.015625 s). The test passes correctly because 0.01 - 0.015625 < 0.0. The comment is inaccurate but not a logic bug. Do not re-flag the test as wrong.
 
+## refactor/rantzsoft-prelude-and-defaults lifecycle.rs Confirmed Correct (2026-03-26)
+- `apply_perfect_tracking` bump condition `bolt_position.y > breaker_position.0.y && distance <= PERFECT_TRACKING_BUMP_THRESHOLD` — correct; fires while bolt is above breaker and within 20 world units of contact. Bolt travels downward (y < 0), so condition is only reachable for the relevant hemisphere.
+- `BumpMode::AlwaysWhiff` → `force_grade.0 = None` combined with no Bump injection in proximity check — correct compound behavior. No Bump action injected + no grade override → bolt passes breaker naturally without entering a bump window. `BumpWhiffed` only fires if a forward bump was somehow already open, which won't happen when `AlwaysWhiff` suppresses injection.
+- `BumpMode::NeverBump` → `force_grade.0 = None` + no Bump injection — correct; bolt never triggers a bump window.
+- `BumpMode::Random` `choices.choose(&mut perfect.rng)` — `choices` is a non-empty 3-element slice; `choose()` always returns `Some`. `if let Some(&chosen)` always matches. Correct.
+- `ChipSelectionIndex` reset in `bypass_menu_to_playing` + increment in `auto_skip_chip_select` — correct; index resets on each run restart (OnEnter MainMenu), then advances once per chip select node. Maps node N chip select to `chip_selections[N-1]`.
+- `auto_skip_chip_select` `if index.0 < selections.len()` guard — correct out-of-bounds protection. Extra chip selects skip silently.
+- `apply_pending_bolt_effects` `Local<bool>` guard fires once per app lifetime — intentional. New bolt entities from subsequent nodes do NOT get the initial effects again. Design intent is first-node setup.
+- `initial_effects` `Target::_` fallback to breaker chains — intentional for AllBolts routing; Cell/Wall targeting at startup is a scenario authoring error (those entities don't exist), silently routed to breaker. Not a code bug.
+- `bypass_menu_to_playing` `breaker_query` iterating 0 entities on FIRST run — pre-existing behavior shared with `initial_overclocks`. Tests pre-spawn a breaker entity (synthetic). In the actual runner, `initial_overclocks` and `Target::Breaker` initial_effects are silently no-ops on first run because the breaker is spawned in OnEnter(Playing). This is a known limitation, not a regression.
+
 ## C7-R RootEffect Migration Confirmed Correct (2026-03-26)
 - `RootEffect::On { target, then }` irrefutable let destructure in `dispatch_chip_effects` line 43 — safe; `RootEffect` has exactly one variant. Correct.
 - `From<RootEffect> for EffectNode` in `definition.rs:320-324` — correctly converts to `EffectNode::On`. Do not re-flag.

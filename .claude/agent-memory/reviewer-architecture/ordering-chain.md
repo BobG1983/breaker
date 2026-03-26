@@ -64,7 +64,7 @@ NodeSystems::TickTimer
 
 ### OnEnter(Playing) Init Chain
 ```
-apply_archetype_config_overrides .before(BreakerSystems::InitParams)
+apply_breaker_config_overrides .before(BreakerSystems::InitParams)  [was apply_archetype_config_overrides before C7-R]
 spawn_breaker → init_breaker_params .in_set(BreakerSystems::InitParams)
   apply_entity_scale_to_breaker .after(BreakerSystems::InitParams) .after(NodeSystems::Spawn)
   reset_breaker .after(BreakerSystems::InitParams) .in_set(BreakerSystems::Reset)

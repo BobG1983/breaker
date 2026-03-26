@@ -193,49 +193,49 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 
 ## EffectPlugin (src/effect/ — standalone domain, renamed from behaviors/ in C7-R 2026-03-25)
 
-Resources owned: BreakerRegistry, ActiveEffects (was ActiveChains → was ActiveBehaviors+ActiveOverclocks)
-Components owned: ArmedEffects (was ArmedTriggers), EffectChains
-System set exported: EffectSystems::Bridge (FixedUpdate — bridge systems)
+Resources owned: (none — BreakerRegistry moved to breaker/registry.rs in C7-R)
+Components owned: ArmedEffects (Vec<(Option<String>, EffectNode)> per bolt), EffectChains (Vec<EffectNode> per breaker)
+System set exported: EffectSystems::Bridge (FixedUpdate — bridge systems in effect/triggers/)
 
-NOTE (2026-03-21 refactor/unify-behaviors): behaviors/consequences/ DELETED. behaviors/effects/ replaced it.
-ConsequenceFired DELETED. EffectFired (was OverclockEffectFired) was unified trigger.
-NOTE (2026-03-25 C7-R): EffectFired DELETED. Per-effect typed events (ShockwaveFired, LoseLifeFired, etc.) replace it.
-Bridge systems now in effect/triggers/ (not behaviors/bridges.rs). Handlers in effect/effects/.
+NOTE (2026-03-25 C7-R): TriggerChain DELETED. EffectFired DELETED. ActiveEffects (global resource) DELETED.
+Replaced by: EffectNode tree per entity; per-effect typed events (ShockwaveFired, LoseLifeFired, etc.); EffectChains component.
 BreakerDefinition/BreakerRegistry moved from effect/definition.rs to breaker/definition.rs + breaker/registry.rs.
+Bridge systems restructured: one-trigger-per-file in effect/triggers/ with self-registration.
 
-### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), .before(init_breaker_params)
-- Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>, Res<Assets<BreakerDefaults>>
+### `apply_breaker_config_overrides` — OnEnter(GameState::Playing), .before(BreakerSystems::InitParams)
+- Reads: Res<SelectedArchetype>, Res<BreakerRegistry>, Res<Assets<BreakerDefaults>>
 - Writes: ResMut<BreakerConfig>
 - Cross-domain write: touches BreakerConfig (BreakerPlugin resource)
+- NOTE: was `apply_archetype_config_overrides` before C7-R (2026-03-25)
 
-### `init_archetype` — OnEnter(GameState::Playing), .after(init_breaker_params)
-- Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>
-- Reads (query): Query<Entity, (With<Breaker>, Without<LivesCount>)>
-- Writes: ResMut<ActiveChains>
-- Commands: inserts LivesCount on Breaker entity; populates ActiveChains from archetype root fields
-- NOTE (2026-03-21): BumpPerfectMultiplier and BumpWeakMultiplier DELETED — multipliers are now expressed as TriggerChain::SpeedBoost leaves in archetype RON
+### `init_breaker` — OnEnter(GameState::Playing), .after(BreakerSystems::InitParams)
+- Reads: Res<SelectedArchetype>, Res<BreakerRegistry>
+- Reads (query): Query<Entity, With<Breaker>>
+- Commands: inserts LivesCount on Breaker entity; pushes EffectNode trees to EffectChains component
+- NOTE: was `init_archetype` + `*active = ActiveChains(...)` replacement before C7-R. Now uses `.push()` on EffectChains (no replacement).
 
-### `spawn_lives_display` — OnEnter(GameState::Playing), .after(init_archetype), .after(spawn_timer_hud)
+### `spawn_lives_display` — OnEnter(GameState::Playing), .after(init_breaker), .after(UiSystems::SpawnTimerHud)
 - Reads (query): Query<&LivesCount>
 - Reads (query): Query<Entity, With<StatusPanel>>
 - Reads (query): Query<(), With<LivesDisplay>> (existence guard)
 - Commands: spawns LivesDisplay as child of StatusPanel (UI entity)
 
-### Bridge systems — FixedUpdate, .in_set(BehaviorSystems::Bridge), run_if(PlayingState::Active)
-All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) to fire EffectFired or arm bolts.
+### Bridge systems — FixedUpdate, .in_set(EffectSystems::Bridge), run_if(PlayingState::Active)
+Bridge systems now in effect/triggers/ (one file per trigger type), registered via self-registration in each file.
+Each reads EffectChains component on Breaker entity (not a global resource) and calls evaluate_entity_chains or evaluate_armed.
 - `bridge_bolt_lost` — .after(BoltSystems::BoltLost) — reads BoltLost
 - `bridge_bump` — .after(BreakerSystems::GradeBump) — reads BumpPerformed
 - `bridge_bump_whiff` — .after(BreakerSystems::GradeBump) — reads BumpWhiffed
 - `bridge_cell_impact` — .after(BoltSystems::BreakerCollision) — reads BoltHitCell
 - `bridge_breaker_impact` — .after(BoltSystems::BreakerCollision) — reads BoltHitBreaker
 - `bridge_wall_impact` — .after(BoltSystems::BreakerCollision) — reads BoltHitWall
-- `bridge_cell_destroyed` — .in_set(BehaviorSystems::Bridge) (unordered relative to physics chain) — reads CellDestroyed
+- `bridge_cell_destroyed` — .in_set(EffectSystems::Bridge) — reads CellDestroyed
 
-### Effect observers (all observe EffectFired):
-- `handle_life_lost` — pattern-matches TriggerChain::LoseLife; writes LivesCount; sends RunLost
-- `handle_time_penalty` — pattern-matches TriggerChain::TimePenalty; sends ApplyTimePenalty
-- `handle_spawn_bolt` — pattern-matches TriggerChain::SpawnBolt; sends SpawnAdditionalBolt
-- `handle_shockwave` — pattern-matches TriggerChain::Shockwave; early-returns when bolt is None; writes DamageCell
+### Per-effect observers (each observes its own typed event):
+- `handle_life_lost` — observes LoseLifeFired; writes LivesCount; sends RunLost
+- `handle_time_penalty` — observes TimePenaltyFired; sends ApplyTimePenalty
+- `handle_spawn_bolt` — observes SpawnBoltsFired; sends SpawnAdditionalBolt
+- `handle_shockwave` — observes ShockwaveFired; writes DamageCell
 
 ### `update_lives_display` — Update, run_if(any_with_component::<LivesDisplay> AND PlayingState::Active)
 - Reads (query): Query<&LivesCount>
@@ -268,12 +268,12 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 - Writes (query): mut BoltVelocity, read BoltMinSpeed, BoltMaxSpeed (ActiveBoltFilter)
 - Reads (query): Query<&MinAngleFromHorizontal, (With<Breaker>, Without<Bolt>)>
 
-### `spawn_additional_bolt` — FixedUpdate, after(BehaviorSystems::Bridge), run_if(PlayingState::Active)
+### `spawn_additional_bolt` — FixedUpdate, after(EffectSystems::Bridge), run_if(PlayingState::Active)
 - Receives: MessageReader<SpawnAdditionalBolt>
 - Reads: Res<BoltConfig>, ResMut<GameRng>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
 - Reads (query): Query<&Transform, With<Breaker>> (read-only)
 - Commands (spawn Bolt+ExtraBolt entity with InterpolateTransform2D, Position2D, Aabb2D, CleanupOnNodeExit)
-- NOTE: Orders .after(BehaviorSystems::Bridge) to ensure bridge_bump observer has run and SpawnAdditionalBolt message is available in the same tick
+- NOTE: Orders .after(EffectSystems::Bridge) to ensure bridge systems have run and SpawnAdditionalBolt message is available in the same tick
 
 ### `spawn_bolt_lost_text` — FixedUpdate, run_if(PlayingState::Active) [NO ordering]
 - Receives: MessageReader<BoltLost>

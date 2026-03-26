@@ -1,6 +1,6 @@
 # Orchestration Rules
 
-Session state management, verification tiers, circuit breaking, RED gate, and context pruning for the main agent.
+Session state management, circuit breaking, RED gate, and context pruning for the main agent.
 
 ## Session State Protocol
 
@@ -8,7 +8,7 @@ Maintain `.claude/agent-memory/orchestrator/ephemeral/session-state.md`.
 
 **Create** at start of every task.
 **Update** after every phase transition.
-**Read** before every routing decision in Phase 3.
+**Read** before every failure routing decision.
 
 Format (keep under 80 lines):
 
@@ -20,7 +20,7 @@ Format (keep under 80 lines):
 - [key decisions with rationale]
 ## Specs
 | Domain | Spec Status | Writer-Tests | Test Review | RED Gate | Writer-Code | Notes |
-## Phase 2 Results
+## Verification Results
 | Agent | Status | Action Needed |
 ## Active Failures
 - [failure]: attempt N — [what was tried] → [result]
@@ -30,14 +30,14 @@ Format (keep under 80 lines):
 - [failure]: N attempts, needs human input
 ```
 
-When a Phase 2 failure or Phase 3 fix reveals an earlier decision was wrong, mark it REVISED in Decisions with rationale and list affected features. If completed code is now wrong, add rework entry to Active Failures. When a decision revision represents a recurring pattern, record in orchestrator stable memory.
+When a verification failure or fix attempt reveals an earlier decision was wrong, mark it REVISED in Decisions with rationale and list affected features. If completed code is now wrong, add rework entry to Active Failures. When a decision revision represents a recurring pattern, record in orchestrator stable memory.
 
 ## Context Pruning
 
-When launching fix agents in Phase 3, provide only:
+When launching fix agents, provide only:
 - The specific hint block or regression spec
 - The relevant session-state row (domain + failure entry)
-- NOT the full output of every Phase 2 agent
+- NOT the full output of every verification agent
 
 ## Circuit Breaking
 
@@ -71,37 +71,8 @@ For single-domain work, the same sequence applies — it just has one agent per 
 
 Track RED gate status in session-state.md (the `RED Gate` column in the Specs table).
 
-## Two-Tier Verification
+## Verification Tiers
 
-### Standard — default for all work
+See `.claude/rules/verification-tiers.md` for the authoritative definition of the Basic, Standard, and Full Verification Tiers — which agents, when to run each, and the pipeline flow.
 
-Launch: **runner-linting** + **runner-tests** + **reviewer-correctness** + **reviewer-quality** + **reviewer-bevy-api** + **reviewer-architecture** + **reviewer-performance**
-
-### Pre-planning research (before planner-spec — see `delegated-implementation.md` step 2)
-
-| Condition | Agent |
-|-----------|-------|
-| Feature touches 2+ domains, or adds new messages/state transitions/cross-plugin flow | **researcher-system-dependencies** |
-| Feature uses unfamiliar Bevy 0.18 APIs | **researcher-bevy-api** |
-| Modifying existing types, systems, or messages | **researcher-impact** |
-| Modifying existing behavior (need to understand current flow) | **researcher-codebase** |
-
-### Conditional agents (add to either tier when triggered)
-
-| Condition | Agent |
-|-----------|-------|
-| Pre-commit (end of REFACTOR phase) or phase boundary | **runner-scenarios** |
-| 3+ systems added, or cross-plugin data flow | **researcher-system-dependencies** |
-| New gameplay mechanic or upgrade designed | **guard-game-design** |
-| Phase complete or significant structural change | **guard-docs** |
-| New dependencies added or security-sensitive code | **guard-security** |
-| New dependencies added or before release | **guard-dependencies** |
-| New mechanic needs adversarial scenario coverage | **writer-scenarios** |
-| Exhaustive coverage audit or post-refactor scenario gap analysis | **reviewer-scenarios** |
-| Phase complete or multiple sessions since last audit | **guard-agent-memory** |
-| Choosing a new dependency | **researcher-crates** |
-| Modifying code with non-obvious history | **researcher-git** |
-
-All agents in a tier launch in parallel.
-
-planner-spec recommends a tier. Main agent may bump up (never down without good reason).
+See `.claude/rules/sub-agents.md` for the complete agent directory — every agent, its purpose, and when to use it (including pre-planning research agents).

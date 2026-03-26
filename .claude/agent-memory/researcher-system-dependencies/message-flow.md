@@ -82,15 +82,16 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Receivers:
   - `perfect_bump_dash_cancel` (BreakerPlugin)
   - `spawn_bump_grade_text` (BreakerPlugin)
-  - `bridge_bump` (EffectPlugin) — evaluates chains via TriggerKind::PerfectBump/EarlyBump/LateBump/BumpSuccess → fires EffectFired → effect observers (including handle_speed_boost for SpeedBoost leaf)
+  - `bridge_bump` (EffectPlugin) — evaluates EffectChains/ArmedEffects via Trigger enum → fire_typed_event (SpeedBoostFired, ShockwaveFired, SpawnBoltsFired, etc.) → per-effect observers
   - `track_bump_result` (DebugPlugin, dev only)
-  - NOTE (2026-03-21): `apply_bump_velocity` (BoltPlugin) DELETED — velocity scaling now handled by TriggerChain::SpeedBoost leaf via EffectFired/handle_speed_boost
+  - NOTE (2026-03-21): `apply_bump_velocity` (BoltPlugin) DELETED — velocity scaling now handled by SpeedBoost effect via EffectNode trees
+  - NOTE (C7-R 2026-03-25): TriggerChain, TriggerKind, EffectFired ALL DELETED — replaced by Trigger enum + EffectNode trees + per-effect typed events
 
 ### BumpWhiffed (BreakerPlugin → cross-domain)
 - Sender: `grade_bump` (BreakerPlugin)
 - Receivers:
   - `spawn_whiff_text` (BreakerPlugin)
-  - `bridge_bump_whiff` (EffectPlugin) — evaluates chains via TriggerKind::BumpWhiff → fires EffectFired
+  - `bridge_bump_whiff` (EffectPlugin) — evaluates EffectChains via Trigger::OnBumpWhiff → fire_typed_event per effect
   - `track_bump_result` (DebugPlugin, dev only)
 
 ### BoltHitBreaker (BoltPlugin → cross-domain)
@@ -120,7 +121,7 @@ written in OnEnter are available in the first FixedUpdate tick.
 - Sender: `bolt_lost` (BoltPlugin, BoltSystems::BoltLost) — fires for baseline AND ExtraBolt
 - Receivers:
   - `spawn_bolt_lost_text` (BoltPlugin)
-  - `bridge_bolt_lost` (EffectPlugin, FixedUpdate) — evaluates all chains via TriggerKind::BoltLost → fires EffectFired → effect observers (handles both old bridge_bolt_lost consequence and new overclock chains in one unified bridge)
+  - `bridge_bolt_lost` (EffectPlugin, FixedUpdate) — evaluates EffectChains via Trigger::OnBoltLost → fire_typed_event (LoseLifeFired, TimePenaltyFired, etc.) → per-effect observers
 
 ### CellDestroyed (CellsPlugin → RunPlugin/NodePlugin)
 - Sender: `handle_cell_hit` (CellsPlugin, FixedUpdate, no ordering vs receiver)
@@ -146,27 +147,28 @@ written in OnEnter are available in the first FixedUpdate tick.
 
 ### ApplyTimePenalty (EffectPlugin → NodePlugin) — cross-plugin message
 - Sender chain:
-  - `bridge_bolt_lost` or `bridge_bump` (EffectPlugin) → commands.trigger(EffectFired { effect: TriggerChain::TimePenalty { .. }, bolt })
+  - bridge trigger systems (EffectPlugin) → fire_typed_event(TimePenaltyFired { .. })
     → `handle_time_penalty` observer (immediate) → writes ApplyTimePenalty
 - Receiver: `apply_time_penalty` (NodePlugin, FixedUpdate, .after(NodeSystems::TickTimer))
 - Cross-plugin boundary: EffectPlugin (standalone) → NodePlugin
 
 ### SpawnAdditionalBolt (EffectPlugin → BoltPlugin) — cross-plugin message
 - Sender chain:
-  - `bridge_bump` (EffectPlugin) → commands.trigger(EffectFired { effect: TriggerChain::SpawnBolt, bolt })
+  - bridge trigger systems (EffectPlugin) → fire_typed_event(SpawnBoltsFired { .. })
     → `handle_spawn_bolt` observer (immediate) → writes SpawnAdditionalBolt
 - Receiver: `spawn_additional_bolt` (BoltPlugin, FixedUpdate, .after(EffectSystems::Bridge))
 - Cross-plugin boundary: EffectPlugin (standalone) → BoltPlugin
 - Ordering: spawn_additional_bolt runs AFTER EffectSystems::Bridge set — same-tick guarantee
 
 ### RunLost (EffectPlugin → RunPlugin)
-- Sender: `handle_life_lost` observer (immediate on EffectFired { effect: TriggerChain::LoseLife, .. })
+- Sender: `handle_life_lost` observer (immediate on LoseLifeFired typed event)
 - Receiver: `handle_run_lost` (RunPlugin, .after(handle_node_cleared), .after(handle_timer_expired))
 - Cross-plugin boundary: EffectPlugin (standalone) → RunPlugin
 
 ### ChipSelected (UiPlugin → ChipsPlugin)
 - Sender: `handle_chip_input` (ChipSelectPlugin/ScreenPlugin, Update, run_if(GameState::ChipSelect)) — sent on confirm keypress with chip name only (`{ name: String }`)
-- Receiver: `apply_chip_effect` (ChipsPlugin, Update, run_if(GameState::ChipSelect)) — reads ChipSelected, triggers ChipEffectApplied observer event
+- Receiver: `dispatch_chip_effects` (ChipsPlugin, Update, run_if(GameState::ChipSelect)) — reads ChipSelected via queue, pushes EffectNode trees to entity EffectChains, fires passive typed events (PiercingApplied, DamageBoostApplied, etc.) for immediate stat changes
+- NOTE: was `apply_chip_effect` + `ChipEffectApplied` before C7-R (2026-03-25) — both DELETED
 - NOTE: Previously called UpgradeSelected; renamed to ChipSelected to match game vocabulary.
 - NOTE: handle_chip_input reads ButtonInput<KeyCode> directly (not InputActions). This is intentional — same pattern as main menu.
 
@@ -225,7 +227,7 @@ Bridge systems call fire_typed_event() in effect/triggers/. Effect observers pat
 ```
 BoltLost message
   → bridge_bolt_lost (.after(BoltLost set), in_set(EffectSystems::Bridge))
-    → evaluates EffectNode trees in ActiveEffects/ArmedEffects → fire_typed_event(LoseLifeFired)
+    → evaluates EffectChains/ArmedEffects (EffectNode trees per entity) → fire_typed_event(LoseLifeFired)
       → handle_life_lost observer → LivesCount decremented → RunLost message (when lives == 0)
     → fire_typed_event(TimePenaltyFired) → handle_time_penalty observer → ApplyTimePenalty message
 

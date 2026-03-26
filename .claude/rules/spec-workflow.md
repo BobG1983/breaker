@@ -7,17 +7,11 @@ See `.claude/rules/tdd.md` for the TDD cycle that specs feed into.
 
 ## Phase 1 — Research and Spec Creation
 
-Before writing any code, resolve unknowns and produce specs:
+Before writing any code, resolve unknowns and produce specs. See `.claude/rules/sub-agents.md` for the full agent directory — research agents for pre-planning, pipeline agents for spec production.
 
-| Trigger | Agent |
-|---------|-------|
-| Feature touches 2+ domains (query conflicts, message flow, ordering) | **researcher-system-dependencies** |
-| Unfamiliar Bevy 0.18 API or pattern | **researcher-bevy-api** |
-| Modifying existing types or systems (ripple effects) | **researcher-impact** |
-| Need to understand current behavior before modifying it | **researcher-codebase** |
-| Choosing between Rust idiom alternatives | **researcher-rust-idioms** |
-| Feature ready for spec writing | **planner-spec** |
-| Specs produced — novel mechanic, cross-domain, or uncertain scope | **planner-review** |
+1. Launch applicable **research agents** in parallel (see Research Agents in `sub-agents.md`)
+2. Feed research results into **planner-spec** to produce test + implementation specs
+3. Launch **planner-review** to pressure-test specs (especially for novel mechanics, cross-domain, or uncertain scope)
 
 ## Spec Revision Loop
 

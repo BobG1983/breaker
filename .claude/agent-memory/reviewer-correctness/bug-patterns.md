@@ -54,12 +54,12 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 
-- **ActiveChains (was ActiveOverclocks) never cleared between runs**: `chips/effects/overclock.rs` — `handle_overclock` pushes to `ActiveChains.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveChains. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveChains.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`.
+- **ActiveChains never cleared between runs — RESOLVED (C7-R, 2026-03-25)**: `ActiveChains` → `ActiveEffects` → entirely replaced by `EffectChains` component per entity in C7-R. `dispatch_chip_effects` now pushes to `EffectChains` on bolt/breaker entities (not a global resource). `ChipInventory.clear()` in `reset_run_state` is the only run-reset needed. No global Vec resource to clear.
 
 - **Retroactive bump path silences None last_hit_bolt**: `breaker/systems/bump.rs:115` — `update_bump` uses `bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER)`. The `None` case is not reachable through current code, but the invariant `post_hit_timer > 0 ↔ last_hit_bolt is Some` is not structural. Should use `expect()` or restructure the timer/entity as a single `Option<(f32, Entity)>`. Medium confidence — not currently reachable, but silently wrong if it becomes reachable.
 
 ## Recurring Bug Category (new)
-- **Resource Vec not cleared on run reset**: pattern seen in ActiveChains. When a Vec resource is populated during gameplay, ensure `reset_run_state` or an OnEnter(Playing) system clears it. Check all Vec resources when adding new ones.
+- **Resource Vec not cleared on run reset**: pattern from ActiveChains era. When a Vec resource is populated during gameplay, ensure `reset_run_state` or an OnEnter(Playing) system clears it. Check all Vec resources when adding new ones.
 
 ## Overclock Trigger Chain Bugs (2026-03-20, feature/overclock-trigger-chain)
 
@@ -72,25 +72,13 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
   - Confidence: medium (may be intentional cascade mechanic)
   - Confidence: medium (may be intentional)
 
-## refactor/unify-behaviors Confirmed Bugs (2026-03-21) — RESOLVED BY UNIFICATION
+## refactor/unify-behaviors Confirmed Bugs (2026-03-21) — ALL RESOLVED IN C7-R
 
-NOTE: The following bugs were opened when new TriggerChain variants were added as type-only in refactor/unify-behaviors Step 1. The full unification (bolt/behaviors/ merged into behaviors/, then renamed to effect/ in C7-R) resolved the structural issues. Verify against current code before re-flagging.
-
-- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` in `effect/evaluate.rs` (was `behaviors/evaluate.rs` before C7-R) now includes EarlyBump, LateBump, BumpWhiff variants. VERIFY: check effect/evaluate.rs — if TriggerKind has these variants and evaluate() handles them, this is fixed.
-
-- **No bridge for BumpWhiffed**: VERIFY: check if bridge_bump_whiff system exists in `effect/triggers/on_bump.rs` (was `behaviors/bridges.rs` before C7-R).
-
-- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: Handlers `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` exist in `effect/effects/` (was `behaviors/effects/` before C7-R) and observe per-effect typed events (was EffectFired before C7-R). All four leaf types are fully wired. SpeedBoost target field removed in C7-R (Effect::SpeedBoost { multiplier: f32 } — no target).
-
-- **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) TriggerKind + evaluate(), (3) bridge system + effect handler. This three-part requirement is now well-documented in the codebase.
-
-## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
-
-- **ActiveOverclocks (→ActiveChains→ActiveEffects) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` (now `dispatch_chip_effects`) pushes to `ActiveEffects` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but may not clear ActiveEffects. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveEffects.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: renamed from ActiveOverclocks to ActiveChains (refactor/unify-behaviors) to ActiveEffects (C7-R 2026-03-25).
+The full unification (bolt/behaviors/ merged into behaviors/, then renamed to effect/ in C7-R) resolved all structural issues. `TriggerChain` is entirely deleted from the codebase; the `EffectNode`/`Effect`/`Trigger` tree replaced it. `TriggerKind` deleted; `Trigger` enum used directly. All bridge/effect handlers observe typed per-effect events. Do NOT re-flag any `TriggerChain`-based bugs — the type no longer exists.
 
 ## SpeedBoost Generalization Bugs (2026-03-21, refactor/unify-behaviors or follow-on branch)
 
-- **init_archetype wipes overclock chains on every node entry**: Was at `behaviors/init.rs:108` (now `breaker/systems/init_breaker.rs` after C7-R) — `*active = ActiveEffects(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `dispatch_chip_effects` pushes chip chains to `ActiveEffects` during ChipSelect state. State flow: Playing→TransitionOut→ChipSelect (dispatch adds chain)→TransitionIn→Playing (init_breaker resets). Overclock chains selected between nodes may be silently discarded. Fix: `init_breaker` should EXTEND `active.0` with archetype chains rather than replacing. Or separate "archetype chains" from "chip chains" so only archetype chains are reset. Confidence: HIGH (verify against current init_breaker.rs).
+- **init_archetype wipes overclock chains — RESOLVED (C7-R, 2026-03-25)**: `init_breaker` (was `init_archetype`) no longer touches `ActiveEffects` at all. It pushes `EffectNode` entries to `EffectChains` component on the breaker entity. `dispatch_chip_effects` also pushes to `EffectChains`. Both use `push()` — no replacement occurs. The chip-chains-wiped-on-node-entry bug is structurally impossible with the component-based design.
 
 ## BumpForceBoost Dead Code (confirmed 2026-03-21)
 - `BumpForceBoost` component is stamped by `handle_bump_force_boost` (chips/effects/bump_force_boost.rs) but no system reads it to affect bump behavior. The chip effect observer correctly stacks the value on the breaker, but the value is never consumed. This is a pre-existing gap, not introduced by the SpeedBoost refactor. The PR description notes it as "intentional — left for future use."
@@ -149,11 +137,9 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
   handler's correctness. Check all `#[cfg(test)]` blocks in migrated handler files for uses of
   the old event type. Flag any test that still triggers the old event against the migrated handler.
 
-## B1-B3 TriggerChain Flatten Bugs (feature/spatial-physics-extraction, 2026-03-24)
+## B1-B3 TriggerChain Flatten Bugs — ALL RESOLVED (C7-R, 2026-03-25)
 
-- **Attraction leaf has no ChipEffectApplied handler**: `TriggerChain::Attraction` is correctly classified as a leaf by `is_leaf()` (definition.rs:230), so `apply_chip_effect` routes it through `ChipEffectApplied` (bare-leaf arm, line 52). However no observer in `ChipsPlugin` (plugin.rs:23-31) or anywhere in the codebase pattern-matches `TriggerChain::Attraction`. The `magnetism.amp.ron` chip (`Magnetism`, Uncommon, `OnSelected([Attraction(8.0)])`) fires `ChipEffectApplied` on selection and the event is silently discarded. No attraction component is inserted. Confidence: HIGH.
-
-- **OnSelected with non-leaf inner: silently drops the trigger chain** (structural gap, no current RON file hits it): `apply_chip_effect` lines 43-49 iterate `inner` vec and fire `ChipEffectApplied` for each item without checking `is_leaf()`. If a RON file used `OnSelected([OnPerfectBump([...])])`, the inner trigger chain would reach all 9 handler observers, all would early-return (none match trigger variants), and the chain would be permanently lost — never pushed to `ActiveChains`. Depth test `on_selected_nested_depth_is_two` (definition.rs:684) suggests this configuration is considered valid. No current RON file triggers this path.
+`TriggerChain` is entirely deleted from the codebase. `ChipEffectApplied` (observer trigger) is also deleted. The chip dispatch pipeline (`dispatch_chip_effects`) now routes via `RootEffect::On` → `EffectNode` → typed per-effect events. `apply_chip_effect` no longer exists. Attraction is wired via `AttractionApplied` typed event and `handle_attraction` in `effect/effects/attraction.rs`. Do NOT re-flag any `TriggerChain`/`ChipEffectApplied`-based bugs.
 
 ## Memorable Moments Wave E Bugs (2026-03-24, feature/spatial-physics-extraction)
 
@@ -164,7 +150,7 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 ## feature/spatial-physics-extraction Code-Reuse Review (2026-03-24)
 
 - **is_inside_aabb boundary semantics diverge from Aabb2D::contains_point**: `bolt_breaker_collision.rs:44` — local helper uses strict `> / <`; library uses inclusive `>= / <=`. Boundary-touching bolts skip overlap resolution. Medium confidence / low practical impact (boundary states are transient). Main agent should decide whether boundary inclusion is intended before fixing.
-- **apply_speed_scale duplicates prepare_bolt_velocity clamping**: `behaviors/effects/speed_boost.rs:69` — two-step floor+ceiling using normalize_or_zero. `prepare_bolt_velocity` uses `clamp_length` (atomic). Equivalent for valid data (base < max), but diverges if clamping contract changes. Code-reuse gap, not a confirmed runtime bug.
+- **apply_speed_scale duplicates prepare_bolt_velocity clamping**: `effect/effects/speed_boost.rs` (was `behaviors/effects/speed_boost.rs`) — two-step floor+ceiling using normalize_or_zero. `prepare_bolt_velocity` uses `clamp_length` (atomic). Equivalent for valid data (base < max), but diverges if clamping contract changes. Code-reuse gap, not a confirmed runtime bug.
 - Confirmed correct: `handle_multi_bolt` formula, `detect_most_powerful_evolution` max_by(total_cmp), all 15 HighlightKind arms in spawn_run_end_screen, track_evolution_damage accumulation. Do not re-flag.
 
 ## Wave 2a (feature/spatial-physics-extraction, 2026-03-25) — UPDATED AFTER CODE-REUSE REVIEW

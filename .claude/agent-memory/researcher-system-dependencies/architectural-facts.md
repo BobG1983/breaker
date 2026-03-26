@@ -44,8 +44,8 @@ type: reference
 - Set 2 `PropagateConfig` (2 systems): `.after(PropagateDefaults)`, gated by `resource_changed::<T>`
 - Breaker path: direct `ResMut<BreakerConfig>` write → same-frame propagation
 - Bolt/cell/etc.: `commands.insert_resource` → next-frame propagation
-- `propagate_archetype_changes` also writes `ResMut<BreakerConfig>` and `ResMut<ActiveEffects>` (was ActiveBehaviors before refactor/unify-behaviors; renamed to ActiveChains, then ActiveEffects in C7-R)
-- `propagate_breaker_defaults` and `propagate_archetype_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
+- `propagate_breaker_changes` (was `propagate_archetype_changes` before C7-R 2026-03-25) writes `ResMut<BreakerConfig>` AND `Query<&mut EffectChains, With<Breaker>>` (was `ResMut<ActiveEffects>` → `ResMut<ActiveChains>` → `ResMut<ActiveBehaviors>` in prior refactors; now component-based EffectChains in C7-R)
+- `propagate_breaker_defaults` and `propagate_breaker_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
 
 ## Scenario Runner (breaker-scenario-runner)
 - 17 systems in FixedUpdate (lifecycle chain + 14 invariant checkers + enforce_frozen_positions + tag_game_entities), 1 OnEnter group

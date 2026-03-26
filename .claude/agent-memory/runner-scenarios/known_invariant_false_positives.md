@@ -110,37 +110,6 @@ when OnEnter(Playing) fired under I/O contention.
 
 ---
 
-## Known Failing Unit Tests (require test updates — NOT game bugs)
-
-As of 2026-03-23, three unit tests in `breaker-scenario-runner/src/lifecycle/tests.rs` fail
-because they were written against the old behavior where `tag_game_entities` set
-`ScenarioStats::entered_playing = true`. That responsibility moved to
-`mark_entered_playing_on_spawn_complete` (reads `SpawnNodeComplete` message).
-
-### Failing tests
-
-1. `lifecycle::tests::scenario_stats_entered_playing_set_by_tag_game_entities` (line 791)
-   - Asserts `entered_playing == true` after running `tag_game_entities` alone.
-   - `tag_game_entities` no longer sets `entered_playing`, so the assertion fails.
-   - Fix: rename to `scenario_stats_entered_playing_set_by_mark_entered_playing_on_spawn_complete`
-     and rewrite to send a `SpawnNodeComplete` message and assert the new system sets the flag.
-
-2. `lifecycle::tests::check_bolt_in_bounds_is_registered_in_scenario_lifecycle` (line 191)
-   - Uses `lifecycle_test_app()` which includes `ScenarioLifecycle`. The invariant block is
-     gated on `entered_playing`. No `SpawnNodeComplete` message is ever sent in the test, so
-     `entered_playing` stays `false`, invariants never run, ViolationLog stays empty.
-   - Fix: send a `SpawnNodeComplete` message before the tick (or manually set
-     `ScenarioStats::entered_playing = true` in the test world before ticking).
-
-3. `lifecycle::tests::check_no_nan_is_registered_in_scenario_lifecycle` (line 229)
-   - Same root cause as #2 — `entered_playing` never becomes `true`.
-   - Fix: same approach as #2.
-
-All three tests are in `breaker-scenario-runner/src/lifecycle/tests.rs`.
-Route to writer-tests with a test revision spec once confirmed. Confidence: high.
-
----
-
 ## Unresolved Game Bugs (correctly detected by scenario runner)
 
 ### BoltInBounds — prism_scatter sustained violation
@@ -152,29 +121,3 @@ bounds for sustained period. Root cause not yet confirmed — likely degenerate 
 state in bolt physics under Scatter layout with many cells destroyed.
 **This is NOT a scenario runner bug.** The runner correctly detects it.
 
----
-
-## Active Known Flaky Failures (fail --all, pass individually and --serial)
-
-### TypeId panic — all scenarios fail under --all default parallelism (2026-03-26)
-
-**Symptom:** All 47 scenarios fail under `--all` with default 32-worker parallelism.
-Panic: `The target Handle<breaker::chips::definition::ChipDefinition>'s TypeId does not match the TypeId of this UntypedHandle`
-
-**Passes:** `--serial`, `-p 4`, individual `-s` runs. Fails: `--all` (≥32 workers), or `--all -p all`.
-
-**Root cause:** `DefaultsCollection` has `chip_templates: Vec<Handle<ChipTemplate>>` with
-`path = "chips"` (line 60 of `resources.rs`). Bevy's `load_folder("chips")` recursively scans
-`chips/evolution/*.evolution.ron` (typed as `ChipDefinition`). Under high concurrency (79
-simultaneous subprocesses), `bevy_asset_loader`'s generated `create()` calls `.typed::<ChipTemplate>()`
-on those `ChipDefinition` handles → TypeId mismatch → panic.
-
-**Design flaw:** `chip_templates` path should be `"chips/templates"` not `"chips"` to avoid
-scanning `chips/evolution/`. This would eliminate the TypeId collision.
-
-**File:** `breaker-game/src/screen/loading/resources.rs:60`
-**Suggested fix:** Change `#[asset(path = "chips", collection(typed))]` above `chip_templates`
-to `#[asset(path = "chips/templates", collection(typed))]`
-
-**Workaround:** Use `cargo scenario -- --all -p 4` for scenario validation until fixed.
-Do NOT use `--all` alone for scenario validation while this is unresolved.
