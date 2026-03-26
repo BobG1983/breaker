@@ -23,6 +23,21 @@ pub struct RayHit {
     pub normal: Vec2,
 }
 
+impl RayHit {
+    /// Computes the safe position along the ray, offset from the collision
+    /// surface by the internal CCD epsilon to prevent floating-point touching.
+    #[must_use]
+    pub fn safe_position(&self, origin: Vec2, direction: Vec2) -> Vec2 {
+        origin + direction * (self.distance - CCD_EPSILON).max(0.0)
+    }
+
+    /// Returns the remaining travel distance after reaching the hit point.
+    #[must_use]
+    pub fn remaining(&self, max_dist: f32) -> f32 {
+        (max_dist - self.distance).max(0.0)
+    }
+}
+
 /// Result of a swept circle (or ray) cast against the quadtree.
 pub struct SweepHit {
     /// The entity that was hit.
@@ -108,6 +123,14 @@ pub fn ray_vs_aabb(origin: Vec2, direction: Vec2, max_dist: f32, aabb: &Aabb2D) 
         distance: tmin,
         normal,
     })
+}
+
+/// Reflects a velocity vector off a surface normal.
+///
+/// Standard reflection formula: `v - 2(v·n)n`. Preserves speed (magnitude).
+#[must_use]
+pub fn reflect(velocity: Vec2, normal: Vec2) -> Vec2 {
+    velocity - 2.0 * velocity.dot(normal) * normal
 }
 
 #[cfg(test)]
@@ -314,5 +337,70 @@ mod tests {
         assert_eq!(sweep.position, Vec2::new(10.0, 35.0));
         assert_eq!(sweep.normal, Vec2::NEG_Y);
         assert!((sweep.remaining - 165.0).abs() < f32::EPSILON);
+    }
+
+    // ── RayHit::safe_position ──
+
+    #[test]
+    fn ray_hit_safe_position_offsets_by_epsilon() {
+        let hit = RayHit {
+            distance: 10.0,
+            normal: Vec2::NEG_Y,
+        };
+        let pos = hit.safe_position(Vec2::new(0.0, -30.0), Vec2::Y);
+        // 10.0 - 0.01 = 9.99, so position = (0, -30) + Y * 9.99 = (0, -20.01)
+        assert!((pos.y - (-20.01)).abs() < 1e-4, "got {}", pos.y);
+    }
+
+    #[test]
+    fn ray_hit_safe_position_clamps_at_zero() {
+        let hit = RayHit {
+            distance: 0.005,
+            normal: Vec2::NEG_Y,
+        };
+        let pos = hit.safe_position(Vec2::ZERO, Vec2::Y);
+        // (0.005 - 0.01).max(0.0) = 0.0, so position = origin
+        assert_eq!(pos, Vec2::ZERO);
+    }
+
+    // ── RayHit::remaining ──
+
+    #[test]
+    fn ray_hit_remaining_distance() {
+        let hit = RayHit {
+            distance: 35.0,
+            normal: Vec2::NEG_Y,
+        };
+        let rem = hit.remaining(200.0);
+        assert!((rem - 165.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn ray_hit_remaining_clamps_at_zero() {
+        let hit = RayHit {
+            distance: 200.0,
+            normal: Vec2::NEG_Y,
+        };
+        let rem = hit.remaining(100.0);
+        assert!(rem.abs() < f32::EPSILON);
+    }
+
+    // ── reflect ──
+
+    #[test]
+    fn reflect_off_horizontal_surface() {
+        let v = Vec2::new(300.0, -400.0);
+        let n = Vec2::NEG_Y;
+        let r = reflect(v, n);
+        assert!((r.x - 300.0).abs() < 1e-3);
+        assert!((r.y - 400.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn reflect_preserves_speed() {
+        let v = Vec2::new(-250.0, -100.0);
+        let n = Vec2::NEG_X;
+        let r = reflect(v, n);
+        assert!((v.length() - r.length()).abs() < 1e-3);
     }
 }

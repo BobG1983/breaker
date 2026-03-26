@@ -12,12 +12,6 @@ use crate::{
     breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
 };
 
-/// Sub-pixel separation gap applied after bolt-breaker collision.
-///
-/// The bolt is placed this far outside the breaker's expanded AABB to prevent
-/// floating-point touching on the next sweep.
-const SEPARATION_GAP: f32 = 0.01;
-
 /// Overwrites bolt velocity based on a normalized hit position on the breaker's top surface.
 ///
 /// - `hit_fraction`: hit position in `[-1.0, 1.0]` — left edge = -1, right edge = +1
@@ -154,13 +148,10 @@ pub(crate) fn bolt_breaker_collision(
             // Side hit — reflect X only, preserve Y velocity
             bolt_velocity.0.x = -bolt_velocity.0.x;
 
-            let advance = (hit.distance - SEPARATION_GAP).max(0.0);
-            let new_pos = bolt_pos + direction * advance;
-            bolt_position.0 = new_pos;
+            bolt_position.0 = hit.safe_position(bolt_pos, direction);
         } else {
             // Top/bottom hit — move to impact point, reflect, push above breaker
-            let advance = (hit.distance - SEPARATION_GAP).max(0.0);
-            let impact_pos = bolt_pos + direction * advance;
+            let impact_pos = hit.safe_position(bolt_pos, direction);
             let hit_fraction = ((impact_pos.x - breaker_pos.x) / half_w).clamp(-1.0, 1.0);
 
             reflect_top_hit(
