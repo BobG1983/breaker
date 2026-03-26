@@ -10,9 +10,10 @@ use crate::{
         },
         resources::BoltConfig,
         systems::{
-            apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
-            bolt_scale_visual, break_chain_on_bolt_lost, clamp_bolt_to_playfield, hover_bolt,
-            init_bolt_params, launch_bolt, prepare_bolt_velocity, reset_bolt,
+            apply_attraction, apply_entity_scale_to_bolt, bolt_breaker_collision,
+            bolt_cell_collision, bolt_lost, bolt_scale_visual, break_chain_on_bolt_lost,
+            clamp_bolt_to_playfield, despawn_second_wind_wall, hover_bolt, init_bolt_params,
+            launch_bolt, manage_attraction_types, prepare_bolt_velocity, reset_bolt,
             spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text, spawn_chain_bolt,
         },
     },
@@ -69,6 +70,10 @@ impl Plugin for BoltPlugin {
                     spawn_additional_bolt.after(EffectSystems::Bridge),
                     spawn_chain_bolt.after(EffectSystems::Bridge),
                     spawn_bolt_lost_text,
+                    // Attraction steering (before collision so direction is updated)
+                    apply_attraction
+                        .after(BoltSystems::PrepareVelocity)
+                        .before(bolt_cell_collision),
                     // Collision systems (moved from PhysicsPlugin)
                     bolt_cell_collision
                         .after(BoltSystems::PrepareVelocity)
@@ -84,6 +89,12 @@ impl Plugin for BoltPlugin {
                         .after(clamp_bolt_to_playfield)
                         .in_set(BoltSystems::BoltLost),
                     break_chain_on_bolt_lost.after(BoltSystems::BoltLost),
+                    // Toggle attraction types after collision events are sent
+                    manage_attraction_types
+                        .after(bolt_cell_collision)
+                        .after(BreakerSystems::GradeBump),
+                    // Despawn SecondWindWall after bolt bounces off it
+                    despawn_second_wind_wall.after(bolt_cell_collision),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

@@ -1,5 +1,6 @@
 //! Bolt systems — one file per system function.
 
+mod apply_attraction;
 pub(crate) mod apply_entity_scale_to_bolt;
 mod bolt_breaker_collision;
 mod bolt_cell_collision;
@@ -8,15 +9,18 @@ mod bolt_lost_feedback;
 pub(crate) mod bolt_scale_visual;
 mod break_chain_on_bolt_lost;
 mod clamp_bolt_to_playfield;
+mod despawn_second_wind_wall;
 mod hover_bolt;
 mod init_bolt_params;
 mod launch_bolt;
+mod manage_attraction_types;
 mod prepare_bolt_velocity;
 mod reset_bolt;
 mod spawn_additional_bolt;
 mod spawn_bolt;
 mod spawn_chain_bolt;
 
+pub(crate) use apply_attraction::apply_attraction;
 pub(crate) use apply_entity_scale_to_bolt::apply_entity_scale_to_bolt;
 pub(crate) use bolt_breaker_collision::bolt_breaker_collision;
 pub(crate) use bolt_cell_collision::bolt_cell_collision;
@@ -25,9 +29,11 @@ pub use bolt_lost_feedback::spawn_bolt_lost_text;
 pub(crate) use bolt_scale_visual::bolt_scale_visual;
 pub(crate) use break_chain_on_bolt_lost::break_chain_on_bolt_lost;
 pub(crate) use clamp_bolt_to_playfield::clamp_bolt_to_playfield;
+pub(crate) use despawn_second_wind_wall::despawn_second_wind_wall;
 pub use hover_bolt::hover_bolt;
 pub use init_bolt_params::init_bolt_params;
 pub use launch_bolt::launch_bolt;
+pub(crate) use manage_attraction_types::manage_attraction_types;
 pub(crate) use prepare_bolt_velocity::prepare_bolt_velocity;
 pub(crate) use reset_bolt::reset_bolt;
 pub use spawn_additional_bolt::spawn_additional_bolt;
