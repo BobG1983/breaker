@@ -1,5 +1,5 @@
 use super::*;
-use crate::types::{ChaosParams, HybridParams, ScriptedFrame, ScriptedParams};
+use crate::types::{BumpMode, ChaosParams, HybridParams, ScriptedFrame, ScriptedParams};
 
 // -------------------------------------------------------------------------
 // ChaosDriver — statistical probability
@@ -12,10 +12,9 @@ use crate::types::{ChaosParams, HybridParams, ScriptedFrame, ScriptedParams};
 #[test]
 fn chaos_driver_fires_at_correct_statistical_probability() {
     let params = ChaosParams {
-        seed: 0,
         action_prob: 0.3,
     };
-    let mut driver = ChaosDriver::new(&params);
+    let mut driver = ChaosDriver::new(0, &params);
 
     let fired_count = (0_u32..1000)
         .filter(|&frame| !driver.actions_for_frame(frame, true).is_empty())
@@ -35,12 +34,11 @@ fn chaos_driver_fires_at_correct_statistical_probability() {
 #[test]
 fn chaos_driver_produces_reproducible_output_for_same_seed() {
     let params = ChaosParams {
-        seed: 42,
         action_prob: 0.5,
     };
 
-    let mut driver_a = ChaosDriver::new(&params);
-    let mut driver_b = ChaosDriver::new(&params);
+    let mut driver_a = ChaosDriver::new(42, &params);
+    let mut driver_b = ChaosDriver::new(42, &params);
 
     let frame0_a = driver_a.actions_for_frame(0, true);
     let frame1_a = driver_a.actions_for_frame(1, true);
@@ -66,10 +64,9 @@ fn chaos_driver_produces_reproducible_output_for_same_seed() {
 #[test]
 fn chaos_driver_does_not_fire_when_inactive() {
     let params = ChaosParams {
-        seed: 0,
         action_prob: 1.0,
     };
-    let mut driver = ChaosDriver::new(&params);
+    let mut driver = ChaosDriver::new(0, &params);
 
     let result = driver.actions_for_frame(0, false);
 
@@ -90,10 +87,9 @@ fn chaos_driver_does_not_fire_when_inactive() {
 #[test]
 fn chaos_driver_only_picks_gameplay_actions() {
     let params = ChaosParams {
-        seed: 1,
         action_prob: 1.0,
     };
-    let mut driver = ChaosDriver::new(&params);
+    let mut driver = ChaosDriver::new(1, &params);
 
     let menu_actions = [
         GameAction::MenuUp,
@@ -199,10 +195,9 @@ fn scripted_input_with_empty_entries_returns_nothing() {
 fn hybrid_input_returns_empty_during_scripted_phase() {
     let params = HybridParams {
         scripted_frames: 100,
-        seed: 42,
         action_prob: 1.0,
     };
-    let mut hybrid = HybridInput::new(&params);
+    let mut hybrid = HybridInput::new(42, &params);
 
     let result_mid = hybrid.actions_for_frame(50, true);
     assert!(
@@ -232,10 +227,9 @@ fn hybrid_input_returns_empty_during_scripted_phase() {
 fn hybrid_input_switches_to_chaos_after_scripted_phase() {
     let params = HybridParams {
         scripted_frames: 10,
-        seed: 42,
         action_prob: 1.0,
     };
-    let mut hybrid = HybridInput::new(&params);
+    let mut hybrid = HybridInput::new(42, &params);
 
     // Exhaust the scripted phase frames first so RNG state is correct
     for frame in 0_u32..10 {
@@ -263,10 +257,9 @@ fn hybrid_input_switches_to_chaos_after_scripted_phase() {
 fn hybrid_input_respects_is_active_false_in_chaos_phase() {
     let params = HybridParams {
         scripted_frames: 10,
-        seed: 42,
         action_prob: 1.0,
     };
-    let mut hybrid = HybridInput::new(&params);
+    let mut hybrid = HybridInput::new(42, &params);
 
     // Frame 50 is well into the chaos phase but is_active=false
     let result = hybrid.actions_for_frame(50, false);
@@ -288,10 +281,9 @@ fn hybrid_input_respects_is_active_false_in_chaos_phase() {
 #[test]
 fn input_driver_from_chaos_strategy_constructs_without_panic() {
     let strategy = InputStrategy::Chaos(ChaosParams {
-        seed: 42,
         action_prob: 0.5,
     });
-    let mut driver = InputDriver::from_strategy(&strategy);
+    let mut driver = InputDriver::from_strategy(&strategy, 42);
 
     // Must not panic — return type is Vec<GameAction>
     drop(driver.actions_for_frame(0, true));
@@ -313,7 +305,7 @@ fn input_driver_from_scripted_strategy_fires_at_configured_frame() {
             actions: vec![GameAction::Bump],
         }],
     });
-    let mut driver = InputDriver::from_strategy(&strategy);
+    let mut driver = InputDriver::from_strategy(&strategy, 0);
 
     let result_frame_5 = driver.actions_for_frame(5, true);
     assert_eq!(
@@ -340,10 +332,9 @@ fn input_driver_from_scripted_strategy_fires_at_configured_frame() {
 fn input_driver_from_hybrid_strategy_respects_phase_boundary() {
     let strategy = InputStrategy::Hybrid(HybridParams {
         scripted_frames: 10,
-        seed: 42,
         action_prob: 1.0,
     });
-    let mut driver = InputDriver::from_strategy(&strategy);
+    let mut driver = InputDriver::from_strategy(&strategy, 42);
 
     // Scripted phase — frame 5 must be empty
     let result_scripted = driver.actions_for_frame(5, true);
@@ -357,5 +348,95 @@ fn input_driver_from_hybrid_strategy_respects_phase_boundary() {
     assert!(
         !result_chaos.is_empty(),
         "expected non-empty Vec at frame 50 (chaos phase, action_prob=1.0), got {result_chaos:?}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// ChaosDriver — new takes seed as separate argument
+// -------------------------------------------------------------------------
+
+/// `ChaosDriver::new(42, &ChaosParams { action_prob: 0.3 })` produces
+/// deterministic output from frame 0.
+#[test]
+fn chaos_driver_new_takes_seed() {
+    let params = ChaosParams { action_prob: 0.3 };
+    let mut driver = ChaosDriver::new(42, &params);
+
+    // Must produce at least one deterministic frame result without panic
+    let result = driver.actions_for_frame(0, true);
+    // Result is deterministic but we only assert it's a valid Vec
+    assert!(
+        result.len() <= 1,
+        "ChaosDriver should produce at most one action per frame, got {result:?}"
+    );
+}
+
+/// Two `ChaosDriver` instances with the same explicit seed produce identical output.
+#[test]
+fn chaos_driver_same_seed_same_output() {
+    let params = ChaosParams { action_prob: 0.5 };
+
+    let mut driver_a = ChaosDriver::new(42, &params);
+    let mut driver_b = ChaosDriver::new(42, &params);
+
+    for frame in 0_u32..50 {
+        let a = driver_a.actions_for_frame(frame, true);
+        let b = driver_b.actions_for_frame(frame, true);
+        assert_eq!(
+            a, b,
+            "frame {frame}: same seed must produce identical output"
+        );
+    }
+}
+
+// -------------------------------------------------------------------------
+// HybridInput — new takes seed as separate argument
+// -------------------------------------------------------------------------
+
+/// `HybridInput::new(7, &params)` creates successfully with seed as separate arg.
+#[test]
+fn hybrid_input_new_takes_seed() {
+    let params = HybridParams {
+        scripted_frames: 100,
+        action_prob: 0.5,
+    };
+    let mut hybrid = HybridInput::new(7, &params);
+
+    // Scripted phase — must return empty
+    let result = hybrid.actions_for_frame(0, true);
+    assert!(
+        result.is_empty(),
+        "frame 0 in scripted phase must be empty, got {result:?}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InputDriver — constructs from Perfect strategy
+// -------------------------------------------------------------------------
+
+/// `InputDriver::from_strategy(&Perfect(AlwaysPerfect), 99)` creates a Perfect variant.
+#[test]
+fn input_driver_from_perfect() {
+    let strategy = InputStrategy::Perfect(BumpMode::AlwaysPerfect);
+    let driver = InputDriver::from_strategy(&strategy, 99);
+
+    assert!(
+        matches!(driver, InputDriver::Perfect(_)),
+        "expected InputDriver::Perfect variant"
+    );
+}
+
+// -------------------------------------------------------------------------
+// PerfectDriver — stub returns empty actions
+// -------------------------------------------------------------------------
+
+/// `PerfectDriver` stub returns empty `Vec` from `actions_for_frame`.
+#[test]
+fn perfect_driver_returns_empty_actions() {
+    let mut driver = PerfectDriver::new(42, BumpMode::AlwaysPerfect);
+    let result = driver.actions_for_frame(0, true);
+    assert!(
+        result.is_empty(),
+        "PerfectDriver stub must return empty Vec, got {result:?}"
     );
 }

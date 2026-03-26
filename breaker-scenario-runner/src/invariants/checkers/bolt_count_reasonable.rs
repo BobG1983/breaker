@@ -48,14 +48,8 @@ mod tests {
                     input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
                     max_frames: 1000,
                     invariants: vec![],
-                    expected_violations: None,
-                    debug_setup: None,
                     invariant_params: InvariantParams { max_bolt_count },
-                    allow_early_end: true,
-                    stress: None,
-                    seed: None,
-                    initial_overclocks: None,
-                    frame_mutations: None,
+                    ..Default::default()
                 },
             })
             .add_systems(FixedUpdate, check_bolt_count_reasonable);

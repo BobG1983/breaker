@@ -4,7 +4,7 @@ use super::*;
 use crate::{
     invariants::ScenarioStats,
     log_capture::LogEntry,
-    types::{ChaosParams, InputStrategy, InvariantKind, InvariantParams, ScenarioDefinition},
+    types::{ChaosParams, InputStrategy, InvariantKind, ScenarioDefinition},
 };
 
 // -------------------------------------------------------------------------
@@ -34,19 +34,11 @@ fn make_chaos_definition() -> ScenarioDefinition {
         breaker: "aegis".to_owned(),
         layout: "corridor".to_owned(),
         input: InputStrategy::Chaos(ChaosParams {
-            seed: 0,
             action_prob: 0.3,
         }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     }
 }
 

@@ -14,5 +14,5 @@ pub mod systems;
 pub(crate) use definition::BreakerDefinition;
 pub use plugin::BreakerPlugin;
 pub(crate) use registry::BreakerRegistry;
-pub use resources::{BreakerConfig, BreakerDefaults};
+pub use resources::{BreakerConfig, BreakerDefaults, ForceBumpGrade};
 pub use sets::BreakerSystems;

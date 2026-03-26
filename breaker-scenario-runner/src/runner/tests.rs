@@ -496,9 +496,7 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
                 invariant_params: InvariantParams { max_bolt_count: 8 },
                 allow_early_end: true,
                 stress: None,
-                seed: None,
-                initial_overclocks: None,
-                frame_mutations: None,
+                ..Default::default()
             },
         })
         .insert_resource(shared.clone())

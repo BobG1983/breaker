@@ -7,12 +7,11 @@ use super::*;
 #[test]
 fn chaos_input_strategy_parses_from_ron() {
     // RON newtype-variant syntax: Chaos((field: val, ...))
-    let ron = "Chaos((seed: 42, action_prob: 0.3))";
+    let ron = "Chaos((action_prob: 0.3))";
     let result: InputStrategy = ron::de::from_str(ron).expect("Chaos should parse");
     assert_eq!(
         result,
         InputStrategy::Chaos(ChaosParams {
-            seed: 42,
             action_prob: 0.3,
         })
     );
@@ -61,13 +60,12 @@ fn scripted_input_strategy_empty_actions_list_parses() {
 
 #[test]
 fn hybrid_input_strategy_parses_from_ron() {
-    let ron = "Hybrid((scripted_frames: 100, seed: 7, action_prob: 0.5))";
+    let ron = "Hybrid((scripted_frames: 100, action_prob: 0.5))";
     let result: InputStrategy = ron::de::from_str(ron).expect("Hybrid should parse");
     assert_eq!(
         result,
         InputStrategy::Hybrid(HybridParams {
             scripted_frames: 100,
-            seed: 7,
             action_prob: 0.5,
         })
     );
@@ -148,7 +146,7 @@ fn scenario_definition_expected_violations_some_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [BoltInBounds, NoNaN],
         expected_violations: Some([BoltInBounds, NoNaN]),
@@ -167,7 +165,7 @@ fn scenario_definition_expected_violations_none_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -210,7 +208,7 @@ fn full_scenario_definition_parses_all_fields() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 99, action_prob: 0.25)),
+        input: Chaos((action_prob: 0.25)),
         max_frames: 20000,
         invariants: [BoltInBounds, NoNaN],
         expected_violations: None,
@@ -224,7 +222,6 @@ fn full_scenario_definition_parses_all_fields() {
     assert_eq!(
         result.input,
         InputStrategy::Chaos(ChaosParams {
-            seed: 99,
             action_prob: 0.25,
         })
     );
@@ -246,7 +243,7 @@ fn scenario_definition_allow_early_end_defaults_to_true() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -311,7 +308,7 @@ fn scenario_definition_seed_defaults_to_none_when_omitted() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -330,7 +327,7 @@ fn scenario_definition_seed_some_value_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -409,7 +406,7 @@ fn scenario_definition_stress_field_defaults_to_none_when_omitted() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -428,7 +425,7 @@ fn scenario_definition_stress_some_with_explicit_values_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -451,7 +448,7 @@ fn scenario_definition_stress_some_empty_uses_defaults() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -480,7 +477,7 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -518,7 +515,7 @@ fn scenario_definition_initial_overclocks_multiple_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -557,7 +554,7 @@ fn scenario_definition_initial_overclocks_defaults_to_none() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -904,7 +901,7 @@ fn scenario_definition_with_frame_mutations_parses_from_ron() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -927,7 +924,7 @@ fn scenario_definition_without_frame_mutations_defaults_to_none() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
-        input: Chaos((seed: 1, action_prob: 0.1)),
+        input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
         invariants: [],
         expected_violations: None,
@@ -938,5 +935,176 @@ fn scenario_definition_without_frame_mutations_defaults_to_none() {
     assert!(
         result.frame_mutations.is_none(),
         "frame_mutations must be None when omitted from RON"
+    );
+}
+
+// -------------------------------------------------------------------------
+// ChaosParams — seed removed
+// -------------------------------------------------------------------------
+
+#[test]
+fn chaos_params_without_seed_parses() {
+    let ron = "(action_prob: 0.3)";
+    let result: ChaosParams = ron::de::from_str(ron).expect("ChaosParams without seed should parse");
+    assert_eq!(
+        result,
+        ChaosParams { action_prob: 0.3 },
+        "ChaosParams must contain only action_prob"
+    );
+}
+
+// -------------------------------------------------------------------------
+// HybridParams — seed removed
+// -------------------------------------------------------------------------
+
+#[test]
+fn hybrid_params_without_seed_parses() {
+    let ron = "(scripted_frames: 100, action_prob: 0.5)";
+    let result: HybridParams =
+        ron::de::from_str(ron).expect("HybridParams without seed should parse");
+    assert_eq!(
+        result,
+        HybridParams {
+            scripted_frames: 100,
+            action_prob: 0.5,
+        },
+        "HybridParams must contain only scripted_frames and action_prob"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InputStrategy — Perfect variant
+// -------------------------------------------------------------------------
+
+#[test]
+fn input_strategy_perfect_parses() {
+    let ron = "Perfect(AlwaysPerfect)";
+    let result: InputStrategy =
+        ron::de::from_str(ron).expect("InputStrategy::Perfect(AlwaysPerfect) should parse");
+    assert_eq!(
+        result,
+        InputStrategy::Perfect(BumpMode::AlwaysPerfect),
+        "must parse to Perfect(AlwaysPerfect)"
+    );
+}
+
+// -------------------------------------------------------------------------
+// BumpMode — all variants
+// -------------------------------------------------------------------------
+
+#[test]
+fn bump_mode_all_variants_parse() {
+    let variants = [
+        ("AlwaysPerfect", BumpMode::AlwaysPerfect),
+        ("AlwaysEarly", BumpMode::AlwaysEarly),
+        ("AlwaysLate", BumpMode::AlwaysLate),
+        ("AlwaysWhiff", BumpMode::AlwaysWhiff),
+        ("NeverBump", BumpMode::NeverBump),
+        ("Random", BumpMode::Random),
+    ];
+    for (ron_str, expected) in &variants {
+        let result: BumpMode = ron::de::from_str(ron_str)
+            .unwrap_or_else(|e| panic!("BumpMode::{ron_str} should parse: {e}"));
+        assert_eq!(
+            result, *expected,
+            "BumpMode::{ron_str} must parse to {expected:?}"
+        );
+    }
+}
+
+// -------------------------------------------------------------------------
+// ScenarioDefinition — chip_selections field
+// -------------------------------------------------------------------------
+
+#[test]
+fn chip_selections_parses_from_ron() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        chip_selections: Some(["Surge", "Surge"]),
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition with chip_selections should parse");
+    assert_eq!(
+        result.chip_selections,
+        Some(vec!["Surge".to_owned(), "Surge".to_owned()]),
+        "chip_selections must be Some([\"Surge\", \"Surge\"])"
+    );
+}
+
+#[test]
+fn chip_selections_defaults_to_none() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition without chip_selections should parse");
+    assert!(
+        result.chip_selections.is_none(),
+        "chip_selections must be None when omitted from RON"
+    );
+}
+
+// -------------------------------------------------------------------------
+// ScenarioDefinition — initial_effects field
+// -------------------------------------------------------------------------
+
+#[test]
+fn initial_effects_parses_from_ron() {
+    use breaker::effect::{Effect, EffectNode, RootEffect, Target};
+
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+        initial_effects: Some([On(target: Bolt, then: [Do(Piercing(1))])]),
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition with initial_effects should parse");
+    let effects = result
+        .initial_effects
+        .expect("initial_effects must be Some");
+    assert_eq!(effects.len(), 1, "expected 1 root effect");
+    assert_eq!(
+        effects[0],
+        RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(Effect::Piercing(1))],
+        },
+        "initial_effects must contain On(target: Bolt, then: [Do(Piercing(1))])"
+    );
+}
+
+#[test]
+fn initial_effects_defaults_to_none() {
+    let ron = r#"(
+        breaker: "aegis",
+        layout: "corridor",
+        input: Chaos((action_prob: 0.1)),
+        max_frames: 1000,
+        invariants: [],
+        expected_violations: None,
+        debug_setup: None,
+    )"#;
+    let result: ScenarioDefinition =
+        ron::de::from_str(ron).expect("ScenarioDefinition without initial_effects should parse");
+    assert!(
+        result.initial_effects.is_none(),
+        "initial_effects must be None when omitted from RON"
     );
 }

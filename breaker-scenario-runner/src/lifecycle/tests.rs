@@ -15,7 +15,7 @@ use crate::{
     },
     types::{
         ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy, InvariantKind,
-        InvariantParams, MutationKind, ScenarioBreakerState, ScenarioDefinition, ScriptedParams,
+        MutationKind, ScenarioBreakerState, ScenarioDefinition, ScriptedParams,
     },
 };
 
@@ -24,19 +24,11 @@ fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         breaker: "aegis".to_owned(),
         layout: "corridor".to_owned(),
         input: InputStrategy::Chaos(ChaosParams {
-            seed: 0,
             action_prob: 0.3,
         }),
         max_frames,
         invariants: vec![InvariantKind::BoltInBounds],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     }
 }
 
@@ -49,14 +41,7 @@ fn make_lifecycle_test_scenario() -> ScenarioDefinition {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     }
 }
 
@@ -274,19 +259,13 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_position: Some((0.0, -500.0)),
             breaker_position: None,
             disable_physics: false,
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -334,19 +313,13 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_position: None,
             breaker_position: Some((100.0, -50.0)),
             disable_physics: false,
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -394,19 +367,13 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_position: Some((0.0, -400.0)),
             breaker_position: None,
             disable_physics: true,
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -669,19 +636,11 @@ fn init_scenario_input_creates_driver_resource() {
             breaker: "aegis".to_owned(),
             layout: "corridor".to_owned(),
             input: InputStrategy::Chaos(ChaosParams {
-                seed: 42,
                 action_prob: 0.3,
             }),
             max_frames: 1000,
             invariants: vec![],
-            expected_violations: None,
-            debug_setup: None,
-            invariant_params: InvariantParams::default(),
-            allow_early_end: true,
-            stress: None,
-            seed: None,
-            initial_overclocks: None,
-            frame_mutations: None,
+            ..Default::default()
         },
     });
     app.add_systems(Update, init_scenario_input);
@@ -1165,17 +1124,11 @@ fn apply_debug_setup_sets_bolt_velocity_when_some() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_velocity: Some((0.0, 2000.0)),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1215,17 +1168,11 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_velocity: None,
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1270,17 +1217,11 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_velocity: Some((100.0, 200.0)),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1347,17 +1288,11 @@ fn apply_debug_setup_spawns_extra_tagged_bolts() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             extra_tagged_bolts: Some(5),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1438,17 +1373,11 @@ fn apply_debug_setup_spawns_zero_extra_bolts_when_some_zero() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             extra_tagged_bolts: Some(0),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1485,17 +1414,11 @@ fn apply_debug_setup_sets_node_timer_remaining() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             node_timer_remaining: Some(-1.0),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1530,17 +1453,11 @@ fn apply_debug_setup_ignores_node_timer_remaining_when_no_resource() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             node_timer_remaining: Some(-1.0),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1566,17 +1483,11 @@ fn apply_debug_setup_sets_previous_game_state_from_forced() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             force_previous_game_state: Some(ForcedGameState::Loading),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);
@@ -1659,14 +1570,7 @@ fn apply_debug_frame_mutations_noop_when_none() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1694,17 +1598,11 @@ fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
             mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1746,17 +1644,11 @@ fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
             mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1798,17 +1690,11 @@ fn apply_debug_frame_mutations_set_timer_remaining_at_matching_frame() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 5,
             mutation: MutationKind::SetTimerRemaining(61.0),
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1845,17 +1731,11 @@ fn apply_debug_frame_mutations_set_timer_remaining_noop_when_no_timer() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 5,
             mutation: MutationKind::SetTimerRemaining(61.0),
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1882,17 +1762,11 @@ fn apply_debug_frame_mutations_spawn_extra_entities_at_matching_frame() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 10,
             mutation: MutationKind::SpawnExtraEntities(5),
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1929,17 +1803,11 @@ fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 5,
             mutation: MutationKind::MoveBolt(999.0, 999.0),
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -1983,17 +1851,11 @@ fn apply_debug_frame_mutations_toggle_pause_sets_paused() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
             mutation: MutationKind::TogglePause,
         }]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -2038,13 +1900,6 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
-        debug_setup: None,
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
         frame_mutations: Some(vec![
             FrameMutation {
                 frame: 5,
@@ -2055,6 +1910,7 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
                 mutation: MutationKind::MoveBolt(100.0, 200.0),
             },
         ]),
+        ..Default::default()
     };
 
     let mut app = App::new();
@@ -2275,17 +2131,11 @@ fn apply_debug_setup_writes_velocity2d_when_bolt_velocity_some() {
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
         invariants: vec![],
-        expected_violations: None,
         debug_setup: Some(DebugSetup {
             bolt_velocity: Some((0.0, 2000.0)),
             ..Default::default()
         }),
-        invariant_params: InvariantParams::default(),
-        allow_early_end: true,
-        stress: None,
-        seed: None,
-        initial_overclocks: None,
-        frame_mutations: None,
+        ..Default::default()
     };
 
     let mut app = debug_setup_app(definition);

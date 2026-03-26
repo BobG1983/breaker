@@ -6,6 +6,7 @@
 #[cfg(test)]
 mod tests;
 
+use breaker::effect::RootEffect;
 use serde::Deserialize;
 
 /// All gameplay actions that can be injected by an input strategy.
@@ -39,6 +40,26 @@ pub enum GameAction {
     TogglePause,
 }
 
+/// Bump timing mode for the [`InputStrategy::Perfect`] variant.
+///
+/// Controls how the `PerfectDriver` times its bump actions relative to the
+/// bolt's proximity to the breaker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum BumpMode {
+    /// Always produces a perfectly-timed bump.
+    AlwaysPerfect,
+    /// Always produces an early bump.
+    AlwaysEarly,
+    /// Always produces a late bump.
+    AlwaysLate,
+    /// Always produces a whiff (miss).
+    AlwaysWhiff,
+    /// Never bumps at all.
+    NeverBump,
+    /// Randomly chooses a bump timing per frame.
+    Random,
+}
+
 /// A single scripted frame entry — a frame index and the actions to inject.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ScriptedFrame {
@@ -51,8 +72,6 @@ pub struct ScriptedFrame {
 /// Parameters for the [`InputStrategy::Chaos`] variant.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ChaosParams {
-    /// Seed for the RNG.
-    pub seed: u64,
     /// Probability (0.0–1.0) of injecting any action on a given frame.
     pub action_prob: f32,
 }
@@ -69,15 +88,13 @@ pub struct ScriptedParams {
 pub struct HybridParams {
     /// Number of frames to play back scripted actions before switching to chaos.
     pub scripted_frames: u32,
-    /// Seed for the random phase.
-    pub seed: u64,
     /// Probability (0.0–1.0) for the random phase.
     pub action_prob: f32,
 }
 
 /// Input injection strategy for a scenario run.
 ///
-/// RON newtype-variant syntax: `Chaos((seed: 42, action_prob: 0.3))`.
+/// RON newtype-variant syntax: `Chaos((action_prob: 0.3))`.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum InputStrategy {
     /// Randomised action injection driven by an RNG seed and probability.
@@ -86,6 +103,8 @@ pub enum InputStrategy {
     Scripted(ScriptedParams),
     /// Scripted actions up to `scripted_frames`, then random chaos afterwards.
     Hybrid(HybridParams),
+    /// Perfect-timing input driven by a [`BumpMode`] strategy.
+    Perfect(BumpMode),
 }
 
 /// Invariant kinds the runner can check during a scenario run.
@@ -332,11 +351,45 @@ pub struct ScenarioDefinition {
     /// by [`crate::lifecycle::apply_debug_frame_mutations`].
     #[serde(default)]
     pub frame_mutations: Option<Vec<FrameMutation>>,
+    /// Optional chip selections to pre-populate at scenario start.
+    ///
+    /// Each string is a chip name (e.g. `"Surge"`) that will be added to the
+    /// chip inventory before the run begins.
+    #[serde(default)]
+    pub chip_selections: Option<Vec<String>>,
+    /// Optional root effects to pre-populate at scenario start.
+    ///
+    /// Each [`RootEffect`] is injected into the active effects before the run
+    /// begins.
+    #[serde(default)]
+    pub initial_effects: Option<Vec<RootEffect>>,
 }
 
 impl ScenarioDefinition {
     const fn default_allow_early_end() -> bool {
         true
+    }
+}
+
+impl Default for ScenarioDefinition {
+    fn default() -> Self {
+        Self {
+            breaker: String::new(),
+            layout: String::new(),
+            input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+            max_frames: 1000,
+            invariants: vec![],
+            expected_violations: None,
+            debug_setup: None,
+            invariant_params: InvariantParams::default(),
+            allow_early_end: true,
+            stress: None,
+            seed: None,
+            initial_overclocks: None,
+            frame_mutations: None,
+            chip_selections: None,
+            initial_effects: None,
+        }
     }
 }
 

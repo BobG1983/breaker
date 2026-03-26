@@ -8,6 +8,7 @@ use crate::{
         components::{Breaker, BreakerState, BreakerStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
         queries::{BumpGradingQuery, BumpTimingQuery},
+        resources::ForceBumpGrade,
     },
     input::resources::{GameAction, InputActions},
 };
@@ -112,7 +113,9 @@ pub(crate) fn grade_bump(
     mut hit_reader: MessageReader<BoltHitBreaker>,
     mut writer: MessageWriter<BumpPerformed>,
     mut whiff_writer: MessageWriter<BumpWhiffed>,
+    force_grade: Option<Res<ForceBumpGrade>>,
 ) {
+    let forced = force_grade.as_ref().and_then(|fg| fg.0);
     let Ok((mut bump, perfect_window, late_window, perfect_cooldown, weak_cooldown)) =
         bump_query.single_mut()
     else {
@@ -121,8 +124,9 @@ pub(crate) fn grade_bump(
 
     for hit in hit_reader.read() {
         if bump.active {
-            // Forward path: grade based on timer position
-            let grade = forward_grade(bump.timer, perfect_window.0);
+            // Forward path: grade based on timer position, with optional override
+            let natural_grade = forward_grade(bump.timer, perfect_window.0);
+            let grade = forced.unwrap_or(natural_grade);
             writer.write(BumpPerformed {
                 grade,
                 bolt: Some(hit.bolt),
@@ -1050,6 +1054,110 @@ mod tests {
             captured.0[0].bolt,
             Some(bolt_entity),
             "BumpPerformed.bolt in retroactive path should match BumpState.last_hit_bolt"
+        );
+    }
+
+    // ── ForceBumpGrade override tests ─────────────────────────────
+
+    #[test]
+    fn grade_bump_uses_force_grade_when_some() {
+        // Given: ForceBumpGrade(Some(Late)), forward bump active in perfect zone
+        // When: grade_bump runs with a BoltHitBreaker
+        // Then: BumpPerformed.grade should be Late (overridden), not Perfect (calculated)
+        let mut app = grade_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        app.insert_resource(ForceBumpGrade(Some(BumpGrade::Late)));
+
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                active: true,
+                timer: config.perfect_window * 0.5, // in the perfect zone — would normally grade Perfect
+                ..Default::default()
+            },
+            bump_param_bundle(&config),
+        ));
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
+        assert_eq!(
+            captured.0[0].grade,
+            BumpGrade::Late,
+            "grade_bump should use ForceBumpGrade override (Late), not calculated grade (Perfect)"
+        );
+    }
+
+    #[test]
+    fn grade_bump_ignores_force_grade_when_none() {
+        // Given: ForceBumpGrade(None), forward bump active in perfect zone
+        // When: grade_bump runs with a BoltHitBreaker
+        // Then: BumpPerformed.grade should be Perfect (normal calculation)
+        let mut app = grade_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        app.insert_resource(ForceBumpGrade(None));
+
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                active: true,
+                timer: config.perfect_window * 0.5, // in the perfect zone
+                ..Default::default()
+            },
+            bump_param_bundle(&config),
+        ));
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
+        assert_eq!(
+            captured.0[0].grade,
+            BumpGrade::Perfect,
+            "grade_bump should use normal grading when ForceBumpGrade is None"
+        );
+    }
+
+    #[test]
+    fn grade_bump_works_without_force_grade_resource() {
+        // Given: no ForceBumpGrade resource inserted, forward bump active in perfect zone
+        // When: grade_bump runs with a BoltHitBreaker
+        // Then: BumpPerformed.grade should be Perfect (backward compatible)
+        let mut app = grade_bump_test_app();
+        let config = app.world().resource::<BreakerConfig>().clone();
+
+        // Intentionally do NOT insert ForceBumpGrade resource
+
+        app.world_mut().spawn((
+            Breaker,
+            BumpState {
+                active: true,
+                timer: config.perfect_window * 0.5, // in the perfect zone
+                ..Default::default()
+            },
+            bump_param_bundle(&config),
+        ));
+
+        app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+            bolt: Entity::PLACEHOLDER,
+        })));
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedBumps>();
+        assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
+        assert_eq!(
+            captured.0[0].grade,
+            BumpGrade::Perfect,
+            "grade_bump should work normally when ForceBumpGrade resource is absent"
         );
     }
 }

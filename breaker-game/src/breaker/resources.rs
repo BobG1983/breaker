@@ -3,6 +3,8 @@
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 use rantzsoft_defaults::GameConfig;
 
+use super::messages::BumpGrade;
+
 /// Breaker configuration resource.
 #[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
 #[game_config(
@@ -121,6 +123,11 @@ impl BreakerConfig {
     }
 }
 
+/// Scenario runner override for bump grading. When `Some`, the `grade_bump`
+/// system uses this grade instead of calculating from timing.
+#[derive(Resource, Default)]
+pub struct ForceBumpGrade(pub Option<BumpGrade>);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,6 +165,27 @@ mod tests {
         assert!(
             result.min_angle_from_horizontal > 0.0,
             "RON should include min_angle_from_horizontal"
+        );
+    }
+
+    // ── ForceBumpGrade tests ────────────────────────────────────────
+
+    #[test]
+    fn force_bump_grade_default_is_none() {
+        let force = ForceBumpGrade::default();
+        assert!(
+            force.0.is_none(),
+            "ForceBumpGrade::default() should be None"
+        );
+    }
+
+    #[test]
+    fn force_bump_grade_holds_perfect() {
+        let force = ForceBumpGrade(Some(BumpGrade::Perfect));
+        assert_eq!(
+            force.0,
+            Some(BumpGrade::Perfect),
+            "ForceBumpGrade should hold Some(Perfect)"
         );
     }
 }

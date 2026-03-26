@@ -97,7 +97,7 @@ pub fn print_coverage_report(report: &CoverageReport) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{ChaosParams, InputStrategy, InvariantParams};
+    use crate::types::{ChaosParams, InputStrategy};
 
     // -----------------------------------------------------------------------
     // Helper — minimal ScenarioDefinition builder
@@ -113,19 +113,12 @@ mod tests {
             breaker: "aegis".to_owned(),
             layout: layout.to_owned(),
             input: InputStrategy::Chaos(ChaosParams {
-                seed: 1,
                 action_prob: 0.1,
             }),
             max_frames: 100,
             invariants: vec![],
             expected_violations,
-            debug_setup: None,
-            invariant_params: InvariantParams::default(),
-            allow_early_end: true,
-            stress: None,
-            seed: None,
-            initial_overclocks: None,
-            frame_mutations: None,
+            ..Default::default()
         }
     }
 

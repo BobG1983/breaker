@@ -420,14 +420,7 @@ mod tests {
             input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
             max_frames: 100,
             invariants: vec![],
-            expected_violations: None,
-            debug_setup: None,
-            invariant_params: default(),
-            allow_early_end: true,
-            stress: None,
-            seed: None,
-            initial_overclocks: None,
-            frame_mutations: None,
+            ..Default::default()
         };
         let stats = ScenarioStats {
             actions_injected: 0,
