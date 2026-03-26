@@ -13,7 +13,13 @@ use crate::{
     chips::components::DamageBoost,
     effect::{
         definition::{Effect, EffectNode, ImpactTarget, Trigger},
-        effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
+        effects::{
+            bolt_size_boost::ActiveSizeBoosts,
+            bump_force_boost::ActiveBumpForces,
+            damage_boost::ActiveDamageBoosts,
+            piercing::ActivePiercings,
+            speed_boost::ActiveSpeedBoosts,
+        },
     },
 };
 
@@ -24,6 +30,9 @@ type UntilTimerQuery = (
     Option<&'static mut Velocity2D>,
     Option<&'static mut ActiveSpeedBoosts>,
     Option<&'static mut ActiveDamageBoosts>,
+    Option<&'static mut ActivePiercings>,
+    Option<&'static mut ActiveSizeBoosts>,
+    Option<&'static mut ActiveBumpForces>,
 );
 
 /// Query for entities with trigger-based Until buffs, velocity, and active boost tracking.
@@ -33,6 +42,9 @@ type UntilTriggerQuery = (
     Option<&'static mut Velocity2D>,
     Option<&'static mut ActiveSpeedBoosts>,
     Option<&'static mut ActiveDamageBoosts>,
+    Option<&'static mut ActivePiercings>,
+    Option<&'static mut ActiveSizeBoosts>,
+    Option<&'static mut ActiveBumpForces>,
 );
 
 /// A single timed Until entry — an active buff that expires after a duration.
@@ -61,6 +73,18 @@ pub(crate) struct UntilTriggerEntry {
 #[derive(Component, Debug, Default, Clone)]
 pub(crate) struct UntilTriggers(pub Vec<UntilTriggerEntry>);
 
+/// Bundles mutable references to all active boost tracking components for
+/// reversal. Passed as a single argument to [`reverse_children`] to stay
+/// within clippy's `too_many_arguments` threshold.
+struct ActiveBoosts<'a> {
+    velocity: Option<&'a mut Velocity2D>,
+    speed: Option<&'a mut ActiveSpeedBoosts>,
+    damage: Option<&'a mut ActiveDamageBoosts>,
+    piercings: Option<&'a mut ActivePiercings>,
+    size: Option<&'a mut ActiveSizeBoosts>,
+    bump_force: Option<&'a mut ActiveBumpForces>,
+}
+
 /// Reverses applicable child effects on an entity.
 ///
 /// - `SpeedBoost`: if [`ActiveSpeedBoosts`] is present, removes one matching
@@ -68,41 +92,75 @@ pub(crate) struct UntilTriggers(pub Vec<UntilTriggerEntry>);
 ///   Otherwise falls back to dividing `Velocity2D` by the multiplier.
 /// - `DamageBoost`: if [`ActiveDamageBoosts`] is present, removes one matching
 ///   multiplier entry. Otherwise removes the `DamageBoost` component.
+/// - `Piercing`: if [`ActivePiercings`] is present, removes one matching
+///   entry (letting `apply_active_piercings` recalculate).
+/// - `SizeBoost`: if [`ActiveSizeBoosts`] is present, removes one matching
+///   entry (letting `apply_active_size_boosts` recalculate).
+/// - `BumpForce`: if [`ActiveBumpForces`] is present, removes one matching
+///   entry (letting `apply_active_bump_forces` recalculate).
 /// - All other effects: no-op (fire-and-forget).
 fn reverse_children(
     entity: Entity,
     children: &[EffectNode],
-    mut velocity: Option<&mut Velocity2D>,
-    mut active_speed_boosts: Option<&mut ActiveSpeedBoosts>,
-    mut active_damage_boosts: Option<&mut ActiveDamageBoosts>,
+    boosts: &mut ActiveBoosts,
     commands: &mut Commands,
 ) {
     for child in children {
         match child {
             EffectNode::Do(Effect::SpeedBoost { multiplier, .. }) => {
-                if let Some(ref mut boosts) = active_speed_boosts {
-                    let pos = boosts
+                if let Some(ref mut speed) = boosts.speed {
+                    let pos = speed
                         .0
                         .iter()
                         .position(|&m| (m - multiplier).abs() < f32::EPSILON);
                     if let Some(idx) = pos {
-                        boosts.0.swap_remove(idx);
+                        speed.0.swap_remove(idx);
                     }
-                } else if let Some(ref mut vel) = velocity {
+                } else if let Some(ref mut vel) = boosts.velocity {
                     vel.0 /= *multiplier;
                 }
             }
             EffectNode::Do(Effect::DamageBoost(multiplier)) => {
-                if let Some(ref mut boosts) = active_damage_boosts {
-                    let pos = boosts
+                if let Some(ref mut damage) = boosts.damage {
+                    let pos = damage
                         .0
                         .iter()
                         .position(|&m| (m - multiplier).abs() < f32::EPSILON);
                     if let Some(idx) = pos {
-                        boosts.0.swap_remove(idx);
+                        damage.0.swap_remove(idx);
                     }
                 } else {
                     commands.entity(entity).remove::<DamageBoost>();
+                }
+            }
+            EffectNode::Do(Effect::Piercing(count)) => {
+                if let Some(ref mut piercings) = boosts.piercings {
+                    let pos = piercings.0.iter().position(|&c| c == *count);
+                    if let Some(idx) = pos {
+                        piercings.0.swap_remove(idx);
+                    }
+                }
+            }
+            EffectNode::Do(Effect::SizeBoost(_, value)) => {
+                if let Some(ref mut size) = boosts.size {
+                    let pos = size
+                        .0
+                        .iter()
+                        .position(|&v| (v - value).abs() < f32::EPSILON);
+                    if let Some(idx) = pos {
+                        size.0.swap_remove(idx);
+                    }
+                }
+            }
+            EffectNode::Do(Effect::BumpForce(value)) => {
+                if let Some(ref mut forces) = boosts.bump_force {
+                    let pos = forces
+                        .0
+                        .iter()
+                        .position(|&v| (v - value).abs() < f32::EPSILON);
+                    if let Some(idx) = pos {
+                        forces.0.swap_remove(idx);
+                    }
                 }
             }
             _ => {
@@ -122,7 +180,17 @@ pub(crate) fn tick_until_timers(
     mut query: Query<UntilTimerQuery>,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut timers, mut velocity, mut active_speed, mut active_damage) in &mut query {
+    for (
+        entity,
+        mut timers,
+        mut velocity,
+        mut active_speed,
+        mut active_damage,
+        mut active_piercings,
+        mut active_size,
+        mut active_bump,
+    ) in &mut query
+    {
         let mut expired_indices = Vec::new();
         for (i, entry) in timers.0.iter_mut().enumerate() {
             entry.remaining -= dt;
@@ -133,14 +201,15 @@ pub(crate) fn tick_until_timers(
         // Process expired entries in reverse order to preserve indices.
         for &i in expired_indices.iter().rev() {
             let entry = timers.0.remove(i);
-            reverse_children(
-                entity,
-                &entry.children,
-                velocity.as_deref_mut(),
-                active_speed.as_deref_mut(),
-                active_damage.as_deref_mut(),
-                &mut commands,
-            );
+            let mut active = ActiveBoosts {
+                velocity: velocity.as_deref_mut(),
+                speed: active_speed.as_deref_mut(),
+                damage: active_damage.as_deref_mut(),
+                piercings: active_piercings.as_deref_mut(),
+                size: active_size.as_deref_mut(),
+                bump_force: active_bump.as_deref_mut(),
+            };
+            reverse_children(entity, &entry.children, &mut active, &mut commands);
         }
         if timers.0.is_empty() {
             commands.entity(entity).remove::<UntilTimers>();
@@ -174,7 +243,17 @@ pub(crate) fn check_until_triggers(
         .unwrap_or_default();
     let cell_destroyed_count = cell_destroyed_reader.map_or(0, |mut r| r.read().count());
 
-    for (entity, mut triggers, mut velocity, mut active_speed, mut active_damage) in &mut query {
+    for (
+        entity,
+        mut triggers,
+        mut velocity,
+        mut active_speed,
+        mut active_damage,
+        mut active_piercings,
+        mut active_size,
+        mut active_bump,
+    ) in &mut query
+    {
         triggers.0.retain(|entry| {
             let matched = match &entry.trigger {
                 Trigger::Impact(ImpactTarget::Cell) => cell_hit_bolts.contains(&entity),
@@ -184,14 +263,15 @@ pub(crate) fn check_until_triggers(
                 _ => false,
             };
             if matched {
-                reverse_children(
-                    entity,
-                    &entry.children,
-                    velocity.as_deref_mut(),
-                    active_speed.as_deref_mut(),
-                    active_damage.as_deref_mut(),
-                    &mut commands,
-                );
+                let mut active = ActiveBoosts {
+                    velocity: velocity.as_deref_mut(),
+                    speed: active_speed.as_deref_mut(),
+                    damage: active_damage.as_deref_mut(),
+                    piercings: active_piercings.as_deref_mut(),
+                    size: active_size.as_deref_mut(),
+                    bump_force: active_bump.as_deref_mut(),
+                };
+                reverse_children(entity, &entry.children, &mut active, &mut commands);
                 false // Remove the entry
             } else {
                 true // Keep the entry
@@ -208,11 +288,15 @@ mod tests {
     use super::*;
     use crate::{
         bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
+        breaker::components::Breaker,
         chips::components::DamageBoost,
         effect::{
             definition::{Effect, EffectNode, ImpactTarget, Target, Trigger},
             effects::{
+                bolt_size_boost::ActiveSizeBoosts,
+                bump_force_boost::ActiveBumpForces,
                 damage_boost::ActiveDamageBoosts,
+                piercing::ActivePiercings,
                 speed_boost::{ActiveSpeedBoosts, apply_speed_boosts},
             },
         },
@@ -1064,6 +1148,114 @@ mod tests {
             vec![1.5],
             "ActiveDamageBoosts should be [1.5] after 2.0 is removed, got {:?}",
             boosts.0
+        );
+    }
+
+    // =========================================================================
+    // Vec-based Until reversal — Piercing, SizeBoost, BumpForce
+    // =========================================================================
+
+    // --- Test 13: Timer expiry removes piercing entry from ActivePiercings ---
+
+    #[test]
+    fn reverse_piercing_removes_from_active_piercings() {
+        let mut app = test_app();
+        app.add_systems(FixedUpdate, tick_until_timers);
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                ActivePiercings(vec![2, 1]),
+                UntilTimers(vec![UntilTimerEntry {
+                    remaining: 0.01, // dt = 1/64 > 0.01 — expires this tick
+                    children: vec![EffectNode::Do(Effect::Piercing(2))],
+                }]),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // The 2 entry should be removed, leaving [1]
+        let piercings = app
+            .world()
+            .get::<ActivePiercings>(bolt)
+            .expect("bolt should have ActivePiercings");
+        assert_eq!(
+            piercings.0,
+            vec![1],
+            "ActivePiercings should be [1] after 2 is removed, got {:?}",
+            piercings.0
+        );
+    }
+
+    // --- Test 14: Timer expiry removes size boost entry from ActiveSizeBoosts ---
+
+    #[test]
+    fn reverse_size_boost_removes_from_active_size_boosts() {
+        let mut app = test_app();
+        app.add_systems(FixedUpdate, tick_until_timers);
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                ActiveSizeBoosts(vec![0.5, 0.3]),
+                UntilTimers(vec![UntilTimerEntry {
+                    remaining: 0.01, // dt = 1/64 > 0.01 — expires this tick
+                    children: vec![EffectNode::Do(Effect::SizeBoost(Target::Bolt, 0.5))],
+                }]),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // The 0.5 entry should be removed, leaving [0.3]
+        let boosts = app
+            .world()
+            .get::<ActiveSizeBoosts>(bolt)
+            .expect("bolt should have ActiveSizeBoosts");
+        assert_eq!(
+            boosts.0,
+            vec![0.3],
+            "ActiveSizeBoosts should be [0.3] after 0.5 is removed, got {:?}",
+            boosts.0
+        );
+    }
+
+    // --- Test 15: Timer expiry removes bump force entry from ActiveBumpForces ---
+
+    #[test]
+    fn reverse_bump_force_removes_from_active_bump_forces() {
+        let mut app = test_app();
+        app.add_systems(FixedUpdate, tick_until_timers);
+
+        let breaker = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                ActiveBumpForces(vec![10.0, 15.0]),
+                UntilTimers(vec![UntilTimerEntry {
+                    remaining: 0.01, // dt = 1/64 > 0.01 — expires this tick
+                    children: vec![EffectNode::Do(Effect::BumpForce(10.0))],
+                }]),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        // The 10.0 entry should be removed, leaving [15.0]
+        let forces = app
+            .world()
+            .get::<ActiveBumpForces>(breaker)
+            .expect("breaker should have ActiveBumpForces");
+        assert_eq!(
+            forces.0,
+            vec![15.0],
+            "ActiveBumpForces should be [15.0] after 10.0 is removed, got {:?}",
+            forces.0
         );
     }
 }
