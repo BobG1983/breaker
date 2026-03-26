@@ -192,10 +192,13 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                EffectChains(vec![EffectNode::Once(vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(Effect::SecondWind { invuln_secs: 3.0 })],
-                }])]),
+                EffectChains(vec![(
+                    None,
+                    EffectNode::Once(vec![EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::SecondWind { invuln_secs: 3.0 })],
+                    }]),
+                )]),
             ))
             .id();
 
@@ -241,10 +244,13 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                EffectChains(vec![EffectNode::Once(vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(Effect::SecondWind { invuln_secs: 3.0 })],
-                }])]),
+                EffectChains(vec![(
+                    None,
+                    EffectNode::Once(vec![EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::SecondWind { invuln_secs: 3.0 })],
+                    }]),
+                )]),
             ))
             .id();
 

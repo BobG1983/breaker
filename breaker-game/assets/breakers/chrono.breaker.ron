@@ -3,9 +3,10 @@
     name: "Chrono",
     stat_overrides: (),
     life_pool: None,
-    on_bolt_lost: Some(Do(TimePenalty(seconds: 5.0))),
-    on_perfect_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.5))),
-    on_early_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-    on_late_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-    chains: [],
+    effects: [
+        On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(TimePenalty(seconds: 5.0))])]),
+        On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+    ],
 )

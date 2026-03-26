@@ -3,9 +3,7 @@
 use bevy::prelude::*;
 
 use super::stack_f32;
-use crate::{
-    bolt::components::Bolt, chips::components::BoltSpeedBoost, effect::definition::Target,
-};
+use crate::{bolt::components::Bolt, chips::components::BoltSpeedBoost};
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -14,8 +12,6 @@ use crate::{
 /// Fired when a speed boost passive effect is applied via chip selection.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct SpeedBoostApplied {
-    /// Which entity to apply the speed change to.
-    pub target: Target,
     /// Speed multiplier per stack.
     pub multiplier: f32,
     /// Maximum number of stacks allowed.
@@ -31,9 +27,6 @@ pub(crate) fn handle_bolt_speed_boost(
     mut commands: Commands,
 ) {
     let event = trigger.event();
-    if event.target != crate::effect::definition::Target::Bolt {
-        return;
-    }
     let per_stack = event.multiplier;
     let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
@@ -70,7 +63,6 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
             multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
@@ -87,7 +79,6 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, BoltSpeedBoost(1.1))).id();
 
         app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
             multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
@@ -103,25 +94,21 @@ mod tests {
     }
 
     #[test]
-    fn ignores_breaker_target() {
+    fn applies_to_all_bolt_entities() {
         let mut app = test_app();
-        app.world_mut().spawn(Bolt);
+        let bolt_a = app.world_mut().spawn(Bolt).id();
+        let bolt_b = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
             multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
         });
         app.world_mut().flush();
 
-        assert!(
-            app.world_mut()
-                .query::<&BoltSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "handle_bolt_speed_boost should ignore Target::Breaker"
-        );
+        let sa = app.world().entity(bolt_a).get::<BoltSpeedBoost>().unwrap();
+        let sb = app.world().entity(bolt_b).get::<BoltSpeedBoost>().unwrap();
+        assert!((sa.0 - 1.1).abs() < f32::EPSILON);
+        assert!((sb.0 - 1.1).abs() < f32::EPSILON);
     }
 }

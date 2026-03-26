@@ -108,7 +108,6 @@ mod tests {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.25),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
                 multiplier: 2.0,
             })],
         };
@@ -142,7 +141,6 @@ mod tests {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.25),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
                 multiplier: 2.0,
             })],
         };
@@ -171,7 +169,6 @@ mod tests {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.5),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
                 multiplier: 1.5,
             })],
         };
@@ -206,7 +203,6 @@ mod tests {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.5),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
                 multiplier: 1.5,
             })],
         };

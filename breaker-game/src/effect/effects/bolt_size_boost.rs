@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::stack_f32;
-use crate::{bolt::components::Bolt, chips::components::BoltSizeBoost, effect::definition::Target};
+use crate::{bolt::components::Bolt, chips::components::BoltSizeBoost};
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -12,8 +12,6 @@ use crate::{bolt::components::Bolt, chips::components::BoltSizeBoost, effect::de
 /// Fired when a size boost passive effect is applied via chip selection.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct SizeBoostApplied {
-    /// Which entity to apply the size change to.
-    pub target: Target,
     /// Size boost per stack.
     pub per_stack: f32,
     /// Maximum number of stacks allowed.
@@ -39,9 +37,6 @@ pub(crate) fn handle_bolt_size_boost(
     mut commands: Commands,
 ) {
     let event = trigger.event();
-    if event.target != crate::effect::definition::Target::Bolt {
-        return;
-    }
     let per_stack = event.per_stack;
     let max_stacks = event.max_stacks;
     for (entity, mut existing, mut active_boosts) in &mut query {
@@ -126,7 +121,6 @@ mod tests {
         let bolt = app.world_mut().spawn(Bolt).id();
 
         app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
             per_stack: 0.5,
             max_stacks: 3,
             chip_name: String::new(),
@@ -143,7 +137,6 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, BoltSizeBoost(0.5))).id();
 
         app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
             per_stack: 0.5,
             max_stacks: 3,
             chip_name: String::new(),
@@ -155,29 +148,6 @@ mod tests {
             (s.0 - 1.0).abs() < f32::EPSILON,
             "BoltSizeBoost should stack from 0.5 to 1.0, got {}",
             s.0
-        );
-    }
-
-    #[test]
-    fn ignores_breaker_target() {
-        let mut app = test_app();
-        app.world_mut().spawn(Bolt);
-
-        app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
-            per_stack: 20.0,
-            max_stacks: 3,
-            chip_name: String::new(),
-        });
-        app.world_mut().flush();
-
-        assert!(
-            app.world_mut()
-                .query::<&BoltSizeBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "handle_bolt_size_boost should ignore Target::Breaker"
         );
     }
 
@@ -201,7 +171,6 @@ mod tests {
         let bolt = app.world_mut().spawn((Bolt, ActiveSizeBoosts(vec![]))).id();
 
         app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
             per_stack: 0.5,
             max_stacks: 5,
             chip_name: String::new(),

@@ -3,9 +3,10 @@
     name: "Aegis",
     stat_overrides: (),
     life_pool: Some(3),
-    on_bolt_lost: Some(Do(LoseLife)),
-    on_perfect_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.5))),
-    on_early_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-    on_late_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-    chains: [],
+    effects: [
+        On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(LoseLife)])]),
+        On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+    ],
 )

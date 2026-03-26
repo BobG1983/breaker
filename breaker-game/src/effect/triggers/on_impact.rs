@@ -490,7 +490,7 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::When {
+            .spawn(EffectChains(vec![(None, EffectNode::When {
                 trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
@@ -498,7 +498,7 @@ mod tests {
                     stacks: 1,
                     speed: 400.0,
                 })],
-            }]))
+            })]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -537,13 +537,12 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::When {
+            .spawn(EffectChains(vec![(None, EffectNode::When {
                 trigger: Trigger::Impact(ImpactTarget::Breaker),
                 then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    target: crate::effect::definition::Target::Bolt,
                     multiplier: 1.5,
                 })],
-            }]))
+            })]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
@@ -579,13 +578,12 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::When {
+            .spawn(EffectChains(vec![(None, EffectNode::When {
                 trigger: Trigger::Impact(ImpactTarget::Wall),
                 then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    target: crate::effect::definition::Target::Bolt,
                     multiplier: 1.3,
                 })],
-            }]))
+            })]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
@@ -621,8 +619,9 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::Once(vec![
-                EffectNode::When {
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::Once(vec![EffectNode::When {
                     trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 64.0,
@@ -630,8 +629,8 @@ mod tests {
                         stacks: 1,
                         speed: 400.0,
                     })],
-                },
-            ])]))
+                }]),
+            )]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -673,15 +672,15 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::Once(vec![
-                EffectNode::When {
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::Once(vec![EffectNode::When {
                     trigger: Trigger::Impact(ImpactTarget::Wall), // Does NOT match CellImpact
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        target: crate::effect::definition::Target::Bolt,
                         multiplier: 2.0,
                     })],
-                },
-            ])]))
+                }]),
+            )]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -737,13 +736,12 @@ mod tests {
         // Bolt with entity-level EffectChains containing SpeedBoost on cell impact
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::When {
+            .spawn(EffectChains(vec![(None, EffectNode::When {
                 trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    target: crate::effect::definition::Target::Bolt,
                     multiplier: 1.5,
                 })],
-            }]))
+            })]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -941,7 +939,6 @@ mod tests {
                 children: vec![EffectNode::When {
                     trigger: Trigger::Impact(ImpactTarget::Wall),
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        target: crate::effect::definition::Target::Bolt,
                         multiplier: 1.3,
                     })],
                 }],

@@ -15,9 +15,6 @@ pub(crate) fn handle_width_boost(
     mut commands: Commands,
 ) {
     let event = trigger.event();
-    if event.target != crate::effect::definition::Target::Breaker {
-        return;
-    }
     let per_stack = event.per_stack;
     let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
@@ -54,7 +51,6 @@ mod tests {
         let breaker = app.world_mut().spawn(Breaker).id();
 
         app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
             per_stack: 20.0,
             max_stacks: 3,
             chip_name: String::new(),
@@ -71,7 +67,6 @@ mod tests {
         let breaker = app.world_mut().spawn((Breaker, WidthBoost(20.0))).id();
 
         app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
             per_stack: 20.0,
             max_stacks: 3,
             chip_name: String::new(),
@@ -80,28 +75,5 @@ mod tests {
 
         let w = app.world().entity(breaker).get::<WidthBoost>().unwrap();
         assert!((w.0 - 40.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn ignores_bolt_target() {
-        let mut app = test_app();
-        app.world_mut().spawn(Breaker);
-
-        app.world_mut().commands().trigger(SizeBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
-            per_stack: 0.3,
-            max_stacks: 3,
-            chip_name: String::new(),
-        });
-        app.world_mut().flush();
-
-        assert!(
-            app.world_mut()
-                .query::<&WidthBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "handle_width_boost should ignore Target::Bolt"
-        );
     }
 }

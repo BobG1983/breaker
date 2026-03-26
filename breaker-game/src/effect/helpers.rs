@@ -125,7 +125,7 @@ pub(super) fn evaluate_entity_chains(
 ) {
     let mut consumed_indices = Vec::new();
 
-    for (i, node) in chains.0.iter().enumerate() {
+    for (i, (chip_name, node)) in chains.0.iter().enumerate() {
         match node {
             EffectNode::Once(children) => {
                 // Unwrap the Once: evaluate inner children against the trigger
@@ -135,7 +135,12 @@ pub(super) fn evaluate_entity_chains(
                         match result {
                             NodeEvalResult::Fire(effect) => {
                                 any_matched = true;
-                                fire_typed_event(effect, targets.clone(), None, commands);
+                                fire_typed_event(
+                                    effect,
+                                    targets.clone(),
+                                    chip_name.clone(),
+                                    commands,
+                                );
                             }
                             NodeEvalResult::Arm(_remaining) => {
                                 // Arming from Once children — treat as matched
@@ -154,7 +159,12 @@ pub(super) fn evaluate_entity_chains(
                 for result in evaluate_node(trigger_kind, node) {
                     match result {
                         NodeEvalResult::Fire(effect) => {
-                            fire_typed_event(effect, targets.clone(), None, commands);
+                            fire_typed_event(
+                                effect,
+                                targets.clone(),
+                                chip_name.clone(),
+                                commands,
+                            );
                         }
                         NodeEvalResult::Arm(_) | NodeEvalResult::NoMatch => {}
                     }

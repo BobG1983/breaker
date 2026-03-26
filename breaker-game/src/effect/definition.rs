@@ -134,15 +134,13 @@ pub enum Effect {
     DamageBoost(f32),
     /// Scales a target's speed by a multiplier, clamped within base/max bounds.
     SpeedBoost {
-        /// Which entity to apply the speed change to.
-        target: Target,
         /// Multiplier applied to the current velocity magnitude (1.x format).
         multiplier: f32,
     },
     /// Bolt chains to N additional cells on hit.
     ChainHit(u32),
-    /// Size boost: on `Target::Bolt` adjusts radius, on `Target::Breaker` adjusts width.
-    SizeBoost(Target, f32),
+    /// Size boost: adjusts radius for bolts, width for breakers.
+    SizeBoost(f32),
     /// Bolt attracts nearby entities of the specified type (force per stack).
     Attraction(AttractionType, f32),
     /// Flat bump force increase per stack.
@@ -345,9 +343,12 @@ pub enum EffectTarget {
 /// Entity-local effect chains (e.g., `OnDeath` chains on cells, breaker-specific triggers).
 ///
 /// Coexists with `ActiveEffects` (global resource) and `ArmedEffects` (bolt component).
-/// Populated by `bridge_cell_death` evaluation and future `On` node dispatch.
+/// Each entry is `(chip_name, chain)` where `chip_name` is `None` for
+/// breaker-originating chains and `Some(name)` for chip/evolution chains.
+/// Populated by `bridge_cell_death` evaluation, `init_breaker`, `dispatch_chip_effects`,
+/// and future `On` node dispatch.
 #[derive(Component, Debug, Default, Clone)]
-pub struct EffectChains(pub Vec<EffectNode>);
+pub struct EffectChains(pub Vec<(Option<String>, EffectNode)>);
 
 // ---------------------------------------------------------------------------
 // Test constructors for Effect
@@ -402,12 +403,9 @@ impl Effect {
         }
     }
 
-    /// Build a `SpeedBoost` leaf targeting `Bolt` with the given multiplier.
+    /// Build a `SpeedBoost` leaf with the given multiplier.
     pub(crate) fn test_speed_boost(multiplier: f32) -> Self {
-        Self::SpeedBoost {
-            target: Target::Bolt,
-            multiplier,
-        }
+        Self::SpeedBoost { multiplier }
     }
 
     /// Build a `Piercing` leaf with the given count.
@@ -1082,12 +1080,9 @@ mod tests {
             },
             Effect::Piercing(1),
             Effect::DamageBoost(0.5),
-            Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.2,
-            },
+            Effect::SpeedBoost { multiplier: 1.2 },
             Effect::ChainHit(2),
-            Effect::SizeBoost(Target::Bolt, 5.0),
+            Effect::SizeBoost(5.0),
             Effect::Attraction(AttractionType::Cell, 0.3),
             Effect::BumpForce(0.2),
             Effect::TiltControl(0.1),
@@ -1170,23 +1165,26 @@ mod tests {
     #[test]
     fn effect_chains_stores_mixed_node_types() {
         let chains = EffectChains(vec![
-            EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            },
-            EffectNode::Do(Effect::Piercing(1)),
+            (
+                None,
+                EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(Effect::Shockwave {
+                        base_range: 64.0,
+                        range_per_level: 0.0,
+                        stacks: 1,
+                        speed: 400.0,
+                    })],
+                },
+            ),
+            (None, EffectNode::Do(Effect::Piercing(1))),
         ]);
         assert_eq!(chains.0.len(), 2);
     }
 
     #[test]
     fn effect_chains_single_do_is_valid() {
-        let chains = EffectChains(vec![EffectNode::Do(Effect::Piercing(1))]);
+        let chains = EffectChains(vec![(None, EffectNode::Do(Effect::Piercing(1)))]);
         assert_eq!(chains.0.len(), 1, "single Do node in chains is valid");
     }
 
@@ -1285,28 +1283,46 @@ mod tests {
             name: "Aegis".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            on_bolt_lost: Some(EffectNode::Do(Effect::LoseLife)),
-            on_perfect_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            })),
-            on_early_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            })),
-            on_late_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            })),
-            chains: vec![],
+            effects: vec![
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::LoseLife)],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBumped,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::EarlyBumped,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::LateBumped,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    }],
+                },
+            ],
         };
+        // Verify BoltLost effect is present
         assert!(matches!(
-            def.on_bolt_lost,
-            Some(EffectNode::Do(Effect::LoseLife))
+            &def.effects[0],
+            RootEffect::On { target: Target::Breaker, then } if matches!(&then[0], EffectNode::When { trigger: Trigger::BoltLost, then: inner } if matches!(&inner[0], EffectNode::Do(Effect::LoseLife)))
         ));
+        // Verify PerfectBumped SpeedBoost is present
         assert!(matches!(
-            def.on_perfect_bump,
-            Some(EffectNode::Do(Effect::SpeedBoost { .. }))
+            &def.effects[1],
+            RootEffect::On { target: Target::Bolt, then } if matches!(&then[0], EffectNode::When { trigger: Trigger::PerfectBumped, then: inner } if matches!(&inner[0], EffectNode::Do(Effect::SpeedBoost { .. })))
         ));
     }
 
@@ -1316,18 +1332,20 @@ mod tests {
             name: "Prism".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: Some(EffectNode::Do(Effect::SpawnBolts {
-                count: 1,
-                lifespan: None,
-                inherit: false,
-            })),
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(Effect::SpawnBolts {
+                        count: 1,
+                        lifespan: None,
+                        inherit: false,
+                    })],
+                }],
+            }],
         };
-        assert!(def.on_early_bump.is_none());
-        assert!(def.on_late_bump.is_none());
+        // Only one effect — no early/late bump entries
+        assert_eq!(def.effects.len(), 1);
     }
 
     #[test]
@@ -1336,24 +1354,23 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![EffectNode::When {
-                trigger: Trigger::PerfectBump,
+            effects: vec![RootEffect::On {
+                target: Target::Bolt,
                 then: vec![EffectNode::When {
-                    trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(Effect::Shockwave {
-                        base_range: 64.0,
-                        range_per_level: 0.0,
-                        stacks: 1,
-                        speed: 400.0,
-                    })],
+                    trigger: Trigger::PerfectBumped,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::Shockwave {
+                            base_range: 64.0,
+                            range_per_level: 0.0,
+                            stacks: 1,
+                            speed: 400.0,
+                        })],
+                    }],
                 }],
             }],
         };
-        assert_eq!(def.chains.len(), 1);
+        assert_eq!(def.effects.len(), 1);
     }
 
     #[test]
@@ -1362,13 +1379,9 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
-        assert!(def.chains.is_empty());
+        assert!(def.effects.is_empty());
     }
 
     #[test]
@@ -1378,20 +1391,18 @@ mod tests {
             name: "Aegis",
             stat_overrides: (),
             life_pool: Some(3),
-            on_bolt_lost: Some(Do(LoseLife)),
-            on_perfect_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.5))),
-            on_early_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-            on_late_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-            chains: [],
+            effects: [
+                On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(LoseLife)])]),
+                On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+                On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+                On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+            ],
         )
         "#;
         let def: BreakerDefinition =
             ron::de::from_str(ron_str).expect("BreakerDefinition with EffectNode RON should parse");
         assert_eq!(def.name, "Aegis");
-        assert!(matches!(
-            def.on_bolt_lost,
-            Some(EffectNode::Do(Effect::LoseLife))
-        ));
+        assert_eq!(def.effects.len(), 4);
     }
 
     #[test]
@@ -1401,18 +1412,16 @@ mod tests {
             name: "Prism",
             stat_overrides: (),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: Some(Do(SpawnBolts(count: 1))),
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: [],
+            effects: [
+                On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(TimePenalty(seconds: 7.0))])]),
+                On(target: Breaker, then: [When(trigger: OnPerfectBump, then: [Do(SpawnBolts())])]),
+            ],
         )
         "#;
         let def: BreakerDefinition =
             ron::de::from_str(ron_str).expect("Prism-style BreakerDefinition should parse");
         assert_eq!(def.name, "Prism");
-        assert!(def.on_early_bump.is_none());
-        assert!(def.on_late_bump.is_none());
+        assert_eq!(def.effects.len(), 2);
     }
 
     // =========================================================================
@@ -1431,14 +1440,8 @@ mod tests {
     #[test]
     fn speed_boost_uses_multiplier_format() {
         // 1.5 means 1.5x speed, 0.5 means 50% speed
-        let fast = Effect::SpeedBoost {
-            target: Target::Bolt,
-            multiplier: 1.5,
-        };
-        let slow = Effect::SpeedBoost {
-            target: Target::Bolt,
-            multiplier: 0.5,
-        };
+        let fast = Effect::SpeedBoost { multiplier: 1.5 };
+        let slow = Effect::SpeedBoost { multiplier: 0.5 };
         assert!(
             matches!(fast, Effect::SpeedBoost { multiplier, .. } if (multiplier - 1.5).abs() < f32::EPSILON)
         );
@@ -1493,17 +1496,8 @@ mod tests {
 
     #[test]
     fn effect_speed_boost_all_bolts_target() {
-        let e = Effect::SpeedBoost {
-            target: Target::AllBolts,
-            multiplier: 0.5,
-        };
-        assert!(matches!(
-            e,
-            Effect::SpeedBoost {
-                target: Target::AllBolts,
-                ..
-            }
-        ));
+        let e = Effect::SpeedBoost { multiplier: 0.5 };
+        assert!(matches!(e, Effect::SpeedBoost { multiplier, .. } if (multiplier - 0.5).abs() < f32::EPSILON));
     }
 
     #[test]

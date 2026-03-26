@@ -15,7 +15,10 @@ pub(crate) use crate::{
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
-    effect::{active::ActiveEffects, effects::life_lost::LivesCount},
+    effect::{
+        definition::EffectChains,
+        effects::life_lost::LivesCount,
+    },
     shared::SelectedBreaker,
 };
 
@@ -23,7 +26,8 @@ pub(crate) use crate::{
 mod tests {
     use super::*;
     use crate::effect::definition::{
-        BreakerDefinition, BreakerStatOverrides, Effect, EffectNode, ImpactTarget, Target, Trigger,
+        BreakerDefinition, BreakerStatOverrides, Effect, EffectNode, ImpactTarget, RootEffect,
+        Target, Trigger,
     };
 
     const TEST_BREAKER_NAME: &str = "TestBreaker";
@@ -33,20 +37,36 @@ mod tests {
             name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            on_bolt_lost: Some(EffectNode::Do(Effect::LoseLife)),
-            on_perfect_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            })),
-            on_early_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            })),
-            on_late_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            })),
-            chains: vec![],
+            effects: vec![
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::LoseLife)],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::EarlyBump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::LateBump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    }],
+                },
+            ],
         }
     }
 
@@ -57,7 +77,6 @@ mod tests {
         registry.insert(def.name.clone(), def);
         app.insert_resource(registry)
             .insert_resource(SelectedBreaker(TEST_BREAKER_NAME.to_owned()))
-            .init_resource::<ActiveEffects>()
             .add_systems(Update, init_breaker);
         app
     }
@@ -65,7 +84,7 @@ mod tests {
     #[test]
     fn init_breaker_stamps_lives_count() {
         let mut app = test_app_with_breaker(make_test_breaker());
-        let entity = app.world_mut().spawn(Breaker).id();
+        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.update();
 
         let lives = app.world().get::<LivesCount>(entity).unwrap();
@@ -75,17 +94,14 @@ mod tests {
     #[test]
     fn init_breaker_builds_active_chains() {
         let mut app = test_app_with_breaker(make_test_breaker());
-        app.world_mut().spawn(Breaker);
+        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.update();
 
-        let active = app.world().resource::<ActiveEffects>();
-        // on_bolt_lost=Do(LoseLife) → When { BoltLost, [Do(LoseLife)] }
-        // on_perfect_bump=Do(SpeedBoost) → When { PerfectBump, [Do(SpeedBoost)] }
-        // on_early_bump=Do(SpeedBoost) → When { EarlyBump, [Do(SpeedBoost)] }
-        // on_late_bump=Do(SpeedBoost) → When { LateBump, [Do(SpeedBoost)] }
-        assert_eq!(active.0.len(), 4);
+        let chains = app.world().get::<EffectChains>(entity).unwrap();
+        // 4 On(Breaker) entries → 4 chains on breaker entity
+        assert_eq!(chains.0.len(), 4);
         assert!(matches!(
-            &active.0[0],
+            &chains.0[0],
             (None, EffectNode::When { trigger: Trigger::BoltLost, then }) if then.len() == 1 && matches!(then[0], EffectNode::Do(Effect::LoseLife))
         ));
     }
@@ -96,22 +112,33 @@ mod tests {
             name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: Some(EffectNode::Do(Effect::TimePenalty { seconds: 5.0 })),
-            on_perfect_bump: Some(EffectNode::Do(Effect::SpawnBolts {
-                count: 1,
-                lifespan: None,
-                inherit: false,
-            })),
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::TimePenalty { seconds: 5.0 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::SpawnBolts {
+                            count: 1,
+                            lifespan: None,
+                            inherit: false,
+                        })],
+                    }],
+                },
+            ],
         };
         let mut app = test_app_with_breaker(def);
-        app.world_mut().spawn(Breaker);
+        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.update();
 
-        let active = app.world().resource::<ActiveEffects>();
-        assert_eq!(active.0.len(), 2);
+        let chains = app.world().get::<EffectChains>(entity).unwrap();
+        assert_eq!(chains.0.len(), 2);
     }
 
     #[test]
@@ -120,30 +147,32 @@ mod tests {
             name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![EffectNode::When {
-                trigger: Trigger::PerfectBump,
+            effects: vec![RootEffect::On {
+                target: Target::Breaker,
                 then: vec![EffectNode::When {
-                    trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    }],
                 }],
             }],
         };
         let mut app = test_app_with_breaker(def);
-        app.world_mut().spawn(Breaker);
+        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.update();
 
-        let active = app.world().resource::<ActiveEffects>();
-        assert_eq!(active.0.len(), 1);
+        let chains = app.world().get::<EffectChains>(entity).unwrap();
+        assert_eq!(chains.0.len(), 1);
     }
 
     #[test]
     fn init_breaker_skips_already_initialized() {
         let mut app = test_app_with_breaker(make_test_breaker());
-        let entity = app.world_mut().spawn((Breaker, LivesCount(99))).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, LivesCount(99), EffectChains::default()))
+            .id();
         app.update();
 
         let lives = app.world().get::<LivesCount>(entity).unwrap();
@@ -223,11 +252,7 @@ mod tests {
                 ..default()
             },
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
 
         let mut registry = BreakerRegistry::default();
@@ -249,15 +274,11 @@ mod tests {
             name: TEST_BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
 
         let mut app = test_app_with_breaker(def);
-        let entity = app.world_mut().spawn(Breaker).id();
+        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
         app.update();
 
         assert!(app.world().get::<LivesCount>(entity).is_none());
@@ -290,18 +311,12 @@ mod tests {
 
         let node = EffectNode::When {
             trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(Effect::SpeedBoost {
-                target: crate::effect::definition::Target::Bolt,
-                multiplier: 1.5,
-            })],
+            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
         };
         let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Fire(Effect::SpeedBoost {
-                target: crate::effect::definition::Target::Bolt,
-                multiplier: 1.5,
-            })],
+            vec![NodeEvalResult::Fire(Effect::SpeedBoost { multiplier: 1.5 })],
             "pass-through EffectNode should evaluate to Fire(SpeedBoost) on PerfectBump"
         );
     }

@@ -194,10 +194,10 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                EffectChains(vec![EffectNode::When {
+                EffectChains(vec![(None, EffectNode::When {
                     trigger: Trigger::NoBump,
                     then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-                }]),
+                })]),
             ))
             .id();
 

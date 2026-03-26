@@ -15,9 +15,6 @@ pub(crate) fn handle_breaker_speed_boost(
     mut commands: Commands,
 ) {
     let event = trigger.event();
-    if event.target != crate::effect::definition::Target::Breaker {
-        return;
-    }
     let per_stack = event.multiplier;
     let max_stacks = event.max_stacks;
     for (entity, mut existing) in &mut query {
@@ -54,7 +51,6 @@ mod tests {
         let breaker = app.world_mut().spawn(Breaker).id();
 
         app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
             multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
@@ -78,7 +74,6 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Breaker,
             multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
@@ -98,25 +93,22 @@ mod tests {
     }
 
     #[test]
-    fn ignores_bolt_target() {
+    fn applies_to_all_breaker_entities() {
         let mut app = test_app();
-        app.world_mut().spawn(Breaker);
+        let breaker = app.world_mut().spawn(Breaker).id();
 
         app.world_mut().commands().trigger(SpeedBoostApplied {
-            target: crate::effect::definition::Target::Bolt,
             multiplier: 1.1,
             max_stacks: 3,
             chip_name: String::new(),
         });
         app.world_mut().flush();
 
-        assert!(
-            app.world_mut()
-                .query::<&BreakerSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "handle_breaker_speed_boost should ignore Target::Bolt"
-        );
+        let s = app
+            .world()
+            .entity(breaker)
+            .get::<BreakerSpeedBoost>()
+            .unwrap();
+        assert!((s.0 - 1.1).abs() < f32::EPSILON);
     }
 }

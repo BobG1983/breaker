@@ -271,7 +271,7 @@ mod tests {
             rarity: Rarity::Rare,
             ..ChipDefinition::test(
                 "Wide Breaker",
-                EffectNode::Do(Effect::SizeBoost(Target::Breaker, 20.0)),
+                EffectNode::Do(Effect::SizeBoost(20.0)),
                 3,
             )
         }

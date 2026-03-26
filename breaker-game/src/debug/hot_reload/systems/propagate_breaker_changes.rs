@@ -9,7 +9,7 @@ use crate::{
     },
     effect::{
         active::ActiveEffects,
-        definition::{BreakerDefinition, EffectNode, Trigger},
+        definition::{BreakerDefinition, EffectChains, RootEffect, Target},
         effects::life_lost::LivesCount,
         init::apply_stat_overrides,
         registry::BreakerRegistry,
@@ -33,10 +33,12 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
     registry: ResMut<'w, BreakerRegistry>,
     /// Mutable breaker configuration.
     config: ResMut<'w, BreakerConfig>,
-    /// Mutable active chains.
+    /// Mutable active chains (legacy — kept for backward compatibility).
     active: ResMut<'w, ActiveEffects>,
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
+    /// Breaker `EffectChains` for populating from definition.
+    breaker_chains_query: Query<'w, 's, &'static mut EffectChains, With<Breaker>>,
     /// Command buffer for entity modifications.
     commands: Commands<'w, 's>,
 }
@@ -88,52 +90,34 @@ pub(crate) fn propagate_breaker_changes(
         }
     }
 
-    // Build ActiveEffects from root fields + chains
-    let mut chains = Vec::new();
-    if let Some(node) = &def.on_bolt_lost {
-        chains.push((
-            None,
-            EffectNode::When {
-                trigger: Trigger::BoltLost,
-                then: vec![node.clone()],
-            },
-        ));
+    // Resolve On targets to entity EffectChains
+    for mut chains in &mut ctx.breaker_chains_query {
+        chains.0.clear();
     }
-    if let Some(node) = &def.on_perfect_bump {
-        chains.push((
-            None,
-            EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![node.clone()],
-            },
-        ));
+    for root in &def.effects {
+        let RootEffect::On { target, then } = root;
+        match target {
+            Target::Breaker => {
+                for mut chains in &mut ctx.breaker_chains_query {
+                    for child in then {
+                        chains.0.push((None, child.clone()));
+                    }
+                }
+            }
+            // At hot-reload time, bolt/cell/wall targets are not resolved here
+            Target::Bolt | Target::AllBolts | Target::Cell | Target::Wall | Target::AllCells => {}
+        }
     }
-    if let Some(node) = &def.on_early_bump {
-        chains.push((
-            None,
-            EffectNode::When {
-                trigger: Trigger::EarlyBump,
-                then: vec![node.clone()],
-            },
-        ));
-    }
-    if let Some(node) = &def.on_late_bump {
-        chains.push((
-            None,
-            EffectNode::When {
-                trigger: Trigger::LateBump,
-                then: vec![node.clone()],
-            },
-        ));
-    }
-    chains.extend(def.chains.iter().cloned().map(|c| (None, c)));
-    *ctx.active = ActiveEffects(chains);
+    // Clear ActiveEffects (legacy — no longer populated from breaker definition)
+    ctx.active.0.clear();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::effect::definition::{BreakerStatOverrides, Effect, EffectNode, Target, Trigger};
+    use crate::effect::definition::{
+        BreakerStatOverrides, Effect, EffectNode, RootEffect, Target, Trigger,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -175,11 +159,7 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
@@ -220,11 +200,7 @@ mod tests {
                 ..default()
             },
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
@@ -268,14 +244,13 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            })),
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                }],
+            }],
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
@@ -287,37 +262,59 @@ mod tests {
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
+        let breaker_entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
+
         app.update();
         app.update();
 
-        // Modify: add bolt_lost and early/late bump
+        // Modify: add 3 more effects
         {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.on_bolt_lost = Some(EffectNode::Do(Effect::LoseLife));
-            asset.on_early_bump = Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            }));
-            asset.on_late_bump = Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.1,
-            }));
+            asset.effects = vec![
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::LoseLife)],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::EarlyBump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    }],
+                },
+                RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::LateBump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    }],
+                },
+            ];
         }
 
         app.update();
         app.update();
 
-        let active = app.world().resource::<ActiveEffects>();
-        // on_bolt_lost=LoseLife -> BoltLost(LoseLife)
-        // on_perfect_bump=SpeedBoost -> PerfectBump(SpeedBoost{...})
-        // on_early_bump=SpeedBoost -> OnEarlyBump(SpeedBoost{...})
-        // on_late_bump=SpeedBoost -> OnLateBump(SpeedBoost{...})
+        let chains = app.world().get::<EffectChains>(breaker_entity).unwrap();
         assert_eq!(
-            active.0.len(),
+            chains.0.len(),
             4,
-            "should have 4 active chains (all included), got {}",
-            active.0.len()
+            "should have 4 chains on breaker entity (all included), got {}",
+            chains.0.len()
         );
     }
 
@@ -329,11 +326,7 @@ mod tests {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(3),
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
@@ -346,7 +339,10 @@ mod tests {
             .insert_resource(make_collection(vec![handle.clone()]));
 
         // Spawn breaker with 1 life remaining (took damage)
-        let entity = app.world_mut().spawn((Breaker, LivesCount(1))).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, LivesCount(1), EffectChains::default()))
+            .id();
 
         app.update();
         app.update();
@@ -369,21 +365,20 @@ mod tests {
     }
 
     #[test]
-    fn speed_boost_chains_appear_in_active_chains_on_breaker_change() {
+    fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
         let mut app = test_app();
 
         let def = BreakerDefinition {
             name: "Test".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 1.5,
-            })),
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                }],
+            }],
         };
         let handle = {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
@@ -395,7 +390,10 @@ mod tests {
         app.world_mut()
             .insert_resource(make_collection(vec![handle.clone()]));
 
-        app.world_mut().spawn(Breaker);
+        let breaker_entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
 
         app.update();
         app.update();
@@ -404,24 +402,27 @@ mod tests {
         {
             let mut assets = app.world_mut().resource_mut::<Assets<BreakerDefinition>>();
             let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.on_perfect_bump = Some(EffectNode::Do(Effect::SpeedBoost {
-                target: Target::Bolt,
-                multiplier: 2.0,
-            }));
+            asset.effects = vec![RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
+                }],
+            }];
         }
 
         app.update();
         app.update();
 
-        let active = app.world().resource::<ActiveEffects>();
+        let chains = app.world().get::<EffectChains>(breaker_entity).unwrap();
         assert_eq!(
-            active.0.len(),
+            chains.0.len(),
             1,
-            "should have 1 active chain for SpeedBoost, got {}",
-            active.0.len()
+            "should have 1 chain for SpeedBoost on breaker entity, got {}",
+            chains.0.len()
         );
         assert!(matches!(
-            &active.0[0],
+            &chains.0[0],
             (None, EffectNode::When { trigger: Trigger::PerfectBump, then }) if then.len() == 1 && matches!(
                 &then[0],
                 EffectNode::Do(Effect::SpeedBoost { multiplier, .. }) if (*multiplier - 2.0).abs() < f32::EPSILON

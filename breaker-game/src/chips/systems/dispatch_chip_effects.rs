@@ -605,11 +605,11 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: SpeedBoost Target::AllBolts via ChipEffectApplied is silent no-op (39)
+    // B3: SpeedBoost via OnSelected dispatches to bolt entities (39)
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn speed_boost_all_bolts_via_on_selected_is_silent_noop() {
+    fn speed_boost_via_on_selected_applies_to_bolt() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
@@ -617,14 +617,13 @@ mod tests {
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
-                name: "AllBoltsSpeed".to_owned(),
+                name: "BoltSpeed".to_owned(),
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
                     trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        target: Target::AllBolts,
                         multiplier: 1.1,
                     })],
                 }],
@@ -632,25 +631,22 @@ mod tests {
                 template_name: None,
             });
 
-        send_chip_selected(&mut app, "AllBoltsSpeed");
+        send_chip_selected(&mut app, "BoltSpeed");
         tick(&mut app);
 
+        // SpeedBoost passive applies to bolt entities (no Target routing — handler applies to all bolts)
         assert!(
             app.world_mut()
                 .query::<&BoltSpeedBoost>()
                 .iter(app.world())
                 .next()
-                .is_none(),
-            "no BoltSpeedBoost should exist for AllBolts passive"
+                .is_some(),
+            "BoltSpeedBoost should exist after SpeedBoost passive dispatch"
         );
-        assert!(
-            app.world_mut()
-                .query::<&BreakerSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "no BreakerSpeedBoost should exist for AllBolts passive"
-        );
+        // Note: without Target on SpeedBoost, both bolt and breaker handlers fire.
+        // On-node routing (future) will restrict to the correct entity type.
+        // BreakerSpeedBoost may or may not exist depending on whether a Breaker
+        // entity is present — not asserted here.
     }
 
     // ---------------------------------------------------------------------------
@@ -719,7 +715,7 @@ mod tests {
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
                     trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::SizeBoost(Target::Breaker, 20.0))],
+                    then: vec![EffectNode::Do(Effect::SizeBoost(20.0))],
                 }],
                 ingredients: None,
                 template_name: None,
@@ -996,7 +992,7 @@ mod tests {
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
                     trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::SizeBoost(Target::Bolt, 5.0))],
+                    then: vec![EffectNode::Do(Effect::SizeBoost(5.0))],
                 }],
                 ingredients: None,
                 template_name: None,
@@ -1010,10 +1006,6 @@ mod tests {
             captured.0.len(),
             1,
             "dispatch should fire SizeBoostApplied for Selected SizeBoost"
-        );
-        assert_eq!(
-            captured.0[0].target,
-            crate::effect::definition::Target::Bolt
         );
         assert!((captured.0[0].per_stack - 5.0).abs() < f32::EPSILON);
     }
@@ -1034,11 +1026,9 @@ mod tests {
                     trigger: Trigger::Selected,
                     then: vec![
                         EffectNode::Do(Effect::SpeedBoost {
-                            target: Target::Bolt,
                             multiplier: 0.1,
                         }),
                         EffectNode::Do(Effect::SpeedBoost {
-                            target: Target::Breaker,
                             multiplier: 0.2,
                         }),
                     ],
@@ -1056,14 +1046,9 @@ mod tests {
             2,
             "dispatch should fire two SpeedBoostApplied events for both Bolt and Breaker targets"
         );
-        assert_eq!(
-            captured.0[0].target,
-            crate::effect::definition::Target::Bolt
-        );
-        assert_eq!(
-            captured.0[1].target,
-            crate::effect::definition::Target::Breaker
-        );
+        // Both SpeedBoostApplied events should have the correct multipliers
+        assert!((captured.0[0].multiplier - 0.1).abs() < f32::EPSILON);
+        assert!((captured.0[1].multiplier - 0.2).abs() < f32::EPSILON);
     }
 
     // =========================================================================

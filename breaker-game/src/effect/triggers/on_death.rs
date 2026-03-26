@@ -24,10 +24,10 @@ use crate::{
 fn evaluate_ondeath_chains(entity: Entity, chains: Option<&EffectChains>, commands: &mut Commands) {
     if let Some(chains) = chains {
         let targets = vec![crate::effect::definition::EffectTarget::Entity(entity)];
-        for node in &chains.0 {
+        for (chip_name, node) in &chains.0 {
             for result in evaluate_node(Trigger::Death, node) {
                 if let NodeEvalResult::Fire(effect) = result {
-                    fire_typed_event(effect, targets.clone(), None, commands);
+                    fire_typed_event(effect, targets.clone(), chip_name.clone(), commands);
                 }
             }
         }
@@ -117,7 +117,7 @@ pub(crate) fn cleanup_destroyed_bolts(
 /// Once nodes wrapping `When` nodes are left for bridge evaluation.
 pub(crate) fn apply_once_nodes(mut query: Query<&mut EffectChains>, mut commands: Commands) {
     for mut chains in &mut query {
-        chains.0.retain(|node| {
+        chains.0.retain(|(chip_name, node)| {
             if let EffectNode::Once(children) = node {
                 // Check if all children are bare Do nodes
                 let all_bare_do = children.iter().all(|c| matches!(c, EffectNode::Do(_)));
@@ -125,7 +125,12 @@ pub(crate) fn apply_once_nodes(mut query: Query<&mut EffectChains>, mut commands
                     // Fire all bare Do children
                     for child in children {
                         if let EffectNode::Do(effect) = child {
-                            fire_typed_event(effect.clone(), vec![], None, &mut commands);
+                            fire_typed_event(
+                                effect.clone(),
+                                vec![],
+                                chip_name.clone(),
+                                &mut commands,
+                            );
                         }
                     }
                     return false; // Remove the Once node
@@ -288,7 +293,7 @@ mod tests {
                 Cell,
                 RequiredToClear,
                 Position2D(Vec2::new(100.0, 200.0)),
-                EffectChains(vec![EffectNode::When {
+                EffectChains(vec![(None, EffectNode::When {
                     trigger: Trigger::Death,
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 48.0,
@@ -296,7 +301,7 @@ mod tests {
                         stacks: 1,
                         speed: 400.0,
                     })],
-                }]),
+                })]),
             ))
             .id();
 
@@ -441,7 +446,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Position2D(Vec2::new(50.0, -100.0)),
-                EffectChains(vec![EffectNode::When {
+                EffectChains(vec![(None, EffectNode::When {
                     trigger: Trigger::Death,
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 32.0,
@@ -449,7 +454,7 @@ mod tests {
                         stacks: 1,
                         speed: 400.0,
                     })],
-                }]),
+                })]),
             ))
             .id();
 
@@ -622,13 +627,14 @@ mod tests {
 
         let entity = app
             .world_mut()
-            .spawn(EffectChains(vec![EffectNode::Once(vec![EffectNode::Do(
-                Effect::SpawnBolts {
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::Once(vec![EffectNode::Do(Effect::SpawnBolts {
                     count: 1,
                     lifespan: None,
                     inherit: false,
-                },
-            )])]))
+                })]),
+            )]))
             .id();
 
         tick(&mut app);
@@ -668,7 +674,7 @@ mod tests {
             .add_systems(FixedUpdate, apply_once_nodes);
 
         // Empty EffectChains — Once was already consumed
-        app.world_mut().spawn(EffectChains(vec![]));
+        app.world_mut().spawn(EffectChains::default());
 
         tick(&mut app);
 

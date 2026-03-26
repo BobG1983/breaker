@@ -3,9 +3,8 @@
     name: "Prism",
     stat_overrides: (),
     life_pool: None,
-    on_bolt_lost: Some(Do(TimePenalty(seconds: 7.0))),
-    on_perfect_bump: Some(Do(SpawnBolts())),
-    on_early_bump: None,
-    on_late_bump: None,
-    chains: [],
+    effects: [
+        On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(TimePenalty(seconds: 7.0))])]),
+        On(target: Breaker, then: [When(trigger: PerfectBump, then: [Do(SpawnBolts())])]),
+    ],
 )

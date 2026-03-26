@@ -149,11 +149,7 @@ mod tests {
                 ..default()
             },
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
 
         let mut registry = BreakerRegistry::default();
@@ -209,11 +205,7 @@ mod tests {
             name: "Plain".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
         let mut registry = BreakerRegistry::default();
         registry.insert("Plain".to_owned(), def);

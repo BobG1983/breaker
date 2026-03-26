@@ -290,7 +290,6 @@ mod tests {
                     inherit: false,
                 }),
                 EffectNode::Do(Effect::SpeedBoost {
-                    target: super::super::definition::Target::Bolt,
                     multiplier: 1.2,
                 }),
             ],

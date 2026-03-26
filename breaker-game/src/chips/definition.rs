@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn chip_template_ron_with_effect_node_syntax() {
-        let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [When(trigger: OnPerfectBump, then: [Do(SpeedBoost(target: Bolt, multiplier: 1.2))])])), uncommon: None, rare: None, legendary: None)"#;
+        let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [When(trigger: OnPerfectBump, then: [Do(SpeedBoost(multiplier: 1.2))])])), uncommon: None, rare: None, legendary: None)"#;
         let template: ChipTemplate =
             ron::de::from_str(ron_str).expect("ChipTemplate with EffectNode RON should parse");
         assert_eq!(template.name, "Surge");
@@ -596,7 +596,6 @@ mod tests {
                 effects: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        target: Target::Bolt,
                         multiplier: 1.2,
                     })],
                 }],

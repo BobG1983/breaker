@@ -10,7 +10,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use crate::{
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
     chips::components::BoltSpeedBoost,
-    effect::definition::{EffectTarget, Target},
+    effect::definition::EffectTarget,
 };
 
 // ---------------------------------------------------------------------------
@@ -20,8 +20,6 @@ use crate::{
 /// Fired when a speed boost effect resolves via a triggered chain.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct SpeedBoostFired {
-    /// Which entity to apply the speed change to.
-    pub target: Target,
     /// Multiplier applied to the current velocity magnitude.
     pub multiplier: f32,
     /// The effect targets for this event.
@@ -79,9 +77,9 @@ pub(crate) fn apply_speed_boosts(
 
 /// Observer: handles speed boost when a `SpeedBoostFired` event fires.
 ///
-/// For `Bolt` target: scales the specific bolt's velocity by `multiplier`.
-/// For `AllBolts` target: scales every bolt's velocity by `multiplier`.
-/// Both clamp within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
+/// If `targets` contains entity references, applies to those specific bolts.
+/// If `targets` is empty, applies to all bolts (`AllBolts` behavior).
+/// Clamps within `[BoltBaseSpeed + amp_boost, BoltMaxSpeed + amp_boost]`.
 /// Also pushes the multiplier onto each bolt's [`ActiveSpeedBoosts`] vec
 /// (if present) so that Until reversal can remove individual entries.
 pub(crate) fn handle_speed_boost(
@@ -90,19 +88,31 @@ pub(crate) fn handle_speed_boost(
 ) {
     let event = trigger.event();
 
-    match event.target {
-        Target::Bolt => {
-            let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
-                crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
-                crate::effect::definition::EffectTarget::Location(_) => None,
-            }) else {
-                return;
-            };
+    let bolt_entities: Vec<_> = event
+        .targets
+        .iter()
+        .filter_map(|t| match t {
+            crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
+            crate::effect::definition::EffectTarget::Location(_) => None,
+        })
+        .collect();
 
+    if bolt_entities.is_empty() {
+        // No specific targets — apply to all bolts
+        for (mut vel, base_speed, max_speed, speed_boost, mut active_boosts) in &mut bolt_query {
+            let boost = speed_boost.map_or(0.0, |b| b.0);
+            apply_speed_scale(&mut vel, event.multiplier, base_speed.0, max_speed.0, boost);
+            if let Some(ref mut boosts) = active_boosts {
+                boosts.0.push(event.multiplier);
+            }
+        }
+    } else {
+        // Apply to specific bolt entities
+        for bolt_entity in bolt_entities {
             let Ok((mut vel, base_speed, max_speed, speed_boost, mut active_boosts)) =
                 bolt_query.get_mut(bolt_entity)
             else {
-                return;
+                continue;
             };
 
             let boost = speed_boost.map_or(0.0, |b| b.0);
@@ -110,19 +120,6 @@ pub(crate) fn handle_speed_boost(
             if let Some(ref mut boosts) = active_boosts {
                 boosts.0.push(event.multiplier);
             }
-        }
-        Target::AllBolts => {
-            for (mut vel, base_speed, max_speed, speed_boost, mut active_boosts) in &mut bolt_query
-            {
-                let boost = speed_boost.map_or(0.0, |b| b.0);
-                apply_speed_scale(&mut vel, event.multiplier, base_speed.0, max_speed.0, boost);
-                if let Some(ref mut boosts) = active_boosts {
-                    boosts.0.push(event.multiplier);
-                }
-            }
-        }
-        Target::Breaker | Target::Cell | Target::Wall | Target::AllCells => {
-            // Not applicable to speed boost — no-op
         }
     }
 }
@@ -219,13 +216,12 @@ mod tests {
     }
 
     fn trigger_speed_boost(app: &mut App, bolt: Option<Entity>, multiplier: f32) {
-        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let targets = bolt
             .map(|e| vec![crate::effect::definition::EffectTarget::Entity(e)])
             .unwrap_or_default();
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffTarget::Bolt,
             multiplier,
             targets,
             source_chip: None,
@@ -365,17 +361,17 @@ mod tests {
     }
 
     #[test]
-    fn handle_speed_boost_no_ops_when_bolt_is_none() {
+    fn handle_speed_boost_empty_targets_applies_to_all_bolts() {
         let mut app = test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 400.0);
 
         trigger_speed_boost(&mut app, None, 1.5);
 
-        // The bolt that exists should be unchanged
+        // Empty targets = AllBolts — boost should apply
         let vel = get_bolt_velocity(&mut app, bolt);
         assert!(
-            (vel.0.y - 400.0).abs() < f32::EPSILON,
-            "bolt velocity should be unchanged when event bolt is None, got y={:.1}",
+            (vel.0.y - 600.0).abs() < 1.0,
+            "empty targets should apply to all bolts (AllBolts), got y={:.1}",
             vel.0.y
         );
     }
@@ -427,10 +423,9 @@ mod tests {
     // =========================================================================
 
     fn trigger_all_bolts_speed_boost(app: &mut App, multiplier: f32) {
-        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffTarget::AllBolts,
             multiplier,
             targets: vec![],
             source_chip: None,
@@ -568,13 +563,12 @@ mod tests {
 
     #[test]
     fn speed_boost_fired_scales_bolt_velocity() {
-        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let mut app = typed_test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 400.0);
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffectTarget::Bolt,
             multiplier: 1.5,
             targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
@@ -592,14 +586,13 @@ mod tests {
 
     #[test]
     fn speed_boost_fired_all_bolts_scales_all() {
-        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let mut app = typed_test_app();
         let bolt_a = spawn_bolt(&mut app, 0.0, 400.0);
         let bolt_b = spawn_bolt(&mut app, 300.0, 400.0);
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffectTarget::AllBolts,
             multiplier: 1.3,
             targets: vec![],
             source_chip: None,
@@ -624,13 +617,12 @@ mod tests {
 
     #[test]
     fn speed_boost_fired_clamps_to_max() {
-        use crate::effect::{definition::Target as EffectTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let mut app = typed_test_app();
         let bolt = spawn_bolt(&mut app, 0.0, 700.0);
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffectTarget::Bolt,
             multiplier: 1.5,
             targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
@@ -690,13 +682,12 @@ mod tests {
 
     #[test]
     fn handle_speed_boost_pushes_to_active_speed_boosts() {
-        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let mut app = boost_test_app();
         let bolt = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 800.0, vec![]);
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffTarget::Bolt,
             multiplier: 1.5,
             targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
@@ -716,13 +707,12 @@ mod tests {
 
     #[test]
     fn handle_speed_boost_stacks_multiple_boosts() {
-        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let mut app = boost_test_app();
         let bolt = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 800.0, vec![1.5]);
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffTarget::Bolt,
             multiplier: 2.0,
             targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
             source_chip: None,
@@ -843,14 +833,13 @@ mod tests {
 
     #[test]
     fn handle_speed_boost_all_bolts_pushes_to_all_active_speed_boosts() {
-        use crate::effect::{definition::Target as EffTarget, typed_events::SpeedBoostFired};
+        use crate::effect::typed_events::SpeedBoostFired;
 
         let mut app = boost_test_app();
         let bolt_a = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 2000.0, vec![1.5]);
         let bolt_b = spawn_bolt_with_active_boosts(&mut app, 0.0, 400.0, 400.0, 2000.0, vec![1.5]);
 
         app.world_mut().commands().trigger(SpeedBoostFired {
-            target: EffTarget::AllBolts,
             multiplier: 2.0,
             targets: vec![],
             source_chip: None,

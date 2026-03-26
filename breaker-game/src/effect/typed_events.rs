@@ -7,7 +7,7 @@
 use bevy::prelude::*;
 use tracing::warn;
 
-use super::definition::{EffectTarget, Target};
+use super::definition::EffectTarget;
 // ===========================================================================
 // Re-exports — passive effect events (canonical location: effects/<name>.rs)
 // ===========================================================================
@@ -128,9 +128,8 @@ fn fire_bolt_effect(
                 source_chip,
             });
         }
-        Effect::SpeedBoost { target, multiplier } => {
+        Effect::SpeedBoost { multiplier } => {
             commands.trigger(SpeedBoostFired {
-                target,
                 multiplier,
                 targets,
                 source_chip,
@@ -322,9 +321,8 @@ pub(crate) fn fire_passive_event(
                 chip_name,
             });
         }
-        Effect::SpeedBoost { target, multiplier } => {
+        Effect::SpeedBoost { multiplier } => {
             commands.trigger(SpeedBoostApplied {
-                target,
                 multiplier,
                 max_stacks,
                 chip_name,
@@ -337,9 +335,8 @@ pub(crate) fn fire_passive_event(
                 chip_name,
             });
         }
-        Effect::SizeBoost(target, per_stack) => {
+        Effect::SizeBoost(per_stack) => {
             commands.trigger(SizeBoostApplied {
-                target,
                 per_stack,
                 max_stacks,
                 chip_name,
@@ -454,12 +451,10 @@ mod tests {
     #[test]
     fn speed_boost_fired_with_targets() {
         let event = SpeedBoostFired {
-            target: Target::Bolt,
             multiplier: 1.3,
             targets: vec![EffectTarget::Entity(Entity::PLACEHOLDER)],
             source_chip: None,
         };
-        assert_eq!(event.target, Target::Bolt);
         assert!((event.multiplier - 1.3).abs() < f32::EPSILON);
         assert_eq!(event.targets.len(), 1);
     }
