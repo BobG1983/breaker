@@ -30,6 +30,14 @@
 | Lint | `cargo physics2dclippy` |
 | Test | `cargo physics2dtest` |
 
+## rantzsoft_defaults
+
+| Task | Alias |
+|------|-------|
+| Type check | `cargo defaultscheck` |
+| Lint | `cargo defaultsclippy` |
+| Test | `cargo defaultstest` |
+
 ## Scenario runner (`breaker-scenario-runner`)
 
 | Task | Alias | When |
@@ -43,8 +51,8 @@
 ## All crates
 
 **runner-tests** and **runner-linting** must test/lint ALL workspace crates, not just the game and scenario runner. Run all of these:
-- `cargo dtest` + `cargo spatial2dtest` + `cargo physics2dtest` + `cargo dstest`
-- `cargo dclippy` + `cargo spatial2dclippy` + `cargo physics2dclippy` + `cargo dsclippy`
+- `cargo dtest` + `cargo spatial2dtest` + `cargo physics2dtest` + `cargo defaultstest` + `cargo dstest`
+- `cargo dclippy` + `cargo spatial2dclippy` + `cargo physics2dclippy` + `cargo defaultsclippy` + `cargo dsclippy`
 
 `cargo scenario` is the release build and MUST be used for all scenario validation. `cargo dscenario` is a dev build with debug symbols — only use it when you suspect a bug in the scenario runner code itself (not in the game code) and need additional debug output.
 
