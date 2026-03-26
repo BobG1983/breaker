@@ -51,9 +51,9 @@ pub enum Effect {
     // Passive effects (via OnSelected / When(Selected, ...))
     Piercing(u32),
     DamageBoost(f32),
-    SpeedBoost { target: Target, multiplier: f32 },
+    SpeedBoost { multiplier: f32 },    // target resolved from On{} context
     ChainHit(u32),
-    SizeBoost(Target, f32),            // Bolt = radius, Breaker = width
+    SizeBoost(f32),                    // Bolt = radius, Breaker = width (handler-determined)
     Attraction(AttractionType, f32),
     BumpForce(f32),
     TiltControl(f32),
@@ -65,13 +65,20 @@ pub enum Effect {
     LoseLife,
     TimePenalty { seconds: f32 },
     SpawnBolts { count: u32, lifespan: Option<f32>, inherit: bool },
-    SpeedBoost { target: Target, multiplier: f32 },
+    MultiBolt { base_count: u32, count_per_level: u32, stacks: u32 },
+    Shield { base_duration: f32, duration_per_level: f32, stacks: u32 },
+    ChainLightning { arcs: u32, range: f32, damage_mult: f32 },
+    SpawnPhantom { duration: f32, max_active: u32 },
+    PiercingBeam { damage_mult: f32, width: f32 },
+    GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
+    SecondWind { invuln_secs: f32 },
+    Pulse { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
     RandomEffect(Vec<(f32, EffectNode)>),
     EntropyEngine { threshold: u32, pool: Vec<(f32, EffectNode)> },
     // ... (see effect/definition.rs for full list)
 }
 
-pub enum Target { Bolt, Breaker, AllBolts }
+pub enum Target { Bolt, Breaker, AllBolts, Cell, Wall, AllCells }
 pub enum ImpactTarget { Cell, Breaker, Wall }
 pub enum AttractionType { Cell, Wall, Breaker }
 

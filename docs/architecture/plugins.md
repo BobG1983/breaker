@@ -122,7 +122,7 @@ effect/
     ... (one file per effect — ~20 total)
   triggers/            # Bridge systems (one file per trigger event)
     on_impact.rs       # bridge_cell_impact, bridge_wall_impact, bridge_breaker_impact
-    on_bump.rs         # bridge_bump, bridge_bump_whiff (all bump grades including NoBump)
+    on_bump.rs         # bridge_bump, bridge_bump_whiff (all bump grades — excludes NoBump which is in on_no_bump.rs)
     on_no_bump.rs      # bridge_no_bump
     on_bolt_lost.rs    # bridge_bolt_lost
     on_death.rs        # bridge_cell_death, bridge_bolt_death, cleanup systems, apply_once_nodes
@@ -130,7 +130,7 @@ effect/
   helpers.rs           # Shared bridge helpers (evaluate_entity_chains, evaluate_active_chains, arm_bolt, etc.)
   active.rs            # ActiveEffects resource (Vec<(Option<String>, EffectNode)>)
   armed.rs             # ArmedEffects component (Vec<(Option<String>, EffectNode)> on bolt entities)
-  definition.rs        # EffectNode, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget enums
+  definition.rs        # EffectNode (When/Do/Until/Once/On), RootEffect, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget enums
   evaluate.rs          # evaluate_node — pure trigger matching, NodeEvalResult
   typed_events.rs      # Re-exports all typed events; fire_typed_event / fire_passive_event dispatch helpers
   registry.rs          # BreakerRegistry re-export (canonical: breaker/registry.rs)
@@ -168,7 +168,7 @@ pub(crate) fn register(app: &mut App) {
     app.add_observer(handle_speed_boost)
        .add_message::<RemoveSpeedBoost>()
        .add_observer(handle_remove_speed_boost)
-       .add_systems(FixedUpdate, apply_speed_boosts.in_set(EffectSystems::Apply));
+       .add_systems(FixedUpdate, apply_speed_boosts);
 }
 ```
 

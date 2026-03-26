@@ -29,15 +29,20 @@
 | **Do** | EffectNode variant — leaf effect. Terminal action in the tree. | `Do(Shockwave(...))`, `Do(DamageBoost(2.0))` |
 | **Until** | EffectNode variant — applies children, auto-removes when `until` trigger fires. Used for timed buffs (`TimeExpires(3.0)`), trigger-based removal (`OnImpact(Breaker)`). | `Until { until: TimeExpires(3.0), then: [Do(DamageBoost(2.0))] }` |
 | **Once** | EffectNode variant — fires children once ever, then permanently consumed from the chain. Used for SecondWind-style one-time saves. | `Once([Do(SecondWind(...))])` |
-| **EffectChains** | Component (`EffectChains(Vec<EffectNode>)`) on individual entities (bolts, cells). Entity-local chains, evaluated by bridge systems based on triggers. | `EffectChains`, `effect/definition.rs` |
+| **EffectChains** | Component (`EffectChains(Vec<EffectNode>)`) on individual entities (bolts, cells). Entity-local chains evaluated by `evaluate_entity_chains`. Used for `Once`-wrapped one-shot effects, cell-specific chains, and `On`-node-dispatched sub-chains. | `EffectChains`, `effect/definition.rs` |
 | **ActiveEffects** | Global resource (`Vec<(Option<String>, EffectNode)>`) holding all breaker-definition and triggered-chip chains. Bridge helpers sweep it for global and breaker-owned triggers. | `ActiveEffects`, `effect/active.rs` |
 | **ArmedEffects** | Component on bolt entities holding partially-resolved `When` trees waiting for a deeper trigger. Consumed on Fire, replaced on re-Arm. | `ArmedEffects`, `effect/armed.rs` |
+| **RootEffect** | Top-level enum wrapping an `On` node — constrains breaker definitions so every chain explicitly names its target entity before trigger matching. `BreakerDefinition.effects: Vec<RootEffect>`. | `RootEffect::On`, `effect/definition.rs` |
+| **EffectNode::On** | EffectNode variant — target scope. Dispatches children against the entity identified by `target` (Bolt, Breaker, Cell, Wall, AllBolts, AllCells). Not a trigger gate; resolved at dispatch time. | `On { target: Bolt, then: [...] }` |
 | **OnSelected** | Trigger variant for passive effects — evaluated immediately when a chip is selected, rather than waiting for a game event trigger | `When { trigger: OnSelected, then: [...] }` |
 | **OnBump** | Trigger variant that fires on any non-whiff bump (Early, Late, or Perfect) | `When { trigger: OnBump, then: [...] }` |
-| **Target** | Enum discriminating which entity type an effect targets: `Bolt`, `Breaker`, or `AllBolts`. Used by `SpeedBoost(Target, val)` and `SizeBoost(Target, val)`. | `Target::Bolt`, `Target::Breaker`, `Target::AllBolts` |
+| **Target** | Enum discriminating which entity type an effect targets: `Bolt`, `Breaker`, `AllBolts`, `Cell`, `Wall`, or `AllCells`. Used in `On { target, then }` nodes to scope effect dispatch. | `Target::Bolt`, `Target::Breaker`, `Target::AllBolts`, `Target::Cell`, `Target::Wall`, `Target::AllCells` |
 | **AttractionType** | Enum discriminating what entity type an `Attraction` effect pulls toward: `Cell`, `Wall`, or `Breaker`. Nearest wins. Type deactivates on hit, reactivates on bounce off non-attracted type. | `AttractionType::Cell`, `AttractionType::Wall`, `AttractionType::Breaker` |
 | **SpawnBolts** | Effect leaf — spawns additional bolts. Has `count` (default 1), `lifespan` (default None = permanent), and `inherit` (default false = no effect inheritance). | `Do(SpawnBolts { count: 2, inherit: true })` |
 | **RandomEffect** | Effect leaf — weighted random selection from a pool of effects. Each entry is `(weight, EffectNode)`. | `Do(RandomEffect([(0.5, Do(SpeedBoost(...))), ...]))` |
+| **Pulse** | Triggered effect leaf — fires a shockwave at every active bolt position simultaneously. Parameters: `base_range`, `range_per_level`, `stacks`, `speed`. | `Do(Pulse { base_range: 32.0, ... })` |
+| **SpawnPhantom** | Triggered effect leaf — spawns a temporary phantom bolt with infinite piercing and a lifespan timer. Parameters: `duration`, `max_active`. | `Do(SpawnPhantom { duration: 2.0, max_active: 1 })` |
+| **GravityWell** | Triggered effect leaf — spawns a gravity well entity that attracts bolts within a radius for a given duration. Parameters: `strength`, `duration`, `radius`, `max`. | `Do(GravityWell { strength: 1.0, duration: 3.0, radius: 80.0, max: 1 })` |
 
 ## Evolutions
 

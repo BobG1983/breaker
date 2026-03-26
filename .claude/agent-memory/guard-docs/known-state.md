@@ -246,7 +246,7 @@ type: reference
 
 ### BreakerDefinition / BreakerRegistry moved
 - `effect/definition.rs` no longer owns `BreakerDefinition`
-- `BreakerDefinition` → `breaker/definition.rs` (canonical; uses `EffectNode` directly)
+- `BreakerDefinition` → `breaker/definition.rs` (canonical; has `effects: Vec<RootEffect>` — NOT named fields)
 - `BreakerRegistry` → `breaker/registry.rs` (canonical; re-exported from `effect/`)
 - `init_breaker` → `breaker/systems/init_breaker.rs`
 - `apply_breaker_config_overrides` → `breaker/systems/init_breaker.rs`
@@ -261,13 +261,14 @@ type: reference
 - `bridge_cell_death`, `bridge_bolt_death`, `cleanup_destroyed_cells`, `cleanup_destroyed_bolts`, `apply_once_nodes` (in `effect/triggers/on_death.rs`)
 - `bridge_timer_threshold` (in `effect/triggers/on_timer.rs`)
 
-### EffectNode/Effect split
-- `EffectNode` (the tree): 4 variants: `When`, `Do`, `Until`, `Once` — NO `On` variant
-- `Effect` (the leaf enum): ~20 variants covering triggered + passive effects
-- `EffectChains` component exists (entity-local chains); `ActiveEffects` resource also exists (global breaker+chip chains)
-- `RootEffect` DOES NOT EXIST — was a forward-looking design not implemented
+### EffectNode/Effect split (CORRECTED 2026-03-25)
+- `EffectNode` (the tree): 5 variants: `When`, `Do`, `Until`, `Once`, `On { target: Target, then: Vec<EffectNode> }`
+- `EffectNode::On` IS REAL — used at dispatch time (not trigger matching) to scope children against a target entity
+- `RootEffect` IS REAL — `enum RootEffect { On { target: Target, then: Vec<EffectNode> } }` in `effect/definition.rs`; converts to `EffectNode::On` via `From<RootEffect>`
+- `Effect` (the leaf enum): ~20+ variants covering triggered + passive effects (including Pulse, SpawnPhantom, GravityWell added in Wave 3)
 - `ChipDefinition.effects: Vec<EffectNode>` (not Vec<TriggerChain>, not Vec<RootEffect>)
-- `BreakerDefinition` has named fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump: Option<EffectNode>`) + `chains: Vec<EffectNode>` — no `effects` field
+- `BreakerDefinition` has `effects: Vec<RootEffect>` — NO named fields (no `on_bolt_lost`, `on_perfect_bump` etc.). Breaker RON uses `effects: [On(target: ..., then: [When(trigger: ..., then: [Do(...)])])]`
+- Previous memory (lines 265-270) was wrong — corrected in docs review 2026-03-25
 
 ### run/highlights/ sub-domain
 - `run/highlights/systems/` holds: `detect_close_save`, `detect_combo_king`, `detect_mass_destruction`, `detect_pinball_wizard`
@@ -291,6 +292,34 @@ type: reference
 - `EffectChains` — component on individual entities. Entity-local chains (used for Once/SecondWind-style effects on cells/bolts).
 - NOTE: `effect/definition.rs` code comment on `EffectChains` is misleading — says "Replaces both `ActiveEffects` and `ArmedEffects`" but that's wrong; all three types coexist. This is a code comment error (cannot be fixed by docs guard). Documentation has been corrected to accurately describe the three-store model.
 - RON chip files use shorthand `OnSelected([...])` syntax (serde alias) rather than `When(trigger: OnSelected, then: [...])` — both are valid; doc examples show both forms intentionally.
+
+## C7 Wave 2b + Wave 3 Architecture (2026-03-25, do not re-flag)
+
+### BoltHitWall wall field
+- `BoltHitWall` has `{ bolt: Entity, wall: Entity }` — `wall` field added in Wave 2b
+- Fixed in messages.md 2026-03-25
+
+### Two-phase bolt destruction
+- `RequestBoltDestroyed { bolt: Entity }` — sent by `bolt_lost` for extra bolt despawn; consumed by `bridge_bolt_death` and `cleanup_destroyed_bolts`
+- `BoltDestroyedAt { position: Vec2 }` — sent by `bridge_bolt_death` after extracting entity data; no current consumers
+- Both added to messages.md 2026-03-25
+
+### Wave 3 new effects
+- `Pulse { base_range, range_per_level, stacks, speed }` — shockwave at every bolt position simultaneously; `PulseFired` event; wired in plugin
+- `SpawnPhantom { duration, max_active }` — temporary phantom bolt with infinite piercing; `SpawnPhantomFired` event; wired in plugin
+- `GravityWell { strength, duration, radius, max }` — gravity well entity; `GravityWellFired` event; wired in plugin
+- `ChainLightning` and `PiercingBeam` also wired (were previously "not yet wired")
+- `TimedSpeedBurst` does NOT exist in Effect enum — removed from docs
+- `TimePressureBoost` does NOT exist in Effect enum — removed from docs (needs human decision if planned)
+
+### SpeedBoost / SizeBoost signatures
+- `Effect::SpeedBoost { multiplier: f32 }` — NO target field; target is resolved from `On{}` context
+- `Effect::SizeBoost(f32)` — NO Target parameter; bolt handler and breaker handler both receive `SizeBoostApplied`
+- Fixed in triggers-and-effects.md and content.md 2026-03-25
+
+### detect_most_powerful_evolution
+- Registered in RunPlugin on `OnEnter(RunEnd)` — not on FixedUpdate
+- Emits `HighlightTriggered` — added to messages.md senders list
 
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete

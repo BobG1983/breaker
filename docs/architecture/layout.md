@@ -39,7 +39,7 @@ src/effect/
 ├── mod.rs                 # Re-exports + pub mod declarations
 ├── plugin.rs              # EffectPlugin — calls each effect's register(), wires bridges and Until timers
 ├── sets.rs                # EffectSystems set (Bridge variant for cross-domain ordering)
-├── definition.rs          # EffectNode, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget
+├── definition.rs          # EffectNode (When/Do/Until/Once/On), RootEffect, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget
 ├── evaluate.rs            # evaluate_node() pure function + NodeEvalResult enum
 ├── active.rs              # ActiveEffects resource (Vec<(Option<String>, EffectNode)>)
 ├── armed.rs               # ArmedEffects component (Vec<(Option<String>, EffectNode)> on bolt entities)

@@ -14,7 +14,7 @@ Cargo workspace with crate directories at root: `breaker-game/` (main game), `ra
 
 ## Architecture
 
-**Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, chips, behaviors, run, fx, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. `RantzSpatial2dPlugin` and `RantzPhysics2dPlugin` (from `rantzsoft_*` crates) provide shared spatial transform propagation and physics primitives. See `docs/architecture/` for full details, file tree, message table, and patterns.
+**Plugin-per-domain** with message-driven decoupling. Each domain plugin (input, breaker, bolt, cells, chips, effect, run, fx, audio, ui, debug) owns its components, resources, and systems. Domains communicate only through Bevy 0.18 messages. `RantzSpatial2dPlugin` and `RantzPhysics2dPlugin` (from `rantzsoft_*` crates) provide shared spatial transform propagation and physics primitives. See `docs/architecture/` for full details, file tree, message table, and patterns.
 
 ## Terminology
 

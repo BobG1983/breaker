@@ -12,6 +12,7 @@ pub enum EffectNode {
     Do(Effect),
     Until { until: Trigger, then: Vec<EffectNode> },
     Once(Vec<EffectNode>),
+    On { target: Target, then: Vec<EffectNode> },  // target scope — used by RootEffect
 }
 ```
 
@@ -23,6 +24,7 @@ pub enum EffectNode {
 | `Do` | Leaf effect — terminal action | N/A |
 | `Until` | Applies children, auto-removes when `until` trigger fires | No — removed on trigger |
 | `Once` | Fires children once ever, then permanently consumed from the chain | No — consumed after first fire |
+| `On` | Target scope — dispatches children against the specified entity type; used at top level in `RootEffect` | N/A |
 
 **`When`** — trigger gate. Fires children when the trigger condition is met. Re-fires on each subsequent activation. This is the primary mechanism for recurring triggered effects.
 
@@ -31,6 +33,8 @@ pub enum EffectNode {
 **`Until`** — applies children immediately, then auto-removes them when the `until` trigger fires. Used for timed buffs (`TimeExpires(3.0)`), trigger-based removal (`Impact(Breaker)`), or any effect that should end on a specific condition.
 
 **`Once`** — fires children once ever, then permanently consumed from the chain. Used for SecondWind-style one-time saves where the effect fires exactly once per run (or per node) and never again.
+
+**`On`** — target scope. Dispatches children against the entity identified by `target`. Not evaluated by trigger matching — it is resolved at dispatch time. Used as the top-level wrapper in `RootEffect` so every breaker chain explicitly names its target entity. `On` nodes in a chain are unwrapped during dispatch before any trigger evaluation.
 
 ### Examples
 
@@ -124,18 +128,18 @@ The evaluate/arm/resolve cycle is depth-agnostic: `evaluate()` peels the outermo
 
 ### Bolt Context
 
-- **Specific bolt**: The effect targets the bolt that triggered the event. The bolt entity is passed through `EffectFired.bolt`.
-- **Global**: No specific bolt. Effects that require a bolt entity (like `SpeedBoost` targeting `Bolt`) will no-op. Effects that don't require a bolt (like `LoseLife`) fire normally.
+- **Specific bolt**: The effect targets the bolt that triggered the event. The bolt entity is carried in the typed event's `targets` field as `EffectTarget::Entity(entity)`.
+- **Global**: No specific bolt. Effects that operate on all bolts (like `SpeedBoost`) query for all bolt entities. Effects that don't require a bolt (like `LoseLife`) fire normally regardless of context.
 
 ## Chain Ownership Model
 
 Chains live on the entity whose events trigger them. The `Target` enum in effects handles cross-entity targeting at handler time.
 
-### Two Stores Per Entity
+### Three Effect Stores
 
-- **`EffectChains`** — entity-local component (`EffectChains(Vec<EffectNode>)`). Populated by breaker init and chip dispatch. Never modified by trigger evaluation.
-- **`ActiveEffects`** — global resource (`Vec<(Option<String>, EffectNode)>`). Holds all breaker-definition and triggered-chip chains. Bridge helpers sweep it for global triggers.
+- **`ActiveEffects`** — global resource (`Vec<(Option<String>, EffectNode)>`). Holds all breaker-definition and triggered-chip chains. Populated by `init_breaker` and `dispatch_chip_effects`. Bridge helpers sweep it for global and breaker-owned triggers (BoltLost, BumpWhiff, NoBump, CellDestroyed).
 - **`ArmedEffects`** — component on bolt entities. Partially resolved `When` trees waiting for deeper triggers. Consumed on Fire, replaced on re-Arm.
+- **`EffectChains`** — component on individual entities (bolts, cells). Entity-local chains evaluated by `evaluate_entity_chains`. Used for `Once`-wrapped one-shot effects, cell-specific chains, and `On`-node-dispatched sub-chains.
 
 ### Which Entity Owns Which Chains
 
@@ -150,22 +154,7 @@ Chains live on the entity whose events trigger them. The `Target` enum in effect
 
 **Global triggers** — `CellDestroyed` and `BoltLost` are global events. During evaluation, bridges call `evaluate_active_chains` which sweeps all chains in `ActiveEffects`. The `bridge_cell_death` bridge reads `RequestCellDestroyed` (entity still alive) so effects can access the cell's components. It also evaluates the cell's own `Death` trigger. Then `cleanup_destroyed_cells` despawns the entity.
 
-`ChipDefinition.effects` is `Vec<EffectNode>` (not a restricted wrapper). `BreakerDefinition` uses named root fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump: Option<EffectNode>`) plus `chains: Vec<EffectNode>` for multi-step chains — there is no `effects` vec on `BreakerDefinition`.
-
-Example — Aegis breaker definition (named root fields, not an `effects` vec):
-```ron
-// assets/breakers/aegis.breaker.ron
-(
-    name: "Aegis",
-    stat_overrides: (),
-    life_pool: Some(3),
-    on_bolt_lost: Some(Do(LoseLife)),
-    on_perfect_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.5))),
-    on_early_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-    on_late_bump: Some(Do(SpeedBoost(target: Bolt, multiplier: 1.1))),
-    chains: [],
-)
-```
+`ChipDefinition.effects` is `Vec<EffectNode>` (not a restricted wrapper). `BreakerDefinition` uses `effects: Vec<RootEffect>` — see the [RootEffect and Breaker Definition](#rooteffect-and-breaker-definition) section below for the full format and RON example.
 
 ### Bump / Bumped Trigger Split
 
@@ -209,21 +198,23 @@ These fire through the bridge system when their trigger condition is met.
 
 | Effect | Parameters | Handler | Description |
 |--------|-----------|---------|-------------|
-| `Shockwave` | `base_range`, `range_per_level`, `stacks` | `handle_shockwave` | Area damage within range. Effective range = `base_range + (stacks - 1) * range_per_level`. |
+| `Shockwave` | `base_range`, `range_per_level`, `stacks`, `speed` | `handle_shockwave` | Expanding ring of area damage. Effective range = `base_range + (stacks - 1) * range_per_level`. `speed` controls expansion rate in world units/sec. |
 | `ChainBolt` | `tether_distance` | `handle_chain_bolt` | Spawns a chain bolt tethered to the triggering bolt via `DistanceConstraint`. |
 | `SpawnBolts` | `count`, `lifespan`, `inherit` | `handle_spawn_bolts` | Spawns `count` additional bolts. Serde defaults: `lifespan: None` (permanent), `inherit: false` (no effect inheritance), `count: 1`. |
-| `MultiBolt` | `base_count`, `count_per_level`, `stacks` | *(not yet wired)* | Spawns additional bolts. Effective count = `base_count + (stacks - 1) * count_per_level`. |
-| `Shield` | `base_duration`, `duration_per_level`, `stacks` | *(not yet wired)* | Temporary shield. Effective duration = `base_duration + (stacks - 1) * duration_per_level`. |
+| `MultiBolt` | `base_count`, `count_per_level`, `stacks` | `handle_multi_bolt` | Spawns additional bolts. Effective count = `base_count + (stacks - 1) * count_per_level`. |
+| `Shield` | `base_duration`, `duration_per_level`, `stacks` | `handle_shield` | Temporary shield. Effective duration = `base_duration + (stacks - 1) * duration_per_level`. |
 | `LoseLife` | *(none)* | `handle_life_lost` | Decrements `LivesCount`. When lives reach 0, sends `RunLost`. |
 | `TimePenalty` | `seconds` | `handle_time_penalty` | Subtracts time from the node timer. |
-| `SpeedBoost` | `target: Target`, `multiplier: f32` | `handle_speed_boost` | Scales velocity of the target by `multiplier`. Uses 1.x format: 2.0 = 2x speed, 0.5 = 50% speed. |
+| `SpeedBoost` | `multiplier: f32` | `handle_speed_boost` | Scales the bolt velocity by `multiplier`. Uses 1.x format: 2.0 = 2x speed, 0.5 = 50% speed. Target is resolved from the `On` node or event context. |
 | `RandomEffect` | `Vec<(f32, EffectNode)>` | `handle_random_effect` | Weighted random selection from a pool of effects. |
 | `EntropyEngine` | `counter: u32`, `Vec<(f32, EffectNode)>` | `handle_entropy_engine` | Counter-gated `RandomEffect` — every Nth trigger, roll from pool. |
 | `RampingDamage` | `bonus_per_hit: f32` | `handle_ramping_damage` | Stacking damage bonus on cell hits, resets on non-bump breaker impact. No maximum cap. |
-| `TimedSpeedBurst` | `speed_mult: f32`, `duration_secs: f32` | `handle_timed_speed_burst` | Temporary speed multiplier that decays after duration. |
-| `SecondWind` | `invuln_secs: f32` | `handle_second_wind` | Invisible wall that bounces the bolt once per node. Applied to the breaker's `EffectChains`. Consumed after use via `Once`. |
-| `ChainLightning` | `arcs: u32`, `range: f32`, `damage_mult: f32` | `handle_chain_lightning` | Arc damage jumping between nearby cells. |
-| `PiercingBeam` | `damage_mult: f32`, `width: f32` | `handle_piercing_beam` | Piercing beam through all cells in the bolt's path. |
+| `SecondWind` | `invuln_secs: f32` | `handle_second_wind` | Spawns an invisible bottom wall that bounces the bolt once. Despawned after first hit. |
+| `ChainLightning` | `arcs: u32`, `range: f32`, `damage_mult: f32` | `handle_chain_lightning` | Arc damage jumping between nearby cells using greedy nearest-neighbor traversal. |
+| `PiercingBeam` | `damage_mult: f32`, `width: f32` | `handle_piercing_beam` | Fires a beam through all cells in the bolt's current velocity direction. |
+| `SpawnPhantom` | `duration: f32`, `max_active: u32` | `handle_spawn_phantom` | Spawns a temporary phantom bolt with infinite piercing and a lifespan timer. |
+| `GravityWell` | `strength: f32`, `duration: f32`, `radius: f32`, `max: u32` | `handle_gravity_well` | Spawns a gravity well entity that attracts bolts within radius for the given duration. |
+| `Pulse` | `base_range: f32`, `range_per_level: f32`, `stacks: u32`, `speed: f32` | `handle_pulse` | Fires a shockwave at every active bolt position simultaneously. Functionally equivalent to Shockwave but targets all bolts. |
 
 ### Passive Effects (OnSelected Leaves)
 
@@ -233,13 +224,12 @@ These fire immediately when a chip is selected and modify entity components dire
 |--------|-----------|--------|-------------|
 | `Piercing` | `count: u32` | Bolt | Bolt passes through N cells before stopping |
 | `DamageBoost` | `boost: f32` | Bolt | Fractional bonus damage per stack. Uses 1.x format: 2.0 = 2x damage. |
-| `SpeedBoost` | `target: Target`, `multiplier: f32` | Bolt or Breaker | Multiplicative speed multiplier per stack (e.g., 1.1 = 10% boost). 2.0 = 2x speed. |
+| `SpeedBoost` | `multiplier: f32` | Bolt | Multiplicative speed multiplier per stack (e.g., 1.1 = 10% boost). 2.0 = 2x speed. Passive apply fires `SpeedBoostApplied`; triggered form fires `SpeedBoostFired`. |
 | `ChainHit` | `count: u32` | Bolt | Chains to N additional cells on hit |
-| `SizeBoost` | `target: Target`, `value: f32` | Bolt (radius) or Breaker (width) | Size increase per stack |
+| `SizeBoost` | `value: f32` | Bolt (radius) or Breaker (width) | Size increase per stack. Dispatched as `SizeBoostApplied` — bolt handler (`bolt_size_boost`) and breaker handler (`width_boost`) both receive it and apply to their respective entities. |
 | `Attraction` | `type: AttractionType`, `force: f32` | Bolt | Attracts toward nearest entity of the given type. See Attraction section below. |
 | `BumpForce` | `force: f32` | Breaker | Flat bump force increase per stack |
 | `TiltControl` | `sensitivity: f32` | Breaker | Flat tilt control sensitivity increase per stack |
-| `TimePressureBoost` | `speed_mult: f32`, `threshold_pct: f32` | Bolt | Conditional: when timer < threshold, bolt speed multiplied. |
 
 ### Attraction
 
@@ -260,15 +250,18 @@ Do(Attraction(Wall, 0.5))
 
 ### Target Enum
 
-Effects that can target multiple entity types use the `Target` enum:
+`Target` is used in `On { target, then }` nodes to scope effect dispatch to a specific entity type:
 
 | Target | Behavior |
 |--------|----------|
-| `Bolt` | Affects the specific triggering bolt entity |
-| `Breaker` | Affects the breaker entity |
-| `AllBolts` | Affects all bolt entities in play |
+| `Bolt` | The specific bolt that triggered the event |
+| `Breaker` | The breaker entity |
+| `AllBolts` | All bolt entities currently in play |
+| `Cell` | The specific cell entity that was hit |
+| `Wall` | The wall entity that was hit |
+| `AllCells` | All cell entities in the current node |
 
-`SizeBoost` interpretation varies by target: on `Bolt` it adjusts radius, on `Breaker` it adjusts width.
+`SizeBoost` interpretation varies by context: `bolt_size_boost` handler applies to bolt radius; `width_boost` handler applies to breaker width.
 
 ### Buff Stacking
 
@@ -297,14 +290,41 @@ All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half). T
 
 RON files only need to specify non-default values.
 
+## RootEffect and Breaker Definition
+
+`RootEffect` is a top-level wrapper enum that constrains breaker definitions so every chain explicitly names its target entity before any trigger matching:
+
+```rust
+pub enum RootEffect {
+    On { target: Target, then: Vec<EffectNode> }
+}
+```
+
+`BreakerDefinition` has a single `effects: Vec<RootEffect>` field. Each entry is `On(target: ..., then: [...])`. At dispatch time `RootEffect` converts to `EffectNode::On`, establishing the entity context for child trigger evaluation.
+
 ## Breaker Usage
 
-Each breaker defines root effect chains for bump events:
+Each breaker defines root effect chains using `effects: Vec<RootEffect>`. All entries are `On(target, then: [When(trigger, then: [effect])])` style:
 
-| Breaker | on_bolt_lost | on_perfect_bump | on_early_bump | on_late_bump |
-|---------|-------------|-----------------|---------------|-------------|
-| **Aegis** | `Do(LoseLife)` | `Do(SpeedBoost(Bolt, 1.5))` | `Do(SpeedBoost(Bolt, 1.1))` | `Do(SpeedBoost(Bolt, 1.1))` |
-| **Chrono** | `Do(TimePenalty(5.0))` | `Do(SpeedBoost(Bolt, 1.5))` | `Do(SpeedBoost(Bolt, 1.1))` | `Do(SpeedBoost(Bolt, 1.1))` |
-| **Prism** | `Do(TimePenalty(7.0))` | `Do(SpawnBolts { count: 1 })` | *(none)* | *(none)* |
+| Breaker | Effect chains |
+|---------|--------------|
+| **Aegis** | `On(Breaker, When(OnBoltLost, Do(LoseLife)))` · `On(Bolt, When(PerfectBumped, Do(SpeedBoost(1.5))))` · `On(Bolt, When(EarlyBumped, Do(SpeedBoost(1.1))))` · `On(Bolt, When(LateBumped, Do(SpeedBoost(1.1))))` |
+| **Chrono** | `On(Breaker, When(OnBoltLost, Do(TimePenalty(5.0))))` · `On(Bolt, When(PerfectBumped, Do(SpeedBoost(1.5))))` · `On(Bolt, When(EarlyBumped, Do(SpeedBoost(1.1))))` · `On(Bolt, When(LateBumped, Do(SpeedBoost(1.1))))` |
+| **Prism** | `On(Breaker, When(OnBoltLost, Do(TimePenalty(7.0))))` · `On(Breaker, When(PerfectBump, Do(SpawnBolts())))` |
 
-Breakers can also define additional chains in the `chains` field for more complex trigger combinations. All root fields and `chains` are loaded into `ActiveEffects` at run start by `init_breaker`.
+All entries in `effects` are loaded into `ActiveEffects` at run start by `init_breaker`. Breakers may have any number of entries; there are no special named fields.
+
+Example — Aegis RON:
+```ron
+(
+    name: "Aegis",
+    stat_overrides: (),
+    life_pool: Some(3),
+    effects: [
+        On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(LoseLife)])]),
+        On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+    ],
+)
+```
