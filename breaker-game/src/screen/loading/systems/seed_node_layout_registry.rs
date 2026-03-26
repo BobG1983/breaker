@@ -115,17 +115,9 @@ mod tests {
         let handle = assets.add(make_layout());
 
         app.world_mut().insert_resource(DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![],
             nodes: vec![handle],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips: vec![],
             chip_templates: vec![],
             difficulty: Handle::default(),
@@ -144,17 +136,9 @@ mod tests {
         let handle = assets.add(make_layout());
 
         app.world_mut().insert_resource(DefaultsCollection {
-            playfield: Handle::default(),
-            bolt: Handle::default(),
-            breaker: Handle::default(),
-            cell_defaults: Handle::default(),
-            input: Handle::default(),
-            main_menu: Handle::default(),
-            timer_ui: Handle::default(),
             cells: vec![],
             nodes: vec![handle],
             breakers: vec![],
-            chip_select: Handle::default(),
             chips: vec![],
             chip_templates: vec![],
             difficulty: Handle::default(),

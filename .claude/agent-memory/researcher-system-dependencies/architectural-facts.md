@@ -9,7 +9,8 @@ type: reference
 - EXCEPTION: `check_spawn_complete` (NodePlugin, FixedUpdate) has NO run_if guard — it must fire in the first tick of Playing before Active is set
 - Visual-only systems run in Update (animate_bump_visual, animate_tilt_visual, update_timer_display, debug overlays, update_lives_display, animate_fade_out)
 - EffectPlugin (renamed from BehaviorsPlugin in C7-R, 2026-03-25) is STANDALONE, registered between BreakerPlugin and BoltPlugin
-- Spatial2d pipeline: `save_previous` (FixedFirst) → [FixedUpdate gameplay/physics] → `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale` (AfterFixedMainLoop, chained in RantzSpatial2dPlugin)
+- Spatial2d pipeline: `save_previous` (FixedFirst, SpatialSystems::SavePrevious) → [FixedUpdate gameplay/physics] → `compute_globals` (SpatialSystems::ComputeGlobals) → `derive_transform` (SpatialSystems::DeriveTransform) (AfterFixedMainLoop, chained in RantzSpatial2dPlugin). NOTE: propagate_position/rotation/scale are NOT registered by the plugin.
+- SpatialSystems set: `SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform` — exported from `rantzsoft_spatial2d::plugin` and prelude; use for cross-system ordering
 - InterpolatePlugin and PhysicsPlugin DELETED (2026-03-24 spatial/physics extraction). Replaced by RantzSpatial2dPlugin and RantzPhysics2dPlugin.
 - Bolt entities carry Position2D (canonical) + InterpolateTransform2D (for visual smoothing); bolt_lost no longer inserts PhysicsTranslation (that type is gone)
 - Physics collision chain (bolt domain): `prepare_bolt_velocity` → `bolt_cell_collision` → `bolt_breaker_collision` → `clamp_bolt_to_playfield` → `bolt_lost`

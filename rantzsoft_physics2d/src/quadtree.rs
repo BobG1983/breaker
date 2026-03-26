@@ -2,7 +2,11 @@
 
 use bevy::{platform::collections::HashSet, prelude::*};
 
-use crate::{aabb::Aabb2D, collision_layers::CollisionLayers};
+use crate::{
+    aabb::Aabb2D,
+    ccd::{CCD_EPSILON, SweepHit},
+    collision_layers::CollisionLayers,
+};
 
 /// Internal node representation for the quadtree.
 enum QuadNode {
@@ -395,6 +399,74 @@ impl Quadtree {
     pub fn clear(&mut self) {
         self.root = QuadNode::Leaf { items: Vec::new() };
         self.len = 0;
+    }
+
+    /// Casts a circle along a ray and returns all hits sorted by distance.
+    ///
+    /// The circle is swept from `origin` in `direction` up to `max_dist`.
+    /// Internally performs Minkowski expansion (expands each stored AABB by
+    /// `radius`) and casts a point ray against the expanded AABBs.
+    ///
+    /// Only entities whose `CollisionLayers` interact with `layers` are tested.
+    /// Results are sorted nearest-first by hit distance.
+    #[must_use]
+    pub fn cast_circle(
+        &self,
+        origin: Vec2,
+        direction: Vec2,
+        max_dist: f32,
+        radius: f32,
+        layers: CollisionLayers,
+    ) -> Vec<SweepHit> {
+        // Compute swept AABB for broad-phase
+        let end = origin + direction * max_dist;
+        let swept_aabb = Aabb2D::from_min_max(
+            origin.min(end) - Vec2::splat(radius),
+            origin.max(end) + Vec2::splat(radius),
+        );
+
+        // Broad-phase: find candidate entities via layer-filtered AABB query
+        let candidates = self.query_aabb_filtered(&swept_aabb, layers);
+        let candidate_set: HashSet<Entity> = candidates.into_iter().collect();
+
+        // Narrow-phase: ray-cast against Minkowski-expanded AABBs
+        let mut raw_hits: Vec<(f32, SweepHit)> = Vec::new();
+        collect_matching_items(&self.root, &candidate_set, &mut |entity, stored_aabb, _| {
+            let expanded = stored_aabb.expand_by(radius);
+            if let Some(ray_hit) = expanded.ray_intersect(origin, direction, max_dist) {
+                let safe_dist = (ray_hit.distance - CCD_EPSILON).max(0.0);
+                let position = origin + direction * safe_dist;
+                let remaining = (max_dist - ray_hit.distance).max(0.0);
+                raw_hits.push((
+                    ray_hit.distance,
+                    SweepHit {
+                        entity,
+                        position,
+                        normal: ray_hit.normal,
+                        remaining,
+                    },
+                ));
+            }
+        });
+
+        // Sort by raw hit distance (nearest first)
+        raw_hits.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+
+        raw_hits.into_iter().map(|(_, hit)| hit).collect()
+    }
+
+    /// Casts a zero-radius ray and returns all hits sorted by distance.
+    ///
+    /// Equivalent to `cast_circle` with `radius = 0.0`.
+    #[must_use]
+    pub fn cast_ray(
+        &self,
+        origin: Vec2,
+        direction: Vec2,
+        max_dist: f32,
+        layers: CollisionLayers,
+    ) -> Vec<SweepHit> {
+        self.cast_circle(origin, direction, max_dist, 0.0, layers)
     }
 }
 
@@ -973,5 +1045,201 @@ mod tests {
             "only in-range entity_a should be returned"
         );
         assert_eq!(results[0], entities[0]);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Sweep API tests — cast_circle, cast_ray
+    // ════════════════════════════════════════════════════════════════
+
+    // ── Behavior 5: cast_circle finds entity in path ──
+
+    #[test]
+    fn cast_circle_finds_entity_in_path() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+
+        // Entity at (0, 50) with half_extents (10, 10), membership=0x01
+        let aabb = Aabb2D::new(Vec2::new(0.0, 50.0), Vec2::new(10.0, 10.0));
+        tree.insert(entities[0], aabb, CollisionLayers::new(0x01, 0x01));
+
+        // Cast circle from origin upward, radius=5
+        // Stored AABB: center=50, half=10. Expanded by radius 5 → half=15.
+        // Bottom face of expanded AABB at y = 50 - 15 = 35.
+        // Ray from y=0 going up → hits at distance 35.0.
+        let hits = tree.cast_circle(
+            Vec2::new(0.0, 0.0),
+            Vec2::Y,
+            200.0,
+            5.0,
+            CollisionLayers::new(0x00, 0x01),
+        );
+
+        assert_eq!(hits.len(), 1, "should find one entity in path");
+        assert_eq!(hits[0].entity, entities[0]);
+        // Position should be safe stop point just before contact (~35.0 along Y)
+        assert!(
+            (hits[0].position.y - 35.0).abs() < 1.0,
+            "position.y should be ~35.0, got {}",
+            hits[0].position.y
+        );
+        assert_eq!(
+            hits[0].normal,
+            Vec2::NEG_Y,
+            "should report bottom face normal"
+        );
+        // Remaining = max_dist - distance = 200.0 - 35.0 = 165.0
+        assert!(
+            (hits[0].remaining - 165.0).abs() < 1.0,
+            "remaining should be ~165.0, got {}",
+            hits[0].remaining
+        );
+    }
+
+    #[test]
+    fn cast_circle_entity_not_on_matching_layer_returns_empty() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+
+        // Entity on layer 0x02
+        let aabb = Aabb2D::new(Vec2::new(0.0, 50.0), Vec2::new(10.0, 10.0));
+        tree.insert(entities[0], aabb, CollisionLayers::new(0x02, 0x02));
+
+        // Cast with mask=0x01 — does not match membership=0x02
+        let hits = tree.cast_circle(
+            Vec2::new(0.0, 0.0),
+            Vec2::Y,
+            200.0,
+            5.0,
+            CollisionLayers::new(0x00, 0x01),
+        );
+
+        assert!(
+            hits.is_empty(),
+            "entity on non-matching layer should not be hit"
+        );
+    }
+
+    // ── Behavior 6: cast_circle returns hits sorted by distance ──
+
+    #[test]
+    fn cast_circle_returns_hits_sorted_nearest_first() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(2);
+
+        // entity_a at (0, 30) with half_extents (5, 5)
+        let aabb_a = Aabb2D::new(Vec2::new(0.0, 30.0), Vec2::new(5.0, 5.0));
+        tree.insert(entities[0], aabb_a, CollisionLayers::new(0x01, 0x01));
+
+        // entity_b at (0, 80) with half_extents (5, 5)
+        let aabb_b = Aabb2D::new(Vec2::new(0.0, 80.0), Vec2::new(5.0, 5.0));
+        tree.insert(entities[1], aabb_b, CollisionLayers::new(0x01, 0x01));
+
+        // Cast ray (radius=0) from origin upward
+        // entity_a bottom face at y=25, entity_b bottom face at y=75
+        let hits = tree.cast_circle(
+            Vec2::new(0.0, 0.0),
+            Vec2::Y,
+            200.0,
+            0.0,
+            CollisionLayers::new(0x00, 0x01),
+        );
+
+        assert_eq!(hits.len(), 2, "should find both entities");
+        assert_eq!(
+            hits[0].entity, entities[0],
+            "first hit should be entity_a (closer)"
+        );
+        assert_eq!(
+            hits[1].entity, entities[1],
+            "second hit should be entity_b (farther)"
+        );
+    }
+
+    // ── Behavior 7: cast_circle misses entity outside path ──
+
+    #[test]
+    fn cast_circle_misses_entity_outside_path() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+
+        // Entity far to the right at (100, 50)
+        let aabb = Aabb2D::new(Vec2::new(100.0, 50.0), Vec2::new(5.0, 5.0));
+        tree.insert(entities[0], aabb, CollisionLayers::new(0x01, 0x01));
+
+        // Cast circle straight up with radius=5 — should not reach entity at x=100
+        let hits = tree.cast_circle(
+            Vec2::new(0.0, 0.0),
+            Vec2::Y,
+            200.0,
+            5.0,
+            CollisionLayers::new(0x00, 0x01),
+        );
+
+        assert!(
+            hits.is_empty(),
+            "entity at x=100 should not be hit by ray along Y axis"
+        );
+    }
+
+    // ── Behavior 8: cast_circle respects collision layers ──
+
+    #[test]
+    fn cast_circle_respects_collision_layers() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(2);
+
+        // entity_a on layer 0x01, directly in path at (0, 30)
+        let aabb_a = Aabb2D::new(Vec2::new(0.0, 30.0), Vec2::new(5.0, 5.0));
+        tree.insert(entities[0], aabb_a, CollisionLayers::new(0x01, 0x01));
+
+        // entity_b on layer 0x02, also in path at (0, 60)
+        let aabb_b = Aabb2D::new(Vec2::new(0.0, 60.0), Vec2::new(5.0, 5.0));
+        tree.insert(entities[1], aabb_b, CollisionLayers::new(0x02, 0x02));
+
+        // Cast with mask=0x01 — should only hit entity_a
+        let hits = tree.cast_circle(
+            Vec2::new(0.0, 0.0),
+            Vec2::Y,
+            200.0,
+            5.0,
+            CollisionLayers::new(0x00, 0x01),
+        );
+
+        assert_eq!(hits.len(), 1, "should only hit entity on matching layer");
+        assert_eq!(
+            hits[0].entity, entities[0],
+            "should hit entity_a (layer 0x01)"
+        );
+    }
+
+    // ── Behavior 9: cast_ray works (zero radius) ──
+
+    #[test]
+    fn cast_ray_hits_unexpanded_aabb() {
+        let mut tree = test_tree();
+        let entities = spawn_entities(1);
+
+        // Entity at (0, 50) with half_extents (10, 10)
+        // Unexpanded bottom face at y=40
+        let aabb = Aabb2D::new(Vec2::new(0.0, 50.0), Vec2::new(10.0, 10.0));
+        tree.insert(entities[0], aabb, CollisionLayers::new(0x01, 0x01));
+
+        // cast_ray = cast_circle with radius 0
+        let hits = tree.cast_ray(
+            Vec2::new(0.0, 0.0),
+            Vec2::Y,
+            200.0,
+            CollisionLayers::new(0x00, 0x01),
+        );
+
+        assert_eq!(hits.len(), 1, "ray should hit entity");
+        assert_eq!(hits[0].entity, entities[0]);
+        // Ray hits unexpanded AABB at y=40 (no Minkowski expansion)
+        assert!(
+            (hits[0].position.y - 40.0).abs() < 1.0,
+            "position.y should be ~40.0 (unexpanded), got {}",
+            hits[0].position.y
+        );
+        assert_eq!(hits[0].normal, Vec2::NEG_Y);
     }
 }

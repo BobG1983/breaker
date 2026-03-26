@@ -4,8 +4,16 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
+[features]
+default = ["progress"]
+progress = ["dep:iyes_progress"]
+
 [dependencies]
 rantzsoft_defaults_derive = { path = "../rantzsoft_defaults_derive" }
+bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
+ron = "0.12"
+serde = { version = "1", features = ["derive"] }
+iyes_progress = { version = "0.16", optional = true }
 
 [lints]
 workspace = true

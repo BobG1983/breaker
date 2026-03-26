@@ -197,7 +197,8 @@ type: reference
 ## Spatial/Physics Extraction Architecture (2026-03-24, do not re-flag)
 
 ### New crates
-- `rantzsoft_spatial2d` — `Position2D`, `Rotation2D`, `Scale2D`, `Global*`, `Velocity2D`, `PreviousVelocity`, `InterpolateTransform2D`, `VisualOffset`, `ApplyVelocity`, `Spatial2D` marker, `DrawLayer` trait, `PositionPropagation`/`RotationPropagation`/`ScalePropagation` enums. Plugin: `RantzSpatial2dPlugin<D: DrawLayer>`.
+- `rantzsoft_spatial2d` — `Position2D`, `Rotation2D`, `Scale2D`, `Global*`, `Velocity2D`, `PreviousVelocity`, `InterpolateTransform2D`, `VisualOffset`, `ApplyVelocity`, `Spatial2D` marker, `DrawLayer` trait, `PositionPropagation`/`RotationPropagation`/`ScalePropagation` enums. Plugin: `RantzSpatial2dPlugin<D: DrawLayer>`. Also exports `SpatialSystems` enum (4 variants: `SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) from `plugin.rs` and `prelude.rs`.
+- `rantzsoft_defaults` — expanded beyond simple lib.rs re-export. Now has: `handle.rs` (DefaultsHandle<D>), `loader.rs` (RonAssetLoader<T>), `plugin.rs` (RantzDefaultsPlugin, RantzDefaultsPluginBuilder, DefaultsSystems enum with Seed and PropagateDefaults variants), `prelude.rs`, `seedable.rs` (SeedableConfig trait), `systems.rs` (seed_config, propagate_defaults, init_defaults_handle). Cargo aliases: `defaultstest`, `defaultsclippy`, `defaultscheck`. All documented in plugins.md workspace layout and ordering.md defined sets table as of 2026-03-26.
 - `rantzsoft_physics2d` — `Aabb2D` (requires Spatial2D), `CollisionLayers`, `DistanceConstraint`, `CollisionQuadtree` resource, quadtree/CCD math, `RantzPhysics2dPlugin`, `rantzsoft_physics2d::plugin::PhysicsSystems` set (MaintainQuadtree, EnforceDistanceConstraints).
 - `rantzsoft_defaults` + `rantzsoft_defaults_derive` — existed before; no game-specific content, re-exports `GameConfig` derive macro.
 

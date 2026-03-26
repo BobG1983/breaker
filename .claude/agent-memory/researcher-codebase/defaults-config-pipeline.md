@@ -10,19 +10,32 @@ type: reference
 
 **Crate:** `rantzsoft_defaults_derive` (proc-macro crate), re-exported from `rantzsoft_defaults`.
 
-**Usage annotation required on the `*Defaults` struct:**
+**Forward form — applied to `*Defaults` struct:**
 ```rust
 #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 #[game_config(name = "FooConfig")]
 pub struct FooDefaults { ... }
 ```
+Generates: `FooConfig` (Resource+Debug+Clone), `From<FooDefaults> for FooConfig`, `Default for FooConfig` (delegates to `FooDefaults::default().into()`).
 
-**What the macro generates:**
-1. A `FooConfig` struct with identical named fields, deriving `Resource + Debug + Clone`
-2. `impl From<FooDefaults> for FooConfig` — field-by-field copy (no doc attrs on the config type, only forwarded `#[doc]` attrs from each field)
-3. `impl Default for FooConfig` — delegates to `FooDefaults::default().into()`
+**Reversed form — applied to `*Config` struct (new as of rantzsoft prelude session):**
+```rust
+#[derive(Resource, Debug, Clone, GameConfig)]
+#[game_config(defaults = "FooDefaults")]
+struct FooConfig { ... }
+```
+Generates: `FooDefaults` struct, bidirectional `From` impls, `Default for FooDefaults` (delegates to `FooConfig::default().into()`), and `merge_from_defaults(&FooDefaults)` method on `FooConfig`.
+
+**With SeedableConfig (adds `path` + `ext` to reversed form):**
+```rust
+#[game_config(defaults = "FooDefaults", path = "config/foo.ron", ext = "foo.ron")]
+struct FooConfig { ... }
+```
+Additionally generates `impl SeedableConfig for FooDefaults`.
 
 No Bevy systems, plugins, or asset loader wiring. Pure code generation.
+
+**NOTE:** The `breaker-game` pipeline below uses the FORWARD form exclusively. The reversed form and SeedableConfig are available but not yet adopted by the game codebase.
 
 ---
 

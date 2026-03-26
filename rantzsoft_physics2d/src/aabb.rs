@@ -88,6 +88,20 @@ impl Aabb2D {
     pub fn merge(&self, other: &Self) -> Self {
         Self::from_min_max(self.min().min(other.min()), self.max().max(other.max()))
     }
+
+    /// Casts a ray against this AABB and returns the entry distance and face normal.
+    ///
+    /// Returns `None` if the ray misses, the origin is inside the AABB, or the
+    /// hit is beyond `max_dist`.
+    #[must_use]
+    pub fn ray_intersect(
+        &self,
+        origin: Vec2,
+        direction: Vec2,
+        max_dist: f32,
+    ) -> Option<crate::ccd::RayHit> {
+        crate::ccd::ray_vs_aabb(origin, direction, max_dist, self)
+    }
 }
 
 #[cfg(test)]
@@ -245,5 +259,83 @@ mod tests {
             Vec2::new(5.0, 5.0),
             "explicit Position2D should not be overwritten by default"
         );
+    }
+
+    // ── Behavior 1: ray_intersect returns hit for ray from below ──
+
+    #[test]
+    fn ray_intersect_hit_from_below() {
+        // AABB center=(0,0), half_extents=(43,20) → spans [-43,43] x [-20,20]
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(43.0, 20.0));
+        let origin = Vec2::new(0.0, -30.0);
+        let direction = Vec2::Y;
+        let max_dist = 100.0;
+
+        let hit = aabb
+            .ray_intersect(origin, direction, max_dist)
+            .expect("should hit bottom face");
+
+        // Bottom face at y=-20, origin at y=-30, distance = |-30 - (-20)| = 10.0
+        assert!(
+            (hit.distance - 10.0).abs() < 0.01,
+            "distance should be ~10.0, got {}",
+            hit.distance
+        );
+        assert_eq!(hit.normal, Vec2::NEG_Y, "should hit bottom face");
+    }
+
+    #[test]
+    fn ray_intersect_origin_inside_returns_none() {
+        // AABB center=(0,0), half_extents=(43,20) → origin (0,0) is inside
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(43.0, 20.0));
+        let result = aabb.ray_intersect(Vec2::ZERO, Vec2::Y, 100.0);
+        assert!(result.is_none(), "origin inside AABB should return None");
+    }
+
+    // ── Behavior 2: ray_intersect returns None for miss ──
+
+    #[test]
+    fn ray_intersect_miss_parallel_ray() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(43.0, 20.0));
+        let origin = Vec2::new(0.0, -30.0);
+        // Direction parallel to bottom face (along X), never enters AABB
+        let direction = Vec2::X;
+        let result = aabb.ray_intersect(origin, direction, 100.0);
+        assert!(result.is_none(), "parallel ray should miss");
+    }
+
+    #[test]
+    fn ray_intersect_miss_beyond_max_dist() {
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(43.0, 20.0));
+        // Origin very far below, max_dist too short to reach
+        let origin = Vec2::new(0.0, -200.0);
+        let result = aabb.ray_intersect(origin, Vec2::Y, 10.0);
+        assert!(
+            result.is_none(),
+            "ray should not reach AABB within max_dist"
+        );
+    }
+
+    // ── Behavior 3: ray_intersect returns hit from side ──
+
+    #[test]
+    fn ray_intersect_hit_from_left_side() {
+        // AABB center=(0,0), half_extents=(43,20) → left face at x=-43
+        let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(43.0, 20.0));
+        let origin = Vec2::new(-60.0, 0.0);
+        let direction = Vec2::X;
+        let max_dist = 100.0;
+
+        let hit = aabb
+            .ray_intersect(origin, direction, max_dist)
+            .expect("should hit left face");
+
+        // Left face at x=-43, origin at x=-60, distance = |-60 - (-43)| = 17.0
+        assert!(
+            (hit.distance - 17.0).abs() < 0.01,
+            "distance should be ~17.0, got {}",
+            hit.distance
+        );
+        assert_eq!(hit.normal, Vec2::NEG_X, "should hit left face");
     }
 }

@@ -19,9 +19,13 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
+    collision_layers::CollisionLayers, prelude::SweepHit, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::Position2D;
+
+/// Maximum number of bounces resolved per bolt per frame.
+///
+/// Prevents infinite loops in degenerate geometries.
+const MAX_BOUNCES: u32 = 4;
 
 use crate::{
     bolt::{
@@ -34,12 +38,15 @@ use crate::{
         components::{Cell, CellHealth},
         messages::DamageCell,
     },
-    shared::{
-        BASE_BOLT_DAMAGE, CELL_LAYER, WALL_LAYER,
-        math::{CCD_EPSILON, MAX_BOUNCES, ray_vs_aabb},
-    },
+    shared::{BASE_BOLT_DAMAGE, CELL_LAYER, WALL_LAYER},
     wall::components::Wall,
 };
+
+/// Sub-pixel separation gap used to determine when remaining distance is negligible.
+///
+/// If the bolt's remaining travel is at or below this threshold, the CCD loop
+/// stops — there is not enough distance left for a meaningful collision.
+const SEPARATION_GAP: f32 = 0.01;
 
 /// Message writers used by the bolt-cell-wall collision system.
 type CollisionWriters<'a> = (
@@ -48,73 +55,28 @@ type CollisionWriters<'a> = (
     MessageWriter<'a, BoltHitWall>,
 );
 
-/// Query for looking up entity `Aabb2D` and `Position2D` by entity ID
-/// after the quadtree broad-phase returns candidate entities.
+/// Query for looking up game-specific data by entity ID after `cast_circle`
+/// identifies a hit.
 ///
 /// Excludes bolts to avoid query conflicts with the mutable `bolt_query`.
-type CandidateLookup<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static Position2D,
-        &'static Aabb2D,
-        Has<Cell>,
-        Has<Wall>,
-        Option<&'static CellHealth>,
-    ),
-    Without<Bolt>,
->;
+type CandidateLookup<'w, 's> =
+    Query<'w, 's, (Has<Cell>, Has<Wall>, Option<&'static CellHealth>), Without<Bolt>>;
 
-/// Finds the nearest collision candidate from a set of quadtree results.
+/// Returns the first `SweepHit` whose entity is not a pierced cell.
 ///
-/// Returns `Some((cell_entity_or_none, candidate_entity, hit))` for the closest
-/// hit, or `None` if no candidate was hit. Cell entities return
-/// `Some(entity)` in the first field, walls return `None`. The second field
-/// always holds the raw candidate entity (cell or wall).
-fn find_nearest_candidate(
-    candidates: &[Entity],
+/// `cast_circle` returns hits sorted nearest-first. For each hit, check if the
+/// entity is a cell that has already been pierced this frame — if so, skip it.
+fn find_first_non_pierced<'a>(
+    hits: &'a [SweepHit],
     candidate_lookup: &CandidateLookup,
     pierced_this_frame: &[Entity],
-    position: Vec2,
-    direction: Vec2,
-    remaining: f32,
-    bolt_radius: f32,
-) -> Option<(Option<Entity>, Entity, crate::shared::math::RayHit)> {
-    let mut best: Option<(Option<Entity>, Entity, crate::shared::math::RayHit)> = None;
-
-    for candidate_entity in candidates {
-        let Ok((_, candidate_pos, candidate_aabb, is_cell, _is_wall, _cell_health)) =
-            candidate_lookup.get(*candidate_entity)
-        else {
-            continue;
+) -> Option<&'a SweepHit> {
+    hits.iter().find(|hit| {
+        let Ok((is_cell, ..)) = candidate_lookup.get(hit.entity) else {
+            return false;
         };
-
-        if is_cell && pierced_this_frame.contains(candidate_entity) {
-            continue;
-        }
-
-        let expanded_half_extents = candidate_aabb.half_extents + Vec2::splat(bolt_radius);
-        if let Some(hit) = ray_vs_aabb(
-            position,
-            direction,
-            remaining,
-            candidate_pos.0,
-            expanded_half_extents,
-        ) && best
-            .as_ref()
-            .is_none_or(|(_, _, b)| hit.distance < b.distance)
-        {
-            let hit_entity = if is_cell {
-                Some(*candidate_entity)
-            } else {
-                None
-            };
-            best = Some((hit_entity, *candidate_entity, hit));
-        }
-    }
-
-    best
+        !(is_cell && pierced_this_frame.contains(&hit.entity))
+    })
 }
 
 /// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
@@ -162,8 +124,10 @@ pub(crate) fn bolt_cell_collision(
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
 
+        let collision_layers = CollisionLayers::new(0, CELL_LAYER | WALL_LAYER);
+
         for _ in 0..MAX_BOUNCES {
-            if remaining <= CCD_EPSILON {
+            if remaining <= SEPARATION_GAP {
                 break;
             }
 
@@ -172,47 +136,36 @@ pub(crate) fn bolt_cell_collision(
                 break;
             }
 
-            // Compute swept AABB for this bounce step
-            let end_pos = position + direction * remaining;
-            let sweep_min = position.min(end_pos) - Vec2::splat(r);
-            let sweep_max = position.max(end_pos) + Vec2::splat(r);
-            let swept_aabb = Aabb2D::from_min_max(sweep_min, sweep_max);
+            // Swept circle cast: broad-phase + narrow-phase in one call.
+            // Returns hits sorted nearest-first with safe position (epsilon applied).
+            let hits =
+                quadtree
+                    .quadtree
+                    .cast_circle(position, direction, remaining, r, collision_layers);
 
-            // Query quadtree for candidate cells and walls
-            let candidates = quadtree.quadtree.query_aabb_filtered(
-                &swept_aabb,
-                CollisionLayers::new(0, CELL_LAYER | WALL_LAYER),
-            );
+            // Find the first hit that is not a pierced cell
+            let best = find_first_non_pierced(&hits, &candidate_lookup, &pierced_this_frame);
 
-            let best = find_nearest_candidate(
-                &candidates,
-                &candidate_lookup,
-                &pierced_this_frame,
-                position,
-                direction,
-                remaining,
-                r,
-            );
-
-            let Some((hit_cell, candidate_entity, hit)) = best else {
+            let Some(hit) = best else {
                 // No target in path — move the full remaining distance
                 position += direction * remaining;
                 break;
             };
 
-            // Advance to the impact point — shared by all hit outcomes
-            let advance = (hit.distance - CCD_EPSILON).max(0.0);
-            position += direction * advance;
-            remaining -= advance;
+            // Advance to the safe position (epsilon already applied by cast_circle)
+            position = hit.position;
+            remaining = hit.remaining;
 
-            if let Some(cell_entity) = hit_cell {
+            // Look up game-specific data for the hit entity
+            let Ok((is_cell, _is_wall, cell_health)) = candidate_lookup.get(hit.entity) else {
+                // Entity not in lookup (shouldn't happen) — skip
+                continue;
+            };
+
+            if is_cell {
                 // Check if this bolt can pierce this cell
                 let can_pierce = piercing_remaining.as_deref().is_some_and(|pr| pr.0 > 0);
-                let cell_hp = candidate_lookup
-                    .get(cell_entity)
-                    .ok()
-                    .and_then(|(_, _, _, _, _, health)| health)
-                    .map(|h| h.current);
+                let cell_hp = cell_health.map(|h| h.current);
                 let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
 
                 if can_pierce && would_destroy {
@@ -220,18 +173,18 @@ pub(crate) fn bolt_cell_collision(
                     if let Some(ref mut pr) = piercing_remaining {
                         pr.0 = pr.0.saturating_sub(1);
                     }
-                    pierced_this_frame.push(cell_entity);
+                    pierced_this_frame.push(hit.entity);
                     // Continue CCD loop — velocity unchanged, direction unchanged
                 } else {
                     // NORMAL: reflect
                     velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
                 }
                 hit_writer.write(BoltHitCell {
-                    cell: cell_entity,
+                    cell: hit.entity,
                     bolt: bolt_entity,
                 });
                 damage_writer.write(DamageCell {
-                    cell: cell_entity,
+                    cell: hit.entity,
                     damage: effective_damage,
                     source_bolt: Some(bolt_entity),
                     source_chip: spawned_by_evo.map(|s| s.0.clone()),
@@ -245,7 +198,7 @@ pub(crate) fn bolt_cell_collision(
                 }
                 wall_hit_writer.write(BoltHitWall {
                     bolt: bolt_entity,
-                    wall: candidate_entity,
+                    wall: hit.entity,
                 });
             }
         }

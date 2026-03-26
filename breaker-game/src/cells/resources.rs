@@ -4,14 +4,17 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
-use serde::Deserialize;
 
 use super::definition::CellTypeDefinition;
 
-/// Cell defaults loaded from RON — shared grid layout properties only.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "CellConfig")]
-pub(crate) struct CellDefaults {
+/// Cell configuration resource — shared grid layout properties.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "CellDefaults",
+    path = "config/defaults.cells.ron",
+    ext = "cells.ron"
+)]
+pub(crate) struct CellConfig {
     /// Full width of a cell in world units.
     pub width: f32,
     /// Full height of a cell in world units.
@@ -22,7 +25,7 @@ pub(crate) struct CellDefaults {
     pub padding_y: f32,
 }
 
-impl Default for CellDefaults {
+impl Default for CellConfig {
     fn default() -> Self {
         Self {
             width: 70.0,

@@ -337,7 +337,7 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - Confirmed: `bridge_cell_destroyed` and `bridge_bolt_lost` in bridges.rs
 
 ## Option<ResMut<T>> for optional system params (re-confirmed)
-- `mut active_chains: Option<ResMut<ActiveChains>>` (was `ActiveOverclocks` before refactor/unify-behaviors 2026-03-21) — valid system parameter; None when not inserted
+- `mut active_effects: Option<ResMut<ActiveEffects>>` (was `ActiveChains` before C7-R rename 2026-03-25; was `ActiveOverclocks` before refactor/unify-behaviors 2026-03-21) — valid system parameter; None when not inserted
 - Pattern used in `bypass_menu_to_playing` in lifecycle/mod.rs — correct
 - `mut stats: Option<ResMut<ScenarioStats>>` — same pattern, confirmed correct
 
@@ -366,10 +366,10 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - Then pass it by value to `evaluate_armed_all(mut armed_query: Query<...>, ...)` which does declare it `mut`
 - This is valid: `mut` on a binding only governs reborrow semantics within a scope; moving into a `mut` parameter is always allowed regardless
 
-## System set ordering for bridge systems (confirmed 2026-03-20)
-- `.after(BreakerSystems::GradeBump).after(BehaviorSystems::Bridge)` — chaining multiple `.after()` is valid; all constraints are AND-ed
-- `.after(BoltSystems::BreakerCollision).after(BehaviorSystems::Bridge)` — same pattern, confirmed valid (BoltSystems replaces PhysicsSystems as of 2026-03-24)
-- Bridge systems ordered after both a message-producer set AND the behaviors bridge set — correct for ensuring messages exist before evaluation
+## System set ordering for bridge systems (confirmed 2026-03-20; updated 2026-03-25)
+- `.after(BreakerSystems::GradeBump).after(EffectSystems::Bridge)` — chaining multiple `.after()` is valid; all constraints are AND-ed (was `BehaviorSystems::Bridge` before C7-R rename)
+- `.after(BoltSystems::BreakerCollision).after(EffectSystems::Bridge)` — same pattern, confirmed valid (BoltSystems replaces PhysicsSystems as of 2026-03-24)
+- Bridge systems ordered after both a message-producer set AND the EffectSystems::Bridge set — correct for ensuring messages exist before evaluation
 
 ## AlphaMode2d Import Path (confirmed 2026-03-23)
 - `use bevy::sprite_render::AlphaMode2d;` — correct import path in Bevy 0.18.1

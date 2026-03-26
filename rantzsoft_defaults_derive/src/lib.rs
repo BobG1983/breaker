@@ -1,4 +1,8 @@
-//! Derive macro for generating Config structs from Defaults structs.
+//! Derive macro for generating paired Config/Defaults structs.
+//!
+//! Supports two directions:
+//! - `#[game_config(name = "ConfigName")]` on a Defaults struct (legacy)
+//! - `#[game_config(defaults = "DefaultsName")]` on a Config struct (reversed)
 
 #![allow(
     clippy::expect_used,
@@ -10,60 +14,241 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Fields, Meta, parse_macro_input};
 
-/// Derives a `*Config` struct from a `*Defaults` struct.
+/// Parsed attributes from `#[game_config(...)]`.
+struct GameConfigAttrs {
+    /// Legacy path: `name = "ConfigName"` — derive is on the Defaults struct.
+    name: Option<syn::Ident>,
+    /// Reversed path: `defaults = "DefaultsName"` — derive is on the Config struct.
+    defaults: Option<syn::Ident>,
+    /// Optional asset path for `SeedableConfig`.
+    path: Option<String>,
+    /// Optional file extension for `SeedableConfig`.
+    ext: Option<String>,
+}
+
+/// Extracts all `game_config` attributes from the derive input.
+fn parse_game_config_attrs(input: &DeriveInput) -> GameConfigAttrs {
+    let mut attrs = GameConfigAttrs {
+        name: None,
+        defaults: None,
+        path: None,
+        ext: None,
+    };
+
+    for attr in &input.attrs {
+        if !attr.path().is_ident("game_config") {
+            continue;
+        }
+        let Meta::List(meta_list) = &attr.meta else {
+            continue;
+        };
+        let Ok(nested) = meta_list.parse_args_with(
+            syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+        ) else {
+            continue;
+        };
+        for meta in &nested {
+            if let Meta::NameValue(nv) = meta
+                && let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(s),
+                    ..
+                }) = &nv.value
+            {
+                if nv.path.is_ident("name") {
+                    attrs.name = Some(syn::Ident::new(&s.value(), s.span()));
+                } else if nv.path.is_ident("defaults") {
+                    attrs.defaults = Some(syn::Ident::new(&s.value(), s.span()));
+                } else if nv.path.is_ident("path") {
+                    attrs.path = Some(s.value());
+                } else if nv.path.is_ident("ext") {
+                    attrs.ext = Some(s.value());
+                }
+            }
+        }
+    }
+
+    attrs
+}
+
+/// Derives a paired struct from the annotated struct.
 ///
-/// Generates:
-/// 1. A config struct with identical fields, deriving `Resource, Debug, Clone`
-/// 2. `impl From<*Defaults> for *Config` (field-by-field copy)
-/// 3. `impl Default for *Config` delegating to `Defaults::default().into()`
+/// # Legacy path (`name`)
 ///
-/// # Panics
-///
-/// Panics if the struct is missing `#[game_config(name = "...")]` or uses
-/// unnamed fields.
-///
-/// # Usage
 /// ```ignore
 /// #[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
 /// #[game_config(name = "BreakerConfig")]
 /// pub struct BreakerDefaults { ... }
 /// ```
+///
+/// Generates:
+/// 1. A `BreakerConfig` struct with identical fields, deriving `Resource, Debug, Clone`
+/// 2. `impl From<BreakerDefaults> for BreakerConfig`
+/// 3. `impl Default for BreakerConfig` delegating to `BreakerDefaults::default().into()`
+///
+/// # Reversed path (`defaults`)
+///
+/// ```ignore
+/// #[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+/// #[game_config(defaults = "BoltDefaults", path = "config/bolt.ron", ext = "bolt.ron")]
+/// pub struct BoltConfig { ... }
+/// ```
+///
+/// Generates:
+/// 1. A `BoltDefaults` struct with identical fields (Asset + Deserialize)
+/// 2. `impl From<BoltDefaults> for BoltConfig`
+/// 3. `impl From<BoltConfig> for BoltDefaults`
+/// 4. `impl Default for BoltDefaults` delegating to `BoltConfig::default().into()`
+/// 5. `impl BoltConfig { fn merge_from_defaults(&mut self, defaults: &BoltDefaults) }`
+/// 6. `impl SeedableConfig for BoltDefaults` (when `path` and `ext` are provided)
+///
+/// # Panics
+///
+/// Panics if the struct has neither `name` nor `defaults` attribute, or uses unnamed fields.
 #[proc_macro_derive(GameConfig, attributes(game_config))]
 pub fn derive_game_config(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    let attrs = parse_game_config_attrs(&input);
 
+    match (&attrs.name, &attrs.defaults) {
+        (Some(_), None) => derive_legacy_path(&input, &attrs),
+        (None, Some(_)) => derive_reversed_path(&input, &attrs),
+        (Some(_), Some(_)) => panic!("GameConfig: cannot specify both `name` and `defaults`"),
+        (None, None) => panic!(
+            "GameConfig derive requires either #[game_config(name = \"...\")] or \
+             #[game_config(defaults = \"...\")]"
+        ),
+    }
+}
+
+/// Legacy path: derive is on the Defaults struct, generates Config.
+fn derive_legacy_path(input: &DeriveInput, attrs: &GameConfigAttrs) -> TokenStream {
     let defaults_name = &input.ident;
+    let config_name = attrs.name.as_ref().expect("name must be present");
 
-    // Extract config name from #[game_config(name = "...")] attribute
-    let config_name = input
-        .attrs
-        .iter()
-        .find_map(|attr| {
-            if !attr.path().is_ident("game_config") {
-                return None;
-            }
-            let Meta::List(meta_list) = &attr.meta else {
-                return None;
-            };
-            let nested: syn::punctuated::Punctuated<syn::Meta, syn::Token![,]> = meta_list
-                .parse_args_with(syn::punctuated::Punctuated::parse_terminated)
-                .ok()?;
-            for meta in &nested {
-                if let Meta::NameValue(nv) = meta
-                    && nv.path.is_ident("name")
-                    && let syn::Expr::Lit(syn::ExprLit {
-                        lit: syn::Lit::Str(s),
-                        ..
-                    }) = &nv.value
-                {
-                    return Some(syn::Ident::new(&s.value(), s.span()));
+    let (field_defs, field_names) = extract_fields(input);
+
+    let expanded = quote! {
+        /// Configuration resource generated by the `GameConfig` derive macro.
+        #[derive(::bevy::prelude::Resource, Debug, Clone)]
+        pub struct #config_name {
+            #(#field_defs,)*
+        }
+
+        impl ::core::convert::From<#defaults_name> for #config_name {
+            fn from(d: #defaults_name) -> Self {
+                Self {
+                    #(#field_names: d.#field_names,)*
                 }
             }
-            None
-        })
-        .expect("GameConfig derive requires #[game_config(name = \"...\")]");
+        }
 
-    // Extract fields from struct data
+        impl ::core::default::Default for #config_name {
+            fn default() -> Self {
+                <#defaults_name as ::core::default::Default>::default().into()
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Reversed path: derive is on the Config struct, generates Defaults.
+///
+/// Generates the Defaults struct with matching fields, bidirectional `From` impls,
+/// `Default` delegation, `merge_from_defaults`, and optionally `SeedableConfig`.
+fn derive_reversed_path(input: &DeriveInput, attrs: &GameConfigAttrs) -> TokenStream {
+    let config_name = &input.ident;
+    let vis = &input.vis;
+    let defaults_name = attrs.defaults.as_ref().expect("defaults must be present");
+    let has_seedable = attrs.path.is_some() && attrs.ext.is_some();
+
+    let (field_defs, field_names) = extract_fields(input);
+
+    // Choose derives based on whether SeedableConfig is needed.
+    // Generated struct inherits the visibility of the input struct.
+    let struct_def = if has_seedable {
+        quote! {
+            /// Defaults asset struct generated by the `GameConfig` derive macro (reversed path).
+            #[derive(::bevy::prelude::Asset, ::bevy::prelude::TypePath, ::serde::Deserialize, Debug, Clone, PartialEq)]
+            #vis struct #defaults_name {
+                #(#field_defs,)*
+            }
+        }
+    } else {
+        quote! {
+            /// Defaults asset struct generated by the `GameConfig` derive macro (reversed path).
+            #[derive(Debug, Clone)]
+            #vis struct #defaults_name {
+                #(#field_defs,)*
+            }
+        }
+    };
+
+    let behavioral_impls = quote! {
+        impl ::core::convert::From<#defaults_name> for #config_name {
+            fn from(d: #defaults_name) -> Self {
+                Self {
+                    #(#field_names: d.#field_names,)*
+                }
+            }
+        }
+
+        impl ::core::convert::From<#config_name> for #defaults_name {
+            fn from(c: #config_name) -> Self {
+                Self {
+                    #(#field_names: c.#field_names,)*
+                }
+            }
+        }
+
+        impl ::core::default::Default for #defaults_name {
+            fn default() -> Self {
+                <#config_name as ::core::default::Default>::default().into()
+            }
+        }
+
+        impl #config_name {
+            /// Overwrites all fields from the given defaults.
+            pub fn merge_from_defaults(&mut self, defaults: &#defaults_name) {
+                #(self.#field_names = defaults.#field_names.clone();)*
+            }
+        }
+    };
+
+    // SeedableConfig impl (only when path + ext are present)
+    let seedable_impl = if has_seedable {
+        let path_literal = attrs.path.as_ref().expect("path must be present");
+        let ext_literal = attrs.ext.as_ref().expect("ext must be present");
+        quote! {
+            impl ::rantzsoft_defaults::SeedableConfig for #defaults_name {
+                type Config = #config_name;
+
+                fn asset_path() -> &'static str {
+                    #path_literal
+                }
+
+                fn extensions() -> &'static [&'static str] {
+                    &[#ext_literal]
+                }
+            }
+        }
+    } else {
+        quote! {}
+    };
+
+    let expanded = quote! {
+        #struct_def
+        #behavioral_impls
+        #seedable_impl
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Extracts field definitions and field names from a struct's named fields.
+fn extract_fields(
+    input: &DeriveInput,
+) -> (Vec<proc_macro2::TokenStream>, Vec<&Option<syn::Ident>>) {
     let syn::Data::Struct(data_struct) = &input.data else {
         panic!("GameConfig only supports structs");
     };
@@ -92,27 +277,5 @@ pub fn derive_game_config(input: TokenStream) -> TokenStream {
 
     let field_names: Vec<_> = fields.named.iter().map(|f| &f.ident).collect();
 
-    let expanded = quote! {
-        /// Configuration resource generated from [`#defaults_name`] by the `GameConfig` derive macro.
-        #[derive(::bevy::prelude::Resource, Debug, Clone)]
-        pub struct #config_name {
-            #(#field_defs,)*
-        }
-
-        impl ::core::convert::From<#defaults_name> for #config_name {
-            fn from(d: #defaults_name) -> Self {
-                Self {
-                    #(#field_names: d.#field_names,)*
-                }
-            }
-        }
-
-        impl ::core::default::Default for #config_name {
-            fn default() -> Self {
-                <#defaults_name as ::core::default::Default>::default().into()
-            }
-        }
-    };
-
-    TokenStream::from(expanded)
+    (field_defs, field_names)
 }

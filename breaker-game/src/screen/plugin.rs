@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
 use iyes_progress::prelude::*;
+use rantzsoft_defaults::prelude::*;
 
 use super::{
     chip_select::{ChipSelectDefaults, ChipSelectPlugin},
@@ -41,20 +42,25 @@ impl Plugin for ScreenPlugin {
             // State machine
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
-            // RON asset plugins — each type gets a unique extension to avoid
-            // bevy_common_assets trying every loader on every file.
+            // Defaults plugin — registers loaders, startup handles, and seed
+            // systems for simple config types.
+            .add_plugins(
+                RantzDefaultsPluginBuilder::new()
+                    .register_config::<PlayfieldDefaults>()
+                    .register_config::<BoltDefaults>()
+                    .register_config::<BreakerDefaults>()
+                    .register_config::<CellDefaults>()
+                    .register_config::<InputDefaults>()
+                    .register_config::<MainMenuDefaults>()
+                    .register_config::<TimerUiDefaults>()
+                    .register_config::<ChipSelectDefaults>()
+                    .build(),
+            )
+            // RON asset plugins for registry/collection types (not simple configs)
             .add_plugins((
-                RonAssetPlugin::<PlayfieldDefaults>::new(&["playfield.ron"]),
-                RonAssetPlugin::<BoltDefaults>::new(&["bolt.ron"]),
-                RonAssetPlugin::<BreakerDefaults>::new(&["breaker.ron"]),
-                RonAssetPlugin::<CellDefaults>::new(&["cells.ron"]),
-                RonAssetPlugin::<InputDefaults>::new(&["input.ron"]),
-                RonAssetPlugin::<MainMenuDefaults>::new(&["mainmenu.ron"]),
                 RonAssetPlugin::<CellTypeDefinition>::new(&["cell.ron"]),
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
-                RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
                 RonAssetPlugin::<BreakerDefinition>::new(&["bdef.ron"]),
-                RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
                 RonAssetPlugin::<ChipDefinition>::new(&["evolution.ron"]),
                 RonAssetPlugin::<ChipTemplate>::new(&["chip.ron"]),
                 RonAssetPlugin::<DifficultyCurveDefaults>::new(&["difficulty.ron"]),

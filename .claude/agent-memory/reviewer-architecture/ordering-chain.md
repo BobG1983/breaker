@@ -96,3 +96,12 @@ Update schedule: animate_bump_visual, animate_tilt_visual, width_boost_visual
 - NodeSystems::Spawn table entry does not list cross-domain consumers (breaker, bolt entity scale systems)
 
 Note: BoltSystems::InitParams/Reset, DamageCell, BoltHitWall, and BoltHitBreaker consumer list were all fixed in docs as of 2026-03-21/2026-03-22.
+
+### SpatialSystems (rantzsoft_spatial2d, 2026-03-26)
+RantzSpatial2dPlugin registers these sets — game systems can order relative to them:
+| Set | Schedule | System |
+|-----|----------|--------|
+| SpatialSystems::SavePrevious | FixedFirst | save_previous |
+| SpatialSystems::ApplyVelocity | FixedUpdate | apply_velocity |
+| SpatialSystems::ComputeGlobals | AfterFixedMainLoop | compute_globals |
+| SpatialSystems::DeriveTransform | AfterFixedMainLoop | derive_transform |

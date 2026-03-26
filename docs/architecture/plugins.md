@@ -18,9 +18,16 @@ brickbreaker/                 # Repository root (workspace)
 ├── rantzsoft_physics2d/      # Game-agnostic 2D physics primitives (quadtree, CCD, CollisionLayers, DistanceConstraint)
 │   ├── Cargo.toml            # Package: rantzsoft_physics2d
 │   └── src/                  # Aabb2D, CollisionLayers, DistanceConstraint, quadtree, CCD
-├── rantzsoft_defaults/       # Re-exports the GameConfig derive macro
+├── rantzsoft_defaults/       # Config/defaults pipeline: GameConfig derive macro, RON asset loader, seed/propagate systems, DefaultsSystems set, RantzDefaultsPlugin
 │   ├── Cargo.toml
-│   └── src/lib.rs
+│   └── src/
+│       ├── lib.rs            # Re-exports GameConfig, SeedableConfig; declares all modules
+│       ├── handle.rs         # DefaultsHandle<D> resource (typed asset handle wrapper)
+│       ├── loader.rs         # RonAssetLoader<T> generic RON AssetLoader + deserialize_ron helper
+│       ├── plugin.rs         # RantzDefaultsPlugin, RantzDefaultsPluginBuilder, DefaultsSystems set (Seed, PropagateDefaults)
+│       ├── prelude.rs        # Public re-exports: GameConfig, SeedableConfig, DefaultsHandle, RonAssetLoader, DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder
+│       ├── seedable.rs       # SeedableConfig trait (asset_path, extensions, Config associated type)
+│       └── systems.rs        # seed_config, propagate_defaults, init_defaults_handle generic systems
 ├── rantzsoft_defaults_derive/ # Proc-macro crate: #[derive(GameConfig)] for RON defaults loading
 │   ├── Cargo.toml
 │   └── src/lib.rs
@@ -78,7 +85,7 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external `rantzsoft_physics2d::plugin::PhysicsSystems` set (`MaintainQuadtree`, `EnforceDistanceConstraints`) is also used for ordering against the quadtree maintenance system. See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 
