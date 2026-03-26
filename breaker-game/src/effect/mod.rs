@@ -7,10 +7,12 @@ pub(crate) mod definition;
 pub(crate) mod effect_nodes;
 pub(crate) mod effects;
 pub(crate) mod evaluate;
+pub(crate) mod helpers;
 pub(crate) mod init;
 mod plugin;
 pub(crate) mod registry;
 pub(crate) mod sets;
+pub(crate) mod triggers;
 pub(crate) mod typed_events;
 
 pub use active::ActiveEffects;

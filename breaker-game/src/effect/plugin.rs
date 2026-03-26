@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::{
-    bridges::{
+    triggers::{
         apply_once_nodes, bridge_bolt_death, bridge_bolt_lost, bridge_breaker_impact, bridge_bump,
         bridge_bump_whiff, bridge_cell_death, bridge_cell_impact, bridge_no_bump,
         bridge_timer_threshold, bridge_wall_impact, cleanup_destroyed_bolts,
