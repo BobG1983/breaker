@@ -28,6 +28,11 @@ pub(crate) fn handle_piercing_beam(_trigger: On<PiercingBeamFired>) {
     // Stub: no implementation yet
 }
 
+/// Registers all observers and systems for the piercing beam effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_piercing_beam);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

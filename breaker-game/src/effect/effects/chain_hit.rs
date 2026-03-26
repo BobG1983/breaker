@@ -41,6 +41,11 @@ pub(crate) fn handle_chain_hit(
     }
 }
 
+/// Registers all observers and systems for the chain hit effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_chain_hit);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

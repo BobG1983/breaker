@@ -92,6 +92,11 @@ pub(crate) fn handle_random_effect(
     }
 }
 
+/// Registers all observers and systems for the random effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_random_effect);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

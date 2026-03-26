@@ -46,6 +46,11 @@ pub(crate) fn handle_attraction(
     }
 }
 
+/// Registers all observers and systems for the attraction effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_attraction);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

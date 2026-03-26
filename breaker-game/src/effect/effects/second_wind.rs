@@ -26,6 +26,11 @@ pub(crate) fn handle_second_wind(_trigger: On<SecondWindFired>) {
     // Stub: no implementation yet
 }
 
+/// Registers all observers and systems for the second wind effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_second_wind);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

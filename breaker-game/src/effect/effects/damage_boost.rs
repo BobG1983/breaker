@@ -75,6 +75,11 @@ pub(crate) fn handle_damage_boost(
     }
 }
 
+/// Registers all observers and systems for the damage boost effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_damage_boost);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

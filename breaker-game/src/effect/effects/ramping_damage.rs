@@ -25,8 +25,6 @@ use crate::{
 pub(crate) struct RampingDamageApplied {
     /// Damage bonus added per cell hit.
     pub bonus_per_hit: f32,
-    /// Maximum cumulative damage bonus before capping.
-    pub max_bonus: f32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
     /// Name of the chip that applied this effect.
@@ -39,16 +37,14 @@ pub(crate) struct RampingDamageApplied {
 
 /// Tracks ramping damage state on a bolt entity.
 ///
-/// `current_bonus` starts at 0.0 and increases by `bonus_per_hit` on each cell hit,
-/// capping at `max_bonus`. Resets to 0.0 when the bolt hits the breaker without a bump.
+/// `current_bonus` starts at 0.0 and increases by `bonus_per_hit` on each cell hit.
+/// Resets to 0.0 when the bolt hits the breaker without a bump.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct RampingDamageState {
     /// Current accumulated damage bonus.
     pub current_bonus: f32,
     /// Damage bonus added per cell hit.
     pub bonus_per_hit: f32,
-    /// Maximum cumulative damage bonus.
-    pub max_bonus: f32,
 }
 
 // ---------------------------------------------------------------------------
@@ -66,12 +62,10 @@ pub(crate) fn handle_ramping_damage(
     for (entity, existing) in &mut query {
         if let Some(mut state) = existing {
             state.bonus_per_hit += event.bonus_per_hit;
-            state.max_bonus += event.max_bonus;
         } else {
             commands.entity(entity).insert(RampingDamageState {
                 current_bonus: 0.0,
                 bonus_per_hit: event.bonus_per_hit,
-                max_bonus: event.max_bonus,
             });
         }
     }
@@ -82,14 +76,14 @@ pub(crate) fn handle_ramping_damage(
 // ---------------------------------------------------------------------------
 
 /// Increments `RampingDamageState::current_bonus` by `bonus_per_hit` for each
-/// `BoltHitCell` message, clamping at `max_bonus`.
+/// `BoltHitCell` message.
 pub(crate) fn increment_ramping_damage(
     mut reader: MessageReader<BoltHitCell>,
     mut query: Query<&mut RampingDamageState>,
 ) {
     for msg in reader.read() {
         if let Ok(mut state) = query.get_mut(msg.bolt) {
-            state.current_bonus = (state.current_bonus + state.bonus_per_hit).min(state.max_bonus);
+            state.current_bonus += state.bonus_per_hit;
         }
     }
 }
@@ -97,6 +91,25 @@ pub(crate) fn increment_ramping_damage(
 // ---------------------------------------------------------------------------
 // Reset system — resets current_bonus on non-bump breaker impact
 // ---------------------------------------------------------------------------
+
+/// Registers all observers and systems for the ramping damage effect.
+pub(crate) fn register(app: &mut App) {
+    use crate::{
+        breaker::BreakerSystems, effect::sets::EffectSystems, shared::PlayingState,
+    };
+
+    app.add_observer(handle_ramping_damage);
+
+    // Ramping damage increment + reset
+    app.add_systems(
+        FixedUpdate,
+        (
+            increment_ramping_damage.after(EffectSystems::Bridge),
+            reset_ramping_damage.after(BreakerSystems::GradeBump),
+        )
+            .run_if(in_state(PlayingState::Active)),
+    );
+}
 
 /// Resets `RampingDamageState::current_bonus` to 0.0 when a bolt hits the breaker
 /// without a corresponding `BumpPerformed` message for the same bolt.
@@ -208,7 +221,6 @@ mod tests {
 
         app.world_mut().commands().trigger(RampingDamageApplied {
             bonus_per_hit: 0.02,
-            max_bonus: 0.2,
             max_stacks: 2,
             chip_name: "Basic Amp".to_owned(),
         });
@@ -228,11 +240,6 @@ mod tests {
             "bonus_per_hit should be 0.02, got {}",
             state.bonus_per_hit
         );
-        assert!(
-            (state.max_bonus - 0.2).abs() < f32::EPSILON,
-            "max_bonus should be 0.2, got {}",
-            state.max_bonus
-        );
     }
 
     // =========================================================================
@@ -249,14 +256,12 @@ mod tests {
                 RampingDamageState {
                     current_bonus: 0.0,
                     bonus_per_hit: 0.02,
-                    max_bonus: 0.2,
                 },
             ))
             .id();
 
         app.world_mut().commands().trigger(RampingDamageApplied {
             bonus_per_hit: 0.04,
-            max_bonus: 0.4,
             max_stacks: 2,
             chip_name: "Potent Amp".to_owned(),
         });
@@ -270,11 +275,6 @@ mod tests {
             (state.bonus_per_hit - 0.06).abs() < 1e-6,
             "bonus_per_hit should be 0.06 (0.02 + 0.04), got {}",
             state.bonus_per_hit
-        );
-        assert!(
-            (state.max_bonus - 0.6).abs() < 1e-6,
-            "max_bonus should be 0.6 (0.2 + 0.4), got {}",
-            state.max_bonus
         );
     }
 
@@ -292,7 +292,6 @@ mod tests {
                 RampingDamageState {
                     current_bonus: 0.0,
                     bonus_per_hit: 0.04,
-                    max_bonus: 0.4,
                 },
             ))
             .id();
@@ -317,11 +316,11 @@ mod tests {
     }
 
     // =========================================================================
-    // Behavior 10: increment_ramping_damage clamps at max_bonus
+    // Behavior 10: increment_ramping_damage grows without cap
     // =========================================================================
 
     #[test]
-    fn increment_ramping_damage_clamps_at_max_bonus() {
+    fn increment_ramping_damage_grows_without_cap() {
         let mut app = test_app_message();
         let bolt = app
             .world_mut()
@@ -330,7 +329,6 @@ mod tests {
                 RampingDamageState {
                     current_bonus: 0.38,
                     bonus_per_hit: 0.04,
-                    max_bonus: 0.4,
                 },
             ))
             .id();
@@ -348,8 +346,8 @@ mod tests {
             .get::<RampingDamageState>(bolt)
             .expect("bolt should have RampingDamageState");
         assert!(
-            (state.current_bonus - 0.4).abs() < f32::EPSILON,
-            "current_bonus should be clamped at 0.4, got {}",
+            (state.current_bonus - 0.42).abs() < 1e-6,
+            "current_bonus should be 0.42 (0.38 + 0.04) without cap, got {}",
             state.current_bonus
         );
     }
@@ -368,7 +366,6 @@ mod tests {
                 RampingDamageState {
                     current_bonus: 0.2,
                     bonus_per_hit: 0.04,
-                    max_bonus: 0.4,
                 },
             ))
             .id();
@@ -390,16 +387,11 @@ mod tests {
             "current_bonus should be reset to 0.0 on non-bump breaker impact, got {}",
             state.current_bonus
         );
-        // bonus_per_hit and max_bonus should be unchanged
+        // bonus_per_hit should be unchanged
         assert!(
             (state.bonus_per_hit - 0.04).abs() < f32::EPSILON,
             "bonus_per_hit should be unchanged at 0.04, got {}",
             state.bonus_per_hit
-        );
-        assert!(
-            (state.max_bonus - 0.4).abs() < f32::EPSILON,
-            "max_bonus should be unchanged at 0.4, got {}",
-            state.max_bonus
         );
     }
 
@@ -417,7 +409,6 @@ mod tests {
                 RampingDamageState {
                     current_bonus: 0.2,
                     bonus_per_hit: 0.04,
-                    max_bonus: 0.4,
                 },
             ))
             .id();

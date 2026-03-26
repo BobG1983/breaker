@@ -150,6 +150,26 @@ fn apply_speed_scale(vel: &mut Velocity2D, multiplier: f32, base: f32, max: f32,
     }
 }
 
+/// Registers all observers and systems for the speed boost effect.
+pub(crate) fn register(app: &mut App) {
+    use crate::{
+        effect::{effect_nodes::until, sets::EffectSystems},
+        shared::PlayingState,
+    };
+
+    app.add_observer(handle_speed_boost);
+
+    // Speed boost recalculation — after bridge and Until reversal
+    app.add_systems(
+        FixedUpdate,
+        apply_speed_boosts
+            .after(EffectSystems::Bridge)
+            .after(until::tick_until_timers)
+            .after(until::check_until_triggers)
+            .run_if(in_state(PlayingState::Active)),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

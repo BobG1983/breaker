@@ -41,6 +41,11 @@ pub(crate) fn handle_tilt_control_boost(
     }
 }
 
+/// Registers all observers and systems for the tilt control boost effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_tilt_control_boost);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

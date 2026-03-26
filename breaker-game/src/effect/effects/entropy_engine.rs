@@ -117,6 +117,11 @@ pub(crate) fn handle_entropy_engine(
     }
 }
 
+/// Registers all observers and systems for the entropy engine effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_entropy_engine);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

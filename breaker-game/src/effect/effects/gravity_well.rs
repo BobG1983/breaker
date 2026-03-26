@@ -32,6 +32,11 @@ pub(crate) fn handle_gravity_well(_trigger: On<GravityWellFired>) {
     // Stub: no implementation yet
 }
 
+/// Registers all observers and systems for the gravity well effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_gravity_well);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

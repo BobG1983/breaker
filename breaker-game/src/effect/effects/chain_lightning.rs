@@ -30,6 +30,11 @@ pub(crate) fn handle_chain_lightning(_trigger: On<ChainLightningFired>) {
     // Stub: no implementation yet
 }
 
+/// Registers all observers and systems for the chain lightning effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_chain_lightning);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

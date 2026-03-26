@@ -78,6 +78,21 @@ pub(crate) fn handle_shield(
 // Tick system — decrements and removes
 // ---------------------------------------------------------------------------
 
+/// Registers all observers and systems for the shield effect.
+pub(crate) fn register(app: &mut App) {
+    use crate::{effect::sets::EffectSystems, shared::PlayingState};
+
+    app.add_observer(handle_shield);
+
+    // Shield tick (decrement + remove)
+    app.add_systems(
+        FixedUpdate,
+        tick_shield
+            .after(EffectSystems::Bridge)
+            .run_if(in_state(PlayingState::Active)),
+    );
+}
+
 /// Decrements `ShieldActive::remaining` each fixed tick and removes the
 /// component when it expires (<= 0.0).
 pub(crate) fn tick_shield(

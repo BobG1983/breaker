@@ -221,6 +221,29 @@ pub(crate) fn animate_shockwave(
     }
 }
 
+/// Registers all observers and systems for the shockwave effect.
+pub(crate) fn register(app: &mut App) {
+    use crate::shared::PlayingState;
+
+    app.add_observer(handle_shockwave);
+
+    // Shockwave expansion + collision
+    app.add_systems(
+        FixedUpdate,
+        (tick_shockwave, shockwave_collision.after(tick_shockwave))
+            .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
+            .run_if(in_state(PlayingState::Active)),
+    );
+
+    // Shockwave visual update
+    app.add_systems(
+        Update,
+        animate_shockwave
+            .run_if(any_with_component::<ShockwaveRadius>)
+            .run_if(in_state(PlayingState::Active)),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use rantzsoft_physics2d::{

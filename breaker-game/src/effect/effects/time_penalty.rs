@@ -37,6 +37,11 @@ pub(crate) fn handle_time_penalty(
     });
 }
 
+/// Registers all observers and systems for the time penalty effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_time_penalty);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

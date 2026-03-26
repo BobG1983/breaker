@@ -49,6 +49,11 @@ pub(crate) fn handle_bolt_speed_boost(
     }
 }
 
+/// Registers all observers and systems for the bolt speed boost effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_bolt_speed_boost);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

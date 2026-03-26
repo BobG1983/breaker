@@ -150,8 +150,6 @@ pub enum TriggerChain {
     RampingDamage {
         /// Damage bonus added per cell hit.
         bonus_per_hit: f32,
-        /// Maximum cumulative damage bonus before capping.
-        max_bonus: f32,
     },
     /// Selects a random effect from a weighted pool of `TriggerChain` entries.
     ///
@@ -454,12 +452,9 @@ impl TriggerChain {
         Self::SecondWind { invuln_secs }
     }
 
-    /// Build a `RampingDamage` leaf with the given per-hit bonus and max bonus.
-    pub(crate) fn test_ramping_damage(bonus_per_hit: f32, max_bonus: f32) -> Self {
-        Self::RampingDamage {
-            bonus_per_hit,
-            max_bonus,
-        }
+    /// Build a `RampingDamage` leaf with the given per-hit bonus.
+    pub(crate) fn test_ramping_damage(bonus_per_hit: f32) -> Self {
+        Self::RampingDamage { bonus_per_hit }
     }
 
     /// Build a `RandomEffect` leaf with the given weighted pool entries.

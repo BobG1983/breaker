@@ -38,6 +38,11 @@ pub(crate) fn handle_spawn_bolt(
     });
 }
 
+/// Registers all observers and systems for the spawn bolt effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_spawn_bolt);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

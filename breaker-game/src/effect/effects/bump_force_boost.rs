@@ -41,6 +41,11 @@ pub(crate) fn handle_bump_force_boost(
     }
 }
 
+/// Registers all observers and systems for the bump force boost effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_bump_force_boost);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

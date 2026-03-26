@@ -43,6 +43,11 @@ pub(crate) fn handle_multi_bolt(
     }
 }
 
+/// Registers all observers and systems for the multi-bolt effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_multi_bolt);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -40,6 +40,11 @@ pub(crate) fn handle_chain_bolt(
     });
 }
 
+/// Registers all observers and systems for the chain bolt effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_chain_bolt);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

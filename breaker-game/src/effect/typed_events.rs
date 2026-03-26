@@ -369,13 +369,9 @@ pub(crate) fn fire_passive_event(
                 chip_name,
             });
         }
-        Effect::RampingDamage {
-            bonus_per_hit,
-            max_bonus,
-        } => {
+        Effect::RampingDamage { bonus_per_hit } => {
             commands.trigger(RampingDamageApplied {
                 bonus_per_hit,
-                max_bonus,
                 max_stacks,
                 chip_name,
             });

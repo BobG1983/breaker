@@ -32,6 +32,11 @@ pub(crate) fn handle_breaker_speed_boost(
     }
 }
 
+/// Registers all observers and systems for the breaker speed boost effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_breaker_speed_boost);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

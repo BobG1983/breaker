@@ -28,6 +28,11 @@ pub(crate) fn handle_spawn_phantom(_trigger: On<SpawnPhantomFired>) {
     // Stub: no implementation yet
 }
 
+/// Registers all observers and systems for the spawn phantom effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_spawn_phantom);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

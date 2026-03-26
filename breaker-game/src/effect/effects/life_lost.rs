@@ -51,6 +51,25 @@ pub(crate) fn handle_life_lost(
     }
 }
 
+/// Registers all observers and systems for the life-lost effect.
+pub(crate) fn register(app: &mut App) {
+    use crate::shared::PlayingState;
+
+    app.add_observer(handle_life_lost);
+
+    // HUD — lives display update
+    app.add_systems(
+        Update,
+        update_lives_display
+            .run_if(any_with_component::<LivesDisplay>)
+            .run_if(in_state(PlayingState::Active)),
+    );
+
+    // NOTE: spawn_lives_display and init systems are registered directly in
+    // EffectPlugin::build() because they have ordering dependencies on
+    // breaker init and UI systems that cross effect boundaries.
+}
+
 /// Spawns the lives display as a child of the [`StatusPanel`].
 pub(crate) fn spawn_lives_display(
     mut commands: Commands,

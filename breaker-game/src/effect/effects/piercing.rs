@@ -59,6 +59,11 @@ pub(crate) fn handle_piercing(
     }
 }
 
+/// Registers all observers and systems for the piercing effect.
+pub(crate) fn register(app: &mut App) {
+    app.add_observer(handle_piercing);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
