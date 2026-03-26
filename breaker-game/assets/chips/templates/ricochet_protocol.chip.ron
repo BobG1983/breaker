@@ -4,5 +4,16 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [When(trigger: OnImpact(Wall), then: [Until(until: OnImpact(Cell), then: [Do(DamageBoost(2.0))])])])),
+    legendary: Some((
+        prefix: "",
+        effects: [
+            On(target: Bolt, then: [
+                When(trigger: Impacted(Wall), then: [
+                    Until(until: Impacted(Cell), then: [
+                        Do(DamageBoost(2.0)),
+                    ]),
+                ]),
+            ]),
+        ],
+    )),
 )

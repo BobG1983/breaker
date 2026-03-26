@@ -99,7 +99,7 @@ mod tests {
             ChipDefinition,
             definition::{EvolutionIngredient, Rarity},
         },
-        effect::definition::{Effect, EffectNode},
+        effect::definition::{Effect, EffectNode, RootEffect, Target},
         run::{
             definition::NodeType,
             resources::{NodeAssignment, NodeSequence, RunState},
@@ -318,7 +318,10 @@ mod tests {
             description: "Combined piercing power".into(),
             rarity: Rarity::Evolution,
             max_stacks: 1,
-            effects: vec![EffectNode::Do(Effect::Piercing(5))],
+            effects: vec![RootEffect::On {
+                target: Target::Bolt,
+                then: vec![EffectNode::Do(Effect::Piercing(5))],
+            }],
             ingredients: Some(vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".into(),
                 stacks_required: 2,

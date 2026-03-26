@@ -3,7 +3,13 @@
     description: "Losing a bolt grants temporary invulnerability — cheat death once",
     rarity: Evolution,
     max_stacks: 1,
-    effects: [When(trigger: OnBoltLost, then: [Do(SecondWind(invuln_secs: 3.0))])],
+    effects: [
+        On(target: Breaker, then: [
+            When(trigger: OnBoltLost, then: [
+                Do(SecondWind(invuln_secs: 3.0)),
+            ]),
+        ]),
+    ],
     ingredients: Some([
         (chip_name: "Wide Breaker", stacks_required: 3),
         (chip_name: "Breaker Speed", stacks_required: 3),

@@ -4,5 +4,20 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [When(trigger: OnPerfectBump, then: [When(trigger: OnImpact(Cell), then: [When(trigger: OnCellDestroyed, then: [Until(until: TimeExpires(3.0), then: [Do(SpeedBoost(multiplier: 1.5))])])])])])),
+    legendary: Some((
+        prefix: "",
+        effects: [
+            On(target: Bolt, then: [
+                When(trigger: PerfectBumped, then: [
+                    When(trigger: Impacted(Cell), then: [
+                        When(trigger: DestroyedCell, then: [
+                            Until(until: TimeExpires(3.0), then: [
+                                Do(SpeedBoost(multiplier: 1.5)),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ],
+    )),
 )

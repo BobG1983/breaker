@@ -4,5 +4,16 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [When(trigger: OnCellDestroyed, then: [When(trigger: OnCellDestroyed, then: [Do(SpawnBolts())])])])),
+    legendary: Some((
+        prefix: "",
+        effects: [
+            On(target: Bolt, then: [
+                When(trigger: DestroyedCell, then: [
+                    When(trigger: DestroyedCell, then: [
+                        Do(SpawnBolts()),
+                    ]),
+                ]),
+            ]),
+        ],
+    )),
 )

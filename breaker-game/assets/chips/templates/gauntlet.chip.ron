@@ -4,5 +4,14 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(0.5)), Do(SpeedBoost(multiplier: 1.4)), Do(DamageBoost(-0.5))])])),
+    legendary: Some((
+        prefix: "",
+        effects: [
+            On(target: Bolt, then: [
+                Do(SizeBoost(0.5)),
+                Do(SpeedBoost(multiplier: 1.4)),
+                Do(DamageBoost(-0.5)),
+            ]),
+        ],
+    )),
 )

@@ -1,26 +1,25 @@
 //! Thin dispatcher: reads [`ChipSelected`] messages, looks up the chip in the
-//! [`ChipRegistry`], and fires typed passive events for per-effect observers.
+//! [`ChipRegistry`], and dispatches effects via `RootEffect::On` target routing.
 
 use bevy::prelude::*;
-use tracing::debug;
 
 use crate::{
     bolt::components::Bolt,
     breaker::components::Breaker,
     chips::{inventory::ChipInventory, resources::ChipRegistry},
     effect::{
-        definition::{EffectChains, EffectNode, ImpactTarget, Trigger},
+        definition::{EffectChains, EffectNode, RootEffect, Target},
         typed_events::fire_passive_event,
     },
     ui::messages::ChipSelected,
 };
 
 /// Reads [`ChipSelected`] messages, looks up the chip definition in the
-/// [`ChipRegistry`], and fires typed passive events for each selected chip.
+/// [`ChipRegistry`], and dispatches effects via `RootEffect::On` target routing.
 ///
-/// For triggered chains (non-Selected), pushes to the appropriate entity's
-/// `EffectChains` based on trigger type. Per-effect observers handle the
-/// actual stacking logic.
+/// For each `On { target, then }` node in the chip's effects:
+/// - `Do(eff)` children fire as passive events immediately
+/// - `When`/`Once`/`Until`/`On` children push to the target entity's `EffectChains`
 pub(crate) fn dispatch_chip_effects(
     mut reader: MessageReader<ChipSelected>,
     registry: Option<Res<ChipRegistry>>,
@@ -37,85 +36,42 @@ pub(crate) fn dispatch_chip_effects(
             debug!("chip not found in registry: {}", msg.name);
             continue;
         };
-        if let Some(ref mut inv) = inventory {
+        if let Some(inv) = inventory.as_mut() {
             let _ = inv.add_chip(&msg.name, chip);
         }
-        for effect in &chip.effects {
-            match effect {
-                EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then,
-                } => {
-                    for child in then {
-                        if let EffectNode::Do(eff) = child {
-                            fire_passive_event(
-                                eff.clone(),
-                                chip.max_stacks,
-                                msg.name.clone(),
-                                &mut commands,
-                            );
-                        }
+        for root in &chip.effects {
+            let RootEffect::On { target, then } = root;
+            for child in then {
+                match child {
+                    EffectNode::Do(eff) => {
+                        fire_passive_event(
+                            eff.clone(),
+                            chip.max_stacks,
+                            msg.name.clone(),
+                            &mut commands,
+                        );
                     }
-                }
-                EffectNode::Do(eff) => {
-                    fire_passive_event(
-                        eff.clone(),
-                        chip.max_stacks,
-                        msg.name.clone(),
-                        &mut commands,
-                    );
-                }
-                // Any trigger-wrapper variant (When with non-Selected trigger, Until, Once)
-                // is pushed to the appropriate entity's EffectChains based on trigger type.
-                node => {
-                    let entry = (Some(msg.name.clone()), node.clone());
-                    // Determine the default entity based on the outermost trigger
-                    match outermost_trigger(node) {
-                        Some(
-                            Trigger::PerfectBump
-                            | Trigger::Bump
-                            | Trigger::EarlyBump
-                            | Trigger::LateBump
-                            | Trigger::BumpWhiff
-                            | Trigger::NoBump
-                            | Trigger::NodeTimerThreshold(_)
-                            | Trigger::BoltLost,
-                        ) => {
-                            for mut chains in &mut breaker_query {
-                                chains.0.push(entry.clone());
+                    node => {
+                        let entry = (Some(msg.name.clone()), node.clone());
+                        match target {
+                            Target::Bolt => {
+                                for mut chains in &mut bolt_query {
+                                    chains.0.push(entry.clone());
+                                }
                             }
-                        }
-                        Some(
-                            Trigger::Impact(
-                                ImpactTarget::Cell | ImpactTarget::Wall | ImpactTarget::Breaker,
-                            )
-                            | Trigger::CellDestroyed,
-                        ) => {
-                            for mut chains in &mut bolt_query {
-                                chains.0.push(entry.clone());
+                            Target::Breaker => {
+                                for mut chains in &mut breaker_query {
+                                    chains.0.push(entry.clone());
+                                }
                             }
-                        }
-                        _ => {
-                            // Default: push to breaker entity
-                            for mut chains in &mut breaker_query {
-                                chains.0.push(entry.clone());
+                            _ => {
+                                warn!("dispatch_chip_effects: unhandled target {:?}", target);
                             }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-/// Returns the outermost trigger of an `EffectNode`, if it has one.
-fn outermost_trigger(node: &EffectNode) -> Option<Trigger> {
-    match node {
-        EffectNode::When { trigger, .. } => Some(*trigger),
-        EffectNode::Until { .. }
-        | EffectNode::Once(_)
-        | EffectNode::Do(_)
-        | EffectNode::On { .. } => None,
     }
 }
 
@@ -134,7 +90,9 @@ mod tests {
             resources::ChipRegistry,
         },
         effect::{
-            definition::{Effect, EffectChains, EffectNode, ImpactTarget, Target, Trigger},
+            definition::{
+                Effect, EffectChains, EffectNode, ImpactTarget, RootEffect, Target, Trigger,
+            },
             effects::*,
         },
         ui::messages::ChipSelected,
@@ -193,12 +151,12 @@ mod tests {
         })));
     }
 
-    // ---------------------------------------------------------------------------
-    // B3: Selected effects fire ChipEffectApplied for each inner leaf (29)
-    // ---------------------------------------------------------------------------
+    // =========================================================================
+    // Dispatch via RootEffect::On — passive Do children
+    // =========================================================================
 
     #[test]
-    fn on_selected_piercing_inserts_on_bolt() {
+    fn passive_piercing_via_root_effect() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
@@ -209,8 +167,8 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
                 ingredients: None,
@@ -225,24 +183,26 @@ mod tests {
             .query::<&Piercing>()
             .iter(app.world())
             .next()
-            .expect("bolt should have Piercing component after Selected chip selected");
+            .expect(
+                "bolt should have Piercing component after RootEffect::On(Bolt, [Do(Piercing)])",
+            );
         assert_eq!(piercing.0, 1);
     }
 
     #[test]
-    fn on_selected_multiple_leaves_fires_all() {
+    fn passive_multiple_do_leaves_fire_all() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
-                name: "MultiEffect".to_owned(),
+                name: "MultiPassive".to_owned(),
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
                     then: vec![
                         EffectNode::Do(Effect::Piercing(1)),
                         EffectNode::Do(Effect::DamageBoost(0.5)),
@@ -252,7 +212,7 @@ mod tests {
                 template_name: None,
             });
 
-        send_chip_selected(&mut app, "MultiEffect");
+        send_chip_selected(&mut app, "MultiPassive");
         tick(&mut app);
 
         assert!(
@@ -261,7 +221,7 @@ mod tests {
                 .iter(app.world())
                 .next()
                 .is_some(),
-            "bolt should have Piercing from Selected with multiple leaves"
+            "bolt should have Piercing from On(Bolt, [Do(Piercing), Do(DamageBoost)])"
         );
         assert!(
             app.world_mut()
@@ -269,30 +229,22 @@ mod tests {
                 .iter(app.world())
                 .next()
                 .is_some(),
-            "bolt should have DamageBoost from Selected with multiple leaves"
+            "bolt should have DamageBoost from On(Bolt, [Do(Piercing), Do(DamageBoost)])"
         );
     }
 
-    // ---------------------------------------------------------------------------
-    // B3: Triggered chain pushes to entity EffectChains (30)
-    // ---------------------------------------------------------------------------
+    // =========================================================================
+    // Dispatch via RootEffect::On — triggered chain push to EffectChains
+    // =========================================================================
 
     #[test]
-    fn triggered_chain_pushes_to_breaker_entity_effect_chains() {
+    fn triggered_chain_pushes_to_breaker_chains() {
         let mut app = test_app();
 
-        let chain = EffectNode::When {
-            trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impact(ImpactTarget::Cell),
-                then: vec![EffectNode::Do(Effect::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 32.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        };
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
@@ -300,16 +252,16 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Rare,
                 max_stacks: 1,
-                effects: vec![chain.clone()],
+                effects: vec![RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    }],
+                }],
                 ingredients: None,
                 template_name: None,
             });
-
-        // Spawn breaker entity with EffectChains for dispatch to push to
-        let breaker = app
-            .world_mut()
-            .spawn((Breaker, EffectChains::default()))
-            .id();
 
         send_chip_selected(&mut app, "Surge");
         tick(&mut app);
@@ -321,15 +273,159 @@ mod tests {
             "triggered chain should be pushed to breaker entity EffectChains"
         );
         assert_eq!(chains.0[0].0, Some("Surge".to_owned()));
-        assert_eq!(chains.0[0].1, chain);
     }
 
-    // ---------------------------------------------------------------------------
-    // B3: dispatch_chip_effects updates ChipInventory (32)
-    // ---------------------------------------------------------------------------
+    #[test]
+    fn triggered_chain_pushes_to_bolt_chains() {
+        let mut app = test_app();
+
+        let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Impact Chip".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Impacted(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    }],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Impact Chip");
+        tick(&mut app);
+
+        let chains = app.world().get::<EffectChains>(bolt).unwrap();
+        assert_eq!(
+            chains.0.len(),
+            1,
+            "triggered chain should be pushed to bolt entity EffectChains"
+        );
+        assert_eq!(chains.0[0].0, Some("Impact Chip".to_owned()));
+    }
+
+    // =========================================================================
+    // Dispatch: mixed passive + triggered in separate RootEffects
+    // =========================================================================
 
     #[test]
-    fn dispatch_chip_effects_adds_chip_to_inventory_on_chip_selected() {
+    fn mixed_passive_and_triggered_in_separate_roots() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Hybrid".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![
+                    RootEffect::On {
+                        target: Target::Bolt,
+                        then: vec![EffectNode::Do(Effect::Piercing(1))],
+                    },
+                    RootEffect::On {
+                        target: Target::Breaker,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::PerfectBump,
+                            then: vec![EffectNode::Do(Effect::SpawnBolts {
+                                count: 1,
+                                lifespan: None,
+                                inherit: false,
+                            })],
+                        }],
+                    },
+                ],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Hybrid");
+        tick(&mut app);
+
+        // Bolt should have Piercing(1) from the passive Do
+        let piercing = app
+            .world_mut()
+            .query::<&Piercing>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Piercing from On(Bolt, [Do(Piercing)])");
+        assert_eq!(piercing.0, 1);
+
+        // Breaker EffectChains should have the triggered chain
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
+        assert_eq!(
+            chains.0.len(),
+            1,
+            "breaker should have 1 triggered chain from On(Breaker, [When(PerfectBump, ...)])"
+        );
+    }
+
+    // =========================================================================
+    // Dispatch: bare Do fires passive, not pushed to chains
+    // =========================================================================
+
+    #[test]
+    fn bare_do_fires_passive_not_pushed_to_chains() {
+        let mut app = test_app();
+
+        app.world_mut().spawn(Bolt);
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "BareLeaf".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::Do(Effect::Piercing(1))],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "BareLeaf");
+        tick(&mut app);
+
+        // Bolt should have Piercing(1)
+        let piercing = app
+            .world_mut()
+            .query::<&Piercing>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Piercing from bare Do passive dispatch");
+        assert_eq!(piercing.0, 1);
+
+        // Breaker EffectChains should NOT have the leaf
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
+        assert!(
+            chains.0.is_empty(),
+            "bare Do leaf should fire passive, NOT be pushed to entity EffectChains"
+        );
+    }
+
+    // =========================================================================
+    // Dispatch: inventory updated on selection
+    // =========================================================================
+
+    #[test]
+    fn inventory_updated_on_selection() {
         let mut app = test_app();
         app.init_resource::<ChipInventory>();
 
@@ -341,8 +437,8 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Common,
                 max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
                 ingredients: None,
@@ -360,10 +456,17 @@ mod tests {
         );
     }
 
+    // =========================================================================
+    // Dispatch: unknown chip silently skipped
+    // =========================================================================
+
     #[test]
-    fn dispatch_chip_effects_does_not_add_inventory_entry_for_unknown_chip() {
+    fn unknown_chip_silently_skipped() {
         let mut app = test_app();
         app.init_resource::<ChipInventory>();
+
+        app.world_mut().spawn(Bolt);
+        app.world_mut().spawn(Breaker);
 
         send_chip_selected(&mut app, "Nonexistent");
         tick(&mut app);
@@ -374,18 +477,29 @@ mod tests {
             0,
             "ChipInventory should remain empty for unknown chip"
         );
+        assert!(
+            app.world_mut()
+                .query::<&Piercing>()
+                .iter(app.world())
+                .next()
+                .is_none(),
+            "no passive components should exist for unknown chip"
+        );
     }
 
-    // ---------------------------------------------------------------------------
-    // B3: Triggered chip adds no passive components (33)
-    // ---------------------------------------------------------------------------
+    // =========================================================================
+    // Dispatch: triggered chip adds no passive components
+    // =========================================================================
 
     #[test]
     fn triggered_chip_adds_no_passive_components() {
         let mut app = test_app();
 
         app.world_mut().spawn(Bolt);
-        app.world_mut().spawn(Breaker);
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
@@ -393,13 +507,16 @@ mod tests {
                 description: "test".to_owned(),
                 rarity: Rarity::Rare,
                 max_stacks: 1,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::SpawnBolts {
-                        count: 1,
-                        lifespan: None,
-                        inherit: false,
-                    })],
+                effects: vec![RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::SpawnBolts {
+                            count: 1,
+                            lifespan: None,
+                            inherit: false,
+                        })],
+                    }],
                 }],
                 ingredients: None,
                 template_name: None,
@@ -408,847 +525,412 @@ mod tests {
         send_chip_selected(&mut app, "Surge");
         tick(&mut app);
 
+        // No passive components on bolt or breaker
         assert!(
             app.world_mut()
                 .query::<&Piercing>()
                 .iter(app.world())
                 .next()
-                .is_none()
+                .is_none(),
+            "triggered chip should not insert Piercing"
         );
         assert!(
             app.world_mut()
                 .query::<&DamageBoost>()
                 .iter(app.world())
                 .next()
-                .is_none()
+                .is_none(),
+            "triggered chip should not insert DamageBoost"
         );
         assert!(
             app.world_mut()
                 .query::<&BoltSpeedBoost>()
                 .iter(app.world())
                 .next()
-                .is_none()
+                .is_none(),
+            "triggered chip should not insert BoltSpeedBoost"
         );
-        assert!(
-            app.world_mut()
-                .query::<&ChainHit>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BoltSizeBoost>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-        assert!(
-            app.world_mut()
-                .query::<&WidthBoost>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BreakerSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-        assert!(
-            app.world_mut()
-                .query::<&BumpForceBoost>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-        assert!(
-            app.world_mut()
-                .query::<&TiltControlBoost>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-    }
 
-    // ---------------------------------------------------------------------------
-    // B3: Bare leaf at top level is treated as immediate passive (34)
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn bare_leaf_fires_chip_effect_applied_not_entity_chains() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        // Spawn breaker with empty EffectChains to verify bare leaf is not pushed
-        let breaker = app
-            .world_mut()
-            .spawn((Breaker, EffectChains::default()))
-            .id();
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "BareLeaf",
-                EffectNode::Do(Effect::Piercing(1)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "BareLeaf");
-        tick(&mut app);
-
-        // Bolt should have Piercing(1) from direct ChipEffectApplied
-        let piercing = app
-            .world_mut()
-            .query::<&Piercing>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have Piercing from bare leaf ChipEffectApplied");
-        assert_eq!(piercing.0, 1);
-
-        // Breaker EffectChains should NOT have the leaf
-        let chains = app.world().get::<EffectChains>(breaker).unwrap();
-        assert!(
-            chains.0.is_empty(),
-            "bare leaf should NOT be pushed to entity EffectChains"
-        );
-    }
-
-    // ---------------------------------------------------------------------------
-    // B3: Selected integration via registry (36)
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn on_selected_via_registry_inserts_piercing() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "Piercing Shot".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::Piercing(1))],
-                }],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "Piercing Shot");
-        tick(&mut app);
-
-        let piercing = app
-            .world_mut()
-            .query::<&Piercing>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have Piercing via Selected from registry");
-        assert_eq!(piercing.0, 1);
-    }
-
-    // ---------------------------------------------------------------------------
-    // B3: Selected with empty inner vec is a no-op (37)
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn on_selected_empty_vec_is_noop() {
-        let mut app = test_app();
-        app.init_resource::<ChipInventory>();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "EmptyPassive".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 1,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![],
-                }],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "EmptyPassive");
-        tick(&mut app);
-
-        // No components inserted
-        assert!(
-            app.world_mut()
-                .query::<&Piercing>()
-                .iter(app.world())
-                .next()
-                .is_none()
-        );
-        // But inventory still tracks it
-        let inventory = app.world().resource::<ChipInventory>();
-        assert_eq!(inventory.stacks("EmptyPassive"), 1);
-    }
-
-    // ---------------------------------------------------------------------------
-    // B3: Mixed effects: Selected + triggered chain on same chip (38)
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn mixed_effects_on_selected_and_triggered() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        // Spawn breaker entity with EffectChains
-        let breaker = app
-            .world_mut()
-            .spawn((Breaker, EffectChains::default()))
-            .id();
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "Hybrid".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Rare,
-                max_stacks: 1,
-                effects: vec![
-                    EffectNode::When {
-                        trigger: Trigger::Selected,
-                        then: vec![EffectNode::Do(Effect::Piercing(1))],
-                    },
-                    EffectNode::When {
-                        trigger: Trigger::PerfectBump,
-                        then: vec![EffectNode::Do(Effect::SpawnBolts {
-                            count: 1,
-                            lifespan: None,
-                            inherit: false,
-                        })],
-                    },
-                ],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "Hybrid");
-        tick(&mut app);
-
-        // Piercing from Selected dispatch
-        let piercing = app
-            .world_mut()
-            .query::<&Piercing>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have Piercing from Selected dispatch");
-        assert_eq!(piercing.0, 1);
-
-        // Breaker EffectChains has the triggered chain
+        // But breaker EffectChains should have the triggered chain
         let chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert_eq!(
             chains.0.len(),
             1,
-            "triggered chain should be pushed to breaker entity EffectChains"
+            "triggered chain should be in breaker EffectChains"
         );
-        assert_eq!(chains.0[0].0, Some("Hybrid".to_owned()));
+    }
+
+    // =========================================================================
+    // Dispatch: Once and Until nodes push to chains
+    // =========================================================================
+
+    #[test]
+    fn once_node_pushes_to_chains() {
+        let mut app = test_app();
+
+        let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "OnceChip".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::Once(vec![EffectNode::When {
+                        trigger: Trigger::Impacted(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::DamageBoost(1.5))],
+                    }])],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "OnceChip");
+        tick(&mut app);
+
+        let chains = app.world().get::<EffectChains>(bolt).unwrap();
         assert_eq!(
-            chains.0[0].1,
-            EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::SpawnBolts {
-                    count: 1,
-                    lifespan: None,
-                    inherit: false
-                })]
-            }
+            chains.0.len(),
+            1,
+            "Once node should be pushed to bolt EffectChains"
         );
-    }
-
-    // ---------------------------------------------------------------------------
-    // B3: SpeedBoost via OnSelected dispatches to bolt entities (39)
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn speed_boost_via_on_selected_applies_to_bolt() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut().spawn(Breaker);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "BoltSpeed".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
-                }],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "BoltSpeed");
-        tick(&mut app);
-
-        // SpeedBoost passive applies to bolt entities (no Target routing — handler applies to all bolts)
         assert!(
-            app.world_mut()
-                .query::<&BoltSpeedBoost>()
-                .iter(app.world())
-                .next()
-                .is_some(),
-            "BoltSpeedBoost should exist after SpeedBoost passive dispatch"
+            matches!(&chains.0[0].1, EffectNode::Once(_)),
+            "pushed chain should be a Once node"
         );
-        // Note: without Target on SpeedBoost, both bolt and breaker handlers fire.
-        // On-node routing (future) will restrict to the correct entity type.
-        // BreakerSpeedBoost may or may not exist depending on whether a Breaker
-        // entity is present — not asserted here.
-    }
-
-    // ---------------------------------------------------------------------------
-    // Existing integration tests rewritten with new types
-    // ---------------------------------------------------------------------------
-
-    #[test]
-    fn piercing_stacks_from_1_to_2_via_bare_leaf() {
-        let mut app = test_app();
-
-        let bolt = app.world_mut().spawn((Bolt, Piercing(1))).id();
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Piercing Shot",
-                EffectNode::Do(Effect::Piercing(1)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Piercing Shot");
-        tick(&mut app);
-
-        let piercing = app
-            .world()
-            .entity(bolt)
-            .get::<Piercing>()
-            .expect("bolt should still have Piercing component");
-        assert_eq!(piercing.0, 2, "Piercing should stack from 1 to 2");
     }
 
     #[test]
-    fn piercing_respects_max_stacks_cap() {
+    fn until_node_pushes_to_chains() {
         let mut app = test_app();
 
-        let bolt = app.world_mut().spawn((Bolt, Piercing(3))).id();
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition::test(
-                "Piercing Shot",
-                EffectNode::Do(Effect::Piercing(1)),
-                3,
-            ));
-
-        send_chip_selected(&mut app, "Piercing Shot");
-        tick(&mut app);
-
-        let piercing = app
-            .world()
-            .entity(bolt)
-            .get::<Piercing>()
-            .expect("bolt should still have Piercing component");
-        assert_eq!(piercing.0, 3, "Piercing should not exceed max_stacks=3 cap");
-    }
-
-    #[test]
-    fn width_boost_inserts_on_breaker_via_on_selected_size_boost() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Breaker);
+        let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
-                name: "Wide Breaker".to_owned(),
+                name: "UntilChip".to_owned(),
                 description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::SizeBoost(20.0))],
+                rarity: Rarity::Rare,
+                max_stacks: 1,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::Until {
+                        until: Trigger::BoltLost,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                    }],
                 }],
                 ingredients: None,
                 template_name: None,
             });
 
-        send_chip_selected(&mut app, "Wide Breaker");
+        send_chip_selected(&mut app, "UntilChip");
         tick(&mut app);
 
-        let wb = app
+        let chains = app.world().get::<EffectChains>(bolt).unwrap();
+        assert_eq!(
+            chains.0.len(),
+            1,
+            "Until node should be pushed to bolt EffectChains"
+        );
+        assert!(
+            matches!(&chains.0[0].1, EffectNode::Until { .. }),
+            "pushed chain should be an Until node"
+        );
+    }
+
+    // =========================================================================
+    // Dispatch: unhandled target logs warning and does not panic
+    // =========================================================================
+
+    #[test]
+    fn unhandled_target_logs_and_does_not_panic() {
+        let mut app = test_app();
+
+        let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
+        let breaker = app
             .world_mut()
-            .query::<&WidthBoost>()
-            .iter(app.world())
-            .next()
-            .expect("breaker should have WidthBoost component after Selected SizeBoost(Breaker)");
-        assert!(
-            (wb.0 - 20.0).abs() < f32::EPSILON,
-            "WidthBoost should be 20.0, got {}",
-            wb.0
-        );
-    }
+            .spawn((Breaker, EffectChains::default()))
+            .id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "AllBoltsChip".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 1,
+                effects: vec![RootEffect::On {
+                    target: Target::AllBolts,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::Piercing(1))],
+                    }],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
 
-    #[test]
-    fn no_components_added_for_unknown_chip_name() {
-        let mut app = test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut().spawn(Breaker);
-
-        send_chip_selected(&mut app, "Nonexistent");
+        send_chip_selected(&mut app, "AllBoltsChip");
         tick(&mut app);
 
+        // No Piercing component should be on any entity
         assert!(
             app.world_mut()
                 .query::<&Piercing>()
                 .iter(app.world())
                 .next()
                 .is_none(),
-            "no Piercing should exist for unknown chip"
+            "unhandled target should not insert Piercing on any entity"
         );
+
+        // No EffectChains entries should have been pushed
+        let bolt_chains = app.world().get::<EffectChains>(bolt).unwrap();
         assert!(
-            app.world_mut()
-                .query::<&DamageBoost>()
-                .iter(app.world())
-                .next()
-                .is_none(),
-            "no DamageBoost should exist for unknown chip"
+            bolt_chains.0.is_empty(),
+            "unhandled target should not push chains to bolt EffectChains"
         );
-    }
-
-    // =========================================================================
-    // B12b: dispatch_chip_effects dispatch patterns with EffectNode (behaviors 25-26)
-    // These tests verify the EffectNode dispatch logic that dispatch_chip_effects
-    // will use after migration. They exercise evaluate_node which fails
-    // with todo!().
-    // =========================================================================
-
-    #[test]
-    fn effect_node_on_selected_dispatches_leaf_effects() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, evaluate_node},
-        };
-
-        // dispatch_chip_effects matches on
-        // EffectNode::When { trigger: Selected, then } and fires
-        // passive events for each inner Do's Effect.
-        let node = EffectNode::When {
-            trigger: Trigger::Selected,
-            then: vec![EffectNode::Do(Effect::Piercing(1))],
-        };
-        // Verify EffectNode structure and inner extraction
-        match &node {
-            EffectNode::When {
-                trigger: Trigger::Selected,
-                then,
-            } => {
-                assert_eq!(then.len(), 1);
-                match &then[0] {
-                    EffectNode::Do(effect) => {
-                        assert_eq!(*effect, Effect::Piercing(1));
-                    }
-                    other => panic!("expected Do, got {other:?}"),
-                }
-            }
-            other => panic!("expected When(Selected, _), got {other:?}"),
-        }
-        // evaluate_node should return NoMatch for Selected — it's handled
-        // by dispatch_chip_effects, not by bridges
-        let result = evaluate_node(Trigger::PerfectBump, &node);
-        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
-    }
-
-    #[test]
-    fn effect_node_on_selected_multiple_leaves_extracts_all() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, evaluate_node},
-        };
-
-        let node = EffectNode::When {
-            trigger: Trigger::Selected,
-            then: vec![
-                EffectNode::Do(Effect::Piercing(1)),
-                EffectNode::Do(Effect::DamageBoost(0.5)),
-            ],
-        };
-        match &node {
-            EffectNode::When {
-                trigger: Trigger::Selected,
-                then,
-            } => {
-                assert_eq!(then.len(), 2);
-                assert_eq!(then[0], EffectNode::Do(Effect::Piercing(1)));
-                assert_eq!(then[1], EffectNode::Do(Effect::DamageBoost(0.5)));
-            }
-            other => panic!("expected When(Selected, 2 children), got {other:?}"),
-        }
-        // Selected always returns NoMatch from evaluate_node (fails with todo!)
-        let result = evaluate_node(Trigger::Bump, &node);
-        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
-    }
-
-    #[test]
-    fn effect_node_trigger_wrapper_pushed_to_active_effects_pattern() {
-        use crate::effect::{
-            definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, evaluate_node},
-        };
-
-        // After migration, dispatch_chip_effects pushes non-Selected triggers
-        // to ActiveEffects. Verify this EffectNode evaluates as expected.
-        let node = EffectNode::When {
-            trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(Effect::SpawnBolts {
-                count: 1,
-                lifespan: None,
-                inherit: false,
-            })],
-        };
-        // Should NOT match Selected — bridge evaluation handles it
-        let result = evaluate_node(Trigger::PerfectBump, &node);
-        assert_eq!(
-            result,
-            vec![NodeEvalResult::Fire(Effect::SpawnBolts {
-                count: 1,
-                lifespan: None,
-                inherit: false
-            })],
-            "PerfectBump with Do(SpawnBolts) should fire on PerfectBump"
-        );
-    }
-
-    #[test]
-    fn effect_node_bare_leaf_pattern_for_direct_dispatch() {
-        use crate::effect::{
-            definition::{Effect, EffectNode},
-            evaluate::{NodeEvalResult, evaluate_node},
-        };
-
-        // A bare EffectNode::Do is treated as an immediate
-        // passive — dispatched via fire_passive_event directly.
-        let node = EffectNode::Do(Effect::Piercing(1));
+        let breaker_chains = app.world().get::<EffectChains>(breaker).unwrap();
         assert!(
-            matches!(&node, EffectNode::Do(_)),
-            "bare Do should be directly dispatchable"
+            breaker_chains.0.is_empty(),
+            "unhandled target should not push chains to breaker EffectChains"
         );
-        // Verify it extracts correctly
-        if let EffectNode::Do(effect) = &node {
-            assert_eq!(*effect, Effect::Piercing(1));
-        }
-        // Bare leaf returns NoMatch from evaluate_node (fails with todo!)
-        let result = evaluate_node(Trigger::PerfectBump, &node);
-        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
 
     // =========================================================================
-    // B12c: dispatch fires typed passive events (behaviors 18-20)
+    // H5: Same chip selected twice pushes two entries to EffectChains
     // =========================================================================
 
-    #[derive(Resource, Default)]
-    struct CapturedPiercingApplied(Vec<crate::effect::typed_events::PiercingApplied>);
-
-    fn capture_piercing_applied(
-        trigger: On<crate::effect::typed_events::PiercingApplied>,
-        mut captured: ResMut<CapturedPiercingApplied>,
-    ) {
-        captured.0.push(trigger.event().clone());
-    }
-
-    #[derive(Resource, Default)]
-    struct CapturedSizeBoostApplied(Vec<crate::effect::typed_events::SizeBoostApplied>);
-
-    fn capture_size_boost_applied(
-        trigger: On<crate::effect::typed_events::SizeBoostApplied>,
-        mut captured: ResMut<CapturedSizeBoostApplied>,
-    ) {
-        captured.0.push(trigger.event().clone());
-    }
-
-    #[derive(Resource, Default)]
-    struct CapturedSpeedBoostApplied(Vec<crate::effect::typed_events::SpeedBoostApplied>);
-
-    fn capture_speed_boost_applied(
-        trigger: On<crate::effect::typed_events::SpeedBoostApplied>,
-        mut captured: ResMut<CapturedSpeedBoostApplied>,
-    ) {
-        captured.0.push(trigger.event().clone());
-    }
-
-    fn typed_dispatch_test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<ChipSelected>()
-            .init_resource::<ChipRegistry>()
-            .init_resource::<CapturedPiercingApplied>()
-            .init_resource::<CapturedSizeBoostApplied>()
-            .init_resource::<CapturedSpeedBoostApplied>()
-            .add_observer(capture_piercing_applied)
-            .add_observer(capture_size_boost_applied)
-            .add_observer(capture_speed_boost_applied)
-            .add_systems(
-                Update,
-                (enqueue_chip_selected, dispatch_chip_effects).chain(),
-            );
-        app
-    }
-
     #[test]
-    fn dispatch_fires_piercing_applied_for_on_selected_piercing() {
-        let mut app = typed_dispatch_test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "Piercing Shot".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::Piercing(1))],
-                }],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "Piercing Shot");
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedPiercingApplied>();
-        assert_eq!(
-            captured.0.len(),
-            1,
-            "dispatch should fire PiercingApplied (not ChipEffectApplied) for Selected Piercing"
-        );
-        assert_eq!(captured.0[0].per_stack, 1);
-        assert_eq!(captured.0[0].max_stacks, 3);
-        assert_eq!(captured.0[0].chip_name, "Piercing Shot");
-    }
-
-    #[test]
-    fn dispatch_fires_size_boost_applied_for_on_selected_size_boost() {
-        let mut app = typed_dispatch_test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "Big Shot".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::SizeBoost(5.0))],
-                }],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "Big Shot");
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSizeBoostApplied>();
-        assert_eq!(
-            captured.0.len(),
-            1,
-            "dispatch should fire SizeBoostApplied for Selected SizeBoost"
-        );
-        assert!((captured.0[0].per_stack - 5.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn dispatch_fires_speed_boost_applied_for_both_bolt_and_breaker() {
-        let mut app = typed_dispatch_test_app();
-
-        app.world_mut().spawn(Bolt);
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "Speed Mix".to_owned(),
-                description: "test".to_owned(),
-                rarity: Rarity::Common,
-                max_stacks: 3,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![
-                        EffectNode::Do(Effect::SpeedBoost { multiplier: 0.1 }),
-                        EffectNode::Do(Effect::SpeedBoost { multiplier: 0.2 }),
-                    ],
-                }],
-                ingredients: None,
-                template_name: None,
-            });
-
-        send_chip_selected(&mut app, "Speed Mix");
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpeedBoostApplied>();
-        assert_eq!(
-            captured.0.len(),
-            2,
-            "dispatch should fire two SpeedBoostApplied events for both Bolt and Breaker targets"
-        );
-        // Both SpeedBoostApplied events should have the correct multipliers
-        assert!((captured.0[0].multiplier - 0.1).abs() < f32::EPSILON);
-        assert!((captured.0[1].multiplier - 0.2).abs() < f32::EPSILON);
-    }
-
-    // =========================================================================
-    // B12d: dispatch_chip_effects finds evolution chip in registry (B7 fix)
-    // Behaviors 19-20
-    // =========================================================================
-
-    /// Behavior 19: Evolution chip is found in unified `ChipRegistry` and
-    /// `Selected` effects fire. Before B12d, evolution chips were excluded
-    /// from `ChipRegistry` (stored only in `EvolutionRegistry`), so
-    /// `registry.get("Barrage")` returned None — this is the B7 fix.
-    #[test]
-    fn dispatch_finds_evolution_chip_in_registry_and_applies_effects() {
+    fn same_chip_selected_twice_pushes_two_entries() {
         let mut app = test_app();
 
-        app.world_mut().spawn(Bolt);
-        // Insert an Evolution-rarity chip into the unified ChipRegistry
-        app.world_mut()
-            .resource_mut::<ChipRegistry>()
-            .insert(ChipDefinition {
-                name: "Barrage".to_owned(),
-                description: "Evolution chip".to_owned(),
-                rarity: Rarity::Evolution,
-                max_stacks: 1,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::Piercing(5))],
-                }],
-                ingredients: Some(vec![crate::chips::definition::EvolutionIngredient {
-                    chip_name: "Piercing Shot".to_owned(),
-                    stacks_required: 2,
-                }]),
-                template_name: None,
-            });
-        app.init_resource::<ChipInventory>();
-
-        send_chip_selected(&mut app, "Barrage");
-        tick(&mut app);
-
-        // Bolt should have Piercing(5) from the evolution chip's Selected effect
-        let piercing = app
-            .world_mut()
-            .query::<&Piercing>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have Piercing component after evolution chip selected (B7 fix)");
-        assert_eq!(
-            piercing.0, 5,
-            "Piercing value should be 5 from evolution chip's Selected(Piercing(5))"
-        );
-
-        // ChipInventory should track the evolution chip
-        let inventory = app.world().resource::<ChipInventory>();
-        assert_eq!(
-            inventory.stacks("Barrage"),
-            1,
-            "ChipInventory should have 1 stack of 'Barrage'"
-        );
-    }
-
-    /// Behavior 20: Evolution chip with triggered chain pushes to entity `EffectChains`.
-    #[test]
-    fn dispatch_handles_triggered_chain_for_evolution_chip() {
-        let mut app = test_app();
-
-        // Spawn breaker entity with EffectChains
         let breaker = app
             .world_mut()
             .spawn((Breaker, EffectChains::default()))
             .id();
 
-        // Insert an Evolution chip with a triggered chain (PerfectBump → Shockwave)
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
-                name: "Evo Surge".to_owned(),
-                description: "Evolution with triggered effect".to_owned(),
-                rarity: Rarity::Evolution,
-                max_stacks: 1,
-                effects: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::Shockwave {
-                        base_range: 64.0,
-                        range_per_level: 0.0,
-                        stacks: 1,
-                        speed: 400.0,
+                name: "Surge".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Rare,
+                max_stacks: 3,
+                effects: vec![RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    }],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        // First selection
+        send_chip_selected(&mut app, "Surge");
+        tick(&mut app);
+
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
+        assert_eq!(
+            chains.0.len(),
+            1,
+            "first selection should push 1 entry to breaker EffectChains"
+        );
+
+        // Second selection
+        send_chip_selected(&mut app, "Surge");
+        tick(&mut app);
+
+        let chains = app.world().get::<EffectChains>(breaker).unwrap();
+        assert_eq!(
+            chains.0.len(),
+            2,
+            "second selection of same chip should push another entry — got {}",
+            chains.0.len()
+        );
+
+        // Both entries should be When(PerfectBump) with chip name "Surge"
+        for (i, (chip_name, node)) in chains.0.iter().enumerate() {
+            assert_eq!(
+                chip_name.as_deref(),
+                Some("Surge"),
+                "entry {i} chip_name should be Some(\"Surge\")"
+            );
+            assert!(
+                matches!(
+                    node,
+                    EffectNode::When {
+                        trigger: Trigger::PerfectBump,
+                        ..
+                    }
+                ),
+                "entry {i} should be When(PerfectBump)"
+            );
+        }
+    }
+
+    // =========================================================================
+    // H6: Passive dispatch fires correct typed events for all passive effect types
+    // =========================================================================
+
+    #[test]
+    fn passive_chain_hit_fires_and_applies_component() {
+        let mut app = test_app();
+
+        let bolt = app.world_mut().spawn(Bolt).id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Chain Hit".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::Do(Effect::ChainHit(1))],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Chain Hit");
+        tick(&mut app);
+
+        let chain_hit = app
+            .world()
+            .entity(bolt)
+            .get::<ChainHit>()
+            .expect("bolt should have ChainHit component after passive ChainHit dispatch");
+        assert_eq!(
+            chain_hit.0, 1,
+            "ChainHit should be 1 per stack — got {}",
+            chain_hit.0
+        );
+    }
+
+    #[test]
+    fn passive_bump_force_fires_and_applies_component() {
+        let mut app = test_app();
+
+        let breaker = app.world_mut().spawn(Breaker).id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Bump Force".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::Do(Effect::BumpForce(10.0))],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Bump Force");
+        tick(&mut app);
+
+        let bump_force = app
+            .world()
+            .entity(breaker)
+            .get::<BumpForceBoost>()
+            .expect("breaker should have BumpForceBoost after passive BumpForce dispatch");
+        assert!(
+            (bump_force.0 - 10.0).abs() < f32::EPSILON,
+            "BumpForceBoost should be 10.0 — got {}",
+            bump_force.0
+        );
+    }
+
+    #[test]
+    fn passive_tilt_control_fires_and_applies_component() {
+        let mut app = test_app();
+
+        let breaker = app.world_mut().spawn(Breaker).id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Tilt Control".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Common,
+                max_stacks: 3,
+                effects: vec![RootEffect::On {
+                    target: Target::Breaker,
+                    then: vec![EffectNode::Do(Effect::TiltControl(0.1))],
+                }],
+                ingredients: None,
+                template_name: None,
+            });
+
+        send_chip_selected(&mut app, "Tilt Control");
+        tick(&mut app);
+
+        let tilt = app
+            .world()
+            .entity(breaker)
+            .get::<TiltControlBoost>()
+            .expect("breaker should have TiltControlBoost after passive TiltControl dispatch");
+        assert!(
+            (tilt.0 - 0.1).abs() < f32::EPSILON,
+            "TiltControlBoost should be 0.1 — got {}",
+            tilt.0
+        );
+    }
+
+    #[test]
+    fn passive_ramping_damage_fires_and_applies_component() {
+        use crate::effect::effects::ramping_damage::{
+            handle_ramping_damage, RampingDamageState,
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<ChipSelected>()
+            .init_resource::<ChipRegistry>()
+            .add_observer(handle_ramping_damage)
+            .add_systems(
+                Update,
+                (enqueue_chip_selected, dispatch_chip_effects).chain(),
+            );
+
+        let bolt = app.world_mut().spawn(Bolt).id();
+        app.world_mut()
+            .resource_mut::<ChipRegistry>()
+            .insert(ChipDefinition {
+                name: "Ramping".to_owned(),
+                description: "test".to_owned(),
+                rarity: Rarity::Uncommon,
+                max_stacks: 2,
+                effects: vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::Do(Effect::RampingDamage {
+                        bonus_per_hit: 0.02,
                     })],
                 }],
                 ingredients: None,
                 template_name: None,
             });
 
-        send_chip_selected(&mut app, "Evo Surge");
+        send_chip_selected(&mut app, "Ramping");
         tick(&mut app);
 
-        let chains = app.world().get::<EffectChains>(breaker).unwrap();
-        assert_eq!(
-            chains.0.len(),
-            1,
-            "evolution chip's triggered chain should be pushed to breaker entity EffectChains"
-        );
-        assert_eq!(
-            chains.0[0].0,
-            Some("Evo Surge".to_owned()),
-            "EffectChains entry should carry the evolution chip name"
-        );
-        assert_eq!(
-            chains.0[0].1,
-            EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })]
-            },
-            "EffectChains chain should match the evolution chip's triggered effect"
-        );
-    }
-
-    /// Edge case for behavior 20: unknown evolution chip name is skipped.
-    #[test]
-    fn dispatch_skips_unknown_evolution_chip_name() {
-        let mut app = test_app();
-        app.init_resource::<ChipInventory>();
-
-        // Spawn breaker entity with EffectChains
-        let breaker = app
-            .world_mut()
-            .spawn((Breaker, EffectChains::default()))
-            .id();
-
-        // Don't add any chip named "Unknown Evo" to the registry
-        send_chip_selected(&mut app, "Unknown Evo");
-        tick(&mut app);
-
-        let inventory = app.world().resource::<ChipInventory>();
-        assert_eq!(
-            inventory.total_held(),
-            0,
-            "unknown chip name should be skipped, inventory remains empty"
-        );
-        let chains = app.world().get::<EffectChains>(breaker).unwrap();
+        let state = app
+            .world()
+            .entity(bolt)
+            .get::<RampingDamageState>()
+            .expect("bolt should have RampingDamageState after passive RampingDamage dispatch");
         assert!(
-            chains.0.is_empty(),
-            "unknown chip name should not push to entity EffectChains"
+            (state.bonus_per_hit - 0.02).abs() < f32::EPSILON,
+            "bonus_per_hit should be 0.02 — got {}",
+            state.bonus_per_hit
+        );
+        assert!(
+            (state.current_bonus - 0.0).abs() < f32::EPSILON,
+            "current_bonus should start at 0.0 — got {}",
+            state.current_bonus
         );
     }
 }

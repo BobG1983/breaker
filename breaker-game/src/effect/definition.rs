@@ -93,9 +93,12 @@ pub enum Trigger {
     EarlyBumped,
     /// Fires after a late bump completes (post-bump event).
     LateBumped,
-    /// Passive effects: evaluated immediately on chip selection.
-    #[serde(rename = "OnSelected")]
-    Selected,
+    /// Targeted impact trigger — fires on the impacted entity (cell, wall, breaker).
+    Impacted(ImpactTarget),
+    /// Targeted death trigger — fires on the entity that died.
+    Died,
+    /// Targeted cell-destroyed trigger — fires on the destroyed cell entity.
+    DestroyedCell,
     /// Timer-based expiry trigger (duration in seconds).
     TimeExpires(f32),
     /// Fires when the node timer ratio crosses below the threshold.
@@ -119,13 +122,13 @@ fn default_spawn_bolts_count() -> u32 {
 pub enum Effect {
     /// Area damage around impact point — expanding wavefront.
     Shockwave {
-        /// Base radius of the shockwave effect.
+        /// Base radius before stacking.
         base_range: f32,
-        /// Additional radius per stack beyond the first.
+        /// Extra radius per stack.
         range_per_level: f32,
         /// Current stack count (starts at 1, incremented at runtime).
         stacks: u32,
-        /// Expansion speed in world units per second.
+        /// Expansion speed (world units/sec).
         speed: f32,
     },
     /// Bolt passes through N cells before stopping.
@@ -149,108 +152,108 @@ pub enum Effect {
     TiltControl(f32),
     /// Spawns a tethered chain bolt at the anchor bolt's position.
     ChainBolt {
-        /// Maximum distance the chain bolt can travel from its anchor.
+        /// Max distance from anchor bolt.
         tether_distance: f32,
     },
     /// Spawns additional bolts on trigger.
     MultiBolt {
-        /// Base number of extra bolts to spawn.
+        /// Base bolt count before stacking.
         base_count: u32,
-        /// Additional bolts per stack beyond the first.
+        /// Extra bolts per stack.
         count_per_level: u32,
-        /// Current stack count.
+        /// Stack count (starts at 1, incremented at runtime).
         stacks: u32,
     },
     /// Temporary shield protecting the breaker.
     Shield {
-        /// Base duration in seconds.
+        /// Base duration (seconds).
         base_duration: f32,
-        /// Additional duration per stack beyond the first.
+        /// Extra duration per stack (seconds).
         duration_per_level: f32,
-        /// Current stack count.
+        /// Stack count (starts at 1, incremented at runtime).
         stacks: u32,
     },
     /// Deducts a life from the breaker.
     LoseLife,
     /// Applies a time penalty in seconds.
     TimePenalty {
-        /// Duration of the penalty in seconds.
+        /// Penalty duration (seconds).
         seconds: f32,
     },
     /// Spawns additional bolts with configurable parameters.
     SpawnBolts {
-        /// Number of bolts to spawn.
+        /// Bolt spawn count.
         #[serde(default = "default_spawn_bolts_count")]
         count: u32,
-        /// Optional lifespan in seconds (temporary bolts).
+        /// Optional lifespan (seconds); `None` = permanent.
         #[serde(default)]
         lifespan: Option<f32>,
-        /// Whether spawned bolts inherit the parent bolt's velocity.
+        /// Inherit parent bolt velocity.
         #[serde(default)]
         inherit: bool,
     },
     /// Chain lightning arcing between nearby cells.
     ChainLightning {
-        /// Number of arcs from the origin cell.
+        /// Arc count from origin cell.
         arcs: u32,
-        /// Maximum arc range in world units.
+        /// Max arc range (world units).
         range: f32,
         /// Damage multiplier per arc (applied to base bolt damage).
         damage_mult: f32,
     },
     /// Spawns a temporary phantom breaker entity.
     SpawnPhantom {
-        /// How long the phantom persists in seconds.
+        /// Duration (seconds).
         duration: f32,
-        /// Maximum active phantoms at once.
+        /// Max simultaneous instances.
         max_active: u32,
     },
     /// Fires a piercing beam through cells in a line.
     PiercingBeam {
-        /// Damage multiplier for the beam.
+        /// Damage multiplier per arc.
         damage_mult: f32,
-        /// Width of the beam in world units.
+        /// Beam width (world units).
         width: f32,
     },
     /// Creates a gravity well that attracts bolts.
     GravityWell {
-        /// Attraction strength.
+        /// Pull force magnitude.
         strength: f32,
-        /// Duration in seconds.
+        /// Duration (seconds).
         duration: f32,
-        /// Effect radius in world units.
+        /// Effect radius (world units).
         radius: f32,
         /// Maximum active wells at once.
         max: u32,
     },
     /// Temporary invulnerability after bolt loss.
     SecondWind {
-        /// Duration of invulnerability in seconds.
+        /// Invulnerability duration (seconds).
         invuln_secs: f32,
     },
     /// Ramping damage bonus that accumulates per cell hit and resets on breaker bounce.
     RampingDamage {
-        /// Damage bonus added per cell hit.
+        /// Damage bonus per cell hit.
         bonus_per_hit: f32,
     },
     /// Selects a random effect from a weighted pool of `EffectNode` entries.
     RandomEffect(Vec<(f32, EffectNode)>),
     /// Counts cell destructions and fires a random effect from the pool when threshold reached.
     EntropyEngine {
-        /// Number of cell destructions needed before firing.
+        /// Cell destructions before firing.
         threshold: u32,
-        /// Weighted pool of `EffectNode` entries to select from on trigger.
+        /// Weighted pool of effects to choose from.
         pool: Vec<(f32, EffectNode)>,
     },
     /// Shockwave at every active bolt position simultaneously.
     Pulse {
-        /// Base radius of each shockwave.
+        /// Base radius before stacking.
         base_range: f32,
-        /// Additional radius per stack beyond the first.
+        /// Extra radius per stack.
         range_per_level: f32,
-        /// Current stack count.
+        /// Stack count (starts at 1, incremented at runtime).
         stacks: u32,
-        /// Expansion speed in world units per second.
+        /// Expansion speed (world units/sec).
         speed: f32,
     },
 }
@@ -266,7 +269,7 @@ pub enum Effect {
 pub enum EffectNode {
     /// A trigger condition with child nodes evaluated when the trigger fires.
     When {
-        /// The trigger that gates this subtree.
+        /// Condition that gates evaluation.
         trigger: Trigger,
         /// Child nodes evaluated when the trigger fires.
         then: Vec<EffectNode>,
@@ -275,9 +278,9 @@ pub enum EffectNode {
     Do(Effect),
     /// A removal condition — child effects are active until the trigger fires.
     Until {
-        /// The trigger that removes these effects.
+        /// Condition that removes the child effects.
         until: Trigger,
-        /// Child nodes active until the trigger fires.
+        /// Child effects active until the removal trigger fires.
         then: Vec<EffectNode>,
     },
     /// A one-shot wrapper — children fire once and are consumed.
@@ -287,7 +290,7 @@ pub enum EffectNode {
     /// `On` nodes are not evaluated by trigger matching; they are resolved at
     /// dispatch time to determine the entity context for child effects.
     On {
-        /// Which entity type the child effects target.
+        /// Entity type this scope targets.
         target: Target,
         /// Child nodes dispatched against the target entity.
         then: Vec<EffectNode>,
@@ -307,9 +310,9 @@ pub enum EffectNode {
 pub enum RootEffect {
     /// A target-scoped effect chain.
     On {
-        /// Which entity type the child effects target.
+        /// Entity type this chain targets.
         target: Target,
-        /// Child nodes dispatched against the target entity.
+        /// Effect nodes in this chain.
         then: Vec<EffectNode>,
     },
 }
@@ -806,12 +809,12 @@ mod tests {
     }
 
     #[test]
-    fn effect_node_trigger_leaf_on_selected() {
-        let node = EffectNode::trigger_leaf(Trigger::Selected, Effect::Piercing(1));
+    fn effect_node_trigger_leaf_on_perfect_bump() {
+        let node = EffectNode::trigger_leaf(Trigger::PerfectBump, Effect::Piercing(1));
         assert_eq!(
             node,
             EffectNode::When {
-                trigger: Trigger::Selected,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::Piercing(1))]
             }
         );
@@ -901,7 +904,7 @@ mod tests {
     }
 
     #[test]
-    fn trigger_enum_has_all_fourteen_patterns() {
+    fn trigger_enum_has_all_patterns() {
         let triggers = [
             Trigger::PerfectBump,
             Trigger::Bump,
@@ -914,14 +917,23 @@ mod tests {
             Trigger::CellDestroyed,
             Trigger::BoltLost,
             Trigger::Death,
-            Trigger::Selected,
+            Trigger::NoBump,
+            Trigger::PerfectBumped,
+            Trigger::Bumped,
+            Trigger::EarlyBumped,
+            Trigger::LateBumped,
+            Trigger::Impacted(ImpactTarget::Cell),
+            Trigger::Impacted(ImpactTarget::Wall),
+            Trigger::Impacted(ImpactTarget::Breaker),
+            Trigger::Died,
+            Trigger::DestroyedCell,
             Trigger::TimeExpires(1.0),
             Trigger::NodeTimerThreshold(0.25),
         ];
         assert_eq!(
             triggers.len(),
-            14,
-            "all 14 distinguishable trigger patterns"
+            23,
+            "all 23 active trigger patterns (Selected deleted, 5 new targeted triggers added)"
         );
     }
 
@@ -1668,5 +1680,83 @@ mod tests {
     fn target_all_cells_deserializes() {
         let t: Target = ron::de::from_str("AllCells").expect("Target::AllCells RON should parse");
         assert_eq!(t, Target::AllCells);
+    }
+
+    // =========================================================================
+    // New targeted trigger variants — RON deserialization
+    // =========================================================================
+
+    #[test]
+    fn impacted_cell_deserializes_from_ron() {
+        let t: Trigger =
+            ron::de::from_str("Impacted(Cell)").expect("Impacted(Cell) RON should parse");
+        assert_eq!(t, Trigger::Impacted(ImpactTarget::Cell));
+    }
+
+    #[test]
+    fn impacted_wall_deserializes_from_ron() {
+        let t: Trigger =
+            ron::de::from_str("Impacted(Wall)").expect("Impacted(Wall) RON should parse");
+        assert_eq!(t, Trigger::Impacted(ImpactTarget::Wall));
+    }
+
+    #[test]
+    fn impacted_breaker_deserializes_from_ron() {
+        let t: Trigger =
+            ron::de::from_str("Impacted(Breaker)").expect("Impacted(Breaker) RON should parse");
+        assert_eq!(t, Trigger::Impacted(ImpactTarget::Breaker));
+    }
+
+    #[test]
+    fn died_deserializes_from_ron() {
+        let t: Trigger = ron::de::from_str("Died").expect("Died RON should parse");
+        assert_eq!(t, Trigger::Died);
+    }
+
+    #[test]
+    fn destroyed_cell_deserializes_from_ron() {
+        let t: Trigger =
+            ron::de::from_str("DestroyedCell").expect("DestroyedCell RON should parse");
+        assert_eq!(t, Trigger::DestroyedCell);
+    }
+
+    #[test]
+    fn selected_ron_fails_to_parse() {
+        let result = ron::de::from_str::<Trigger>("OnSelected");
+        assert!(
+            result.is_err(),
+            "OnSelected should fail to parse — Selected variant has been removed"
+        );
+    }
+
+    // =========================================================================
+    // New targeted trigger variants — distinctness
+    // =========================================================================
+
+    #[test]
+    fn impacted_is_distinct_from_impact() {
+        assert_ne!(
+            Trigger::Impacted(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Cell),
+            "Impacted(Cell) must be distinct from Impact(Cell)"
+        );
+    }
+
+    #[test]
+    fn died_is_distinct_from_death() {
+        assert_ne!(
+            Trigger::Died,
+            Trigger::Death,
+            "Died must be distinct from Death"
+        );
+    }
+
+    #[test]
+    fn destroyed_cell_is_distinct_from_cell_destroyed() {
+        assert_ne!(
+            Trigger::DestroyedCell,
+            Trigger::CellDestroyed,
+            "DestroyedCell must be distinct from CellDestroyed"
+        );
     }
 }

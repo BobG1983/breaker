@@ -4,5 +4,14 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [When(trigger: OnBoltLost, then: [Do(SpeedBoost(multiplier: 2.0))])])),
+    legendary: Some((
+        prefix: "",
+        effects: [
+            On(target: Breaker, then: [
+                When(trigger: OnBoltLost, then: [
+                    Do(SpeedBoost(multiplier: 2.0)),
+                ]),
+            ]),
+        ],
+    )),
 )

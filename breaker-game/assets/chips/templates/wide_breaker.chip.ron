@@ -1,8 +1,29 @@
 (
     name: "Wide Breaker",
     max_taken: 3,
-    common: Some((prefix: "Slight", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(10.0))])])),
-    uncommon: Some((prefix: "Sturdy", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(20.0))])])),
-    rare: Some((prefix: "Massive", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(30.0))])])),
+    common: Some((
+        prefix: "Slight",
+        effects: [
+            On(target: Breaker, then: [
+                Do(SizeBoost(10.0)),
+            ]),
+        ],
+    )),
+    uncommon: Some((
+        prefix: "Sturdy",
+        effects: [
+            On(target: Breaker, then: [
+                Do(SizeBoost(20.0)),
+            ]),
+        ],
+    )),
+    rare: Some((
+        prefix: "Massive",
+        effects: [
+            On(target: Breaker, then: [
+                Do(SizeBoost(30.0)),
+            ]),
+        ],
+    )),
     legendary: None,
 )

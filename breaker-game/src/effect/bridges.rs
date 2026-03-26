@@ -9,7 +9,7 @@ pub(crate) use super::triggers::*;
 mod tests {
     use bevy::prelude::*;
 
-    use super::{bridge_bump, bridge_cell_death, bridge_cell_impact};
+    use super::{bridge_bump, bridge_cell_death, bridge_cell_destroyed, bridge_cell_impact};
     use crate::{
         bolt::messages::BoltHitCell,
         breaker::{
@@ -23,21 +23,12 @@ mod tests {
         effect::{
             armed::ArmedEffects,
             definition::{Effect, EffectChains, EffectNode, ImpactTarget, Trigger},
+            triggers::test_helpers::*,
             typed_events::*,
         },
     };
 
     // --- Test infrastructure ---
-
-    #[derive(Resource, Default)]
-    struct CapturedShockwaveFired(Vec<ShockwaveFired>);
-
-    fn capture_shockwave_fired(
-        trigger: On<ShockwaveFired>,
-        mut captured: ResMut<CapturedShockwaveFired>,
-    ) {
-        captured.0.push(trigger.event().clone());
-    }
 
     #[derive(Resource)]
     struct SendBump(Option<BumpPerformed>);
@@ -69,23 +60,15 @@ mod tests {
         }
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
-
     // =========================================================================
     // B12b: Bridge evaluation with EffectNode types (behaviors 23-24)
     // =========================================================================
 
     #[test]
-    fn evaluate_node_fires_effect_for_bolt_lost_bridge() {
+    fn evaluate_node_returns_children_for_bolt_lost_bridge() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, evaluate_node},
+            evaluate::evaluate_node,
         };
 
         let node = EffectNode::When {
@@ -100,21 +83,24 @@ mod tests {
         let result = evaluate_node(Trigger::BoltLost, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Fire(Effect::Shockwave {
-                base_range: 32.0,
-                range_per_level: 0.0,
-                stacks: 1,
-                speed: 400.0,
-            })],
-            "bridge_bolt_lost should get Fire(Shockwave) from evaluate_node"
+            Some(
+                vec![EffectNode::Do(Effect::Shockwave {
+                    base_range: 32.0,
+                    range_per_level: 0.0,
+                    stacks: 1,
+                    speed: 400.0,
+                })]
+                .as_slice()
+            ),
+            "bridge_bolt_lost should get children from evaluate_node"
         );
     }
 
     #[test]
-    fn evaluate_node_arms_effect_node_for_bump_bridge_non_leaf() {
+    fn evaluate_node_returns_children_for_bump_bridge_non_leaf() {
         use crate::effect::{
             definition::{Effect, EffectNode, ImpactTarget, Trigger},
-            evaluate::{NodeEvalResult, evaluate_node},
+            evaluate::evaluate_node,
         };
 
         let inner_node = EffectNode::When {
@@ -133,16 +119,16 @@ mod tests {
         let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Arm(inner_node)],
-            "PerfectBump with non-leaf child should Arm the inner node"
+            Some(vec![inner_node].as_slice()),
+            "PerfectBump with non-leaf child should return the inner node as child"
         );
     }
 
     #[test]
-    fn evaluate_node_no_match_for_wrong_trigger() {
+    fn evaluate_node_none_for_wrong_trigger() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, evaluate_node},
+            evaluate::evaluate_node,
         };
 
         let node = EffectNode::When {
@@ -150,7 +136,7 @@ mod tests {
             then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
         };
         let result = evaluate_node(Trigger::PerfectBump, &node);
-        assert_eq!(result, vec![NodeEvalResult::NoMatch]);
+        assert_eq!(result, None);
     }
 
     // =========================================================================
@@ -220,6 +206,98 @@ mod tests {
         assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
     }
 
+    // =========================================================================
+    // H4: Multiple bridges fire from a single BumpPerformed
+    // =========================================================================
+
+    #[test]
+    fn multiple_bridges_fire_from_single_bump_performed() {
+        use super::{bridge_bumped, bridge_perfect_bump, bridge_perfect_bumped};
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BumpPerformed>()
+            .insert_resource(SendBump(None))
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(
+                FixedUpdate,
+                (
+                    send_bump,
+                    // All four bump bridges run in sequence
+                    bridge_bump,
+                    bridge_perfect_bump,
+                    bridge_bumped,
+                    bridge_perfect_bumped,
+                )
+                    .chain(),
+            );
+
+        // Bolt with When(Bumped) and When(PerfectBumped) on EffectChains
+        let bolt = app
+            .world_mut()
+            .spawn(EffectChains(wrap_chains(vec![
+                EffectNode::trigger_leaf(
+                    Trigger::Bumped,
+                    Effect::test_shockwave(16.0),
+                ),
+                EffectNode::trigger_leaf(
+                    Trigger::PerfectBumped,
+                    Effect::test_shockwave(8.0),
+                ),
+            ])))
+            .id();
+
+        // Breaker with When(Bump) and When(PerfectBump) on EffectChains
+        app.world_mut().spawn((
+            Breaker,
+            EffectChains(wrap_chains(vec![
+                EffectNode::trigger_leaf(
+                    Trigger::Bump,
+                    Effect::test_shockwave(64.0),
+                ),
+                EffectNode::trigger_leaf(
+                    Trigger::PerfectBump,
+                    Effect::test_shockwave(32.0),
+                ),
+            ])),
+        ));
+
+        // Single BumpPerformed with Perfect grade
+        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+        });
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        // Expect 4 firings:
+        // - bridge_bump: breaker's When(Bump) fires (64.0)
+        // - bridge_perfect_bump: breaker's When(PerfectBump) fires (32.0)
+        // - bridge_bumped: bolt's When(Bumped) fires (16.0)
+        // - bridge_perfect_bumped: bolt's When(PerfectBumped) fires (8.0)
+        assert_eq!(
+            captured.0.len(),
+            4,
+            "4 ShockwaveFired events expected — Bump(64), PerfectBump(32), \
+             Bumped(16), PerfectBumped(8) — got {}",
+            captured.0.len()
+        );
+
+        // Verify all 4 ranges are present
+        let mut ranges: Vec<u32> = captured
+            .0
+            .iter()
+            .map(|s| s.base_range as u32)
+            .collect();
+        ranges.sort();
+        assert_eq!(
+            ranges,
+            vec![8, 16, 32, 64],
+            "expected ranges [8, 16, 32, 64] — got {ranges:?}"
+        );
+    }
+
     #[test]
     fn full_three_step_chain_bump_arms_impact_rearms_cell_destroyed_fires() {
         // Pre-arm bolt with a 2-step chain (Impact(Cell) -> CellDestroyed -> Shockwave)
@@ -245,6 +323,7 @@ mod tests {
                     bridge_cell_impact,
                     send_cell_destroyed,
                     bridge_cell_death,
+                    bridge_cell_destroyed,
                 )
                     .chain(),
             );

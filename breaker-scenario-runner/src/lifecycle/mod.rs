@@ -85,7 +85,8 @@ pub struct ScenarioInputDriver(pub InputDriver);
 ///
 /// Runs once at scenario startup.
 pub fn init_scenario_input(config: Res<ScenarioConfig>, mut commands: Commands) {
-    let driver = InputDriver::from_strategy(&config.definition.input);
+    let seed = config.definition.seed.unwrap_or(0);
+    let driver = InputDriver::from_strategy(&config.definition.input, seed);
     commands.insert_resource(ScenarioInputDriver(driver));
 }
 
@@ -673,14 +674,17 @@ fn apply_inject_duplicate_offers(
 ) {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{Effect, EffectNode},
+        effect::{Effect, EffectNode, RootEffect, Target},
     };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![EffectNode::Do(Effect::Piercing(1))],
+        effects: vec![RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(Effect::Piercing(1))],
+        }],
         ingredients: None,
         template_name: None,
     };
@@ -705,14 +709,17 @@ fn apply_inject_maxed_chip_offer(
 ) {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{Effect, EffectNode},
+        effect::{Effect, EffectNode, RootEffect, Target},
     };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 1,
-        effects: vec![EffectNode::Do(Effect::Piercing(1))],
+        effects: vec![RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(Effect::Piercing(1))],
+        }],
         ingredients: None,
         template_name: None,
     };

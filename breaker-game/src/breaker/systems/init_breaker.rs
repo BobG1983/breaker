@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn effect_node_pass_through_bolt_lost_fires_correctly() {
-        use crate::effect::evaluate::{NodeEvalResult, evaluate_node};
+        use crate::effect::evaluate::evaluate_node;
 
         // After migration, init_breaker pushes EffectNode directly
         let node = EffectNode::When {
@@ -401,14 +401,14 @@ mod tests {
         let result = evaluate_node(Trigger::BoltLost, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Fire(Effect::LoseLife)],
-            "pass-through EffectNode should evaluate to Fire(LoseLife) on BoltLost"
+            Some(vec![EffectNode::Do(Effect::LoseLife)].as_slice()),
+            "pass-through EffectNode should return children on BoltLost"
         );
     }
 
     #[test]
     fn effect_node_pass_through_perfect_bump_fires_correctly() {
-        use crate::effect::evaluate::{NodeEvalResult, evaluate_node};
+        use crate::effect::evaluate::evaluate_node;
 
         let node = EffectNode::When {
             trigger: Trigger::PerfectBump,
@@ -417,14 +417,14 @@ mod tests {
         let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
-            vec![NodeEvalResult::Fire(Effect::SpeedBoost { multiplier: 1.5 })],
-            "pass-through EffectNode should evaluate to Fire(SpeedBoost) on PerfectBump"
+            Some(vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })].as_slice()),
+            "pass-through EffectNode should return children on PerfectBump"
         );
     }
 
     #[test]
     fn effect_node_pass_through_chains_field_evaluates_correctly() {
-        use crate::effect::evaluate::{NodeEvalResult, evaluate_node};
+        use crate::effect::evaluate::evaluate_node;
 
         // chains field entries are already full EffectNode trees — verify evaluation
         let node = EffectNode::When {
@@ -435,16 +435,17 @@ mod tests {
             }],
         };
         let result = evaluate_node(Trigger::PerfectBump, &node);
-        assert_eq!(result.len(), 1);
+        let children = result.expect("should match PerfectBump");
+        assert_eq!(children.len(), 1);
         assert!(
             matches!(
-                &result[0],
-                NodeEvalResult::Arm(EffectNode::When {
+                &children[0],
+                EffectNode::When {
                     trigger: Trigger::Impact(..),
                     ..
-                })
+                }
             ),
-            "nested EffectNode should arm on first trigger match"
+            "nested EffectNode should be returned as child on first trigger match"
         );
     }
 }

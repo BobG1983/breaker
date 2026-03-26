@@ -1,8 +1,30 @@
 (
     name: "Chain Hit",
     max_taken: 3,
-    common: Some((prefix: "Linked", effects: [When(trigger: OnSelected, then: [Do(ChainHit(1))])])),
-    uncommon: Some((prefix: "Branching", effects: [When(trigger: OnSelected, then: [Do(ChainHit(2))])])),
-    rare: Some((prefix: "Arcing", effects: [When(trigger: OnSelected, then: [Do(ChainHit(3)), Do(DamageBoost(0.05))])])),
+    common: Some((
+        prefix: "Linked",
+        effects: [
+            On(target: Bolt, then: [
+                Do(ChainHit(1)),
+            ]),
+        ],
+    )),
+    uncommon: Some((
+        prefix: "Branching",
+        effects: [
+            On(target: Bolt, then: [
+                Do(ChainHit(2)),
+            ]),
+        ],
+    )),
+    rare: Some((
+        prefix: "Arcing",
+        effects: [
+            On(target: Bolt, then: [
+                Do(ChainHit(3)),
+                Do(DamageBoost(0.05)),
+            ]),
+        ],
+    )),
     legendary: None,
 )

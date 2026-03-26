@@ -3,7 +3,13 @@
     description: "Destroying cells creates gravity wells that pull bolts toward the destruction point",
     rarity: Evolution,
     max_stacks: 1,
-    effects: [When(trigger: OnCellDestroyed, then: [Do(GravityWell(strength: 500.0, duration: 3.0, radius: 128.0, max: 2))])],
+    effects: [
+        On(target: Bolt, then: [
+            When(trigger: DestroyedCell, then: [
+                Do(GravityWell(strength: 500.0, duration: 3.0, radius: 128.0, max: 2)),
+            ]),
+        ]),
+    ],
     ingredients: Some([
         (chip_name: "Bolt Size", stacks_required: 2),
         (chip_name: "Magnetism", stacks_required: 2),
