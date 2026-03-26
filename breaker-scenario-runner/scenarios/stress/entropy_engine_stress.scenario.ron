@@ -1,0 +1,31 @@
+// Adversarial: EntropyEngine fires every 3rd cell destruction (lower threshold than the
+// actual chip to maximise trigger frequency). Pool contains SpawnBolts and Shockwave with
+// equal weight — random selection means either effect fires each time. Dense layout drives
+// rapid destructions. If the counter state leaks between bolts or random effect cleanup
+// fails, NoEntityLeaks or BoltCountReasonable will fire. Stress: 32 runs.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((
+        seed: 4242,
+        action_prob: 0.5,
+    )),
+    max_frames: 8000,
+    invariants: [BoltCountReasonable, NoEntityLeaks, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 12),
+    allow_early_end: false,
+    stress: Some((runs: 32, parallelism: 32)),
+    initial_overclocks: Some([
+        When(trigger: DestroyedCell, then: [
+            Do(EntropyEngine(
+                threshold: 3,
+                pool: [
+                    (0.5, Do(SpawnBolts(count: 1, lifespan: Some(2.0), inherit: false))),
+                    (0.5, Do(Shockwave(base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                ],
+            )),
+        ]),
+    ]),
+)

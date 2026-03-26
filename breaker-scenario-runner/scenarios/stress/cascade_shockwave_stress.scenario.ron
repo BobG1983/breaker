@@ -1,0 +1,24 @@
+// Adversarial: Shockwave fires on every cell destruction. Dense layout means many simultaneous
+// destructions can occur in a single frame — this races the shockwave entity spawn, expansion,
+// cleanup cycle against the entity leak detector. If despawn is missed under rapid-fire
+// DestroyedCell events NoEntityLeaks fires. Also exercises NaN propagation when shockwave
+// position is derived from a just-destroyed cell entity. Stress: 32 runs.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((
+        seed: 9999,
+        action_prob: 0.6,
+    )),
+    max_frames: 8000,
+    invariants: [NoEntityLeaks, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: Some((runs: 32, parallelism: 32)),
+    initial_overclocks: Some([
+        When(trigger: DestroyedCell, then: [
+            Do(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
+        ]),
+    ]),
+)

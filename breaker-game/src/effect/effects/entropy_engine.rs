@@ -160,6 +160,53 @@ mod tests {
     }
 
     // =========================================================================
+    // M8: Basic test with single-entry shockwave pool, threshold 1
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct CapturedShockwaveEE(Vec<crate::effect::typed_events::ShockwaveFired>);
+
+    fn capture_shockwave_ee(
+        trigger: On<crate::effect::typed_events::ShockwaveFired>,
+        mut captured: ResMut<CapturedShockwaveEE>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    /// M8: EntropyEngine with threshold 1 and single-entry shockwave pool fires
+    /// ShockwaveFired(64.0) on first trigger. Counter reaches threshold immediately.
+    #[test]
+    fn handle_entropy_engine_fires_shockwave_at_threshold_one() {
+        let mut app = test_app();
+        app.insert_resource(GameRng::from_seed(42));
+        app.insert_resource(EntropyEngineCounter { count: 0 });
+        app.init_resource::<CapturedShockwaveEE>()
+            .add_observer(capture_shockwave_ee);
+
+        app.world_mut().commands().trigger(EntropyEngineFired {
+            threshold: 1,
+            pool: vec![(1.0, EffectNode::Do(Effect::test_shockwave(64.0)))],
+            targets: vec![],
+            source_chip: Some("Entropy Engine".to_owned()),
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedShockwaveEE>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "threshold 1 with count 0: counter increments to 1, reaches threshold — should fire"
+        );
+        assert!(
+            (captured.0[0].base_range - 64.0).abs() < f32::EPSILON,
+            "ShockwaveFired base_range should be 64.0"
+        );
+
+        let counter = app.world().resource::<EntropyEngineCounter>();
+        assert_eq!(counter.count, 0, "counter should reset to 0 after firing");
+    }
+
+    // =========================================================================
     // Behavior 6: below threshold does not fire
     // =========================================================================
 

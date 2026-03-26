@@ -1,0 +1,27 @@
+// Adversarial: ChainBolt spawns a tethered bolt on every cell impact after a PerfectBumped.
+// Scatter layout spreads cells so tether distance constraints are exercised at various gap
+// widths. If tethered bolts don't despawn correctly or the DistanceConstraint system corrupts
+// positions under rapid spawn-despawn cycles, BoltCountReasonable, NoEntityLeaks, BoltInBounds,
+// or NoNaN will fire. Stress: 16 runs to explore different scatter layouts.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((
+        seed: 8080,
+        action_prob: 0.6,
+    )),
+    max_frames: 5000,
+    invariants: [BoltCountReasonable, NoEntityLeaks, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 12),
+    allow_early_end: false,
+    stress: Some((runs: 16, parallelism: 16)),
+    initial_overclocks: Some([
+        When(trigger: PerfectBumped, then: [
+            When(trigger: Impacted(Cell), then: [
+                Do(ChainBolt(tether_distance: 120.0)),
+            ]),
+        ]),
+    ]),
+)

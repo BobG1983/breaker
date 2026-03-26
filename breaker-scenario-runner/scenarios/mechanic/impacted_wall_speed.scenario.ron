@@ -1,0 +1,24 @@
+// Adversarial: SpeedBoost fires on every wall impact. Corridor layout maximises wall bounces
+// — the bolt ricochets between parallel walls continuously, triggering SpeedBoost on every
+// single reflection. Over 8000 frames at 0.3 action_prob this accumulates many boost
+// applications. BoltSpeedInRange verifies that the configured min/max clamp holds across
+// hundreds of wall-triggered boosts. If the clamp is missed for any wall-triggered path,
+// this scenario will catch it while corridor geometry guarantees near-continuous triggering.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((
+        seed: 2718,
+        action_prob: 0.3,
+    )),
+    max_frames: 8000,
+    invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    initial_overclocks: Some([
+        When(trigger: Impacted(Wall), then: [
+            Do(SpeedBoost(multiplier: 1.1)),
+        ]),
+    ]),
+)

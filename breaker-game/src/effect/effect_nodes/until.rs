@@ -1117,6 +1117,66 @@ mod tests {
     // Vec-based Until reversal — Piercing, SizeBoost, BumpForce
     // =========================================================================
 
+    // --- M11: Trigger-based Until reversal for Piercing via check_until_triggers ---
+
+    /// M11: Bolt with ActivePiercings(vec![2, 1]) and UntilTriggers entry
+    /// { trigger: Impact(Cell), children: [Do(Piercing(2))] }. On BoltHitCell,
+    /// check_until_triggers removes the matching entry (value 2) from ActivePiercings.
+    #[test]
+    fn check_until_triggers_removes_piercing_from_active_piercings() {
+        use crate::bolt::messages::BoltHitCell;
+
+        #[derive(Resource)]
+        struct SendCellMsg(Option<BoltHitCell>);
+
+        fn enqueue_cell(msg: Res<SendCellMsg>, mut writer: MessageWriter<BoltHitCell>) {
+            if let Some(m) = msg.0.clone() {
+                writer.write(m);
+            }
+        }
+
+        let mut app = test_app();
+        app.add_message::<BoltHitCell>();
+        app.add_systems(FixedUpdate, (enqueue_cell, check_until_triggers).chain());
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                ActivePiercings(vec![2, 1]),
+                UntilTriggers(vec![UntilTriggerEntry {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    children: vec![EffectNode::Do(Effect::Piercing(2))],
+                }]),
+            ))
+            .id();
+
+        let cell = app.world_mut().spawn_empty().id();
+        app.insert_resource(SendCellMsg(Some(BoltHitCell { cell, bolt })));
+
+        tick(&mut app);
+
+        // The entry matching value 2 should be removed, leaving [1]
+        let piercings = app
+            .world()
+            .get::<ActivePiercings>(bolt)
+            .expect("bolt should have ActivePiercings");
+        assert_eq!(
+            piercings.0,
+            vec![1],
+            "ActivePiercings should be [1] after removing matching entry 2, got {:?}",
+            piercings.0
+        );
+
+        // UntilTriggers entry should be consumed
+        let triggers = app.world().get::<UntilTriggers>(bolt);
+        assert!(
+            triggers.is_none() || triggers.unwrap().0.is_empty(),
+            "UntilTriggers entry should be removed after trigger match"
+        );
+    }
+
     // --- Test 13: Timer expiry removes piercing entry from ActivePiercings ---
 
     #[test]

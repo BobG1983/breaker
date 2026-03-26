@@ -1,0 +1,30 @@
+// Adversarial: 4-deep trigger chain mimicking Supernova: PerfectBumped -> Impacted(Cell)
+// -> DestroyedCell -> MultiBolt + Shockwave. Each chain link requires an independent event
+// to resolve — this stresses the arm/resolve cycle across four trigger depths. Dense layout
+// maximises cell destruction events. If MultiBolt entity cleanup fails or NaN propagates
+// through the chain, BoltCountReasonable/NoEntityLeaks/NoNaN fire. Stress: 16 runs.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((
+        seed: 1337,
+        action_prob: 0.6,
+    )),
+    max_frames: 8000,
+    invariants: [BoltCountReasonable, NoEntityLeaks, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 20),
+    allow_early_end: false,
+    stress: Some((runs: 16, parallelism: 16)),
+    initial_overclocks: Some([
+        When(trigger: PerfectBumped, then: [
+            When(trigger: Impacted(Cell), then: [
+                When(trigger: DestroyedCell, then: [
+                    Do(MultiBolt(base_count: 1, count_per_level: 0, stacks: 1)),
+                    Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
+                ]),
+            ]),
+        ]),
+    ]),
+)

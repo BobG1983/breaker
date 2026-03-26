@@ -582,6 +582,225 @@ mod tests {
     }
 
     // =========================================================================
+    // M10: fire_typed_event dispatches all Effect variants via observers
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct CapturedChainBolt(Vec<ChainBoltFired>);
+
+    fn capture_chain_bolt(
+        trigger: On<ChainBoltFired>,
+        mut captured: ResMut<CapturedChainBolt>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedMultiBolt(Vec<MultiBoltFired>);
+
+    fn capture_multi_bolt(
+        trigger: On<MultiBoltFired>,
+        mut captured: ResMut<CapturedMultiBolt>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedShield(Vec<ShieldFired>);
+
+    fn capture_shield(trigger: On<ShieldFired>, mut captured: ResMut<CapturedShield>) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedLoseLife(Vec<LoseLifeFired>);
+
+    fn capture_lose_life(trigger: On<LoseLifeFired>, mut captured: ResMut<CapturedLoseLife>) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedTimePenalty(Vec<TimePenaltyFired>);
+
+    fn capture_time_penalty(
+        trigger: On<TimePenaltyFired>,
+        mut captured: ResMut<CapturedTimePenalty>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    #[derive(Resource, Default)]
+    struct CapturedSpawnBolts(Vec<SpawnBoltsFired>);
+
+    fn capture_spawn_bolts(
+        trigger: On<SpawnBoltsFired>,
+        mut captured: ResMut<CapturedSpawnBolts>,
+    ) {
+        captured.0.push(trigger.event().clone());
+    }
+
+    /// M10: fire_typed_event dispatches ChainBolt into ChainBoltFired observer.
+    #[test]
+    fn fire_typed_event_dispatches_chain_bolt() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedChainBolt>()
+            .add_observer(capture_chain_bolt);
+
+        let effect = Effect::ChainBolt {
+            tether_distance: 100.0,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(effect, vec![], None, &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedChainBolt>();
+        assert_eq!(captured.0.len(), 1, "ChainBolt should dispatch ChainBoltFired");
+        assert!(
+            (captured.0[0].tether_distance - 100.0).abs() < f32::EPSILON,
+            "tether_distance should be 100.0"
+        );
+    }
+
+    /// M10: fire_typed_event dispatches MultiBolt into MultiBoltFired observer.
+    #[test]
+    fn fire_typed_event_dispatches_multi_bolt() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedMultiBolt>()
+            .add_observer(capture_multi_bolt);
+
+        let effect = Effect::MultiBolt {
+            base_count: 2,
+            count_per_level: 0,
+            stacks: 1,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(effect, vec![], None, &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedMultiBolt>();
+        assert_eq!(captured.0.len(), 1, "MultiBolt should dispatch MultiBoltFired");
+        assert_eq!(captured.0[0].base_count, 2);
+        assert_eq!(captured.0[0].count_per_level, 0);
+        assert_eq!(captured.0[0].stacks, 1);
+    }
+
+    /// M10: fire_typed_event dispatches Shield into ShieldFired observer.
+    #[test]
+    fn fire_typed_event_dispatches_shield() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedShield>()
+            .add_observer(capture_shield);
+
+        let effect = Effect::Shield {
+            base_duration: 3.0,
+            duration_per_level: 0.0,
+            stacks: 1,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(effect, vec![], None, &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedShield>();
+        assert_eq!(captured.0.len(), 1, "Shield should dispatch ShieldFired");
+        assert!((captured.0[0].base_duration - 3.0).abs() < f32::EPSILON);
+        assert_eq!(captured.0[0].stacks, 1);
+    }
+
+    /// M10: fire_typed_event dispatches LoseLife into LoseLifeFired observer.
+    #[test]
+    fn fire_typed_event_dispatches_lose_life() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedLoseLife>()
+            .add_observer(capture_lose_life);
+
+        let effect = Effect::LoseLife;
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(effect, vec![], None, &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedLoseLife>();
+        assert_eq!(captured.0.len(), 1, "LoseLife should dispatch LoseLifeFired");
+    }
+
+    /// M10: fire_typed_event dispatches TimePenalty into TimePenaltyFired observer.
+    #[test]
+    fn fire_typed_event_dispatches_time_penalty() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedTimePenalty>()
+            .add_observer(capture_time_penalty);
+
+        let effect = Effect::TimePenalty { seconds: 5.0 };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(effect, vec![], None, &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedTimePenalty>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "TimePenalty should dispatch TimePenaltyFired"
+        );
+        assert!((captured.0[0].seconds - 5.0).abs() < f32::EPSILON);
+    }
+
+    /// M10: fire_typed_event dispatches SpawnBolts into SpawnBoltsFired observer.
+    #[test]
+    fn fire_typed_event_dispatches_spawn_bolts() {
+        use super::super::definition::Effect;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.init_resource::<CapturedSpawnBolts>()
+            .add_observer(capture_spawn_bolts);
+
+        let effect = Effect::SpawnBolts {
+            count: 1,
+            lifespan: None,
+            inherit: false,
+        };
+        app.world_mut().commands().queue(move |world: &mut World| {
+            let mut commands = world.commands();
+            fire_typed_event(effect, vec![], None, &mut commands);
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedSpawnBolts>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "SpawnBolts should dispatch SpawnBoltsFired"
+        );
+        assert_eq!(captured.0[0].count, 1);
+        assert_eq!(captured.0[0].lifespan, None);
+        assert!(!captured.0[0].inherit);
+    }
+
+    // =========================================================================
     // Preserved: passive event construction tests
     // =========================================================================
 

@@ -150,6 +150,38 @@ mod tests {
     }
 
     // =========================================================================
+    // M9: Basic test — single-entry shockwave pool fires ShockwaveFired
+    // =========================================================================
+
+    /// M9: RandomEffect with single-entry Shockwave(64.0) pool fires
+    /// ShockwaveFired(64.0) deterministically.
+    #[test]
+    fn handle_random_effect_fires_shockwave_from_single_entry() {
+        let mut app = test_app();
+        app.insert_resource(GameRng::from_seed(42));
+        app.init_resource::<CapturedShockwave>()
+            .add_observer(capture_shockwave);
+
+        app.world_mut().commands().trigger(RandomEffectFired {
+            pool: vec![(1.0, EffectNode::Do(Effect::test_shockwave(64.0)))],
+            targets: vec![],
+            source_chip: None,
+        });
+        app.world_mut().flush();
+
+        let captured = app.world().resource::<CapturedShockwave>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "single-entry shockwave pool should fire exactly one ShockwaveFired"
+        );
+        assert!(
+            (captured.0[0].base_range - 64.0).abs() < f32::EPSILON,
+            "ShockwaveFired base_range should be 64.0"
+        );
+    }
+
+    // =========================================================================
     // Behavior 7: handle_random_effect selects from weighted pool and fires leaf
     // =========================================================================
 

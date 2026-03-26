@@ -1,0 +1,23 @@
+// Adversarial: SpeedBoost fires on every PerfectBumped event. High action_prob (0.9) maximises
+// bump attempts. After repeated speed boosts the bolt speed must remain within configured
+// min/max — if the clamp system fails to cap multiplicative stacking this scenario will expose it.
+// Stress: 32 independent seeds to explore diverse execution paths.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((
+        seed: 2048,
+        action_prob: 0.9,
+    )),
+    max_frames: 10000,
+    invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: Some((runs: 32, parallelism: 32)),
+    initial_overclocks: Some([
+        When(trigger: PerfectBumped, then: [
+            Do(SpeedBoost(multiplier: 1.3)),
+        ]),
+    ]),
+)
