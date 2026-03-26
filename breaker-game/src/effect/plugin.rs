@@ -6,14 +6,8 @@ use super::{
     effect_nodes::until::{check_until_triggers, tick_until_timers},
     effects,
     sets::EffectSystems,
-    triggers::{
-        bridge_bolt_death, bridge_bolt_lost, bridge_breaker_impact, bridge_bump, bridge_bump_whiff,
-        bridge_cell_death, bridge_cell_impact, bridge_no_bump, bridge_timer_threshold,
-        bridge_wall_impact, cleanup_destroyed_bolts, cleanup_destroyed_cells,
-    },
 };
 use crate::{
-    bolt::BoltSystems,
     breaker::{
         BreakerRegistry, BreakerSystems,
         systems::{apply_breaker_config_overrides, init_breaker},
@@ -67,6 +61,9 @@ impl Plugin for EffectPlugin {
         effects::tilt_control_boost::register(app);
         effects::attraction::register(app);
 
+        // ── Trigger bridge registration ────────────────────────────────
+        super::triggers::register(app);
+
         app
             // Init systems — run on entering Playing state
             .add_systems(
@@ -79,49 +76,10 @@ impl Plugin for EffectPlugin {
                         .after(UiSystems::SpawnTimerHud),
                 ),
             )
-            // Bridge systems — each reads one message type, run in parallel
-            .add_systems(
-                FixedUpdate,
-                (
-                    bridge_bolt_lost
-                        .after(BoltSystems::BoltLost)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_bump
-                        .after(BreakerSystems::GradeBump)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_bump_whiff
-                        .after(BreakerSystems::GradeBump)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_cell_impact
-                        .after(BoltSystems::BreakerCollision)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_breaker_impact
-                        .after(BoltSystems::BreakerCollision)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_wall_impact
-                        .after(BoltSystems::BreakerCollision)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_no_bump
-                        .after(bridge_breaker_impact)
-                        .after(bridge_bump)
-                        .in_set(EffectSystems::Bridge),
-                    bridge_cell_death.in_set(EffectSystems::Bridge),
-                    bridge_bolt_death.in_set(EffectSystems::Bridge),
-                    bridge_timer_threshold.in_set(EffectSystems::Bridge),
-                )
-                    .run_if(in_state(PlayingState::Active)),
-            )
             // Until timer/trigger systems
             .add_systems(
                 FixedUpdate,
                 (tick_until_timers, check_until_triggers)
-                    .after(EffectSystems::Bridge)
-                    .run_if(in_state(PlayingState::Active)),
-            )
-            // Cleanup systems — despawn entities after bridges evaluate
-            .add_systems(
-                FixedUpdate,
-                (cleanup_destroyed_cells, cleanup_destroyed_bolts)
                     .after(EffectSystems::Bridge)
                     .run_if(in_state(PlayingState::Active)),
             );

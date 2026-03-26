@@ -12,9 +12,9 @@ use crate::{
         systems::{
             apply_attraction, apply_entity_scale_to_bolt, bolt_breaker_collision,
             bolt_cell_collision, bolt_lost, bolt_scale_visual, break_chain_on_bolt_lost,
-            clamp_bolt_to_playfield, despawn_second_wind_wall, hover_bolt, init_bolt_params,
-            launch_bolt, manage_attraction_types, prepare_bolt_velocity, reset_bolt,
-            spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text, spawn_chain_bolt,
+            clamp_bolt_to_playfield, cleanup_destroyed_bolts, despawn_second_wind_wall, hover_bolt,
+            init_bolt_params, launch_bolt, manage_attraction_types, prepare_bolt_velocity,
+            reset_bolt, spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text, spawn_chain_bolt,
             tick_bolt_lifespan,
         },
     },
@@ -98,6 +98,8 @@ impl Plugin for BoltPlugin {
                     despawn_second_wind_wall.after(bolt_cell_collision),
                     // Tick bolt lifespan timers and request destruction on expiry
                     tick_bolt_lifespan.before(BoltSystems::BoltLost),
+                    // Cleanup destroyed bolts after effect bridges evaluate
+                    cleanup_destroyed_bolts.after(EffectSystems::Bridge),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

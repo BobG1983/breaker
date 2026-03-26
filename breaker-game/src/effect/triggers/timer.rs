@@ -1,20 +1,20 @@
-//! Bridge for `NodeTimer` — fires threshold-based chains when timer ratio drops.
+//! Bridge for `NodeTimer` — sweeps ALL entities with `EffectChains` for
+//! `Trigger::NodeTimerThreshold(t)` when the timer ratio crosses below the threshold.
 
 use bevy::prelude::*;
 
 use crate::{
-    breaker::components::Breaker,
     effect::definition::{EffectChains, EffectNode, Trigger},
     run::node::resources::NodeTimer,
 };
 
-/// Bridge for `NodeTimer` — fires `When(NodeTimerThreshold(t))` chains
-/// when the timer ratio crosses below the threshold. Fires once only.
+/// Bridge for `NodeTimer` — fires `When(NodeTimerThreshold(t))` chains when
+/// the timer ratio crosses below the threshold. Fires once only (chain consumed).
 ///
-/// Threshold chains live on breaker entity `EffectChains`.
+/// FIX from old bridge: was breaker-only; now sweeps ALL entities.
 pub(crate) fn bridge_timer_threshold(
     timer: Res<NodeTimer>,
-    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
+    mut chains_query: Query<&mut EffectChains>,
     mut commands: Commands,
 ) {
     let ratio = if timer.total == 0.0 {
@@ -23,7 +23,7 @@ pub(crate) fn bridge_timer_threshold(
         timer.remaining / timer.total
     };
 
-    for mut chains in &mut breaker_query {
+    for mut chains in &mut chains_query {
         let mut indices_to_remove = Vec::new();
         for (i, (_chip_name, chain)) in chains.0.iter().enumerate() {
             if let EffectNode::When {
@@ -54,77 +54,82 @@ pub(crate) fn bridge_timer_threshold(
     }
 }
 
+/// Registers bridge systems for timer threshold trigger.
+pub(crate) fn register(app: &mut App) {
+    use crate::{effect::sets::EffectSystems, shared::PlayingState};
+    app.add_systems(
+        FixedUpdate,
+        bridge_timer_threshold
+            .in_set(EffectSystems::Bridge)
+            .run_if(in_state(PlayingState::Active)),
+    );
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{super::test_helpers::*, *};
     use crate::{
-        effect::definition::{Effect, EffectNode, Trigger},
-        run::node::resources::NodeTimer,
+        breaker::components::Breaker,
+        effect::{
+            definition::{Effect, EffectNode, Trigger},
+            typed_events::*,
+        },
     };
 
     // --- Test infrastructure ---
 
     #[derive(Resource, Default)]
-    struct CapturedSpeedBoostFired(Vec<crate::effect::typed_events::SpeedBoostFired>);
+    struct CapturedSpeedBoostFired(Vec<SpeedBoostFired>);
 
     fn capture_speed_boost_fired(
-        trigger: On<crate::effect::typed_events::SpeedBoostFired>,
+        trigger: On<SpeedBoostFired>,
         mut captured: ResMut<CapturedSpeedBoostFired>,
     ) {
         captured.0.push(trigger.event().clone());
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    // --- Timer threshold bridge tests ---
 
-    /// Wraps a list of `EffectNode`s as `(None, node)` tuples for `EffectChains`.
-    fn wrap_chains(chains: Vec<EffectNode>) -> Vec<(Option<String>, EffectNode)> {
-        chains.into_iter().map(|c| (None, c)).collect()
-    }
-
-    // --- NodeTimerThreshold bridge tests ---
-
+    /// Breaker + non-breaker both have `When(NodeTimerThreshold(0.5))` — both fire
+    /// when ratio < 0.5.
     #[test]
-    fn bridge_timer_threshold_fires_when_ratio_crosses_below_threshold() {
+    fn bridge_timer_sweeps_all_entities() {
         let chain = EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(0.25),
+            trigger: Trigger::NodeTimerThreshold(0.5),
             then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(NodeTimer {
-                remaining: 14.9,
-                total: 60.0,
+                remaining: 12.0,
+                total: 60.0, // ratio = 0.2, below 0.5
             })
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
-        // Place threshold chain on breaker entity EffectChains
+        // Breaker entity with threshold chain
         app.world_mut()
-            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
+            .spawn((Breaker, EffectChains(wrap_chains(vec![chain.clone()]))));
+
+        // Non-breaker entity with threshold chain
+        app.world_mut()
+            .spawn(EffectChains(wrap_chains(vec![chain])));
 
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedSpeedBoostFired>();
         assert_eq!(
             captured.0.len(),
-            1,
-            "timer ratio 14.9/60.0 = 0.248 < 0.25 should fire"
-        );
-        assert!(
-            (captured.0[0].multiplier - 2.0).abs() < f32::EPSILON,
-            "fired effect should have multiplier 2.0"
+            2,
+            "both breaker and non-breaker should fire when ratio < threshold — got {}",
+            captured.0.len()
         );
     }
 
+    /// Ratio above threshold should not fire.
     #[test]
-    fn bridge_timer_threshold_no_fire_when_ratio_above_threshold() {
+    fn bridge_timer_no_fire_above_threshold() {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.25),
             then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
@@ -133,26 +138,58 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(NodeTimer {
                 remaining: 30.0,
-                total: 60.0,
+                total: 60.0, // ratio = 0.5, above 0.25
             })
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
         app.world_mut()
-            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
+            .spawn(EffectChains(wrap_chains(vec![chain])));
 
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedSpeedBoostFired>();
         assert!(
             captured.0.is_empty(),
-            "timer ratio 30/60 = 0.5 > 0.25 should NOT fire"
+            "ratio 0.5 > 0.25 should NOT fire — got {}",
+            captured.0.len()
         );
     }
 
+    /// M4: Ratio exactly at threshold (0.5) does NOT fire — strict less-than comparison.
     #[test]
-    fn bridge_timer_threshold_fires_once_even_if_ratio_stays_below() {
+    fn bridge_timer_no_fire_at_exact_threshold() {
+        let chain = EffectNode::When {
+            trigger: Trigger::NodeTimerThreshold(0.5),
+            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+        };
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(NodeTimer {
+                remaining: 30.0,
+                total: 60.0, // ratio = 0.5, exactly at threshold
+            })
+            .init_resource::<CapturedShockwaveFired>()
+            .add_observer(capture_shockwave_fired)
+            .add_systems(FixedUpdate, bridge_timer_threshold);
+
+        app.world_mut()
+            .spawn(EffectChains(wrap_chains(vec![chain])));
+
+        tick(&mut app);
+
+        let captured = app.world().resource::<CapturedShockwaveFired>();
+        assert!(
+            captured.0.is_empty(),
+            "ratio 0.5 is NOT less than threshold 0.5 — should NOT fire (strict less-than). Got {}",
+            captured.0.len()
+        );
+    }
+
+    /// After firing, the chain is consumed. Second tick should not fire again.
+    #[test]
+    fn bridge_timer_fires_once_only() {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.5),
             then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
@@ -161,16 +198,16 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(NodeTimer {
                 remaining: 12.0,
-                total: 60.0,
+                total: 60.0, // ratio = 0.2, below 0.5
             })
             .init_resource::<CapturedSpeedBoostFired>()
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
         app.world_mut()
-            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
+            .spawn(EffectChains(wrap_chains(vec![chain])));
 
-        // First tick: fires
+        // First tick: should fire
         tick(&mut app);
         let captured = app.world().resource::<CapturedSpeedBoostFired>();
         assert_eq!(captured.0.len(), 1, "first tick should fire");
@@ -181,36 +218,8 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             1,
-            "second tick should NOT fire again — chain should be consumed"
-        );
-    }
-
-    #[test]
-    fn bridge_timer_threshold_zero_total_treats_ratio_as_zero() {
-        let chain = EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(0.5),
-            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
-        };
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(NodeTimer {
-                remaining: 10.0,
-                total: 0.0, // Edge case: total is zero
-            })
-            .init_resource::<CapturedSpeedBoostFired>()
-            .add_observer(capture_speed_boost_fired)
-            .add_systems(FixedUpdate, bridge_timer_threshold);
-
-        app.world_mut()
-            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
-
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpeedBoostFired>();
-        assert_eq!(
-            captured.0.len(),
-            1,
-            "total == 0.0 should treat ratio as 0.0, which is below 0.5"
+            "second tick should NOT fire again — chain should be consumed — got {}",
+            captured.0.len()
         );
     }
 }

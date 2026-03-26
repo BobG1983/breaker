@@ -7,11 +7,12 @@ use crate::{
         messages::{CellDestroyedAt, DamageCell, RequestCellDestroyed},
         resources::CellConfig,
         systems::{
-            check_lock_release::check_lock_release, handle_cell_hit,
+            check_lock_release::check_lock_release, cleanup_destroyed_cells, handle_cell_hit,
             rotate_shield_cells::rotate_shield_cells,
             sync_orbit_cell_positions::sync_orbit_cell_positions, tick_cell_regen::tick_cell_regen,
         },
     },
+    effect::EffectSystems,
     shared::PlayingState,
 };
 
@@ -34,6 +35,7 @@ impl Plugin for CellsPlugin {
                     tick_cell_regen,
                     rotate_shield_cells,
                     sync_orbit_cell_positions.after(rotate_shield_cells),
+                    cleanup_destroyed_cells.after(EffectSystems::Bridge),
                 )
                     .run_if(in_state(PlayingState::Active)),
             );
