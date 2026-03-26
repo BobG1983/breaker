@@ -19,6 +19,7 @@ mod reset_bolt;
 mod spawn_additional_bolt;
 mod spawn_bolt;
 mod spawn_chain_bolt;
+mod tick_bolt_lifespan;
 
 pub(crate) use apply_attraction::apply_attraction;
 pub(crate) use apply_entity_scale_to_bolt::apply_entity_scale_to_bolt;
@@ -39,3 +40,4 @@ pub(crate) use reset_bolt::reset_bolt;
 pub use spawn_additional_bolt::spawn_additional_bolt;
 pub(crate) use spawn_bolt::spawn_bolt;
 pub(crate) use spawn_chain_bolt::spawn_chain_bolt;
+pub(crate) use tick_bolt_lifespan::tick_bolt_lifespan;

@@ -15,6 +15,7 @@ use crate::{
             clamp_bolt_to_playfield, despawn_second_wind_wall, hover_bolt, init_bolt_params,
             launch_bolt, manage_attraction_types, prepare_bolt_velocity, reset_bolt,
             spawn_additional_bolt, spawn_bolt, spawn_bolt_lost_text, spawn_chain_bolt,
+            tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
@@ -95,6 +96,8 @@ impl Plugin for BoltPlugin {
                         .after(BreakerSystems::GradeBump),
                     // Despawn SecondWindWall after bolt bounces off it
                     despawn_second_wind_wall.after(bolt_cell_collision),
+                    // Tick bolt lifespan timers and request destruction on expiry
+                    tick_bolt_lifespan.before(BoltSystems::BoltLost),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )

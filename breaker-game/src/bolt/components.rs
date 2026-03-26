@@ -86,6 +86,13 @@ pub struct ExtraBolt;
 #[derive(Component, Debug, Clone)]
 pub struct SpawnedByEvolution(pub String);
 
+/// Countdown timer that despawns the bolt when it expires.
+///
+/// Used by phantom bolts and other temporary bolt-like entities
+/// to auto-destroy after a configured duration.
+#[derive(Component, Debug)]
+pub struct BoltLifespan(pub Timer);
+
 #[cfg(test)]
 mod tests {
     use super::*;
