@@ -130,7 +130,11 @@ mod tests {
 
     fn send_spawn(flag: Res<SendSpawn>, mut writer: MessageWriter<SpawnAdditionalBolt>) {
         for _ in 0..flag.0 {
-            writer.write(SpawnAdditionalBolt { source_chip: None });
+            writer.write(SpawnAdditionalBolt {
+                source_chip: None,
+                lifespan: None,
+                inherit: false,
+            });
         }
     }
 
@@ -474,6 +478,8 @@ mod tests {
             .0
             .push(SpawnAdditionalBolt {
                 source_chip: Some("chain_lightning".to_owned()),
+                lifespan: None,
+                inherit: false,
             });
         tick(&mut app);
 
@@ -503,6 +509,8 @@ mod tests {
             .0
             .push(SpawnAdditionalBolt {
                 source_chip: Some(String::new()),
+                lifespan: None,
+                inherit: false,
             });
         tick(&mut app);
 
@@ -530,7 +538,11 @@ mod tests {
         app.world_mut()
             .resource_mut::<SendSpawnWithAttribution>()
             .0
-            .push(SpawnAdditionalBolt { source_chip: None });
+            .push(SpawnAdditionalBolt {
+                source_chip: None,
+                lifespan: None,
+                inherit: false,
+            });
         tick(&mut app);
 
         let entity = app
@@ -554,9 +566,13 @@ mod tests {
             let mut res = app.world_mut().resource_mut::<SendSpawnWithAttribution>();
             res.0.push(SpawnAdditionalBolt {
                 source_chip: Some("alpha".to_owned()),
+                lifespan: None,
+                inherit: false,
             });
             res.0.push(SpawnAdditionalBolt {
                 source_chip: Some("beta".to_owned()),
+                lifespan: None,
+                inherit: false,
             });
         }
         tick(&mut app);

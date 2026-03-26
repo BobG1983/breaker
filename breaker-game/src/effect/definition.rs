@@ -242,6 +242,17 @@ pub enum Effect {
         /// Weighted pool of `EffectNode` entries to select from on trigger.
         pool: Vec<(f32, EffectNode)>,
     },
+    /// Shockwave at every active bolt position simultaneously.
+    Pulse {
+        /// Base radius of each shockwave.
+        base_range: f32,
+        /// Additional radius per stack beyond the first.
+        range_per_level: f32,
+        /// Current stack count.
+        stacks: u32,
+        /// Expansion speed in world units per second.
+        speed: f32,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -430,6 +441,16 @@ impl Effect {
     /// Build an `EntropyEngine` variant with the given threshold and pool.
     pub(crate) fn test_entropy_engine(threshold: u32, pool: Vec<(f32, EffectNode)>) -> Self {
         Self::EntropyEngine { threshold, pool }
+    }
+
+    /// Build a `Pulse` leaf with `range_per_level: 0.0`, `stacks: 1`, and `speed: 400.0`.
+    pub(crate) fn test_pulse(range: f32) -> Self {
+        Self::Pulse {
+            base_range: range,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 400.0,
+        }
     }
 }
 

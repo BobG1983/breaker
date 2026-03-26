@@ -53,6 +53,7 @@ impl Plugin for EffectPlugin {
         effects::second_wind::register(app);
         effects::random_effect::register(app);
         effects::entropy_engine::register(app);
+        effects::pulse::register(app);
         // Passive effects
         effects::ramping_damage::register(app);
         effects::piercing::register(app);

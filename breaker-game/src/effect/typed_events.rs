@@ -29,6 +29,7 @@ pub(crate) use super::effects::{
     multi_bolt::MultiBoltFired,
     piercing::PiercingApplied,
     piercing_beam::PiercingBeamFired,
+    pulse::PulseFired,
     ramping_damage::RampingDamageApplied,
     random_effect::RandomEffectFired,
     second_wind::SecondWindFired,
@@ -63,7 +64,8 @@ pub(crate) fn fire_typed_event(
         | Effect::ChainBolt { .. }
         | Effect::MultiBolt { .. }
         | Effect::ChainLightning { .. }
-        | Effect::PiercingBeam { .. }) => {
+        | Effect::PiercingBeam { .. }
+        | Effect::Pulse { .. }) => {
             fire_bolt_effect(effect, targets, source_chip, commands);
         }
 
@@ -172,6 +174,21 @@ fn fire_bolt_effect(
             commands.trigger(PiercingBeamFired {
                 damage_mult,
                 width,
+                targets,
+                source_chip,
+            });
+        }
+        Effect::Pulse {
+            base_range,
+            range_per_level,
+            stacks,
+            speed,
+        } => {
+            commands.trigger(PulseFired {
+                base_range,
+                range_per_level,
+                stacks,
+                speed,
                 targets,
                 source_chip,
             });

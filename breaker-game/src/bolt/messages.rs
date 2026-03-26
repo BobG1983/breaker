@@ -9,6 +9,10 @@ use bevy::prelude::*;
 pub struct SpawnAdditionalBolt {
     /// The chip name that originated this spawn, for damage attribution.
     pub source_chip: Option<String>,
+    /// Optional lifespan in seconds — if `Some`, the bolt despawns after this duration.
+    pub lifespan: Option<f32>,
+    /// Whether the spawned bolt inherits the parent bolt's velocity direction.
+    pub inherit: bool,
 }
 
 /// Sent by `spawn_bolt` after the bolt entity is spawned.
@@ -90,7 +94,11 @@ mod tests {
 
     #[test]
     fn message_debug_format() {
-        let msg = SpawnAdditionalBolt { source_chip: None };
+        let msg = SpawnAdditionalBolt {
+            source_chip: None,
+            lifespan: None,
+            inherit: false,
+        };
         assert!(format!("{msg:?}").contains("SpawnAdditionalBolt"));
 
         let msg = BoltSpawned;

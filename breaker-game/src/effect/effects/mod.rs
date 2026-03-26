@@ -17,6 +17,7 @@ pub(crate) mod life_lost;
 pub(crate) mod multi_bolt;
 pub(crate) mod piercing;
 pub(crate) mod piercing_beam;
+pub(crate) mod pulse;
 pub(crate) mod ramping_damage;
 pub(crate) mod random_effect;
 pub(crate) mod second_wind;

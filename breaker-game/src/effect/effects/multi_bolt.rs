@@ -39,6 +39,8 @@ pub(crate) fn handle_multi_bolt(
     for _ in 0..total {
         writer.write(SpawnAdditionalBolt {
             source_chip: event.source_chip.clone(),
+            lifespan: None,
+            inherit: false,
         });
     }
 }
