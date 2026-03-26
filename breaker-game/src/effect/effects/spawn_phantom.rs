@@ -4,13 +4,13 @@
 //! [`ExtraBolt`], [`BoltLifespan`], and infinite [`Piercing`].
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::components::{Bolt, BoltLifespan, ExtraBolt},
     chips::components::Piercing,
     effect::definition::EffectTarget,
 };
-use rantzsoft_spatial2d::components::Position2D;
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -80,10 +80,13 @@ pub(crate) fn register(app: &mut App) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::bolt::components::{Bolt, BoltLifespan, ExtraBolt};
-    use crate::chips::components::Piercing;
     use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+
+    use super::*;
+    use crate::{
+        bolt::components::{Bolt, BoltLifespan, ExtraBolt},
+        chips::components::Piercing,
+    };
 
     fn test_app() -> App {
         let mut app = App::new();

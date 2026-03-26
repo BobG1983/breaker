@@ -6,9 +6,11 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
-use crate::effect::definition::EffectTarget;
-use crate::shared::{PlayfieldConfig, BOLT_LAYER, WALL_LAYER};
-use crate::wall::components::{Wall, WallSize};
+use crate::{
+    effect::definition::EffectTarget,
+    shared::{BOLT_LAYER, PlayfieldConfig, WALL_LAYER},
+    wall::components::{Wall, WallSize},
+};
 
 // ---------------------------------------------------------------------------
 // Components
@@ -79,11 +81,14 @@ pub(crate) fn register(app: &mut App) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::shared::{GameDrawLayer, BOLT_LAYER, WALL_LAYER};
-    use crate::wall::components::{Wall, WallSize};
     use rantzsoft_physics2d::collision_layers::CollisionLayers;
     use rantzsoft_spatial2d::components::Position2D;
+
+    use super::*;
+    use crate::{
+        shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
+        wall::components::{Wall, WallSize},
+    };
 
     fn test_app() -> App {
         let mut app = App::new();

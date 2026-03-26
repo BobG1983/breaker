@@ -112,9 +112,10 @@ pub(crate) fn dispatch_chip_effects(
 fn outermost_trigger(node: &EffectNode) -> Option<Trigger> {
     match node {
         EffectNode::When { trigger, .. } => Some(*trigger),
-        EffectNode::Until { .. } | EffectNode::Once(_) | EffectNode::Do(_) | EffectNode::On { .. } => {
-            None
-        }
+        EffectNode::Until { .. }
+        | EffectNode::Once(_)
+        | EffectNode::Do(_)
+        | EffectNode::On { .. } => None,
     }
 }
 
@@ -305,7 +306,10 @@ mod tests {
             });
 
         // Spawn breaker entity with EffectChains for dispatch to push to
-        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
 
         send_chip_selected(&mut app, "Surge");
         tick(&mut app);
@@ -479,7 +483,10 @@ mod tests {
 
         app.world_mut().spawn(Bolt);
         // Spawn breaker with empty EffectChains to verify bare leaf is not pushed
-        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition::test(
@@ -595,7 +602,10 @@ mod tests {
 
         app.world_mut().spawn(Bolt);
         // Spawn breaker entity with EffectChains
-        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
@@ -673,9 +683,7 @@ mod tests {
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
                     trigger: Trigger::Selected,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.1,
-                    })],
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
                 }],
                 ingredients: None,
                 template_name: None,
@@ -1074,12 +1082,8 @@ mod tests {
                 effects: vec![EffectNode::When {
                     trigger: Trigger::Selected,
                     then: vec![
-                        EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 0.1,
-                        }),
-                        EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 0.2,
-                        }),
+                        EffectNode::Do(Effect::SpeedBoost { multiplier: 0.1 }),
+                        EffectNode::Do(Effect::SpeedBoost { multiplier: 0.2 }),
                     ],
                 }],
                 ingredients: None,
@@ -1164,7 +1168,10 @@ mod tests {
         let mut app = test_app();
 
         // Spawn breaker entity with EffectChains
-        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
 
         // Insert an Evolution chip with a triggered chain (PerfectBump → Shockwave)
         app.world_mut()
@@ -1223,7 +1230,10 @@ mod tests {
         app.init_resource::<ChipInventory>();
 
         // Spawn breaker entity with EffectChains
-        let breaker = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let breaker = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
 
         // Don't add any chip named "Unknown Evo" to the registry
         send_chip_selected(&mut app, "Unknown Evo");

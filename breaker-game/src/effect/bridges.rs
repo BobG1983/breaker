@@ -186,7 +186,8 @@ mod tests {
             );
 
         // Place chain on breaker entity EffectChains
-        app.world_mut().spawn((Breaker, EffectChains(vec![(None, chain)])));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(vec![(None, chain)])));
         let bolt = app.world_mut().spawn_empty().id();
 
         // Step 1: Perfect bump -- arms (evaluate_entity_chains discards Arm results
@@ -251,16 +252,19 @@ mod tests {
         // Spawn breaker with empty EffectChains
         app.world_mut().spawn((Breaker, EffectChains::default()));
         // Pre-arm bolt with the Impact(Cell) -> CellDestroyed -> Shockwave chain
-        let bolt = app.world_mut().spawn(ArmedEffects(vec![(
-            None,
-            EffectNode::When {
-                trigger: Trigger::Impact(ImpactTarget::Cell),
-                then: vec![EffectNode::When {
-                    trigger: Trigger::CellDestroyed,
-                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-                }],
-            },
-        )])).id();
+        let bolt = app
+            .world_mut()
+            .spawn(ArmedEffects(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::CellDestroyed,
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    }],
+                },
+            )]))
+            .id();
 
         // Step 1: Cell impact — re-arms from Impact(Cell) to CellDestroyed
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {

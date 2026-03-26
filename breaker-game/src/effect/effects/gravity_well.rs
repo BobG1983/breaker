@@ -77,9 +77,10 @@ pub(crate) fn register(app: &mut App) {
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+
     use super::*;
     use crate::bolt::components::Bolt;
-    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     fn test_app() -> App {
         let mut app = App::new();

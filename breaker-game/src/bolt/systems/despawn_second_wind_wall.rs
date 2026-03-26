@@ -6,10 +6,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::messages::BoltHitWall,
-    effect::effects::second_wind::SecondWindWall,
-};
+use crate::{bolt::messages::BoltHitWall, effect::effects::second_wind::SecondWindWall};
 
 /// Despawns the [`SecondWindWall`] entity when a bolt hits it.
 ///
@@ -32,8 +29,7 @@ pub(crate) fn despawn_second_wind_wall(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::effect::effects::second_wind::SecondWindWall;
-    use crate::wall::components::Wall;
+    use crate::{effect::effects::second_wind::SecondWindWall, wall::components::Wall};
 
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
@@ -82,10 +78,7 @@ mod tests {
         let mut app = test_app_with_message();
 
         let bolt_entity = app.world_mut().spawn_empty().id();
-        let sw_wall_entity = app
-            .world_mut()
-            .spawn((Wall, SecondWindWall))
-            .id();
+        let sw_wall_entity = app.world_mut().spawn((Wall, SecondWindWall)).id();
 
         app.insert_resource(SendBoltHitWall(Some(BoltHitWall {
             bolt: bolt_entity,
@@ -116,10 +109,7 @@ mod tests {
 
         let bolt_entity = app.world_mut().spawn_empty().id();
         let regular_wall = app.world_mut().spawn(Wall).id();
-        let _sw_wall = app
-            .world_mut()
-            .spawn((Wall, SecondWindWall))
-            .id();
+        let _sw_wall = app.world_mut().spawn((Wall, SecondWindWall)).id();
 
         app.insert_resource(SendBoltHitWall(Some(BoltHitWall {
             bolt: bolt_entity,
@@ -147,10 +137,7 @@ mod tests {
         // Then: SecondWindWall remains alive
         let mut app = test_app_with_message();
 
-        let _sw_wall = app
-            .world_mut()
-            .spawn((Wall, SecondWindWall))
-            .id();
+        let _sw_wall = app.world_mut().spawn((Wall, SecondWindWall)).id();
 
         // No message enqueued (SendBoltHitWall is None)
         tick(&mut app);

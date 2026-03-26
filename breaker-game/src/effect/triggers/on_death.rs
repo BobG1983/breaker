@@ -203,7 +203,8 @@ mod tests {
         let chain = EffectNode::trigger_leaf(Trigger::CellDestroyed, Effect::test_shockwave(32.0));
         let mut app = cell_destroyed_test_app();
         // Spawn a bolt with armed CellDestroyed chain
-        app.world_mut().spawn(crate::effect::armed::ArmedEffects(vec![(None, chain)]));
+        app.world_mut()
+            .spawn(crate::effect::armed::ArmedEffects(vec![(None, chain)]));
         // Spawn a cell entity with Position2D for bridge_cell_death to query
         let cell = app
             .world_mut()
@@ -221,7 +222,8 @@ mod tests {
     fn cell_destroyed_no_message_no_fire() {
         let chain = EffectNode::trigger_leaf(Trigger::CellDestroyed, Effect::test_shockwave(32.0));
         let mut app = cell_destroyed_test_app();
-        app.world_mut().spawn(crate::effect::armed::ArmedEffects(vec![(None, chain)]));
+        app.world_mut()
+            .spawn(crate::effect::armed::ArmedEffects(vec![(None, chain)]));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShockwaveFired>();
@@ -284,15 +286,18 @@ mod tests {
                 Cell,
                 RequiredToClear,
                 Position2D(Vec2::new(100.0, 200.0)),
-                EffectChains(vec![(None, EffectNode::When {
-                    trigger: Trigger::Death,
-                    then: vec![EffectNode::Do(Effect::Shockwave {
-                        base_range: 48.0,
-                        range_per_level: 0.0,
-                        stacks: 1,
-                        speed: 400.0,
-                    })],
-                })]),
+                EffectChains(vec![(
+                    None,
+                    EffectNode::When {
+                        trigger: Trigger::Death,
+                        then: vec![EffectNode::Do(Effect::Shockwave {
+                            base_range: 48.0,
+                            range_per_level: 0.0,
+                            stacks: 1,
+                            speed: 400.0,
+                        })],
+                    },
+                )]),
             ))
             .id();
 
@@ -436,15 +441,18 @@ mod tests {
             .world_mut()
             .spawn((
                 Position2D(Vec2::new(50.0, -100.0)),
-                EffectChains(vec![(None, EffectNode::When {
-                    trigger: Trigger::Death,
-                    then: vec![EffectNode::Do(Effect::Shockwave {
-                        base_range: 32.0,
-                        range_per_level: 0.0,
-                        stacks: 1,
-                        speed: 400.0,
-                    })],
-                })]),
+                EffectChains(vec![(
+                    None,
+                    EffectNode::When {
+                        trigger: Trigger::Death,
+                        then: vec![EffectNode::Do(Effect::Shockwave {
+                            base_range: 32.0,
+                            range_per_level: 0.0,
+                            stacks: 1,
+                            speed: 400.0,
+                        })],
+                    },
+                )]),
             ))
             .id();
 

@@ -15,10 +15,7 @@ pub(crate) use crate::{
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
-    effect::{
-        definition::EffectChains,
-        effects::life_lost::LivesCount,
-    },
+    effect::{definition::EffectChains, effects::life_lost::LivesCount},
     shared::SelectedBreaker,
 };
 
@@ -84,7 +81,10 @@ mod tests {
     #[test]
     fn init_breaker_stamps_lives_count() {
         let mut app = test_app_with_breaker(make_test_breaker());
-        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.update();
 
         let lives = app.world().get::<LivesCount>(entity).unwrap();
@@ -94,7 +94,10 @@ mod tests {
     #[test]
     fn init_breaker_builds_active_chains() {
         let mut app = test_app_with_breaker(make_test_breaker());
-        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.update();
 
         let chains = app.world().get::<EffectChains>(entity).unwrap();
@@ -134,7 +137,10 @@ mod tests {
             ],
         };
         let mut app = test_app_with_breaker(def);
-        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.update();
 
         let chains = app.world().get::<EffectChains>(entity).unwrap();
@@ -159,7 +165,10 @@ mod tests {
             }],
         };
         let mut app = test_app_with_breaker(def);
-        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.update();
 
         let chains = app.world().get::<EffectChains>(entity).unwrap();
@@ -278,7 +287,10 @@ mod tests {
         };
 
         let mut app = test_app_with_breaker(def);
-        let entity = app.world_mut().spawn((Breaker, EffectChains::default())).id();
+        let entity = app
+            .world_mut()
+            .spawn((Breaker, EffectChains::default()))
+            .id();
         app.update();
 
         assert!(app.world().get::<LivesCount>(entity).is_none());

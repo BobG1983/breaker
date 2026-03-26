@@ -4,5 +4,5 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [OnSelected([DamageBoost(1.0), SizeBoost(Breaker, -0.3)])])),
+    legendary: Some((prefix: "", effects: [When(trigger: OnSelected, then: [Do(DamageBoost(1.0)), Do(SizeBoost(-0.3))])])),
 )

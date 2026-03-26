@@ -12,7 +12,9 @@ use crate::{
     chips::components::DamageBoost,
     effect::{
         definition::EffectTarget,
-        effects::shockwave::{ShockwaveAlreadyHit, ShockwaveDamage, ShockwaveRadius, ShockwaveSpeed},
+        effects::shockwave::{
+            ShockwaveAlreadyHit, ShockwaveDamage, ShockwaveRadius, ShockwaveSpeed,
+        },
     },
     shared::{BASE_BOLT_DAMAGE, CleanupOnNodeExit, GameDrawLayer},
 };
@@ -56,8 +58,7 @@ pub(crate) fn handle_pulse(
         return;
     }
 
-    let extra_stacks =
-        f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX));
+    let extra_stacks = f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX));
     let max = event.base_range + extra_stacks * event.range_per_level;
 
     for (bolt_entity, bolt_pos, damage_boost) in &bolt_query {
@@ -127,7 +128,13 @@ mod tests {
             .id()
     }
 
-    fn trigger_pulse(app: &mut App, base_range: f32, range_per_level: f32, stacks: u32, speed: f32) {
+    fn trigger_pulse(
+        app: &mut App,
+        base_range: f32,
+        range_per_level: f32,
+        stacks: u32,
+        speed: f32,
+    ) {
         app.world_mut().commands().trigger(PulseFired {
             base_range,
             range_per_level,

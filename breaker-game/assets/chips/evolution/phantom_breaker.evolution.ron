@@ -3,7 +3,7 @@
     description: "Successful bumps summon a phantom breaker that mirrors your moves",
     rarity: Evolution,
     max_stacks: 1,
-    effects: [OnBump([SpawnPhantom(duration: 5.0, max_active: 1)])],
+    effects: [When(trigger: OnBump, then: [Do(SpawnPhantom(duration: 5.0, max_active: 1))])],
     ingredients: Some([
         (chip_name: "Wide Breaker", stacks_required: 2),
         (chip_name: "Bump Force", stacks_required: 2),

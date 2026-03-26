@@ -1,8 +1,8 @@
 (
     name: "Cascade",
     max_taken: 3,
-    common: Some((prefix: "Minor", effects: [OnCellDestroyed([Shockwave(base_range: 20.0, range_per_level: 5.0, stacks: 1, speed: 400.0)])])),
-    uncommon: Some((prefix: "Spreading", effects: [OnCellDestroyed([Shockwave(base_range: 30.0, range_per_level: 8.0, stacks: 1, speed: 400.0)])])),
-    rare: Some((prefix: "Devastating", effects: [OnCellDestroyed([Shockwave(base_range: 40.0, range_per_level: 12.0, stacks: 1, speed: 400.0)])])),
+    common: Some((prefix: "Minor", effects: [When(trigger: OnCellDestroyed, then: [Do(Shockwave(base_range: 20.0, range_per_level: 5.0, stacks: 1, speed: 400.0))])])),
+    uncommon: Some((prefix: "Spreading", effects: [When(trigger: OnCellDestroyed, then: [Do(Shockwave(base_range: 30.0, range_per_level: 8.0, stacks: 1, speed: 400.0))])])),
+    rare: Some((prefix: "Devastating", effects: [When(trigger: OnCellDestroyed, then: [Do(Shockwave(base_range: 40.0, range_per_level: 12.0, stacks: 1, speed: 400.0))])])),
     legendary: None,
 )

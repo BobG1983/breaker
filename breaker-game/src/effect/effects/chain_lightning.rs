@@ -129,10 +129,7 @@ mod tests {
     #[derive(Resource, Default)]
     struct CapturedDamage(Vec<DamageCell>);
 
-    fn capture_damage(
-        mut reader: MessageReader<DamageCell>,
-        mut captured: ResMut<CapturedDamage>,
-    ) {
+    fn capture_damage(mut reader: MessageReader<DamageCell>, mut captured: ResMut<CapturedDamage>) {
         for msg in reader.read() {
             captured.0.push(msg.clone());
         }

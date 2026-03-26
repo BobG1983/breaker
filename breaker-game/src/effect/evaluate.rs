@@ -289,9 +289,7 @@ mod tests {
                     lifespan: None,
                     inherit: false,
                 }),
-                EffectNode::Do(Effect::SpeedBoost {
-                    multiplier: 1.2,
-                }),
+                EffectNode::Do(Effect::SpeedBoost { multiplier: 1.2 }),
             ],
         };
         let result = evaluate_node(Trigger::Bump, &node);

@@ -202,10 +202,8 @@ mod tests {
             .add_observer(capture_time_penalty_fired)
             .add_systems(FixedUpdate, (send_bump, bridge_bump).chain());
         // Place chains on breaker entity EffectChains
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(breaker_chains)),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(breaker_chains))));
         app
     }
 
@@ -218,10 +216,8 @@ mod tests {
             .add_observer(capture_lose_life_fired)
             .add_systems(FixedUpdate, (send_bump_whiff, bridge_bump_whiff).chain());
         // Place chains on breaker entity EffectChains
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(breaker_chains)),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(breaker_chains))));
         app
     }
 
@@ -340,16 +336,19 @@ mod tests {
         // breaker entity cannot arm bolts (Arm results are discarded by
         // evaluate_entity_chains). Place on bolt ArmedEffects to test arming.
         let mut app = bump_test_app(vec![]);
-        let bolt = app.world_mut().spawn(ArmedEffects(vec![(
-            None,
-            EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-                }],
-            },
-        )])).id();
+        let bolt = app
+            .world_mut()
+            .spawn(ArmedEffects(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    }],
+                },
+            )]))
+            .id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt),
@@ -412,12 +411,13 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                EffectChains(vec![(None, EffectNode::When {
-                    trigger: Trigger::Bump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.2,
-                    })],
-                })]),
+                EffectChains(vec![(
+                    None,
+                    EffectNode::When {
+                        trigger: Trigger::Bump,
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.2 })],
+                    },
+                )]),
             ))
             .id();
 
@@ -454,10 +454,13 @@ mod tests {
         // Bolt entity with PerfectBumped EffectChain
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-            })]))
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::PerfectBumped,
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                },
+            )]))
             .id();
 
         // Spawn breaker entity so breaker_query has something
@@ -493,10 +496,13 @@ mod tests {
         // Bolt entity with generic Bumped EffectChain
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::Bumped,
-                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-            })]))
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::Bumped,
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                },
+            )]))
             .id();
 
         // Spawn breaker entity so breaker_query has something
@@ -534,10 +540,13 @@ mod tests {
         // (PerfectBumped is bolt-perspective only)
         app.world_mut().spawn((
             Breaker,
-            EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-            })]),
+            EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::PerfectBumped,
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                },
+            )]),
         ));
 
         let bolt = app.world_mut().spawn_empty().id();
@@ -569,10 +578,13 @@ mod tests {
         // Breaker entity with PerfectBump (breaker-perspective) EffectChain
         app.world_mut().spawn((
             Breaker,
-            EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-            })]),
+            EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                },
+            )]),
         ));
 
         let bolt = app.world_mut().spawn_empty().id();

@@ -595,9 +595,7 @@ mod tests {
                 prefix: "Basic".to_owned(),
                 effects: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.2,
-                    })],
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.2 })],
                 }],
             }),
             uncommon: None,

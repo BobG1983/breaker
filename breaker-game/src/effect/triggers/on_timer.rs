@@ -93,9 +93,7 @@ mod tests {
     fn bridge_timer_threshold_fires_when_ratio_crosses_below_threshold() {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.25),
-            then: vec![EffectNode::Do(Effect::SpeedBoost {
-                multiplier: 2.0,
-            })],
+            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -108,10 +106,8 @@ mod tests {
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
         // Place threshold chain on breaker entity EffectChains
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(vec![chain])),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
 
         tick(&mut app);
 
@@ -131,9 +127,7 @@ mod tests {
     fn bridge_timer_threshold_no_fire_when_ratio_above_threshold() {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.25),
-            then: vec![EffectNode::Do(Effect::SpeedBoost {
-                multiplier: 2.0,
-            })],
+            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -145,10 +139,8 @@ mod tests {
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(vec![chain])),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
 
         tick(&mut app);
 
@@ -163,9 +155,7 @@ mod tests {
     fn bridge_timer_threshold_fires_once_even_if_ratio_stays_below() {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.5),
-            then: vec![EffectNode::Do(Effect::SpeedBoost {
-                multiplier: 1.5,
-            })],
+            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -177,10 +167,8 @@ mod tests {
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(vec![chain])),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
 
         // First tick: fires
         tick(&mut app);
@@ -201,9 +189,7 @@ mod tests {
     fn bridge_timer_threshold_zero_total_treats_ratio_as_zero() {
         let chain = EffectNode::When {
             trigger: Trigger::NodeTimerThreshold(0.5),
-            then: vec![EffectNode::Do(Effect::SpeedBoost {
-                multiplier: 1.5,
-            })],
+            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
         };
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -215,10 +201,8 @@ mod tests {
             .add_observer(capture_speed_boost_fired)
             .add_systems(FixedUpdate, bridge_timer_threshold);
 
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(vec![chain])),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(vec![chain]))));
 
         tick(&mut app);
 

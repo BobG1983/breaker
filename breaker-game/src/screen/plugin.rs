@@ -53,7 +53,7 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<CellTypeDefinition>::new(&["cell.ron"]),
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
-                RonAssetPlugin::<BreakerDefinition>::new(&["breaker.ron"]),
+                RonAssetPlugin::<BreakerDefinition>::new(&["bdef.ron"]),
                 RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
                 RonAssetPlugin::<ChipDefinition>::new(&["evolution.ron"]),
                 RonAssetPlugin::<ChipTemplate>::new(&["chip.ron"]),

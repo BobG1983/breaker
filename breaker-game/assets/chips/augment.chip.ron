@@ -1,8 +1,8 @@
 (
     name: "Augment",
     max_taken: 2,
-    common: Some((prefix: "Basic", effects: [OnSelected([SizeBoost(Breaker, 6.0), BumpForce(8.0)])])),
-    uncommon: Some((prefix: "Sturdy", effects: [OnSelected([SizeBoost(Breaker, 10.0), BumpForce(15.0)])])),
-    rare: Some((prefix: "Fortified", effects: [OnSelected([SizeBoost(Breaker, 16.0), BumpForce(25.0), SpeedBoost(target: Breaker, multiplier: 1.15)])])),
+    common: Some((prefix: "Basic", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(6.0)), Do(BumpForce(8.0))])])),
+    uncommon: Some((prefix: "Sturdy", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(10.0)), Do(BumpForce(15.0))])])),
+    rare: Some((prefix: "Fortified", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(16.0)), Do(BumpForce(25.0)), Do(SpeedBoost(multiplier: 1.15))])])),
     legendary: None,
 )

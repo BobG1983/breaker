@@ -135,12 +135,7 @@ pub(super) fn evaluate_entity_chains(
                 for result in evaluate_node(trigger_kind, node) {
                     match result {
                         NodeEvalResult::Fire(effect) => {
-                            fire_typed_event(
-                                effect,
-                                targets.clone(),
-                                chip_name.clone(),
-                                commands,
-                            );
+                            fire_typed_event(effect, targets.clone(), chip_name.clone(), commands);
                         }
                         NodeEvalResult::Arm(_) | NodeEvalResult::NoMatch => {}
                     }

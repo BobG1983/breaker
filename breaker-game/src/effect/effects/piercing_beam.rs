@@ -100,11 +100,13 @@ pub(crate) fn register(app: &mut App) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::bolt::components::Bolt;
-    use crate::cells::components::Cell;
-    use crate::cells::messages::DamageCell;
     use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+
+    use super::*;
+    use crate::{
+        bolt::components::Bolt,
+        cells::{components::Cell, messages::DamageCell},
+    };
 
     #[derive(Resource, Default)]
     struct CapturedDamageCell(Vec<DamageCell>);

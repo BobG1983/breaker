@@ -277,7 +277,10 @@ mod tests {
         );
         let mut app = cell_impact_test_app();
         // Place chain on bolt entity EffectChains
-        let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
+        let bolt = app
+            .world_mut()
+            .spawn(EffectChains(vec![(None, chain)]))
+            .id();
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
             cell: Entity::PLACEHOLDER,
             bolt,
@@ -340,7 +343,10 @@ mod tests {
         );
         let mut app = breaker_impact_test_app();
         // Place chain on bolt entity EffectChains
-        let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
+        let bolt = app
+            .world_mut()
+            .spawn(EffectChains(vec![(None, chain)]))
+            .id();
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
         tick(&mut app);
 
@@ -380,8 +386,14 @@ mod tests {
         );
         let mut app = wall_impact_test_app();
         // Place chain on bolt entity EffectChains
-        let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
+        let bolt = app
+            .world_mut()
+            .spawn(EffectChains(vec![(None, chain)]))
+            .id();
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall {
+            bolt,
+            wall: Entity::PLACEHOLDER,
+        });
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShockwaveFired>();
@@ -402,7 +414,10 @@ mod tests {
                 ),
             )]))
             .id();
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall {
+            bolt,
+            wall: Entity::PLACEHOLDER,
+        });
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShieldFired>();
@@ -429,15 +444,18 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::Impact(ImpactTarget::Cell),
-                then: vec![EffectNode::Do(Effect::Shockwave {
-                    base_range: 64.0,
-                    range_per_level: 0.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            })]))
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::Do(Effect::Shockwave {
+                        base_range: 64.0,
+                        range_per_level: 0.0,
+                        stacks: 1,
+                        speed: 400.0,
+                    })],
+                },
+            )]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitCell>().0 = Some(BoltHitCell {
@@ -475,12 +493,13 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::Impact(ImpactTarget::Breaker),
-                then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    multiplier: 1.5,
-                })],
-            })]))
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Breaker),
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                },
+            )]))
             .id();
 
         app.world_mut().resource_mut::<SendBoltHitBreaker>().0 = Some(BoltHitBreaker { bolt });
@@ -515,15 +534,19 @@ mod tests {
 
         let bolt = app
             .world_mut()
-            .spawn(EffectChains(vec![(None, EffectNode::When {
-                trigger: Trigger::Impact(ImpactTarget::Wall),
-                then: vec![EffectNode::Do(Effect::SpeedBoost {
-                    multiplier: 1.3,
-                })],
-            })]))
+            .spawn(EffectChains(vec![(
+                None,
+                EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Wall),
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.3 })],
+                },
+            )]))
             .id();
 
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall {
+            bolt,
+            wall: Entity::PLACEHOLDER,
+        });
 
         tick(&mut app);
 
@@ -611,9 +634,7 @@ mod tests {
                 None,
                 EffectNode::Once(vec![EffectNode::When {
                     trigger: Trigger::Impact(ImpactTarget::Wall), // Does NOT match CellImpact
-                    then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 2.0,
-                    })],
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
                 }]),
             )]))
             .id();
@@ -662,16 +683,20 @@ mod tests {
         let bolt = app
             .world_mut()
             .spawn(EffectChains(vec![
-                (Some("chip1".to_string()), EffectNode::When {
-                    trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-                }),
-                (None, EffectNode::When {
-                    trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.5,
-                    })],
-                }),
+                (
+                    Some("chip1".to_string()),
+                    EffectNode::When {
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    },
+                ),
+                (
+                    None,
+                    EffectNode::When {
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
+                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                    },
+                ),
             ]))
             .id();
 
@@ -864,14 +889,15 @@ mod tests {
                 remaining: 3.0, // Still active
                 children: vec![EffectNode::When {
                     trigger: Trigger::Impact(ImpactTarget::Wall),
-                    then: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.3,
-                    })],
+                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.3 })],
                 }],
             }]))
             .id();
 
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall {
+            bolt,
+            wall: Entity::PLACEHOLDER,
+        });
 
         tick(&mut app);
 

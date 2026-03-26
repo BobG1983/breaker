@@ -269,11 +269,7 @@ mod tests {
     fn wide_breaker_def() -> ChipDefinition {
         ChipDefinition {
             rarity: Rarity::Rare,
-            ..ChipDefinition::test(
-                "Wide Breaker",
-                EffectNode::Do(Effect::SizeBoost(20.0)),
-                3,
-            )
+            ..ChipDefinition::test("Wide Breaker", EffectNode::Do(Effect::SizeBoost(20.0)), 3)
         }
     }
 

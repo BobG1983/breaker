@@ -3,7 +3,7 @@
     description: "Perfect bumps fire a devastating piercing beam through all cells in the bolt's path",
     rarity: Evolution,
     max_stacks: 1,
-    effects: [OnPerfectBump([PiercingBeam(damage_mult: 3.0, width: 30.0)])],
+    effects: [When(trigger: OnPerfectBump, then: [Do(PiercingBeam(damage_mult: 3.0, width: 30.0))])],
     ingredients: Some([
         (chip_name: "Piercing Shot", stacks_required: 3),
         (chip_name: "Bolt Speed", stacks_required: 4),

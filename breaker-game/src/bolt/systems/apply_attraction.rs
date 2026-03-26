@@ -6,9 +6,10 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use crate::{
     bolt::components::Bolt,
     cells::components::Cell,
-    effect::definition::AttractionType,
-    effect::effects::attraction::ActiveAttractions,
-    effect::effects::second_wind::SecondWindWall,
+    effect::{
+        definition::AttractionType,
+        effects::{attraction::ActiveAttractions, second_wind::SecondWindWall},
+    },
     wall::components::Wall,
 };
 
@@ -97,10 +98,8 @@ mod tests {
         ));
 
         // Cell to the right and above
-        app.world_mut().spawn((
-            Cell,
-            Position2D(Vec2::new(50.0, 100.0)),
-        ));
+        app.world_mut()
+            .spawn((Cell, Position2D(Vec2::new(50.0, 100.0))));
 
         tick(&mut app);
 
@@ -143,10 +142,8 @@ mod tests {
         ));
 
         // Cell to the right
-        app.world_mut().spawn((
-            Cell,
-            Position2D(Vec2::new(50.0, 100.0)),
-        ));
+        app.world_mut()
+            .spawn((Cell, Position2D(Vec2::new(50.0, 100.0))));
 
         tick(&mut app);
 
@@ -188,17 +185,12 @@ mod tests {
         ));
 
         // Regular wall to the left
-        app.world_mut().spawn((
-            Wall,
-            Position2D(Vec2::new(-490.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((Wall, Position2D(Vec2::new(-490.0, 0.0))));
 
         // SecondWindWall at bottom — should be filtered out
-        app.world_mut().spawn((
-            Wall,
-            SecondWindWall,
-            Position2D(Vec2::new(0.0, -390.0)),
-        ));
+        app.world_mut()
+            .spawn((Wall, SecondWindWall, Position2D(Vec2::new(0.0, -390.0))));
 
         tick(&mut app);
 
@@ -228,10 +220,8 @@ mod tests {
         ));
 
         // Cell nearby
-        app.world_mut().spawn((
-            Cell,
-            Position2D(Vec2::new(50.0, 100.0)),
-        ));
+        app.world_mut()
+            .spawn((Cell, Position2D(Vec2::new(50.0, 100.0))));
 
         tick(&mut app);
 

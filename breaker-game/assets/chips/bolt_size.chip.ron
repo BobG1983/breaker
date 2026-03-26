@@ -1,8 +1,8 @@
 (
     name: "Bolt Size",
     max_taken: 3,
-    common: Some((prefix: "Broad", effects: [OnSelected([SizeBoost(Bolt, 0.15)])])),
-    uncommon: Some((prefix: "Expanded", effects: [OnSelected([SizeBoost(Bolt, 0.25)])])),
-    rare: Some((prefix: "Massive", effects: [OnSelected([SizeBoost(Bolt, 0.4)])])),
+    common: Some((prefix: "Broad", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(0.15))])])),
+    uncommon: Some((prefix: "Expanded", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(0.25))])])),
+    rare: Some((prefix: "Massive", effects: [When(trigger: OnSelected, then: [Do(SizeBoost(0.4))])])),
     legendary: None,
 )

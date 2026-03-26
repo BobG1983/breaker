@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::messages::{BoltHitBreaker, BoltHitCell, BoltHitWall},
-    effect::definition::AttractionType,
-    effect::effects::attraction::ActiveAttractions,
+    effect::{definition::AttractionType, effects::attraction::ActiveAttractions},
 };
 
 /// Reads bolt collision messages and toggles attraction entry active state:
@@ -58,8 +57,7 @@ fn update_attraction_state(aa: &mut ActiveAttractions, hit_type: AttractionType)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::components::Bolt;
-    use crate::effect::effects::attraction::AttractionEntry;
+    use crate::{bolt::components::Bolt, effect::effects::attraction::AttractionEntry};
 
     // -- Helper resources for injecting messages into the test app ----------
 
@@ -72,19 +70,13 @@ mod tests {
     #[derive(Resource, Default)]
     struct PendingBreakerHit(Option<BoltHitBreaker>);
 
-    fn send_cell_hit(
-        pending: Res<PendingCellHit>,
-        mut writer: MessageWriter<BoltHitCell>,
-    ) {
+    fn send_cell_hit(pending: Res<PendingCellHit>, mut writer: MessageWriter<BoltHitCell>) {
         if let Some(msg) = pending.0.clone() {
             writer.write(msg);
         }
     }
 
-    fn send_wall_hit(
-        pending: Res<PendingWallHit>,
-        mut writer: MessageWriter<BoltHitWall>,
-    ) {
+    fn send_wall_hit(pending: Res<PendingWallHit>, mut writer: MessageWriter<BoltHitWall>) {
         if let Some(msg) = pending.0.clone() {
             writer.write(msg);
         }

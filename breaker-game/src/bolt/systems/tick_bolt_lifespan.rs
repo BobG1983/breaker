@@ -24,9 +24,10 @@ pub(crate) fn tick_bolt_lifespan(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+
     use super::*;
     use crate::bolt::components::ExtraBolt;
-    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     #[derive(Resource, Default)]
     struct CapturedRequestBoltDestroyed(Vec<RequestBoltDestroyed>);

@@ -4,5 +4,5 @@
     common: None,
     uncommon: None,
     rare: None,
-    legendary: Some((prefix: "", effects: [OnSelected([TimePressureBoost(speed_mult: 2.0, threshold_pct: 0.25)])])),
+    legendary: Some((prefix: "", effects: [When(trigger: OnNodeTimerThreshold(0.25), then: [Do(SpeedBoost(multiplier: 2.0))])])),
 )

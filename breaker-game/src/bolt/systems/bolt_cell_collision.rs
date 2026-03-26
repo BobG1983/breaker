@@ -101,7 +101,9 @@ fn find_nearest_candidate(
             remaining,
             candidate_pos.0,
             expanded_half_extents,
-        ) && best.as_ref().is_none_or(|(_, _, b)| hit.distance < b.distance)
+        ) && best
+            .as_ref()
+            .is_none_or(|(_, _, b)| hit.distance < b.distance)
         {
             let hit_entity = if is_cell {
                 Some(*candidate_entity)

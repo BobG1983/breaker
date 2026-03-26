@@ -1,8 +1,8 @@
 (
     name: "Magnetism",
     max_taken: 3,
-    common: Some((prefix: "Faint", effects: [OnSelected([Attraction(0.5)])])),
-    uncommon: Some((prefix: "Steady", effects: [OnSelected([Attraction(1.0)])])),
-    rare: Some((prefix: "Powerful", effects: [OnSelected([Attraction(1.5), SizeBoost(Bolt, 0.1)])])),
+    common: Some((prefix: "Faint", effects: [When(trigger: OnSelected, then: [Do(Attraction(Cell, 0.5))])])),
+    uncommon: Some((prefix: "Steady", effects: [When(trigger: OnSelected, then: [Do(Attraction(Cell, 1.0))])])),
+    rare: Some((prefix: "Powerful", effects: [When(trigger: OnSelected, then: [Do(Attraction(Cell, 1.5)), Do(SizeBoost(0.1))])])),
     legendary: None,
 )

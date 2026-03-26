@@ -105,10 +105,8 @@ mod tests {
                 (send_bolt_hit_breaker, send_bump, bridge_no_bump).chain(),
             );
         // Place chains on breaker entity EffectChains
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(wrap_chains(breaker_chains)),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(wrap_chains(breaker_chains))));
         app
     }
 
@@ -191,10 +189,13 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                EffectChains(vec![(None, EffectNode::When {
-                    trigger: Trigger::NoBump,
-                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-                })]),
+                EffectChains(vec![(
+                    None,
+                    EffectNode::When {
+                        trigger: Trigger::NoBump,
+                        then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    },
+                )]),
             ))
             .id();
 

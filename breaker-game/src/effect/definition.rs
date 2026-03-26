@@ -1517,7 +1517,9 @@ mod tests {
     #[test]
     fn effect_speed_boost_all_bolts_target() {
         let e = Effect::SpeedBoost { multiplier: 0.5 };
-        assert!(matches!(e, Effect::SpeedBoost { multiplier, .. } if (multiplier - 0.5).abs() < f32::EPSILON));
+        assert!(
+            matches!(e, Effect::SpeedBoost { multiplier, .. } if (multiplier - 0.5).abs() < f32::EPSILON)
+        );
     }
 
     #[test]
@@ -1580,8 +1582,7 @@ mod tests {
     #[test]
     fn effect_node_on_deserializes_from_ron() {
         let ron_str = "On(target: Bolt, then: [Do(LoseLife)])";
-        let node: EffectNode =
-            ron::de::from_str(ron_str).expect("EffectNode On RON should parse");
+        let node: EffectNode = ron::de::from_str(ron_str).expect("EffectNode On RON should parse");
         assert_eq!(
             node,
             EffectNode::On {
@@ -1621,8 +1622,7 @@ mod tests {
     fn root_effect_on_deserializes_from_ron() {
         let ron_str =
             "On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(LoseLife)])])";
-        let root: RootEffect =
-            ron::de::from_str(ron_str).expect("RootEffect On RON should parse");
+        let root: RootEffect = ron::de::from_str(ron_str).expect("RootEffect On RON should parse");
         match &root {
             RootEffect::On { target, then } => {
                 assert_eq!(*target, Target::Breaker);
@@ -1666,8 +1666,7 @@ mod tests {
 
     #[test]
     fn target_all_cells_deserializes() {
-        let t: Target =
-            ron::de::from_str("AllCells").expect("Target::AllCells RON should parse");
+        let t: Target = ron::de::from_str("AllCells").expect("Target::AllCells RON should parse");
         assert_eq!(t, Target::AllCells);
     }
 }

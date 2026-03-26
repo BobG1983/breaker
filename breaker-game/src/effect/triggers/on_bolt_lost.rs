@@ -105,10 +105,8 @@ mod tests {
         let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         let mut app = bolt_lost_test_app();
         // Place chain on breaker entity EffectChains
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(vec![(None, chain)]),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(vec![(None, chain)])));
         app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
         tick(&mut app);
 
@@ -121,10 +119,8 @@ mod tests {
     fn bolt_lost_no_message_no_fire() {
         let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         let mut app = bolt_lost_test_app();
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(vec![(None, chain)]),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(vec![(None, chain)])));
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedLoseLifeFired>();
@@ -150,10 +146,8 @@ mod tests {
             .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
 
         // Place chain on breaker entity EffectChains
-        app.world_mut().spawn((
-            Breaker,
-            EffectChains(vec![(None, chain)]),
-        ));
+        app.world_mut()
+            .spawn((Breaker, EffectChains(vec![(None, chain)])));
         let entity = app.world_mut().spawn(LivesCount(3)).id();
         app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
         tick(&mut app);

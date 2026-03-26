@@ -334,9 +334,7 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTimers(vec![UntilTimerEntry {
                     remaining: 3.0,
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 2.0,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
                 }]),
             ))
             .id();
@@ -369,9 +367,7 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTimers(vec![UntilTimerEntry {
                     remaining: 0.01, // Will expire on next tick (dt = 1/64 > 0.01)
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 2.0,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
                 }]),
             ))
             .id();
@@ -474,9 +470,7 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
                     trigger: Trigger::Impact(ImpactTarget::Breaker),
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.5,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
                 }]),
             ))
             .id();
@@ -522,9 +516,7 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
                     trigger: Trigger::Impact(ImpactTarget::Breaker),
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.5,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
                 }]),
             ))
             .id();
@@ -642,15 +634,11 @@ mod tests {
                 UntilTimers(vec![
                     UntilTimerEntry {
                         remaining: 0.01, // Expires this tick
-                        children: vec![EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 2.0,
-                        })],
+                        children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
                     },
                     UntilTimerEntry {
                         remaining: 5.0, // Still active
-                        children: vec![EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 1.5,
-                        })],
+                        children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
                     },
                 ]),
             ))
@@ -703,14 +691,15 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
                     trigger: Trigger::Impact(ImpactTarget::Wall),
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.3,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.3 })],
                 }]),
             ))
             .id();
 
-        app.insert_resource(SendMsg(Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER })));
+        app.insert_resource(SendMsg(Some(BoltHitWall {
+            bolt,
+            wall: Entity::PLACEHOLDER,
+        })));
 
         tick(&mut app);
 
@@ -758,9 +747,7 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
                     trigger: Trigger::CellDestroyed,
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.5,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
                 }]),
             ))
             .id();
@@ -810,15 +797,11 @@ mod tests {
                 UntilTimers(vec![
                     UntilTimerEntry {
                         remaining: 0.01, // dt = 1/64 > 0.01 — expires this tick
-                        children: vec![EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 2.0,
-                        })],
+                        children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
                     },
                     UntilTimerEntry {
                         remaining: 0.01, // Also expires this tick
-                        children: vec![EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 1.5,
-                        })],
+                        children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
                     },
                 ]),
             ))
@@ -860,9 +843,7 @@ mod tests {
                 BoltMaxSpeed(800.0),
                 UntilTimers(vec![UntilTimerEntry {
                     remaining: 0.0, // Exactly zero — should expire on next tick
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 2.0,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
                 }]),
             ))
             .id();
@@ -951,9 +932,7 @@ mod tests {
                 UntilTimers(vec![UntilTimerEntry {
                     remaining: 0.01, // Expires this tick
                     children: vec![
-                        EffectNode::Do(Effect::SpeedBoost {
-                            multiplier: 1.5,
-                        }),
+                        EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 }),
                         EffectNode::When {
                             trigger: Trigger::Impact(ImpactTarget::Cell),
                             then: vec![EffectNode::Do(Effect::Shockwave {
@@ -1053,9 +1032,7 @@ mod tests {
                 ActiveSpeedBoosts(vec![1.5, 2.0]),
                 UntilTimers(vec![UntilTimerEntry {
                     remaining: 0.01, // dt = 1/64 > 0.01 — expires this tick
-                    children: vec![EffectNode::Do(Effect::SpeedBoost {
-                        multiplier: 1.5,
-                    })],
+                    children: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
                 }]),
             ))
             .id();
