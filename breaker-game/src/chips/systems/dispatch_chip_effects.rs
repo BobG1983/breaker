@@ -85,10 +85,12 @@ pub(crate) fn dispatch_chip_effects(
                                 chains.0.push(entry.clone());
                             }
                         }
-                        Some(Trigger::Impact(ImpactTarget::Cell))
-                        | Some(Trigger::Impact(ImpactTarget::Wall))
-                        | Some(Trigger::Impact(ImpactTarget::Breaker))
-                        | Some(Trigger::CellDestroyed) => {
+                        Some(
+                            Trigger::Impact(
+                                ImpactTarget::Cell | ImpactTarget::Wall | ImpactTarget::Breaker,
+                            )
+                            | Trigger::CellDestroyed,
+                        ) => {
                             for mut chains in &mut bolt_query {
                                 chains.0.push(entry.clone());
                             }

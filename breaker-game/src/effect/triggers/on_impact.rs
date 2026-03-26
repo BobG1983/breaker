@@ -381,7 +381,7 @@ mod tests {
         let mut app = wall_impact_test_app();
         // Place chain on bolt entity EffectChains
         let bolt = app.world_mut().spawn(EffectChains(vec![(None, chain)])).id();
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShockwaveFired>();
@@ -402,7 +402,7 @@ mod tests {
                 ),
             )]))
             .id();
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
         tick(&mut app);
 
         let captured = app.world().resource::<CapturedShieldFired>();
@@ -523,7 +523,7 @@ mod tests {
             })]))
             .id();
 
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
 
         tick(&mut app);
 
@@ -871,7 +871,7 @@ mod tests {
             }]))
             .id();
 
-        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt });
+        app.world_mut().resource_mut::<SendBoltHitWall>().0 = Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER });
 
         tick(&mut app);
 

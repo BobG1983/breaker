@@ -68,8 +68,10 @@ type CandidateLookup<'w, 's> = Query<
 
 /// Finds the nearest collision candidate from a set of quadtree results.
 ///
-/// Returns `Some((cell_entity_or_none, hit))` for the closest hit, or `None`
-/// if no candidate was hit. Cell entities return `Some(entity)`, walls return `None`.
+/// Returns `Some((cell_entity_or_none, candidate_entity, hit))` for the closest
+/// hit, or `None` if no candidate was hit. Cell entities return
+/// `Some(entity)` in the first field, walls return `None`. The second field
+/// always holds the raw candidate entity (cell or wall).
 fn find_nearest_candidate(
     candidates: &[Entity],
     candidate_lookup: &CandidateLookup,
@@ -78,8 +80,8 @@ fn find_nearest_candidate(
     direction: Vec2,
     remaining: f32,
     bolt_radius: f32,
-) -> Option<(Option<Entity>, crate::shared::math::RayHit)> {
-    let mut best: Option<(Option<Entity>, crate::shared::math::RayHit)> = None;
+) -> Option<(Option<Entity>, Entity, crate::shared::math::RayHit)> {
+    let mut best: Option<(Option<Entity>, Entity, crate::shared::math::RayHit)> = None;
 
     for candidate_entity in candidates {
         let Ok((_, candidate_pos, candidate_aabb, is_cell, _is_wall, _cell_health)) =
@@ -99,14 +101,14 @@ fn find_nearest_candidate(
             remaining,
             candidate_pos.0,
             expanded_half_extents,
-        ) && best.as_ref().is_none_or(|(_, b)| hit.distance < b.distance)
+        ) && best.as_ref().is_none_or(|(_, _, b)| hit.distance < b.distance)
         {
             let hit_entity = if is_cell {
                 Some(*candidate_entity)
             } else {
                 None
             };
-            best = Some((hit_entity, hit));
+            best = Some((hit_entity, *candidate_entity, hit));
         }
     }
 
@@ -190,7 +192,7 @@ pub(crate) fn bolt_cell_collision(
                 r,
             );
 
-            let Some((hit_cell, hit)) = best else {
+            let Some((hit_cell, candidate_entity, hit)) = best else {
                 // No target in path — move the full remaining distance
                 position += direction * remaining;
                 break;
@@ -239,7 +241,10 @@ pub(crate) fn bolt_cell_collision(
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
                 }
-                wall_hit_writer.write(BoltHitWall { bolt: bolt_entity });
+                wall_hit_writer.write(BoltHitWall {
+                    bolt: bolt_entity,
+                    wall: candidate_entity,
+                });
             }
         }
 

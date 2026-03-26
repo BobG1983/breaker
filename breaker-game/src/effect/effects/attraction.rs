@@ -3,9 +3,33 @@
 use bevy::prelude::*;
 
 use super::stack_f32;
-use crate::{
-    bolt::components::Bolt, chips::components::AttractionForce, effect::definition::AttractionType,
-};
+use crate::{bolt::components::Bolt, effect::definition::AttractionType};
+
+// ---------------------------------------------------------------------------
+// Components
+// ---------------------------------------------------------------------------
+
+/// Attraction force magnitude pulling nearby cells toward the bolt.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct AttractionForce(pub f32);
+
+/// Tracks per-type attraction state on a bolt entity.
+#[derive(Component, Debug, Clone, Default)]
+pub(crate) struct ActiveAttractions {
+    /// Individual attraction entries by type.
+    pub entries: Vec<AttractionEntry>,
+}
+
+/// A single attraction type entry with force magnitude and active state.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct AttractionEntry {
+    /// Which type of entity this attraction targets.
+    pub attraction_type: AttractionType,
+    /// Force magnitude for this attraction.
+    pub force: f32,
+    /// Whether this attraction is currently active.
+    pub active: bool,
+}
 
 // ---------------------------------------------------------------------------
 // Typed event

@@ -1,10 +1,19 @@
-//! Second wind effect handler — grants temporary invulnerability after bolt loss.
+//! Second wind effect handler — spawns invisible bottom wall that bounces bolt once.
 //!
-//! Observes [`SecondWindFired`] and applies invulnerability to the breaker.
+//! Observes [`SecondWindFired`] and spawns a [`SecondWindWall`] entity.
 
 use bevy::prelude::*;
 
 use crate::effect::definition::EffectTarget;
+
+// ---------------------------------------------------------------------------
+// Components
+// ---------------------------------------------------------------------------
+
+/// Marker for the invisible bottom wall spawned by the `SecondWind` effect.
+/// Filtered out of attraction queries via `Without<SecondWindWall>`.
+#[derive(Component, Debug, Default)]
+pub(crate) struct SecondWindWall;
 
 // ---------------------------------------------------------------------------
 // Typed event

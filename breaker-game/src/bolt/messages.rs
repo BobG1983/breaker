@@ -50,6 +50,8 @@ pub struct BoltLost;
 pub(crate) struct BoltHitWall {
     /// The bolt entity that hit the wall.
     pub bolt: Entity,
+    /// The wall entity that was hit.
+    pub wall: Entity,
 }
 
 /// Sent by `bolt_lost` when an extra bolt falls off screen. Entity is still alive.
@@ -190,6 +192,7 @@ mod tests {
 
         let d = BoltHitWall {
             bolt: Entity::PLACEHOLDER,
+            wall: Entity::PLACEHOLDER,
         };
         let d_fmt = format!("{d:?}");
         assert!(d_fmt.contains("BoltHitWall"));

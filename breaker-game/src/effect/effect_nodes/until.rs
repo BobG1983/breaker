@@ -710,7 +710,7 @@ mod tests {
             ))
             .id();
 
-        app.insert_resource(SendMsg(Some(BoltHitWall { bolt })));
+        app.insert_resource(SendMsg(Some(BoltHitWall { bolt, wall: Entity::PLACEHOLDER })));
 
         tick(&mut app);
 
