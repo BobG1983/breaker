@@ -121,8 +121,8 @@ pub(crate) fn handle_speed_boost(
                 }
             }
         }
-        Target::Breaker => {
-            // Future feature — no-op for now
+        Target::Breaker | Target::Cell | Target::Wall | Target::AllCells => {
+            // Not applicable to speed boost — no-op
         }
     }
 }

@@ -49,7 +49,10 @@ pub(crate) fn evaluate_node(trigger: Trigger, node: &EffectNode) -> Vec<NodeEval
                 vec![NodeEvalResult::NoMatch]
             }
         }
-        EffectNode::Do(_) | EffectNode::Until { .. } | EffectNode::Once(_) => {
+        EffectNode::Do(_)
+        | EffectNode::Until { .. }
+        | EffectNode::Once(_)
+        | EffectNode::On { .. } => {
             vec![NodeEvalResult::NoMatch]
         }
     }
@@ -513,5 +516,25 @@ mod tests {
                 "NoBump should not match When({bump_trigger:?})"
             );
         }
+    }
+
+    // =========================================================================
+    // EffectNode::On — evaluate_node returns NoMatch (stub behavior)
+    // =========================================================================
+
+    #[test]
+    fn evaluate_node_returns_no_match_for_on() {
+        use crate::effect::definition::Target;
+
+        let node = EffectNode::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(Effect::LoseLife)],
+        };
+        let result = evaluate_node(Trigger::PerfectBump, &node);
+        assert_eq!(
+            result,
+            vec![NodeEvalResult::NoMatch],
+            "On nodes are not evaluated by trigger matching — should return NoMatch"
+        );
     }
 }

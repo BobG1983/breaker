@@ -19,7 +19,7 @@ pub use active::ActiveEffects;
 pub(crate) use definition::BreakerDefinition;
 pub use definition::{
     AttractionType, Effect, EffectChains, EffectEntity, EffectNode, EffectTarget, ImpactTarget,
-    Target, Trigger,
+    RootEffect, Target, Trigger,
 };
 pub(crate) use plugin::EffectPlugin;
 pub(crate) use registry::BreakerRegistry;

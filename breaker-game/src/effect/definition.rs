@@ -18,6 +18,12 @@ pub enum Target {
     Breaker,
     /// Target all bolt entities in play.
     AllBolts,
+    /// Target the specific cell entity that was hit.
+    Cell,
+    /// Target the wall entity that was hit.
+    Wall,
+    /// Target all cell entities in the current node.
+    AllCells,
 }
 
 /// Discriminates which surface triggered an impact event.
@@ -241,10 +247,10 @@ pub enum Effect {
 }
 
 // ---------------------------------------------------------------------------
-// EffectNode — the new 4-variant tree shape
+// EffectNode — the effect tree shape
 // ---------------------------------------------------------------------------
 
-/// A node in the effect tree — `When`/`Do`/`Until`/`Once`.
+/// A node in the effect tree — `When`/`Do`/`Until`/`Once`/`On`.
 ///
 /// Replaces the old `Trigger(Trigger, Vec<EffectNode>)` / `Leaf(Effect)` shape.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
@@ -267,6 +273,43 @@ pub enum EffectNode {
     },
     /// A one-shot wrapper — children fire once and are consumed.
     Once(Vec<EffectNode>),
+    /// A target scope — children are dispatched against the specified target entity.
+    ///
+    /// `On` nodes are not evaluated by trigger matching; they are resolved at
+    /// dispatch time to determine the entity context for child effects.
+    On {
+        /// Which entity type the child effects target.
+        target: Target,
+        /// Child nodes dispatched against the target entity.
+        then: Vec<EffectNode>,
+    },
+}
+
+// ---------------------------------------------------------------------------
+// RootEffect — breaker-definition entry point (always starts with On)
+// ---------------------------------------------------------------------------
+
+/// A root-level effect declaration — always scoped to a target entity.
+///
+/// `RootEffect` constrains breaker definitions so that every top-level effect
+/// chain explicitly names its target. It converts into an [`EffectNode::On`]
+/// for tree evaluation.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub enum RootEffect {
+    /// A target-scoped effect chain.
+    On {
+        /// Which entity type the child effects target.
+        target: Target,
+        /// Child nodes dispatched against the target entity.
+        then: Vec<EffectNode>,
+    },
+}
+
+impl From<RootEffect> for EffectNode {
+    fn from(r: RootEffect) -> Self {
+        let RootEffect::On { target, then } = r;
+        EffectNode::On { target, then }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1498,5 +1541,119 @@ mod tests {
         };
         let cloned = effect.clone();
         assert_eq!(effect, cloned);
+    }
+
+    // =========================================================================
+    // EffectNode::On — construction and serde (Part A)
+    // =========================================================================
+
+    #[test]
+    fn effect_node_on_wraps_target_and_children() {
+        let node = EffectNode::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(Effect::LoseLife)],
+        };
+        match &node {
+            EffectNode::On { target, then } => {
+                assert_eq!(*target, Target::Bolt);
+                assert_eq!(then.len(), 1);
+                assert!(matches!(then[0], EffectNode::Do(Effect::LoseLife)));
+            }
+            other => panic!("expected On(Bolt, _), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn effect_node_on_deserializes_from_ron() {
+        let ron_str = "On(target: Bolt, then: [Do(LoseLife)])";
+        let node: EffectNode =
+            ron::de::from_str(ron_str).expect("EffectNode On RON should parse");
+        assert_eq!(
+            node,
+            EffectNode::On {
+                target: Target::Bolt,
+                then: vec![EffectNode::Do(Effect::LoseLife)],
+            }
+        );
+    }
+
+    #[test]
+    fn effect_node_on_converts_from_root_effect() {
+        let root = RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::BoltLost,
+                then: vec![EffectNode::Do(Effect::LoseLife)],
+            }],
+        };
+        let node: EffectNode = root.into();
+        assert_eq!(
+            node,
+            EffectNode::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::BoltLost,
+                    then: vec![EffectNode::Do(Effect::LoseLife)],
+                }],
+            }
+        );
+    }
+
+    // =========================================================================
+    // RootEffect — construction and serde (Part B)
+    // =========================================================================
+
+    #[test]
+    fn root_effect_on_deserializes_from_ron() {
+        let ron_str =
+            "On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(LoseLife)])])";
+        let root: RootEffect =
+            ron::de::from_str(ron_str).expect("RootEffect On RON should parse");
+        match &root {
+            RootEffect::On { target, then } => {
+                assert_eq!(*target, Target::Breaker);
+                assert_eq!(then.len(), 1);
+                assert!(matches!(
+                    &then[0],
+                    EffectNode::When {
+                        trigger: Trigger::BoltLost,
+                        ..
+                    }
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn root_effect_rejects_non_on_variant() {
+        let ron_str = "When(trigger: OnPerfectBump, then: [Do(LoseLife)])";
+        let result = ron::de::from_str::<RootEffect>(ron_str);
+        assert!(
+            result.is_err(),
+            "RootEffect should reject non-On variants like When"
+        );
+    }
+
+    // =========================================================================
+    // Target expansion — new variants (Part C)
+    // =========================================================================
+
+    #[test]
+    fn target_cell_deserializes() {
+        let t: Target = ron::de::from_str("Cell").expect("Target::Cell RON should parse");
+        assert_eq!(t, Target::Cell);
+    }
+
+    #[test]
+    fn target_wall_deserializes() {
+        let t: Target = ron::de::from_str("Wall").expect("Target::Wall RON should parse");
+        assert_eq!(t, Target::Wall);
+    }
+
+    #[test]
+    fn target_all_cells_deserializes() {
+        let t: Target =
+            ron::de::from_str("AllCells").expect("Target::AllCells RON should parse");
+        assert_eq!(t, Target::AllCells);
     }
 }

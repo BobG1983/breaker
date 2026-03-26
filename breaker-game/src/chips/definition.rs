@@ -719,9 +719,10 @@ mod tests {
     }
 
     #[test]
-    fn target_rejects_invalid_variant() {
+    fn target_cell_is_valid_variant() {
         let result = ron::de::from_str::<Target>("Cell");
-        assert!(result.is_err(), "Target should not accept Cell variant");
+        assert!(result.is_ok(), "Target::Cell should be a valid variant");
+        assert_eq!(result.unwrap(), Target::Cell);
     }
 
     // =========================================================================
