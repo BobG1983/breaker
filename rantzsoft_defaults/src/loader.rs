@@ -42,6 +42,10 @@ impl<T> RonAssetLoader<T> {
 ///
 /// This is the core deserialization logic used by [`RonAssetLoader`].
 /// Exposed as a public function for testability.
+///
+/// # Errors
+///
+/// Returns [`ron::error::SpannedError`] if `bytes` is not valid RON for type `T`.
 pub fn deserialize_ron<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ron::error::SpannedError> {
     ron::de::from_bytes(bytes)
 }
@@ -72,8 +76,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde::Deserialize;
+
+    use super::*;
 
     #[derive(Asset, TypePath, Deserialize, Clone, Debug, PartialEq)]
     struct TestAsset {
@@ -102,10 +107,7 @@ mod tests {
     fn loader_rejects_invalid_ron() {
         let invalid_bytes = b"not valid ron {{{";
         let result = deserialize_ron::<TestAsset>(invalid_bytes);
-        assert!(
-            result.is_err(),
-            "invalid RON bytes should produce an error"
-        );
+        assert!(result.is_err(), "invalid RON bytes should produce an error");
     }
 
     /// `RonAssetLoader::extensions` returns the extensions passed at
