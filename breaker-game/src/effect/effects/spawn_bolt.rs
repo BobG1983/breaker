@@ -2,7 +2,31 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::SpawnAdditionalBolt, effect::typed_events::SpawnBoltFired};
+use crate::{bolt::messages::SpawnAdditionalBolt, effect::definition::EffectTarget};
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a spawn-bolts effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct SpawnBoltsFired {
+    /// Number of bolts to spawn.
+    pub count: u32,
+    /// Optional lifespan in seconds (temporary bolts).
+    pub lifespan: Option<f32>,
+    /// Whether spawned bolts inherit the parent bolt's velocity.
+    pub inherit: bool,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
+
+/// Backward-compatible alias — production code still references this name.
+///
+/// Will be removed when all handler files are updated.
+pub(crate) type SpawnBoltFired = SpawnBoltsFired;
 
 /// Observer that handles spawn-bolt — writes [`SpawnAdditionalBolt`] message.
 pub(crate) fn handle_spawn_bolt(

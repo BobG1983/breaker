@@ -5,8 +5,25 @@ use bevy::prelude::*;
 use super::stack_f32;
 use crate::{
     bolt::components::Bolt, chips::components::BoltSizeBoost,
-    effect::typed_events::SizeBoostApplied,
+    effect::definition::Target,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a size boost passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct SizeBoostApplied {
+    /// Which entity to apply the size change to.
+    pub target: Target,
+    /// Size boost per stack.
+    pub per_stack: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 /// Observer: applies bolt size boost stacking to all bolt entities.
 pub(crate) fn handle_bolt_size_boost(

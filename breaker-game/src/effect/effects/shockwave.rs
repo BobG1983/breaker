@@ -14,9 +14,30 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 use crate::{
     cells::{components::Locked, messages::DamageCell},
     chips::components::DamageBoost,
-    effect::typed_events::ShockwaveFired,
+    effect::definition::EffectTarget,
     shared::{BASE_BOLT_DAMAGE, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a shockwave effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct ShockwaveFired {
+    /// Base radius of the shockwave effect.
+    pub base_range: f32,
+    /// Additional radius per stack beyond the first.
+    pub range_per_level: f32,
+    /// Current stack count.
+    pub stacks: u32,
+    /// Expansion speed in world units per second.
+    pub speed: f32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The chip name that originated this chain, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 // ---------------------------------------------------------------------------
 // Components

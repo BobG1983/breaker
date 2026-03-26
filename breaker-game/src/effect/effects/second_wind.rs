@@ -4,7 +4,22 @@
 
 use bevy::prelude::*;
 
-use crate::effect::typed_events::SecondWindFired;
+use crate::effect::definition::EffectTarget;
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a second wind effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct SecondWindFired {
+    /// Duration of invulnerability in seconds.
+    pub invuln_secs: f32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Observer: handles second wind — temporary invulnerability.
 pub(crate) fn handle_second_wind(_trigger: On<SecondWindFired>) {

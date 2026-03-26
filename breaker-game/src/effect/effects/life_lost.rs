@@ -3,10 +3,23 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{effects::shield::ShieldActive, typed_events::LoseLifeFired},
+    effect::{definition::EffectTarget, effects::shield::ShieldActive},
     run::messages::RunLost,
     ui::components::StatusPanel,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a lose-life effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct LoseLifeFired {
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Number of remaining lives on the breaker entity.
 #[derive(Component, Debug, Clone, Copy)]

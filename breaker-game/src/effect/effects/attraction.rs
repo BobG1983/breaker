@@ -5,8 +5,25 @@ use bevy::prelude::*;
 use super::stack_f32;
 use crate::{
     bolt::components::Bolt, chips::components::AttractionForce,
-    effect::typed_events::AttractionApplied,
+    effect::definition::AttractionType,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when an attraction passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct AttractionApplied {
+    /// The type of entity attraction targets.
+    pub attraction_type: AttractionType,
+    /// Attraction force per stack.
+    pub per_stack: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 /// Observer: applies attraction force stacking to all bolt entities.
 pub(crate) fn handle_attraction(

@@ -2,7 +2,22 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::SpawnChainBolt, effect::typed_events::ChainBoltFired};
+use crate::{bolt::messages::SpawnChainBolt, effect::definition::EffectTarget};
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a chain bolt effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct ChainBoltFired {
+    /// Maximum distance the chain bolt can travel from its anchor.
+    pub tether_distance: f32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Observer that handles chain bolt — writes [`SpawnChainBolt`] message.
 ///

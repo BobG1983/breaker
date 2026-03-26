@@ -14,8 +14,24 @@ use crate::{
         messages::{BoltHitBreaker, BoltHitCell},
     },
     breaker::messages::BumpPerformed,
-    effect::typed_events::RampingDamageApplied,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a ramping damage passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct RampingDamageApplied {
+    /// Damage bonus added per cell hit.
+    pub bonus_per_hit: f32,
+    /// Maximum cumulative damage bonus before capping.
+    pub max_bonus: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 // ---------------------------------------------------------------------------
 // Components

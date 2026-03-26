@@ -3,9 +3,22 @@
 use bevy::prelude::*;
 
 use super::stack_u32;
-use crate::{
-    bolt::components::Bolt, chips::components::ChainHit, effect::typed_events::ChainHitApplied,
-};
+use crate::{bolt::components::Bolt, chips::components::ChainHit};
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a chain hit passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct ChainHitApplied {
+    /// Chain hit count per stack.
+    pub per_stack: u32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 /// Observer: applies chain hit stacking to all bolt entities.
 pub(crate) fn handle_chain_hit(

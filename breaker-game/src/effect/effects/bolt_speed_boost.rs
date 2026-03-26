@@ -5,8 +5,25 @@ use bevy::prelude::*;
 use super::stack_f32;
 use crate::{
     bolt::components::Bolt, chips::components::BoltSpeedBoost,
-    effect::typed_events::SpeedBoostApplied,
+    effect::definition::Target,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a speed boost passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct SpeedBoostApplied {
+    /// Which entity to apply the speed change to.
+    pub target: Target,
+    /// Speed multiplier per stack.
+    pub multiplier: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 /// Observer: applies bolt speed boost stacking to all bolt entities.
 pub(crate) fn handle_bolt_speed_boost(

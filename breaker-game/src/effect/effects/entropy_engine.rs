@@ -10,11 +10,28 @@ use rand::Rng;
 
 use crate::{
     effect::{
-        definition::EffectNode,
-        typed_events::{EntropyEngineFired, fire_typed_event},
+        definition::{EffectNode, EffectTarget},
+        typed_events::fire_typed_event,
     },
     shared::GameRng,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when an entropy engine effect needs counting and potential resolution.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct EntropyEngineFired {
+    /// Number of cell destructions needed before firing.
+    pub threshold: u32,
+    /// Weighted pool of `EffectNode` entries to select from on trigger.
+    pub pool: Vec<(f32, EffectNode)>,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 // ---------------------------------------------------------------------------
 // Resources

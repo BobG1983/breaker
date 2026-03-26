@@ -4,7 +4,24 @@
 
 use bevy::prelude::*;
 
-use crate::effect::typed_events::SpawnPhantomFired;
+use crate::effect::definition::EffectTarget;
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a spawn phantom effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct SpawnPhantomFired {
+    /// How long the phantom persists in seconds.
+    pub duration: f32,
+    /// Maximum active phantoms at once.
+    pub max_active: u32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Observer: handles phantom breaker spawning.
 pub(crate) fn handle_spawn_phantom(_trigger: On<SpawnPhantomFired>) {

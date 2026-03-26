@@ -4,7 +4,24 @@
 
 use bevy::prelude::*;
 
-use crate::effect::typed_events::PiercingBeamFired;
+use crate::effect::definition::EffectTarget;
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a piercing beam effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct PiercingBeamFired {
+    /// Damage multiplier for the beam.
+    pub damage_mult: f32,
+    /// Width of the beam in world units.
+    pub width: f32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Observer: handles piercing beam — fires a beam through cells.
 pub(crate) fn handle_piercing_beam(_trigger: On<PiercingBeamFired>) {

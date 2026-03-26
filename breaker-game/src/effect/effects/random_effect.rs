@@ -11,10 +11,25 @@ use crate::{
     effect::{
         armed::ArmedEffects,
         definition::{EffectNode, EffectTarget},
-        typed_events::{RandomEffectFired, fire_typed_event},
+        typed_events::fire_typed_event,
     },
     shared::GameRng,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a random effect pool needs to be resolved.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct RandomEffectFired {
+    /// Weighted pool of `EffectNode` entries to select from.
+    pub pool: Vec<(f32, EffectNode)>,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 // ---------------------------------------------------------------------------
 // Observer — handles random effect selection

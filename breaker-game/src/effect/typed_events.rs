@@ -1,332 +1,47 @@
 //! Typed per-effect observer events and dispatch helpers.
 //!
-//! Each event replaces the catchall `EffectFired` / `ChipEffectApplied` with a
-//! concrete struct per `Effect` variant. Dispatch helpers convert `Effect`
-//! values and fire the corresponding typed events.
+//! Each event struct now lives in its corresponding effect handler file.
+//! This module re-exports them for backward compatibility and contains
+//! the dispatch helpers that convert `Effect` values into typed events.
 
 use bevy::prelude::*;
 use tracing::warn;
 
-use super::definition::{AttractionType, EffectTarget, Target};
+use super::definition::{EffectTarget, Target};
 
 // ===========================================================================
-// Triggered effect events (fired by bridge systems)
+// Re-exports — triggered effect events (canonical location: effects/<name>.rs)
 // ===========================================================================
 
-/// Fired when a shockwave effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ShockwaveFired {
-    /// Base radius of the shockwave effect.
-    pub base_range: f32,
-    /// Additional radius per stack beyond the first.
-    pub range_per_level: f32,
-    /// Current stack count.
-    pub stacks: u32,
-    /// Expansion speed in world units per second.
-    pub speed: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The chip name that originated this chain, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a lose-life effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct LoseLifeFired {
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a time penalty effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct TimePenaltyFired {
-    /// Duration of the penalty in seconds.
-    pub seconds: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a spawn-bolts effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SpawnBoltsFired {
-    /// Number of bolts to spawn.
-    pub count: u32,
-    /// Optional lifespan in seconds (temporary bolts).
-    pub lifespan: Option<f32>,
-    /// Whether spawned bolts inherit the parent bolt's velocity.
-    pub inherit: bool,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Backward-compatible alias — production code still references this name.
-///
-/// Will be removed when all handler files are updated.
-pub(crate) type SpawnBoltFired = SpawnBoltsFired;
-
-/// Fired when a speed boost effect resolves via a triggered chain.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SpeedBoostFired {
-    /// Which entity to apply the speed change to.
-    pub target: Target,
-    /// Multiplier applied to the current velocity magnitude.
-    pub multiplier: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a chain bolt effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ChainBoltFired {
-    /// Maximum distance the chain bolt can travel from its anchor.
-    pub tether_distance: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a multi-bolt effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct MultiBoltFired {
-    /// Base number of extra bolts to spawn.
-    pub base_count: u32,
-    /// Additional bolts per stack beyond the first.
-    pub count_per_level: u32,
-    /// Current stack count.
-    pub stacks: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a shield effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ShieldFired {
-    /// Base duration in seconds.
-    pub base_duration: f32,
-    /// Additional duration per stack beyond the first.
-    pub duration_per_level: f32,
-    /// Current stack count.
-    pub stacks: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a chain lightning effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ChainLightningFired {
-    /// Number of arcs from the origin cell.
-    pub arcs: u32,
-    /// Maximum arc range in world units.
-    pub range: f32,
-    /// Damage multiplier per arc.
-    pub damage_mult: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a spawn phantom effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SpawnPhantomFired {
-    /// How long the phantom persists in seconds.
-    pub duration: f32,
-    /// Maximum active phantoms at once.
-    pub max_active: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a piercing beam effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct PiercingBeamFired {
-    /// Damage multiplier for the beam.
-    pub damage_mult: f32,
-    /// Width of the beam in world units.
-    pub width: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a gravity well effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct GravityWellFired {
-    /// Attraction strength.
-    pub strength: f32,
-    /// Duration in seconds.
-    pub duration: f32,
-    /// Effect radius in world units.
-    pub radius: f32,
-    /// Maximum active wells at once.
-    pub max: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a second wind effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SecondWindFired {
-    /// Duration of invulnerability in seconds.
-    pub invuln_secs: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when a random effect pool needs to be resolved.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct RandomEffectFired {
-    /// Weighted pool of `EffectNode` entries to select from.
-    pub pool: Vec<(f32, super::definition::EffectNode)>,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Fired when an entropy engine effect needs counting and potential resolution.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct EntropyEngineFired {
-    /// Number of cell destructions needed before firing.
-    pub threshold: u32,
-    /// Weighted pool of `EffectNode` entries to select from on trigger.
-    pub pool: Vec<(f32, super::definition::EffectNode)>,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
+pub(crate) use super::effects::chain_bolt::ChainBoltFired;
+pub(crate) use super::effects::chain_lightning::ChainLightningFired;
+pub(crate) use super::effects::entropy_engine::EntropyEngineFired;
+pub(crate) use super::effects::gravity_well::GravityWellFired;
+pub(crate) use super::effects::life_lost::LoseLifeFired;
+pub(crate) use super::effects::multi_bolt::MultiBoltFired;
+pub(crate) use super::effects::piercing_beam::PiercingBeamFired;
+pub(crate) use super::effects::random_effect::RandomEffectFired;
+pub(crate) use super::effects::second_wind::SecondWindFired;
+pub(crate) use super::effects::shield::ShieldFired;
+pub(crate) use super::effects::shockwave::ShockwaveFired;
+pub(crate) use super::effects::spawn_bolt::{SpawnBoltFired, SpawnBoltsFired};
+pub(crate) use super::effects::spawn_phantom::SpawnPhantomFired;
+pub(crate) use super::effects::speed_boost::SpeedBoostFired;
+pub(crate) use super::effects::time_penalty::TimePenaltyFired;
 
 // ===========================================================================
-// Passive effect events (fired by dispatch_chip_effects)
+// Re-exports — passive effect events (canonical location: effects/<name>.rs)
 // ===========================================================================
 
-/// Fired when a piercing passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct PiercingApplied {
-    /// Piercing count per stack.
-    pub per_stack: u32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a damage boost passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct DamageBoostApplied {
-    /// Damage boost per stack.
-    pub per_stack: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a speed boost passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SpeedBoostApplied {
-    /// Which entity to apply the speed change to.
-    pub target: Target,
-    /// Speed multiplier per stack.
-    pub multiplier: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a chain hit passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ChainHitApplied {
-    /// Chain hit count per stack.
-    pub per_stack: u32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a size boost passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SizeBoostApplied {
-    /// Which entity to apply the size change to.
-    pub target: Target,
-    /// Size boost per stack.
-    pub per_stack: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when an attraction passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct AttractionApplied {
-    /// The type of entity attraction targets.
-    pub attraction_type: AttractionType,
-    /// Attraction force per stack.
-    pub per_stack: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a bump force passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct BumpForceApplied {
-    /// Bump force increase per stack.
-    pub per_stack: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a tilt control passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct TiltControlApplied {
-    /// Tilt control sensitivity increase per stack.
-    pub per_stack: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
-
-/// Fired when a ramping damage passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct RampingDamageApplied {
-    /// Damage bonus added per cell hit.
-    pub bonus_per_hit: f32,
-    /// Maximum cumulative damage bonus before capping.
-    pub max_bonus: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
-}
+pub(crate) use super::effects::attraction::AttractionApplied;
+pub(crate) use super::effects::bolt_size_boost::SizeBoostApplied;
+pub(crate) use super::effects::bolt_speed_boost::SpeedBoostApplied;
+pub(crate) use super::effects::bump_force_boost::BumpForceApplied;
+pub(crate) use super::effects::chain_hit::ChainHitApplied;
+pub(crate) use super::effects::damage_boost::DamageBoostApplied;
+pub(crate) use super::effects::piercing::PiercingApplied;
+pub(crate) use super::effects::ramping_damage::RampingDamageApplied;
+pub(crate) use super::effects::tilt_control_boost::TiltControlApplied;
 
 // ===========================================================================
 // Bridge dispatch — converts Effect -> typed event

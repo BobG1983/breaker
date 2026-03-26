@@ -6,7 +6,26 @@
 
 use bevy::prelude::*;
 
-use crate::{breaker::components::Breaker, effect::typed_events::ShieldFired};
+use crate::{breaker::components::Breaker, effect::definition::EffectTarget};
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a shield effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct ShieldFired {
+    /// Base duration in seconds.
+    pub base_duration: f32,
+    /// Additional duration per stack beyond the first.
+    pub duration_per_level: f32,
+    /// Current stack count.
+    pub stacks: u32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 // ---------------------------------------------------------------------------
 // Components

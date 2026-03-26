@@ -3,10 +3,22 @@
 use bevy::prelude::*;
 
 use super::stack_f32;
-use crate::{
-    breaker::components::Breaker, chips::components::TiltControlBoost,
-    effect::typed_events::TiltControlApplied,
-};
+use crate::{breaker::components::Breaker, chips::components::TiltControlBoost};
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a tilt control passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct TiltControlApplied {
+    /// Tilt control sensitivity increase per stack.
+    pub per_stack: f32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 /// Observer: applies tilt control boost stacking to all breaker entities.
 pub(crate) fn handle_tilt_control_boost(

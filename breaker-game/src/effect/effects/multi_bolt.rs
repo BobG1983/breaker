@@ -5,7 +5,26 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::SpawnAdditionalBolt, effect::typed_events::MultiBoltFired};
+use crate::{bolt::messages::SpawnAdditionalBolt, effect::definition::EffectTarget};
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a multi-bolt effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct MultiBoltFired {
+    /// Base number of extra bolts to spawn.
+    pub base_count: u32,
+    /// Additional bolts per stack beyond the first.
+    pub count_per_level: u32,
+    /// Current stack count.
+    pub stacks: u32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Observer: handles multi-bolt effect — writes multiple [`SpawnAdditionalBolt`] messages.
 ///

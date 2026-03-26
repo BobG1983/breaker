@@ -3,9 +3,24 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{effects::shield::ShieldActive, typed_events::TimePenaltyFired},
+    effect::{definition::EffectTarget, effects::shield::ShieldActive},
     run::node::messages::ApplyTimePenalty,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a time penalty effect resolves.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct TimePenaltyFired {
+    /// Duration of the penalty in seconds.
+    pub seconds: f32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Observer that handles time penalty — writes [`ApplyTimePenalty`] message.
 /// Skips when any entity has [`ShieldActive`].

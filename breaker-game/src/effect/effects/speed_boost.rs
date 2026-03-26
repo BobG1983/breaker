@@ -10,8 +10,25 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use crate::{
     bolt::components::{Bolt, BoltBaseSpeed, BoltMaxSpeed},
     chips::components::BoltSpeedBoost,
-    effect::{definition::Target, typed_events::SpeedBoostFired},
+    effect::definition::{EffectTarget, Target},
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a speed boost effect resolves via a triggered chain.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct SpeedBoostFired {
+    /// Which entity to apply the speed change to.
+    pub target: Target,
+    /// Multiplier applied to the current velocity magnitude.
+    pub multiplier: f32,
+    /// The effect targets for this event.
+    pub targets: Vec<EffectTarget>,
+    /// The originating chip name, or `None` for breaker chains.
+    pub source_chip: Option<String>,
+}
 
 /// Query for bolts needing speed boost handling (velocity, base/max speed, optional boost amp,
 /// optional active boost tracking).

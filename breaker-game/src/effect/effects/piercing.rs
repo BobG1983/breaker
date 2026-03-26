@@ -6,8 +6,22 @@ use super::stack_u32;
 use crate::{
     bolt::components::Bolt,
     chips::components::{Piercing, PiercingRemaining},
-    effect::typed_events::PiercingApplied,
 };
+
+// ---------------------------------------------------------------------------
+// Typed event
+// ---------------------------------------------------------------------------
+
+/// Fired when a piercing passive effect is applied via chip selection.
+#[derive(Event, Clone, Debug)]
+pub(crate) struct PiercingApplied {
+    /// Piercing count per stack.
+    pub per_stack: u32,
+    /// Maximum number of stacks allowed.
+    pub max_stacks: u32,
+    /// Name of the chip that applied this effect.
+    pub chip_name: String,
+}
 
 /// Observer: applies piercing stacking to all bolt entities.
 pub(crate) fn handle_piercing(
