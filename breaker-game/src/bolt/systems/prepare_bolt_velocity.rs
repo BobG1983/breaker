@@ -4,6 +4,7 @@
 //! the CCD system in the physics domain handles position advancement.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{components::*, filters::ActiveFilter},
@@ -13,12 +14,13 @@ use crate::{
 
 /// Prepares the bolt velocity for the current timestep.
 ///
-/// Enforces speed clamping (min/max) and minimum angle from horizontal.
+/// Enforces speed clamping (min/max) and minimum angle from horizontal
+/// on `Velocity2D`.
 /// Position advancement is handled by the CCD collision system.
 pub(crate) fn prepare_bolt_velocity(
     mut query: Query<
         (
-            &mut BoltVelocity,
+            &mut Velocity2D,
             &BoltMinSpeed,
             &BoltMaxSpeed,
             Option<&BoltSpeedBoost>,
@@ -32,17 +34,14 @@ pub(crate) fn prepare_bolt_velocity(
     };
 
     for (mut velocity, min_speed, max_speed, speed_boost) in &mut query {
+        let boost = speed_boost.map_or(0.0, |b| b.0);
+        let effective_min = min_speed.0 + boost;
+        let effective_max = max_speed.0 + boost;
+
         let speed = velocity.speed();
         if speed > f32::EPSILON {
-            let boost = speed_boost.map_or(0.0, |b| b.0);
-            let effective_min = min_speed.0 + boost;
-            let effective_max = max_speed.0 + boost;
-            let clamped_speed = speed.clamp(effective_min, effective_max);
-            if (clamped_speed - speed).abs() > f32::EPSILON {
-                velocity.value = velocity.direction() * clamped_speed;
-            }
-
-            velocity.enforce_min_angle(min_angle.0);
+            velocity.0 = velocity.0.clamp_length(effective_min, effective_max);
+            enforce_min_angle(&mut velocity.0, min_angle.0);
         }
     }
 }
@@ -95,7 +94,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, 400.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
             bolt_param_bundle(),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
@@ -125,14 +124,14 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
-                BoltVelocity::new(0.0, 1.0), // below min_speed
+                Velocity2D(Vec2::new(0.0, 1.0)), // below min_speed
                 bolt_param_bundle(),
             ))
             .id();
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             (vel.speed() - 1.0).abs() < f32::EPSILON,
             "serving bolt velocity should not be clamped, got speed={}",
@@ -151,14 +150,14 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 1.0), // below min, but no breaker → early return
+                Velocity2D(Vec2::new(0.0, 1.0)), // below min, but no breaker -> early return
                 bolt_param_bundle(),
             ))
             .id();
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             (vel.speed() - 1.0).abs() < f32::EPSILON,
             "without breaker, velocity should be unchanged, got speed={}",
@@ -173,7 +172,7 @@ mod tests {
 
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, 1.0), // far below min_speed
+            Velocity2D(Vec2::new(0.0, 1.0)), // far below min_speed
             bolt_param_bundle(),
         ));
 
@@ -181,7 +180,7 @@ mod tests {
 
         let vel = app
             .world_mut()
-            .query::<&BoltVelocity>()
+            .query::<&Velocity2D>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
@@ -197,9 +196,8 @@ mod tests {
 
     /// [`BoltSpeedBoost`] raises the effective minimum speed.
     ///
-    /// Given: speed=100, min=200, max=600, boost=100 → `effective_min`=300.
-    /// Speed 100 < 300 → should clamp UP to 300.
-    /// RED: system ignores `_speed_boost`, clamps to base min (200), not 300 → FAIL.
+    /// Given: speed=100, min=200, max=600, boost=100 -> `effective_min`=300.
+    /// Speed 100 < 300 -> should clamp UP to 300.
     #[test]
     fn bolt_speed_boost_raises_effective_min_speed() {
         let mut app = test_app();
@@ -208,7 +206,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 100.0), // speed=100
+                Velocity2D(Vec2::new(0.0, 100.0)), // speed=100
                 BoltMinSpeed(200.0),
                 BoltMaxSpeed(600.0),
                 BoltSpeedBoost(100.0), // effective_min = 300
@@ -217,7 +215,7 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             vel.speed() >= 300.0 - f32::EPSILON,
             "speed {} should be at least effective_min 300.0 (base 200 + boost 100)",
@@ -227,9 +225,8 @@ mod tests {
 
     /// [`BoltSpeedBoost`] raises the effective maximum speed.
     ///
-    /// Given: speed=800, min=200, max=600, boost=100 → `effective_max`=700.
-    /// Speed 800 > 700 → should clamp DOWN to 700.
-    /// RED: system ignores `_speed_boost`, clamps to base max (600), not 700 → FAIL.
+    /// Given: speed=800, min=200, max=600, boost=100 -> `effective_max`=700.
+    /// Speed 800 > 700 -> should clamp DOWN to 700.
     #[test]
     fn bolt_speed_boost_raises_effective_max_speed() {
         let mut app = test_app();
@@ -238,7 +235,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 800.0), // speed=800
+                Velocity2D(Vec2::new(0.0, 800.0)), // speed=800
                 BoltMinSpeed(200.0),
                 BoltMaxSpeed(600.0),
                 BoltSpeedBoost(100.0), // effective_max = 700
@@ -247,7 +244,7 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             vel.speed() >= 700.0 - f32::EPSILON,
             "speed {} should be at least effective_max 700.0 (base 600 + boost 100), not clamped to base 600",
@@ -258,8 +255,7 @@ mod tests {
     /// Regression guard: without [`BoltSpeedBoost`], base clamping is unchanged.
     ///
     /// Given: speed=100, min=200, max=600, NO boost.
-    /// Speed 100 < 200 → clamped to 200 (base min). No boost applied.
-    /// GREEN: this should pass with the current stub implementation.
+    /// Speed 100 < 200 -> clamped to 200 (base min). No boost applied.
     #[test]
     fn no_bolt_speed_boost_uses_base_min_speed() {
         let mut app = test_app();
@@ -268,7 +264,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 100.0), // speed=100
+                Velocity2D(Vec2::new(0.0, 100.0)), // speed=100
                 BoltMinSpeed(200.0),
                 BoltMaxSpeed(600.0),
                 // No BoltSpeedBoost
@@ -277,7 +273,7 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             (vel.speed() - 200.0).abs() < 1.0,
             "speed {} should be clamped to base min 200.0 when no boost present",
@@ -288,8 +284,7 @@ mod tests {
     /// [`BoltServing`] bolt is not affected by [`BoltSpeedBoost`] (excluded by `ActiveFilter`).
     ///
     /// Given: serving bolt, speed=1, min=200, max=600, boost=100.
-    /// `ActiveFilter` excludes [`BoltServing`] → velocity unchanged at speed=1.
-    /// GREEN: this should pass because the `ActiveFilter` already excludes serving bolts.
+    /// `ActiveFilter` excludes [`BoltServing`] -> velocity unchanged at speed=1.
     #[test]
     fn serving_bolt_not_affected_by_bolt_speed_boost() {
         let mut app = test_app();
@@ -299,7 +294,7 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
-                BoltVelocity::new(0.0, 1.0), // speed=1, below any min
+                Velocity2D(Vec2::new(0.0, 1.0)), // speed=1, below any min
                 BoltMinSpeed(200.0),
                 BoltMaxSpeed(600.0),
                 BoltSpeedBoost(100.0), // effective_min would be 300
@@ -308,7 +303,7 @@ mod tests {
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             (vel.speed() - 1.0).abs() < f32::EPSILON,
             "serving bolt speed {} should be unchanged at 1.0 (excluded by ActiveFilter)",
@@ -316,11 +311,10 @@ mod tests {
         );
     }
 
-    /// `BoltSpeedBoost(0.0)` is identical to no boost — base clamping applies.
+    /// `BoltSpeedBoost(0.0)` is identical to no boost -- base clamping applies.
     ///
-    /// Given: speed=600, min=200, max=600, boost=0.0 → `effective_max`=600.
-    /// Speed 600 == `effective_max` → should remain at 600 (no change needed).
-    /// GREEN: this should pass because boost of 0 means no change to the clamp range.
+    /// Given: speed=600, min=200, max=600, boost=0.0 -> `effective_max`=600.
+    /// Speed 600 == `effective_max` -> should remain at 600 (no change needed).
     #[test]
     fn bolt_speed_boost_zero_same_as_no_boost() {
         let mut app = test_app();
@@ -329,19 +323,85 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 600.0), // speed=600, exactly at base max
+                Velocity2D(Vec2::new(0.0, 600.0)), // speed=600, exactly at base max
                 BoltMinSpeed(200.0),
                 BoltMaxSpeed(600.0),
-                BoltSpeedBoost(0.0), // zero boost — no change expected
+                BoltSpeedBoost(0.0), // zero boost -- no change expected
             ))
             .id();
 
         tick(&mut app);
 
-        let vel = app.world().get::<BoltVelocity>(entity).unwrap();
+        let vel = app.world().get::<Velocity2D>(entity).unwrap();
         assert!(
             (vel.speed() - 600.0).abs() < 1.0,
             "speed {} should remain at 600.0 when boost is 0.0 (at base max, no effective change)",
+            vel.speed()
+        );
+    }
+
+    // ── Velocity2D migration tests ────────────────────────────────
+
+    /// Given: bolt with `Velocity2D`(0.0, 100.0), min=200, max=600.
+    /// When: `prepare_bolt_velocity` runs.
+    /// Then: `Velocity2D` speed clamped up to >= 200.
+    #[test]
+    fn velocity2d_speed_below_min_is_clamped_up() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        let mut app = test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 100.0)),
+                BoltMinSpeed(200.0),
+                BoltMaxSpeed(600.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world()
+            .get::<Velocity2D>(entity)
+            .expect("entity should have Velocity2D");
+        assert!(
+            vel.speed() >= 200.0 - f32::EPSILON,
+            "Velocity2D speed {} should be clamped up to at least min_speed 200.0",
+            vel.speed()
+        );
+    }
+
+    /// Given: bolt with `Velocity2D`(0.0, 800.0), min=200, max=600.
+    /// When: `prepare_bolt_velocity` runs.
+    /// Then: `Velocity2D` speed clamped down to 600.
+    #[test]
+    fn velocity2d_speed_above_max_is_clamped_down() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        let mut app = test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(0.0, 800.0)),
+                BoltMinSpeed(200.0),
+                BoltMaxSpeed(600.0),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let vel = app
+            .world()
+            .get::<Velocity2D>(entity)
+            .expect("entity should have Velocity2D");
+        assert!(
+            (vel.speed() - 600.0).abs() < 1.0,
+            "Velocity2D speed {} should be clamped down to max_speed 600.0",
             vel.speed()
         );
     }

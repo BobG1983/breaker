@@ -1,6 +1,7 @@
 //! System to keep a serving bolt hovering above the breaker.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
@@ -15,25 +16,27 @@ use crate::{
 /// Only affects bolts with the [`BoltServing`] marker. The bolt tracks
 /// the breaker's X position so the player can choose their opening angle.
 pub fn hover_bolt(
-    breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
-    mut bolt_query: Query<(&mut Transform, &BoltSpawnOffsetY), ServingFilter>,
+    breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
+    mut bolt_query: Query<(&mut Position2D, &BoltSpawnOffsetY), ServingFilter>,
 ) {
-    let Ok(breaker_tf) = breaker_query.single() else {
+    let Ok(breaker_pos) = breaker_query.single() else {
         return;
     };
 
-    for (mut bolt_tf, spawn_offset) in &mut bolt_query {
-        bolt_tf.translation.x = breaker_tf.translation.x;
-        bolt_tf.translation.y = breaker_tf.translation.y + spawn_offset.0;
+    for (mut bolt_position, spawn_offset) in &mut bolt_query {
+        bolt_position.0.x = breaker_pos.0.x;
+        bolt_position.0.y = breaker_pos.0.y + spawn_offset.0;
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
+
     use super::*;
-    use crate::bolt::{
-        components::{BoltServing, BoltVelocity},
-        resources::BoltConfig,
+    use crate::{
+        bolt::{components::BoltServing, resources::BoltConfig},
+        shared::GameDrawLayer,
     };
 
     fn tick(app: &mut App) {
@@ -45,74 +48,89 @@ mod tests {
     }
 
     #[test]
-    fn hover_bolt_tracks_breaker_x() {
+    fn hover_bolt_writes_position2d_tracking_breaker() {
+        // Given: serving bolt at Position2D(0.0, 0.0), breaker at Position2D(100.0, -250.0),
+        //        spawn_offset_y = 30.0
+        // When: hover_bolt runs
+        // Then: bolt Position2D(Vec2::new(100.0, -220.0))
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
 
         let config = BoltConfig::default();
 
-        // Spawn breaker at x=100
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(100.0, -250.0, 0.0)));
+        // Breaker uses Position2D as canonical position
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(100.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
 
-        // Spawn serving bolt at origin
+        // Serving bolt with Position2D
         app.world_mut().spawn((
             Bolt,
             BoltServing,
             BoltSpawnOffsetY(config.spawn_offset_y),
-            BoltVelocity::new(0.0, 0.0),
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
+            Position2D(Vec2::new(0.0, 0.0)),
         ));
 
         app.add_systems(FixedUpdate, hover_bolt);
         tick(&mut app);
 
-        let bolt_tf = app
+        let position = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
-            .expect("bolt should exist");
+            .expect("bolt should have Position2D");
 
+        let expected = Vec2::new(100.0, -250.0 + config.spawn_offset_y);
         assert!(
-            (bolt_tf.translation.x - 100.0).abs() < f32::EPSILON,
-            "bolt X should track breaker X"
-        );
-        assert!(
-            (bolt_tf.translation.y - (-250.0 + config.spawn_offset_y)).abs() < f32::EPSILON,
-            "bolt Y should be above breaker"
+            (position.0.x - expected.x).abs() < f32::EPSILON
+                && (position.0.y - expected.y).abs() < f32::EPSILON,
+            "hover bolt Position2D should be {expected:?}, got {:?}",
+            position.0,
         );
     }
 
     #[test]
     fn hover_bolt_ignores_non_serving_bolt() {
+        // Given: non-serving bolt at Position2D(50.0, 50.0)
+        // When: hover_bolt runs
+        // Then: Position2D unchanged
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
 
-        // Spawn breaker
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(100.0, -250.0, 0.0)));
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(100.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
 
-        // Spawn non-serving bolt (no BoltServing marker)
+        // Non-serving bolt (no BoltServing marker) with Position2D
         app.world_mut().spawn((
             Bolt,
-            BoltVelocity::new(0.0, 400.0),
-            Transform::from_xyz(50.0, 50.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+            Position2D(Vec2::new(50.0, 50.0)),
         ));
 
         app.add_systems(FixedUpdate, hover_bolt);
         tick(&mut app);
 
-        let bolt_tf = app
+        let position = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
-            .expect("bolt should exist");
+            .expect("bolt should have Position2D");
 
         assert!(
-            (bolt_tf.translation.x - 50.0).abs() < f32::EPSILON,
-            "non-serving bolt X should be unchanged"
+            (position.0.x - 50.0).abs() < f32::EPSILON
+                && (position.0.y - 50.0).abs() < f32::EPSILON,
+            "non-serving bolt Position2D should be unchanged at (50.0, 50.0), got {:?}",
+            position.0,
         );
     }
 }

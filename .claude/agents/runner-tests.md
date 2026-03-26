@@ -1,6 +1,6 @@
 ---
 name: runner-tests
-description: "Run `cargo dtest` (game crate) and `cargo dstest` (scenario runner crate) and report pass/fail with Fix spec hints that writer-code and writer-tests can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-tests agent to validate tests pass.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-tests agent to verify nothing broke.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-tests agent to confirm the build is clean.\""
+description: "Run `cargo dtest` (game crate), `cargo spatial2dtest` (spatial2d crate), `cargo physics2dtest` (physics2d crate), and `cargo dstest` (scenario runner crate) and report pass/fail with Fix spec hints that writer-code and writer-tests can act on directly.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-tests agent to validate tests pass.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-tests agent to verify nothing broke.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-tests agent to confirm the build is clean.\""
 tools: Bash, Read, Glob, Grep
 model: sonnet
 color: yellow
@@ -26,6 +26,20 @@ cargo dtest 2>&1
 - Report: total tests run, passed, failed, ignored.
 - For each failure: test name, file location if identifiable, and the assertion/panic message.
 - If compilation fails before tests run, report it as a build failure (not test failure).
+
+### rantzsoft_spatial2d Tests
+```
+cargo spatial2dtest 2>&1
+```
+- Report separately (different crate).
+- Same format: total run, passed, failed, ignored.
+
+### rantzsoft_physics2d Tests
+```
+cargo physics2dtest 2>&1
+```
+- Report separately (different crate).
+- Same format: total run, passed, failed, ignored.
 
 ### Scenario Runner Tests
 ```

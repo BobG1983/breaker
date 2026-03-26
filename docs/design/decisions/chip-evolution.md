@@ -12,12 +12,11 @@
 
 ## Scope
 
-Phase 4 (vertical slice) targets 3-4 evolutions across mixed chip kinds:
-- Amp + Amp -> evolved Amp
-- Augment + Augment -> evolved Augment
-- Amp + Overclock -> evolved Overclock (cross-kind)
+Phase 4 (vertical slice) targets 3-4 evolutions across mixed chip combinations:
+- Passive + Passive -> evolved chip
+- Passive + Triggered -> evolved chip (cross-type)
 
-This proves the architecture handles same-kind and cross-kind evolutions.
+This proves the architecture handles same-type and cross-type evolutions.
 
 ## Rationale
 
@@ -29,3 +28,23 @@ This proves the architecture handles same-kind and cross-kind evolutions.
 ## Design Space
 
 Evolution recipes create a discovery layer: players experiment to find which chip pairs evolve, and plan runs around recipes they know. The wiki effect — community knowledge-sharing — is a longevity multiplier.
+
+## Evolution Recipes
+
+### Chain Reaction
+**Ingredients**: Cascade x3 + Splinter x2 + Piercing x3
+
+**Design notes**: The most ingredient-heavy evolution — requires investment across three chip types. The payoff is proportional: recursive bolt spawning with effect inheritance creates exponential chain reactions. Cascade provides the trigger (cell destruction), Splinter provides the bolt-spawning mechanic, and Piercing ensures spawned bolts cut through multiple cells rather than stopping at one.
+
+The `inherit: true` flag on `SpawnBolts` means spawned bolts carry the parent's effects, including piercing and cascade shockwaves. This creates genuine chain reactions where destroying one cell can clear a cluster.
+
+**Effect**: `When(OnCellDestroyed, [Do(SpawnBolts { count: 2, lifespan: Some(3.0), inherit: true })])`
+
+### Feedback Loop
+**Ingredients**: TBD
+
+**Design notes**: Counter-gated burst. Every 3rd perfect bump fires a bolt swarm + shockwave. Rewards consistent precision over time rather than single-hit spikes. Uses `EntropyEngine` internally as a counter mechanism with deterministic output instead of random selection.
+
+**Effect**: `When(OnPerfectBump, [Do(EntropyEngine(3, [(0.5, Do(SpawnBolts { count: 2 })), (0.5, Do(Shockwave(base_range: 96.0, ...)))]))])`
+
+See `docs/design/chip-catalog.md` for the full evolution catalog and `docs/design/evolutions.md` for design principles.

@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 use crate::{
-    behaviors::ArchetypeDefinition,
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
-    chips::ChipDefinition,
+    chips::{ChipDefinition, definition::ChipTemplate},
+    effect::BreakerDefinition,
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     screen::{chip_select::ChipSelectDefaults, main_menu::MainMenuDefaults},
@@ -31,37 +31,34 @@ pub(crate) struct DefaultsCollection {
     pub breaker: Handle<BreakerDefaults>,
     /// Handle for cells defaults.
     #[asset(path = "config/defaults.cells.ron")]
-    pub cells: Handle<CellDefaults>,
+    pub cell_defaults: Handle<CellDefaults>,
     /// Handle for input defaults.
     #[asset(path = "config/defaults.input.ron")]
     pub input: Handle<InputDefaults>,
     /// Handle for main menu defaults.
     #[asset(path = "config/defaults.mainmenu.ron")]
-    pub mainmenu: Handle<MainMenuDefaults>,
+    pub main_menu: Handle<MainMenuDefaults>,
     /// Handle for timer UI defaults.
     #[asset(path = "config/defaults.timerui.ron")]
-    pub timerui: Handle<TimerUiDefaults>,
+    pub timer_ui: Handle<TimerUiDefaults>,
     /// All cell type definition handles.
     #[asset(path = "cells", collection(typed))]
-    pub cell_types: Vec<Handle<CellTypeDefinition>>,
+    pub cells: Vec<Handle<CellTypeDefinition>>,
     /// All node layout handles.
     #[asset(path = "nodes", collection(typed))]
-    pub layouts: Vec<Handle<NodeLayout>>,
-    /// All archetype definition handles.
-    #[asset(path = "archetypes", collection(typed))]
-    pub archetypes: Vec<Handle<ArchetypeDefinition>>,
+    pub nodes: Vec<Handle<NodeLayout>>,
+    /// All breaker definition handles.
+    #[asset(path = "breakers", collection(typed))]
+    pub breakers: Vec<Handle<BreakerDefinition>>,
     /// Handle for chip select defaults.
     #[asset(path = "config/defaults.chipselect.ron")]
-    pub chipselect: Handle<ChipSelectDefaults>,
-    /// All amp chip definition handles.
-    #[asset(path = "amps", collection(typed))]
-    pub amps: Vec<Handle<ChipDefinition>>,
-    /// All augment chip definition handles.
-    #[asset(path = "augments", collection(typed))]
-    pub augments: Vec<Handle<ChipDefinition>>,
-    /// All overclock chip definition handles.
-    #[asset(path = "overclocks", collection(typed))]
-    pub overclocks: Vec<Handle<ChipDefinition>>,
+    pub chip_select: Handle<ChipSelectDefaults>,
+    /// All chip definitions (evolutions only) — only scans the evolution subdirectory.
+    #[asset(path = "chips/evolution", collection(typed))]
+    pub chips: Vec<Handle<ChipDefinition>>,
+    /// All chip template handles (`.chip.ron` files).
+    #[asset(path = "chips/templates", collection(typed))]
+    pub chip_templates: Vec<Handle<ChipTemplate>>,
     /// Handle for difficulty curve defaults.
     #[asset(path = "config/defaults.difficulty.ron")]
     pub difficulty: Handle<DifficultyCurveDefaults>,

@@ -1,0 +1,10 @@
+/* @[brickbreaker::effect::definition::BreakerDefinition] */
+(
+    name: "Prism",
+    stat_overrides: (),
+    life_pool: None,
+    effects: [
+        On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(TimePenalty(seconds: 7.0))])]),
+        On(target: Breaker, then: [When(trigger: OnPerfectBump, then: [Do(SpawnBolts())])]),
+    ],
+)

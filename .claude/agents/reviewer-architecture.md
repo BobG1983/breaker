@@ -17,7 +17,7 @@ Do NOT assume a Bevy version. If questions involve Bevy APIs, check `Cargo.toml`
 
 ## First Step — Always
 
-Read ALL files in `docs/architecture/` to ground yourself in the project's requirements. Also read `docs/design/terminology.md` and `CLAUDE.md`.
+Read ALL files in `docs/architecture/` to ground yourself in the project's requirements. Also read `docs/design/terminology/` and `CLAUDE.md`.
 
 Every evaluation you give must be rooted in the requirements defined in those docs.
 

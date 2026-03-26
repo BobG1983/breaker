@@ -1,18 +1,26 @@
 //! System to spawn cells from the active node layout.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
+use rantzsoft_spatial2d::{
+    components::{Position2D, Scale2D},
+    propagation::PositionPropagation,
+};
 use tracing::debug;
 
+#[cfg(test)]
+use crate::shared::CleanupOnNodeExit;
 use crate::{
     cells::{
         components::*,
+        definition::ShieldBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     run::{
         node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
         resources::{NodeSequence, RunState},
     },
-    shared::{CleanupOnNodeExit, PlayfieldConfig},
+    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
 };
 
 /// Total extent of a grid along one axis: `step * count - padding`.
@@ -128,56 +136,137 @@ pub(crate) fn spawn_cells_from_grid(
             if alias == '.' {
                 continue;
             }
-
             let Some(def) = registry.get(alias) else {
                 continue;
             };
-
             let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
             let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
             let x = col_f.mul_add(step_x, start_x);
             let y = row_f.mul_add(-step_y, start_y);
-
             let scaled_hp = def.hp * hp_mult;
 
-            let mut entity = commands.spawn((
-                Cell,
-                CellTypeAlias(alias),
-                CellWidth(cell_width),
-                CellHeight(cell_height),
-                CellHealth::new(scaled_hp),
-                CellDamageVisuals {
-                    hdr_base: def.damage_hdr_base,
-                    green_min: def.damage_green_min,
-                    blue_range: def.damage_blue_range,
-                    blue_base: def.damage_blue_base,
-                },
-                Mesh2d(rect_mesh.clone()),
-                MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
-                Transform {
-                    translation: Vec3::new(x, y, 0.0),
-                    scale: Vec3::new(cell_width, cell_height, 1.0),
-                    ..default()
-                },
-                CleanupOnNodeExit,
-            ));
+            // Block scope limits EntityCommands borrow so `commands` can
+            // be used for orbit children below.
+            let cell_entity_id = {
+                let mut entity = commands.spawn((
+                    Cell,
+                    CellTypeAlias(alias),
+                    CellWidth(cell_width),
+                    CellHeight(cell_height),
+                    CellHealth::new(scaled_hp),
+                    CellDamageVisuals {
+                        hdr_base: def.damage_hdr_base,
+                        green_min: def.damage_green_min,
+                        blue_range: def.damage_blue_range,
+                        blue_base: def.damage_blue_base,
+                    },
+                    Mesh2d(rect_mesh.clone()),
+                    MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
+                    Position2D(Vec2::new(x, y)),
+                    Scale2D {
+                        x: cell_width,
+                        y: cell_height,
+                    },
+                    Aabb2D::new(Vec2::ZERO, Vec2::new(cell_width / 2.0, cell_height / 2.0)),
+                    CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                    GameDrawLayer::Cell,
+                ));
 
-            if def.required_to_clear {
-                entity.insert(RequiredToClear);
-                required_count += 1;
-            }
+                if def.required_to_clear {
+                    entity.insert(RequiredToClear);
+                    required_count += 1;
+                }
+                if def.behavior.locked {
+                    entity.insert(Locked);
+                    entity.insert(LockAdjacents(Vec::new()));
+                }
+                if let Some(rate) = def.behavior.regen_rate {
+                    entity.insert(CellRegen { rate });
+                }
+                if def.behavior.shield.is_some() {
+                    entity.insert((ShieldParent, Locked));
+                }
+                entity.id()
+            };
 
-            if def.behavior.locked {
-                entity.insert(Locked);
-                entity.insert(LockAdjacents(Vec::new()));
-            }
-
-            if let Some(rate) = def.behavior.regen_rate {
-                entity.insert(CellRegen { rate });
+            if let Some(ref shield) = def.behavior.shield {
+                spawn_orbit_children(
+                    commands,
+                    shield,
+                    cell_entity_id,
+                    Vec2::new(x, y),
+                    scale,
+                    hp_mult,
+                    (&rect_mesh, materials),
+                );
             }
         }
     }
     required_count
+}
+
+/// Spawns orbit children around a shield cell and inserts `LockAdjacents`.
+fn spawn_orbit_children(
+    commands: &mut Commands,
+    shield: &ShieldBehavior,
+    shield_entity: Entity,
+    center: Vec2,
+    scale: f32,
+    hp_mult: f32,
+    render: (&Handle<Mesh>, &mut Assets<ColorMaterial>),
+) {
+    let (rect_mesh, materials) = render;
+    let orbit_dim = 20.0 * scale;
+    let orbit_half = orbit_dim / 2.0;
+    let orbit_half_diag = orbit_half * std::f32::consts::SQRT_2;
+    let min_clamp = orbit_half_diag + 1.0;
+    let scaled_radius = (shield.radius * scale).max(min_clamp);
+
+    let orbit_color = crate::shared::color_from_rgb(shield.color_rgb);
+    let orbit_material = materials.add(ColorMaterial::from_color(orbit_color));
+
+    let orbit_count_f = f32::from(u16::try_from(shield.count).unwrap_or(u16::MAX));
+    let mut orbit_ids = Vec::with_capacity(shield.count as usize);
+    for i in 0..shield.count {
+        let i_f = f32::from(u16::try_from(i).unwrap_or(u16::MAX));
+        let angle = 2.0 * std::f32::consts::PI * i_f / orbit_count_f;
+        let offset = Vec2::new(scaled_radius * angle.cos(), scaled_radius * angle.sin());
+        let orbit_pos = center + offset;
+
+        let orbit_entity = commands
+            .spawn((
+                Cell,
+                OrbitCell,
+                ChildOf(shield_entity),
+                CellHealth::new(shield.hp * hp_mult),
+                CellWidth(orbit_dim),
+                CellHeight(orbit_dim),
+                Mesh2d(rect_mesh.clone()),
+                MeshMaterial2d(orbit_material.clone()),
+                Position2D(orbit_pos),
+                PositionPropagation::Absolute,
+                Scale2D {
+                    x: orbit_dim,
+                    y: orbit_dim,
+                },
+                (
+                    Aabb2D::new(Vec2::ZERO, Vec2::new(orbit_half, orbit_half)),
+                    CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                    OrbitAngle(angle),
+                    OrbitConfig {
+                        radius: scaled_radius,
+                        speed: shield.speed,
+                    },
+                    GameDrawLayer::Cell,
+                ),
+            ))
+            .id();
+        orbit_ids.push(orbit_entity);
+    }
+
+    commands
+        .entity(shield_entity)
+        .insert(LockAdjacents(orbit_ids));
 }
 
 /// Resolves the `hp_mult` for the current node from the run state and node
@@ -334,9 +423,9 @@ mod tests {
     fn collect_sorted_cell_positions(app: &mut App) -> Vec<(f32, f32)> {
         let mut positions: Vec<(f32, f32)> = app
             .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
+            .query_filtered::<&Position2D, With<Cell>>()
             .iter(app.world())
-            .map(|tf| (tf.translation.x, tf.translation.y))
+            .map(|pos| (pos.0.x, pos.0.y))
             .collect();
         positions.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
         positions
@@ -450,13 +539,13 @@ mod tests {
         let mut app = test_app(layout);
         app.update();
 
-        for transform in app
+        for position in app
             .world_mut()
-            .query_filtered::<&Transform, With<Cell>>()
+            .query_filtered::<&Position2D, With<Cell>>()
             .iter(app.world())
         {
-            let x = transform.translation.x;
-            let y = transform.translation.y;
+            let x = position.0.x;
+            let y = position.0.y;
             assert!(
                 x.abs() < playfield.right() + config.width / 2.0,
                 "cell x={x} out of bounds"
@@ -652,6 +741,7 @@ mod tests {
                 behavior: CellBehavior {
                     locked: true,
                     regen_rate: None,
+                    ..Default::default()
                 },
             },
         );
@@ -670,6 +760,7 @@ mod tests {
                 behavior: CellBehavior {
                     locked: false,
                     regen_rate: Some(2.0),
+                    ..Default::default()
                 },
             },
         );
@@ -1270,21 +1361,21 @@ mod tests {
         let mut app = scaled_test_app(layout);
         app.update();
 
-        for (_, w, h, tf) in app
+        for (_, w, h, scale) in app
             .world_mut()
-            .query::<(&Cell, &CellWidth, &CellHeight, &Transform)>()
+            .query::<(&Cell, &CellWidth, &CellHeight, &Scale2D)>()
             .iter(app.world())
         {
             assert!(
-                (tf.scale.x - w.0).abs() < f32::EPSILON,
-                "Transform.scale.x={} should match CellWidth={}",
-                tf.scale.x,
+                (scale.x - w.0).abs() < f32::EPSILON,
+                "Scale2D.x={} should match CellWidth={}",
+                scale.x,
                 w.0
             );
             assert!(
-                (tf.scale.y - h.0).abs() < f32::EPSILON,
-                "Transform.scale.y={} should match CellHeight={}",
-                tf.scale.y,
+                (scale.y - h.0).abs() < f32::EPSILON,
+                "Scale2D.y={} should match CellHeight={}",
+                scale.y,
                 h.0
             );
         }
@@ -1305,18 +1396,18 @@ mod tests {
         let mut app = scaled_test_app(layout);
         app.update();
 
-        let cells: Vec<(&CellWidth, &CellHeight, &Transform)> = app
+        let cells: Vec<(&CellWidth, &CellHeight, &Position2D)> = app
             .world_mut()
-            .query::<(&CellWidth, &CellHeight, &Transform)>()
+            .query::<(&CellWidth, &CellHeight, &Position2D)>()
             .iter(app.world())
             .collect();
         assert_eq!(cells.len(), 1, "should spawn exactly 1 cell");
 
-        let (w, h, tf) = cells[0];
+        let (w, h, pos) = cells[0];
         assert!(
-            tf.translation.x.abs() < f32::EPSILON,
+            pos.0.x.abs() < f32::EPSILON,
             "single cell should be centered at x=0.0, got {}",
-            tf.translation.x
+            pos.0.x
         );
         assert!(
             (w.0 - 126.0).abs() < f32::EPSILON,
@@ -1327,6 +1418,1018 @@ mod tests {
             (h.0 - 43.0).abs() < f32::EPSILON,
             "1x1 grid CellHeight should be 43.0, got {}",
             h.0
+        );
+    }
+
+    // --- Position2D migration tests ---
+
+    #[test]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "grid column index is always small"
+    )]
+    fn spawned_cell_has_position2d_at_grid_position() {
+        // Given: full 3x2 layout with CellConfig default (width=70, height=24,
+        //        padding_x=4, padding_y=4) and PlayfieldConfig default
+        // When: spawn_cells_from_layout runs
+        // Then: Each Cell entity has Position2D matching the grid formula
+        use rantzsoft_spatial2d::components::Position2D;
+
+        let layout = full_layout(); // 3x2, grid_top_offset=50
+        let config = CellConfig::default();
+        let playfield = PlayfieldConfig::default();
+        let step_x = config.width + config.padding_x; // 74.0
+        let step_y = config.height + config.padding_y; // 28.0
+        let cols_f = 3.0_f32;
+        let grid_width = grid_extent(step_x, cols_f, config.padding_x); // 74*3 - 4 = 218
+        let start_x = -grid_width / 2.0 + config.width / 2.0;
+        let start_y = playfield.top() - layout.grid_top_offset - config.height / 2.0;
+
+        let mut app = test_app(layout);
+        app.update();
+
+        let mut positions: Vec<Vec2> = app
+            .world_mut()
+            .query_filtered::<&Position2D, With<Cell>>()
+            .iter(app.world())
+            .map(|p| p.0)
+            .collect();
+        // Sort top-to-bottom, left-to-right
+        positions.sort_by(|a, b| b.y.total_cmp(&a.y).then(a.x.total_cmp(&b.x)));
+
+        assert_eq!(positions.len(), 6, "full 3x2 layout should spawn 6 cells");
+
+        // Row 0: 3 cells
+        let expected_row0: Vec<Vec2> = (0..3)
+            .map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y))
+            .collect();
+        // Row 1: 3 cells
+        let expected_row1: Vec<Vec2> = (0..3)
+            .map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y - step_y))
+            .collect();
+
+        let expected: Vec<Vec2> = expected_row0.into_iter().chain(expected_row1).collect();
+
+        for (i, (actual, exp)) in positions.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (actual.x - exp.x).abs() < 0.01 && (actual.y - exp.y).abs() < 0.01,
+                "cell {i} Position2D mismatch: expected {exp:?}, got {actual:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn spawned_cell_position2d_matches_former_transform_translation() {
+        // Edge case: Position2D.0 should match what was previously
+        // Transform.translation.truncate() — verifying the values are identical
+        use rantzsoft_spatial2d::components::Position2D;
+
+        let layout = sparse_layout(); // [., S, .], [T, ., S]
+        let mut app = test_app(layout);
+        app.update();
+
+        // Every cell should have a Position2D
+        let cells_with_pos = app
+            .world_mut()
+            .query_filtered::<&Position2D, With<Cell>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            cells_with_pos, 3,
+            "sparse layout should have 3 cells with Position2D"
+        );
+    }
+
+    #[test]
+    fn spawned_cell_has_game_draw_layer_cell() {
+        // Given: A layout with cells
+        // When: spawn_cells_from_layout runs
+        // Then: Each Cell has GameDrawLayer::Cell (z=0.0)
+        use rantzsoft_spatial2d::draw_layer::DrawLayer;
+
+        use crate::shared::GameDrawLayer;
+
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let cell_count = app
+            .world_mut()
+            .query_filtered::<Entity, With<Cell>>()
+            .iter(app.world())
+            .count();
+
+        let cells_with_layer: Vec<&GameDrawLayer> = app
+            .world_mut()
+            .query_filtered::<&GameDrawLayer, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(
+            cells_with_layer.len(),
+            cell_count,
+            "every cell should have GameDrawLayer"
+        );
+        for layer in &cells_with_layer {
+            assert!(
+                layer.z().abs() < f32::EPSILON,
+                "GameDrawLayer::Cell.z() should be 0.0, got {}",
+                layer.z()
+            );
+        }
+    }
+
+    #[test]
+    fn spawned_cell_has_spatial2d_but_not_interpolate_transform2d() {
+        // Given: A layout with cells
+        // When: spawn_cells_from_layout runs
+        // Then: Each Cell has Spatial2D. Does NOT have InterpolateTransform2D.
+        use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
+
+        let layout = full_layout();
+        let mut app = test_app(layout);
+        app.update();
+
+        let entities: Vec<Entity> = app
+            .world_mut()
+            .query_filtered::<Entity, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        for entity in &entities {
+            assert!(
+                app.world().get::<Spatial2D>(*entity).is_some(),
+                "cell should have Spatial2D marker"
+            );
+            assert!(
+                app.world().get::<InterpolateTransform2D>(*entity).is_none(),
+                "cell should NOT have InterpolateTransform2D (static entity)"
+            );
+        }
+    }
+
+    #[test]
+    fn spawned_cell_has_scale2d_matching_cell_dimensions() {
+        // Given: CellConfig default width=70.0, height=24.0, no grid scaling
+        //        (3x2 grid fits at scale 1.0 with default playfield)
+        // When: spawn_cells_from_layout runs
+        // Then: Each Cell has Scale2D { x: 70.0, y: 24.0 }
+        use rantzsoft_spatial2d::components::Scale2D;
+
+        let layout = full_layout();
+        let config = CellConfig::default();
+        let mut app = test_app(layout);
+        app.update();
+
+        let scales: Vec<&Scale2D> = app
+            .world_mut()
+            .query_filtered::<&Scale2D, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(scales.len(), 6, "all 6 cells should have Scale2D");
+        for (i, scale) in scales.iter().enumerate() {
+            assert!(
+                (scale.x - config.width).abs() < f32::EPSILON,
+                "cell {i} Scale2D.x should be {}, got {}",
+                config.width,
+                scale.x
+            );
+            assert!(
+                (scale.y - config.height).abs() < f32::EPSILON,
+                "cell {i} Scale2D.y should be {}, got {}",
+                config.height,
+                scale.y
+            );
+        }
+    }
+
+    #[test]
+    fn spawned_cell_scale2d_uses_scaled_dimensions_for_large_grid() {
+        // Edge case: When grid scaling applies, Scale2D uses scaled dimensions
+        use rantzsoft_spatial2d::components::Scale2D;
+
+        let layout = uniform_layout(40, 20, 90.0);
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let dims = compute_grid_scale(&config, &playfield, 40, 20, 90.0);
+
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        let scales: Vec<&Scale2D> = app
+            .world_mut()
+            .query_filtered::<&Scale2D, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert!(!scales.is_empty(), "should have spawned cells");
+        assert!(
+            dims.scale < 1.0,
+            "40x20 grid should need scaling, got {}",
+            dims.scale
+        );
+
+        for (i, scale) in scales.iter().enumerate() {
+            assert!(
+                (scale.x - dims.cell_width).abs() < f32::EPSILON,
+                "cell {i} Scale2D.x should be {}, got {}",
+                dims.cell_width,
+                scale.x
+            );
+            assert!(
+                (scale.y - dims.cell_height).abs() < f32::EPSILON,
+                "cell {i} Scale2D.y should be {}, got {}",
+                dims.cell_height,
+                scale.y
+            );
+        }
+    }
+
+    // --- Aabb2D + CollisionLayers tests ---
+
+    #[test]
+    fn spawned_cell_has_aabb2d_with_half_extents_matching_cell_dimensions() {
+        // Given: CellConfig default width=70.0, height=24.0, no grid scaling
+        //        (single cell in wide playfield fits at scale 1.0)
+        // When: spawn_cells_from_layout runs
+        // Then: cell entity has Aabb2D { center: Vec2::ZERO, half_extents: Vec2::new(35.0, 12.0) }
+        use rantzsoft_physics2d::aabb::Aabb2D;
+
+        let layout = NodeLayout {
+            name: "aabb_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let config = CellConfig::default(); // width=70.0, height=24.0
+        let mut app = test_app(layout);
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<Cell>>()
+            .iter(app.world())
+            .next()
+            .expect("cell should exist");
+        let aabb = app
+            .world()
+            .get::<Aabb2D>(entity)
+            .expect("cell should have Aabb2D");
+        assert_eq!(
+            aabb.center,
+            Vec2::ZERO,
+            "cell Aabb2D center should be ZERO (local space)"
+        );
+        let expected_half_w = config.width / 2.0; // 35.0
+        let expected_half_h = config.height / 2.0; // 12.0
+        assert!(
+            (aabb.half_extents.x - expected_half_w).abs() < f32::EPSILON
+                && (aabb.half_extents.y - expected_half_h).abs() < f32::EPSILON,
+            "cell Aabb2D half_extents should be ({expected_half_w}, {expected_half_h}), got ({}, {})",
+            aabb.half_extents.x,
+            aabb.half_extents.y,
+        );
+    }
+
+    #[test]
+    fn spawned_cell_aabb2d_uses_scaled_dimensions_for_large_grid() {
+        // Edge case: scaled grid — Aabb2D half_extents should use scaled cell dimensions
+        use rantzsoft_physics2d::aabb::Aabb2D;
+
+        let layout = uniform_layout(40, 20, 90.0);
+        let config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let dims = compute_grid_scale(&config, &playfield, 40, 20, 90.0);
+        assert!(dims.scale < 1.0, "40x20 grid should need scaling");
+
+        let mut app = scaled_test_app(layout);
+        app.update();
+
+        let aabbs: Vec<&Aabb2D> = app
+            .world_mut()
+            .query_filtered::<&Aabb2D, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert!(!aabbs.is_empty(), "should have spawned cells");
+        let expected_half_w = dims.cell_width / 2.0;
+        let expected_half_h = dims.cell_height / 2.0;
+        for (i, aabb) in aabbs.iter().enumerate() {
+            assert_eq!(
+                aabb.center,
+                Vec2::ZERO,
+                "cell {i} Aabb2D center should be ZERO"
+            );
+            assert!(
+                (aabb.half_extents.x - expected_half_w).abs() < 0.01
+                    && (aabb.half_extents.y - expected_half_h).abs() < 0.01,
+                "cell {i} Aabb2D half_extents should be ({expected_half_w:.2}, {expected_half_h:.2}), got ({:.2}, {:.2})",
+                aabb.half_extents.x,
+                aabb.half_extents.y,
+            );
+        }
+    }
+
+    #[test]
+    fn spawned_cell_has_collision_layers_cell_membership_bolt_mask() {
+        // Given: spawn_cells_from_layout runs
+        // Then: all cells have CollisionLayers { membership: CELL_LAYER (0x02), mask: BOLT_LAYER (0x01) }
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, CELL_LAYER};
+
+        let layout = full_layout(); // 3x2 = 6 cells
+        let mut app = test_app(layout);
+        app.update();
+
+        let layers_list: Vec<&CollisionLayers> = app
+            .world_mut()
+            .query_filtered::<&CollisionLayers, With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(
+            layers_list.len(),
+            6,
+            "all 6 cells should have CollisionLayers"
+        );
+        for (i, layers) in layers_list.iter().enumerate() {
+            assert_eq!(
+                layers.membership, CELL_LAYER,
+                "cell {i} membership should be CELL_LAYER (0x{:02X}), got 0x{:02X}",
+                CELL_LAYER, layers.membership,
+            );
+            assert_eq!(
+                layers.mask, BOLT_LAYER,
+                "cell {i} mask should be BOLT_LAYER (0x{:02X}), got 0x{:02X}",
+                BOLT_LAYER, layers.mask,
+            );
+        }
+    }
+
+    #[test]
+    fn locked_cell_has_same_collision_layers_as_normal_cell() {
+        // Edge case: locked cell has same CollisionLayers (lock is behavioral, not physical)
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+        use crate::shared::{BOLT_LAYER, CELL_LAYER};
+
+        let layout = NodeLayout {
+            name: "lock_layers_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['L', 'N']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+        let mut app = behavior_test_app(layout, behavior_registry());
+        app.update();
+
+        let layers_list: Vec<(&CollisionLayers, Option<&Locked>)> = app
+            .world_mut()
+            .query_filtered::<(&CollisionLayers, Option<&Locked>), With<Cell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(layers_list.len(), 2, "should have 2 cells");
+        for (layers, locked) in &layers_list {
+            let label = if locked.is_some() { "locked" } else { "normal" };
+            assert_eq!(
+                layers.membership, CELL_LAYER,
+                "{label} cell membership should be CELL_LAYER"
+            );
+            assert_eq!(
+                layers.mask, BOLT_LAYER,
+                "{label} cell mask should be BOLT_LAYER"
+            );
+        }
+    }
+
+    // --- Shield cell spawn tests (Phase 10: Orbiting Cells) ---
+
+    use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
+    use rantzsoft_spatial2d::{components::Scale2D, propagation::PositionPropagation};
+
+    use crate::cells::{
+        components::{OrbitAngle, OrbitCell, OrbitConfig, ShieldParent},
+        definition::ShieldBehavior,
+    };
+
+    /// Creates a registry containing a shield cell type ('H') plus a normal cell ('N').
+    fn shield_registry() -> CellTypeRegistry {
+        let mut registry = CellTypeRegistry::default();
+        registry.insert(
+            'H',
+            CellTypeDefinition {
+                id: "shield".to_owned(),
+                alias: 'H',
+                hp: 20.0,
+                color_rgb: [0.8, 0.8, 1.0],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+                behavior: CellBehavior {
+                    locked: false,
+                    regen_rate: None,
+                    shield: Some(ShieldBehavior {
+                        count: 3,
+                        radius: 60.0,
+                        speed: std::f32::consts::FRAC_PI_2,
+                        hp: 10.0,
+                        color_rgb: [0.5, 0.8, 1.0],
+                    }),
+                },
+            },
+        );
+        registry.insert(
+            'N',
+            CellTypeDefinition {
+                id: "normal".to_owned(),
+                alias: 'N',
+                hp: 1.0,
+                color_rgb: [1.0, 0.5, 0.5],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+                behavior: CellBehavior::default(),
+            },
+        );
+        registry
+    }
+
+    fn shield_layout() -> NodeLayout {
+        NodeLayout {
+            name: "shield_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 2,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['H', 'N']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        }
+    }
+
+    fn shield_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
+            .init_resource::<CellConfig>()
+            .init_resource::<PlayfieldConfig>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(registry)
+            .add_systems(Startup, spawn_cells_from_layout);
+        app
+    }
+
+    // ── Behavior 1: Shield cell has ShieldParent + OrbitConfig + Locked + LockAdjacents ──
+
+    #[test]
+    fn shield_cell_has_shield_parent_marker() {
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let shield_count = app
+            .world_mut()
+            .query::<(&Cell, &ShieldParent)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            shield_count, 1,
+            "shield cell ('H') should have ShieldParent marker"
+        );
+    }
+
+    #[test]
+    fn shield_cell_has_locked_and_lock_adjacents() {
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let shield_locked_count = app
+            .world_mut()
+            .query::<(&Cell, &ShieldParent, &Locked, &LockAdjacents)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            shield_locked_count, 1,
+            "shield cell should have Locked + LockAdjacents"
+        );
+    }
+
+    #[test]
+    fn shield_cell_lock_adjacents_contains_orbit_entity_ids() {
+        // Given: shield with orbit_count=3
+        // When: spawn runs
+        // Then: LockAdjacents contains exactly 3 entity IDs (the orbit children)
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let shield_adjacents: Vec<&LockAdjacents> = app
+            .world_mut()
+            .query_filtered::<&LockAdjacents, With<ShieldParent>>()
+            .iter(app.world())
+            .collect();
+        assert_eq!(shield_adjacents.len(), 1);
+        assert_eq!(
+            shield_adjacents[0].0.len(),
+            3,
+            "shield LockAdjacents should contain 3 orbit entity IDs, got {}",
+            shield_adjacents[0].0.len()
+        );
+
+        // Verify each entity in LockAdjacents is an actual OrbitCell
+        for &orbit_entity in &shield_adjacents[0].0 {
+            assert!(
+                app.world().get::<OrbitCell>(orbit_entity).is_some(),
+                "LockAdjacents entity {orbit_entity:?} should have OrbitCell component"
+            );
+        }
+    }
+
+    // ── Behavior 2: Orbit children spawned with correct components ──
+
+    #[test]
+    fn orbit_cells_spawned_with_correct_count() {
+        // Given: shield with orbit_count=3
+        // When: spawn runs
+        // Then: 3 OrbitCell entities exist
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let orbit_count = app
+            .world_mut()
+            .query::<(&Cell, &OrbitCell)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            orbit_count, 3,
+            "should spawn 3 orbit cells, got {orbit_count}"
+        );
+    }
+
+    #[test]
+    fn orbit_cells_have_cell_health_from_shield_behavior() {
+        // Given: shield with orbit_hp=10.0
+        // When: spawn runs
+        // Then: each OrbitCell has CellHealth { current: 10.0, max: 10.0 }
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        for health in app
+            .world_mut()
+            .query_filtered::<&CellHealth, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert!(
+                (health.current - 10.0).abs() < f32::EPSILON,
+                "orbit cell current HP should be 10.0, got {}",
+                health.current
+            );
+            assert!(
+                (health.max - 10.0).abs() < f32::EPSILON,
+                "orbit cell max HP should be 10.0, got {}",
+                health.max
+            );
+        }
+    }
+
+    #[test]
+    fn orbit_cells_have_square_20x20_scale() {
+        // Given: orbit dimensions 20.0 x 20.0
+        // When: spawn runs
+        // Then: each OrbitCell has Scale2D { x: 20.0, y: 20.0 }
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        for scale in app
+            .world_mut()
+            .query_filtered::<&Scale2D, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert!(
+                (scale.x - 20.0).abs() < f32::EPSILON,
+                "orbit cell Scale2D.x should be 20.0, got {}",
+                scale.x
+            );
+            assert!(
+                (scale.y - 20.0).abs() < f32::EPSILON,
+                "orbit cell Scale2D.y should be 20.0, got {}",
+                scale.y
+            );
+        }
+    }
+
+    #[test]
+    fn orbit_cells_have_aabb2d_matching_square_size() {
+        // Given: orbit dimensions 20.0 x 20.0
+        // When: spawn runs
+        // Then: each OrbitCell has Aabb2D with half_extents (10.0, 10.0)
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        for aabb in app
+            .world_mut()
+            .query_filtered::<&Aabb2D, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert_eq!(
+                aabb.center,
+                Vec2::ZERO,
+                "orbit cell Aabb2D center should be ZERO"
+            );
+            assert!(
+                (aabb.half_extents.x - 10.0).abs() < f32::EPSILON,
+                "orbit cell Aabb2D half_extents.x should be 10.0, got {}",
+                aabb.half_extents.x
+            );
+            assert!(
+                (aabb.half_extents.y - 10.0).abs() < f32::EPSILON,
+                "orbit cell Aabb2D half_extents.y should be 10.0, got {}",
+                aabb.half_extents.y
+            );
+        }
+    }
+
+    #[test]
+    fn orbit_cells_have_collision_layers() {
+        // Given: orbit cells are collidable
+        // When: spawn runs
+        // Then: each OrbitCell has CollisionLayers { membership: CELL_LAYER, mask: BOLT_LAYER }
+        use crate::shared::{BOLT_LAYER, CELL_LAYER};
+
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        for layers in app
+            .world_mut()
+            .query_filtered::<&CollisionLayers, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert_eq!(
+                layers.membership, CELL_LAYER,
+                "orbit cell membership should be CELL_LAYER"
+            );
+            assert_eq!(
+                layers.mask, BOLT_LAYER,
+                "orbit cell mask should be BOLT_LAYER"
+            );
+        }
+    }
+
+    #[test]
+    fn orbit_cells_have_orbit_angle_evenly_spaced() {
+        // Given: shield with orbit_count=3
+        // When: spawn runs
+        // Then: OrbitAngle values are 0, 2*PI/3, 4*PI/3 (evenly spaced)
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let mut angles: Vec<f32> = app
+            .world_mut()
+            .query_filtered::<&OrbitAngle, With<OrbitCell>>()
+            .iter(app.world())
+            .map(|a| a.0)
+            .collect();
+        angles.sort_by(f32::total_cmp);
+
+        assert_eq!(angles.len(), 3, "should have 3 orbit angles");
+        let expected = [
+            0.0,
+            2.0 * std::f32::consts::PI / 3.0,
+            4.0 * std::f32::consts::PI / 3.0,
+        ];
+        for (i, (actual, exp)) in angles.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (actual - exp).abs() < 1e-5,
+                "orbit {i} angle should be {exp:.4}, got {actual:.4}"
+            );
+        }
+    }
+
+    #[test]
+    fn orbit_cells_have_orbit_config_from_shield_behavior() {
+        // Given: shield with orbit_radius=60.0, orbit_speed=PI/2
+        // When: spawn runs
+        // Then: each OrbitCell has OrbitConfig { radius: 60.0, speed: PI/2 }
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        for config in app
+            .world_mut()
+            .query_filtered::<&OrbitConfig, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert!(
+                (config.radius - 60.0).abs() < f32::EPSILON,
+                "orbit config radius should be 60.0, got {}",
+                config.radius
+            );
+            assert!(
+                (config.speed - std::f32::consts::FRAC_PI_2).abs() < f32::EPSILON,
+                "orbit config speed should be PI/2, got {}",
+                config.speed
+            );
+        }
+    }
+
+    // ── Behavior 3: Orbit cells NOT RequiredToClear ──
+
+    #[test]
+    fn orbit_cells_not_required_to_clear() {
+        // Given: shield with orbits
+        // When: spawn runs
+        // Then: NO OrbitCell has RequiredToClear
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let orbit_required = app
+            .world_mut()
+            .query::<(&OrbitCell, &RequiredToClear)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            orbit_required, 0,
+            "orbit cells should NOT have RequiredToClear"
+        );
+    }
+
+    #[test]
+    fn shield_parent_is_required_to_clear() {
+        // Given: shield definition has required_to_clear=true
+        // When: spawn runs
+        // Then: the shield parent cell HAS RequiredToClear
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let shield_required = app
+            .world_mut()
+            .query::<(&ShieldParent, &RequiredToClear)>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            shield_required, 1,
+            "shield parent cell should have RequiredToClear"
+        );
+    }
+
+    // ── Behavior 4: Orbit radius scales by grid scale with min clamp ──
+
+    #[test]
+    fn orbit_radius_scaled_by_grid_scale_factor() {
+        // Given: a grid so large it requires grid scaling (e.g., 40x20)
+        //        shield orbit_radius=60.0
+        // When: spawn runs
+        // Then: orbit OrbitConfig.radius = 60.0 * grid_scale (< 60.0)
+        let layout = NodeLayout {
+            name: "shield_scale_test".to_owned(),
+            timer_secs: 60.0,
+            cols: 40,
+            rows: 20,
+            grid_top_offset: 90.0,
+            grid: {
+                let mut grid = vec![vec!['N'; 40]; 20];
+                grid[0][0] = 'H'; // shield in corner
+                grid
+            },
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+
+        let cell_config = ron_like_cell_config();
+        let playfield = ron_like_playfield_config();
+        let dims = compute_grid_scale(&cell_config, &playfield, 40, 20, 90.0);
+        assert!(
+            dims.scale < 1.0,
+            "40x20 grid should need scaling, got {}",
+            dims.scale
+        );
+        let expected_radius = (60.0 * dims.scale).max(10.0); // min clamp
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellsSpawned>()
+            .insert_resource(cell_config)
+            .insert_resource(playfield)
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .insert_resource(ActiveNodeLayout(layout))
+            .insert_resource(shield_registry())
+            .add_systems(Startup, spawn_cells_from_layout);
+        app.update();
+
+        for config in app
+            .world_mut()
+            .query_filtered::<&OrbitConfig, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert!(
+                (config.radius - expected_radius).abs() < 0.5,
+                "orbit radius should be ~{expected_radius:.2} (60.0 * {:.3}), got {:.2}",
+                dims.scale,
+                config.radius
+            );
+        }
+    }
+
+    // ── Behavior 5: Orbit initial Position2D = shield_pos + radius * (cos, sin) ──
+
+    #[test]
+    fn orbit_initial_position_matches_shield_pos_plus_radius_offset() {
+        // Given: shield at some grid position, orbit_count=3, orbit_radius=60.0
+        //        angles: 0, 2PI/3, 4PI/3
+        // When: spawn runs (no sync system registered, just spawn)
+        // Then: each orbit has Position2D = shield_pos + 60.0 * (cos(angle), sin(angle))
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        // Find shield Position2D
+        let shield_pos: Vec2 = app
+            .world_mut()
+            .query_filtered::<&Position2D, With<ShieldParent>>()
+            .iter(app.world())
+            .next()
+            .expect("shield should exist")
+            .0;
+
+        let expected_angles = [
+            0.0,
+            2.0 * std::f32::consts::PI / 3.0,
+            4.0 * std::f32::consts::PI / 3.0,
+        ];
+
+        let mut orbit_data: Vec<(f32, Vec2)> = app
+            .world_mut()
+            .query_filtered::<(&OrbitAngle, &Position2D), With<OrbitCell>>()
+            .iter(app.world())
+            .map(|(angle, pos)| (angle.0, pos.0))
+            .collect();
+        orbit_data.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+        assert_eq!(orbit_data.len(), 3, "should have 3 orbit cells");
+
+        for (i, (angle, pos)) in orbit_data.iter().enumerate() {
+            let expected_x = 60.0f32.mul_add(angle.cos(), shield_pos.x);
+            let expected_y = 60.0f32.mul_add(angle.sin(), shield_pos.y);
+            assert!(
+                (pos.x - expected_x).abs() < 0.1,
+                "orbit {i} x at angle {:.3}: expected {expected_x:.2}, got {:.2}",
+                expected_angles[i],
+                pos.x
+            );
+            assert!(
+                (pos.y - expected_y).abs() < 0.1,
+                "orbit {i} y at angle {:.3}: expected {expected_y:.2}, got {:.2}",
+                expected_angles[i],
+                pos.y
+            );
+        }
+    }
+
+    // ── Behavior 5 edge case: orbit cells use PositionPropagation::Absolute ──
+
+    #[test]
+    fn orbit_cells_have_absolute_position_propagation() {
+        // Orbit cells must use Absolute position propagation so the quadtree
+        // sees correct world-space coordinates.
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        for prop in app
+            .world_mut()
+            .query_filtered::<&PositionPropagation, With<OrbitCell>>()
+            .iter(app.world())
+        {
+            assert_eq!(
+                *prop,
+                PositionPropagation::Absolute,
+                "orbit cell should have PositionPropagation::Absolute"
+            );
+        }
+    }
+
+    // ── Behavior 8: Shield destroyed -> orbit children auto-despawned via ChildOf ──
+
+    #[test]
+    fn orbit_cells_are_children_of_shield_via_child_of() {
+        // Given: shield with 3 orbits
+        // When: spawn runs
+        // Then: each OrbitCell entity is a child of the shield entity (ChildOf relationship)
+        let mut app = shield_test_app(shield_layout(), shield_registry());
+        app.update();
+
+        let shield_entity = app
+            .world_mut()
+            .query_filtered::<Entity, With<ShieldParent>>()
+            .iter(app.world())
+            .next()
+            .expect("shield should exist");
+
+        // Collect orbit entities first to avoid borrow conflict
+        let orbit_entities: Vec<Entity> = app
+            .world_mut()
+            .query_filtered::<Entity, With<OrbitCell>>()
+            .iter(app.world())
+            .collect();
+
+        assert_eq!(orbit_entities.len(), 3, "should have 3 orbit cells");
+
+        // Check via Children component on shield
+        let children = app
+            .world()
+            .get::<Children>(shield_entity)
+            .expect("shield should have Children component (from ChildOf on orbits)");
+
+        for orbit in &orbit_entities {
+            assert!(
+                children.contains(orbit),
+                "orbit entity {orbit:?} should be a child of shield entity {shield_entity:?}"
+            );
+        }
+    }
+
+    // ── Edge case: orbit_count=0 → shield has empty LockAdjacents ──
+
+    #[test]
+    fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
+        // Given: shield with orbit_count=0
+        // When: spawn runs
+        // Then: shield has Locked + LockAdjacents(empty) → will immediately unlock
+        let mut registry = CellTypeRegistry::default();
+        registry.insert(
+            'H',
+            CellTypeDefinition {
+                id: "shield_zero".to_owned(),
+                alias: 'H',
+                hp: 20.0,
+                color_rgb: [0.8, 0.8, 1.0],
+                required_to_clear: true,
+                damage_hdr_base: 4.0,
+                damage_green_min: 0.2,
+                damage_blue_range: 0.4,
+                damage_blue_base: 0.2,
+                behavior: CellBehavior {
+                    locked: false,
+                    regen_rate: None,
+                    shield: Some(ShieldBehavior {
+                        count: 0,
+                        radius: 60.0,
+                        speed: std::f32::consts::FRAC_PI_2,
+                        hp: 10.0,
+                        color_rgb: [0.5, 0.8, 1.0],
+                    }),
+                },
+            },
+        );
+
+        let layout = NodeLayout {
+            name: "zero_orbits".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['H']],
+            pool: NodePool::default(),
+            entity_scale: 1.0,
+        };
+
+        let mut app = shield_test_app(layout, registry);
+        app.update();
+
+        // No orbit cells spawned
+        let orbit_count = app
+            .world_mut()
+            .query::<&OrbitCell>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            orbit_count, 0,
+            "shield with orbit_count=0 should spawn no orbit cells"
+        );
+
+        // Shield has LockAdjacents with empty vec
+        let adjacents: Vec<&LockAdjacents> = app
+            .world_mut()
+            .query_filtered::<&LockAdjacents, With<ShieldParent>>()
+            .iter(app.world())
+            .collect();
+        assert_eq!(adjacents.len(), 1);
+        assert!(
+            adjacents[0].0.is_empty(),
+            "shield with orbit_count=0 should have empty LockAdjacents, got {} entries",
+            adjacents[0].0.len()
         );
     }
 }

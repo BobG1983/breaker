@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 use super::definition::CellTypeDefinition;

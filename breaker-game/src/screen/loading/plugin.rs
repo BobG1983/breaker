@@ -6,13 +6,13 @@ use iyes_progress::prelude::*;
 use super::{
     components::LoadingScreen,
     systems::{
-        seed_archetype_registry, seed_bolt_config, seed_breaker_config, seed_cell_config,
+        seed_bolt_config, seed_breaker_config, seed_breaker_registry, seed_cell_config,
         seed_cell_type_registry, seed_chip_registry, seed_chip_select_config,
         seed_difficulty_curve, seed_input_config, seed_main_menu_config, seed_node_layout_registry,
         seed_playfield_config, seed_timer_ui_config, spawn_loading_screen, update_loading_bar,
     },
 };
-use crate::shared::GameState;
+use crate::{screen::systems::cleanup_entities, shared::GameState};
 
 /// Plugin for the loading screen — UI and config seeding.
 pub(crate) struct LoadingPlugin;
@@ -31,7 +31,7 @@ impl Plugin for LoadingPlugin {
                 seed_cell_type_registry.track_progress::<GameState>(),
                 seed_node_layout_registry.track_progress::<GameState>(),
                 seed_timer_ui_config.track_progress::<GameState>(),
-                seed_archetype_registry.track_progress::<GameState>(),
+                seed_breaker_registry.track_progress::<GameState>(),
                 seed_chip_select_config.track_progress::<GameState>(),
                 seed_chip_registry.track_progress::<GameState>(),
                 seed_difficulty_curve.track_progress::<GameState>(),
@@ -45,7 +45,7 @@ impl Plugin for LoadingPlugin {
         )
         .add_systems(
             OnExit(GameState::Loading),
-            crate::screen::systems::cleanup_entities::<LoadingScreen>,
+            cleanup_entities::<LoadingScreen>,
         );
     }
 }

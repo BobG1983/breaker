@@ -3,6 +3,52 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+/// Configuration for a shield cell's orbiting children.
+#[derive(Deserialize, Clone, Debug)]
+pub(crate) struct ShieldBehavior {
+    /// Number of orbit cells to spawn around the shield.
+    pub count: u32,
+    /// Distance from shield center to orbit cell center (before grid scaling).
+    pub radius: f32,
+    /// Angular speed in radians per second.
+    pub speed: f32,
+    /// Hit points for each orbit cell.
+    pub hp: f32,
+    /// HDR RGB color for orbit cells.
+    pub color_rgb: [f32; 3],
+}
+
+impl ShieldBehavior {
+    /// Validates that all fields are well-formed.
+    ///
+    /// Checks:
+    /// - `radius` must be finite and positive (> 0.0).
+    /// - `speed` must be finite and non-negative (>= 0.0).
+    /// - `hp` must be finite and positive (> 0.0).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string describing the first invalid field found.
+    pub(crate) fn validate(&self) -> Result<(), String> {
+        if self.radius <= 0.0 || !self.radius.is_finite() {
+            return Err(format!(
+                "radius must be positive and finite, got {}",
+                self.radius
+            ));
+        }
+        if self.speed < 0.0 || !self.speed.is_finite() {
+            return Err(format!(
+                "speed must be non-negative and finite, got {}",
+                self.speed
+            ));
+        }
+        if self.hp <= 0.0 || !self.hp.is_finite() {
+            return Err(format!("hp must be positive and finite, got {}", self.hp));
+        }
+        Ok(())
+    }
+}
+
 /// Optional behavior flags for a cell type.
 #[derive(Deserialize, Clone, Debug, Default)]
 pub(crate) struct CellBehavior {
@@ -12,6 +58,9 @@ pub(crate) struct CellBehavior {
     /// If set, HP regenerates at this rate per second.
     #[serde(default)]
     pub regen_rate: Option<f32>,
+    /// If set, this cell is a shield that spawns orbiting children.
+    #[serde(default)]
+    pub shield: Option<ShieldBehavior>,
 }
 
 /// A cell type definition loaded from RON.
@@ -66,6 +115,9 @@ impl CellTypeDefinition {
             return Err(format!(
                 "regen_rate must be positive and finite, got {rate}"
             ));
+        }
+        if let Some(ref shield) = self.behavior.shield {
+            shield.validate()?;
         }
         Ok(())
     }
@@ -173,6 +225,156 @@ mod tests {
         assert!(
             def.validate().is_ok(),
             "valid definition with regen_rate = Some(2.0) should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    // ── ShieldBehavior validation ─────────────────────────────────
+
+    fn valid_shield() -> ShieldBehavior {
+        ShieldBehavior {
+            count: 3,
+            radius: 60.0,
+            speed: std::f32::consts::FRAC_PI_2,
+            hp: 10.0,
+            color_rgb: [0.5, 0.8, 1.0],
+        }
+    }
+
+    #[test]
+    fn shield_validate_accepts_valid_shield() {
+        let shield = valid_shield();
+        assert!(
+            shield.validate().is_ok(),
+            "valid ShieldBehavior should pass validation: {:?}",
+            shield.validate(),
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_zero_orbit_radius() {
+        let mut shield = valid_shield();
+        shield.radius = 0.0;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_radius = 0.0 should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_negative_orbit_radius() {
+        let mut shield = valid_shield();
+        shield.radius = -10.0;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_radius = -10.0 should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_infinite_orbit_radius() {
+        let mut shield = valid_shield();
+        shield.radius = f32::INFINITY;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_radius = INFINITY should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_nan_orbit_radius() {
+        let mut shield = valid_shield();
+        shield.radius = f32::NAN;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_radius = NaN should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_negative_orbit_speed() {
+        let mut shield = valid_shield();
+        shield.speed = -1.0;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_speed = -1.0 should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_accepts_zero_orbit_speed() {
+        // Zero speed means orbit cells don't rotate, which is valid.
+        let mut shield = valid_shield();
+        shield.speed = 0.0;
+        assert!(
+            shield.validate().is_ok(),
+            "orbit_speed = 0.0 should be accepted (stationary orbits)"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_infinite_orbit_speed() {
+        let mut shield = valid_shield();
+        shield.speed = f32::INFINITY;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_speed = INFINITY should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_zero_orbit_hp() {
+        let mut shield = valid_shield();
+        shield.hp = 0.0;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_hp = 0.0 should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_negative_orbit_hp() {
+        let mut shield = valid_shield();
+        shield.hp = -5.0;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_hp = -5.0 should be rejected"
+        );
+    }
+
+    #[test]
+    fn shield_validate_rejects_nan_orbit_hp() {
+        let mut shield = valid_shield();
+        shield.hp = f32::NAN;
+        assert!(
+            shield.validate().is_err(),
+            "orbit_hp = NaN should be rejected"
+        );
+    }
+
+    #[test]
+    fn cell_definition_validate_delegates_to_shield_validate() {
+        let mut def = valid_definition();
+        def.behavior.shield = Some(ShieldBehavior {
+            count: 3,
+            radius: -1.0, // invalid
+            speed: std::f32::consts::FRAC_PI_2,
+            hp: 10.0,
+            color_rgb: [0.5, 0.8, 1.0],
+        });
+        assert!(
+            def.validate().is_err(),
+            "CellTypeDefinition.validate should reject invalid ShieldBehavior"
+        );
+    }
+
+    #[test]
+    fn cell_definition_validate_accepts_valid_shield() {
+        let mut def = valid_definition();
+        def.behavior.shield = Some(valid_shield());
+        assert!(
+            def.validate().is_ok(),
+            "CellTypeDefinition with valid ShieldBehavior should pass: {:?}",
             def.validate(),
         );
     }

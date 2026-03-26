@@ -1,7 +1,0 @@
-(
-    name: "Damage Boost",
-    description: "Bolt deals more damage on hit",
-    rarity: Common,
-    max_stacks: 5,
-    effects: [Amp(DamageBoost(0.25))],
-)

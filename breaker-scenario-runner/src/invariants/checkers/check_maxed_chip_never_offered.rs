@@ -35,7 +35,10 @@ pub fn check_maxed_chip_never_offered(
 
 #[cfg(test)]
 mod tests {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
 
     use super::*;
 
@@ -54,7 +57,9 @@ mod tests {
             description: format!("{name} test description"),
             rarity: Rarity::Common,
             max_stacks,
-            effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+            effects: vec![EffectNode::Do(Effect::Piercing(1))],
+            ingredients: None,
+            template_name: None,
         }
     }
 

@@ -3,16 +3,27 @@
 //! Contains passive types only: state enums, cleanup markers, and playfield
 //! configuration. No systems or plugins — those live in domain plugins.
 
+pub mod draw_layer;
 pub mod math;
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+pub use draw_layer::GameDrawLayer;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 /// Base damage dealt by a bolt hit. Fixed game-design constant.
 pub const BASE_BOLT_DAMAGE: f32 = 10.0;
+
+/// Collision layer bitmask: Bolt entities.
+pub const BOLT_LAYER: u32 = 1 << 0;
+/// Collision layer bitmask: Cell entities.
+pub const CELL_LAYER: u32 = 1 << 1;
+/// Collision layer bitmask: Wall entities.
+pub const WALL_LAYER: u32 = 1 << 2;
+/// Collision layer bitmask: Breaker entities.
+pub const BREAKER_LAYER: u32 = 1 << 3;
 
 /// Converts an `[f32; 3]` RGB triple into an sRGB [`Color`].
 #[must_use]
@@ -153,7 +164,7 @@ pub struct EntityScale(pub f32);
 /// as exiting [`GameState::Playing`] — any new transitions out of `Playing`
 /// must account for the fact that all `CleanupOnNodeExit` entities will be
 /// despawned.
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct CleanupOnNodeExit;
 
 /// Marker component for entities that should be despawned when a run ends.
@@ -191,14 +202,14 @@ impl Default for GameRng {
 #[derive(Resource, Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RunSeed(pub Option<u64>);
 
-/// The archetype selected for the current run.
+/// The breaker selected for the current run.
 ///
-/// Set at run start; read by `init_archetype` to look up the archetype
+/// Set at run start; read by `init_breaker` to look up the breaker
 /// definition from the registry.
 #[derive(Resource, Debug, Clone)]
-pub struct SelectedArchetype(pub String);
+pub struct SelectedBreaker(pub String);
 
-impl Default for SelectedArchetype {
+impl Default for SelectedBreaker {
     fn default() -> Self {
         Self("Aegis".to_owned())
     }
@@ -291,6 +302,39 @@ mod tests {
             "expected cell_zone_height ~{expected}, got {}",
             config.cell_zone_height(),
         );
+    }
+
+    #[test]
+    fn collision_layer_constants_are_distinct_powers_of_two() {
+        // Each layer constant is a distinct power of 2 (single bit set)
+        let layers = [BOLT_LAYER, CELL_LAYER, WALL_LAYER, BREAKER_LAYER];
+
+        // Each is a power of 2
+        for &layer in &layers {
+            assert!(
+                layer.is_power_of_two(),
+                "layer 0x{layer:02X} is not a power of 2"
+            );
+        }
+
+        // All are distinct
+        for (i, &a) in layers.iter().enumerate() {
+            for (j, &b) in layers.iter().enumerate() {
+                if i != j {
+                    assert_ne!(a, b, "layers at index {i} and {j} are not distinct");
+                }
+            }
+        }
+
+        // Specific values
+        assert_eq!(BOLT_LAYER, 0x01);
+        assert_eq!(CELL_LAYER, 0x02);
+        assert_eq!(WALL_LAYER, 0x04);
+        assert_eq!(BREAKER_LAYER, 0x08);
+
+        // No overlap: bitwise OR of all equals bitwise sum (no shared bits)
+        let combined = BOLT_LAYER | CELL_LAYER | WALL_LAYER | BREAKER_LAYER;
+        assert_eq!(combined, 0x0F, "combined layers should be 0x0F");
     }
 
     #[test]

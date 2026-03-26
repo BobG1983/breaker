@@ -3,18 +3,20 @@
 use bevy::prelude::*;
 
 use crate::{
-    physics::PhysicsSystems,
     run::{
+        definition::HighlightConfig,
+        highlights::systems::{
+            detect_close_save, detect_combo_king, detect_mass_destruction, detect_pinball_wizard,
+        },
         messages::{HighlightTriggered, RunLost},
         node::{NodePlugin, NodeSystems},
         resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
         systems::{
-            advance_node, capture_run_seed, detect_close_save, detect_combo_and_pinball,
-            detect_first_evolution, detect_mass_destruction, detect_nail_biter,
-            generate_node_sequence_system, handle_node_cleared, handle_run_lost,
+            advance_node, capture_run_seed, detect_first_evolution, detect_most_powerful_evolution,
+            detect_nail_biter, generate_node_sequence_system, handle_node_cleared, handle_run_lost,
             handle_timer_expired, reset_highlight_tracker, reset_run_state, spawn_highlight_text,
             track_bolts_lost, track_bumps, track_cells_destroyed, track_chips_collected,
-            track_node_cleared_stats, track_time_elapsed,
+            track_evolution_damage, track_node_cleared_stats, track_time_elapsed,
         },
     },
     shared::{GameRng, GameState, PlayingState, RunSeed},
@@ -32,7 +34,7 @@ impl Plugin for RunPlugin {
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
             .init_resource::<RunStats>()
-            .init_resource::<crate::run::definition::HighlightConfig>()
+            .init_resource::<HighlightConfig>()
             .init_resource::<HighlightTracker>()
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
@@ -52,11 +54,13 @@ impl Plugin for RunPlugin {
                     track_bumps,
                     track_bolts_lost,
                     track_time_elapsed,
+                    track_evolution_damage,
                     track_node_cleared_stats.after(NodeSystems::TrackCompletion),
                     // Highlight detection
                     detect_mass_destruction,
                     detect_close_save.after(crate::breaker::BreakerSystems::GradeBump),
-                    detect_combo_and_pinball,
+                    detect_combo_king,
+                    detect_pinball_wizard,
                     detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )
                     .run_if(in_state(PlayingState::Active)),
@@ -76,6 +80,7 @@ impl Plugin for RunPlugin {
                 OnEnter(GameState::Playing),
                 (reset_highlight_tracker, capture_run_seed),
             )
+            .add_systems(OnEnter(GameState::RunEnd), detect_most_powerful_evolution)
             .add_systems(OnEnter(GameState::TransitionIn), advance_node)
             .add_systems(
                 OnExit(GameState::MainMenu),
@@ -90,6 +95,14 @@ impl Plugin for RunPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        bolt::messages::{BoltHitBreaker, BoltHitCell, BoltLost},
+        breaker::messages::BumpPerformed,
+        cells::messages::DamageCell,
+        chips::inventory::ChipInventory,
+        shared::PlayfieldConfig,
+        ui::messages::ChipSelected,
+    };
 
     #[test]
     fn plugin_builds() {
@@ -99,15 +112,15 @@ mod tests {
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             // Messages read by run domain systems
-            .add_message::<crate::cells::messages::CellDestroyed>()
-            .add_message::<crate::breaker::messages::BumpPerformed>()
-            .add_message::<crate::physics::messages::BoltLost>()
-            .add_message::<crate::physics::messages::BoltHitBreaker>()
-            .add_message::<crate::physics::messages::BoltHitCell>()
-            .add_message::<crate::ui::messages::ChipSelected>()
+            .add_message::<DamageCell>()
+            .add_message::<BumpPerformed>()
+            .add_message::<BoltLost>()
+            .add_message::<BoltHitBreaker>()
+            .add_message::<BoltHitCell>()
+            .add_message::<ChipSelected>()
             // Resources required by run domain systems
-            .init_resource::<crate::chips::inventory::ChipInventory>()
-            .init_resource::<crate::shared::PlayfieldConfig>()
+            .init_resource::<ChipInventory>()
+            .init_resource::<PlayfieldConfig>()
             .add_plugins(RunPlugin)
             .update();
     }

@@ -1,6 +1,7 @@
 //! System to reset the bolt's position and velocity at the start of each node.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
@@ -9,7 +10,6 @@ use crate::{
         resources::BoltConfig,
     },
     breaker::components::Breaker,
-    interpolate::components::PhysicsTranslation,
     run::RunState,
 };
 
@@ -26,38 +26,39 @@ pub(crate) fn reset_bolt(
     mut commands: Commands,
     config: Res<BoltConfig>,
     run_state: Res<RunState>,
-    breaker_query: Query<&Transform, (With<Breaker>, Without<Bolt>)>,
+    breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
     mut bolt_query: Query<ResetBoltQuery, (With<Bolt>, Without<ExtraBolt>)>,
 ) {
-    let (breaker_x, breaker_y) = breaker_query
-        .iter()
-        .next()
-        .map_or((0.0, 0.0), |tf| (tf.translation.x, tf.translation.y));
+    let Ok(breaker_pos) = breaker_query.single() else {
+        return;
+    };
 
-    for (entity, mut transform, mut velocity, piercing_remaining, piercing, physics_translation) in
+    let breaker_x = breaker_pos.0.x;
+    let breaker_y = breaker_pos.0.y;
+
+    let serving = run_state.node_index == 0;
+
+    for (entity, mut position, mut velocity, piercing_remaining, piercing, prev_pos) in
         &mut bolt_query
     {
-        let new_pos = Vec3::new(
-            breaker_x,
-            breaker_y + config.spawn_offset_y,
-            transform.translation.z,
-        );
-        transform.translation = new_pos;
+        let new_pos = Vec2::new(breaker_x, breaker_y + config.spawn_offset_y);
+        position.0 = new_pos;
 
-        if run_state.node_index == 0 {
-            velocity.value = Vec2::ZERO;
+        if let Some(mut prev) = prev_pos {
+            prev.0 = new_pos;
+        }
+
+        if serving {
+            velocity.0 = Vec2::ZERO;
             commands.entity(entity).insert(BoltServing);
         } else {
-            velocity.value = config.initial_velocity();
+            let v = config.initial_velocity();
+            velocity.0 = Vec2::new(v.x, v.y);
             commands.entity(entity).remove::<BoltServing>();
         }
 
         if let (Some(mut remaining), Some(pierce)) = (piercing_remaining, piercing) {
             remaining.0 = pierce.0;
-        }
-
-        if let Some(mut pt) = physics_translation {
-            *pt = PhysicsTranslation::new(new_pos);
         }
     }
 }
@@ -65,19 +66,20 @@ pub(crate) fn reset_bolt(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, Velocity2D};
 
     use super::*;
     use crate::{
         bolt::{
-            components::{Bolt, BoltServing, BoltVelocity, ExtraBolt},
+            components::{Bolt, BoltServing, ExtraBolt},
             resources::BoltConfig,
         },
         breaker::components::Breaker,
         chips::components::{
             BoltSizeBoost, BoltSpeedBoost, ChainHit, DamageBoost, Piercing, PiercingRemaining,
         },
-        interpolate::components::PhysicsTranslation,
         run::RunState,
+        shared::GameDrawLayer,
     };
 
     fn test_app() -> App {
@@ -89,69 +91,99 @@ mod tests {
         app
     }
 
-    /// Spawns a bolt entity with standard components for reset testing.
-    fn spawn_bolt_entity(app: &mut App, pos: Vec3, velocity: BoltVelocity) -> Entity {
+    /// Spawns a bolt entity with spatial2d components for reset testing.
+    fn spawn_bolt_entity(app: &mut App, pos: Vec2, velocity: Velocity2D) -> Entity {
+        app.world_mut()
+            .spawn((Bolt, velocity, Position2D(pos), PreviousPosition(pos)))
+            .id()
+    }
+
+    /// Spawns a breaker entity at the given position using `Position2D`.
+    fn spawn_breaker(app: &mut App, x: f32, y: f32) -> Entity {
         app.world_mut()
             .spawn((
-                Bolt,
-                velocity,
-                Transform::from_translation(pos),
-                PhysicsTranslation::new(pos),
+                Breaker,
+                Position2D(Vec2::new(x, y)),
+                Spatial2D,
+                GameDrawLayer::Breaker,
             ))
             .id()
     }
 
-    /// Spawns a breaker entity at the given position.
-    fn spawn_breaker(app: &mut App, x: f32, y: f32) -> Entity {
-        app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(x, y, 0.0)))
-            .id()
-    }
-
     #[test]
-    fn reset_bolt_repositions_bolt_above_breaker() {
+    fn reset_bolt_writes_position2d_above_breaker() {
+        // Given: bolt at Position2D(150.0, 100.0), breaker at (0.0, -250.0),
+        //        spawn_offset_y = 30.0
+        // When: reset_bolt runs
+        // Then: Position2D(Vec2::new(0.0, -220.0))
         let mut app = test_app();
-        let bolt_pos = Vec3::new(150.0, 100.0, 1.0);
-        spawn_bolt_entity(&mut app, bolt_pos, BoltVelocity::new(300.0, 400.0));
+        spawn_bolt_entity(
+            &mut app,
+            Vec2::new(150.0, 100.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
+        );
         spawn_breaker(&mut app, 0.0, -250.0);
 
         app.update();
 
         let config = BoltConfig::default();
-        let expected_y = -250.0 + config.spawn_offset_y; // -250.0 + 30.0 = -220.0
+        let expected = Vec2::new(0.0, -250.0 + config.spawn_offset_y);
 
-        let transform = app
+        let position = app
             .world_mut()
-            .query_filtered::<&Transform, With<Bolt>>()
+            .query_filtered::<&Position2D, With<Bolt>>()
             .iter(app.world())
             .next()
-            .expect("bolt should exist");
+            .expect("bolt should have Position2D");
 
         assert!(
-            (transform.translation.x - 0.0).abs() < f32::EPSILON,
-            "bolt x should be centered above breaker, got {}",
-            transform.translation.x
+            (position.0.x - expected.x).abs() < f32::EPSILON
+                && (position.0.y - expected.y).abs() < f32::EPSILON,
+            "bolt Position2D should be {expected:?}, got {:?}",
+            position.0,
         );
-        assert!(
-            (transform.translation.y - expected_y).abs() < f32::EPSILON,
-            "bolt y should be {expected_y}, got {}",
-            transform.translation.y
-        );
-        assert!(
-            (transform.translation.z - 1.0).abs() < f32::EPSILON,
-            "bolt z should remain 1.0, got {}",
-            transform.translation.z
+    }
+
+    #[test]
+    fn reset_bolt_snaps_previous_position_to_prevent_interpolation_teleport() {
+        // Given: bolt with PreviousPosition(140.0, 90.0)
+        // When: reset_bolt runs
+        // Then: PreviousPosition.0 matches new Position2D.0
+        let mut app = test_app();
+        let bolt_id = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::new(300.0, 400.0)),
+                Position2D(Vec2::new(150.0, 100.0)),
+                PreviousPosition(Vec2::new(140.0, 90.0)),
+            ))
+            .id();
+        spawn_breaker(&mut app, 0.0, -250.0);
+
+        app.update();
+
+        let pos = app
+            .world()
+            .get::<Position2D>(bolt_id)
+            .expect("bolt should have Position2D");
+        let prev = app
+            .world()
+            .get::<PreviousPosition>(bolt_id)
+            .expect("bolt should have PreviousPosition");
+        assert_eq!(
+            pos.0, prev.0,
+            "PreviousPosition should match Position2D after reset to prevent teleport"
         );
     }
 
     #[test]
     fn reset_bolt_zeroes_velocity_on_node_zero() {
         let mut app = test_app();
-        // node_index defaults to 0
         spawn_bolt_entity(
             &mut app,
-            Vec3::new(0.0, 0.0, 1.0),
-            BoltVelocity::new(300.0, 400.0),
+            Vec2::new(0.0, 0.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
         );
         spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -159,15 +191,15 @@ mod tests {
 
         let velocity = app
             .world_mut()
-            .query_filtered::<&BoltVelocity, With<Bolt>>()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
 
         assert!(
-            velocity.value == Vec2::ZERO,
+            velocity.0 == Vec2::ZERO,
             "velocity should be zero on node 0, got {:?}",
-            velocity.value
+            velocity.0
         );
     }
 
@@ -177,8 +209,8 @@ mod tests {
         app.world_mut().resource_mut::<RunState>().node_index = 2;
         spawn_bolt_entity(
             &mut app,
-            Vec3::new(0.0, 0.0, 1.0),
-            BoltVelocity::new(0.0, 0.0),
+            Vec2::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
         );
         spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -187,15 +219,15 @@ mod tests {
         let config = BoltConfig::default();
         let velocity = app
             .world_mut()
-            .query_filtered::<&BoltVelocity, With<Bolt>>()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
             .iter(app.world())
             .next()
             .expect("bolt should have velocity");
 
         assert!(
-            velocity.value.y > 0.0,
+            velocity.0.y > 0.0,
             "velocity y should be positive on subsequent node, got {}",
-            velocity.value.y
+            velocity.0.y
         );
         let speed = velocity.speed();
         assert!(
@@ -208,11 +240,10 @@ mod tests {
     #[test]
     fn reset_bolt_inserts_serving_on_node_zero() {
         let mut app = test_app();
-        // node_index defaults to 0
         let bolt_id = spawn_bolt_entity(
             &mut app,
-            Vec3::new(0.0, 0.0, 1.0),
-            BoltVelocity::new(0.0, 0.0),
+            Vec2::new(0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 0.0)),
         );
         spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -233,9 +264,9 @@ mod tests {
             .spawn((
                 Bolt,
                 BoltServing,
-                BoltVelocity::new(0.0, 0.0),
-                Transform::from_xyz(0.0, 0.0, 1.0),
-                PhysicsTranslation::new(Vec3::new(0.0, 0.0, 1.0)),
+                Velocity2D(Vec2::new(0.0, 0.0)),
+                Position2D(Vec2::new(0.0, 0.0)),
+                PreviousPosition(Vec2::new(0.0, 0.0)),
             ))
             .id();
         spawn_breaker(&mut app, 0.0, -250.0);
@@ -255,9 +286,9 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 0.0),
-                Transform::from_xyz(0.0, 0.0, 1.0),
-                PhysicsTranslation::new(Vec3::new(0.0, 0.0, 1.0)),
+                Velocity2D(Vec2::new(0.0, 0.0)),
+                Position2D(Vec2::new(0.0, 0.0)),
+                PreviousPosition(Vec2::new(0.0, 0.0)),
                 Piercing(3),
                 PiercingRemaining(0),
             ))
@@ -284,9 +315,9 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltVelocity::new(0.0, 0.0),
-                Transform::from_xyz(0.0, 0.0, 1.0),
-                PhysicsTranslation::new(Vec3::new(0.0, 0.0, 1.0)),
+                Velocity2D(Vec2::new(0.0, 0.0)),
+                Position2D(Vec2::new(0.0, 0.0)),
+                PreviousPosition(Vec2::new(0.0, 0.0)),
                 Piercing(3),
                 DamageBoost(0.5),
                 BoltSpeedBoost(100.0),
@@ -327,37 +358,6 @@ mod tests {
     }
 
     #[test]
-    fn reset_bolt_snaps_physics_translation() {
-        let mut app = test_app();
-        let bolt_pos = Vec3::new(150.0, 100.0, 1.0);
-        spawn_bolt_entity(&mut app, bolt_pos, BoltVelocity::new(0.0, 0.0));
-        spawn_breaker(&mut app, 0.0, -250.0);
-
-        app.update();
-
-        let config = BoltConfig::default();
-        let expected_pos = Vec3::new(0.0, -250.0 + config.spawn_offset_y, 1.0);
-
-        let physics = app
-            .world_mut()
-            .query_filtered::<&PhysicsTranslation, With<Bolt>>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have PhysicsTranslation");
-
-        assert_eq!(
-            physics.current, expected_pos,
-            "PhysicsTranslation.current should be {expected_pos:?}, got {:?}",
-            physics.current
-        );
-        assert_eq!(
-            physics.previous, expected_pos,
-            "PhysicsTranslation.previous should be {expected_pos:?}, got {:?}",
-            physics.previous
-        );
-    }
-
-    #[test]
     fn reset_bolt_is_noop_when_no_bolt_exists() {
         let mut app = test_app();
         spawn_breaker(&mut app, 0.0, -250.0);
@@ -377,20 +377,21 @@ mod tests {
     fn reset_bolt_ignores_extra_bolt_entities() {
         let mut app = test_app();
         // Baseline bolt
-        let baseline_pos = Vec3::new(150.0, 100.0, 1.0);
-        let baseline_id =
-            spawn_bolt_entity(&mut app, baseline_pos, BoltVelocity::new(300.0, 400.0));
+        let baseline_id = spawn_bolt_entity(
+            &mut app,
+            Vec2::new(150.0, 100.0),
+            Velocity2D(Vec2::new(300.0, 400.0)),
+        );
 
         // Extra bolt at a different position
-        let extra_pos = Vec3::new(-100.0, 50.0, 1.0);
         let extra_id = app
             .world_mut()
             .spawn((
                 Bolt,
                 ExtraBolt,
-                BoltVelocity::new(200.0, 300.0),
-                Transform::from_translation(extra_pos),
-                PhysicsTranslation::new(extra_pos),
+                Velocity2D(Vec2::new(200.0, 300.0)),
+                Position2D(Vec2::new(-100.0, 50.0)),
+                PreviousPosition(Vec2::new(-100.0, 50.0)),
             ))
             .id();
         spawn_breaker(&mut app, 0.0, -250.0);
@@ -401,26 +402,24 @@ mod tests {
         let expected_y = -250.0 + config.spawn_offset_y;
 
         // Baseline should be repositioned
-        let baseline_tf = app.world().get::<Transform>(baseline_id).unwrap();
+        let baseline_pos = app.world().get::<Position2D>(baseline_id).unwrap();
         assert!(
-            (baseline_tf.translation.y - expected_y).abs() < f32::EPSILON,
+            (baseline_pos.0.y - expected_y).abs() < f32::EPSILON,
             "baseline bolt should be repositioned to y={expected_y}, got y={}",
-            baseline_tf.translation.y
+            baseline_pos.0.y,
         );
 
         // Extra bolt should remain untouched
-        let extra_tf = app.world().get::<Transform>(extra_id).unwrap();
+        let extra_pos = app.world().get::<Position2D>(extra_id).unwrap();
         assert!(
-            (extra_tf.translation.x - extra_pos.x).abs() < f32::EPSILON,
-            "extra bolt x should be unchanged at {}, got {}",
-            extra_pos.x,
-            extra_tf.translation.x
+            (extra_pos.0.x - (-100.0)).abs() < f32::EPSILON,
+            "extra bolt x should be unchanged at -100.0, got {}",
+            extra_pos.0.x,
         );
         assert!(
-            (extra_tf.translation.y - extra_pos.y).abs() < f32::EPSILON,
-            "extra bolt y should be unchanged at {}, got {}",
-            extra_pos.y,
-            extra_tf.translation.y
+            (extra_pos.0.y - 50.0).abs() < f32::EPSILON,
+            "extra bolt y should be unchanged at 50.0, got {}",
+            extra_pos.0.y,
         );
     }
 }

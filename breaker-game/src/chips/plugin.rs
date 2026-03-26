@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{effects::*, inventory::ChipInventory, systems::apply_chip_effect};
+use super::{inventory::ChipInventory, systems::dispatch_chip_effects};
 use crate::shared::GameState;
 
 /// Plugin for the chips domain.
@@ -18,18 +18,8 @@ impl Plugin for ChipsPlugin {
             // Only run during ChipSelect — messages can only arrive in that state.
             .add_systems(
                 Update,
-                apply_chip_effect.run_if(in_state(GameState::ChipSelect)),
-            )
-            .add_observer(handle_piercing)
-            .add_observer(handle_damage_boost)
-            .add_observer(handle_bolt_speed_boost)
-            .add_observer(handle_chain_hit)
-            .add_observer(handle_bolt_size_boost)
-            .add_observer(handle_width_boost)
-            .add_observer(handle_breaker_speed_boost)
-            .add_observer(handle_bump_force_boost)
-            .add_observer(handle_tilt_control_boost)
-            .add_observer(handle_overclock);
+                dispatch_chip_effects.run_if(in_state(GameState::ChipSelect)),
+            );
     }
 }
 
@@ -48,5 +38,43 @@ mod tests {
             .add_message::<ChipSelected>()
             .add_plugins(ChipsPlugin)
             .update();
+    }
+
+    // =========================================================================
+    // B12d Behavior 22: ChipsPlugin does NOT register passive handler observers
+    // =========================================================================
+
+    /// After B12d, passive handlers (`handle_piercing`, `handle_damage_boost`, etc.)
+    /// are moved to `EffectPlugin`. `ChipsPlugin` should NOT register them.
+    /// Triggering `PiercingApplied` with only `ChipsPlugin` should NOT insert
+    /// `Piercing` on a bolt.
+    #[test]
+    fn chips_plugin_does_not_register_passive_handler_observers() {
+        use crate::{
+            bolt::components::Bolt, chips::components::Piercing,
+            effect::typed_events::PiercingApplied, shared::GameState, ui::messages::ChipSelected,
+        };
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<GameState>()
+            .add_message::<ChipSelected>()
+            .add_plugins(ChipsPlugin);
+
+        let bolt = app.world_mut().spawn(Bolt).id();
+
+        app.world_mut().commands().trigger(PiercingApplied {
+            per_stack: 1,
+            max_stacks: 3,
+            chip_name: "test".to_owned(),
+        });
+        app.world_mut().flush();
+
+        assert!(
+            app.world().entity(bolt).get::<Piercing>().is_none(),
+            "ChipsPlugin should NOT register handle_piercing — bolt should NOT have Piercing component. \
+             Passive handler observers are now registered by EffectPlugin."
+        );
     }
 }

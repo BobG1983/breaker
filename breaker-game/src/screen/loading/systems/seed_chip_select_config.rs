@@ -23,7 +23,7 @@ pub(crate) fn seed_chip_select_config(
         return Progress { done: 0, total: 1 };
     };
 
-    let Some(defaults) = assets.get(&collection.chipselect) else {
+    let Some(defaults) = assets.get(&collection.chip_select) else {
         return Progress { done: 0, total: 1 };
     };
 
@@ -64,17 +64,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: handle,
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: handle,
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
 
@@ -95,17 +94,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: handle,
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: handle,
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
 

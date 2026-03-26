@@ -16,8 +16,8 @@ pub(crate) fn propagate_cell_defaults(
     mut commands: Commands,
 ) {
     for event in events.read() {
-        if event.is_modified(collection.cells.id())
-            && let Some(defaults) = assets.get(collection.cells.id())
+        if event.is_modified(collection.cell_defaults.id())
+            && let Some(defaults) = assets.get(collection.cell_defaults.id())
         {
             commands.insert_resource::<CellConfig>(defaults.clone().into());
         }
@@ -37,22 +37,21 @@ mod tests {
         app
     }
 
-    fn make_collection(cells: Handle<CellDefaults>) -> DefaultsCollection {
+    fn make_collection(cell_defaults: Handle<CellDefaults>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells,
+            cell_defaults,
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

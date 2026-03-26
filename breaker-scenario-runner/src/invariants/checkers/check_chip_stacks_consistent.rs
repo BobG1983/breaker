@@ -37,7 +37,10 @@ pub fn check_chip_stacks_consistent(
 
 #[cfg(test)]
 mod tests {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
 
     use super::*;
 
@@ -55,7 +58,9 @@ mod tests {
             description: format!("{name} test description"),
             rarity: Rarity::Common,
             max_stacks,
-            effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+            effects: vec![EffectNode::Do(Effect::Piercing(1))],
+            ingredients: None,
+            template_name: None,
         }
     }
 
@@ -186,7 +191,7 @@ mod tests {
         let mut app = test_app();
 
         let mut inventory = ChipInventory::default();
-        inventory.force_insert_entry("OverStacked", 3, 2); // stacks=3 > max=2
+        inventory.force_insert_entry("OverStacked", 3, 2, None); // stacks=3 > max=2
         app.insert_resource(inventory);
 
         tick(&mut app);
@@ -215,9 +220,9 @@ mod tests {
         let mut app = test_app();
 
         let mut inventory = ChipInventory::default();
-        inventory.force_insert_entry("ChipA", 5, 3); // 5 > 3
-        inventory.force_insert_entry("ChipB", 2, 1); // 2 > 1
-        inventory.force_insert_entry("ChipC", 1, 2); // 1 <= 2 — valid
+        inventory.force_insert_entry("ChipA", 5, 3, None); // 5 > 3
+        inventory.force_insert_entry("ChipB", 2, 1, None); // 2 > 1
+        inventory.force_insert_entry("ChipC", 1, 2, None); // 1 <= 2 — valid
         app.insert_resource(inventory);
 
         tick(&mut app);

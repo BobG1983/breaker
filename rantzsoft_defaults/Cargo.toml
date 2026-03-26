@@ -1,0 +1,11 @@
+[package]
+name = "rantzsoft_defaults"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+rantzsoft_defaults_derive = { path = "../rantzsoft_defaults_derive" }
+
+[lints]
+workspace = true

@@ -10,32 +10,42 @@ Searched: `bevy::transform` module (only `TransformPlugin`, `TransformSystems`, 
 
 ## Official Manual Pattern (from `examples/movement/physics_in_fixed_timestep.rs`)
 
-Two custom components + a PostUpdate system reading `overstep_fraction()`:
+Two custom components + a PostUpdate system reading `overstep_fraction()`. Verified against Bevy 0.18.1 source in cargo registry.
+
+**CRITICAL**: The snapshot (`prev = curr`) and the physics advance (`curr += vel * dt`) happen in ONE `FixedUpdate` system — NOT in separate systems. There is no separate `FixedFirst` / `FixedPreUpdate` snapshot step in the official example.
 
 ```rust
 // Custom components — one per physics entity
-#[derive(Component)] struct PhysicalTranslation(Vec3);
-#[derive(Component)] struct PreviousPhysicalTranslation(Vec3);
+#[derive(Component, Default, Deref, DerefMut)] struct PhysicalTranslation(Vec3);
+#[derive(Component, Default, Deref, DerefMut)] struct PreviousPhysicalTranslation(Vec3);
 
-// In FixedUpdate: save previous, advance current
+// In FixedUpdate: snapshot previous THEN advance current — both in same system
 fn advance_physics(
-    mut query: Query<(&mut PreviousPhysicalTranslation, &mut PhysicalTranslation, &Velocity)>,
-    time: Res<Time<Fixed>>,
+    fixed_time: Res<Time<Fixed>>,
+    mut query: Query<(
+        &mut PhysicalTranslation,
+        &mut PreviousPhysicalTranslation,
+        &Velocity,
+    )>,
 ) {
-    for (mut prev, mut curr, vel) in &mut query {
-        prev.0 = curr.0;
-        curr.0 += vel.0 * time.delta_secs();
+    for (mut current, mut previous, velocity) in query.iter_mut() {
+        previous.0 = current.0;              // snapshot first
+        current.0 += velocity.0 * fixed_time.delta_secs();  // then advance
     }
 }
 
-// In AfterFixedMainLoop (or PostUpdate): blend into visual Transform
+// In RunFixedMainLoop / AfterFixedMainLoop: blend into visual Transform
 fn interpolate_rendered_transform(
-    mut query: Query<(&mut Transform, &PreviousPhysicalTranslation, &PhysicalTranslation)>,
-    time: Res<Time<Fixed>>,
+    fixed_time: Res<Time<Fixed>>,
+    mut query: Query<(
+        &mut Transform,
+        &PhysicalTranslation,
+        &PreviousPhysicalTranslation,
+    )>,
 ) {
-    let alpha = time.overstep_fraction();
-    for (mut transform, prev, curr) in &mut query {
-        transform.translation = prev.0.lerp(curr.0, alpha);
+    for (mut transform, current, previous) in query.iter_mut() {
+        let alpha = fixed_time.overstep_fraction();  // 0.0–1.0
+        transform.translation = previous.0.lerp(current.0, alpha);
     }
 }
 ```

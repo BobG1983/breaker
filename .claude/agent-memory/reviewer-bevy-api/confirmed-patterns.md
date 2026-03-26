@@ -314,10 +314,11 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `#[derive(SubStates)]` with `#[source(GameState = GameState::Playing)]` — correct
 - `app.add_sub_state::<PlayingState>()` — correct registration (idempotent; multiple plugins call it)
 
-## Interpolation schedule usage
-- `FixedFirst` for `restore_authoritative` — correct (before FixedUpdate)
-- `FixedPostUpdate` for `store_authoritative` — correct (after FixedUpdate)
-- `PostUpdate` for `interpolate_transform` — correct (every render frame)
+## Interpolation schedule usage (DELETED 2026-03-24)
+- ~~`FixedFirst` for `restore_authoritative`~~ — interpolate/ game domain DELETED
+- ~~`FixedPostUpdate` for `store_authoritative`~~ — interpolate/ game domain DELETED
+- ~~`PostUpdate` for `interpolate_transform`~~ — interpolate/ game domain DELETED
+- Replacement: rantzsoft_spatial2d uses `FixedFirst` (save_previous), `AfterFixedMainLoop` (derive_transform, propagate_position/rotation/scale). Interpolation via `InterpolateTransform2D` marker + `PreviousPosition` snapshot.
 
 ## Custom Test Schedules
 - `#[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]` on custom struct — correct
@@ -348,16 +349,16 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - A system may have 2, 3, or more `MessageWriter<T>` params for DIFFERENT message types — valid, no conflict
 - `(mut hit_writer: MessageWriter<BoltHitCell>, mut damage_writer: MessageWriter<DamageCell>, mut wall_hit_writer: MessageWriter<BoltHitWall>)` — confirmed correct
 - Each `MessageWriter<T>` is an independent `SystemParam`; they don't conflict because they write to different `Messages<T>` resources
-- `add_message` is idempotent — registering the same type in multiple plugins (e.g., `BoltHitCell` in `PhysicsPlugin` and in a test app) is safe
+- `add_message` is idempotent — registering the same type in multiple plugins (e.g., `BoltHitCell` in `BoltPlugin` and in a test app) is safe
 
 ## DamageCell message (confirmed 2026-03-20)
 - `#[derive(Message, Clone, Debug)]` on `DamageCell` — correct; lives in `cells/messages.rs`
 - Registered with `app.add_message::<DamageCell>()` in `CellsPlugin` — correct owner
 - Written by `bolt_cell_collision` (physics domain) — cross-domain write is fine since receiver (cells) owns the registration
 
-## BoltHitWall message (confirmed 2026-03-20)
-- `#[derive(Message, Clone, Debug)]` on `BoltHitWall` — correct; lives in `physics/messages.rs`
-- Registered with `app.add_message::<BoltHitWall>()` in `PhysicsPlugin` alongside the other physics messages — correct
+## BoltHitWall message (confirmed 2026-03-20; updated 2026-03-24)
+- `#[derive(Message, Clone, Debug)]` on `BoltHitWall` — correct; lives in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)
+- Registered with `app.add_message::<BoltHitWall>()` in `BoltPlugin` alongside the other bolt collision messages — correct
 - `MessageReader<BoltHitWall>` in `bridge_wall_impact` — correct consumer pattern
 
 ## Query<(Entity, &mut ArmedTriggers)> without mut binding (re-confirmed 2026-03-20)
@@ -367,8 +368,35 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 
 ## System set ordering for bridge systems (confirmed 2026-03-20)
 - `.after(BreakerSystems::GradeBump).after(BehaviorSystems::Bridge)` — chaining multiple `.after()` is valid; all constraints are AND-ed
-- `.after(PhysicsSystems::BreakerCollision).after(BehaviorSystems::Bridge)` — same pattern, confirmed valid
+- `.after(BoltSystems::BreakerCollision).after(BehaviorSystems::Bridge)` — same pattern, confirmed valid (BoltSystems replaces PhysicsSystems as of 2026-03-24)
 - Bridge systems ordered after both a message-producer set AND the behaviors bridge set — correct for ensuring messages exist before evaluation
+
+## AlphaMode2d Import Path (confirmed 2026-03-23)
+- `use bevy::sprite_render::AlphaMode2d;` — correct import path in Bevy 0.18.1
+- `bevy::sprite_render` is a top-level re-export of `bevy_sprite_render`, which contains `AlphaMode2d`
+- NOT in `bevy::prelude` — must import explicitly; either `bevy::sprite_render::AlphaMode2d` or `bevy::sprite::AlphaMode2d` works
+- Variants: `Opaque`, `Mask(f32)`, `Blend`
+- Confirmed: `bevy::sprite_render::AlphaMode2d::Blend` used in `shockwave.rs` is correct
+
+## ColorMaterial::color.with_alpha + re-assignment (confirmed 2026-03-23)
+- `material.color = material.color.with_alpha(alpha);` — correct pattern
+- `Color::with_alpha(&self, alpha: f32) -> Color` returns a NEW Color value; it does NOT mutate in place
+- Must assign the return value back — the pattern in `animate_shockwave` is correct
+- Same pattern confirmed in `animate_fade_out.rs` and `transition.rs`
+
+## Annulus::new for Mesh2d (confirmed 2026-03-23)
+- `Mesh2d(meshes.add(Annulus::new(inner_radius, outer_radius)))` — confirmed correct
+- `Annulus` is in `bevy::prelude`; `Assets<Mesh>::add` accepts anything `Into<Mesh>`
+- `Annulus::new(0.85, 1.0)` creates a ring with inner radius 0.85, outer radius 1.0
+
+## B12c Typed Events Pattern (confirmed 2026-03-24)
+- `#[derive(Event, Clone, Debug)]` on per-effect typed event structs — correct; `Clone` needed for test capture observers, `Debug` for diagnostics
+- `fn handle_x(trigger: On<XFired>, ...)` observer signature — correct; typed `On<XFired>` replaces old `On<EffectFired>` with self-selection
+- `trigger.event()` — returns `&XFired`; correct accessor on `On<E>` in 0.18.1
+- `commands.trigger(XFired { ... })` from schedule systems (bridges) — deferred, correct; observers run at command flush
+- Observer chaining is NOT used here: bridge systems are schedule systems (not observers), so `commands.trigger()` inside them is plain deferred dispatch — no re-entrancy
+- Old `EffectFired` / `ChipEffectApplied` kept as `#[derive(Event)]` types; used ONLY in legacy test self-selection tests (no production observer registered for them in B12c-migrated handlers) — the tests that trigger these are checking that the old untyped event does NOT trigger the new typed handler (self-selection correctness tests)
+- `trigger.event().clone()` in test capture observers for `Vec<XFired>` push — valid; `Clone` on event struct is required and derived
 
 ## Patterns That Look Wrong But Are Correct
 - `commands.entity(e).despawn()` on UI roots with children — recursive in 0.18+

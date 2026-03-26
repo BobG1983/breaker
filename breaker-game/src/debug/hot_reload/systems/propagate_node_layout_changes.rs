@@ -55,7 +55,7 @@ pub(crate) fn propagate_node_layout_changes(
     // Check for any modified layout
     let any_layout_modified = events.read().any(|event| {
         ctx.collection
-            .layouts
+            .nodes
             .iter()
             .any(|h| event.is_modified(h.id()))
     });
@@ -69,7 +69,7 @@ pub(crate) fn propagate_node_layout_changes(
     // Rebuild layout registry
     if any_layout_modified {
         ctx.registry.clear();
-        for handle in &ctx.collection.layouts {
+        for handle in &ctx.collection.nodes {
             if let Some(layout) = ctx.layout_assets.get(handle.id()) {
                 ctx.registry.insert(layout.clone());
             }
@@ -180,22 +180,21 @@ mod tests {
         }
     }
 
-    fn make_collection(layouts: Vec<Handle<NodeLayout>>) -> DefaultsCollection {
+    fn make_collection(nodes: Vec<Handle<NodeLayout>>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts,
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes,
+            breakers: vec![],
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

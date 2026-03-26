@@ -4,9 +4,18 @@ description: Verified dependency versions and audit state as of 2026-03-23 (Wave
 type: project
 ---
 
-Vetted as of 2026-03-23 (feature/wave-3-offerings-transitions, Wave 4 audit). Prior vetted: 2026-03-22 (Wave 3 audit).
+Vetted as of 2026-03-24 (spatial/physics extraction branch). Prior vetted: 2026-03-23 (Wave 4 audit).
 
 ## Direct Dependencies
+
+### rantzsoft_spatial2d (new in spatial/physics extraction branch)
+- bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted
+- No external non-bevy dependencies
+
+### rantzsoft_physics2d (new in spatial/physics extraction branch)
+- bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted
+- rantzsoft_spatial2d (path) — internal
+- No external non-bevy dependencies
 
 ### breaker-game
 - bevy 0.18.1 — current, trusted
@@ -38,6 +47,11 @@ Vetted as of 2026-03-23 (feature/wave-3-offerings-transitions, Wave 4 audit). Pr
 - ron 0.12 — upgraded from 0.11, no known CVEs
 - serde 1 — current, trusted
 - rand 0.9 — current, trusted
+
+## cargo audit result (2026-03-24, spatial/physics extraction branch)
+- 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)
+- No CVEs or errors
+- Two new internal crates added (rantzsoft_spatial2d, rantzsoft_physics2d) — no new external dependencies.
 
 ## cargo audit result (2026-03-23, Wave 4 audit)
 - 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)

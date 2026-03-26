@@ -12,17 +12,14 @@ mod tests;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    behaviors::ActiveChains,
-    bolt::{
-        BoltSystems,
-        components::{Bolt, BoltVelocity},
-    },
+    bolt::{BoltSystems, components::Bolt},
     breaker::{
         BreakerSystems,
         components::{Breaker, BreakerState},
         systems::update_breaker_state,
     },
     chips::inventory::ChipInventory,
+    effect::EffectChains,
     input::resources::InputActions,
     run::{
         RunStats,
@@ -32,8 +29,9 @@ use breaker::{
         },
     },
     screen::chip_select::{ChipOffering, ChipOffers},
-    shared::{GameState, PlayingState, RunSeed, SelectedArchetype},
+    shared::{GameState, PlayingState, RunSeed, SelectedBreaker},
 };
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     input::InputDriver,
@@ -53,23 +51,19 @@ use crate::{
     },
 };
 
-/// Query alias for bolt entities in [`apply_debug_setup`].
+/// Query alias for bolt entities in [`apply_debug_setup`] and [`deferred_debug_setup`].
 type BoltDebugQuery<'w, 's> = Query<
     'w,
     's,
-    (
-        Entity,
-        &'static mut Transform,
-        Option<&'static mut BoltVelocity>,
-    ),
+    (Entity, &'static mut Position2D, &'static mut Velocity2D),
     With<ScenarioTagBolt>,
 >;
 
-/// Query alias for breaker entities in [`apply_debug_setup`].
+/// Query alias for breaker entities in [`apply_debug_setup`] and [`deferred_debug_setup`].
 type BreakerDebugQuery<'w, 's> = Query<
     'w,
     's,
-    (Entity, &'static mut Transform),
+    (Entity, &'static mut Position2D),
     (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>),
 >;
 
@@ -218,10 +212,13 @@ impl Plugin for ScenarioLifecycle {
                         .run_if(|stats: Option<Res<ScenarioStats>>| {
                             stats.is_some_and(|s| s.entered_playing)
                         })
+                        .after(deferred_debug_setup)
                         .after(tag_game_entities)
                         .after(update_breaker_state)
-                        .before(breaker::physics::PhysicsSystems::BoltLost),
+                        .before(breaker::bolt::BoltSystems::BoltLost),
                     tag_game_entities,
+                    deferred_debug_setup.after(tag_game_entities),
+                    mark_entered_playing_on_spawn_complete,
                 ),
             );
 
@@ -237,26 +234,28 @@ impl Plugin for ScenarioLifecycle {
     }
 }
 
-/// Sets the archetype and layout override, then immediately enters `Playing`.
+/// Sets the breaker and layout override, then immediately enters `Playing`.
 ///
-/// This bypasses `RunSetup` entirely — the scenario controls which archetype
+/// This bypasses `RunSetup` entirely — the scenario controls which breaker
 /// and layout are used without any user interaction.
 fn bypass_menu_to_playing(
     config: Res<ScenarioConfig>,
-    mut selected: ResMut<SelectedArchetype>,
+    mut selected: ResMut<SelectedBreaker>,
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
-    mut active_overclocks: Option<ResMut<ActiveChains>>,
+    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
 ) {
     selected.0.clone_from(&config.definition.breaker);
     layout_override.0 = Some(config.definition.layout.clone());
     // Scenarios always use deterministic seed (default 0 when not specified)
     run_seed.0 = Some(config.definition.seed.unwrap_or(0));
-    if let Some(ref overclocks) = config.definition.initial_overclocks
-        && let Some(ref mut active) = active_overclocks
-    {
-        active.0.clone_from(overclocks);
+    if let Some(ref overclocks) = config.definition.initial_overclocks {
+        for mut chains in &mut breaker_query {
+            chains
+                .0
+                .extend(overclocks.iter().cloned().map(|c| (None, c)));
+        }
     }
     next_state.set(GameState::Playing);
 }
@@ -325,9 +324,9 @@ pub(crate) fn map_forced_game_state(forced: ForcedGameState) -> GameState {
 /// Applies debug overrides from [`ScenarioConfig`] to tagged bolt and breaker entities.
 ///
 /// For each entity tagged with [`ScenarioTagBolt`] or [`ScenarioTagBreaker`],
-/// applies position teleports from [`crate::types::DebugSetup`] (z coordinate is
-/// preserved). When `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`]
-/// on both bolts and breakers with the post-teleport position as the frozen target.
+/// applies position teleports from [`crate::types::DebugSetup`]. When
+/// `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`] on both bolts
+/// and breakers with the post-teleport position as the frozen target.
 ///
 /// Also handles `bolt_velocity`, `extra_tagged_bolts`, `node_timer_remaining`,
 /// and `force_previous_game_state` overrides.
@@ -343,35 +342,33 @@ pub fn apply_debug_setup(
         return;
     };
 
-    for (entity, mut transform, bolt_vel) in &mut bolt_query {
+    for (entity, mut position, mut velocity) in &mut bolt_query {
         if let Some((x, y)) = setup.bolt_position {
-            transform.translation.x = x;
-            transform.translation.y = y;
+            position.0.x = x;
+            position.0.y = y;
         }
 
-        if let Some((vx, vy)) = setup.bolt_velocity
-            && let Some(mut vel) = bolt_vel
-        {
-            vel.value = Vec2::new(vx, vy);
+        if let Some((vx, vy)) = setup.bolt_velocity {
+            velocity.0 = Vec2::new(vx, vy);
         }
 
         if setup.disable_physics {
-            commands.entity(entity).insert(ScenarioPhysicsFrozen {
-                target: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
         }
     }
 
-    for (entity, mut transform) in &mut breaker_query {
+    for (entity, mut position) in &mut breaker_query {
         if let Some((x, y)) = setup.breaker_position {
-            transform.translation.x = x;
-            transform.translation.y = y;
+            position.0.x = x;
+            position.0.y = y;
         }
 
         if setup.disable_physics {
-            commands.entity(entity).insert(ScenarioPhysicsFrozen {
-                target: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
         }
     }
 
@@ -394,13 +391,81 @@ pub fn apply_debug_setup(
     }
 }
 
+/// Deferred fallback for [`apply_debug_setup`] — runs once in `FixedUpdate` after
+/// [`tag_game_entities`] to catch entities that were not yet spawned when the
+/// `OnEnter(GameState::Playing)` version of `apply_debug_setup` ran.
+///
+/// Under heavy parallel I/O contention (45+ scenarios loading simultaneously),
+/// the `OnEnter` schedule can execute `apply_debug_setup` before spawn systems
+/// have flushed their deferred commands, leaving 0 tagged entities to process.
+/// This system re-applies the entity-dependent parts of debug setup (position
+/// overrides, velocity overrides, and physics freeze) on the first `FixedUpdate`
+/// tick where tagged entities exist.
+///
+/// Uses a [`Local<bool>`] guard so it fires at most once per app lifetime.
+/// Non-entity parts (extra tagged bolts, timer override, forced previous state)
+/// are handled by the `OnEnter` version and are not repeated here.
+pub fn deferred_debug_setup(
+    mut done: Local<bool>,
+    config: Res<ScenarioConfig>,
+    mut bolt_query: BoltDebugQuery,
+    mut breaker_query: BreakerDebugQuery,
+    mut commands: Commands,
+) {
+    if *done {
+        return;
+    }
+
+    let Some(setup) = config.definition.debug_setup.as_ref() else {
+        *done = true;
+        return;
+    };
+
+    // Wait until at least one tagged entity exists before applying.
+    if bolt_query.is_empty() && breaker_query.is_empty() {
+        return;
+    }
+
+    for (entity, mut position, mut velocity) in &mut bolt_query {
+        if let Some((x, y)) = setup.bolt_position {
+            position.0.x = x;
+            position.0.y = y;
+        }
+
+        if let Some((vx, vy)) = setup.bolt_velocity {
+            velocity.0 = Vec2::new(vx, vy);
+        }
+
+        if setup.disable_physics {
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
+        }
+    }
+
+    for (entity, mut position) in &mut breaker_query {
+        if let Some((x, y)) = setup.breaker_position {
+            position.0.x = x;
+            position.0.y = y;
+        }
+
+        if setup.disable_physics {
+            commands
+                .entity(entity)
+                .insert(ScenarioPhysicsFrozen { target: position.0 });
+        }
+    }
+
+    *done = true;
+}
+
 /// Resets each entity with [`ScenarioPhysicsFrozen`] back to its pinned `target` every tick.
 ///
 /// Prevents physics systems from moving entities that should be stationary during
 /// a self-test scenario. Runs after physics in `FixedUpdate`.
-pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Transform)>) {
-    for (pinned, mut transform) in &mut frozen {
-        transform.translation = pinned.target;
+pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Position2D)>) {
+    for (pinned, mut position) in &mut frozen {
+        position.0 = pinned.target;
     }
 }
 
@@ -409,8 +474,6 @@ pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut 
 /// Finds all untagged [`Bolt`] entities and inserts [`ScenarioTagBolt`].
 /// Finds all untagged [`Breaker`] entities and inserts [`ScenarioTagBreaker`].
 /// Runs in `OnEnter(GameState::Playing)` before [`apply_debug_setup`].
-///
-/// Also sets [`ScenarioStats::entered_playing`] to `true` when the stats resource is present.
 pub fn tag_game_entities(
     bolt_query: Query<Entity, (With<Bolt>, Without<ScenarioTagBolt>)>,
     breaker_query: Query<Entity, (With<Breaker>, Without<ScenarioTagBreaker>)>,
@@ -430,7 +493,6 @@ pub fn tag_game_entities(
     }
 
     if let Some(ref mut s) = stats {
-        s.entered_playing = true;
         s.bolts_tagged += bolts_tagged;
         s.breakers_tagged += breakers_tagged;
     }
@@ -486,7 +548,7 @@ pub fn apply_debug_frame_mutations(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut breakers: Query<&mut BreakerState, With<ScenarioTagBreaker>>,
-    mut bolts: Query<&mut Transform, With<ScenarioTagBolt>>,
+    mut bolts: Query<&mut Position2D, With<ScenarioTagBolt>>,
     mut node_timer: Option<ResMut<NodeTimer>>,
     mut pause: PauseControl,
     mut targets: MutationTargets,
@@ -517,9 +579,9 @@ pub fn apply_debug_frame_mutations(
                 }
             }
             MutationKind::MoveBolt(x, y) => {
-                for mut transform in &mut bolts {
-                    transform.translation.x = *x;
-                    transform.translation.y = *y;
+                for mut position in &mut bolts {
+                    position.0.x = *x;
+                    position.0.y = *y;
                 }
             }
             MutationKind::TogglePause => {
@@ -548,7 +610,7 @@ pub fn apply_debug_frame_mutations(
                 max_stacks,
             } => {
                 if let Some(ref mut inventory) = targets.chip_inventory {
-                    inventory.force_insert_entry(chip_name, *stacks, *max_stacks);
+                    inventory.force_insert_entry(chip_name, *stacks, *max_stacks, None);
                 }
             }
             MutationKind::InjectDuplicateOffers { chip_name } => {
@@ -609,13 +671,18 @@ fn apply_inject_duplicate_offers(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+        effects: vec![EffectNode::Do(Effect::Piercing(1))],
+        ingredients: None,
+        template_name: None,
     };
     let offers = ChipOffers(vec![
         ChipOffering::Normal(def.clone()),
@@ -636,22 +703,43 @@ fn apply_inject_maxed_chip_offer(
     chip_offers: &mut Option<ResMut<ChipOffers>>,
     commands: &mut Commands,
 ) {
-    use breaker::chips::definition::{AmpEffect, ChipDefinition, ChipEffect, Rarity};
+    use breaker::{
+        chips::definition::{ChipDefinition, Rarity},
+        effect::{Effect, EffectNode},
+    };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 1,
-        effects: vec![ChipEffect::Amp(AmpEffect::Piercing(1))],
+        effects: vec![EffectNode::Do(Effect::Piercing(1))],
+        ingredients: None,
+        template_name: None,
     };
     if let Some(inventory) = chip_inventory {
-        inventory.force_insert_entry(chip_name, 1, 1);
+        inventory.force_insert_entry(chip_name, 1, 1, None);
     }
     let offers = ChipOffers(vec![ChipOffering::Normal(def)]);
     if let Some(existing) = chip_offers {
         **existing = offers;
     } else {
         commands.insert_resource(offers);
+    }
+}
+
+/// Sets [`ScenarioStats::entered_playing`] to `true` when [`SpawnNodeComplete`]
+/// fires, indicating all game entities are spawned and ready.
+///
+/// Frame counting and invariant checking are gated on `entered_playing`, so
+/// no scenario frames advance until the node is fully loaded and spawned.
+pub fn mark_entered_playing_on_spawn_complete(
+    mut spawn_reader: MessageReader<SpawnNodeComplete>,
+    mut stats: Option<ResMut<ScenarioStats>>,
+) {
+    if spawn_reader.read().next().is_some()
+        && let Some(ref mut s) = stats
+    {
+        s.entered_playing = true;
     }
 }
 

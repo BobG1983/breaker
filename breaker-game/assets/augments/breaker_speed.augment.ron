@@ -1,7 +1,0 @@
-(
-    name: "Breaker Speed",
-    description: "Breaker moves faster",
-    rarity: Common,
-    max_stacks: 4,
-    effects: [Augment(SpeedBoost(25.0))],
-)

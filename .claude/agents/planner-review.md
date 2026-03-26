@@ -2,7 +2,7 @@
 name: planner-review
 description: "Use this agent to pressure-test behavioral and implementation specs before they reach writer-tests and writer-code. The planner-review looks for missing behaviors, incorrect values, scope problems, pillar violations, and ambiguities that would cause rework downstream. Use after planner-spec produces specs, or when the main agent writes specs directly and wants validation.\n\nExamples:\n\n- After planner-spec produces specs:\n  Assistant: \"Specs produced. Let me use the planner-review agent to pressure-test them before launching writers.\"\n\n- When the main agent writes specs for a straightforward feature:\n  Assistant: \"Specs written. This one's novel enough that I want planner-review to check for gaps before we commit.\"\n\n- When a feature has cross-domain implications:\n  Assistant: \"Let me use the planner-review agent to verify the specs cover the interaction between bolt and cells correctly.\""
 tools: Read, Glob, Grep
-model: opus
+model: sonnet
 color: green
 memory: project
 ---
@@ -16,7 +16,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 ## First Step — Always
 
 1. Read `CLAUDE.md` for project conventions
-2. Read `docs/design/terminology.md` for required vocabulary
+2. Read `docs/design/terminology/` for required vocabulary
 3. Read `docs/architecture/layout.md` for domain structure
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards

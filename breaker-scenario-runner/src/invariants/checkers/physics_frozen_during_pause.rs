@@ -1,23 +1,24 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use breaker::shared::PlayingState;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
 /// Per-entity previous position map for pause-freeze checking.
 ///
 /// Stored in a [`Local`] to track bolt positions between fixed-update ticks.
-type PreviousBoltPositions = HashMap<Entity, Vec3>;
+type PreviousBoltPositions = HashMap<Entity, Vec2>;
 
 /// Checks that physics entities do not move while the game is paused.
 ///
-/// Stores the previous `Transform` for each tagged bolt each tick. When
+/// Stores the previous `Position2D` for each tagged bolt each tick. When
 /// [`PlayingState`] is [`PlayingState::Paused`] and a bolt has moved since
 /// last tick, appends a [`ViolationEntry`] with
 /// [`InvariantKind::PhysicsFrozenDuringPause`].
 ///
 /// Clears local state when [`PlayingState`] is absent (game is not in `Playing`).
 pub fn check_physics_frozen_during_pause(
-    bolts: Query<(Entity, &Transform), With<ScenarioTagBolt>>,
+    bolts: Query<(Entity, &Position2D), With<ScenarioTagBolt>>,
     playing_state: Option<Res<State<PlayingState>>>,
     mut previous_positions: Local<PreviousBoltPositions>,
     frame: Res<ScenarioFrame>,
@@ -30,8 +31,8 @@ pub fn check_physics_frozen_during_pause(
 
     let is_paused = **state == PlayingState::Paused;
 
-    for (entity, transform) in &bolts {
-        let current_pos = transform.translation;
+    for (entity, position) in &bolts {
+        let current_pos = position.0;
         if is_paused
             && let Some(&prev_pos) = previous_positions.get(&entity)
             && current_pos != prev_pos
@@ -53,6 +54,7 @@ pub fn check_physics_frozen_during_pause(
 #[cfg(test)]
 mod tests {
     use breaker::shared::GameState;
+    use rantzsoft_spatial2d::components::Position2D;
 
     use super::*;
 
@@ -79,9 +81,9 @@ mod tests {
     /// When [`PlayingState`] is `Paused` and a tagged bolt moves between ticks,
     /// a [`ViolationEntry`] with [`InvariantKind::PhysicsFrozenDuringPause`] fires.
     ///
-    /// Tick 1 (Active): seeds Local with position (100.0, 200.0, 0.0).
+    /// Tick 1 (Active): seeds Local with position (100.0, 200.0).
     /// Then transition to Paused.
-    /// Tick 2 (Paused): bolt moved to (105.0, 200.0, 0.0) → violation.
+    /// Tick 2 (Paused): bolt moved to (105.0, 200.0) → violation.
     #[test]
     fn physics_frozen_during_pause_fires_when_bolt_moves_during_pause() {
         let mut app = test_app_physics_frozen();
@@ -94,13 +96,10 @@ mod tests {
 
         let entity = app
             .world_mut()
-            .spawn((
-                ScenarioTagBolt,
-                Transform::from_translation(Vec3::new(100.0, 200.0, 0.0)),
-            ))
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(100.0, 200.0))))
             .id();
 
-        // Tick 1 in Active: system stores (100.0, 200.0, 0.0) in Local
+        // Tick 1 in Active: system stores (100.0, 200.0) in Local
         tick(&mut app);
 
         // Transition to Paused
@@ -112,9 +111,9 @@ mod tests {
         // Move the bolt while paused
         app.world_mut()
             .entity_mut(entity)
-            .get_mut::<Transform>()
+            .get_mut::<Position2D>()
             .unwrap()
-            .translation = Vec3::new(105.0, 200.0, 0.0);
+            .0 = Vec2::new(105.0, 200.0);
 
         // Tick 2: game is paused and bolt moved → violation
         tick(&mut app);
@@ -141,10 +140,7 @@ mod tests {
 
         let entity = app
             .world_mut()
-            .spawn((
-                ScenarioTagBolt,
-                Transform::from_translation(Vec3::new(100.0, 200.0, 0.0)),
-            ))
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(100.0, 200.0))))
             .id();
 
         // Tick 1: seeds Local with position
@@ -153,9 +149,9 @@ mod tests {
         // Move bolt (game is Active — movement is legal)
         app.world_mut()
             .entity_mut(entity)
-            .get_mut::<Transform>()
+            .get_mut::<Position2D>()
             .unwrap()
-            .translation = Vec3::new(200.0, 200.0, 0.0);
+            .0 = Vec2::new(200.0, 200.0);
 
         // Tick 2: Active state → no violation
         tick(&mut app);
@@ -175,10 +171,8 @@ mod tests {
 
         // Do NOT enter Playing — PlayingState is absent
 
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(100.0, 200.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(100.0, 200.0))));
 
         // Tick with no PlayingState in world → should not panic, no violation
         tick(&mut app);

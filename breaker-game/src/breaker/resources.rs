@@ -1,7 +1,7 @@
 //! Breaker domain resources.
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 /// Breaker defaults loaded from RON.

@@ -129,7 +129,7 @@ mod tests {
         spawn_breaker(&mut app);
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         })));
         tick(&mut app);
 
@@ -147,7 +147,7 @@ mod tests {
         spawn_breaker(&mut app);
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Early,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         })));
         tick(&mut app);
 
@@ -165,7 +165,7 @@ mod tests {
         spawn_breaker(&mut app);
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Late,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         })));
         tick(&mut app);
 

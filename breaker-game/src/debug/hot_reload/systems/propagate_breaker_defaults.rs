@@ -1,24 +1,24 @@
 //! System to propagate `BreakerDefaults` asset changes to `BreakerConfig`,
-//! then re-apply the currently selected archetype's stat overrides.
+//! then re-apply the currently selected breaker's stat overrides.
 
 use bevy::prelude::*;
 
 use crate::{
-    behaviors::{init::apply_stat_overrides, registry::ArchetypeRegistry},
     breaker::{BreakerConfig, BreakerDefaults},
+    effect::{init::apply_stat_overrides, registry::BreakerRegistry},
     screen::loading::resources::DefaultsCollection,
-    shared::SelectedArchetype,
+    shared::SelectedBreaker,
 };
 
 /// Watches for `AssetEvent::Modified` on the breaker defaults asset,
 /// re-seeds `BreakerConfig` from the updated asset data, then re-applies
-/// the selected archetype's stat overrides.
+/// the selected breaker's stat overrides.
 pub(crate) fn propagate_breaker_defaults(
     mut events: MessageReader<AssetEvent<BreakerDefaults>>,
     collection: Res<DefaultsCollection>,
     assets: Res<Assets<BreakerDefaults>>,
-    selected: Res<SelectedArchetype>,
-    registry: Res<ArchetypeRegistry>,
+    selected: Res<SelectedBreaker>,
+    registry: Res<BreakerRegistry>,
     mut config: ResMut<BreakerConfig>,
 ) {
     for event in events.read() {
@@ -36,15 +36,15 @@ pub(crate) fn propagate_breaker_defaults(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::effect::definition::{BreakerDefinition, BreakerStatOverrides};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<BreakerDefaults>()
             .init_resource::<BreakerConfig>()
-            .init_resource::<ArchetypeRegistry>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<BreakerRegistry>()
+            .init_resource::<SelectedBreaker>()
             .add_systems(Update, propagate_breaker_defaults);
         app
     }
@@ -53,18 +53,17 @@ mod tests {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker,
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }
@@ -110,9 +109,9 @@ mod tests {
 
         app.world_mut()
             .insert_resource(make_collection(handle.clone()));
-        // No archetype selected with overrides — default registry is empty.
+        // No breaker selected with overrides — default registry is empty.
         app.world_mut()
-            .insert_resource(SelectedArchetype("None".to_owned()));
+            .insert_resource(SelectedBreaker("None".to_owned()));
 
         app.update();
         app.update();
@@ -134,34 +133,30 @@ mod tests {
         );
     }
 
-    /// After re-seeding from defaults, the selected archetype's stat overrides
+    /// After re-seeding from defaults, the selected breaker's stat overrides
     /// must be re-applied on top of the base config values.
     #[test]
-    fn archetype_overrides_re_applied_after_defaults_modified() {
-        const ARCHETYPE_NAME: &str = "TestArch";
+    fn breaker_overrides_re_applied_after_defaults_modified() {
+        const BREAKER_NAME: &str = "TestBreaker";
         const OVERRIDE_WIDTH: f32 = 250.0;
 
         let mut app = test_app();
 
-        let def = ArchetypeDefinition {
-            name: ARCHETYPE_NAME.to_owned(),
+        let def = BreakerDefinition {
+            name: BREAKER_NAME.to_owned(),
             stat_overrides: BreakerStatOverrides {
                 width: Some(OVERRIDE_WIDTH),
                 ..default()
             },
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
 
-        let mut registry = ArchetypeRegistry::default();
-        registry.insert(ARCHETYPE_NAME.to_owned(), def);
+        let mut registry = BreakerRegistry::default();
+        registry.insert(BREAKER_NAME.to_owned(), def);
         app.world_mut().insert_resource(registry);
         app.world_mut()
-            .insert_resource(SelectedArchetype(ARCHETYPE_NAME.to_owned()));
+            .insert_resource(SelectedBreaker(BREAKER_NAME.to_owned()));
 
         // Defaults have base width of 120.0; override will make it 250.0.
         let defaults = BreakerDefaults {
@@ -192,35 +187,31 @@ mod tests {
         let config = app.world().resource::<BreakerConfig>();
         assert!(
             (config.width - OVERRIDE_WIDTH).abs() < f32::EPSILON,
-            "archetype override ({OVERRIDE_WIDTH}) must be applied after re-seeding; got {}",
+            "breaker override ({OVERRIDE_WIDTH}) must be applied after re-seeding; got {}",
             config.width
         );
     }
 
-    /// Without an archetype override, the width from the new defaults asset
+    /// Without an breaker override, the width from the new defaults asset
     /// value is used directly.
     #[test]
-    fn without_archetype_override_base_defaults_width_is_used() {
+    fn without_breaker_override_base_defaults_width_is_used() {
         let mut app = test_app();
 
         let new_base_width = 180.0_f32;
 
-        // Archetype with no width override.
-        let def = ArchetypeDefinition {
+        // Breaker with no width override.
+        let def = BreakerDefinition {
             name: "Plain".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         };
-        let mut registry = ArchetypeRegistry::default();
+        let mut registry = BreakerRegistry::default();
         registry.insert("Plain".to_owned(), def);
         app.world_mut().insert_resource(registry);
         app.world_mut()
-            .insert_resource(SelectedArchetype("Plain".to_owned()));
+            .insert_resource(SelectedBreaker("Plain".to_owned()));
 
         let defaults = BreakerDefaults {
             width: new_base_width,

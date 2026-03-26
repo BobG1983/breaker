@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use breaker::{bolt::components::BoltRadius, shared::PlayfieldConfig};
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
 /// Checks that all [`ScenarioTagBolt`] entities remain within playfield bounds.
 ///
 /// Appends a [`ViolationEntry`] to [`ViolationLog`] for every bolt whose
-/// `Transform` translation is outside the top, left, or right playfield boundaries,
+/// `Position2D` is outside the top, left, or right playfield boundaries,
 /// expanded by `BoltRadius + 1.0` when [`BoltRadius`] is present (zero margin when
 /// absent). The bottom is intentionally open (no floor wall) — bolts exit through
 /// the bottom during life-loss, so no bottom check is performed.
@@ -18,7 +19,7 @@ use crate::{invariants::*, types::InvariantKind};
 ///
 /// Increments [`ScenarioStats::invariant_checks`] by the number of bolts checked.
 pub fn check_bolt_in_bounds(
-    bolts: Query<(Entity, &Transform, Option<&BoltRadius>), With<ScenarioTagBolt>>,
+    bolts: Query<(Entity, &Position2D, Option<&BoltRadius>), With<ScenarioTagBolt>>,
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
@@ -36,10 +37,10 @@ pub fn check_bolt_in_bounds(
     let left = playfield.left();
     let right = playfield.right();
     let mut checks = 0u32;
-    for (entity, transform, bolt_radius) in &bolts {
+    for (entity, position, bolt_radius) in &bolts {
         checks += 1;
-        let x = transform.translation.x;
-        let y = transform.translation.y;
+        let x = position.0.x;
+        let y = position.0.y;
         let margin = bolt_radius.map_or(0.0, |r| r.0 + 1.0);
         // No bottom check — the floor is intentionally open (no wall). The bolt
         // exits through the bottom during life-loss, handled by `bolt_lost`.
@@ -140,10 +141,7 @@ mod tests {
 
         let bolt_entity = app
             .world_mut()
-            .spawn((
-                ScenarioTagBolt,
-                Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
-            ))
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 500.0))))
             .id();
 
         tick(&mut app);
@@ -192,10 +190,8 @@ mod tests {
         });
         app.world_mut().insert_resource(ScenarioFrame(10));
 
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, -100.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, -100.0))));
 
         tick(&mut app);
 
@@ -223,10 +219,8 @@ mod tests {
         app.world_mut().insert_resource(ScenarioFrame(0));
 
         // `PlayfieldConfig::bottom()` returns -350.0 for height 700.0
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, -350.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, -350.0))));
 
         tick(&mut app);
 
@@ -257,10 +251,8 @@ mod tests {
 
         // Spawn 3 tagged bolts, all in-bounds
         for _ in 0..3 {
-            app.world_mut().spawn((
-                ScenarioTagBolt,
-                Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            ));
+            app.world_mut()
+                .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))));
         }
 
         tick(&mut app);
@@ -291,10 +283,7 @@ mod tests {
 
         let bolt_entity = app
             .world_mut()
-            .spawn((
-                ScenarioTagBolt,
-                Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
-            ))
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 500.0))))
             .id();
 
         tick(&mut app);
@@ -343,10 +332,8 @@ mod tests {
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, 1000.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 1000.0))));
 
         tick(&mut app);
 
@@ -376,10 +363,8 @@ mod tests {
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, 350.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 350.0))));
 
         tick(&mut app);
 
@@ -407,10 +392,8 @@ mod tests {
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(-2000.0, 0.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(-2000.0, 0.0))));
 
         tick(&mut app);
 
@@ -441,10 +424,8 @@ mod tests {
         });
         app.world_mut().insert_resource(ScenarioFrame(1));
 
-        app.world_mut().spawn((
-            ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(2000.0, 0.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBolt, Position2D(Vec2::new(2000.0, 0.0))));
 
         tick(&mut app);
 
@@ -467,7 +448,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, -358.0, 0.0)),
+            Position2D(Vec2::new(0.0, -358.0)),
             BoltRadius(8.0),
         ));
 
@@ -497,7 +478,7 @@ mod tests {
         // top() = 350.0, margin = 8.0 + 1.0 = 9.0; allowed = 359.0; 500.0 well beyond
         app.world_mut().spawn((
             ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
+            Position2D(Vec2::new(0.0, 500.0)),
             BoltRadius(8.0),
         ));
 
@@ -530,7 +511,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(408.0, 0.0, 0.0)),
+            Position2D(Vec2::new(408.0, 0.0)),
             BoltRadius(8.0),
         ));
 
@@ -560,7 +541,7 @@ mod tests {
 
         app.world_mut().spawn((
             ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, -350.0, 0.0)),
+            Position2D(Vec2::new(0.0, -350.0)),
             BoltRadius(8.0),
         ));
 
@@ -586,7 +567,7 @@ mod tests {
         // Bolt far below bottom — simulates life-loss exit through open floor
         app.world_mut().spawn((
             ScenarioTagBolt,
-            Transform::from_translation(Vec3::new(0.0, -1000.0, 0.0)),
+            Position2D(Vec2::new(0.0, -1000.0)),
             BoltRadius(14.0),
         ));
 

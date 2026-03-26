@@ -3,14 +3,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::BoltServing,
+    bolt::{components::BoltServing, messages::BoltHitBreaker},
     breaker::{
         components::{Breaker, BreakerState, BreakerStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
         queries::{BumpGradingQuery, BumpTimingQuery},
     },
     input::resources::{GameAction, InputActions},
-    physics::messages::BoltHitBreaker,
 };
 
 /// Determines the forward-window grade based on remaining timer.
@@ -85,7 +84,7 @@ pub(crate) fn update_bump(
                 let grade = retroactive_grade(time_since_hit, perfect_window.0);
                 writer.write(BumpPerformed {
                     grade,
-                    bolt: bump.last_hit_bolt.unwrap_or(Entity::PLACEHOLDER),
+                    bolt: bump.last_hit_bolt,
                 });
                 bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
                 bump.post_hit_timer = 0.0;
@@ -102,7 +101,7 @@ pub(crate) fn update_bump(
 
 /// Grades bump timing on bolt-breaker contact and sends [`BumpPerformed`].
 ///
-/// Must run after `PhysicsSystems::BreakerCollision` to ensure messages are available.
+/// Must run after `BoltSystems::BreakerCollision` to ensure messages are available.
 /// If a forward bump is active, grades immediately. Otherwise, sets `post_hit_timer`
 /// for the retroactive path in `update_bump`.
 ///
@@ -126,7 +125,7 @@ pub(crate) fn grade_bump(
             let grade = forward_grade(bump.timer, perfect_window.0);
             writer.write(BumpPerformed {
                 grade,
-                bolt: hit.bolt,
+                bolt: Some(hit.bolt),
             });
             bump.active = false;
             bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
@@ -902,7 +901,7 @@ mod tests {
 
         app.insert_resource(TestBumpMessage(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
-            bolt: Entity::PLACEHOLDER,
+            bolt: None,
         })));
 
         app.add_systems(
@@ -974,7 +973,8 @@ mod tests {
         let captured = app.world().resource::<CapturedBumps>();
         assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
         assert_eq!(
-            captured.0[0].bolt, bolt_entity,
+            captured.0[0].bolt,
+            Some(bolt_entity),
             "BumpPerformed.bolt should match the bolt entity from BoltHitBreaker"
         );
     }
@@ -1047,7 +1047,8 @@ mod tests {
         let captured = app.world().resource::<CapturedBumps>();
         assert_eq!(captured.0.len(), 1, "should emit one BumpPerformed");
         assert_eq!(
-            captured.0[0].bolt, bolt_entity,
+            captured.0[0].bolt,
+            Some(bolt_entity),
             "BumpPerformed.bolt in retroactive path should match BumpState.last_hit_bolt"
         );
     }

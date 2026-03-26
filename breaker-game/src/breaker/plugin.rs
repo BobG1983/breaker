@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    bolt::BoltSystems,
     breaker::{
         BreakerSystems,
         messages::{BumpPerformed, BumpWhiffed},
@@ -14,9 +15,8 @@ use crate::{
             update_breaker_state, update_bump, width_boost_visual,
         },
     },
-    physics::PhysicsSystems,
     run::node::sets::NodeSystems,
-    shared::{GameState, PlayingState, SelectedArchetype},
+    shared::{GameState, PlayingState, SelectedBreaker},
 };
 
 /// Plugin for the breaker domain.
@@ -26,12 +26,16 @@ pub struct BreakerPlugin;
 
 impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
-        use crate::breaker::messages::BreakerSpawned;
+        use crate::breaker::messages::{
+            BreakerDestroyedAt, BreakerSpawned, RequestBreakerDestroyed,
+        };
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
             .add_message::<BreakerSpawned>()
+            .add_message::<RequestBreakerDestroyed>()
+            .add_message::<BreakerDestroyedAt>()
             .init_resource::<BreakerConfig>()
-            .init_resource::<SelectedArchetype>()
+            .init_resource::<SelectedBreaker>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -61,7 +65,7 @@ impl Plugin for BreakerPlugin {
                     update_breaker_state.after(move_breaker),
                     grade_bump
                         .after(update_bump)
-                        .after(PhysicsSystems::BreakerCollision)
+                        .after(BoltSystems::BreakerCollision)
                         .in_set(BreakerSystems::GradeBump),
                     (
                         perfect_bump_dash_cancel,
@@ -99,8 +103,8 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BreakerPlugin reads BoltHitBreaker from the physics domain
-            .add_message::<crate::physics::messages::BoltHitBreaker>()
+            // BreakerPlugin reads BoltHitBreaker from the bolt domain
+            .add_message::<crate::bolt::messages::BoltHitBreaker>()
             .add_plugins(BreakerPlugin)
             .update();
     }

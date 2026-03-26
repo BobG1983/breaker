@@ -8,7 +8,7 @@ use tracing::info;
 use crate::{
     chips::inventory::ChipInventory,
     run::resources::{HighlightTracker, RunState, RunStats},
-    shared::{GameRng, RunSeed, SelectedArchetype},
+    shared::{GameRng, RunSeed, SelectedBreaker},
 };
 
 /// Resets [`RunState`] to defaults and reseeds [`GameRng`] when leaving the
@@ -17,7 +17,7 @@ pub(crate) fn reset_run_state(
     mut run_state: ResMut<RunState>,
     mut rng: ResMut<GameRng>,
     seed: Res<RunSeed>,
-    archetype: Option<Res<SelectedArchetype>>,
+    selected_breaker: Option<Res<SelectedBreaker>>,
     mut chip_inventory: ResMut<ChipInventory>,
     mut stats: ResMut<RunStats>,
     mut highlight_tracker: ResMut<HighlightTracker>,
@@ -33,8 +33,8 @@ pub(crate) fn reset_run_state(
         rng.0 = ChaCha8Rng::from_os_rng();
         info!("run started seed=random");
     }
-    let archetype_name = archetype.as_deref().map_or("none", |a| a.0.as_str());
-    info!("run started archetype={}", archetype_name);
+    let breaker_name = selected_breaker.as_deref().map_or("none", |b| b.0.as_str());
+    info!("run started breaker={}", breaker_name);
 }
 
 #[cfg(test)]

@@ -13,7 +13,7 @@ You are a code quality specialist for a Bevy ECS roguelite game. Your focus is h
 
 ## First Step — Always
 
-Read `CLAUDE.md` and `docs/design/terminology.md`. Vocabulary compliance cannot be evaluated without knowing the required terms.
+Read `CLAUDE.md` and `docs/design/terminology/`. Vocabulary compliance cannot be evaluated without knowing the required terms.
 
 ## What You Review
 
@@ -31,6 +31,7 @@ Read `CLAUDE.md` and `docs/design/terminology.md`. Vocabulary compliance cannot 
 - `Default::default()` where `..Default::default()` struct update syntax would be cleaner
 - `use crate::some_module::{A, B, C, D}` with 4+ items from the same path — should be `use crate::some_module::*`
 - When a domain has a `prelude` sub-module, explicit item lists should use `use crate::domain::prelude::*` instead
+- Files that are too large and should be converted into folder based modules (500+ lines)
 
 ### Game Vocabulary
 
@@ -108,7 +109,7 @@ What to save:
 
 What NOT to save:
 - Generic Rust style advice
-- Anything duplicating CLAUDE.md or docs/design/terminology.md
+- Anything duplicating CLAUDE.md or docs/design/terminology/
 
 Save session-specific outputs (date-stamped reviews, one-off analyses) to the `ephemeral/` subdirectory (gitignored), not the memory root.
 

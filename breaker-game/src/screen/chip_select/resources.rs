@@ -1,7 +1,7 @@
 //! Chip selection screen resources.
 
 use bevy::prelude::*;
-use breaker_derive::GameConfig;
+use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
 use crate::chips::{ChipDefinition, definition::EvolutionIngredient};
@@ -169,7 +169,10 @@ pub struct ChipOffers(pub Vec<ChipOffering>);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::definition::{AmpEffect, ChipEffect, EvolutionIngredient};
+    use crate::{
+        chips::definition::EvolutionIngredient,
+        effect::definition::{Effect, EffectNode},
+    };
 
     #[test]
     fn default_config_has_positive_timer() {
@@ -192,14 +195,14 @@ mod tests {
 
     #[test]
     fn normal_offering_name_returns_inner_definition_name() {
-        let def = ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3);
+        let def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 3);
         let offering = ChipOffering::Normal(def);
         assert_eq!(offering.name(), "Piercing Shot");
     }
 
     #[test]
     fn normal_offering_definition_returns_inner_definition() {
-        let def = ChipDefinition::test("Piercing Shot", ChipEffect::Amp(AmpEffect::Piercing(1)), 3);
+        let def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 3);
         let offering = ChipOffering::Normal(def);
         assert_eq!(offering.definition().name, "Piercing Shot");
     }
@@ -213,7 +216,7 @@ mod tests {
                 chip_name: "A".to_owned(),
                 stacks_required: 2,
             }],
-            result: ChipDefinition::test("A+", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+            result: ChipDefinition::test("A+", EffectNode::Do(Effect::Piercing(5)), 1),
         };
         assert_eq!(offering.name(), "A+");
     }
@@ -225,7 +228,7 @@ mod tests {
                 chip_name: "A".to_owned(),
                 stacks_required: 2,
             }],
-            result: ChipDefinition::test("Barrage", ChipEffect::Amp(AmpEffect::Piercing(5)), 1),
+            result: ChipDefinition::test("Barrage", EffectNode::Do(Effect::Piercing(5)), 1),
         };
         assert_eq!(offering.definition().name, "Barrage");
     }

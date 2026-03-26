@@ -1,0 +1,1 @@
+//! Wall domain query filters.

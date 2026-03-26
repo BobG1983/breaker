@@ -59,9 +59,9 @@ type: reference
 16. **IMPORTANT** Evolution "no eligible" fallback undefined — recommend curated boss chip pool w/ higher rarity weights (2026-03-23)
 17. **IMPORTANT** Evolved chip effects need design direction: must introduce new interaction points, not just stat boosts (2026-03-23)
 18. **BLOCKING** spawn_highlight_text system is dead code — never registered in RunPlugin::build. Zero in-game juice from highlights (2026-03-23)
-19. **BLOCKING** FadeOut { timer: 0.0 } in spawn_highlight_text — text despawns immediately (timer should equal duration: 2.0) (2026-03-23)
+19. ~~**BLOCKING** FadeOut { timer: 0.0 } in spawn_highlight_text — text despawns immediately~~ FIXED — timer now matches duration (2.0), but duration itself should be 0.8s (see issue #21 visual treatment)
 20. **BLOCKING** track_node_cleared_stats never emits HighlightTriggered — 8 of 15 highlight types have no in-game juice message (2026-03-23)
-21. **IMPORTANT** All highlight popups spawn at same position (0,100,10) — simultaneous highlights stack unreadably (2026-03-23)
+21. **IMPORTANT** Highlight popup visual treatment needs overhaul (2026-03-24): position above playfield (not center), 0.8s lifetime (not 2.0s), scale overshoot 1.15x->1.0x (not scale-in from 0.5x), cascading vertical stack with 0.1s stagger, 48px font (not 64px), max 3 visible, seeded 2-4px horizontal jitter, micro screen-shake per popup. All values RON-configurable via HighlightConfig.
 22. **IMPORTANT** track_node_cleared_stats has no per-kind dedup — same HighlightKind can fill entire cap (2026-03-23)
 
 ## Resolved (from prior reviews)
@@ -99,5 +99,15 @@ type: reference
 - ~~Highlight moments (ClutchClear, PerfectStreak, etc.) should trigger in-game juice when detected, not just post-run display (2026-03-23)~~ IMPLEMENTED (spawn_highlight_text exists but has 3 BLOCKING bugs, see issues #18-20)
 - ~~Run-end subtitles should be distinct per death type and ideally randomized from a pool (2026-03-23)~~ IMPLEMENTED — 5 variants per outcome, seed-deterministic selection
 - Highlight popup system needs screen shake + particles in Phase 5+ (text-only is placeholder)
+- Highlight popup visual treatment APPROVED (2026-03-24): cascade (not queue/scatter), position above playfield (Pillar 4), 0.8s lifetime, scale overshoot punch-in, max 3 visible with oldest-despawn, seeded jitter via GameRng, all values in HighlightConfig/RON
 - Future: Flux bonus per highlight, or chip that scales with highlights earned (Phase 8)
 - Flux formula too soft for final balance (bolts_lost * -3 is negligible) — flag for Phase 8 tuning, fine for vertical slice
+- Spreading shockwave (expanding wavefront, not instant) is APPROVED — adds spatial positioning as skill expression; speed param on TriggerChain::Shockwave enables future "Detonation" vs "Pulse" overclock variants (2026-03-24)
+- Chain bolts (tethered pairs via DistanceConstraint) are APPROVED — momentum conservation on taut tether creates slingshot skill ceiling; ExtraBolt despawn on loss is correct (2026-03-24)
+- Chain bolt tether needs visible VFX (neon arc/line between bolts) — invisible tether is unreadable, track for Phase 5 (2026-03-24)
+- Naming collision: "Chain Hit" (amp, cell ricochet) vs "Chain Bolt" (tether spawn) — consider rename for clarity in content pass (2026-03-24)
+- Orbiting shield cells are APPROVED — orbit speed is the difficulty lever, parent Locked until children cleared, synergy showcase with spreading shockwave (2026-03-24)
+- Shield cell unlock moment needs juice (color shift + flash + sound) when last orbit child dies — track for Phase 5 (2026-03-24)
+- Spatial positioning confirmed as skill expression axis: "where to detonate" and "where to aim through orbits" deepen control surface without new inputs (2026-03-24)
+- Multi-shockwave readability: overlapping HDR cyan rings may obscure gameplay — playtest; if problematic, stagger or dim subsequent rings (2026-03-24)
+- Shockwave VFX (Annulus 0.85-1.0, HDR cyan, alpha fade) complies with Pillar 4: thin ring = max spectacle, zero confusion (2026-03-24)

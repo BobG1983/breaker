@@ -16,8 +16,8 @@ pub(crate) fn propagate_chip_select_defaults(
     mut commands: Commands,
 ) {
     for event in events.read() {
-        if event.is_modified(collection.chipselect.id())
-            && let Some(defaults) = assets.get(collection.chipselect.id())
+        if event.is_modified(collection.chip_select.id())
+            && let Some(defaults) = assets.get(collection.chip_select.id())
         {
             commands.insert_resource::<ChipSelectConfig>(defaults.clone().into());
         }
@@ -37,22 +37,21 @@ mod tests {
         app
     }
 
-    fn make_collection(chipselect: Handle<ChipSelectDefaults>) -> DefaultsCollection {
+    fn make_collection(chip_select: Handle<ChipSelectDefaults>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            chipselect,
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            chip_select,
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

@@ -2,7 +2,7 @@
 name: reviewer-tests
 description: "Use this agent to review writer-tests output against the test spec. Verifies tests match spec behaviors, use concrete values, cover edge cases, and contain no production logic. Use after every writer-tests completes, before the RED gate.\n\nExamples:\n\n- After writer-tests completes:\n  Assistant: \"Let me use the reviewer-tests agent to verify the tests match the spec before running the RED gate.\"\n\n- Parallel multi-domain:\n  Assistant: \"Launching reviewer-tests for bolt and cells domains in parallel.\"\n\n- After writer-tests revision:\n  Assistant: \"Let me use the reviewer-tests agent to verify the revised tests address the findings.\""
 tools: Read, Glob, Grep
-model: opus
+model: sonnet
 color: blue
 memory: project
 ---

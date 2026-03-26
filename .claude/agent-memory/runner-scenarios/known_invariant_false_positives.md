@@ -1,6 +1,6 @@
 ---
 name: resolved_checker_bugs
-description: Past scenario runner bugs that caused incorrect invariant results — fixed, kept as regression reference
+description: Past scenario runner bugs that caused incorrect invariant results — fixed, kept as regression reference. Also documents confirmed flaky scenarios and active known bugs.
 type: project
 ---
 
@@ -66,6 +66,79 @@ frame 30 were missed because Playing wasn't entered yet.
 **Fix:** Added `.run_if(entered_playing)` to `(tick_scenario_frame, check_frame_limit).chain()`.
 **File:** `breaker-scenario-runner/src/lifecycle/mod.rs`
 
+## entered_playing race condition — SpawnNodeComplete fix (RESOLVED 2026-03-23)
+
+**Bug:** `entered_playing` was set by `tag_game_entities` (OnEnter(Playing)), but bolt/breaker
+entities hadn't been spawned yet under parallel I/O load at that moment. Three self-test
+scenarios were flaky: `bolt_count_exceeded`, `timer_increase`, `physics_frozen_during_pause`.
+**Root cause:** OnEnter(Playing) fires before spawn systems flush deferred commands. Tags were
+applied to entities that didn't exist yet, so `bolts_tagged=0 / breakers_tagged=0` even with
+`entered_playing=true`, causing health-check failures in the verdict evaluator.
+**Fix:** Moved `entered_playing` assignment from `tag_game_entities` to a new system
+`mark_entered_playing_on_spawn_complete` that reads the `SpawnNodeComplete` message. Frame
+counting and invariant checking now only begin once all entities are actually spawned.
+**File:** `breaker-scenario-runner/src/lifecycle/mod.rs`
+**Side effect:** Three unit tests in `lifecycle/tests.rs` are now failing (see below — known
+failing tests). They were written against the old behavior and need to be updated.
+
+---
+
+## Confirmed Flaky Scenarios — RESOLVED by SpawnNodeComplete fix (2026-03-23)
+
+The three scenarios below were formerly flaky under `--all` parallel mode. The
+`entered_playing` → `SpawnNodeComplete` migration resolved all three. They now pass
+reliably in both `--all` and individual runs.
+
+### bolt_count_exceeded — formerly FLAKY, now STABLE
+
+**Scenario:** `scenarios/self_tests/bolt_count_exceeded.scenario.ron`
+**Former failure:** `entered_playing=false` race — game didn't reach Playing within frame budget.
+**Status:** RESOLVED. All 47 scenarios including this one passed on 2026-03-23 `--all` run.
+
+### timer_increase — formerly FLAKY, now STABLE
+
+**Scenario:** `scenarios/self_tests/timer_increase.scenario.ron`
+**Former failure:** `bolts=0 breakers=0` despite `entered_playing=true` — entities not yet spawned
+when OnEnter(Playing) fired under I/O contention.
+**Status:** RESOLVED. Passed reliably on 2026-03-23 `--all` run.
+
+### physics_frozen_during_pause — formerly FLAKY, now STABLE
+
+**Scenario:** `scenarios/self_tests/physics_frozen_during_pause.scenario.ron`
+**Former failure:** invariant never fired — frame mutation window compressed under parallel I/O load.
+**Status:** RESOLVED. Passed reliably on 2026-03-23 `--all` run.
+
+---
+
+## Known Failing Unit Tests (require test updates — NOT game bugs)
+
+As of 2026-03-23, three unit tests in `breaker-scenario-runner/src/lifecycle/tests.rs` fail
+because they were written against the old behavior where `tag_game_entities` set
+`ScenarioStats::entered_playing = true`. That responsibility moved to
+`mark_entered_playing_on_spawn_complete` (reads `SpawnNodeComplete` message).
+
+### Failing tests
+
+1. `lifecycle::tests::scenario_stats_entered_playing_set_by_tag_game_entities` (line 791)
+   - Asserts `entered_playing == true` after running `tag_game_entities` alone.
+   - `tag_game_entities` no longer sets `entered_playing`, so the assertion fails.
+   - Fix: rename to `scenario_stats_entered_playing_set_by_mark_entered_playing_on_spawn_complete`
+     and rewrite to send a `SpawnNodeComplete` message and assert the new system sets the flag.
+
+2. `lifecycle::tests::check_bolt_in_bounds_is_registered_in_scenario_lifecycle` (line 191)
+   - Uses `lifecycle_test_app()` which includes `ScenarioLifecycle`. The invariant block is
+     gated on `entered_playing`. No `SpawnNodeComplete` message is ever sent in the test, so
+     `entered_playing` stays `false`, invariants never run, ViolationLog stays empty.
+   - Fix: send a `SpawnNodeComplete` message before the tick (or manually set
+     `ScenarioStats::entered_playing = true` in the test world before ticking).
+
+3. `lifecycle::tests::check_no_nan_is_registered_in_scenario_lifecycle` (line 229)
+   - Same root cause as #2 — `entered_playing` never becomes `true`.
+   - Fix: same approach as #2.
+
+All three tests are in `breaker-scenario-runner/src/lifecycle/tests.rs`.
+Route to writer-tests with a test revision spec once confirmed. Confidence: high.
+
 ---
 
 ## Unresolved Game Bugs (correctly detected by scenario runner)
@@ -78,3 +151,30 @@ frame 30 were missed because Playing wasn't entered yet.
 bounds for sustained period. Root cause not yet confirmed — likely degenerate reflection
 state in bolt physics under Scatter layout with many cells destroyed.
 **This is NOT a scenario runner bug.** The runner correctly detects it.
+
+---
+
+## Active Known Flaky Failures (fail --all, pass individually and --serial)
+
+### TypeId panic — all scenarios fail under --all default parallelism (2026-03-26)
+
+**Symptom:** All 47 scenarios fail under `--all` with default 32-worker parallelism.
+Panic: `The target Handle<breaker::chips::definition::ChipDefinition>'s TypeId does not match the TypeId of this UntypedHandle`
+
+**Passes:** `--serial`, `-p 4`, individual `-s` runs. Fails: `--all` (≥32 workers), or `--all -p all`.
+
+**Root cause:** `DefaultsCollection` has `chip_templates: Vec<Handle<ChipTemplate>>` with
+`path = "chips"` (line 60 of `resources.rs`). Bevy's `load_folder("chips")` recursively scans
+`chips/evolution/*.evolution.ron` (typed as `ChipDefinition`). Under high concurrency (79
+simultaneous subprocesses), `bevy_asset_loader`'s generated `create()` calls `.typed::<ChipTemplate>()`
+on those `ChipDefinition` handles → TypeId mismatch → panic.
+
+**Design flaw:** `chip_templates` path should be `"chips/templates"` not `"chips"` to avoid
+scanning `chips/evolution/`. This would eliminate the TypeId collision.
+
+**File:** `breaker-game/src/screen/loading/resources.rs:60`
+**Suggested fix:** Change `#[asset(path = "chips", collection(typed))]` above `chip_templates`
+to `#[asset(path = "chips/templates", collection(typed))]`
+
+**Workaround:** Use `cargo scenario -- --all -p 4` for scenario validation until fixed.
+Do NOT use `--all` alone for scenario validation while this is unresolved.

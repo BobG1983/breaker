@@ -1,7 +1,0 @@
-(
-    name: "Wide Breaker",
-    description: "Breaker width increased",
-    rarity: Common,
-    max_stacks: 3,
-    effects: [Augment(WidthBoost(20.0))],
-)

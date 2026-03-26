@@ -1,6 +1,7 @@
 //! Bump visual feedback — eased upward pop animation on the breaker.
 
 use bevy::{math::curve::Curve, prelude::*};
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     breaker::{components::*, filters::BumpTriggerFilter},
@@ -39,7 +40,7 @@ pub fn animate_bump_visual(
     mut query: Query<
         (
             Entity,
-            &mut Transform,
+            &mut Position2D,
             &mut BumpVisual,
             &BreakerBaseY,
             &BumpVisualParams,
@@ -49,20 +50,20 @@ pub fn animate_bump_visual(
 ) {
     let dt = time.delta_secs();
 
-    for (entity, mut transform, mut visual, base_y, params) in &mut query {
+    for (entity, mut position, mut visual, base_y, params) in &mut query {
         // Remove previous frame's offset
         let prev_offset = bump_offset(&visual, params);
-        transform.translation.y -= prev_offset;
+        position.0.y -= prev_offset;
 
         visual.timer -= dt;
 
         if visual.timer <= 0.0 {
             // Animation complete — snap to base position
-            transform.translation.y = base_y.0;
+            position.0.y = base_y.0;
             commands.entity(entity).remove::<BumpVisual>();
         } else {
             // Apply new eased offset
-            transform.translation.y += bump_offset(&visual, params);
+            position.0.y += bump_offset(&visual, params);
         }
     }
 }
@@ -315,7 +316,13 @@ mod tests {
     }
 
     #[test]
-    fn animate_applies_y_offset_during_animation() {
+    fn animate_applies_position2d_y_offset_during_animation() {
+        // Given: Breaker with active BumpVisual, BreakerBaseY(-250.0),
+        //        Position2D(Vec2::new(0.0, -250.0))
+        // When: animate_bump_visual runs
+        // Then: Position2D.0.y > -250.0 (popped up)
+        use rantzsoft_spatial2d::components::Position2D;
+
         let mut app = animate_test_app();
         let config = BreakerConfig::default();
         let params = default_bump_visual_params();
@@ -324,7 +331,7 @@ mod tests {
             Breaker,
             BreakerBaseY(config.y_position),
             params.clone(),
-            Transform::from_xyz(0.0, config.y_position, 0.0),
+            Position2D(Vec2::new(0.0, config.y_position)),
             BumpVisual {
                 timer: params.duration,
                 duration: params.duration,
@@ -334,23 +341,25 @@ mod tests {
 
         tick(&mut app);
 
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, With<Breaker>>()
+            .query_filtered::<&Position2D, With<Breaker>>()
             .iter(app.world())
             .next()
             .expect("breaker should exist");
 
         assert!(
-            tf.translation.y > config.y_position,
-            "breaker should pop upward during animation, y={} base={}",
-            tf.translation.y,
+            pos.0.y > config.y_position,
+            "breaker should pop upward during animation, Position2D.y={} base={}",
+            pos.0.y,
             config.y_position
         );
     }
 
     #[test]
     fn animate_removes_bump_visual_when_done() {
+        use rantzsoft_spatial2d::components::Position2D;
+
         let mut app = animate_test_app();
         let config = BreakerConfig::default();
         let params = default_bump_visual_params();
@@ -361,7 +370,7 @@ mod tests {
                 Breaker,
                 BreakerBaseY(config.y_position),
                 params.clone(),
-                Transform::from_xyz(0.0, config.y_position, 0.0),
+                Position2D(Vec2::new(0.0, config.y_position)),
                 BumpVisual {
                     // Zero timer — will expire on next tick
                     timer: 0.0,
@@ -378,16 +387,20 @@ mod tests {
             "BumpVisual should be removed after animation completes"
         );
 
-        let tf = app.world().get::<Transform>(entity).expect("should exist");
+        let pos = app.world().get::<Position2D>(entity).expect("should exist");
         assert!(
-            (tf.translation.y - config.y_position).abs() < f32::EPSILON,
-            "breaker should return to base y after animation, got {}",
-            tf.translation.y
+            (pos.0.y - config.y_position).abs() < f32::EPSILON,
+            "breaker should return to base y after animation, Position2D.y={} expected={}",
+            pos.0.y,
+            config.y_position
         );
     }
 
     #[test]
-    fn animate_snaps_to_base_after_expiry() {
+    fn animate_snaps_position2d_to_base_after_expiry() {
+        // Edge case: animation complete -> Position2D.0.y snaps to -250.0
+        use rantzsoft_spatial2d::components::Position2D;
+
         let mut app = animate_test_app();
         let config = BreakerConfig::default();
         let params = default_bump_visual_params();
@@ -397,7 +410,7 @@ mod tests {
             Breaker,
             BreakerBaseY(config.y_position),
             params.clone(),
-            Transform::from_xyz(0.0, config.y_position + 5.0, 0.0),
+            Position2D(Vec2::new(0.0, config.y_position + 5.0)),
             BumpVisual {
                 // Near-expired timer — will complete within a few test updates
                 timer: 0.0001,
@@ -411,17 +424,17 @@ mod tests {
             tick(&mut app);
         }
 
-        let tf = app
+        let pos = app
             .world_mut()
-            .query_filtered::<&Transform, With<Breaker>>()
+            .query_filtered::<&Position2D, With<Breaker>>()
             .iter(app.world())
             .next()
             .expect("breaker should exist");
 
         assert!(
-            (tf.translation.y - config.y_position).abs() < f32::EPSILON,
-            "breaker should snap to base y after animation, got {} base={}",
-            tf.translation.y,
+            (pos.0.y - config.y_position).abs() < f32::EPSILON,
+            "breaker should snap to base y after animation, Position2D.y={} base={}",
+            pos.0.y,
             config.y_position
         );
     }

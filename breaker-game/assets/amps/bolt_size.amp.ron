@@ -1,7 +1,0 @@
-(
-    name: "Bolt Size",
-    description: "Bolt grows larger, hitting more cells",
-    rarity: Rare,
-    max_stacks: 3,
-    effects: [Amp(SizeBoost(0.3))],
-)

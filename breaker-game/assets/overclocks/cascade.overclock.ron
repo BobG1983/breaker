@@ -1,7 +1,0 @@
-(
-    name: "Cascade",
-    description: "Destroying a cell sends a shockwave to nearby cells",
-    rarity: Rare,
-    max_stacks: 2,
-    effects: [Overclock(OnCellDestroyed(Shockwave(base_range: 48.0, range_per_level: 16.0, stacks: 1)))],
-)

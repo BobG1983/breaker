@@ -1,0 +1,12 @@
+/* @[brickbreaker::effect::definition::BreakerDefinition] */
+(
+    name: "Chrono",
+    stat_overrides: (),
+    life_pool: None,
+    effects: [
+        On(target: Breaker, then: [When(trigger: OnBoltLost, then: [Do(TimePenalty(seconds: 5.0))])]),
+        On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+    ],
+)

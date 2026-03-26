@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     fx::{
-        systems::animate_fade_out,
+        systems::{animate_fade_out, animate_punch_scale},
         transition::{
             animate_transition, cleanup_transition, spawn_transition_in, spawn_transition_out,
         },
@@ -22,7 +22,7 @@ impl Plugin for FxPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            animate_fade_out.run_if(in_state(PlayingState::Active)),
+            (animate_fade_out, animate_punch_scale).run_if(in_state(PlayingState::Active)),
         )
         .add_systems(OnEnter(GameState::TransitionOut), spawn_transition_out)
         .add_systems(OnEnter(GameState::TransitionIn), spawn_transition_in)

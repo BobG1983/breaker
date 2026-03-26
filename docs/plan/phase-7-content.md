@@ -18,7 +18,7 @@ Each cell type multiplies situation variety: a Lock Cell + Regen Cell layout pla
 
 Scale from the vertical slice's 16-20 to 40+:
 
-- **More synergy chips**: Cross-chip interactions that weren't possible with the smaller pool. "On reaching 5 total stacks across all amps, gain a free augment" type effects.
+- **More synergy chips**: Cross-chip interactions that weren't possible with the smaller pool. Chips whose effects interact with other chips' components.
 - **Trade-off chips**: Benefit + cost. "Double bolt damage, but bolt is 30% smaller." These create agonizing decisions on the chip select screen (Pillar 5: Pressure, Not Panic).
 - **Conditional chips**: Effects that only activate under specific circumstances. "While below 2 lives, bump grade is always perfect." Risk/reward chips that create dramatic moments.
 - **Archetype-affinity chips**: Some chips are stronger with specific breakers. Doesn't restrict — just incentivizes. Creates build paths per archetype.
@@ -29,7 +29,7 @@ At 40+ chips, the synergy web must be dense enough that players discover new int
 
 ## More Evolution Recipes (10-15 total)
 
-- Cross-kind evolutions: Amp + Overclock, Augment + Amp
+- Cross-type evolutions: passive + triggered chip combinations
 - Chain evolutions: Evolved chip + another chip = further evolution (rare, powerful, deep knowledge reward)
 - Secret evolutions: Undocumented recipes discoverable only through experimentation. Community wiki content.
 

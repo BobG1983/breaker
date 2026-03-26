@@ -1,0 +1,8 @@
+(
+    name: "Overclock",
+    max_taken: 2,
+    common: Some((prefix: "Basic", effects: [When(trigger: OnPerfectBump, then: [Until(until: TimeExpires(2.0), then: [Do(SpeedBoost(multiplier: 1.3))])])])),
+    uncommon: Some((prefix: "Charged", effects: [When(trigger: OnPerfectBump, then: [Until(until: TimeExpires(3.0), then: [Do(SpeedBoost(multiplier: 1.5))])])])),
+    rare: Some((prefix: "Supercharged", effects: [When(trigger: OnPerfectBump, then: [Until(until: TimeExpires(4.0), then: [Do(SpeedBoost(multiplier: 1.8))])])])),
+    legendary: None,
+)

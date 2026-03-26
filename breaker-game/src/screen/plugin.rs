@@ -15,11 +15,11 @@ use super::{
     systems::cleanup_entities,
 };
 use crate::{
-    behaviors::ArchetypeDefinition,
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
     cells::{CellDefaults, CellTypeDefinition},
-    chips::ChipDefinition,
+    chips::{ChipDefinition, definition::ChipTemplate},
+    effect::BreakerDefinition,
     input::InputDefaults,
     run::{NodeLayout, definition::DifficultyCurveDefaults},
     shared::{
@@ -53,9 +53,10 @@ impl Plugin for ScreenPlugin {
                 RonAssetPlugin::<CellTypeDefinition>::new(&["cell.ron"]),
                 RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
                 RonAssetPlugin::<TimerUiDefaults>::new(&["timerui.ron"]),
-                RonAssetPlugin::<ArchetypeDefinition>::new(&["archetype.ron"]),
+                RonAssetPlugin::<BreakerDefinition>::new(&["bdef.ron"]),
                 RonAssetPlugin::<ChipSelectDefaults>::new(&["chipselect.ron"]),
-                RonAssetPlugin::<ChipDefinition>::new(&["amp.ron", "augment.ron", "overclock.ron"]),
+                RonAssetPlugin::<ChipDefinition>::new(&["evolution.ron"]),
+                RonAssetPlugin::<ChipTemplate>::new(&["chip.ron"]),
                 RonAssetPlugin::<DifficultyCurveDefaults>::new(&["difficulty.ron"]),
             ))
             // Progress plugin drives Loading → MainMenu transition.

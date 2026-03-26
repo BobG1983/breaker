@@ -1,6 +1,6 @@
 ---
 name: guard-docs
-description: "Use this agent to keep documentation true: detect and fix drift between code and docs/architecture/, update plan/index.md when phases or tasks complete, and ensure docs/design/ and terminology.md reflect implemented mechanics and vocabulary. Unlike reviewer-architecture (which protects code from violating the architecture), guard-docs protects docs from falling behind the code. This agent CAN edit documentation files.\n\nExamples:\n\n- After completing a phase:\n  Assistant: \"Phase complete. Let me run guard-docs to update plan/index.md and check for architecture doc drift.\"\n\n- After significant structural changes:\n  Assistant: \"Domains restructured. Let me use guard-docs to sync the architecture docs with what was actually built.\"\n\n- When new terminology appears in code:\n  Assistant: \"New term used in code. Let me use guard-docs to verify it's in terminology.md.\"\n\n- Parallel note: Can run alongside runner-tests, code-reviewer, reviewer-architecture, researcher-system-dependencies, and guard-game-design — all are independent."
+description: "Use this agent to keep documentation true: detect and fix drift between code and docs/architecture/, update plan/index.md when phases or tasks complete, and ensure docs/design/ and terminology/ reflect implemented mechanics and vocabulary. Unlike reviewer-architecture (which protects code from violating the architecture), guard-docs protects docs from falling behind the code. This agent CAN edit documentation files.\n\nExamples:\n\n- After completing a phase:\n  Assistant: \"Phase complete. Let me run guard-docs to update plan/index.md and check for architecture doc drift.\"\n\n- After significant structural changes:\n  Assistant: \"Domains restructured. Let me use guard-docs to sync the architecture docs with what was actually built.\"\n\n- When new terminology appears in code:\n  Assistant: \"New term used in code. Let me use guard-docs to verify it's in terminology/.\"\n\n- Parallel note: Can run alongside runner-tests, code-reviewer, reviewer-architecture, researcher-system-dependencies, and guard-game-design — all are independent."
 tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: teal
@@ -36,10 +36,10 @@ Flag every place a doc claims something the code contradicts.
 - Phase numbering or naming that has shifted
 - New phases or sub-phases that exist in reality but not in the plan
 
-### 3. Design Docs (docs/design/) / terminology.md
+### 3. Design Docs (docs/design/) / terminology/
 
 - Mechanics implemented in code that aren't described in `docs/design/` (pillars, decisions)
-- Code identifiers using terminology not defined in `docs/design/terminology.md` (flag as potential misuse OR as a gap in the glossary)
+- Code identifiers using terminology not defined in `docs/design/terminology/` (flag as potential misuse OR as a gap in the glossary)
 - New game entities, systems, or mechanics that need coverage in the design docs
 - Terminology entries that are outdated or renamed
 - Design decisions made during planning that aren't captured in `docs/design/decisions/`
@@ -64,7 +64,7 @@ If a discrepancy could be intentional (e.g., a doc describes a future planned st
 
 If a phase or task is verifiably complete in code, mark it done in plan/index.md. Use the existing formatting conventions in the file.
 
-### terminology.md Additions
+### terminology/ Additions
 
 If code consistently uses a new term that isn't in the glossary, add it. Use the existing entry format.
 
@@ -82,7 +82,7 @@ If code consistently uses a new term that isn't in the glossary, add it. Use the
 ### Design Docs [N gaps / Current]
 [mechanics missing from design docs or decisions]
 
-### terminology.md [N gaps / Current]
+### terminology/ [N gaps / Current]
 [terms added or flagged]
 
 ### Changes Made

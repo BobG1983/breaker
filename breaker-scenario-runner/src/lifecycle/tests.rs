@@ -5,10 +5,14 @@ use breaker::{
     run::node::resources::NodeTimer,
     shared::{GameState, PlayfieldConfig, PlayingState},
 };
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::*;
 use crate::{
-    invariants::{PreviousGameState, ScenarioPhysicsFrozen, ScenarioTagBolt, ScenarioTagBreaker},
+    invariants::{
+        PreviousGameState, ScenarioPhysicsFrozen, ScenarioStats, ScenarioTagBolt,
+        ScenarioTagBreaker,
+    },
     types::{
         ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy, InvariantKind,
         InvariantParams, MutationKind, ScenarioBreakerState, ScenarioDefinition, ScriptedParams,
@@ -74,7 +78,7 @@ fn lifecycle_test_app() -> App {
             zone_fraction: 0.667,
         });
     // Resources required by bypass_menu_to_playing
-    app.insert_resource(breaker::shared::SelectedArchetype("Aegis".to_owned()))
+    app.insert_resource(breaker::shared::SelectedBreaker("Aegis".to_owned()))
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>();
     // Resources required by inject_scenario_input
@@ -199,11 +203,14 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
         zone_fraction: 0.667,
     });
 
+    // Set entered_playing so invariant checkers are active
+    app.world_mut()
+        .resource_mut::<ScenarioStats>()
+        .entered_playing = true;
+
     // Spawn bolt well above the top bound
-    app.world_mut().spawn((
-        ScenarioTagBolt,
-        Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
-    ));
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 500.0))));
 
     tick(&mut app);
 
@@ -222,7 +229,7 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
 }
 
 /// `check_no_nan` is defined in `invariants.rs` but must be registered by
-/// [`ScenarioLifecycle`]. A bolt entity with `f32::NAN` in its x translation
+/// [`ScenarioLifecycle`]. A bolt entity with `f32::NAN` in its x position
 /// must produce a [`ViolationEntry`] with [`InvariantKind::NoNaN`] after one tick.
 ///
 /// This test FAILS until `check_no_nan` is added to `ScenarioLifecycle::build()`.
@@ -230,10 +237,13 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
 fn check_no_nan_is_registered_in_scenario_lifecycle() {
     let mut app = lifecycle_test_app();
 
-    app.world_mut().spawn((
-        ScenarioTagBolt,
-        Transform::from_translation(Vec3::new(f32::NAN, 0.0, 0.0)),
-    ));
+    // Set entered_playing so invariant checkers are active
+    app.world_mut()
+        .resource_mut::<ScenarioStats>()
+        .entered_playing = true;
+
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(f32::NAN, 0.0))));
 
     tick(&mut app);
 
@@ -250,16 +260,14 @@ fn check_no_nan_is_registered_in_scenario_lifecycle() {
 }
 
 // -------------------------------------------------------------------------
-// apply_debug_setup — teleport to bolt_position (z preserved)
+// apply_debug_setup — teleport to bolt_position
 // -------------------------------------------------------------------------
 
 /// When `debug_setup` has `bolt_position: Some((0.0, -500.0))` and
 /// `disable_physics: false`, `apply_debug_setup` must move the
-/// [`ScenarioTagBolt`] entity to `(0.0, -500.0)` while preserving z = 1.0.
-///
-/// This test FAILS until `apply_debug_setup` is implemented.
+/// [`ScenarioTagBolt`] entity's `Position2D` to `(0.0, -500.0)`.
 #[test]
-fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
+fn apply_debug_setup_teleports_bolt_to_bolt_position() {
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -286,7 +294,11 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)))
+        .spawn((
+            ScenarioTagBolt,
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::ZERO),
+        ))
         .id();
 
     // First update: system runs and enqueues commands
@@ -294,36 +306,28 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position_preserving_z() {
     // Second update: commands are flushed
     app.update();
 
-    let transform = app
+    let position = app
         .world()
         .entity(entity)
-        .get::<Transform>()
-        .expect("entity must still have Transform");
+        .get::<Position2D>()
+        .expect("entity must still have Position2D");
 
     assert!(
-        (transform.translation.y - (-500.0_f32)).abs() < f32::EPSILON,
+        (position.0.y - (-500.0_f32)).abs() < f32::EPSILON,
         "expected y = -500.0 after teleport, got {}",
-        transform.translation.y
-    );
-    assert!(
-        (transform.translation.z - 1.0_f32).abs() < f32::EPSILON,
-        "expected z = 1.0 preserved, got {}",
-        transform.translation.z
+        position.0.y
     );
 }
 
 // -------------------------------------------------------------------------
-// apply_debug_setup — teleport breaker to breaker_position (z preserved)
+// apply_debug_setup — teleport breaker to breaker_position
 // -------------------------------------------------------------------------
 
 /// When `debug_setup` has `breaker_position: Some((100.0, -50.0))`,
-/// `apply_debug_setup` must move the [`ScenarioTagBreaker`] entity to
-/// `(100.0, -50.0)` while preserving the original z coordinate.
-///
-/// This test covers the `breaker_position` code path, which is distinct from
-/// the existing `bolt_position` tests.
+/// `apply_debug_setup` must move the [`ScenarioTagBreaker`] entity's
+/// `Position2D` to `(100.0, -50.0)`.
 #[test]
-fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
+fn apply_debug_setup_teleports_breaker_to_breaker_position() {
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -350,34 +354,29 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, Transform::from_xyz(0.0, 0.0, 2.0)))
+        .spawn((ScenarioTagBreaker, Position2D(Vec2::new(0.0, 0.0))))
         .id();
 
-    // First update: system runs and mutates transform directly (no commands needed)
+    // First update: system runs and mutates position directly (no commands needed)
     app.update();
     // Second update: flush any pending commands
     app.update();
 
-    let transform = app
+    let position = app
         .world()
         .entity(entity)
-        .get::<Transform>()
-        .expect("breaker entity must still have Transform");
+        .get::<Position2D>()
+        .expect("breaker entity must still have Position2D");
 
     assert!(
-        (transform.translation.x - 100.0_f32).abs() < f32::EPSILON,
+        (position.0.x - 100.0_f32).abs() < f32::EPSILON,
         "expected x = 100.0 after breaker_position teleport, got {}",
-        transform.translation.x
+        position.0.x
     );
     assert!(
-        (transform.translation.y - (-50.0_f32)).abs() < f32::EPSILON,
+        (position.0.y - (-50.0_f32)).abs() < f32::EPSILON,
         "expected y = -50.0 after breaker_position teleport, got {}",
-        transform.translation.y
-    );
-    assert!(
-        (transform.translation.z - 2.0_f32).abs() < f32::EPSILON,
-        "expected z = 2.0 preserved, got {}",
-        transform.translation.z
+        position.0.y
     );
 }
 
@@ -386,11 +385,7 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position_preserving_z() {
 // -------------------------------------------------------------------------
 
 /// When `disable_physics: true`, `apply_debug_setup` must insert
-/// [`ScenarioPhysicsFrozen`] with `target = Vec3::new(0.0, -400.0, 1.0)`.
-///
-/// The entity's z coordinate (1.0) is baked into the frozen target.
-///
-/// This test FAILS until `apply_debug_setup` is implemented.
+/// [`ScenarioPhysicsFrozen`] with `target = Vec2::new(0.0, -400.0)`.
 #[test]
 fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true() {
     let definition = ScenarioDefinition {
@@ -419,7 +414,11 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)))
+        .spawn((
+            ScenarioTagBolt,
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::ZERO),
+        ))
         .id();
 
     // First update: system runs
@@ -435,8 +434,8 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
 
     assert_eq!(
         frozen.target,
-        Vec3::new(0.0, -400.0, 1.0),
-        "ScenarioPhysicsFrozen.target must be (0.0, -400.0, 1.0)"
+        Vec2::new(0.0, -400.0),
+        "ScenarioPhysicsFrozen.target must be (0.0, -400.0)"
     );
 }
 
@@ -445,13 +444,11 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
 // -------------------------------------------------------------------------
 
 /// Each fixed-update tick, `enforce_frozen_positions` must set the entity's
-/// `Transform.translation` exactly to `ScenarioPhysicsFrozen.target`, regardless
+/// `Position2D` exactly to `ScenarioPhysicsFrozen.target`, regardless
 /// of where physics moved it.
 ///
-/// Given target = `(0.0, -500.0, 0.0)` and current position `(100.0, 200.0, 0.0)`,
-/// after one tick the position must be exactly `(0.0, -500.0, 0.0)`.
-///
-/// This test FAILS until `enforce_frozen_positions` is implemented.
+/// Given target = `(0.0, -500.0)` and current position `(100.0, 200.0)`,
+/// after one tick the position must be exactly `(0.0, -500.0)`.
 #[test]
 fn enforce_frozen_positions_resets_entity_to_frozen_target_each_tick() {
     let mut app = App::new();
@@ -462,25 +459,25 @@ fn enforce_frozen_positions_resets_entity_to_frozen_target_each_tick() {
         .world_mut()
         .spawn((
             ScenarioPhysicsFrozen {
-                target: Vec3::new(0.0, -500.0, 0.0),
+                target: Vec2::new(0.0, -500.0),
             },
-            Transform::from_xyz(100.0, 200.0, 0.0),
+            Position2D(Vec2::new(100.0, 200.0)),
         ))
         .id();
 
     tick(&mut app);
 
-    let transform = app
+    let position = app
         .world()
         .entity(entity)
-        .get::<Transform>()
-        .expect("entity must still have Transform");
+        .get::<Position2D>()
+        .expect("entity must still have Position2D");
 
     assert_eq!(
-        transform.translation,
-        Vec3::new(0.0, -500.0, 0.0),
-        "expected position to be reset to frozen target (0.0, -500.0, 0.0), got {:?}",
-        transform.translation
+        position.0,
+        Vec2::new(0.0, -500.0),
+        "expected position to be reset to frozen target (0.0, -500.0), got {:?}",
+        position.0
     );
 }
 
@@ -491,9 +488,7 @@ fn enforce_frozen_positions_resets_entity_to_frozen_target_each_tick() {
 /// `tag_game_entities` must find all [`Bolt`] entities that lack
 /// [`ScenarioTagBolt`] and insert the marker. After two updates (system
 /// runs + commands flush), the entity must have [`ScenarioTagBolt`] and its
-/// transform must be unchanged.
-///
-/// This test FAILS until `tag_game_entities` is implemented.
+/// position must be unchanged.
 #[test]
 fn tag_game_entities_tags_bolt_entity_with_scenario_tag_bolt() {
     let mut app = App::new();
@@ -502,7 +497,7 @@ fn tag_game_entities_tags_bolt_entity_with_scenario_tag_bolt() {
 
     let entity = app
         .world_mut()
-        .spawn((Bolt, Transform::from_xyz(50.0, 50.0, 1.0)))
+        .spawn((Bolt, Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
     // First update: system runs and enqueues insert(ScenarioTagBolt)
@@ -518,17 +513,17 @@ fn tag_game_entities_tags_bolt_entity_with_scenario_tag_bolt() {
         "expected ScenarioTagBolt to be added to Bolt entity"
     );
 
-    // Transform must be unchanged — tagging should not move the entity.
-    let transform = app
+    // Position must be unchanged — tagging should not move the entity.
+    let position = app
         .world()
         .entity(entity)
-        .get::<Transform>()
-        .expect("entity must still have Transform");
+        .get::<Position2D>()
+        .expect("entity must still have Position2D");
     assert_eq!(
-        transform.translation,
-        Vec3::new(50.0, 50.0, 1.0),
-        "expected transform unchanged after tagging, got {:?}",
-        transform.translation
+        position.0,
+        Vec2::new(50.0, 50.0),
+        "expected position unchanged after tagging, got {:?}",
+        position.0
     );
 }
 
@@ -539,8 +534,6 @@ fn tag_game_entities_tags_bolt_entity_with_scenario_tag_bolt() {
 /// `tag_game_entities` must find all [`Breaker`] entities that lack
 /// [`ScenarioTagBreaker`] and insert the marker. After two updates the
 /// entity must have [`ScenarioTagBreaker`].
-///
-/// This test FAILS until `tag_game_entities` is implemented.
 #[test]
 fn tag_game_entities_tags_breaker_entity_with_scenario_tag_breaker() {
     let mut app = App::new();
@@ -549,7 +542,7 @@ fn tag_game_entities_tags_breaker_entity_with_scenario_tag_breaker() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, Transform::from_xyz(0.0, -250.0, 0.0)))
+        .spawn((Breaker, Position2D(Vec2::new(0.0, -250.0))))
         .id();
 
     app.update();
@@ -768,10 +761,8 @@ fn scenario_stats_invariant_checks_incremented_after_one_tick() {
         })
         .add_systems(FixedUpdate, check_bolt_in_bounds);
 
-    app.world_mut().spawn((
-        ScenarioTagBolt,
-        Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-    ));
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))));
 
     tick(&mut app);
 
@@ -812,27 +803,34 @@ fn scenario_stats_max_frame_tracked_by_tick_scenario_frame() {
 }
 
 // -------------------------------------------------------------------------
-// ScenarioStats — entered_playing set by tag_game_entities
+// ScenarioStats — entered_playing set by mark_entered_playing_on_spawn_complete
 // -------------------------------------------------------------------------
 
-/// When `tag_game_entities` runs (which happens in `OnEnter(GameState::Playing)`),
-/// `ScenarioStats::entered_playing` must be set to `true`.
+/// When `SpawnNodeComplete` fires, `mark_entered_playing_on_spawn_complete`
+/// sets `ScenarioStats::entered_playing` to `true`.
 #[test]
-fn scenario_stats_entered_playing_set_by_tag_game_entities() {
+fn scenario_stats_entered_playing_set_on_spawn_node_complete() {
+    use breaker::run::node::messages::SpawnNodeComplete;
+
     use crate::invariants::ScenarioStats;
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<ScenarioStats>()
-        .add_systems(Update, tag_game_entities);
+        .add_message::<SpawnNodeComplete>()
+        .add_systems(Update, mark_entered_playing_on_spawn_complete);
 
-    // Run the system (simulates entering Playing)
+    // Send SpawnNodeComplete message
+    app.world_mut()
+        .resource_mut::<Messages<SpawnNodeComplete>>()
+        .write(SpawnNodeComplete);
+
     app.update();
 
     let stats = app.world().resource::<ScenarioStats>();
     assert!(
         stats.entered_playing,
-        "expected entered_playing == true after tag_game_entities ran"
+        "expected entered_playing == true after SpawnNodeComplete"
     );
 }
 
@@ -849,7 +847,7 @@ fn bypass_menu_to_playing_sets_run_seed_default_zero() {
         .insert_resource(ScenarioConfig {
             definition: make_scenario(100),
         })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .add_plugins(StatesPlugin)
@@ -877,7 +875,7 @@ fn bypass_menu_to_playing_sets_run_seed_from_scenario() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(ScenarioConfig { definition })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .add_plugins(StatesPlugin)
@@ -928,82 +926,91 @@ fn restart_run_on_end_transitions_to_main_menu() {
 }
 
 // -------------------------------------------------------------------------
-// bypass_menu_to_playing — populates ActiveChains from initial_overclocks
+// bypass_menu_to_playing — populates breaker EffectChains from initial_overclocks
 // -------------------------------------------------------------------------
 
 /// When `initial_overclocks` is `Some` with one chain, `bypass_menu_to_playing`
-/// must populate `ActiveChains` with that chain.
-///
-/// This test FAILS until `bypass_menu_to_playing` reads `initial_overclocks`
-/// and writes them to `ActiveChains`.
+/// must populate breaker entity `EffectChains` with that chain.
 #[test]
 fn bypass_menu_to_playing_inserts_active_overclocks_when_some() {
-    use breaker::{behaviors::ActiveChains, chips::TriggerChain};
+    use breaker::effect::{Effect, EffectChains, EffectNode};
 
     let mut definition = make_scenario(100);
-    definition.initial_overclocks = Some(vec![TriggerChain::Shockwave {
+    definition.initial_overclocks = Some(vec![EffectNode::Do(Effect::Shockwave {
         base_range: 64.0,
         range_per_level: 0.0,
         stacks: 1,
-    }]);
+        speed: 400.0,
+    })]);
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(ScenarioConfig { definition })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveChains>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
+    // Spawn a breaker entity with EffectChains for the system to push to
+    let breaker = app
+        .world_mut()
+        .spawn((Breaker, EffectChains::default()))
+        .id();
+
     app.update();
 
-    let active = app.world().resource::<ActiveChains>();
+    let chains = app.world().get::<EffectChains>(breaker).unwrap();
     assert_eq!(
-        active.0.len(),
+        chains.0.len(),
         1,
-        "expected ActiveChains to contain 1 chain when initial_overclocks is Some, got {}",
-        active.0.len()
+        "expected breaker EffectChains to contain 1 chain when initial_overclocks is Some, got {}",
+        chains.0.len()
     );
     assert_eq!(
-        active.0[0],
-        TriggerChain::Shockwave {
+        chains.0[0].1,
+        EffectNode::Do(Effect::Shockwave {
             base_range: 64.0,
             range_per_level: 0.0,
-            stacks: 1
-        },
-        "expected ActiveChains[0] to be Shockwave"
+            stacks: 1,
+            speed: 400.0,
+        }),
+        "expected EffectChains[0] to be Do(Shockwave)"
     );
 }
 
 /// When `initial_overclocks` is `None`, `bypass_menu_to_playing` must leave
-/// `ActiveChains` at its default (empty vec).
+/// breaker entity `EffectChains` at its default (empty vec).
 #[test]
 fn bypass_menu_to_playing_leaves_active_overclocks_empty_when_none() {
-    use breaker::behaviors::ActiveChains;
+    use breaker::effect::EffectChains;
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(ScenarioConfig {
             definition: make_scenario(100),
         })
-        .insert_resource(breaker::shared::SelectedArchetype::default())
+        .insert_resource(breaker::shared::SelectedBreaker::default())
         .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
-        .init_resource::<ActiveChains>()
         .add_plugins(StatesPlugin)
         .init_state::<GameState>()
         .add_systems(Update, bypass_menu_to_playing);
 
+    // Spawn a breaker entity with EffectChains
+    let breaker = app
+        .world_mut()
+        .spawn((Breaker, EffectChains::default()))
+        .id();
+
     app.update();
 
-    let active = app.world().resource::<ActiveChains>();
+    let chains = app.world().get::<EffectChains>(breaker).unwrap();
     assert!(
-        active.0.is_empty(),
-        "expected ActiveChains to be empty when initial_overclocks is None, got {} entries",
-        active.0.len()
+        chains.0.is_empty(),
+        "expected breaker EffectChains to be empty when initial_overclocks is None, got {} entries",
+        chains.0.len()
     );
 }
 
@@ -1042,10 +1049,8 @@ fn invariant_checkers_do_not_fire_when_entered_playing_is_false() {
 
     // Bolt at y = 999.0 is well above top bound (350.0). Without the
     // entered_playing gate this would fire a BoltInBounds violation.
-    app.world_mut().spawn((
-        ScenarioTagBolt,
-        Transform::from_translation(Vec3::new(0.0, 999.0, 0.0)),
-    ));
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 999.0))));
 
     tick(&mut app);
 
@@ -1088,10 +1093,8 @@ fn invariant_checkers_fire_when_entered_playing_is_true() {
         .add_systems(FixedUpdate, check_bolt_in_bounds);
 
     // Bolt at y = 999.0 is above top bound (350.0) — should produce a violation.
-    app.world_mut().spawn((
-        ScenarioTagBolt,
-        Transform::from_translation(Vec3::new(0.0, 999.0, 0.0)),
-    ));
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 999.0))));
 
     tick(&mut app);
 
@@ -1132,10 +1135,8 @@ fn invariant_checkers_remain_gated_across_multiple_frames_while_not_playing() {
         .add_systems(FixedUpdate, check_bolt_in_bounds);
 
     // Bolt far above top bound — would fire if not gated
-    app.world_mut().spawn((
-        ScenarioTagBolt,
-        Transform::from_translation(Vec3::new(0.0, 999.0, 0.0)),
-    ));
+    app.world_mut()
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 999.0))));
 
     for _ in 0..5 {
         tick(&mut app);
@@ -1158,8 +1159,6 @@ fn invariant_checkers_remain_gated_across_multiple_frames_while_not_playing() {
 /// must set `BoltVelocity.value` to `Vec2::new(0.0, 2000.0)` on the tagged bolt.
 #[test]
 fn apply_debug_setup_sets_bolt_velocity_when_some() {
-    use breaker::bolt::components::BoltVelocity;
-
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -1186,8 +1185,8 @@ fn apply_debug_setup_sets_bolt_velocity_when_some() {
         .world_mut()
         .spawn((
             ScenarioTagBolt,
-            Transform::from_xyz(0.0, 0.0, 1.0),
-            BoltVelocity::new(0.0, 400.0),
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
 
@@ -1197,21 +1196,19 @@ fn apply_debug_setup_sets_bolt_velocity_when_some() {
     let vel = app
         .world()
         .entity(entity)
-        .get::<BoltVelocity>()
-        .expect("entity must still have BoltVelocity");
+        .get::<Velocity2D>()
+        .expect("entity must still have Velocity2D");
     assert_eq!(
-        vel.value,
+        vel.0,
         Vec2::new(0.0, 2000.0),
-        "expected BoltVelocity.value == (0.0, 2000.0), got {:?}",
-        vel.value
+        "expected Velocity2D.0 == (0.0, 2000.0), got {:?}",
+        vel.0
     );
 }
 
 /// When `debug_setup` has `bolt_velocity: None`, `BoltVelocity` must remain unchanged.
 #[test]
 fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
-    use breaker::bolt::components::BoltVelocity;
-
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -1238,8 +1235,8 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
         .world_mut()
         .spawn((
             ScenarioTagBolt,
-            Transform::from_xyz(0.0, 0.0, 1.0),
-            BoltVelocity::new(0.0, 400.0),
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
 
@@ -1249,13 +1246,13 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
     let vel = app
         .world()
         .entity(entity)
-        .get::<BoltVelocity>()
-        .expect("entity must still have BoltVelocity");
+        .get::<Velocity2D>()
+        .expect("entity must still have Velocity2D");
     assert_eq!(
-        vel.value,
+        vel.0,
         Vec2::new(0.0, 400.0),
-        "expected BoltVelocity unchanged at (0.0, 400.0), got {:?}",
-        vel.value
+        "expected Velocity2D unchanged at (0.0, 400.0), got {:?}",
+        vel.0
     );
 }
 
@@ -1267,8 +1264,6 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
 /// the overridden velocity, not just the first one.
 #[test]
 fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
-    use breaker::bolt::components::BoltVelocity;
-
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -1295,24 +1290,24 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         .world_mut()
         .spawn((
             ScenarioTagBolt,
-            Transform::from_xyz(0.0, 0.0, 1.0),
-            BoltVelocity::new(0.0, 400.0),
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
     let e2 = app
         .world_mut()
         .spawn((
             ScenarioTagBolt,
-            Transform::from_xyz(10.0, 10.0, 1.0),
-            BoltVelocity::new(300.0, 0.0),
+            Position2D(Vec2::new(10.0, 10.0)),
+            Velocity2D(Vec2::new(300.0, 0.0)),
         ))
         .id();
     let e3 = app
         .world_mut()
         .spawn((
             ScenarioTagBolt,
-            Transform::from_xyz(20.0, 20.0, 1.0),
-            BoltVelocity::new(-100.0, -100.0),
+            Position2D(Vec2::new(20.0, 20.0)),
+            Velocity2D(Vec2::new(-100.0, -100.0)),
         ))
         .id();
 
@@ -1324,12 +1319,12 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         let vel = app
             .world()
             .entity(entity)
-            .get::<BoltVelocity>()
+            .get::<Velocity2D>()
             .unwrap_or_else(|| panic!("{label} must still have BoltVelocity"));
         assert_eq!(
-            vel.value, expected,
+            vel.0, expected,
             "{label}: expected BoltVelocity.value == {expected:?}, got {:?}",
-            vel.value
+            vel.0
         );
     }
 }
@@ -1344,7 +1339,7 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
 /// `BoltMinSpeed`, or `BoltMaxSpeed` components.
 #[test]
 fn apply_debug_setup_spawns_extra_tagged_bolts() {
-    use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed, BoltVelocity};
+    use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed};
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
@@ -1370,7 +1365,7 @@ fn apply_debug_setup_spawns_extra_tagged_bolts() {
 
     // Spawn one existing tagged bolt
     app.world_mut()
-        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)));
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))));
 
     // Single update: apply_debug_setup runs as OnEnter in production (fires once).
     // Two updates would run the system twice, doubling the spawned count.
@@ -1400,12 +1395,12 @@ fn apply_debug_setup_spawns_extra_tagged_bolts() {
 
     let bolts_with_velocity = app
         .world_mut()
-        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltVelocity>)>()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<Velocity2D>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         bolts_with_velocity, 0,
-        "extra tagged bolts must NOT have BoltVelocity component, found {bolts_with_velocity}"
+        "extra tagged bolts must NOT have Velocity2D component, found {bolts_with_velocity}"
     );
 
     let bolts_with_min_speed = app
@@ -1460,7 +1455,7 @@ fn apply_debug_setup_spawns_zero_extra_bolts_when_some_zero() {
     app.add_systems(Update, apply_debug_setup);
 
     app.world_mut()
-        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)));
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))));
 
     app.update();
     app.update();
@@ -1925,8 +1920,7 @@ fn apply_debug_frame_mutations_spawn_extra_entities_at_matching_frame() {
 // -------------------------------------------------------------------------
 
 /// When `frame_mutations` has `MoveBolt(999.0, 999.0)` at frame 5 and
-/// the current frame is 5, the tagged bolt must be moved to (999.0, 999.0)
-/// with z preserved.
+/// the current frame is 5, the tagged bolt must be moved to (999.0, 999.0).
 #[test]
 fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
     let definition = ScenarioDefinition {
@@ -1956,21 +1950,21 @@ fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 1.0)))
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))))
         .id();
 
     app.update();
 
-    let transform = app
+    let position = app
         .world()
         .entity(entity)
-        .get::<Transform>()
-        .expect("entity must still have Transform");
+        .get::<Position2D>()
+        .expect("entity must still have Position2D");
     assert_eq!(
-        transform.translation,
-        Vec3::new(999.0, 999.0, 1.0),
-        "expected bolt at (999.0, 999.0, 1.0) with z preserved, got {:?}",
-        transform.translation
+        position.0,
+        Vec2::new(999.0, 999.0),
+        "expected bolt at (999.0, 999.0), got {:?}",
+        position.0
     );
 }
 
@@ -2075,7 +2069,7 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
         .id();
     let bolt_entity = app
         .world_mut()
-        .spawn((ScenarioTagBolt, Transform::from_xyz(0.0, 0.0, 3.0)))
+        .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 0.0))))
         .id();
 
     app.update();
@@ -2091,16 +2085,16 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
         "expected BreakerState::Braking from first mutation, got {state:?}"
     );
 
-    let transform = app
+    let position = app
         .world()
         .entity(bolt_entity)
-        .get::<Transform>()
-        .expect("bolt entity must still have Transform");
+        .get::<Position2D>()
+        .expect("bolt entity must still have Position2D");
     assert_eq!(
-        transform.translation,
-        Vec3::new(100.0, 200.0, 3.0),
-        "expected bolt at (100.0, 200.0, 3.0) from second mutation, got {:?}",
-        transform.translation
+        position.0,
+        Vec2::new(100.0, 200.0),
+        "expected bolt at (100.0, 200.0) from second mutation, got {:?}",
+        position.0
     );
 }
 
@@ -2256,5 +2250,68 @@ fn check_frame_limit_gated_before_playing_entered() {
         frame.0, 0,
         "expected ScenarioFrame == 0 (gated), got {}",
         frame.0
+    );
+}
+
+// -------------------------------------------------------------------------
+// Velocity2D migration — apply_debug_setup writes Velocity2D
+// -------------------------------------------------------------------------
+
+/// After migration, `apply_debug_setup` must write `Velocity2D` (not `BoltVelocity`)
+/// when `bolt_velocity` is `Some(...)`.
+///
+/// Given: tagged bolt with `Velocity2D(0.0, 400.0)`, `debug_setup` `bolt_velocity: Some((0.0, 2000.0))`
+/// When: `apply_debug_setup` runs
+/// Then: `Velocity2D.0` == `Vec2::new(0.0, 2000.0)`
+///
+/// This test will FAIL until `apply_debug_setup` is updated to write `Velocity2D`.
+#[test]
+fn apply_debug_setup_writes_velocity2d_when_bolt_velocity_some() {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
+    let definition = ScenarioDefinition {
+        breaker: "Aegis".to_owned(),
+        layout: "Corridor".to_owned(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 1000,
+        invariants: vec![],
+        expected_violations: None,
+        debug_setup: Some(DebugSetup {
+            bolt_velocity: Some((0.0, 2000.0)),
+            ..Default::default()
+        }),
+        invariant_params: InvariantParams::default(),
+        allow_early_end: true,
+        stress: None,
+        seed: None,
+        initial_overclocks: None,
+        frame_mutations: None,
+    };
+
+    let mut app = debug_setup_app(definition);
+    app.add_systems(Update, apply_debug_setup);
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    app.update();
+    app.update();
+
+    let vel = app
+        .world()
+        .entity(entity)
+        .get::<Velocity2D>()
+        .expect("entity must have Velocity2D");
+    assert_eq!(
+        vel.0,
+        Vec2::new(0.0, 2000.0),
+        "expected Velocity2D == (0.0, 2000.0), got {:?}",
+        vel.0
     );
 }

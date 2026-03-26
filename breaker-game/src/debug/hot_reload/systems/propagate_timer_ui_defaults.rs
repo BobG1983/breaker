@@ -16,8 +16,8 @@ pub(crate) fn propagate_timer_ui_defaults(
     mut commands: Commands,
 ) {
     for event in events.read() {
-        if event.is_modified(collection.timerui.id())
-            && let Some(defaults) = assets.get(collection.timerui.id())
+        if event.is_modified(collection.timer_ui.id())
+            && let Some(defaults) = assets.get(collection.timer_ui.id())
         {
             commands.insert_resource::<TimerUiConfig>(defaults.clone().into());
         }
@@ -37,22 +37,21 @@ mod tests {
         app
     }
 
-    fn make_collection(timerui: Handle<TimerUiDefaults>) -> DefaultsCollection {
+    fn make_collection(timer_ui: Handle<TimerUiDefaults>) -> DefaultsCollection {
         DefaultsCollection {
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: Handle::default(),
+            cell_defaults: Handle::default(),
             playfield: Handle::default(),
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui,
-            chipselect: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui,
+            chip_select: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         }
     }

@@ -1,0 +1,8 @@
+(
+    name: "Damage Boost",
+    max_taken: 5,
+    common: Some((prefix: "Minor", effects: [When(trigger: OnSelected, then: [Do(DamageBoost(0.1))])])),
+    uncommon: Some((prefix: "Potent", effects: [When(trigger: OnSelected, then: [Do(DamageBoost(0.2))])])),
+    rare: Some((prefix: "Savage", effects: [When(trigger: OnSelected, then: [Do(DamageBoost(0.35))])])),
+    legendary: None,
+)

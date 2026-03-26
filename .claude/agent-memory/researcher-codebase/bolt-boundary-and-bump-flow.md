@@ -6,15 +6,15 @@ type: reference
 
 ## Bolt Position
 
-- Bolt position: `Transform.translation` (standard Bevy Transform)
-- Authoritative physics position: `PhysicsTranslation { previous, current }` (for visual interpolation)
+- Bolt canonical position: `Position2D(Vec2)` (from rantzsoft_spatial2d; replaces old PhysicsTranslation as of 2026-03-24)
+- Visual interpolation: `InterpolateTransform2D` marker (opt-in) + `PreviousPosition` snapshot (rantzsoft_spatial2d)
 - Velocity: `BoltVelocity { value: Vec2 }` component
 - Radius: `BoltRadius(f32)` component, scaled by optional `EntityScale(f32)`
 
 ## Bolt-Lost Boundary Detection
 
-System: `bolt_lost` (PhysicsPlugin, FixedUpdate, run_if PlayingState::Active)
-Ordering: after `clamp_bolt_to_playfield`, in set `PhysicsSystems::BoltLost`
+System: `bolt_lost` (BoltPlugin, FixedUpdate, run_if PlayingState::Active)
+Ordering: after `clamp_bolt_to_playfield`, in set `BoltSystems::BoltLost`
 
 Boundary check:
 ```
@@ -35,8 +35,8 @@ Message: `BoltLost` (unit struct, no fields -- no bolt entity reference).
 Schedule: FixedUpdate, all run_if PlayingState::Active
 
 1. `prepare_bolt_velocity` (BoltPlugin, in set BoltSystems::PrepareVelocity) -- clamp speed
-2. `bolt_cell_collision` (PhysicsPlugin) -- after PrepareVelocity
-3. `bolt_breaker_collision` (PhysicsPlugin) -- after bolt_cell_collision, in set PhysicsSystems::BreakerCollision
+2. `bolt_cell_collision` (BoltPlugin) -- after PrepareVelocity
+3. `bolt_breaker_collision` (BoltPlugin) -- after bolt_cell_collision, in set BoltSystems::BreakerCollision
    Sends: `BoltHitBreaker { bolt: Entity }`
 4. `update_bump` (BreakerPlugin, FixedUpdate) -- reads InputActions, ticks timers
    May send: `BumpPerformed { grade: BumpGrade, bolt: Entity }` (retroactive path)

@@ -2,7 +2,7 @@
 name: researcher-codebase
 description: "Use this agent to trace end-to-end data flow through the ECS for a feature, system, or mechanic and produce a narrative explanation of how it works today. Not \"find files\" (Explore does that) but \"explain the behavior chain.\" Use before writing specs that modify existing behavior.\n\nExamples:\n\n- How does the bump system work from input to speed change?:\n  Assistant: \"Let me use the researcher-codebase agent to trace the bump system's data flow.\"\n\n- Trace what happens when a bolt hits a cell:\n  Assistant: \"Let me use the researcher-codebase agent to trace the bolt-cell collision chain.\"\n\n- Explain the upgrade selection flow end-to-end:\n  Assistant: \"Let me use the researcher-codebase agent to trace the upgrade selection flow.\"\n\n- How does the chip offering system work?:\n  Assistant: \"Let me use the researcher-codebase agent to trace the chip offering pipeline.\""
 tools: Read, Glob, Grep
-model: opus
+model: sonnet
 color: blue
 memory: project
 ---

@@ -1,8 +1,8 @@
 //! Hot-reload systems — propagate RON file changes to live game state.
 
-pub(crate) mod propagate_archetype_changes;
 pub(crate) mod propagate_bolt_config;
 pub(crate) mod propagate_bolt_defaults;
+pub(crate) mod propagate_breaker_changes;
 pub(crate) mod propagate_breaker_config;
 pub(crate) mod propagate_breaker_defaults;
 pub(crate) mod propagate_cell_defaults;
@@ -14,9 +14,9 @@ pub(crate) mod propagate_node_layout_changes;
 pub(crate) mod propagate_playfield_defaults;
 pub(crate) mod propagate_timer_ui_defaults;
 
-pub(crate) use propagate_archetype_changes::propagate_archetype_changes;
 pub(crate) use propagate_bolt_config::propagate_bolt_config;
 pub(crate) use propagate_bolt_defaults::propagate_bolt_defaults;
+pub(crate) use propagate_breaker_changes::propagate_breaker_changes;
 pub(crate) use propagate_breaker_config::propagate_breaker_config;
 pub(crate) use propagate_breaker_defaults::propagate_breaker_defaults;
 pub(crate) use propagate_cell_defaults::propagate_cell_defaults;

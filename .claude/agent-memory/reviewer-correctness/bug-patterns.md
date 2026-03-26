@@ -40,7 +40,7 @@ type: reference
 
 ## Phase 4b.2 Bolt Persistence Bugs (2026-03-19, feature/phase4b2-effect-consumption) — FIXED
 - **reset_bolt spawns bolt at stale breaker x**: FIXED — `reset_bolt` now has `.after(BreakerSystems::Reset)` in `bolt/plugin.rs`. Confirmed in code.
-- **bridge_bump_whiff can miss BumpWhiffed in same frame**: FIXED — `bridge_bump_whiff` now has `.after(BreakerSystems::GradeBump)` in `behaviors/plugin.rs`. Confirmed in code.
+- **bridge_bump_whiff can miss BumpWhiffed in same frame**: FIXED — `bridge_bump_whiff` now has `.after(BreakerSystems::GradeBump)` in `effect/plugin.rs` (was `behaviors/plugin.rs` before C7-R). Confirmed in code.
 
 ## Phase 4 Wave 2 OPEN Bugs — ALL FIXED (2026-03-19 second session)
 All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in current codebase:
@@ -74,23 +74,23 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## refactor/unify-behaviors Confirmed Bugs (2026-03-21) — RESOLVED BY UNIFICATION
 
-NOTE: The following bugs were opened when new TriggerChain variants were added as type-only in refactor/unify-behaviors Step 1. The full unification (bolt/behaviors/ merged into behaviors/) resolved the structural issues by wiring evaluate.rs (now TriggerKind in behaviors/evaluate.rs with EarlyBump, LateBump, BumpWhiff variants) and adding handlers in behaviors/effects/. Verify against current code before re-flagging.
+NOTE: The following bugs were opened when new TriggerChain variants were added as type-only in refactor/unify-behaviors Step 1. The full unification (bolt/behaviors/ merged into behaviors/, then renamed to effect/ in C7-R) resolved the structural issues. Verify against current code before re-flagging.
 
-- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` (was `OverclockTriggerKind`) in `behaviors/evaluate.rs` now includes EarlyBump, LateBump, BumpWhiff variants. The evaluate() function's or-pattern now covers all 10 trigger kinds. VERIFY: check behaviors/evaluate.rs — if TriggerKind has EarlyBump/LateBump/BumpWhiff variants and evaluate() handles them, this is fixed.
+- **OnEarlyBump, OnLateBump, OnBumpWhiff trigger variants**: `TriggerKind` in `effect/evaluate.rs` (was `behaviors/evaluate.rs` before C7-R) now includes EarlyBump, LateBump, BumpWhiff variants. VERIFY: check effect/evaluate.rs — if TriggerKind has these variants and evaluate() handles them, this is fixed.
 
-- **No bridge for BumpWhiffed**: `bridge_bump` (behaviors/bridges.rs) handles BumpGrade mapping to TriggerKind. VERIFY: check if bridge_bump_whiff system exists in behaviors/bridges.rs.
+- **No bridge for BumpWhiffed**: VERIFY: check if bridge_bump_whiff system exists in `effect/triggers/on_bump.rs` (was `behaviors/bridges.rs` before C7-R).
 
-- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: The unification confirmed `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` observers all exist in `behaviors/effects/` and observe `EffectFired`. All four leaf types are fully wired. BoltSpeedBoost renamed to SpeedBoost { target: SpeedBoostTarget, multiplier: f32 } in refactor/unify-behaviors.
+- **LoseLife, TimePenalty, SpawnBolt, SpeedBoost (was BoltSpeedBoost) leaves — RESOLVED**: Handlers `handle_life_lost`, `handle_time_penalty`, `handle_spawn_bolt`, and `handle_speed_boost` exist in `effect/effects/` (was `behaviors/effects/` before C7-R) and observe per-effect typed events (was EffectFired before C7-R). All four leaf types are fully wired. SpeedBoost target field removed in C7-R (Effect::SpeedBoost { multiplier: f32 } — no target).
 
 - **Recurring pattern**: Adding TriggerChain variants requires THREE coordinated updates: (1) enum + depth()/is_leaf(), (2) TriggerKind + evaluate(), (3) bridge system + effect handler. This three-part requirement is now well-documented in the codebase.
 
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 
-- **ActiveOverclocks (now ActiveChains) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` pushes to `ActiveChains.0` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but not ActiveChains. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveChains.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: type renamed from ActiveOverclocks to ActiveChains in refactor/unify-behaviors.
+- **ActiveOverclocks (→ActiveChains→ActiveEffects) never cleared between runs**: `chips/effects/overclock.rs:15` — `handle_overclock` (now `dispatch_chip_effects`) pushes to `ActiveEffects` on chip select. `reset_run_state` (OnExit MainMenu) clears ChipInventory but may not clear ActiveEffects. Overclock chains from run N persist and fire in run N+1. Fix: clear `ActiveEffects.0` in a system on `OnEnter(GameState::Playing)` or `OnExit(GameState::MainMenu)`. NOTE: renamed from ActiveOverclocks to ActiveChains (refactor/unify-behaviors) to ActiveEffects (C7-R 2026-03-25).
 
 ## SpeedBoost Generalization Bugs (2026-03-21, refactor/unify-behaviors or follow-on branch)
 
-- **init_archetype wipes overclock chains on every node entry**: `behaviors/init.rs:108` — `*active = ActiveChains(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `handle_overclock` pushes overclock chip chains to `ActiveChains` during ChipSelect state. State flow: Playing→TransitionOut→ChipSelect (handle_overclock adds chain)→TransitionIn→Playing (init_archetype resets). Overclock chains selected between nodes are silently discarded on the next node entry. Fix: `init_archetype` should EXTEND `active.0` with the archetype chains rather than replacing the entire resource. Or separate "archetype chains" from "overclock chains" so only archetype chains are reset. Confidence: HIGH.
+- **init_archetype wipes overclock chains on every node entry**: Was at `behaviors/init.rs:108` (now `breaker/systems/init_breaker.rs` after C7-R) — `*active = ActiveEffects(chains)` unconditionally replaces the resource on every `OnEnter(GameState::Playing)`. `dispatch_chip_effects` pushes chip chains to `ActiveEffects` during ChipSelect state. State flow: Playing→TransitionOut→ChipSelect (dispatch adds chain)→TransitionIn→Playing (init_breaker resets). Overclock chains selected between nodes may be silently discarded. Fix: `init_breaker` should EXTEND `active.0` with archetype chains rather than replacing. Or separate "archetype chains" from "chip chains" so only archetype chains are reset. Confidence: HIGH (verify against current init_breaker.rs).
 
 ## BumpForceBoost Dead Code (confirmed 2026-03-21)
 - `BumpForceBoost` component is stamped by `handle_bump_force_boost` (chips/effects/bump_force_boost.rs) but no system reads it to affect bump behavior. The chip effect observer correctly stacks the value on the breaker, but the value is never consumed. This is a pre-existing gap, not introduced by the SpeedBoost refactor. The PR description notes it as "intentional — left for future use."
@@ -114,6 +114,79 @@ NOTE: The following bugs were opened when new TriggerChain variants were added a
 - **detect_nail_biter fires on below-floor bolts**: `min_distance < config.nail_biter_pixels` has no lower bound guard. A bolt at y < bottom has `distance < 0.0`, which satisfies `< 30.0`. Triggers NailBiter incorrectly for bolts that are effectively lost. Contrast: `detect_close_save` correctly guards `distance >= 0.0`. Confidence: HIGH.
 
 - **track_node_cleared_stats: no HighlightTriggered emitted for juice VFX**: ClutchClear, NoDamageNode, FastClear, PerfectStreak, SpeedDemon, Untouchable, Comeback, PerfectNode are silently skipped when cap is full with no HighlightTriggered message. Architecture contract says "always emit HighlightTriggered for juice/VFX feedback even if the highlight cap is full." These 8 kinds never emit HighlightTriggered at all — not even when the cap is NOT full. This is inconsistent with the other 6 detection systems. Confidence: HIGH (design inconsistency; all others emit the message).
+
+## Position2D Migration Bugs (2026-03-23, feature/wave-3-offerings-transitions)
+
+- **detect_nail_biter queries Transform instead of Position2D**: `run/systems/detect_nail_biter.rs:21` — queries `&Transform` on bolt entities. After migration, bolt positions are in `Position2D`; `Transform` is only written by `propagate_position` (AfterFixedMainLoop). During FixedUpdate, bolt Transform lags behind actual Position2D. The y-value read is stale/interpolated, not the physics position. Same bug in `detect_close_save.rs:18`. Confidence: HIGH.
+
+- **spawn_walls writes Transform::from_xyz directly**: `wall/systems/spawn_walls.rs:34,52,70` — walls are spawned with `Transform::from_xyz(...)` explicitly set. Walls also have `Spatial2D` + `Position2D`, so `propagate_position` will overwrite Transform on the first tick. The manually-set Transform value is redundant but not incorrect in practice. However it violates the migration contract (only propagation should write Transform for spatial2d entities). Confidence: HIGH (redundant write).
+
+- **spawn_cells_from_layout writes Transform directly**: `run/node/systems/spawn_cells_from_layout.rs:158-162` — cells are spawned with both `Transform { translation, scale }` set manually AND `Position2D`+`Scale2D`. The propagation system will overwrite on first tick. Same redundant-write pattern as walls. No correctness impact since static entities don't need frame-accurate Transform.
+
+## Shockwave VFX Bugs (2026-03-23, feature/wave-3-offerings-transitions)
+
+- **animate_shockwave divides by zero when radius.max = 0.0**: `shockwave.rs:187` — `let progress = (radius.current / radius.max).clamp(0.0, 1.0)`. Rust's `f32::clamp` does NOT eliminate NaN; `0.0 / 0.0 = NaN`, `.clamp(0.0, 1.0)` returns NaN, `material.color.with_alpha(NaN)` corrupts the material. A shockwave with `base_range=0.0, stacks=1` passes the speed guard and spawns. Fix: add `if radius.max <= 0.0 { continue; }` guard before the division. Current RON data presumably has non-zero base_range so this is not triggered at runtime yet, but it is a structural gap.
+
+## spatial2d Wave 1 Bugs (2026-03-23, feature/wave-3-offerings-transitions) — OPEN
+
+- **compute_globals runs AFTER derive_transform**: `plugin.rs:62-63` — chain order is `propagate_position → propagate_rotation → propagate_scale → derive_transform → compute_globals`. `derive_transform` reads Global* before `compute_globals` has updated them from current `Position2D` (updated by `apply_velocity` in FixedUpdate). Result: derive_transform always renders the PREVIOUS tick's position. For the non-interpolation case, this is a one-tick visual lag. For interpolation, derive_transform interpolates between previous and stale globals (both pointing to the same prior state), producing no visible movement. Fix: reorder the chain to `compute_globals → derive_transform` (or at minimum swap those two entries). Confidence: HIGH.
+
+- **compute_globals single-level hierarchy only**: `compute_globals.rs:38-46` — first pass collects only root entities into `parent_cache`. Second pass looks up `child_of.parent()` in that cache. A grandchild's parent is a child (not a root), so it is absent from the cache. Grandchildren fall back to their local position — incorrect global for depth > 1. Fix: build cache incrementally by traversing in parent-first order (topological sort), or run multiple passes until cache stabilizes. Confidence: HIGH.
+
+## Wave 2/3 Physics Migration Bugs (2026-03-24, feature/wave-3-offerings-transitions) — OPEN
+
+- **Dual-velocity desync: launch_bolt, reset_bolt, bolt_breaker_collision ignore Velocity2D**: After migration, `Bolt` #[require]s both `BoltVelocity` and `Velocity2D`. The physics-authority source of truth for bolt speed/direction is in flux. `launch_bolt` (bolt/systems/launch_bolt.rs:24) sets `BoltVelocity.value` but never sets `Velocity2D`. `reset_bolt` (reset_bolt.rs:52,56) sets `BoltVelocity.value` but never sets `Velocity2D`. `bolt_breaker_collision` (bolt_breaker_collision.rs) reflects only off `BoltVelocity`. Result: `Velocity2D` stays zero/stale while `BoltVelocity` holds actual velocity. The scenario-runner invariant checker (bolt_speed_in_range.rs:33-38) prefers `Velocity2D` over `BoltVelocity` — it reads zero speed and skips ALL speed checks on every bolt every frame since migration. The BoltSpeedInRange invariant is silently neutered. Confidence: HIGH.
+
+- **Game-domain enforce_distance_constraints adjusts only BoltVelocity, not Velocity2D**: `bolt/systems/enforce_distance_constraints.rs:19` — the game-side solver takes `(&mut Position2D, &mut BoltVelocity)` and redistibutes `a.1.value`/`b.1.value`. The physics-library solver in `rantzsoft_physics2d` (also registered via `RantzPhysics2dPlugin`) takes `(&mut Position2D, &mut Velocity2D)`. Both run in the same app's FixedUpdate. After the game-side solver applies velocity redistribution to `BoltVelocity`, `Velocity2D` remains whatever value it had before. After the lib-side solver applies redistribution to `Velocity2D`, `BoltVelocity` remains whatever it was. The two velocities diverge on any frame where a chain constraint is taut. Confidence: HIGH.
+
+- **bolt_speed_in_range.rs invariant checks Velocity2D first: masks all speed violations**: `breaker-scenario-runner/src/invariants/checkers/bolt_speed_in_range.rs:33-38` — `if let Some(v2d) = velocity2d { v2d.speed() }` short-circuits before checking BoltVelocity. Since Velocity2D is never set by launch/reset/collision systems (all write BoltVelocity), every bolt entity has `Velocity2D(Vec2::ZERO)`, speed = 0.0, hits the `< f32::EPSILON` guard, and is skipped. No BoltSpeedInRange violation ever fires in scenario runs. Confidence: HIGH.
+
+## B12c Typed Events — Vacuous Max-Stacks / Ignore-Variant Tests (2026-03-24)
+
+- **Recurring pattern**: After migrating observers from a generic event to a typed event, legacy
+  tests that `trigger(OldEvent {...})` pass vacuously — the observer never fires, so assertions
+  about "should not be affected" or "should not exceed cap" are trivially true regardless of the
+  handler's correctness. Check all `#[cfg(test)]` blocks in migrated handler files for uses of
+  the old event type. Flag any test that still triggers the old event against the migrated handler.
+
+## B1-B3 TriggerChain Flatten Bugs (feature/spatial-physics-extraction, 2026-03-24)
+
+- **Attraction leaf has no ChipEffectApplied handler**: `TriggerChain::Attraction` is correctly classified as a leaf by `is_leaf()` (definition.rs:230), so `apply_chip_effect` routes it through `ChipEffectApplied` (bare-leaf arm, line 52). However no observer in `ChipsPlugin` (plugin.rs:23-31) or anywhere in the codebase pattern-matches `TriggerChain::Attraction`. The `magnetism.amp.ron` chip (`Magnetism`, Uncommon, `OnSelected([Attraction(8.0)])`) fires `ChipEffectApplied` on selection and the event is silently discarded. No attraction component is inserted. Confidence: HIGH.
+
+- **OnSelected with non-leaf inner: silently drops the trigger chain** (structural gap, no current RON file hits it): `apply_chip_effect` lines 43-49 iterate `inner` vec and fire `ChipEffectApplied` for each item without checking `is_leaf()`. If a RON file used `OnSelected([OnPerfectBump([...])])`, the inner trigger chain would reach all 9 handler observers, all would early-return (none match trigger variants), and the chain would be permanently lost — never pushed to `ActiveChains`. Depth test `on_selected_nested_depth_is_two` (definition.rs:684) suggests this configuration is considered valid. No current RON file triggers this path.
+
+## Memorable Moments Wave E Bugs (2026-03-24, feature/spatial-physics-extraction)
+
+- **spawn_highlight_text culling skips new messages**: `spawn_highlight_text.rs:84-101` — `to_cull = total_after_spawn - max_visible`, but culling only iterates pre-existing popup entities. If `messages.len() > max_visible` with 0 existing popups, `to_cull > 0` but `existing_sorted` is empty, so zero culls happen and all messages spawn unconstrained. Fix: cap the number of messages spawned to `max_visible` in the spawn loop, or factor new-message spawns into the cull candidates.
+
+- **track_node_cleared_stats PerfectStreak re-records every node clear**: `track_node_cleared_stats.rs:64-74` — `best_perfect_streak` is a cross-node field. After the streak threshold is exceeded on node N, every subsequent `NodeCleared` passes `best >= threshold` and pushes another `PerfectStreak` highlight. A 10-node run with one streak on node 1 records 9 duplicate `PerfectStreak` highlights. Fix: check only if this node contributed a NEW best streak (i.e., `consecutive_perfect_bumps > previous_best`) or record once per run using a flag analogous to `first_evolution_recorded`.
+
+## feature/spatial-physics-extraction Code-Reuse Review (2026-03-24)
+
+- **is_inside_aabb boundary semantics diverge from Aabb2D::contains_point**: `bolt_breaker_collision.rs:44` — local helper uses strict `> / <`; library uses inclusive `>= / <=`. Boundary-touching bolts skip overlap resolution. Medium confidence / low practical impact (boundary states are transient). Main agent should decide whether boundary inclusion is intended before fixing.
+- **apply_speed_scale duplicates prepare_bolt_velocity clamping**: `behaviors/effects/speed_boost.rs:69` — two-step floor+ceiling using normalize_or_zero. `prepare_bolt_velocity` uses `clamp_length` (atomic). Equivalent for valid data (base < max), but diverges if clamping contract changes. Code-reuse gap, not a confirmed runtime bug.
+- Confirmed correct: `handle_multi_bolt` formula, `detect_most_powerful_evolution` max_by(total_cmp), all 15 HighlightKind arms in spawn_run_end_screen, track_evolution_damage accumulation. Do not re-flag.
+
+## Wave 2a (feature/spatial-physics-extraction, 2026-03-25) — UPDATED AFTER CODE-REUSE REVIEW
+
+- **Double-counting cells_destroyed**: RESOLVED — `CellDestroyed` type is completely removed; only `RequestCellDestroyed` (internal) + `CellDestroyedAt` (downstream) exist. No dual-reader path. Do not re-flag.
+
+- **bridge_timer_threshold fires on zero-total timer**: FIXED — `bridges.rs` now explicitly handles `timer.total == 0.0` by assigning `ratio = 0.0`. The zero-total path treats all thresholds as satisfied (ratio < threshold for any positive threshold). This is the documented design: no timer = immediate trigger. Do not re-flag.
+
+- **ActiveDamageBoosts.0 grows past max_stacks cap**: CONFIRMED STILL OPEN — `damage_boost.rs` — `handle_damage_boost` calls `stack_f32` (capped) but always pushes `per_stack` to `ActiveDamageBoosts.0` even after cap is reached. `multiplier()` returns an ever-growing product past `max_stacks`. Until reversal also affected. Confidence: HIGH.
+
+- **bridge_bump skips breaker EffectChains when BumpPerformed.bolt is None**: NEW (2026-03-25) — `bridges.rs:72-74` — `let Some(bolt_entity) = performed.bolt else { continue; }` exits the entire loop iteration including the breaker entity `EffectChains` evaluation block at lines 130-138. A retroactive bump with `bolt: None` silently skips any `OnBump` / `OnPerfectBump` chip on the breaker. Regression spec hint written. Confidence: HIGH.
+
+- **chains_query missing With<Bolt> filter**: NEW (2026-03-25) — `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact` all use `Query<&mut EffectChains>` with no entity filter. Access is via `.get_mut(bolt_entity)` today (safe), but query matches cell entities with `EffectChains` too. Latent risk if code ever iterates the query. Medium priority.
+
+- **Until machinery not end-to-end wired** (observation): `tick_until_timers`, `check_until_triggers`, `apply_speed_boosts`, `reverse_children` all function correctly but are inert in production (no code inserts `UntilTimers`/`UntilTriggers` outside tests). This is Wave 2b scope. Do not re-flag.
+
+## Wave 2a Confirmed Correct Patterns (2026-03-25)
+- `bridge_cell_death` / `cleanup_destroyed_cells` ordering: cleanup runs `.after(EffectSystems::Bridge)`. Entity lives through bridge evaluation. Correct.
+- `bridge_timer_threshold` index-based removal in reverse order: correct.
+- `BoltLostWriters` `Result<MessageWriter<RequestBoltDestroyed>>` fallback: the `Err` arm (legacy despawn) runs only when `RequestBoltDestroyed` is not registered; in production it is always registered. Low-impact design choice, not a bug.
+- `apply_speed_boosts` empty-vec product = 1.0: idempotent at base speed. Correct.
+- `bridge_cell_death` + `bridge_bolt_death` near-duplicate structure: intentional; no shared helper. Do not re-flag as wrong — flag as code-reuse gap only.
 
 ## Wave 3 Chip Select / Transition Bugs (2026-03-22) — PARTIALLY RESOLVED
 

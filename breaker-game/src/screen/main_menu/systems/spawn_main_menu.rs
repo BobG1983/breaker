@@ -95,6 +95,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::{screen::systems::cleanup_entities, shared::GameState};
 
     fn test_config() -> MainMenuConfig {
         MainMenuConfig {
@@ -166,17 +167,17 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()))
             .init_asset::<Font>()
             .insert_resource(test_config())
-            .init_state::<crate::shared::GameState>()
-            .add_systems(OnEnter(crate::shared::GameState::MainMenu), spawn_main_menu)
+            .init_state::<GameState>()
+            .add_systems(OnEnter(GameState::MainMenu), spawn_main_menu)
             .add_systems(
-                OnExit(crate::shared::GameState::MainMenu),
-                crate::screen::systems::cleanup_entities::<MainMenuScreen>,
+                OnExit(GameState::MainMenu),
+                cleanup_entities::<MainMenuScreen>,
             );
 
         // Enter MainMenu state
         app.world_mut()
-            .resource_mut::<NextState<crate::shared::GameState>>()
-            .set(crate::shared::GameState::MainMenu);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::MainMenu);
         app.update();
 
         // Verify entities exist and selection resource was inserted
@@ -190,8 +191,8 @@ mod tests {
 
         // Exit MainMenu state
         app.world_mut()
-            .resource_mut::<NextState<crate::shared::GameState>>()
-            .set(crate::shared::GameState::Loading);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Loading);
         app.update();
 
         // Verify entities cleaned up; selection resource persists (reset on re-entry)

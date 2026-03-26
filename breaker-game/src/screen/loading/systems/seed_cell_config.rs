@@ -23,7 +23,7 @@ pub(crate) fn seed_cell_config(
         return Progress { done: 0, total: 1 };
     };
 
-    let Some(defaults) = assets.get(&collection.cells) else {
+    let Some(defaults) = assets.get(&collection.cell_defaults) else {
         return Progress { done: 0, total: 1 };
     };
 
@@ -63,17 +63,16 @@ mod tests {
             playfield: Handle::default(),
             bolt: Handle::default(),
             breaker: Handle::default(),
-            cells: handle,
+            cell_defaults: handle,
             input: Handle::default(),
-            mainmenu: Handle::default(),
-            timerui: Handle::default(),
-            cell_types: vec![],
-            layouts: vec![],
-            archetypes: vec![],
-            chipselect: Handle::default(),
-            amps: vec![],
-            augments: vec![],
-            overclocks: vec![],
+            main_menu: Handle::default(),
+            timer_ui: Handle::default(),
+            cells: vec![],
+            nodes: vec![],
+            breakers: vec![],
+            chip_select: Handle::default(),
+            chips: vec![],
+            chip_templates: vec![],
             difficulty: Handle::default(),
         });
 

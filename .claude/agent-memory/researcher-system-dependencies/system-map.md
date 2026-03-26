@@ -9,38 +9,39 @@ type: reference
 Last updated: 2026-03-21 — refactor/unify-behaviors (see above). PARTIAL UPDATE 2026-03-23 (Wave 4 audit): RunPlugin now additionally registers RunStats, HighlightTracker resources and 8 stat-tracking systems: track_cells_destroyed, track_bumps, track_bolts_lost, track_time_elapsed, track_node_cleared_stats (FixedUpdate PlayingState::Active); track_chips_collected (Update ChipSelect); reset_highlight_tracker, capture_run_seed (OnEnter(Playing)). spawn_run_end_screen enhanced to read RunStats. Full re-research recommended before Wave 5 planning.
 
 ## Plugin Registration Order (game.rs)
-InputPlugin → ScreenPlugin → InterpolatePlugin → PhysicsPlugin → WallPlugin → BreakerPlugin →
-BehaviorsPlugin → BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin →
+InputPlugin → ScreenPlugin → RantzSpatial2dPlugin → RantzPhysics2dPlugin → WallPlugin → BreakerPlugin →
+EffectPlugin (was BehaviorsPlugin — renamed C7-R 2026-03-25) → BoltPlugin → CellsPlugin → ChipsPlugin → FxPlugin → RunPlugin → AudioPlugin →
 UiPlugin → DebugPlugin
 
-Note: InterpolatePlugin is registered BEFORE PhysicsPlugin.
-Note: BehaviorsPlugin is a STANDALONE domain, registered between BreakerPlugin and BoltPlugin.
+NOTE (2026-03-24): InterpolatePlugin and PhysicsPlugin (game domains) DELETED. Replaced by
+RantzSpatial2dPlugin<GameDrawLayer> and RantzPhysics2dPlugin (from rantzsoft_spatial2d /
+rantzsoft_physics2d workspace crates). Collision systems moved to bolt domain.
+Note: EffectPlugin (was BehaviorsPlugin) is a STANDALONE domain, registered between BreakerPlugin and BoltPlugin.
 BreakerPlugin no longer contains any behavior sub-plugin.
 NOTE (2026-03-21): BoltBehaviorsPlugin has been REMOVED — it was a sub-plugin of BoltPlugin that
-contained the overclock bridge systems. Those systems are now registered directly in BehaviorsPlugin.
+contained the overclock bridge systems. Those systems are now registered directly in EffectPlugin.
+NOTE (2026-03-25, C7-R): BehaviorsPlugin renamed to EffectPlugin; BehaviorSystems renamed to EffectSystems; src/behaviors/ renamed to src/effect/.
 
 ---
 
-## InterpolatePlugin
+## RantzSpatial2dPlugin (replaces deleted InterpolatePlugin game domain, 2026-03-24)
 
-### `restore_authoritative` — FixedFirst [NO ordering constraints]
-- Writes (query): mut Transform, mut PhysicsTranslation (With<InterpolateTransform>)
+### `save_previous` — FixedFirst [NO ordering constraints]
+- Reads/Writes (query): Position2D → PreviousPosition2D, Rotation2D → PreviousRotation2D,
+  Scale2D → PreviousScale2D, Velocity2D → PreviousVelocity (With<InterpolateTransform2D>)
 - Runs before ALL FixedUpdate systems by schedule position
-- Effect: shifts PhysicsTranslation.previous = current; restores Transform.translation = current
 
-### `store_authoritative` — FixedPostUpdate [NO ordering constraints]
-- Reads (query): &Transform (With<InterpolateTransform>)
-- Writes (query): mut PhysicsTranslation (With<InterpolateTransform>)
-- Runs after ALL FixedUpdate systems complete
-- Effect: captures post-physics Transform.translation into PhysicsTranslation.current
+### `apply_velocity` — FixedUpdate [NO ordering constraints; game uses bolt's own motion systems]
+- Writes (query): mut Position2D (With<ApplyVelocity>, With<Velocity2D>)
+- Optional opt-in via ApplyVelocity marker — bolt domain uses its own systems instead
 
-### `interpolate_transform` — PostUpdate [NO ordering constraints]
-- Reads: Res<Time<Fixed>>
-- Reads (query): &PhysicsTranslation (With<InterpolateTransform>)
-- Writes (query): mut Transform (With<InterpolateTransform>)
-- Effect: lerps Transform.translation between previous and current using overstep_fraction
+### `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale`
+All chained in AfterFixedMainLoop (RunFixedMainLoopSystems::AfterFixedMainLoop):
+- `compute_globals`: reads Position2D/Rotation2D/Scale2D hierarchy → writes Global* components
+- `derive_transform`: reads Global* + Previous* (interpolation) → writes Transform
+- `propagate_*`: Bevy hierarchy propagation for each component type
 
-Entities with interpolation: Bolt (baseline + ExtraBolt) — both get InterpolateTransform + PhysicsTranslation at spawn
+Entities with interpolation: Bolt (baseline + ExtraBolt) — both get InterpolateTransform2D at spawn
 
 ---
 
@@ -153,7 +154,7 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 - Reads: Res<InputActions>, Res<Time<Fixed>>
 - Writes (query): mut BreakerState, mut BreakerVelocity, mut BreakerTilt, mut BreakerStateTimer
 
-### `grade_bump` — FixedUpdate, after(update_bump), after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
+### `grade_bump` — FixedUpdate, after(update_bump), after(BoltSystems::BreakerCollision), run_if(PlayingState::Active)
 - Receives: MessageReader<BoltHitBreaker>
 - Sends: MessageWriter<BumpPerformed>, MessageWriter<BumpWhiffed>
 - Writes (query): BumpGradingQuery (mut BumpState; read BumpPerfectWindow, BumpLateWindow, BumpPerfectCooldown, BumpWeakCooldown)
@@ -187,16 +188,17 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 
 ---
 
-## BehaviorsPlugin (src/behaviors/ — standalone domain, UNIFIED 2026-03-21)
+## EffectPlugin (src/effect/ — standalone domain, renamed from behaviors/ in C7-R 2026-03-25)
 
-Resources owned: ArchetypeRegistry, ActiveChains (was ActiveBehaviors+ActiveOverclocks)
-System set exported: BehaviorSystems::Bridge (FixedUpdate — bridge systems)
+Resources owned: BreakerRegistry, ActiveEffects (was ActiveChains → was ActiveBehaviors+ActiveOverclocks)
+Components owned: ArmedEffects (was ArmedTriggers), EffectChains
+System set exported: EffectSystems::Bridge (FixedUpdate — bridge systems)
 
-NOTE (2026-03-21 refactor/unify-behaviors): behaviors/consequences/ is GONE. behaviors/effects/ replaces it.
-ConsequenceFired event is GONE. EffectFired (was OverclockEffectFired in bolt/behaviors/) is the unified trigger.
-ActiveBehaviors (old archetype trigger/consequence logic) merged into ActiveChains.
-All bridge systems (overclock + archetype consequence) now live in behaviors/bridges.rs.
-All effect observers (shockwave + life_lost + time_penalty + spawn_bolt) in behaviors/effects/.
+NOTE (2026-03-21 refactor/unify-behaviors): behaviors/consequences/ DELETED. behaviors/effects/ replaced it.
+ConsequenceFired DELETED. EffectFired (was OverclockEffectFired) was unified trigger.
+NOTE (2026-03-25 C7-R): EffectFired DELETED. Per-effect typed events (ShockwaveFired, LoseLifeFired, etc.) replace it.
+Bridge systems now in effect/triggers/ (not behaviors/bridges.rs). Handlers in effect/effects/.
+BreakerDefinition/BreakerRegistry moved from effect/definition.rs to breaker/definition.rs + breaker/registry.rs.
 
 ### `apply_archetype_config_overrides` — OnEnter(GameState::Playing), .before(init_breaker_params)
 - Reads: Res<SelectedArchetype>, Res<ArchetypeRegistry>, Res<Assets<BreakerDefaults>>
@@ -218,12 +220,12 @@ All effect observers (shockwave + life_lost + time_penalty + spawn_bolt) in beha
 
 ### Bridge systems — FixedUpdate, .in_set(BehaviorSystems::Bridge), run_if(PlayingState::Active)
 All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) to fire EffectFired or arm bolts.
-- `bridge_bolt_lost` — .after(PhysicsSystems::BoltLost) — reads BoltLost
+- `bridge_bolt_lost` — .after(BoltSystems::BoltLost) — reads BoltLost
 - `bridge_bump` — .after(BreakerSystems::GradeBump) — reads BumpPerformed
 - `bridge_bump_whiff` — .after(BreakerSystems::GradeBump) — reads BumpWhiffed
-- `bridge_cell_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitCell
-- `bridge_breaker_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitBreaker
-- `bridge_wall_impact` — .after(PhysicsSystems::BreakerCollision) — reads BoltHitWall
+- `bridge_cell_impact` — .after(BoltSystems::BreakerCollision) — reads BoltHitCell
+- `bridge_breaker_impact` — .after(BoltSystems::BreakerCollision) — reads BoltHitBreaker
+- `bridge_wall_impact` — .after(BoltSystems::BreakerCollision) — reads BoltHitWall
 - `bridge_cell_destroyed` — .in_set(BehaviorSystems::Bridge) (unordered relative to physics chain) — reads CellDestroyed
 
 ### Effect observers (all observe EffectFired):
@@ -244,7 +246,7 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 - Reads: Res<BoltConfig>, Res<BreakerConfig>, Res<RunState>
 - Writes: ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
 - Reads (query): Query<&Transform, With<Breaker>>
-- Commands (spawn Bolt entity with CleanupOnNodeExit, InterpolateTransform, PhysicsTranslation)
+- Commands (spawn Bolt entity with CleanupOnNodeExit, InterpolateTransform2D, Position2D, Aabb2D)
 
 ### `init_bolt_params` — OnEnter(GameState::Playing), after(spawn_bolt)
 - Reads: Res<BoltConfig>
@@ -267,7 +269,7 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 - Receives: MessageReader<SpawnAdditionalBolt>
 - Reads: Res<BoltConfig>, ResMut<GameRng>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>
 - Reads (query): Query<&Transform, With<Breaker>> (read-only)
-- Commands (spawn Bolt+ExtraBolt entity with InterpolateTransform, PhysicsTranslation, CleanupOnNodeExit)
+- Commands (spawn Bolt+ExtraBolt entity with InterpolateTransform2D, Position2D, Aabb2D, CleanupOnNodeExit)
 - NOTE: Orders .after(BehaviorSystems::Bridge) to ensure bridge_bump observer has run and SpawnAdditionalBolt message is available in the same tick
 
 ### `spawn_bolt_lost_text` — FixedUpdate, run_if(PlayingState::Active) [NO ordering]
@@ -285,36 +287,41 @@ All bridge systems read Res<ActiveChains> and use evaluate(TriggerKind, chain) t
 
 ---
 
-## PhysicsPlugin
+## BoltPlugin — Collision Systems (moved from deleted PhysicsPlugin, 2026-03-24)
+
+NOTE: `PhysicsPlugin` game domain DELETED. `bolt_cell_collision`, `bolt_breaker_collision`,
+`clamp_bolt_to_playfield`, and `bolt_lost` all now live in `bolt/systems/` and are registered
+by BoltPlugin. Message types (`BoltHitBreaker`, `BoltHitCell`, `BoltHitWall`, `BoltLost`) moved
+from `physics/messages.rs` to `bolt/messages.rs` and registered by BoltPlugin.
+Sets `BoltSystems::BreakerCollision` and `BoltSystems::BoltLost` replace old
+`BoltSystems::BreakerCollision` and `BoltSystems::BoltLost`.
 
 ### `bolt_cell_collision` — FixedUpdate, after(BoltSystems::PrepareVelocity), run_if(PlayingState::Active)
 - Reads: Res<Time<Fixed>>
-- Writes (query): mut Transform, mut BoltVelocity, read BoltRadius (ActiveBoltFilter)
-- Reads (query): Entity+Transform+CellWidth+CellHeight (CellCollisionFilter)
-- Reads (query): Entity+Transform+WallSize (WallCollisionFilter)
+- Writes (query): mut Position2D, mut BoltVelocity, read BoltRadius (ActiveBoltFilter)
+- Reads (query): Entity+Position2D+CellWidth+CellHeight (CellCollisionFilter)
+- Reads (query): Entity+Position2D+WallSize (WallCollisionFilter)
 - Sends: MessageWriter<BoltHitCell>
-- NOTE: BoltHitCell carries `{ cell: Entity, bolt: Entity }` — both fields present (bolt field was removed then re-added in feature/phase4b2-effect-consumption)
+- NOTE: BoltHitCell carries `{ cell: Entity, bolt: Entity }` — both fields present
 
-### `bolt_breaker_collision` — FixedUpdate, after(bolt_cell_collision), in_set(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
+### `bolt_breaker_collision` — FixedUpdate, after(bolt_cell_collision), in_set(BoltSystems::BreakerCollision), run_if(PlayingState::Active)
 - Reads: Res<Time<Fixed>>
-- Writes (query): mut Transform, mut BoltVelocity, read BoltBaseSpeed, BoltRadius
-- Reads (query): Transform+BreakerTilt+BreakerWidth+BreakerHeight+MaxReflectionAngle+MinAngleFromHorizontal (BreakerCollisionFilter)
+- Writes (query): mut Position2D, mut BoltVelocity, read BoltBaseSpeed, BoltRadius
+- Reads (query): Position2D+BreakerTilt+BreakerWidth+BreakerHeight+MaxReflectionAngle+MinAngleFromHorizontal (BreakerCollisionFilter)
 - Sends: MessageWriter<BoltHitBreaker>
-- NOTE: New upward-bolt guard added: bolts moving upward (vel.y > 0) are now skipped for ALL face types (previously only top-hit path had this guard; side hits were unguarded). This means upward-moving bolts pass through the breaker entirely.
+- NOTE: Upward-bolt guard at top of bolt loop — bolts moving upward pass through breaker entirely.
 
 ### `clamp_bolt_to_playfield` — FixedUpdate, after(bolt_breaker_collision), run_if(PlayingState::Active)
 - Reads: Res<PlayfieldConfig>
-- Writes (query): mut Transform, mut BoltVelocity; read BoltRadius (ActiveBoltFilter)
-- NOTE: Safety clamp for bolts that escape through wall corner overlaps in CCD. Positioned AFTER bolt_breaker_collision and BEFORE bolt_lost in the chain: `bolt_cell_collision → bolt_breaker_collision → clamp_bolt_to_playfield → bolt_lost`.
-- No bottom clamp — intentionally open for bolt_lost to handle.
-- BoltLost set is now registered `.after(clamp_bolt_to_playfield)` (was previously `.after(bolt_breaker_collision)`).
+- Writes (query): mut Position2D, mut BoltVelocity; read BoltRadius (ActiveBoltFilter)
+- NOTE: Safety clamp for bolts escaping through CCD corner overlaps. No bottom clamp.
+- BoltSystems::BoltLost registered `.after(clamp_bolt_to_playfield)`.
 
-### `bolt_lost` — FixedUpdate, after(clamp_bolt_to_playfield), in_set(PhysicsSystems::BoltLost), run_if(PlayingState::Active)
+### `bolt_lost` — FixedUpdate, after(clamp_bolt_to_playfield), in_set(BoltSystems::BoltLost), run_if(PlayingState::Active)
 - Reads: Res<PlayfieldConfig>, ResMut<GameRng>
-- Writes (query): mut Transform, mut BoltVelocity + inserts PhysicsTranslation on respawn (baseline bolt)
-  OR despawns entity (ExtraBolt)
+- Writes (query): mut Position2D, mut BoltVelocity (baseline bolt) OR despawns entity (ExtraBolt)
 - Reads (query): Has<ExtraBolt> as part of bolt_query (ActiveBoltFilter)
-- Reads (query): Query<&Transform, (With<Breaker>, Without<Bolt>)>
+- Reads (query): Query<&Position2D, (With<Breaker>, Without<Bolt>)>
 - Sends: MessageWriter<BoltLost> (once per lost bolt, including ExtraBolt)
 - Commands (despawn ExtraBolt OR insert respawn components on baseline)
 
@@ -434,7 +441,7 @@ NOTE: BoltSpeedBoost here is the chips/components.rs Amp chip component (flat sp
 ### `input_actions_ui` — EguiPrimaryContextPass, run_if(resource_exists::<DebugOverlays>)
 - Reads: Res<DebugOverlays>, Res<InputActions>, EguiContexts
 
-### `track_bump_result` — FixedUpdate, after(PhysicsSystems::BreakerCollision), run_if(PlayingState::Active)
+### `track_bump_result` — FixedUpdate, after(BoltSystems::BreakerCollision), run_if(PlayingState::Active)
 - Receives: MessageReader<BumpPerformed>, MessageReader<BumpWhiffed>
 - Writes: ResMut<LastBumpResult>
 

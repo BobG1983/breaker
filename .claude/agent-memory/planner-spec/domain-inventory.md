@@ -4,25 +4,22 @@ description: Types, systems, and query aliases per domain — physics, cells, bo
 type: project
 ---
 
-## physics domain (`src/physics/`)
+## ~~physics domain~~ DELETED 2026-03-24 (spatial/physics extraction)
 
-### Query Aliases (`physics/queries.rs`)
-- `CollisionQueryBolt` — (Entity, &mut Transform, &mut BoltVelocity, &BoltBaseSpeed, &BoltRadius)
-- `CollisionQueryBreaker` — (&Transform, &BreakerTilt, &BreakerWidth, &BreakerHeight, &MaxReflectionAngle, &MinAngleFromHorizontal)
-- `CollisionQueryCell` — (Entity, &Transform, &CellWidth, &CellHeight, Option<&CellHealth>)
+Collision systems and messages moved to bolt domain. `physics/` game domain no longer exists.
 
-### Filters (`physics/filters.rs`)
-- `CollisionFilterBreaker` — (With<Breaker>, Without<Bolt>)
-- `CollisionFilterCell` — (With<Cell>, Without<Bolt>, Without<Wall>)
-- `CollisionFilterWall` — (With<Wall>, Without<Bolt>, Without<Cell>)
-
-### Systems
-- `bolt_cell_collision` — CCD sweep bolt vs cells+walls; sends BoltHitCell. Also imports BASE_BOLT_DAMAGE for pierce lookahead effective_damage calculation.
+### Moved to bolt domain (`src/bolt/`)
+- `bolt_cell_collision` — CCD sweep bolt vs cells+walls; sends BoltHitCell, DamageCell, BoltHitWall
 - `bolt_breaker_collision` — CCD sweep bolt vs breaker; sends BoltHitBreaker
+- Query aliases (`bolt/queries.rs`): CollisionQueryBolt uses Position2D (not Transform)
+- Filters (`bolt/filters.rs`): CollisionFilterBreaker, CollisionFilterCell, CollisionFilterWall
 
-### Messages (`physics/messages.rs`)
-- `BoltHitCell { cell: Entity, bolt: Entity }` — sent to cells domain
+### Messages (`bolt/messages.rs`) — moved from physics/messages.rs
+- `BoltHitCell { cell: Entity, bolt: Entity }` — sent to cells/behaviors domain
 - `BoltHitBreaker { bolt: Entity }` — sent to breaker domain
+- `BoltHitWall { bolt: Entity }` — sent to effect domain (wall: Entity field planned for C7 Wave 2a)
+- `BoltLost` — sent to bolt/effect domain
+- NOTE (C7 Wave 2a): `RequestBoltDestroyed { bolt: Entity }` and `BoltDestroyedAt { position: Vec2 }` planned for two-phase destruction
 
 ## cells domain (`src/cells/`)
 
@@ -47,6 +44,7 @@ type: project
 
 ### Systems
 - `handle_cell_hit` — reads DamageCell (NOT BoltHitCell), calls take_damage(msg.damage), sends CellDestroyed. DamageCell.damage already includes DamageBoost calculation from the sender (bolt_cell_collision or shockwave).
+- NOTE (C7 Wave 2a): `CellDestroyed` replaced by two-phase `RequestCellDestroyed { cell }` + `CellDestroyedAt { position, was_required_to_clear }`. handle_cell_hit will write RequestCellDestroyed instead of despawning; cleanup system despawns later.
 
 ### Cell type RON files (`assets/cells/`)
 - `standard.cell.ron` — `hp: 10.0`
@@ -111,34 +109,93 @@ NOTE: The overclock evaluation engine (`ActiveChains`, `EffectFired`, `TriggerKi
 - `BumpForceBoost(f32)` — flat multiplier increase for bump
 - `TiltControlBoost(f32)` — flat angle increase for tilt control
 
-## behaviors domain (`src/behaviors/`) — UNIFIED as of refactor/unify-behaviors
+## effect domain (`src/effect/`) — RENAMED from behaviors (B12 refactor complete)
 
-NOTE: This domain was restructured. The old `behaviors/consequences/` directory is GONE. The old `bolt/behaviors/` sub-domain is GONE. Both were merged here.
+NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, typed events, bridges, evaluate, active chains, armed triggers, and per-effect handlers now live here. EffectPlugin in `effect/plugin.rs`.
 
-### Resources (`behaviors/active.rs`)
-- `ActiveChains(pub Vec<TriggerChain>)` — runtime active overclock chains (was `ActiveOverclocks` in old `bolt/behaviors/`)
+### Resources
+- `ActiveEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/active.rs` — runtime active trigger chains
+- `BreakerRegistry` in `effect/registry.rs` — name->BreakerDefinition lookup
 
-### Components (`behaviors/armed.rs`)
-- `ArmedTriggers(pub Vec<TriggerChain>)` — per-bolt partially resolved chains (was in `bolt/behaviors/armed.rs`)
+### Components
+- `ArmedEffects(pub Vec<(Option<String>, TriggerChain)>)` in `effect/armed.rs` — per-bolt partially resolved chains
+- `EffectTarget` in `effect/definition.rs` — marker for entities that can have effects
+- NOTE (C7 Wave 2a): `EffectChains(Vec<EffectNode>)` planned in `effect/components.rs` — entity-local effect chains
+- NOTE (C7 Wave 2a): `UntilTimers`, `UntilTriggers` planned in `effect/effects/until.rs`
+- NOTE (C7 Wave 2b): `AttractionState { active_types: HashSet<AttractionType> }` planned in `effect/effects/attraction.rs`
+- NOTE (C7 Wave 2b): `SecondWindWall` marker planned in `effect/effects/second_wind.rs`
 
-### Events (`behaviors/events.rs`)
-- `EffectFired { pub effect: TriggerChain, pub bolt: Option<Entity> }` — fired when chain resolves to leaf (was `OverclockEffectFired` in old `bolt/behaviors/events.rs`)
+### Typed Events (`effect/typed_events.rs`)
+- Triggered: `ShockwaveFired`, `LoseLifeFired`, `TimePenaltyFired`, `SpawnBoltsFired`, `SpeedBoostFired`, `ChainBoltFired`, `MultiBoltFired`, `ShieldFired`, `ChainLightningFired`, `SpawnPhantomFired`, `PiercingBeamFired`, `GravityWellFired`, `SecondWindFired`, `RandomEffectFired`, `EntropyEngineFired`
+- DELETED (C7 Wave 1): `TimedSpeedBurstFired`, `OneShotDamageBoostFired`, `TimePressureBoostApplied` — replaced by Until/When(OnTimerThreshold) EffectNode trees
+- Passive: `PiercingApplied`, `DamageBoostApplied`, `SpeedBoostApplied`, `ChainHitApplied`, `SizeBoostApplied`, `AttractionApplied`, `BumpForceApplied`, `TiltControlApplied`, `RampingDamageApplied`
+- Dispatch: `fire_typed_event`, `fire_passive_event` (NOTE: `trigger_chain_to_effect`, `chain_to_passive_effect`, `chain_to_triggered_effect` DELETED in C7 Wave 1)
 
-### Pure functions (`behaviors/evaluate.rs`)
-- `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> EvalResult` — NoMatch/Arm/Fire (was `OverclockTriggerKind` in old `bolt/behaviors/evaluate.rs`)
-- `TriggerKind` enum (was `OverclockTriggerKind`) — PerfectBump, EarlyBump, LateBump, BumpWhiff, BumpSuccess, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost
+### Definition types (`effect/definition.rs`)
+- `Effect` enum — 23 variants (Shockwave through EntropyEngine; TimedSpeedBurst/TimePressureBoost/OneShotDamageBoost DELETED in C7 Wave 1, SpawnBolt replaced by SpawnBolts)
+- `EffectNode` enum — `When { trigger, then }` | `Do(Effect)` | `Until { until, then }` | `Once(Vec<EffectNode>)` (migrated in C7 Wave 1)
+- `Trigger` enum — 12 variants (OnPerfectBump through OnSelected, plus TimeExpires(f32), OnDeath, OnTimerThreshold(f32); does NOT derive Eq; KEEPS Copy)
+- `Target` — Bolt, Breaker, AllBolts
+- `ImpactTarget` — Cell, Breaker, Wall
+- `BreakerDefinition`, `BreakerStatOverrides`
 
-### Systems (`behaviors/bridges.rs`)
-- All bridge systems now live here (was `bolt/behaviors/bridges.rs`)
+### Pure functions (`effect/evaluate.rs`)
+- `evaluate(trigger: TriggerKind, chain: &TriggerChain) -> Vec<EvalResult>` — NoMatch/Arm/Fire
+- `evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<NodeEvalResult>`
+- `TriggerKind` enum — PerfectBump, BumpSuccess, EarlyBump, LateBump, BumpWhiff, CellImpact, BreakerImpact, WallImpact, CellDestroyed, BoltLost. Wave 2a adds: Death
+
+### Bridge systems (`effect/bridges.rs`)
 - `bridge_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_lost`, `bridge_bump_whiff`
+- Helper: `fire_leaf(leaf, bolt, source_chip, commands)` — converts TriggerChain leaf -> Effect -> typed event
 
-### Effects observers (`behaviors/effects/`)
-- `handle_shockwave` in `behaviors/effects/shockwave.rs` (was `bolt/behaviors/effects/shockwave.rs`)
-- `handle_life_lost` in `behaviors/effects/life_lost.rs`
-- `handle_time_penalty` in `behaviors/effects/time_penalty.rs`
-- `handle_spawn_bolt` in `behaviors/effects/spawn_bolt.rs`
-- `handle_speed_boost` in `behaviors/effects/speed_boost.rs` — handles TriggerChain::SpeedBoost { target, multiplier }; targets specific bolt from EffectFired.bolt; applies multiplier to bolt velocity
-All observe `EffectFired` (not `ConsequenceFired`).
+### Per-effect handlers (`effect/effects/`)
+- Triggered: shockwave, life_lost, time_penalty, spawn_bolt, speed_boost, chain_bolt, multi_bolt, shield, chain_lightning, spawn_phantom, piercing_beam, gravity_well, second_wind, random_effect, entropy_engine
+- DELETED (C7 Wave 1): timed_speed_burst, time_pressure_boost, one_shot_damage_boost — replaced by Until/When(OnTimerThreshold) EffectNode trees
+- Passive: piercing, damage_boost, bolt_speed_boost, chain_hit, bolt_size_boost, width_boost, breaker_speed_boost, bump_force_boost, tilt_control_boost, attraction, ramping_damage
+- Helpers in `effect/effects/mod.rs`: `stack_u32`, `stack_f32`
 
-**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21).
+### Test convenience constructors (`chips/definition.rs` — #[cfg(test)] impl TriggerChain)
+- `test_shockwave(range: f32)`, `test_multi_bolt(count: u32)`, `test_shield(duration: f32)`, `test_lose_life()`, `test_time_penalty(seconds: f32)`, `test_spawn_bolt()`, `test_speed_boost(multiplier: f32)`, `test_chain_bolt(tether_distance: f32)`
+
+## rantzsoft_spatial2d (`rantzsoft_spatial2d/src/`)
+
+### Components (`components.rs`)
+- `Position2D(Vec2)` — Deref/DerefMut, distance(), distance_squared(), arithmetic
+- `Rotation2D(Rot2)` — from_degrees, from_radians, as_radians, as_degrees, to_quat
+- `Scale2D { x: f32, y: f32 }` — new(), uniform(), to_vec3()
+- `PreviousPosition(Vec2)`, `PreviousRotation(Rot2)`, `PreviousScale { x, y }`
+- `InterpolateTransform2D` — marker
+- `VisualOffset(Vec3)` — pixel offset added to Transform
+- `Spatial2D` — #[require] marker for all spatial components
+
+### Propagation (`propagation.rs`)
+- `PositionPropagation` — enum { Relative, Absolute }
+- `RotationPropagation` — enum { Relative, Absolute }
+- `ScalePropagation` — enum { Relative, Absolute }
+
+### Systems
+- `save_previous` — FixedFirst — snapshots current to Previous* for InterpolateTransform2D entities
+- `propagate_position<D: DrawLayer>` — AfterFixedMainLoop — writes Transform.translation from Position2D + DrawLayer z + VisualOffset, interpolation, parent/child with counteract hack
+- `propagate_rotation` — AfterFixedMainLoop — writes Transform.rotation
+- `propagate_scale` — AfterFixedMainLoop — writes Transform.scale
+
+### Plugin
+- `RantzSpatial2dPlugin<D: DrawLayer>` — generic over DrawLayer
+
+## rantzsoft_physics2d (`rantzsoft_physics2d/src/`)
+
+### Components
+- `DistanceConstraint { entity_a, entity_b, max_distance }` — in `constraint.rs`
+
+### Resources
+- `CollisionQuadtree` — wraps quadtree spatial index
+
+### Systems
+- `maintain_quadtree` — FixedUpdate, PhysicsSystems::MaintainQuadtree — reads Position2D for AABB center
+
+### Plugin
+- `RantzPhysics2dPlugin` — registers CollisionQuadtree + maintain_quadtree
+- `PhysicsSystems` system set — currently only `MaintainQuadtree` variant
+
+**Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21). rantzsoft crates inventoried for Phase 11a (2026-03-23).
 **How to apply:** Use this to avoid re-reading files when writing future specs in these domains.

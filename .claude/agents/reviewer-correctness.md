@@ -17,7 +17,7 @@ Do NOT assume a Bevy version. When reviewing Bevy-specific patterns, read `Cargo
 
 ## First Step — Always
 
-Read `CLAUDE.md` and `docs/design/terminology.md`, then the specific files under review. Understand the surrounding context (what state is active, what messages are flowing) before evaluating correctness.
+Read `CLAUDE.md` and `docs/design/terminology/`, then the specific files under review. Understand the surrounding context (what state is active, what messages are flowing) before evaluating correctness.
 
 ## What You Review
 

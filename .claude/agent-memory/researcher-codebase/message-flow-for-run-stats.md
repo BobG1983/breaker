@@ -10,7 +10,7 @@ type: project
 |---------|-----------|---------------|----------|-----------|
 | CellDestroyed | cells/messages.rs | handle_cell_hit (cells) | FixedUpdate, PlayingState::Active | track_node_completion, bridge_cell_destroyed |
 | BumpPerformed | breaker/messages.rs | update_bump, grade_bump (breaker) | FixedUpdate, PlayingState::Active | spawn_bump_grade_text, bridge_bump, perfect_bump_dash_cancel |
-| BoltLost | physics/messages.rs | bolt_lost (physics) | FixedUpdate, PlayingState::Active | spawn_bolt_lost_text, bridge_bolt_lost |
+| BoltLost | bolt/messages.rs | bolt_lost (bolt) | FixedUpdate, PlayingState::Active | spawn_bolt_lost_text, bridge_bolt_lost |
 | ChipSelected | ui/messages.rs | handle_chip_input (screen/chip_select) | Update, during ChipSelect | apply_chip_effect (chips) |
 | NodeCleared | run/node/messages.rs | track_node_completion (run/node) | FixedUpdate, PlayingState::Active | handle_node_cleared (run) |
 | TimerExpired | run/node/messages.rs | tick_node_timer, apply_time_penalty (run/node) | FixedUpdate, PlayingState::Active | handle_timer_expired (run) |

@@ -14,9 +14,9 @@ pub(crate) fn update_run_setup_colors(
     children_query: Query<&Children>,
     mut text_colors: Query<&mut TextColor>,
 ) {
-    // Sort cards by archetype name to match selection index
+    // Sort cards by breaker name to match selection index
     let mut sorted_cards: Vec<(Entity, &BreakerCard)> = cards.iter().collect();
-    sorted_cards.sort_by(|a, b| a.1.archetype_name.cmp(&b.1.archetype_name));
+    sorted_cards.sort_by(|a, b| a.1.breaker_name.cmp(&b.1.breaker_name));
 
     for (i, (card_entity, _)) in sorted_cards.iter().enumerate() {
         let color = if i == selection.index {
@@ -56,7 +56,7 @@ mod tests {
         let card_entity = app
             .world_mut()
             .spawn(BreakerCard {
-                archetype_name: name.to_owned(),
+                breaker_name: name.to_owned(),
             })
             .id();
         app.world_mut()

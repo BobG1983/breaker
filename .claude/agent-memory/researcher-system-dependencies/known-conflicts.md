@@ -67,9 +67,9 @@ Not worth fixing unless the asymmetry causes confusion.
 
 ---
 
-## HOT-RELOAD NO CONFLICT — propagate_archetype_changes writes BreakerConfig AND ActiveBehaviors in same system
+## HOT-RELOAD NO CONFLICT — propagate_archetype_changes writes BreakerConfig AND ActiveEffects in same system
 
-`propagate_archetype_changes` holds both `ResMut<BreakerConfig>` and `ResMut<ActiveBehaviors>`.
+`propagate_archetype_changes` holds both `ResMut<BreakerConfig>` and `ResMut<ActiveEffects>` (was `ActiveBehaviors` before refactor/unify-behaviors; then `ActiveChains`; then `ActiveEffects` in C7-R).
 No other system in PropagateDefaults touches either of these resources (the breaker defaults system
 also takes `ResMut<BreakerConfig>`, but they are UNORDERED within PropagateDefaults).
 
@@ -96,7 +96,7 @@ mutable access forcing serialization between propagate_breaker_defaults and prop
 Each system guards itself with an asset event check and returns early if no matching Modified event
 was seen. They act on disjoint resources (BoltConfig, BreakerConfig, CellConfig, PlayfieldConfig,
 InputConfig, TimerUiConfig, MainMenuConfig, ChipSelectConfig, CellTypeRegistry, NodeLayoutRegistry,
-ArchetypeRegistry/ActiveBehaviors). No logical dependency between them.
+BreakerRegistry/ActiveEffects — was ArchetypeRegistry/ActiveBehaviors). No logical dependency between them.
 
 ---
 
@@ -209,27 +209,22 @@ The docstring on `NodeSystems::ApplyTimePenalty` explicitly calls this out for d
 
 ---
 
-## NO CONFLICT — interpolation pipeline schedule ordering
+## DELETED — InterpolatePlugin / old interpolation pipeline (2026-03-24 spatial/physics extraction)
 
-`restore_authoritative` (FixedFirst) runs before ALL FixedUpdate systems by schedule.
-`store_authoritative` (FixedPostUpdate) runs after ALL FixedUpdate systems by schedule.
-`interpolate_transform` (PostUpdate) runs after ALL Update systems by schedule.
+The old interpolation pipeline (`restore_authoritative` in FixedFirst, `store_authoritative` in
+FixedPostUpdate, `interpolate_transform` in PostUpdate) and its associated components
+(`PhysicsTranslation`, `InterpolateTransform`) no longer exist. The `interpolate/` game domain
+and `InterpolatePlugin` were deleted.
 
-These are distinct schedules with no overlap. No ordering constraint needed — the schedule
-hierarchy itself enforces the correct pipeline:
-```
-FixedFirst:        restore_authoritative     ← restores Transform = physics.current
-FixedUpdate:       [all physics/gameplay]    ← moves bolts via Transform
-FixedPostUpdate:   store_authoritative       ← captures Transform → physics.current
-                   clear_input_actions
-PostUpdate:        interpolate_transform     ← lerps Transform between previous/current
-```
+Replacement: `RantzSpatial2dPlugin` handles position propagation in `AfterFixedMainLoop` via
+`save_previous` (FixedFirst) + `compute_globals → derive_transform → ...` (AfterFixedMainLoop).
+See guard-docs/known-state.md Spatial/Physics Extraction Architecture section.
 
 ---
 
-## NO CONFLICT — interpolate_transform (PostUpdate) vs animate_bump_visual / animate_tilt_visual (Update)
+## NO CONFLICT — spatial2d AfterFixedMainLoop vs animate_bump_visual / animate_tilt_visual (Update)
 
-`interpolate_transform` writes `Transform.translation.x/y` on Bolt entities (With<InterpolateTransform>).
+`derive_transform` writes `Transform` on entities with `InterpolateTransform2D` in AfterFixedMainLoop.
 `animate_bump_visual` writes `Transform.translation.y` on Breaker entities (With<Breaker>).
 `animate_tilt_visual` writes `Transform.rotation` on Breaker entities (With<Breaker>).
 
@@ -237,20 +232,20 @@ Bolt and Breaker are different entities. No archetype overlap. No conflict.
 
 ---
 
-## NO CONFLICT — restore_authoritative (FixedFirst) vs physics mutation systems
+## NO CONFLICT — save_previous (FixedFirst) vs physics mutation systems
 
-`restore_authoritative` runs in FixedFirst and completes before any FixedUpdate system starts.
-All physics systems (bolt_cell_collision, bolt_breaker_collision, bolt_lost, hover_bolt, etc.)
-run in FixedUpdate. They see the restored authoritative position, not the interpolated one.
-This is exactly the correct invariant. No conflict.
+`save_previous` runs in FixedFirst and completes before any FixedUpdate system starts.
+All collision systems (bolt_cell_collision, bolt_breaker_collision, bolt_lost, hover_bolt, etc.)
+run in FixedUpdate. They write to Position2D (canonical); `save_previous` reads Position2D
+snapshots before any mutation.
 
 ---
 
-## NO CONFLICT — store_authoritative (FixedPostUpdate) vs clear_input_actions
+## NO CONFLICT — clear_input_actions (FixedPostUpdate)
 
-`store_authoritative` reads `&Transform` and writes `PhysicsTranslation`.
 `clear_input_actions` writes `ResMut<InputActions>`.
-Completely disjoint data access. Both run in FixedPostUpdate with no ordering needed.
+No spatial2d system runs in FixedPostUpdate — the propagation pipeline is AfterFixedMainLoop.
+Completely disjoint.
 
 ---
 
@@ -270,7 +265,7 @@ This is correct: the new bolt appears on the next tick, which is the intended be
 
 ## RESOLVED — spawn_additional_bolt now orders after BehaviorSystems::Bridge
 
-`spawn_additional_bolt` previously ordered `.after(PhysicsSystems::BreakerCollision)`.
+`spawn_additional_bolt` previously ordered `.after(BoltSystems::BreakerCollision)` (was `PhysicsSystems::BreakerCollision` before extraction).
 It now orders `.after(BehaviorSystems::Bridge)` — which runs after BreakerCollision.
 This guarantees the SpawnAdditionalBolt message written by the bridge observer is readable
 in the same tick.
@@ -289,7 +284,7 @@ FixedPreUpdate:
   inject_scenario_input  [ScenarioLifecycle — runs unconditionally, after clear_input_actions of prev tick]
 
 FixedFirst:
-  restore_authoritative  [InterpolatePlugin]
+  save_previous  [RantzSpatial2dPlugin]
 
 FixedUpdate:
   [ScenarioLifecycle (tick_scenario_frame → check_frame_limit).chain().before(BreakerSystems::Move)]
@@ -335,11 +330,10 @@ FixedUpdate:
     handle_run_lost (.after(handle_node_cleared), .after(handle_timer_expired))
 
 FixedPostUpdate:
-  store_authoritative  [InterpolatePlugin]
   clear_input_actions  [InputPlugin]
 
-PostUpdate:
-  interpolate_transform  [InterpolatePlugin]
+AfterFixedMainLoop:
+  compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale  [RantzSpatial2dPlugin, chained]
 ```
 
 ---
@@ -360,7 +354,7 @@ All 13 invariant systems (including enforce_frozen_positions + tag_game_entities
 ```rust
 .after(tag_game_entities)
 .after(update_breaker_state)
-.before(breaker::physics::PhysicsSystems::BoltLost)
+.before(bolt::sets::BoltSystems::BoltLost)
 ```
 This means: invariants check AFTER breaker state is updated AND before bolt_lost runs.
 The prior concern about bolt_lost respawning OOB bolts before detection is now addressed.
@@ -443,7 +437,7 @@ runs. This guarantees `StatusPanel` is queryable when `spawn_timer_hud` calls `s
 `enforce_frozen_positions` writes `&mut Transform` on entities with `ScenarioPhysicsFrozen`.
 Physics systems write `&mut Transform` on bolt entities. Bevy serializes these because of the
 mutable access conflict. The system is now grouped with invariant checkers which are ordered
-`.after(update_breaker_state).before(PhysicsSystems::BoltLost)` — so it runs BEFORE physics,
+`.after(update_breaker_state).before(BoltSystems::BoltLost)` — so it runs BEFORE bolt collision,
 not after. This is intentional: enforce_frozen_positions pins the position BEFORE physics mutates,
 ensuring physics cannot move the frozen entity away from its target in the same tick.
 

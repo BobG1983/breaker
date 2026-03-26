@@ -66,6 +66,24 @@ type: reference
 - Batching key for 2D meshes: `(Material2dBindGroupId, AssetId<Mesh>)` — entities sharing the same material handle AND same mesh handle batch into one draw call
 - Unique material per entity = unique pipeline bind group per entity = NO batching
 
+## Annulus Mesh (verified from 2d_shapes.rs example + bevy_mesh source, v0.18.1)
+- `Annulus` is in `bevy::prelude`; struct has `inner_circle: Circle` and `outer_circle: Circle`
+- Constructor: `Annulus::new(inner_radius: f32, outer_radius: f32) -> Annulus`
+- Default: inner_radius=0.5, outer_radius=1.0
+- Implements `Meshable` → returns `AnnulusMeshBuilder { annulus: Annulus, resolution: u32 }`
+- `AnnulusMeshBuilder` methods: `.resolution(u32)` setter, `.build() -> Mesh`
+- `From<AnnulusMeshBuilder> for Mesh` — so `meshes.add(builder)` works directly
+- Idiomatic shorthand: `meshes.add(Annulus::new(inner, outer))` — `Assets<Mesh>::add` accepts anything `Into<Mesh>`, and `Annulus` itself (via its `AnnulusMeshBuilder`) converts via the same blanket impl
+- **Confirmed pattern from example**: `meshes.add(Annulus::new(25.0, 50.0))` — no explicit `.mesh().build()` needed
+
+## AlphaMode2d (verified from bevy_sprite_render docs, v0.18.1)
+- Three variants:
+  - `AlphaMode2d::Opaque` — alpha values overridden to 1.0 (fully opaque)
+  - `AlphaMode2d::Mask(f32)` — pixels below threshold are transparent, above are opaque
+  - `AlphaMode2d::Blend` — standard alpha blending; fragment alpha controls opacity
+- `AlphaMode2d` is NOT in `bevy::prelude` — must import explicitly (from `bevy::sprite` or `bevy_sprite_render`)
+- For a fading shockwave: set `alpha_mode: AlphaMode2d::Blend` and vary the alpha of the `Color`
+
 ## Vertex Colors on Mesh (ATTRIBUTE_COLOR)
 - `Mesh::ATTRIBUTE_COLOR: MeshVertexAttribute` — `VertexFormat::Float32x4` (RGBA f32)
 - Insert: `mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, vec![[r, g, b, a], ...])`

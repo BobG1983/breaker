@@ -61,7 +61,7 @@ type: reference
 - `HighlightConfig` is `init_resource`'d in `RunPlugin.build()` — uses `Default` impl (matches `defaults.highlights.ron` values). Fields: clutch_clear_secs, fast_clear_fraction, perfect_streak_count, mass_destruction_count, mass_destruction_window_secs, combo_king_cells, pinball_wizard_bounces, speed_demon_secs, close_save_pixels, comeback_bolts_lost, nail_biter_pixels, untouchable_nodes, highlight_cap
 - `HighlightTriggered { kind: HighlightKind }` message in `run/messages.rs` — registered by `RunPlugin`; emitted by all detection systems; consumed by `spawn_highlight_text` for in-game popups
 - Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`, `detect_mass_destruction`, `detect_close_save`, `detect_combo_and_pinball`, `detect_nail_biter`
-- `detect_close_save` is `.after(PhysicsSystems::BreakerCollision)` (needs post-collision bolt position)
+- `detect_close_save` is `.after(BreakerSystems::GradeBump)` (updated in C7-R; previously was .after(BoltSystems::BreakerCollision))
 - `detect_nail_biter` is `.after(NodeSystems::TrackCompletion)` (fires on node clear)
 - `track_chips_collected` + `detect_first_evolution` run in `Update` during `GameState::ChipSelect`
 - `reset_highlight_tracker` + `capture_run_seed` run on `OnEnter(GameState::Playing)` — both unordered
@@ -168,9 +168,9 @@ type: reference
 - `ArchetypeDefinition` now has named root fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`: `Option<TriggerChain>`) + `chains: Vec<TriggerChain>` — no more `BehaviorBinding` vec
 
 ### New bridge systems in BehaviorSystems::Bridge
-- `bridge_cell_impact` — reads `BoltHitCell`, runs `.after(PhysicsSystems::BreakerCollision)`
-- `bridge_breaker_impact` — reads `BoltHitBreaker`, runs `.after(PhysicsSystems::BreakerCollision)`
-- `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(PhysicsSystems::BreakerCollision)`
+- `bridge_cell_impact` — reads `BoltHitCell`, runs `.after(BoltSystems::BreakerCollision)`
+- `bridge_breaker_impact` — reads `BoltHitBreaker`, runs `.after(BoltSystems::BreakerCollision)`
+- `bridge_wall_impact` — reads `BoltHitWall`, runs `.after(BoltSystems::BreakerCollision)`
 - `bridge_cell_destroyed` — reads `CellDestroyed`, unordered (no physics dependency)
 
 ### BumpPerformed carries bolt field only
@@ -194,6 +194,133 @@ type: reference
 - `TriggerKind` / `EvalResult` in `behaviors/evaluate.rs`: internal eval types, not glossary-level terms
 - `FrameMutation` / `MutationKind`: added to `docs/design/terminology.md` in 2026-03-21 session
 
+## Spatial/Physics Extraction Architecture (2026-03-24, do not re-flag)
+
+### New crates
+- `rantzsoft_spatial2d` — `Position2D`, `Rotation2D`, `Scale2D`, `Global*`, `Velocity2D`, `PreviousVelocity`, `InterpolateTransform2D`, `VisualOffset`, `ApplyVelocity`, `Spatial2D` marker, `DrawLayer` trait, `PositionPropagation`/`RotationPropagation`/`ScalePropagation` enums. Plugin: `RantzSpatial2dPlugin<D: DrawLayer>`.
+- `rantzsoft_physics2d` — `Aabb2D` (requires Spatial2D), `CollisionLayers`, `DistanceConstraint`, `CollisionQuadtree` resource, quadtree/CCD math, `RantzPhysics2dPlugin`, `rantzsoft_physics2d::plugin::PhysicsSystems` set (MaintainQuadtree, EnforceDistanceConstraints).
+- `rantzsoft_defaults` + `rantzsoft_defaults_derive` — existed before; no game-specific content, re-exports `GameConfig` derive macro.
+
+### What was dissolved
+- `physics/` game domain — deleted. Collision systems (`bolt_cell_collision`, `bolt_breaker_collision`, `bolt_lost`, `clamp_bolt_to_playfield`) moved to **bolt domain**.
+- `interpolate/` game domain — deleted. Replaced by `rantzsoft_spatial2d` AfterFixedMainLoop propagation pipeline.
+- `breaker-derive/` — replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`.
+- Old `PhysicsSystems::BreakerCollision` and `PhysicsSystems::BoltLost` — now `BoltSystems::BreakerCollision` and `BoltSystems::BoltLost` in `bolt/sets.rs`.
+
+### Scheduling changes
+- `FixedFirst`: `save_previous` (spatial2d)
+- `FixedUpdate`: `maintain_quadtree.in_set(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)`, `apply_velocity` — collision now in bolt domain ordering after MaintainQuadtree
+- `AfterFixedMainLoop` (RunFixedMainLoopSystems::AfterFixedMainLoop): `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale` — all chained in rantzsoft_spatial2d
+
+### Chain bolts
+- `TriggerChain::ChainBolt { tether_distance }` — now wired; `handle_chain_bolt` observer sends `SpawnChainBolt` message
+- `spawn_chain_bolt` system in bolt domain; `break_chain_on_bolt_lost` cleans up on anchor loss
+- `DistanceConstraint` component (physics2d) used for tethering; game-level `enforce_distance_constraints` in bolt domain
+
+### Spreading shockwave (not instant)
+- `ShockwaveRadius` component grows via `tick_shockwave` each fixed tick
+- `shockwave_collision` queries `CollisionQuadtree` each tick for newly-entered cells
+- `animate_shockwave` in Update drives visual VFX ring
+
+### Transform is derived, never written
+- `Position2D` is canonical — game systems write Position2D, Transform is derived by `derive_transform`
+- `DrawLayer` trait + `GameDrawLayer` enum in `shared/` sets Transform.translation.z
+- `Aabb2D` has `#[require(Spatial2D)]` — spawning Aabb2D auto-inserts all spatial components
+
+## C7-R Effect Domain Architecture (2026-03-25, do not re-flag)
+
+### behaviors/ → effect/ domain rename
+- `behaviors/` domain DELETED. Replaced by `effect/` top-level domain.
+- `BehaviorsPlugin` → `EffectPlugin` (in `effect/plugin.rs`)
+- `BehaviorSystems::Bridge` → `EffectSystems::Bridge` (in `effect/sets.rs`)
+- `ActiveChains(Vec<TriggerChain>)` → `ActiveEffects(Vec<(Option<String>, EffectNode)>)` (in `effect/active.rs`)
+- `ArmedTriggers` → `ArmedEffects` (in `effect/armed.rs`)
+- `EffectFired { effect: TriggerChain, bolt: Option<Entity> }` DELETED → replaced by typed per-effect events (ShockwaveFired, LoseLifeFired, etc.) dispatched via `fire_typed_event` in `typed_events.rs`
+- `behaviors/bridges.rs` → `effect/triggers/` (on_bolt_lost, on_bump, on_no_bump, on_impact, on_death, on_timer)
+- `behaviors/effects/` → `effect/effects/` (~20 files, each with `register(app)`)
+- `behaviors/evaluate.rs` → `effect/evaluate.rs` (`TriggerKind` deleted — `Trigger` enum used directly)
+- `behaviors/events.rs` → `effect/typed_events.rs` (complete redesign)
+- `behaviors/active.rs` → `effect/active.rs`
+- `behaviors/armed.rs` → `effect/armed.rs`
+- `helpers.rs` (new in `effect/`) — shared bridge helpers
+
+### BreakerDefinition / BreakerRegistry moved
+- `effect/definition.rs` no longer owns `BreakerDefinition`
+- `BreakerDefinition` → `breaker/definition.rs` (canonical; has `effects: Vec<RootEffect>` — NOT named fields)
+- `BreakerRegistry` → `breaker/registry.rs` (canonical; re-exported from `effect/`)
+- `init_breaker` → `breaker/systems/init_breaker.rs`
+- `apply_breaker_config_overrides` → `breaker/systems/init_breaker.rs`
+
+### New triggers added
+- `NoBump` — bolt passed breaker without bump attempt; owner: breaker
+- `PerfectBumped`, `Bumped`, `EarlyBumped`, `LateBumped` — bolt-perspective post-bump triggers; owner: specific bolt
+- `NodeTimerThreshold(f32)` — fires when node timer ratio drops below threshold
+
+### New bridge systems added
+- `bridge_no_bump` (in `effect/triggers/on_no_bump.rs`)
+- `bridge_cell_death`, `bridge_bolt_death`, `cleanup_destroyed_cells`, `cleanup_destroyed_bolts`, `apply_once_nodes` (in `effect/triggers/on_death.rs`)
+- `bridge_timer_threshold` (in `effect/triggers/on_timer.rs`)
+
+### EffectNode/Effect split (CORRECTED 2026-03-25)
+- `EffectNode` (the tree): 5 variants: `When`, `Do`, `Until`, `Once`, `On { target: Target, then: Vec<EffectNode> }`
+- `EffectNode::On` IS REAL — used at dispatch time (not trigger matching) to scope children against a target entity
+- `RootEffect` IS REAL — `enum RootEffect { On { target: Target, then: Vec<EffectNode> } }` in `effect/definition.rs`; converts to `EffectNode::On` via `From<RootEffect>`
+- `Effect` (the leaf enum): ~20+ variants covering triggered + passive effects (including Pulse, SpawnPhantom, GravityWell added in Wave 3)
+- `ChipDefinition.effects: Vec<EffectNode>` (not Vec<TriggerChain>, not Vec<RootEffect>)
+- `BreakerDefinition` has `effects: Vec<RootEffect>` — NO named fields (no `on_bolt_lost`, `on_perfect_bump` etc.). Breaker RON uses `effects: [On(target: ..., then: [When(trigger: ..., then: [Do(...)])])]`
+- Previous memory (lines 265-270) was wrong — corrected in docs review 2026-03-25
+
+### run/highlights/ sub-domain
+- `run/highlights/systems/` holds: `detect_close_save`, `detect_combo_king`, `detect_mass_destruction`, `detect_pinball_wizard`
+- Previously at `run/systems/detect_*.rs`; now moved to highlight sub-domain
+- `detect_combo_and_pinball.rs` split into `detect_combo_king.rs` + `detect_pinball_wizard.rs`
+- `detect_close_save` now orders `.after(BreakerSystems::GradeBump)` (not `.after(BoltSystems::BreakerCollision)`)
+- `spawn_highlight_text` IS registered in RunPlugin (Update, PlayingState::Active)
+- `HighlightConfig` IS init_resource'd in RunPlugin
+
+### RampingDamage max_bonus removed
+- `RampingDamage` now only has `bonus_per_hit: f32` — no `max_bonus` field
+
+### TriggerChain still exists in chips/definition.rs
+- `TriggerChain` enum in `chips/definition.rs` is a legacy/parallel chip-side tree (using `On*` wrappers)
+- `ChipDefinition.effects: Vec<EffectNode>` (not Vec<TriggerChain>) — chips have migrated to EffectNode
+- Do NOT re-flag `TriggerChain` in chips/definition.rs as drift — it may be used by the chip dispatch pipeline
+
+### Three Effect Stores (do not re-flag after 2026-03-25 fix)
+- `ActiveEffects` — global Resource, populated by `init_breaker` and `dispatch_chip_effects`. Bridge helpers sweep for global triggers.
+- `ArmedEffects` — component on bolt entities. Partially-resolved When trees awaiting deeper trigger.
+- `EffectChains` — component on individual entities. Entity-local chains (used for Once/SecondWind-style effects on cells/bolts).
+- NOTE: `effect/definition.rs` code comment on `EffectChains` is misleading — says "Replaces both `ActiveEffects` and `ArmedEffects`" but that's wrong; all three types coexist. This is a code comment error (cannot be fixed by docs guard). Documentation has been corrected to accurately describe the three-store model.
+- RON chip files use shorthand `OnSelected([...])` syntax (serde alias) rather than `When(trigger: OnSelected, then: [...])` — both are valid; doc examples show both forms intentionally.
+
+## C7 Wave 2b + Wave 3 Architecture (2026-03-25, do not re-flag)
+
+### BoltHitWall wall field
+- `BoltHitWall` has `{ bolt: Entity, wall: Entity }` — `wall` field added in Wave 2b
+- Fixed in messages.md 2026-03-25
+
+### Two-phase bolt destruction
+- `RequestBoltDestroyed { bolt: Entity }` — sent by `bolt_lost` for extra bolt despawn; consumed by `bridge_bolt_death` and `cleanup_destroyed_bolts`
+- `BoltDestroyedAt { position: Vec2 }` — sent by `bridge_bolt_death` after extracting entity data; no current consumers
+- Both added to messages.md 2026-03-25
+
+### Wave 3 new effects
+- `Pulse { base_range, range_per_level, stacks, speed }` — shockwave at every bolt position simultaneously; `PulseFired` event; wired in plugin
+- `SpawnPhantom { duration, max_active }` — temporary phantom bolt with infinite piercing; `SpawnPhantomFired` event; wired in plugin
+- `GravityWell { strength, duration, radius, max }` — gravity well entity; `GravityWellFired` event; wired in plugin
+- `ChainLightning` and `PiercingBeam` also wired (were previously "not yet wired")
+- `TimedSpeedBurst` does NOT exist in Effect enum — removed from docs
+- `TimePressureBoost` does NOT exist in Effect enum — removed from docs (needs human decision if planned)
+
+### SpeedBoost / SizeBoost signatures
+- `Effect::SpeedBoost { multiplier: f32 }` — NO target field; target is resolved from `On{}` context
+- `Effect::SizeBoost(f32)` — NO Target parameter; bolt handler and breaker handler both receive `SizeBoostApplied`
+- Fixed in triggers-and-effects.md and content.md 2026-03-25
+
+### detect_most_powerful_evolution
+- Registered in RunPlugin on `OnEnter(RunEnd)` — not on FixedUpdate
+- Emits `HighlightTriggered` — added to messages.md senders list
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table
@@ -203,3 +330,5 @@ type: reference
 - CellTypeDefinition.hp field: always `f32` (not `u32`) — check content.md and data.md on each wave
 - `standards.md` scenario runner section: use `cargo scenario` alias (not `dscenario`) for all standard usage; runner is headless by default (`--visual` to open window, no `--headless` flag)
 - New chip effect observers land in `chips/effects/` but content.md covers them via the flat component list — don't re-flag observer names as missing unless new component types are added
+- Effect domain uses `EffectSystems::Bridge` (not `BehaviorSystems::Bridge`) — check ordering.md and messages.md after any bridge refactor
+- `TriggerChain` in chips/definition.rs coexists with `EffectNode` in effect/definition.rs — these are separate types serving different subsystems; don't flag as redundancy

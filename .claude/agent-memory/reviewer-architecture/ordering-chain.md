@@ -4,22 +4,22 @@ description: Current system ordering chain for FixedUpdate and OnEnter(Playing)
 type: reference
 ---
 
-## Current Ordering Chain (verified 2026-03-20)
+## Current Ordering Chain (verified 2026-03-20; PhysicsSystems→BoltSystems updated 2026-03-24)
 
 ### Defined SystemSet Variants (code reality)
 | Set | Domain | Tags | Cross-Domain Consumers |
 |-----|--------|------|----------------------|
 | BreakerSystems::Move | breaker/sets.rs | move_breaker | bolt (hover_bolt, prepare_bolt_velocity) |
-| BreakerSystems::InitParams | breaker/sets.rs | init_breaker_params | behaviors (init_archetype), bolt (init_bolt_params not directly, but via ordering) |
+| BreakerSystems::InitParams | breaker/sets.rs | init_breaker_params | effect (init_archetype via init_breaker), bolt (init_bolt_params not directly, but via ordering) |
 | BreakerSystems::Reset | breaker/sets.rs | reset_breaker | bolt (reset_bolt) |
-| BreakerSystems::GradeBump | breaker/sets.rs | grade_bump | behaviors (bridge_bump, bridge_bump_whiff) |
+| BreakerSystems::GradeBump | breaker/sets.rs | grade_bump | effect (bridge_bump, bridge_bump_whiff) |
 | BoltSystems::InitParams | bolt/sets.rs | init_bolt_params | (intra-domain: reset_bolt) |
-| BoltSystems::PrepareVelocity | bolt/sets.rs | prepare_bolt_velocity | physics (bolt_cell_collision) |
+| BoltSystems::PrepareVelocity | bolt/sets.rs | prepare_bolt_velocity | bolt (bolt_cell_collision) |
 | BoltSystems::Reset | bolt/sets.rs | reset_bolt | (no cross-domain consumers) |
-| PhysicsSystems::BreakerCollision | physics/sets.rs | bolt_breaker_collision | breaker (grade_bump) |
-| PhysicsSystems::BoltLost | physics/sets.rs | bolt_lost | behaviors (bridge_bolt_lost) |
-| BehaviorSystems::Bridge | behaviors/sets.rs | bridge_bump, bridge_bolt_lost, bridge_bump_whiff, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_cell_destroyed | bolt (spawn_additional_bolt) |
-| UiSystems::SpawnTimerHud | ui/sets.rs | spawn_timer_hud | behaviors (spawn_lives_display) |
+| BoltSystems::BreakerCollision | bolt/sets.rs | bolt_breaker_collision | breaker (grade_bump) |
+| BoltSystems::BoltLost | bolt/sets.rs | bolt_lost | effect (bridge_bolt_lost) |
+| EffectSystems::Bridge | effect/sets.rs | bridge_bump, bridge_bolt_lost, bridge_bump_whiff, bridge_cell_impact, bridge_breaker_impact, bridge_wall_impact, bridge_cell_destroyed, bridge_no_bump, bridge_cell_death, bridge_bolt_death, bridge_timer_threshold | bolt (spawn_additional_bolt) |
+| UiSystems::SpawnTimerHud | ui/sets.rs | spawn_timer_hud | effect (spawn_lives_display) |
 | NodeSystems::Spawn | run/node/sets.rs | spawn_cells_from_layout | breaker (apply_entity_scale_to_breaker), bolt (apply_entity_scale_to_bolt) |
 | NodeSystems::TrackCompletion | run/node/sets.rs | track_node_completion | run (handle_node_cleared) |
 | NodeSystems::TickTimer | run/node/sets.rs | tick_node_timer | (intra-domain: apply_time_penalty) |
@@ -33,22 +33,23 @@ BreakerSystems::Move
     BoltSystems::PrepareVelocity
       <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
         <- bolt_breaker_collision .after(bolt_cell_collision)
-          PhysicsSystems::BreakerCollision
+          BoltSystems::BreakerCollision
             <- grade_bump .after(update_bump)
-                          .after(PhysicsSystems::BreakerCollision)
+                          .after(BoltSystems::BreakerCollision)
                           .in_set(BreakerSystems::GradeBump)
               <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
             <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
             <- bolt_lost .after(clamp_bolt_to_playfield)
-              PhysicsSystems::BoltLost
-                <- bridge_bolt_lost .after(PhysicsSystems::BoltLost)
-                   .in_set(BehaviorSystems::Bridge)
+              BoltSystems::BoltLost
+                <- bridge_bolt_lost .after(BoltSystems::BoltLost)
+                   .in_set(EffectSystems::Bridge)
             <- bridge_bump .after(BreakerSystems::GradeBump)
-               .in_set(BehaviorSystems::Bridge)
+               .in_set(EffectSystems::Bridge)
             <- bridge_bump_whiff .after(BreakerSystems::GradeBump)
-               .in_set(BehaviorSystems::Bridge)
-              BehaviorSystems::Bridge
-                <- spawn_additional_bolt .after(BehaviorSystems::Bridge)
+               .in_set(EffectSystems::Bridge)
+            <- bridge_no_bump .in_set(EffectSystems::Bridge)
+              EffectSystems::Bridge
+                <- spawn_additional_bolt .after(EffectSystems::Bridge)
 
 NodeSystems::TrackCompletion
   <- handle_node_cleared .after(NodeSystems::TrackCompletion)
@@ -70,9 +71,9 @@ spawn_breaker → init_breaker_params .in_set(BreakerSystems::InitParams)
 spawn_bolt → init_bolt_params .in_set(BoltSystems::InitParams)
   apply_entity_scale_to_bolt .after(BoltSystems::InitParams) .after(NodeSystems::Spawn)
   reset_bolt .after(BoltSystems::InitParams) .after(BreakerSystems::Reset) .in_set(BoltSystems::Reset)
-init_archetype .after(BreakerSystems::InitParams)
+init_breaker (effect domain, was init_archetype) .after(BreakerSystems::InitParams)
 spawn_side_panels → ApplyDeferred → spawn_timer_hud .in_set(UiSystems::SpawnTimerHud)
-spawn_lives_display .after(init_archetype) .after(UiSystems::SpawnTimerHud)
+spawn_lives_display .after(init_breaker) .after(UiSystems::SpawnTimerHud)
 set_active_layout → spawn_cells_from_layout .in_set(NodeSystems::Spawn) → init_clear_remaining → init_node_timer .in_set(NodeSystems::InitTimer)  [chained]
 ```
 
@@ -85,7 +86,7 @@ reset_run_state
 ### Breaker Intra-Domain
 ```
 update_bump → move_breaker → update_breaker_state
-grade_bump .after(update_bump) .after(PhysicsSystems::BreakerCollision)
+grade_bump .after(update_bump) .after(BoltSystems::BreakerCollision)
 trigger_bump_visual .after(update_bump)
 Update schedule: animate_bump_visual, animate_tilt_visual, width_boost_visual
 ```

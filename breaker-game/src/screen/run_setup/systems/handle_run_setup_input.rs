@@ -3,19 +3,19 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
-    behaviors::ArchetypeRegistry,
+    effect::BreakerRegistry,
     input::InputConfig,
     screen::run_setup::{
         components::BreakerCard,
         resources::{RunSetupSelection, SeedEntry},
     },
-    shared::{GameState, RunSeed, SelectedArchetype},
+    shared::{GameState, RunSeed, SelectedBreaker},
 };
 
-/// Bundled parameters for run confirmation (archetype, state transition, seed).
+/// Bundled parameters for run confirmation (breaker, state transition, seed).
 #[derive(SystemParam)]
 pub(crate) struct RunConfirmation<'w> {
-    archetype: ResMut<'w, SelectedArchetype>,
+    breaker: ResMut<'w, SelectedBreaker>,
     next_state: ResMut<'w, NextState<GameState>>,
     seed: ResMut<'w, RunSeed>,
 }
@@ -27,7 +27,7 @@ pub(crate) struct RunConfirmation<'w> {
 pub(crate) fn handle_run_setup_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
-    registry: Res<ArchetypeRegistry>,
+    registry: Res<BreakerRegistry>,
     mut selection: ResMut<RunSetupSelection>,
     mut confirm: RunConfirmation,
     seed_entry: Res<SeedEntry>,
@@ -58,7 +58,7 @@ pub(crate) fn handle_run_setup_input(
         sorted_names.sort();
 
         if let Some(name) = sorted_names.get(selection.index) {
-            confirm.archetype.0.clone_from(name);
+            confirm.breaker.0.clone_from(name);
         }
 
         // Parse seed entry: empty → None (random), non-empty → Some(parsed)
@@ -77,25 +77,21 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::behaviors::definition::{ArchetypeDefinition, BreakerStatOverrides};
+    use crate::effect::definition::{BreakerDefinition, BreakerStatOverrides};
 
-    fn make_archetype(name: &str) -> ArchetypeDefinition {
-        ArchetypeDefinition {
+    fn make_breaker(name: &str) -> BreakerDefinition {
+        BreakerDefinition {
             name: name.to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
-            on_bolt_lost: None,
-            on_perfect_bump: None,
-            on_early_bump: None,
-            on_late_bump: None,
-            chains: vec![],
+            effects: vec![],
         }
     }
 
-    fn test_registry(names: &[&str]) -> ArchetypeRegistry {
-        let mut registry = ArchetypeRegistry::default();
+    fn test_breaker_registry(names: &[&str]) -> BreakerRegistry {
+        let mut registry = BreakerRegistry::default();
         for name in names {
-            registry.insert((*name).to_owned(), make_archetype(name));
+            registry.insert((*name).to_owned(), make_breaker(name));
         }
         registry
     }
@@ -106,20 +102,20 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
             .init_state::<GameState>()
-            .insert_resource(SelectedArchetype::default())
+            .insert_resource(SelectedBreaker::default())
             .init_resource::<RunSeed>()
             .init_resource::<SeedEntry>();
 
-        let registry = test_registry(&["Aegis", "Chrono"]);
+        let registry = test_breaker_registry(&["Aegis", "Chrono"]);
         app.insert_resource(registry)
             .insert_resource(RunSetupSelection { index: 0 });
 
         // Spawn cards matching registry
         app.world_mut().spawn(BreakerCard {
-            archetype_name: "Aegis".to_owned(),
+            breaker_name: "Aegis".to_owned(),
         });
         app.world_mut().spawn(BreakerCard {
-            archetype_name: "Chrono".to_owned(),
+            breaker_name: "Chrono".to_owned(),
         });
 
         app.add_systems(Update, handle_run_setup_input);
@@ -164,17 +160,17 @@ mod tests {
     }
 
     #[test]
-    fn confirm_sets_selected_archetype() {
+    fn confirm_sets_selected_breaker() {
         let mut app = test_app();
         // Index 0 = "Aegis" (sorted alphabetically)
         press_key(&mut app, KeyCode::Enter);
 
-        let selected = app.world().resource::<SelectedArchetype>();
+        let selected = app.world().resource::<SelectedBreaker>();
         assert_eq!(selected.0, "Aegis");
     }
 
     #[test]
-    fn confirm_after_navigation_selects_correct_archetype() {
+    fn confirm_after_navigation_selects_correct_breaker() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::ArrowDown);
 
@@ -188,7 +184,7 @@ mod tests {
 
         press_key(&mut app, KeyCode::Enter);
 
-        let selected = app.world().resource::<SelectedArchetype>();
+        let selected = app.world().resource::<SelectedBreaker>();
         assert_eq!(selected.0, "Chrono");
     }
 

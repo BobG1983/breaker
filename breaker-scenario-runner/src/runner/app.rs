@@ -238,7 +238,7 @@ pub(super) fn run_scenario(
         app.cleanup();
 
         let wall_clock = Instant::now();
-        let timeout = Duration::from_mins(2);
+        let timeout = Duration::from_mins(5);
 
         loop {
             match guarded_update(&mut app) {

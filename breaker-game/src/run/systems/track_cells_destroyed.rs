@@ -2,11 +2,12 @@
 
 use bevy::prelude::*;
 
-use crate::{cells::messages::CellDestroyed, run::resources::RunStats};
+use crate::{cells::messages::CellDestroyedAt, run::resources::RunStats};
 
-/// Reads [`CellDestroyed`] messages and increments [`RunStats::cells_destroyed`].
+/// Reads [`CellDestroyedAt`] messages and increments
+/// [`RunStats::cells_destroyed`].
 pub(crate) fn track_cells_destroyed(
-    mut reader: MessageReader<CellDestroyed>,
+    mut reader: MessageReader<CellDestroyedAt>,
     mut stats: ResMut<RunStats>,
 ) {
     for _msg in reader.read() {
@@ -17,11 +18,12 @@ pub(crate) fn track_cells_destroyed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cells::messages::CellDestroyedAt;
 
     #[derive(Resource)]
-    struct TestMessages(Vec<CellDestroyed>);
+    struct TestMessages(Vec<CellDestroyedAt>);
 
-    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<CellDestroyed>) {
+    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<CellDestroyedAt>) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
         }
@@ -30,7 +32,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyed>()
+            .add_message::<CellDestroyedAt>()
             .init_resource::<RunStats>()
             .add_systems(
                 FixedUpdate,
@@ -47,17 +49,52 @@ mod tests {
         app.update();
     }
 
+    // =========================================================================
+    // C7 Wave 2a: CellDestroyed -> CellDestroyedAt migration (behavior 32b)
+    // =========================================================================
+
+    #[derive(Resource)]
+    struct TestCellDestroyedAtMsgs(Vec<crate::cells::messages::CellDestroyedAt>);
+
+    fn enqueue_cell_destroyed_at(
+        msg_res: Res<TestCellDestroyedAtMsgs>,
+        mut writer: MessageWriter<crate::cells::messages::CellDestroyedAt>,
+    ) {
+        for msg in &msg_res.0 {
+            writer.write(msg.clone());
+        }
+    }
+
+    fn test_app_cell_destroyed_at() -> App {
+        use crate::cells::messages::CellDestroyedAt;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellDestroyedAt>()
+            .init_resource::<RunStats>()
+            .add_systems(
+                FixedUpdate,
+                (enqueue_cell_destroyed_at, track_cells_destroyed).chain(),
+            );
+        app
+    }
+
     #[test]
-    fn increments_cells_destroyed_for_each_message() {
-        let mut app = test_app();
-        app.insert_resource(TestMessages(vec![
-            CellDestroyed {
+    fn track_cells_destroyed_reads_cell_destroyed_at() {
+        use crate::cells::messages::CellDestroyedAt;
+
+        let mut app = test_app_cell_destroyed_at();
+        app.insert_resource(TestCellDestroyedAtMsgs(vec![
+            CellDestroyedAt {
+                position: Vec2::new(10.0, 20.0),
                 was_required_to_clear: true,
             },
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(30.0, 40.0),
                 was_required_to_clear: false,
             },
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(50.0, 60.0),
                 was_required_to_clear: true,
             },
         ]));
@@ -66,7 +103,33 @@ mod tests {
         let stats = app.world().resource::<RunStats>();
         assert_eq!(
             stats.cells_destroyed, 3,
-            "all 3 CellDestroyed messages should increment cells_destroyed"
+            "all 3 CellDestroyedAt messages should increment cells_destroyed"
+        );
+    }
+
+    #[test]
+    fn increments_cells_destroyed_for_each_message() {
+        let mut app = test_app();
+        app.insert_resource(TestMessages(vec![
+            CellDestroyedAt {
+                position: Vec2::new(10.0, 20.0),
+                was_required_to_clear: true,
+            },
+            CellDestroyedAt {
+                position: Vec2::new(30.0, 40.0),
+                was_required_to_clear: false,
+            },
+            CellDestroyedAt {
+                position: Vec2::new(50.0, 60.0),
+                was_required_to_clear: true,
+            },
+        ]));
+        tick(&mut app);
+
+        let stats = app.world().resource::<RunStats>();
+        assert_eq!(
+            stats.cells_destroyed, 3,
+            "all 3 CellDestroyedAt messages should increment cells_destroyed"
         );
     }
 }

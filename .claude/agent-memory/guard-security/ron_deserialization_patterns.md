@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding. Updated 2026-03-23 (memorable moments audit) to add HighlightDefaults findings.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding. Updated 2026-03-23 (memorable moments audit) to add HighlightDefaults findings. Updated 2026-03-24 (spatial/physics extraction branch) to add Shockwave.speed/base_range findings and MoveBolt mutation finding.
 
 ## Summary
 
@@ -253,3 +253,33 @@ the input and validate it matches `v*` pattern before use.
 
 **How to apply:** On future audits, verify whether the workflow has been updated to validate the
 tag input format (e.g., `if [[ ! "$TAG" =~ ^v[0-9] ]]; then exit 1; fi`).
+
+## Spatial/Physics extraction: Shockwave.speed — guarded at runtime (confirmed 2026-03-24)
+
+`TriggerChain::Shockwave.speed: f32` is now deserialized from `.overclock.ron` files. The handler
+in `src/behaviors/effects/shockwave.rs:77` has an explicit `if *speed <= 0.0 { return; }` guard.
+Zero or negative speed returns early without spawning. Large positive speed (e.g., 1e10) causes the
+shockwave to expand across the whole world in one frame and despawn — no panic, cells hit normally.
+
+**Remaining gap:** `base_range: f32` and `range_per_level: f32` in `Shockwave` have no bounds check.
+Negative `base_range` produces a negative `max` — shockwave despawns on first tick (no-op). This is
+the same category as prior `TriggerChain` stacking fields.
+
+**Status as of 2026-03-24:** `speed` guard confirmed. `base_range`/`range_per_level` unvalidated —
+same risk tier as pre-existing TriggerChain fields (first-party data only, no panic).
+
+**How to apply:** On future audits, verify the `speed <= 0.0` guard is still present.
+
+## Spatial/Physics extraction: MutationKind::MoveBolt — new unvalidated f32 pair (added 2026-03-24)
+
+`MutationKind::MoveBolt(f32, f32)` was added to the scenario runner in this branch. It directly
+sets `bolt.position.x = x; bolt.position.y = y;` without bounds checking
+(`lifecycle/mod.rs:597-601`). A `MoveBolt(1e30, 1e30)` would place the bolt far outside the world
+bounds — `BoltInBounds` invariant would catch this at the next frame. Same risk category as prior
+scenario debug fields (`DebugSetup.bolt_velocity`). Developer tool only; no external input path.
+
+**Status as of 2026-03-24:** Unvalidated. First-party developer tool. Intentional by design (used
+in `physics_frozen_during_pause.scenario.ron` to move the bolt after physics is disabled).
+
+**How to apply:** On future audits, verify no external filesystem path for scenario loading has been
+added.

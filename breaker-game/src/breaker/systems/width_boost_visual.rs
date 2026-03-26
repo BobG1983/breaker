@@ -10,21 +10,24 @@ use crate::{
     chips::components::WidthBoost,
 };
 
-/// Sets the breaker's [`Transform`] scale to reflect its effective width.
+/// Sets the breaker's [`Scale2D`] to reflect its effective width.
 ///
 /// When `WidthBoost` is present, effective width = `BreakerWidth + WidthBoost`.
 /// Without it, effective width equals `BreakerWidth`.
 /// When `EntityScale` is present, both width and height are multiplied by it.
 pub(crate) fn width_boost_visual(mut query: Query<WidthBoostVisualQuery, With<Breaker>>) {
-    for (breaker_w, width_boost, breaker_h, entity_scale, mut transform) in &mut query {
-        let scale = entity_scale.map_or(1.0, |s| s.0);
-        let effective_width = (breaker_w.0 + width_boost.map_or(0.0, |b| b.0)) * scale;
-        transform.scale = Vec3::new(effective_width, breaker_h.0 * scale, 1.0);
+    for (breaker_w, width_boost, breaker_h, entity_scale, mut scale) in &mut query {
+        let entity_s = entity_scale.map_or(1.0, |s| s.0);
+        let effective_width = (breaker_w.0 + width_boost.map_or(0.0, |b| b.0)) * entity_s;
+        scale.x = effective_width;
+        scale.y = breaker_h.0 * entity_s;
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Scale2D;
+
     use super::*;
 
     fn test_app() -> App {
@@ -44,10 +47,10 @@ mod tests {
     }
 
     #[test]
-    fn width_boost_visual_sets_scale_to_effective_width() {
+    fn width_boost_visual_sets_scale2d_to_effective_width() {
         // Given: BreakerWidth(120.0), BreakerHeight(20.0), WidthBoost(40.0)
         // When: width_boost_visual runs
-        // Then: transform.scale = Vec3::new(160.0, 20.0, 1.0)
+        // Then: Scale2D { x: 160.0, y: 20.0 }
         let mut app = test_app();
 
         let entity = app
@@ -57,18 +60,18 @@ mod tests {
                 BreakerWidth(120.0),
                 BreakerHeight(20.0),
                 WidthBoost(40.0),
-                Transform::default(),
+                Scale2D { x: 120.0, y: 20.0 },
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
-        let expected = Vec3::new(160.0, 20.0, 1.0);
-        assert_eq!(
-            tf.scale, expected,
-            "scale should be Vec3::new(effective_width=160, height=20, 1), got {:?}",
-            tf.scale
+        let scale = app.world().get::<Scale2D>(entity).unwrap();
+        assert!(
+            (scale.x - 160.0).abs() < f32::EPSILON && (scale.y - 20.0).abs() < f32::EPSILON,
+            "Scale2D should be (160.0, 20.0), got ({}, {})",
+            scale.x,
+            scale.y,
         );
     }
 
@@ -76,8 +79,7 @@ mod tests {
     fn entity_scale_applies_to_breaker_dimensions_with_width_boost() {
         // Given: BreakerWidth(120.0), BreakerHeight(20.0), WidthBoost(40.0), EntityScale(0.7)
         // When: width_boost_visual runs
-        // Then: transform.scale = Vec3::new((120.0 + 40.0) * 0.7, 20.0 * 0.7, 1.0)
-        //                       = Vec3::new(112.0, 14.0, 1.0)
+        // Then: Scale2D { x: 112.0, y: 14.0 }
         let mut app = test_app();
 
         let entity = app
@@ -88,18 +90,18 @@ mod tests {
                 BreakerHeight(20.0),
                 WidthBoost(40.0),
                 crate::shared::EntityScale(0.7),
-                Transform::default(),
+                Scale2D { x: 120.0, y: 20.0 },
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
-        let expected = Vec3::new(112.0, 14.0, 1.0);
+        let scale = app.world().get::<Scale2D>(entity).unwrap();
         assert!(
-            (tf.scale - expected).length() < 1e-5,
-            "scale should be {expected:?} with EntityScale(0.7), got {:?}",
-            tf.scale,
+            (scale.x - 112.0).abs() < 1e-5 && (scale.y - 14.0).abs() < 1e-5,
+            "Scale2D should be (112.0, 14.0) with EntityScale(0.7), got ({}, {})",
+            scale.x,
+            scale.y,
         );
     }
 
@@ -107,7 +109,7 @@ mod tests {
     fn entity_scale_identity_matches_without_entity_scale() {
         // Given: BreakerWidth(120.0), BreakerHeight(20.0), WidthBoost(40.0), EntityScale(1.0)
         // When: width_boost_visual runs
-        // Then: transform.scale = Vec3::new(160.0, 20.0, 1.0) — same as without EntityScale
+        // Then: Scale2D { x: 160.0, y: 20.0 } — same as without EntityScale
         let mut app = test_app();
 
         let entity = app
@@ -118,18 +120,18 @@ mod tests {
                 BreakerHeight(20.0),
                 WidthBoost(40.0),
                 crate::shared::EntityScale(1.0),
-                Transform::default(),
+                Scale2D { x: 120.0, y: 20.0 },
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
-        let expected = Vec3::new(160.0, 20.0, 1.0);
-        assert_eq!(
-            tf.scale, expected,
-            "EntityScale(1.0) should produce same result as no EntityScale, got {:?}",
-            tf.scale,
+        let scale = app.world().get::<Scale2D>(entity).unwrap();
+        assert!(
+            (scale.x - 160.0).abs() < f32::EPSILON && (scale.y - 20.0).abs() < f32::EPSILON,
+            "EntityScale(1.0) should produce Scale2D (160.0, 20.0), got ({}, {})",
+            scale.x,
+            scale.y,
         );
     }
 
@@ -137,7 +139,7 @@ mod tests {
     fn entity_scale_applies_without_width_boost() {
         // Given: BreakerWidth(120.0), BreakerHeight(20.0), no WidthBoost, EntityScale(0.5)
         // When: width_boost_visual runs
-        // Then: transform.scale = Vec3::new(60.0, 10.0, 1.0)
+        // Then: Scale2D { x: 60.0, y: 10.0 }
         let mut app = test_app();
 
         let entity = app
@@ -147,26 +149,24 @@ mod tests {
                 BreakerWidth(120.0),
                 BreakerHeight(20.0),
                 crate::shared::EntityScale(0.5),
-                Transform::default(),
+                Scale2D { x: 120.0, y: 20.0 },
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
-        let expected = Vec3::new(60.0, 10.0, 1.0);
+        let scale = app.world().get::<Scale2D>(entity).unwrap();
         assert!(
-            (tf.scale - expected).length() < 1e-5,
-            "scale should be {expected:?} with EntityScale(0.5) and no WidthBoost, got {:?}",
-            tf.scale,
+            (scale.x - 60.0).abs() < 1e-5 && (scale.y - 10.0).abs() < 1e-5,
+            "Scale2D should be (60.0, 10.0) with EntityScale(0.5) and no WidthBoost, got ({}, {})",
+            scale.x,
+            scale.y,
         );
     }
 
     #[test]
-    fn no_width_boost_scale_equals_base_dimensions() {
-        // Given: BreakerWidth(120.0), BreakerHeight(20.0), no WidthBoost
-        // When: width_boost_visual runs
-        // Then: transform.scale = Vec3::new(120.0, 20.0, 1.0)
+    fn no_width_boost_scale2d_equals_base_dimensions() {
+        // Edge case: No WidthBoost -> Scale2D { x: 120.0, y: 20.0 }
         let mut app = test_app();
 
         let entity = app
@@ -176,18 +176,18 @@ mod tests {
                 BreakerWidth(120.0),
                 BreakerHeight(20.0),
                 // No WidthBoost
-                Transform::default(),
+                Scale2D { x: 1.0, y: 1.0 },
             ))
             .id();
 
         tick(&mut app);
 
-        let tf = app.world().get::<Transform>(entity).unwrap();
-        let expected = Vec3::new(120.0, 20.0, 1.0);
-        assert_eq!(
-            tf.scale, expected,
-            "without WidthBoost, scale should be Vec3::new(width=120, height=20, 1), got {:?}",
-            tf.scale
+        let scale = app.world().get::<Scale2D>(entity).unwrap();
+        assert!(
+            (scale.x - 120.0).abs() < f32::EPSILON && (scale.y - 20.0).abs() < f32::EPSILON,
+            "without WidthBoost, Scale2D should be (120.0, 20.0), got ({}, {})",
+            scale.x,
+            scale.y,
         );
     }
 }

@@ -57,11 +57,11 @@ jobs:
       - name: Check formatting
         run: cargo fmt --check
 
-      - name: Lint with Clippy (game + derive)
-        run: cargo clippy -p breaker -p breaker_derive --all-targets -- -D warnings
+      - name: Lint with Clippy (game + defaults)
+        run: cargo clippy -p breaker -p rantzsoft_defaults --all-targets -- -D warnings
 
-      - name: Run tests (game + derive)
-        run: cargo test -p breaker -p breaker_derive
+      - name: Run tests (game + defaults)
+        run: cargo test -p breaker -p rantzsoft_defaults
 
   test-game-cross-platform:
     name: Test Game (${{ matrix.os }})
@@ -85,11 +85,11 @@ jobs:
           shared-key: "ci-${{ matrix.os }}"
           save-if: ${{ github.ref == 'refs/heads/develop' }}
 
-      - name: Lint with Clippy (game + derive)
-        run: cargo clippy -p breaker -p breaker_derive --all-targets -- -D warnings
+      - name: Lint with Clippy (game + defaults)
+        run: cargo clippy -p breaker -p rantzsoft_defaults --all-targets -- -D warnings
 
-      - name: Run tests (game + derive)
-        run: cargo test -p breaker -p breaker_derive
+      - name: Run tests (game + defaults)
+        run: cargo test -p breaker -p rantzsoft_defaults
 
   test-scenarios:
     name: Test Scenarios

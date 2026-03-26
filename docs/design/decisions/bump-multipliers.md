@@ -22,4 +22,4 @@ Rewarding engagement at all grades means:
 
 ## Note
 
-Different archetypes may use different multiplier profiles (e.g., a risk/reward archetype with higher perfect multiplier but lower early/late). The baseline principle is: attempted bumps always boost.
+Different breakers may use different multiplier profiles (e.g., a risk/reward breaker with higher perfect multiplier but lower early/late). The baseline principle is: attempted bumps always boost.

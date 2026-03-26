@@ -4,17 +4,17 @@ use bevy::{ecs::entity::Entities, prelude::*};
 
 use crate::cells::{
     components::{LockAdjacents, Locked},
-    messages::CellDestroyed,
+    messages::CellDestroyedAt,
 };
 
 /// Removes [`Locked`] marker when all adjacent cells are destroyed.
 ///
-/// Listens for [`CellDestroyed`] messages and checks each locked cell's
+/// Listens for [`CellDestroyedAt`] messages and checks each locked cell's
 /// [`LockAdjacents`] list. If every entity in the adjacents list has been
 /// destroyed (no longer exists in the world), the [`Locked`] component is
 /// removed, allowing the cell to take damage.
 pub(crate) fn check_lock_release(
-    mut reader: MessageReader<CellDestroyed>,
+    mut reader: MessageReader<CellDestroyedAt>,
     query: Query<(Entity, &LockAdjacents), With<Locked>>,
     mut commands: Commands,
     all_entities: &Entities,
@@ -42,15 +42,15 @@ mod tests {
     use crate::cells::{components::*, messages::DamageCell};
 
     // ---------------------------------------------------------------
-    // Test helpers — message injection for CellDestroyed
+    // Test helpers — message injection for CellDestroyedAt
     // ---------------------------------------------------------------
 
     #[derive(Resource, Default)]
-    struct TestDestroyedMessages(Vec<CellDestroyed>);
+    struct TestDestroyedMessages(Vec<CellDestroyedAt>);
 
     fn enqueue_destroyed(
         msg_res: Res<TestDestroyedMessages>,
-        mut writer: MessageWriter<CellDestroyed>,
+        mut writer: MessageWriter<CellDestroyedAt>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -81,7 +81,7 @@ mod tests {
     fn lock_release_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyed>()
+            .add_message::<CellDestroyedAt>()
             .init_resource::<TestDestroyedMessages>()
             .add_systems(
                 FixedUpdate,
@@ -95,14 +95,14 @@ mod tests {
 
     /// App for testing `handle_cell_hit` with lock interaction (behaviors 1, 4).
     fn hit_app() -> App {
-        use crate::cells::systems::handle_cell_hit;
+        use crate::cells::{messages::RequestCellDestroyed, systems::handle_cell_hit};
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<DamageCell>()
-            .add_message::<CellDestroyed>()
+            .add_message::<RequestCellDestroyed>()
             .add_systems(
                 FixedUpdate,
                 (enqueue_damage_cell.before(handle_cell_hit), handle_cell_hit),
@@ -186,7 +186,8 @@ mod tests {
         app.insert_resource(TestDamageCellMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
+            source_chip: None,
         })));
         tick(&mut app);
 
@@ -231,12 +232,14 @@ mod tests {
         app.world_mut().despawn(adj_a);
         app.world_mut().despawn(adj_b);
 
-        // Send CellDestroyed messages for both adjacents.
+        // Send CellDestroyedAt messages for both adjacents.
         app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(10.0, 20.0),
                 was_required_to_clear: true,
             },
-            CellDestroyed {
+            CellDestroyedAt {
+                position: Vec2::new(30.0, 40.0),
                 was_required_to_clear: true,
             },
         ];
@@ -275,8 +278,9 @@ mod tests {
         // Despawn only adj_a.
         app.world_mut().despawn(adj_a);
 
-        // Send CellDestroyed only for adj_a.
-        app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![CellDestroyed {
+        // Send CellDestroyedAt only for adj_a.
+        app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![CellDestroyedAt {
+            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         }];
 
@@ -293,22 +297,124 @@ mod tests {
     // Behavior 4: Unlocked cell takes normal damage
     // ---------------------------------------------------------------
 
+    #[derive(Resource, Default)]
+    struct CapturedRequestCellDestroyed(Vec<crate::cells::messages::RequestCellDestroyed>);
+
+    fn capture_request_cell_destroyed(
+        mut reader: MessageReader<crate::cells::messages::RequestCellDestroyed>,
+        mut captured: ResMut<CapturedRequestCellDestroyed>,
+    ) {
+        for msg in reader.read() {
+            captured.0.push(msg.clone());
+        }
+    }
+
     #[test]
-    fn unlocked_cell_takes_damage_and_is_destroyed() {
+    fn unlocked_cell_takes_damage_and_sends_request_destroyed() {
+        use crate::cells::systems::handle_cell_hit;
+
         let mut app = hit_app();
         let cell = spawn_unlocked_cell(&mut app, 10.0);
 
+        app.init_resource::<CapturedRequestCellDestroyed>();
         app.insert_resource(TestDamageCellMessage(Some(DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: Entity::PLACEHOLDER,
+            source_bolt: None,
+            source_chip: None,
         })));
+        app.add_systems(
+            FixedUpdate,
+            capture_request_cell_destroyed.after(handle_cell_hit),
+        );
         tick(&mut app);
 
-        // 10.0 HP cell hit with 10.0 damage should be destroyed.
+        // Two-phase destruction: entity stays alive, RequestCellDestroyed sent
+        let captured = app.world().resource::<CapturedRequestCellDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "unlocked 10-HP cell should produce RequestCellDestroyed from 10.0 damage"
+        );
+        assert_eq!(
+            captured.0[0].cell, cell,
+            "RequestCellDestroyed should carry the destroyed cell entity"
+        );
+    }
+
+    // =========================================================================
+    // C7 Wave 2a: CellDestroyed -> CellDestroyedAt migration (behavior 32e)
+    // =========================================================================
+
+    #[derive(Resource, Default)]
+    struct TestCellDestroyedAtMessages(Vec<crate::cells::messages::CellDestroyedAt>);
+
+    fn enqueue_cell_destroyed_at(
+        msg_res: Res<TestCellDestroyedAtMessages>,
+        mut writer: MessageWriter<crate::cells::messages::CellDestroyedAt>,
+    ) {
+        for msg in &msg_res.0 {
+            writer.write(msg.clone());
+        }
+    }
+
+    fn lock_release_app_cell_destroyed_at() -> App {
+        use crate::cells::messages::CellDestroyedAt;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<CellDestroyedAt>()
+            .init_resource::<TestCellDestroyedAtMessages>()
+            .add_systems(
+                FixedUpdate,
+                (
+                    enqueue_cell_destroyed_at.before(check_lock_release),
+                    check_lock_release,
+                ),
+            );
+        app
+    }
+
+    #[test]
+    fn check_lock_release_reads_cell_destroyed_at() {
+        let mut app = lock_release_app_cell_destroyed_at();
+
+        let adj_a = app.world_mut().spawn_empty().id();
+        let adj_b = app.world_mut().spawn_empty().id();
+
+        let lock_cell = app
+            .world_mut()
+            .spawn((
+                Cell,
+                Locked,
+                LockAdjacents(vec![adj_a, adj_b]),
+                CellHealth::new(10.0),
+            ))
+            .id();
+
+        // Despawn adjacents (simulating cleanup_destroyed_cells)
+        app.world_mut().despawn(adj_a);
+        app.world_mut().despawn(adj_b);
+
+        // Send CellDestroyedAt messages
+        app.world_mut()
+            .resource_mut::<TestCellDestroyedAtMessages>()
+            .0 = vec![
+            crate::cells::messages::CellDestroyedAt {
+                position: Vec2::new(10.0, 20.0),
+                was_required_to_clear: true,
+            },
+            crate::cells::messages::CellDestroyedAt {
+                position: Vec2::new(30.0, 40.0),
+                was_required_to_clear: true,
+            },
+        ];
+
+        tick(&mut app);
+
         assert!(
-            app.world().get_entity(cell).is_err(),
-            "unlocked 10-HP cell should be destroyed by 10.0 damage via DamageCell"
+            app.world().get::<Locked>(lock_cell).is_none(),
+            "Locked should be removed when reading CellDestroyedAt and all adjacents are gone"
         );
     }
 

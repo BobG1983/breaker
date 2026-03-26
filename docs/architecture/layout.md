@@ -23,49 +23,60 @@ src/<domain>/
 - **`plugin.rs`** is the only file that wires things to the Bevy `App` — system registration, message registration, state registration all happen here.
 - **`components.rs`**, **`messages.rs`**, **`resources.rs`** — one file each per category. Omit the file if the domain has none of that category (e.g., no `messages.rs` if the domain sends no messages).
 - **`sets.rs`** — optional file for `#[derive(SystemSet)]` enums that the domain exports for cross-domain ordering. Omit if the domain has no ordering points that other domains depend on. `mod.rs` must NOT contain type definitions — SystemSet enums go here, not in `mod.rs`.
-- **`definition.rs`** — optional file for RON-deserialized content data types and observer dispatch events. Use it for: `#[derive(Asset, TypePath, Deserialize)]` content types loaded from RON (e.g., `ChipDefinition`, `CellTypeDefinition`); content enums like `AmpEffect`, `AugmentEffect`, `ChipEffect`; `#[derive(Event)]` types used with `commands.trigger()` for observer dispatch. Do NOT put in `definition.rs`: `#[derive(Component)]` types (go in `components.rs`), `#[derive(Resource)]` types (go in `resources.rs`), `#[derive(Message)]` types (go in `messages.rs`), config defaults, or registries.
+- **`definition.rs`** — optional file for RON-deserialized content data types and observer dispatch events. Use it for: `#[derive(Asset, TypePath, Deserialize)]` content types loaded from RON (e.g., `ChipDefinition`, `ChipTemplate`, `CellTypeDefinition`); content enums like `TriggerChain`, `Target`, `ImpactTarget`, `Rarity`; `#[derive(Event)]` types used with `commands.trigger()` for observer dispatch. Do NOT put in `definition.rs`: `#[derive(Component)]` types (go in `components.rs`), `#[derive(Resource)]` types (go in `resources.rs`), `#[derive(Message)]` types (go in `messages.rs`), config defaults, or registries.
 - **`queries.rs`**, **`filters.rs`** — optional files for query and filter type aliases to satisfy clippy's `type_complexity` lint. Omit if not needed. **Naming convention:** `<Purpose><Query|Filter>[<Entity>]`. Include the entity suffix when the alias queries/filters entities from a *different* domain than where the alias is defined (e.g., `CollisionQueryBolt` in the physics domain). Omit the suffix when querying entities from the *same* domain (e.g., `DashQuery` in the breaker domain) — the module path provides context.
 - **`systems/`** — one `.rs` file per system function, or per tightly-coupled group (e.g., a system + its helper). Files are named after the system. `systems/mod.rs` only re-exports.
 - Any canonical file (e.g., `components.rs`) may be promoted to a **directory** with `mod.rs` + subfiles when the single file grows too large. The `mod.rs` follows the same routing-only rule.
 - **Shared math modules** live in `shared/math.rs` when multiple domains need the same pure functions (e.g., `ray_vs_aabb` for CCD). These should contain only pure functions and data types — no systems, no Bevy resources.
 - No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`. If it doesn't fit the categories above, it probably belongs in an existing file or a different domain.
 
-## Per-Effect Layout (Behaviors Domain)
+## Per-Effect Layout (Effect Domain)
 
-The `behaviors/` domain evaluates unified `TriggerChain` trees and dispatches leaf effects using a **per-effect file** layout instead of the canonical category-based layout. Each effect gets its own file containing the relevant components, observer, and helper systems. This keeps each effect self-contained and scales cleanly as new effects are added.
+The `effect/` domain evaluates `EffectNode` trees and dispatches leaf effects using a **per-effect file** layout instead of the canonical category-based layout. Each effect gets its own file containing the relevant typed events, observers, and helper systems. This keeps each effect self-contained and scales cleanly as new effects are added.
 
 ```
-src/behaviors/
+src/effect/
 ├── mod.rs                 # Re-exports + pub mod declarations
-├── plugin.rs              # BehaviorsPlugin — wires init, bridges, observers
-├── sets.rs                # BehaviorSystems set (Bridge variant for cross-domain ordering)
-├── definition.rs          # Asset type (ArchetypeDefinition with root trigger fields + chains vec)
-├── registry.rs            # Registry resource (name → definition lookup)
-├── active.rs              # ActiveChains resource (Vec<TriggerChain> populated at run start and by overclocks)
-├── armed.rs               # ArmedTriggers component (partially-resolved chains attached to a bolt entity)
-├── evaluate.rs            # TriggerKind enum + evaluate() pure function for chain resolution
-├── events.rs              # EffectFired { effect: TriggerChain, bolt: Option<Entity> } observer event
-├── init.rs                # Init systems (config overrides, component stamping)
-├── bridges.rs             # Per-trigger bridge systems (message → EffectFired event or ArmedTriggers)
-└── effects/               # Per-effect handlers (NOT a sub-domain — no plugin.rs)
-    ├── mod.rs             # Routing only
-    ├── <effect_a>.rs      # Components + observer + HUD for effect A
-    └── <effect_b>.rs      # Observer handler for effect B
+├── plugin.rs              # EffectPlugin — calls each effect's register(), wires bridges and Until timers
+├── sets.rs                # EffectSystems set (Bridge variant for cross-domain ordering)
+├── definition.rs          # EffectNode (When/Do/Until/Once/On), RootEffect, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget
+├── evaluate.rs            # evaluate_node() pure function + NodeEvalResult enum
+├── active.rs              # ActiveEffects resource (Vec<(Option<String>, EffectNode)>)
+├── armed.rs               # ArmedEffects component (Vec<(Option<String>, EffectNode)> on bolt entities)
+├── typed_events.rs        # Re-exports all typed events; fire_typed_event / fire_passive_event dispatch
+├── helpers.rs             # Shared bridge helpers (evaluate_active_chains, evaluate_entity_chains, arm_bolt)
+├── registry.rs            # BreakerRegistry re-export (canonical: breaker/registry.rs)
+├── effect_nodes/          # EffectNode tree logic (NOT a sub-domain — no plugin.rs)
+│   └── until.rs           # UntilTimers, UntilTriggers, tick_until_timers, check_until_triggers
+├── effects/               # Per-effect handlers (NOT a sub-domain — no plugin.rs)
+│   ├── mod.rs             # Routing only + shared stack_u32/stack_f32 helpers
+│   ├── <effect_a>.rs      # Typed event + observer + systems + register() for effect A
+│   └── <effect_b>.rs      # Typed event + observer + register() for effect B
+└── triggers/              # Bridge systems (one file per trigger group — NOT a sub-domain)
+    ├── mod.rs             # Routing + re-exports
+    ├── on_bolt_lost.rs    # bridge_bolt_lost
+    ├── on_bump.rs         # bridge_bump, bridge_bump_whiff
+    ├── on_no_bump.rs      # bridge_no_bump
+    ├── on_impact.rs       # bridge_cell_impact, bridge_wall_impact, bridge_breaker_impact
+    ├── on_death.rs        # bridge_cell_death, bridge_bolt_death, cleanup systems, apply_once_nodes
+    └── on_timer.rs        # bridge_timer_threshold
 ```
 
 **Rules:**
-- One file per effect type. The file owns any `Component`s the effect needs and the observer that handles `EffectFired`.
-- `effects/` is a **directory grouping**, not a sub-domain — it has no `plugin.rs`. `BehaviorsPlugin` registers all observers and systems from effect files.
-- `definition.rs` holds the RON-deserialized `ArchetypeDefinition` asset type. `ArchetypeDefinition` has named root trigger fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`) plus a `chains: Vec<TriggerChain>` for additional multi-step chains. These are content data types, not Bevy components or resources.
-- `events.rs` holds the `EffectFired` observer event. Bridge systems fire it via `commands.trigger()` when a `TriggerChain` resolves to a leaf. Each effect handler self-selects via pattern matching on `effect` — adding a new leaf effect never touches `bridges.rs`.
-- `armed.rs` holds the `ArmedTriggers` component. When a bridge resolves a trigger node but the inner chain is not a leaf, it pushes the remaining chain onto the bolt's `ArmedTriggers` for evaluation on the next matching trigger event.
-- `evaluate.rs` holds the pure `evaluate(TriggerKind, &TriggerChain) -> EvalResult` function and the `TriggerKind` enum. Bridge systems call this to determine whether a chain fires, arms, or does not match.
-- `bridges.rs` holds per-trigger bridge systems. Each reads ONE message type, evaluates all active chains and any armed triggers, and fires `EffectFired` or updates `ArmedTriggers`. Adding a new trigger = new bridge system + `BehaviorSystems::Bridge` entry in `plugin.rs`.
-- `init.rs` holds systems that run at archetype init time (config overrides, component stamping). `init_archetype` populates `ActiveChains` from the archetype definition's root trigger fields and `chains` vec.
-- Adding a new leaf effect = new file in `effects/` + `mod.rs` entry + `TriggerChain` leaf variant in `chips/definition.rs` + observer registered in `plugin.rs`.
-- Adding a new archetype = new RON file only (if using existing trigger fields and effects).
-- This layout applies **only** to the `behaviors/` domain. Standard domains use the canonical category-based layout.
-- `behaviors/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.
+- One file per effect type. The file owns any typed events, `Component`s, and observers the effect needs, plus a `register(app: &mut App)` function.
+- `effects/` and `triggers/` and `effect_nodes/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectPlugin` registers all observers, bridges, and systems.
+- `definition.rs` holds the `EffectNode` enum (`When`, `Do`, `Until`, `Once`), the `Trigger` enum, the `Effect` enum, `EffectChains` component, `EffectEntity` marker, and `EffectTarget` runtime enum.
+- `evaluate.rs` holds the pure `evaluate_node(Trigger, &EffectNode) -> Vec<NodeEvalResult>` function. Bridge systems call this to determine whether a chain fires, arms, or does not match.
+- `active.rs` holds `ActiveEffects` — the global resource holding all breaker-definition and triggered-chip chains. Bridge helpers sweep it for global triggers.
+- `armed.rs` holds `ArmedEffects` — a component on bolt entities holding partially-resolved chains. Subsequent triggers re-evaluate these via bridge helpers.
+- `typed_events.rs` holds `fire_typed_event` (triggered effects) and `fire_passive_event` (passive/OnSelected effects) dispatch helpers. Each per-effect typed event struct lives in its effect file and is re-exported from `typed_events.rs`.
+- `helpers.rs` holds shared bridge helpers consumed by multiple trigger files.
+- `BreakerDefinition` lives in `breaker/definition.rs`. `BreakerRegistry` lives in `breaker/registry.rs`. Both are re-exported from `effect/` for historical reasons (`init_breaker` moved to `breaker/systems/init_breaker.rs`).
+- Adding a new leaf effect = new file in `effects/` + `mod.rs` entry + `Effect` variant in `definition.rs` + `register()` call in `plugin.rs`.
+- Adding a new trigger = new (or updated) file in `triggers/` + bridge system registered in `plugin.rs`.
+- Adding a new breaker = new RON file only (if using existing trigger fields and effects).
+- This layout applies **only** to the `effect/` domain. Standard domains use the canonical category-based layout.
+- `effect/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.
 
 ## Nested Sub-Domains
 

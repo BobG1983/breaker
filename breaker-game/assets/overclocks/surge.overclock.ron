@@ -1,7 +1,0 @@
-(
-    name: "Surge",
-    description: "Perfect bump sends a shockwave that damages adjacent cells",
-    rarity: Rare,
-    max_stacks: 1,
-    effects: [Overclock(OnPerfectBump(OnImpact(Cell, Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1))))],
-)

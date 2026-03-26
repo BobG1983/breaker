@@ -1,7 +1,0 @@
-(
-    name: "Tilt Control",
-    description: "Breaker tilt is more responsive",
-    rarity: Uncommon,
-    max_stacks: 3,
-    effects: [Augment(TiltControl(3.0))],
-)

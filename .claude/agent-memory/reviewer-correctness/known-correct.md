@@ -6,6 +6,13 @@ type: reference
 
 ## Known Correct Patterns (Do Not Flag)
 
+### Shockwave VFX (2026-03-23, feature/wave-3-offerings-transitions)
+- `Option<ResMut<Assets<ColorMaterial>>>` in `animate_shockwave` — valid Bevy 0.18 system parameter; returns None in test setups that omit the resource. Confirmed correct.
+- `Annulus::new(0.85, 1.0)` — parameter order is (inner_radius, outer_radius). Correct thin ring at unit scale; Scale2D expands it. Do not re-flag as wrong-order.
+- `materials.get_mut(mat_handle.id())` inside query iterator — safe because Assets<ColorMaterial> is a resource, disjoint from component queries. No borrow conflict.
+- `Color::with_alpha` on `Color::LinearRgba` — sets alpha directly on the LinearRgba inner value; HDR channels (values > 1.0) are preserved. Confirmed from bevy_color source.
+- `animate_shockwave` scheduled in `Update`, `tick_shockwave` in `FixedUpdate` — the scheduling asymmetry is intentional (visual-only in Update, simulation in FixedUpdate). No ordering bug.
+
 ### entity_scale feature (2026-03-20, feature/overclock-trigger-chain)
 - `apply_entity_scale_to_breaker` uses `Option<Res<ActiveNodeLayout>>` and early-returns if None — correct guard. Runs `.after(BreakerSystems::InitParams).after(NodeSystems::Spawn)`. `NodeSystems::Spawn` is in a `.chain()` with `set_active_layout` first, so `ActiveNodeLayout` exists before this system runs. No ordering hazard.
 - `apply_entity_scale_to_bolt` runs `.after(BoltSystems::InitParams).after(NodeSystems::Spawn)` — same correct ordering as breaker.
@@ -51,6 +58,51 @@ type: reference
 - `#![cfg_attr(test, allow(...))]` in lib.rs is the approved conditional form, not a bare `#[allow(...)]` — do not re-flag.
 - `check_valid_breaker_state` legal set includes `Settling → Dashing` — correct; `handle_idle_or_settling` allows dash from Settling state.
 - `RenderSetupPlugin` inserts `ClearColor(PlayfieldConfig::default().background_color())` at plugin-build time using compile-time defaults — intentional; RON default matches Rust default `[0.02, 0.01, 0.04]`.
+
+## Wave 2a Two-Phase Destruction Correct Patterns (feature/spatial-physics-extraction, 2026-03-25)
+- `cleanup_destroyed_cells` ordering `.after(EffectSystems::Bridge)` — cleanup runs after the entire Bridge set, including `bridge_cell_death` (which is inside Bridge). Order is correct: entity lives during bridge evaluation, is despawned after.
+- `tick_until_timers` / `check_until_triggers` / `reverse_children` — systems are correctly implemented. `UntilTimers`/`UntilTriggers` components are intentionally only populated by test code in Wave 2a; Until wiring is Wave 2b scope.
+- `apply_speed_boosts` empty-vec path: `product()` of empty iterator returns 1.0, so `base_speed * 1.0 = base_speed`. Only runs on entities with `ActiveSpeedBoosts` — not auto-inserted in production, so this runs on zero entities. Do not flag as "always overrides velocity."
+- `bridge_timer_threshold` index-based removal in reverse order — correct; indices collected ascending, removed descending to preserve validity.
+- `bridge_cell_death` `any_destroyed` flag: fires global `OnCellDestroyed` evaluation once per frame (not per cell). This matches the pre-existing `bridge_cell_destroyed` semantics. Intentional fire-once-if-any pattern. Do not re-flag.
+- `bridge_bump` `BumpSuccess` evaluation uses `targets = vec![EffectTarget::Entity(bolt_entity)]`: targets set to bolt entity. Correct — `BumpSuccess` and grade-specific triggers both use the bolt as the effect target.
+- `CellDestroyed` type is entirely removed in Wave 2a. `RequestCellDestroyed` (internal bridge trigger) + `CellDestroyedAt` (downstream consumers) are the two-phase replacement. No dual-read path exists.
+- `bridge_timer_threshold` zero-total: `ratio = 0.0` when `timer.total == 0.0`. All positive thresholds are satisfied immediately. Design intent: a node with no timer fires threshold chains immediately. Do not re-flag as zero-division.
+- `BoltLostWriters` `Result<MessageWriter<RequestBoltDestroyed>, SystemParamValidationError>` fallback: the `Err` arm runs only when the message is not registered. In production it is always registered. Legacy graceful-degradation pattern. Do not flag as bug.
+
+## B4-B6 Template/Inventory/Offering Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
+- `expand_template` sets `max_stacks = template.max_taken` on all rarity variants — all variants from the same template always share the same cap value. Do not flag as inconsistency.
+- `template_taken` counts total stacks across all rarity variants (one increment per `add_chip` call, one decrement per `remove_chip` call). This is intentional and correct.
+- `remove_chip` grabs `template_name` from the entry BEFORE decrementing stacks. Even when stacks hit 0 and the entry is removed, the local `template_name` binding is still valid for the subsequent template_taken decrement. Safe.
+- `generate_offerings` dedup loop produces fewer than `offers_per_node` results when fewer unique templates exist. This is intentional and tested by `generate_offerings_fewer_templates_than_slots`. Do not flag as count bug.
+- `is_template_maxed` is test-only (not called in production code). Production pool gate is `is_chip_available`. The two separate sources (`template_maxes` vs `def.max_stacks`) do not diverge in production because `expand_template` guarantees uniform `max_stacks` per template.
+- `seed_chip_registry` skips `Rarity::Evolution` chips from the `chips` collection — intentional; evolutions are handled by `seed_evolution_registry`.
+- `seed_chip_registry` `Local<bool>` guard: persists for app lifetime. Seeding only runs once — correct.
+- `add_chip` template cap check comes BEFORE individual cap check — correct ordering per spec (prevent template overflow before allowing individual increment).
+- `or_insert(def.max_stacks)` in template_maxes is a first-write-wins register for the template's max. Since all chips from the same template have identical max_stacks (guaranteed by expand_template), any write order produces the same value.
+
+## B1-B3 TriggerChain Flatten Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
+- `apply_chip_effect` match order `OnSelected` → `is_leaf()` → catchall: `OnSelected` is not a leaf so it is correctly intercepted by arm 1 before reaching the catchall that pushes to `ActiveChains`. Correct arm ordering.
+- Bare leaf fallback arm (line 51-57): `chain if chain.is_leaf()` fires `ChipEffectApplied` immediately. `OnPerfectBump` etc. are not leaves, so they correctly fall through to the `ActiveChains` push arm. No OnSelected variant can erroneously reach `ActiveChains`.
+- 9 handlers (`handle_piercing`, `handle_damage_boost`, `handle_bolt_speed_boost`, `handle_chain_hit`, `handle_bolt_size_boost`, `handle_width_boost`, `handle_breaker_speed_boost`, `handle_bump_force_boost`, `handle_tilt_control_boost`) all correctly early-return via `let TriggerChain::Variant = ... else { return; }` pattern. No cross-contamination.
+- `handle_bolt_speed_boost` matches `Target::Bolt` only; `handle_breaker_speed_boost` matches `Target::Breaker` only; `Target::AllBolts` routes to `handle_speed_boost` (`effect/effects/speed_boost.rs` — was `behaviors/effects/speed_boost.rs` before C7-R) which observes `SpeedBoostFired` typed event (was `EffectFired` before C7-R), not `ChipEffectApplied` — so `AllBolts` used in `OnSelected` is a silent no-op. This is INTENTIONAL per test `speed_boost_all_bolts_via_on_selected_is_silent_noop` (apply_chip_effect.rs:492). AllBolts is only meaningful at trigger-fire time, not chip-select time.
+- `evaluate()` in `effect/evaluate.rs` (was `behaviors/evaluate.rs` before C7-R): or-pattern covers TriggerKind variants (PerfectBump, CellImpact, BreakerImpact, WallImpact, BumpSuccess, CellDestroyed, BoltLost, EarlyBump, LateBump, BumpWhiff). `OnSelected` is intentionally absent — it's not a runtime trigger. Correct.
+- `effect/active.rs` doc update (was `behaviors/active.rs` before C7-R): `None` for archetype chains, `Some(name)` for chip/evolution chains. Correct; `dispatch_chip_effects` pushes `Some(msg.name.clone())`.
+
+## feature/spatial-physics-extraction Confirmed Correct (2026-03-24)
+- `handle_multi_bolt` formula `base_count + stacks.saturating_sub(1) * count_per_level` — correct. Operator precedence: `*` binds tighter than `+`; `stacks.saturating_sub(1) * count_per_level` is the extra-level term added to base. Do not re-flag.
+- `detect_most_powerful_evolution` uses `.max_by(|a, b| a.1.total_cmp(b.1))` — correct for NaN-free f32 damage values. `total_cmp` is the right choice here.
+- `spawn_run_end_screen` `spawn_highlights_section` match on `HighlightKind` is exhaustive over all 15 variants. Confirmed correct.
+- `track_evolution_damage` `entry(name.clone()).or_insert(0.0) += msg.damage` — correct accumulation pattern, does not double-count.
+- `tick_shield_removes_at_zero_or_below` test comment says "dt ~0.0167" (wrong — actual fixed delta is 1/64 ≈ 0.015625 s). The test passes correctly because 0.01 - 0.015625 < 0.0. The comment is inaccurate but not a logic bug. Do not re-flag the test as wrong.
+
+## Wave 2/3 Physics Migration Confirmed Correct (2026-03-24)
+- `maintain_quadtree` double-insert guard: `aabb_ref.is_added()` skip in both `changed_pos` and `changed_layers` loops — correctly prevents double-insert when entity was just added (Added<Aabb2D> fires Changed<GlobalPosition2D> too on the same tick). Do not re-flag.
+- `enforce_distance_constraints` (physics library, rantzsoft_physics2d) `both_converging = dot_a > 0.0 && dot_b < 0.0` — axis = delta = (b - a). `dot_a > 0` means A's velocity has positive component toward B. `dot_b < 0` means B's velocity has negative component (i.e., toward A). Both moving toward each other = converging. The sign convention is correct.
+- `enforce_distance_constraints` zero-distance guard `distance < f32::EPSILON || distance <= constraint.max_distance` — the `||` short-circuit is intentional. Zero distance AND within-slack share the same skip (both are no-ops). Order matters because computing `axis = delta / distance` with `distance=0` would produce NaN. Correct.
+- `CellsPlugin` `sync_orbit_cell_positions.after(rotate_shield_cells)` — orbit positions depend on current angle, so rotation must run first. Correct ordering.
+- `apply_debug_setup` and `deferred_debug_setup` both write `Velocity2D` when `bolt_velocity` is set — correct dual-write during debug setup. This is intentional migration scaffolding.
+- `check_bolt_speed_in_range` `Velocity2D` preference: prefers `Velocity2D` over `BoltVelocity` as intended post-migration design. The actual BUG is that launch/reset/collision systems don't write Velocity2D, not the checker design itself.
 - `Game` uses `#[derive(Default)]` for `headless: false` — correct; bool defaults to false, identical to removed manual impl.
 - `app.rs` `headless_app()` test helper uses `Game::default()` (headless=false, includes RenderSetupPlugin) — intentional; `camera_spawns` test verifies camera spawning.
 - `runner.rs` `build_app(headless=true)` correctly uses `Game::headless()`, `build_app(headless=false)` correctly uses `Game::default()`.
@@ -67,6 +119,14 @@ type: reference
 - `check_spawn_complete` uses Local<SpawnChecklist> bitfield — resets after firing, persists across frames for multi-frame arrival. Correct.
 - `update_loading_bar` ratio guard `if global.total > 0` prevents div-by-zero. Correct.
 - `ScriptedInput.actions_for_frame` uses `find()` — O(n) but scripted actions list is short. Correct.
+
+## Memorable Moments Wave E (2026-03-24)
+- `select_highlights` normalization `(raw - 1.0) / (max_expected - 1.0)`: anchors raw=1.0 at score 0.0, raw=max_expected at 1.0; guarded by `max_expected <= 1.0` check. Correct.
+- `spawn_highlight_text` FadeOut timer > duration for staggered popups: alpha = (timer/duration)^2 > 1.0 renders as full opacity. By design — stagger delay before fade begins.
+- `detect_first_evolution` early-return reader drain pattern: drains messages when EvolutionRegistry absent. Correct; prevents stale accumulation.
+- `animate_punch_scale` duration=0.0 guard: `duration <= 0.0` fires before `timer / duration` division. Correct.
+- `detect_close_save` query filter `Without<BoltServing>`: correct — serving bolts cannot be close-saved.
+- `spawn_highlight_text` is registered in `run/plugin.rs` at line 66 (Update, PlayingState::Active). FIXED from prior session note.
 - `ChaosDriver.actions_for_frame` `roll >= action_prob` → no action: roll in [0,1), so `action_prob=1.0` always fires, `action_prob=0.0` never fires. Correct.
 - `lifecycle/mod.rs` `inject_scenario_input` passes `is_active: true` always — documented intentional for pause-toggle testing in chaos scenarios.
 - `tag_game_entities` runs both in OnEnter(Playing) AND FixedUpdate to tag entities spawned mid-play (e.g. ExtraBolt from Prism). Without<ScenarioTagBolt> filter ensures idempotency. Correct.
@@ -94,9 +154,53 @@ type: reference
 - Full-tree review 2026-03-19: no confirmed logic bugs found beyond z=1.0 hardcode in bolt_lost (cosmetic concern for multi-layer games but functionally correct for current single-layer setup).
 - Phase 4 Wave 1 (2026-03-19): `handle_run_setup_input` uses `Option<Res<SeedEntry>>` — always Some at runtime because `spawn_run_setup` (OnEnter) fires before Update. Defensive Option is correct, not a bug.
 - Memorable moments (2026-03-23): `detect_close_save` guards `distance >= 0.0 && distance < threshold` — correct; prevents firing on bolts below the floor. Do not re-flag.
+- spatial2d Wave 1 (2026-03-23): `save_previous` uses `Option<&GlobalPosition2D>` with fallback to local `pos.0` — intentional. An entity can have `InterpolateTransform2D` without `Spatial2D` and thus without `GlobalPosition2D`. The fallback is correct for that case. Do not re-flag.
+- spatial2d Wave 1 (2026-03-23): `Velocity2D::clamped()` has `speed < f32::EPSILON` guard before division — zero-division risk is eliminated. Do not re-flag.
+- spatial2d Wave 1 (2026-03-23): `propagate_position/rotation/scale` still running alongside `derive_transform` — old systems write Transform first, derive_transform (which requires DrawLayer) overwrites. For entities with DrawLayer, derive_transform always wins. For entities without DrawLayer (no rendering), only old systems run. Functionally redundant but not a correctness bug for the dual-write itself. The ordering bug (compute_globals after derive_transform) is separate.
 - Memorable moments (2026-03-23): `spawn_run_end_screen` subtitle index `usize::try_from(seed % 5).unwrap_or(0)` — `seed % 5` in [0,4], `try_from` infallible on all 16-bit+ targets, `.unwrap_or(0)` is dead but harmless. Not a bug.
 - Memorable moments (2026-03-23): `track_node_cleared_stats` early-continue at top of loop before highlight checks — correct for the record path. The system intentionally does not emit HighlightTriggered (design inconsistency with other systems but not a crash).
 - Memorable moments (2026-03-23): `detect_combo_and_pinball` resets counters AFTER threshold check on BoltHitBreaker — correct ordering.
+
+## Position2D Migration Patterns (2026-03-23)
+- `spawn_bolt`: spawns `Position2D(spawn_pos)` + `PreviousPosition(spawn_pos)` + `InterpolateTransform2D` + `Spatial2D` + `Transform::default()`. PreviousPosition matches Position2D — teleport safe. Correct.
+- `reset_bolt`: sets `position.0 = new_pos` AND `prev.0 = new_pos` — teleport safe. Correct.
+- `bolt_lost` respawn: inserts `Position2D(new_pos)` + `PreviousPosition(new_pos)` simultaneously — teleport safe. Correct.
+- `spawn_breaker`: `Position2D(spawn_pos)` + `PreviousPosition(spawn_pos)` + `InterpolateTransform2D`. Correct.
+- `reset_breaker`: snaps `PreviousPosition` to new position — teleport safe. Correct.
+- `hover_bolt`: writes `bolt_position.0.x/y` (Position2D) — correct, not Transform.
+- `move_breaker`: writes `position.0.x` (Position2D) — correct.
+- `animate_bump_visual`: reads/writes `position.0.y` (Position2D) — correct.
+- `animate_tilt_visual`: writes `Rotation2D(Rot2::radians(-tilt.angle))` — correct sign convention (positive tilt=clockwise=negative CCW).
+- `width_boost_visual`: writes `Scale2D.x/y` — correct.
+- `bolt_scale_visual`: writes `Scale2D.x/y` from `BoltRadius * EntityScale` — correct.
+- `spawn_walls`: static, has `Spatial2D` + `Position2D` but NOT `InterpolateTransform2D` — correct for static entity. Also redundantly sets Transform::from_xyz (migration contract violation but no runtime impact — walls are static). Do not re-flag as a logic bug.
+- `spawn_cells_from_grid`: static cells, has `Spatial2D` + `Position2D` but NOT `InterpolateTransform2D` — correct. Also redundantly sets Transform { translation, scale } alongside Position2D+Scale2D — same migration contract violation, same no-impact conclusion. Do not re-flag as logic bug.
+- Wall collision query in `bolt_cell_collision`: `Query<(Entity, &Position2D, &WallSize), CollisionFilterWall>` — Position2D used. Correct.
+- `CollisionQueryBolt/Breaker/Cell` all use `Position2D` — correct.
+- `GameDrawLayer` Z values: Bolt=1.0, Breaker/Cell/Wall=0.0, Fx=2.0 — correct.
+
+## Phase 5c / Phase 6 Migration Patterns (2026-03-23)
+- `Bolt #[require]` Spatial2D + InterpolateTransform2D + BoltVelocity — correct. Bolt moves and needs interpolation.
+- `Breaker #[require]` Spatial2D + InterpolateTransform2D — correct.
+- `Cell #[require]` Spatial2D + CleanupOnNodeExit — correct, no InterpolateTransform2D (static).
+- `Wall #[require]` Spatial2D + CleanupOnNodeExit — correct, no InterpolateTransform2D (static).
+- `BoltVelocity Default` = zero velocity — correct for `#[require]` fallback; spawn sites override with real velocity.
+- `CleanupOnNodeExit Default` = unit struct marker — trivially correct.
+- `PreviousScale` defaults to `{1.0, 1.0}` — correct; matches `Scale2D` default, no teleport artifact on first tick.
+- `save_previous_positions` third loop for Scale2D → PreviousScale: gated on `With<InterpolateTransform2D>`. Only dynamic entities (Bolt, Breaker) have the marker. Cells/walls are excluded. Correct.
+- `propagate_scale` interpolation path: `prev + (current - prev) * alpha` is correct lerp. PreviousScale defaults to 1.0 to match Scale2D default — no first-frame artifact.
+- `propagate_scale` Absolute mode divides by `parent_scale.x/y`. All production spawn sites use non-zero scales so no live division-by-zero. Latent hazard only if zero scale is manually set — do NOT flag as confirmed production bug.
+- `check_no_nan` rotation check removed — Rot2 cannot hold NaN by construction. Correct.
+- `ScenarioPhysicsFrozen.target` changed Vec3 → Vec2. `enforce_frozen_positions` assigns `position.0 = pinned.target` (Vec2 = Vec2). Correct.
+- `apply_debug_setup` and `deferred_debug_setup` write Position2D not Transform — correct migration.
+- `enforce_frozen_positions` resets `Position2D` each tick — correct.
+- `check_bolt_in_bounds`, `check_no_nan`, `check_physics_frozen_during_pause` all use `&Position2D` — correct post-migration.
+- `wall_positions_match_playfield` test reads `&Transform` (stale after migration) — currently passes because spawn_walls still sets Transform explicitly. Not a production logic bug but tests the wrong field.
+
+## PreviousScale Interpolation Pattern
+- `save_previous_positions` runs in FixedPreUpdate. At the start of each fixed tick, it snaps PreviousScale to Scale2D.
+- `propagate_scale` runs in PostUpdate (AfterFixedMainLoop equivalent). It lerps from PreviousScale to Scale2D using overstep fraction.
+- On spawn frame: PreviousScale starts at (1.0, 1.0) (default). First `save_previous_positions` call before first game tick sets PreviousScale = Scale2D. On that same tick, `propagate_scale` sees PreviousScale == Scale2D so lerp produces Scale2D regardless of alpha. No teleport artifact. Correct.
 - Phase 4 Wave 1 (2026-03-19): `reset_run_state` uses `Option<Res<SelectedArchetype>>` — for logging only; if absent logs "none". Correct.
 - Phase 4 Wave 1 (2026-03-19): `bypass_menu_to_playing` always sets `RunSeed(Some(n))` — intentional; scenarios always use deterministic seed.
 - Phase 4 Wave 1 (2026-03-19): `stack_u32` and `stack_f32` cap check `current / per_stack < max_stacks` — correct because current is always `n * per_stack` (exact integer/float multiple), so division is exact and gives stack count directly.
@@ -154,7 +258,7 @@ type: reference
 - `bolt_cell_collision` writes BOTH `BoltHitCell` (for overclock bridges) AND `DamageCell` (for handle_cell_hit) on every cell hit — intentional dual-write by design. `handle_cell_hit` consumes DamageCell; `bridge_cell_impact` consumes BoltHitCell. No duplication in damage application.
 - `handle_cell_hit` refactored to read `DamageCell` (not `BoltHitCell`). Tests in handle_cell_hit.rs and check_lock_release.rs still register `add_message::<BoltHitCell>()` with stale "pre-refactor" comments — the registration is dead (system no longer reads it) but tests pass because they write DamageCell correctly. Stale test scaffolding only, not a logic bug.
 - `ImpactTarget`-discriminated `evaluate()` function: CellImpact matches only `OnImpact(Cell,_)`, BreakerImpact only `OnImpact(Breaker,_)`, WallImpact only `OnImpact(Wall,_)`. All three are separate `TriggerKind` variants (was `OverclockTriggerKind` — renamed in refactor/unify-behaviors). No cross-target false positives. Confirmed by tests `cell_impact_does_not_match_on_impact_breaker`, `breaker_impact_does_not_match_on_impact_wall`, etc.
-- `bridge_wall_impact` ordering: `.after(PhysicsSystems::BreakerCollision)` — BoltHitWall is written by `bolt_cell_collision` which runs before BreakerCollision. BoltHitBreaker written by `bolt_breaker_collision` (runs in BreakerCollision set). `bridge_breaker_impact` orders after BreakerCollision. All correct — writers precede readers.
+- `bridge_wall_impact` ordering: `.after(BoltSystems::BreakerCollision)` — BoltHitWall is written by `bolt_cell_collision` which runs before BreakerCollision. BoltHitBreaker written by `bolt_breaker_collision` (runs in BreakerCollision set). `bridge_breaker_impact` orders after BreakerCollision. All correct — writers precede readers.
 - `TriggerChain::depth()` and `is_leaf()` correctly cover all variants including the ones added in refactor/unify-behaviors (4 leaves: LoseLife, TimePenalty, SpawnBolt, SpeedBoost { target, multiplier } — was BoltSpeedBoost { multiplier }; 3 triggers: OnEarlyBump, OnLateBump, OnBumpWhiff). Match arms are exhaustive. Do not re-flag.
 - All 23 new unit tests in definition.rs (refactor/unify-behaviors) are structurally correct and non-vacuous. `effective_f32` helper with `saturating_sub(1)` correctly models stacking formula. `stacks=0` test assertion is correct.
 - SpeedBoost refactor (2026-03-21): `handle_speed_boost` zero-velocity guard `if speed > 0.0` is correct — `direction()` uses `normalize_or_zero()` which returns `Vec2::ZERO` for zero magnitude. Floor/ceiling clamps gated on `speed > 0.0` correctly leave zero velocity unchanged. Confirmed by `handle_speed_boost_zero_velocity_remains_zero` test.

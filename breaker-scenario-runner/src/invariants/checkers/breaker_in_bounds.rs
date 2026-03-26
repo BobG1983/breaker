@@ -1,14 +1,15 @@
 use bevy::prelude::*;
 use breaker::shared::PlayfieldConfig;
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
 /// Checks that all [`ScenarioTagBreaker`] entities remain within playfield bounds.
 ///
-/// Appends a [`ViolationEntry`] for every breaker whose `Transform` translation x
+/// Appends a [`ViolationEntry`] for every breaker whose `Position2D` x
 /// is outside `PlayfieldConfig::left()` or `PlayfieldConfig::right()` (with 50.0 margin).
 pub fn check_breaker_in_bounds(
-    breakers: Query<(Entity, &Transform), With<ScenarioTagBreaker>>,
+    breakers: Query<(Entity, &Position2D), With<ScenarioTagBreaker>>,
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
@@ -16,8 +17,8 @@ pub fn check_breaker_in_bounds(
     let margin = 50.0;
     let left = playfield.left() - margin;
     let right = playfield.right() + margin;
-    for (entity, transform) in &breakers {
-        let x = transform.translation.x;
+    for (entity, position) in &breakers {
+        let x = position.0.x;
         if x < left || x > right {
             log.0.push(ViolationEntry {
                 frame: frame.0,
@@ -58,10 +59,8 @@ mod tests {
     fn breaker_in_bounds_fires_when_breaker_far_outside_right() {
         let mut app = test_app_breaker_in_bounds();
 
-        app.world_mut().spawn((
-            ScenarioTagBreaker,
-            Transform::from_translation(Vec3::new(1000.0, 0.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBreaker, Position2D(Vec2::new(1000.0, 0.0))));
 
         tick(&mut app);
 
@@ -74,10 +73,8 @@ mod tests {
     fn breaker_in_bounds_does_not_fire_when_breaker_centered() {
         let mut app = test_app_breaker_in_bounds();
 
-        app.world_mut().spawn((
-            ScenarioTagBreaker,
-            Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-        ));
+        app.world_mut()
+            .spawn((ScenarioTagBreaker, Position2D(Vec2::new(0.0, 0.0))));
 
         tick(&mut app);
 
