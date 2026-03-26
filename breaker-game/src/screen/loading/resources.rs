@@ -53,8 +53,8 @@ pub(crate) struct DefaultsCollection {
     /// Handle for chip select defaults.
     #[asset(path = "config/defaults.chipselect.ron")]
     pub chip_select: Handle<ChipSelectDefaults>,
-    /// All chip definitions (evolutions only) — recurses through rarity subdirectories.
-    #[asset(path = "chips", collection(typed))]
+    /// All chip definitions (evolutions only) — only scans the evolution subdirectory.
+    #[asset(path = "chips/evolution", collection(typed))]
     pub chips: Vec<Handle<ChipDefinition>>,
     /// All chip template handles (`.chip.ron` files).
     #[asset(path = "chips", collection(typed))]
