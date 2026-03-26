@@ -173,6 +173,9 @@ type: reference
 - `significant_drop_tightening` warning (rantzsoft_spatial2d/src/plugin.rs:286): `registry` lock guard held until end of function — can be dropped earlier. Nursery lint, warning only.
 - Scenario runner (dsclippy) new warnings: `missing_const_for_fn` for 5 functions in lifecycle/mod.rs (310, 506, 636, 647) and check_run_stats_monotonic.rs (17, 28). `too_long_first_doc_paragraph` at lifecycle/mod.rs:394. All nursery lints, warnings only.
 
+## New as of 2026-03-26 (feature/spatial-physics-extraction — chips template session, second run)
+- `float_cmp` ERROR (rantzsoft_physics2d/src/ccd.rs:385, test-only): `assert_eq!(rem, 0.0)` — strict equality comparison of `f32`. `-D clippy::pedantic` makes this an error. Fix: replace with `assert!((rem - 0.0).abs() < f32::EPSILON)` or `assert!((rem).abs() < f32::EPSILON)` — i.e. use an approximate comparison instead of `assert_eq!`. This is in a test function inside ccd.rs. First observed 2026-03-26.
+
 ## New as of 2026-03-25f (feature/spatial-physics-extraction — full lint verification, all PASS)
 - No errors in any crate. All warnings are nursery/restriction lints.
 - New `unused_imports` warnings in `effect/` domain (forward-declared for future wiring): `super::triggers::*` (bridges.rs:6), `BreakerStatOverrides` (definition.rs:415), `ImpactTarget` (evaluate.rs:6), `apply_breaker_config_overrides`/`init_breaker` (init.rs:9), `EffectNode` (triggers/on_bump.rs:13, triggers/on_impact.rs:10), `apply_once_nodes` (triggers/mod.rs:14), `Target`/`SpawnBoltFired` (typed_events.rs), `NodeEvalResult` (active.rs:38), `EffectTarget` (entropy_engine.rs:130). All warning-only.

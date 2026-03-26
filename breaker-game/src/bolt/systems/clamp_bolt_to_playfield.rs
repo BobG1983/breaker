@@ -82,10 +82,13 @@ mod tests {
     use rantzsoft_spatial2d::components::Position2D;
 
     use super::*;
-    use crate::{
-        bolt::components::{Bolt, BoltServing},
-        shared::math::CCD_EPSILON,
-    };
+    use crate::bolt::components::{Bolt, BoltServing};
+
+    /// Local alias for the CCD epsilon used in test expected values.
+    ///
+    /// Matches the production `BOUNDARY_INSET` constant and the physics
+    /// crate's `CCD_EPSILON` — both are 0.01.
+    const CCD_EPSILON: f32 = 0.01;
 
     fn test_app() -> App {
         let mut app = App::new();

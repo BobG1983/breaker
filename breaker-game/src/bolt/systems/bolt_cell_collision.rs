@@ -19,7 +19,9 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
-    collision_layers::CollisionLayers, prelude::SweepHit, resources::CollisionQuadtree,
+    collision_layers::CollisionLayers,
+    prelude::{SweepHit, reflect},
+    resources::CollisionQuadtree,
 };
 
 /// Maximum number of bounces resolved per bolt per frame.
@@ -42,11 +44,11 @@ use crate::{
     wall::components::Wall,
 };
 
-/// Sub-pixel separation gap used to determine when remaining distance is negligible.
+/// Minimum remaining travel distance below which the CCD loop terminates.
 ///
 /// If the bolt's remaining travel is at or below this threshold, the CCD loop
 /// stops — there is not enough distance left for a meaningful collision.
-const SEPARATION_GAP: f32 = 0.01;
+const MIN_REMAINING: f32 = 0.01;
 
 /// Message writers used by the bolt-cell-wall collision system.
 type CollisionWriters<'a> = (
@@ -127,7 +129,7 @@ pub(crate) fn bolt_cell_collision(
         let collision_layers = CollisionLayers::new(0, CELL_LAYER | WALL_LAYER);
 
         for _ in 0..MAX_BOUNCES {
-            if remaining <= SEPARATION_GAP {
+            if remaining <= MIN_REMAINING {
                 break;
             }
 
@@ -177,7 +179,7 @@ pub(crate) fn bolt_cell_collision(
                     // Continue CCD loop — velocity unchanged, direction unchanged
                 } else {
                     // NORMAL: reflect
-                    velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
+                    velocity = reflect(velocity, hit.normal);
                 }
                 hit_writer.write(BoltHitCell {
                     cell: hit.entity,
@@ -191,7 +193,7 @@ pub(crate) fn bolt_cell_collision(
                 });
             } else {
                 // WALL HIT: reflect and reset `PiercingRemaining`
-                velocity -= 2.0 * velocity.dot(hit.normal) * hit.normal;
+                velocity = reflect(velocity, hit.normal);
                 // Reset `PiercingRemaining` to `Piercing.0`
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
@@ -228,9 +230,7 @@ mod tests {
             resources::CellConfig,
         },
         chips::components::{DamageBoost, Piercing, PiercingRemaining},
-        shared::{
-            BOLT_LAYER, CELL_LAYER, EntityScale, GameDrawLayer, WALL_LAYER, math::MAX_BOUNCES,
-        },
+        shared::{BOLT_LAYER, CELL_LAYER, EntityScale, GameDrawLayer, WALL_LAYER},
         wall::components::{Wall, WallSize},
     };
 
