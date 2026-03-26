@@ -1,22 +1,28 @@
 ---
 name: spatial2d-propagation-flow
-description: End-to-end spatial2d propagation pipeline -- save_previous, propagate_{position,rotation,scale}, interpolation, Absolute/Relative hierarchy, orbit cell sync
+description: End-to-end spatial2d propagation pipeline -- save_previous, compute_globals, derive_transform, interpolation, Absolute/Relative hierarchy, orbit cell sync
 type: reference
 ---
 
 ## Schedule Order (Bevy 0.18)
 
-1. **FixedFirst** -- `save_previous` snapshots Position2D/Rotation2D/Scale2D into Previous* components (only for entities with InterpolateTransform2D marker)
-2. **FixedUpdate** -- game logic (physics, collisions, orbit rotation, orbit sync) mutates Position2D/Rotation2D/Scale2D
-3. **RunFixedMainLoop / AfterFixedMainLoop** -- `propagate_position`, `propagate_rotation`, `propagate_scale` (chained) write to Transform from the 2D components, using Time<Fixed>.overstep_fraction() for interpolation
+1. **FixedFirst** -- `save_previous` (SpatialSystems::SavePrevious) snapshots Position2D/Rotation2D/Scale2D into Previous* components (only for entities with InterpolateTransform2D marker)
+2. **FixedUpdate** -- `apply_velocity` (SpatialSystems::ApplyVelocity) advances Position2D for ApplyVelocity entities. Game logic (physics, collisions, orbit rotation, orbit sync) also mutates Position2D/Rotation2D/Scale2D.
+3. **RunFixedMainLoop / AfterFixedMainLoop** -- `compute_globals` (SpatialSystems::ComputeGlobals) then `derive_transform` (SpatialSystems::DeriveTransform) chained. Write Global* components then write Transform from Global* + interpolation.
+
+NOTE: `propagate_position`, `propagate_rotation`, `propagate_scale` are NOT registered by `RantzSpatial2dPlugin` — they are pub(crate) internal utilities. The active pipeline is compute_globals + derive_transform.
 
 ## Propagation Pipeline
 
-Each propagate system:
-1. Reads the current 2D component (Position2D, Rotation2D, Scale2D)
-2. If InterpolateTransform2D marker present AND Previous* exists: lerp(previous, current, alpha)
-3. If entity is a child with *Propagation::Absolute: counteract parent's value (subtract position, subtract rotation angle, divide scale)
-4. Write to Transform (position also uses DrawLayer::z() and optional VisualOffset)
+`compute_globals`:
+1. Walks hierarchy from root to children
+2. Accumulates Global* from parent Global* and child's local Position2D/Rotation2D/Scale2D
+3. Respects *Propagation::Relative vs *Propagation::Absolute per axis
+
+`derive_transform`:
+1. Reads GlobalPosition2D/GlobalRotation2D/GlobalScale2D
+2. If InterpolateTransform2D marker present: lerp(Previous*, Global*, overstep_fraction)
+3. Writes Transform.translation (also adds DrawLayer::z() and optional VisualOffset.x/y), Transform.rotation, Transform.scale
 
 ## Absolute Propagation Hack
 

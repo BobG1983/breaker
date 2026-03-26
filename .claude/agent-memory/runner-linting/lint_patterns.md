@@ -175,11 +175,27 @@ type: reference
 - New `unreachable_pub` warnings (4 total): `bolt_size_boost.rs:75` (`total`), `bump_force_boost.rs:70` (`total`), `damage_boost.rs:46` (`multiplier`), `piercing.rs:88` (`total`) — all `pub` methods that should be `pub(crate)`. Warning-only.
 - Scenario runner new warning: `lifecycle/mod.rs:392` — `too_long_first_doc_paragraph` on `apply_debug_frame_mutations`. Nursery, warning-only.
 
+## New as of 2026-03-26b (feature/spatial-physics-extraction — chips session, full lint run)
+- `collapsible_if` ERROR (rantzsoft_defaults_derive/src/lib.rs:51): nested `if let Meta::NameValue(nv) = meta { if let syn::Expr::Lit(...) = &nv.value { ... } }` — clippy requires collapsing into a single `if let ... && let ... { ... }`. This error blocks ALL crates that depend on `rantzsoft_defaults` (game crate, scenario runner) since the proc-macro fails to compile. Fix: `if let Meta::NameValue(nv) = meta && let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = &nv.value { ... }`. Error under `-D clippy::collapsible-if` (part of `-D clippy::all`). NEW as of this session.
+- New `dead_code` / `unreachable_pub` / `unused` warnings in `rantzsoft_spatial2d`: `PropagatePositionQuery`, `PropagateRotationQuery`, `PropagateScaleQuery` type aliases and `propagate_position`, `propagate_rotation`, `propagate_scale` functions are unused — these are forward-declared (or legacy) public items that the active `derive_transform` system supersedes. All warning-only.
+- New `unreachable_pub` warnings in `rantzsoft_spatial2d/src/systems/mod.rs` (7 items) and all system functions (apply_velocity, compute_globals, derive_transform, propagate_*, save_previous) — all `pub` items in a crate-internal `systems` submodule. Warning-only, recurring pattern.
+
 ## New as of 2026-03-26 (feature/spatial-physics-extraction — chips template session)
 - `doc_markdown` error (rantzsoft_spatial2d/src/plugin.rs:450): doc comment `"a known starting state for apply_velocity."` — bare `apply_velocity` needs backticks. Fix: change to `` `apply_velocity` ``. Error in `spatial2dclippy` (pedantic). NEW — not seen in prior sessions.
 - `no_effect_underscore_binding` errors (rantzsoft_physics2d/src/plugin.rs:119,120,191,192,203): five `let _name = ...;` bindings in test functions have no side effect — the value is unused and the `_` prefix is a lie. All five are in test code. Fix: use `drop(...)` to actually consume the value, or just remove the binding if it's a compile-time check. Five errors in `physics2dclippy` (pedantic). NEW as of this session.
 - `chips/definition.rs` — new `draw_offerings` dead_code warning (chips/offering.rs:74): `pub(crate) fn draw_offerings` is never called. Warning-only. New this session.
 - `chips/mod.rs` — new `unused_imports` warning: `ChipTemplate`, `TriggerChain`, `expand_template` forward-declared in pub(crate) re-exports but not yet consumed. Warning-only. New this session.
+
+## New as of 2026-03-26 (feature/spatial-physics-extraction — collapsible_if fix session)
+- `rantzsoft_defaults` crate 5 blocking errors (NEW — first time this crate blocked compilation):
+  - `missing_errors_doc` ERROR (`rantzsoft_defaults/src/loader.rs:45`): `pub fn deserialize_ron` returns `Result` without `# Errors` doc section. Fix: add `/// # Errors\n/// Returns `ron::error::SpannedError` if the bytes are not valid RON for type `T`.` to the function.
+  - `type_complexity` ERROR (`rantzsoft_defaults/src/plugin.rs:20`): `Mutex<Vec<Box<dyn FnOnce(&mut App) + Send>>>` field in `RantzDefaultsPlugin`. Fix: extract a type alias, e.g., `type Registration = Box<dyn FnOnce(&mut App) + Send>;` then `Mutex<Vec<Registration>>`.
+  - `type_complexity` ERROR (`rantzsoft_defaults/src/plugin.rs:29`): `Vec<Box<dyn FnOnce(&mut App) + Send>>>` field in `RantzDefaultsPluginBuilder`. Same fix: use the `Registration` alias.
+  - `derivable_impls` ERROR (`rantzsoft_defaults/src/plugin.rs:32`): manual `impl Default for RantzDefaultsPluginBuilder` is derivable. Fix: remove the manual impl and add `#[derive(Default)]` to the struct.
+  - `must_use_candidate` ERROR (`rantzsoft_defaults/src/systems.rs:16`): `pub fn seed_config` returns a value without `#[must_use]`. Fix: add `#[must_use]` attribute above the function.
+  - `expect_used` warning (`rantzsoft_defaults/src/plugin.rs:78`): `.expect("defaults plugin lock poisoned")` — warning only (restriction lint), not an error.
+- These 5 errors block ALL downstream crates (`breaker-game`, `breaker-scenario-runner`) from compiling under clippy. `dclippy`, `defaultsclippy`, and `dsclippy` all fail at the `rantzsoft_defaults` step. `spatial2dclippy` and `physics2dclippy` are unaffected (no dependency on defaults).
+- `defaultsclippy` is NOT a defined alias in `.cargo/config.toml` but the shell resolves it anyway (likely via a custom cargo alias or shell completion). It runs only the `rantzsoft_defaults` crate and confirms the same 5 errors.
 - `unused_imports` warning: `Target` in `chips/inventory.rs:261`, `chips/systems/dispatch_chip_effects.rs:137`, `effect/effect_nodes/until.rs:292`. Warning-only. New this session.
 - `unused_imports` warning: `BumpGrade` in `effect/bridges.rs:17`. Warning-only. New this session.
 - `unused_variable` warning: `chain` in `effect/triggers/on_bump.rs:328` — `let chain = EffectNode::When { ... }`. Not prefixed with `_`. Warning-only. New this session.

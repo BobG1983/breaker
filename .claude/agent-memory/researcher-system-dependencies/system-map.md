@@ -35,11 +35,14 @@ NOTE (2026-03-25, C7-R): BehaviorsPlugin renamed to EffectPlugin; BehaviorSystem
 - Writes (query): mut Position2D (With<ApplyVelocity>, With<Velocity2D>)
 - Optional opt-in via ApplyVelocity marker — bolt domain uses its own systems instead
 
-### `compute_globals → derive_transform → propagate_position → propagate_rotation → propagate_scale`
-All chained in AfterFixedMainLoop (RunFixedMainLoopSystems::AfterFixedMainLoop):
-- `compute_globals`: reads Position2D/Rotation2D/Scale2D hierarchy → writes Global* components
-- `derive_transform`: reads Global* + Previous* (interpolation) → writes Transform
-- `propagate_*`: Bevy hierarchy propagation for each component type
+### `compute_globals → derive_transform`
+Chained in AfterFixedMainLoop (RunFixedMainLoopSystems::AfterFixedMainLoop):
+- `compute_globals` (in `SpatialSystems::ComputeGlobals`): reads Position2D/Rotation2D/Scale2D hierarchy → writes Global* components
+- `derive_transform` (in `SpatialSystems::DeriveTransform`): reads Global* + Previous* (interpolation) → writes Transform
+
+`propagate_position`, `propagate_rotation`, `propagate_scale` are NOT registered by the plugin — they are pub(crate) internal helpers not part of the active system chain.
+
+SpatialSystems variants: `SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform` — use these for ordering game systems relative to spatial pipeline stages.
 
 Entities with interpolation: Bolt (baseline + ExtraBolt) — both get InterpolateTransform2D at spawn
 

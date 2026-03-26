@@ -173,14 +173,17 @@ NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, t
 - `RotationPropagation` — enum { Relative, Absolute }
 - `ScalePropagation` — enum { Relative, Absolute }
 
-### Systems
-- `save_previous` — FixedFirst — snapshots current to Previous* for InterpolateTransform2D entities
-- `propagate_position<D: DrawLayer>` — AfterFixedMainLoop — writes Transform.translation from Position2D + DrawLayer z + VisualOffset, interpolation, parent/child with counteract hack
-- `propagate_rotation` — AfterFixedMainLoop — writes Transform.rotation
-- `propagate_scale` — AfterFixedMainLoop — writes Transform.scale
+### Systems (registered by plugin)
+- `save_previous` — FixedFirst (SpatialSystems::SavePrevious) — snapshots current to Previous* for InterpolateTransform2D entities
+- `apply_velocity` — FixedUpdate (SpatialSystems::ApplyVelocity) — advances Position2D for entities with ApplyVelocity marker
+- `compute_globals` — AfterFixedMainLoop (SpatialSystems::ComputeGlobals) — computes Global* from hierarchy
+- `derive_transform<D: DrawLayer>` — AfterFixedMainLoop (SpatialSystems::DeriveTransform) — writes Transform from Global* + interpolation
 
-### Plugin
+`propagate_position`, `propagate_rotation`, `propagate_scale` are NOT registered by the plugin (pub(crate) only).
+
+### Plugin and SystemSet
 - `RantzSpatial2dPlugin<D: DrawLayer>` — generic over DrawLayer
+- `SpatialSystems` — system set enum exported from plugin module; 4 variants for cross-system ordering
 
 ## rantzsoft_physics2d (`rantzsoft_physics2d/src/`)
 
@@ -193,9 +196,10 @@ NOTE: The `behaviors/` domain was refactored into `effect/`. All effect types, t
 ### Systems
 - `maintain_quadtree` — FixedUpdate, PhysicsSystems::MaintainQuadtree — reads Position2D for AABB center
 
-### Plugin
-- `RantzPhysics2dPlugin` — registers CollisionQuadtree + maintain_quadtree
-- `PhysicsSystems` system set — currently only `MaintainQuadtree` variant
+### Plugin and SystemSet
+- `RantzPhysics2dPlugin` — registers CollisionQuadtree + maintain_quadtree + enforce_distance_constraints
+- `PhysicsSystems` system set — `MaintainQuadtree` and `EnforceDistanceConstraints` variants
+- Prelude available: `use rantzsoft_physics2d::prelude::*` re-exports all public types including `SweepHit` and `cast_circle` (via Quadtree method)
 
 **Why:** Built from reading all domain source files during Phase 4b.2 spec writing (2026-03-19). Updated with CellHealth migration details and hot-reload callsites (2026-03-19). Behaviors domain restructured in refactor/unify-behaviors (2026-03-21). rantzsoft crates inventoried for Phase 11a (2026-03-23).
 **How to apply:** Use this to avoid re-reading files when writing future specs in these domains.
