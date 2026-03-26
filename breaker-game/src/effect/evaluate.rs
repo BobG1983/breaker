@@ -1,41 +1,14 @@
-//! Pure evaluation function — maps a trigger kind + `EffectNode` to a `NodeEvalResult`.
+//! Pure evaluation function — maps a runtime `Trigger` + `EffectNode` to a `NodeEvalResult`.
 //!
 //! Unified version covering all trigger kinds including bump grades
-//! (`EarlyBump`, `LateBump`, `BumpWhiff`) and the new `Death` kind.
+//! (`EarlyBump`, `LateBump`, `BumpWhiff`) and `Death`.
 
 use super::definition::{Effect, EffectNode, ImpactTarget, Trigger};
 
-/// The kind of trigger event that occurred at runtime.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum TriggerKind {
-    /// A perfect bump was performed.
-    PerfectBump,
-    /// Any non-whiff bump (Early, Late, or Perfect).
-    BumpSuccess,
-    /// Bump pressed before the perfect zone.
-    EarlyBump,
-    /// Bump pressed after the bolt hit.
-    LateBump,
-    /// Forward bump window expired without bolt contact.
-    BumpWhiff,
-    /// A bolt hit a cell.
-    CellImpact,
-    /// A bolt bounced off the breaker.
-    BreakerImpact,
-    /// A bolt bounced off a wall.
-    WallImpact,
-    /// A cell was destroyed.
-    CellDestroyed,
-    /// A bolt was lost.
-    BoltLost,
-    /// The breaker died (all lives lost or timer expired).
-    Death,
-}
-
-/// Result of evaluating a trigger kind against an `EffectNode`.
+/// Result of evaluating a trigger against an `EffectNode`.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum NodeEvalResult {
-    /// The trigger kind does not match the node's trigger.
+    /// The trigger does not match the node's trigger.
     NoMatch,
     /// The trigger matched and a child node should be armed on the bolt.
     Arm(EffectNode),
@@ -48,18 +21,18 @@ pub(crate) enum NodeEvalResult {
 /// Returns a `Vec<NodeEvalResult>` with one entry per child in the
 /// matched trigger variant's children. Returns `vec![NoMatch]` if
 /// the node is a bare `Do` (no trigger wrapper), `Until`, `Once`,
-/// or if the trigger kind doesn't match the node's trigger.
+/// or if the trigger doesn't match the node's trigger.
 ///
 /// Each child produces `Fire(effect)` if it is a `Do`, or `Arm(node)`
 /// if it is another `When` (needs further resolution).
 ///
-/// [`Trigger::OnSelected`] has no runtime [`TriggerKind`] mapping and
+/// [`Trigger::Selected`] has no runtime trigger mapping and
 /// always returns `vec![NoMatch]`.
 ///
-/// [`Trigger::TimeExpires`] has no runtime [`TriggerKind`] mapping
+/// [`Trigger::TimeExpires`] has no runtime trigger mapping
 /// (it is timer-based removal, not a trigger event) and always returns
 /// `vec![NoMatch]`.
-pub(crate) fn evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<NodeEvalResult> {
+pub(crate) fn evaluate_node(trigger: Trigger, node: &EffectNode) -> Vec<NodeEvalResult> {
     match node {
         EffectNode::When {
             trigger: node_trigger,
@@ -82,33 +55,23 @@ pub(crate) fn evaluate_node(trigger: TriggerKind, node: &EffectNode) -> Vec<Node
     }
 }
 
-/// Returns `true` if the runtime `TriggerKind` matches the declared `Trigger`.
+/// Returns `true` if the runtime trigger matches the declared trigger on the node.
 ///
-/// `OnSelected` and `TimeExpires` have no runtime trigger mapping and always return `false`.
-fn trigger_matches(kind: TriggerKind, trigger: Trigger) -> bool {
-    matches!(
-        (kind, trigger),
-        (TriggerKind::PerfectBump, Trigger::OnPerfectBump)
-            | (TriggerKind::BumpSuccess, Trigger::OnBump)
-            | (TriggerKind::EarlyBump, Trigger::OnEarlyBump)
-            | (TriggerKind::LateBump, Trigger::OnLateBump)
-            | (TriggerKind::BumpWhiff, Trigger::OnBumpWhiff)
-            | (
-                TriggerKind::CellImpact,
-                Trigger::OnImpact(ImpactTarget::Cell)
-            )
-            | (
-                TriggerKind::BreakerImpact,
-                Trigger::OnImpact(ImpactTarget::Breaker)
-            )
-            | (
-                TriggerKind::WallImpact,
-                Trigger::OnImpact(ImpactTarget::Wall)
-            )
-            | (TriggerKind::CellDestroyed, Trigger::OnCellDestroyed)
-            | (TriggerKind::BoltLost, Trigger::OnBoltLost)
-            | (TriggerKind::Death, Trigger::OnDeath)
-    )
+/// `Selected`, `TimeExpires`, and `NodeTimerThreshold` have no runtime trigger mapping
+/// and always return `false`.
+fn trigger_matches(runtime: Trigger, declared: Trigger) -> bool {
+    match (runtime, declared) {
+        (Trigger::PerfectBump, Trigger::PerfectBump)
+        | (Trigger::Bump, Trigger::Bump)
+        | (Trigger::EarlyBump, Trigger::EarlyBump)
+        | (Trigger::LateBump, Trigger::LateBump)
+        | (Trigger::BumpWhiff, Trigger::BumpWhiff)
+        | (Trigger::CellDestroyed, Trigger::CellDestroyed)
+        | (Trigger::BoltLost, Trigger::BoltLost)
+        | (Trigger::Death, Trigger::Death) => true,
+        (Trigger::Impact(a), Trigger::Impact(b)) => a == b,
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -123,7 +86,7 @@ mod tests {
     #[test]
     fn evaluate_node_when_matching_trigger_fires_do_leaf() {
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
@@ -131,7 +94,7 @@ mod tests {
                 speed: 400.0,
             })],
         };
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::Fire(Effect::Shockwave {
@@ -140,28 +103,28 @@ mod tests {
                 stacks: 1,
                 speed: 400.0,
             })],
-            "PerfectBump should match When(OnPerfectBump) and fire Do leaf"
+            "PerfectBump should match When(PerfectBump) and fire Do leaf"
         );
     }
 
     #[test]
     fn evaluate_node_when_non_matching_trigger_returns_no_match() {
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
         };
-        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        let result = evaluate_node(Trigger::BoltLost, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::NoMatch],
-            "BoltLost should not match When(OnPerfectBump)"
+            "BoltLost should not match When(PerfectBump)"
         );
     }
 
     #[test]
     fn evaluate_node_when_matching_arms_nested_when() {
         let inner = EffectNode::When {
-            trigger: Trigger::OnImpact(ImpactTarget::Cell),
+            trigger: Trigger::Impact(ImpactTarget::Cell),
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
@@ -170,10 +133,10 @@ mod tests {
             })],
         };
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![inner.clone()],
         };
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::Arm(inner)],
@@ -184,7 +147,7 @@ mod tests {
     #[test]
     fn evaluate_node_bare_do_returns_no_match() {
         let node = EffectNode::Do(Effect::LoseLife);
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::NoMatch],
@@ -198,7 +161,7 @@ mod tests {
             until: Trigger::TimeExpires(3.0),
             then: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
         };
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::NoMatch],
@@ -211,7 +174,7 @@ mod tests {
         let node = EffectNode::Once(vec![EffectNode::Do(Effect::SecondWind {
             invuln_secs: 3.0,
         })]);
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::NoMatch],
@@ -220,30 +183,30 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_node_when_on_selected_always_returns_no_match() {
+    fn evaluate_node_when_selected_always_returns_no_match() {
         let node = EffectNode::When {
-            trigger: Trigger::OnSelected,
+            trigger: Trigger::Selected,
             then: vec![EffectNode::Do(Effect::Piercing(1))],
         };
-        let kinds = [
-            TriggerKind::PerfectBump,
-            TriggerKind::BumpSuccess,
-            TriggerKind::EarlyBump,
-            TriggerKind::LateBump,
-            TriggerKind::BumpWhiff,
-            TriggerKind::CellImpact,
-            TriggerKind::BreakerImpact,
-            TriggerKind::WallImpact,
-            TriggerKind::CellDestroyed,
-            TriggerKind::BoltLost,
-            TriggerKind::Death,
+        let triggers = [
+            Trigger::PerfectBump,
+            Trigger::Bump,
+            Trigger::EarlyBump,
+            Trigger::LateBump,
+            Trigger::BumpWhiff,
+            Trigger::Impact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Breaker),
+            Trigger::Impact(ImpactTarget::Wall),
+            Trigger::CellDestroyed,
+            Trigger::BoltLost,
+            Trigger::Death,
         ];
-        for kind in &kinds {
-            let result = evaluate_node(*kind, &node);
+        for trigger in triggers {
+            let result = evaluate_node(trigger, &node);
             assert_eq!(
                 result,
                 vec![NodeEvalResult::NoMatch],
-                "OnSelected should NEVER match {kind:?}"
+                "Selected should NEVER match {trigger:?}"
             );
         }
     }
@@ -254,56 +217,56 @@ mod tests {
             trigger: Trigger::TimeExpires(3.0),
             then: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
         };
-        let kinds = [
-            TriggerKind::PerfectBump,
-            TriggerKind::BumpSuccess,
-            TriggerKind::EarlyBump,
-            TriggerKind::LateBump,
-            TriggerKind::BumpWhiff,
-            TriggerKind::CellImpact,
-            TriggerKind::BreakerImpact,
-            TriggerKind::WallImpact,
-            TriggerKind::CellDestroyed,
-            TriggerKind::BoltLost,
-            TriggerKind::Death,
+        let triggers = [
+            Trigger::PerfectBump,
+            Trigger::Bump,
+            Trigger::EarlyBump,
+            Trigger::LateBump,
+            Trigger::BumpWhiff,
+            Trigger::Impact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Breaker),
+            Trigger::Impact(ImpactTarget::Wall),
+            Trigger::CellDestroyed,
+            Trigger::BoltLost,
+            Trigger::Death,
         ];
-        for kind in &kinds {
-            let result = evaluate_node(*kind, &node);
+        for trigger in triggers {
+            let result = evaluate_node(trigger, &node);
             assert_eq!(
                 result,
                 vec![NodeEvalResult::NoMatch],
-                "TimeExpires has no TriggerKind — should return NoMatch for {kind:?}"
+                "TimeExpires has no runtime trigger mapping — should return NoMatch for {trigger:?}"
             );
         }
     }
 
     #[test]
-    fn evaluate_node_all_trigger_kinds_match_correctly() {
+    fn evaluate_node_all_triggers_match_correctly() {
         use crate::effect::definition::ImpactTarget as IT;
-        let pairs: Vec<(TriggerKind, Trigger)> = vec![
-            (TriggerKind::PerfectBump, Trigger::OnPerfectBump),
-            (TriggerKind::BumpSuccess, Trigger::OnBump),
-            (TriggerKind::EarlyBump, Trigger::OnEarlyBump),
-            (TriggerKind::LateBump, Trigger::OnLateBump),
-            (TriggerKind::BumpWhiff, Trigger::OnBumpWhiff),
-            (TriggerKind::CellImpact, Trigger::OnImpact(IT::Cell)),
-            (TriggerKind::BreakerImpact, Trigger::OnImpact(IT::Breaker)),
-            (TriggerKind::WallImpact, Trigger::OnImpact(IT::Wall)),
-            (TriggerKind::CellDestroyed, Trigger::OnCellDestroyed),
-            (TriggerKind::BoltLost, Trigger::OnBoltLost),
-            (TriggerKind::Death, Trigger::OnDeath),
+        let pairs: Vec<(Trigger, Trigger)> = vec![
+            (Trigger::PerfectBump, Trigger::PerfectBump),
+            (Trigger::Bump, Trigger::Bump),
+            (Trigger::EarlyBump, Trigger::EarlyBump),
+            (Trigger::LateBump, Trigger::LateBump),
+            (Trigger::BumpWhiff, Trigger::BumpWhiff),
+            (Trigger::Impact(IT::Cell), Trigger::Impact(IT::Cell)),
+            (Trigger::Impact(IT::Breaker), Trigger::Impact(IT::Breaker)),
+            (Trigger::Impact(IT::Wall), Trigger::Impact(IT::Wall)),
+            (Trigger::CellDestroyed, Trigger::CellDestroyed),
+            (Trigger::BoltLost, Trigger::BoltLost),
+            (Trigger::Death, Trigger::Death),
         ];
         let leaf = Effect::test_shockwave(64.0);
-        for (kind, trigger) in &pairs {
+        for (runtime, declared) in pairs {
             let node = EffectNode::When {
-                trigger: *trigger,
+                trigger: declared,
                 then: vec![EffectNode::Do(leaf.clone())],
             };
-            let result = evaluate_node(*kind, &node);
+            let result = evaluate_node(runtime, &node);
             assert_eq!(
                 result,
                 vec![NodeEvalResult::Fire(leaf.clone())],
-                "TriggerKind::{kind:?} should match Trigger::{trigger:?}"
+                "Trigger::{runtime:?} should match Trigger::{declared:?}"
             );
         }
     }
@@ -311,7 +274,7 @@ mod tests {
     #[test]
     fn evaluate_node_when_multiple_do_children_returns_multiple_fire_results() {
         let node = EffectNode::When {
-            trigger: Trigger::OnBump,
+            trigger: Trigger::Bump,
             then: vec![
                 EffectNode::Do(Effect::SpawnBolts {
                     count: 1,
@@ -324,7 +287,7 @@ mod tests {
                 }),
             ],
         };
-        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
+        let result = evaluate_node(Trigger::Bump, &node);
         assert_eq!(
             result.len(),
             2,
@@ -343,42 +306,46 @@ mod tests {
     #[test]
     fn evaluate_node_cell_impact_does_not_match_breaker_impact_target() {
         let node = EffectNode::When {
-            trigger: Trigger::OnImpact(ImpactTarget::Breaker),
+            trigger: Trigger::Impact(ImpactTarget::Breaker),
             then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
         };
-        let result = evaluate_node(TriggerKind::CellImpact, &node);
+        let result = evaluate_node(Trigger::Impact(ImpactTarget::Cell), &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::NoMatch],
-            "CellImpact must NOT match When(OnImpact(Breaker))"
+            "Impact(Cell) must NOT match When(Impact(Breaker))"
         );
     }
 
     // =========================================================================
-    // C7 Wave 1 Part K: TriggerKind extension (behaviors 49-50)
+    // Trigger variant tests (formerly TriggerKind extension tests)
     // =========================================================================
 
     #[test]
-    fn trigger_kind_death_exists() {
-        let kind = TriggerKind::Death;
-        assert_ne!(kind, TriggerKind::BoltLost);
+    fn trigger_death_exists() {
+        let trigger = Trigger::Death;
+        assert_ne!(trigger, Trigger::BoltLost);
     }
 
     #[test]
-    fn trigger_kind_has_eleven_variants() {
-        let kinds = [
-            TriggerKind::PerfectBump,
-            TriggerKind::BumpSuccess,
-            TriggerKind::EarlyBump,
-            TriggerKind::LateBump,
-            TriggerKind::BumpWhiff,
-            TriggerKind::CellImpact,
-            TriggerKind::BreakerImpact,
-            TriggerKind::WallImpact,
-            TriggerKind::CellDestroyed,
-            TriggerKind::BoltLost,
-            TriggerKind::Death,
+    fn trigger_has_runtime_variants() {
+        let triggers = [
+            Trigger::PerfectBump,
+            Trigger::Bump,
+            Trigger::EarlyBump,
+            Trigger::LateBump,
+            Trigger::BumpWhiff,
+            Trigger::Impact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Breaker),
+            Trigger::Impact(ImpactTarget::Wall),
+            Trigger::CellDestroyed,
+            Trigger::BoltLost,
+            Trigger::Death,
         ];
-        assert_eq!(kinds.len(), 11, "TriggerKind should have 11 variants");
+        assert_eq!(
+            triggers.len(),
+            11,
+            "Trigger should have 11 runtime variants"
+        );
     }
 }

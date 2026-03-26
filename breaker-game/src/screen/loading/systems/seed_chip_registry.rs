@@ -206,14 +206,14 @@ mod tests {
             Some((
                 "Basic",
                 vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
             )),
             Some((
                 "Keen",
                 vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(2))],
                 }],
             )),
@@ -289,7 +289,7 @@ mod tests {
             rarity: Rarity::Common,
             max_stacks: 3,
             effects: vec![EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then: vec![EffectNode::Do(Effect::Piercing(1))],
             }],
             ingredients: None,
@@ -512,7 +512,7 @@ mod tests {
             Some((
                 "Basic",
                 vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
             )),
@@ -541,7 +541,7 @@ mod tests {
             Some((
                 "Basic",
                 vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
             )),

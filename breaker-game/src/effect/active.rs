@@ -35,13 +35,13 @@ mod tests {
 
     #[test]
     fn effect_node_for_active_effects_with_chip_name() {
-        use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
+        use super::super::evaluate::{NodeEvalResult, evaluate_node};
 
         // Verify the shape of what ActiveEffects stores:
-        // (Some("Surge"), EffectNode::When { trigger: OnPerfectBump, then: [Do(Shockwave)] })
+        // (Some("Surge"), EffectNode::When { trigger: PerfectBump, then: [Do(Shockwave)] })
         let chip_name: Option<String> = Some("Surge".to_owned());
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
@@ -53,25 +53,25 @@ mod tests {
         assert!(matches!(
             &node,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 ..
             }
         ));
         // Verify evaluate_node works with this node
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(result.len(), 1);
     }
 
     #[test]
     fn effect_node_for_active_effects_breaker_chain_none_chip_name() {
-        use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
+        use super::super::evaluate::{NodeEvalResult, evaluate_node};
 
         // Breaker chains have None chip name
         let chip_name: Option<String> = None;
-        let node = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
+        let node = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         assert!(chip_name.is_none());
         // Verify evaluate_node works
-        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        let result = evaluate_node(Trigger::BoltLost, &node);
         assert_eq!(result, vec![NodeEvalResult::Fire(Effect::LoseLife)]);
     }
 }

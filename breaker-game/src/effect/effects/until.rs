@@ -177,10 +177,10 @@ pub(crate) fn check_until_triggers(
     for (entity, mut triggers, mut velocity, mut active_speed, mut active_damage) in &mut query {
         triggers.0.retain(|entry| {
             let matched = match &entry.trigger {
-                Trigger::OnImpact(ImpactTarget::Cell) => cell_hit_bolts.contains(&entity),
-                Trigger::OnImpact(ImpactTarget::Wall) => wall_hit_bolts.contains(&entity),
-                Trigger::OnImpact(ImpactTarget::Breaker) => breaker_hit_bolts.contains(&entity),
-                Trigger::OnCellDestroyed => cell_destroyed_count > 0,
+                Trigger::Impact(ImpactTarget::Cell) => cell_hit_bolts.contains(&entity),
+                Trigger::Impact(ImpactTarget::Wall) => wall_hit_bolts.contains(&entity),
+                Trigger::Impact(ImpactTarget::Breaker) => breaker_hit_bolts.contains(&entity),
+                Trigger::CellDestroyed => cell_destroyed_count > 0,
                 _ => false,
             };
             if matched {
@@ -341,7 +341,7 @@ mod tests {
                 Velocity2D(Vec2::new(0.0, 400.0)),
                 DamageBoost(2.0),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     children: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
                 }]),
             ))
@@ -393,7 +393,7 @@ mod tests {
                 BoltBaseSpeed(400.0),
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnImpact(ImpactTarget::Breaker),
+                    trigger: Trigger::Impact(ImpactTarget::Breaker),
                     children: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Bolt,
                         multiplier: 1.5,
@@ -442,7 +442,7 @@ mod tests {
                 BoltBaseSpeed(400.0),
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnImpact(ImpactTarget::Breaker),
+                    trigger: Trigger::Impact(ImpactTarget::Breaker),
                     children: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Bolt,
                         multiplier: 1.5,
@@ -626,7 +626,7 @@ mod tests {
                 BoltBaseSpeed(400.0),
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnImpact(ImpactTarget::Wall),
+                    trigger: Trigger::Impact(ImpactTarget::Wall),
                     children: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Bolt,
                         multiplier: 1.3,
@@ -682,7 +682,7 @@ mod tests {
                 BoltBaseSpeed(400.0),
                 BoltMaxSpeed(800.0),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnCellDestroyed,
+                    trigger: Trigger::CellDestroyed,
                     children: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Bolt,
                         multiplier: 1.5,
@@ -833,7 +833,7 @@ mod tests {
                 UntilTimers(vec![UntilTimerEntry {
                     remaining: 0.01, // dt = 1/64 > 0.01 — expires this tick
                     children: vec![EffectNode::When {
-                        trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
                         then: vec![EffectNode::Do(Effect::Shockwave {
                             base_range: 64.0,
                             range_per_level: 0.0,
@@ -885,7 +885,7 @@ mod tests {
                             multiplier: 1.5,
                         }),
                         EffectNode::When {
-                            trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                            trigger: Trigger::Impact(ImpactTarget::Cell),
                             then: vec![EffectNode::Do(Effect::Shockwave {
                                 base_range: 48.0,
                                 range_per_level: 0.0,
@@ -940,9 +940,9 @@ mod tests {
                 Bolt,
                 Velocity2D(Vec2::new(0.0, 400.0)),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnImpact(ImpactTarget::Breaker),
+                    trigger: Trigger::Impact(ImpactTarget::Breaker),
                     children: vec![EffectNode::When {
-                        trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                        trigger: Trigger::Impact(ImpactTarget::Cell),
                         then: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
                     }],
                 }]),
@@ -1043,7 +1043,7 @@ mod tests {
                 Velocity2D(Vec2::new(0.0, 400.0)),
                 ActiveDamageBoosts(vec![2.0, 1.5]),
                 UntilTriggers(vec![UntilTriggerEntry {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     children: vec![EffectNode::Do(Effect::DamageBoost(2.0))],
                 }]),
             ))

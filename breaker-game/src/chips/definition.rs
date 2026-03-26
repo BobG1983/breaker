@@ -333,7 +333,7 @@ impl ChipDefinition {
         Self::test(
             name,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
             },
             1,
@@ -490,7 +490,7 @@ mod tests {
             rarity: Rarity::Common,
             max_stacks: 3,
             effects: vec![EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then: vec![EffectNode::Do(Effect::Piercing(1))],
             }],
             ingredients: None,
@@ -499,7 +499,7 @@ mod tests {
         assert!(matches!(
             def.effects[0],
             EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 ..
             }
         ));
@@ -528,7 +528,7 @@ mod tests {
         assert_eq!(
             def.effects[0],
             EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then: vec![EffectNode::Do(Effect::Piercing(1))]
             }
         );
@@ -542,7 +542,7 @@ mod tests {
         assert!(matches!(
             def.effects[0],
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 ..
             }
         ));
@@ -557,7 +557,7 @@ mod tests {
         let slot = RaritySlot {
             prefix: "Basic".to_owned(),
             effects: vec![EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then: vec![EffectNode::Do(Effect::Piercing(1))],
             }],
         };
@@ -565,7 +565,7 @@ mod tests {
         assert!(matches!(
             slot.effects[0],
             EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 ..
             }
         ));
@@ -585,7 +585,7 @@ mod tests {
         assert!(matches!(
             common.effects[0],
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 ..
             }
         ));
@@ -599,7 +599,7 @@ mod tests {
             common: Some(RaritySlot {
                 prefix: "Basic".to_owned(),
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnPerfectBump,
+                    trigger: Trigger::PerfectBump,
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: Target::Bolt,
                         multiplier: 1.2,
@@ -618,7 +618,7 @@ mod tests {
         assert!(matches!(
             defs[0].effects[0],
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 ..
             }
         ));
@@ -645,7 +645,7 @@ mod tests {
         assert!(matches!(
             def.effects[0],
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 ..
             }
         ));

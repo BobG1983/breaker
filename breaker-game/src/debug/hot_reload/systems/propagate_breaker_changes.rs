@@ -94,7 +94,7 @@ pub(crate) fn propagate_breaker_changes(
         chains.push((
             None,
             EffectNode::When {
-                trigger: Trigger::OnBoltLost,
+                trigger: Trigger::BoltLost,
                 then: vec![node.clone()],
             },
         ));
@@ -103,7 +103,7 @@ pub(crate) fn propagate_breaker_changes(
         chains.push((
             None,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![node.clone()],
             },
         ));
@@ -112,7 +112,7 @@ pub(crate) fn propagate_breaker_changes(
         chains.push((
             None,
             EffectNode::When {
-                trigger: Trigger::OnEarlyBump,
+                trigger: Trigger::EarlyBump,
                 then: vec![node.clone()],
             },
         ));
@@ -121,7 +121,7 @@ pub(crate) fn propagate_breaker_changes(
         chains.push((
             None,
             EffectNode::When {
-                trigger: Trigger::OnLateBump,
+                trigger: Trigger::LateBump,
                 then: vec![node.clone()],
             },
         ));
@@ -309,8 +309,8 @@ mod tests {
         app.update();
 
         let active = app.world().resource::<ActiveEffects>();
-        // on_bolt_lost=LoseLife -> OnBoltLost(LoseLife)
-        // on_perfect_bump=SpeedBoost -> OnPerfectBump(SpeedBoost{...})
+        // on_bolt_lost=LoseLife -> BoltLost(LoseLife)
+        // on_perfect_bump=SpeedBoost -> PerfectBump(SpeedBoost{...})
         // on_early_bump=SpeedBoost -> OnEarlyBump(SpeedBoost{...})
         // on_late_bump=SpeedBoost -> OnLateBump(SpeedBoost{...})
         assert_eq!(
@@ -422,7 +422,7 @@ mod tests {
         );
         assert!(matches!(
             &active.0[0],
-            (None, EffectNode::When { trigger: Trigger::OnPerfectBump, then }) if then.len() == 1 && matches!(
+            (None, EffectNode::When { trigger: Trigger::PerfectBump, then }) if then.len() == 1 && matches!(
                 &then[0],
                 EffectNode::Do(Effect::SpeedBoost { multiplier, .. }) if (*multiplier - 2.0).abs() < f32::EPSILON
             )

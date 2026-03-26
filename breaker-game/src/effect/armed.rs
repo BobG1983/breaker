@@ -36,12 +36,12 @@ mod tests {
 
     #[test]
     fn effect_node_for_armed_effects_impact_trigger() {
-        use super::super::evaluate::{NodeEvalResult, TriggerKind, evaluate_node};
+        use super::super::evaluate::{NodeEvalResult, evaluate_node};
 
         // Verify the shape of what ArmedEffects stores:
         // (None, EffectNode::When { trigger: OnImpact(Cell), then: [Do(Shockwave)] })
         let node = EffectNode::When {
-            trigger: Trigger::OnImpact(ImpactTarget::Cell),
+            trigger: Trigger::Impact(ImpactTarget::Cell),
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
@@ -52,12 +52,12 @@ mod tests {
         assert!(matches!(
             &node,
             EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 ..
             }
         ));
         // Verify evaluate_node resolves this armed trigger
-        let result = evaluate_node(TriggerKind::CellImpact, &node);
+        let result = evaluate_node(Trigger::Impact(ImpactTarget::Cell), &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::Fire(Effect::Shockwave {

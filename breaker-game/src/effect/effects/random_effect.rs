@@ -217,7 +217,7 @@ mod tests {
             .add_observer(capture_shockwave);
 
         let chain = EffectNode::When {
-            trigger: Trigger::OnImpact(crate::effect::definition::ImpactTarget::Cell),
+            trigger: Trigger::Impact(crate::effect::definition::ImpactTarget::Cell),
             then: vec![EffectNode::Do(Effect::test_shockwave(32.0))],
         };
         let bolt = app.world_mut().spawn(ArmedEffects::default()).id();

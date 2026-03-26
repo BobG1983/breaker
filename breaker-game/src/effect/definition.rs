@@ -51,29 +51,40 @@ pub enum AttractionType {
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq)]
 pub enum Trigger {
     /// Fires on a perfect bump.
-    OnPerfectBump,
+    #[serde(rename = "OnPerfectBump")]
+    PerfectBump,
     /// Fires on any non-whiff bump (Early, Late, or Perfect).
-    OnBump,
+    #[serde(rename = "OnBump")]
+    Bump,
     /// Fires on an early bump.
-    OnEarlyBump,
+    #[serde(rename = "OnEarlyBump")]
+    EarlyBump,
     /// Fires on a late bump.
-    OnLateBump,
+    #[serde(rename = "OnLateBump")]
+    LateBump,
     /// Fires when a bump whiffs (misses).
-    OnBumpWhiff,
+    #[serde(rename = "OnBumpWhiff")]
+    BumpWhiff,
     /// Fires on bolt impact with a specific surface.
-    OnImpact(ImpactTarget),
+    #[serde(rename = "OnImpact")]
+    Impact(ImpactTarget),
     /// Fires when a cell is destroyed.
-    OnCellDestroyed,
+    #[serde(rename = "OnCellDestroyed")]
+    CellDestroyed,
     /// Fires when a bolt is lost.
-    OnBoltLost,
+    #[serde(rename = "OnBoltLost")]
+    BoltLost,
     /// Fires when the breaker dies (all lives lost or timer expired).
-    OnDeath,
+    #[serde(rename = "OnDeath")]
+    Death,
     /// Passive effects: evaluated immediately on chip selection.
-    OnSelected,
+    #[serde(rename = "OnSelected")]
+    Selected,
     /// Timer-based expiry trigger (duration in seconds).
     TimeExpires(f32),
     /// Fires when the node timer ratio crosses below the threshold.
-    OnNodeTimerThreshold(f32),
+    #[serde(rename = "OnNodeTimerThreshold")]
+    NodeTimerThreshold(f32),
 }
 
 // ---------------------------------------------------------------------------
@@ -449,7 +460,7 @@ mod tests {
     #[test]
     fn effect_node_when_wraps_trigger_and_children() {
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
@@ -459,29 +470,29 @@ mod tests {
         };
         match &node {
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then,
             } => {
                 assert_eq!(then.len(), 1);
             }
-            other => panic!("expected When(OnPerfectBump, _), got {other:?}"),
+            other => panic!("expected When(PerfectBump, _), got {other:?}"),
         }
     }
 
     #[test]
     fn effect_node_when_empty_then_is_valid() {
         let node = EffectNode::When {
-            trigger: Trigger::OnBump,
+            trigger: Trigger::Bump,
             then: vec![],
         };
         match &node {
             EffectNode::When {
-                trigger: Trigger::OnBump,
+                trigger: Trigger::Bump,
                 then,
             } => {
                 assert!(then.is_empty());
             }
-            other => panic!("expected When(OnBump, []), got {other:?}"),
+            other => panic!("expected When(Bump, []), got {other:?}"),
         }
     }
 
@@ -522,13 +533,13 @@ mod tests {
     #[test]
     fn effect_node_until_with_impact_breaker_removal() {
         let node = EffectNode::Until {
-            until: Trigger::OnImpact(ImpactTarget::Breaker),
+            until: Trigger::Impact(ImpactTarget::Breaker),
             then: vec![],
         };
         assert!(matches!(
             node,
             EffectNode::Until {
-                until: Trigger::OnImpact(ImpactTarget::Breaker),
+                until: Trigger::Impact(ImpactTarget::Breaker),
                 ..
             }
         ));
@@ -561,9 +572,9 @@ mod tests {
     #[test]
     fn effect_node_nests_when_inside_when_two_deep() {
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
@@ -574,29 +585,29 @@ mod tests {
         };
         match &node {
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then,
             } => match &then[0] {
                 EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: inner,
                 } => {
                     assert!(matches!(inner[0], EffectNode::Do(Effect::Shockwave { .. })));
                 }
-                other => panic!("expected inner When(OnImpact(Cell), _), got {other:?}"),
+                other => panic!("expected inner When(Impact(Cell), _), got {other:?}"),
             },
-            other => panic!("expected outer When(OnPerfectBump, _), got {other:?}"),
+            other => panic!("expected outer When(PerfectBump, _), got {other:?}"),
         }
     }
 
     #[test]
     fn effect_node_nests_three_deep() {
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::When {
-                    trigger: Trigger::OnCellDestroyed,
+                    trigger: Trigger::CellDestroyed,
                     then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
                 }],
             }],
@@ -604,7 +615,7 @@ mod tests {
         assert!(matches!(
             node,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 ..
             }
         ));
@@ -613,11 +624,11 @@ mod tests {
     #[test]
     fn effect_node_when_containing_until_with_do_leaves() {
         let node = EffectNode::When {
-            trigger: Trigger::OnBumpWhiff,
+            trigger: Trigger::BumpWhiff,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Until {
-                    until: Trigger::OnImpact(ImpactTarget::Breaker),
+                    until: Trigger::Impact(ImpactTarget::Breaker),
                     then: vec![
                         EffectNode::Do(Effect::DamageBoost(1.5)),
                         EffectNode::Do(Effect::Shockwave {
@@ -659,7 +670,7 @@ mod tests {
         assert_eq!(
             node,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
@@ -698,7 +709,7 @@ mod tests {
         assert_eq!(
             node,
             EffectNode::Until {
-                until: Trigger::OnImpact(ImpactTarget::Breaker),
+                until: Trigger::Impact(ImpactTarget::Breaker),
                 then: vec![]
             }
         );
@@ -731,24 +742,24 @@ mod tests {
         // Verify outer When
         match &node {
             EffectNode::When {
-                trigger: Trigger::OnBumpWhiff,
+                trigger: Trigger::BumpWhiff,
                 then,
             } => match &then[0] {
                 EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: inner,
                 } => match &inner[0] {
                     EffectNode::Until {
-                        until: Trigger::OnImpact(ImpactTarget::Breaker),
+                        until: Trigger::Impact(ImpactTarget::Breaker),
                         then: until_kids,
                     } => {
                         assert_eq!(until_kids.len(), 2, "Until should have 2 Do children");
                     }
                     other => panic!("expected Until, got {other:?}"),
                 },
-                other => panic!("expected inner When(OnImpact(Cell)), got {other:?}"),
+                other => panic!("expected inner When(Impact(Cell)), got {other:?}"),
             },
-            other => panic!("expected outer When(OnBumpWhiff), got {other:?}"),
+            other => panic!("expected outer When(BumpWhiff), got {other:?}"),
         }
     }
 
@@ -758,11 +769,11 @@ mod tests {
 
     #[test]
     fn effect_node_trigger_leaf_builds_when_do() {
-        let node = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
+        let node = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         assert_eq!(
             node,
             EffectNode::When {
-                trigger: Trigger::OnBoltLost,
+                trigger: Trigger::BoltLost,
                 then: vec![EffectNode::Do(Effect::LoseLife)]
             }
         );
@@ -770,11 +781,11 @@ mod tests {
 
     #[test]
     fn effect_node_trigger_leaf_on_selected() {
-        let node = EffectNode::trigger_leaf(Trigger::OnSelected, Effect::Piercing(1));
+        let node = EffectNode::trigger_leaf(Trigger::Selected, Effect::Piercing(1));
         assert_eq!(
             node,
             EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then: vec![EffectNode::Do(Effect::Piercing(1))]
             }
         );
@@ -800,13 +811,13 @@ mod tests {
 
     #[test]
     fn trigger_on_death_constructs() {
-        let t = Trigger::OnDeath;
-        assert!(matches!(t, Trigger::OnDeath));
+        let t = Trigger::Death;
+        assert!(matches!(t, Trigger::Death));
     }
 
     #[test]
     fn trigger_on_death_distinct_from_bolt_lost() {
-        assert_ne!(Trigger::OnDeath, Trigger::OnBoltLost);
+        assert_ne!(Trigger::Death, Trigger::BoltLost);
     }
 
     #[test]
@@ -826,7 +837,7 @@ mod tests {
     #[test]
     fn trigger_ron_on_death() {
         let t: Trigger = ron::de::from_str("OnDeath").expect("OnDeath RON should parse");
-        assert_eq!(t, Trigger::OnDeath);
+        assert_eq!(t, Trigger::Death);
     }
 
     // =========================================================================
@@ -837,21 +848,21 @@ mod tests {
     fn trigger_ron_on_node_timer_threshold() {
         let t: Trigger = ron::de::from_str("OnNodeTimerThreshold(0.25)")
             .expect("OnNodeTimerThreshold(0.25) RON should parse");
-        assert_eq!(t, Trigger::OnNodeTimerThreshold(0.25));
+        assert_eq!(t, Trigger::NodeTimerThreshold(0.25));
     }
 
     #[test]
     fn trigger_ron_on_node_timer_threshold_zero() {
         let t: Trigger = ron::de::from_str("OnNodeTimerThreshold(0.0)")
             .expect("OnNodeTimerThreshold(0.0) RON should parse");
-        assert_eq!(t, Trigger::OnNodeTimerThreshold(0.0));
+        assert_eq!(t, Trigger::NodeTimerThreshold(0.0));
     }
 
     #[test]
     fn trigger_ron_on_node_timer_threshold_one() {
         let t: Trigger = ron::de::from_str("OnNodeTimerThreshold(1.0)")
             .expect("OnNodeTimerThreshold(1.0) RON should parse");
-        assert_eq!(t, Trigger::OnNodeTimerThreshold(1.0));
+        assert_eq!(t, Trigger::NodeTimerThreshold(1.0));
     }
 
     #[test]
@@ -866,20 +877,20 @@ mod tests {
     #[test]
     fn trigger_enum_has_all_fourteen_patterns() {
         let triggers = [
-            Trigger::OnPerfectBump,
-            Trigger::OnBump,
-            Trigger::OnEarlyBump,
-            Trigger::OnLateBump,
-            Trigger::OnBumpWhiff,
-            Trigger::OnImpact(ImpactTarget::Cell),
-            Trigger::OnImpact(ImpactTarget::Breaker),
-            Trigger::OnImpact(ImpactTarget::Wall),
-            Trigger::OnCellDestroyed,
-            Trigger::OnBoltLost,
-            Trigger::OnDeath,
-            Trigger::OnSelected,
+            Trigger::PerfectBump,
+            Trigger::Bump,
+            Trigger::EarlyBump,
+            Trigger::LateBump,
+            Trigger::BumpWhiff,
+            Trigger::Impact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Breaker),
+            Trigger::Impact(ImpactTarget::Wall),
+            Trigger::CellDestroyed,
+            Trigger::BoltLost,
+            Trigger::Death,
+            Trigger::Selected,
             Trigger::TimeExpires(1.0),
-            Trigger::OnNodeTimerThreshold(0.25),
+            Trigger::NodeTimerThreshold(0.25),
         ];
         assert_eq!(
             triggers.len(),
@@ -1153,7 +1164,7 @@ mod tests {
     fn effect_chains_stores_mixed_node_types() {
         let chains = EffectChains(vec![
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
@@ -1323,9 +1334,9 @@ mod tests {
             on_early_bump: None,
             on_late_bump: None,
             chains: vec![EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 64.0,
                         range_per_level: 0.0,

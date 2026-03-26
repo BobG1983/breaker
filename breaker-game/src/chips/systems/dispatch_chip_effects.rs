@@ -39,7 +39,7 @@ pub(crate) fn dispatch_chip_effects(
         for effect in &chip.effects {
             match effect {
                 EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then,
                 } => {
                     for child in then {
@@ -61,7 +61,7 @@ pub(crate) fn dispatch_chip_effects(
                         &mut commands,
                     );
                 }
-                // Any trigger-wrapper variant (When with non-OnSelected trigger, Until, Once)
+                // Any trigger-wrapper variant (When with non-Selected trigger, Until, Once)
                 // is pushed to ActiveEffects for runtime evaluation by bridge systems.
                 node => {
                     if let Some(ref mut active) = active_chains {
@@ -150,7 +150,7 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: OnSelected effects fire ChipEffectApplied for each inner leaf (29)
+    // B3: Selected effects fire ChipEffectApplied for each inner leaf (29)
     // ---------------------------------------------------------------------------
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
                 ingredients: None,
@@ -181,7 +181,7 @@ mod tests {
             .query::<&Piercing>()
             .iter(app.world())
             .next()
-            .expect("bolt should have Piercing component after OnSelected chip selected");
+            .expect("bolt should have Piercing component after Selected chip selected");
         assert_eq!(piercing.0, 1);
     }
 
@@ -198,7 +198,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![
                         EffectNode::Do(Effect::Piercing(1)),
                         EffectNode::Do(Effect::DamageBoost(0.5)),
@@ -217,7 +217,7 @@ mod tests {
                 .iter(app.world())
                 .next()
                 .is_some(),
-            "bolt should have Piercing from OnSelected with multiple leaves"
+            "bolt should have Piercing from Selected with multiple leaves"
         );
         assert!(
             app.world_mut()
@@ -225,7 +225,7 @@ mod tests {
                 .iter(app.world())
                 .next()
                 .is_some(),
-            "bolt should have DamageBoost from OnSelected with multiple leaves"
+            "bolt should have DamageBoost from Selected with multiple leaves"
         );
     }
 
@@ -238,9 +238,9 @@ mod tests {
         let mut app = test_app();
 
         let chain = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 32.0,
@@ -292,7 +292,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
                 ingredients: None,
@@ -344,7 +344,7 @@ mod tests {
                 rarity: Rarity::Rare,
                 max_stacks: 1,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnPerfectBump,
+                    trigger: Trigger::PerfectBump,
                     then: vec![EffectNode::Do(Effect::SpawnBolts {
                         count: 1,
                         lifespan: None,
@@ -461,7 +461,7 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: OnSelected integration via registry (36)
+    // B3: Selected integration via registry (36)
     // ---------------------------------------------------------------------------
 
     #[test]
@@ -477,7 +477,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
                 ingredients: None,
@@ -492,12 +492,12 @@ mod tests {
             .query::<&Piercing>()
             .iter(app.world())
             .next()
-            .expect("bolt should have Piercing via OnSelected from registry");
+            .expect("bolt should have Piercing via Selected from registry");
         assert_eq!(piercing.0, 1);
     }
 
     // ---------------------------------------------------------------------------
-    // B3: OnSelected with empty inner vec is a no-op (37)
+    // B3: Selected with empty inner vec is a no-op (37)
     // ---------------------------------------------------------------------------
 
     #[test]
@@ -514,7 +514,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 1,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![],
                 }],
                 ingredients: None,
@@ -538,7 +538,7 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // B3: Mixed effects: OnSelected + triggered chain on same chip (38)
+    // B3: Mixed effects: Selected + triggered chain on same chip (38)
     // ---------------------------------------------------------------------------
 
     #[test]
@@ -555,11 +555,11 @@ mod tests {
                 max_stacks: 1,
                 effects: vec![
                     EffectNode::When {
-                        trigger: Trigger::OnSelected,
+                        trigger: Trigger::Selected,
                         then: vec![EffectNode::Do(Effect::Piercing(1))],
                     },
                     EffectNode::When {
-                        trigger: Trigger::OnPerfectBump,
+                        trigger: Trigger::PerfectBump,
                         then: vec![EffectNode::Do(Effect::SpawnBolts {
                             count: 1,
                             lifespan: None,
@@ -574,13 +574,13 @@ mod tests {
         send_chip_selected(&mut app, "Hybrid");
         tick(&mut app);
 
-        // Piercing from OnSelected dispatch
+        // Piercing from Selected dispatch
         let piercing = app
             .world_mut()
             .query::<&Piercing>()
             .iter(app.world())
             .next()
-            .expect("bolt should have Piercing from OnSelected dispatch");
+            .expect("bolt should have Piercing from Selected dispatch");
         assert_eq!(piercing.0, 1);
 
         // ActiveEffects has the triggered chain
@@ -594,7 +594,7 @@ mod tests {
         assert_eq!(
             active.0[0].1,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::SpawnBolts {
                     count: 1,
                     lifespan: None,
@@ -622,7 +622,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: Target::AllBolts,
                         multiplier: 1.1,
@@ -718,7 +718,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::SizeBoost(Target::Breaker, 20.0))],
                 }],
                 ingredients: None,
@@ -733,7 +733,7 @@ mod tests {
             .query::<&WidthBoost>()
             .iter(app.world())
             .next()
-            .expect("breaker should have WidthBoost component after OnSelected SizeBoost(Breaker)");
+            .expect("breaker should have WidthBoost component after Selected SizeBoost(Breaker)");
         assert!(
             (wb.0 - 20.0).abs() < f32::EPSILON,
             "WidthBoost should be 20.0, got {}",
@@ -780,20 +780,20 @@ mod tests {
     fn effect_node_on_selected_dispatches_leaf_effects() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
         // dispatch_chip_effects matches on
-        // EffectNode::When { trigger: OnSelected, then } and fires
+        // EffectNode::When { trigger: Selected, then } and fires
         // passive events for each inner Do's Effect.
         let node = EffectNode::When {
-            trigger: Trigger::OnSelected,
+            trigger: Trigger::Selected,
             then: vec![EffectNode::Do(Effect::Piercing(1))],
         };
         // Verify EffectNode structure and inner extraction
         match &node {
             EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then,
             } => {
                 assert_eq!(then.len(), 1);
@@ -804,11 +804,11 @@ mod tests {
                     other => panic!("expected Do, got {other:?}"),
                 }
             }
-            other => panic!("expected When(OnSelected, _), got {other:?}"),
+            other => panic!("expected When(Selected, _), got {other:?}"),
         }
-        // evaluate_node should return NoMatch for OnSelected — it's handled
+        // evaluate_node should return NoMatch for Selected — it's handled
         // by dispatch_chip_effects, not by bridges
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
 
@@ -816,11 +816,11 @@ mod tests {
     fn effect_node_on_selected_multiple_leaves_extracts_all() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
         let node = EffectNode::When {
-            trigger: Trigger::OnSelected,
+            trigger: Trigger::Selected,
             then: vec![
                 EffectNode::Do(Effect::Piercing(1)),
                 EffectNode::Do(Effect::DamageBoost(0.5)),
@@ -828,17 +828,17 @@ mod tests {
         };
         match &node {
             EffectNode::When {
-                trigger: Trigger::OnSelected,
+                trigger: Trigger::Selected,
                 then,
             } => {
                 assert_eq!(then.len(), 2);
                 assert_eq!(then[0], EffectNode::Do(Effect::Piercing(1)));
                 assert_eq!(then[1], EffectNode::Do(Effect::DamageBoost(0.5)));
             }
-            other => panic!("expected When(OnSelected, 2 children), got {other:?}"),
+            other => panic!("expected When(Selected, 2 children), got {other:?}"),
         }
-        // OnSelected always returns NoMatch from evaluate_node (fails with todo!)
-        let result = evaluate_node(TriggerKind::BumpSuccess, &node);
+        // Selected always returns NoMatch from evaluate_node (fails with todo!)
+        let result = evaluate_node(Trigger::Bump, &node);
         assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
 
@@ -846,21 +846,21 @@ mod tests {
     fn effect_node_trigger_wrapper_pushed_to_active_effects_pattern() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
-        // After migration, dispatch_chip_effects pushes non-OnSelected triggers
+        // After migration, dispatch_chip_effects pushes non-Selected triggers
         // to ActiveEffects. Verify this EffectNode evaluates as expected.
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::Do(Effect::SpawnBolts {
                 count: 1,
                 lifespan: None,
                 inherit: false,
             })],
         };
-        // Should NOT match OnSelected — bridge evaluation handles it
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        // Should NOT match Selected — bridge evaluation handles it
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::Fire(Effect::SpawnBolts {
@@ -868,7 +868,7 @@ mod tests {
                 lifespan: None,
                 inherit: false
             })],
-            "OnPerfectBump with Do(SpawnBolts) should fire on PerfectBump"
+            "PerfectBump with Do(SpawnBolts) should fire on PerfectBump"
         );
     }
 
@@ -876,7 +876,7 @@ mod tests {
     fn effect_node_bare_leaf_pattern_for_direct_dispatch() {
         use crate::effect::{
             definition::{Effect, EffectNode},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
         // A bare EffectNode::Do is treated as an immediate
@@ -891,7 +891,7 @@ mod tests {
             assert_eq!(*effect, Effect::Piercing(1));
         }
         // Bare leaf returns NoMatch from evaluate_node (fails with todo!)
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
 
@@ -961,7 +961,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(1))],
                 }],
                 ingredients: None,
@@ -975,7 +975,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             1,
-            "dispatch should fire PiercingApplied (not ChipEffectApplied) for OnSelected Piercing"
+            "dispatch should fire PiercingApplied (not ChipEffectApplied) for Selected Piercing"
         );
         assert_eq!(captured.0[0].per_stack, 1);
         assert_eq!(captured.0[0].max_stacks, 3);
@@ -995,7 +995,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::SizeBoost(Target::Bolt, 5.0))],
                 }],
                 ingredients: None,
@@ -1009,7 +1009,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             1,
-            "dispatch should fire SizeBoostApplied for OnSelected SizeBoost"
+            "dispatch should fire SizeBoostApplied for Selected SizeBoost"
         );
         assert_eq!(
             captured.0[0].target,
@@ -1031,7 +1031,7 @@ mod tests {
                 rarity: Rarity::Common,
                 max_stacks: 3,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![
                         EffectNode::Do(Effect::SpeedBoost {
                             target: Target::Bolt,
@@ -1072,7 +1072,7 @@ mod tests {
     // =========================================================================
 
     /// Behavior 19: Evolution chip is found in unified `ChipRegistry` and
-    /// `OnSelected` effects fire. Before B12d, evolution chips were excluded
+    /// `Selected` effects fire. Before B12d, evolution chips were excluded
     /// from `ChipRegistry` (stored only in `EvolutionRegistry`), so
     /// `registry.get("Barrage")` returned None — this is the B7 fix.
     #[test]
@@ -1089,7 +1089,7 @@ mod tests {
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnSelected,
+                    trigger: Trigger::Selected,
                     then: vec![EffectNode::Do(Effect::Piercing(5))],
                 }],
                 ingredients: Some(vec![crate::chips::definition::EvolutionIngredient {
@@ -1103,7 +1103,7 @@ mod tests {
         send_chip_selected(&mut app, "Barrage");
         tick(&mut app);
 
-        // Bolt should have Piercing(5) from the evolution chip's OnSelected effect
+        // Bolt should have Piercing(5) from the evolution chip's Selected effect
         let piercing = app
             .world_mut()
             .query::<&Piercing>()
@@ -1112,7 +1112,7 @@ mod tests {
             .expect("bolt should have Piercing component after evolution chip selected (B7 fix)");
         assert_eq!(
             piercing.0, 5,
-            "Piercing value should be 5 from evolution chip's OnSelected(Piercing(5))"
+            "Piercing value should be 5 from evolution chip's Selected(Piercing(5))"
         );
 
         // ChipInventory should track the evolution chip
@@ -1129,7 +1129,7 @@ mod tests {
     fn dispatch_handles_triggered_chain_for_evolution_chip() {
         let mut app = test_app();
 
-        // Insert an Evolution chip with a triggered chain (OnPerfectBump → Shockwave)
+        // Insert an Evolution chip with a triggered chain (PerfectBump → Shockwave)
         app.world_mut()
             .resource_mut::<ChipRegistry>()
             .insert(ChipDefinition {
@@ -1138,7 +1138,7 @@ mod tests {
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
                 effects: vec![EffectNode::When {
-                    trigger: Trigger::OnPerfectBump,
+                    trigger: Trigger::PerfectBump,
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 64.0,
                         range_per_level: 0.0,
@@ -1167,7 +1167,7 @@ mod tests {
         assert_eq!(
             active.0[0].1,
             EffectNode::When {
-                trigger: Trigger::OnPerfectBump,
+                trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,

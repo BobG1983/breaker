@@ -496,9 +496,9 @@ fn scenario_definition_initial_overclocks_single_surge_chain_parses() {
     assert_eq!(
         overclocks[0],
         EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 32.0,

@@ -9,9 +9,9 @@ use rantzsoft_spatial2d::components::Position2D;
 use super::{
     active::ActiveEffects,
     armed::ArmedEffects,
-    definition::{EffectChains, EffectNode, EffectTarget, Trigger},
+    definition::{EffectChains, EffectNode, EffectTarget, ImpactTarget, Trigger},
     effects::until::{UntilTimers, UntilTriggers},
-    evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+    evaluate::{NodeEvalResult, evaluate_node},
     typed_events::fire_typed_event,
 };
 use crate::{
@@ -44,7 +44,7 @@ pub(crate) fn bridge_bolt_lost(
     if reader.read().count() == 0 {
         return;
     }
-    let trigger_kind = TriggerKind::BoltLost;
+    let trigger_kind = Trigger::BoltLost;
     evaluate_active_chains(&active, trigger_kind, vec![], &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 
@@ -58,7 +58,7 @@ pub(crate) fn bridge_bolt_lost(
 ///
 /// For each bump message, evaluates two trigger kinds:
 /// 1. Grade-specific: Perfect→`PerfectBump`, Early→`EarlyBump`, Late→`LateBump`
-/// 2. `BumpSuccess`: all non-whiff bumps evaluate `OnBump` chains.
+/// 2. `Bump`: all non-whiff bumps evaluate `Bump` chains.
 ///
 /// Also evaluates breaker entity `EffectChains`.
 pub(crate) fn bridge_bump(
@@ -70,9 +70,9 @@ pub(crate) fn bridge_bump(
 ) {
     for performed in reader.read() {
         let grade_trigger = match performed.grade {
-            BumpGrade::Perfect => TriggerKind::PerfectBump,
-            BumpGrade::Early => TriggerKind::EarlyBump,
-            BumpGrade::Late => TriggerKind::LateBump,
+            BumpGrade::Perfect => Trigger::PerfectBump,
+            BumpGrade::Early => Trigger::EarlyBump,
+            BumpGrade::Late => Trigger::LateBump,
         };
 
         // Bolt-targeted evaluation requires a real bolt entity
@@ -104,7 +104,7 @@ pub(crate) fn bridge_bump(
                     }
                 }
                 // BumpSuccess evaluation (all grades)
-                for result in evaluate_node(TriggerKind::BumpSuccess, chain) {
+                for result in evaluate_node(Trigger::Bump, chain) {
                     match result {
                         NodeEvalResult::Fire(effect) => {
                             fire_typed_event(
@@ -130,33 +130,18 @@ pub(crate) fn bridge_bump(
 
             // Evaluate armed triggers on the specific bolt
             evaluate_armed(&mut armed_query, &mut commands, bolt_entity, grade_trigger);
-            evaluate_armed(
-                &mut armed_query,
-                &mut commands,
-                bolt_entity,
-                TriggerKind::BumpSuccess,
-            );
+            evaluate_armed(&mut armed_query, &mut commands, bolt_entity, Trigger::Bump);
 
             // Evaluate breaker entity EffectChains (bolt-targeted)
             for mut chains in &mut breaker_query {
                 evaluate_entity_chains(&mut chains, grade_trigger, targets.clone(), &mut commands);
-                evaluate_entity_chains(
-                    &mut chains,
-                    TriggerKind::BumpSuccess,
-                    targets.clone(),
-                    &mut commands,
-                );
+                evaluate_entity_chains(&mut chains, Trigger::Bump, targets.clone(), &mut commands);
             }
         } else {
             // No bolt — still evaluate breaker entity EffectChains with empty targets
             for mut chains in &mut breaker_query {
                 evaluate_entity_chains(&mut chains, grade_trigger, vec![], &mut commands);
-                evaluate_entity_chains(
-                    &mut chains,
-                    TriggerKind::BumpSuccess,
-                    vec![],
-                    &mut commands,
-                );
+                evaluate_entity_chains(&mut chains, Trigger::Bump, vec![], &mut commands);
             }
         }
     }
@@ -175,7 +160,7 @@ pub(crate) fn bridge_bump_whiff(
     if reader.read().count() == 0 {
         return;
     }
-    let trigger_kind = TriggerKind::BumpWhiff;
+    let trigger_kind = Trigger::BumpWhiff;
     evaluate_active_chains(&active, trigger_kind, vec![], &mut commands);
     evaluate_armed_all(armed_query, trigger_kind, &mut commands);
 }
@@ -195,7 +180,7 @@ pub(crate) fn bridge_cell_impact(
         let bolt_entity = hit.bolt;
         let targets = vec![EffectTarget::Entity(bolt_entity)];
         for (chip_name, chain) in &active.0 {
-            for result in evaluate_node(TriggerKind::CellImpact, chain) {
+            for result in evaluate_node(Trigger::Impact(ImpactTarget::Cell), chain) {
                 match result {
                     NodeEvalResult::Fire(effect) => {
                         fire_typed_event(effect, targets.clone(), chip_name.clone(), &mut commands);
@@ -217,14 +202,14 @@ pub(crate) fn bridge_cell_impact(
             &mut armed_query,
             &mut commands,
             bolt_entity,
-            TriggerKind::CellImpact,
+            Trigger::Impact(ImpactTarget::Cell),
         );
 
         // Evaluate bolt entity EffectChains
         if let Ok(mut chains) = chains_query.get_mut(bolt_entity) {
             evaluate_entity_chains(
                 &mut chains,
-                TriggerKind::CellImpact,
+                Trigger::Impact(ImpactTarget::Cell),
                 targets.clone(),
                 &mut commands,
             );
@@ -234,7 +219,7 @@ pub(crate) fn bridge_cell_impact(
         evaluate_until_children(
             &until_query,
             bolt_entity,
-            TriggerKind::CellImpact,
+            Trigger::Impact(ImpactTarget::Cell),
             &targets,
             &mut commands,
         );
@@ -254,7 +239,7 @@ pub(crate) fn bridge_breaker_impact(
         let bolt_entity = hit.bolt;
         let targets = vec![EffectTarget::Entity(bolt_entity)];
         for (chip_name, chain) in &active.0 {
-            for result in evaluate_node(TriggerKind::BreakerImpact, chain) {
+            for result in evaluate_node(Trigger::Impact(ImpactTarget::Breaker), chain) {
                 match result {
                     NodeEvalResult::Fire(effect) => {
                         fire_typed_event(effect, targets.clone(), chip_name.clone(), &mut commands);
@@ -276,14 +261,14 @@ pub(crate) fn bridge_breaker_impact(
             &mut armed_query,
             &mut commands,
             bolt_entity,
-            TriggerKind::BreakerImpact,
+            Trigger::Impact(ImpactTarget::Breaker),
         );
 
         // Evaluate bolt entity EffectChains
         if let Ok(mut chains) = chains_query.get_mut(bolt_entity) {
             evaluate_entity_chains(
                 &mut chains,
-                TriggerKind::BreakerImpact,
+                Trigger::Impact(ImpactTarget::Breaker),
                 targets,
                 &mut commands,
             );
@@ -306,7 +291,7 @@ pub(crate) fn bridge_wall_impact(
         let bolt_entity = hit.bolt;
         let targets = vec![EffectTarget::Entity(bolt_entity)];
         for (chip_name, chain) in &active.0 {
-            for result in evaluate_node(TriggerKind::WallImpact, chain) {
+            for result in evaluate_node(Trigger::Impact(ImpactTarget::Wall), chain) {
                 match result {
                     NodeEvalResult::Fire(effect) => {
                         fire_typed_event(effect, targets.clone(), chip_name.clone(), &mut commands);
@@ -328,14 +313,14 @@ pub(crate) fn bridge_wall_impact(
             &mut armed_query,
             &mut commands,
             bolt_entity,
-            TriggerKind::WallImpact,
+            Trigger::Impact(ImpactTarget::Wall),
         );
 
         // Evaluate bolt entity EffectChains
         if let Ok(mut chains) = chains_query.get_mut(bolt_entity) {
             evaluate_entity_chains(
                 &mut chains,
-                TriggerKind::WallImpact,
+                Trigger::Impact(ImpactTarget::Wall),
                 targets.clone(),
                 &mut commands,
             );
@@ -345,24 +330,20 @@ pub(crate) fn bridge_wall_impact(
         evaluate_until_children(
             &until_query,
             bolt_entity,
-            TriggerKind::WallImpact,
+            Trigger::Impact(ImpactTarget::Wall),
             &targets,
             &mut commands,
         );
     }
 }
 
-/// Evaluates `TriggerKind::Death` on an entity's `EffectChains` and fires
+/// Evaluates `Trigger::Death` on an entity's `EffectChains` and fires
 /// any matching leaf effects. Shared by `bridge_cell_death` and `bridge_bolt_death`.
-fn evaluate_ondeath_chains(
-    entity: Entity,
-    chains: Option<&EffectChains>,
-    commands: &mut Commands,
-) {
+fn evaluate_ondeath_chains(entity: Entity, chains: Option<&EffectChains>, commands: &mut Commands) {
     if let Some(chains) = chains {
         let targets = vec![EffectTarget::Entity(entity)];
         for node in &chains.0 {
-            for result in evaluate_node(TriggerKind::Death, node) {
+            for result in evaluate_node(Trigger::Death, node) {
                 if let NodeEvalResult::Fire(effect) = result {
                     fire_typed_event(effect, targets.clone(), None, commands);
                 }
@@ -372,10 +353,10 @@ fn evaluate_ondeath_chains(
 }
 
 /// Bridge for `RequestCellDestroyed` — evaluates cell's `EffectChains` with
-/// `TriggerKind::Death` while the entity is still alive, then writes
+/// `Trigger::Death` while the entity is still alive, then writes
 /// `CellDestroyedAt` with position and required-to-clear data.
 ///
-/// Also evaluates `TriggerKind::CellDestroyed` active chains and armed triggers.
+/// Also evaluates `Trigger::CellDestroyed` active chains and armed triggers.
 pub(crate) fn bridge_cell_death(
     mut reader: MessageReader<RequestCellDestroyed>,
     cell_query: Query<(Option<&EffectChains>, &Position2D, Has<RequiredToClear>)>,
@@ -400,13 +381,13 @@ pub(crate) fn bridge_cell_death(
     }
 
     if any_destroyed {
-        evaluate_active_chains(&active, TriggerKind::CellDestroyed, vec![], &mut commands);
-        evaluate_armed_all(armed_query, TriggerKind::CellDestroyed, &mut commands);
+        evaluate_active_chains(&active, Trigger::CellDestroyed, vec![], &mut commands);
+        evaluate_armed_all(armed_query, Trigger::CellDestroyed, &mut commands);
     }
 }
 
 /// Bridge for `RequestBoltDestroyed` — evaluates bolt's `EffectChains` with
-/// `TriggerKind::Death` while the entity is still alive, then writes
+/// `Trigger::Death` while the entity is still alive, then writes
 /// `BoltDestroyedAt` with position data.
 pub(crate) fn bridge_bolt_death(
     mut reader: MessageReader<RequestBoltDestroyed>,
@@ -427,7 +408,7 @@ pub(crate) fn bridge_bolt_death(
     }
 }
 
-/// Bridge for `NodeTimer` — fires `When(OnNodeTimerThreshold(t))` chains
+/// Bridge for `NodeTimer` — fires `When(NodeTimerThreshold(t))` chains
 /// when the timer ratio crosses below the threshold. Fires once only.
 pub(crate) fn bridge_timer_threshold(
     timer: Res<NodeTimer>,
@@ -436,7 +417,13 @@ pub(crate) fn bridge_timer_threshold(
 ) {
     // Early return if no threshold chains exist
     let has_threshold = active.0.iter().any(|(_, chain)| {
-        matches!(chain, EffectNode::When { trigger: Trigger::OnNodeTimerThreshold(_), .. })
+        matches!(
+            chain,
+            EffectNode::When {
+                trigger: Trigger::NodeTimerThreshold(_),
+                ..
+            }
+        )
     });
     if !has_threshold {
         return;
@@ -452,7 +439,7 @@ pub(crate) fn bridge_timer_threshold(
     let mut indices_to_remove = Vec::new();
     for (i, (_chip_name, chain)) in active.0.iter().enumerate() {
         if let EffectNode::When {
-            trigger: Trigger::OnNodeTimerThreshold(threshold),
+            trigger: Trigger::NodeTimerThreshold(threshold),
             then,
         } = chain
             && ratio < *threshold
@@ -527,7 +514,7 @@ pub(crate) fn apply_once_nodes(mut query: Query<&mut EffectChains>, mut commands
 /// If no children match, the `Once` is preserved.
 fn evaluate_entity_chains(
     chains: &mut EffectChains,
-    trigger_kind: TriggerKind,
+    trigger_kind: Trigger,
     targets: Vec<EffectTarget>,
     commands: &mut Commands,
 ) {
@@ -584,7 +571,7 @@ fn evaluate_entity_chains(
 /// triggers (cell destroyed, bolt lost, bump whiff) don't provide.
 fn evaluate_active_chains(
     active: &ActiveEffects,
-    trigger_kind: TriggerKind,
+    trigger_kind: Trigger,
     targets: Vec<EffectTarget>,
     commands: &mut Commands,
 ) {
@@ -603,7 +590,7 @@ fn evaluate_active_chains(
 /// Evaluates armed triggers on all bolt entities that have `ArmedEffects`.
 fn evaluate_armed_all(
     mut armed_query: Query<(Entity, &mut ArmedEffects)>,
-    trigger_kind: TriggerKind,
+    trigger_kind: Trigger,
     commands: &mut Commands,
 ) {
     for (bolt_entity, mut armed) in &mut armed_query {
@@ -637,7 +624,7 @@ fn evaluate_armed(
     armed_query: &mut Query<&mut ArmedEffects>,
     commands: &mut Commands,
     bolt_entity: Entity,
-    trigger_kind: TriggerKind,
+    trigger_kind: Trigger,
 ) {
     if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
         let targets = vec![EffectTarget::Entity(bolt_entity)];
@@ -648,7 +635,7 @@ fn evaluate_armed(
 /// Resolves armed trigger chains: fires leaves, re-arms non-leaves, retains non-matches.
 fn resolve_armed(
     armed: &mut ArmedEffects,
-    trigger_kind: TriggerKind,
+    trigger_kind: Trigger,
     targets: Vec<EffectTarget>,
     commands: &mut Commands,
 ) {
@@ -685,7 +672,7 @@ fn resolve_armed(
 fn evaluate_until_children(
     until_query: &Query<(Option<&UntilTimers>, Option<&UntilTriggers>)>,
     bolt_entity: Entity,
-    trigger_kind: TriggerKind,
+    trigger_kind: Trigger,
     targets: &[EffectTarget],
     commands: &mut Commands,
 ) {
@@ -985,7 +972,7 @@ mod tests {
 
     #[test]
     fn bolt_lost_fires_active_chains() {
-        let chain = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
+        let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         let mut app = bolt_lost_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendBoltLostFlag>().0 = true;
         tick(&mut app);
@@ -997,7 +984,7 @@ mod tests {
 
     #[test]
     fn bolt_lost_no_message_no_fire() {
-        let chain = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
+        let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         let mut app = bolt_lost_test_app(vec![chain]);
         tick(&mut app);
 
@@ -1009,7 +996,7 @@ mod tests {
 
     #[test]
     fn perfect_bump_fires_on_perfect_bump_chain() {
-        let chain = EffectNode::trigger_leaf(Trigger::OnPerfectBump, Effect::test_shockwave(64.0));
+        let chain = EffectNode::trigger_leaf(Trigger::PerfectBump, Effect::test_shockwave(64.0));
         let mut app = bump_test_app(vec![chain]);
         let bolt = app.world_mut().spawn_empty().id();
         app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
@@ -1027,8 +1014,8 @@ mod tests {
     #[test]
     fn perfect_bump_fires_both_on_perfect_bump_and_on_bump_success() {
         let chains = vec![
-            EffectNode::trigger_leaf(Trigger::OnPerfectBump, Effect::test_shockwave(64.0)),
-            EffectNode::trigger_leaf(Trigger::OnBump, Effect::test_shield(3.0)),
+            EffectNode::trigger_leaf(Trigger::PerfectBump, Effect::test_shockwave(64.0)),
+            EffectNode::trigger_leaf(Trigger::Bump, Effect::test_shield(3.0)),
         ];
         let mut app = bump_test_app(chains);
         let bolt = app.world_mut().spawn_empty().id();
@@ -1043,21 +1030,21 @@ mod tests {
         assert_eq!(
             shockwaves.0.len(),
             1,
-            "perfect bump should fire ShockwaveFired from OnPerfectBump chain"
+            "perfect bump should fire ShockwaveFired from PerfectBump chain"
         );
         assert_eq!(
             shields.0.len(),
             1,
-            "perfect bump should fire ShieldFired from OnBump chain"
+            "perfect bump should fire ShieldFired from Bump chain"
         );
     }
 
     #[test]
     fn early_bump_fires_on_early_bump_and_on_bump_success_but_not_on_perfect_bump() {
         let chains = vec![
-            EffectNode::trigger_leaf(Trigger::OnPerfectBump, Effect::test_shockwave(64.0)),
-            EffectNode::trigger_leaf(Trigger::OnEarlyBump, Effect::LoseLife),
-            EffectNode::trigger_leaf(Trigger::OnBump, Effect::test_shield(3.0)),
+            EffectNode::trigger_leaf(Trigger::PerfectBump, Effect::test_shockwave(64.0)),
+            EffectNode::trigger_leaf(Trigger::EarlyBump, Effect::LoseLife),
+            EffectNode::trigger_leaf(Trigger::Bump, Effect::test_shield(3.0)),
         ];
         let mut app = bump_test_app(chains);
         let bolt = app.world_mut().spawn_empty().id();
@@ -1073,24 +1060,24 @@ mod tests {
         assert_eq!(
             lose_life.0.len(),
             1,
-            "early bump should fire LoseLifeFired from OnEarlyBump chain"
+            "early bump should fire LoseLifeFired from EarlyBump chain"
         );
         assert_eq!(
             shields.0.len(),
             1,
-            "early bump should fire ShieldFired from OnBump chain"
+            "early bump should fire ShieldFired from Bump chain"
         );
         assert!(
             shockwaves.0.is_empty(),
-            "early bump should NOT fire ShockwaveFired from OnPerfectBump chain"
+            "early bump should NOT fire ShockwaveFired from PerfectBump chain"
         );
     }
 
     #[test]
     fn late_bump_fires_on_late_bump_and_on_bump_success() {
         let chains = vec![
-            EffectNode::trigger_leaf(Trigger::OnLateBump, Effect::test_time_penalty(3.0)),
-            EffectNode::trigger_leaf(Trigger::OnBump, Effect::test_shield(3.0)),
+            EffectNode::trigger_leaf(Trigger::LateBump, Effect::test_time_penalty(3.0)),
+            EffectNode::trigger_leaf(Trigger::Bump, Effect::test_shield(3.0)),
         ];
         let mut app = bump_test_app(chains);
         let bolt = app.world_mut().spawn_empty().id();
@@ -1110,9 +1097,9 @@ mod tests {
     #[test]
     fn perfect_bump_with_non_leaf_arms_bolt() {
         let chain = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
             }],
         };
@@ -1132,7 +1119,7 @@ mod tests {
         assert_eq!(
             armed.0[0].1,
             EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::test_shockwave(64.0))]
             }
         );
@@ -1142,7 +1129,7 @@ mod tests {
 
     #[test]
     fn bump_whiff_fires_on_bump_whiff_chain() {
-        let chain = EffectNode::trigger_leaf(Trigger::OnBumpWhiff, Effect::LoseLife);
+        let chain = EffectNode::trigger_leaf(Trigger::BumpWhiff, Effect::LoseLife);
         let mut app = bump_whiff_test_app(vec![chain]);
         app.world_mut().resource_mut::<SendBumpWhiffFlag>().0 = true;
         tick(&mut app);
@@ -1154,7 +1141,7 @@ mod tests {
 
     #[test]
     fn bump_whiff_no_message_no_fire() {
-        let chain = EffectNode::trigger_leaf(Trigger::OnBumpWhiff, Effect::LoseLife);
+        let chain = EffectNode::trigger_leaf(Trigger::BumpWhiff, Effect::LoseLife);
         let mut app = bump_whiff_test_app(vec![chain]);
         tick(&mut app);
 
@@ -1167,7 +1154,7 @@ mod tests {
     #[test]
     fn cell_impact_fires_active_chain() {
         let chain = EffectNode::trigger_leaf(
-            Trigger::OnImpact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Cell),
             Effect::test_shockwave(64.0),
         );
         let mut app = cell_impact_test_app(vec![chain]);
@@ -1191,7 +1178,7 @@ mod tests {
             .spawn(ArmedEffects(vec![(
                 None,
                 EffectNode::trigger_leaf(
-                    Trigger::OnImpact(ImpactTarget::Cell),
+                    Trigger::Impact(ImpactTarget::Cell),
                     Effect::test_shockwave(64.0),
                 ),
             )]))
@@ -1213,7 +1200,7 @@ mod tests {
     #[test]
     fn cell_impact_no_message_no_fire() {
         let chain = EffectNode::trigger_leaf(
-            Trigger::OnImpact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Cell),
             Effect::test_shockwave(64.0),
         );
         let mut app = cell_impact_test_app(vec![chain]);
@@ -1228,7 +1215,7 @@ mod tests {
     #[test]
     fn breaker_impact_fires_active_chain() {
         let chain = EffectNode::trigger_leaf(
-            Trigger::OnImpact(ImpactTarget::Breaker),
+            Trigger::Impact(ImpactTarget::Breaker),
             Effect::test_shield(5.0),
         );
         let mut app = breaker_impact_test_app(vec![chain]);
@@ -1249,7 +1236,7 @@ mod tests {
             .spawn(ArmedEffects(vec![(
                 None,
                 EffectNode::trigger_leaf(
-                    Trigger::OnImpact(ImpactTarget::Breaker),
+                    Trigger::Impact(ImpactTarget::Breaker),
                     Effect::test_multi_bolt(2),
                 ),
             )]))
@@ -1267,7 +1254,7 @@ mod tests {
     #[test]
     fn wall_impact_fires_active_chain() {
         let chain = EffectNode::trigger_leaf(
-            Trigger::OnImpact(ImpactTarget::Wall),
+            Trigger::Impact(ImpactTarget::Wall),
             Effect::test_shockwave(32.0),
         );
         let mut app = wall_impact_test_app(vec![chain]);
@@ -1288,7 +1275,7 @@ mod tests {
             .spawn(ArmedEffects(vec![(
                 None,
                 EffectNode::trigger_leaf(
-                    Trigger::OnImpact(ImpactTarget::Wall),
+                    Trigger::Impact(ImpactTarget::Wall),
                     Effect::test_shield(5.0),
                 ),
             )]))
@@ -1305,8 +1292,7 @@ mod tests {
 
     #[test]
     fn cell_destroyed_fires_active_chain() {
-        let chain =
-            EffectNode::trigger_leaf(Trigger::OnCellDestroyed, Effect::test_shockwave(32.0));
+        let chain = EffectNode::trigger_leaf(Trigger::CellDestroyed, Effect::test_shockwave(32.0));
         let mut app = cell_destroyed_test_app(vec![chain]);
         // Spawn a cell entity with Position2D for bridge_cell_death to query
         let cell = app
@@ -1324,8 +1310,7 @@ mod tests {
 
     #[test]
     fn cell_destroyed_no_message_no_fire() {
-        let chain =
-            EffectNode::trigger_leaf(Trigger::OnCellDestroyed, Effect::test_shockwave(32.0));
+        let chain = EffectNode::trigger_leaf(Trigger::CellDestroyed, Effect::test_shockwave(32.0));
         let mut app = cell_destroyed_test_app(vec![chain]);
         tick(&mut app);
 
@@ -1338,9 +1323,9 @@ mod tests {
     #[test]
     fn full_two_step_chain_bump_arms_then_impact_fires() {
         let chain = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
             }],
         };
@@ -1397,11 +1382,11 @@ mod tests {
     #[test]
     fn full_three_step_chain_bump_arms_impact_rearms_cell_destroyed_fires() {
         let chain = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::When {
-                    trigger: Trigger::OnCellDestroyed,
+                    trigger: Trigger::CellDestroyed,
                     then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
                 }],
             }],
@@ -1504,7 +1489,7 @@ mod tests {
             run::messages::RunLost,
         };
 
-        let chain = EffectNode::trigger_leaf(Trigger::OnBoltLost, Effect::LoseLife);
+        let chain = EffectNode::trigger_leaf(Trigger::BoltLost, Effect::LoseLife);
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<BoltLost>()
@@ -1533,11 +1518,11 @@ mod tests {
     fn evaluate_node_fires_effect_for_bolt_lost_bridge() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
         let node = EffectNode::When {
-            trigger: Trigger::OnBoltLost,
+            trigger: Trigger::BoltLost,
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -1545,7 +1530,7 @@ mod tests {
                 speed: 400.0,
             })],
         };
-        let result = evaluate_node(TriggerKind::BoltLost, &node);
+        let result = evaluate_node(Trigger::BoltLost, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::Fire(Effect::Shockwave {
@@ -1562,11 +1547,11 @@ mod tests {
     fn evaluate_node_arms_effect_node_for_bump_bridge_non_leaf() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
         let inner_node = EffectNode::When {
-            trigger: Trigger::OnImpact(super::super::definition::ImpactTarget::Cell),
+            trigger: Trigger::Impact(super::super::definition::ImpactTarget::Cell),
             then: vec![EffectNode::Do(Effect::Shockwave {
                 base_range: 64.0,
                 range_per_level: 0.0,
@@ -1575,10 +1560,10 @@ mod tests {
             })],
         };
         let node = EffectNode::When {
-            trigger: Trigger::OnPerfectBump,
+            trigger: Trigger::PerfectBump,
             then: vec![inner_node.clone()],
         };
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(
             result,
             vec![NodeEvalResult::Arm(inner_node)],
@@ -1590,19 +1575,19 @@ mod tests {
     fn evaluate_node_no_match_for_wrong_trigger() {
         use crate::effect::{
             definition::{Effect, EffectNode, Trigger},
-            evaluate::{NodeEvalResult, TriggerKind, evaluate_node},
+            evaluate::{NodeEvalResult, evaluate_node},
         };
 
         let node = EffectNode::When {
-            trigger: Trigger::OnBoltLost,
+            trigger: Trigger::BoltLost,
             then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
         };
-        let result = evaluate_node(TriggerKind::PerfectBump, &node);
+        let result = evaluate_node(Trigger::PerfectBump, &node);
         assert_eq!(result, vec![NodeEvalResult::NoMatch]);
     }
 
     // =========================================================================
-    // C7 Wave 2a Sub-Feature A2: OnNodeTimerThreshold bridge (behaviors 13-16)
+    // C7 Wave 2a Sub-Feature A2: NodeTimerThreshold bridge (behaviors 13-16)
     // =========================================================================
 
     #[test]
@@ -1610,7 +1595,7 @@ mod tests {
         use crate::run::node::resources::NodeTimer;
 
         let chain = EffectNode::When {
-            trigger: Trigger::OnNodeTimerThreshold(0.25),
+            trigger: Trigger::NodeTimerThreshold(0.25),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
                 target: super::super::definition::Target::Bolt,
                 multiplier: 2.0,
@@ -1646,7 +1631,7 @@ mod tests {
         use crate::run::node::resources::NodeTimer;
 
         let chain = EffectNode::When {
-            trigger: Trigger::OnNodeTimerThreshold(0.25),
+            trigger: Trigger::NodeTimerThreshold(0.25),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
                 target: super::super::definition::Target::Bolt,
                 multiplier: 2.0,
@@ -1677,7 +1662,7 @@ mod tests {
         use crate::run::node::resources::NodeTimer;
 
         let chain = EffectNode::When {
-            trigger: Trigger::OnNodeTimerThreshold(0.5),
+            trigger: Trigger::NodeTimerThreshold(0.5),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
                 target: super::super::definition::Target::Bolt,
                 multiplier: 1.5,
@@ -1714,7 +1699,7 @@ mod tests {
         use crate::run::node::resources::NodeTimer;
 
         let chain = EffectNode::When {
-            trigger: Trigger::OnNodeTimerThreshold(0.5),
+            trigger: Trigger::NodeTimerThreshold(0.5),
             then: vec![EffectNode::Do(Effect::SpeedBoost {
                 target: super::super::definition::Target::Bolt,
                 multiplier: 1.5,
@@ -1846,7 +1831,7 @@ mod tests {
             .world_mut()
             .spawn(EffectChains(vec![EffectNode::Once(vec![
                 EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 64.0,
                         range_per_level: 0.0,
@@ -1868,7 +1853,7 @@ mod tests {
         assert_eq!(
             captured.0.len(),
             1,
-            "bridge should unwrap Once, evaluate inner When(OnImpact(Cell)), and fire Shockwave"
+            "bridge should unwrap Once, evaluate inner When(Impact(Cell)), and fire Shockwave"
         );
 
         let chains = app.world().get::<EffectChains>(bolt).unwrap();
@@ -1900,7 +1885,7 @@ mod tests {
             .world_mut()
             .spawn(EffectChains(vec![EffectNode::Once(vec![
                 EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Wall), // Does NOT match CellImpact
+                    trigger: Trigger::Impact(ImpactTarget::Wall), // Does NOT match CellImpact
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: super::super::definition::Target::Bolt,
                         multiplier: 2.0,
@@ -1919,7 +1904,7 @@ mod tests {
         let captured = app.world().resource::<CapturedSpeedBoostFired>();
         assert!(
             captured.0.is_empty(),
-            "inner When(OnImpact(Wall)) should NOT match CellImpact trigger"
+            "inner When(Impact(Wall)) should NOT match CellImpact trigger"
         );
 
         let chains = app.world().get::<EffectChains>(bolt).unwrap();
@@ -1955,7 +1940,7 @@ mod tests {
         let bolt = app
             .world_mut()
             .spawn(EffectChains(vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::Shockwave {
                     base_range: 64.0,
                     range_per_level: 0.0,
@@ -2002,7 +1987,7 @@ mod tests {
         let bolt = app
             .world_mut()
             .spawn(EffectChains(vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Breaker),
+                trigger: Trigger::Impact(ImpactTarget::Breaker),
                 then: vec![EffectNode::Do(Effect::SpeedBoost {
                     target: super::super::definition::Target::Bolt,
                     multiplier: 1.5,
@@ -2044,7 +2029,7 @@ mod tests {
         let bolt = app
             .world_mut()
             .spawn(EffectChains(vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Wall),
+                trigger: Trigger::Impact(ImpactTarget::Wall),
                 then: vec![EffectNode::Do(Effect::SpeedBoost {
                     target: super::super::definition::Target::Bolt,
                     multiplier: 1.3,
@@ -2090,13 +2075,13 @@ mod tests {
             .add_observer(capture_second_wind)
             .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
 
-        // Breaker with Once([When(OnBoltLost, [Do(SecondWind)])])
+        // Breaker with Once([When(BoltLost, [Do(SecondWind)])])
         let _breaker = app
             .world_mut()
             .spawn((
                 Breaker,
                 EffectChains(vec![EffectNode::Once(vec![EffectNode::When {
-                    trigger: Trigger::OnBoltLost,
+                    trigger: Trigger::BoltLost,
                     then: vec![EffectNode::Do(Effect::SecondWind { invuln_secs: 3.0 })],
                 }])]),
             ))
@@ -2134,7 +2119,7 @@ mod tests {
             .spawn((
                 Breaker,
                 EffectChains(vec![EffectNode::When {
-                    trigger: Trigger::OnBump,
+                    trigger: Trigger::Bump,
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: super::super::definition::Target::Bolt,
                         multiplier: 1.2,
@@ -2219,7 +2204,7 @@ mod tests {
                 RequiredToClear,
                 Position2D(Vec2::new(100.0, 200.0)),
                 EffectChains(vec![EffectNode::When {
-                    trigger: Trigger::OnDeath,
+                    trigger: Trigger::Death,
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 48.0,
                         range_per_level: 0.0,
@@ -2242,12 +2227,12 @@ mod tests {
             "cell entity should still be alive after bridge_cell_death"
         );
 
-        // OnDeath EffectChains should have fired
+        // Death EffectChains should have fired
         let shockwaves = app.world().resource::<CapturedShockwaveFired>();
         assert_eq!(
             shockwaves.0.len(),
             1,
-            "bridge_cell_death should evaluate cell's OnDeath EffectChains"
+            "bridge_cell_death should evaluate cell's Death EffectChains"
         );
         assert!((shockwaves.0[0].base_range - 48.0).abs() < f32::EPSILON);
 
@@ -2374,7 +2359,7 @@ mod tests {
             .spawn((
                 Position2D(Vec2::new(50.0, -100.0)),
                 EffectChains(vec![EffectNode::When {
-                    trigger: Trigger::OnDeath,
+                    trigger: Trigger::Death,
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 32.0,
                         range_per_level: 0.0,
@@ -2399,7 +2384,7 @@ mod tests {
         assert_eq!(
             shockwaves.0.len(),
             1,
-            "bridge_bolt_death should evaluate bolt's OnDeath EffectChains"
+            "bridge_bolt_death should evaluate bolt's Death EffectChains"
         );
 
         let captured = app.world().resource::<CapturedBDA>();
@@ -2563,13 +2548,13 @@ mod tests {
             .add_observer(capture_second_wind2)
             .add_systems(FixedUpdate, (send_bolt_lost, bridge_bolt_lost).chain());
 
-        // Breaker with Once([When(OnBoltLost, [Do(SecondWind { invuln_secs: 3.0 })])])
+        // Breaker with Once([When(BoltLost, [Do(SecondWind { invuln_secs: 3.0 })])])
         let _breaker = app
             .world_mut()
             .spawn((
                 Breaker,
                 EffectChains(vec![EffectNode::Once(vec![EffectNode::When {
-                    trigger: Trigger::OnBoltLost,
+                    trigger: Trigger::BoltLost,
                     then: vec![EffectNode::Do(Effect::SecondWind { invuln_secs: 3.0 })],
                 }])]),
             ))
@@ -2605,9 +2590,9 @@ mod tests {
     fn bridge_cell_impact_fires_both_active_effects_and_entity_effect_chains() {
         use crate::effect::definition::EffectChains;
 
-        // ActiveEffects has a Shockwave chain on OnImpact(Cell)
+        // ActiveEffects has a Shockwave chain on Impact(Cell)
         let active_chain = EffectNode::trigger_leaf(
-            Trigger::OnImpact(ImpactTarget::Cell),
+            Trigger::Impact(ImpactTarget::Cell),
             Effect::test_shockwave(64.0),
         );
 
@@ -2632,7 +2617,7 @@ mod tests {
         let bolt = app
             .world_mut()
             .spawn(EffectChains(vec![EffectNode::When {
-                trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                trigger: Trigger::Impact(ImpactTarget::Cell),
                 then: vec![EffectNode::Do(Effect::SpeedBoost {
                     target: super::super::definition::Target::Bolt,
                     multiplier: 1.5,
@@ -2688,13 +2673,13 @@ mod tests {
                 (send_bolt_hit_cell, bridge_cell_impact).chain(),
             );
 
-        // Bolt with UntilTimers containing a When(OnImpact(Cell)) child
+        // Bolt with UntilTimers containing a When(Impact(Cell)) child
         let bolt = app
             .world_mut()
             .spawn(UntilTimers(vec![UntilTimerEntry {
                 remaining: 3.0, // Still active (not expired)
                 children: vec![EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 64.0,
                         range_per_level: 0.0,
@@ -2779,16 +2764,16 @@ mod tests {
                 (send_bolt_hit_cell, bridge_cell_impact).chain(),
             );
 
-        // Bolt with UntilTriggers entry (trigger: OnImpact(Breaker)) containing
-        // When(OnImpact(Cell), [Do(Shockwave)]). The Until itself has NOT expired
-        // (trigger is OnImpact(Breaker), and we're hitting a Cell), so nested
+        // Bolt with UntilTriggers entry (trigger: Impact(Breaker)) containing
+        // When(Impact(Cell), [Do(Shockwave)]). The Until itself has NOT expired
+        // (trigger is Impact(Breaker), and we're hitting a Cell), so nested
         // children should still be active and evaluated.
         let bolt = app
             .world_mut()
             .spawn(UntilTriggers(vec![UntilTriggerEntry {
-                trigger: Trigger::OnImpact(ImpactTarget::Breaker),
+                trigger: Trigger::Impact(ImpactTarget::Breaker),
                 children: vec![EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Cell),
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
                     then: vec![EffectNode::Do(Effect::Shockwave {
                         base_range: 48.0,
                         range_per_level: 0.0,
@@ -2837,13 +2822,13 @@ mod tests {
                 (send_bolt_hit_wall, bridge_wall_impact).chain(),
             );
 
-        // Bolt with UntilTimers containing a When(OnImpact(Wall)) child
+        // Bolt with UntilTimers containing a When(Impact(Wall)) child
         let bolt = app
             .world_mut()
             .spawn(UntilTimers(vec![UntilTimerEntry {
                 remaining: 3.0, // Still active
                 children: vec![EffectNode::When {
-                    trigger: Trigger::OnImpact(ImpactTarget::Wall),
+                    trigger: Trigger::Impact(ImpactTarget::Wall),
                     then: vec![EffectNode::Do(Effect::SpeedBoost {
                         target: super::super::definition::Target::Bolt,
                         multiplier: 1.3,
