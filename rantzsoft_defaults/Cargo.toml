@@ -7,5 +7,9 @@ publish = false
 [dependencies]
 rantzsoft_defaults_derive = { path = "../rantzsoft_defaults_derive" }
 
+[dev-dependencies]
+bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
+serde = { version = "1", features = ["derive"] }
+
 [lints]
 workspace = true

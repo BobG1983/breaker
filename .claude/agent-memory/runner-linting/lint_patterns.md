@@ -151,6 +151,21 @@ type: reference
 - `unnecessary_struct_initialization` warning (quadtree.rs:118): building `TreeConfig { max_items_per_leaf: cfg.max_items_per_leaf, ... }` where all fields copy from `cfg` — replace with just `cfg`. Nursery lint, warning only.
 - `redundant_clone` warning (constraint.rs:63): `let cloned = original.clone()` where `cloned` is never read after the clone. Nursery lint, warning only.
 
+## New as of 2026-03-26 (feature/spatial-physics-extraction — chips session)
+- `no_effect_underscore_binding` ERROR (rantzsoft_physics2d/src/plugin.rs:220): `let _sweep = SweepHit { ... }` — binding to a `_`-prefixed variable with no side-effect. `-D clippy::pedantic` flag makes this an error. Fix: either use the value (remove underscore prefix) or drop it entirely — write `let _ = SweepHit { ... }` (blank discard, not underscore-prefixed binding). This is in test/example code within plugin.rs.
+- New `unused_imports` in game crate (chips domain): `ChipTemplate`, `TriggerChain`, `expand_template` from `chips/mod.rs:11`, `Target` from `chips/inventory.rs:261` and `chips/systems/dispatch_chip_effects.rs:137`, `BumpGrade` from `effect/bridges.rs:17`, `Target` from `effect/effect_nodes/until.rs:292`, `EffectTarget` from `effect/effects/entropy_engine.rs:130`. All warning-only — forward-declared for future wiring.
+- `unused_variable` warning (effect/triggers/on_bump.rs:328): `let chain = ...` — prefix with `_chain`. Warning only.
+- `dead_code` warnings (effect/effects/damage_boost.rs:46): `multiplier` method and `ActiveDamageBoosts` struct — forward-declared. Not errors.
+- `dead_code` warnings (multiple `*Applied` structs with `chip_name` field): `AttractionApplied`, `SizeBoostApplied`, `SpeedBoostApplied`, `BumpForceApplied`, `ChainHitApplied`, `DamageBoostApplied`, `PiercingApplied`, `TiltControlApplied`, `RampingDamageApplied` — all have `pub chip_name: String` never read. Forward-declared for future audio/telemetry consumers. Not errors.
+- `dead_code` warnings (effect/effects/*.rs structs): `GravityWellFired` (strength/duration/radius/source_chip), `LoseLifeFired` (targets/source_chip), `MultiBoltFired` (targets), `PulseFired` (targets), `SecondWindFired` (invuln_secs/targets/source_chip), `ShieldFired` (targets/source_chip), `SpawnBoltsFired` (targets), `SpawnPhantomFired` (source_chip), `SpeedBoostFired` (source_chip), `TimePenaltyFired` (targets/source_chip). All forward-declared. Not errors.
+- `dead_code` warnings (effect/helpers.rs:31): `arm_bolt` function and `effect/triggers/on_death.rs:115` `apply_once_nodes` function — forward-declared. Not errors.
+- `dead_code` warnings (chips/definition.rs:345+): 15+ `test_*` builder functions (test_shockwave, test_multi_bolt, etc.) and `effect/definition.rs:398+` `Effect` test helpers are `pub(crate)` but only used in test builds — appear as dead_code in lib (non-test) build. Not errors.
+- `dead_code` warning (effect/effects/random_effect.rs:121): `tick` test helper function. Not an error.
+- `dead_code` warning (effect/triggers/on_impact.rs:220): `wrap_chains` test helper. Not an error.
+- `needless_collect` warning (run/node/systems/spawn_cells_from_layout.rs:1465): `.collect()` into `Vec` then immediately consumed by `.chain()` — remove intermediate collect. Nursery lint, warning only.
+- `significant_drop_tightening` warning (rantzsoft_spatial2d/src/plugin.rs:286): `registry` lock guard held until end of function — can be dropped earlier. Nursery lint, warning only.
+- Scenario runner (dsclippy) new warnings: `missing_const_for_fn` for 5 functions in lifecycle/mod.rs (310, 506, 636, 647) and check_run_stats_monotonic.rs (17, 28). `too_long_first_doc_paragraph` at lifecycle/mod.rs:394. All nursery lints, warnings only.
+
 ## New as of 2026-03-25f (feature/spatial-physics-extraction — full lint verification, all PASS)
 - No errors in any crate. All warnings are nursery/restriction lints.
 - New `unused_imports` warnings in `effect/` domain (forward-declared for future wiring): `super::triggers::*` (bridges.rs:6), `BreakerStatOverrides` (definition.rs:415), `ImpactTarget` (evaluate.rs:6), `apply_breaker_config_overrides`/`init_breaker` (init.rs:9), `EffectNode` (triggers/on_bump.rs:13, triggers/on_impact.rs:10), `apply_once_nodes` (triggers/mod.rs:14), `Target`/`SpawnBoltFired` (typed_events.rs), `NodeEvalResult` (active.rs:38), `EffectTarget` (entropy_engine.rs:130). All warning-only.
@@ -159,6 +174,21 @@ type: reference
 - New `dead_code` warnings: `apply_once_nodes` function (effect/triggers/on_death.rs:118), `tick` function (effect/effects/random_effect.rs:121), `multiplier` method (effect/effects/damage_boost.rs:46), `WallSize.half_width`/`half_height` (wall/components.rs:20). Warning-only.
 - New `unreachable_pub` warnings (4 total): `bolt_size_boost.rs:75` (`total`), `bump_force_boost.rs:70` (`total`), `damage_boost.rs:46` (`multiplier`), `piercing.rs:88` (`total`) — all `pub` methods that should be `pub(crate)`. Warning-only.
 - Scenario runner new warning: `lifecycle/mod.rs:392` — `too_long_first_doc_paragraph` on `apply_debug_frame_mutations`. Nursery, warning-only.
+
+## New as of 2026-03-26 (feature/spatial-physics-extraction — chips template session)
+- `doc_markdown` error (rantzsoft_spatial2d/src/plugin.rs:450): doc comment `"a known starting state for apply_velocity."` — bare `apply_velocity` needs backticks. Fix: change to `` `apply_velocity` ``. Error in `spatial2dclippy` (pedantic). NEW — not seen in prior sessions.
+- `no_effect_underscore_binding` errors (rantzsoft_physics2d/src/plugin.rs:119,120,191,192,203): five `let _name = ...;` bindings in test functions have no side effect — the value is unused and the `_` prefix is a lie. All five are in test code. Fix: use `drop(...)` to actually consume the value, or just remove the binding if it's a compile-time check. Five errors in `physics2dclippy` (pedantic). NEW as of this session.
+- `chips/definition.rs` — new `draw_offerings` dead_code warning (chips/offering.rs:74): `pub(crate) fn draw_offerings` is never called. Warning-only. New this session.
+- `chips/mod.rs` — new `unused_imports` warning: `ChipTemplate`, `TriggerChain`, `expand_template` forward-declared in pub(crate) re-exports but not yet consumed. Warning-only. New this session.
+- `unused_imports` warning: `Target` in `chips/inventory.rs:261`, `chips/systems/dispatch_chip_effects.rs:137`, `effect/effect_nodes/until.rs:292`. Warning-only. New this session.
+- `unused_imports` warning: `BumpGrade` in `effect/bridges.rs:17`. Warning-only. New this session.
+- `unused_variable` warning: `chain` in `effect/triggers/on_bump.rs:328` — `let chain = EffectNode::When { ... }`. Not prefixed with `_`. Warning-only. New this session.
+- `dead_code` warning: `wrap_chains` function in `effect/triggers/on_impact.rs:220`. Warning-only. New this session.
+- `dead_code` warning: `arm_bolt` function in `effect/helpers.rs:31`. Warning-only. New this session.
+- `dead_code` warning: `EffectNode` in `breaker/systems/init_breaker.rs:14` (import). Warning-only. New this session.
+- `needless_collect` warning: `spawn_cells_from_layout.rs:1465` — intermediate `.collect()` on iterator that's immediately used as an iterator again. Nursery, warning-only. New this session.
+- `significant_drop_tightening` warning (rantzsoft_spatial2d/src/plugin.rs:290): `RwLockReadGuard` held for entire test function scope — clippy suggests `drop(registry)` before end. Nursery, warning-only. New this session.
+- `redundant_clone` warning (rantzsoft_physics2d/src/constraint.rs:63): `let cloned = original.clone()` where `cloned` is never read. Nursery, warning-only.
 
 ## New as of 2026-03-25b (feature/spatial-physics-extraction — post-clippy-fix verification)
 - `E0107` compile errors (run/systems/detect_combo_and_pinball.rs:14,15,16): `MessageReader<'w, CellDestroyedAt>` etc. use only 1 lifetime arg — `MessageReader` in Bevy 0.18.1 takes `'w` and `'s`. Compiler hint says to add `'w` as second arg: `MessageReader<'w, 'w, CellDestroyedAt>`. This is inside a `#[derive(SystemParam)]` struct `ComboReaders<'w>`. Fix: change all three fields to `MessageReader<'w, 'w, T>`. Three errors, same file, same pattern. Sole blocking error this session — all other errors/warnings are carry-overs from prior sessions already logged.

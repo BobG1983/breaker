@@ -1,6 +1,7 @@
 //! Bolt-breaker collision detection and reflection via CCD.
 
 use bevy::prelude::*;
+use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
@@ -9,8 +10,13 @@ use crate::{
         queries::CollisionQueryBolt,
     },
     breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
-    shared::math::{CCD_EPSILON, ray_vs_aabb},
 };
+
+/// Sub-pixel separation gap applied after bolt-breaker collision.
+///
+/// The bolt is placed this far outside the breaker's expanded AABB to prevent
+/// floating-point touching on the next sweep.
+const SEPARATION_GAP: f32 = 0.01;
 
 /// Overwrites bolt velocity based on a normalized hit position on the breaker's top surface.
 ///
@@ -133,8 +139,8 @@ pub(crate) fn bolt_breaker_collision(
 
         let (direction, max_dist) = (bolt_velocity.0 / speed, speed * dt);
 
-        let Some(hit) = ray_vs_aabb(bolt_pos, direction, max_dist, breaker_pos, expanded_half)
-        else {
+        let expanded = Aabb2D::new(breaker_pos, expanded_half);
+        let Some(hit) = expanded.ray_intersect(bolt_pos, direction, max_dist) else {
             continue;
         };
 
@@ -148,12 +154,12 @@ pub(crate) fn bolt_breaker_collision(
             // Side hit — reflect X only, preserve Y velocity
             bolt_velocity.0.x = -bolt_velocity.0.x;
 
-            let advance = (hit.distance - CCD_EPSILON).max(0.0);
+            let advance = (hit.distance - SEPARATION_GAP).max(0.0);
             let new_pos = bolt_pos + direction * advance;
             bolt_position.0 = new_pos;
         } else {
             // Top/bottom hit — move to impact point, reflect, push above breaker
-            let advance = (hit.distance - CCD_EPSILON).max(0.0);
+            let advance = (hit.distance - SEPARATION_GAP).max(0.0);
             let impact_pos = bolt_pos + direction * advance;
             let hit_fraction = ((impact_pos.x - breaker_pos.x) / half_w).clamp(-1.0, 1.0);
 

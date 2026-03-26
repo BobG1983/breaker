@@ -23,6 +23,18 @@ pub struct RayHit {
     pub normal: Vec2,
 }
 
+/// Result of a swept circle (or ray) cast against the quadtree.
+pub struct SweepHit {
+    /// The entity that was hit.
+    pub entity: Entity,
+    /// Safe position for the moving object just before contact.
+    pub position: Vec2,
+    /// Outward face normal at the contact point.
+    pub normal: Vec2,
+    /// Remaining travel distance after the hit.
+    pub remaining: f32,
+}
+
 /// Casts a ray against an `Aabb2D` and returns the entry distance and face normal.
 ///
 /// The AABB should already be Minkowski-expanded by the object radius so that
@@ -285,5 +297,22 @@ mod tests {
             (speed_before - speed_after).abs() < 1e-3,
             "reflection off +X should preserve speed: {speed_before} vs {speed_after}"
         );
+    }
+
+    // ── Behavior 4: SweepHit has correct fields ──
+
+    #[test]
+    fn sweep_hit_fields_are_publicly_accessible() {
+        let sweep = SweepHit {
+            entity: Entity::PLACEHOLDER,
+            position: Vec2::new(10.0, 35.0),
+            normal: Vec2::NEG_Y,
+            remaining: 165.0,
+        };
+
+        assert_eq!(sweep.entity, Entity::PLACEHOLDER);
+        assert_eq!(sweep.position, Vec2::new(10.0, 35.0));
+        assert_eq!(sweep.normal, Vec2::NEG_Y);
+        assert!((sweep.remaining - 165.0).abs() < f32::EPSILON);
     }
 }

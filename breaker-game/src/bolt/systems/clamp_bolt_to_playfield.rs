@@ -5,8 +5,14 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     bolt::{components::BoltRadius, filters::ActiveFilter},
-    shared::{EntityScale, PlayfieldConfig, math::CCD_EPSILON},
+    shared::{EntityScale, PlayfieldConfig},
 };
+
+/// Sub-pixel inset applied when clamping bolt position to playfield walls.
+///
+/// Keeps the bolt just inside the boundary to prevent floating-point edge overlap
+/// on the next frame.
+const BOUNDARY_INSET: f32 = 0.01;
 
 /// Clamps bolt position to within the playfield walls and reflects the
 /// offending velocity component.
@@ -33,9 +39,9 @@ pub(crate) fn clamp_bolt_to_playfield(
         let r = radius.0 * bolt_entity_scale.map_or(1.0, |s| s.0);
         let pos = position.0;
 
-        let x_min = playfield.left() + r + CCD_EPSILON;
-        let x_max = playfield.right() - r - CCD_EPSILON;
-        let y_max = playfield.top() - r - CCD_EPSILON;
+        let x_min = playfield.left() + r + BOUNDARY_INSET;
+        let x_max = playfield.right() - r - BOUNDARY_INSET;
+        let y_max = playfield.top() - r - BOUNDARY_INSET;
 
         let mut new_pos = pos;
         let mut new_vel = vel.0;
