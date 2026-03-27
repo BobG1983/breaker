@@ -253,6 +253,17 @@ Spawn bolts on perfect bump. Uncommon and rare only — no common variant.
 
 `max_taken: 1`
 
+### Splinter
+Spawn tiny temporary bolts on cell destruction. Parent bolt shrinks as a trade-off — higher rarity = more splinters, less shrinkage.
+
+| Rarity | Prefix | Effects | Synergy Notes |
+|--------|--------|---------|---------------|
+| Common | Minor | `On(Bolt) → When(DestroyedCell) → Do(SpawnBolts(count: 1, lifespan: 2.0)), Do(SizeBoost(-0.5))` | 1 splinter, 50% shrink |
+| Uncommon | Spreading | `On(Bolt) → When(DestroyedCell) → Do(SpawnBolts(count: 2, lifespan: 2.5)), Do(SizeBoost(-0.45))` | 2 splinters, 45% shrink |
+| Rare | Devastating | `On(Bolt) → When(DestroyedCell) → Do(SpawnBolts(count: 3, lifespan: 3.0)), Do(SizeBoost(-0.4))` | 3 splinters, 40% shrink — evolution ingredient for Split Decision |
+
+`max_taken: 2`
+
 ## Legendaries
 
 All legendaries are `max_taken: 1`. Template has only the `legendary` slot filled.
@@ -320,6 +331,27 @@ Perfect bump → cell impact → cell destruction → timed speed burst.
 |--------|---------|-------------|
 | Legendary | `On(Bolt) → When(PerfectBumped) → When(Impacted(Cell)) → When(DestroyedCell) → Until(TimeExpires(3.0)) → Do(SpeedBoost(multiplier: 1.5))` | Deep trigger chain rewards a full precision sequence with a 3s speed burst. |
 
+### Parry
+Perfect bump grants breaker immunity + all bolts emit shockwaves.
+
+| Rarity | Effects | Design Notes |
+|--------|---------|-------------|
+| Legendary | `On(Breaker) → When(OnPerfectBump) → Do(Shield(base_duration: 2.0))` + `On(AllBolts) → When(OnPerfectBump) → Do(Shockwave(base_range: 64, speed: 500))` | Two On targets: breaker gets shield, every bolt shockwaves. Rewards precision with brief invulnerability + area damage burst. |
+
+### Powder Keg
+Cells hit by the bolt explode on death. Uses `Explode` effect *(not yet implemented)*.
+
+| Rarity | Effects | Design Notes |
+|--------|---------|-------------|
+| Legendary | `On(Bolt) → When(Impacted(Cell)) → On(Cell) → When(Died) → Do(Explode(range: 48, damage_mult: 1.0))` | Nested On: targets the impacted cell, arms a Died trigger on it. When that cell dies, instant area damage. Chain explosions possible if Explode kills adjacent cells that also have armed Died triggers. |
+
+### Tempo
+Speed ramps on consecutive bumps, whiff removes all boosts.
+
+| Rarity | Effects | Design Notes |
+|--------|---------|-------------|
+| Legendary | `On(AllBolts) → When(Bumped) → Until(OnBumpWhiff) → Do(SpeedBoost(multiplier: 1.2))` | Each bump adds a 1.2x speed layer to the bumped bolt. Whiff strips all layers from all bolts. High-skill momentum legendary — consecutive perfect play builds devastating speed. |
+
 ## Evolutions
 
 See `docs/design/evolutions.md` for evolution design principles. Evolution RON files are in `assets/chips/evolution/`.
@@ -386,3 +418,10 @@ Destroying cells creates gravity wells that pull bolts toward the destruction po
 **Effect**: `On(Breaker) → When(OnBoltLost) → Do(SecondWind(invuln_secs: 3.0))`
 
 Bolt loss grants temporary invulnerability — cheat death.
+
+### Split Decision
+**Ingredients**: Splinter x2 + Piercing Shot x2
+
+**Effect**: `On(Bolt) → When(DestroyedCell) → Do(SpawnBolts(count: 2, inherit: true))`
+
+Destroyed cells spawn 2 permanent bolts that inherit the parent's effects. Splinter provides the destruction-spawning mechanic, Piercing provides multi-cell reach, evolution removes the downsides (no shrink, no lifespan, inherits effects).

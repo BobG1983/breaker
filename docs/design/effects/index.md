@@ -12,6 +12,7 @@ All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half).
 - [ChainLightning](chain_lightning.md) — arc damage jumping between cells
 - [PiercingBeam](piercing_beam.md) — beam through cells in velocity direction
 - [Pulse](pulse.md) — shockwave at every active bolt position
+- [Explode](explode.md) — instant area damage burst *(not yet implemented)*
 
 ## Bolt Spawning
 

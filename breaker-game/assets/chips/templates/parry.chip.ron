@@ -1,0 +1,19 @@
+(
+    name: "Parry",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            On(target: Breaker, then: [
+                When(trigger: OnPerfectBump, then: [
+                    Do(Shield(base_duration: 2.0, duration_per_level: 0.0, stacks: 1)),
+                ]),
+            ]),
+            On(target: AllBolts, then: [
+                When(trigger: OnPerfectBump, then: [
+                    Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 500.0)),
+                ]),
+            ]),
+        ],
+    ),
+)

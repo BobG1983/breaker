@@ -1,0 +1,17 @@
+(
+    name: "Split Decision",
+    description: "Destroyed cells spawn permanent bolts that inherit the parent's effects",
+    rarity: Evolution,
+    max_stacks: 1,
+    effects: [
+        On(target: Bolt, then: [
+            When(trigger: DestroyedCell, then: [
+                Do(SpawnBolts(count: 2, inherit: true)),
+            ]),
+        ]),
+    ],
+    ingredients: Some([
+        (chip_name: "Splinter", stacks_required: 2),
+        (chip_name: "Piercing Shot", stacks_required: 2),
+    ]),
+)
