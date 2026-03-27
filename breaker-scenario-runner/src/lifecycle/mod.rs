@@ -891,17 +891,21 @@ pub(crate) const PERFECT_TRACKING_BUMP_THRESHOLD: f32 = 20.0;
 /// Factor of breaker half-width used for random x offset.
 pub(crate) const PERFECT_TRACKING_WIDTH_FACTOR: f32 = 0.8;
 
-/// Positions breaker under bolt with random offset when bolt is descending (`velocity.y < 0.0`).
+/// Positions breaker under bolt with random offset at all times.
 ///
-/// Writes `GameAction::Bump` when bolt is above breaker within
-/// [`PERFECT_TRACKING_BUMP_THRESHOLD`] world units, unless mode is
-/// [`BumpMode::NeverBump`].
+/// Writes `GameAction::Bump` when:
+/// - Bolt is serving (velocity magnitude near zero) — to launch it
+/// - Bolt is descending and within [`PERFECT_TRACKING_BUMP_THRESHOLD`] world
+///   units of the breaker
+///
+/// Bump is suppressed when mode is [`BumpMode::NeverBump`].
 /// Only active when [`ScenarioInputDriver`] wraps [`InputDriver::Perfect`].
 pub fn apply_perfect_tracking(
     mut driver: Option<ResMut<ScenarioInputDriver>>,
     bolt_query: Query<(&Position2D, &Velocity2D), With<ScenarioTagBolt>>,
     mut breaker_query: BreakerTrackingQuery,
     mut actions: ResMut<InputActions>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
     let Some(ref mut driver) = driver else {
         return;
@@ -915,29 +919,39 @@ pub fn apply_perfect_tracking(
     };
     let bolt_position = bolt_pos.0;
     let bolt_velocity = bolt_vel.0;
+    let bolt_is_serving = bolt_velocity.length_squared() < 1.0;
 
     let mut should_bump = false;
 
-    if bolt_velocity.y < 0.0 {
-        for (mut breaker_pos, breaker_width) in &mut breaker_query {
-            let half_width = breaker_width.half_width();
-            let offset = perfect.rng.gen_range(
-                -PERFECT_TRACKING_WIDTH_FACTOR * half_width
-                    ..=PERFECT_TRACKING_WIDTH_FACTOR * half_width,
-            );
-            breaker_pos.0.x = bolt_position.x + offset;
+    // Always position breaker under bolt (regardless of bolt direction)
+    for (mut breaker_pos, breaker_width) in &mut breaker_query {
+        let half_width = breaker_width.half_width();
+        let offset = perfect.rng.random_range(
+            -PERFECT_TRACKING_WIDTH_FACTOR * half_width
+                ..=PERFECT_TRACKING_WIDTH_FACTOR * half_width,
+        );
+        breaker_pos.0.x = bolt_position.x + offset;
 
-            if bolt_position.y > breaker_pos.0.y
-                && bolt_position.y - breaker_pos.0.y <= PERFECT_TRACKING_BUMP_THRESHOLD
-                && perfect.bump_mode != BumpMode::NeverBump
-            {
-                should_bump = true;
-            }
+        // Bump when bolt is near breaker and descending
+        if bolt_velocity.y < 0.0
+            && bolt_position.y > breaker_pos.0.y
+            && bolt_position.y - breaker_pos.0.y <= PERFECT_TRACKING_BUMP_THRESHOLD
+            && perfect.bump_mode != BumpMode::NeverBump
+        {
+            should_bump = true;
         }
+    }
+
+    // Also bump to launch serving bolt
+    if bolt_is_serving && perfect.bump_mode != BumpMode::NeverBump {
+        should_bump = true;
     }
 
     if should_bump {
         actions.0.push(map_action(ScenarioGameAction::Bump));
+        if let Some(ref mut s) = stats {
+            s.actions_injected += 1;
+        }
     }
 }
 

@@ -47,9 +47,10 @@ fn perfect_tracking_moves_breaker_toward_bolt_when_bolt_descends() {
     );
 }
 
-/// Perfect tracking does NOT move breaker when bolt moves upward.
+/// Perfect tracking repositions breaker under bolt even when bolt moves
+/// upward — the breaker always tracks the bolt regardless of direction.
 #[test]
-fn perfect_tracking_does_not_move_breaker_when_bolt_ascends() {
+fn perfect_tracking_moves_breaker_when_bolt_ascends() {
     let mut app = perfect_tracking_app(42, BumpMode::AlwaysPerfect);
 
     app.add_systems(Update, apply_perfect_tracking);
@@ -72,16 +73,25 @@ fn perfect_tracking_does_not_move_breaker_when_bolt_ascends() {
     app.update();
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
+    let half_width = 60.0;
+    let low = 100.0 - PERFECT_TRACKING_WIDTH_FACTOR * half_width;
+    let high = 100.0 + PERFECT_TRACKING_WIDTH_FACTOR * half_width;
     assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
-        "expected breaker x unchanged at 0.0, got {}",
+        pos.0.x >= low && pos.0.x <= high,
+        "expected breaker x in [{low}, {high}], got {}",
         pos.0.x
+    );
+    assert!(
+        (pos.0.y - (-250.0)).abs() < f32::EPSILON,
+        "expected breaker y unchanged at -250.0, got {}",
+        pos.0.y
     );
 }
 
-/// Edge case: bolt with zero y velocity should NOT move breaker.
+/// Edge case: bolt with zero y velocity (but non-zero x) still has breaker
+/// tracked — the breaker always positions under the bolt regardless of direction.
 #[test]
-fn perfect_tracking_does_not_move_breaker_when_bolt_y_velocity_zero() {
+fn perfect_tracking_moves_breaker_when_bolt_y_velocity_zero() {
     let mut app = perfect_tracking_app(42, BumpMode::AlwaysPerfect);
 
     app.add_systems(Update, apply_perfect_tracking);
@@ -104,10 +114,18 @@ fn perfect_tracking_does_not_move_breaker_when_bolt_y_velocity_zero() {
     app.update();
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
+    let half_width = 60.0;
+    let low = 100.0 - PERFECT_TRACKING_WIDTH_FACTOR * half_width;
+    let high = 100.0 + PERFECT_TRACKING_WIDTH_FACTOR * half_width;
     assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
-        "expected breaker x unchanged at 0.0, got {}",
+        pos.0.x >= low && pos.0.x <= high,
+        "expected breaker x in [{low}, {high}], got {}",
         pos.0.x
+    );
+    assert!(
+        (pos.0.y - (-250.0)).abs() < f32::EPSILON,
+        "expected breaker y unchanged at -250.0, got {}",
+        pos.0.y
     );
 }
 

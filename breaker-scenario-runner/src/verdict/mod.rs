@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use crate::{
     invariants::{ScenarioStats, ViolationEntry},
     log_capture::LogEntry,
-    types::{InputStrategy, InvariantKind, ScenarioDefinition, ScriptedParams},
+    types::{BumpMode, InputStrategy, InvariantKind, ScenarioDefinition, ScriptedParams},
 };
 
 /// Whether a scenario run passed or failed evaluation.
@@ -101,7 +101,12 @@ impl ScenarioVerdict {
             InputStrategy::Scripted(ScriptedParams { actions }) if actions.is_empty()
         );
 
-        if stats.actions_injected == 0 && !is_empty_scripted {
+        let is_never_bump = matches!(
+            &definition.input,
+            InputStrategy::Perfect(BumpMode::NeverBump)
+        );
+
+        if stats.actions_injected == 0 && !is_empty_scripted && !is_never_bump {
             self.add_fail_reason(format!(
                 "no actions were injected during scenario run (input strategy: {:?})",
                 definition.input
