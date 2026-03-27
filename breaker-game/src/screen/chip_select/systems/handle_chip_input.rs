@@ -351,8 +351,10 @@ mod tests {
         let mut app = test_app_with_offers(offers);
 
         // Seed inventory with ingredient stacks
-        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-        let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+            .with_template("Piercing Shot");
+        let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5)
+            .with_template("Damage Up");
         let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
         let _ = inventory.add_chip("Piercing Shot", &ps_def);

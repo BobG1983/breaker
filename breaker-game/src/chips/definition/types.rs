@@ -185,6 +185,13 @@ impl ChipDefinition {
         )
     }
 
+    /// Set the template name on a test chip (builder pattern).
+    #[must_use]
+    pub(crate) fn with_template(mut self, template_name: &str) -> Self {
+        self.template_name = Some(template_name.to_owned());
+        self
+    }
+
     /// Build a test chip with explicit target control.
     pub(crate) fn test_on(
         name: &str,

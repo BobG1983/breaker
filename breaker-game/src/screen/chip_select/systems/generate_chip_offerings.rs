@@ -303,7 +303,8 @@ mod tests {
             seq.assignments[node_index as usize].node_type = node_type_at_index;
         }
 
-        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
+        let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+            .with_template("Piercing Shot");
         let mut inventory = ChipInventory::default();
         if evolution_eligible {
             let _ = inventory.add_chip("Piercing Shot", &ps_def);

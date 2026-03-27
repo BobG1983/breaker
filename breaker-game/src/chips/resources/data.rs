@@ -60,6 +60,10 @@ impl ChipCatalog {
     }
 
     /// Returns recipes whose ingredients are all satisfied by the given inventory.
+    ///
+    /// Ingredient `chip_name` values are template names (e.g., "Splinter"), matched
+    /// against the inventory's template-level taken count — not individual expanded
+    /// chip names.
     #[must_use]
     pub fn eligible_recipes(
         &self,
@@ -71,7 +75,7 @@ impl ChipCatalog {
                 recipe
                     .ingredients
                     .iter()
-                    .all(|ing| inventory.stacks(&ing.chip_name) >= ing.stacks_required)
+                    .all(|ing| inventory.template_taken(&ing.chip_name) >= ing.stacks_required)
             })
             .collect()
     }

@@ -116,12 +116,14 @@ fn eligible_recipes_returns_recipe_when_all_ingredients_met() {
     });
 
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Damage Up", &du_def);
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let du_def = ChipDefinition::test("Minor Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5)
+        .with_template("Damage Up");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Minor Damage Up", &du_def);
 
     let eligible = registry.eligible_recipes(&inventory);
     assert_eq!(eligible.len(), 1, "should find one eligible recipe");
@@ -136,9 +138,10 @@ fn eligible_recipes_exact_threshold_still_eligible() {
     });
 
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def); // exactly 2
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def); // exactly 2
 
     let eligible = registry.eligible_recipes(&inventory);
     assert_eq!(
@@ -159,10 +162,11 @@ fn eligible_recipes_empty_when_one_ingredient_missing() {
     });
 
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
     // No Damage Up added
 
     let eligible = registry.eligible_recipes(&inventory);
@@ -199,8 +203,9 @@ fn eligible_recipes_empty_when_ingredient_stacks_insufficient() {
     });
 
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def); // only 1 stack, need 2
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def); // only 1 stack, need 2
 
     let eligible = registry.eligible_recipes(&inventory);
     assert!(
@@ -240,10 +245,11 @@ fn eligible_recipes_returns_only_eligible_among_multiple() {
     });
 
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
     // No Wide Breaker
 
     let eligible = registry.eligible_recipes(&inventory);
@@ -266,10 +272,12 @@ fn eligible_recipes_returns_multiple_when_both_satisfied() {
     });
 
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
-    let _ = inventory.add_chip("Damage Up", &du_def);
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let du_def = ChipDefinition::test("Minor Damage Up", EffectNode::Do(Effect::DamageBoost(0.5)), 5)
+        .with_template("Damage Up");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Minor Damage Up", &du_def);
 
     let eligible = registry.eligible_recipes(&inventory);
     assert_eq!(eligible.len(), 2, "both recipes should be eligible");
@@ -279,13 +287,66 @@ fn eligible_recipes_returns_multiple_when_both_satisfied() {
 fn eligible_recipes_empty_for_default_registry_with_any_inventory() {
     let registry = ChipCatalog::default(); // no recipes
     let mut inventory = ChipInventory::default();
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5);
-    let _ = inventory.add_chip("Piercing Shot", &ps_def);
+    let ps_def = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &ps_def);
 
     let eligible = registry.eligible_recipes(&inventory);
     assert!(
         eligible.is_empty(),
         "default ChipCatalog with no recipes should return empty Vec"
+    );
+}
+
+// --- Behavior 8: eligible_recipes matches by template name across rarity variants ---
+
+#[test]
+fn eligible_recipes_matches_mixed_rarity_variants_of_same_template() {
+    let mut registry = ChipCatalog::default();
+    registry.insert_recipe(Recipe {
+        ingredients: vec![ingredient("Piercing Shot", 3)],
+        result_name: "Railgun".to_owned(),
+    });
+
+    let mut inventory = ChipInventory::default();
+    // Add different rarity variants of the same template
+    let basic = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let keen = ChipDefinition::test("Keen Piercing Shot", EffectNode::Do(Effect::Piercing(2)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &basic);
+    let _ = inventory.add_chip("Basic Piercing Shot", &basic);
+    let _ = inventory.add_chip("Keen Piercing Shot", &keen);
+    // 3 total from "Piercing Shot" template (2 Basic + 1 Keen)
+
+    let eligible = registry.eligible_recipes(&inventory);
+    assert_eq!(
+        eligible.len(),
+        1,
+        "mixed rarity variants should count toward the same template ingredient"
+    );
+    assert_eq!(eligible[0].result_name, "Railgun");
+}
+
+#[test]
+fn eligible_recipes_not_eligible_when_template_taken_below_threshold() {
+    let mut registry = ChipCatalog::default();
+    registry.insert_recipe(Recipe {
+        ingredients: vec![ingredient("Piercing Shot", 3)],
+        result_name: "Railgun".to_owned(),
+    });
+
+    let mut inventory = ChipInventory::default();
+    let basic = ChipDefinition::test("Basic Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let _ = inventory.add_chip("Basic Piercing Shot", &basic);
+    let _ = inventory.add_chip("Basic Piercing Shot", &basic);
+    // Only 2 from "Piercing Shot" template, need 3
+
+    let eligible = registry.eligible_recipes(&inventory);
+    assert!(
+        eligible.is_empty(),
+        "2 of 3 required template chips should not satisfy the recipe"
     );
 }
 
