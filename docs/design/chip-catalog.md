@@ -237,7 +237,7 @@ Wall-bank damage boost.
 
 | Rarity | Effects | Design Notes |
 |--------|---------|-------------|
-| Legendary | `When(OnImpact(Wall), [Until(until: OnImpact(Breaker), then: [Do(DamageBoost(2.0))])])` | Wall bounce grants 2x damage until bolt returns to breaker. Rewards precise wall-bank shots. Build-around: pair with wall-impact chips. |
+| Legendary | `When(OnImpact(Wall), [Until(trigger: OnImpact(Breaker), then: [Do(DamageBoost(2.0))])])` | Wall bounce grants 2x damage until bolt returns to breaker. Rewards precise wall-bank shots. Build-around: pair with wall-impact chips. |
 
 ### Glass Cannon
 2x damage, 30% narrow breaker.
@@ -265,7 +265,7 @@ Whiff redemption — miss a bump, but the next cell impact gets bonus damage + s
 
 | Rarity | Effects | Design Notes |
 |--------|---------|-------------|
-| Legendary | `When(OnBumpWhiff, [When(OnImpact(Cell), [Until(until: OnImpact(Breaker), then: [Do(DamageBoost(1.5)), Do(Shockwave(base_range: 64.0, ...))])])])` | Turns whiffs into comebacks. The damage boost lasts until the bolt returns to the breaker. |
+| Legendary | `When(OnBumpWhiff, [When(OnImpact(Cell), [Until(trigger: OnImpact(Breaker), then: [Do(DamageBoost(1.5)), Do(Shockwave(base_range: 64.0, ...))])])])` | Turns whiffs into comebacks. The damage boost lasts until the bolt returns to the breaker. |
 
 ### Singularity
 Small bolt, big damage, fast.
@@ -300,7 +300,7 @@ Perfect bump grants temporary damage immunity + shockwave.
 
 | Rarity | Effects | Design Notes |
 |--------|---------|-------------|
-| Legendary | `When(OnPerfectBump, [Until(until: TimeExpires(2.0), then: [Do(Shield(base_duration: 2.0, ...))]), Do(Shockwave(base_range: 64.0, ...))])` | Rewards precision with a brief invulnerability window + shockwave burst. |
+| Legendary | `When(OnPerfectBump, [Until(trigger: TimeExpires(2.0), then: [Do(Shield(base_duration: 2.0, ...))]), Do(Shockwave(base_range: 64.0, ...))])` | Rewards precision with a brief invulnerability window + shockwave burst. |
 
 ### Second Strike
 Perfect bumps fire a piercing beam.

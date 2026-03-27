@@ -6,9 +6,9 @@
     )),
     max_frames: 120,
     invariants: [BoltInBounds],
-    expected_violations: Some([BoltInBounds]),
-    debug_setup: Some((
-        bolt_position: Some((0.0, 1000.0)),
+    expected_violations: [BoltInBounds],
+    debug_setup: (
+        bolt_position: (0.0, 1000.0),
         disable_physics: true,
-    )),
+    ),
 )

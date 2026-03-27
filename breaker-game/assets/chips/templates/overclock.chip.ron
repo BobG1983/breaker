@@ -1,7 +1,7 @@
 (
     name: "Overclock",
     max_taken: 2,
-    common: Some((
+    common: (
         prefix: "Basic",
         effects: [
             On(target: Bolt, then: [
@@ -12,8 +12,8 @@
                 ]),
             ]),
         ],
-    )),
-    uncommon: Some((
+    ),
+    uncommon: (
         prefix: "Charged",
         effects: [
             On(target: Bolt, then: [
@@ -24,8 +24,8 @@
                 ]),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Supercharged",
         effects: [
             On(target: Bolt, then: [
@@ -36,6 +36,5 @@
                 ]),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

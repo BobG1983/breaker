@@ -11,6 +11,6 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    seed: Some(42),
-    chip_selections: Some(["Surge"]),
+    seed: 42,
+    chip_selections: ["Surge"],
 )

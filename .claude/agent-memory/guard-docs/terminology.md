@@ -62,3 +62,12 @@ type: reference
 - `HighlightTriggered` — new glossary entry for the juice/VFX message
 - `RunHighlight.value` semantics clarified per-kind (distance for CloseSave, etc.)
 - All added to `docs/design/terminology.md`
+
+## Terminology Additions (2026-03-26, SeedableRegistry)
+- `ChipCatalog` — replaces `ChipRegistry`; NOT a SeedableRegistry; runtime-built from template expansion; has `recipes: Vec<Recipe>`
+- `ChipTemplateRegistry` — SeedableRegistry loading `.chip.ron` files; stores `(AssetId, ChipTemplate)` pairs
+- `SeedableRegistry` — trait from `rantzsoft_defaults`; folder-based RON loading; `add_registry::<R>()` on builder wires everything
+- `RegistryHandles` — resource holding folder handle + typed asset handles for a SeedableRegistry
+- `Recipe` — replaces `EvolutionRecipe`; has `ingredients` + `result_name: String`; stored in `ChipCatalog`
+- `eligible_recipes()` on `ChipCatalog` — replaces `eligible_evolutions()` on `EvolutionRegistry`
+- All added to `docs/design/terminology/chips.md` and `docs/design/terminology/spatial-physics.md` (2026-03-26)

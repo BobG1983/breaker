@@ -13,6 +13,7 @@
 - [pattern_doc_markdown_clippy.md](pattern_doc_markdown_clippy.md) — CamelCase in doc comments needs backticks; derive Eq alongside PartialEq
 - [pattern_entity_generational_ids_testing.md](pattern_entity_generational_ids_testing.md) — Bevy generational IDs: stale HashMap entries cause memory leaks, not false violations
 - [pattern_observer_message_timing.md](pattern_observer_message_timing.md) — Flush commands before tick when observers write Messages for MessageReader capture
+- [pattern_loaded_folder_testing.md](pattern_loaded_folder_testing.md) — LoadedFolder testing: Handle::into() for typed-to-untyped, manual folder creation
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

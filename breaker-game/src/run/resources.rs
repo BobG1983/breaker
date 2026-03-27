@@ -1,8 +1,9 @@
 //! Run domain resources.
 
 use bevy::prelude::*;
+use rantzsoft_defaults::GameConfig;
 
-use crate::run::definition::{DifficultyCurveDefaults, NodeType, TierDefinition};
+use crate::run::definition::{NodeType, TierDefinition};
 
 /// A single node assignment in the generated sequence.
 #[derive(Debug, Clone, PartialEq)]
@@ -25,7 +26,16 @@ pub struct NodeSequence {
 }
 
 /// Runtime resource holding the active difficulty curve.
-#[derive(Resource, Debug, Clone)]
+///
+/// The `GameConfig` derive generates `DifficultyCurveDefaults` with
+/// `Asset + TypePath + Deserialize + Clone + PartialEq` and bidirectional
+/// `From` impls.
+#[derive(Resource, Debug, Clone, GameConfig)]
+#[game_config(
+    defaults = "DifficultyCurveDefaults",
+    path = "config/defaults.difficulty.ron",
+    ext = "difficulty.ron"
+)]
 pub struct DifficultyCurve {
     /// Ordered list of tier definitions.
     pub tiers: Vec<TierDefinition>,
@@ -41,16 +51,6 @@ impl Default for DifficultyCurve {
             tiers: vec![],
             boss_hp_mult: 1.0,
             timer_reduction_per_boss: 0.0,
-        }
-    }
-}
-
-impl From<DifficultyCurveDefaults> for DifficultyCurve {
-    fn from(defaults: DifficultyCurveDefaults) -> Self {
-        Self {
-            tiers: defaults.tiers,
-            boss_hp_mult: defaults.boss_hp_mult,
-            timer_reduction_per_boss: defaults.timer_reduction_per_boss,
         }
     }
 }

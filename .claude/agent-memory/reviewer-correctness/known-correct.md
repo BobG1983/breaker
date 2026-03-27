@@ -81,6 +81,13 @@ type: reference
 - `add_chip` template cap check comes BEFORE individual cap check — correct ordering per spec (prevent template overflow before allowing individual increment).
 - `or_insert(def.max_stacks)` in template_maxes is a first-write-wins register for the template's max. Since all chips from the same template have identical max_stacks (guaranteed by expand_template), any write order produces the same value.
 
+## SeedableRegistry Phase 1 (develop, 2026-03-26)
+- `MessageReader<AssetEvent<D>>` in `propagate_defaults` is correct in Bevy 0.18 — `MessageReader` is the renamed `EventReader` and works for all `Event`/`Message` types, confirmed by `propagate_node_layout_changes.rs:52` production use.
+- `handles.loaded = true` set inside the folder-resolution block before per-asset collection succeeds is intentional: the handles vec is stable once the folder loads; the asset loop retries on subsequent frames via early-return. Not a bug.
+- Zero-handles after `try_typed` filtering: `seed_registry` treats this as a successful seed of empty registry and sets `*seeded = true`. BUG — see bug-patterns.md.
+- `R::extensions()` is NOT used inside `seed_registry` — only by `RonAssetLoader` registration. The filter-by-type via `try_typed` is correct; extension filtering is the loader's responsibility.
+- `propagate_registry` system does not exist — hot-reload for registries is not implemented by this plugin. This is a missing feature, not a logic bug in the seed path.
+
 ## B1-B3 TriggerChain Flatten Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
 - `apply_chip_effect` match order `OnSelected` → `is_leaf()` → catchall: `OnSelected` is not a leaf so it is correctly intercepted by arm 1 before reaching the catchall that pushes to `ActiveChains`. Correct arm ordering.
 - Bare leaf fallback arm (line 51-57): `chain if chain.is_leaf()` fires `ChipEffectApplied` immediately. `OnPerfectBump` etc. are not leaves, so they correctly fall through to the `ActiveChains` push arm. No OnSelected variant can erroneously reach `ActiveChains`.
@@ -297,3 +304,15 @@ type: reference
 - 4i (2026-03-22): `track_node_cleared_stats` FastClear math `elapsed = total - remaining` is correct; no division involved, no div-by-zero when total=0 (0 < 0*0.5 = 0 is false, no false positive).
 - 4i (2026-03-22): `track_node_cleared_stats` highlight cap: `nodes_cleared += 1` runs BEFORE the `continue` guard, so node count is always accurate even when highlights are full.
 - 4i (2026-03-22): `capture_run_seed` re-seeding logic in the None branch: generates seed from RNG, stores it, then re-seeds RNG with that seed. This makes the RNG deterministic starting from the captured seed for subsequent use. Correct.
+
+## SeedableRegistry / Build Chip Catalog Review (develop, 2026-03-26)
+- `seed_registry` handles.loaded=true before is_empty() guard: On subsequent ticks the !handles.loaded block is skipped but the is_empty() guard fires again — correct retry behavior. Not a stuck-seeded bug. Do not re-flag.
+- `propagate_registry` `update_all` calls `seed()` which on `BreakerRegistry` asserts no duplicate names — intentional; data contract enforced at load time.
+- `propagate_cell_type_changes` / `propagate_node_layout_changes` / `propagate_breaker_changes` all use `is_changed() && !is_added()` pattern — confirmed correct Bevy 0.18 changed-but-not-just-added guard.
+- `propagate_breaker_changes` two-loop pattern (clear in one loop, push in second loop, both iterating breaker_chains_query) — correct for single breaker entity. Multiple breakers would produce N×M chains but the architecture guarantees one breaker entity at runtime.
+- `propagate_breaker_changes` `defaults_assets.iter().next()` pattern — same as `apply_breaker_config_overrides`. In production exactly one BreakerDefaults asset is loaded. If the asset is absent the config stays at the last-known value. Accepted risk; same pattern used in two places. Do not re-flag as a new bug.
+- `build_chip_catalog` correctly gates recipe extraction behind `if def.rarity == Rarity::Evolution` — non-evolution defs from EvolutionRegistry would be inserted into catalog but get no recipe. The data contract prevents this; no enforcement needed in code.
+- `build_chip_catalog` with empty registries produces empty catalog and returns Progress::done — correct behavior. An empty catalog just means no chips appear in offers.
+- `init_breaker` query split: `breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>` (lives stamp, only uninitialized) vs `breaker_chains_query: Query<&mut EffectChains, With<Breaker>>` (chains, all breaers) — intentional; LivesCount is guarded to prevent double-stamp, EffectChains is always pushed fresh (entity is newly spawned each run). Correct.
+- `dispatch_chip_effects` fires passive events for `EffectNode::Do(eff)` children immediately (typed events), and pushes non-Do nodes to `EffectChains`. The `Do` children bypass the chains system entirely. Correct per architecture.
+- `dispatch_chip_effects` uses `bolt_query: Query<&mut EffectChains, (With<Bolt>, Without<Breaker>)>` with explicit Without<Breaker> — prevents ambiguity if an entity ever has both markers. Defensive and correct.

@@ -6,11 +6,11 @@
     )),
     max_frames: 120,
     invariants: [ChipStacksConsistent],
-    expected_violations: Some([ChipStacksConsistent]),
-    debug_setup: Some((
+    expected_violations: [ChipStacksConsistent],
+    debug_setup: (
         disable_physics: true,
-    )),
-    frame_mutations: Some([
+    ),
+    frame_mutations: [
         (frame: 30, mutation: InjectOverStackedChip(chip_name: "TestChip", stacks: 3, max_stacks: 2)),
-    ]),
+    ],
 )

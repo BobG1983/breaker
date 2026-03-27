@@ -6,7 +6,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     chips::{
-        ChipRegistry,
+        ChipCatalog,
         definition::Rarity,
         inventory::ChipInventory,
         offering::{OfferingConfig, generate_offerings},
@@ -26,7 +26,7 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct ChipOfferingParams<'w, 's> {
     commands: Commands<'w, 's>,
-    registry: Res<'w, ChipRegistry>,
+    registry: Res<'w, ChipCatalog>,
     inventory: Res<'w, ChipInventory>,
     config: Res<'w, ChipSelectConfig>,
     rng: ResMut<'w, GameRng>,
@@ -107,8 +107,8 @@ mod tests {
     };
 
     /// Build a registry with `count` Common chips named `Chip_0`, `Chip_1`, etc.
-    fn make_registry(count: usize) -> ChipRegistry {
-        let mut registry = ChipRegistry::default();
+    fn make_registry(count: usize) -> ChipCatalog {
+        let mut registry = ChipCatalog::default();
         for i in 0..count {
             registry.insert(ChipDefinition::test(
                 &format!("Chip_{i}"),
@@ -120,8 +120,8 @@ mod tests {
     }
 
     /// Build a registry with specific rarities for testing weighted selection.
-    fn make_mixed_registry() -> ChipRegistry {
-        let mut registry = ChipRegistry::default();
+    fn make_mixed_registry() -> ChipCatalog {
+        let mut registry = ChipCatalog::default();
         for i in 0..3 {
             registry.insert(ChipDefinition {
                 rarity: Rarity::Common,
@@ -139,7 +139,7 @@ mod tests {
         registry
     }
 
-    fn test_app_with_registry(registry: ChipRegistry) -> App {
+    fn test_app_with_registry(registry: ChipCatalog) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(registry)
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn generate_excludes_maxed_chips() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         let chip_a = ChipDefinition::test(
             "MaxedChip",
             EffectNode::Do(Effect::Piercing(1)),
@@ -255,7 +255,7 @@ mod tests {
         );
     }
 
-    // --- B12d: Evolution offering generation tests using ChipRegistry ---
+    // --- B12d: Evolution offering generation tests using ChipCatalog ---
 
     use crate::chips::Recipe;
 
@@ -279,12 +279,12 @@ mod tests {
         NodeSequence { assignments }
     }
 
-    /// Test app for evolution offering tests using unified `ChipRegistry`.
+    /// Test app for evolution offering tests using unified `ChipCatalog`.
     ///
-    /// The `ChipRegistry` contains 5 normal chips plus the "Barrage" evolution
+    /// The `ChipCatalog` contains 5 normal chips plus the "Barrage" evolution
     /// chip definition and a recipe requiring "Piercing Shot" x2.
     /// No `EvolutionRegistry` resource is inserted — the system must use
-    /// `ChipRegistry::eligible_recipes` instead.
+    /// `ChipCatalog::eligible_recipes` instead.
     fn test_app_for_evolution(
         node_index: u32,
         node_type_at_index: NodeType,
@@ -311,7 +311,7 @@ mod tests {
             let _ = inventory.add_chip("Piercing Shot", &ps_def);
         }
 
-        // Build unified ChipRegistry with 5 normal chips + Barrage evolution + recipe
+        // Build unified ChipCatalog with 5 normal chips + Barrage evolution + recipe
         let mut registry = make_registry(5);
         registry.insert(ChipDefinition {
             name: "Barrage".into(),
@@ -339,7 +339,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(registry)
             .insert_resource(inventory)
-            // No EvolutionRegistry inserted — system must use ChipRegistry.eligible_recipes
+            // No EvolutionRegistry inserted — system must use ChipCatalog.eligible_recipes
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(GameRng::from_seed(42))
             .insert_resource(RunState {

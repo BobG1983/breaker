@@ -36,28 +36,29 @@ type: reference
 - Added to ordering.md defined sets table with note "intra-domain only"
 
 ## Chips Domain Architecture (do not re-flag)
-- `chips/` has `definition.rs` (content data types: ChipDefinition, ChipTemplate, RaritySlot, EvolutionIngredient, EvolutionRecipe, Rarity — TriggerChain/AmpEffect/AugmentEffect/ChipEffectApplied all deleted in C7-R)
-- `chips/effects/` promoted directory with per-effect observer handlers (mirrors `effect/effects/` pattern — note: `behaviors/effects/` was renamed to `effect/effects/` in C7-R)
-- `ChipEffectApplied { effect, max_stacks }` is `#[derive(Event)]` (observer trigger) — lives in `chips/definition.rs` (moved from chips/messages.rs in refactor/phase4-wave1-cleanup). Consistent with behaviors domain pattern. No longer flagged.
-- `ChipEffectApplied` documented in messages.md Observer Events table
+- `chips/` has `definition.rs` (content data types: ChipDefinition, ChipTemplate, RaritySlot, EvolutionIngredient, Rarity — TriggerChain/AmpEffect/AugmentEffect/ChipEffectApplied all deleted in C7-R)
+- `chips/effects/` directory with per-effect passive observer handlers (mirrors `effect/effects/` pattern)
+- `ChipEffectApplied` DELETED in C7-R — replaced by passive typed events (PiercingApplied, DamageBoostApplied, etc.) dispatched via `dispatch_chip_effects` + `fire_passive_event()`
+- `chips/resources.rs` has `ChipCatalog` (flat lookup + recipes), `ChipTemplateRegistry` (SeedableRegistry), `EvolutionRegistry` (SeedableRegistry)
+- `ChipRegistry` name OBSOLETE — was used before SeedableRegistry feature. Now: `ChipTemplateRegistry` + `EvolutionRegistry` are the seeded registries; `ChipCatalog` is the derived lookup built by `build_chip_catalog`
 
 ## Phase 4 Wave 4 Architecture (as of 2026-03-23, do not re-flag)
 
 ### Chip Evolution (4h)
 - `ChipOffering` enum in `screen/chip_select/resources.rs`: `Normal(ChipDefinition)` and `Evolution { ingredients: Vec<EvolutionIngredient>, result: ChipDefinition }`
-- `EvolutionRecipe` / `EvolutionIngredient` in `chips/definition.rs` — both `Asset + TypePath + Deserialize`; ingredient fields: `chip_name: String`, `stacks_required: u32`; recipe field: `result_definition: ChipDefinition`
-- `EvolutionRegistry` in `chips/resources.rs` — flat `Vec<EvolutionRecipe>`; `eligible_evolutions(&ChipInventory)` for lookup
-- Evolution is presented via existing ChipSelect screen (not a separate screen) — boss nodes inject `ChipOffering::Evolution` before normal chips in `generate_chip_offerings`
+- `EvolutionIngredient` in `chips/definition.rs` — ingredient fields: `chip_name: String`, `stacks_required: u32`
+- `EvolutionRegistry` in `chips/resources.rs` — `SeedableRegistry<Asset=ChipDefinition>`; stores evolution ChipDefinitions; `eligible_evolutions` is now via `ChipCatalog.recipes` (not EvolutionRegistry directly)
+- Evolution is presented via existing ChipSelect screen — boss nodes inject `ChipOffering::Evolution` before normal chips in `generate_chip_offerings`
 - `handle_chip_input` consumes ingredient stacks for `ChipOffering::Evolution` on confirm
-- No RON data files in `assets/evolutions/` yet — infrastructure in place, data authoring pending
-- `EvolutionRegistry` NOT in `DefaultsCollection` / loading screen — only inserted if explicitly added; `generate_chip_offerings` uses `Option<Res<EvolutionRegistry>>`
+- Evolution RON files: `assets/chips/evolution/*.evolution.ron` — loaded by `RantzDefaultsPluginBuilder.add_registry::<EvolutionRegistry>()`
+- `EvolutionRegistry` IS in `RantzDefaultsPluginBuilder` via `.add_registry::<EvolutionRegistry>()` — guaranteed present after loading
 - No `EvolutionConsumesIngredients` scenario invariant yet — described in plan but not yet implemented in runner
 
 ### Run Stats & Highlights (4i) — UPDATED for memorable moments wave (2026-03-23)
 - `RunStats` resource in `run/resources.rs` — counters: nodes_cleared, cells_destroyed, bumps_performed, perfect_bumps, bolts_lost, chips_collected (Vec<String>), evolutions_performed, time_elapsed, seed; plus `highlights: Vec<RunHighlight>`
 - `HighlightTracker` resource in `run/resources.rs` — per-node AND cross-node transient tracking fields; reset by `reset_highlight_tracker` (per-node fields only)
 - `HighlightKind` enum (15 variants): ClutchClear, MassDestruction, PerfectStreak, FastClear, FirstEvolution, NoDamageNode, MostPowerfulEvolution, CloseSave, SpeedDemon, Untouchable, ComboKing, PinballWizard, Comeback, PerfectNode, NailBiter
-- `HighlightDefaults` in `run/definition.rs` — `#[derive(Asset, TypePath, Deserialize, GameConfig)]` → generates `HighlightConfig` resource via `#[game_config(name = "HighlightConfig")]`; RON file `assets/config/defaults.highlights.ron` exists (tested via `include_str!`); NOT in `DefaultsCollection` — not hot-reload wired
+- `HighlightDefaults` in `run/definition.rs` — `#[derive(Asset, TypePath, Deserialize, GameConfig)]` → generates `HighlightConfig` resource; RON file `assets/config/defaults.highlights.ron` exists (tested via `include_str!`); NOT added to `RantzDefaultsPluginBuilder` — gap: HighlightConfig is `init_resource`'d from Default in RunPlugin, not seeded from file
 - `HighlightConfig` is `init_resource`'d in `RunPlugin.build()` — uses `Default` impl (matches `defaults.highlights.ron` values). Fields: clutch_clear_secs, fast_clear_fraction, perfect_streak_count, mass_destruction_count, mass_destruction_window_secs, combo_king_cells, pinball_wizard_bounces, speed_demon_secs, close_save_pixels, comeback_bolts_lost, nail_biter_pixels, untouchable_nodes, highlight_cap
 - `HighlightTriggered { kind: HighlightKind }` message in `run/messages.rs` — registered by `RunPlugin`; emitted by all detection systems; consumed by `spawn_highlight_text` for in-game popups
 - Stats systems in `run/plugin.rs` FixedUpdate (PlayingState::Active): `track_cells_destroyed`, `track_bumps`, `track_bolts_lost`, `track_time_elapsed`, `track_node_cleared_stats`, `detect_mass_destruction`, `detect_close_save`, `detect_combo_and_pinball`, `detect_nail_biter`
@@ -152,7 +153,7 @@ All TriggerChain/ActiveChains/ActiveEffects/BehaviorSystems references are histo
 
 ### New crates
 - `rantzsoft_spatial2d` — `Position2D`, `Rotation2D`, `Scale2D`, `Global*`, `Velocity2D`, `PreviousVelocity`, `InterpolateTransform2D`, `VisualOffset`, `ApplyVelocity`, `Spatial2D` marker, `DrawLayer` trait, `PositionPropagation`/`RotationPropagation`/`ScalePropagation` enums. Plugin: `RantzSpatial2dPlugin<D: DrawLayer>`. Also exports `SpatialSystems` enum (4 variants: `SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) from `plugin.rs` and `prelude.rs`.
-- `rantzsoft_defaults` — expanded beyond simple lib.rs re-export. Now has: `handle.rs` (DefaultsHandle<D>), `loader.rs` (RonAssetLoader<T>), `plugin.rs` (RantzDefaultsPlugin, RantzDefaultsPluginBuilder, DefaultsSystems enum with Seed and PropagateDefaults variants), `prelude.rs`, `seedable.rs` (SeedableConfig trait), `systems.rs` (seed_config, propagate_defaults, init_defaults_handle). Cargo aliases: `defaultstest`, `defaultsclippy`, `defaultscheck`. All documented in plugins.md workspace layout and ordering.md defined sets table as of 2026-03-26.
+- `rantzsoft_defaults` — expanded beyond simple lib.rs re-export. Now has: `handle.rs` (DefaultsHandle<D>), `loader.rs` (RonAssetLoader<T>), `plugin.rs` (RantzDefaultsPlugin, RantzDefaultsPluginBuilder, DefaultsSystems enum with Seed and PropagateDefaults variants), `prelude.rs`, `registry.rs` (SeedableRegistry trait, RegistryHandles<A> resource), `seedable.rs` (SeedableConfig trait), `systems.rs` (seed_config, propagate_defaults, init_defaults_handle, seed_registry, propagate_registry, init_registry_handles). Cargo aliases include `hot-reload` feature flag. All documented in plugins.md workspace layout and ordering.md defined sets table as of 2026-03-26.
 - `rantzsoft_physics2d` — `Aabb2D` (requires Spatial2D), `CollisionLayers`, `DistanceConstraint`, `CollisionQuadtree` resource, quadtree/CCD math, `RantzPhysics2dPlugin`, `rantzsoft_physics2d::plugin::PhysicsSystems` set (MaintainQuadtree, EnforceDistanceConstraints).
 - `rantzsoft_defaults` + `rantzsoft_defaults_derive` — existed before; no game-specific content, re-exports `GameConfig` derive macro.
 
@@ -170,7 +171,7 @@ All TriggerChain/ActiveChains/ActiveEffects/BehaviorSystems references are histo
 ### Chain bolts
 - `TriggerChain::ChainBolt { tether_distance }` — now wired; `handle_chain_bolt` observer sends `SpawnChainBolt` message
 - `spawn_chain_bolt` system in bolt domain; `break_chain_on_bolt_lost` cleans up on anchor loss
-- `DistanceConstraint` component (physics2d) used for tethering; game-level `enforce_distance_constraints` in bolt domain
+- `DistanceConstraint` component (physics2d) used for tethering; game-level `bolt::enforce_distance_constraints` in bolt domain
 
 ### Spreading shockwave (not instant)
 - `ShockwaveRadius` component grows via `tick_shockwave` each fixed tick
@@ -276,6 +277,17 @@ All TriggerChain/ActiveChains/ActiveEffects/BehaviorSystems references are histo
 - Registered in RunPlugin on `OnEnter(RunEnd)` — not on FixedUpdate
 - Emits `HighlightTriggered` — added to messages.md senders list
 
+## SeedableRegistry Architecture (2026-03-26, do not re-flag)
+- `SeedableRegistry` trait in `rantzsoft_defaults::registry` — folder-based RON loading; `RegistryHandles<A>` resource tracks folder + typed handles
+- `BreakerRegistry` implements `SeedableRegistry` (`breaker/registry.rs`); `asset_dir()` = "breakers", `extensions()` = ["bdef.ron"]
+- `ChipTemplateRegistry` implements `SeedableRegistry` (`chips/resources.rs`); `asset_dir()` = "chips/templates", `extensions()` = ["chip.ron"]; stores `(AssetId, ChipTemplate)` pairs
+- `EvolutionRegistry` implements `SeedableRegistry` (`chips/resources.rs`); `asset_dir()` = "chips/evolution", `extensions()` = ["evolution.ron"]; stores `(AssetId, ChipDefinition)` pairs
+- `ChipRegistry` RENAMED to `ChipCatalog` — NOT a SeedableRegistry; built at runtime from template expansion; holds `chips: HashMap`, `order: Vec<String>`, `recipes: Vec<Recipe>`
+- `Recipe` replaces `EvolutionRecipe`: `ingredients: Vec<EvolutionIngredient>`, `result_name: String` (not `result_definition: ChipDefinition`); stored in `ChipCatalog`, not `EvolutionRegistry`
+- `eligible_recipes()` is on `ChipCatalog` (not `eligible_evolutions()` on `EvolutionRegistry`)
+- `.cargo/config.toml` aliases `defaultstest`, `defaultsclippy`, `defaultscheck` all include `,hot-reload` feature — cargo.md does not show this; needs human edit to `.claude/rules/cargo.md`
+- `RantzDefaultsPluginBuilder` has `add_registry::<R>()` — wires SeedableRegistry into loading, seeding, hot-reload
+
 ## Recurring Drift Patterns
 - Stub labels in `plugins.md` folder listing go stale as phases complete
 - New system sets added to code without corresponding update to ordering.md defined sets table
@@ -287,3 +299,4 @@ All TriggerChain/ActiveChains/ActiveEffects/BehaviorSystems references are histo
 - New chip effect observers land in `chips/effects/` but content.md covers them via the flat component list — don't re-flag observer names as missing unless new component types are added
 - Effect domain uses `EffectSystems::Bridge` (not `BehaviorSystems::Bridge`) — check ordering.md and messages.md after any bridge refactor
 - `TriggerChain` is DELETED from all source files — do not reference it; only `EffectNode`/`Effect`/`Trigger` exist now
+- `ChipRegistry` is DELETED — renamed to `ChipCatalog`; `EvolutionRecipe` replaced by `Recipe`; `eligible_evolutions()` replaced by `eligible_recipes()` on `ChipCatalog`

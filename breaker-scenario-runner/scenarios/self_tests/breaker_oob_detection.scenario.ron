@@ -6,10 +6,10 @@
     )),
     max_frames: 120,
     invariants: [BreakerInBounds, BreakerPositionClamped],
-    expected_violations: Some([BreakerInBounds, BreakerPositionClamped]),
-    debug_setup: Some((
+    expected_violations: [BreakerInBounds, BreakerPositionClamped],
+    debug_setup: (
         bolt_position: None,
-        breaker_position: Some((2000.0, 0.0)),
+        breaker_position: (2000.0, 0.0),
         disable_physics: true,
-    )),
+    ),
 )

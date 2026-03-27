@@ -1,14 +1,12 @@
 //! Screen plugin registration.
 
 use bevy::prelude::*;
-use bevy_asset_loader::prelude::*;
-use bevy_common_assets::ron::RonAssetPlugin;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
 
 use super::{
     chip_select::{ChipSelectDefaults, ChipSelectPlugin},
-    loading::{LoadingPlugin, resources::DefaultsCollection},
+    loading::LoadingPlugin,
     main_menu::{MainMenuDefaults, MainMenuPlugin},
     pause_menu::PauseMenuPlugin,
     run_end::RunEndPlugin,
@@ -18,11 +16,9 @@ use super::{
 use crate::{
     bolt::BoltDefaults,
     breaker::BreakerDefaults,
-    cells::{CellDefaults, CellTypeDefinition},
-    chips::{ChipDefinition, definition::ChipTemplate},
-    effect::BreakerDefinition,
+    cells::CellDefaults,
     input::InputDefaults,
-    run::{NodeLayout, definition::DifficultyCurveDefaults},
+    run::resources::DifficultyCurveDefaults,
     shared::{
         CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
         PlayingState,
@@ -45,35 +41,28 @@ impl Plugin for ScreenPlugin {
             // Defaults plugin — registers loaders, startup handles, and seed
             // systems for simple config types.
             .add_plugins(
-                RantzDefaultsPluginBuilder::new()
-                    .register_config::<PlayfieldDefaults>()
-                    .register_config::<BoltDefaults>()
-                    .register_config::<BreakerDefaults>()
-                    .register_config::<CellDefaults>()
-                    .register_config::<InputDefaults>()
-                    .register_config::<MainMenuDefaults>()
-                    .register_config::<TimerUiDefaults>()
-                    .register_config::<ChipSelectDefaults>()
+                RantzDefaultsPluginBuilder::<GameState>::new(GameState::Loading)
+                    .add_config::<PlayfieldDefaults>()
+                    .add_config::<BoltDefaults>()
+                    .add_config::<BreakerDefaults>()
+                    .add_config::<CellDefaults>()
+                    .add_config::<InputDefaults>()
+                    .add_config::<MainMenuDefaults>()
+                    .add_config::<TimerUiDefaults>()
+                    .add_config::<ChipSelectDefaults>()
+                    .add_config::<DifficultyCurveDefaults>()
+                    // Registries
+                    .add_registry::<crate::cells::CellTypeRegistry>()
+                    .add_registry::<crate::breaker::BreakerRegistry>()
+                    .add_registry::<crate::run::NodeLayoutRegistry>()
+                    .add_registry::<crate::chips::ChipTemplateRegistry>()
+                    .add_registry::<crate::chips::EvolutionRegistry>()
                     .build(),
             )
-            // RON asset plugins for registry/collection types (not simple configs)
-            .add_plugins((
-                RonAssetPlugin::<CellTypeDefinition>::new(&["cell.ron"]),
-                RonAssetPlugin::<NodeLayout>::new(&["node.ron"]),
-                RonAssetPlugin::<BreakerDefinition>::new(&["bdef.ron"]),
-                RonAssetPlugin::<ChipDefinition>::new(&["evolution.ron"]),
-                RonAssetPlugin::<ChipTemplate>::new(&["chip.ron"]),
-                RonAssetPlugin::<DifficultyCurveDefaults>::new(&["difficulty.ron"]),
-            ))
             // Progress plugin drives Loading → MainMenu transition.
-            // Must be added BEFORE add_loading_state.
             .add_plugins(
                 ProgressPlugin::<GameState>::new()
                     .with_state_transition(GameState::Loading, GameState::MainMenu),
-            )
-            // Asset loader: load all defaults RON files during Loading state
-            .add_loading_state(
-                LoadingState::new(GameState::Loading).load_collection::<DefaultsCollection>(),
             )
             // Sub-domain plugins
             .add_plugins((

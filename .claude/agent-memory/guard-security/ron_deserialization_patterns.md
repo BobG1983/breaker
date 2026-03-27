@@ -4,7 +4,7 @@ description: Confirmed safe RON deserialization patterns and production panic su
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding. Updated 2026-03-23 (memorable moments audit) to add HighlightDefaults findings. Updated 2026-03-24 (spatial/physics extraction branch) to add Shockwave.speed/base_range findings and MoveBolt mutation finding.
+Audited 2026-03-19 (develop, commit 7256360). Updated 2026-03-20 (feature/overclock-trigger-chain) to add chip/overclock RON patterns. Updated 2026-03-21 (develop, post-SpeedBoost refactor) to add SpeedBoost.multiplier finding. Updated 2026-03-21 (feature/invariant-self-tests) to add new scenario runner debug fields. Updated 2026-03-22 (feature/wave-3-offerings-transitions) to add Wave 3 transition config and chip offering weight findings. Updated 2026-03-23 (Wave 4 audit) to add EvolutionRecipe/EvolutionIngredient findings and CI workflow finding. Updated 2026-03-23 (memorable moments audit) to add HighlightDefaults findings. Updated 2026-03-24 (spatial/physics extraction branch) to add Shockwave.speed/base_range findings and MoveBolt mutation finding. Updated 2026-03-26 (SeedableRegistry audit) to add IMPLICIT_SOME, load_folder, Mutex/type-erased closure findings.
 
 ## Summary
 
@@ -283,3 +283,75 @@ in `physics_frozen_during_pause.scenario.ron` to move the bolt after physics is 
 
 **How to apply:** On future audits, verify no external filesystem path for scenario loading has been
 added.
+
+## SeedableRegistry audit: IMPLICIT_SOME confirmed safe (2026-03-26)
+
+`rantzsoft_defaults/src/loader.rs:50-52` uses `ron::Options::default().with_default_extension(Extensions::IMPLICIT_SOME).from_bytes(bytes)`.
+`discovery.rs:77-79` uses the same options for scenario RON. `IMPLICIT_SOME` is a RON syntactic
+sugar extension — it allows `field: value` where `field: Some(value)` is expected. It does NOT
+change how enum variants, strings, or numeric values are parsed. No injection vector exists through
+this extension: the target type T constrains all accepted values at the serde/type level. A
+malicious RON file cannot escape its expected `T` shape via IMPLICIT_SOME.
+
+**Status as of 2026-03-26:** Confirmed safe. No injection risk from IMPLICIT_SOME. Both call sites
+(loader.rs and discovery.rs) apply the option identically.
+
+**How to apply:** On future audits, confirm IMPLICIT_SOME is still the only non-default RON extension
+in use. Any addition of UNWRAP_NEWTYPES or other extensions should be flagged for review.
+
+## SeedableRegistry audit: load_folder path traversal — confirmed no risk (2026-03-26)
+
+`rantzsoft_defaults/src/systems.rs:101` calls `asset_server.load_folder(R::asset_dir())`.
+`R::asset_dir()` is a `&'static str` returned from a `SeedableRegistry` impl — it is a compile-time
+constant defined by first-party code. There is no user-controlled or runtime-constructed input path.
+Bevy's asset server further restricts all folder loading to paths under the `assets/` directory
+root; paths that escape via `../` are rejected by the Bevy IO backend. No path traversal risk.
+
+`try_typed::<R::Asset>().ok()` at line 134 silently drops handles whose type doesn't match the
+expected asset type. This is correct defensive behavior — it means that even if a non-RON file
+lands in the folder, it is simply skipped rather than panicking.
+
+The empty-folder guard at line 142-144 (`if handles.handles.is_empty() { return Progress { done:
+0, total: 1 }; }`) prevents sealing the registry empty forever when the folder is empty or all
+files fail the type filter — this is a deliberate misconfiguration guard, not a security concern.
+
+**Status as of 2026-03-26:** No path traversal risk. load_folder behavior is safe and defensive.
+
+**How to apply:** On future audits, verify R::asset_dir() implementations still return static
+compile-time strings and have not been replaced with a runtime-constructed path.
+
+## SeedableRegistry audit: Mutex + type-erased closures — confirmed sound (2026-03-26)
+
+`rantzsoft_defaults/src/plugin.rs:19` defines:
+```rust
+type Registration = Box<dyn FnOnce(&mut App) + Send>;
+```
+Closures are stored in a `Mutex<Vec<Registration>>` on `RantzDefaultsPlugin`. In `Plugin::build`,
+the lock is acquired and all registrations are drained and executed.
+
+**Soundness assessment:**
+
+1. `Send` bound on closures: The `Send` bound is required because `RantzDefaultsPlugin` is sent
+   across threads (Bevy can build plugins from any thread). The closures capture only compile-time
+   state (`loading_state: S` clones). No raw pointers, no non-Send types. Sound.
+
+2. Mutex usage: The `expect("defaults plugin lock poisoned")` on line 138 would panic on a
+   poisoned mutex. A mutex can only be poisoned if a thread panics while holding the lock. Since
+   the lock is held only for the duration of `Plugin::build` — a call that should not panic — the
+   poisoning path is unreachable in practice. The `expect` here is acceptable (not on user-
+   controlled data, only on internal state). This is categorically different from `expect` on RON
+   parse results.
+
+3. `FnOnce` semantics: Closures are drained from the Vec (`drain(..)`) so each registration runs
+   exactly once. There is no double-call risk. After `Plugin::build` completes, the Vec is empty.
+
+4. Type erasure: The closures capture typed `D: SeedableConfig` or `R: SeedableRegistry` at
+   construction time. The type information is baked into each closure body at compile time via
+   monomorphization. The `Box<dyn FnOnce>` erases the type at runtime but the behavior is already
+   fixed. There is no way to inject incorrect types at runtime.
+
+**Status as of 2026-03-26:** Confirmed sound. No unsafe code, no unsound patterns, no type
+confusion risk, no lock contention risk (build is called once at startup).
+
+**How to apply:** On future audits, verify the Mutex<Vec<Registration>> pattern is still used and
+has not been replaced with interior mutability via UnsafeCell or raw atomics.

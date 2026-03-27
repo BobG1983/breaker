@@ -4,8 +4,11 @@
 
 | Term | Meaning | Code Examples |
 |------|---------|---------------|
-| **Chip** | Any upgrade offered during chip selection — all effects are expressed as `EffectNode` variants | `ChipDefinition`, `ChipRegistry`, `ChipSelected` |
-| **ChipTemplate** | RON source type — one file per chip concept with per-rarity slots (`common`/`uncommon`/`rare`/`legendary`). Loader expands templates into individual `ChipDefinition`s at load time. `max_taken` is shared across all rarities. | `ChipTemplate`, `RaritySlot`, `seed_chip_registry` |
+| **Chip** | Any upgrade offered during chip selection — all effects are expressed as `EffectNode` variants | `ChipDefinition`, `ChipCatalog`, `ChipSelected` |
+| **ChipTemplate** | RON source type — one file per chip concept with per-rarity slots (`common`/`uncommon`/`rare`/`legendary`). Loader expands templates into individual `ChipDefinition`s at load time. `max_taken` is shared across all rarities. | `ChipTemplate`, `RaritySlot`, `expand_template` |
+| **ChipTemplateRegistry** | `SeedableRegistry` loading `.chip.ron` files from `assets/chips/templates/`. Stores `(AssetId, ChipTemplate)` pairs keyed by name. Hot-reload triggers `update_single` on file change. | `ChipTemplateRegistry`, `SeedableRegistry`, `chips/resources.rs` |
+| **ChipCatalog** | Runtime resource holding all expanded `ChipDefinition`s (built from templates) plus in-catalog `Recipe`s. Paired `Vec<String>` preserves insertion order for deterministic chip offers. NOT a `SeedableRegistry` — populated at load time by template expansion. | `ChipCatalog`, `ordered_values()`, `eligible_recipes()` |
+| **SeedableRegistry** | Trait from `rantzsoft_defaults` — folder-based RON asset loading for registries. Implementors define `asset_dir`, `extensions`, `seed`, and `update_single`. `add_registry::<R>()` on `RantzDefaultsPluginBuilder` wires loading, seeding, and hot-reload. | `SeedableRegistry`, `RegistryHandles`, `rantzsoft_defaults::registry` |
 | **ChipInventory** | Runtime resource tracking the player's chip build during a run: which chips are held and at what stack level, and which chips have been seen in offerings | `ChipInventory`, `ChipEntry` |
 | **ChipOffers** | Transient resource holding the `ChipDefinition`s offered on the chip selection screen for the current visit | `ChipOffers`, `generate_chip_offerings` |
 | **ChipOffering** | Enum representing a single item on the chip selection screen. Either `Normal(ChipDefinition)` or `Evolution { ingredients, result }` | `ChipOffering::Normal`, `ChipOffering::Evolution` |
@@ -48,8 +51,8 @@
 
 | Term | Meaning | Code Examples |
 |------|---------|---------------|
-| **EvolutionRecipe** | A RON-loaded recipe combining chip ingredients into a new chip. Has `ingredients: Vec<EvolutionIngredient>` and `result_definition: ChipDefinition`. | `EvolutionRecipe`, `EvolutionIngredient` |
-| **EvolutionRegistry** | Resource holding all loaded `EvolutionRecipe`s. Provides `eligible_evolutions(&ChipInventory)` to return recipes whose ingredient requirements are met. | `EvolutionRegistry`, `chips/resources.rs` |
+| **Recipe** | Runtime recipe record combining chip ingredients into a new chip. Has `ingredients: Vec<EvolutionIngredient>` and `result_name: String` (looks up the full `ChipDefinition` from `ChipCatalog`). Built at load time from `EvolutionRegistry` definitions; stored in `ChipCatalog`. | `Recipe`, `EvolutionIngredient`, `ChipCatalog::insert_recipe` |
+| **EvolutionRegistry** | `SeedableRegistry` loading `.evolution.ron` files from `assets/chips/evolution/`. Each file is a `ChipDefinition` with `rarity: Evolution` and `ingredients`. Provides `eligible_recipes(&ChipInventory)` via `ChipCatalog` after population. | `EvolutionRegistry`, `chips/resources.rs` |
 | **EntropyEngine** | Evolution chip — counter-gated random effect (every Nth cell destroyed, roll from weighted pool). Combines Cascade + Flux ingredients. | `EffectNode::Do(EntropyEngine(...))`, `entropy_engine.evolution.ron` |
 | **Chain Reaction** | Evolution chip — recursive bolt spawning with effect inheritance on cell destruction. Combines Cascade + Splinter + Piercing ingredients. | `chain_reaction.evolution.ron` |
 | **Feedback Loop** | Evolution chip — counter-gated burst (every 3rd perfect bump fires bolts + shockwave). Ingredients TBD. | `feedback_loop.evolution.ron` |

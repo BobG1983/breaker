@@ -1,7 +1,7 @@
 (
     name: "Last Stand",
     max_taken: 1,
-    common: Some((
+    common: (
         prefix: "Minor",
         effects: [
             On(target: Breaker, then: [
@@ -10,8 +10,8 @@
                 ]),
             ]),
         ],
-    )),
-    uncommon: Some((
+    ),
+    uncommon: (
         prefix: "Strong",
         effects: [
             On(target: Breaker, then: [
@@ -20,8 +20,8 @@
                 ]),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Desperate",
         effects: [
             On(target: Breaker, then: [
@@ -30,6 +30,5 @@
                 ]),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

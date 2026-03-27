@@ -1,29 +1,28 @@
 (
     name: "Amp",
     max_taken: 2,
-    common: Some((
+    common: (
         prefix: "Basic",
         effects: [
             On(target: Bolt, then: [
                 Do(RampingDamage(bonus_per_hit: 0.02)),
             ]),
         ],
-    )),
-    uncommon: Some((
+    ),
+    uncommon: (
         prefix: "Potent",
         effects: [
             On(target: Bolt, then: [
                 Do(RampingDamage(bonus_per_hit: 0.04)),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Savage",
         effects: [
             On(target: Bolt, then: [
                 Do(RampingDamage(bonus_per_hit: 0.06)),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

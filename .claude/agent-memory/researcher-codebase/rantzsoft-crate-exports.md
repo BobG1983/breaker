@@ -27,7 +27,7 @@ pub mod systems;    // init_defaults_handle, seed_config (internal)
 
 ### Prelude
 `rantzsoft_defaults::prelude` re-exports:
-`GameConfig`, `SeedableConfig`, `DefaultsHandle`, `RonAssetLoader`, `DefaultsSystems`, `RantzDefaultsPlugin`, `RantzDefaultsPluginBuilder`
+`GameConfig`, `SeedableConfig`, `DefaultsHandle`, `RonAssetLoader`, `DefaultsSystems`, `RantzDefaultsPlugin`, `RantzDefaultsPluginBuilder`, `SeedableRegistry`, `RegistryHandles`
 
 ### SeedableConfig trait (`seedable.rs`)
 ```rust
@@ -57,16 +57,35 @@ pub enum DefaultsSystems {
 }
 ```
 
-### RantzDefaultsPlugin / RantzDefaultsPluginBuilder (`plugin.rs`)
-Builder pattern:
+### SeedableRegistry trait (`registry.rs`)
 ```rust
-RantzDefaultsPluginBuilder::new()
-    .register_config::<MyDefaults>()  // registers init_asset, Startup handle init, seed_config
-    .build()                          // → RantzDefaultsPlugin
+pub trait SeedableRegistry: Resource + Default + Send + Sync + 'static {
+    type Asset: Asset + DeserializeOwned + Clone + Send + Sync + 'static;
+    fn asset_dir() -> &'static str;
+    fn extensions() -> &'static [&'static str];
+    fn seed(&mut self, assets: &[(AssetId<Self::Asset>, Self::Asset)]);
+    fn update_all(&mut self, assets: &[(AssetId<Self::Asset>, Self::Asset)]);  // default: reset + seed
+    fn update_single(&mut self, id: AssetId<Self::Asset>, asset: &Self::Asset);
+}
 ```
-`register_config::<D>()` registers: `init_asset::<D>()`, `Startup` system `init_defaults_handle::<D>`, and (with `progress` feature) `Update` system `seed_config::<D>` in `DefaultsSystems::Seed`.
+Implemented by registries that load an entire folder of RON assets (e.g., `BreakerRegistry`, `ChipTemplateRegistry`, `EvolutionRegistry`, `CellTypeRegistry`, `NodeLayoutRegistry`).
 
-**NOTE:** The `breaker-game` codebase currently uses its OWN hand-written seeding pipeline via `DefaultsCollection` + `bevy_asset_loader`. `rantzsoft_defaults`' plugin pipeline is available for future use but NOT yet wired in `breaker-game`. The game-level pipeline is described in `defaults-config-pipeline.md`.
+### RegistryHandles<A: Asset> (`registry.rs`)
+`#[derive(Resource)] pub struct RegistryHandles<A: Asset> { folder: Handle<LoadedFolder>, handles: Vec<Handle<A>>, loaded: bool }`
+Inserted at `Startup` by `init_registry_handles`. Resolved by `seed_registry` system.
+
+### RantzDefaultsPlugin / RantzDefaultsPluginBuilder (`plugin.rs`)
+Builder pattern — generic over the loading state type:
+```rust
+RantzDefaultsPluginBuilder::<MyState>::new(MyState::Loading)
+    .add_config::<MyDefaults>()     // registers loader, handle init, seed_config
+    .add_registry::<MyRegistry>()  // registers loader, folder handle init, seed_registry
+    .build()                        // → RantzDefaultsPlugin
+```
+`add_config::<D>()` registers: asset loader for `D`, `Startup` system `init_defaults_handle::<D>`, `Update` (in loading state) system `seed_config::<D>` tracked as progress.
+`add_registry::<R>()` registers: asset loader for `R::Asset`, `Startup` system `init_registry_handles::<R>`, `Update` (in loading state) system `seed_registry::<R>` tracked as progress.
+
+**NOTE:** The `breaker-game` codebase NOW uses this plugin pipeline (as of SeedableRegistry feature). `DefaultsCollection` + 14 hand-written seed systems are DELETED. See `defaults-config-pipeline.md` for current game-level wiring.
 
 ---
 

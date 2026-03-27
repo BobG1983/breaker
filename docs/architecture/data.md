@@ -110,46 +110,73 @@ The `Without<BreakerMaxSpeed>` filter skips already-initialized entities (persis
 
 ## Registry Pattern
 
-Domain registries hold definitions loaded from RON during the loading screen. All registries follow a standard encapsulated pattern.
+Domain registries hold definitions loaded from RON during the loading screen. Registries that load a **folder** of RON assets implement the `SeedableRegistry` trait from `rantzsoft_defaults`. Registries that are built from templates at runtime (e.g., `ChipCatalog`) use a custom internal pattern.
 
-### Standard Shape
+### SeedableRegistry (folder-based loading)
+
+Registries that load an entire directory of RON files implement `SeedableRegistry` from `rantzsoft_defaults::prelude`. The `RantzDefaultsPluginBuilder::add_registry::<R>()` call wires all loading, seeding, and (with `hot-reload` feature) hot-reload propagation automatically.
 
 ```rust
 #[derive(Resource, Debug, Default)]
-pub(crate) struct FooRegistry {
-    items: HashMap<String, FooDefinition>,
+pub struct BreakerRegistry {
+    breakers: HashMap<String, BreakerDefinition>,
 }
 
-impl FooRegistry {
-    pub(crate) fn get(&self, name: &str) -> Option<&FooDefinition> { ... }
-    pub(crate) fn insert(&mut self, def: FooDefinition) { ... }
-    pub(crate) fn values(&self) -> impl Iterator<Item = &FooDefinition> { ... }
-    pub(crate) fn len(&self) -> usize { ... }
-    pub(crate) fn is_empty(&self) -> bool { ... }
+impl SeedableRegistry for BreakerRegistry {
+    type Asset = BreakerDefinition;
+
+    fn asset_dir() -> &'static str { "breakers" }
+    fn extensions() -> &'static [&'static str] { &["bdef.ron"] }
+
+    fn seed(&mut self, assets: &[(AssetId<BreakerDefinition>, BreakerDefinition)]) {
+        self.breakers.clear();
+        for (_id, def) in assets { self.breakers.insert(def.name.clone(), def.clone()); }
+    }
+
+    fn update_single(&mut self, _id: AssetId<BreakerDefinition>, asset: &BreakerDefinition) {
+        self.breakers.insert(asset.name.clone(), asset.clone());
+    }
 }
 ```
+
+The `update_all` method is provided by the trait (resets to default then calls `seed`). The `RegistryHandles<A>` resource tracks the folder handle and typed asset handles; the `seed_registry` system resolves the folder and seeds the registry during the loading state.
 
 Fields are **private** — all access goes through methods. This lets internals change (e.g., adding ordering) without breaking callers.
 
 ### Key Types
 
-| Registry | Key | Value | Notes |
-|----------|-----|-------|-------|
-| `ChipRegistry` | `String` (name) | `ChipDefinition` | Paired `Vec<String>` preserves insertion order for deterministic chip offers |
-| `EvolutionRegistry` | — (Vec) | `EvolutionRecipe` | Stores recipes as a flat `Vec` (not keyed by name). Provides `eligible_evolutions(&ChipInventory)` lookup. Populated at load time. |
-| `NodeLayoutRegistry` | `String` (name) | `NodeLayout` | Paired `Vec<String>` preserves insertion order for index-based node progression |
-| `ArchetypeRegistry` | `String` (name) | `ArchetypeDefinition` | Unsorted — callers sort at call site for UI display. `ArchetypeDefinition` has named root trigger fields (`on_bolt_lost`, `on_perfect_bump`, `on_early_bump`, `on_late_bump`: `Option<TriggerChain>`) plus a `chains: Vec<TriggerChain>` for additional multi-step chains. |
-| `CellTypeRegistry` | `char` (alias) | `CellTypeDefinition` | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |
+| Registry | Asset type | Key | Notes |
+|----------|-----------|-----|-------|
+| `BreakerRegistry` | `BreakerDefinition` (`bdef.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/breakers/`. Re-exported from `effect/` for historical reasons. |
+| `ChipTemplateRegistry` | `ChipTemplate` (`chip.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/templates/`. Stores `(AssetId, ChipTemplate)` pairs for hot-reload. |
+| `EvolutionRegistry` | `ChipDefinition` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolution/`. Stores `(AssetId, ChipDefinition)` pairs. |
+| `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |
+| `NodeLayoutRegistry` | `NodeLayout` | `String` (name) | Paired `Vec<String>` preserves insertion order for index-based node progression. |
+| `CellTypeRegistry` | `CellTypeDefinition` | `char` (alias) | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |
 
 ### Pipeline
 
+For `SeedableRegistry` types:
+
 ```
-RON asset files
-    ↓  (asset loader)
+assets/<dir>/*.ron
+    ↓  (RonAssetLoader — registered by add_registry())
 Assets<FooDefinition>
-    ↓  (seed_foo_registry — loading screen system)
+    ↓  (seed_registry — runs in loading state via add_registry())
 Res<FooRegistry>
     ↓  (production systems read via methods)
+    ↓  (propagate_registry — reruns on AssetEvent::Modified when hot-reload feature active)
+```
+
+For `ChipCatalog` (template-expanded):
+
+```
+assets/chips/templates/*.chip.ron
+    ↓  (ChipTemplateRegistry seeded via SeedableRegistry)
+Res<ChipTemplateRegistry>
+    ↓  (expand_template — called at load time to expand each template into ChipDefinitions)
+Res<ChipCatalog>
+    ↓  (production systems read via ordered_values(), get(), eligible_recipes())
 ```
 
 ### When to Add Ordered Access
@@ -157,10 +184,10 @@ Res<FooRegistry>
 If a registry needs both name lookup and index-based access, pair the `HashMap` with a `Vec<String>` for insertion-order keys:
 
 ```rust
-pub struct NodeLayoutRegistry {
-    layouts: HashMap<String, NodeLayout>,
+pub struct ChipCatalog {
+    chips: HashMap<String, ChipDefinition>,
     order: Vec<String>,  // insertion order
 }
 ```
 
-Provide `get_by_index(usize)` alongside `get_by_name(&str)`.
+Provide `ordered_values()` alongside `get(&str)`.

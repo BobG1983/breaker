@@ -6,11 +6,11 @@
     )),
     max_frames: 120,
     invariants: [ValidBreakerState],
-    expected_violations: Some([ValidBreakerState]),
-    debug_setup: Some((
+    expected_violations: [ValidBreakerState],
+    debug_setup: (
         disable_physics: true,
-    )),
-    frame_mutations: Some([
+    ),
+    frame_mutations: [
         (frame: 30, mutation: SetBreakerState(Braking)),
-    ]),
+    ],
 )

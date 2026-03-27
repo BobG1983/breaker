@@ -7,8 +7,8 @@
     max_frames: 120,
     invariants: [NoNaN],
     expected_violations: None,
-    debug_setup: Some((
+    debug_setup: (
         bolt_position: None,
         disable_physics: true,
-    )),
+    ),
 )

@@ -38,6 +38,8 @@
 | Lint | `cargo defaultsclippy` |
 | Test | `cargo defaultstest` |
 
+These aliases include `--features hot-reload` to ensure propagation systems and their tests compile and run during development. The `hot-reload` feature gates `propagate_defaults`, `propagate_registry`, and all propagation tests.
+
 ## Scenario runner (`breaker-scenario-runner`)
 
 | Task | Alias | When |

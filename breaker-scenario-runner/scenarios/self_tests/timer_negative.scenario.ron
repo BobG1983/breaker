@@ -6,9 +6,9 @@
     )),
     max_frames: 120,
     invariants: [TimerNonNegative],
-    expected_violations: Some([TimerNonNegative]),
-    debug_setup: Some((
-        node_timer_remaining: Some(-1.0),
+    expected_violations: [TimerNonNegative],
+    debug_setup: (
+        node_timer_remaining: -1.0,
         disable_physics: true,
-    )),
+    ),
 )

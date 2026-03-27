@@ -6,10 +6,10 @@
     )),
     max_frames: 120,
     invariants: [BoltCountReasonable],
-    expected_violations: Some([BoltCountReasonable]),
-    debug_setup: Some((
-        extra_tagged_bolts: Some(12),
+    expected_violations: [BoltCountReasonable],
+    debug_setup: (
+        extra_tagged_bolts: 12,
         disable_physics: true,
-    )),
+    ),
     invariant_params: (max_bolt_count: 8),
 )

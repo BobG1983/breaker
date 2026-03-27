@@ -10,5 +10,5 @@
         max_bolt_count: 12,
     ),
     allow_early_end: false,
-    seed: Some(50),
+    seed: 50,
 )

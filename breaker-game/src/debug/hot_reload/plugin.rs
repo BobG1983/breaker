@@ -9,7 +9,10 @@ use super::{
         propagate_cell_type_changes, propagate_node_layout_changes,
     },
 };
-use crate::{bolt::BoltConfig, breaker::BreakerConfig, shared::GameState};
+use crate::{
+    bolt::BoltConfig, breaker::BreakerConfig, chips::systems::propagate_chip_catalog,
+    shared::GameState,
+};
 
 /// Plugin that enables live hot-reload of RON configuration and content files.
 ///
@@ -39,6 +42,7 @@ impl Plugin for HotReloadPlugin {
                 propagate_cell_type_changes.before(propagate_node_layout_changes),
                 propagate_node_layout_changes,
                 propagate_breaker_changes,
+                propagate_chip_catalog,
             )
                 .in_set(HotReloadSystems::PropagateDefaults),
         );

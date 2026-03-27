@@ -39,7 +39,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - [4j: Release Infrastructure](done/phase-4/phase-4j-release-infrastructure.md)
 
 ### Current
-- **Spatial/Physics Extraction** — **Done**. Extracted `rantzsoft_spatial2d` and `rantzsoft_physics2d` as game-agnostic workspace crates. Chain bolts and spreading shockwave implemented. `breaker-derive/` replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`.
+- **Spatial/Physics Extraction** — **Done**. Extracted `rantzsoft_spatial2d` and `rantzsoft_physics2d` as game-agnostic workspace crates. Chain bolts and spreading shockwave implemented. `breaker-derive/` replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`. `SeedableRegistry` trait added to `rantzsoft_defaults` — `BreakerRegistry`, `ChipTemplateRegistry`, and `EvolutionRegistry` all implement it; `ChipRegistry` renamed to `ChipCatalog`.
 
 ### Upcoming
 - Graphics & Sound Audit — Full scan of every entity, effect, cell type, breaker, and event to catalog missing graphics and sounds. Produces the work list for Phases 5 and 6 - to be stored under design/ as a markdown, with a table for every missing asset.

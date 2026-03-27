@@ -10,7 +10,7 @@ use rand::{
 use crate::chips::{
     definition::{ChipDefinition, Rarity},
     inventory::ChipInventory,
-    resources::ChipRegistry,
+    resources::ChipCatalog,
 };
 
 /// A single entry in the weighted offering pool, carrying template metadata
@@ -43,7 +43,7 @@ pub(crate) fn compute_weight(base_weight: f32, decay: f32) -> f32 {
 /// Builds the active pool: all chips minus maxed, with effective weights.
 #[must_use]
 pub(crate) fn build_active_pool(
-    registry: &ChipRegistry,
+    registry: &ChipCatalog,
     inventory: &ChipInventory,
     config: &OfferingConfig,
 ) -> Vec<(String, f32)> {
@@ -105,7 +105,7 @@ pub(crate) fn draw_offerings(
 /// deduplicated against each other.
 #[must_use]
 pub(crate) fn generate_offerings(
-    registry: &ChipRegistry,
+    registry: &ChipCatalog,
     inventory: &ChipInventory,
     config: &OfferingConfig,
     rng: &mut impl Rng,
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn empty_registry_returns_empty_offerings() {
-        let registry = ChipRegistry::default();
+        let registry = ChipCatalog::default();
         let inventory = ChipInventory::default();
         let config = test_config();
         let mut rng = GameRng::from_seed(42);
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn pool_smaller_than_count_returns_all() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip("A", 3));
         registry.insert(test_chip("B", 3));
 
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn no_duplicates_in_offering() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         for i in 0..5 {
             registry.insert(test_chip(&format!("Chip{i}"), 3));
         }
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn maxed_chips_excluded_from_offerings() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         let a = test_chip("A", 1);
         let b = test_chip("B", 1);
         let c = test_chip("C", 1);
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn higher_weight_chip_appears_more_frequently() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_rarity("CommonChip", Rarity::Common, 99));
         registry.insert(test_chip_rarity("LegendaryChip", Rarity::Legendary, 99));
 
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn weight_decay_reduces_stale_chip_frequency() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip("Fresh", 99));
         registry.insert(test_chip("Stale", 99));
 
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn build_active_pool_excludes_evolution_rarity_chips() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_rarity("Normal Chip", Rarity::Common, 3));
         registry.insert(test_chip_rarity("Barrage", Rarity::Evolution, 1));
 
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn build_active_pool_only_evolution_chips_produces_empty_pool() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_rarity("Evo A", Rarity::Evolution, 1));
         registry.insert(test_chip_rarity("Evo B", Rarity::Evolution, 1));
 
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn same_seed_produces_same_offerings() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         for i in 0..5 {
             registry.insert(test_chip(&format!("Chip{i}"), 3));
         }
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn different_seed_produces_different_offerings() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         for i in 0..10 {
             let rarity = match i % 4 {
                 0 => Rarity::Common,
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn single_chip_offered_alone() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip("Only", 3));
 
         let inventory = ChipInventory::default();
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     fn all_maxed_except_one_returns_only_remaining() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         let a = test_chip("A", 1);
         let b = test_chip("B", 1);
         let c = test_chip("C", 1);
@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn build_active_pool_applies_weights_and_decay() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_rarity("A", Rarity::Common, 1)); // maxed
         registry.insert(test_chip_rarity("B", Rarity::Rare, 3)); // not maxed, decay 0.8
         registry.insert(test_chip_rarity("C", Rarity::Legendary, 3)); // not maxed, no decay
@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn build_active_pool_excludes_template_maxed_chips() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_template("Basic Piercing", Some("Piercing"), 3));
         registry.insert(test_chip_template("Keen Piercing", Some("Piercing"), 3));
         registry.insert(test_chip_template("Damage Up", None, 5));
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn build_active_pool_excludes_none_template_only_when_individually_maxed() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_template("Solo", None, 1));
 
         let mut inventory = ChipInventory::default();
@@ -630,7 +630,7 @@ mod tests {
 
     #[test]
     fn generate_offerings_no_duplicate_template_in_offering() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_template("Basic Piercing", Some("Piercing"), 3));
         registry.insert(test_chip_template("Keen Piercing", Some("Piercing"), 3));
         registry.insert(test_chip_template("Basic Damage", Some("Damage"), 3));
@@ -667,7 +667,7 @@ mod tests {
     #[test]
     fn generate_offerings_none_template_chips_never_deduplicated() {
         // Chips with template_name: None should never be considered duplicates
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_template("Solo A", None, 3));
         registry.insert(test_chip_template("Solo B", None, 3));
         registry.insert(test_chip_template("Solo C", None, 3));
@@ -690,7 +690,7 @@ mod tests {
 
     #[test]
     fn generate_offerings_correct_count_with_unique_templates() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         for i in 0..5 {
             registry.insert(test_chip_template(
                 &format!("Chip{i}"),
@@ -727,7 +727,7 @@ mod tests {
 
     #[test]
     fn generate_offerings_fewer_templates_than_slots() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         // 4 chips across 2 templates
         registry.insert(test_chip_template("Basic Piercing", Some("Piercing"), 3));
         registry.insert(test_chip_template("Keen Piercing", Some("Piercing"), 3));
@@ -752,7 +752,7 @@ mod tests {
 
     #[test]
     fn generate_offerings_all_none_template_chips_offered() {
-        let mut registry = ChipRegistry::default();
+        let mut registry = ChipCatalog::default();
         registry.insert(test_chip_template("A", None, 3));
         registry.insert(test_chip_template("B", None, 3));
         registry.insert(test_chip_template("C", None, 3));

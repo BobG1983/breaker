@@ -43,24 +43,15 @@ type: project
 ### Workspace crates missing license field — RESOLVED
 - **Status:** RESOLVED 2026-03-22 — `private.ignore = true` added to deny.toml [licenses] section.
 
-### bevy_common_assets 0.16.0 upgrade — DEFERRED
-- **Finding:** `cargo outdated` flags bevy_common_assets 0.15.0 → 0.16.0
-- **Status:** DEFERRED — do not upgrade without verifying Bevy version compatibility
-- **Why:** 0.16.0 targets `bevy ^0.18.0` (same as workspace — compatible). However, the `ron`
-  feature in 0.16.0 still depends on `ron ^0.11`, the same as 0.15.0. Upgrading provides no
-  reduction in the ron 0.11/0.12 duplicate. No changelog benefit identified for this project.
-  The 0.15.0 → 0.16.0 diff should be reviewed before upgrading.
-- **When to re-evaluate:** When Bevy upgrades, or when bevy_common_assets releases a version that
-  uses `ron ^0.12` directly (which would eliminate the duplicate transitive ron).
+### bevy_common_assets + bevy_asset_loader — REMOVED (2026-03-26)
+- **Finding:** Both crates were removed from breaker-game/Cargo.toml.
+- **Status:** RESOLVED — no longer in Cargo.toml or Cargo.lock.
+- **Side effect resolved:** The `ron v0.11.0` transitive duplicate (caused by bevy_common_assets
+  requiring `ron ^0.11`) is also eliminated. Only `ron 0.12.0` remains in the tree.
 
-### ron v0.11 transitive duplicate
-- **Finding:** `cargo tree -d` shows `ron v0.11.0` alongside `ron v0.12.0` in the dep tree.
-- **Status:** WONTFIX (upstream) — caused by `bevy_common_assets` requiring `ron ^0.11`. Both
-  0.15.0 and 0.16.0 have this same dependency spec.
-- **Impact:** Moderate — two ron versions compiled into the binary. Not a runtime conflict (different
-  features from different crates), but does increase compile time and binary size.
-- **Fix if needed:** Replace `bevy_common_assets` with a direct implementation using ron 0.12
-  directly, or wait for a future bevy_common_assets release that bumps to `ron ^0.12`.
+### ron v0.11 transitive duplicate — RESOLVED (2026-03-26)
+- **Previous status:** WONTFIX (bevy_common_assets pinned ron ^0.11)
+- **Status:** RESOLVED — bevy_common_assets removed; ron tree is now unified at 0.12.0.
 
 ### OFL-1.1 / Ubuntu-font-1.0 (epaint_default_fonts) — RESOLVED
 - **Status:** RESOLVED 2026-03-22 — "OFL-1.1" and "Ubuntu-font-1.0" added to deny.toml allow list.

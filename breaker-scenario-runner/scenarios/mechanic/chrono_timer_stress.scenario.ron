@@ -6,5 +6,5 @@
     invariants: [TimerNonNegative, BoltInBounds, ValidStateTransitions],
     expected_violations: None,
     debug_setup: None,
-    seed: Some(55),
+    seed: 55,
 )

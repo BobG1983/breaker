@@ -151,3 +151,12 @@ type: reference
 - Scale interpolation in `derive_transform` uses manual lerp `prev.x + (g_scale.x - prev.x) * alpha` rather than a `lerp` call — intentional; `f32` has no built-in `lerp` in stable Rust at the time of writing; this is the idiomatic manual form. Do not flag.
 - `GlobalScale2D` fields `x: f32, y: f32` match `Scale2D`'s non-newtype layout — intentional symmetry. Do not flag as inconsistent with `GlobalPosition2D(Vec2)` newtype style; scale requires field-level access for the propagation math.
 - `derive_transform` has the interpolation guard `if interp.is_some()` repeated three times (pos, rot, scale) — intentional; each field can be independently interpolated or not (the guard is per-field, not per-entity). Do not flag as duplication.
+
+## SeedableRegistry feature (refactor/rantzsoft-prelude-and-defaults, 2026-03-26)
+- `assert!()` in `CellTypeRegistry::seed()` for reserved alias '.' and duplicate alias — intentional panic-on-misconfiguration (data author error). The sibling `validate()` failure uses `warn!+skip` instead. This inconsistency is a known design tension (flagged in review) but not a new pattern to ignore — it should be resolved.
+- `assert!()` in `BreakerRegistry::seed()` for duplicate breaker name — same pattern as above.
+- `self.registrations.lock().expect("defaults plugin lock poisoned")` in `RantzDefaultsPlugin::build` — intentional; a poisoned Mutex is unrecoverable. Do not flag `expect` here.
+- `Recipe` (pub(crate) struct in chips/resources.rs) — flagged as vocabulary violation; should be `CatalogRecipe` or align with `EvolutionRecipe`. OPEN as of 2026-03-26.
+- `propagate_registry` event reader consumes `.any()` for modified-handle detection — intentional short-circuit; missing test for foreign-asset Modified event not triggering rebuild. OPEN gap as of 2026-03-26.
+- `build_chip_catalog` asymmetric loading state (one handle loaded, one not) — missing test. OPEN gap as of 2026-03-26.
+- `propagate_node_layout_changes` CellConfig-only change path — missing test. OPEN gap as of 2026-03-26.

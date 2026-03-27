@@ -6,5 +6,5 @@
     invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
     expected_violations: None,
     debug_setup: None,
-    seed: Some(400),
+    seed: 400,
 )

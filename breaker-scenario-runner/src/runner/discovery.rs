@@ -74,7 +74,9 @@ pub fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| eprintln!("Failed to read {}: {e}", path.display()))
         .ok()?;
-    ron::de::from_str(&content)
+    ron::Options::default()
+        .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+        .from_str(&content)
         .map_err(|e| eprintln!("Failed to parse {}: {e}", path.display()))
         .ok()
 }

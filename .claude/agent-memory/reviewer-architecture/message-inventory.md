@@ -16,7 +16,7 @@
 | `BumpPerformed { grade, bolt }` | `breaker/messages.rs` | `BreakerPlugin` | breaker/update_bump, breaker/grade_bump | breaker/perfect_bump_dash_cancel, breaker/spawn_bump_grade_text, effect/bridge_bump, run/track_bumps, run/detect_close_save |
 | `BumpWhiffed` | `breaker/messages.rs` | `BreakerPlugin` | breaker/grade_bump | breaker/spawn_whiff_text, effect/bridge_bump_whiff |
 | `ChipSelected { name }` | `ui/messages.rs` | `UiPlugin` | screen/chip_select/handle_chip_input | chips/dispatch_chip_effects (enqueue), run/track_chips_collected, run/detect_first_evolution |
-| `HighlightTriggered { kind }` | `run/messages.rs` | `RunPlugin` | run/detect_mass_destruction, run/detect_close_save, run/detect_combo_and_pinball, run/detect_nail_biter, run/detect_first_evolution, run/track_node_cleared_stats (declared but unused) | run/spawn_highlight_text (imported but NOT registered — BLOCKING) |
+| `HighlightTriggered { kind }` | `run/messages.rs` | `RunPlugin` | run/detect_mass_destruction, run/detect_close_save, run/detect_combo_king, run/detect_pinball_wizard, run/detect_nail_biter, run/detect_first_evolution | run/spawn_highlight_text (Update, PlayingState::Active — registered in RunPlugin) |
 | `BoltSpawned` | `bolt/messages.rs` | `BoltPlugin` | bolt/spawn_bolt | run/node/check_spawn_complete |
 | `BreakerSpawned` | `breaker/messages.rs` | `BreakerPlugin` | breaker/spawn_breaker | run/node/check_spawn_complete |
 | `WallsSpawned` | `wall/messages.rs` | `WallPlugin` | wall/spawn_walls | run/node/check_spawn_complete |

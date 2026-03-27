@@ -7,5 +7,5 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    seed: Some(7777),
+    seed: 7777,
 )

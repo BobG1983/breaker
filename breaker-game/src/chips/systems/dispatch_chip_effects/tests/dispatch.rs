@@ -8,7 +8,7 @@ use crate::{
         components::*,
         definition::{ChipDefinition, Rarity},
         inventory::ChipInventory,
-        resources::ChipRegistry,
+        resources::ChipCatalog,
     },
     effect::{
         definition::{Effect, EffectChains, EffectNode, ImpactTarget, RootEffect, Target, Trigger},
@@ -26,7 +26,7 @@ fn passive_piercing_via_root_effect() {
 
     app.world_mut().spawn(Bolt);
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Piercing Shot".to_owned(),
             description: "test".to_owned(),
@@ -58,7 +58,7 @@ fn passive_multiple_do_leaves_fire_all() {
 
     app.world_mut().spawn(Bolt);
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "MultiPassive".to_owned(),
             description: "test".to_owned(),
@@ -109,7 +109,7 @@ fn triggered_chain_pushes_to_breaker_chains() {
         .spawn((Breaker, EffectChains::default()))
         .id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Surge".to_owned(),
             description: "test".to_owned(),
@@ -144,7 +144,7 @@ fn triggered_chain_pushes_to_bolt_chains() {
 
     let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Impact Chip".to_owned(),
             description: "test".to_owned(),
@@ -187,7 +187,7 @@ fn mixed_passive_and_triggered_in_separate_roots() {
         .spawn((Breaker, EffectChains::default()))
         .id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Hybrid".to_owned(),
             description: "test".to_owned(),
@@ -249,7 +249,7 @@ fn bare_do_fires_passive_not_pushed_to_chains() {
         .spawn((Breaker, EffectChains::default()))
         .id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "BareLeaf".to_owned(),
             description: "test".to_owned(),
@@ -294,7 +294,7 @@ fn inventory_updated_on_selection() {
 
     app.world_mut().spawn(Bolt);
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Piercing Shot".to_owned(),
             description: "test".to_owned(),
@@ -333,7 +333,7 @@ fn same_chip_selected_twice_pushes_two_entries() {
         .id();
 
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Surge".to_owned(),
             description: "test".to_owned(),

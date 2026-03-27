@@ -39,8 +39,8 @@ Collision systems and messages moved to bolt domain. `physics/` game domain no l
 - `CellTypeRegistry { types: HashMap<char, CellTypeDefinition> }`
 - `CellDefaults` / `CellConfig` — grid layout only (width, height, padding), no hp field
 
-### Constants (`shared/mod.rs`)
-- `BASE_BOLT_DAMAGE: f32 = 10.0`
+### Constants (`bolt/resources.rs`)
+- `BASE_BOLT_DAMAGE: f32 = 10.0` — pub const (moved from shared/mod.rs)
 
 ### Systems
 - `handle_cell_hit` — reads DamageCell (NOT BoltHitCell), calls take_damage(msg.damage), sends CellDestroyed. DamageCell.damage already includes DamageBoost calculation from the sender (bolt_cell_collision or shockwave).

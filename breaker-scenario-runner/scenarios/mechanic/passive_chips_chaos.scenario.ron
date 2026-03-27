@@ -11,8 +11,8 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    seed: Some(7331),
-    initial_effects: Some([
+    seed: 7331,
+    initial_effects: [
         On(target: Bolt, then: [
             When(trigger: Bumped, then: [
                 Do(Piercing(1)),
@@ -21,5 +21,5 @@
                 Do(SizeBoost(0.2)),
             ]),
         ]),
-    ]),
+    ],
 )

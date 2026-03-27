@@ -10,4 +10,4 @@ pub(crate) mod systems;
 
 pub(crate) use definition::{ChipDefinition, ChipTemplate, expand_template};
 pub(crate) use plugin::ChipsPlugin;
-pub(crate) use resources::{ChipRegistry, Recipe};
+pub(crate) use resources::{ChipCatalog, ChipTemplateRegistry, EvolutionRegistry, Recipe};

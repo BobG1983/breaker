@@ -1,6 +1,7 @@
-//! System to propagate `BreakerDefinition` asset changes to live game state.
+//! System to propagate `BreakerDefinition` registry changes to live game state.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_defaults::prelude::DefaultsHandle;
 
 use crate::{
     breaker::{
@@ -14,22 +15,19 @@ use crate::{
         init::apply_stat_overrides,
         registry::BreakerRegistry,
     },
-    screen::loading::resources::DefaultsCollection,
 };
 
 /// Bundled system parameters for the breaker change propagation system.
 #[derive(SystemParam)]
 pub(crate) struct BreakerChangeContext<'w, 's> {
-    /// Asset collection handles.
-    collection: Res<'w, DefaultsCollection>,
-    /// Loaded breaker definition assets.
-    assets: Res<'w, Assets<BreakerDefinition>>,
+    /// Handle to the breaker defaults asset (for looking up the correct asset).
+    defaults_handle: Option<Res<'w, DefaultsHandle<BreakerDefaults>>>,
     /// Loaded breaker defaults assets.
     defaults_assets: Res<'w, Assets<BreakerDefaults>>,
     /// Currently selected breaker name.
     selected: Res<'w, SelectedBreaker>,
-    /// Mutable breaker registry.
-    registry: ResMut<'w, BreakerRegistry>,
+    /// Breaker registry (rebuilt by `propagate_registry`).
+    registry: Res<'w, BreakerRegistry>,
     /// Mutable breaker configuration.
     config: ResMut<'w, BreakerConfig>,
     /// Breaker entities for re-stamping components.
@@ -40,42 +38,28 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
-/// Detects `AssetEvent::Modified` on any `BreakerDefinition`, rebuilds
-/// `BreakerRegistry`, and if the selected breaker was modified:
+/// Detects when `propagate_registry` has rebuilt the `BreakerRegistry`
+/// and if the selected breaker was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
 /// 2. Resets `LivesCount` if breaker has `life_pool`
 /// 3. Rebuilds breaker entity `EffectChains`
-pub(crate) fn propagate_breaker_changes(
-    mut events: MessageReader<AssetEvent<BreakerDefinition>>,
-    mut ctx: BreakerChangeContext,
-) {
-    let any_modified = events.read().any(|event| {
-        ctx.collection
-            .breakers
-            .iter()
-            .any(|h| event.is_modified(h.id()))
-    });
-
-    if !any_modified {
+pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
+    if !ctx.registry.is_changed() || ctx.registry.is_added() {
         return;
     }
 
-    // Rebuild registry
-    ctx.registry.clear();
-    for handle in &ctx.collection.breakers {
-        if let Some(def) = ctx.assets.get(handle.id()) {
-            ctx.registry.insert(def.name.clone(), def.clone());
-        }
-    }
-
-    // Check if the selected breaker was modified
+    // Check if the selected breaker exists in the registry
     let Some(def) = ctx.registry.get(&ctx.selected.0) else {
         return;
     };
     let def = def.clone();
 
     // Reset BreakerConfig from defaults + re-apply stat overrides
-    if let Some(loaded) = ctx.defaults_assets.iter().next().map(|(_, d)| d) {
+    if let Some(loaded) = ctx
+        .defaults_handle
+        .as_ref()
+        .and_then(|h| ctx.defaults_assets.get(h.0.id()))
+    {
         *ctx.config = BreakerConfig::from(loaded.clone());
     }
     apply_stat_overrides(&mut ctx.config, &def.stat_overrides);

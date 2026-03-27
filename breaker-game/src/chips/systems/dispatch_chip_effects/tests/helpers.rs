@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::super::dispatch_chip_effects;
-use crate::{chips::resources::ChipRegistry, effect::effects::*, ui::messages::ChipSelected};
+use crate::{chips::resources::ChipCatalog, effect::effects::*, ui::messages::ChipSelected};
 
 /// Resource holding an optional [`ChipSelected`] message to be sent once.
 #[derive(Resource)]
@@ -21,7 +21,7 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_message::<ChipSelected>()
-        .init_resource::<ChipRegistry>()
+        .init_resource::<ChipCatalog>()
         .add_systems(
             Update,
             (enqueue_chip_selected, dispatch_chip_effects).chain(),

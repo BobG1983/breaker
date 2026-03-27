@@ -127,6 +127,53 @@ type: reference
 ### Intentional Pattern: resolve_armed swap idiom
 - `drain(..)` into `new_armed` then assign back to `armed.0` is the standard "process and rebuild" Vec pattern. At typical scale (≤3 armed chains per bolt, ≤3 active overclock chips), this is negligible. Not worth changing.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-26, SeedableRegistry feature)
+
+### rantzsoft_defaults/src/systems.rs — seed_registry, seed_config, propagate_registry, propagate_defaults
+
+SEED_REGISTRY / SEED_CONFIG (Progress systems, iyes_progress feature):
+- Both run in Update with a `Local<bool>` guard. After seeding fires once, the `*seeded` check exits after a single bool read — negligible per-frame cost.
+- `Local<bool>` is the correct idempotency pattern for these. Even though 4 resources are borrowed (ResMut<R>, Option<ResMut<RegistryHandles>>, Res<Assets<LoadedFolder>>, Res<Assets<R::Asset>>), Bevy resolves these borrows at system registration time; the `*seeded` branch returns in a few instructions. Zero concern.
+- Vec allocation in `seed_registry` (`Vec::with_capacity(handles.handles.len())`): fires exactly once per registry, at load time. Not a hot path.
+- Asset `.clone()` inside the Vec collection loop: fires once per loaded asset file, once per session boot. Not a hot path.
+- Missing `run_if(in_state(...))` guard on seed systems: acceptable — iyes_progress controls execution via Progress return. These only need to run during the loading state and the `*seeded` guard kills all further work.
+
+PROPAGATE_REGISTRY (hot-reload feature, dev-only):
+- Runs in Update, reads `AssetEvent<R::Asset>` and calls `events.read().any(...)`. With no events the `.any()` short-circuits immediately and the function returns — zero work each frame at steady state.
+- When `any_modified` is true: allocates `Vec<_>` and calls `asset.clone()` per handle. This is acceptable: fires only on actual disk file saves during dev workflow. Not production code.
+- The nested `.any(|h| event.is_modified(h.id()))` inner scan: O(handles × events). At ~10 chip RON files and 1-2 simultaneous events, this is ~20 comparisons. Completely fine.
+- Does NOT need a state guard — `hot-reload` feature is dev-only; in release builds this system is not compiled.
+
+PROPAGATE_DEFAULTS (hot-reload feature, dev-only):
+- Same pattern as propagate_registry: drains event reader, early-exits if no Modified events, clones one asset on modification. Same reasoning applies. Confirmed clean.
+
+### breaker-game/src/debug/hot_reload — hot_reload plugin systems
+
+PROPAGATE_CELL_TYPE_CHANGES:
+- Uses `is_changed() && !is_added()` guard pattern. Exits immediately if registry not changed. On change: iterates all Cell entities (O(cells)) — fine at <200 cells.
+- No is_changed() archetype concern: `Res<CellTypeRegistry>` is a Resource, not a component. Resource change detection in Bevy 0.18 is a single Ticks comparison, not an archetype scan.
+- Query uses `With<Cell>` filter and requests `&mut CellHealth + &mut CellDamageVisuals` — broad mutable query but only runs on registry hot-reload (rare event during dev). Zero production concern.
+- `materials.get_mut()` per cell: fine for dev-only path.
+
+PROPAGATE_BREAKER_CONFIG / PROPAGATE_BOLT_CONFIG:
+- Both gated with `run_if(resource_changed::<Config>)` in plugin — this is the correct pattern. The run condition checks the resource change tick before the system body executes; body only runs on actual config changes (file saves during dev).
+- commands.entity().insert(large_bundle) on every Breaker/Bolt entity: triggers structural changes on the 1 breaker or 1-2 bolt entities. Acceptable for a dev-only hot-reload system. Zero production concern.
+
+ALL HOT_RELOAD SYSTEMS:
+- Gated with `in_state(GameState::Playing)` via system set configure_sets. So they don't run in menus or loading screens.
+- Entire hot_reload module is `#[cfg(feature = "dev")]` — not compiled in release builds. Confirmed: these are development-only code paths with no production performance impact.
+
+### breaker-game/src/chips/systems/build_chip_catalog.rs — build_chip_catalog
+
+- Runs in Update with `Local<bool>` guard. After catalog is built: 2-instruction exit (bool read + return). Same analysis as seed_registry.
+- Borrowing 4 resources (Res<ChipTemplateRegistry>, Res<EvolutionRegistry>, Res<RegistryHandles<ChipTemplate>>, Res<RegistryHandles<ChipDefinition>>) plus Commands: these are all immutable Res reads except Commands. Bevy can run this alongside any system that only needs write access to disjoint resources. Scheduling is not blocked.
+- When the `Local<bool>` fires: clones ChipDefinitions from EvolutionRegistry. `def.ingredients.clone().unwrap_or_default()` allocates once per evolution chip. This fires exactly once per session load. Not a hot path.
+- `catalog.insert(def.clone())` per evolution: clones ChipDefinition (String + Vec<RootEffect>). Again, one-time load cost. Confirmed clean.
+- `commands.insert_resource(catalog)`: inserts the built ChipCatalog as a resource. Standard pattern, no concern.
+
+## ARCHETYPE FRAGMENTATION NOTE — SeedableRegistry:
+- None. SeedableRegistry works entirely through Resources (no components). Asset loading (LoadedFolder, Assets<T>) adds no entity archetypes. Zero fragmentation concern from this feature.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-23, feature/wave-3-offerings-transitions, memorable moments)
 
 ### run/systems/ — detection systems (detect_mass_destruction, detect_combo_and_pinball, detect_close_save, detect_nail_biter, detect_first_evolution, track_node_cleared_stats)
@@ -189,6 +236,19 @@ RESOLVED ISSUE: spawn_highlight_text is now registered in RunPlugin::build under
 ### Highlights Vec: unbounded growth during run (deferred, watch item added below)
 - The cap enforced during detection is now REMOVED by design. CloseSave entries per run = 1 per BumpPerformed where bolt was close to loss (rare event, but can accumulate across many nodes). track_node_cleared_stats can push multiple highlights per NodeCleared (ClutchClear, SpeedDemon, PerfectNode, etc.) unconditionally.
 - In a 10-node run: at most ~8 highlights per NodeCleared × 10 nodes = 80 entries (degenerate case with all conditions met). In practice: 1–3 per node = 10–30 entries. Bounded by game session length. Not a pathological growth concern. Added to Watch section below.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-26, rantzsoft_defaults SeedableRegistry)
+
+### rantzsoft_defaults/src/systems.rs — seed_registry + plugin.rs registration
+
+SEED_REGISTRY (Update, run_if(in_state(loading_state))):
+- After *seeded = true (first line guard), returns immediately on every subsequent frame. ResMut<R> + ResMut<RegistryHandles> are borrowed but released immediately. No competing systems touch these resources during loading state. Confirmed clean.
+- filter_map + try_typed (lines 104-109): executes on the ONE frame the LoadedFolder first becomes available, then handles.loaded = true gates it permanently. This is O(N) exactly once, not per frame. Confirmed clean.
+- Vec allocation (line 112) + asset.clone() (line 117): Vec is allocated and partially filled on each frame where some assets are not yet loaded (early-return at line 115 drops it). Full clone of all N assets happens on the single seeding frame only. Not a hot-path concern at registry sizes in this game (tens of RON files). Confirmed acceptable — clone is required by the seed() trait signature which takes owned values.
+- UntypedHandle.clone() inside filter_map: Bevy 0.18 handles are ref-counted; clone is an Arc bump. Negligible.
+- track_progress overhead: two atomic increments per frame during loading state. Immeasurable vs .map(drop). Confirmed acceptable.
+
+INTENTIONAL PATTERN: Local<bool> + run_if(in_state(loading_state)) is the correct Bevy idiom for one-shot loading systems. The *seeded guard is belt-and-suspenders: run_if handles the common case; Local<bool> handles edge cases where the system might be called outside the expected state transition. Do not flag this as redundant.
 
 ## Confirmed-Clean New Systems (reviewed 2026-03-26, scenario-runner lifecycle)
 

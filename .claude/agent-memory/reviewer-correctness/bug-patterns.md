@@ -12,12 +12,12 @@ type: reference
 ## Recurring Bug Categories
 - **Stale screen resources**: RunSetupSelection, PauseMenuSelection, etc. persist between visits. Safe because `insert_resource` overwrites on re-entry.
 - **Stale selection index**: All reset to 0 by spawn systems on OnEnter. Safe.
-- **seed_upgrade_registry Local<bool>**: Persists for app lifetime. Correct — Loading only runs once.
+- **seed_registry systems use idempotency via loaded flag**: `seed_registry::<R>` (in rantzsoft_defaults) tracks loaded state internally — safe to call multiple times per app lifetime. Loading only runs once.
 
 ## ECS Pitfalls Found
-- `apply_bump_velocity` DELETED (2026-03-21) — velocity scaling now via TriggerChain::SpeedBoost leaf → handle_speed_boost observer. The Vec-collection pattern for borrow conflicts was used here; apply it in any future systems with the same shape.
-- `ChipSelected` message is consumed by `apply_chip_effect` (ChipsPlugin). Consumer added in feature/phase4b1-chip-effects.
-- `spawn_chip_select` takes `Res<ChipRegistry>` (not Option) — guaranteed safe because Loading completes first.
+- `apply_bump_velocity` DELETED (2026-03-21) — velocity scaling now via Effect::SpeedBoost leaf → handle_speed_boost observer. The Vec-collection pattern for borrow conflicts was used here; apply it in any future systems with the same shape.
+- `ChipSelected` message is consumed by `dispatch_chip_effects` (ChipsPlugin, C7-R). `apply_chip_effect` was the old consumer (DELETED in C7-R).
+- `generate_chip_offerings` (chip select screen) uses `Res<ChipCatalog>` for the chip pool — guaranteed safe because Loading completes first. `ChipCatalog` is populated by `build_chip_catalog` after `ChipTemplateRegistry` and `EvolutionRegistry` are seeded.
 
 ## Phase 4 Wave 1 Confirmed Bugs (2026-03-19)
 - `stack_u32` (apply_chip_effect.rs:204): `*current / per_stack` panics with integer division by zero when `per_stack=0`. No guard. Current RON files are safe (non-zero values), but future chips with `Piercing(0)` or `ChainHit(0)` would panic at stack-2 selection time.
@@ -51,6 +51,14 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 
 ## Full-tree Review Confirmed Bug (2026-03-19, second session) — FIXED (2026-03-19 third session)
 - **spawn_run_end_screen shows wrong loss text for Aegis**: FIXED — `RunOutcome::Lost` split into `TimerExpired` and `LivesDepleted`. `handle_timer_expired` sets `TimerExpired`, `handle_run_lost` sets `LivesDepleted`. Screen match arm maps each to correct text. Confirmed clean.
+
+## SeedableRegistry Phase 1 Confirmed Bug (develop, 2026-03-26) — FIXED
+- **seed_registry empty-handles false-success**: FIXED — `rantzsoft_defaults/src/systems.rs:142-144` now has `if handles.handles.is_empty() { return Progress { done: 0, total: 1 }; }` after `handles.loaded = true`. The fix is present in current code. Do not re-flag.
+
+## SeedableRegistry Review (develop, 2026-03-26)
+- **build_chip_catalog uses Local<bool> — stale on hot-reload**: `breaker-game/src/chips/systems/build_chip_catalog.rs:26-28` — once the `Local<bool>` is set to true, the catalog is never rebuilt. During hot-reload, `propagate_registry` rebuilds `ChipTemplateRegistry` and `EvolutionRegistry` (the underlying registries), but `ChipCatalog` remains stale because `build_chip_catalog` skips rebuild on every subsequent tick. The `hot-reload` feature is active in the plugin builder. Confidence: HIGH. No `propagate_chip_catalog` system exists.
+- **seed_registry: handles.loaded=true set before empty-handles guard** — when the folder resolves to zero typed handles, `loaded=true` is set (line 136) then the `is_empty()` guard returns zero-progress (lines 142-144). On subsequent ticks, the `!handles.loaded` folder-resolution block is skipped but the `is_empty()` guard still fires — the retry loop is correct and permanent. If the folder gains new files at runtime after the first resolution, they are never picked up (handles.loaded=true prevents re-resolution). This is an edge case for hot-reload only, not a loading bug. Confirmed correct for normal loading.
+- **propagate_registry update_all semantics**: calls `registry.seed()` which on `BreakerRegistry` uses `assert!(!contains_key(...), "duplicate breaker name")`. If two `.bdef.ron` files have the same `name` field, `update_all` on a hot-reload `Modified` event will panic. This is intentional per the `seed()` documentation.
 
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 

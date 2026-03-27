@@ -7,6 +7,7 @@ publish = false
 [features]
 default = ["progress"]
 progress = ["dep:iyes_progress"]
+hot-reload = []
 
 [dependencies]
 rantzsoft_defaults_derive = { path = "../rantzsoft_defaults_derive" }

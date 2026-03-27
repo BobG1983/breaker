@@ -1,10 +1,7 @@
 (
     name: "Whiplash",
     max_taken: 1,
-    common: None,
-    uncommon: None,
-    rare: None,
-    legendary: Some((
+    legendary: (
         prefix: "",
         effects: [
             On(target: Bolt, then: [
@@ -16,5 +13,5 @@
                 ]),
             ]),
         ],
-    )),
+    ),
 )

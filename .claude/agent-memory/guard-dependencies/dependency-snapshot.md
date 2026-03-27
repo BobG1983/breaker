@@ -1,10 +1,20 @@
 ---
 name: dependency-snapshot
-description: Crate versions at last audit (2026-03-24) — diff against this on next run to detect changes
+description: Crate versions at last audit (2026-03-26) — diff against this on next run to detect changes
 type: project
 ---
 
-## Last Audit: 2026-03-24 (pre-merge guard, wave-3-offerings-transitions)
+## Last Audit: 2026-03-26 (post-removal of bevy_common_assets + bevy_asset_loader)
+
+### Change delta since 2026-03-24
+- REMOVED from breaker-game: `bevy_common_assets 0.15`, `bevy_asset_loader 0.25`
+- REMOVED from Cargo.lock: both of the above, plus their unique transitives
+  (bevy_common_assets pulled ron 0.11; bevy_asset_loader pulled its own transitives)
+- RETAINED in breaker-game: `iyes_progress 0.16` (still used directly by screen/loading and chips)
+- CHANGED rantzsoft_defaults: now declares `iyes_progress` as optional dep gated by `progress` feature
+  and carries a `hot-reload = []` empty feature. `default = ["progress"]`. Correct.
+- RESOLVED transitive duplicate: `ron 0.11.0` is now gone — no longer pulled by bevy_common_assets.
+  Only `ron 0.12.0` remains. Tree is now unified.
 
 ### breaker-game direct dependencies
 | Crate | Version | Notes |
@@ -18,13 +28,27 @@ type: project
 | tracing-appender | 0.2 | used in app.rs file logger |
 | tracing-subscriber | 0.3 | features=["env-filter","fmt"] |
 | serde | 1 | features=["derive"] |
-| ron | 0.12 | matches Bevy 0.18 transitive |
-| bevy_common_assets | 0.15 | features=["ron"] — 0.16 available but DEFERRED (see known-findings) |
-| bevy_asset_loader | 0.25 | features=["progress_tracking"] |
-| iyes_progress | 0.16 | |
+| ron | 0.12 | matches Bevy 0.18 transitive; ron 0.11 duplicate ELIMINATED |
+| iyes_progress | 0.16 | used by screen/loading and chips — NOT optional in breaker-game |
 | rand | 0.9 | pinned to match Bevy 0.18 internals |
 | rand_chacha | 0.9 | pinned to match Bevy 0.18 internals |
 | proptest | 1 | dev-dependency |
+
+### rantzsoft_defaults direct dependencies
+| Crate | Version | Notes |
+|-------|---------|-------|
+| rantzsoft_defaults_derive | path | proc-macro crate |
+| bevy | 0.18.1 | default-features=false, features=["2d"] — minimal, correct |
+| ron | 0.12 | |
+| serde | 1 | features=["derive"] |
+| iyes_progress | 0.16 | optional, gated by `progress` feature (default enabled) |
+
+### rantzsoft_defaults features (verified 2026-03-26)
+| Feature | Deps activated | Status |
+|---------|---------------|--------|
+| default = ["progress"] | iyes_progress | CORRECT — progress enabled by default |
+| progress | dep:iyes_progress | CORRECT — optional dep properly declared |
+| hot-reload = [] | (none — empty) | CORRECT — activates no deps; enables cfg gates in plugin/systems |
 
 ### rantzsoft_spatial2d direct dependencies
 | Crate | Version | Notes |
@@ -37,11 +61,6 @@ type: project
 | bevy | 0.18.1 | default-features=false, features=["2d"] — minimal, correct |
 | rantzsoft_spatial2d | path | correct dep chain |
 
-### rantzsoft_defaults direct dependencies
-| Crate | Version | Notes |
-|-------|---------|-------|
-| rantzsoft_defaults_derive | path | proc-macro crate |
-
 ### rantzsoft_defaults_derive direct dependencies
 | Crate | Version | Notes |
 |-------|---------|-------|
@@ -53,7 +72,7 @@ type: project
 | Crate | Version | Notes |
 |-------|---------|-------|
 | bevy | 0.18.1 | default-features=false, features=["2d"] |
-| breaker | path | default-features=false — dev-feature-leak FIXED |
+| breaker | path | default-features=false — dev-feature-leak fixed |
 | rantzsoft_spatial2d | path | used directly in invariant checkers and lifecycle |
 | clap | 4 | features=["derive"] |
 | tracing | 0.1 | |
@@ -62,62 +81,15 @@ type: project
 | serde | 1 | features=["derive"] |
 | rand | 0.9 | pinned (see known-pins) |
 
-### Resolved versions (cargo tree, 2026-03-24)
-| Crate | Resolved |
-|-------|---------|
-| rand | 0.9.2 |
-| rand_chacha | 0.9.0 |
-| tracing | 0.1.44 |
-| tracing-appender | 0.2.4 |
-| tracing-subscriber | 0.3.22 |
-| serde | 1.0.228 |
-| ron | 0.12.0 (direct), 0.11.0 (transitive via bevy_common_assets) |
-| clap | 4.6.0 |
-| proptest | 1.10.0 |
+### Transitive duplicates status (2026-03-26)
+- ron 0.11/0.12 split: RESOLVED — bevy_common_assets removed, only ron 0.12 remains
+- foldhash, getrandom, hashbrown, itertools, bitflags: still present (Bevy internal, no action)
+- macOS/objc2 ecosystem splits: still present (Bevy-controlled, no action)
 
-### Transitive duplicates (cargo tree -d, 2026-03-24)
-
-#### Known / Bevy-ecosystem (no project action)
-| Crate | Versions | Source |
-|-------|---------|--------|
-| ron | 0.11.0 / 0.12.0 | bevy_common_assets pins ^0.11 — WONTFIX |
-| foldhash | 0.1.5 / 0.2.0 | Bevy internal |
-| getrandom | 0.3.4 / 0.4.2 | Bevy internal |
-| hashbrown | 0.15.5 / 0.16.1 | Bevy internal |
-| itertools | 0.13.0 / 0.14.0 | Bevy internal |
-| bitflags | 1.3.2 / 2.11.0 | macOS platform crates |
-
-#### macOS platform / objc2 ecosystem (all Bevy-controlled, no project action)
-| Crate | Versions |
-|-------|---------|
-| block2 | 0.5.1 / 0.6.2 |
-| core-foundation | 0.9.4 / 0.10.1 |
-| core-graphics-types | 0.1.3 / 0.2.0 |
-| objc2 | 0.5.2 / 0.6.4 |
-| objc2-app-kit | 0.2.2 / 0.3.2 |
-| objc2-foundation | 0.2.2 / 0.3.2 |
-| quick-error | 1.2.3 / 2.0.1 |
-| read-fonts | 0.35.0 / 0.36.0 |
-| rustc-hash | 1.1.0 / 2.1.1 |
-| skrifa | 0.37.0 / 0.39.0 |
-
-These macOS platform duplicates first appeared 2026-03-24. All driven by bevy_egui / winit
-pulling different objc2 generations. Resolves when bevy_egui or winit unify their objc2 pins.
-
-### cargo outdated -R --workspace findings (2026-03-24)
-| Crate | Current | Latest | Status |
-|-------|---------|--------|--------|
-| rand | 0.9.2 | 0.10.0 | INTENTIONAL PIN — matches Bevy 0.18 transitive |
-| rand_chacha | 0.9.0 | 0.10.0 | INTENTIONAL PIN — matches Bevy 0.18 transitive |
-| bevy_common_assets | 0.15.0 | 0.16.0 | DEFERRED — same ron ^0.11 dep, no benefit; see known-findings |
-
-### cargo deny check licenses (2026-03-24)
-Result: `licenses ok`
-Warning: `Unicode-DFS-2016` in allowlist not encountered — harmless, keep for future Bevy versions.
-
-### Workspace crates license status — RESOLVED
-All six workspace crates have `publish = false`:
-- breaker-game, breaker-scenario-runner, rantzsoft_spatial2d, rantzsoft_physics2d,
-  rantzsoft_defaults, rantzsoft_defaults_derive
-`cargo deny check licenses` passes with no errors.
-Note: `breaker-derive` referenced in prior audits no longer exists — replaced by `rantzsoft_defaults_derive`.
+### Known findings still applicable
+- rand 0.9 / rand_chacha 0.9 pins: INTENTIONAL (Bevy 0.18 internals)
+- bevy/serialize feature: DEFER (see known-findings)
+- proc-macro2 machete false positive: suppressed (see known-findings)
+- macOS objc2 version split: WONTFIX (upstream)
+- `cargo deny check licenses`: last clean run 2026-03-24, no dependency changes that
+  would affect license set (iyes_progress is Apache-2.0, already in tree)
