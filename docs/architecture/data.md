@@ -149,8 +149,8 @@ Fields are **private** — all access goes through methods. This lets internals 
 |----------|-----------|-----|-------|
 | `BreakerRegistry` | `BreakerDefinition` (`bdef.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/breakers/`. Re-exported from `effect/` for historical reasons. |
 | `ChipTemplateRegistry` | `ChipTemplate` (`chip.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/templates/`. Stores `(AssetId, ChipTemplate)` pairs for hot-reload. |
-| `EvolutionRegistry` | `ChipDefinition` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolution/`. Stores `(AssetId, ChipDefinition)` pairs. |
-| `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |
+| `EvolutionTemplateRegistry` | `EvolutionTemplate` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolution/`. Stores `(AssetId, EvolutionTemplate)` pairs. |
+| `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s and `EvolutionTemplate`s via `populate_catalog`. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |
 | `NodeLayoutRegistry` | `NodeLayout` | `String` (name) | Paired `Vec<String>` preserves insertion order for index-based node progression. |
 | `CellTypeRegistry` | `CellTypeDefinition` | `char` (alias) | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |
 
