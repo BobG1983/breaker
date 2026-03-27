@@ -25,10 +25,60 @@ src/<domain>/
 - **`sets.rs`** — optional file for `#[derive(SystemSet)]` enums that the domain exports for cross-domain ordering. Omit if the domain has no ordering points that other domains depend on. `mod.rs` must NOT contain type definitions — SystemSet enums go here, not in `mod.rs`.
 - **`definition.rs`** — optional file for RON-deserialized content data types and observer dispatch events. Use it for: `#[derive(Asset, TypePath, Deserialize)]` content types loaded from RON (e.g., `ChipDefinition`, `ChipTemplate`, `CellTypeDefinition`); content enums like `TriggerChain`, `Target`, `ImpactTarget`, `Rarity`; `#[derive(Event)]` types used with `commands.trigger()` for observer dispatch. Do NOT put in `definition.rs`: `#[derive(Component)]` types (go in `components.rs`), `#[derive(Resource)]` types (go in `resources.rs`), `#[derive(Message)]` types (go in `messages.rs`), config defaults, or registries.
 - **`queries.rs`**, **`filters.rs`** — optional files for query and filter type aliases to satisfy clippy's `type_complexity` lint. Omit if not needed. **Naming convention:** `<Purpose><Query|Filter>[<Entity>]`. Include the entity suffix when the alias queries/filters entities from a *different* domain than where the alias is defined (e.g., `CollisionQueryBolt` in the physics domain). Omit the suffix when querying entities from the *same* domain (e.g., `DashQuery` in the breaker domain) — the module path provides context.
-- **`systems/`** — one `.rs` file per system function, or per tightly-coupled group (e.g., a system + its helper). Files are named after the system. `systems/mod.rs` only re-exports.
+- **`systems/`** — one `.rs` file per system function, or per tightly-coupled group (e.g., a system + its helper). Files are named after the system. `systems/mod.rs` only re-exports. When a system file grows too large, it is split into a directory module — see [System File Split Convention](#system-file-split-convention) below.
 - Any canonical file (e.g., `components.rs`) may be promoted to a **directory** with `mod.rs` + subfiles when the single file grows too large. The `mod.rs` follows the same routing-only rule.
 - **Shared math modules** live in `shared/math.rs` when multiple domains need the same pure functions (e.g., `ray_vs_aabb` for CCD). These should contain only pure functions and data types — no systems, no Bevy resources.
 - No `utils.rs`, `helpers.rs`, `common.rs`, or `types.rs`. If it doesn't fit the categories above, it probably belongs in an existing file or a different domain.
+
+## System File Split Convention
+
+When a system file grows too large — typically because of a large `#[cfg(test)]` block — it should be split into a directory module. The threshold is ~400 lines total, or ~800 lines of test code.
+
+### Standard split (single `tests.rs`)
+
+```
+systems/my_system/
+├── mod.rs      — routing only
+├── system.rs   — all production code
+└── tests.rs    — all test code
+```
+
+`mod.rs` contains only:
+
+```rust
+pub(crate) use system::*;
+
+mod system;
+
+#[cfg(test)]
+mod tests;
+```
+
+### Large test suite split (800+ lines of tests)
+
+When `tests.rs` would itself exceed ~800 lines, promote it to a sub-directory:
+
+```
+systems/my_system/
+├── mod.rs        — routing only (same as above)
+├── system.rs     — all production code
+└── tests/
+    ├── mod.rs    — sub-module declarations only
+    ├── helpers.rs  — shared test builders and utilities (pub(super))
+    ├── group_a.rs  — tests grouped by concern
+    └── group_b.rs  — tests grouped by concern
+```
+
+`tests/mod.rs` contains only `mod` declarations — no test code directly.
+
+### Rules
+
+- `mod.rs` is routing-only: `pub(crate) use system::*;` + `#[cfg(test)] mod tests;`. No logic.
+- The inner production file MUST NOT share the directory's name (avoids `clippy::module_inception`). Use `system.rs`, `types.rs`, `bridge.rs`, `checker.rs`, `data.rs`, `fns.rs`, or `core.rs` as appropriate.
+- Test files use `use crate::...` absolute paths — they lose the `super::*` scope of the old single-file layout.
+- Test files need explicit `use bevy::prelude::*;` — it is not re-exported through `mod.rs`.
+- Items re-exported through `mod.rs` must be `pub` (not `pub(crate)` or `pub(super)`) inside the private inner module — the private `mod system;` declaration in `mod.rs` caps the effective visibility at the domain boundary regardless.
+- Parent `mod.rs` files need no changes — Rust resolves `mod foo;` to `foo/mod.rs` transparently.
 
 ## Per-Effect Layout (Effect Domain)
 
