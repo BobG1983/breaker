@@ -80,6 +80,20 @@ type: reference
 - CCD collision inner loop is O(bolts × cells × MAX_BOUNCES=4). At 16K cells this becomes a real concern if typical grids reach that scale. Flagged as Moderate watch item. At current typical scale (50 cells) it remains clean.
 - `u16::try_from(col_idx).unwrap_or(u16::MAX)` / `u16::try_from(row_idx)` pattern: safe saturation for extreme grids. Accepted.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-27, session 3)
+
+### chips/systems/build_chip_catalog.rs — build_chip_catalog + propagate_chip_catalog
+- `build_chip_catalog`: `Local<bool>` guard makes it a true no-op on every frame after startup. No per-frame cost.
+- `propagate_chip_catalog`: `is_changed() && !is_added()` guard. Only runs on hot-reload edits. Gated to `GameState::Playing` via `HotReloadPlugin` `PropagateDefaults` system set. Correct.
+- Both systems collect-and-sort templates (O(N log N)) at build time only. Allocations are startup/reload-only.
+- Vec clones in `expand_chip_template` and `expand_evolution_template` are proportional to effect tree depth. Trees are shallow (1–4 nodes). Startup-only; no hot-path concern.
+- `eligible_recipes` allocates `Vec<&Recipe>` on call; called only in `ChipSelect` state, not `FixedUpdate`. Negligible at <10 recipes.
+
+### chips/resources/data.rs — ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry
+- Both registries store templates in `HashMap<String, (AssetId, Template)>`. No archetype fragmentation concerns — these are `Resource`s, not components.
+- Double-clone of `ingredients` in `build_chip_catalog.rs:52–55`: `expand_evolution_template` clones it once into `ChipDefinition`, then `Recipe { ingredients: template.ingredients.clone(), ... }` clones it again. Zero runtime cost at startup; Minor watch item if template count grows to hundreds.
+- `insert()` in `ChipCatalog` clones `def.name` twice (into `chips` key and `order` Vec). Startup only; negligible.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-20, session 3)
 
 ### bolt/systems/bolt_cell_collision.rs — 3 MessageWriter params (moved from physics/ 2026-03-24)

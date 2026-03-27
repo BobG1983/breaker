@@ -431,3 +431,15 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `MessageReader<AssetEvent<T>>` — AssetEvent derives Message, not Event; this is correct
 - `LayoutChangeContext<'w, 's>` with both lifetimes — correct when struct contains Query/Commands
 - `ctx.cell_config.is_changed() && !ctx.cell_config.is_added()` — correct change detection idiom
+
+## SeedableRegistry (rantzsoft_defaults) Pattern (confirmed 2026-03-27)
+- `SeedableRegistry` trait from `rantzsoft_defaults::registry` — lives in rantzsoft_defaults, not a Bevy type
+- `type Asset = T` where T: `Asset + DeserializeOwned + Clone + Send + Sync + 'static` — correct associated type bound
+- `fn asset_dir() -> &'static str` + `fn extensions() -> &'static [&'static str]` + `fn seed(...)` + `fn update_single(...)` — all 4 required methods
+- `RegistryHandles<A: Asset>` — `Resource` struct with `folder: Handle<LoadedFolder>`, `handles: Vec<Handle<A>>`, `loaded: bool`
+- `RegistryHandles::<T>::new(Handle::default())` in tests — correct; `Handle::default()` is a valid untyped placeholder
+- `Res<RegistryHandles<T>>` and `Res<EvolutionTemplateRegistry>` as system params — correct (both are Resources)
+- `.add_registry::<R>()` on `RantzDefaultsPluginBuilder` — correct registration; internally calls `init_asset::<R::Asset>()`, registers `RonAssetLoader`, init_resource::<R>()`, adds seed/propagate systems
+- `ChipTemplate` and `EvolutionTemplate` derive `Asset + TypePath` — CORRECT; they are the `SeedableRegistry::Asset` types loaded from disk
+- `ChipDefinition` does NOT derive `Asset` — CORRECT; it is a runtime-constructed struct, never loaded directly from disk
+- `template_registry.is_changed() && !template_registry.is_added()` in propagate_chip_catalog — correct change detection idiom for hot-reload systems

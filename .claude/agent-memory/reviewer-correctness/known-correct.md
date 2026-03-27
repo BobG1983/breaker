@@ -103,6 +103,14 @@ type: reference
 - `track_evolution_damage` `entry(name.clone()).or_insert(0.0) += msg.damage` — correct accumulation pattern, does not double-count.
 - `tick_shield_removes_at_zero_or_below` test comment says "dt ~0.0167" (wrong — actual fixed delta is 1/64 ≈ 0.015625 s). The test passes correctly because 0.01 - 0.015625 < 0.0. The comment is inaccurate but not a logic bug. Do not re-flag the test as wrong.
 
+## feature/seedable-registry EvolutionTemplate Refactor Confirmed Correct (2026-03-27)
+- `expand_evolution_template` sets `template_name: None` — evolution chips have no template and no per-rarity variants. Correct.
+- `expand_chip_template` sets `description: String::new()` — chip templates have no description field; description is evolution-only. Correct design decision.
+- `build_chip_catalog` inserts recipe THEN def (line 56-57): recipe first, chip second. Both use `template.name.clone()`. `recipe.result_name` == `def.name` at build time. `eligible_recipes` resolves by name from ChipCatalog — the chip is guaranteed to be in catalog when recipes are evaluated at runtime. Correct ordering.
+- `propagate_chip_catalog` double-guards `!template_registry.is_added()` AND `!evolution_registry.is_added()` — prevents spurious rebuild on app startup when both registries are freshly initialized. Correct.
+- `ChipTemplate` keeps `description: String::new()` in `expand_chip_template` — intentional absence of per-chip description for template-expanded chips. Not a missing field bug.
+- Triggers `DestroyedCell`, `Died`, `Impacted(Cell)` in new chip RONs now have bridge systems in `effect/triggers/`. Do NOT re-flag as inert.
+
 ## refactor/rantzsoft-prelude-and-defaults lifecycle.rs Confirmed Correct (2026-03-26)
 - `apply_perfect_tracking` bump condition `bolt_position.y > breaker_position.0.y && distance <= PERFECT_TRACKING_BUMP_THRESHOLD` — correct; fires while bolt is above breaker and within 20 world units of contact. Bolt travels downward (y < 0), so condition is only reachable for the relevant hemisphere.
 - `BumpMode::AlwaysWhiff` → `force_grade.0 = None` AND Bump IS injected by proximity check (AlwaysWhiff is NOT excluded by the NeverBump guard) — correct compound behavior. Bump action fires (opens the window) but ForceBumpGrade=None grades it as a whiff. The test `perfect_tracking_always_whiff_mode_writes_bump` confirms Bump is written. Do not flag the NeverBump guard exclusion as missing AlwaysWhiff.

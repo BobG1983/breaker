@@ -202,6 +202,14 @@ NOTE: `TriggerChain` was deleted in C7-R (2026-03-25). Entries referencing it ar
 - `cargo dclippy`: PASS — 0 errors
 - `cargo dsclippy`: PASS — 0 errors
 
+## New as of 2026-03-27 (feature/seedable-registry — full lint run)
+- `cargo fmt`: FIXED 3 files: `breaker-game/src/chips/resources/tests.rs`, `breaker-game/src/screen/chip_select/systems/generate_chip_offerings.rs`, `breaker-scenario-runner/src/invariants/checkers/check_chip_offer_expected.rs`, `breaker-scenario-runner/src/lifecycle/mod.rs`. All long method-chain / function-call argument wrapping.
+- `cargo dclippy`: 1 ERROR — `collapsible_if` at `breaker-game/src/screen/chip_select/systems/generate_chip_offerings.rs:49`. Nested `if let Some(layout) = &params.active_layout { if layout.0.pool == NodePool::Boss { ... } }` — collapse to `if let Some(layout) = &params.active_layout && layout.0.pool == NodePool::Boss { ... }`.
+- `cargo dsclippy`: BLOCKED by the same game crate error (scenario runner depends on `breaker`).
+- `cargo spatial2dclippy`: PASS — 0 errors, ~30 warnings (same recurring dead_code/unreachable_pub/nursery lints).
+- `cargo physics2dclippy`: PASS — 0 errors, ~11 warnings (same recurring nursery lints).
+- `cargo defaultsclippy`: PASS — 0 errors, ~13 warnings (expect_used restriction, missing_const_for_fn nursery).
+
 ## Confirmed Clean as of 2026-03-26 (develop branch, full lint run post-phase-4b)
 - `cargo fmt --check`: PASS (0 files changed)
 - `cargo defaultsclippy`: PASS — 0 errors, ~13 warnings (expect_used restriction, missing_const_for_fn nursery)
@@ -220,6 +228,15 @@ NOTE: `TriggerChain` was deleted in C7-R (2026-03-25). Entries referencing it ar
 - `cargo dclippy`: PASS — 0 errors (104 lib warnings + 84 lib-test warnings, all nursery/restriction)
 - `cargo dsclippy`: PASS — 0 errors (9 lib warnings + 19 lib-test warnings, all nursery/restriction)
 - Note: user requested errors-only report — `spatial2dclippy` and `physics2dclippy` were not run this session
+
+## New as of 2026-03-27 (feature/seedable-registry — full lint run)
+- `cargo fmt`: FIXED (6 diffs auto-formatted, then clean). Files: `chips/definition/mod.rs`, `chips/mod.rs`, `chips/resources/data.rs`, `chips/systems/build_chip_catalog.rs` (3 diffs in this file).
+- `cargo dclippy`: FAIL — 2 errors (lib-test only). Root cause: `ChipDefinition` struct does not derive `Deserialize`, but two tests in `chips/definition/tests.rs` (lines 46-57, 60-72) call `ron::de::from_str::<ChipDefinition>(...)`. The struct doc comment says "Never deserialized directly". Fix: add `#[derive(serde::Deserialize)]` to `ChipDefinition` in `chips/definition/types.rs:141`, or remove the two ron-deserialization tests if they're incorrect. All 41 warnings are nursery/restriction (unused_imports, dead_code, unreachable_pub, option_if_let_else, etc.).
+- `cargo spatial2dclippy`: PASS — 0 errors, ~25 warnings (same recurring patterns: dead_code propagate_* aliases/fns, option_if_let_else, suboptimal_flops, missing_const_for_fn, unreachable_pub, significant_drop_tightening).
+- `cargo physics2dclippy`: PASS — 0 errors, ~11 warnings (missing_const_for_fn, use_self, unnecessary_struct_initialization, unreachable_pub, redundant_clone in test).
+- `cargo defaultsclippy`: PASS — 0 errors, ~12 warnings (expect_used restriction in tests, missing_const_for_fn nursery, dead_code for TestAsset.value in test).
+- `cargo dsclippy`: PASS — 0 errors (scenario runner has no new errors; 10 lib + 14 lib-test warnings, all nursery/restriction — same patterns as prior session: ambiguous_glob_reexports, missing_const_for_fn, first_doc_comment_too_long, unreachable_pub, suboptimal_flops in tests).
+- NEW pattern: `ChipDefinition: serde::Deserialize` missing — test expects deserialization but struct intentionally omits it. Decision required: add derive or delete tests.
 
 ## New as of 2026-03-26 (develop branch — post-file-split refactor, ~48 files restructured)
 - `cargo dclippy`: FAIL — 354 errors (lib-test), 4 errors (lib). Root causes are 5 distinct structural problems (see below).

@@ -66,6 +66,13 @@ type: reference
 - `OfferingConfig::seen_decay_factor` field — defined in the struct but not used inside `offering.rs` itself; the field exists so callers can pass a complete config bundle (the actual decay recording happens in the caller, `generate_chip_offerings`). Intentional data-bag design. Do not flag as dead code.
 - Checker files in `breaker-scenario-runner/src/invariants/checkers/` that lack `//!` module docs — pre-existing pattern in this directory; all existing checkers (e.g., bolt_in_bounds.rs, valid_breaker_state.rs) also omit module docs. Only flag if the project convention is updated.
 
+## feature/seedable-registry (2026-03-27)
+- `propagate_chip_catalog` contains a full copy of the sort+expand+insert loop from `build_chip_catalog` — intentional because the two functions have different access patterns (`ResMut<ChipCatalog>` vs `Commands::insert_resource`). The duplication is a known quality gap (no shared helper); flagged in review.
+- `split_decision.evolution.ron` uses `lifespan` field omitted (inherits `SpawnBolts` default) — correct RON format per the `SpawnBolts` effect definition which has `lifespan: None` as default. Do not flag missing field.
+- `build_chip_catalog` test file duplicates `template_asset_pairs` / `evolution_asset_pairs` helpers that also exist in `resources/tests.rs` — test isolation; two separate test modules. Acceptable per-module duplication.
+- `fn one() -> u32` private helper in `definition/types.rs` for `#[serde(default = "one")]` on `max_stacks` — required by serde; cannot use a closure. Do not flag as an unnecessarily named helper.
+- `Recipe` struct in `resources/data.rs` — the terminology doc now defines `Recipe` as the correct runtime name for an evolution recipe (distinct from `EvolutionRecipe` which was the old RON-deserialized name). The earlier open flag "should be `CatalogRecipe`" in intentional-patterns.md is now resolved. CLOSED as of feature/seedable-registry.
+
 ## Phase 5c / Phase 6 (feature/wave-3-offerings-transitions, 2026-03-23)
 - `spawn_bolt.rs` calls `breaker_query.iter().next()` twice to get y and x separately — minor redundancy, but pre-existing; do not flag as new issue introduced by this PR.
 - `Wall` and `Cell` markers are `pub(crate)` — intentional; only spawned internally. Do not flag `pub(crate)` visibility on these markers.
@@ -156,7 +163,7 @@ type: reference
 - `assert!()` in `CellTypeRegistry::seed()` for reserved alias '.' and duplicate alias — intentional panic-on-misconfiguration (data author error). The sibling `validate()` failure uses `warn!+skip` instead. This inconsistency is a known design tension (flagged in review) but not a new pattern to ignore — it should be resolved.
 - `assert!()` in `BreakerRegistry::seed()` for duplicate breaker name — same pattern as above.
 - `self.registrations.lock().expect("defaults plugin lock poisoned")` in `RantzDefaultsPlugin::build` — intentional; a poisoned Mutex is unrecoverable. Do not flag `expect` here.
-- `Recipe` (pub(crate) struct in chips/resources.rs) — flagged as vocabulary violation; should be `CatalogRecipe` or align with `EvolutionRecipe`. OPEN as of 2026-03-26.
+- `Recipe` (pub(crate) struct in chips/resources.rs) — flagged as vocabulary violation; should be `CatalogRecipe` or align with `EvolutionRecipe`. CLOSED as of feature/seedable-registry (2026-03-27): `chips.md` terminology doc now defines `Recipe` as the correct runtime name.
 - `propagate_registry` event reader consumes `.any()` for modified-handle detection — intentional short-circuit; missing test for foreign-asset Modified event not triggering rebuild. OPEN gap as of 2026-03-26.
 - `build_chip_catalog` asymmetric loading state (one handle loaded, one not) — missing test. OPEN gap as of 2026-03-26.
 - `propagate_node_layout_changes` CellConfig-only change path — missing test. OPEN gap as of 2026-03-26.
