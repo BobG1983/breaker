@@ -83,6 +83,30 @@ fn populate_catalog(
         catalog.insert_recipe(recipe);
         catalog.insert(def);
     }
+
+    validate_recipe_ingredients(catalog);
+}
+
+/// Logs a warning for any recipe ingredient that doesn't match a known template name.
+fn validate_recipe_ingredients(catalog: &ChipCatalog) {
+    use std::collections::HashSet;
+    use tracing::warn;
+
+    let template_names: HashSet<&str> = catalog
+        .ordered_values()
+        .filter_map(|def| def.template_name.as_deref())
+        .collect();
+
+    for recipe in catalog.recipes() {
+        for ing in &recipe.ingredients {
+            if !template_names.contains(ing.chip_name.as_str()) {
+                warn!(
+                    "Recipe '{}' ingredient '{}' does not match any known template name",
+                    recipe.result_name, ing.chip_name
+                );
+            }
+        }
+    }
 }
 
 #[cfg(test)]

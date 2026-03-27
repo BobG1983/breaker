@@ -11,10 +11,7 @@ use crate::{
         inventory::ChipInventory,
         offering::{OfferingConfig, generate_offerings},
     },
-    run::{
-        definition::NodeType,
-        resources::{NodeSequence, RunState},
-    },
+    run::node::{ActiveNodeLayout, definition::NodePool},
     screen::chip_select::{
         ChipSelectConfig,
         resources::{ChipOffering, ChipOffers},
@@ -30,8 +27,7 @@ pub(crate) struct ChipOfferingParams<'w, 's> {
     inventory: Res<'w, ChipInventory>,
     config: Res<'w, ChipSelectConfig>,
     rng: ResMut<'w, GameRng>,
-    run_state: Option<Res<'w, RunState>>,
-    node_sequence: Option<Res<'w, NodeSequence>>,
+    active_layout: Option<Res<'w, ActiveNodeLayout>>,
 }
 
 /// Generates chip offerings using weighted random selection and inserts `ChipOffers`.
@@ -50,11 +46,8 @@ pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
 
     // Check for boss node with eligible evolutions
     let mut evolution_offers: Vec<ChipOffering> = Vec::new();
-    if let (Some(run_state), Some(node_sequence)) = (&params.run_state, &params.node_sequence) {
-        let idx = run_state.node_index as usize;
-        if idx < node_sequence.assignments.len()
-            && node_sequence.assignments[idx].node_type == NodeType::Boss
-        {
+    if let Some(layout) = &params.active_layout {
+        if layout.0.pool == NodePool::Boss {
             let eligible = params.registry.eligible_recipes(&params.inventory);
             for recipe in eligible.iter().take(params.config.offers_per_node) {
                 if let Some(result_def) = params.registry.get(&recipe.result_name) {
@@ -100,9 +93,10 @@ mod tests {
             definition::{EvolutionIngredient, Rarity},
         },
         effect::definition::{Effect, EffectNode, RootEffect, Target},
-        run::{
-            definition::NodeType,
-            resources::{NodeAssignment, NodeSequence, RunState},
+        run::node::{
+            ActiveNodeLayout,
+            NodeLayout,
+            definition::NodePool,
         },
     };
 
@@ -259,49 +253,29 @@ mod tests {
 
     use crate::chips::Recipe;
 
-    /// Creates a `NodeSequence` with a single boss node at the given index
-    /// and active nodes at all other positions.
-    fn make_node_sequence_with_boss(boss_index: usize, total: usize) -> NodeSequence {
-        let mut assignments = Vec::with_capacity(total);
-        for i in 0..total {
-            let node_type = if i == boss_index {
-                NodeType::Boss
-            } else {
-                NodeType::Active
-            };
-            assignments.push(NodeAssignment {
-                node_type,
-                tier_index: 0,
-                hp_mult: 1.0,
-                timer_mult: 1.0,
-            });
-        }
-        NodeSequence { assignments }
+    fn make_test_layout(pool: NodePool) -> ActiveNodeLayout {
+        ActiveNodeLayout(NodeLayout {
+            name: "test_layout".to_owned(),
+            timer_secs: 60.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool,
+            entity_scale: 1.0,
+        })
     }
 
     /// Test app for evolution offering tests using unified `ChipCatalog`.
     ///
     /// The `ChipCatalog` contains 5 normal chips plus the "Barrage" evolution
     /// chip definition and a recipe requiring "Piercing Shot" x2.
-    /// No `EvolutionTemplateRegistry` resource is inserted — the system must use
-    /// `ChipCatalog::eligible_recipes` instead.
+    /// The `ActiveNodeLayout` pool controls whether evolutions are offered.
     fn test_app_for_evolution(
-        node_index: u32,
-        node_type_at_index: NodeType,
+        pool: NodePool,
         evolution_eligible: bool,
     ) -> App {
         let mut app = App::new();
-
-        let boss_index = if node_type_at_index == NodeType::Boss {
-            node_index as usize
-        } else {
-            99
-        };
-        let total = (boss_index + 1).max(node_index as usize + 1);
-        let mut seq = make_node_sequence_with_boss(boss_index, total);
-        if node_type_at_index != NodeType::Boss {
-            seq.assignments[node_index as usize].node_type = node_type_at_index;
-        }
 
         let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)
             .with_template("Piercing Shot");
@@ -340,14 +314,9 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(registry)
             .insert_resource(inventory)
-            // No EvolutionTemplateRegistry inserted — system must use ChipCatalog.eligible_recipes
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(GameRng::from_seed(42))
-            .insert_resource(RunState {
-                node_index,
-                ..Default::default()
-            })
-            .insert_resource(seq)
+            .insert_resource(make_test_layout(pool))
             .add_systems(Update, generate_chip_offerings);
         app
     }
@@ -356,7 +325,7 @@ mod tests {
 
     #[test]
     fn boss_node_eligible_evolution_appears_in_offers() {
-        let mut app = test_app_for_evolution(5, NodeType::Boss, true);
+        let mut app = test_app_for_evolution(NodePool::Boss, true);
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
@@ -388,7 +357,7 @@ mod tests {
 
     #[test]
     fn non_boss_node_has_no_evolution_offerings() {
-        let mut app = test_app_for_evolution(2, NodeType::Active, true);
+        let mut app = test_app_for_evolution(NodePool::Active, true);
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
@@ -413,7 +382,7 @@ mod tests {
 
     #[test]
     fn boss_node_no_eligible_evolutions_all_normal() {
-        let mut app = test_app_for_evolution(5, NodeType::Boss, false);
+        let mut app = test_app_for_evolution(NodePool::Boss, false);
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
@@ -430,7 +399,7 @@ mod tests {
 
     #[test]
     fn boss_node_remaining_slots_filled_with_normal() {
-        let mut app = test_app_for_evolution(5, NodeType::Boss, true);
+        let mut app = test_app_for_evolution(NodePool::Boss, true);
         app.update();
 
         let offers = app.world().resource::<ChipOffers>();
