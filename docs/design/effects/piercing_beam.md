@@ -15,4 +15,4 @@ Casts a beam from the entity's position along its velocity direction. Damages al
 
 ## Reversal
 
-Despawns the beam entity if still alive.
+No-op. Beam entities self-despawn on their own lifecycle.

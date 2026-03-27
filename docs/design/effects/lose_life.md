@@ -12,4 +12,4 @@ Decrements `LivesCount` on the entity. When lives reach 0, sends `RunLost`.
 
 ## Reversal
 
-Restores one life to LivesCount.
+No-op. Life loss is fire-and-forget.

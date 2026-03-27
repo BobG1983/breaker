@@ -17,4 +17,4 @@ Queries all bolt entities and spawns a shockwave at each bolt's position. Functi
 
 ## Reversal
 
-Despawns all spawned shockwave entities if still alive.
+No-op. Pulse shockwave entities self-despawn on their own lifecycle.

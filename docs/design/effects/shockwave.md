@@ -19,4 +19,4 @@ Spawns a wavefront entity at the entity's position that expands outward. Damages
 
 ## Reversal
 
-Despawns the shockwave entity if still alive.
+No-op. Shockwave entities self-despawn on their own lifecycle.

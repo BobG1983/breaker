@@ -15,4 +15,4 @@ Maintains a hit counter on the entity. Each trigger increments the counter. When
 
 ## Reversal
 
-Resets the counter and removes the entropy engine component.
+No-op. Inner effects handle their own reversal via Until/Reverse nodes.

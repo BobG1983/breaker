@@ -16,4 +16,4 @@ Starting from the entity's position, finds the nearest cell within range and dam
 
 ## Reversal
 
-Despawns any active lightning entities if still alive.
+No-op. Lightning arc entities self-despawn on their own lifecycle.
