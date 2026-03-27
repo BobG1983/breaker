@@ -4,10 +4,9 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 /// How rare a chip is — controls appearance weight in the selection pool.
-#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Rarity {
     /// Frequently appearing chips.
-    #[default]
     Common,
     /// Moderately rare chips.
     Uncommon,
@@ -41,7 +40,7 @@ pub struct RaritySlot {
 /// A chip template loaded from RON (`.chip.ron`).
 ///
 /// Each template defines up to four rarity variants. At load time,
-/// [`expand_template`] converts each non-`None` slot into a [`ChipDefinition`].
+/// [`expand_chip_template`] converts each non-`None` slot into a [`ChipDefinition`].
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct ChipTemplate {
     /// Base name shared by all rarity variants.
@@ -62,13 +61,36 @@ pub struct ChipTemplate {
     pub legendary: Option<RaritySlot>,
 }
 
+/// An evolution template loaded from RON (`.evolution.ron`).
+///
+/// At catalog-build time, each template is converted into a [`ChipDefinition`]
+/// with `rarity: Evolution`.
+#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+pub struct EvolutionTemplate {
+    /// Display name of the evolution.
+    pub name: String,
+    /// Flavor text shown below the name.
+    pub description: String,
+    /// Maximum stacks. Defaults to 1.
+    #[serde(default = "one")]
+    pub max_stacks: u32,
+    /// The effects applied when this evolution is selected.
+    pub effects: Vec<crate::effect::definition::RootEffect>,
+    /// Required ingredient chips.
+    pub ingredients: Vec<EvolutionIngredient>,
+}
+
+fn one() -> u32 {
+    1
+}
+
 /// Expand a [`ChipTemplate`] into one [`ChipDefinition`] per non-`None` rarity slot.
 ///
 /// Each slot's prefix is prepended to the template name. An empty or
 /// whitespace-only prefix causes the expanded name to equal the template name
 /// (no prefix prepended).
 #[must_use]
-pub(crate) fn expand_template(template: &ChipTemplate) -> Vec<ChipDefinition> {
+pub(crate) fn expand_chip_template(template: &ChipTemplate) -> Vec<ChipDefinition> {
     let slots: [(Rarity, &Option<RaritySlot>); 4] = [
         (Rarity::Common, &template.common),
         (Rarity::Uncommon, &template.uncommon),
@@ -98,25 +120,39 @@ pub(crate) fn expand_template(template: &ChipTemplate) -> Vec<ChipDefinition> {
         .collect()
 }
 
-/// A single chip definition loaded from RON.
-#[derive(Asset, TypePath, Deserialize, Clone, Debug)]
+/// Expand an [`EvolutionTemplate`] into a [`ChipDefinition`] with `Rarity::Evolution`.
+#[must_use]
+pub(crate) fn expand_evolution_template(evolution: &EvolutionTemplate) -> ChipDefinition {
+    ChipDefinition {
+        name: evolution.name.clone(),
+        description: evolution.description.clone(),
+        rarity: Rarity::Evolution,
+        max_stacks: evolution.max_stacks,
+        effects: evolution.effects.clone(),
+        ingredients: Some(evolution.ingredients.clone()),
+        template_name: None,
+    }
+}
+
+/// A fully resolved chip definition used at runtime.
+///
+/// Never deserialized directly — constructed from [`ChipTemplate`] via
+/// [`expand_chip_template`] or from [`EvolutionTemplate`] via [`expand_evolution_template`].
+#[derive(Clone, Debug)]
 pub struct ChipDefinition {
     /// Display name shown on the chip card.
     pub name: String,
     /// Flavor text shown below the name.
     pub description: String,
-    /// How rare this chip is. Evolutions omit this — `build_chip_catalog` forces `Evolution`.
-    #[serde(default)]
+    /// How rare this chip is.
     pub rarity: Rarity,
     /// Maximum number of times this chip can be stacked.
     pub max_stacks: u32,
     /// The effects applied when this chip is selected.
     pub effects: Vec<crate::effect::definition::RootEffect>,
     /// Evolution ingredients. `None` for non-evolution chips.
-    #[serde(default)]
     pub ingredients: Option<Vec<EvolutionIngredient>>,
     /// Template this chip was expanded from, if any.
-    #[serde(default)]
     pub template_name: Option<String>,
 }
 

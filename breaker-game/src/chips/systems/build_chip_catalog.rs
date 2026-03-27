@@ -1,25 +1,25 @@
-//! Builds the `ChipCatalog` from `ChipTemplateRegistry` and `EvolutionRegistry`.
+//! Builds the `ChipCatalog` from `ChipTemplateRegistry` and `EvolutionTemplateRegistry`.
 
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::RegistryHandles;
 
 use crate::chips::{
-    definition::{ChipDefinition, ChipTemplate, Rarity, expand_template},
-    resources::{ChipCatalog, ChipTemplateRegistry, EvolutionRegistry, Recipe},
+    definition::{ChipTemplate, EvolutionTemplate, expand_chip_template, expand_evolution_template},
+    resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry, Recipe},
 };
 
-/// Builds the `ChipCatalog` resource by expanding all chip templates into
-/// `ChipDefinition`s and inserting all evolution definitions.
+/// Builds the `ChipCatalog` resource by expanding all chip templates and
+/// evolution templates into `ChipDefinition`s.
 ///
 /// Returns `Progress { done: 0, total: 1 }` while both `RegistryHandles`
 /// are not yet loaded. Returns `Progress { done: 1, total: 1 }` once the
 /// catalog is built (or was already built on a previous tick).
 pub(crate) fn build_chip_catalog(
     template_registry: Res<ChipTemplateRegistry>,
-    evolution_registry: Res<EvolutionRegistry>,
+    evolution_registry: Res<EvolutionTemplateRegistry>,
     template_handles: Res<RegistryHandles<ChipTemplate>>,
-    evolution_handles: Res<RegistryHandles<ChipDefinition>>,
+    evolution_handles: Res<RegistryHandles<EvolutionTemplate>>,
     mut commands: Commands,
     mut built: Local<bool>,
 ) -> Progress {
@@ -37,20 +37,19 @@ pub(crate) fn build_chip_catalog(
     let mut templates: Vec<_> = template_registry.templates().collect();
     templates.sort_by(|a, b| a.name.cmp(&b.name));
     for template in templates {
-        for def in expand_template(template) {
+        for def in expand_chip_template(template) {
             catalog.insert(def);
         }
     }
 
     // Collect and sort evolutions by name for deterministic order
-    let mut evolutions: Vec<_> = evolution_registry.definitions().collect();
+    let mut evolutions: Vec<_> = evolution_registry.templates().collect();
     evolutions.sort_by(|a, b| a.name.cmp(&b.name));
-    for def in evolutions {
-        let mut def = def.clone();
-        def.rarity = Rarity::Evolution;
+    for template in evolutions {
+        let def = expand_evolution_template(template);
         let recipe = Recipe {
-            ingredients: def.ingredients.clone().unwrap_or_default(),
-            result_name: def.name.clone(),
+            ingredients: template.ingredients.clone(),
+            result_name: template.name.clone(),
         };
         catalog.insert_recipe(recipe);
         catalog.insert(def);
@@ -65,7 +64,7 @@ pub(crate) fn build_chip_catalog(
 #[cfg(feature = "dev")]
 pub(crate) fn propagate_chip_catalog(
     template_registry: Res<ChipTemplateRegistry>,
-    evolution_registry: Res<EvolutionRegistry>,
+    evolution_registry: Res<EvolutionTemplateRegistry>,
     mut catalog: ResMut<ChipCatalog>,
 ) {
     let templates_changed = template_registry.is_changed() && !template_registry.is_added();
@@ -81,19 +80,18 @@ pub(crate) fn propagate_chip_catalog(
     let mut templates: Vec<_> = template_registry.templates().collect();
     templates.sort_by(|a, b| a.name.cmp(&b.name));
     for template in templates {
-        for def in expand_template(template) {
+        for def in expand_chip_template(template) {
             catalog.insert(def);
         }
     }
 
-    let mut evolutions: Vec<_> = evolution_registry.definitions().collect();
+    let mut evolutions: Vec<_> = evolution_registry.templates().collect();
     evolutions.sort_by(|a, b| a.name.cmp(&b.name));
-    for def in evolutions {
-        let mut def = def.clone();
-        def.rarity = Rarity::Evolution;
+    for template in evolutions {
+        let def = expand_evolution_template(template);
         let recipe = Recipe {
-            ingredients: def.ingredients.clone().unwrap_or_default(),
-            result_name: def.name.clone(),
+            ingredients: template.ingredients.clone(),
+            result_name: template.name.clone(),
         };
         catalog.insert_recipe(recipe);
         catalog.insert(def);
@@ -108,8 +106,10 @@ mod tests {
     use super::build_chip_catalog;
     use crate::{
         chips::{
-            definition::{ChipDefinition, ChipTemplate, EvolutionIngredient, Rarity, RaritySlot},
-            resources::{ChipCatalog, ChipTemplateRegistry, EvolutionRegistry},
+            definition::{
+                ChipTemplate, EvolutionIngredient, EvolutionTemplate, RaritySlot,
+            },
+            resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry},
         },
         effect::definition::{Effect, EffectNode, RootEffect, Target},
     };
@@ -120,7 +120,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.init_resource::<ChipTemplateRegistry>();
-        app.init_resource::<EvolutionRegistry>();
+        app.init_resource::<EvolutionTemplateRegistry>();
         // RegistryHandles are inserted manually per test
         app.add_systems(Update, build_chip_catalog.map(drop));
         app
@@ -131,7 +131,8 @@ mod tests {
         template_handles.loaded = true;
         app.insert_resource(template_handles);
 
-        let mut evolution_handles = RegistryHandles::<ChipDefinition>::new(Handle::default());
+        let mut evolution_handles =
+            RegistryHandles::<EvolutionTemplate>::new(Handle::default());
         evolution_handles.loaded = true;
         app.insert_resource(evolution_handles);
     }
@@ -165,18 +166,16 @@ mod tests {
         }]
     }
 
-    fn make_evolution(name: &str, ingredients: Vec<EvolutionIngredient>) -> ChipDefinition {
-        ChipDefinition {
+    fn make_evolution(name: &str, ingredients: Vec<EvolutionIngredient>) -> EvolutionTemplate {
+        EvolutionTemplate {
             name: name.to_owned(),
             description: String::new(),
-            rarity: Rarity::Evolution,
             max_stacks: 1,
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
                 then: vec![EffectNode::Do(Effect::Piercing(5))],
             }],
-            ingredients: Some(ingredients),
-            template_name: None,
+            ingredients,
         }
     }
 
@@ -194,15 +193,16 @@ mod tests {
             .collect()
     }
 
-    /// Creates `AssetId` values by adding assets to an `Assets<ChipDefinition>` store.
+    /// Creates `AssetId` values by adding assets to an `Assets<EvolutionTemplate>` store.
     fn evolution_asset_pairs(
-        defs: Vec<ChipDefinition>,
-    ) -> Vec<(AssetId<ChipDefinition>, ChipDefinition)> {
-        let mut assets = Assets::<ChipDefinition>::default();
-        defs.into_iter()
-            .map(|d| {
-                let handle = assets.add(d.clone());
-                (handle.id(), d)
+        templates: Vec<EvolutionTemplate>,
+    ) -> Vec<(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
+        let mut assets = Assets::<EvolutionTemplate>::default();
+        templates
+            .into_iter()
+            .map(|t| {
+                let handle = assets.add(t.clone());
+                (handle.id(), t)
             })
             .collect()
     }
@@ -249,7 +249,7 @@ mod tests {
         let mut app = test_app();
         insert_loaded_handles(&mut app);
 
-        // Seed EvolutionRegistry with 1 evolution
+        // Seed EvolutionTemplateRegistry with 1 evolution
         let evolution = make_evolution(
             "Barrage",
             vec![EvolutionIngredient {
@@ -259,7 +259,7 @@ mod tests {
         );
         let pairs = evolution_asset_pairs(vec![evolution]);
         app.world_mut()
-            .resource_mut::<EvolutionRegistry>()
+            .resource_mut::<EvolutionTemplateRegistry>()
             .seed(&pairs);
 
         app.update();
@@ -290,7 +290,7 @@ mod tests {
         );
         let pairs = evolution_asset_pairs(vec![evolution]);
         app.world_mut()
-            .resource_mut::<EvolutionRegistry>()
+            .resource_mut::<EvolutionTemplateRegistry>()
             .seed(&pairs);
 
         app.update();
@@ -349,7 +349,7 @@ mod tests {
         );
         let evolution_pairs = evolution_asset_pairs(vec![evolution]);
         app.world_mut()
-            .resource_mut::<EvolutionRegistry>()
+            .resource_mut::<EvolutionTemplateRegistry>()
             .seed(&evolution_pairs);
 
         app.update();
@@ -456,7 +456,7 @@ mod tests {
         // Insert handles that are NOT loaded
         let template_handles = RegistryHandles::<ChipTemplate>::new(Handle::default());
         app.insert_resource(template_handles);
-        let evolution_handles = RegistryHandles::<ChipDefinition>::new(Handle::default());
+        let evolution_handles = RegistryHandles::<EvolutionTemplate>::new(Handle::default());
         app.insert_resource(evolution_handles);
 
         app.update();

@@ -3,7 +3,10 @@ use rantzsoft_defaults::prelude::SeedableRegistry;
 
 use crate::{
     chips::{
-        definition::{ChipDefinition, ChipTemplate, EvolutionIngredient, Rarity, RaritySlot},
+        definition::{
+            ChipDefinition, ChipTemplate, EvolutionIngredient, EvolutionTemplate, Rarity,
+            RaritySlot,
+        },
         inventory::ChipInventory,
         resources::*,
     },
@@ -442,56 +445,55 @@ fn chip_template_registry_extensions() {
 }
 
 // =========================================================================
-// EvolutionRegistry — SeedableRegistry tests
+// EvolutionTemplateRegistry — SeedableRegistry tests
 // =========================================================================
 
-fn make_evolution_def(name: &str) -> ChipDefinition {
-    ChipDefinition {
+fn make_evolution_template(name: &str) -> EvolutionTemplate {
+    EvolutionTemplate {
         name: name.to_owned(),
         description: String::new(),
-        rarity: Rarity::Evolution,
         max_stacks: 1,
         effects: vec![RootEffect::On {
             target: Target::Bolt,
             then: vec![EffectNode::Do(Effect::Piercing(5))],
         }],
-        ingredients: Some(vec![EvolutionIngredient {
+        ingredients: vec![EvolutionIngredient {
             chip_name: "Piercing Shot".to_owned(),
             stacks_required: 2,
-        }]),
-        template_name: None,
+        }],
     }
 }
 
-/// Creates `AssetId` values by adding assets to an `Assets<ChipDefinition>` store.
+/// Creates `AssetId` values by adding assets to an `Assets<EvolutionTemplate>` store.
 fn evolution_asset_pairs(
-    defs: Vec<ChipDefinition>,
-) -> Vec<(AssetId<ChipDefinition>, ChipDefinition)> {
-    let mut assets = Assets::<ChipDefinition>::default();
-    defs.into_iter()
-        .map(|d| {
-            let handle = assets.add(d.clone());
-            (handle.id(), d)
+    templates: Vec<EvolutionTemplate>,
+) -> Vec<(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
+    let mut assets = Assets::<EvolutionTemplate>::default();
+    templates
+        .into_iter()
+        .map(|t| {
+            let handle = assets.add(t.clone());
+            (handle.id(), t)
         })
         .collect()
 }
 
-// ── Behavior 1: seed() populates from 2 evolution defs ──────────
+// ── Behavior 1: seed() populates from 2 evolution templates ─────
 
 #[test]
-fn evolution_registry_seed_populates_from_definitions() {
+fn evolution_registry_seed_populates_from_templates() {
     let pairs = evolution_asset_pairs(vec![
-        make_evolution_def("Barrage"),
-        make_evolution_def("Supernova"),
+        make_evolution_template("Barrage"),
+        make_evolution_template("Supernova"),
     ]);
 
-    let mut registry = EvolutionRegistry::default();
+    let mut registry = EvolutionTemplateRegistry::default();
     registry.seed(&pairs);
 
     assert_eq!(
         registry.len(),
         2,
-        "registry should contain 2 evolution definitions"
+        "registry should contain 2 evolution templates"
     );
     assert!(
         registry.get("Barrage").is_some(),
@@ -507,10 +509,10 @@ fn evolution_registry_seed_populates_from_definitions() {
 
 #[test]
 fn evolution_registry_seed_clears_existing() {
-    let old_pairs = evolution_asset_pairs(vec![make_evolution_def("Old")]);
-    let new_pairs = evolution_asset_pairs(vec![make_evolution_def("New")]);
+    let old_pairs = evolution_asset_pairs(vec![make_evolution_template("Old")]);
+    let new_pairs = evolution_asset_pairs(vec![make_evolution_template("New")]);
 
-    let mut registry = EvolutionRegistry::default();
+    let mut registry = EvolutionTemplateRegistry::default();
     registry.seed(&old_pairs);
     assert_eq!(registry.len(), 1);
     assert!(registry.get("Old").is_some());
@@ -532,19 +534,19 @@ fn evolution_registry_seed_clears_existing() {
 
 #[test]
 fn evolution_registry_update_single_upserts() {
-    let pairs = evolution_asset_pairs(vec![make_evolution_def("Barrage")]);
+    let pairs = evolution_asset_pairs(vec![make_evolution_template("Barrage")]);
 
-    let mut registry = EvolutionRegistry::default();
+    let mut registry = EvolutionTemplateRegistry::default();
     registry.seed(&pairs);
 
     let (original_id, _) = &pairs[0];
-    let mut updated = make_evolution_def("Barrage");
+    let mut updated = make_evolution_template("Barrage");
     updated.max_stacks = 3;
     registry.update_single(*original_id, &updated);
 
-    let (_, def) = registry.get("Barrage").expect("'Barrage' should exist");
+    let (_, template) = registry.get("Barrage").expect("'Barrage' should exist");
     assert_eq!(
-        def.max_stacks, 3,
+        template.max_stacks, 3,
         "max_stacks should be updated to 3 after update_single"
     );
 }
@@ -554,7 +556,7 @@ fn evolution_registry_update_single_upserts() {
 #[test]
 fn evolution_registry_asset_dir() {
     assert_eq!(
-        EvolutionRegistry::asset_dir(),
+        EvolutionTemplateRegistry::asset_dir(),
         "chips/evolution",
         "asset_dir() should return \"chips/evolution\""
     );
@@ -565,7 +567,7 @@ fn evolution_registry_asset_dir() {
 #[test]
 fn evolution_registry_extensions() {
     assert_eq!(
-        EvolutionRegistry::extensions(),
+        EvolutionTemplateRegistry::extensions(),
         &["evolution.ron"],
         "extensions() should return [\"evolution.ron\"]"
     );

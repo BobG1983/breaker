@@ -115,7 +115,7 @@ fn chip_template_ron_with_root_effect() {
 }
 
 #[test]
-fn expand_template_produces_root_effect() {
+fn expand_chip_template_produces_root_effect() {
     let template = ChipTemplate {
         name: "Surge".to_owned(),
         max_taken: 3,
@@ -133,7 +133,7 @@ fn expand_template_produces_root_effect() {
         rare: None,
         legendary: None,
     };
-    let defs = expand_template(&template);
+    let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
     assert_eq!(defs[0].name, "Basic Surge");
     assert_eq!(defs[0].rarity, Rarity::Common);
@@ -148,7 +148,7 @@ fn expand_template_produces_root_effect() {
 }
 
 #[test]
-fn expand_template_preserves_target() {
+fn expand_chip_template_preserves_target() {
     let template = ChipTemplate {
         name: "Wide".to_owned(),
         max_taken: 3,
@@ -163,7 +163,7 @@ fn expand_template_preserves_target() {
         rare: None,
         legendary: None,
     };
-    let defs = expand_template(&template);
+    let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
     assert!(
         matches!(
@@ -173,7 +173,7 @@ fn expand_template_preserves_target() {
                 ..
             }
         ),
-        "expand_template should preserve Target::Breaker from slot"
+        "expand_chip_template should preserve Target::Breaker from slot"
     );
 }
 
@@ -194,7 +194,7 @@ fn expanded_defs_have_correct_rarities_with_root_effect() {
         rare: Some(make_slot("R", 3)),
         legendary: Some(make_slot("L", 4)),
     };
-    let defs = expand_template(&template);
+    let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 4);
     assert_eq!(defs[0].rarity, Rarity::Common);
     assert_eq!(defs[1].rarity, Rarity::Uncommon);
@@ -358,11 +358,11 @@ fn evolution_ingredient_deserializes_from_ron() {
 }
 
 // =========================================================================
-// Preserved tests: expand_template mechanics
+// Preserved tests: expand_chip_template mechanics
 // =========================================================================
 
 #[test]
-fn expand_template_all_none_returns_empty() {
+fn expand_chip_template_all_none_returns_empty() {
     let template = ChipTemplate {
         name: "Empty".to_owned(),
         max_taken: 1,
@@ -371,7 +371,7 @@ fn expand_template_all_none_returns_empty() {
         rare: None,
         legendary: None,
     };
-    let defs = expand_template(&template);
+    let defs = expand_chip_template(&template);
     assert!(defs.is_empty());
 }
 
@@ -391,7 +391,7 @@ fn expanded_chip_empty_prefix_uses_template_name() {
             }],
         }),
     };
-    let defs = expand_template(&template);
+    let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
     assert_eq!(defs[0].name, "Glass Cannon");
     assert_eq!(defs[0].rarity, Rarity::Legendary);
@@ -413,7 +413,7 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
             }],
         }),
     };
-    let defs = expand_template(&template);
+    let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
     assert_eq!(
         defs[0].name, "Glass Cannon",

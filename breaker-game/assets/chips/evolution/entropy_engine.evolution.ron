@@ -1,7 +1,6 @@
 (
     name: "Entropy Engine",
     description: "Destroying cells charges an entropy counter that unleashes random powerful effects",
-    max_stacks: 1,
     effects: [
         On(target: Bolt, then: [
             When(trigger: DestroyedCell, then: [
@@ -14,11 +13,11 @@
                         (0.20, Do(SpeedBoost(multiplier: 1.3))),
                     ],
                 )),
-            ]),
-        ]),
+            ],
+        ],
     ],
-    ingredients: Some([
+    ingredients: [
         (chip_name: "Cascade", stacks_required: 1),
         (chip_name: "Flux", stacks_required: 1),
-    ]),
+    ],
 )

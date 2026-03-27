@@ -283,7 +283,7 @@ mod tests {
     ///
     /// The `ChipCatalog` contains 5 normal chips plus the "Barrage" evolution
     /// chip definition and a recipe requiring "Piercing Shot" x2.
-    /// No `EvolutionRegistry` resource is inserted — the system must use
+    /// No `EvolutionTemplateRegistry` resource is inserted — the system must use
     /// `ChipCatalog::eligible_recipes` instead.
     fn test_app_for_evolution(
         node_index: u32,
@@ -339,7 +339,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .insert_resource(registry)
             .insert_resource(inventory)
-            // No EvolutionRegistry inserted — system must use ChipCatalog.eligible_recipes
+            // No EvolutionTemplateRegistry inserted — system must use ChipCatalog.eligible_recipes
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(GameRng::from_seed(42))
             .insert_resource(RunState {

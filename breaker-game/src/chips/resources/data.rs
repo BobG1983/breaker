@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
 
-use crate::chips::definition::{ChipDefinition, ChipTemplate, EvolutionIngredient};
+use crate::chips::definition::{ChipDefinition, ChipTemplate, EvolutionIngredient, EvolutionTemplate};
 
 /// A recipe combining ingredient chips into an evolved chip.
 /// Stores only the result name — the full `ChipDefinition` is in `ChipCatalog.chips`.
@@ -130,39 +130,39 @@ impl SeedableRegistry for ChipTemplateRegistry {
     }
 }
 
-/// Registry of evolution chip definitions loaded from `.evolution.ron` files.
+/// Registry of evolution templates loaded from `.evolution.ron` files.
 #[derive(Resource, Debug, Default)]
-pub struct EvolutionRegistry {
-    evolutions: HashMap<String, (AssetId<ChipDefinition>, ChipDefinition)>,
+pub struct EvolutionTemplateRegistry {
+    evolutions: HashMap<String, (AssetId<EvolutionTemplate>, EvolutionTemplate)>,
 }
 
-impl EvolutionRegistry {
-    /// Look up an evolution definition by name.
+impl EvolutionTemplateRegistry {
+    /// Look up an evolution template by name.
     #[must_use]
-    pub fn get(&self, name: &str) -> Option<&(AssetId<ChipDefinition>, ChipDefinition)> {
+    pub fn get(&self, name: &str) -> Option<&(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
         self.evolutions.get(name)
     }
 
-    /// Returns the number of evolution definitions in the registry.
+    /// Returns the number of evolution templates in the registry.
     #[must_use]
     pub fn len(&self) -> usize {
         self.evolutions.len()
     }
 
-    /// Returns `true` if the registry contains no evolution definitions.
+    /// Returns `true` if the registry contains no evolution templates.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.evolutions.is_empty()
     }
 
-    /// Iterate all evolution chip definitions.
-    pub fn definitions(&self) -> impl Iterator<Item = &ChipDefinition> {
-        self.evolutions.values().map(|(_, d)| d)
+    /// Iterate all evolution templates.
+    pub fn templates(&self) -> impl Iterator<Item = &EvolutionTemplate> {
+        self.evolutions.values().map(|(_, t)| t)
     }
 }
 
-impl SeedableRegistry for EvolutionRegistry {
-    type Asset = ChipDefinition;
+impl SeedableRegistry for EvolutionTemplateRegistry {
+    type Asset = EvolutionTemplate;
 
     fn asset_dir() -> &'static str {
         "chips/evolution"
@@ -172,14 +172,15 @@ impl SeedableRegistry for EvolutionRegistry {
         &["evolution.ron"]
     }
 
-    fn seed(&mut self, assets: &[(AssetId<ChipDefinition>, ChipDefinition)]) {
+    fn seed(&mut self, assets: &[(AssetId<EvolutionTemplate>, EvolutionTemplate)]) {
         self.evolutions.clear();
-        for (id, def) in assets {
-            self.evolutions.insert(def.name.clone(), (*id, def.clone()));
+        for (id, template) in assets {
+            self.evolutions
+                .insert(template.name.clone(), (*id, template.clone()));
         }
     }
 
-    fn update_single(&mut self, id: AssetId<ChipDefinition>, asset: &ChipDefinition) {
+    fn update_single(&mut self, id: AssetId<EvolutionTemplate>, asset: &EvolutionTemplate) {
         self.evolutions
             .insert(asset.name.clone(), (id, asset.clone()));
     }

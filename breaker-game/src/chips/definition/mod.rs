@@ -5,5 +5,5 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use types::expand_template;
+pub(crate) use types::{expand_chip_template, expand_evolution_template};
 pub use types::*;

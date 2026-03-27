@@ -8,6 +8,6 @@ mod plugin;
 mod resources;
 pub(crate) mod systems;
 
-pub(crate) use definition::{ChipDefinition, ChipTemplate, expand_template};
+pub(crate) use definition::{ChipDefinition, ChipTemplate, EvolutionTemplate, expand_chip_template};
 pub(crate) use plugin::ChipsPlugin;
-pub(crate) use resources::{ChipCatalog, ChipTemplateRegistry, EvolutionRegistry, Recipe};
+pub(crate) use resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry, Recipe};
