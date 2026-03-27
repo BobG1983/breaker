@@ -142,6 +142,8 @@ pub enum InvariantKind {
     ChipStacksConsistent,
     /// [`RunStats`] counters never decrease during a run.
     RunStatsMonotonic,
+    /// Expected chip name not found in offerings during chip select.
+    ChipOfferExpected,
 }
 
 impl InvariantKind {
@@ -167,6 +169,7 @@ impl InvariantKind {
         Self::MaxedChipNeverOffered,
         Self::ChipStacksConsistent,
         Self::RunStatsMonotonic,
+        Self::ChipOfferExpected,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -192,6 +195,7 @@ impl InvariantKind {
             Self::MaxedChipNeverOffered => "maxed chip appeared in offering",
             Self::ChipStacksConsistent => "held chip stacks exceed max_stacks",
             Self::RunStatsMonotonic => "run stats counter decreased mid-run",
+            Self::ChipOfferExpected => "expected chip not found in offerings",
         }
     }
 }
@@ -366,6 +370,12 @@ pub struct ScenarioDefinition {
     /// begins.
     #[serde(default)]
     pub initial_effects: Option<Vec<RootEffect>>,
+    /// Chip names that MUST appear in offerings when chip select is entered.
+    ///
+    /// Checked by the [`InvariantKind::ChipOfferExpected`] invariant. Each name
+    /// is matched against `ChipOffering::name()` in the `ChipOffers` resource.
+    #[serde(default)]
+    pub expected_offerings: Option<Vec<String>>,
 }
 
 impl ScenarioDefinition {
@@ -392,6 +402,7 @@ impl Default for ScenarioDefinition {
             frame_mutations: None,
             chip_selections: None,
             initial_effects: None,
+            expected_offerings: None,
         }
     }
 }

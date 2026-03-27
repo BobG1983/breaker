@@ -1,0 +1,18 @@
+(
+    breaker: "Aegis",
+    layout: "quick_boss",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    invariants: [ChipOfferExpected, BoltInBounds, NoNaN, ValidStateTransitions],
+    allow_early_end: false,
+    initial_chips: Some([
+        "Basic Piercing Shot",
+        "Basic Piercing Shot",
+        "Basic Piercing Shot",
+        "Slight Bolt Speed",
+        "Slight Bolt Speed",
+        "Slight Bolt Speed",
+        "Slight Bolt Speed",
+    ]),
+    expected_offerings: Some(["Railgun"]),
+)

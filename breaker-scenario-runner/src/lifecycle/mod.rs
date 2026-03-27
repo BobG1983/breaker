@@ -43,7 +43,7 @@ use crate::{
         EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats,
         ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_count_reasonable,
         check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
-        check_breaker_position_clamped, check_chip_stacks_consistent,
+        check_breaker_position_clamped, check_chip_offer_expected, check_chip_stacks_consistent,
         check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
         check_offering_no_duplicates, check_physics_frozen_during_pause, check_run_stats_monotonic,
         check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
@@ -231,6 +231,7 @@ impl Plugin for ScenarioLifecycle {
                         check_maxed_chip_never_offered,
                         check_chip_stacks_consistent,
                         check_run_stats_monotonic,
+                        check_chip_offer_expected,
                     )
                         .chain()
                         .run_if(|stats: Option<Res<ScenarioStats>>| {
@@ -316,6 +317,18 @@ fn bypass_menu_to_playing(
             entity_scale: 1.0,
         });
         layout_override.0 = Some("quick_clear".to_owned());
+    } else if config.definition.layout == QUICK_BOSS_LAYOUT_SENTINEL {
+        extras.layout_registry.insert(NodeLayout {
+            name: "quick_boss".to_owned(),
+            timer_secs: 999.0,
+            cols: 1,
+            rows: 1,
+            grid_top_offset: 50.0,
+            grid: vec![vec!['S']],
+            pool: NodePool::Boss,
+            entity_scale: 1.0,
+        });
+        layout_override.0 = Some("quick_boss".to_owned());
     } else {
         layout_override.0 = Some(config.definition.layout.clone());
     }
@@ -884,6 +897,12 @@ const GODMODE_BREAKER_SENTINEL: &str = "godmode";
 ///
 /// Case-sensitive — RON `layout` field must match exactly.
 const QUICK_CLEAR_LAYOUT_SENTINEL: &str = "quick_clear";
+
+/// Sentinel layout name for scenarios that need a single-cell Boss-pool layout.
+///
+/// Identical to `quick_clear` but with `pool: NodePool::Boss`, so the chip
+/// selection system treats the node as a boss and offers evolutions.
+const QUICK_BOSS_LAYOUT_SENTINEL: &str = "quick_boss";
 
 /// Distance threshold (world units) for bolt-breaker proximity to trigger bump.
 pub(crate) const PERFECT_TRACKING_BUMP_THRESHOLD: f32 = 20.0;
