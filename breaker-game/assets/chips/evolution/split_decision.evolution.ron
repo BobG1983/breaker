@@ -5,8 +5,8 @@
         On(target: Bolt, then: [
             When(trigger: DestroyedCell, then: [
                 Do(SpawnBolts(count: 2, inherit: true)),
-            ],
-        ],
+            ]),
+        ]),
     ],
     ingredients: [
         (chip_name: "Splinter", stacks_required: 2),
