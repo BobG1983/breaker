@@ -13,6 +13,9 @@
 ## TDD
 - RED gate rule defined in `.claude/rules/tdd.md` — orchestrator MUST verify tests compile and fail before launching writer-code
 
+## Effect System
+- [effect-system.md](effect-system.md) — Entity-as-implicit-target model, evaluation algorithm, trigger scopes, reversal, On routing
+
 ## Domain Quirks
 
 ## Cross-References
