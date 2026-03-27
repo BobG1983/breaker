@@ -47,7 +47,9 @@ impl<T> RonAssetLoader<T> {
 ///
 /// Returns [`ron::error::SpannedError`] if `bytes` is not valid RON for type `T`.
 pub fn deserialize_ron<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ron::error::SpannedError> {
-    ron::de::from_bytes(bytes)
+    ron::Options::default()
+        .with_default_extension(ron::extensions::Extensions::IMPLICIT_SOME)
+        .from_bytes(bytes)
 }
 
 impl<T> AssetLoader for RonAssetLoader<T>

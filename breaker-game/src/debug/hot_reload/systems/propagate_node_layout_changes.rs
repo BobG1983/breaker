@@ -1,4 +1,4 @@
-//! System to propagate `NodeLayout` asset changes — despawn and respawn cells.
+//! System to propagate `NodeLayout` registry changes — despawn and respawn cells.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 
@@ -8,28 +8,23 @@ use crate::{
         resources::{CellConfig, CellTypeRegistry},
     },
     run::node::{
-        ActiveNodeLayout, ClearRemainingCount, NodeLayout, NodeLayoutRegistry,
+        ActiveNodeLayout, ClearRemainingCount, NodeLayoutRegistry,
         systems::{RenderAssets, spawn_cells_from_grid},
     },
-    screen::loading::resources::DefaultsCollection,
     shared::PlayfieldConfig,
 };
 
 /// Bundled system parameters for the layout change propagation system.
 #[derive(SystemParam)]
 pub(crate) struct LayoutChangeContext<'w, 's> {
-    /// Asset event source for node layouts.
-    collection: Res<'w, DefaultsCollection>,
-    /// Loaded node layout assets.
-    layout_assets: Res<'w, Assets<NodeLayout>>,
     /// Cell dimensions and padding configuration.
     cell_config: Res<'w, CellConfig>,
     /// Playfield boundaries.
     playfield: Res<'w, PlayfieldConfig>,
     /// Currently active layout (if any).
     active_layout: Option<Res<'w, ActiveNodeLayout>>,
-    /// Mutable registry of available node layouts.
-    registry: ResMut<'w, NodeLayoutRegistry>,
+    /// Node layout registry (rebuilt by `propagate_registry`).
+    registry: Res<'w, NodeLayoutRegistry>,
     /// Cell type definitions for spawning.
     cell_type_registry: Res<'w, CellTypeRegistry>,
     /// Existing cell entities to despawn on layout change.
@@ -42,38 +37,15 @@ pub(crate) struct LayoutChangeContext<'w, 's> {
     materials: ResMut<'w, Assets<ColorMaterial>>,
 }
 
-/// Detects `AssetEvent::Modified` on any `NodeLayout`, rebuilds
-/// `NodeLayoutRegistry`, and if the active layout was modified,
+/// Detects when `propagate_registry` has rebuilt the `NodeLayoutRegistry`
+/// or when `CellConfig` has changed, and if the active layout was affected,
 /// despawns all cells and respawns from the updated layout.
-///
-/// Also triggers on `CellConfig` changes (grid positioning depends on
-/// cell dimensions/padding).
-pub(crate) fn propagate_node_layout_changes(
-    mut events: MessageReader<AssetEvent<NodeLayout>>,
-    mut ctx: LayoutChangeContext,
-) {
-    // Check for any modified layout
-    let any_layout_modified = events.read().any(|event| {
-        ctx.collection
-            .nodes
-            .iter()
-            .any(|h| event.is_modified(h.id()))
-    });
-
+pub(crate) fn propagate_node_layout_changes(mut ctx: LayoutChangeContext) {
+    let registry_changed = ctx.registry.is_changed() && !ctx.registry.is_added();
     let cell_config_changed = ctx.cell_config.is_changed() && !ctx.cell_config.is_added();
 
-    if !any_layout_modified && !cell_config_changed {
+    if !registry_changed && !cell_config_changed {
         return;
-    }
-
-    // Rebuild layout registry
-    if any_layout_modified {
-        ctx.registry.clear();
-        for handle in &ctx.collection.nodes {
-            if let Some(layout) = ctx.layout_assets.get(handle.id()) {
-                ctx.registry.insert(layout.clone());
-            }
-        }
     }
 
     // If we have an active layout, check if it was modified (by name match)
@@ -81,7 +53,7 @@ pub(crate) fn propagate_node_layout_changes(
         return;
     };
 
-    let updated_layout = if any_layout_modified {
+    let updated_layout = if registry_changed {
         ctx.registry.get_by_name(&active.0.name).cloned()
     } else {
         // Cell config changed — respawn with same layout
@@ -123,7 +95,7 @@ mod tests {
     use super::*;
     use crate::{
         cells::{CellTypeDefinition, components::CellTypeAlias, definition::CellBehavior},
-        run::node::definition::NodePool,
+        run::node::{NodeLayout, definition::NodePool},
     };
 
     fn test_registry() -> CellTypeRegistry {
@@ -180,26 +152,13 @@ mod tests {
         }
     }
 
-    fn make_collection(nodes: Vec<Handle<NodeLayout>>) -> DefaultsCollection {
-        DefaultsCollection {
-            cells: vec![],
-            nodes,
-            breakers: vec![],
-            chips: vec![],
-            chip_templates: vec![],
-            difficulty: Handle::default(),
-        }
-    }
-
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-            .init_asset::<NodeLayout>()
             .init_asset::<ColorMaterial>()
+            .init_asset::<Mesh>()
             .init_resource::<CellConfig>()
             .init_resource::<PlayfieldConfig>()
-            .init_resource::<Assets<Mesh>>()
-            .init_resource::<Assets<ColorMaterial>>()
             .init_resource::<NodeLayoutRegistry>()
             .insert_resource(test_registry())
             .add_systems(Update, propagate_node_layout_changes);
@@ -207,44 +166,42 @@ mod tests {
     }
 
     #[test]
-    fn respawns_cells_when_layout_modified() {
+    fn respawns_cells_when_registry_changed() {
         let mut app = test_app();
 
-        // Create initial layout with 2 cells
+        // Create initial layout
         let initial_layout = make_layout("test", vec![vec!['S', 'S']]);
-        let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<NodeLayout>>();
-            assets.add(initial_layout.clone())
-        };
-
         app.world_mut()
-            .insert_resource(ActiveNodeLayout(initial_layout));
-        app.world_mut()
-            .insert_resource(make_collection(vec![handle.clone()]));
+            .insert_resource(ActiveNodeLayout(initial_layout.clone()));
 
-        // Flush Added event
-        app.update();
-        app.update();
-
-        // Count cells after initial state (no cells spawned — no Modified yet)
-        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
-        assert_eq!(cell_count, 0, "no cells until layout is modified");
-
-        // Modify layout: now 3 cells
+        // Seed registry with initial layout
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<NodeLayout>>();
-            let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.grid = vec![vec!['S', 'T', 'S']];
-            asset.cols = 3;
-            asset.rows = 1;
+            let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
+            registry.insert(initial_layout);
         }
 
-        // Flush Modified
+        // Flush Added change detection (system should skip Added)
         app.update();
         app.update();
 
+        // Count cells after initial state (no cells spawned — system skipped Added)
         let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
-        assert_eq!(cell_count, 3, "should have 3 cells after layout change");
+        assert_eq!(cell_count, 0, "no cells until registry is mutated");
+
+        // Mutate registry — simulates propagate_registry rebuild with updated layout
+        let updated_layout = make_layout("test", vec![vec!['S', 'T', 'S']]);
+        {
+            let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
+            registry.clear();
+            registry.insert(updated_layout);
+        }
+
+        app.update();
+        // Need another update for despawn commands to flush
+        app.update();
+
+        let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
+        assert_eq!(cell_count, 3, "should have 3 cells after registry change");
     }
 
     #[test]
@@ -252,26 +209,24 @@ mod tests {
         let mut app = test_app();
 
         let layout = make_layout("test", vec![vec!['S', 'T']]);
-        let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<NodeLayout>>();
-            assets.add(layout.clone())
-        };
-
-        app.world_mut().insert_resource(ActiveNodeLayout(layout));
         app.world_mut()
-            .insert_resource(make_collection(vec![handle.clone()]));
+            .insert_resource(ActiveNodeLayout(layout.clone()));
+        {
+            let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
+            registry.insert(layout);
+        }
         app.insert_resource(ClearRemainingCount { remaining: 99 });
 
+        // Flush Added
         app.update();
         app.update();
 
-        // Modify to trigger respawn
+        // Modify registry to trigger respawn
+        let updated_layout = make_layout("test", vec![vec!['S', 'S', 'S']]);
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<NodeLayout>>();
-            let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.grid = vec![vec!['S', 'S', 'S']];
-            asset.cols = 3;
-            asset.rows = 1;
+            let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
+            registry.clear();
+            registry.insert(updated_layout);
         }
 
         app.update();
@@ -289,28 +244,28 @@ mod tests {
         let mut app = test_app();
 
         let layout = make_layout("test", vec![vec!['S']]);
-        let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<NodeLayout>>();
-            assets.add(layout.clone())
-        };
-
-        app.world_mut().insert_resource(ActiveNodeLayout(layout));
         app.world_mut()
-            .insert_resource(make_collection(vec![handle.clone()]));
+            .insert_resource(ActiveNodeLayout(layout.clone()));
+        {
+            let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
+            registry.insert(layout);
+        }
 
         // Manually spawn some "old" cell entities
         app.world_mut().spawn((Cell, CellTypeAlias('S')));
         app.world_mut().spawn((Cell, CellTypeAlias('S')));
         app.world_mut().spawn((Cell, CellTypeAlias('S')));
 
+        // Flush Added
         app.update();
         app.update();
 
-        // Modify layout to 1 cell
+        // Modify registry to 1 cell
+        let updated_layout = make_layout("test", vec![vec!['T']]);
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<NodeLayout>>();
-            let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.grid = vec![vec!['T']];
+            let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
+            registry.clear();
+            registry.insert(updated_layout);
         }
 
         app.update();

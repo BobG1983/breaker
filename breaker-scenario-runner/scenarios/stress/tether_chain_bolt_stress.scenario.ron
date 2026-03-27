@@ -13,9 +13,9 @@
     debug_setup: None,
     invariant_params: (max_bolt_count: 12),
     allow_early_end: false,
-    stress: Some((runs: 16, parallelism: 16)),
-    seed: Some(8080),
-    initial_effects: Some([
+    stress: (runs: 16, parallelism: 16),
+    seed: 8080,
+    initial_effects: [
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
                 When(trigger: Impacted(Cell), then: [
@@ -23,5 +23,5 @@
                 ]),
             ]),
         ]),
-    ]),
+    ],
 )

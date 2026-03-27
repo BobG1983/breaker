@@ -11,7 +11,7 @@ use crate::screen::chip_select::{
 /// Spawns the chip selection UI with cards from the pre-generated offers and a countdown timer.
 ///
 /// Reads `ChipOffers` inserted by `generate_chip_offerings` (which runs earlier in the
-/// `OnEnter(ChipSelect)` chain). Does not interact with `ChipRegistry` directly.
+/// `OnEnter(ChipSelect)` chain). Does not interact with `ChipCatalog` directly.
 pub(crate) fn spawn_chip_select(
     mut commands: Commands,
     config: Res<ChipSelectConfig>,

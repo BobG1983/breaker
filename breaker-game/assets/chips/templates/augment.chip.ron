@@ -1,7 +1,7 @@
 (
     name: "Augment",
     max_taken: 2,
-    common: Some((
+    common: (
         prefix: "Basic",
         effects: [
             On(target: Breaker, then: [
@@ -9,8 +9,8 @@
                 Do(BumpForce(8.0)),
             ]),
         ],
-    )),
-    uncommon: Some((
+    ),
+    uncommon: (
         prefix: "Sturdy",
         effects: [
             On(target: Breaker, then: [
@@ -18,8 +18,8 @@
                 Do(BumpForce(15.0)),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Fortified",
         effects: [
             On(target: Breaker, then: [
@@ -28,6 +28,5 @@
                 Do(SpeedBoost(multiplier: 1.15)),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

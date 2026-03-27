@@ -11,13 +11,13 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    stress: Some((runs: 32, parallelism: 32)),
-    seed: Some(2048),
-    initial_effects: Some([
+    stress: (runs: 32, parallelism: 32),
+    seed: 2048,
+    initial_effects: [
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
                 Do(SpeedBoost(multiplier: 1.3)),
             ]),
         ]),
-    ]),
+    ],
 )

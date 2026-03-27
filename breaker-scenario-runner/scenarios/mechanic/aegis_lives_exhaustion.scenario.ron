@@ -6,5 +6,5 @@
     invariants: [ValidStateTransitions, NoEntityLeaks, BoltInBounds, NoNaN],
     expected_violations: None,
     debug_setup: None,
-    seed: Some(500),
+    seed: 500,
 )

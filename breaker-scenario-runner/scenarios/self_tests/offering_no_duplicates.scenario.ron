@@ -6,11 +6,11 @@
     )),
     max_frames: 120,
     invariants: [OfferingNoDuplicates],
-    expected_violations: Some([OfferingNoDuplicates]),
-    debug_setup: Some((
+    expected_violations: [OfferingNoDuplicates],
+    debug_setup: (
         disable_physics: true,
-    )),
-    frame_mutations: Some([
+    ),
+    frame_mutations: [
         (frame: 30, mutation: InjectDuplicateOffers(chip_name: "TestChip")),
-    ]),
+    ],
 )

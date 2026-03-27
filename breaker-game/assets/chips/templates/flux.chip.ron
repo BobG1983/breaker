@@ -1,7 +1,7 @@
 (
     name: "Flux",
     max_taken: 2,
-    common: Some((
+    common: (
         prefix: "Minor",
         effects: [
             On(target: Breaker, then: [
@@ -13,8 +13,8 @@
                 ]),
             ]),
         ],
-    )),
-    uncommon: Some((
+    ),
+    uncommon: (
         prefix: "Volatile",
         effects: [
             On(target: Breaker, then: [
@@ -27,8 +27,8 @@
                 ]),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Critical",
         effects: [
             On(target: Breaker, then: [
@@ -42,6 +42,5 @@
                 ]),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

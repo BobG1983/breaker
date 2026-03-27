@@ -48,12 +48,16 @@ pub struct ChipTemplate {
     /// Maximum total chips from this template the player may hold.
     pub max_taken: u32,
     /// Common-rarity variant, if any.
+    #[serde(default)]
     pub common: Option<RaritySlot>,
     /// Uncommon-rarity variant, if any.
+    #[serde(default)]
     pub uncommon: Option<RaritySlot>,
     /// Rare-rarity variant, if any.
+    #[serde(default)]
     pub rare: Option<RaritySlot>,
     /// Legendary-rarity variant, if any.
+    #[serde(default)]
     pub legendary: Option<RaritySlot>,
 }
 

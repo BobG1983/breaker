@@ -19,6 +19,8 @@
 - [spatial2d_builtin_audit.md](spatial2d_builtin_audit.md) — What Bevy 0.18.1 provides natively vs what must be custom for a spatial2d crate (Position2D, interpolation, z-order, absolute positioning, Transform2D)
 - [change_removal_detection.md](change_removal_detection.md) — Added<T>, Changed<T>, Ref<T>, RemovedComponents<T>: signatures, iteration method (.read()), gotchas
 - [resource_and_system_ordering.md](resource_and_system_ordering.md) — Resource trait bounds, generic Resource derive, .before()/.after()/.in_set(), cross-plugin set ordering
+- [folder_asset_loading.md](folder_asset_loading.md) — LoadedFolder, load_folder(), UntypedHandle.typed(), RecursiveDependencyLoadState, FreelyMutableState bound
+- [exclusive_systems.md](exclusive_systems.md) — Exclusive system signatures, World query/entity/resource API, SystemState pattern, ordering, performance, deferred alternative
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

@@ -190,6 +190,19 @@ RESOLVED ISSUE: spawn_highlight_text is now registered in RunPlugin::build under
 - The cap enforced during detection is now REMOVED by design. CloseSave entries per run = 1 per BumpPerformed where bolt was close to loss (rare event, but can accumulate across many nodes). track_node_cleared_stats can push multiple highlights per NodeCleared (ClutchClear, SpeedDemon, PerfectNode, etc.) unconditionally.
 - In a 10-node run: at most ~8 highlights per NodeCleared × 10 nodes = 80 entries (degenerate case with all conditions met). In practice: 1–3 per node = 10–30 entries. Bounded by game session length. Not a pathological growth concern. Added to Watch section below.
 
+## Confirmed-Clean New Systems (reviewed 2026-03-26, rantzsoft_defaults SeedableRegistry)
+
+### rantzsoft_defaults/src/systems.rs — seed_registry + plugin.rs registration
+
+SEED_REGISTRY (Update, run_if(in_state(loading_state))):
+- After *seeded = true (first line guard), returns immediately on every subsequent frame. ResMut<R> + ResMut<RegistryHandles> are borrowed but released immediately. No competing systems touch these resources during loading state. Confirmed clean.
+- filter_map + try_typed (lines 104-109): executes on the ONE frame the LoadedFolder first becomes available, then handles.loaded = true gates it permanently. This is O(N) exactly once, not per frame. Confirmed clean.
+- Vec allocation (line 112) + asset.clone() (line 117): Vec is allocated and partially filled on each frame where some assets are not yet loaded (early-return at line 115 drops it). Full clone of all N assets happens on the single seeding frame only. Not a hot-path concern at registry sizes in this game (tens of RON files). Confirmed acceptable — clone is required by the seed() trait signature which takes owned values.
+- UntypedHandle.clone() inside filter_map: Bevy 0.18 handles are ref-counted; clone is an Arc bump. Negligible.
+- track_progress overhead: two atomic increments per frame during loading state. Immeasurable vs .map(drop). Confirmed acceptable.
+
+INTENTIONAL PATTERN: Local<bool> + run_if(in_state(loading_state)) is the correct Bevy idiom for one-shot loading systems. The *seeded guard is belt-and-suspenders: run_if handles the common case; Local<bool> handles edge cases where the system might be called outside the expected state transition. Do not flag this as redundant.
+
 ## Confirmed-Clean New Systems (reviewed 2026-03-26, scenario-runner lifecycle)
 
 ### breaker-scenario-runner/src/lifecycle/mod.rs

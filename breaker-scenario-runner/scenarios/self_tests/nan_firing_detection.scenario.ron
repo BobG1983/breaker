@@ -6,9 +6,9 @@
     )),
     max_frames: 120,
     invariants: [NoNaN],
-    expected_violations: Some([NoNaN]),
-    debug_setup: Some((
-        bolt_position: Some((NaN, 0.0)),
+    expected_violations: [NoNaN],
+    debug_setup: (
+        bolt_position: (NaN, 0.0),
         disable_physics: true,
-    )),
+    ),
 )

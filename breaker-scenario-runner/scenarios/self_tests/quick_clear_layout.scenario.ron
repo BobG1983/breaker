@@ -11,5 +11,5 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: true,
-    seed: Some(42),
+    seed: 42,
 )

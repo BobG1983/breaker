@@ -6,9 +6,9 @@
     )),
     max_frames: 120,
     invariants: [ValidStateTransitions],
-    expected_violations: Some([ValidStateTransitions]),
-    debug_setup: Some((
-        force_previous_game_state: Some(Loading),
+    expected_violations: [ValidStateTransitions],
+    debug_setup: (
+        force_previous_game_state: Loading,
         disable_physics: true,
-    )),
+    ),
 )

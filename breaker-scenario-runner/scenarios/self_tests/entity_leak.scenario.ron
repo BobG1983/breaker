@@ -6,12 +6,12 @@
     )),
     max_frames: 300,
     invariants: [NoEntityLeaks],
-    expected_violations: Some([NoEntityLeaks]),
-    debug_setup: Some((
+    expected_violations: [NoEntityLeaks],
+    debug_setup: (
         disable_physics: true,
-    )),
+    ),
     allow_early_end: false,
-    frame_mutations: Some([
+    frame_mutations: [
         (frame: 119, mutation: SpawnExtraEntities(200)),
-    ]),
+    ],
 )

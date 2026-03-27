@@ -5,5 +5,6 @@ pub use crate::{
     handle::DefaultsHandle,
     loader::RonAssetLoader,
     plugin::{DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder},
+    registry::{RegistryHandles, SeedableRegistry},
     seedable::SeedableConfig,
 };

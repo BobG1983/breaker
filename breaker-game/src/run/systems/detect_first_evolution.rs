@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    chips::ChipRegistry,
+    chips::ChipCatalog,
     run::{messages::HighlightTriggered, resources::*},
     ui::messages::ChipSelected,
 };
@@ -16,7 +16,7 @@ use crate::{
 /// [`RunStats::evolutions_performed`].
 pub(crate) fn detect_first_evolution(
     mut reader: MessageReader<ChipSelected>,
-    registry: Option<Res<ChipRegistry>>,
+    registry: Option<Res<ChipCatalog>>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
     run_state: Res<RunState>,
@@ -64,7 +64,7 @@ pub(crate) fn detect_first_evolution(
 mod tests {
     use super::*;
     use crate::{
-        chips::{ChipRegistry, Recipe, definition::EvolutionIngredient},
+        chips::{ChipCatalog, Recipe, definition::EvolutionIngredient},
         run::{
             definition::HighlightConfig,
             resources::{HighlightKind, RunHighlight},
@@ -92,10 +92,10 @@ mod tests {
         }
     }
 
-    /// Creates a test `ChipRegistry` with one recipe producing
+    /// Creates a test `ChipCatalog` with one recipe producing
     /// `"Piercing Barrage"`.
-    fn test_chip_registry() -> ChipRegistry {
-        let mut registry = ChipRegistry::default();
+    fn test_chip_registry() -> ChipCatalog {
+        let mut registry = ChipCatalog::default();
         registry.insert_recipe(Recipe {
             ingredients: vec![EvolutionIngredient {
                 chip_name: "Piercing Shot".to_owned(),
@@ -249,7 +249,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 18: Graceful without ChipRegistry ---
+    // --- Behavior 18: Graceful without ChipCatalog ---
 
     #[test]
     fn graceful_without_chip_registry() {
@@ -261,7 +261,7 @@ mod tests {
             .init_resource::<HighlightTracker>()
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
-            // NOTE: No ChipRegistry inserted — Option<Res<ChipRegistry>> is None
+            // NOTE: No ChipCatalog inserted — Option<Res<ChipCatalog>> is None
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 Update,
@@ -281,7 +281,7 @@ mod tests {
         let stats = app.world().resource::<RunStats>();
         assert!(
             stats.highlights.is_empty(),
-            "should not detect any highlight without ChipRegistry"
+            "should not detect any highlight without ChipCatalog"
         );
         assert_eq!(
             stats.evolutions_performed, 0,

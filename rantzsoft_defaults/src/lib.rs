@@ -9,6 +9,7 @@ pub mod handle;
 pub mod loader;
 pub mod plugin;
 pub mod prelude;
+pub mod registry;
 pub mod seedable;
 pub mod systems;
 
@@ -238,20 +239,31 @@ mod tests {
     }
 
     /// Prelude re-exports `DefaultsHandle`, `RonAssetLoader`, `DefaultsSystems`,
-    /// `RantzDefaultsPlugin`, and `RantzDefaultsPluginBuilder`.
+    /// `RantzDefaultsPlugin`, `RantzDefaultsPluginBuilder`, `SeedableRegistry`,
+    /// and `RegistryHandles`.
     #[test]
     fn prelude_reexports_new_types() {
         use crate::prelude::{
             DefaultsHandle, DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder,
-            RonAssetLoader,
+            RegistryHandles, RonAssetLoader, SeedableRegistry,
         };
 
+        // The builder is now generic — define a state type first.
+        #[derive(bevy::prelude::States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+        enum PreludeTestState {
+            #[default]
+            Loading,
+        }
+
+        // Ensure SeedableRegistry trait is in scope (compile-time check).
+        fn _assert_trait_in_scope<T: SeedableRegistry>() {}
+
         // If this compiles, the prelude re-exports all new types.
-        // Exercise type names so they are considered used.
         let _ = std::mem::size_of::<DefaultsHandle<TestDefaults3>>();
         let _ = std::mem::size_of::<RonAssetLoader<TestDefaults3>>();
         let _ = std::mem::size_of::<DefaultsSystems>();
         let _ = std::mem::size_of::<RantzDefaultsPlugin>();
-        let _ = std::mem::size_of::<RantzDefaultsPluginBuilder>();
+        let _ = std::mem::size_of::<RantzDefaultsPluginBuilder<PreludeTestState>>();
+        let _ = std::mem::size_of::<RegistryHandles<TestDefaults3>>();
     }
 }

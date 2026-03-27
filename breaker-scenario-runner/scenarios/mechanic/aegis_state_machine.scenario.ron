@@ -6,5 +6,5 @@
     invariants: [ValidBreakerState, BreakerInBounds, BreakerPositionClamped, NoNaN],
     expected_violations: None,
     debug_setup: None,
-    seed: Some(300),
+    seed: 300,
 )

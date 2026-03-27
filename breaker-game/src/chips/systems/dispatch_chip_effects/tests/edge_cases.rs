@@ -8,7 +8,7 @@ use crate::{
         components::*,
         definition::{ChipDefinition, Rarity},
         inventory::ChipInventory,
-        resources::ChipRegistry,
+        resources::ChipCatalog,
     },
     effect::{
         definition::{Effect, EffectChains, EffectNode, ImpactTarget, RootEffect, Target, Trigger},
@@ -62,7 +62,7 @@ fn triggered_chip_adds_no_passive_components() {
         .spawn((Breaker, EffectChains::default()))
         .id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Surge".to_owned(),
             description: "test".to_owned(),
@@ -131,7 +131,7 @@ fn once_node_pushes_to_chains() {
 
     let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "OnceChip".to_owned(),
             description: "test".to_owned(),
@@ -169,7 +169,7 @@ fn until_node_pushes_to_chains() {
 
     let bolt = app.world_mut().spawn((Bolt, EffectChains::default())).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "UntilChip".to_owned(),
             description: "test".to_owned(),
@@ -215,7 +215,7 @@ fn unhandled_target_logs_and_does_not_panic() {
         .spawn((Breaker, EffectChains::default()))
         .id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "AllBoltsChip".to_owned(),
             description: "test".to_owned(),
@@ -268,7 +268,7 @@ fn passive_chain_hit_fires_and_applies_component() {
 
     let bolt = app.world_mut().spawn(Bolt).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Chain Hit".to_owned(),
             description: "test".to_owned(),
@@ -303,7 +303,7 @@ fn passive_bump_force_fires_and_applies_component() {
 
     let breaker = app.world_mut().spawn(Breaker).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Bump Force".to_owned(),
             description: "test".to_owned(),
@@ -338,7 +338,7 @@ fn passive_tilt_control_fires_and_applies_component() {
 
     let breaker = app.world_mut().spawn(Breaker).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Tilt Control".to_owned(),
             description: "test".to_owned(),
@@ -374,7 +374,7 @@ fn passive_ramping_damage_fires_and_applies_component() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_message::<ChipSelected>()
-        .init_resource::<ChipRegistry>()
+        .init_resource::<ChipCatalog>()
         .add_observer(handle_ramping_damage)
         .add_systems(
             Update,
@@ -383,7 +383,7 @@ fn passive_ramping_damage_fires_and_applies_component() {
 
     let bolt = app.world_mut().spawn(Bolt).id();
     app.world_mut()
-        .resource_mut::<ChipRegistry>()
+        .resource_mut::<ChipCatalog>()
         .insert(ChipDefinition {
             name: "Ramping".to_owned(),
             description: "test".to_owned(),

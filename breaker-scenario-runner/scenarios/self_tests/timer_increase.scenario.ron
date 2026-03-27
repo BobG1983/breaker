@@ -6,11 +6,11 @@
     )),
     max_frames: 120,
     invariants: [TimerMonotonicallyDecreasing],
-    expected_violations: Some([TimerMonotonicallyDecreasing]),
-    debug_setup: Some((
+    expected_violations: [TimerMonotonicallyDecreasing],
+    debug_setup: (
         disable_physics: true,
-    )),
-    frame_mutations: Some([
+    ),
+    frame_mutations: [
         (frame: 30, mutation: SetTimerRemaining(80.0)),
-    ]),
+    ],
 )

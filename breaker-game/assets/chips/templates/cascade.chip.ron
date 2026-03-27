@@ -1,7 +1,7 @@
 (
     name: "Cascade",
     max_taken: 3,
-    common: Some((
+    common: (
         prefix: "Minor",
         effects: [
             On(target: Bolt, then: [
@@ -10,8 +10,8 @@
                 ]),
             ]),
         ],
-    )),
-    uncommon: Some((
+    ),
+    uncommon: (
         prefix: "Spreading",
         effects: [
             On(target: Bolt, then: [
@@ -20,8 +20,8 @@
                 ]),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Devastating",
         effects: [
             On(target: Bolt, then: [
@@ -30,6 +30,5 @@
                 ]),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

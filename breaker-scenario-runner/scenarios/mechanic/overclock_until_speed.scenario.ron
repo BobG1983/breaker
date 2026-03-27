@@ -12,8 +12,8 @@
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,
-    seed: Some(3141),
-    initial_effects: Some([
+    seed: 3141,
+    initial_effects: [
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
                 Until(until: TimeExpires(1.0), then: [
@@ -21,5 +21,5 @@
                 ]),
             ]),
         ]),
-    ]),
+    ],
 )

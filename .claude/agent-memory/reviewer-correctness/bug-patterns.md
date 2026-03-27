@@ -52,6 +52,9 @@ All four bugs recorded as OPEN in Phase 4 Wave 2 are now confirmed FIXED in curr
 ## Full-tree Review Confirmed Bug (2026-03-19, second session) — FIXED (2026-03-19 third session)
 - **spawn_run_end_screen shows wrong loss text for Aegis**: FIXED — `RunOutcome::Lost` split into `TimerExpired` and `LivesDepleted`. `handle_timer_expired` sets `TimerExpired`, `handle_run_lost` sets `LivesDepleted`. Screen match arm maps each to correct text. Confirmed clean.
 
+## SeedableRegistry Phase 1 Confirmed Bug (develop, 2026-03-26)
+- **seed_registry empty-handles false-success**: `rantzsoft_defaults/src/systems.rs:108-121` — when `try_typed` filters ALL handles from the `LoadedFolder` (empty folder, wrong extensions, or asset type mismatch), `handles.handles` becomes empty. The collection loop runs zero iterations (no early-return), `registry.seed(&[])` is called (clears registry), `*seeded = true` permanently blocks re-seeding. An empty folder should return `Progress { done: 0, total: 1 }`, not a successful empty seed. Fix: guard `if handles.handles.is_empty() { return Progress { done: 0, total: 1 }; }` after `handles.loaded = true`.
+
 ## Overclock Engine Bugs (2026-03-20, fix/stress-count-and-dead-code)
 
 - **ActiveChains never cleared between runs — RESOLVED (C7-R, 2026-03-25)**: `ActiveChains` → `ActiveEffects` → entirely replaced by `EffectChains` component per entity in C7-R. `dispatch_chip_effects` now pushes to `EffectChains` on bolt/breaker entities (not a global resource). `ChipInventory.clear()` in `reset_run_state` is the only run-reset needed. No global Vec resource to clear.

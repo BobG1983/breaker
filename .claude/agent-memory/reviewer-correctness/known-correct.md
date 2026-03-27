@@ -81,6 +81,13 @@ type: reference
 - `add_chip` template cap check comes BEFORE individual cap check — correct ordering per spec (prevent template overflow before allowing individual increment).
 - `or_insert(def.max_stacks)` in template_maxes is a first-write-wins register for the template's max. Since all chips from the same template have identical max_stacks (guaranteed by expand_template), any write order produces the same value.
 
+## SeedableRegistry Phase 1 (develop, 2026-03-26)
+- `MessageReader<AssetEvent<D>>` in `propagate_defaults` is correct in Bevy 0.18 — `MessageReader` is the renamed `EventReader` and works for all `Event`/`Message` types, confirmed by `propagate_node_layout_changes.rs:52` production use.
+- `handles.loaded = true` set inside the folder-resolution block before per-asset collection succeeds is intentional: the handles vec is stable once the folder loads; the asset loop retries on subsequent frames via early-return. Not a bug.
+- Zero-handles after `try_typed` filtering: `seed_registry` treats this as a successful seed of empty registry and sets `*seeded = true`. BUG — see bug-patterns.md.
+- `R::extensions()` is NOT used inside `seed_registry` — only by `RonAssetLoader` registration. The filter-by-type via `try_typed` is correct; extension filtering is the loader's responsibility.
+- `propagate_registry` system does not exist — hot-reload for registries is not implemented by this plugin. This is a missing feature, not a logic bug in the seed path.
+
 ## B1-B3 TriggerChain Flatten Confirmed Correct (feature/spatial-physics-extraction, 2026-03-24)
 - `apply_chip_effect` match order `OnSelected` → `is_leaf()` → catchall: `OnSelected` is not a leaf so it is correctly intercepted by arm 1 before reaching the catchall that pushes to `ActiveChains`. Correct arm ordering.
 - Bare leaf fallback arm (line 51-57): `chain if chain.is_leaf()` fires `ChipEffectApplied` immediately. `OnPerfectBump` etc. are not leaves, so they correctly fall through to the `ActiveChains` push arm. No OnSelected variant can erroneously reach `ActiveChains`.

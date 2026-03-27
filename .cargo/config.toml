@@ -17,9 +17,9 @@ physics2dclippy = "clippy -p rantzsoft_physics2d --all-targets --features bevy/d
 physics2dcheck = "check -p rantzsoft_physics2d --features bevy/dynamic_linking"
 
 # rantzsoft_defaults (dynamic linking to avoid workspace artifact conflicts)
-defaultstest = "test -p rantzsoft_defaults --features bevy/dynamic_linking"
-defaultsclippy = "clippy -p rantzsoft_defaults --all-targets --features bevy/dynamic_linking"
-defaultscheck = "check -p rantzsoft_defaults --features bevy/dynamic_linking"
+defaultstest = "test -p rantzsoft_defaults --features bevy/dynamic_linking,hot-reload"
+defaultsclippy = "clippy -p rantzsoft_defaults --all-targets --features bevy/dynamic_linking,hot-reload"
+defaultscheck = "check -p rantzsoft_defaults --features bevy/dynamic_linking,hot-reload"
 
 # scenario runner (dev — ONLY for debugging bugs in the runner itself)
 dscenario = "run -p breaker_scenario_runner"

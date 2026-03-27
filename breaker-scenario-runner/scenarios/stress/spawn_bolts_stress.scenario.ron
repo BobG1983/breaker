@@ -13,13 +13,13 @@
     debug_setup: None,
     invariant_params: (max_bolt_count: 16),
     allow_early_end: false,
-    stress: Some((runs: 16, parallelism: 16)),
-    seed: Some(5050),
-    initial_effects: Some([
+    stress: (runs: 16, parallelism: 16),
+    seed: 5050,
+    initial_effects: [
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
-                Do(SpawnBolts(count: 1, lifespan: Some(3.0), inherit: true)),
+                Do(SpawnBolts(count: 1, lifespan: 3.0, inherit: true)),
             ]),
         ]),
-    ]),
+    ],
 )

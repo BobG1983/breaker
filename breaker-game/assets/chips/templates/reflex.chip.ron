@@ -1,8 +1,7 @@
 (
     name: "Reflex",
     max_taken: 1,
-    common: None,
-    uncommon: Some((
+    uncommon: (
         prefix: "Quick",
         effects: [
             On(target: Breaker, then: [
@@ -11,8 +10,8 @@
                 ]),
             ]),
         ],
-    )),
-    rare: Some((
+    ),
+    rare: (
         prefix: "Lightning",
         effects: [
             On(target: Breaker, then: [
@@ -22,6 +21,5 @@
                 ]),
             ]),
         ],
-    )),
-    legendary: None,
+    ),
 )

@@ -6,12 +6,12 @@
     )),
     max_frames: 300,
     invariants: [PhysicsFrozenDuringPause],
-    expected_violations: Some([PhysicsFrozenDuringPause]),
-    debug_setup: Some((
+    expected_violations: [PhysicsFrozenDuringPause],
+    debug_setup: (
         disable_physics: true,
-    )),
-    frame_mutations: Some([
+    ),
+    frame_mutations: [
         (frame: 30, mutation: TogglePause),
         (frame: 60, mutation: MoveBolt(100.0, 100.0)),
-    ]),
+    ],
 )

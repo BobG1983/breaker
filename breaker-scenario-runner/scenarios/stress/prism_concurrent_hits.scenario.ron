@@ -8,5 +8,5 @@
     debug_setup: None,
     invariant_params: (max_bolt_count: 12),
     allow_early_end: false,
-    seed: Some(700),
+    seed: 700,
 )

@@ -1,21 +1,15 @@
-//! System to propagate `CellTypeDefinition` asset changes to live cell entities.
+//! System to propagate `CellTypeRegistry` changes to live cell entities.
 
 use bevy::prelude::*;
 
-use crate::{
-    cells::{CellTypeDefinition, components::*, resources::CellTypeRegistry},
-    screen::loading::resources::DefaultsCollection,
-};
+use crate::cells::{components::*, resources::CellTypeRegistry};
 
-/// Detects `AssetEvent::Modified` on any `CellTypeDefinition`, rebuilds
-/// `CellTypeRegistry`, and updates matching live cell entities.
+/// Detects when `propagate_registry` has rebuilt the `CellTypeRegistry`
+/// and updates matching live cell entities.
 ///
 /// Updated per-cell: `CellHealth.max` (clamped), `CellDamageVisuals`, material color.
 pub(crate) fn propagate_cell_type_changes(
-    mut events: MessageReader<AssetEvent<CellTypeDefinition>>,
-    collection: Res<DefaultsCollection>,
-    assets: Res<Assets<CellTypeDefinition>>,
-    mut registry: ResMut<CellTypeRegistry>,
+    registry: Res<CellTypeRegistry>,
     mut query: Query<
         (
             &CellTypeAlias,
@@ -27,21 +21,8 @@ pub(crate) fn propagate_cell_type_changes(
     >,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // Check if any cell type definition was modified
-    let any_modified = events
-        .read()
-        .any(|event| collection.cells.iter().any(|h| event.is_modified(h.id())));
-
-    if !any_modified {
+    if !registry.is_changed() || registry.is_added() {
         return;
-    }
-
-    // Rebuild registry from current asset state
-    registry.clear();
-    for handle in &collection.cells {
-        if let Some(def) = assets.get(handle.id()) {
-            registry.insert(def.alias, def.clone());
-        }
     }
 
     // Update matching live cell entities
@@ -67,7 +48,7 @@ pub(crate) fn propagate_cell_type_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::definition::CellBehavior;
+    use crate::cells::{CellTypeDefinition, definition::CellBehavior};
 
     fn make_standard_def() -> CellTypeDefinition {
         CellTypeDefinition {
@@ -102,43 +83,22 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-            .init_asset::<CellTypeDefinition>()
             .init_asset::<ColorMaterial>()
             .init_resource::<CellTypeRegistry>()
-            .init_resource::<Assets<ColorMaterial>>()
             .add_systems(Update, propagate_cell_type_changes);
         app
     }
 
-    fn make_collection(cells: Vec<Handle<CellTypeDefinition>>) -> DefaultsCollection {
-        DefaultsCollection {
-            cells,
-            nodes: vec![],
-            breakers: vec![],
-            chips: vec![],
-            chip_templates: vec![],
-            difficulty: Handle::default(),
-        }
-    }
-
     #[test]
-    fn registry_rebuilt_and_cell_health_max_updated() {
+    fn registry_change_updates_cell_health_max() {
         let mut app = test_app();
 
-        // Add a standard cell type asset
         let def = make_standard_def();
-        let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            assets.add(def.clone())
-        };
-
-        // Seed the registry manually
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             registry.insert('S', def);
         }
 
-        // Spawn a cell entity with alias 'S' and health matching old definition
         let material_handle = {
             let mut mats = app.world_mut().resource_mut::<Assets<ColorMaterial>>();
             mats.add(ColorMaterial::from_color(Color::WHITE))
@@ -159,23 +119,19 @@ mod tests {
             ))
             .id();
 
-        app.world_mut()
-            .insert_resource(make_collection(vec![handle.clone()]));
-
-        // Flush Added event
+        // Flush Added change detection (system should skip Added)
         app.update();
         app.update();
 
-        // Modify the cell type: increase HP to 5
+        // Mutate registry directly — simulates propagate_registry rebuild
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.hp = 5.0;
-            asset.damage_hdr_base = 8.0;
+            let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
+            let mut updated_def = make_standard_def();
+            updated_def.hp = 5.0;
+            updated_def.damage_hdr_base = 8.0;
+            registry.insert('S', updated_def);
         }
 
-        // Flush Modified event
-        app.update();
         app.update();
 
         let health = app.world().get::<CellHealth>(entity).unwrap();
@@ -201,15 +157,6 @@ mod tests {
 
         let s_def = make_standard_def();
         let t_def = make_tough_def();
-        let s_handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            assets.add(s_def.clone())
-        };
-        let t_handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            assets.add(t_def.clone())
-        };
-
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             registry.insert('S', s_def);
@@ -238,23 +185,21 @@ mod tests {
             ))
             .id();
 
-        app.world_mut()
-            .insert_resource(make_collection(vec![s_handle.clone(), t_handle]));
-
+        // Flush Added
         app.update();
         app.update();
 
-        // Modify only 'S' cell type (not 'T')
+        // Modify only 'S' in the registry (but registry still reports Changed)
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            let asset = assets.get_mut(s_handle.id()).expect("asset should exist");
-            asset.hp = 10.0;
+            let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
+            let mut updated_s = make_standard_def();
+            updated_s.hp = 10.0;
+            registry.insert('S', updated_s);
         }
 
         app.update();
-        app.update();
 
-        // 'T' cell should be unchanged
+        // 'T' cell should be unchanged — registry updated 'T' with same values
         let health = app.world().get::<CellHealth>(t_entity).unwrap();
         assert!(
             (health.max - 3.0).abs() < f32::EPSILON,
@@ -267,11 +212,6 @@ mod tests {
         let mut app = test_app();
 
         let def = make_tough_def(); // hp=3
-        let handle = {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            assets.add(def.clone())
-        };
-
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             registry.insert('T', def);
@@ -302,20 +242,18 @@ mod tests {
             ))
             .id();
 
-        app.world_mut()
-            .insert_resource(make_collection(vec![handle.clone()]));
-
+        // Flush Added
         app.update();
         app.update();
 
         // Reduce HP from 3.0 to 1.0 — current should clamp
         {
-            let mut assets = app.world_mut().resource_mut::<Assets<CellTypeDefinition>>();
-            let asset = assets.get_mut(handle.id()).expect("asset should exist");
-            asset.hp = 1.0;
+            let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
+            let mut updated_def = make_tough_def();
+            updated_def.hp = 1.0;
+            registry.insert('T', updated_def);
         }
 
-        app.update();
         app.update();
 
         let health = app.world().get::<CellHealth>(entity).unwrap();

@@ -6,11 +6,11 @@
     )),
     max_frames: 120,
     invariants: [MaxedChipNeverOffered],
-    expected_violations: Some([MaxedChipNeverOffered]),
-    debug_setup: Some((
+    expected_violations: [MaxedChipNeverOffered],
+    debug_setup: (
         disable_physics: true,
-    )),
-    frame_mutations: Some([
+    ),
+    frame_mutations: [
         (frame: 30, mutation: InjectMaxedChipOffer(chip_name: "TestChip")),
-    ]),
+    ],
 )
