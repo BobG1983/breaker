@@ -5,7 +5,9 @@ use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::RegistryHandles;
 
 use crate::chips::{
-    definition::{ChipTemplate, EvolutionTemplate, expand_chip_template, expand_evolution_template},
+    definition::{
+        ChipTemplate, EvolutionTemplate, expand_chip_template, expand_evolution_template,
+    },
     resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry, Recipe},
 };
 
@@ -32,28 +34,7 @@ pub(crate) fn build_chip_catalog(
     }
 
     let mut catalog = ChipCatalog::default();
-
-    // Collect and sort templates by name for deterministic order
-    let mut templates: Vec<_> = template_registry.templates().collect();
-    templates.sort_by(|a, b| a.name.cmp(&b.name));
-    for template in templates {
-        for def in expand_chip_template(template) {
-            catalog.insert(def);
-        }
-    }
-
-    // Collect and sort evolutions by name for deterministic order
-    let mut evolutions: Vec<_> = evolution_registry.templates().collect();
-    evolutions.sort_by(|a, b| a.name.cmp(&b.name));
-    for template in evolutions {
-        let def = expand_evolution_template(template);
-        let recipe = Recipe {
-            ingredients: template.ingredients.clone(),
-            result_name: template.name.clone(),
-        };
-        catalog.insert_recipe(recipe);
-        catalog.insert(def);
-    }
+    populate_catalog(&mut catalog, &template_registry, &evolution_registry);
 
     commands.insert_resource(catalog);
     *built = true;
@@ -74,9 +55,15 @@ pub(crate) fn propagate_chip_catalog(
         return;
     }
 
-    // Rebuild catalog from scratch
     *catalog = ChipCatalog::default();
+    populate_catalog(&mut catalog, &template_registry, &evolution_registry);
+}
 
+fn populate_catalog(
+    catalog: &mut ChipCatalog,
+    template_registry: &ChipTemplateRegistry,
+    evolution_registry: &EvolutionTemplateRegistry,
+) {
     let mut templates: Vec<_> = template_registry.templates().collect();
     templates.sort_by(|a, b| a.name.cmp(&b.name));
     for template in templates {
@@ -106,9 +93,7 @@ mod tests {
     use super::build_chip_catalog;
     use crate::{
         chips::{
-            definition::{
-                ChipTemplate, EvolutionIngredient, EvolutionTemplate, RaritySlot,
-            },
+            definition::{ChipTemplate, EvolutionIngredient, EvolutionTemplate, RaritySlot},
             resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry},
         },
         effect::definition::{Effect, EffectNode, RootEffect, Target},
@@ -131,8 +116,7 @@ mod tests {
         template_handles.loaded = true;
         app.insert_resource(template_handles);
 
-        let mut evolution_handles =
-            RegistryHandles::<EvolutionTemplate>::new(Handle::default());
+        let mut evolution_handles = RegistryHandles::<EvolutionTemplate>::new(Handle::default());
         evolution_handles.loaded = true;
         app.insert_resource(evolution_handles);
     }

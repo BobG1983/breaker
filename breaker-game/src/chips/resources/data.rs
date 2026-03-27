@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
 
-use crate::chips::definition::{ChipDefinition, ChipTemplate, EvolutionIngredient, EvolutionTemplate};
+use crate::chips::definition::{
+    ChipDefinition, ChipTemplate, EvolutionIngredient, EvolutionTemplate,
+};
 
 /// A recipe combining ingredient chips into an evolved chip.
 /// Stores only the result name — the full `ChipDefinition` is in `ChipCatalog.chips`.
@@ -18,7 +20,8 @@ pub struct Recipe {
 /// `HashMap` pool of all loaded chip definitions, keyed by name.
 ///
 /// Preserves insertion order via a separate `Vec<String>` for deterministic
-/// iteration (chip offer display). Populated during loading by `seed_chip_registry`.
+/// iteration (chip offer display). Populated during loading by `build_chip_catalog`
+/// from `ChipTemplateRegistry` and `EvolutionTemplateRegistry`.
 #[derive(Resource, Debug, Default)]
 pub struct ChipCatalog {
     chips: HashMap<String, ChipDefinition>,
