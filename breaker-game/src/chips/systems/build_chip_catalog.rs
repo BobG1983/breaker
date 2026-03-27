@@ -33,15 +33,19 @@ pub(crate) fn build_chip_catalog(
 
     let mut catalog = ChipCatalog::default();
 
-    // Expand chip templates into definitions
-    for template in template_registry.templates() {
+    // Collect and sort templates by name for deterministic order
+    let mut templates: Vec<_> = template_registry.templates().collect();
+    templates.sort_by(|a, b| a.name.cmp(&b.name));
+    for template in templates {
         for def in expand_template(template) {
             catalog.insert(def);
         }
     }
 
-    // Insert evolution definitions and extract recipes
-    for def in evolution_registry.definitions() {
+    // Collect and sort evolutions by name for deterministic order
+    let mut evolutions: Vec<_> = evolution_registry.definitions().collect();
+    evolutions.sort_by(|a, b| a.name.cmp(&b.name));
+    for def in evolutions {
         if def.rarity == Rarity::Evolution {
             let recipe = Recipe {
                 ingredients: def.ingredients.clone().unwrap_or_default(),
@@ -55,6 +59,45 @@ pub(crate) fn build_chip_catalog(
     commands.insert_resource(catalog);
     *built = true;
     Progress { done: 1, total: 1 }
+}
+
+/// Rebuilds `ChipCatalog` when either source registry is updated by hot-reload.
+#[cfg(feature = "dev")]
+pub(crate) fn propagate_chip_catalog(
+    template_registry: Res<ChipTemplateRegistry>,
+    evolution_registry: Res<EvolutionRegistry>,
+    mut catalog: ResMut<ChipCatalog>,
+) {
+    let templates_changed = template_registry.is_changed() && !template_registry.is_added();
+    let evolutions_changed = evolution_registry.is_changed() && !evolution_registry.is_added();
+
+    if !templates_changed && !evolutions_changed {
+        return;
+    }
+
+    // Rebuild catalog from scratch
+    *catalog = ChipCatalog::default();
+
+    let mut templates: Vec<_> = template_registry.templates().collect();
+    templates.sort_by(|a, b| a.name.cmp(&b.name));
+    for template in templates {
+        for def in expand_template(template) {
+            catalog.insert(def);
+        }
+    }
+
+    let mut evolutions: Vec<_> = evolution_registry.definitions().collect();
+    evolutions.sort_by(|a, b| a.name.cmp(&b.name));
+    for def in evolutions {
+        if def.rarity == Rarity::Evolution {
+            let recipe = Recipe {
+                ingredients: def.ingredients.clone().unwrap_or_default(),
+                result_name: def.name.clone(),
+            };
+            catalog.insert_recipe(recipe);
+        }
+        catalog.insert(def.clone());
+    }
 }
 
 #[cfg(test)]

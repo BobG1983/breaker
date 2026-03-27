@@ -21,20 +21,22 @@ type: reference
 - The `ron` crate is NOT bundled — user must add `ron = "0.11"` separately
 - Import: `use bevy_common_assets::ron::RonAssetPlugin;`
 - Source: docs.rs/bevy_common_assets/0.15.0, raw Cargo.toml confirmed `serde_ron = "0.11"`
+- **NOTE:** `breaker-game` does NOT directly depend on `bevy_common_assets` as of the SeedableRegistry feature. `rantzsoft_defaults` uses `RonAssetPlugin` internally via its `RonAssetLoader`. Do not add `bevy_common_assets` directly to `breaker-game` Cargo.toml.
 
-## bevy_asset_loader 0.25 + iyes_progress 0.16 (verified)
+## bevy_asset_loader 0.25
 
-- Feature flag: `bevy_asset_loader = { version = "0.25", features = ["progress_tracking"] }`
-- Must also add `iyes_progress = "0.16"` directly (bevy_asset_loader does NOT register ProgressPlugin)
+- **NOTE:** `breaker-game` NO LONGER uses `bevy_asset_loader` directly as of the SeedableRegistry feature. `DefaultsCollection` (which used `AssetCollection`) is DELETED. The `rantzsoft_defaults` plugin now handles all asset loading. Do NOT add `bevy_asset_loader` back to `breaker-game/Cargo.toml`.
+- If needed in `rantzsoft_*` crates, see docs.rs/bevy_asset_loader/0.25.0 for API.
+
+## iyes_progress 0.16 (verified — still used)
+
+- `breaker-game/Cargo.toml` still depends on `iyes_progress = "0.16"` directly for `ProgressPlugin`.
+- Must add `iyes_progress = "0.16"` directly (not re-exported by bevy_asset_loader)
 - `Progress` struct: `pub done: u32, pub total: u32` — implements `Into<f32>` (0.0–1.0 ratio)
 - `HiddenProgress(pub Progress)` — blocks transition but invisible to `get_global_progress()`
 - `ProgressTracker<S>: Resource` — `get_global_progress() -> Progress`, `is_ready() -> bool`
 - Systems returning `Progress`/`HiddenProgress` use `.track_progress::<S>()` or `.track_progress_and_stop::<S>()`
-- `ProgressEntry` system param: `set_progress(done, total)`, `set_total(u32)`, `set_done(u32)`, `add_progress(done, total)`, `add_total(u32)`, `add_done(u32)`, `is_ready() -> bool`, `is_global_ready() -> bool`, `get_global_progress() -> Progress` — no `.track_progress()` needed, registers itself
-- `ProgressPlugin::<S>::new().with_state_transition(from, to)` drives the state change, NOT `LoadingState::continue_to_state`
-- `ProgressPlugin` MUST be added BEFORE `LoadingState` plugin in the app builder
-- `finally_init_resource::<R>()` on `LoadingState` does NOT count toward progress tracking; runs after assets loaded, before transition
-- Check schedule: `Last` by default; override with `.check_progress_in(schedule)`
-- `ProgressPlugin` + `LoadingState` together: assets auto-contribute to ProgressTracker when feature active
+- `ProgressPlugin::<S>::new().with_state_transition(from, to)` drives the state change
+- `ProgressPlugin` MUST be added BEFORE the `RantzDefaultsPlugin` in the app builder
 - Clippy warning: `u32 as f32` cast triggers `cast_precision_loss` — use `Into::<f32>::into(progress)` instead
-- Sources: docs.rs/bevy_asset_loader/0.25.0, docs.rs/iyes_progress/0.16.0, github.com/IyesGames/iyes_progress v0.16.0 full.rs example
+- Sources: docs.rs/iyes_progress/0.16.0, github.com/IyesGames/iyes_progress v0.16.0 full.rs example

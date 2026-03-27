@@ -10,60 +10,28 @@ Last updated: 2026-03-19 (RESOLVED: apply_time_penalty/handle_timer_expired now 
 
 ---
 
-## HOT-RELOAD — cross-frame chain: propagate_breaker_defaults writes BreakerConfig → propagate_breaker_config reads it next frame
+## HOT-RELOAD — propagate_breaker_changes writes BreakerConfig → propagate_breaker_config reads it same frame
 
-`propagate_breaker_defaults` (PropagateDefaults set) writes `ResMut<BreakerConfig>` directly.
+`propagate_breaker_changes` (PropagateDefaults set) writes `ResMut<BreakerConfig>` directly.
 `propagate_breaker_config` (PropagateConfig set) is gated by `run_if(resource_changed::<BreakerConfig>)`.
 
 Both run in Update. PropagateConfig runs `.after(PropagateDefaults)`.
 
-**Within one frame:** `resource_changed` is evaluated by Bevy before systems run (as a run condition).
-If `propagate_breaker_defaults` modifies `BreakerConfig` in frame N, the change flag is set.
-`propagate_breaker_config` runs after it in the SAME frame (PropagateConfig is ordered after PropagateDefaults),
-BUT whether `resource_changed` sees the mutation depends on when the flag is reset.
+**Key behavior:** Bevy's `resource_changed` checks the `last_changed` tick vs the system's `last_run` tick. `propagate_breaker_changes` writes `ResMut<BreakerConfig>` directly (not via Commands), so the change is immediate and synchronous. `propagate_breaker_config` runs in the same frame in PropagateConfig (ordered after PropagateDefaults). `resource_changed` WILL detect it — same-frame chain is reliable.
 
-**Key behavior:** Bevy's `resource_changed` checks the `last_changed` tick vs the system's `last_run` tick.
-`propagate_breaker_defaults` writes `ResMut<BreakerConfig>` directly (not via Commands), so the change
-is immediate and synchronous within the same frame. `propagate_breaker_config` runs in the same frame
-in PropagateConfig (which is ordered after PropagateDefaults). The run condition evaluates against
-the pre-run `last_changed` tick. Since the write happened earlier in the same frame (earlier tick),
-`resource_changed` WILL detect it.
-
-**Verdict:** The chain IS reliable within a single frame. The set ordering `.after(PropagateDefaults)`
-guarantees `propagate_breaker_defaults` completes before `propagate_breaker_config` evaluates its
-run condition. Direct resource write (not Commands) means no deferred flush needed.
-
-**Note:** `propagate_bolt_defaults` uses `commands.insert_resource` (deferred via Commands), so
-BoltConfig is written at command-flush time (end of update), and `propagate_bolt_config` which is
-also conditioned on `resource_changed::<BoltConfig>` will NOT see it in the same frame — it sees
-it the NEXT frame. This is a one-frame delay for the bolt path vs. zero-frame delay for the breaker
-path. See LOW SEVERITY note below.
+**NOTE (SeedableRegistry feature):** `propagate_breaker_defaults` (old game-side simple config propagate system) is DELETED. `BreakerConfig` is now hot-reloaded only via `propagate_breaker_changes` (which rebuilds the BreakerRegistry AND writes BreakerConfig). Simple config types (bolt, cell, etc.) are hot-reloaded by `rantzsoft_defaults`' `propagate_defaults` system instead.
 
 ---
 
-## HOT-RELOAD LOW SEVERITY — bolt/cell/playfield/input/timerui/mainmenu/chipselect defaults use Commands.insert_resource (one-frame delay)
+## HOT-RELOAD NOTE — simple config propagation now in rantzsoft_defaults (SeedableRegistry feature)
 
-These 7 systems all use `commands.insert_resource(...)` (deferred):
-- `propagate_bolt_defaults` → `BoltConfig`
-- `propagate_cell_defaults` → `CellConfig`
-- `propagate_playfield_defaults` → `PlayfieldConfig`
-- `propagate_input_defaults` → `InputConfig`
-- `propagate_timer_ui_defaults` → `TimerUiConfig`
-- `propagate_main_menu_defaults` → `MainMenuConfig`
-- `propagate_chip_select_defaults` → `ChipSelectConfig`
+As of the SeedableRegistry feature, game-specific propagate systems for bolt/cell/playfield/input/timerui/mainmenu/chipselect are DELETED from the game HotReloadPlugin. `rantzsoft_defaults`' `propagate_defaults` system handles these automatically. Any one-frame delay concerns for those config types now live within rantzsoft_defaults' implementation.
 
-Since these use Commands (deferred), the resource is not updated until command flush (PostUpdate).
-`propagate_bolt_config` in PropagateConfig (same frame, same Update) will NOT see the new BoltConfig
-value — `resource_changed::<BoltConfig>` checks against the pre-flush state.
+The game HotReloadPlugin only handles:
+- Registry rebuilds: `propagate_cell_type_changes`, `propagate_node_layout_changes`, `propagate_breaker_changes`
+- Config → entity: `propagate_bolt_config`, `propagate_breaker_config`
 
-**Consequence:** Bolt/cell/etc. component propagation is delayed by one frame relative to the asset
-modification. For hot-reload purposes (human-scale edits), one frame (~16ms) is imperceptible.
-
-**Vs. breaker path:** `propagate_breaker_defaults` writes `ResMut<BreakerConfig>` directly, so
-`propagate_breaker_config` fires in the same frame.
-
-**Severity:** Low. Hot-reload is for development tooling — one extra frame of latency is fine.
-Not worth fixing unless the asymmetry causes confusion.
+The breaker config path remains direct `ResMut<BreakerConfig>` write (same-frame behavior still applies).
 
 ---
 
@@ -90,15 +58,13 @@ NOTE (C7-R 2026-03-25): propagate_archetype_changes renamed to propagate_breaker
 
 ---
 
-## HOT-RELOAD NO CONFLICT — PropagateDefaults systems within the same set are unordered but independent
+## HOT-RELOAD NO CONFLICT — game PropagateDefaults systems (3) are unordered but independent
 
-The 11 systems in PropagateDefaults are unordered relative to each other (except BreakerConfig
-mutable access forcing serialization between propagate_breaker_defaults and propagate_archetype_changes).
+As of SeedableRegistry feature, game HotReloadPlugin PropagateDefaults has 3 systems: `propagate_cell_type_changes`, `propagate_node_layout_changes`, `propagate_breaker_changes`. They are unordered relative to each other except:
+- `propagate_cell_type_changes.before(propagate_node_layout_changes)` — explicit ordering; layouts depend on cell types
+- `propagate_breaker_changes` also holds `ResMut<BreakerConfig>` — may be serialized by Bevy with any future system taking that resource
 
-Each system guards itself with an asset event check and returns early if no matching Modified event
-was seen. They act on disjoint resources (BoltConfig, BreakerConfig, CellConfig, PlayfieldConfig,
-InputConfig, TimerUiConfig, MainMenuConfig, ChipSelectConfig, CellTypeRegistry, NodeLayoutRegistry,
-BreakerRegistry/EffectChains-component — was ArchetypeRegistry/ActiveBehaviors → ActiveChains → ActiveEffects). No logical dependency between them.
+Each system guards itself with an asset event check. They act on disjoint resources (CellTypeRegistry, NodeLayoutRegistry, BreakerConfig/EffectChains-component).
 
 ---
 

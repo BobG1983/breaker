@@ -201,6 +201,18 @@ NOTE: `TriggerChain` was deleted in C7-R (2026-03-25). Entries referencing it ar
 - `cargo fmt --check`: PASS (0 files changed)
 - `cargo dclippy`: PASS — 0 errors
 - `cargo dsclippy`: PASS — 0 errors
+
+## Confirmed Clean as of 2026-03-26 (develop branch, full lint run post-phase-4b)
+- `cargo fmt --check`: PASS (0 files changed)
+- `cargo defaultsclippy`: PASS — 0 errors, ~13 warnings (expect_used restriction, missing_const_for_fn nursery)
+- `cargo dclippy`: PASS — 0 errors, ~127 warnings (unused_imports, dead_code, unreachable_pub, option_if_let_else, suboptimal_flops, missing_const_for_fn nursery)
+- `cargo spatial2dclippy`: PASS — 0 errors, ~30 warnings (dead_code on unused propagate_* fns/aliases, option_if_let_else, suboptimal_flops, unreachable_pub, missing_const_for_fn nursery)
+- `cargo physics2dclippy`: PASS — 0 errors, ~11 warnings (missing_const_for_fn, use_self, unnecessary_struct_initialization, unreachable_pub, redundant_clone in test code)
+- `cargo dsclippy`: PASS — 0 errors, ~10 lib warnings (ambiguous_glob_reexports, missing_const_for_fn, too_long_first_doc_paragraph, unreachable_pub, suboptimal_flops in tests)
+- New warning: `ambiguous_glob_reexports` in `breaker-scenario-runner/src/invariants/checkers/mod.rs:26` — both `check_run_stats_monotonic::*` and `valid_breaker_state::*` re-export a `checker` module. Warning only.
+- New mass of `unused_imports` warnings in `effect/` domain: all bridge functions and effect handlers re-exported in mod.rs but not yet wired into the plugin. Forward-declared. Warning only.
+- `unused_variable` warning (effect/effects/life_lost.rs:35): `trigger: On<LoseLifeFired>` not prefixed with `_`. Warning only.
+- `redundant_clone` warnings (chips/offering.rs:259,260,478) and `needless_collect` warning (test position2d.rs:60). Nursery, warnings only.
 - All warnings are nursery/restriction lints (dead_code forward declarations, unused_imports for pre-wired re-exports, option_if_let_else, suboptimal_flops, missing_const_for_fn, redundant_clone, etc.)
 
 ## Confirmed Clean as of 2026-03-26 (develop branch, post-phase-4b chip effects)

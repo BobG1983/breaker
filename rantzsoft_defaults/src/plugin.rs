@@ -439,7 +439,7 @@ mod tests {
 
     /// When the `hot-reload` feature is enabled, `add_config` wires
     /// `propagate_defaults` so that modifying the asset updates the config.
-    #[cfg(feature = "hot-reload")]
+    #[cfg(all(feature = "hot-reload", feature = "progress"))]
     #[test]
     fn add_config_wires_propagate_defaults_on_hot_reload() {
         let plugin = RantzDefaultsPluginBuilder::<TestState>::new(TestState::Loading)
@@ -513,7 +513,7 @@ mod tests {
     /// When the `hot-reload` feature is enabled, `add_registry` wires
     /// `propagate_registry` so that modifying a registry asset rebuilds
     /// the registry.
-    #[cfg(feature = "hot-reload")]
+    #[cfg(all(feature = "hot-reload", feature = "progress"))]
     #[test]
     fn add_registry_wires_propagate_registry_on_hot_reload() {
         let plugin = RantzDefaultsPluginBuilder::<TestState>::new(TestState::Loading)

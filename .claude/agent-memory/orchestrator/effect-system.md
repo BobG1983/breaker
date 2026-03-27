@@ -13,8 +13,8 @@ The effect system has been redesigned twice due to implementation diverging from
 ## Architecture (HOW it works)
 
 **`docs/architecture/effects/index.md`** — start here. Links to all architecture docs:
-- `effect_enum.md` — EffectKind enum with inline fields, fire/reverse methods, per-module functions
-- `components.md` — ActiveEffects (permanent) and ArmedEffects (consumed)
+- `core_types.md` — ALL type definitions: EffectKind, Trigger, EffectNode, Target, RootEffect, ImpactTarget, AttractionType
+- `components.md` — BoundEffects (permanent) and StagedEffects (consumed)
 - `node_types.md` — When, Do, Once, On, Until (with detailed Until→When+Reverse desugaring)
 - `commands.md` — EffectCommandsExt trait, FireEffectCommand, ReverseEffectCommand, TransferCommand
 - `evaluation.md` — how trigger systems walk chains step by step
@@ -36,7 +36,7 @@ The effect system has been redesigned twice due to implementation diverging from
 
 1. Effects act on self (the entity they live on)
 2. On only redirects — never fires on current entity
-3. ActiveEffects = permanent, ArmedEffects = consumed
+3. BoundEffects = permanent, StagedEffects = consumed
 4. Commands extension bridges triggers → effects (fire_effect, reverse_effect, transfer_effect)
 5. EffectKind enum with inline fields — fire()/reverse() methods call per-module functions
 6. No Effect trait — exhaustive match provides compile-time enforcement
@@ -44,6 +44,6 @@ The effect system has been redesigned twice due to implementation diverging from
 8. Trigger systems are normal Bevy systems — no exclusive world access
 9. Dispatch lives in entity domains (chips, breaker, cells), NOT effect domain
 10. Collision detection lives in entity domains, fires impact messages
-11. Until desugars: fires Do children, pushes When children to ActiveEffects, replaces itself with When(trigger, [Reverse(effects, chains)])
+11. Until desugars: fires Do children, pushes When children to BoundEffects, replaces itself with When(trigger, [Reverse(effects, chains)])
 12. ALL effects define reverse() — there are no no-ops
 13. Impact(X) = global, Impacted(X) = targeted on BOTH participants

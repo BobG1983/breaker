@@ -15,7 +15,7 @@ pub trait SeedableConfig: Asset + Clone + Send + Sync + 'static {
     /// The `Resource` type seeded from this defaults asset.
     type Config: Resource + From<Self> + Send + Sync + 'static;
 
-    /// Asset path used by `bevy_asset_loader` to load this RON file.
+    /// Asset path for the RON file, used by the `rantzsoft_defaults` loading pipeline.
     fn asset_path() -> &'static str;
 
     /// File extensions recognized for this asset type.

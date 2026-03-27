@@ -4,9 +4,16 @@ description: Verified dependency versions and audit state as of 2026-03-23 (Wave
 type: project
 ---
 
-Vetted as of 2026-03-24 (spatial/physics extraction branch). Prior vetted: 2026-03-23 (Wave 4 audit).
+Vetted as of 2026-03-26 (SeedableRegistry audit). Prior vetted: 2026-03-24 (spatial/physics extraction branch).
 
 ## Direct Dependencies
+
+### rantzsoft_defaults (audited 2026-03-26)
+- bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted
+- ron 0.12 — current, no CVEs
+- serde 1 (features = ["derive"]) — current, trusted
+- iyes_progress 0.16 (optional, feature = "progress") — current, trusted
+- rantzsoft_defaults_derive (path) — internal
 
 ### rantzsoft_spatial2d (new in spatial/physics extraction branch)
 - bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted

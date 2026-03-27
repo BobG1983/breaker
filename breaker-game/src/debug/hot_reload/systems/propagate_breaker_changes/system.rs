@@ -1,6 +1,7 @@
 //! System to propagate `BreakerDefinition` registry changes to live game state.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_defaults::prelude::DefaultsHandle;
 
 use crate::{
     breaker::{
@@ -19,6 +20,8 @@ use crate::{
 /// Bundled system parameters for the breaker change propagation system.
 #[derive(SystemParam)]
 pub(crate) struct BreakerChangeContext<'w, 's> {
+    /// Handle to the breaker defaults asset (for looking up the correct asset).
+    defaults_handle: Option<Res<'w, DefaultsHandle<BreakerDefaults>>>,
     /// Loaded breaker defaults assets.
     defaults_assets: Res<'w, Assets<BreakerDefaults>>,
     /// Currently selected breaker name.
@@ -52,7 +55,11 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     let def = def.clone();
 
     // Reset BreakerConfig from defaults + re-apply stat overrides
-    if let Some(loaded) = ctx.defaults_assets.iter().next().map(|(_, d)| d) {
+    if let Some(loaded) = ctx
+        .defaults_handle
+        .as_ref()
+        .and_then(|h| ctx.defaults_assets.get(h.0.id()))
+    {
         *ctx.config = BreakerConfig::from(loaded.clone());
     }
     apply_stat_overrides(&mut ctx.config, &def.stat_overrides);

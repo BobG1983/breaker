@@ -18,16 +18,17 @@ brickbreaker/                 # Repository root (workspace)
 ├── rantzsoft_physics2d/      # Game-agnostic 2D physics primitives (quadtree, CCD, CollisionLayers, DistanceConstraint)
 │   ├── Cargo.toml            # Package: rantzsoft_physics2d
 │   └── src/                  # Aabb2D, CollisionLayers, DistanceConstraint, quadtree, CCD
-├── rantzsoft_defaults/       # Config/defaults pipeline: GameConfig derive macro, RON asset loader, seed/propagate systems, DefaultsSystems set, RantzDefaultsPlugin
+├── rantzsoft_defaults/       # Config/defaults pipeline: GameConfig derive macro, RON asset loader, seed/propagate systems, DefaultsSystems set, RantzDefaultsPlugin, SeedableRegistry trait
 │   ├── Cargo.toml
 │   └── src/
 │       ├── lib.rs            # Re-exports GameConfig, SeedableConfig; declares all modules
 │       ├── handle.rs         # DefaultsHandle<D> resource (typed asset handle wrapper)
 │       ├── loader.rs         # RonAssetLoader<T> generic RON AssetLoader + deserialize_ron helper
-│       ├── plugin.rs         # RantzDefaultsPlugin, RantzDefaultsPluginBuilder, DefaultsSystems set (Seed, PropagateDefaults)
-│       ├── prelude.rs        # Public re-exports: GameConfig, SeedableConfig, DefaultsHandle, RonAssetLoader, DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder
+│       ├── plugin.rs         # RantzDefaultsPlugin, RantzDefaultsPluginBuilder (add_config/add_registry API), DefaultsSystems set (Seed, PropagateDefaults)
+│       ├── prelude.rs        # Public re-exports: GameConfig, SeedableConfig, SeedableRegistry, RegistryHandles, DefaultsHandle, RonAssetLoader, DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder
+│       ├── registry.rs       # SeedableRegistry trait (asset_dir, extensions, seed, update_single, update_all); RegistryHandles<A> resource (folder + typed handles)
 │       ├── seedable.rs       # SeedableConfig trait (asset_path, extensions, Config associated type)
-│       └── systems.rs        # seed_config, propagate_defaults, init_defaults_handle generic systems
+│       └── systems.rs        # seed_config, propagate_defaults, init_defaults_handle, seed_registry, propagate_registry, init_registry_handles generic systems
 ├── rantzsoft_defaults_derive/ # Proc-macro crate: #[derive(GameConfig)] for RON defaults loading
 │   ├── Cargo.toml
 │   └── src/lib.rs
@@ -60,7 +61,7 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── chips/            # Chip system — template loading, EffectNode effects, observer-based application; EvolutionRegistry for evolution recipes
+├── chips/            # Chip system — ChipTemplateRegistry (SeedableRegistry) + ChipCatalog (expanded definitions + recipes); EvolutionRegistry (SeedableRegistry for evolution definitions); observer-based effect application
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
 ├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker, highlight detection (highlights/ sub-domain), spawn_highlight_text juice
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)

@@ -65,11 +65,10 @@ Entities with interpolation: Bolt (baseline + ExtraBolt) — both get Interpolat
 ### `spawn_loading_screen` — OnEnter(GameState::Loading)
 - Commands (spawn UI)
 
-### Seeding systems (x11) — Update, run_if(GameState::Loading), tracked as progress
-- Each reads its own Res<Assets<*Defaults>> and Commands (insert_resource)
-- Systems: seed_playfield_config, seed_bolt_config, seed_breaker_config, seed_cell_config,
-  seed_input_config, seed_main_menu_config, seed_timer_ui_config, seed_archetype_registry,
-  seed_cell_type_registry, seed_node_layout_registry, seed_chip_select_config (was seed_upgrade_select_config), seed_chip_registry
+### RantzDefaultsPlugin (from RantzDefaultsPluginBuilder) — Startup + Update progress systems
+- `add_config::<*Defaults>()` registers per-config: `init_defaults_handle` (Startup) + `seed_config` (Update, progress-tracked) — 9 configs: Playfield, Bolt, Breaker, Cell, Input, MainMenu, TimerUi, ChipSelect, DifficultyCurve
+- `add_registry::<R>()` registers per-registry: `init_registry_handles` (Startup) + `seed_registry` (Update, progress-tracked) — 5 registries: CellTypeRegistry, BreakerRegistry, NodeLayoutRegistry, ChipTemplateRegistry, EvolutionRegistry
+- NOTE: `DefaultsCollection` + 14 hand-written seed systems DELETED (SeedableRegistry feature)
 
 ### `update_loading_bar` — Update, run_if(GameState::Loading)
 - Reads: Res<ProgressTracker<GameState>>

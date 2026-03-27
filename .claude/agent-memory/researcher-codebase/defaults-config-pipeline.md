@@ -1,327 +1,180 @@
 ---
 name: defaults-config-pipeline
-description: End-to-end data flow for the defaults/config system: GameConfig derive macro, DefaultsCollection, asset loading, seed systems, progress tracking, and hot-reload. Accurate for Bevy 0.18 + bevy_asset_loader + iyes_progress.
+description: End-to-end data flow for the defaults/config system after SeedableRegistry feature: RantzDefaultsPluginBuilder, SeedableConfig, SeedableRegistry. DefaultsCollection and 14 seed systems are DELETED.
 type: reference
 ---
 
-# Defaults / Config Pipeline
+# Defaults / Config Pipeline (SeedableRegistry era)
+
+> **NOTE:** `DefaultsCollection` + `bevy_asset_loader` + 14 hand-written seed systems are DELETED as of the SeedableRegistry feature branch. The new pipeline uses `RantzDefaultsPluginBuilder` from `rantzsoft_defaults`.
+
+---
 
 ## 1. The `GameConfig` Derive Macro
 
 **Crate:** `rantzsoft_defaults_derive` (proc-macro crate), re-exported from `rantzsoft_defaults`.
 
-**Forward form — applied to `*Defaults` struct:**
+**Reversed form — applied to `*Config` struct (game standard):**
 ```rust
-#[derive(Asset, TypePath, Deserialize, Clone, Debug, GameConfig)]
-#[game_config(name = "FooConfig")]
-pub struct FooDefaults { ... }
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "FooDefaults",
+    path = "config/defaults.foo.ron",
+    ext = "foo.ron"
+)]
+pub struct FooConfig { ... }
 ```
-Generates: `FooConfig` (Resource+Debug+Clone), `From<FooDefaults> for FooConfig`, `Default for FooConfig` (delegates to `FooDefaults::default().into()`).
+Generates: `FooDefaults` struct (Asset+TypePath+Deserialize+Clone), bidirectional `From` impls, `Default for FooDefaults` (delegates to `FooConfig::default().into()`), `merge_from_defaults(&FooDefaults)` on `FooConfig`, and `impl SeedableConfig for FooDefaults` with `asset_path()` and `extensions()`.
 
-**Reversed form — applied to `*Config` struct (new as of rantzsoft prelude session):**
-```rust
-#[derive(Resource, Debug, Clone, GameConfig)]
-#[game_config(defaults = "FooDefaults")]
-struct FooConfig { ... }
-```
-Generates: `FooDefaults` struct, bidirectional `From` impls, `Default for FooDefaults` (delegates to `FooConfig::default().into()`), and `merge_from_defaults(&FooDefaults)` method on `FooConfig`.
+**No Bevy systems, plugins, or asset loader wiring in the proc-macro itself. Pure code generation.**
 
-**With SeedableConfig (adds `path` + `ext` to reversed form):**
-```rust
-#[game_config(defaults = "FooDefaults", path = "config/foo.ron", ext = "foo.ron")]
-struct FooConfig { ... }
-```
-Additionally generates `impl SeedableConfig for FooDefaults`.
-
-No Bevy systems, plugins, or asset loader wiring. Pure code generation.
-
-**NOTE:** The `breaker-game` pipeline below uses the FORWARD form exclusively. The reversed form and SeedableConfig are available but not yet adopted by the game codebase.
+All game `*Config` structs now use the reversed form. The forward form (`#[game_config(name = "FooConfig")]` on `*Defaults`) is available in the crate but NOT used by the game.
 
 ---
 
-## 2. All `*Defaults` Structs That Derive `GameConfig`
+## 2. All `*Config` Structs and Their Defaults Types
 
-| `*Defaults` type | `*Config` generated | File | RON asset key in `DefaultsCollection` |
+| `*Config` type | `*Defaults` generated | File | RON asset path |
 |---|---|---|---|
-| `PlayfieldDefaults` | `PlayfieldConfig` | `shared/mod.rs` | `collection.playfield` |
-| `BoltDefaults` | `BoltConfig` | `bolt/resources.rs` | `collection.bolt` |
-| `BreakerDefaults` | `BreakerConfig` | `breaker/resources.rs` | `collection.breaker` |
-| `CellDefaults` | `CellConfig` | `cells/resources.rs` | `collection.cell_defaults` |
-| `InputDefaults` | `InputConfig` | `input/resources.rs` | `collection.input` |
-| `MainMenuDefaults` | `MainMenuConfig` | `screen/main_menu/resources.rs` | `collection.main_menu` |
-| `TimerUiDefaults` | `TimerUiConfig` | `ui/resources.rs` | `collection.timer_ui` |
-| `ChipSelectDefaults` | `ChipSelectConfig` | `screen/chip_select/resources.rs` | `collection.chip_select` |
-| `TransitionDefaults` | `TransitionConfig` | `fx/transition.rs` | **NOT in DefaultsCollection** (see §6) |
-| `HighlightDefaults` | `HighlightConfig` | `run/definition.rs` | **NOT in DefaultsCollection** (see §6) |
+| `PlayfieldConfig` | `PlayfieldDefaults` | `shared/playfield.rs` | `config/defaults.playfield.ron` |
+| `BoltConfig` | `BoltDefaults` | `bolt/resources.rs` | `config/defaults.bolt.ron` |
+| `BreakerConfig` | `BreakerDefaults` | `breaker/resources.rs` | `config/defaults.breaker.ron` |
+| `CellConfig` | `CellDefaults` | `cells/resources.rs` | `config/defaults.cells.ron` |
+| `InputConfig` | `InputDefaults` | `input/resources.rs` | `config/defaults.input.ron` |
+| `MainMenuConfig` | `MainMenuDefaults` | `screen/main_menu/resources.rs` | `config/defaults.mainmenu.ron` |
+| `TimerUiConfig` | `TimerUiDefaults` | `ui/resources.rs` | `config/defaults.timerui.ron` |
+| `ChipSelectConfig` | `ChipSelectDefaults` | `screen/chip_select/resources.rs` | `config/defaults.chipselect.ron` |
+| `DifficultyCurve` | `DifficultyCurveDefaults` | `run/resources.rs` | `config/defaults.difficulty.ron` |
 
-**Non-`GameConfig` but loaded via `DefaultsCollection`:**
-- `DifficultyCurveDefaults` — derives `Asset + TypePath + Deserialize + Clone + Debug` only (no `GameConfig`). Has a hand-written `impl From<DifficultyCurveDefaults> for DifficultyCurve`. `DifficultyCurve` is the live `Resource`.
-
-**Collection-style (registry building, not Config resources):**
-- `Vec<Handle<CellTypeDefinition>>` — builds `CellTypeRegistry`
-- `Vec<Handle<NodeLayout>>` — builds `NodeLayoutRegistry` (depends on `CellTypeRegistry`)
-- `Vec<Handle<ArchetypeDefinition>>` — builds `ArchetypeRegistry`
-- `Vec<Handle<ChipDefinition>>` — two consumers: `seed_chip_registry` (non-evolution only) + `seed_evolution_registry` (evolution only)
-- `Vec<Handle<ChipTemplate>>` — consumed by `seed_chip_registry` via `expand_template()`
+**NOT loaded through RantzDefaultsPluginBuilder (still use Default only):**
+- `TransitionConfig` (`fx/transition.rs`) — `FxPlugin` does NOT seed from file; relies on `Default` impl. Gap accepted.
+- `HighlightConfig` (`run/definition.rs`) — `RunPlugin::build` calls `app.init_resource::<HighlightConfig>()`. Gap accepted.
 
 ---
 
-## 3. `DefaultsCollection` Definition
+## 3. Registry Types
 
-```
-breaker-game/src/screen/loading/resources.rs
-```
+Registries implement `SeedableRegistry` trait from `rantzsoft_defaults::registry`:
 
-```rust
-#[derive(AssetCollection, Resource)]
-pub(crate) struct DefaultsCollection {
-    #[asset(path = "config/defaults.playfield.ron")]  pub playfield: Handle<PlayfieldDefaults>,
-    #[asset(path = "config/defaults.bolt.ron")]       pub bolt: Handle<BoltDefaults>,
-    #[asset(path = "config/defaults.breaker.ron")]    pub breaker: Handle<BreakerDefaults>,
-    #[asset(path = "config/defaults.cells.ron")]      pub cell_defaults: Handle<CellDefaults>,
-    #[asset(path = "config/defaults.input.ron")]      pub input: Handle<InputDefaults>,
-    #[asset(path = "config/defaults.mainmenu.ron")]   pub main_menu: Handle<MainMenuDefaults>,
-    #[asset(path = "config/defaults.timerui.ron")]    pub timer_ui: Handle<TimerUiDefaults>,
-    #[asset(path = "cells", collection(typed))]       pub cells: Vec<Handle<CellTypeDefinition>>,
-    #[asset(path = "nodes", collection(typed))]       pub nodes: Vec<Handle<NodeLayout>>,
-    #[asset(path = "breakers", collection(typed))]    pub breakers: Vec<Handle<ArchetypeDefinition>>,
-    #[asset(path = "config/defaults.chipselect.ron")] pub chip_select: Handle<ChipSelectDefaults>,
-    #[asset(path = "chips", collection(typed))]       pub chips: Vec<Handle<ChipDefinition>>,
-    #[asset(path = "chips", collection(typed))]       pub chip_templates: Vec<Handle<ChipTemplate>>,
-    #[asset(path = "config/defaults.difficulty.ron")] pub difficulty: Handle<DifficultyCurveDefaults>,
-}
-```
+| Registry | Asset type | `asset_dir()` | `extensions()` | File |
+|---|---|---|---|---|
+| `CellTypeRegistry` | `CellTypeDefinition` | `"cells"` | `["cell.ron"]` | `cells/resources.rs` |
+| `BreakerRegistry` | `BreakerDefinition` | `"breakers"` | `["bdef.ron"]` | `breaker/registry.rs` |
+| `NodeLayoutRegistry` | `NodeLayout` | `"nodes"` | `["layout.ron"]` | `run/node/resources.rs` |
+| `ChipTemplateRegistry` | `ChipTemplate` | `"chips/templates"` | `["chip.ron"]` | `chips/resources.rs` |
+| `EvolutionRegistry` | `ChipDefinition` | `"chips/evolution"` | `["evolution.ron"]` | `chips/resources.rs` |
 
-**Key facts:**
-- `DefaultsCollection` is a Bevy `Resource` and also a `bevy_asset_loader` `AssetCollection`.
-- All asset paths are relative to `assets/`.
-- Collection fields (`collection(typed)`) load all files in a directory matching the registered extension.
-- `chips` and `chip_templates` are two different asset types loaded from the same `chips/` directory. `ChipDefinition` → `.evolution.ron`; `ChipTemplate` → `.chip.ron` (unique extensions, set in `RonAssetPlugin` registrations).
-- `DefaultsCollection` itself is NOT manually inserted — `bevy_asset_loader` inserts it as a resource once all asset loads succeed.
+**NOTE:** `ChipCatalog` (the flat lookup + recipe table built from templates) is NOT a `SeedableRegistry`. It is populated by `build_chip_catalog` (a separate `LoadingPlugin` system that runs after `ChipTemplateRegistry` is seeded). See §6.
 
 ---
 
-## 4. Asset Loading Pipeline (Phase 1: ScreenPlugin setup)
+## 4. Loading Pipeline (ScreenPlugin)
 
-```
-breaker-game/src/screen/plugin.rs
-```
-
-### Step A — Register RON asset plugins (unique file extension per type)
-
-`ScreenPlugin::build` calls `app.add_plugins(RonAssetPlugin::<T>::new(&["ext.ron"]))` for all 14 asset types. Each unique extension prevents `bevy_common_assets` from ambiguously trying every loader on every file.
-
-### Step B — Register state machine
-
-```rust
-app.init_state::<GameState>()     // starts in GameState::Loading (default)
-   .add_sub_state::<PlayingState>()
-```
-
-### Step C — Register progress plugin
+`ScreenPlugin::build` adds:
 
 ```rust
 app.add_plugins(
+    RantzDefaultsPluginBuilder::<GameState>::new(GameState::Loading)
+        .add_config::<PlayfieldDefaults>()
+        .add_config::<BoltDefaults>()
+        .add_config::<BreakerDefaults>()
+        .add_config::<CellDefaults>()
+        .add_config::<InputDefaults>()
+        .add_config::<MainMenuDefaults>()
+        .add_config::<TimerUiDefaults>()
+        .add_config::<ChipSelectDefaults>()
+        .add_config::<DifficultyCurveDefaults>()
+        // Registries
+        .add_registry::<CellTypeRegistry>()
+        .add_registry::<BreakerRegistry>()
+        .add_registry::<NodeLayoutRegistry>()
+        .add_registry::<ChipTemplateRegistry>()
+        .add_registry::<EvolutionRegistry>()
+        .build(),
+)
+.add_plugins(
     ProgressPlugin::<GameState>::new()
-        .with_state_transition(GameState::Loading, GameState::MainMenu)
+        .with_state_transition(GameState::Loading, GameState::MainMenu),
 )
 ```
 
-`iyes_progress` tracks a global progress counter per state. When `done >= total` in `GameState::Loading`, it automatically drives `NextState` to `GameState::MainMenu`.
+### For each `add_config::<D>()`:
+- Registers `RonAssetLoader<D>` (reads the file declared by `D::asset_path()`)
+- Adds `Startup` system: `init_defaults_handle::<D>` — loads the asset and inserts `DefaultsHandle<D>` resource
+- Adds `Update` (in loading state, tracked as progress): `seed_config::<D>` — waits for asset to load, calls `commands.init_resource::<D::Config>()` by converting via `From<D> for D::Config`
 
-### Step D — Register asset loader
+### For each `add_registry::<R>()`:
+- Registers `RonAssetLoader<R::Asset>` (reads files in `R::asset_dir()` matching `R::extensions()`)
+- Adds `Startup` system: `init_registry_handles::<R>` — calls `asset_server.load_folder(R::asset_dir())` and inserts `RegistryHandles<R::Asset>`
+- Adds `Update` (in loading state, tracked as progress): `seed_registry::<R>` — waits for folder load, resolves typed handles, calls `registry.seed(&pairs)` after all handles loaded
 
-```rust
-app.add_loading_state(
-    LoadingState::new(GameState::Loading)
-        .load_collection::<DefaultsCollection>()
-)
-```
-
-`bevy_asset_loader` fires all asset loads declared in `DefaultsCollection` when `GameState::Loading` is entered. Once all handles resolve, it inserts `DefaultsCollection` as a resource.
-
----
-
-## 5. Config Seeding (Phase 2: LoadingPlugin systems)
-
-```
-breaker-game/src/screen/loading/plugin.rs
-breaker-game/src/screen/loading/systems/seed_*.rs
-```
-
-All seed systems run in `Update` while `in_state(GameState::Loading)`, registered via `.track_progress::<GameState>()`.
-
-### Seed system pattern (for `*Config` resources from `*Defaults` assets)
-
-```rust
-pub(crate) fn seed_foo_config(
-    collection: Option<Res<DefaultsCollection>>,  // Option: not yet inserted if assets still loading
-    assets: Res<Assets<FooDefaults>>,
-    mut commands: Commands,
-    mut seeded: Local<bool>,                       // idempotency guard
-) -> Progress {
-    if *seeded { return Progress { done: 1, total: 1 }; }
-    let Some(collection) = collection else { return Progress { done: 0, total: 1 }; };
-    let Some(defaults) = assets.get(&collection.foo) else { return Progress { done: 0, total: 1 }; };
-    commands.insert_resource::<FooConfig>(defaults.clone().into()); // From<FooDefaults> via GameConfig macro
-    *seeded = true;
-    Progress { done: 1, total: 1 }
-}
-```
-
-**Critical details:**
-- `collection` is `Option<Res<>>` because `DefaultsCollection` doesn't exist until `bevy_asset_loader` finishes — the seed system polls for it.
-- `assets.get(&collection.foo)` also returns `None` while the handle is unresolved — double guard.
-- `Local<bool>` is the idempotency guard: once seeded, always returns `done:1/total:1` without re-reading.
-- The system returns `Progress { done, total }`, which `iyes_progress` aggregates into the global counter.
-- Command insertion is deferred: `PlayfieldConfig` (etc.) is NOT available until the frame after `seed_*_config` runs and commands are flushed.
-
-### Full list of seeding operations (14 systems)
-
-| System | Output resource | Input collection field |
-|---|---|---|
-| `seed_playfield_config` | `PlayfieldConfig` | `collection.playfield` |
-| `seed_bolt_config` | `BoltConfig` | `collection.bolt` |
-| `seed_breaker_config` | `BreakerConfig` | `collection.breaker` |
-| `seed_cell_config` | `CellConfig` | `collection.cell_defaults` |
-| `seed_input_config` | `InputConfig` | `collection.input` |
-| `seed_main_menu_config` | `MainMenuConfig` | `collection.main_menu` |
-| `seed_timer_ui_config` | `TimerUiConfig` | `collection.timer_ui` |
-| `seed_chip_select_config` | `ChipSelectConfig` | `collection.chip_select` |
-| `seed_difficulty_curve` | `DifficultyCurve` | `collection.difficulty` |
-| `seed_cell_type_registry` | `CellTypeRegistry` | `collection.cells` (all handles) |
-| `seed_node_layout_registry` | `NodeLayoutRegistry` | `collection.nodes` (depends on `CellTypeRegistry` existing) |
-| `seed_archetype_registry` | `ArchetypeRegistry` | `collection.breakers` |
-| `seed_chip_registry` | `ChipRegistry` | `collection.chip_templates` (expanded via `expand_template`) + `collection.chips` (non-evolution only) |
-| `seed_evolution_registry` | `EvolutionRegistry` | `collection.chips` (evolution-rarity only) |
-
-### Dependency chain
-
-`seed_node_layout_registry` has an explicit dependency: it also takes `Option<Res<CellTypeRegistry>>` and returns `done:0` until `CellTypeRegistry` exists. This means `seed_cell_type_registry` must complete (and flush commands) before `seed_node_layout_registry` can proceed. All other seed systems are independent.
-
-### Registry building (not `*Config` resources)
-
-- `CellTypeRegistry`: `HashMap<char, CellTypeDefinition>`. Validates each definition (hp > 0), asserts alias != '.', asserts no duplicate aliases (panics on dup — data authoring error).
-- `NodeLayoutRegistry`: validates each layout against `CellTypeRegistry`; returns `done:0` (non-panic) on invalid layout.
-- `ArchetypeRegistry`: asserts no duplicate archetype names (panics on dup).
-- `ChipRegistry`: expands `ChipTemplate`s via `expand_template()` → each `RaritySlot` (common/uncommon/rare/legendary) becomes one `ChipDefinition` with name `"{prefix} {template.name}"`. Also absorbs non-evolution `ChipDefinition` assets for backward compatibility.
-- `EvolutionRegistry`: wraps evolution `ChipDefinition`s as `EvolutionRecipe { ingredients, result_definition }`.
+### Progress tracking:
+`iyes_progress::ProgressPlugin<GameState>` drives `GameState::Loading → GameState::MainMenu` when all tracked systems report `done`. Each `seed_config` and `seed_registry` system returns `Progress { done, total }` via `.track_progress::<GameState>()`.
 
 ---
 
-## 6. Progress Tracking and State Transition
+## 5. `LoadingPlugin` (remaining systems)
 
-**Mechanism:** `iyes_progress::ProgressPlugin<GameState>` + `.track_progress::<GameState>()`.
-
-Every seed system returns `Progress { done: u32, total: u32 }`. The `.track_progress::<GameState>()` wrapper registers this return value into the `ProgressTracker<GameState>` resource.
-
-`ProgressPlugin` checks each frame: when `global.done >= global.total` across all tracked systems, it drives `NextState<GameState>` to `GameState::MainMenu`.
-
-**Loading bar system** (`update_loading_bar`, `Update` while `Loading`):
-```rust
-let global = progress.get_global_progress();
-let ratio = global.done / global.total;
-// Sets Node::width = Val::Percent(ratio * 100.0) on LoadingBarFill entity
-// Updates Text with "Loading... {done}/{total}" on LoadingProgressText entity
-```
-
-The loading bar UI is spawned by `spawn_loading_screen` in `OnEnter(GameState::Loading)` and cleaned up by `cleanup_entities::<LoadingScreen>` in `OnExit(GameState::Loading)`.
-
-**Loading screen UI hierarchy:**
-```
-(LoadingScreen, Node 100%x100% column center)
-  ├── (LoadingProgressText, Text "Loading...")
-  └── (Node bar background 720x43px, BackgroundColor dim white)
-        └── (LoadingBarFill, Node width=0% to 100%, BackgroundColor blue)
-```
+After `DefaultsCollection` deletion, `LoadingPlugin` has only:
+- `build_chip_catalog` — `Update`, tracked as progress — builds `ChipCatalog` (flat lookup + recipes) from `ChipTemplateRegistry` + `EvolutionRegistry` after they are seeded
+- `spawn_loading_screen` — `OnEnter(GameState::Loading)`
+- `update_loading_bar` — `Update, run_if(GameState::Loading)`
+- `cleanup_entities::<LoadingScreen>` — `OnExit(GameState::Loading)`
 
 ---
 
-## 7. Config Resources Available Post-Loading
+## 6. ChipCatalog
 
-After `GameState::Loading` exits (state transition to `GameState::MainMenu`), the following resources are guaranteed to exist in the Bevy world:
+`ChipCatalog` is NOT a `SeedableRegistry`. It is a derived resource built from `ChipTemplateRegistry` (which stores raw templates) by `build_chip_catalog`. The system:
+- Expands each `ChipTemplate` via `expand_template()` → produces one `ChipDefinition` per `RaritySlot`
+- Absorbs `EvolutionRegistry` definitions as `Recipe` entries
+- Result: `ChipCatalog` with flat name→ChipDefinition map (insertion-order preserved) and recipe list
 
-**`*Config` resources (all derived via `GameConfig` macro):**
+`build_chip_catalog` is the only remaining game-specific seed system in `LoadingPlugin`.
+
+---
+
+## 7. Configs Available Post-Loading
+
+After `GameState::Loading` exits, guaranteed resources:
+
+**`*Config` resources (all via `seed_config`):**
 - `PlayfieldConfig`, `BoltConfig`, `BreakerConfig`, `CellConfig`
 - `InputConfig`, `MainMenuConfig`, `TimerUiConfig`, `ChipSelectConfig`
+- `DifficultyCurve` (via `seed_config::<DifficultyCurveDefaults>`)
 
-**Non-macro runtime resource:**
-- `DifficultyCurve` (hand-written `From<DifficultyCurveDefaults>`)
+**Registry resources (all via `seed_registry`):**
+- `CellTypeRegistry`, `BreakerRegistry`, `NodeLayoutRegistry`
+- `ChipTemplateRegistry`, `EvolutionRegistry`
 
-**Registry resources:**
-- `CellTypeRegistry`, `NodeLayoutRegistry`, `ArchetypeRegistry`
-- `ChipRegistry`, `EvolutionRegistry`
+**Derived registry (via `build_chip_catalog`):**
+- `ChipCatalog`
 
-**The `DefaultsCollection` resource** remains alive in the world — it is not removed after loading. Hot-reload systems use it to correlate `AssetEvent::Modified` events back to the correct handle.
-
----
-
-## 8. Configs NOT Loaded Through `DefaultsCollection`
-
-Two `GameConfig`-derived types are **not** in `DefaultsCollection`:
-
-**`TransitionConfig`** (`fx/transition.rs`):
-- `FxPlugin` does NOT call `init_resource::<TransitionConfig>()`.
-- `TransitionConfig` is used directly via `Res<TransitionConfig>` in `spawn_transition_out` / `spawn_transition_in`.
-- Tests insert it manually via `app.insert_resource(TransitionConfig::default())`.
-- There is no seed system or hot-reload for `TransitionConfig`. It relies on `Default` (which delegates to `TransitionDefaults::default().into()`).
-- **Gap:** `TransitionConfig` is never explicitly inserted at runtime outside tests — it works only because `Default` is implemented and Bevy can init it via `init_resource`.
-
-**`HighlightConfig`** (`run/definition.rs`):
-- `RunPlugin::build` calls `app.init_resource::<HighlightConfig>()` — this inserts the default.
-- `HighlightDefaults` file `assets/config/defaults.highlights.ron` exists and parses correctly, but there is NO seed system that loads it via `DefaultsCollection`.
-- `HighlightConfig` is therefore always at its Rust default values in production (not hot-reloadable and not read from the RON file at runtime). The RON file is only tested via `include_str!` in unit tests.
-- **Gap:** `HighlightDefaults` derives `GameConfig` and has a RON file, but the pipeline from file → `DefaultsCollection` → `seed_highlight_config` → `HighlightConfig` does not exist.
+**NOT via DefaultsPlugin (use `Default`):**
+- `TransitionConfig` (gap — not seeded from file)
+- `HighlightConfig` (gap — init_resource in RunPlugin, uses Default)
 
 ---
 
-## 9. Hot-Reload Path (debug only)
+## 8. Hot-Reload Path (HotReloadPlugin)
 
-```
-breaker-game/src/debug/hot_reload/plugin.rs
-```
-
-`HotReloadPlugin` runs during `GameState::Playing` only, in two ordered system sets:
-
-**Set 1: `HotReloadSystems::PropagateDefaults`** — watches `AssetEvent<FooDefaults>`, re-seeds `FooConfig` on `Modified`:
-
-| System | Asset type watched | Config resource re-seeded |
-|---|---|---|
-| `propagate_bolt_defaults` | `BoltDefaults` | `BoltConfig` |
-| `propagate_breaker_defaults` | `BreakerDefaults` | `BreakerConfig` |
-| `propagate_cell_defaults` | `CellDefaults` | `CellConfig` |
-| `propagate_playfield_defaults` | `PlayfieldDefaults` | `PlayfieldConfig` |
-| `propagate_input_defaults` | `InputDefaults` | `InputConfig` |
-| `propagate_timer_ui_defaults` | `TimerUiDefaults` | `TimerUiConfig` |
-| `propagate_main_menu_defaults` | `MainMenuDefaults` | `MainMenuConfig` |
-| `propagate_chip_select_defaults` | `ChipSelectDefaults` | `ChipSelectConfig` |
-| `propagate_cell_type_changes` | `CellTypeDefinition` | `CellTypeRegistry` (rebuilt) |
-| `propagate_node_layout_changes` | `NodeLayout` | `NodeLayoutRegistry` (rebuilt, after cell type changes) |
-| `propagate_archetype_changes` | `ArchetypeDefinition` | `ArchetypeRegistry` (rebuilt) |
-
-`propagate_cell_type_changes.before(propagate_node_layout_changes)` — explicit ordering so cell types are updated before layouts re-validate against them.
-
-**Set 2: `HotReloadSystems::PropagateConfig`** — runs after Set 1; propagates config resource changes into existing entity components:
-
-- `propagate_bolt_config.run_if(resource_changed::<BoltConfig>)` — overwrites components on bolt entities
-- `propagate_breaker_config.run_if(resource_changed::<BreakerConfig>)` — overwrites components on breaker entities
-
-Hot-reload only watches `AssetEvent::Modified` (not `Added`). The handle ID is verified against `collection.bolt` etc. to avoid reacting to unrelated asset changes.
+`HotReloadPlugin` handles two categories:
+- **Layer 2 (PropagateDefaults):** Registry rebuilds on asset change — `propagate_cell_type_changes`, `propagate_node_layout_changes`, `propagate_breaker_changes`. Simple config propagation (bolt, breaker, etc.) is handled automatically by `rantzsoft_defaults::systems::propagate_defaults` — no longer needs per-config hot-reload systems in the game.
+- **Layer 3 (PropagateConfig):** Config → entity components — `propagate_bolt_config` (resource_changed::<BoltConfig>), `propagate_breaker_config` (resource_changed::<BreakerConfig>)
 
 ---
 
-## 10. Key Files
+## 9. Key Files
 
 | File | Role |
 |---|---|
-| `rantzsoft_defaults_derive/src/lib.rs` | Proc-macro: `GameConfig` derive generates `*Config` struct + `From` + `Default` |
-| `rantzsoft_defaults/src/lib.rs` | Re-export shim: `pub use rantzsoft_defaults_derive::GameConfig` |
-| `breaker-game/src/screen/loading/resources.rs` | `DefaultsCollection` — all 14 asset handles/collections |
-| `breaker-game/src/screen/plugin.rs` | Registers `RonAssetPlugin`s, `ProgressPlugin`, `LoadingState::load_collection::<DefaultsCollection>()` |
-| `breaker-game/src/screen/loading/plugin.rs` | Registers 14 seed systems with `.track_progress::<GameState>()` |
-| `breaker-game/src/screen/loading/systems/seed_*.rs` | One file per seeding operation (14 files) |
-| `breaker-game/src/screen/loading/systems/update_loading_bar.rs` | Progress bar UI update from `ProgressTracker<GameState>` |
-| `breaker-game/src/debug/hot_reload/plugin.rs` | Hot-reload: `PropagateDefaults` and `PropagateConfig` system sets |
-| `breaker-game/src/shared/mod.rs` | `PlayfieldDefaults`, `PlayfieldConfig` (with extra methods), `GameState` |
-| `breaker-game/src/run/definition.rs` | `DifficultyCurveDefaults`, `HighlightDefaults` / `HighlightConfig` (gap: highlight not seeded at runtime) |
-| `breaker-game/src/fx/transition.rs` | `TransitionDefaults` / `TransitionConfig` (gap: not seeded at runtime, relies on `Default`) |
+| `rantzsoft_defaults/src/registry.rs` | `SeedableRegistry` trait + `RegistryHandles<A>` |
+| `rantzsoft_defaults/src/plugin.rs` | `RantzDefaultsPluginBuilder`, `RantzDefaultsPlugin`, `DefaultsSystems` |
+| `rantzsoft_defaults/src/seedable.rs` | `SeedableConfig` trait |
+| `rantzsoft_defaults/src/systems.rs` | `seed_config`, `seed_registry`, `init_defaults_handle`, `init_registry_handles` |
+| `rantzsoft_defaults_derive/src/lib.rs` | Proc-macro: `GameConfig` derive (reversed form) |
+| `breaker-game/src/screen/plugin.rs` | `ScreenPlugin` — adds `RantzDefaultsPluginBuilder` + `ProgressPlugin` |
+| `breaker-game/src/screen/loading/plugin.rs` | `LoadingPlugin` — `build_chip_catalog`, loading UI |
+| `breaker-game/src/chips/resources.rs` | `ChipCatalog`, `ChipTemplateRegistry`, `EvolutionRegistry` |
+| `breaker-game/src/breaker/registry.rs` | `BreakerRegistry` (implements SeedableRegistry) |
+| `breaker-game/src/debug/hot_reload/plugin.rs` | `HotReloadPlugin` — reduced to registry + entity-component propagation only |

@@ -40,12 +40,11 @@ type: reference
 - RecordingPlugin (debug, cfg(feature="dev")): `capture_frame` (FixedUpdate, reads InputActions), `write_recording_on_exit` (Last, triggers on AppExit message)
 
 ## Hot-Reload Pipeline (HotReloadPlugin, Update, GameState::Playing)
-- Set 1 `PropagateDefaults` (11 systems): asset Modified event → Config resource or registry
-- Set 2 `PropagateConfig` (2 systems): `.after(PropagateDefaults)`, gated by `resource_changed::<T>`
+- Set 1 `PropagateDefaults` (3 systems): registry rebuilds on asset Modified event — `propagate_cell_type_changes`, `propagate_node_layout_changes`, `propagate_breaker_changes`. Simple config propagation (bolt, breaker, input, etc.) is now handled by `rantzsoft_defaults::systems::propagate_defaults` registered via `RantzDefaultsPlugin` — no longer in HotReloadPlugin.
+- Set 2 `PropagateConfig` (2 systems): `.after(PropagateDefaults)`, gated by `resource_changed::<T>` — `propagate_bolt_config`, `propagate_breaker_config`
 - Breaker path: direct `ResMut<BreakerConfig>` write → same-frame propagation
-- Bolt/cell/etc.: `commands.insert_resource` → next-frame propagation
-- `propagate_breaker_changes` (was `propagate_archetype_changes` before C7-R 2026-03-25) writes `ResMut<BreakerConfig>` AND `Query<&mut EffectChains, With<Breaker>>` (was `ResMut<ActiveEffects>` → `ResMut<ActiveChains>` → `ResMut<ActiveBehaviors>` in prior refactors; now component-based EffectChains in C7-R)
-- `propagate_breaker_defaults` and `propagate_breaker_changes` both hold `ResMut<BreakerConfig>` — Bevy serializes, no race
+- `propagate_breaker_changes` writes `ResMut<BreakerConfig>` AND `Query<&mut EffectChains, With<Breaker>>`
+- NOTE: `DefaultsCollection` DELETED (SeedableRegistry feature). The old 11-system PropagateDefaults count was before rantzsoft_defaults absorbed simple config propagation.
 
 ## Scenario Runner (breaker-scenario-runner)
 - 17 systems in FixedUpdate (lifecycle chain + 14 invariant checkers + enforce_frozen_positions + tag_game_entities), 1 OnEnter group
@@ -87,5 +86,5 @@ AudioPlugin
 - `SpawnNodeComplete` — NodePlugin, sent by `check_spawn_complete` coordinator; consumed by scenario runner only
 - `NodeSystems::ApplyTimePenalty` — system set variant in NodeSystems enum
 - `clamp_bolt_to_playfield` — BoltPlugin system, safety clamp after bolt_breaker_collision
-- `seed_chip_registry` — new LoadingPlugin system (seeds ChipRegistry from chip definition assets)
+- `build_chip_catalog` — LoadingPlugin system (builds ChipCatalog from ChipTemplateRegistry + EvolutionRegistry after both are seeded by RantzDefaultsPlugin)
 - `RecordingPlugin` with `capture_frame` + `write_recording_on_exit` — debug-only input recorder
