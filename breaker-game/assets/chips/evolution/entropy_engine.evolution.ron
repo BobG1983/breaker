@@ -11,7 +11,7 @@
                         (0.25, Do(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
                         (0.25, Do(ChainBolt(tether_distance: 120.0))),
                         (0.20, Do(SpeedBoost(multiplier: 1.3))),
-                    ]),
+                    ],
                 )),
             ]),
         ]),
