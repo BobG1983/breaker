@@ -1,7 +1,6 @@
 (
     name: "Split Decision",
     description: "Destroyed cells spawn permanent bolts that inherit the parent's effects",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [

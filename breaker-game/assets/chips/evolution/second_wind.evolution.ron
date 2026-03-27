@@ -1,7 +1,6 @@
 (
     name: "Second Wind",
     description: "Losing a bolt grants temporary invulnerability — cheat death once",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Breaker, then: [

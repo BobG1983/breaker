@@ -18,6 +18,13 @@ pub enum Rarity {
     Evolution,
 }
 
+impl Rarity {
+    /// Serde default for evolution RON files.
+    fn evolution() -> Self {
+        Self::Evolution
+    }
+}
+
 /// A single ingredient required for a chip evolution recipe.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct EvolutionIngredient {
@@ -104,7 +111,8 @@ pub struct ChipDefinition {
     pub name: String,
     /// Flavor text shown below the name.
     pub description: String,
-    /// How rare this chip is.
+    /// How rare this chip is. Defaults to `Evolution` for evolution RON files.
+    #[serde(default = "Rarity::evolution")]
     pub rarity: Rarity,
     /// Maximum number of times this chip can be stacked.
     pub max_stacks: u32,

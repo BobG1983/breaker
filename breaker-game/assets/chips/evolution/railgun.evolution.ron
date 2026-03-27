@@ -1,7 +1,6 @@
 (
     name: "Railgun",
     description: "Perfect bumps fire a devastating piercing beam through all cells in the bolt's path",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [

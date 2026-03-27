@@ -1,7 +1,6 @@
 (
     name: "Entropy Engine",
     description: "Destroying cells charges an entropy counter that unleashes random powerful effects",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [

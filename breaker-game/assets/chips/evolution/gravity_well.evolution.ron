@@ -1,7 +1,6 @@
 (
     name: "Gravity Well",
     description: "Destroying cells creates gravity wells that pull bolts toward the destruction point",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [

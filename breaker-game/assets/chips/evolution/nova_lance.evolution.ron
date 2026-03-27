@@ -1,7 +1,6 @@
 (
     name: "Nova Lance",
     description: "Perfect bumps unleash devastating shockwaves on impact",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [

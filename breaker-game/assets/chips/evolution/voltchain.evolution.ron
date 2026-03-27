@@ -1,7 +1,6 @@
 (
     name: "Voltchain",
     description: "Destroying cells unleashes chain lightning to nearby targets",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [

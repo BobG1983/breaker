@@ -1,7 +1,6 @@
 (
     name: "Dead Man's Hand",
     description: "Losing a bolt triggers a shockwave and boosts all remaining bolts",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Breaker, then: [

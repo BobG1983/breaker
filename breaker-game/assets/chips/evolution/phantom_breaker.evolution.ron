@@ -1,7 +1,6 @@
 (
     name: "Phantom Breaker",
     description: "Successful bumps summon a phantom breaker that mirrors your moves",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Breaker, then: [

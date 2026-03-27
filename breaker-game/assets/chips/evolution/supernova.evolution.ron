@@ -1,7 +1,6 @@
 (
     name: "Supernova",
     description: "Perfect bumps trigger chain explosions — cells destroyed spawn bolts and shockwaves",
-    rarity: Evolution,
     max_stacks: 1,
     effects: [
         On(target: Bolt, then: [
