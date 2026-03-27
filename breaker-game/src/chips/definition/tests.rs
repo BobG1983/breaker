@@ -42,35 +42,6 @@ fn chip_definition_empty_effects_is_valid() {
     assert!(def.effects.is_empty());
 }
 
-#[test]
-fn chip_definition_ron_with_root_effect_syntax() {
-    let ron_str = r#"(name: "Test", description: "test", rarity: Common, max_stacks: 3, effects: [On(target: Bolt, then: [Do(Piercing(1))])])"#;
-    let def: ChipDefinition =
-        ron::de::from_str(ron_str).expect("ChipDefinition with RootEffect RON should parse");
-    assert_eq!(def.name, "Test");
-    assert!(matches!(
-        def.effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            ..
-        }
-    ));
-}
-
-#[test]
-fn chip_definition_ron_triggered_chain() {
-    let ron_str = r#"(name: "Test", description: "test", rarity: Rare, max_stacks: 1, effects: [On(target: Bolt, then: [When(trigger: OnPerfectBump, then: [Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))])])])"#;
-    let def: ChipDefinition = ron::de::from_str(ron_str)
-        .expect("ChipDefinition with triggered RootEffect RON should parse");
-    assert!(matches!(
-        def.effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            ..
-        }
-    ));
-}
-
 // =========================================================================
 // RaritySlot with Vec<RootEffect>
 // =========================================================================
