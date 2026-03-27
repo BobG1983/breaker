@@ -5,8 +5,8 @@
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
                 Do(PiercingBeam(damage_mult: 3.0, width: 30.0)),
-            ],
-        ],
+            ]),
+        ]),
     ],
     ingredients: [
         (chip_name: "Piercing Shot", stacks_required: 3),

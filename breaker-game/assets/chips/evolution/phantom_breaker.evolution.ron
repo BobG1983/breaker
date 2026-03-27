@@ -5,8 +5,8 @@
         On(target: Breaker, then: [
             When(trigger: OnBump, then: [
                 Do(SpawnPhantom(duration: 5.0, max_active: 1)),
-            ],
-        ],
+            ]),
+        ]),
     ],
     ingredients: [
         (chip_name: "Wide Breaker", stacks_required: 2),

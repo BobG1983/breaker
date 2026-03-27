@@ -5,8 +5,8 @@
         On(target: Breaker, then: [
             When(trigger: OnBoltLost, then: [
                 Do(SecondWind(invuln_secs: 3.0)),
-            ],
-        ],
+            ]),
+        ]),
     ],
     ingredients: [
         (chip_name: "Wide Breaker", stacks_required: 3),

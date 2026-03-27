@@ -8,10 +8,10 @@
                     When(trigger: DestroyedCell, then: [
                         Do(MultiBolt(base_count: 2, count_per_level: 0, stacks: 1)),
                         Do(Shockwave(base_range: 96.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
-                    ],
-                ],
-            ],
-        ],
+                    ]),
+                ]),
+            ]),
+        ]),
     ],
     ingredients: [
         (chip_name: "Piercing Shot", stacks_required: 3),

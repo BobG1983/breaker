@@ -5,8 +5,8 @@
         On(target: Bolt, then: [
             When(trigger: DestroyedCell, then: [
                 Do(ChainLightning(arcs: 3, range: 96.0, damage_mult: 0.5)),
-            ],
-        ],
+            ]),
+        ]),
     ],
     ingredients: [
         (chip_name: "Chain Hit", stacks_required: 2),
