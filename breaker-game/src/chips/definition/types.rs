@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 /// How rare a chip is — controls appearance weight in the selection pool.
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Rarity {
     /// Frequently appearing chips.
     Common,
@@ -15,14 +15,8 @@ pub enum Rarity {
     /// Extremely rare, run-defining chips.
     Legendary,
     /// Evolution-tier chips — produced by combining maxed ingredient chips.
+    #[default]
     Evolution,
-}
-
-impl Rarity {
-    /// Serde default for evolution RON files.
-    fn evolution() -> Self {
-        Self::Evolution
-    }
 }
 
 /// A single ingredient required for a chip evolution recipe.
@@ -112,7 +106,7 @@ pub struct ChipDefinition {
     /// Flavor text shown below the name.
     pub description: String,
     /// How rare this chip is. Defaults to `Evolution` for evolution RON files.
-    #[serde(default = "Rarity::evolution")]
+    #[serde(default)]
     pub rarity: Rarity,
     /// Maximum number of times this chip can be stacked.
     pub max_stacks: u32,
