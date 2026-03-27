@@ -71,7 +71,7 @@ Increases bolt radius by a fraction per stack.
 `max_taken: 3`
 
 ### Attraction (Magnetism)
-Bolt attracts toward nearest entity of the given type. See `triggers-and-effects.md` for Attraction mechanics.
+Bolt attracts toward nearest entity of the given type. See [effects/attraction.md](effects/attraction.md) for Attraction mechanics.
 
 | Rarity | Prefix | Effects | Synergy Notes |
 |--------|--------|---------|---------------|
