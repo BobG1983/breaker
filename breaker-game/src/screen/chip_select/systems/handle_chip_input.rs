@@ -74,9 +74,9 @@ pub(crate) fn handle_chip_input(
         // Consume ingredient stacks for evolution offerings
         if let ChipOffering::Evolution { ingredients, .. } = offering {
             for ingredient in ingredients {
-                for _ in 0..ingredient.stacks_required {
-                    let _ = actions.inventory.remove_chip(&ingredient.chip_name);
-                }
+                actions
+                    .inventory
+                    .remove_by_template(&ingredient.chip_name, ingredient.stacks_required);
             }
         }
 

@@ -163,6 +163,56 @@ fn clear_resets_template_tracking() {
     assert!(!inv.is_template_maxed("Piercing"));
 }
 
+// --- Behavior 23: remove_by_template removes stacks across variants ---
+
+#[test]
+fn remove_by_template_removes_from_single_variant() {
+    let mut inv = ChipInventory::default();
+    let basic = template_chip_def("Basic Piercing", "Piercing", 5);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+
+    let removed = inv.remove_by_template("Piercing", 2);
+    assert_eq!(removed, 2, "should remove exactly 2 stacks");
+    assert_eq!(inv.stacks("Basic Piercing"), 1);
+    assert_eq!(inv.template_taken("Piercing"), 1);
+}
+
+#[test]
+fn remove_by_template_removes_across_multiple_variants() {
+    let mut inv = ChipInventory::default();
+    let basic = template_chip_def("Basic Piercing", "Piercing", 5);
+    let keen = template_chip_def("Keen Piercing", "Piercing", 5);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+    let _ = inv.add_chip("Keen Piercing", &keen);
+    let _ = inv.add_chip("Keen Piercing", &keen);
+    // 3 total: 1 Basic + 2 Keen
+
+    let removed = inv.remove_by_template("Piercing", 3);
+    assert_eq!(removed, 3, "should remove all 3 stacks across variants");
+    assert_eq!(inv.template_taken("Piercing"), 0);
+}
+
+#[test]
+fn remove_by_template_returns_zero_for_unknown_template() {
+    let mut inv = ChipInventory::default();
+    let removed = inv.remove_by_template("Unknown", 5);
+    assert_eq!(removed, 0);
+}
+
+#[test]
+fn remove_by_template_caps_at_available_stacks() {
+    let mut inv = ChipInventory::default();
+    let basic = template_chip_def("Basic Piercing", "Piercing", 5);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+
+    let removed = inv.remove_by_template("Piercing", 5); // ask for 5, only 2 available
+    assert_eq!(removed, 2, "should remove only what's available");
+    assert_eq!(inv.template_taken("Piercing"), 0);
+}
+
 // --- Behavior 27: add_chip rejects when template maxed via OTHER chip names ---
 
 #[test]
