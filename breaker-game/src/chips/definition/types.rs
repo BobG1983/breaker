@@ -7,6 +7,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Rarity {
     /// Frequently appearing chips.
+    #[default]
     Common,
     /// Moderately rare chips.
     Uncommon,
@@ -15,7 +16,6 @@ pub enum Rarity {
     /// Extremely rare, run-defining chips.
     Legendary,
     /// Evolution-tier chips — produced by combining maxed ingredient chips.
-    #[default]
     Evolution,
 }
 
@@ -105,7 +105,7 @@ pub struct ChipDefinition {
     pub name: String,
     /// Flavor text shown below the name.
     pub description: String,
-    /// How rare this chip is. Defaults to `Evolution` for evolution RON files.
+    /// How rare this chip is. Evolutions omit this — `build_chip_catalog` forces `Evolution`.
     #[serde(default)]
     pub rarity: Rarity,
     /// Maximum number of times this chip can be stacked.

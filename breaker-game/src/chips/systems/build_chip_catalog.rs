@@ -46,14 +46,14 @@ pub(crate) fn build_chip_catalog(
     let mut evolutions: Vec<_> = evolution_registry.definitions().collect();
     evolutions.sort_by(|a, b| a.name.cmp(&b.name));
     for def in evolutions {
-        if def.rarity == Rarity::Evolution {
-            let recipe = Recipe {
-                ingredients: def.ingredients.clone().unwrap_or_default(),
-                result_name: def.name.clone(),
-            };
-            catalog.insert_recipe(recipe);
-        }
-        catalog.insert(def.clone());
+        let mut def = def.clone();
+        def.rarity = Rarity::Evolution;
+        let recipe = Recipe {
+            ingredients: def.ingredients.clone().unwrap_or_default(),
+            result_name: def.name.clone(),
+        };
+        catalog.insert_recipe(recipe);
+        catalog.insert(def);
     }
 
     commands.insert_resource(catalog);
@@ -89,14 +89,14 @@ pub(crate) fn propagate_chip_catalog(
     let mut evolutions: Vec<_> = evolution_registry.definitions().collect();
     evolutions.sort_by(|a, b| a.name.cmp(&b.name));
     for def in evolutions {
-        if def.rarity == Rarity::Evolution {
-            let recipe = Recipe {
-                ingredients: def.ingredients.clone().unwrap_or_default(),
-                result_name: def.name.clone(),
-            };
-            catalog.insert_recipe(recipe);
-        }
-        catalog.insert(def.clone());
+        let mut def = def.clone();
+        def.rarity = Rarity::Evolution;
+        let recipe = Recipe {
+            ingredients: def.ingredients.clone().unwrap_or_default(),
+            result_name: def.name.clone(),
+        };
+        catalog.insert_recipe(recipe);
+        catalog.insert(def);
     }
 }
 
