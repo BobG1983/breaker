@@ -50,6 +50,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
 - [Phase 9: Boss Nodes & Advanced Mechanics](phase-9-bosses.md)
 - [Phase 10: Social Shareability](phase-10-social-shareability.md) — Video clips of highlight moments, run-end playback, social media sharing
 - [Phase 11: Polish & Ship](phase-11-polish.md)
+- **Asset Validator** (future) — Standalone tool that loads all RON assets, validates deserialization, checks recipe ingredient references, effect variant existence, and cross-file data consistency. Complements scenario runner (which tests gameplay) with static data validation.
 
 ## Build Order Rationale
 
