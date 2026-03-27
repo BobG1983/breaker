@@ -20,7 +20,7 @@ pub(crate) fn animate_punch_scale(
             continue;
         }
         let t = punch.timer / punch.duration;
-        transform.scale = Vec3::splat(1.0 + (punch.overshoot - 1.0) * t);
+        transform.scale = Vec3::splat((punch.overshoot - 1.0).mul_add(t, 1.0));
     }
 }
 

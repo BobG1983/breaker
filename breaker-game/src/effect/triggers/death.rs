@@ -3,6 +3,7 @@
 //! messages.
 
 use bevy::prelude::*;
+#[cfg(test)]
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
@@ -44,19 +45,18 @@ fn evaluate_ondeath_chains(entity: Entity, chains: Option<&EffectChains>, comman
 /// `EffectChains` with `Trigger::Death`, then writes `CellDestroyedAt`.
 pub(crate) fn bridge_cell_death(
     mut reader: MessageReader<RequestCellDestroyed>,
-    cell_query: Query<(Option<&EffectChains>, &Position2D, Has<RequiredToClear>)>,
+    cell_query: Query<(Option<&EffectChains>, Has<RequiredToClear>)>,
     mut destroyed_writer: MessageWriter<CellDestroyedAt>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
-        let Ok((chains, position, is_required)) = cell_query.get(msg.cell) else {
+        let Ok((chains, is_required)) = cell_query.get(msg.cell) else {
             continue;
         };
 
         evaluate_ondeath_chains(msg.cell, chains, &mut commands);
 
         destroyed_writer.write(CellDestroyedAt {
-            position: position.0,
             was_required_to_clear: is_required,
         });
     }
@@ -66,20 +66,18 @@ pub(crate) fn bridge_cell_death(
 /// `EffectChains` with `Trigger::Death`, then writes `BoltDestroyedAt`.
 pub(crate) fn bridge_bolt_death(
     mut reader: MessageReader<RequestBoltDestroyed>,
-    bolt_query: Query<(Option<&EffectChains>, &Position2D)>,
+    bolt_query: Query<Option<&EffectChains>>,
     mut destroyed_writer: MessageWriter<BoltDestroyedAt>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
-        let Ok((chains, position)) = bolt_query.get(msg.bolt) else {
+        let Ok(chains) = bolt_query.get(msg.bolt) else {
             continue;
         };
 
         evaluate_ondeath_chains(msg.bolt, chains, &mut commands);
 
-        destroyed_writer.write(BoltDestroyedAt {
-            position: position.0,
-        });
+        destroyed_writer.write(BoltDestroyedAt {});
     }
 }
 
@@ -99,10 +97,7 @@ mod tests {
     use super::{super::test_helpers::*, *};
     use crate::{
         cells::components::Cell,
-        effect::{
-            definition::{Effect, EffectNode, Trigger},
-            typed_events::*,
-        },
+        effect::definition::{Effect, EffectNode, Trigger},
     };
 
     // --- Cell death bridge tests ---
@@ -202,7 +197,6 @@ mod tests {
             "CellDestroyedAt should be written — got {}",
             captured.0.len()
         );
-        assert_eq!(captured.0[0].position, Vec2::new(100.0, 200.0));
         assert!(captured.0[0].was_required_to_clear);
     }
 
@@ -281,7 +275,7 @@ mod tests {
             1,
             "CellDestroyedAt should still be written even when dying entity has no chains"
         );
-        assert_eq!(cda.0[0].position, Vec2::new(50.0, 100.0));
+        // position field was commented out from CellDestroyedAt
     }
 
     // --- Bolt death bridge tests ---
@@ -379,6 +373,5 @@ mod tests {
             "BoltDestroyedAt should be written — got {}",
             captured.0.len()
         );
-        assert_eq!(captured.0[0].position, Vec2::new(50.0, -100.0));
     }
 }

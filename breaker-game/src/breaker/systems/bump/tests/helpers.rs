@@ -8,7 +8,7 @@ use crate::{
             BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
             BumpWeakCooldown, SettleDuration,
         },
-        messages::{BumpGrade, BumpPerformed, BumpWhiffed},
+        messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
     },
     input::resources::{GameAction, InputActions},

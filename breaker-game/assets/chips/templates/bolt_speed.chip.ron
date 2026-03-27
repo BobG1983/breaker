@@ -1,6 +1,6 @@
 (
     name: "Bolt Speed",
-    max_taken: 3,
+    max_taken: 4,
     common: (
         prefix: "Slight",
         effects: [

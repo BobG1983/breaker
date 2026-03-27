@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{definition::EffectTarget, effects::shield::ShieldActive},
+    effect::effects::shield::ShieldActive,
     run::node::messages::ApplyTimePenalty,
 };
 
@@ -16,10 +16,11 @@ use crate::{
 pub(crate) struct TimePenaltyFired {
     /// Duration of the penalty in seconds.
     pub seconds: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 /// Observer that handles time penalty — writes [`ApplyTimePenalty`] message.
@@ -84,8 +85,6 @@ mod tests {
 
         app.world_mut().commands().trigger(TimePenaltyFired {
             seconds: 5.0,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -113,8 +112,6 @@ mod tests {
 
         app.world_mut().commands().trigger(TimePenaltyFired {
             seconds: 5.0,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -137,8 +134,6 @@ mod tests {
 
         app.world_mut().commands().trigger(TimePenaltyFired {
             seconds: 5.0,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -178,8 +173,6 @@ mod tests {
 
         app.world_mut().commands().trigger(TimePenaltyFired {
             seconds: 5.0,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -206,8 +199,6 @@ mod tests {
 
         app.world_mut().commands().trigger(TimePenaltyFired {
             seconds: 5.0,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);

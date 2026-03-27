@@ -3,13 +3,14 @@
 //! This module re-exports all bridge systems from their new per-trigger file
 //! locations. Integration tests that exercise multiple bridges remain here.
 
-pub(crate) use super::triggers::*;
-
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
 
-    use super::{bridge_bump, bridge_cell_death, bridge_cell_destroyed, bridge_cell_impact};
+    use crate::effect::triggers::{
+        bump::bridge_bump, cell_destroyed::bridge_cell_destroyed, death::bridge_cell_death,
+        impact::bridge_cell_impact,
+    };
     use crate::{
         bolt::messages::BoltHitCell,
         breaker::{
@@ -24,7 +25,6 @@ mod tests {
             armed::ArmedEffects,
             definition::{Effect, EffectChains, EffectNode, ImpactTarget, Trigger},
             triggers::test_helpers::*,
-            typed_events::*,
         },
     };
 
@@ -212,7 +212,10 @@ mod tests {
 
     #[test]
     fn multiple_bridges_fire_from_single_bump_performed() {
-        use super::{bridge_bumped, bridge_perfect_bump, bridge_perfect_bumped};
+        use crate::effect::triggers::{
+            bumped::bridge_bumped, perfect_bump::bridge_perfect_bump,
+            perfect_bumped::bridge_perfect_bumped,
+        };
 
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)

@@ -8,4 +8,4 @@ mod system;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{score_highlight, select_highlights};
+pub(crate) use system::select_highlights;

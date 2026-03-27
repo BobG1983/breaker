@@ -14,18 +14,23 @@ pub(crate) fn track_node_completion(
     mut reader: MessageReader<CellDestroyedAt>,
     mut remaining: ResMut<ClearRemainingCount>,
     mut writer: MessageWriter<NodeCleared>,
+    mut fired: Local<bool>,
 ) {
-    let mut decremented = false;
+    // Reset when a new node loads (resource re-inserted by init_clear_remaining).
+    if remaining.is_changed() {
+        *fired = false;
+    }
+
     for msg in reader.read() {
         if msg.was_required_to_clear {
             remaining.remaining = remaining.remaining.saturating_sub(1);
-            decremented = true;
         }
     }
 
-    if remaining.remaining == 0 && decremented {
+    if remaining.remaining == 0 && !*fired {
         info!("node cleared");
         writer.write(NodeCleared);
+        *fired = true;
     }
 }
 
@@ -80,7 +85,6 @@ mod tests {
     fn decrement_on_required_destroyed() {
         let mut app = test_app(3);
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -93,7 +97,6 @@ mod tests {
     fn ignore_non_required_destroyed() {
         let mut app = test_app(3);
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: false,
         }]));
         tick(&mut app);
@@ -111,7 +114,6 @@ mod tests {
             capture_node_cleared.after(track_node_completion),
         );
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -126,9 +128,9 @@ mod tests {
     }
 
     #[test]
-    fn node_cleared_does_not_fire_when_already_at_zero_with_no_messages() {
-        // remaining starts at 0 but nothing changed this tick — is_changed()
-        // guard should prevent a spurious NodeCleared.
+    fn node_cleared_fires_when_remaining_starts_at_zero() {
+        // Empty grids start with remaining=0. NodeCleared should fire
+        // immediately on the first tick (no cells to destroy).
         let mut app = test_app(0);
         app.init_resource::<NodeClearedCaptured>();
         app.add_systems(
@@ -140,8 +142,8 @@ mod tests {
 
         let captured = app.world().resource::<NodeClearedCaptured>();
         assert!(
-            !captured.0,
-            "NodeCleared should not fire when remaining starts at 0 with no messages"
+            captured.0,
+            "NodeCleared should fire when remaining starts at 0 (empty grid)"
         );
     }
 
@@ -182,7 +184,6 @@ mod tests {
 
         let mut app = test_app_cell_destroyed_at(3);
         app.insert_resource(TestCellDestroyedAtMessages(vec![CellDestroyedAt {
-            position: Vec2::new(100.0, 200.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -200,7 +201,6 @@ mod tests {
 
         let mut app = test_app_cell_destroyed_at(3);
         app.insert_resource(TestCellDestroyedAtMessages(vec![CellDestroyedAt {
-            position: Vec2::new(50.0, 75.0),
             was_required_to_clear: false,
         }]));
         tick(&mut app);
@@ -223,7 +223,6 @@ mod tests {
             capture_node_cleared.after(track_node_completion),
         );
         app.insert_resource(TestCellDestroyedAtMessages(vec![CellDestroyedAt {
-            position: Vec2::new(100.0, 200.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -239,7 +238,6 @@ mod tests {
     fn node_cleared_does_not_fire_while_cells_remain() {
         let mut app = test_app(5);
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);

@@ -14,7 +14,7 @@ pub(crate) fn rotate_shield_cells(
 ) {
     let dt = time.delta_secs();
     for (mut angle, config) in &mut query {
-        angle.0 += config.speed * dt;
+        angle.0 = config.speed.mul_add(dt, angle.0);
     }
 }
 

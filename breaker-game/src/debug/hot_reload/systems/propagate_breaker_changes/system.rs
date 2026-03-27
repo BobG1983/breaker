@@ -10,7 +10,7 @@ use crate::{
         resources::{BreakerConfig, BreakerDefaults},
     },
     effect::{
-        definition::{BreakerDefinition, EffectChains, RootEffect, Target},
+        definition::{EffectChains, RootEffect, Target},
         effects::life_lost::LivesCount,
         init::apply_stat_overrides,
         registry::BreakerRegistry,

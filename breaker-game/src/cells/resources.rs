@@ -50,12 +50,14 @@ impl CellTypeRegistry {
     }
 
     /// Returns `true` if the registry contains a definition for the given alias.
+    #[cfg(test)]
     pub(crate) fn contains(&self, alias: char) -> bool {
         self.types.contains_key(&alias)
     }
 
     /// Inserts a cell type definition under the given alias, returning the
     /// previous definition if one existed.
+    #[cfg(test)]
     pub(crate) fn insert(
         &mut self,
         alias: char,
@@ -64,35 +66,41 @@ impl CellTypeRegistry {
         self.types.insert(alias, def)
     }
 
-    /// Returns an iterator over all cell type definitions.
-    pub(crate) fn values(&self) -> impl Iterator<Item = &CellTypeDefinition> {
-        self.types.values()
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Returns an iterator over all cell type definitions.
+    // pub(crate) fn values(&self) -> impl Iterator<Item = &CellTypeDefinition> {
+    //     self.types.values()
+    // }
 
-    /// Returns an iterator over `(alias, definition)` pairs.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (&char, &CellTypeDefinition)> {
-        self.types.iter()
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Returns an iterator over `(alias, definition)` pairs.
+    // pub(crate) fn iter(&self) -> impl Iterator<Item = (&char, &CellTypeDefinition)> {
+    //     self.types.iter()
+    // }
 
-    /// Returns an iterator over all registered alias chars.
-    pub(crate) fn aliases(&self) -> impl Iterator<Item = &char> {
-        self.types.keys()
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Returns an iterator over all registered alias chars.
+    // pub(crate) fn aliases(&self) -> impl Iterator<Item = &char> {
+    //     self.types.keys()
+    // }
 
     /// Returns the number of registered cell types.
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.types.len()
     }
 
-    /// Returns `true` if the registry contains no cell types.
-    pub(crate) fn is_empty(&self) -> bool {
-        self.types.is_empty()
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Returns `true` if the registry contains no cell types.
+    // pub(crate) fn is_empty(&self) -> bool {
+    //     self.types.is_empty()
+    // }
 
-    /// Removes all entries from the registry.
-    pub(crate) fn clear(&mut self) {
-        self.types.clear();
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Removes all entries from the registry.
+    // pub(crate) fn clear(&mut self) {
+    //     self.types.clear();
+    // }
 }
 
 impl SeedableRegistry for CellTypeRegistry {

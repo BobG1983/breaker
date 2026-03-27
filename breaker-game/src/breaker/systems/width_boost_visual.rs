@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 
+use crate::breaker::{components::Breaker, queries::WidthBoostVisualQuery};
+
+#[cfg(test)]
 use crate::{
-    breaker::{
-        components::{Breaker, BreakerHeight, BreakerWidth},
-        queries::WidthBoostVisualQuery,
-    },
+    breaker::components::{BreakerHeight, BreakerWidth},
     chips::components::WidthBoost,
 };
 

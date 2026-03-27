@@ -111,7 +111,7 @@ pub enum Trigger {
 // ---------------------------------------------------------------------------
 
 /// Default count for `SpawnBolts` serde deserialization.
-fn default_spawn_bolts_count() -> u32 {
+const fn default_spawn_bolts_count() -> u32 {
     1
 }
 
@@ -272,7 +272,7 @@ pub enum EffectNode {
         /// Condition that gates evaluation.
         trigger: Trigger,
         /// Child nodes evaluated when the trigger fires.
-        then: Vec<EffectNode>,
+        then: Vec<Self>,
     },
     /// A terminal effect action.
     Do(Effect),
@@ -281,10 +281,10 @@ pub enum EffectNode {
         /// Condition that removes the child effects.
         until: Trigger,
         /// Child effects active until the removal trigger fires.
-        then: Vec<EffectNode>,
+        then: Vec<Self>,
     },
     /// A one-shot wrapper — children fire once and are consumed.
-    Once(Vec<EffectNode>),
+    Once(Vec<Self>),
     /// A target scope — children are dispatched against the specified target entity.
     ///
     /// `On` nodes are not evaluated by trigger matching; they are resolved at
@@ -293,7 +293,7 @@ pub enum EffectNode {
         /// Entity type this scope targets.
         target: Target,
         /// Child nodes dispatched against the target entity.
-        then: Vec<EffectNode>,
+        then: Vec<Self>,
     },
 }
 
@@ -320,7 +320,7 @@ pub enum RootEffect {
 impl From<RootEffect> for EffectNode {
     fn from(r: RootEffect) -> Self {
         let RootEffect::On { target, then } = r;
-        EffectNode::On { target, then }
+        Self::On { target, then }
     }
 }
 
@@ -490,4 +490,5 @@ impl EffectNode {
 // Breaker definition re-exports (canonical location: breaker/definition.rs)
 // ---------------------------------------------------------------------------
 
-pub use crate::breaker::definition::{BreakerDefinition, BreakerStatOverrides};
+#[cfg(test)]
+pub(crate) use crate::breaker::definition::{BreakerDefinition, BreakerStatOverrides};

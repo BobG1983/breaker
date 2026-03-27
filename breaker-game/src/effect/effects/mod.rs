@@ -30,17 +30,6 @@ pub(crate) mod tilt_control_boost;
 pub(crate) mod time_penalty;
 pub(crate) mod width_boost;
 
-pub(crate) use attraction::handle_attraction;
-pub(crate) use bolt_size_boost::handle_bolt_size_boost;
-pub(crate) use bolt_speed_boost::handle_bolt_speed_boost;
-pub(crate) use breaker_speed_boost::handle_breaker_speed_boost;
-pub(crate) use bump_force_boost::handle_bump_force_boost;
-pub(crate) use chain_hit::handle_chain_hit;
-pub(crate) use damage_boost::handle_damage_boost;
-pub(crate) use piercing::handle_piercing;
-pub(crate) use tilt_control_boost::handle_tilt_control_boost;
-pub(crate) use width_boost::handle_width_boost;
-
 /// Stacks a `u32` component field on an entity.
 ///
 /// - If `per_stack` is 0, this is a no-op regardless of `field`.

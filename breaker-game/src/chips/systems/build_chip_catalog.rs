@@ -90,6 +90,7 @@ fn populate_catalog(
 /// Logs a warning for any recipe ingredient that doesn't match a known template name.
 fn validate_recipe_ingredients(catalog: &ChipCatalog) {
     use std::collections::HashSet;
+
     use tracing::warn;
 
     let template_names: HashSet<&str> = catalog

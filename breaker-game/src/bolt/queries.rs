@@ -10,7 +10,7 @@ use crate::{
         BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, ExtraBolt,
         SpawnedByEvolution,
     },
-    chips::components::{DamageBoost, Piercing, PiercingRemaining, TiltControlBoost, WidthBoost},
+    chips::components::{DamageBoost, Piercing, PiercingRemaining},
     shared::EntityScale,
 };
 

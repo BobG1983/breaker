@@ -36,7 +36,7 @@ pub(crate) fn draw_hitboxes(
     for (transform, cell_w, cell_h) in &cell_query {
         gizmos.rect_2d(
             transform.translation.truncate(),
-            Vec2::new(cell_w.0, cell_h.0),
+            Vec2::new(cell_w.value, cell_h.value),
             CELL_HITBOX_COLOR,
         );
     }

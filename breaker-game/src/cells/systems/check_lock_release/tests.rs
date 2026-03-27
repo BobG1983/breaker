@@ -148,7 +148,6 @@ fn locked_cell_hp_unchanged_after_damage_cell() {
     app.insert_resource(TestDamageCellMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     tick(&mut app);
@@ -197,11 +196,9 @@ fn lock_releases_when_all_adjacents_destroyed() {
     // Send CellDestroyedAt messages for both adjacents.
     app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![
         CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         },
         CellDestroyedAt {
-            position: Vec2::new(30.0, 40.0),
             was_required_to_clear: true,
         },
     ];
@@ -242,7 +239,6 @@ fn lock_stays_locked_when_only_some_adjacents_destroyed() {
 
     // Send CellDestroyedAt only for adj_a.
     app.world_mut().resource_mut::<TestDestroyedMessages>().0 = vec![CellDestroyedAt {
-        position: Vec2::new(10.0, 20.0),
         was_required_to_clear: true,
     }];
 
@@ -282,7 +278,6 @@ fn unlocked_cell_takes_damage_and_sends_request_destroyed() {
     app.insert_resource(TestDamageCellMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -363,11 +358,9 @@ fn check_lock_release_reads_cell_destroyed_at() {
         .resource_mut::<TestCellDestroyedAtMessages>()
         .0 = vec![
         crate::cells::messages::CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         },
         crate::cells::messages::CellDestroyedAt {
-            position: Vec2::new(30.0, 40.0),
             was_required_to_clear: true,
         },
     ];

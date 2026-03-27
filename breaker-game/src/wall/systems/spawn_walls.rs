@@ -30,10 +30,7 @@ pub(crate) fn spawn_walls(
     // Left wall
     commands.spawn((
         Wall,
-        WallSize {
-            half_width: wall_ht,
-            half_height,
-        },
+        WallSize {},
         Position2D(Vec2::new(playfield.left() - wall_ht, 0.0)),
         Scale2D {
             x: wall_ht,
@@ -47,10 +44,7 @@ pub(crate) fn spawn_walls(
     // Right wall
     commands.spawn((
         Wall,
-        WallSize {
-            half_width: wall_ht,
-            half_height,
-        },
+        WallSize {},
         Position2D(Vec2::new(playfield.right() + wall_ht, 0.0)),
         Scale2D {
             x: wall_ht,
@@ -64,10 +58,7 @@ pub(crate) fn spawn_walls(
     // Ceiling
     commands.spawn((
         Wall,
-        WallSize {
-            half_width,
-            half_height: wall_ht,
-        },
+        WallSize {},
         Position2D(Vec2::new(0.0, playfield.top() + wall_ht)),
         Scale2D {
             x: half_width,
@@ -113,16 +104,12 @@ mod tests {
         let mut app = test_app();
         app.update();
 
-        let sizes: Vec<_> = app
+        let count = app
             .world_mut()
             .query::<&WallSize>()
             .iter(app.world())
-            .collect();
-        assert_eq!(sizes.len(), 3);
-        for size in sizes {
-            assert!(size.half_width > 0.0);
-            assert!(size.half_height > 0.0);
-        }
+            .count();
+        assert_eq!(count, 3);
     }
 
     #[test]
@@ -160,35 +147,35 @@ mod tests {
 
         let walls: Vec<_> = app
             .world_mut()
-            .query::<(&Position2D, &WallSize)>()
+            .query::<&Position2D>()
             .iter(app.world())
-            .map(|(pos, ws)| (pos.0, ws.half_width, ws.half_height))
+            .map(|pos| pos.0)
             .collect();
 
         // Left wall: x < playfield left
         let left = walls
             .iter()
-            .find(|(pos, ..)| pos.x < playfield.left())
+            .find(|pos| pos.x < playfield.left())
             .expect("should have left wall");
-        assert!((left.0.y).abs() < f32::EPSILON, "left wall centered at y=0");
+        assert!((left.y).abs() < f32::EPSILON, "left wall centered at y=0");
 
         // Right wall: x > playfield right
         let right = walls
             .iter()
-            .find(|(pos, ..)| pos.x > playfield.right())
+            .find(|pos| pos.x > playfield.right())
             .expect("should have right wall");
         assert!(
-            (right.0.y).abs() < f32::EPSILON,
+            (right.y).abs() < f32::EPSILON,
             "right wall centered at y=0"
         );
 
         // Ceiling: y > playfield top
         let ceiling = walls
             .iter()
-            .find(|(pos, ..)| pos.y > playfield.top())
+            .find(|pos| pos.y > playfield.top())
             .expect("should have ceiling wall");
         assert!(
-            (ceiling.0.x).abs() < f32::EPSILON,
+            (ceiling.x).abs() < f32::EPSILON,
             "ceiling centered at x=0"
         );
     }
@@ -345,26 +332,25 @@ mod tests {
         let half_height = playfield.height / 2.0; // 300.0
 
         // We need to correlate Scale2D with position to identify which wall is which.
-        // Use Position2D if available, otherwise fall back to WallSize for identification.
-        let wall_data: Vec<(&WallSize, &Scale2D)> = app
+        // Use Scale2D to identify walls since WallSize fields are commented out.
+        let wall_data: Vec<&Scale2D> = app
             .world_mut()
-            .query_filtered::<(&WallSize, &Scale2D), With<Wall>>()
+            .query_filtered::<&Scale2D, With<Wall>>()
             .iter(app.world())
             .collect();
 
         assert_eq!(wall_data.len(), 3, "all 3 walls should have Scale2D");
 
-        // Left/right walls: WallSize { half_width: wall_ht, half_height }
-        // → Scale2D { x: wall_ht, y: half_height }
+        // Left/right walls: Scale2D { x: wall_ht, y: half_height }
         let side_walls: Vec<_> = wall_data
             .iter()
-            .filter(|(ws, _)| {
-                (ws.half_width - wall_ht).abs() < f32::EPSILON
-                    && (ws.half_height - half_height).abs() < f32::EPSILON
+            .filter(|scale| {
+                (scale.x - wall_ht).abs() < f32::EPSILON
+                    && (scale.y - half_height).abs() < f32::EPSILON
             })
             .collect();
         assert_eq!(side_walls.len(), 2, "should have 2 side walls");
-        for (_, scale) in &side_walls {
+        for scale in &side_walls {
             assert!(
                 (scale.x - wall_ht).abs() < f32::EPSILON,
                 "side wall Scale2D.x should be {wall_ht}, got {}",
@@ -377,17 +363,16 @@ mod tests {
             );
         }
 
-        // Ceiling: WallSize { half_width, half_height: wall_ht }
-        // → Scale2D { x: half_width, y: wall_ht }
+        // Ceiling: Scale2D { x: half_width, y: wall_ht }
         let ceiling_walls: Vec<_> = wall_data
             .iter()
-            .filter(|(ws, _)| {
-                (ws.half_width - half_width).abs() < f32::EPSILON
-                    && (ws.half_height - wall_ht).abs() < f32::EPSILON
+            .filter(|scale| {
+                (scale.x - half_width).abs() < f32::EPSILON
+                    && (scale.y - wall_ht).abs() < f32::EPSILON
             })
             .collect();
         assert_eq!(ceiling_walls.len(), 1, "should have 1 ceiling wall");
-        let (_, ceiling_scale) = ceiling_walls[0];
+        let ceiling_scale = ceiling_walls[0];
         assert!(
             (ceiling_scale.x - half_width).abs() < f32::EPSILON,
             "ceiling Scale2D.x should be {half_width}, got {}",

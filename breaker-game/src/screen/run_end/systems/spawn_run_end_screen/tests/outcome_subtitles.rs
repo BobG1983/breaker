@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::spawn_run_end_screen, helpers::*};
-use crate::{
-    run::resources::{RunOutcome, RunState, RunStats},
-    screen::run_end::RunEndScreen,
-};
+use crate::run::resources::{RunOutcome, RunState, RunStats};
 
 const WON_SUBS: [&str; 5] = [
     "The bolt obeys. For now.",

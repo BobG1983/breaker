@@ -4,13 +4,13 @@ use super::*;
 
 #[test]
 fn cell_width_half_width() {
-    let w = CellWidth(70.0);
+    let w = CellWidth::new(70.0);
     assert!((w.half_width() - 35.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn cell_height_half_height() {
-    let h = CellHeight(24.0);
+    let h = CellHeight::new(24.0);
     assert!((h.half_height() - 12.0).abs() < f32::EPSILON);
 }
 

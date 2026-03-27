@@ -87,13 +87,14 @@ pub(crate) fn spawn_run_end_screen(
             }
 
             if let Some(stats) = &stats {
-                let selected: Vec<&RunHighlight> = if let Some(c) = config.as_ref() {
-                    let cap = c.highlight_cap as usize;
-                    let indices = select_highlights(&stats.highlights, c, cap);
-                    indices.iter().map(|&i| &stats.highlights[i]).collect()
-                } else {
-                    stats.highlights.iter().take(3).collect()
-                };
+                let selected: Vec<&RunHighlight> = config.as_ref().map_or_else(
+                    || stats.highlights.iter().take(3).collect(),
+                    |c| {
+                        let cap = c.highlight_cap as usize;
+                        let indices = select_highlights(&stats.highlights, c, cap);
+                        indices.iter().map(|&i| &stats.highlights[i]).collect()
+                    },
+                );
                 spawn_stats_section(parent, stats);
                 spawn_flux_section(parent, stats);
                 spawn_highlights_section(parent, &selected);
@@ -169,13 +170,10 @@ fn spawn_highlights_section(parent: &mut ChildSpawnerCommands<'_>, highlights: &
             HighlightKind::FirstEvolution => {
                 format!("First Evolution - Node {}", highlight.node_index)
             }
-            HighlightKind::MostPowerfulEvolution => {
-                if let Some(name) = &highlight.detail {
-                    format!("Most Powerful Evolution: {name}")
-                } else {
-                    format!("Most Powerful Evolution - Node {}", highlight.node_index)
-                }
-            }
+            HighlightKind::MostPowerfulEvolution => highlight.detail.as_ref().map_or_else(
+                || format!("Most Powerful Evolution - Node {}", highlight.node_index),
+                |name| format!("Most Powerful Evolution: {name}"),
+            ),
             HighlightKind::CloseSave => {
                 format!("Close Save - Node {}", highlight.node_index)
             }

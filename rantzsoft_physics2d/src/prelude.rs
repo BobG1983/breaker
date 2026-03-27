@@ -1,8 +1,4 @@
 //! Convenience re-exports for consumers of `rantzsoft_physics2d`.
-//!
-//! ```rust,ignore
-//! use rantzsoft_physics2d::prelude::*;
-//! ```
 
 pub use crate::{
     aabb::Aabb2D,

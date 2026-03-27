@@ -5,8 +5,11 @@
 #[cfg(test)]
 pub(crate) use bevy::prelude::*;
 
+#[cfg(any(test, feature = "dev"))]
+pub(crate) use crate::breaker::systems::init_breaker::apply_stat_overrides;
+#[cfg(test)]
 pub(crate) use crate::breaker::systems::init_breaker::{
-    apply_breaker_config_overrides, apply_stat_overrides, init_breaker,
+    apply_breaker_config_overrides, init_breaker,
 };
 #[cfg(test)]
 pub(crate) use crate::{

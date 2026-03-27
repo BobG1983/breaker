@@ -49,7 +49,7 @@ pub(super) fn bolt_param_bundle() -> (BoltBaseSpeed, BoltRadius) {
 
 pub(super) fn default_cell_dims() -> (CellWidth, CellHeight) {
     let cc = CellConfig::default();
-    (CellWidth(cc.width), CellHeight(cc.height))
+    (CellWidth::new(cc.width), CellHeight::new(cc.height))
 }
 
 /// Accumulates one fixed timestep of overstep, then runs one update.
@@ -106,10 +106,7 @@ pub(super) fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_he
     let pos = Vec2::new(x, y);
     app.world_mut().spawn((
         Wall,
-        WallSize {
-            half_width,
-            half_height,
-        },
+        WallSize {},
         Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, half_height)),
         CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
         Position2D(pos),

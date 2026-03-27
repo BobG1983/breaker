@@ -68,7 +68,7 @@ pub(crate) fn compute_grid_scale(
     let cell_height = config.height * scale;
     let padding_x = config.padding_x * scale;
     let step_x = cell_width + padding_x;
-    let step_y = cell_height + config.padding_y * scale;
+    let step_y = config.padding_y.mul_add(scale, cell_height);
     ScaledGridDims {
         cell_width,
         cell_height,
@@ -149,8 +149,8 @@ pub(crate) fn spawn_cells_from_grid(
                 let mut entity = commands.spawn((
                     Cell,
                     CellTypeAlias(alias),
-                    CellWidth(cell_width),
-                    CellHeight(cell_height),
+                    CellWidth::new(cell_width),
+                    CellHeight::new(cell_height),
                     CellHealth::new(scaled_hp),
                     CellDamageVisuals {
                         hdr_base: def.damage_hdr_base,
@@ -237,8 +237,8 @@ fn spawn_orbit_children(
                 OrbitCell,
                 ChildOf(shield_entity),
                 CellHealth::new(shield.hp * hp_mult),
-                CellWidth(orbit_dim),
-                CellHeight(orbit_dim),
+                CellWidth::new(orbit_dim),
+                CellHeight::new(orbit_dim),
                 Mesh2d(rect_mesh.clone()),
                 MeshMaterial2d(orbit_material.clone()),
                 Position2D(orbit_pos),

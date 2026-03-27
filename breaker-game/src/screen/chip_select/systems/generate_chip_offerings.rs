@@ -46,16 +46,16 @@ pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
 
     // Check for boss node with eligible evolutions
     let mut evolution_offers: Vec<ChipOffering> = Vec::new();
-    if let Some(layout) = &params.active_layout {
-        if layout.0.pool == NodePool::Boss {
-            let eligible = params.registry.eligible_recipes(&params.inventory);
-            for recipe in eligible.iter().take(params.config.offers_per_node) {
-                if let Some(result_def) = params.registry.get(&recipe.result_name) {
-                    evolution_offers.push(ChipOffering::Evolution {
-                        ingredients: recipe.ingredients.clone(),
-                        result: result_def.clone(),
-                    });
-                }
+    if let Some(layout) = &params.active_layout
+        && layout.0.pool == NodePool::Boss
+    {
+        let eligible = params.registry.eligible_recipes(&params.inventory);
+        for recipe in eligible.iter().take(params.config.offers_per_node) {
+            if let Some(result_def) = params.registry.get(&recipe.result_name) {
+                evolution_offers.push(ChipOffering::Evolution {
+                    ingredients: recipe.ingredients.clone(),
+                    result: result_def.clone(),
+                });
             }
         }
     }
@@ -93,11 +93,7 @@ mod tests {
             definition::{EvolutionIngredient, Rarity},
         },
         effect::definition::{Effect, EffectNode, RootEffect, Target},
-        run::node::{
-            ActiveNodeLayout,
-            NodeLayout,
-            definition::NodePool,
-        },
+        run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
     };
 
     /// Build a registry with `count` Common chips named `Chip_0`, `Chip_1`, etc.
@@ -271,10 +267,7 @@ mod tests {
     /// The `ChipCatalog` contains 5 normal chips plus the "Barrage" evolution
     /// chip definition and a recipe requiring "Piercing Shot" x2.
     /// The `ActiveNodeLayout` pool controls whether evolutions are offered.
-    fn test_app_for_evolution(
-        pool: NodePool,
-        evolution_eligible: bool,
-    ) -> App {
+    fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
         let mut app = App::new();
 
         let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(Effect::Piercing(1)), 5)

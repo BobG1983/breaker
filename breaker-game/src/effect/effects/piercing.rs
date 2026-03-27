@@ -19,8 +19,9 @@ pub(crate) struct PiercingApplied {
     pub per_stack: u32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 /// Query for bolts with optional piercing and active piercing tracking.
@@ -85,7 +86,7 @@ impl ActivePiercings {
     /// Returns the total piercing count: the sum of all active entries.
     ///
     /// Returns 0 if no entries are active (empty vec).
-    pub fn total(&self) -> u32 {
+    pub(crate) fn total(&self) -> u32 {
         self.0.iter().copied().sum()
     }
 }
@@ -145,7 +146,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -161,7 +161,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -177,7 +176,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -195,7 +193,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 2,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -216,7 +213,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -237,7 +233,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -258,7 +253,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -294,7 +288,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 2,
             max_stacks: 5,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 

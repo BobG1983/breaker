@@ -25,10 +25,11 @@ use crate::{
 pub(crate) struct RampingDamageApplied {
     /// Damage bonus added per cell hit.
     pub bonus_per_hit: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Maximum number of stacks allowed.
+    // pub max_stacks: u32,
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 // ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
+    let _bolt_entity = app
         .world_mut()
         .spawn((
             Bolt,
@@ -43,11 +43,6 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
         (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
         "DamageCell.damage should be BASE_BOLT_DAMAGE (10.0), got {}",
         msgs.0[0].damage
-    );
-    assert_eq!(
-        msgs.0[0].source_bolt,
-        Some(bolt_entity),
-        "DamageCell.source_bolt should match the bolt entity"
     );
 }
 
@@ -94,7 +89,7 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
+    let _bolt_entity = app
         .world_mut()
         .spawn((
             Bolt,
@@ -114,11 +109,6 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
         "DamageCell.damage with DamageBoost(0.5) should be 15.0, got {}",
         msgs.0[0].damage
     );
-    assert_eq!(
-        msgs.0[0].source_bolt,
-        Some(bolt_entity),
-        "DamageCell.source_bolt should match bolt entity"
-    );
 }
 
 #[test]
@@ -132,7 +122,7 @@ fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
 
     let start_y = 100.0 - cc.height / 2.0 - bc.radius - 2.0;
 
-    let bolt_a = app
+    let _bolt_a = app
         .world_mut()
         .spawn((
             Bolt,
@@ -141,7 +131,7 @@ fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
             Position2D(Vec2::new(-100.0, start_y)),
         ))
         .id();
-    let bolt_b = app
+    let _bolt_b = app
         .world_mut()
         .spawn((
             Bolt,
@@ -160,21 +150,10 @@ fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
         "two bolts hitting two cells should produce two DamageCell messages"
     );
 
-    // Find the message for each cell and verify source_bolt
     let msg_a = msgs.0.iter().find(|m| m.cell == cell_a);
     let msg_b = msgs.0.iter().find(|m| m.cell == cell_b);
     assert!(msg_a.is_some(), "DamageCell for cell A should exist");
     assert!(msg_b.is_some(), "DamageCell for cell B should exist");
-    assert_eq!(
-        msg_a.unwrap().source_bolt,
-        Some(bolt_a),
-        "DamageCell for cell A should have source_bolt == bolt A"
-    );
-    assert_eq!(
-        msg_b.unwrap().source_bolt,
-        Some(bolt_b),
-        "DamageCell for cell B should have source_bolt == bolt B"
-    );
 }
 
 #[test]
@@ -214,7 +193,7 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
     let cell_b = spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10.0);
 
     let start_y = near_cell_y - bc.radius - 25.0;
-    let bolt_entity = app
+    let _bolt_entity = app
         .world_mut()
         .spawn((
             Bolt,
@@ -241,11 +220,6 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
             (msg.damage - 10.0).abs() < f32::EPSILON,
             "each DamageCell.damage should be 10.0, got {}",
             msg.damage
-        );
-        assert_eq!(
-            msg.source_bolt,
-            Some(bolt_entity),
-            "each DamageCell.source_bolt should match the bolt entity"
         );
     }
 
@@ -294,5 +268,4 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
         "should emit exactly one DamageCell alongside BoltHitCell"
     );
     assert_eq!(dmg_msgs.0[0].cell, cell_entity);
-    assert_eq!(dmg_msgs.0[0].source_bolt, Some(bolt_entity));
 }

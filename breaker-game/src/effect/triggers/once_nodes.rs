@@ -3,8 +3,10 @@
 //! Moved from `on_death.rs` to its own file. Fires bare `Do` children inside
 //! `Once` wrappers and removes the consumed `Once` from `EffectChains`.
 
+#[cfg(test)]
 use bevy::prelude::*;
 
+#[cfg(test)]
 use crate::effect::{
     definition::{EffectChains, EffectNode},
     typed_events::fire_typed_event,
@@ -13,6 +15,7 @@ use crate::effect::{
 /// Processes `Once` nodes wrapping bare `Do` children at chip selection time.
 /// Fires the effect and removes the `Once` wrapper from `EffectChains`.
 /// Once nodes wrapping `When` nodes are left for bridge evaluation.
+#[cfg(test)]
 pub(crate) fn apply_once_nodes(mut query: Query<&mut EffectChains>, mut commands: Commands) {
     for mut chains in &mut query {
         chains.0.retain(|(chip_name, node)| {

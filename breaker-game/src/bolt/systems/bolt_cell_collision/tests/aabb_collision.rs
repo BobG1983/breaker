@@ -152,10 +152,7 @@ fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
     // Spawn wall with large WallSize but tiny Aabb2D
     app.world_mut().spawn((
         Wall,
-        WallSize {
-            half_width: 50.0,
-            half_height: 300.0,
-        },
+        WallSize {},
         Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
         CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
         Position2D(Vec2::new(200.0, 0.0)),

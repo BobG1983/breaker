@@ -1,7 +1,17 @@
 use bevy::prelude::*;
 
 use super::super::dispatch_chip_effects;
-use crate::{chips::resources::ChipCatalog, effect::effects::*, ui::messages::ChipSelected};
+use crate::{
+    chips::resources::ChipCatalog,
+    effect::effects::{
+        bolt_size_boost::handle_bolt_size_boost, bolt_speed_boost::handle_bolt_speed_boost,
+        breaker_speed_boost::handle_breaker_speed_boost,
+        bump_force_boost::handle_bump_force_boost, chain_hit::handle_chain_hit,
+        damage_boost::handle_damage_boost, piercing::handle_piercing,
+        tilt_control_boost::handle_tilt_control_boost, width_boost::handle_width_boost,
+    },
+    ui::messages::ChipSelected,
+};
 
 /// Resource holding an optional [`ChipSelected`] message to be sent once.
 #[derive(Resource)]

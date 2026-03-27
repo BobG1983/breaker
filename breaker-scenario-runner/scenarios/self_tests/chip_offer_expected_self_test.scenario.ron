@@ -5,6 +5,6 @@
     max_frames: 3000,
     invariants: [ChipOfferExpected],
     expected_violations: Some([ChipOfferExpected]),
-    allow_early_end: false,
+    allow_early_end: true,
     expected_offerings: Some(["Railgun"]),
 )

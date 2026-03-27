@@ -64,8 +64,9 @@ pub(crate) struct ShockwaveDamage {
     pub damage: f32,
     /// The chip name that originated this shockwave, for damage attribution.
     pub source_chip: Option<String>,
-    /// The bolt entity that caused this shockwave (for VFX / `DamageCell`), if any.
-    pub source_bolt: Option<Entity>,
+    // FUTURE: may be used for upcoming phases
+    // /// The bolt entity that caused this shockwave (for VFX / `DamageCell`), if any.
+    // pub source_bolt: Option<Entity>,
 }
 
 /// Tracks which cell entities have already been hit by this shockwave.
@@ -105,7 +106,7 @@ pub(crate) fn handle_shockwave(
     };
 
     let extra_stacks = f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX));
-    let max = event.base_range + extra_stacks * event.range_per_level;
+    let max = extra_stacks.mul_add(event.range_per_level, event.base_range);
     let damage = BASE_BOLT_DAMAGE * (1.0 + damage_boost.map_or(0.0, |b| b.0));
 
     commands.spawn((
@@ -115,7 +116,6 @@ pub(crate) fn handle_shockwave(
         ShockwaveDamage {
             damage,
             source_chip: event.source_chip.clone(),
-            source_bolt: Some(bolt_entity),
         },
         ShockwaveAlreadyHit::default(),
         GameDrawLayer::Fx,
@@ -142,7 +142,7 @@ pub(crate) fn tick_shockwave(
     mut query: Query<(Entity, &mut ShockwaveRadius, &ShockwaveSpeed)>,
 ) {
     for (entity, mut radius, speed) in &mut query {
-        radius.current += speed.0 * time.delta_secs();
+        radius.current = speed.0.mul_add(time.delta_secs(), radius.current);
         if radius.current >= radius.max {
             commands.entity(entity).despawn();
         }
@@ -184,7 +184,6 @@ pub(crate) fn shockwave_collision(
             damage_writer.write(DamageCell {
                 cell: candidate,
                 damage: dmg.damage,
-                source_bolt: dmg.source_bolt,
                 source_chip: dmg.source_chip.clone(),
             });
             already_hit.0.insert(candidate);

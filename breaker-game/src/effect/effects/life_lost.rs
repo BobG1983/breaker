@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::{definition::EffectTarget, effects::shield::ShieldActive},
+    effect::effects::shield::ShieldActive,
     run::messages::RunLost,
     ui::components::StatusPanel,
 };
@@ -15,10 +15,11 @@ use crate::{
 /// Fired when a lose-life effect resolves.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct LoseLifeFired {
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 /// Number of remaining lives on the breaker entity.
@@ -32,7 +33,7 @@ pub(crate) struct LivesDisplay;
 /// Observer that handles life loss — decrements `LivesCount`, sends [`RunLost`]
 /// when lives reach zero. Skips entities that have [`ShieldActive`].
 pub(crate) fn handle_life_lost(
-    trigger: On<LoseLifeFired>,
+    _trigger: On<LoseLifeFired>,
     mut lives_query: Query<(&mut LivesCount, Option<&ShieldActive>)>,
     mut writer: MessageWriter<RunLost>,
 ) {
@@ -172,8 +173,6 @@ mod tests {
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -192,8 +191,6 @@ mod tests {
         app.world_mut().spawn(LivesCount(1));
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -217,8 +214,6 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -238,8 +233,6 @@ mod tests {
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -261,8 +254,6 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -303,8 +294,6 @@ mod tests {
         let entity = app.world_mut().spawn(LivesCount(3)).id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -323,8 +312,6 @@ mod tests {
         app.world_mut().spawn(LivesCount(1));
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
         tick(&mut app);
@@ -347,8 +334,6 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(LoseLifeFired {
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 

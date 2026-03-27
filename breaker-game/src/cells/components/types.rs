@@ -34,23 +34,55 @@ pub(crate) struct CellDamageVisuals {
 
 /// Full width of a cell in world units.
 #[derive(Component, Debug)]
-pub(crate) struct CellWidth(pub f32);
+pub(crate) struct CellWidth {
+    #[cfg(any(test, feature = "dev"))]
+    pub value: f32,
+}
 
 impl CellWidth {
+    /// Creates a new `CellWidth`.
+    #[cfg(any(test, feature = "dev"))]
+    pub(crate) const fn new(value: f32) -> Self {
+        Self { value }
+    }
+
+    /// Creates a new `CellWidth` (value unused outside test/dev).
+    #[cfg(not(any(test, feature = "dev")))]
+    pub(crate) const fn new(_value: f32) -> Self {
+        Self {}
+    }
+
     /// Returns half the cell width.
+    #[cfg(test)]
     pub(crate) fn half_width(&self) -> f32 {
-        self.0 / 2.0
+        self.value / 2.0
     }
 }
 
 /// Full height of a cell in world units.
 #[derive(Component, Debug)]
-pub(crate) struct CellHeight(pub f32);
+pub(crate) struct CellHeight {
+    #[cfg(any(test, feature = "dev"))]
+    pub value: f32,
+}
 
 impl CellHeight {
+    /// Creates a new `CellHeight`.
+    #[cfg(any(test, feature = "dev"))]
+    pub(crate) const fn new(value: f32) -> Self {
+        Self { value }
+    }
+
+    /// Creates a new `CellHeight` (value unused outside test/dev).
+    #[cfg(not(any(test, feature = "dev")))]
+    pub(crate) const fn new(_value: f32) -> Self {
+        Self {}
+    }
+
     /// Returns half the cell height.
+    #[cfg(test)]
     pub(crate) fn half_height(&self) -> f32 {
-        self.0 / 2.0
+        self.value / 2.0
     }
 }
 
@@ -90,15 +122,6 @@ impl CellHealth {
         }
         (self.current / self.max).clamp(0.0, 1.0)
     }
-}
-
-/// Grid position of a cell within its node layout.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CellGridPosition {
-    /// Row index (0-indexed from top).
-    pub row: u32,
-    /// Column index (0-indexed from left).
-    pub col: u32,
 }
 
 /// Marker component — cell is locked and immune to damage.

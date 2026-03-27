@@ -1,5 +1,3 @@
-use bevy::prelude::*;
-
 use super::helpers::*;
 use crate::breaker::{
     components::{Breaker, BumpState},

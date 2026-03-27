@@ -7,4 +7,3 @@ pub(crate) mod transition;
 
 pub(crate) use components::{FadeOut, PunchScale};
 pub(crate) use plugin::FxPlugin;
-pub(crate) use transition::{TransitionConfig, TransitionDefaults, TransitionOverlay};

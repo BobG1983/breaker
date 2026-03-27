@@ -86,7 +86,6 @@ pub(crate) fn handle_piercing_beam(
             damage_writer.write(DamageCell {
                 cell: cell_entity,
                 damage,
-                source_bolt: Some(bolt_entity),
                 source_chip: event.source_chip.clone(),
             });
         }

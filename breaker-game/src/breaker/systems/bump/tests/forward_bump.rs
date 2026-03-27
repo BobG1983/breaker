@@ -4,7 +4,7 @@ use super::helpers::*;
 use crate::{
     breaker::{
         components::{Breaker, BumpState},
-        messages::{BumpGrade, BumpPerformed, BumpWhiffed},
+        messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
     },
     input::resources::InputActions,

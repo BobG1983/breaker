@@ -27,25 +27,26 @@ pub(in crate::effect) fn evaluate_armed_all(
     }
 }
 
-/// Arms a bolt entity with a remaining trigger chain.
-///
-/// If the bolt already has `ArmedEffects`, pushes to the existing vec.
-/// Otherwise, inserts a new `ArmedEffects` component.
-pub(in crate::effect) fn arm_bolt(
-    armed_query: &mut Query<&mut ArmedEffects>,
-    commands: &mut Commands,
-    bolt_entity: Entity,
-    chip_name: Option<String>,
-    remaining: EffectNode,
-) {
-    if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
-        armed.0.push((chip_name, remaining));
-    } else {
-        commands
-            .entity(bolt_entity)
-            .insert(ArmedEffects(vec![(chip_name, remaining)]));
-    }
-}
+// FUTURE: may be used for upcoming phases
+// /// Arms a bolt entity with a remaining trigger chain.
+// ///
+// /// If the bolt already has `ArmedEffects`, pushes to the existing vec.
+// /// Otherwise, inserts a new `ArmedEffects` component.
+// pub(in crate::effect) fn arm_bolt(
+//     armed_query: &mut Query<&mut ArmedEffects>,
+//     commands: &mut Commands,
+//     bolt_entity: Entity,
+//     chip_name: Option<String>,
+//     remaining: EffectNode,
+// ) {
+//     if let Ok(mut armed) = armed_query.get_mut(bolt_entity) {
+//         armed.0.push((chip_name, remaining));
+//     } else {
+//         commands
+//             .entity(bolt_entity)
+//             .insert(ArmedEffects(vec![(chip_name, remaining)]));
+//     }
+// }
 
 /// Evaluates armed triggers on a specific bolt entity.
 pub(in crate::effect) fn evaluate_armed(

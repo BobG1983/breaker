@@ -258,7 +258,6 @@ fn check_until_triggers_removes_on_cell_destroyed() {
         .id();
 
     app.insert_resource(SendMsg(Some(CellDestroyedAt {
-        position: Vec2::ZERO,
         was_required_to_clear: true,
     })));
 

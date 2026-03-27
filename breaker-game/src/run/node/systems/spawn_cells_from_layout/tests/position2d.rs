@@ -54,16 +54,13 @@ fn spawned_cell_has_position2d_at_grid_position() {
 
     assert_eq!(positions.len(), 6, "full 3x2 layout should spawn 6 cells");
 
-    // Row 0: 3 cells
-    let expected_row0: Vec<Vec2> = (0..3)
+    // Row 0: 3 cells, Row 1: 3 cells
+    let expected: Vec<Vec2> = (0..3)
         .map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y))
+        .chain(
+            (0..3).map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y - step_y)),
+        )
         .collect();
-    // Row 1: 3 cells
-    let expected_row1: Vec<Vec2> = (0..3)
-        .map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y - step_y))
-        .collect();
-
-    let expected: Vec<Vec2> = expected_row0.into_iter().chain(expected_row1).collect();
 
     for (i, (actual, exp)) in positions.iter().zip(expected.iter()).enumerate() {
         assert!(

@@ -43,8 +43,9 @@ pub struct BreakerSpawned;
 /// if no messages arrive.
 #[derive(Message, Clone, Debug)]
 pub(crate) struct RequestBreakerDestroyed {
-    /// The breaker entity to be destroyed.
-    pub breaker: Entity,
+    // FUTURE: may be used for upcoming phases
+    // /// The breaker entity to be destroyed.
+    // pub breaker: Entity,
 }
 
 /// Sent after extracting entity data from the still-alive breaker.
@@ -52,8 +53,9 @@ pub(crate) struct RequestBreakerDestroyed {
 /// Stub for two-phase destruction.
 #[derive(Message, Clone, Debug)]
 pub(crate) struct BreakerDestroyedAt {
-    /// World-space position of the destroyed breaker.
-    pub position: Vec2,
+    // FUTURE: may be used for upcoming phases
+    // /// World-space position of the destroyed breaker.
+    // pub position: Vec2,
 }
 
 #[cfg(test)]
@@ -90,17 +92,13 @@ mod tests {
 
     #[test]
     fn request_breaker_destroyed_debug_format() {
-        let msg = RequestBreakerDestroyed {
-            breaker: Entity::PLACEHOLDER,
-        };
+        let msg = RequestBreakerDestroyed {};
         assert!(format!("{msg:?}").contains("RequestBreakerDestroyed"));
     }
 
     #[test]
     fn breaker_destroyed_at_debug_format() {
-        let msg = BreakerDestroyedAt {
-            position: Vec2::new(0.0, -300.0),
-        };
+        let msg = BreakerDestroyedAt {};
         let debug = format!("{msg:?}");
         assert!(debug.contains("BreakerDestroyedAt"));
     }

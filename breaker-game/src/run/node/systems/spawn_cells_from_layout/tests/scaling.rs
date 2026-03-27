@@ -129,13 +129,13 @@ fn large_grid_cells_have_scaled_dimensions() {
         .world_mut()
         .query::<(&Cell, &CellWidth)>()
         .iter(app.world())
-        .map(|(_, w)| w.0)
+        .map(|(_, w)| w.value)
         .collect();
     let heights: Vec<f32> = app
         .world_mut()
         .query::<(&Cell, &CellHeight)>()
         .iter(app.world())
-        .map(|(_, h)| h.0)
+        .map(|(_, h)| h.value)
         .collect();
 
     assert!(!widths.is_empty(), "should have spawned cells");
@@ -215,9 +215,9 @@ fn small_grid_preserves_original_dimensions() {
         .iter(app.world())
     {
         assert!(
-            (w.0 - 126.0).abs() < f32::EPSILON,
+            (w.value - 126.0).abs() < f32::EPSILON,
             "3x2 grid CellWidth should be 126.0, got {}",
-            w.0
+            w.value
         );
     }
     for (_, h) in app
@@ -226,9 +226,9 @@ fn small_grid_preserves_original_dimensions() {
         .iter(app.world())
     {
         assert!(
-            (h.0 - 43.0).abs() < f32::EPSILON,
+            (h.value - 43.0).abs() < f32::EPSILON,
             "3x2 grid CellHeight should be 43.0, got {}",
-            h.0
+            h.value
         );
     }
 }
@@ -245,16 +245,16 @@ fn large_grid_transform_scale_matches_cell_dimensions() {
         .iter(app.world())
     {
         assert!(
-            (scale.x - w.0).abs() < f32::EPSILON,
+            (scale.x - w.value).abs() < f32::EPSILON,
             "Scale2D.x={} should match CellWidth={}",
             scale.x,
-            w.0
+            w.value
         );
         assert!(
-            (scale.y - h.0).abs() < f32::EPSILON,
+            (scale.y - h.value).abs() < f32::EPSILON,
             "Scale2D.y={} should match CellHeight={}",
             scale.y,
-            h.0
+            h.value
         );
     }
 }
@@ -296,13 +296,13 @@ fn single_cell_grid_spawns_centered_at_full_scale() {
         pos.0.x
     );
     assert!(
-        (w.0 - 126.0).abs() < f32::EPSILON,
+        (w.value - 126.0).abs() < f32::EPSILON,
         "1x1 grid CellWidth should be 126.0, got {}",
-        w.0
+        w.value
     );
     assert!(
-        (h.0 - 43.0).abs() < f32::EPSILON,
+        (h.value - 43.0).abs() < f32::EPSILON,
         "1x1 grid CellHeight should be 43.0, got {}",
-        h.0
+        h.value
     );
 }

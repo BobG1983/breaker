@@ -189,7 +189,6 @@ pub(crate) fn bolt_cell_collision(
                 damage_writer.write(DamageCell {
                     cell: hit.entity,
                     damage: effective_damage,
-                    source_bolt: Some(bolt_entity),
                     source_chip: spawned_by_evo.map(|s| s.0.clone()),
                 });
             } else {

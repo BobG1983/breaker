@@ -10,10 +10,7 @@ use crate::{
         inventory::ChipInventory,
         resources::ChipCatalog,
     },
-    effect::{
-        definition::{Effect, EffectChains, EffectNode, ImpactTarget, RootEffect, Target, Trigger},
-        effects::*,
-    },
+    effect::definition::{Effect, EffectChains, EffectNode, ImpactTarget, RootEffect, Target, Trigger},
 };
 
 // =========================================================================

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,

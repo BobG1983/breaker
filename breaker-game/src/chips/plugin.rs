@@ -67,7 +67,6 @@ mod tests {
         app.world_mut().commands().trigger(PiercingApplied {
             per_stack: 1,
             max_stacks: 3,
-            chip_name: "test".to_owned(),
         });
         app.world_mut().flush();
 

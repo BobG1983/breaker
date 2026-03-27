@@ -17,11 +17,13 @@ pub(crate) fn detect_most_powerful_evolution(
         return;
     }
 
-    let (max_name, max_damage) = tracker
+    let Some((max_name, max_damage)) = tracker
         .evolution_damage
         .iter()
         .max_by(|a, b| a.1.total_cmp(b.1))
-        .expect("evolution_damage is non-empty");
+    else {
+        return;
+    };
 
     stats.highlights.push(RunHighlight {
         kind: HighlightKind::MostPowerfulEvolution,

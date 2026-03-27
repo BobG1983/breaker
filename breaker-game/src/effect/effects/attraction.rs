@@ -44,8 +44,9 @@ pub(crate) struct AttractionApplied {
     pub per_stack: f32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 type AttractionQuery = (
@@ -129,7 +130,6 @@ mod tests {
             attraction_type: crate::effect::definition::AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -158,7 +158,6 @@ mod tests {
             attraction_type: crate::effect::definition::AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -180,7 +179,6 @@ mod tests {
             attraction_type: crate::effect::definition::AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -205,7 +203,6 @@ mod tests {
             attraction_type: AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -257,7 +254,6 @@ mod tests {
             attraction_type: AttractionType::Wall,
             per_stack: 4.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -314,7 +310,6 @@ mod tests {
             attraction_type: AttractionType::Cell,
             per_stack: 8.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 

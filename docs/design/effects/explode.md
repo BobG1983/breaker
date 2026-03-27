@@ -13,7 +13,7 @@ Instant area damage centered on the entity's position. Unlike [Shockwave](shockw
 
 ## Behavior
 
-Instantly damages all cells within `range` of the entity's position. Damage per cell = base bolt damage * `damage_mult`. Cells destroyed by Explode can trigger further effect chains (e.g., Powder Keg's nested `Died` triggers create chain explosions).
+Instantly damages all cells within `range` of the entity's position. Damage per cell = base bolt damage * `damage_mult`. 
 
 ## Visual
 

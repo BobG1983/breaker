@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::SpawnAdditionalBolt, effect::definition::EffectTarget};
+use crate::bolt::messages::SpawnAdditionalBolt;
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -20,8 +20,9 @@ pub(crate) struct MultiBoltFired {
     pub count_per_level: u32,
     /// Current stack count.
     pub stacks: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
+    // FUTURE: may be used for upcoming phases
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
     /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
@@ -99,7 +100,6 @@ mod tests {
             base_count,
             count_per_level,
             stacks,
-            targets: vec![],
             source_chip,
         });
         app.world_mut().flush();

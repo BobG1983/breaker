@@ -5,6 +5,7 @@
 //! the dispatch helpers that convert `Effect` values into typed events.
 
 use bevy::prelude::*;
+#[cfg(debug_assertions)]
 use tracing::warn;
 
 use crate::effect::definition::EffectTarget;
@@ -35,12 +36,14 @@ pub(crate) use crate::effect::effects::{
     second_wind::SecondWindFired,
     shield::ShieldFired,
     shockwave::ShockwaveFired,
-    spawn_bolt::{SpawnBoltFired, SpawnBoltsFired},
+    spawn_bolt::SpawnBoltsFired,
     spawn_phantom::SpawnPhantomFired,
     speed_boost::SpeedBoostFired,
     tilt_control_boost::TiltControlApplied,
     time_penalty::TimePenaltyFired,
 };
+#[cfg(test)]
+pub(crate) use crate::effect::effects::spawn_bolt::SpawnBoltFired;
 
 // ===========================================================================
 // Bridge dispatch — converts Effect -> typed event
@@ -87,7 +90,7 @@ pub(crate) fn fire_typed_event(
 
         // Passive-only effects should not be fired via bridge dispatch.
         // If they end up here, it's a data error — log and skip.
-        effect @ (Effect::Piercing(_)
+        _effect @ (Effect::Piercing(_)
         | Effect::DamageBoost(_)
         | Effect::ChainHit(_)
         | Effect::SizeBoost(..)
@@ -98,7 +101,7 @@ pub(crate) fn fire_typed_event(
             #[cfg(debug_assertions)]
             {
                 warn!(
-                    "fire_typed_event called with passive-only effect {effect:?} — should use fire_passive_event"
+                    "fire_typed_event called with passive-only effect {_effect:?} — should use fire_passive_event"
                 );
             }
         }
@@ -134,7 +137,6 @@ fn fire_bolt_effect(
             commands.trigger(SpeedBoostFired {
                 multiplier,
                 targets,
-                source_chip,
             });
         }
         Effect::ChainBolt { tether_distance } => {
@@ -153,7 +155,6 @@ fn fire_bolt_effect(
                 base_count,
                 count_per_level,
                 stacks,
-                targets,
                 source_chip,
             });
         }
@@ -189,7 +190,6 @@ fn fire_bolt_effect(
                 range_per_level,
                 stacks,
                 speed,
-                targets,
                 source_chip,
             });
         }
@@ -208,16 +208,11 @@ fn fire_global_effect(
 
     match effect {
         Effect::LoseLife => {
-            commands.trigger(LoseLifeFired {
-                targets,
-                source_chip,
-            });
+            commands.trigger(LoseLifeFired {});
         }
         Effect::TimePenalty { seconds } => {
             commands.trigger(TimePenaltyFired {
                 seconds,
-                targets,
-                source_chip,
             });
         }
         Effect::SpawnBolts {
@@ -229,7 +224,6 @@ fn fire_global_effect(
                 count,
                 lifespan,
                 inherit,
-                targets,
                 source_chip,
             });
         }
@@ -241,7 +235,6 @@ fn fire_global_effect(
                 duration,
                 max_active,
                 targets,
-                source_chip,
             });
         }
         Effect::Shield {
@@ -253,31 +246,21 @@ fn fire_global_effect(
                 base_duration,
                 duration_per_level,
                 stacks,
-                targets,
-                source_chip,
             });
         }
         Effect::GravityWell {
-            strength,
-            duration,
-            radius,
+            strength: _,
+            duration: _,
+            radius: _,
             max,
         } => {
             commands.trigger(GravityWellFired {
-                strength,
-                duration,
-                radius,
                 max,
                 targets,
-                source_chip,
             });
         }
-        Effect::SecondWind { invuln_secs } => {
-            commands.trigger(SecondWindFired {
-                invuln_secs,
-                targets,
-                source_chip,
-            });
+        Effect::SecondWind { invuln_secs: _ } => {
+            commands.trigger(SecondWindFired {});
         }
         _ => {}
     }
@@ -318,7 +301,7 @@ fn fire_pool_effect(
 pub(crate) fn fire_passive_event(
     effect: crate::effect::definition::Effect,
     max_stacks: u32,
-    chip_name: String,
+    _chip_name: String,
     commands: &mut Commands,
 ) {
     use crate::effect::definition::Effect;
@@ -328,35 +311,30 @@ pub(crate) fn fire_passive_event(
             commands.trigger(PiercingApplied {
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::DamageBoost(per_stack) => {
             commands.trigger(DamageBoostApplied {
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::SpeedBoost { multiplier } => {
             commands.trigger(SpeedBoostApplied {
                 multiplier,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::ChainHit(per_stack) => {
             commands.trigger(ChainHitApplied {
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::SizeBoost(per_stack) => {
             commands.trigger(SizeBoostApplied {
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::Attraction(attraction_type, per_stack) => {
@@ -364,28 +342,23 @@ pub(crate) fn fire_passive_event(
                 attraction_type,
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::BumpForce(per_stack) => {
             commands.trigger(BumpForceApplied {
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::TiltControl(per_stack) => {
             commands.trigger(TiltControlApplied {
                 per_stack,
                 max_stacks,
-                chip_name,
             });
         }
         Effect::RampingDamage { bonus_per_hit } => {
             commands.trigger(RampingDamageApplied {
                 bonus_per_hit,
-                max_stacks,
-                chip_name,
             });
         }
         // Triggered-only effects should not be fired via passive dispatch.

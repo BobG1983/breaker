@@ -16,8 +16,9 @@ pub(crate) struct ChainHitApplied {
     pub per_stack: u32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 /// Observer: applies chain hit stacking to all bolt entities.
@@ -65,7 +66,6 @@ mod tests {
         app.world_mut().commands().trigger(ChainHitApplied {
             per_stack: 2,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -81,7 +81,6 @@ mod tests {
         app.world_mut().commands().trigger(ChainHitApplied {
             per_stack: 2,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -97,7 +96,6 @@ mod tests {
         app.world_mut().commands().trigger(ChainHitApplied {
             per_stack: 2,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 

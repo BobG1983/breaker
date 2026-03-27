@@ -182,7 +182,7 @@ fn pick_style(rng: &mut ResMut<crate::shared::GameRng>) -> TransitionStyle {
 }
 
 /// Returns the initial overlay color for the given style and direction.
-fn overlay_color(
+const fn overlay_color(
     config: &TransitionConfig,
     style: TransitionStyle,
     direction: TransitionDirection,

@@ -70,6 +70,7 @@ pub(crate) fn build_active_pool(
 /// Lower-level draw primitive — prefer [`generate_offerings`] for template-aware deduplication.
 ///
 /// Draws `count` chip names from the weighted pool without replacement.
+#[cfg(test)]
 #[must_use]
 pub(crate) fn draw_offerings(
     pool: &[(String, f32)],
@@ -149,11 +150,10 @@ pub(crate) fn generate_offerings(
 
     results
         .iter()
-        .map(|name| {
-            registry
-                .get(name)
-                .expect("drawn name must be in registry")
-                .clone()
+        .filter_map(|name| {
+            let def = registry.get(name);
+            debug_assert!(def.is_some(), "drawn name must be in registry: {name}");
+            def.cloned()
         })
         .collect()
 }
@@ -256,8 +256,8 @@ mod tests {
         let b = test_chip("B", 1);
         let c = test_chip("C", 1);
         registry.insert(a.clone());
-        registry.insert(b.clone());
-        registry.insert(c.clone());
+        registry.insert(b);
+        registry.insert(c);
 
         let mut inventory = ChipInventory::default();
         let _ = inventory.add_chip("A", &a);
@@ -475,7 +475,7 @@ mod tests {
         let c = test_chip("C", 1);
         registry.insert(a.clone());
         registry.insert(b.clone());
-        registry.insert(c.clone());
+        registry.insert(c);
 
         let mut inventory = ChipInventory::default();
         let _ = inventory.add_chip("A", &a);

@@ -89,11 +89,7 @@ fn observer_spawns_shockwave_entity_at_bolt_position() {
         BASE_BOLT_DAMAGE,
         dmg.damage
     );
-    assert_eq!(
-        dmg.source_bolt,
-        Some(bolt),
-        "source_bolt should be the triggering bolt"
-    );
+    // source_bolt field was commented out from ShockwaveDamage
 
     assert_standard_shockwave_components(app.world(), sw_entity);
 

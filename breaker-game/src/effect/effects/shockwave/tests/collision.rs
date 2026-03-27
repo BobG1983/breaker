@@ -32,7 +32,7 @@ fn shockwave_collision_damages_cells_within_radius() {
     tick(&mut app);
 
     // Spawn shockwave at origin with radius already covering the cell
-    let sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
+    let _sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
     app.world_mut().spawn((
         Position2D(Vec2::new(0.0, 0.0)),
         ShockwaveRadius {
@@ -42,7 +42,6 @@ fn shockwave_collision_damages_cells_within_radius() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(sw_bolt),
         },
         ShockwaveAlreadyHit::default(),
     ));
@@ -78,7 +77,7 @@ fn shockwave_collision_skips_already_hit_cells() {
     // Let quadtree update
     tick(&mut app);
 
-    let sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
+    let _sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
     let mut already_hit = HashSet::new();
     already_hit.insert(cell);
     app.world_mut().spawn((
@@ -90,7 +89,6 @@ fn shockwave_collision_skips_already_hit_cells() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(sw_bolt),
         },
         ShockwaveAlreadyHit(already_hit),
     ));
@@ -120,7 +118,7 @@ fn shockwave_collision_skips_locked_cells() {
     // Let quadtree update
     tick(&mut app);
 
-    let sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
+    let _sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
     app.world_mut().spawn((
         Position2D(Vec2::new(0.0, 0.0)),
         ShockwaveRadius {
@@ -130,7 +128,6 @@ fn shockwave_collision_skips_locked_cells() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(sw_bolt),
         },
         ShockwaveAlreadyHit::default(),
     ));
@@ -170,7 +167,7 @@ fn shockwave_collision_only_finds_cells_via_quadtree() {
     // Let quadtree update
     tick(&mut app);
 
-    let sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
+    let _sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
     app.world_mut().spawn((
         Position2D(Vec2::new(0.0, 0.0)),
         ShockwaveRadius {
@@ -180,7 +177,6 @@ fn shockwave_collision_only_finds_cells_via_quadtree() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(sw_bolt),
         },
         ShockwaveAlreadyHit::default(),
     ));
@@ -224,7 +220,7 @@ fn shockwave_collision_does_not_hit_bolt_entities() {
     // Let quadtree update
     tick(&mut app);
 
-    let sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
+    let _sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
     app.world_mut().spawn((
         Position2D(Vec2::new(0.0, 0.0)),
         ShockwaveRadius {
@@ -234,7 +230,6 @@ fn shockwave_collision_does_not_hit_bolt_entities() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(sw_bolt),
         },
         ShockwaveAlreadyHit::default(),
     ));
@@ -284,7 +279,7 @@ fn multi_tick_wavefront_hits_inner_cells_before_outer() {
     // Spawn shockwave: speed=400, max=96
     // After 1 tick: radius = 400/64 ~= 6.25 (inner cell NOT hit yet)
     // After 4 ticks: radius ~= 25.0 (inner cell at 20 IS hit, outer at 80 NOT)
-    let sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
+    let _sw_bolt = spawn_bolt(&mut app, 0.0, 0.0);
     app.world_mut().spawn((
         Position2D(Vec2::new(0.0, 0.0)),
         ShockwaveRadius {
@@ -295,7 +290,6 @@ fn multi_tick_wavefront_hits_inner_cells_before_outer() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(sw_bolt),
         },
         ShockwaveAlreadyHit::default(),
     ));
@@ -350,7 +344,6 @@ fn dangling_source_bolt_does_not_panic() {
         ShockwaveDamage {
             damage: 10.0,
             source_chip: None,
-            source_bolt: Some(stale_bolt),
         },
         ShockwaveAlreadyHit::default(),
     ));
@@ -366,9 +359,5 @@ fn dangling_source_bolt_does_not_panic() {
         captured.0.len()
     );
     assert_eq!(captured.0[0].cell, cell);
-    assert_eq!(
-        captured.0[0].source_bolt,
-        Some(stale_bolt),
-        "DamageCell.source_bolt should carry the stale entity (no panic)"
-    );
+    // source_bolt field was commented out from DamageCell
 }

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::system::*;
 use crate::{
     effect::{
-        definition::{Effect, EffectNode, EffectTarget},
+        definition::{Effect, EffectNode},
         typed_events::{EntropyEngineFired, SpawnBoltFired},
     },
     shared::GameRng,

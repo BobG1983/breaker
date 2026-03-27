@@ -118,8 +118,7 @@ mod tests {
 
     fn make_cell_destroyed_batch(count: usize) -> Vec<CellDestroyedAt> {
         (0..u16::try_from(count).expect("count fits in u16"))
-            .map(|i| CellDestroyedAt {
-                position: Vec2::new(f32::from(i) * 10.0, 100.0),
+            .map(|_i| CellDestroyedAt {
                 was_required_to_clear: true,
             })
             .collect()
@@ -143,8 +142,7 @@ mod tests {
 
     fn make_cell_destroyed_at_batch(count: usize) -> Vec<crate::cells::messages::CellDestroyedAt> {
         (0..u16::try_from(count).expect("count fits in u16"))
-            .map(|i| crate::cells::messages::CellDestroyedAt {
-                position: Vec2::new(f32::from(i) * 10.0, 100.0),
+            .map(|_i| crate::cells::messages::CellDestroyedAt {
                 was_required_to_clear: true,
             })
             .collect()
@@ -268,7 +266,6 @@ mod tests {
 
         // Send 1 cell destroyed to trigger pruning
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
-            position: Vec2::new(10.0, 20.0),
             was_required_to_clear: true,
         }]));
         tick(&mut app);

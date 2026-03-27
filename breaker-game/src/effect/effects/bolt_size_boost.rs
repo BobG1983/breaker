@@ -16,8 +16,9 @@ pub(crate) struct SizeBoostApplied {
     pub per_stack: f32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 /// Query for bolts with optional size boost and active size boost tracking.
@@ -67,7 +68,7 @@ impl ActiveSizeBoosts {
     /// Returns the total size boost: the sum of all active entries.
     ///
     /// Returns 0.0 if no entries are active (empty vec).
-    pub fn total(&self) -> f32 {
+    pub(crate) fn total(&self) -> f32 {
         self.0.iter().sum()
     }
 }
@@ -123,7 +124,6 @@ mod tests {
         app.world_mut().commands().trigger(SizeBoostApplied {
             per_stack: 0.5,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -139,7 +139,6 @@ mod tests {
         app.world_mut().commands().trigger(SizeBoostApplied {
             per_stack: 0.5,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -173,7 +172,6 @@ mod tests {
         app.world_mut().commands().trigger(SizeBoostApplied {
             per_stack: 0.5,
             max_stacks: 5,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 

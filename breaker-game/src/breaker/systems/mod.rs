@@ -18,7 +18,7 @@ pub(crate) use bump::{grade_bump, update_bump};
 pub use bump_feedback::{spawn_bump_grade_text, spawn_whiff_text};
 pub use bump_visual::{animate_bump_visual, trigger_bump_visual};
 pub use dash::update_breaker_state;
-pub(crate) use init_breaker::{apply_breaker_config_overrides, apply_stat_overrides, init_breaker};
+pub(crate) use init_breaker::{apply_breaker_config_overrides, init_breaker};
 pub use init_breaker_params::init_breaker_params;
 pub(crate) use move_breaker::move_breaker;
 pub use spawn_breaker::{reset_breaker, spawn_breaker};

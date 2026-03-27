@@ -8,5 +8,5 @@ pub(crate) mod sets;
 pub(crate) mod systems;
 
 pub(crate) use plugin::UiPlugin;
-pub(crate) use resources::{TimerUiConfig, TimerUiDefaults};
+pub(crate) use resources::TimerUiDefaults;
 pub(crate) use sets::UiSystems;

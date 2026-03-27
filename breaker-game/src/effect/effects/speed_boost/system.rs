@@ -24,8 +24,9 @@ pub(crate) struct SpeedBoostFired {
     pub multiplier: f32,
     /// The effect targets for this event.
     pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 /// Query for bolts needing speed boost handling (velocity, base/max speed, optional boost amp,

@@ -15,18 +15,17 @@ use crate::effect::definition::EffectTarget;
 /// Fired when a gravity well effect resolves.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct GravityWellFired {
-    /// Attraction strength.
-    pub strength: f32,
-    /// Duration in seconds.
-    pub duration: f32,
-    /// Effect radius in world units.
-    pub radius: f32,
+    // FUTURE: may be used for upcoming phases
+    // /// Attraction strength.
+    // /// Duration in seconds.
+    // /// Effect radius in world units.
     /// Maximum active wells at once.
     pub max: u32,
     /// The effect targets for this event.
     pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -96,12 +95,8 @@ mod tests {
         let mut app = test_app();
 
         app.world_mut().commands().trigger(GravityWellFired {
-            strength: 50.0,
-            duration: 5.0,
-            radius: 100.0,
             max: 2,
             targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -124,12 +119,8 @@ mod tests {
             .id();
 
         app.world_mut().commands().trigger(GravityWellFired {
-            strength: 10.0,
-            duration: 3.0,
-            radius: 100.0,
             max: 3,
             targets: vec![EffectTarget::Entity(bolt)],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -180,12 +171,8 @@ mod tests {
 
         // Trigger with max:3 -- should NOT spawn because 3 already exist
         app.world_mut().commands().trigger(GravityWellFired {
-            strength: 10.0,
-            duration: 3.0,
-            radius: 100.0,
             max: 3,
             targets: vec![EffectTarget::Entity(bolt)],
-            source_chip: None,
         });
         app.world_mut().flush();
 

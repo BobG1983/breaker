@@ -7,7 +7,6 @@ use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use crate::{
-    effect::definition::EffectTarget,
     shared::{BOLT_LAYER, PlayfieldConfig, WALL_LAYER},
     wall::components::{Wall, WallSize},
 };
@@ -28,12 +27,12 @@ pub(crate) struct SecondWindWall;
 /// Fired when a second wind effect resolves.
 #[derive(Event, Clone, Debug)]
 pub(crate) struct SecondWindFired {
-    /// Duration of invulnerability in seconds.
-    pub invuln_secs: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// Duration of invulnerability in seconds.
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 /// Observer: handles second wind — spawns invisible bottom wall.
@@ -59,10 +58,7 @@ pub(crate) fn handle_second_wind(
     commands.spawn((
         Wall,
         SecondWindWall,
-        WallSize {
-            half_width,
-            half_height,
-        },
+        WallSize {},
         Position2D(Vec2::new(0.0, y)),
         Scale2D {
             x: half_width,
@@ -108,9 +104,6 @@ mod tests {
 
     fn trigger_second_wind(app: &mut App) {
         app.world_mut().commands().trigger(SecondWindFired {
-            invuln_secs: 3.0,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
     }
@@ -245,10 +238,7 @@ mod tests {
         app.world_mut().spawn((
             SecondWindWall,
             Wall,
-            WallSize {
-                half_width: 400.0,
-                half_height: 5.0,
-            },
+            WallSize {},
             Position2D(Vec2::new(0.0, -310.0)),
             CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
         ));

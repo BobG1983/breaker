@@ -56,13 +56,12 @@ fn trigger_speed_boost(app: &mut App, bolt: Option<Entity>, multiplier: f32) {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier,
         targets,
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(app);
 }
 
-fn get_bolt_velocity(app: &mut App, entity: Entity) -> Velocity2D {
+fn get_bolt_velocity(app: &App, entity: Entity) -> Velocity2D {
     *app.world()
         .entity(entity)
         .get::<Velocity2D>()
@@ -78,7 +77,7 @@ fn handle_speed_boost_scales_bolt_velocity_by_multiplier() {
 
     trigger_speed_boost(&mut app, Some(bolt), 1.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 400.0 * 1.5 = 600.0, within max of 800.0
     assert!(
         (vel.speed() - 600.0).abs() < 1.0,
@@ -95,7 +94,7 @@ fn handle_speed_boost_clamps_to_max_speed() {
 
     trigger_speed_boost(&mut app, Some(bolt), 1.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 700.0 * 1.5 = 1050.0, should clamp to max 800.0
     assert!(
         (vel.speed() - 800.0).abs() < 1.0,
@@ -111,7 +110,7 @@ fn handle_speed_boost_clamps_to_elevated_max_with_amp() {
 
     trigger_speed_boost(&mut app, Some(bolt), 1.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 700.0 * 1.5 = 1050.0, effective max = 800.0 + 100.0 = 900.0
     assert!(
         (vel.speed() - 900.0).abs() < 1.0,
@@ -129,7 +128,7 @@ fn handle_speed_boost_floors_at_base_speed() {
 
     trigger_speed_boost(&mut app, Some(bolt), 0.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 600.0 * 0.5 = 300.0, should floor at base 400.0
     assert!(
         (vel.speed() - 400.0).abs() < 1.0,
@@ -148,7 +147,7 @@ fn handle_speed_boost_floors_at_elevated_base_with_amp() {
 
     trigger_speed_boost(&mut app, Some(bolt), 0.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 700.0 * 0.5 = 350.0, effective base = 400.0 + 100.0 = 500.0
     assert!(
         (vel.speed() - 500.0).abs() < 1.0,
@@ -164,7 +163,7 @@ fn handle_speed_boost_identity_multiplier_leaves_velocity_unchanged() {
 
     trigger_speed_boost(&mut app, Some(bolt), 1.0);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     assert!(
         (vel.0.x).abs() < f32::EPSILON,
         "x should remain 0.0, got {:.4}",
@@ -184,7 +183,7 @@ fn handle_speed_boost_zero_velocity_remains_zero() {
 
     trigger_speed_boost(&mut app, Some(bolt), 1.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     assert!(
         vel.speed() < f32::EPSILON,
         "zero velocity should remain zero, got {:.4}",
@@ -200,7 +199,7 @@ fn handle_speed_boost_empty_targets_applies_to_all_bolts() {
     trigger_speed_boost(&mut app, None, 1.5);
 
     // Empty targets = AllBolts — boost should apply
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     assert!(
         (vel.0.y - 600.0).abs() < 1.0,
         "empty targets should apply to all bolts (AllBolts), got y={:.1}",
@@ -219,7 +218,7 @@ fn handle_speed_boost_no_ops_for_despawned_bolt() {
     trigger_speed_boost(&mut app, Some(stale_entity), 1.5);
 
     // Existing bolt should be unaffected
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     assert!(
         (vel.0.y - 400.0).abs() < f32::EPSILON,
         "existing bolt should be unaffected when target entity is despawned, got y={:.1}",
@@ -235,8 +234,8 @@ fn handle_speed_boost_targets_only_specific_bolt() {
 
     trigger_speed_boost(&mut app, Some(bolt_a), 1.5);
 
-    let vel_a = get_bolt_velocity(&mut app, bolt_a);
-    let vel_b = get_bolt_velocity(&mut app, bolt_b);
+    let vel_a = get_bolt_velocity(&app, bolt_a);
+    let vel_b = get_bolt_velocity(&app, bolt_b);
 
     assert!(
         (vel_a.speed() - 600.0).abs() < 1.0,
@@ -260,7 +259,6 @@ fn trigger_all_bolts_speed_boost(app: &mut App, multiplier: f32) {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier,
         targets: vec![],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(app);
@@ -275,8 +273,8 @@ fn all_bolts_scales_all_bolt_velocities() {
 
     trigger_all_bolts_speed_boost(&mut app, 1.3);
 
-    let vel_a = get_bolt_velocity(&mut app, bolt_a);
-    let vel_b = get_bolt_velocity(&mut app, bolt_b);
+    let vel_a = get_bolt_velocity(&app, bolt_a);
+    let vel_b = get_bolt_velocity(&app, bolt_b);
 
     // Bolt A: 400.0 * 1.3 = 520.0
     assert!(
@@ -308,7 +306,7 @@ fn all_bolts_clamps_to_max() {
 
     trigger_all_bolts_speed_boost(&mut app, 1.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 700.0 * 1.5 = 1050.0, should clamp to max 800.0
     assert!(
         (vel.speed() - 800.0).abs() < 1.0,
@@ -324,7 +322,7 @@ fn all_bolts_floors_at_base() {
 
     trigger_all_bolts_speed_boost(&mut app, 0.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 600.0 * 0.5 = 300.0, should floor at base 400.0
     assert!(
         (vel.speed() - 400.0).abs() < 1.0,
@@ -340,7 +338,7 @@ fn all_bolts_respects_bolt_speed_boost() {
 
     trigger_all_bolts_speed_boost(&mut app, 1.5);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 700.0 * 1.5 = 1050.0, effective max = 800.0 + 100.0 = 900.0
     assert!(
         (vel.speed() - 900.0).abs() < 1.0,
@@ -357,8 +355,8 @@ fn all_bolts_zero_velocity_stays_zero() {
 
     trigger_all_bolts_speed_boost(&mut app, 1.5);
 
-    let vel_zero = get_bolt_velocity(&mut app, bolt_zero);
-    let vel_moving = get_bolt_velocity(&mut app, bolt_moving);
+    let vel_zero = get_bolt_velocity(&app, bolt_zero);
+    let vel_moving = get_bolt_velocity(&app, bolt_moving);
 
     assert!(
         vel_zero.speed() < f32::EPSILON,
@@ -403,12 +401,11 @@ fn speed_boost_fired_scales_bolt_velocity() {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier: 1.5,
         targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(&mut app);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     assert!(
         (vel.speed() - 600.0).abs() < 1.0,
         "SpeedBoostFired should scale bolt speed to ~600.0 (400.0 * 1.5), got {:.1}",
@@ -427,13 +424,12 @@ fn speed_boost_fired_all_bolts_scales_all() {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier: 1.3,
         targets: vec![],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(&mut app);
 
-    let vel_a = get_bolt_velocity(&mut app, bolt_a);
-    let vel_b = get_bolt_velocity(&mut app, bolt_b);
+    let vel_a = get_bolt_velocity(&app, bolt_a);
+    let vel_b = get_bolt_velocity(&app, bolt_b);
 
     assert!(
         (vel_a.speed() - 520.0).abs() < 1.0,
@@ -457,12 +453,11 @@ fn speed_boost_fired_clamps_to_max() {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier: 1.5,
         targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(&mut app);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     assert!(
         (vel.speed() - 800.0).abs() < 1.0,
         "SpeedBoostFired should clamp to max 800.0, got {:.1}",
@@ -522,7 +517,6 @@ fn handle_speed_boost_pushes_to_active_speed_boosts() {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier: 1.5,
         targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(&mut app);
@@ -547,7 +541,6 @@ fn handle_speed_boost_stacks_multiple_boosts() {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier: 2.0,
         targets: vec![crate::effect::definition::EffectTarget::Entity(bolt)],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(&mut app);
@@ -569,7 +562,7 @@ fn apply_speed_boosts_recalculates_velocity_from_vec() {
 
     tick(&mut app);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 400.0 * 1.5 * 2.0 = 1200.0, direction preserved (0, 1)
     assert!(
         (vel.speed() - 1200.0).abs() < 1.0,
@@ -597,7 +590,7 @@ fn apply_speed_boosts_clamps_to_max() {
 
     tick(&mut app);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // 400.0 * 3.0 = 1200.0, clamped to max 800.0
     assert!(
         (vel.speed() - 800.0).abs() < 1.0,
@@ -617,7 +610,7 @@ fn apply_speed_boosts_empty_vec_uses_base_speed() {
 
     tick(&mut app);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // product of empty vec = 1.0, so 400.0 * 1.0 = 400.0
     assert!(
         (vel.speed() - 400.0).abs() < 1.0,
@@ -636,7 +629,7 @@ fn apply_speed_boosts_preserves_direction() {
 
     tick(&mut app);
 
-    let vel = get_bolt_velocity(&mut app, bolt);
+    let vel = get_bolt_velocity(&app, bolt);
     // base_speed * 2.0 = 800.0
     assert!(
         (vel.speed() - 800.0).abs() < 1.0,
@@ -673,7 +666,6 @@ fn handle_speed_boost_all_bolts_pushes_to_all_active_speed_boosts() {
     app.world_mut().commands().trigger(SpeedBoostFired {
         multiplier: 2.0,
         targets: vec![],
-        source_chip: None,
     });
     app.world_mut().flush();
     tick(&mut app);

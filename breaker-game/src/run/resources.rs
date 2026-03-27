@@ -136,7 +136,7 @@ pub enum HighlightKind {
 impl HighlightKind {
     /// Returns the thematic category for this highlight kind.
     #[must_use]
-    pub fn category(&self) -> HighlightCategory {
+    pub const fn category(&self) -> HighlightCategory {
         match self {
             Self::MassDestruction
             | Self::ComboKing
@@ -198,7 +198,7 @@ pub struct RunStats {
 impl RunStats {
     /// Calculate Flux earned from this run's stats.
     #[must_use]
-    pub fn flux_earned(&self) -> u32 {
+    pub const fn flux_earned(&self) -> u32 {
         let base = self.nodes_cleared * 10;
         let bump_bonus = self.perfect_bumps * 2;
         let evo_bonus = self.evolutions_performed * 25;

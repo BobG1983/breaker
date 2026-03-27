@@ -118,13 +118,14 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    // FUTURE: may be used for upcoming phases
+    // fn tick(app: &mut App) {
+    //     let timestep = app.world().resource::<Time<Fixed>>().timestep();
+    //     app.world_mut()
+    //         .resource_mut::<Time<Fixed>>()
+    //         .accumulate_overstep(timestep);
+    //     app.update();
+    // }
 
     // --- Capture resources ---
 
@@ -214,7 +215,7 @@ mod tests {
             1,
             "single-entry pool with weight 1.0 should always fire SpawnBoltsFired"
         );
-        assert_eq!(captured.0[0].targets, vec![EffectTarget::Entity(bolt)]);
+        // targets field was commented out from SpawnBoltsFired
     }
 
     // =========================================================================

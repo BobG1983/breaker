@@ -6,7 +6,7 @@
 
 use bevy::prelude::*;
 
-use crate::{breaker::components::Breaker, effect::definition::EffectTarget};
+use crate::breaker::components::Breaker;
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -21,10 +21,11 @@ pub(crate) struct ShieldFired {
     pub duration_per_level: f32,
     /// Current stack count.
     pub stacks: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -147,8 +148,6 @@ mod tests {
             base_duration,
             duration_per_level,
             stacks,
-            targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
     }

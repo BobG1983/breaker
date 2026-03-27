@@ -8,8 +8,9 @@ mod plugin;
 mod resources;
 pub(crate) mod systems;
 
-pub(crate) use definition::{
-    ChipDefinition, ChipTemplate, EvolutionTemplate, expand_chip_template,
-};
+pub(crate) use definition::ChipDefinition;
 pub(crate) use plugin::ChipsPlugin;
-pub(crate) use resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry, Recipe};
+pub use resources::ChipCatalog;
+pub(crate) use resources::{ChipTemplateRegistry, EvolutionTemplateRegistry};
+#[cfg(test)]
+pub(crate) use resources::Recipe;

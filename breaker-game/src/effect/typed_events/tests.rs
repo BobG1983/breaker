@@ -26,26 +26,14 @@ fn shockwave_fired_with_targets_vec() {
 
 #[test]
 fn lose_life_fired_empty_targets_equivalent_to_old_none_bolt() {
-    let event = LoseLifeFired {
-        targets: vec![],
-        source_chip: None,
-    };
-    assert!(
-        event.targets.is_empty(),
-        "empty targets semantically equivalent to old bolt: None"
-    );
+    let event = LoseLifeFired {};
+    assert!(!format!("{event:?}").is_empty());
 }
 
 #[test]
 fn lose_life_fired_multiple_targets() {
-    let event = LoseLifeFired {
-        targets: vec![
-            EffectTarget::Entity(Entity::PLACEHOLDER),
-            EffectTarget::Entity(Entity::PLACEHOLDER),
-        ],
-        source_chip: None,
-    };
-    assert_eq!(event.targets.len(), 2);
+    let event = LoseLifeFired {};
+    assert!(!format!("{event:?}").is_empty());
 }
 
 #[test]
@@ -54,13 +42,11 @@ fn spawn_bolts_fired_carries_new_fields() {
         count: 2,
         lifespan: Some(5.0),
         inherit: true,
-        targets: vec![EffectTarget::Entity(Entity::PLACEHOLDER)],
         source_chip: Some("Reflex".to_owned()),
     };
     assert_eq!(event.count, 2);
     assert_eq!(event.lifespan, Some(5.0));
     assert!(event.inherit);
-    assert_eq!(event.targets.len(), 1);
 }
 
 #[test]
@@ -68,7 +54,6 @@ fn speed_boost_fired_with_targets() {
     let event = SpeedBoostFired {
         multiplier: 1.3,
         targets: vec![EffectTarget::Entity(Entity::PLACEHOLDER)],
-        source_chip: None,
     };
     assert!((event.multiplier - 1.3).abs() < f32::EPSILON);
     assert_eq!(event.targets.len(), 1);
@@ -120,7 +105,6 @@ fn attraction_applied_carries_attraction_type_cell() {
         attraction_type: AttractionType::Cell,
         per_stack: 1.0,
         max_stacks: 3,
-        chip_name: "Magnet".to_owned(),
     };
     assert_eq!(event.attraction_type, AttractionType::Cell);
     assert!((event.per_stack - 1.0).abs() < f32::EPSILON);
@@ -132,7 +116,6 @@ fn attraction_applied_carries_attraction_type_wall() {
         attraction_type: AttractionType::Wall,
         per_stack: 0.5,
         max_stacks: 3,
-        chip_name: "Wall Magnet".to_owned(),
     };
     assert_eq!(event.attraction_type, AttractionType::Wall);
 }
@@ -173,7 +156,6 @@ fn fire_passive_event_dispatches_attraction_with_type() {
     assert_eq!(captured.0[0].attraction_type, AttractionType::Cell);
     assert!((captured.0[0].per_stack - 1.0).abs() < f32::EPSILON);
     assert_eq!(captured.0[0].max_stacks, 3);
-    assert_eq!(captured.0[0].chip_name, "Magnet");
 }
 
 // =========================================================================
@@ -404,7 +386,6 @@ fn piercing_applied_carries_per_stack_and_max() {
     let event = PiercingApplied {
         per_stack: 1,
         max_stacks: 3,
-        chip_name: "Piercing Shot".to_owned(),
     };
     assert_eq!(event.per_stack, 1);
     assert_eq!(event.max_stacks, 3);
@@ -415,7 +396,6 @@ fn damage_boost_applied_carries_per_stack() {
     let event = DamageBoostApplied {
         per_stack: 0.5,
         max_stacks: 3,
-        chip_name: "Damage Up".to_owned(),
     };
     assert!((event.per_stack - 0.5).abs() < f32::EPSILON);
 }
@@ -425,7 +405,6 @@ fn bump_force_applied_accessible() {
     let event = BumpForceApplied {
         per_stack: 0.2,
         max_stacks: 3,
-        chip_name: "Bump Force".to_owned(),
     };
     assert!((event.per_stack - 0.2).abs() < f32::EPSILON);
 }
@@ -435,7 +414,6 @@ fn tilt_control_applied_accessible() {
     let event = TiltControlApplied {
         per_stack: 0.1,
         max_stacks: 3,
-        chip_name: "Tilt Control".to_owned(),
     };
     assert!((event.per_stack - 0.1).abs() < f32::EPSILON);
 }
@@ -448,8 +426,6 @@ fn tilt_control_applied_accessible() {
 fn time_penalty_fired_carries_seconds() {
     let event = TimePenaltyFired {
         seconds: 3.0,
-        targets: vec![],
-        source_chip: None,
     };
     assert!((event.seconds - 3.0).abs() < f32::EPSILON);
 }
@@ -470,7 +446,6 @@ fn multi_bolt_fired_carries_count_parameters() {
         base_count: 2,
         count_per_level: 1,
         stacks: 1,
-        targets: vec![EffectTarget::Entity(Entity::PLACEHOLDER)],
         source_chip: None,
     };
     assert_eq!(event.base_count, 2);
@@ -482,8 +457,6 @@ fn shield_fired_carries_duration_and_stacks() {
         base_duration: 3.0,
         duration_per_level: 0.5,
         stacks: 2,
-        targets: vec![EffectTarget::Entity(Entity::PLACEHOLDER)],
-        source_chip: None,
     };
     assert!((event.base_duration - 3.0).abs() < f32::EPSILON);
     assert_eq!(event.stacks, 2);

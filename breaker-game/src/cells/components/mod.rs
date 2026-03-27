@@ -5,4 +5,4 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub use types::*;
+pub(crate) use types::*;

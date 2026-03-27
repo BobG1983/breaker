@@ -19,7 +19,7 @@ pub enum Rarity {
 }
 
 /// A single ingredient required for a chip evolution recipe.
-#[derive(Deserialize, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct EvolutionIngredient {
     /// Name of the chip required.
     pub chip_name: String,
@@ -80,7 +80,7 @@ pub struct EvolutionTemplate {
     pub ingredients: Vec<EvolutionIngredient>,
 }
 
-fn one() -> u32 {
+const fn one() -> u32 {
     1
 }
 

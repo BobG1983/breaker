@@ -83,31 +83,33 @@ impl ChipCatalog {
 
 /// Registry of chip templates loaded from `.chip.ron` files.
 #[derive(Resource, Debug, Default)]
-pub struct ChipTemplateRegistry {
+pub(crate) struct ChipTemplateRegistry {
     templates: HashMap<String, (AssetId<ChipTemplate>, ChipTemplate)>,
 }
 
 impl ChipTemplateRegistry {
     /// Look up a template by name.
+    #[cfg(test)]
     #[must_use]
-    pub fn get(&self, name: &str) -> Option<&(AssetId<ChipTemplate>, ChipTemplate)> {
+    pub(crate) fn get(&self, name: &str) -> Option<&(AssetId<ChipTemplate>, ChipTemplate)> {
         self.templates.get(name)
     }
 
     /// Returns the number of templates in the registry.
+    #[cfg(test)]
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.templates.len()
     }
 
-    /// Returns `true` if the registry contains no templates.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.templates.is_empty()
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Returns `true` if the registry contains no templates.
+    // pub(crate) fn is_empty(&self) -> bool {
+    //     self.templates.is_empty()
+    // }
 
     /// Iterate all chip templates.
-    pub fn templates(&self) -> impl Iterator<Item = &ChipTemplate> {
+    pub(crate) fn templates(&self) -> impl Iterator<Item = &ChipTemplate> {
         self.templates.values().map(|(_, t)| t)
     }
 }
@@ -139,31 +141,33 @@ impl SeedableRegistry for ChipTemplateRegistry {
 
 /// Registry of evolution templates loaded from `.evolution.ron` files.
 #[derive(Resource, Debug, Default)]
-pub struct EvolutionTemplateRegistry {
+pub(crate) struct EvolutionTemplateRegistry {
     evolutions: HashMap<String, (AssetId<EvolutionTemplate>, EvolutionTemplate)>,
 }
 
 impl EvolutionTemplateRegistry {
     /// Look up an evolution template by name.
+    #[cfg(test)]
     #[must_use]
-    pub fn get(&self, name: &str) -> Option<&(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
+    pub(crate) fn get(&self, name: &str) -> Option<&(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
         self.evolutions.get(name)
     }
 
     /// Returns the number of evolution templates in the registry.
+    #[cfg(test)]
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.evolutions.len()
     }
 
-    /// Returns `true` if the registry contains no evolution templates.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.evolutions.is_empty()
-    }
+    // FUTURE: may be used for upcoming phases
+    // /// Returns `true` if the registry contains no evolution templates.
+    // pub(crate) fn is_empty(&self) -> bool {
+    //     self.evolutions.is_empty()
+    // }
 
     /// Iterate all evolution templates.
-    pub fn templates(&self) -> impl Iterator<Item = &EvolutionTemplate> {
+    pub(crate) fn templates(&self) -> impl Iterator<Item = &EvolutionTemplate> {
         self.evolutions.values().map(|(_, t)| t)
     }
 }

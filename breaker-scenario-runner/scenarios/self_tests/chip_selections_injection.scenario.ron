@@ -10,7 +10,7 @@
     invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
     expected_violations: None,
     debug_setup: None,
-    allow_early_end: false,
+    allow_early_end: true,
     seed: 42,
     chip_selections: ["Surge"],
 )

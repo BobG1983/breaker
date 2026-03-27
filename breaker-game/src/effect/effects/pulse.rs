@@ -10,11 +10,8 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt},
     chips::components::DamageBoost,
-    effect::{
-        definition::EffectTarget,
-        effects::shockwave::{
-            ShockwaveAlreadyHit, ShockwaveDamage, ShockwaveRadius, ShockwaveSpeed,
-        },
+    effect::effects::shockwave::{
+        ShockwaveAlreadyHit, ShockwaveDamage, ShockwaveRadius, ShockwaveSpeed,
     },
     shared::{CleanupOnNodeExit, GameDrawLayer},
 };
@@ -34,8 +31,9 @@ pub(crate) struct PulseFired {
     pub stacks: u32,
     /// Expansion speed in world units per second.
     pub speed: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
+    // FUTURE: may be used for upcoming phases
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
     /// The chip name that originated this chain, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
@@ -59,9 +57,9 @@ pub(crate) fn handle_pulse(
     }
 
     let extra_stacks = f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX));
-    let max = event.base_range + extra_stacks * event.range_per_level;
+    let max = extra_stacks.mul_add(event.range_per_level, event.base_range);
 
-    for (bolt_entity, bolt_pos, damage_boost) in &bolt_query {
+    for (_bolt_entity, bolt_pos, damage_boost) in &bolt_query {
         let damage = BASE_BOLT_DAMAGE * (1.0 + damage_boost.map_or(0.0, |b| b.0));
 
         commands.spawn((
@@ -71,7 +69,6 @@ pub(crate) fn handle_pulse(
             ShockwaveDamage {
                 damage,
                 source_chip: event.source_chip.clone(),
-                source_bolt: Some(bolt_entity),
             },
             ShockwaveAlreadyHit::default(),
             GameDrawLayer::Fx,
@@ -139,7 +136,6 @@ mod tests {
             range_per_level,
             stacks,
             speed,
-            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();

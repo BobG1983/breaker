@@ -3,10 +3,13 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+#[cfg(test)]
 use crate::cells::CellTypeRegistry;
 
+#[cfg(test)]
 /// Maximum number of columns in a node grid.
 pub(crate) const MAX_GRID_COLS: u32 = 128;
+#[cfg(test)]
 /// Maximum number of rows in a node grid.
 pub(crate) const MAX_GRID_ROWS: u32 = 128;
 
@@ -45,13 +48,15 @@ pub struct NodeLayout {
     pub entity_scale: f32,
 }
 
+#[cfg(test)]
 /// Minimum allowed entity scale — below this, bolt is visually illegible (~4px).
 pub(crate) const MIN_ENTITY_SCALE: f32 = 0.5;
+#[cfg(test)]
 /// Maximum entity scale — unscaled.
 pub(crate) const MAX_ENTITY_SCALE: f32 = 1.0;
 
 /// Default value for `entity_scale` used by serde when the field is absent.
-fn default_entity_scale() -> f32 {
+const fn default_entity_scale() -> f32 {
     1.0
 }
 
@@ -63,7 +68,8 @@ impl NodeLayout {
     ///
     /// Returns an error string if row/column counts don't match the declared
     /// dimensions or if the grid contains an alias not found in the registry.
-    pub fn validate(&self, registry: &CellTypeRegistry) -> Result<(), String> {
+    #[cfg(test)]
+    pub(crate) fn validate(&self, registry: &CellTypeRegistry) -> Result<(), String> {
         if self.entity_scale < MIN_ENTITY_SCALE || self.entity_scale > MAX_ENTITY_SCALE {
             return Err(format!(
                 "layout '{}': entity_scale {} must be {}..={}",

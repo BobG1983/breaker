@@ -71,8 +71,9 @@ pub(crate) struct RequestBoltDestroyed {
 /// Sent by `bridge_bolt_death` after extracting entity data from the still-alive bolt.
 #[derive(Message, Clone, Debug)]
 pub(crate) struct BoltDestroyedAt {
-    /// World-space position of the destroyed bolt.
-    pub position: Vec2,
+    // FUTURE: may be used for upcoming phases
+    // /// World-space position of the destroyed bolt.
+    // pub position: Vec2,
 }
 
 /// Sent by the chain bolt effect handler to spawn a tethered chain bolt.
@@ -139,12 +140,9 @@ mod tests {
 
     #[test]
     fn bolt_destroyed_at_debug_format() {
-        let msg = BoltDestroyedAt {
-            position: Vec2::new(50.0, -100.0),
-        };
+        let msg = BoltDestroyedAt {};
         let debug = format!("{msg:?}");
         assert!(debug.contains("BoltDestroyedAt"));
-        assert!(debug.contains("position"));
     }
 
     #[test]

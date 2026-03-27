@@ -114,7 +114,7 @@ impl ChipOffering {
 
     /// Returns the chip definition this offering would grant.
     #[must_use]
-    pub fn definition(&self) -> &ChipDefinition {
+    pub const fn definition(&self) -> &ChipDefinition {
         match self {
             Self::Normal(def) | Self::Evolution { result: def, .. } => def,
         }

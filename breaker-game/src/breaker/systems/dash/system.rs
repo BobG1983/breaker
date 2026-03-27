@@ -242,7 +242,7 @@ fn handle_braking(
 /// Computes effective deceleration scaled by an easing curve over speed ratio.
 ///
 /// `effective_decel = base_decel * (1.0 + strength * ease(speed / reference_speed))`
-pub fn eased_decel(
+pub(crate) fn eased_decel(
     base_decel: f32,
     speed: f32,
     reference_speed: f32,

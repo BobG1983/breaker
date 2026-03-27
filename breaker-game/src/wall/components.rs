@@ -16,10 +16,11 @@ pub(crate) struct Wall;
 /// rather than relying on cell config.
 #[derive(Component, Debug)]
 pub(crate) struct WallSize {
-    /// Half-width in world units.
-    pub half_width: f32,
-    /// Half-height in world units.
-    pub half_height: f32,
+    // FUTURE: may be used for upcoming phases
+    // /// Half-width in world units.
+    // pub half_width: f32,
+    // /// Half-height in world units.
+    // pub half_height: f32,
 }
 
 #[cfg(test)]

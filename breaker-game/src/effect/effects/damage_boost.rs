@@ -20,8 +20,9 @@ pub(crate) struct DamageBoostApplied {
     pub per_stack: f32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 /// Query for bolts with optional damage boost and active damage boost tracking.
@@ -43,7 +44,8 @@ impl ActiveDamageBoosts {
     /// Returns the effective damage multiplier: the product of all active boosts.
     ///
     /// Returns 1.0 if no boosts are active (empty vec).
-    pub fn multiplier(&self) -> f32 {
+    #[cfg(test)]
+    pub(crate) fn multiplier(&self) -> f32 {
         self.0.iter().product::<f32>()
     }
 }
@@ -99,7 +101,6 @@ mod tests {
         app.world_mut().commands().trigger(DamageBoostApplied {
             per_stack: 1.5,
             max_stacks: 2,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -115,7 +116,6 @@ mod tests {
         app.world_mut().commands().trigger(DamageBoostApplied {
             per_stack: 1.5,
             max_stacks: 2,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -140,7 +140,6 @@ mod tests {
         app.world_mut().commands().trigger(DamageBoostApplied {
             per_stack: 1.5,
             max_stacks: 5,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -170,7 +169,6 @@ mod tests {
         app.world_mut().commands().trigger(DamageBoostApplied {
             per_stack: 2.0,
             max_stacks: 5,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 

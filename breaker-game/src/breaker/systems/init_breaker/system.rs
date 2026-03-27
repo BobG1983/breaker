@@ -12,7 +12,7 @@ use crate::{
         resources::{BreakerConfig, BreakerDefaults},
     },
     effect::{
-        definition::{EffectChains, EffectNode, RootEffect, Target},
+        definition::{EffectChains, RootEffect, Target},
         effects::life_lost::LivesCount,
     },
 };

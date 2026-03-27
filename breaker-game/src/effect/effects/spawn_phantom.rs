@@ -25,8 +25,9 @@ pub(crate) struct SpawnPhantomFired {
     pub max_active: u32,
     /// The effect targets for this event.
     pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
+    // FUTURE: may be used for upcoming phases
+    // /// The originating chip name, or `None` for breaker chains.
+    // pub source_chip: Option<String>,
 }
 
 /// Marker component for phantom bolt entities spawned by this effect.
@@ -105,7 +106,6 @@ mod tests {
             duration: 5.0,
             max_active: 2,
             targets: vec![],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -132,7 +132,6 @@ mod tests {
             duration: 3.0,
             max_active: 5,
             targets: vec![EffectTarget::Entity(bolt)],
-            source_chip: None,
         });
         app.world_mut().flush();
 
@@ -186,7 +185,6 @@ mod tests {
             duration: 3.0,
             max_active: 2,
             targets: vec![EffectTarget::Entity(bolt)],
-            source_chip: None,
         });
         app.world_mut().flush();
 

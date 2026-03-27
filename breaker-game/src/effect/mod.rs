@@ -14,7 +14,6 @@ pub(crate) mod sets;
 pub(crate) mod triggers;
 pub(crate) mod typed_events;
 
-pub(crate) use definition::BreakerDefinition;
 pub use definition::{
     AttractionType, Effect, EffectChains, EffectEntity, EffectNode, EffectTarget, ImpactTarget,
     RootEffect, Target, Trigger,

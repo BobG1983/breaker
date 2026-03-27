@@ -95,8 +95,6 @@ fn handle_ramping_damage_inserts_state_on_bolt() {
 
     app.world_mut().commands().trigger(RampingDamageApplied {
         bonus_per_hit: 0.02,
-        max_stacks: 2,
-        chip_name: "Basic Amp".to_owned(),
     });
     app.world_mut().flush();
 
@@ -136,8 +134,6 @@ fn handle_ramping_damage_stacks_additively() {
 
     app.world_mut().commands().trigger(RampingDamageApplied {
         bonus_per_hit: 0.04,
-        max_stacks: 2,
-        chip_name: "Potent Amp".to_owned(),
     });
     app.world_mut().flush();
 

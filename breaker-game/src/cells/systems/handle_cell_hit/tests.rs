@@ -143,7 +143,6 @@ fn damage_cell_10_destroys_10hp_cell() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -177,7 +176,6 @@ fn damage_cell_overkill_15_on_10hp_cell_destroys() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 15.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -208,7 +206,6 @@ fn damage_cell_10_on_30hp_cell_leaves_20hp() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -236,7 +233,6 @@ fn damage_cell_15_on_20hp_cell_leaves_5hp() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 15.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -265,7 +261,6 @@ fn damage_cell_zero_does_not_change_health() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 0.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -305,7 +300,6 @@ fn locked_cell_ignores_damage_cell() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
@@ -334,7 +328,6 @@ fn destroyed_non_required_cell_sends_request_cell_destroyed() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -372,13 +365,11 @@ fn double_damage_cell_same_cell_only_one_request_cell_destroyed() {
         DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
         DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
     ];
@@ -437,7 +428,6 @@ fn handle_cell_hit_writes_request_cell_destroyed_instead_of_despawning() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -478,13 +468,11 @@ fn handle_cell_hit_dedup_produces_one_request_cell_destroyed() {
         DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
         DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
     ];
@@ -514,7 +502,6 @@ fn handle_cell_hit_non_required_cell_produces_request_cell_destroyed() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(
@@ -546,13 +533,11 @@ fn double_damage_cell_on_30hp_cell_decrements_twice() {
         DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
         DamageCell {
             cell,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
     ];
@@ -580,13 +565,11 @@ fn two_damage_cell_different_cells_different_damage() {
         DamageCell {
             cell: cell_a,
             damage: 20.0,
-            source_bolt: None,
             source_chip: None,
         },
         DamageCell {
             cell: cell_b,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         },
     ];
@@ -622,7 +605,6 @@ fn damage_cell_for_despawned_entity_is_silently_skipped() {
     app.insert_resource(TestMessage(Some(DamageCell {
         cell,
         damage: 10.0,
-        source_bolt: None,
         source_chip: None,
     })));
     app.add_systems(

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::SpawnAdditionalBolt, effect::definition::EffectTarget};
+use crate::bolt::messages::SpawnAdditionalBolt;
 
 // ---------------------------------------------------------------------------
 // Typed event
@@ -17,8 +17,9 @@ pub(crate) struct SpawnBoltsFired {
     pub lifespan: Option<f32>,
     /// Whether spawned bolts inherit the parent bolt's velocity.
     pub inherit: bool,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
+    // FUTURE: may be used for upcoming phases
+    // /// The effect targets for this event.
+    // pub targets: Vec<EffectTarget>,
     /// The originating chip name, or `None` for breaker chains.
     pub source_chip: Option<String>,
 }
@@ -99,7 +100,6 @@ mod tests {
             count,
             lifespan,
             inherit,
-            targets: vec![],
             source_chip,
         });
         app.world_mut().flush();
@@ -118,7 +118,6 @@ mod tests {
             count: 1,
             lifespan: None,
             inherit: false,
-            targets: vec![],
             source_chip: None,
         });
         app.world_mut().flush();
@@ -151,7 +150,6 @@ mod tests {
             count: 1,
             lifespan: None,
             inherit: false,
-            targets: vec![],
             source_chip: Some("Reflex".to_owned()),
         });
         app.world_mut().flush();

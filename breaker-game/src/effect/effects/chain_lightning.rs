@@ -93,7 +93,6 @@ pub(crate) fn handle_chain_lightning(
         damage_writer.write(DamageCell {
             cell: cell_entity,
             damage,
-            source_bolt: Some(bolt_entity),
             source_chip: event.source_chip.clone(),
         });
 

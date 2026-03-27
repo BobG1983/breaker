@@ -73,7 +73,7 @@ pub fn animate_bump_visual(
 /// Piecewise two-phase curve: rise phase (0->peak) uses `rise_ease`,
 /// fall phase (peak->0) uses `fall_ease`. `peak_fraction`
 /// controls what fraction of the total duration is spent rising.
-pub fn bump_offset(visual: &BumpVisual, params: &BumpVisualParams) -> f32 {
+pub(crate) fn bump_offset(visual: &BumpVisual, params: &BumpVisualParams) -> f32 {
     let peak_fraction = params.peak_fraction;
     // progress: 0.0 at start -> 1.0 at end
     let progress = 1.0 - (visual.timer / visual.duration).clamp(0.0, 1.0);

@@ -17,8 +17,9 @@ pub(crate) struct RequestCellDestroyed {
 /// Replaces `CellDestroyed` for all downstream consumers (run tracking, lock release, etc.).
 #[derive(Message, Clone, Debug)]
 pub(crate) struct CellDestroyedAt {
-    /// World-space position of the destroyed cell.
-    pub position: Vec2,
+    // FUTURE: may be used for upcoming phases
+    // /// World-space position of the destroyed cell.
+    // pub position: Vec2,
     /// Whether this cell counted toward node completion.
     pub was_required_to_clear: bool,
 }
@@ -35,8 +36,9 @@ pub(crate) struct DamageCell {
     pub cell: Entity,
     /// Pre-calculated damage amount.
     pub damage: f32,
-    /// The bolt entity that caused this damage (for VFX attachment), if any.
-    pub source_bolt: Option<Entity>,
+    // FUTURE: may be used for upcoming phases
+    // /// The bolt entity that caused this damage (for VFX attachment), if any.
+    // pub source_bolt: Option<Entity>,
     /// The chip name that originated this damage, for evolution attribution.
     pub source_chip: Option<String>,
 }
@@ -62,19 +64,16 @@ mod tests {
     #[test]
     fn cell_destroyed_at_debug_format() {
         let msg = CellDestroyedAt {
-            position: Vec2::new(100.0, 200.0),
             was_required_to_clear: true,
         };
         let debug = format!("{msg:?}");
         assert!(debug.contains("CellDestroyedAt"));
-        assert!(debug.contains("position"));
         assert!(debug.contains("was_required_to_clear"));
     }
 
     #[test]
     fn cell_destroyed_at_non_required() {
         let msg = CellDestroyedAt {
-            position: Vec2::new(50.0, 75.0),
             was_required_to_clear: false,
         };
         assert!(!msg.was_required_to_clear);
@@ -85,7 +84,6 @@ mod tests {
         let msg = DamageCell {
             cell: Entity::PLACEHOLDER,
             damage: 10.0,
-            source_bolt: None,
             source_chip: None,
         };
         assert!(format!("{msg:?}").contains("DamageCell"));

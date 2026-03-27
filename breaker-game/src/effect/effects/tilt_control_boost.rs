@@ -16,8 +16,9 @@ pub(crate) struct TiltControlApplied {
     pub per_stack: f32,
     /// Maximum number of stacks allowed.
     pub max_stacks: u32,
-    /// Name of the chip that applied this effect.
-    pub chip_name: String,
+    // FUTURE: may be used for upcoming phases
+    // /// Name of the chip that applied this effect.
+    // pub chip_name: String,
 }
 
 /// Observer: applies tilt control boost stacking to all breaker entities.
@@ -65,7 +66,6 @@ mod tests {
         app.world_mut().commands().trigger(TiltControlApplied {
             per_stack: 5.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -85,7 +85,6 @@ mod tests {
         app.world_mut().commands().trigger(TiltControlApplied {
             per_stack: 5.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
@@ -112,7 +111,6 @@ mod tests {
         app.world_mut().commands().trigger(TiltControlApplied {
             per_stack: 5.0,
             max_stacks: 3,
-            chip_name: String::new(),
         });
         app.world_mut().flush();
 
