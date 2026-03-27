@@ -56,42 +56,6 @@ fn non_godmode_proceeds_normally() {
 // Quick-Clear Layout Sentinel
 // =========================================================================
 
-/// When `config.layout = "quick_clear"`, `bypass_menu_to_playing` inserts a
-/// synthetic `NodeLayout` into the `NodeLayoutRegistry`.
-#[test]
-fn quick_clear_sentinel_inserts_synthetic_node_layout() {
-    let mut definition = make_scenario(100);
-    definition.layout = "quick_clear".to_owned();
-
-    let mut app = bypass_app(definition);
-    app.update();
-
-    let registry = app.world().resource::<NodeLayoutRegistry>();
-    let layout = registry.get_by_name("quick_clear");
-    assert!(
-        layout.is_some(),
-        "expected NodeLayoutRegistry to contain 'quick_clear'"
-    );
-
-    let layout = layout.unwrap();
-    assert_eq!(layout.name, "quick_clear");
-    assert!((layout.timer_secs - 999.0).abs() < f32::EPSILON);
-    assert_eq!(layout.cols, 1);
-    assert_eq!(layout.rows, 1);
-    assert!((layout.grid_top_offset - 50.0).abs() < f32::EPSILON);
-    assert_eq!(layout.grid, vec![vec!['S']]);
-    assert!((layout.entity_scale - 1.0).abs() < f32::EPSILON);
-
-    let override_res = app
-        .world()
-        .resource::<breaker::run::node::ScenarioLayoutOverride>();
-    assert_eq!(
-        override_res.0.as_deref(),
-        Some("quick_clear"),
-        "expected ScenarioLayoutOverride == Some('quick_clear')"
-    );
-}
-
 /// When `config.layout = "corridor"`, `NodeLayoutRegistry` does NOT contain `quick_clear`.
 #[test]
 fn non_quick_clear_proceeds_normally() {

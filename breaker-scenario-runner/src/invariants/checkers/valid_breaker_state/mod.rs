@@ -1,4 +1,4 @@
-pub mod checker;
+pub(crate) mod checker;
 #[cfg(test)]
 mod tests;
 

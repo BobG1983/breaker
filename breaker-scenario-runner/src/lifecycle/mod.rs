@@ -2,7 +2,7 @@
 //!
 //! [`ScenarioLifecycle`] is a Bevy plugin that:
 //! - Bypasses menus: `OnEnter(GameState::MainMenu)` → immediately enters `Playing`
-//! - Auto-skips chip selection: `OnEnter(GameState::ChipSelect)` → `TransitionIn`
+//! - Auto-skips chip selection: `PostUpdate` when `ChipOffers` exists → `TransitionIn`
 //! - Counts fixed-update frames via [`ScenarioFrame`]
 //! - Exits when `max_frames` is reached; optionally exits when the run ends
 //!   naturally (controlled by [`ScenarioDefinition::allow_early_end`])
@@ -20,7 +20,7 @@ use breaker::{
         messages::BumpGrade,
         resources::ForceBumpGrade,
     },
-    chips::inventory::ChipInventory,
+    chips::{ChipCatalog, inventory::ChipInventory},
     effect::{EffectChains, EffectNode, RootEffect, Target},
     input::resources::InputActions,
     run::{
@@ -172,10 +172,22 @@ impl Plugin for ScenarioLifecycle {
             .add_message::<SpawnNodeComplete>()
             .add_message::<ChipSelected>()
             .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
-            .add_systems(OnEnter(GameState::ChipSelect), auto_skip_chip_select)
+            .add_systems(
+                Update,
+                check_chip_offer_expected.run_if(
+                    in_state(GameState::ChipSelect)
+                        .and(resource_exists::<ChipOffers>),
+                ),
+            )
+            .add_systems(
+                PostUpdate,
+                auto_skip_chip_select
+                    .run_if(in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>)),
+            )
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
+                    seed_initial_chips,
                     init_scenario_input,
                     ApplyDeferred,
                     tag_game_entities,
@@ -231,7 +243,6 @@ impl Plugin for ScenarioLifecycle {
                         check_maxed_chip_never_offered,
                         check_chip_stacks_consistent,
                         check_run_stats_monotonic,
-                        check_chip_offer_expected,
                     )
                         .chain()
                         .run_if(|stats: Option<Res<ScenarioStats>>| {
@@ -273,8 +284,8 @@ pub struct BypassExtras<'w, 's> {
     commands: Commands<'w, 's>,
     /// Chip selection index — reset on each run.
     chip_index: ResMut<'w, ChipSelectionIndex>,
-    /// Writer for dispatching [`ChipSelected`] messages from `initial_chips`.
-    chip_writer: MessageWriter<'w, ChipSelected>,
+    // /// Writer for dispatching [`ChipSelected`] messages from `initial_chips`.
+    // chip_writer: MessageWriter<'w, ChipSelected>,
 }
 
 /// Sets the breaker and layout override, then immediately enters `Playing`.
@@ -306,28 +317,14 @@ fn bypass_menu_to_playing(
     }
 
     if config.definition.layout == QUICK_CLEAR_LAYOUT_SENTINEL {
-        extras.layout_registry.insert(NodeLayout {
-            name: "quick_clear".to_owned(),
-            timer_secs: 999.0,
-            cols: 1,
-            rows: 1,
-            grid_top_offset: 50.0,
-            grid: vec![vec!['S']],
-            pool: NodePool::default(),
-            entity_scale: 1.0,
-        });
+        extras
+            .layout_registry
+            .insert(quick_clear_layout(NodePool::default()));
         layout_override.0 = Some("quick_clear".to_owned());
     } else if config.definition.layout == QUICK_BOSS_LAYOUT_SENTINEL {
-        extras.layout_registry.insert(NodeLayout {
-            name: "quick_boss".to_owned(),
-            timer_secs: 999.0,
-            cols: 1,
-            rows: 1,
-            grid_top_offset: 50.0,
-            grid: vec![vec!['S']],
-            pool: NodePool::Boss,
-            entity_scale: 1.0,
-        });
+        extras
+            .layout_registry
+            .insert(quick_clear_layout(NodePool::Boss));
         layout_override.0 = Some("quick_boss".to_owned());
     } else {
         layout_override.0 = Some(config.definition.layout.clone());
@@ -338,13 +335,8 @@ fn bypass_menu_to_playing(
 
     // Scenarios always use deterministic seed (default 0 when not specified)
     run_seed.0 = Some(config.definition.seed.unwrap_or(0));
-    if let Some(ref chips) = config.definition.initial_chips {
-        for chip_name in chips {
-            extras.chip_writer.write(ChipSelected {
-                name: chip_name.clone(),
-            });
-        }
-    }
+    // initial_chips are seeded by `seed_initial_chips` on OnEnter(Playing),
+    // AFTER reset_run_state clears the inventory on OnExit(MainMenu).
 
     // Dispatch initial_effects to breaker chains or PendingBoltEffects
     if let Some(ref effects) = config.definition.initial_effects {
@@ -384,6 +376,7 @@ fn auto_skip_chip_select(
     mut index: ResMut<ChipSelectionIndex>,
     mut chip_writer: MessageWriter<ChipSelected>,
 ) {
+    info!("auto_skip_chip_select: transitioning ChipSelect → TransitionIn");
     if let Some(ref selections) = config.definition.chip_selections
         && index.0 < selections.len()
     {
@@ -393,6 +386,36 @@ fn auto_skip_chip_select(
         index.0 += 1;
     }
     next_state.set(GameState::TransitionIn);
+}
+
+/// Seeds `initial_chips` into [`ChipInventory`] from the [`ChipCatalog`].
+///
+/// Runs on `OnEnter(Playing)` — after `reset_run_state` has cleared the
+/// inventory on `OnExit(MainMenu)`. This ensures the chips survive the
+/// reset and are present when `generate_chip_offerings` checks eligibility.
+fn seed_initial_chips(
+    config: Res<ScenarioConfig>,
+    catalog: Option<Res<ChipCatalog>>,
+    mut inventory: Option<ResMut<ChipInventory>>,
+    mut seeded: Local<bool>,
+) {
+    if *seeded {
+        return;
+    }
+    let Some(ref chips) = config.definition.initial_chips else {
+        return;
+    };
+    let (Some(catalog), Some(inventory)) = (catalog, &mut inventory) else {
+        return;
+    };
+    *seeded = true;
+    for chip_name in chips {
+        if let Some(def) = catalog.get(chip_name) {
+            let _ = inventory.add_chip(chip_name, def);
+        } else {
+            warn!("initial_chips: chip '{}' not found in catalog", chip_name);
+        }
+    }
 }
 
 /// Increments [`ScenarioFrame`] by 1 each fixed-update tick.
@@ -435,7 +458,7 @@ fn restart_run_on_end(mut next_state: ResMut<NextState<GameState>>) {
 ///
 /// Used by [`apply_debug_setup`] to translate the RON-serializable enum
 /// into the Bevy state enum.
-pub(crate) fn map_forced_game_state(forced: ForcedGameState) -> GameState {
+pub(crate) const fn map_forced_game_state(forced: ForcedGameState) -> GameState {
     match forced {
         ForcedGameState::Loading => GameState::Loading,
         ForcedGameState::MainMenu => GameState::MainMenu,
@@ -532,7 +555,9 @@ pub fn apply_debug_setup(
     }
 }
 
-/// Deferred fallback for [`apply_debug_setup`] — runs once in `FixedUpdate` after
+/// Deferred fallback for [`apply_debug_setup`].
+///
+/// Runs once in `FixedUpdate` after
 /// [`tag_game_entities`] to catch entities that were not yet spawned when the
 /// `OnEnter(GameState::Playing)` version of `apply_debug_setup` ran.
 ///
@@ -616,7 +641,7 @@ pub fn tag_game_entities(
 /// Used by [`apply_debug_frame_mutations`] to translate the RON-serializable
 /// enum into the Bevy component enum.
 #[must_use]
-pub(crate) fn map_scenario_breaker_state(state: ScenarioBreakerState) -> BreakerState {
+pub(crate) const fn map_scenario_breaker_state(state: ScenarioBreakerState) -> BreakerState {
     match state {
         ScenarioBreakerState::Idle => BreakerState::Idle,
         ScenarioBreakerState::Dashing => BreakerState::Dashing,
@@ -746,7 +771,7 @@ pub fn apply_debug_frame_mutations(
 }
 
 /// Sets the named [`RunStats`] counter to `value`.
-fn apply_set_run_stat(stats: &mut RunStats, counter: RunStatCounter, value: u32) {
+const fn apply_set_run_stat(stats: &mut RunStats, counter: RunStatCounter, value: u32) {
     match counter {
         RunStatCounter::NodesCleared => stats.nodes_cleared = value,
         RunStatCounter::CellsDestroyed => stats.cells_destroyed = value,
@@ -757,7 +782,7 @@ fn apply_set_run_stat(stats: &mut RunStats, counter: RunStatCounter, value: u32)
 }
 
 /// Decrements the named [`RunStats`] counter by 1 (saturating at 0).
-fn apply_decrement_run_stat(stats: &mut RunStats, counter: RunStatCounter) {
+const fn apply_decrement_run_stat(stats: &mut RunStats, counter: RunStatCounter) {
     match counter {
         RunStatCounter::NodesCleared => {
             stats.nodes_cleared = stats.nodes_cleared.saturating_sub(1);
@@ -903,6 +928,28 @@ const QUICK_CLEAR_LAYOUT_SENTINEL: &str = "quick_clear";
 /// Identical to `quick_clear` but with `pool: NodePool::Boss`, so the chip
 /// selection system treats the node as a boss and offers evolutions.
 const QUICK_BOSS_LAYOUT_SENTINEL: &str = "quick_boss";
+
+/// Builds an empty layout that clears instantly (no required cells).
+///
+/// `track_node_completion` fires `NodeCleared` when `ClearRemainingCount` is 0,
+/// so an all-empty grid triggers immediate node completion → `TransitionOut`.
+fn quick_clear_layout(pool: NodePool) -> NodeLayout {
+    let name = if pool == NodePool::Boss {
+        "quick_boss"
+    } else {
+        "quick_clear"
+    };
+    NodeLayout {
+        name: name.to_owned(),
+        timer_secs: 999.0,
+        cols: 1,
+        rows: 1,
+        grid_top_offset: 50.0,
+        grid: vec![vec!['.']],
+        pool,
+        entity_scale: 1.0,
+    }
+}
 
 /// Distance threshold (world units) for bolt-breaker proximity to trigger bump.
 pub(crate) const PERFECT_TRACKING_BUMP_THRESHOLD: f32 = 20.0;

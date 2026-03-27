@@ -163,7 +163,7 @@ impl PerfectDriver {
     ///
     /// The `_frame` parameter is reserved for future use.
     /// The `_is_active` parameter indicates whether gameplay input is active.
-    pub fn actions_for_frame(&mut self, _frame: u32, _is_active: bool) -> Vec<GameAction> {
+    pub const fn actions_for_frame(&mut self, _frame: u32, _is_active: bool) -> Vec<GameAction> {
         vec![]
     }
 }

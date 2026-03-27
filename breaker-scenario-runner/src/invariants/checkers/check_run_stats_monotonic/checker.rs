@@ -14,7 +14,7 @@ pub struct PreviousRunStats {
 }
 
 impl PreviousRunStats {
-    fn from_run_stats(stats: &RunStats) -> Self {
+    const fn from_run_stats(stats: &RunStats) -> Self {
         Self {
             nodes_cleared: stats.nodes_cleared,
             cells_destroyed: stats.cells_destroyed,
@@ -25,7 +25,7 @@ impl PreviousRunStats {
     }
 
     /// Returns `true` if all counters are zero (default / fresh run state).
-    fn is_default(&self) -> bool {
+    const fn is_default(&self) -> bool {
         self.nodes_cleared == 0
             && self.cells_destroyed == 0
             && self.bumps_performed == 0

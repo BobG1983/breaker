@@ -33,8 +33,8 @@ fn perfect_tracking_moves_breaker_toward_bolt_when_bolt_descends() {
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     let half_width = 60.0;
-    let low = 100.0 - PERFECT_TRACKING_WIDTH_FACTOR * half_width;
-    let high = 100.0 + PERFECT_TRACKING_WIDTH_FACTOR * half_width;
+    let low = (-PERFECT_TRACKING_WIDTH_FACTOR).mul_add(half_width, 100.0);
+    let high = PERFECT_TRACKING_WIDTH_FACTOR.mul_add(half_width, 100.0);
     assert!(
         pos.0.x >= low && pos.0.x <= high,
         "expected breaker x in [{low}, {high}], got {}",
@@ -74,8 +74,8 @@ fn perfect_tracking_moves_breaker_when_bolt_ascends() {
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     let half_width = 60.0;
-    let low = 100.0 - PERFECT_TRACKING_WIDTH_FACTOR * half_width;
-    let high = 100.0 + PERFECT_TRACKING_WIDTH_FACTOR * half_width;
+    let low = (-PERFECT_TRACKING_WIDTH_FACTOR).mul_add(half_width, 100.0);
+    let high = PERFECT_TRACKING_WIDTH_FACTOR.mul_add(half_width, 100.0);
     assert!(
         pos.0.x >= low && pos.0.x <= high,
         "expected breaker x in [{low}, {high}], got {}",
@@ -115,8 +115,8 @@ fn perfect_tracking_moves_breaker_when_bolt_y_velocity_zero() {
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     let half_width = 60.0;
-    let low = 100.0 - PERFECT_TRACKING_WIDTH_FACTOR * half_width;
-    let high = 100.0 + PERFECT_TRACKING_WIDTH_FACTOR * half_width;
+    let low = (-PERFECT_TRACKING_WIDTH_FACTOR).mul_add(half_width, 100.0);
+    let high = PERFECT_TRACKING_WIDTH_FACTOR.mul_add(half_width, 100.0);
     assert!(
         pos.0.x >= low && pos.0.x <= high,
         "expected breaker x in [{low}, {high}], got {}",
@@ -307,7 +307,7 @@ fn perfect_tracking_noop_when_driver_is_not_perfect() {
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
+        pos.0.x.abs() < f32::EPSILON,
         "expected breaker x unchanged when driver is Chaos, got {}",
         pos.0.x
     );
@@ -344,7 +344,7 @@ fn perfect_tracking_noop_when_driver_absent() {
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
+        pos.0.x.abs() < f32::EPSILON,
         "expected breaker x unchanged when driver absent, got {}",
         pos.0.x
     );
@@ -371,7 +371,7 @@ fn perfect_tracking_noop_with_no_bolt_entities() {
 
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
+        pos.0.x.abs() < f32::EPSILON,
         "expected breaker x unchanged when no bolts, got {}",
         pos.0.x
     );
@@ -411,9 +411,9 @@ fn perfect_tracking_with_multiple_bolts_tracks_first() {
     let half_width = 60.0;
     // Must be in range of one of the bolts
     let tracks_bolt_a =
-        pos.0.x >= (100.0 - 0.8 * half_width) && pos.0.x <= (100.0 + 0.8 * half_width);
+        pos.0.x >= (-0.8f32).mul_add(half_width, 100.0) && pos.0.x <= 0.8f32.mul_add(half_width, 100.0);
     let tracks_bolt_b =
-        pos.0.x >= (-100.0 - 0.8 * half_width) && pos.0.x <= (-100.0 + 0.8 * half_width);
+        pos.0.x >= (-0.8f32).mul_add(half_width, -100.0) && pos.0.x <= 0.8f32.mul_add(half_width, -100.0);
     assert!(
         tracks_bolt_a || tracks_bolt_b,
         "expected breaker x in range of bolt A or B, got {}",
@@ -481,9 +481,9 @@ fn perfect_tracking_with_multiple_bolts_is_deterministic() {
 
     // First verify the system actually repositioned the breaker (not still at initial 300.0).
     let half_width = 60.0;
-    let tracks_bolt_a = pos_a >= (100.0 - 0.8 * half_width) && pos_a <= (100.0 + 0.8 * half_width);
+    let tracks_bolt_a = pos_a >= (-0.8f32).mul_add(half_width, 100.0) && pos_a <= 0.8f32.mul_add(half_width, 100.0);
     let tracks_bolt_b =
-        pos_a >= (-100.0 - 0.8 * half_width) && pos_a <= (-100.0 + 0.8 * half_width);
+        pos_a >= (-0.8f32).mul_add(half_width, -100.0) && pos_a <= 0.8f32.mul_add(half_width, -100.0);
     assert!(
         tracks_bolt_a || tracks_bolt_b,
         "expected breaker repositioned into bolt A or B range, got {pos_a}"

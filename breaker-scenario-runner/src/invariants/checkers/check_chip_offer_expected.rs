@@ -1,40 +1,35 @@
 use bevy::prelude::*;
-use breaker::{
-    screen::chip_select::ChipOffers,
-    shared::GameState,
-};
+use breaker::screen::chip_select::{ChipOffering, ChipOffers};
 
 use crate::{invariants::*, lifecycle::ScenarioConfig, types::InvariantKind};
 
 /// Checks that all expected chip names appear in [`ChipOffers`] during chip select.
 ///
-/// Only fires when `GameState::ChipSelect` is active, `ChipOffers` exists, and the
-/// scenario defines `expected_offerings`. Uses `Local<u32>` to track the last
-/// checked node index so the check fires at most once per chip-select visit.
+/// Runs in `Update` gated on `in_state(ChipSelect)` and `resource_exists::<ChipOffers>`.
+/// Scheduled BEFORE `auto_skip_chip_select` (which runs in `PostUpdate`).
 pub fn check_chip_offer_expected(
     offers: Option<Res<ChipOffers>>,
     config: Res<ScenarioConfig>,
-    state: Res<State<GameState>>,
-    run_state: Option<Res<breaker::run::resources::RunState>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
-    mut last_checked_node: Local<u32>,
 ) {
-    if *state.get() != GameState::ChipSelect {
-        return;
-    }
-
-    let Some(offers) = offers else { return };
     let Some(ref expected) = config.definition.expected_offerings else {
         return;
     };
-
-    // Avoid re-checking the same chip-select visit
-    let current_node = run_state.as_ref().map_or(0, |rs| rs.node_index);
-    if *last_checked_node == current_node + 1 {
+    let Some(offers) = offers else {
+        tracing::debug!(
+            "ChipOfferExpected: ChipOffers not yet available at frame {}",
+            frame.0
+        );
         return;
-    }
-    *last_checked_node = current_node + 1;
+    };
+
+    tracing::info!(
+        "ChipOfferExpected: checking {} expected offerings against {} actual at frame {}",
+        expected.len(),
+        offers.0.len(),
+        frame.0
+    );
 
     for expected_name in expected {
         let found = offers.0.iter().any(|o| o.name() == expected_name);
@@ -50,7 +45,7 @@ pub fn check_chip_offer_expected(
                     offers
                         .0
                         .iter()
-                        .map(|o| o.name())
+                        .map(ChipOffering::name)
                         .collect::<Vec<_>>()
                         .join(", "),
                 ),
@@ -61,14 +56,12 @@ pub fn check_chip_offer_expected(
 
 #[cfg(test)]
 mod tests {
+    use bevy::prelude::*;
     use breaker::{
         chips::definition::{ChipDefinition, EvolutionIngredient, Rarity},
         effect::{Effect, EffectNode, RootEffect, Target},
-        run::resources::RunState,
         screen::chip_select::{ChipOffering, ChipOffers},
-        shared::GameState,
     };
-    use bevy::{prelude::*, state::app::StatesPlugin};
 
     use super::check_chip_offer_expected;
     use crate::{
@@ -80,8 +73,7 @@ mod tests {
     fn make_config(expected: Option<Vec<&str>>) -> ScenarioConfig {
         ScenarioConfig {
             definition: ScenarioDefinition {
-                expected_offerings: expected
-                    .map(|v| v.into_iter().map(str::to_owned).collect()),
+                expected_offerings: expected.map(|v| v.into_iter().map(str::to_owned).collect()),
                 ..Default::default()
             },
         }
@@ -89,13 +81,11 @@ mod tests {
 
     fn test_app(config: ScenarioConfig, offers: ChipOffers) -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.insert_state(GameState::ChipSelect);
+        app.add_plugins(MinimalPlugins);
         app.insert_resource(config);
         app.insert_resource(offers);
         app.insert_resource(ScenarioFrame(10));
         app.insert_resource(ViolationLog::default());
-        app.insert_resource(RunState::default());
         app.add_systems(Update, check_chip_offer_expected);
         app
     }
@@ -162,9 +152,7 @@ mod tests {
     #[test]
     fn does_not_fire_when_no_expected_offerings_configured() {
         let config = make_config(None);
-        let offers = ChipOffers(vec![
-            ChipOffering::Normal(make_chip_def("Piercing Shot")),
-        ]);
+        let offers = ChipOffers(vec![ChipOffering::Normal(make_chip_def("Piercing Shot"))]);
         let mut app = test_app(config, offers);
         app.update();
 
@@ -176,26 +164,21 @@ mod tests {
     }
 
     #[test]
-    fn does_not_fire_outside_chip_select_state() {
+    fn does_not_fire_when_no_offers_resource() {
         let config = make_config(Some(vec!["Railgun"]));
-        let offers = ChipOffers(vec![
-            ChipOffering::Normal(make_chip_def("Piercing Shot")),
-        ]);
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        app.insert_state(GameState::Playing);
+        app.add_plugins(MinimalPlugins);
         app.insert_resource(config);
-        app.insert_resource(offers);
+        // No ChipOffers resource inserted
         app.insert_resource(ScenarioFrame(10));
         app.insert_resource(ViolationLog::default());
-        app.insert_resource(RunState::default());
         app.add_systems(Update, check_chip_offer_expected);
         app.update();
 
         let log = app.world().resource::<ViolationLog>();
         assert!(
             log.0.is_empty(),
-            "should not fire when not in ChipSelect state"
+            "should not fire when ChipOffers resource is absent"
         );
     }
 }
