@@ -16,7 +16,7 @@ use crate::constraint::DistanceConstraint;
 /// velocity components along the axis are redistributed while perpendicular
 /// velocity is preserved. Entities that are already converging keep their
 /// velocities unchanged.
-pub fn enforce_distance_constraints(
+pub(crate) fn enforce_distance_constraints(
     constraint_query: Query<&DistanceConstraint>,
     mut entity_query: Query<(&mut Position2D, &mut Velocity2D)>,
 ) {

@@ -135,7 +135,7 @@ impl Scale2D {
 
     /// Converts to a `Vec3` suitable for `Transform.scale` (z = 1.0).
     #[must_use]
-    pub fn to_vec3(self) -> Vec3 {
+    pub const fn to_vec3(self) -> Vec3 {
         Vec3::new(self.x, self.y, 1.0)
     }
 }

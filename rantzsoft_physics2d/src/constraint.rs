@@ -60,7 +60,7 @@ mod tests {
             entity_b: Entity::PLACEHOLDER,
             max_distance: 200.0,
         };
-        let cloned = original.clone();
+        let cloned = original;
         assert!((cloned.max_distance - 200.0).abs() < f32::EPSILON);
     }
 

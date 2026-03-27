@@ -1,6 +1,5 @@
 //! Derives `Transform` from `GlobalPosition2D`, `GlobalRotation2D`,
-//! `GlobalScale2D` with interpolation and visual offset. Replaces the
-//! old `propagate_position`, `propagate_rotation`, `propagate_scale` systems.
+//! `GlobalScale2D` with interpolation and visual offset.
 //!
 //! For child entities, counteracts the parent's global transform so that
 //! Bevy's built-in `TransformPropagate` (which computes
@@ -53,7 +52,7 @@ type ParentGlobalsQuery<'w, 's> = Query<
 ///
 /// For child entities, subtracts the parent's global position, rotation, and
 /// scale so that Bevy's `TransformPropagate` adds them back correctly.
-pub fn derive_transform<D: DrawLayer>(
+pub(crate) fn derive_transform<D: DrawLayer>(
     time: Res<Time<Fixed>>,
     mut query: DeriveTransformQuery<D>,
     parent_query: ParentGlobalsQuery,
@@ -76,11 +75,7 @@ pub fn derive_transform<D: DrawLayer>(
     {
         // Position: interpolate if markers present, then extend to Vec3 with z.
         let base_pos = if interp.is_some() {
-            if let Some(prev) = prev_pos {
-                prev.0.lerp(g_pos.0, alpha)
-            } else {
-                g_pos.0
-            }
+            prev_pos.map_or(g_pos.0, |prev| prev.0.lerp(g_pos.0, alpha))
         } else {
             g_pos.0
         };
@@ -88,11 +83,7 @@ pub fn derive_transform<D: DrawLayer>(
 
         // Rotation: interpolate if markers present.
         let base_rot = if interp.is_some() {
-            if let Some(prev) = prev_rot {
-                prev.0.nlerp(g_rot.0, alpha)
-            } else {
-                g_rot.0
-            }
+            prev_rot.map_or(g_rot.0, |prev| prev.0.nlerp(g_rot.0, alpha))
         } else {
             g_rot.0
         };
@@ -100,14 +91,10 @@ pub fn derive_transform<D: DrawLayer>(
 
         // Scale: interpolate if markers present.
         let (mut sx, mut sy) = if interp.is_some() {
-            if let Some(prev) = prev_scale {
-                (
-                    prev.x + (g_scale.x - prev.x) * alpha,
-                    prev.y + (g_scale.y - prev.y) * alpha,
-                )
-            } else {
-                (g_scale.x, g_scale.y)
-            }
+            prev_scale.map_or((g_scale.x, g_scale.y), |prev| (
+                (g_scale.x - prev.x).mul_add(alpha, prev.x),
+                (g_scale.y - prev.y).mul_add(alpha, prev.y),
+            ))
         } else {
             (g_scale.x, g_scale.y)
         };

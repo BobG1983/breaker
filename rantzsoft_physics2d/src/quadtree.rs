@@ -14,7 +14,7 @@ enum QuadNode {
         items: Vec<(Entity, Aabb2D, CollisionLayers)>,
     },
     Branch {
-        children: Box<[QuadNode; 4]>,
+        children: Box<[Self; 4]>,
         /// Items stored at this branch level because they span multiple child
         /// quadrants and cannot be pushed down.
         items: Vec<(Entity, Aabb2D, CollisionLayers)>,
@@ -81,6 +81,7 @@ fn fitting_quadrant(parent_bounds: &Aabb2D, item_bounds: &Aabb2D) -> Option<usiz
     }
 }
 
+#[derive(Clone, Copy)]
 struct TreeConfig {
     max_items_per_leaf: usize,
     max_depth: usize,
@@ -119,11 +120,7 @@ fn insert_into_node(
                         e,
                         b,
                         l,
-                        TreeConfig {
-                            max_items_per_leaf: cfg.max_items_per_leaf,
-                            max_depth: cfg.max_depth,
-                            depth: cfg.depth,
-                        },
+                        cfg,
                     );
                 }
             }

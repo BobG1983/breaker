@@ -64,7 +64,7 @@ impl<A: Asset> RegistryHandles<A> {
     /// Creates a new `RegistryHandles` with the given folder handle, no typed
     /// handles, and `loaded` set to `false`.
     #[must_use]
-    pub fn new(folder: Handle<LoadedFolder>) -> Self {
+    pub const fn new(folder: Handle<LoadedFolder>) -> Self {
         Self {
             folder,
             handles: Vec::new(),

@@ -17,7 +17,7 @@ mod tests {
 
     #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
     struct TestAsset {
-        value: f32,
+        _value: f32,
     }
 
     /// `DefaultsHandle` wraps a `Handle` and the inner handle is accessible

@@ -12,7 +12,7 @@ use crate::{aabb::Aabb2D, collision_layers::CollisionLayers, resources::Collisio
 /// 2. Additions (`Added<Aabb2D>`)
 /// 3. Changes (`Changed<GlobalPosition2D>`, `Changed<CollisionLayers>`) — skipping
 ///    entities that were just added this frame to avoid double-insert.
-pub fn maintain_quadtree(
+pub(crate) fn maintain_quadtree(
     mut quadtree: ResMut<CollisionQuadtree>,
     mut removed: RemovedComponents<Aabb2D>,
     added: Query<(Entity, &Aabb2D, &GlobalPosition2D, &CollisionLayers), Added<Aabb2D>>,

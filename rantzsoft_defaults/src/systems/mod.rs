@@ -6,4 +6,5 @@ pub use fns::*;
 mod fns;
 
 #[cfg(test)]
+#[allow(clippy::expect_used, reason = "tests panic on failure")]
 mod tests;

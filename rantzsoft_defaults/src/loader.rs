@@ -77,6 +77,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, reason = "tests panic on failure")]
 mod tests {
     use serde::Deserialize;
 

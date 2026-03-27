@@ -25,7 +25,7 @@ impl CollisionLayers {
 
     /// Returns `true` if this entity's mask overlaps the other entity's membership.
     #[must_use]
-    pub fn interacts_with(&self, other: &Self) -> bool {
+    pub const fn interacts_with(&self, other: &Self) -> bool {
         (self.mask & other.membership) != 0
     }
 }

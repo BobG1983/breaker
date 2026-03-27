@@ -133,6 +133,7 @@ impl<S: FreelyMutableState + Clone> RantzDefaultsPluginBuilder<S> {
 
 impl Plugin for RantzDefaultsPlugin {
     fn build(&self, app: &mut App) {
+        #[allow(clippy::expect_used, reason = "poisoned Mutex is unrecoverable")]
         let mut registrations = self
             .registrations
             .lock()
@@ -144,6 +145,7 @@ impl Plugin for RantzDefaultsPlugin {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, reason = "tests panic on failure")]
 mod tests {
     use std::collections::HashMap;
 

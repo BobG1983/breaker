@@ -34,7 +34,7 @@ type ComputeGlobalsQuery<'w, 's> = Query<
 /// Computes global position, rotation, and scale from local values and parent
 /// hierarchy. Root entities copy local to global. Children combine with parent
 /// globals according to their propagation mode (`Relative` or `Absolute`).
-pub fn compute_globals(mut query: ComputeGlobalsQuery) {
+pub(crate) fn compute_globals(mut query: ComputeGlobalsQuery) {
     // Collect globals in a temporary map so children can read parent values
     // without conflicting mutable borrows.
     let mut parent_cache: HashMap<Entity, (Vec2, Rot2, (f32, f32))> = HashMap::new();

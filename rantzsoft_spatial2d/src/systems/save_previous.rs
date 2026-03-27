@@ -8,7 +8,7 @@ use crate::components::*;
 /// into their previous-frame snapshots for entities that have
 /// `InterpolateTransform2D`. Also snapshots `Velocity2D` to
 /// `PreviousVelocity`.
-pub fn save_previous(
+pub(crate) fn save_previous(
     mut query_pos: Query<
         (
             &Position2D,

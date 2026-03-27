@@ -8,7 +8,7 @@ use crate::components::{ApplyVelocity, Position2D, Velocity2D};
 /// Moves `Position2D` by `Velocity2D` * delta time each fixed step.
 ///
 /// Only affects entities that also have the [`ApplyVelocity`] marker component.
-pub fn apply_velocity(
+pub(crate) fn apply_velocity(
     mut query: Query<(&mut Position2D, &Velocity2D), With<ApplyVelocity>>,
     time: Res<Time<Fixed>>,
 ) {

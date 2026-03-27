@@ -283,36 +283,37 @@ mod tests {
         app.update();
 
         let registry = app.world().resource::<AppTypeRegistry>();
-        let registry = registry.read();
+        let guard = registry.read();
 
         assert!(
-            registry.get(std::any::TypeId::of::<Velocity2D>()).is_some(),
+            guard.get(std::any::TypeId::of::<Velocity2D>()).is_some(),
             "Velocity2D should be registered for reflection"
         );
         assert!(
-            registry
+            guard
                 .get(std::any::TypeId::of::<PreviousVelocity>())
                 .is_some(),
             "PreviousVelocity should be registered for reflection"
         );
         assert!(
-            registry
+            guard
                 .get(std::any::TypeId::of::<GlobalPosition2D>())
                 .is_some(),
             "GlobalPosition2D should be registered for reflection"
         );
         assert!(
-            registry
+            guard
                 .get(std::any::TypeId::of::<GlobalRotation2D>())
                 .is_some(),
             "GlobalRotation2D should be registered for reflection"
         );
         assert!(
-            registry
+            guard
                 .get(std::any::TypeId::of::<GlobalScale2D>())
                 .is_some(),
             "GlobalScale2D should be registered for reflection"
         );
+        drop(guard);
     }
 
     // ── Behavior: SpatialSystems enum is public and has all four variants ──

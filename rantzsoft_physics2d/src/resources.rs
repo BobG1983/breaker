@@ -14,7 +14,7 @@ pub struct CollisionQuadtree {
 impl CollisionQuadtree {
     /// Creates a new `CollisionQuadtree` with the given world bounds.
     #[must_use]
-    pub fn new(bounds: Aabb2D, max_items_per_leaf: usize, max_depth: usize) -> Self {
+    pub const fn new(bounds: Aabb2D, max_items_per_leaf: usize, max_depth: usize) -> Self {
         Self {
             quadtree: Quadtree::new(bounds, max_items_per_leaf, max_depth),
         }
