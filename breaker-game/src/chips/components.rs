@@ -48,7 +48,3 @@ pub(crate) struct BreakerSpeedBoost(pub f32);
 /// Adds flat force applied during a bump.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct BumpForceBoost(pub f32);
-
-/// Adds flat sensitivity to the breaker's tilt control.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct TiltControlBoost(pub f32);

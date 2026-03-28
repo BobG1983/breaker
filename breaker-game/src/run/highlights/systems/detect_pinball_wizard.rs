@@ -180,6 +180,7 @@ mod tests {
             .cell_bounces_since_breaker = 12;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -215,6 +216,7 @@ mod tests {
             .cell_bounces_since_breaker = 11;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -261,6 +263,7 @@ mod tests {
         }
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 

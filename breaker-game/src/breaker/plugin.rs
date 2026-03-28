@@ -10,10 +10,10 @@ use crate::{
         resources::BreakerConfig,
         systems::{
             animate_bump_visual, animate_tilt_visual, apply_entity_scale_to_breaker,
-            detect_breaker_cell_collision, detect_breaker_wall_collision, grade_bump,
-            init_breaker_params, move_breaker, perfect_bump_dash_cancel, reset_breaker,
-            spawn_breaker, spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual,
-            update_breaker_state, update_bump, width_boost_visual,
+            breaker_cell_collision, breaker_wall_collision, grade_bump, init_breaker_params,
+            move_breaker, perfect_bump_dash_cancel, reset_breaker, spawn_breaker,
+            spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual, update_breaker_state,
+            update_bump, width_boost_visual,
         },
     },
     run::node::sets::NodeSystems,
@@ -27,15 +27,10 @@ pub struct BreakerPlugin;
 
 impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
-        use crate::breaker::messages::{
-            BreakerDestroyedAt, BreakerImpactCell, BreakerImpactWall, BreakerSpawned,
-            RequestBreakerDestroyed,
-        };
+        use crate::breaker::messages::{BreakerImpactCell, BreakerImpactWall, BreakerSpawned};
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
             .add_message::<BreakerSpawned>()
-            .add_message::<RequestBreakerDestroyed>()
-            .add_message::<BreakerDestroyedAt>()
             .add_message::<BreakerImpactCell>()
             .add_message::<BreakerImpactWall>()
             .init_resource::<BreakerConfig>()
@@ -83,8 +78,8 @@ impl Plugin for BreakerPlugin {
                         .before(BreakerSystems::UpdateState),
                     trigger_bump_visual.after(update_bump),
                     // Collision detection for effect triggers
-                    detect_breaker_cell_collision.after(BreakerSystems::Move),
-                    detect_breaker_wall_collision.after(BreakerSystems::Move),
+                    breaker_cell_collision.after(BreakerSystems::Move),
+                    breaker_wall_collision.after(BreakerSystems::Move),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
@@ -98,6 +93,8 @@ impl Plugin for BreakerPlugin {
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_physics2d::resources::CollisionQuadtree;
+
     use super::*;
 
     #[test]
@@ -116,6 +113,7 @@ mod tests {
             .add_plugins(crate::input::InputPlugin)
             // BreakerPlugin reads BoltImpactBreaker from the bolt domain
             .add_message::<crate::bolt::messages::BoltImpactBreaker>()
+            .insert_resource(CollisionQuadtree::default())
             .add_plugins(BreakerPlugin)
             .update();
     }

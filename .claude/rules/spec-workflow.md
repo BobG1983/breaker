@@ -10,8 +10,8 @@ See `.claude/rules/tdd.md` for the TDD cycle that specs feed into.
 Before writing any code, resolve unknowns and produce specs. See `.claude/rules/sub-agents.md` for the full agent directory — research agents for pre-planning, pipeline agents for spec production.
 
 1. Launch applicable **research agents** in parallel (see Research Agents in `sub-agents.md`)
-2. Feed research results into **planner-spec** to produce test + implementation specs
-3. Launch **planner-review** to pressure-test specs (especially for novel mechanics, cross-domain, or uncertain scope)
+2. Feed research results into **planner-spec** to produce test + implementation specs - write the specs into ephemeral memory with a meaningful name
+3. Launch **planner-review** to pressure-test specs (especially for novel mechanics, cross-domain, or uncertain scope) - update the specs in ephemeral memory
 
 ## Spec Revision Loop
 

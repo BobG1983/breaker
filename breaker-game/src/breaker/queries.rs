@@ -12,7 +12,7 @@ use crate::{
         DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal,
         SettleDuration, SettleTiltEase,
     },
-    chips::components::{BreakerSpeedBoost, TiltControlBoost, WidthBoost},
+    chips::components::{BreakerSpeedBoost, WidthBoost},
     shared::EntityScale,
 };
 
@@ -24,7 +24,6 @@ pub(crate) type CollisionQueryBreaker = (
     &'static BreakerHeight,
     &'static MaxReflectionAngle,
     &'static MinAngleFromHorizontal,
-    Option<&'static TiltControlBoost>,
     Option<&'static WidthBoost>,
     Option<&'static EntityScale>,
 );

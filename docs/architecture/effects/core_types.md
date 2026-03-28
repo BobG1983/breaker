@@ -122,11 +122,9 @@ pub enum EffectKind {
     SizeBoost(f32),
     BumpForce(f32),
     Attraction(AttractionType, f32),
-    TiltControl(f32),
     LoseLife,
     TimePenalty { seconds: f32 },
     SpawnBolts { #[serde(default = "one")] count: u32, #[serde(default)] lifespan: Option<f32>, #[serde(default)] inherit: bool },
-    MultiBolt { base_count: u32, count_per_level: u32, stacks: u32 },
     ChainBolt { tether_distance: f32 },
     Shield { base_duration: f32, duration_per_level: f32, stacks: u32 },
     ChainLightning { arcs: u32, range: f32, damage_mult: f32 },
@@ -137,7 +135,7 @@ pub enum EffectKind {
     GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
     RandomEffect(Vec<(f32, EffectNode)>),
     EntropyEngine { threshold: u32, pool: Vec<(f32, EffectNode)> },
-    RampingDamage { bonus_per_hit: f32 },
+    RampingDamage { damage_per_trigger: f32 },
 }
 ```
 

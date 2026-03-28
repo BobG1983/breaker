@@ -5,7 +5,7 @@ use super::helpers::*;
 use crate::{
     bolt::components::Bolt,
     breaker::components::{Breaker, BreakerTilt},
-    chips::components::{Piercing, PiercingRemaining, TiltControlBoost, WidthBoost},
+    chips::components::{Piercing, PiercingRemaining, WidthBoost},
     shared::{EntityScale, GameDrawLayer},
 };
 
@@ -324,66 +324,6 @@ fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
         pr.0, 5,
         "PiercingRemaining without Piercing should not be reset on breaker hit, got {}",
         pr.0
-    );
-}
-
-// --- TiltControlBoost tests ---
-
-#[test]
-fn tilt_control_boost_widens_effective_max_reflection_angle() {
-    let mut app = test_app();
-    let hh = default_breaker_height();
-    let hw = default_breaker_width();
-    let y_pos = -250.0;
-
-    app.world_mut().spawn((
-        Breaker,
-        BreakerTilt::default(),
-        default_breaker_width(),
-        default_breaker_height(),
-        default_max_reflection_angle(),
-        default_min_angle(),
-        TiltControlBoost(15.0),
-        Position2D(Vec2::new(0.0, y_pos)),
-        Spatial2D,
-        GameDrawLayer::Breaker,
-    ));
-
-    let hit_x = hw.half_width() - 2.0;
-    let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = spawn_bolt(&mut app, hit_x, start_y, 0.0, -400.0);
-
-    tick(&mut app);
-
-    let vel_with_boost = app.world().get::<Velocity2D>(bolt_entity).unwrap().0;
-    let angle_with_boost = vel_with_boost.x.abs().atan2(vel_with_boost.y);
-
-    // Now test without boost for comparison
-    let mut app_no_boost = test_app();
-    app_no_boost.world_mut().spawn((
-        Breaker,
-        BreakerTilt::default(),
-        default_breaker_width(),
-        default_breaker_height(),
-        default_max_reflection_angle(),
-        default_min_angle(),
-        Position2D(Vec2::new(0.0, y_pos)),
-        Spatial2D,
-        GameDrawLayer::Breaker,
-    ));
-    let bolt_no_boost = spawn_bolt(&mut app_no_boost, hit_x, start_y, 0.0, -400.0);
-    tick(&mut app_no_boost);
-
-    let vel_no_boost = app_no_boost
-        .world()
-        .get::<Velocity2D>(bolt_no_boost)
-        .unwrap()
-        .0;
-    let angle_no_boost = vel_no_boost.x.abs().atan2(vel_no_boost.y);
-
-    assert!(
-        angle_with_boost > angle_no_boost,
-        "TiltControlBoost should widen reflection angle: boost={angle_with_boost:.3} rad, no-boost={angle_no_boost:.3} rad"
     );
 }
 

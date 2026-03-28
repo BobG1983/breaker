@@ -6,11 +6,11 @@ Stacking damage bonus on consecutive impacts. No maximum cap.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `bonus_per_hit` | `f32` | Damage bonus added per impact |
+| `damage_per_trigger` | `f32` | Damage bonus added per trigger activation |
 
 ## Behavior
 
-Each impact (any `Impacted(*)` trigger — Cell, Wall, Breaker, Bolt) adds `bonus_per_hit` to the entity's accumulated damage bonus. The bonus resets on missed bump (`NoBump` trigger). No maximum cap — limited only by chip selection and gameplay. The accumulated bonus is added to the entity's damage on each hit.
+Each impact (any `Impacted(*)` trigger — Cell, Wall, Breaker, Bolt) adds `damage_per_trigger` to the entity's accumulated damage bonus. The bonus resets on missed bump (`NoBump` trigger). No maximum cap — limited only by chip selection and gameplay. The accumulated bonus is added to the entity's damage on each hit.
 
 ## Reversal
 

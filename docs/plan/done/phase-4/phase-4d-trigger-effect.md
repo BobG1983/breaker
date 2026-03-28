@@ -28,7 +28,6 @@ Define the recursive enum and verify RON round-trips:
 enum TriggerChain {
     // Leaf — fire this effect when all parent triggers are satisfied
     Shockwave { range: f32 },
-    MultiBolt { count: u32 },
     Shield { duration: f32 },
 
     // Triggers — each wraps another TriggerChain
@@ -48,7 +47,7 @@ OnCellDestroyed(Shockwave(range: 64.0))
 OnPerfectBump(OnImpact(Shockwave(range: 64.0)))
 
 // Deep: trigger -> trigger -> trigger -> effect
-OnPerfectBump(OnImpact(OnCellDestroyed(MultiBolt(count: 2))))
+OnPerfectBump(OnImpact(OnCellDestroyed(Shockwave(range: 64.0))))
 ```
 
 **Delegatable**: Yes — pure types + parsing tests.

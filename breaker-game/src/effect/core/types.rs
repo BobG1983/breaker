@@ -283,8 +283,8 @@ pub enum EffectKind {
     },
     /// Stacking damage bonus on consecutive cell hits.
     RampingDamage {
-        /// Damage bonus added per hit.
-        bonus_per_hit: f32,
+        /// Damage bonus added per trigger activation.
+        damage_per_trigger: f32,
     },
     /// Instant area damage burst.
     Explode {
@@ -412,8 +412,8 @@ impl EffectKind {
             Self::EntropyEngine { max_effects, pool } => {
                 super::super::effects::entropy_engine::fire(entity, *max_effects, pool, world);
             }
-            Self::RampingDamage { bonus_per_hit } => {
-                super::super::effects::ramping_damage::fire(entity, *bonus_per_hit, world);
+            Self::RampingDamage { damage_per_trigger } => {
+                super::super::effects::ramping_damage::fire(entity, *damage_per_trigger, world);
             }
             Self::Explode { range, damage_mult } => {
                 super::super::effects::explode::fire(entity, *range, *damage_mult, world);

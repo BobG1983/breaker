@@ -56,8 +56,7 @@ pub enum Effect {
     SizeBoost(f32),                    // Bolt = radius, Breaker = width (handler-determined)
     Attraction(AttractionType, f32),
     BumpForce(f32),
-    TiltControl(f32),
-    RampingDamage { bonus_per_hit: f32 },  // no max_bonus — uncapped accumulation
+    RampingDamage { damage_per_trigger: f32 },  // no max_bonus — uncapped accumulation
 
     // Triggered effects (via bridge systems)
     Shockwave { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
@@ -65,7 +64,6 @@ pub enum Effect {
     LoseLife,
     TimePenalty { seconds: f32 },
     SpawnBolts { count: u32, lifespan: Option<f32>, inherit: bool },
-    MultiBolt { base_count: u32, count_per_level: u32, stacks: u32 },
     Shield { base_duration: f32, duration_per_level: f32, stacks: u32 },
     ChainLightning { arcs: u32, range: f32, damage_mult: f32 },
     SpawnPhantom { duration: f32, max_active: u32 },
@@ -111,7 +109,6 @@ struct BoltSizeBoost(pub f32);      // bolt: accumulated fractional radius bonus
 struct ChainHit(pub u32);           // bolt: chain hit count
 struct BreakerSpeedBoost(pub f32);  // breaker: accumulated flat speed bonus
 struct BumpForceBoost(pub f32);     // breaker: accumulated flat bump force bonus
-struct TiltControlBoost(pub f32);   // breaker: accumulated flat tilt sensitivity bonus
 ```
 
 Stacking increments the existing component's value. Production systems query for these components directly — if absent, the system uses the base value.

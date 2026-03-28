@@ -1,12 +1,12 @@
 //! Breaker systems — one file per system function.
 
 pub(crate) mod apply_entity_scale_to_breaker;
+mod breaker_cell_collision;
+mod breaker_wall_collision;
 mod bump;
 mod bump_feedback;
 mod bump_visual;
 mod dash;
-mod detect_breaker_cell_collision;
-mod detect_breaker_wall_collision;
 pub(crate) mod init_breaker;
 mod init_breaker_params;
 mod move_breaker;
@@ -15,13 +15,13 @@ mod tilt_visual;
 pub(crate) mod width_boost_visual;
 
 pub(crate) use apply_entity_scale_to_breaker::apply_entity_scale_to_breaker;
+pub(crate) use breaker_cell_collision::breaker_cell_collision;
+pub(crate) use breaker_wall_collision::breaker_wall_collision;
 pub use bump::perfect_bump_dash_cancel;
 pub(crate) use bump::{grade_bump, update_bump};
 pub use bump_feedback::{spawn_bump_grade_text, spawn_whiff_text};
 pub use bump_visual::{animate_bump_visual, trigger_bump_visual};
 pub use dash::update_breaker_state;
-pub(crate) use detect_breaker_cell_collision::detect_breaker_cell_collision;
-pub(crate) use detect_breaker_wall_collision::detect_breaker_wall_collision;
 pub(crate) use init_breaker::{apply_breaker_config_overrides, init_breaker};
 pub use init_breaker_params::init_breaker_params;
 pub(crate) use move_breaker::move_breaker;

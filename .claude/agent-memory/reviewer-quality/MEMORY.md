@@ -1,6 +1,1 @@
-## Stable
-- [intentional-patterns.md](intentional-patterns.md) — Patterns that look wrong but are correct, vocabulary decisions
-- [coverage-standards.md](coverage-standards.md) — Test coverage standards by domain, documentation conventions
-
-## Session History
-See [ephemeral/](ephemeral/) — not committed.
+- [intentional-patterns.md](intentional-patterns.md) — Intentional patterns from Phase 1 collision refactor: inline overlap detection, near-duplicate collision systems, local test helpers

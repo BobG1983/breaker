@@ -20,14 +20,14 @@ pub(crate) fn fire(entity: Entity, _tether_distance: f32, world: &mut World) {
     let chain_bolt_a = world
         .spawn((
             ChainBoltMarker(entity),
-            Transform::from_translation(position),
+            Transform::from_translation(position), // Should not use transform, ever
         ))
         .id();
 
     let chain_bolt_b = world
         .spawn((
             ChainBoltMarker(entity),
-            Transform::from_translation(position),
+            Transform::from_translation(position), // Should not use transform, ever
         ))
         .id();
 

@@ -31,7 +31,7 @@ pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
-        use crate::bolt::messages::{BoltDestroyedAt, BoltSpawned, RequestBoltDestroyed};
+        use crate::bolt::messages::{BoltSpawned, RequestBoltDestroyed};
         app.init_resource::<BoltConfig>()
             .init_resource::<GameRng>()
             .add_message::<SpawnAdditionalBolt>()
@@ -41,7 +41,6 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltLost>()
             .add_message::<BoltImpactWall>()
             .add_message::<RequestBoltDestroyed>()
-            .add_message::<BoltDestroyedAt>()
             .add_message::<SpawnChainBolt>()
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -101,6 +100,8 @@ impl Plugin for BoltPlugin {
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_physics2d::resources::CollisionQuadtree;
+
     use super::*;
 
     #[test]
@@ -114,6 +115,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
+            .insert_resource(CollisionQuadtree::default())
             .add_plugins(BoltPlugin)
             .update();
     }

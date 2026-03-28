@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use super::*;
 use crate::cells::{
@@ -79,6 +80,7 @@ fn spawn_cell(app: &mut App, hp: f32) -> Entity {
             CellHealth::new(hp),
             default_damage_visuals(),
             RequiredToClear,
+            Position2D(Vec2::ZERO),
             Mesh2d(mesh),
             MeshMaterial2d(material),
             Transform::from_xyz(0.0, 0.0, 0.0),
@@ -99,6 +101,7 @@ fn spawn_optional_cell(app: &mut App, hp: f32, required: bool) -> Entity {
         Cell,
         CellHealth::new(hp),
         default_damage_visuals(),
+        Position2D(Vec2::ZERO),
         Mesh2d(mesh),
         MeshMaterial2d(material),
         Transform::from_xyz(0.0, 0.0, 0.0),
@@ -125,6 +128,7 @@ fn spawn_locked_cell(app: &mut App, hp: f32) -> Entity {
             CellHealth::new(hp),
             default_damage_visuals(),
             RequiredToClear,
+            Position2D(Vec2::ZERO),
             Mesh2d(mesh),
             MeshMaterial2d(material),
             Transform::from_xyz(0.0, 0.0, 0.0),
@@ -621,5 +625,137 @@ fn damage_cell_for_despawned_entity_is_silently_skipped() {
         captured.0.len(),
         0,
         "DamageCell for despawned entity should not produce RequestCellDestroyed"
+    );
+}
+
+// =========================================================================
+// Phase 1B: RequestCellDestroyed carries position and was_required_to_clear
+// =========================================================================
+
+/// Spawns a cell at an explicit position, optionally with `RequiredToClear`.
+fn spawn_cell_at(app: &mut App, hp: f32, pos: Vec2, required: bool) -> Entity {
+    let material = app
+        .world_mut()
+        .resource_mut::<Assets<ColorMaterial>>()
+        .add(ColorMaterial::from_color(Color::srgb(4.0, 0.2, 0.5)));
+    let mesh = app
+        .world_mut()
+        .resource_mut::<Assets<Mesh>>()
+        .add(Rectangle::new(1.0, 1.0));
+    let mut entity = app.world_mut().spawn((
+        Cell,
+        CellHealth::new(hp),
+        default_damage_visuals(),
+        Position2D(pos),
+        Mesh2d(mesh),
+        MeshMaterial2d(material),
+        Transform::from_xyz(pos.x, pos.y, 0.0),
+    ));
+    if required {
+        entity.insert(RequiredToClear);
+    }
+    entity.id()
+}
+
+// --- Behavior 1: RequestCellDestroyed includes position of destroyed cell ---
+
+#[test]
+fn request_cell_destroyed_includes_cell_position() {
+    let mut app = test_app();
+    let cell = spawn_cell_at(&mut app, 10.0, Vec2::new(100.0, 200.0), true);
+
+    app.init_resource::<CapturedDestroyed>();
+    app.insert_resource(TestMessage(Some(DamageCell {
+        cell,
+        damage: 10.0,
+        source_chip: None,
+    })));
+    app.add_systems(
+        FixedUpdate,
+        (
+            enqueue_from_resource.before(handle_cell_hit),
+            capture_destroyed.after(handle_cell_hit),
+        ),
+    );
+    tick(&mut app);
+
+    let captured = app.world().resource::<CapturedDestroyed>();
+    assert_eq!(
+        captured.0.len(),
+        1,
+        "exactly one RequestCellDestroyed expected"
+    );
+    assert_eq!(
+        captured.0[0].position,
+        Vec2::new(100.0, 200.0),
+        "RequestCellDestroyed.position should match the cell's Position2D"
+    );
+}
+
+// --- Behavior 2: RequestCellDestroyed.was_required_to_clear=true for required cells ---
+
+#[test]
+fn request_cell_destroyed_was_required_true_for_required_cell() {
+    let mut app = test_app();
+    let cell = spawn_cell_at(&mut app, 10.0, Vec2::ZERO, true);
+
+    app.init_resource::<CapturedDestroyed>();
+    app.insert_resource(TestMessage(Some(DamageCell {
+        cell,
+        damage: 10.0,
+        source_chip: None,
+    })));
+    app.add_systems(
+        FixedUpdate,
+        (
+            enqueue_from_resource.before(handle_cell_hit),
+            capture_destroyed.after(handle_cell_hit),
+        ),
+    );
+    tick(&mut app);
+
+    let captured = app.world().resource::<CapturedDestroyed>();
+    assert_eq!(
+        captured.0.len(),
+        1,
+        "exactly one RequestCellDestroyed expected"
+    );
+    assert!(
+        captured.0[0].was_required_to_clear,
+        "RequestCellDestroyed.was_required_to_clear should be true for a cell with RequiredToClear"
+    );
+}
+
+// --- Behavior 3: RequestCellDestroyed.was_required_to_clear=false for non-required cells ---
+
+#[test]
+fn request_cell_destroyed_was_required_false_for_non_required_cell() {
+    let mut app = test_app();
+    let cell = spawn_cell_at(&mut app, 10.0, Vec2::ZERO, false);
+
+    app.init_resource::<CapturedDestroyed>();
+    app.insert_resource(TestMessage(Some(DamageCell {
+        cell,
+        damage: 10.0,
+        source_chip: None,
+    })));
+    app.add_systems(
+        FixedUpdate,
+        (
+            enqueue_from_resource.before(handle_cell_hit),
+            capture_destroyed.after(handle_cell_hit),
+        ),
+    );
+    tick(&mut app);
+
+    let captured = app.world().resource::<CapturedDestroyed>();
+    assert_eq!(
+        captured.0.len(),
+        1,
+        "exactly one RequestCellDestroyed expected"
+    );
+    assert!(
+        !captured.0[0].was_required_to_clear,
+        "RequestCellDestroyed.was_required_to_clear should be false for a cell without RequiredToClear"
     );
 }

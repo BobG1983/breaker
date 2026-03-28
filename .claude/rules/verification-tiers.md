@@ -13,6 +13,8 @@ Single source of truth for what agents run at each verification tier. All other 
 
 **Question answered**: "Does it compile, pass tests, and lint clean?"
 
+All compiler and clippy errors and failing tests must be fixed for this tier to be considered complete.
+
 ## Standard Verification Tier
 
 **When**: Commit gate — after Basic Verification Tier is clean and /simplify finds nothing.
@@ -28,6 +30,8 @@ Includes everything in Basic Verification Tier, plus:
 | **reviewer-performance** | Archetype fragmentation, query efficiency, hot-path allocations |
 
 **Question answered**: "Is the code correct, idiomatic, and well-structured?"
+
+All compiler and clippy errors and failing tests must be complete, and all feedback from reviewers investigated and fixed (if required) for this tier to be complete.
 
 ## Full Verification Tier
 
@@ -46,6 +50,8 @@ Includes everything in Standard Verification Tier, plus:
 | **reviewer-file-length** | Large files needing splits, refactor spec hints |
 
 **Question answered**: "Is everything clean across all cross-cutting concerns?"
+
+ALL compiler and clippy errors and warnings, ALL failing tests, ALL failing scenarios, and all feedback from all agents MUST be fixed for this tier to be complete, DEFER NONE, FIX EVERYTHING.
 
 ## Pipeline Summary
 

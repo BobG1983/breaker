@@ -182,9 +182,11 @@ mod tests {
 
         app.insert_resource(TestCellDestroyedAt(vec![
             CellDestroyedAt {
+                position: Vec2::ZERO,
                 was_required_to_clear: true,
             },
             CellDestroyedAt {
+                position: Vec2::ZERO,
                 was_required_to_clear: false,
             },
         ]));
@@ -204,12 +206,15 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestCellDestroyed(vec![
             CellDestroyedAt {
+                position: Vec2::ZERO,
                 was_required_to_clear: true,
             },
             CellDestroyedAt {
+                position: Vec2::ZERO,
                 was_required_to_clear: true,
             },
             CellDestroyedAt {
+                position: Vec2::ZERO,
                 was_required_to_clear: false,
             },
         ]));
@@ -234,6 +239,7 @@ mod tests {
             .cells_since_last_breaker_hit = 8;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -275,6 +281,7 @@ mod tests {
             .cells_since_last_breaker_hit = 7;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -312,6 +319,7 @@ mod tests {
         }
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -344,6 +352,7 @@ mod tests {
         }
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 

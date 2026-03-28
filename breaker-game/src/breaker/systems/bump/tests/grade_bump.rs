@@ -30,6 +30,7 @@ fn bolt_hit_with_active_forward_perfect() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 
@@ -68,6 +69,7 @@ fn bolt_hit_with_active_forward_early() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 
@@ -96,6 +98,7 @@ fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 
@@ -155,6 +158,7 @@ fn grade_bump_forward_sends_bolt_entity() {
     // Use a dedicated resource with the specific bolt entity
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: bolt_entity,
+        breaker: Entity::PLACEHOLDER,
     })));
     app.add_systems(
         FixedUpdate,
@@ -205,6 +209,7 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: bolt_entity,
+        breaker: Entity::PLACEHOLDER,
     })));
     app.add_systems(
         FixedUpdate,
@@ -254,6 +259,7 @@ fn grade_bump_uses_force_grade_when_some() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 
@@ -288,6 +294,7 @@ fn grade_bump_ignores_force_grade_when_none() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 
@@ -322,6 +329,7 @@ fn grade_bump_works_without_force_grade_resource() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 

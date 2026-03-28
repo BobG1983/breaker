@@ -10,7 +10,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 
 | Message | Sent By | Consumed By |
 |---------|---------|-------------|
-| `BoltHitBreaker { bolt }` | bolt (bolt_breaker_collision) | breaker (grade_bump), effect (bridge_breaker_impact) |
+| `BoltImpactBreaker { bolt, breaker }` | bolt (bolt_breaker_collision) | breaker (grade_bump), effect (bridge_breaker_impact) |
 | `BoltHitCell { cell, bolt }` | bolt (bolt_cell_collision) | effect (bridge_cell_impact) |
 | `BoltHitWall { bolt, wall }` | bolt (bolt_cell_collision) | effect (bridge_wall_impact) |
 | `BoltLost` | bolt (bolt_lost) | bolt (spawn_bolt_lost_text), effect (bridge_bolt_lost) |
@@ -19,7 +19,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `BumpPerformed { grade, bolt }` | breaker | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), effect (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), effect (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_breaker) | run/node (check_spawn_complete) |
-| `CellDestroyed { was_required_to_clear }` | cells | run (track_node_completion), effect (bridge_cell_death evaluates trigger on remaining alive cell via RequestCellDestroyed) |
+| `CellDestroyedAt { position, was_required_to_clear }` | cells (cleanup_cell) | run (track_node_completion), effect (bridge_cell_death evaluates trigger on remaining alive cell via RequestCellDestroyed) |
 | `CellsSpawned` | run/node (spawn_cells_from_layout) | run/node (check_spawn_complete) |
 | `BoltSpawned` | bolt (spawn_bolt) | run/node (check_spawn_complete) |
 | `WallsSpawned` | wall (spawn_walls) | run/node (check_spawn_complete) |
@@ -30,7 +30,6 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `ApplyTimePenalty { seconds }` | effect/effects/time_penalty (handle_time_penalty) | run/node (apply_time_penalty) |
 | `SpawnAdditionalBolt` | effect/effects/spawn_bolt (handle_spawn_bolt) | bolt (spawn_additional_bolt) |
 | `RequestBoltDestroyed { bolt }` | bolt (bolt_lost) | effect (bridge_bolt_death), bolt (cleanup_destroyed_bolts) |
-| `BoltDestroyedAt { position }` | effect (bridge_bolt_death) | *(no consumers — positional data for future VFX)* |
 | `ChipSelected { name }` | UI (handle_chip_input) | chips (dispatch_chip_effects) |
 | `HighlightTriggered { kind }` | run (detect_mass_destruction, detect_close_save, detect_combo_king, detect_pinball_wizard, detect_nail_biter, detect_first_evolution, detect_most_powerful_evolution, track_node_cleared_stats) | run (spawn_highlight_text) |
 

@@ -5,21 +5,24 @@ use bevy::prelude::*;
 /// Sent by `handle_cell_hit` when a cell's HP reaches 0. The entity is still alive.
 ///
 /// Consumed by `bridge_cell_death` (evaluates `OnDeath` `BoundEffects` while entity
-/// is still alive) and `cleanup_destroyed_cells` (despawns the entity).
+/// is still alive) and `cleanup_cell` (despawns the entity).
 #[derive(Message, Clone, Debug)]
 pub(crate) struct RequestCellDestroyed {
     /// The cell entity to be destroyed.
     pub cell: Entity,
+    /// World-space position of the destroyed cell.
+    pub position: Vec2,
+    /// Whether this cell had the `RequiredToClear` component.
+    pub was_required_to_clear: bool,
 }
 
-/// Sent by `bridge_cell_death` after extracting entity data from the still-alive cell.
+/// Sent by `cleanup_cell` after extracting entity data from the still-alive cell.
 ///
 /// Replaces `CellDestroyed` for all downstream consumers (run tracking, lock release, etc.).
 #[derive(Message, Clone, Debug)]
 pub(crate) struct CellDestroyedAt {
-    // FUTURE: may be used for upcoming phases
-    // /// World-space position of the destroyed cell.
-    // pub position: Vec2,
+    /// World-space position of the destroyed cell.
+    pub position: Vec2,
     /// Whether this cell counted toward node completion.
     pub was_required_to_clear: bool,
 }
@@ -67,6 +70,8 @@ mod tests {
     fn request_cell_destroyed_debug_format() {
         let msg = RequestCellDestroyed {
             cell: Entity::PLACEHOLDER,
+            position: Vec2::ZERO,
+            was_required_to_clear: false,
         };
         let debug = format!("{msg:?}");
         assert!(debug.contains("RequestCellDestroyed"));
@@ -76,6 +81,7 @@ mod tests {
     #[test]
     fn cell_destroyed_at_debug_format() {
         let msg = CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: true,
         };
         let debug = format!("{msg:?}");
@@ -86,6 +92,7 @@ mod tests {
     #[test]
     fn cell_destroyed_at_non_required() {
         let msg = CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: false,
         };
         assert!(!msg.was_required_to_clear);

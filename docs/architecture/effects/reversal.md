@@ -8,7 +8,7 @@
 |------------|-------------------|
 | Passive buffs (SpeedBoost, DamageBoost, Piercing, SizeBoost, BumpForce, ChainHit) | Removes the matching entry from the Active* vec. Recalculation system picks up the change. |
 | Entity-spawning effects (Shockwave, SpawnBolts, ChainBolt, SpawnPhantom, GravityWell, Shield, SecondWind) | Despawns the spawned entity/entities if still alive. |
-| Component-inserting effects (Attraction, TiltControl, BreakerSpeed, RampingDamage) | Removes the inserted components from the entity. |
+| Component-inserting effects (Attraction, BreakerSpeed, RampingDamage) | Removes the inserted components from the entity. |
 | State-modifying effects (LoseLife, TimePenalty) | Undoes the state change (restore life, restore time). |
 
 ## The Two Kinds of Reversal

@@ -107,17 +107,6 @@ Flat bump force increase per stack.
 
 `max_taken: 3`
 
-### Tilt Control
-Flat tilt control sensitivity increase.
-
-| Rarity | Prefix | Effects | Synergy Notes |
-|--------|--------|---------|---------------|
-| Common | Subtle | `On(Bolt) → Do(TiltControl(0.1))` | Minor control |
-| Uncommon | Precise | `On(Bolt) → Do(TiltControl(0.2))` | Better aim |
-| Rare | Masterful | `On(Bolt) → Do(TiltControl(0.35))` | Precise aim + feels responsive |
-
-`max_taken: 3`
-
 ### Wide Breaker
 Flat breaker width increase per stack.
 
@@ -136,9 +125,9 @@ Ramping damage bonus that stacks on cell hits.
 
 | Rarity | Prefix | Effects | Synergy Notes |
 |--------|--------|---------|---------------|
-| Common | Basic | `On(Bolt) → Do(RampingDamage(bonus_per_hit: 0.02))` | Mild ramp |
-| Uncommon | Potent | `On(Bolt) → Do(RampingDamage(bonus_per_hit: 0.04))` | Decent ramp |
-| Rare | Savage | `On(Bolt) → Do(RampingDamage(bonus_per_hit: 0.06))` | High ramp, rewards sustained combos |
+| Common | Basic | `On(Bolt) → Do(RampingDamage(damage_per_trigger: 0.02))` | Mild ramp |
+| Uncommon | Potent | `On(Bolt) → Do(RampingDamage(damage_per_trigger: 0.04))` | Decent ramp |
+| Rare | Savage | `On(Bolt) → Do(RampingDamage(damage_per_trigger: 0.06))` | High ramp, rewards sustained combos |
 
 `max_taken: 2`
 
@@ -387,7 +376,7 @@ Successful bumps summon a phantom breaker that mirrors your moves.
 ### Supernova
 **Ingredients**: Piercing Shot x3 + Surge x1
 
-**Effect**: `On(Bolt) → When(PerfectBumped) → When(Impacted(Cell)) → When(DestroyedCell) → Do(MultiBolt(base_count: 2, count_per_level: 0, stacks: 1)), Do(Shockwave(base_range: 96, speed: 400))`
+**Effect**: `On(Bolt) → When(PerfectBumped) → When(Impacted(Cell)) → When(DestroyedCell) → Do(SpawnBolts(count: 2)), Do(Shockwave(base_range: 96, speed: 400))`
 
 Perfect bumps trigger chain explosions — cells destroyed spawn bolts and shockwaves.
 
