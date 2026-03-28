@@ -1,88 +1,78 @@
-//! Effect handlers for unified behavior leaf effects.
+//! Effect modules — one per effect, each with `fire()`, `reverse()`, `register()`.
 
-use bevy::prelude::*;
+/// Steer toward nearest entity of a type.
+pub mod attraction;
+/// Flat bump force increase.
+pub mod bump_force;
+/// Spawn two bolts chained together.
+pub mod chain_bolt;
+/// Arc damage jumping between cells.
+pub mod chain_lightning;
+/// Multiplicative damage bonus.
+pub mod damage_boost;
+/// Escalating chaos — fires multiple random effects per cell destroyed.
+pub mod entropy_engine;
+/// Instant area damage burst.
+pub mod explode;
+/// Gravity well that attracts bolts within radius.
+pub mod gravity_well;
+/// Decrement lives.
+pub mod life_lost;
+/// Pass through cells instead of bouncing.
+pub mod piercing;
+/// Beam through cells in velocity direction.
+pub mod piercing_beam;
+/// Shockwave at every active bolt position.
+pub mod pulse;
+/// Breaker deceleration multiplier.
+pub mod quick_stop;
+/// Stacking damage bonus on consecutive cell hits.
+pub mod ramping_damage;
+/// Weighted random selection from a pool.
+pub mod random_effect;
+/// Invisible bottom wall that bounces bolt once.
+pub mod second_wind;
+/// Temporary breaker protection.
+pub mod shield;
+/// Expanding ring of area damage.
+pub mod shockwave;
+/// Size increase (bolt radius or breaker width).
+pub mod size_boost;
+/// Spawn additional bolts.
+pub mod spawn_bolts;
+/// Temporary phantom bolt with infinite piercing.
+pub mod spawn_phantom;
+/// Multiplicative speed scaling.
+pub mod speed_boost;
+/// Two bolts connected by a damaging beam.
+pub mod tether_beam;
+/// Subtract time from node timer.
+pub mod time_penalty;
 
-pub(crate) mod attraction;
-pub(crate) mod bolt_size_boost;
-pub(crate) mod bolt_speed_boost;
-pub(crate) mod breaker_speed_boost;
-pub(crate) mod bump_force_boost;
-pub(crate) mod chain_bolt;
-pub(crate) mod chain_hit;
-pub(crate) mod chain_lightning;
-pub(crate) mod damage_boost;
-pub(crate) mod entropy_engine;
-pub(crate) mod gravity_well;
-pub(crate) mod life_lost;
-pub(crate) mod multi_bolt;
-pub(crate) mod piercing;
-pub(crate) mod piercing_beam;
-pub(crate) mod pulse;
-pub(crate) mod ramping_damage;
-pub(crate) mod random_effect;
-pub(crate) mod second_wind;
-pub(crate) mod shield;
-pub(crate) mod shockwave;
-pub(crate) mod spawn_bolt;
-pub(crate) mod spawn_phantom;
-pub(crate) mod speed_boost;
-pub(crate) mod tilt_control_boost;
-pub(crate) mod time_penalty;
-pub(crate) mod width_boost;
-
-/// Stacks a `u32` component field on an entity.
-///
-/// - If `per_stack` is 0, this is a no-op regardless of `field`.
-/// - If `field` is `Some`, adds `per_stack` when below the cap.
-/// - If `field` is `None`, inserts the component with `per_stack` as the initial value.
-pub(super) fn stack_u32<C, F>(
-    entity: Entity,
-    field: Option<&mut u32>,
-    per_stack: u32,
-    max_stacks: u32,
-    commands: &mut Commands,
-    constructor: F,
-) where
-    C: Component,
-    F: FnOnce(u32) -> C,
-{
-    if per_stack == 0 {
-        return;
-    }
-    if let Some(current) = field {
-        if *current / per_stack < max_stacks {
-            *current += per_stack;
-        }
-    } else {
-        commands.entity(entity).insert(constructor(per_stack));
-    }
-}
-
-/// Stacks an `f32` component field on an entity.
-///
-/// - If `per_stack` is 0.0, this is a no-op regardless of `field`.
-/// - If `field` is `Some`, adds `per_stack` when below the cap.
-/// - If `field` is `None`, inserts the component with `per_stack` as the initial value.
-pub(super) fn stack_f32<C, F>(
-    entity: Entity,
-    field: Option<&mut f32>,
-    per_stack: f32,
-    max_stacks: u32,
-    commands: &mut Commands,
-    constructor: F,
-) where
-    C: Component,
-    F: FnOnce(f32) -> C,
-{
-    if per_stack == 0.0 {
-        return;
-    }
-    if let Some(current) = field {
-        // Compare via f64 to avoid u32→f32 precision loss lint.
-        if f64::from(*current / per_stack) < f64::from(max_stacks) {
-            *current += per_stack;
-        }
-    } else {
-        commands.entity(entity).insert(constructor(per_stack));
-    }
+/// Register all effect runtime systems.
+pub(crate) fn register(app: &mut bevy::prelude::App) {
+    speed_boost::register(app);
+    damage_boost::register(app);
+    piercing::register(app);
+    size_boost::register(app);
+    bump_force::register(app);
+    shockwave::register(app);
+    chain_lightning::register(app);
+    piercing_beam::register(app);
+    pulse::register(app);
+    shield::register(app);
+    gravity_well::register(app);
+    spawn_phantom::register(app);
+    entropy_engine::register(app);
+    ramping_damage::register(app);
+    explode::register(app);
+    spawn_bolts::register(app);
+    chain_bolt::register(app);
+    attraction::register(app);
+    quick_stop::register(app);
+    tether_beam::register(app);
+    life_lost::register(app);
+    time_penalty::register(app);
+    second_wind::register(app);
+    random_effect::register(app);
 }

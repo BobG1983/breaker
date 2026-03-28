@@ -7,8 +7,8 @@
             On(target: Bolt, then: [
                 When(trigger: PerfectBumped, then: [
                     When(trigger: Impacted(Cell), then: [
-                        When(trigger: DestroyedCell, then: [
-                            Until(until: TimeExpires(3.0), then: [
+                        When(trigger: CellDestroyed, then: [
+                            Until(trigger: TimeExpires(3.0), then: [
                                 Do(SpeedBoost(multiplier: 1.5)),
                             ]),
                         ]),

@@ -1,129 +1,16 @@
-//! Bridge for `Trigger::EarlyBumped` — evaluates specific bolt's chains on early bump.
-
+//! Bridge system for the `early_bumped` trigger.
 use bevy::prelude::*;
 
-use crate::{
-    breaker::messages::{BumpGrade, BumpPerformed},
-    effect::{
-        armed::ArmedEffects,
-        definition::{EffectChains, Trigger},
-        helpers::bridge_targeted_bumped_inner,
-    },
-};
+use crate::effect::core::*;
 
-/// Bridge for `Trigger::EarlyBumped` — reads `BumpPerformed`, filters
-/// `Early` grade, then evaluates ONLY the specific bolt entity's
-/// `EffectChains` and `ArmedEffects` for `Trigger::EarlyBumped`.
-pub(crate) fn bridge_early_bumped(
-    mut reader: MessageReader<BumpPerformed>,
-    mut armed_query: Query<&mut ArmedEffects>,
-    mut chains_query: Query<&mut EffectChains>,
-    mut commands: Commands,
+fn bridge_early_bumped(
+    mut _query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
+    mut _commands: Commands,
 ) {
-    bridge_targeted_bumped_inner(
-        &mut reader,
-        &mut chains_query,
-        &mut armed_query,
-        &mut commands,
-        Some(BumpGrade::Early),
-        Trigger::EarlyBumped,
-    );
+    // Placeholder — message reading wired in Wave 8
 }
 
-/// Registers bridge systems for this trigger.
+/// Register trigger bridge systems.
 pub(crate) fn register(app: &mut App) {
-    use crate::{breaker::BreakerSystems, effect::sets::EffectSystems, shared::PlayingState};
-    app.add_systems(
-        FixedUpdate,
-        bridge_early_bumped
-            .after(BreakerSystems::GradeBump)
-            .in_set(EffectSystems::Bridge)
-            .run_if(in_state(PlayingState::Active)),
-    );
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{super::test_helpers::*, *};
-    use crate::{
-        breaker::messages::BumpGrade,
-        effect::definition::{Effect, EffectNode, Trigger},
-    };
-
-    // --- Test infrastructure ---
-
-    #[derive(Resource)]
-    struct SendBump(Option<BumpPerformed>);
-
-    fn send_bump(msg: Res<SendBump>, mut writer: MessageWriter<BumpPerformed>) {
-        if let Some(m) = msg.0.clone() {
-            writer.write(m);
-        }
-    }
-
-    fn early_bumped_test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BumpPerformed>()
-            .insert_resource(SendBump(None))
-            .init_resource::<CapturedShockwaveFired>()
-            .add_observer(capture_shockwave_fired)
-            .add_systems(FixedUpdate, (send_bump, bridge_early_bumped).chain());
-        app
-    }
-
-    // --- Tests ---
-
-    #[test]
-    fn bridge_early_bumped_fires_on_specific_bolt() {
-        let mut app = early_bumped_test_app();
-
-        // Bolt with EarlyBumped chain
-        let bolt = app
-            .world_mut()
-            .spawn(EffectChains(wrap_chains(vec![EffectNode::trigger_leaf(
-                Trigger::EarlyBumped,
-                Effect::test_shockwave(64.0),
-            )])))
-            .id();
-
-        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
-            grade: BumpGrade::Early,
-            bolt: Some(bolt),
-        });
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedShockwaveFired>();
-        assert_eq!(
-            captured.0.len(),
-            1,
-            "bridge_early_bumped should fire EarlyBumped on the specific bolt"
-        );
-        assert!((captured.0[0].base_range - 64.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn bridge_early_bumped_no_fire_on_perfect() {
-        let mut app = early_bumped_test_app();
-
-        let bolt = app
-            .world_mut()
-            .spawn(EffectChains(wrap_chains(vec![EffectNode::trigger_leaf(
-                Trigger::EarlyBumped,
-                Effect::test_shockwave(64.0),
-            )])))
-            .id();
-
-        app.world_mut().resource_mut::<SendBump>().0 = Some(BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: Some(bolt),
-        });
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedShockwaveFired>();
-        assert!(
-            captured.0.is_empty(),
-            "bridge_early_bumped should NOT fire on Perfect grade"
-        );
-    }
+    app.add_systems(FixedUpdate, bridge_early_bumped);
 }

@@ -3,6 +3,8 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use crate::effect::RootEffect;
+
 /// Configuration for a shield cell's orbiting children.
 #[derive(Deserialize, Clone, Debug)]
 pub(crate) struct ShieldBehavior {
@@ -87,6 +89,9 @@ pub(crate) struct CellTypeDefinition {
     /// Optional behavior flags (locked, regen). Defaults to no behavior.
     #[serde(default)]
     pub behavior: CellBehavior,
+    /// Optional effect chains for this cell type. Defaults to `None`.
+    #[serde(default)]
+    pub effects: Option<Vec<RootEffect>>,
 }
 
 impl CellTypeDefinition {
@@ -141,6 +146,7 @@ mod tests {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         }
     }
 

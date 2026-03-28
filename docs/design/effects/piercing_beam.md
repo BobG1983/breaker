@@ -1,6 +1,6 @@
 # PiercingBeam
 
-Fires a beam through all cells in the entity's current velocity direction.
+A fast-expanding beam rectangle in the entity's velocity direction.
 
 ## Parameters
 
@@ -11,8 +11,8 @@ Fires a beam through all cells in the entity's current velocity direction.
 
 ## Behavior
 
-Casts a beam from the entity's position along its velocity direction. Damages all cells intersecting the beam. The beam is instantaneous (not a projectile).
+Spawns a thin rectangle entity at the entity's position that expands very quickly along the entity's velocity direction. Damages all cells the rectangle touches as it expands. Each cell is damaged at most once per beam. Damage per cell = base bolt damage * `damage_mult`. The beam entity despawns after reaching the playfield boundary.
 
 ## Reversal
 
-Despawns the beam entity if still alive.
+No-op. Beam entities self-despawn on their own lifecycle.

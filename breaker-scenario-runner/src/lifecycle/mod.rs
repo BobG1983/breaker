@@ -21,7 +21,7 @@ use breaker::{
         resources::ForceBumpGrade,
     },
     chips::{ChipCatalog, inventory::ChipInventory},
-    effect::{EffectChains, EffectNode, RootEffect, Target},
+    effect::{BoundEffects, EffectNode, RootEffect, Target},
     input::resources::InputActions,
     run::{
         NodeLayout, NodeLayoutRegistry, RunStats,
@@ -174,10 +174,8 @@ impl Plugin for ScenarioLifecycle {
             .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
             .add_systems(
                 Update,
-                check_chip_offer_expected.run_if(
-                    in_state(GameState::ChipSelect)
-                        .and(resource_exists::<ChipOffers>),
-                ),
+                check_chip_offer_expected
+                    .run_if(in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>)),
             )
             .add_systems(
                 PostUpdate,
@@ -298,7 +296,7 @@ fn bypass_menu_to_playing(
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
-    mut breaker_query: Query<&mut EffectChains, With<Breaker>>,
+    mut breaker_query: Query<&mut BoundEffects, With<Breaker>>,
     mut extras: BypassExtras,
 ) {
     if config.definition.breaker == GODMODE_BREAKER_SENTINEL {
@@ -340,18 +338,18 @@ fn bypass_menu_to_playing(
 
     // Dispatch initial_effects to breaker chains or PendingBoltEffects
     if let Some(ref effects) = config.definition.initial_effects {
-        let mut bolt_entries: Vec<(Option<String>, EffectNode)> = Vec::new();
+        let mut bolt_entries: Vec<(String, EffectNode)> = Vec::new();
         for root_effect in effects {
             let RootEffect::On { target, then } = root_effect;
             match target {
                 Target::Bolt => {
-                    bolt_entries.extend(then.iter().cloned().map(|node| (None, node)));
+                    bolt_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
                 }
                 _ => {
                     for mut chains in &mut breaker_query {
                         chains
                             .0
-                            .extend(then.iter().cloned().map(|node| (None, node)));
+                            .extend(then.iter().cloned().map(|node| (String::new(), node)));
                     }
                 }
             }
@@ -811,7 +809,7 @@ fn apply_inject_duplicate_offers(
 ) {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{Effect, EffectNode, RootEffect, Target},
+        effect::{EffectKind, EffectNode, RootEffect, Target},
     };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
@@ -820,7 +818,7 @@ fn apply_inject_duplicate_offers(
         max_stacks: 3,
         effects: vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(1))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
         }],
         ingredients: None,
         template_name: None,
@@ -846,7 +844,7 @@ fn apply_inject_maxed_chip_offer(
 ) {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{Effect, EffectNode, RootEffect, Target},
+        effect::{EffectKind, EffectNode, RootEffect, Target},
     };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
@@ -855,7 +853,7 @@ fn apply_inject_maxed_chip_offer(
         max_stacks: 1,
         effects: vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(1))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
         }],
         ingredients: None,
         template_name: None,
@@ -911,7 +909,7 @@ pub struct ChipSelectionIndex(pub usize);
 /// `Target::Bolt` entry. Applied once by [`apply_pending_bolt_effects`] after
 /// tagged bolt entities exist; cleared after application.
 #[derive(Resource, Default)]
-pub struct PendingBoltEffects(pub Vec<(Option<String>, EffectNode)>);
+pub struct PendingBoltEffects(pub Vec<(String, EffectNode)>);
 
 /// Sentinel breaker name for scenarios that need an indestructible breaker.
 ///
@@ -1051,7 +1049,7 @@ pub fn update_force_bump_grade(
 pub fn apply_pending_bolt_effects(
     mut done: Local<bool>,
     mut pending: Option<ResMut<PendingBoltEffects>>,
-    mut bolt_query: Query<&mut EffectChains, With<ScenarioTagBolt>>,
+    mut bolt_query: Query<&mut BoundEffects, With<ScenarioTagBolt>>,
 ) {
     if *done {
         return;

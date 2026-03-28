@@ -6,7 +6,7 @@
         effects: [
             On(target: AllBolts, then: [
                 When(trigger: Bumped, then: [
-                    Until(until: OnBumpWhiff, then: [
+                    Until(trigger: BumpWhiff, then: [
                         Do(SpeedBoost(multiplier: 1.2)),
                     ]),
                 ]),

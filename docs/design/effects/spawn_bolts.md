@@ -16,4 +16,4 @@ Spawns `count` extra bolts above the breaker with randomized velocity. Extra bol
 
 ## Reversal
 
-Despawns the spawned bolt entities if still alive.
+No-op. Spawned bolts persist independently after creation.

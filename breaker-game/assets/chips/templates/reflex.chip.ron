@@ -5,7 +5,7 @@
         prefix: "Quick",
         effects: [
             On(target: Breaker, then: [
-                When(trigger: OnPerfectBump, then: [
+                When(trigger: PerfectBump, then: [
                     Do(SpawnBolts()),
                 ]),
             ]),
@@ -15,7 +15,7 @@
         prefix: "Lightning",
         effects: [
             On(target: Breaker, then: [
-                When(trigger: OnPerfectBump, then: [
+                When(trigger: PerfectBump, then: [
                     Do(SpawnBolts()),
                     Do(SpeedBoost(multiplier: 1.2)),
                 ]),

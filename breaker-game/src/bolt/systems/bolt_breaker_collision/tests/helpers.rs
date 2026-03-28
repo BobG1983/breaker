@@ -6,7 +6,7 @@ use crate::{
     bolt::{
         BoltConfig,
         components::{Bolt, BoltBaseSpeed, BoltRadius},
-        messages::BoltHitBreaker,
+        messages::BoltImpactBreaker,
     },
     breaker::{
         components::{
@@ -21,7 +21,7 @@ use crate::{
 pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .add_message::<BoltHitBreaker>()
+        .add_message::<BoltImpactBreaker>()
         .add_systems(FixedUpdate, bolt_breaker_collision);
     app
 }
@@ -98,7 +98,7 @@ pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Ent
 pub(super) struct HitBreakers(pub(super) u32);
 
 pub(super) fn collect_breaker_hits(
-    mut reader: MessageReader<BoltHitBreaker>,
+    mut reader: MessageReader<BoltImpactBreaker>,
     mut hits: ResMut<HitBreakers>,
 ) {
     for _msg in reader.read() {
@@ -110,7 +110,7 @@ pub(super) fn collect_breaker_hits(
 pub(super) struct CapturedHitBolts(pub(super) Vec<Entity>);
 
 pub(super) fn collect_breaker_hit_bolts(
-    mut reader: MessageReader<BoltHitBreaker>,
+    mut reader: MessageReader<BoltImpactBreaker>,
     mut captured: ResMut<CapturedHitBolts>,
 ) {
     for msg in reader.read() {

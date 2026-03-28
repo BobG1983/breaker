@@ -15,4 +15,4 @@ Spawns a phantom bolt entity that passes through all cells (infinite piercing) a
 
 ## Reversal
 
-Despawns the phantom bolt entity if still alive.
+No-op. Phantoms have a lifespan timer and self-despawn via the tick system.

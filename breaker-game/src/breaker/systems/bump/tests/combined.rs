@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    bolt::messages::BoltHitBreaker,
+    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{Breaker, BreakerState, BreakerStateTimer, BumpState, SettleDuration},
         messages::{BumpGrade, BumpPerformed},
@@ -29,7 +29,7 @@ fn same_frame_hit_and_expiry_grades_not_whiffs() {
         .id();
 
     // Bolt hits the same frame the window would expire
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);

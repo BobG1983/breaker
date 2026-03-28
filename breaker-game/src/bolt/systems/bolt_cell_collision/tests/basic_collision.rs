@@ -341,11 +341,11 @@ fn serving_bolt_is_not_advanced() {
     );
 }
 
-// --- BoltHitCell bolt entity tests ---
+// --- BoltImpactCell bolt entity tests ---
 
 #[test]
 fn bolt_cell_collision_populates_bolt_entity_in_message() {
-    // This test verifies that BoltHitCell.bolt is set to the actual bolt entity,
+    // This test verifies that BoltImpactCell.bolt is set to the actual bolt entity,
     // not Entity::PLACEHOLDER. It will FAIL until the production code is fixed
     // to capture the bolt entity from the query binding.
     let mut app = test_app();
@@ -376,15 +376,15 @@ fn bolt_cell_collision_populates_bolt_entity_in_message() {
     assert_eq!(
         hits.0.len(),
         1,
-        "should send exactly one BoltHitCell message"
+        "should send exactly one BoltImpactCell message"
     );
     assert_ne!(
         hits.0[0].bolt,
         Entity::PLACEHOLDER,
-        "BoltHitCell.bolt should not be Entity::PLACEHOLDER — it should be the real bolt entity"
+        "BoltImpactCell.bolt should not be Entity::PLACEHOLDER — it should be the real bolt entity"
     );
     assert_eq!(
         hits.0[0].bolt, bolt_entity,
-        "BoltHitCell.bolt should equal the bolt entity that caused the collision"
+        "BoltImpactCell.bolt should equal the bolt entity that caused the collision"
     );
 }

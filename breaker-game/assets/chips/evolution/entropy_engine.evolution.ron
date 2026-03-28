@@ -1,11 +1,11 @@
 (
     name: "Entropy Engine",
-    description: "Destroying cells charges an entropy counter that unleashes random powerful effects",
+    description: "Destroying cells fires escalating random effects on the primary bolt",
     effects: [
         On(target: Bolt, then: [
-            When(trigger: DestroyedCell, then: [
+            When(trigger: CellDestroyed, then: [
                 Do(EntropyEngine(
-                    threshold: 5,
+                    max_effects: 3,
                     pool: [
                         (0.3, Do(SpawnBolts())),
                         (0.25, Do(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
@@ -17,7 +17,7 @@
         ]),
     ],
     ingredients: [
-        (chip_name: "Cascade", stacks_required: 1),
-        (chip_name: "Flux", stacks_required: 1),
+        (chip_name: "Cascade", stacks_required: 2),
+        (chip_name: "Flux", stacks_required: 2),
     ],
 )

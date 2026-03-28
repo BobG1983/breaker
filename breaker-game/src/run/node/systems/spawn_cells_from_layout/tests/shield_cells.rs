@@ -46,6 +46,7 @@ fn shield_registry() -> CellTypeRegistry {
                     color_rgb: [0.5, 0.8, 1.0],
                 }),
             },
+            effects: None,
         },
     );
     registry.insert(
@@ -61,6 +62,7 @@ fn shield_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         },
     );
     registry
@@ -588,6 +590,7 @@ fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
                     color_rgb: [0.5, 0.8, 1.0],
                 }),
             },
+            effects: None,
         },
     );
 

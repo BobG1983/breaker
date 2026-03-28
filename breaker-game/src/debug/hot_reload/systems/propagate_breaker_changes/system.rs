@@ -5,16 +5,12 @@ use rantzsoft_defaults::prelude::DefaultsHandle;
 
 use crate::{
     breaker::{
-        SelectedBreaker,
+        BreakerRegistry, SelectedBreaker,
         components::Breaker,
         resources::{BreakerConfig, BreakerDefaults},
+        systems::init_breaker::apply_stat_overrides,
     },
-    effect::{
-        definition::{EffectChains, RootEffect, Target},
-        effects::life_lost::LivesCount,
-        init::apply_stat_overrides,
-        registry::BreakerRegistry,
-    },
+    effect::{BoundEffects, RootEffect, Target, effects::life_lost::LivesCount},
 };
 
 /// Bundled system parameters for the breaker change propagation system.
@@ -32,8 +28,8 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
     config: ResMut<'w, BreakerConfig>,
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
-    /// Breaker `EffectChains` for populating from definition.
-    breaker_chains_query: Query<'w, 's, &'static mut EffectChains, With<Breaker>>,
+    /// Breaker `BoundEffects` for populating from definition.
+    breaker_chains_query: Query<'w, 's, &'static mut BoundEffects, With<Breaker>>,
     /// Command buffer for entity modifications.
     commands: Commands<'w, 's>,
 }
@@ -42,7 +38,7 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
 /// and if the selected breaker was modified:
 /// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
 /// 2. Resets `LivesCount` if breaker has `life_pool`
-/// 3. Rebuilds breaker entity `EffectChains`
+/// 3. Rebuilds breaker entity `BoundEffects`
 pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     if !ctx.registry.is_changed() || ctx.registry.is_added() {
         return;
@@ -71,7 +67,7 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
         }
     }
 
-    // Resolve On targets to entity EffectChains
+    // Resolve On targets to entity BoundEffects
     for mut chains in &mut ctx.breaker_chains_query {
         chains.0.clear();
     }
@@ -81,12 +77,17 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
             Target::Breaker => {
                 for mut chains in &mut ctx.breaker_chains_query {
                     for child in then {
-                        chains.0.push((None, child.clone()));
+                        chains.0.push((String::new(), child.clone()));
                     }
                 }
             }
             // At hot-reload time, bolt/cell/wall targets are not resolved here
-            Target::Bolt | Target::AllBolts | Target::Cell | Target::Wall | Target::AllCells => {}
+            Target::Bolt
+            | Target::AllBolts
+            | Target::Cell
+            | Target::AllCells
+            | Target::Wall
+            | Target::AllWalls => {}
         }
     }
 }

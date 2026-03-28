@@ -164,7 +164,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        effect::definition::{Effect, EffectNode},
+        effect::{EffectKind, EffectNode},
         shared::GameRng,
     };
 
@@ -181,13 +181,13 @@ mod tests {
     }
 
     fn test_chip(name: &str, max_stacks: u32) -> ChipDefinition {
-        ChipDefinition::test(name, EffectNode::Do(Effect::Piercing(1)), max_stacks)
+        ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)
     }
 
     fn test_chip_rarity(name: &str, rarity: Rarity, max_stacks: u32) -> ChipDefinition {
         ChipDefinition {
             rarity,
-            ..ChipDefinition::test(name, EffectNode::Do(Effect::Piercing(1)), max_stacks)
+            ..ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)
         }
     }
 
@@ -563,7 +563,7 @@ mod tests {
     ) -> ChipDefinition {
         ChipDefinition {
             template_name: template_name.map(str::to_owned),
-            ..ChipDefinition::test(name, EffectNode::Do(Effect::Piercing(1)), max_stacks)
+            ..ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)
         }
     }
 

@@ -14,4 +14,4 @@ Selects one effect from the pool using weighted random selection. Fires the sele
 
 ## Reversal
 
-Reverses the last randomly selected effect.
+No-op. Inner effects handle their own reversal via Until/Reverse nodes.

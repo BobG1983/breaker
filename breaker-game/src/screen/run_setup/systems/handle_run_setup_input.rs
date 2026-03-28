@@ -3,8 +3,7 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
-    breaker::SelectedBreaker,
-    effect::BreakerRegistry,
+    breaker::{BreakerRegistry, SelectedBreaker},
     input::InputConfig,
     screen::run_setup::{
         components::BreakerCard,
@@ -78,7 +77,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::effect::definition::{BreakerDefinition, BreakerStatOverrides};
+    use crate::breaker::definition::{BreakerDefinition, BreakerStatOverrides};
 
     fn make_breaker(name: &str) -> BreakerDefinition {
         BreakerDefinition {

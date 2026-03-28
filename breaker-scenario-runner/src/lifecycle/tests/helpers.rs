@@ -7,7 +7,7 @@ pub(super) use breaker::{
         messages::BumpGrade,
         resources::ForceBumpGrade,
     },
-    effect::{Effect, EffectChains, EffectNode, RootEffect, Target},
+    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target},
     input::resources::InputActions,
     run::{NodeLayoutRegistry, node::resources::NodeTimer},
     shared::{GameState, PlayfieldConfig, PlayingState},

@@ -5,7 +5,7 @@
         prefix: "",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: OnBumpWhiff, then: [
+                When(trigger: BumpWhiff, then: [
                     When(trigger: Impacted(Cell), then: [
                         Once([Do(DamageBoost(1.5))]),
                         Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 500.0)),

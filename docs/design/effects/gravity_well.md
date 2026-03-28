@@ -13,8 +13,8 @@ Spawns a gravity well that attracts bolts within radius.
 
 ## Behavior
 
-Spawns a gravity well entity at the entity's position. Bolts within `radius` are pulled toward the well center. Despawns after `duration` seconds. If `max` wells already exist, the oldest is despawned first.
+Spawns a gravity well entity at the entity's position. Bolts within `radius` are pulled toward the well center each tick (force applied to velocity). Despawns after `duration` seconds. If `max` wells already exist for this owner, the oldest is despawned first.
 
 ## Reversal
 
-Despawns the gravity well entity if still alive.
+No-op. Gravity wells self-despawn via their duration timer.

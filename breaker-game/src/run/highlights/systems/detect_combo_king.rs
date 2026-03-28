@@ -3,19 +3,19 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::BoltHitBreaker,
+    bolt::messages::BoltImpactBreaker,
     cells::messages::CellDestroyedAt,
     run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
-/// Reads [`CellDestroyedAt`] and [`BoltHitBreaker`] messages
+/// Reads [`CellDestroyedAt`] and [`BoltImpactBreaker`] messages
 /// to detect `ComboKing` highlights.
 ///
 /// - `CellDestroyedAt` increments `cells_since_last_breaker_hit`.
-/// - `BoltHitBreaker` checks the combo threshold, records the highlight, and resets the counter.
+/// - `BoltImpactBreaker` checks the combo threshold, records the highlight, and resets the counter.
 pub(crate) fn detect_combo_king(
     mut cell_destroyed_reader: MessageReader<CellDestroyedAt>,
-    mut bolt_hit_breaker_reader: MessageReader<BoltHitBreaker>,
+    mut bolt_hit_breaker_reader: MessageReader<BoltImpactBreaker>,
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
@@ -73,7 +73,7 @@ mod tests {
     struct TestCellDestroyed(Vec<CellDestroyedAt>);
 
     #[derive(Resource, Default)]
-    struct TestBoltHitBreaker(Vec<BoltHitBreaker>);
+    struct TestBoltImpactBreaker(Vec<BoltImpactBreaker>);
 
     fn enqueue_cell_destroyed(
         msg_res: Res<TestCellDestroyed>,
@@ -85,8 +85,8 @@ mod tests {
     }
 
     fn enqueue_bolt_hit_breaker(
-        msg_res: Res<TestBoltHitBreaker>,
-        mut writer: MessageWriter<BoltHitBreaker>,
+        msg_res: Res<TestBoltImpactBreaker>,
+        mut writer: MessageWriter<BoltImpactBreaker>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -109,14 +109,14 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<CellDestroyedAt>()
-            .add_message::<BoltHitBreaker>()
+            .add_message::<BoltImpactBreaker>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestCellDestroyed>()
-            .init_resource::<TestBoltHitBreaker>()
+            .init_resource::<TestBoltImpactBreaker>()
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 FixedUpdate,
@@ -161,14 +161,14 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<CellDestroyedAt>()
-            .add_message::<BoltHitBreaker>()
+            .add_message::<BoltImpactBreaker>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestCellDestroyedAt>()
-            .init_resource::<TestBoltHitBreaker>()
+            .init_resource::<TestBoltImpactBreaker>()
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 FixedUpdate,
@@ -228,11 +228,11 @@ mod tests {
     fn combo_king_detected_when_counter_reaches_threshold() {
         let mut app = test_app();
         // Default combo_king_cells = 8
-        // Pre-set counter to 8 (at threshold), then send BoltHitBreaker
+        // Pre-set counter to 8 (at threshold), then send BoltImpactBreaker
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .cells_since_last_breaker_hit = 8;
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -250,7 +250,7 @@ mod tests {
         let tracker = app.world().resource::<HighlightTracker>();
         assert_eq!(
             tracker.cells_since_last_breaker_hit, 0,
-            "counter should reset to 0 after BoltHitBreaker"
+            "counter should reset to 0 after BoltImpactBreaker"
         );
 
         let captured = app.world().resource::<CapturedHighlightTriggered>();
@@ -273,7 +273,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .cells_since_last_breaker_hit = 7;
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -291,7 +291,7 @@ mod tests {
         let tracker = app.world().resource::<HighlightTracker>();
         assert_eq!(
             tracker.cells_since_last_breaker_hit, 0,
-            "counter should still reset to 0 after BoltHitBreaker"
+            "counter should still reset to 0 after BoltImpactBreaker"
         );
         assert_eq!(
             tracker.best_combo, 7,
@@ -310,7 +310,7 @@ mod tests {
             tracker.best_combo = 10;
             tracker.cells_since_last_breaker_hit = 5;
         }
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -342,7 +342,7 @@ mod tests {
             let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
             tracker.cells_since_last_breaker_hit = 10;
         }
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);

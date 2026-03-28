@@ -432,6 +432,28 @@ app.add_plugins(bevy::text::TextPlugin);    // zero RenderApp dependency, safe h
 - `LayoutChangeContext<'w, 's>` with both lifetimes — correct when struct contains Query/Commands
 - `ctx.cell_config.is_changed() && !ctx.cell_config.is_added()` — correct change detection idiom
 
+## world.get_entity_mut() Result pattern (confirmed 2026-03-27)
+- `world.get_entity_mut(entity)` returns `Result<EntityWorldMut, Entity>` in Bevy 0.18
+- `if let Ok(mut entity_ref) = world.get_entity_mut(self.entity)` — correct pattern
+- `entity_ref.get_mut::<T>()` on `EntityWorldMut` — correct; returns `Option<Mut<T>>`
+- NOT `Option` — callers that use `if let Ok(...)` are correctly treating this as a Result
+- Confirmed in `effect/commands.rs` `TransferCommand::apply()`
+
+## world.get_mut::<T>(entity) in Command::apply (confirmed 2026-03-27)
+- `world.get_mut::<T>(entity)` — valid World method; returns `Option<Mut<T>>`
+- Used in `RemoveChainsCommand::apply()` in `effect/triggers/evaluate.rs`
+- Correct; avoids borrow conflict of calling get_entity_mut then accessing other queries
+
+## MessageWriter<'a, T> lifetime alias (confirmed 2026-03-27)
+- In a type alias `type Foo<'a> = (MessageWriter<'a, A>, MessageWriter<'a, B>)`, the `'a` is just the alias's lifetime parameter name — maps to `'w` at instantiation
+- `type CollisionWriters<'a> = (MessageWriter<'a, BoltImpactCell>, ...)` — correct
+- The ordering `MessageWriter<lifetime, Type>` is required (lifetime before type), name of lifetime in alias is irrelevant
+
+## Command::queue in Commands (confirmed 2026-03-27)
+- `commands.queue(MyCommand { ... })` — correct API for queuing custom commands in 0.18
+- Used in `effect/commands.rs` and `effect/triggers/evaluate.rs` for `RemoveChainsCommand`
+- `impl Command for MyStruct { fn apply(self, world: &mut World) { ... } }` — correct trait impl
+
 ## SeedableRegistry (rantzsoft_defaults) Pattern (confirmed 2026-03-27)
 - `SeedableRegistry` trait from `rantzsoft_defaults::registry` — lives in rantzsoft_defaults, not a Bevy type
 - `type Asset = T` where T: `Asset + DeserializeOwned + Clone + Send + Sync + 'static` — correct associated type bound

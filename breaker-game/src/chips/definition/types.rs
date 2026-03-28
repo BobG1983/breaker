@@ -34,7 +34,7 @@ pub struct RaritySlot {
     /// Display prefix prepended to the template name (e.g., "Basic", "Keen").
     pub prefix: String,
     /// The effects applied when this rarity variant is selected.
-    pub effects: Vec<crate::effect::definition::RootEffect>,
+    pub effects: Vec<crate::effect::RootEffect>,
 }
 
 /// A chip template loaded from RON (`.chip.ron`).
@@ -75,7 +75,7 @@ pub struct EvolutionTemplate {
     #[serde(default = "one")]
     pub max_stacks: u32,
     /// The effects applied when this evolution is selected.
-    pub effects: Vec<crate::effect::definition::RootEffect>,
+    pub effects: Vec<crate::effect::RootEffect>,
     /// Required ingredient chips.
     pub ingredients: Vec<EvolutionIngredient>,
 }
@@ -149,7 +149,7 @@ pub struct ChipDefinition {
     /// Maximum number of times this chip can be stacked.
     pub max_stacks: u32,
     /// The effects applied when this chip is selected.
-    pub effects: Vec<crate::effect::definition::RootEffect>,
+    pub effects: Vec<crate::effect::RootEffect>,
     /// Evolution ingredients. `None` for non-evolution chips.
     pub ingredients: Option<Vec<EvolutionIngredient>>,
     /// Template this chip was expanded from, if any.
@@ -159,27 +159,18 @@ pub struct ChipDefinition {
 #[cfg(test)]
 impl ChipDefinition {
     /// Build a test chip wrapping the effect in `RootEffect::On` targeting `Bolt`.
-    pub(crate) fn test(
-        name: &str,
-        effect: crate::effect::definition::EffectNode,
-        max_stacks: u32,
-    ) -> Self {
-        Self::test_on(
-            name,
-            crate::effect::definition::Target::Bolt,
-            effect,
-            max_stacks,
-        )
+    pub(crate) fn test(name: &str, effect: crate::effect::EffectNode, max_stacks: u32) -> Self {
+        Self::test_on(name, crate::effect::Target::Bolt, effect, max_stacks)
     }
 
     /// Build a simple test chip with a triggered chain and `max_stacks` = 1.
     pub(crate) fn test_simple(name: &str) -> Self {
-        use crate::effect::definition::{Effect, EffectNode, Trigger};
+        use crate::effect::{EffectKind, EffectNode, Trigger};
         Self::test(
             name,
             EffectNode::When {
                 trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                then: vec![EffectNode::Do(EffectKind::test_shockwave(64.0))],
             },
             1,
         )
@@ -195,11 +186,11 @@ impl ChipDefinition {
     /// Build a test chip with explicit target control.
     pub(crate) fn test_on(
         name: &str,
-        target: crate::effect::definition::Target,
-        effect: crate::effect::definition::EffectNode,
+        target: crate::effect::Target,
+        effect: crate::effect::EffectNode,
         max_stacks: u32,
     ) -> Self {
-        use crate::effect::definition::RootEffect;
+        use crate::effect::RootEffect;
         Self {
             name: name.to_owned(),
             description: format!("{name} description"),

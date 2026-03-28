@@ -6,7 +6,7 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: Impacted(Wall), then: [
-                    Until(until: Impacted(Cell), then: [
+                    Until(trigger: Impacted(Cell), then: [
                         Do(DamageBoost(2.0)),
                     ]),
                 ]),

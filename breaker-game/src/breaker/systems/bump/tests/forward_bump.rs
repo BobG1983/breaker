@@ -232,7 +232,7 @@ fn fixed_schedule_bump_app() -> App {
         .init_resource::<InputActions>()
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
-        .add_message::<crate::bolt::messages::BoltHitBreaker>()
+        .add_message::<crate::bolt::messages::BoltImpactBreaker>()
         .init_resource::<CapturedBumps>()
         .init_resource::<CapturedWhiffs>()
         .insert_resource(TestInputActive(false));

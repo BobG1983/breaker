@@ -3,7 +3,7 @@
     description: "Losing a bolt triggers a shockwave and boosts all remaining bolts",
     effects: [
         On(target: Breaker, then: [
-            When(trigger: OnBoltLost, then: [
+            When(trigger: BoltLost, then: [
                 Do(Shockwave(base_range: 128.0, range_per_level: 0.0, stacks: 1, speed: 500.0)),
                 Do(SpeedBoost(multiplier: 1.5)),
             ]),

@@ -1,141 +1,144 @@
-//! Chain bolt effect handler — observer that translates `ChainBoltFired` into a message.
-
 use bevy::prelude::*;
 
-use crate::{bolt::messages::SpawnChainBolt, effect::definition::EffectTarget};
+/// Marker on a chain bolt entity, pointing to its anchor entity.
+#[derive(Component)]
+pub struct ChainBoltMarker(pub Entity);
 
-// ---------------------------------------------------------------------------
-// Typed event
-// ---------------------------------------------------------------------------
+/// Marker on an entity that serves as the anchor for a chain bolt.
+#[derive(Component)]
+pub struct ChainBoltAnchor;
 
-/// Fired when a chain bolt effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ChainBoltFired {
-    /// Maximum distance the chain bolt can travel from its anchor.
-    pub tether_distance: f32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    /// The originating chip name, or `None` for breaker chains.
-    pub source_chip: Option<String>,
-}
-
-/// Observer that handles chain bolt — writes [`SpawnChainBolt`] message.
+/// Spawns a chain bolt tethered to the given entity.
 ///
-/// If the bolt entity is `None`, no spawn occurs.
-pub(crate) fn handle_chain_bolt(
-    trigger: On<ChainBoltFired>,
-    mut writer: MessageWriter<SpawnChainBolt>,
-) {
-    let event = trigger.event();
-    let Some(bolt_entity) = event.targets.iter().find_map(|t| match t {
-        crate::effect::definition::EffectTarget::Entity(e) => Some(*e),
-        crate::effect::definition::EffectTarget::Location(_) => None,
-    }) else {
-        return;
-    };
-    writer.write(SpawnChainBolt {
-        anchor: bolt_entity,
-        tether_distance: event.tether_distance,
-        source_chip: event.source_chip.clone(),
-    });
+/// Placeholder — needs bolt components and `DistanceConstraint` wiring.
+pub(crate) fn fire(entity: Entity, _tether_distance: f32, world: &mut World) {
+    let position = world
+        .entity(entity)
+        .get::<Transform>()
+        .map_or(Vec3::ZERO, |t| t.translation);
+
+    let chain_bolt_a = world
+        .spawn((
+            ChainBoltMarker(entity),
+            Transform::from_translation(position),
+        ))
+        .id();
+
+    let chain_bolt_b = world
+        .spawn((
+            ChainBoltMarker(entity),
+            Transform::from_translation(position),
+        ))
+        .id();
+
+    info!(
+        "spawned chain bolts {:?} and {:?} anchored to {:?} at {:?}",
+        chain_bolt_a, chain_bolt_b, entity, position
+    );
+
+    // TODO: add DistanceConstraint between chain_bolt_a and chain_bolt_b
+
+    if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
+        entity_mut.insert(ChainBoltAnchor);
+    }
 }
 
-/// Registers all observers and systems for the chain bolt effect.
-pub(crate) fn register(app: &mut App) {
-    app.add_observer(handle_chain_bolt);
+/// Despawns all chain bolts anchored to the given entity and removes
+/// the `ChainBoltAnchor` marker.
+pub(crate) fn reverse(entity: Entity, _tether_distance: f32, world: &mut World) {
+    let chain_bolts: Vec<Entity> = world
+        .query::<(Entity, &ChainBoltMarker)>()
+        .iter(world)
+        .filter(|(_, marker)| marker.0 == entity)
+        .map(|(e, _)| e)
+        .collect();
+
+    for chain_bolt in chain_bolts {
+        world.despawn(chain_bolt);
+    }
+
+    if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
+        entity_mut.remove::<ChainBoltAnchor>();
+    }
 }
+
+/// Registers systems for `ChainBolt` effect.
+pub(crate) fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[derive(Resource, Default)]
-    struct CapturedSpawnChainBolt(Vec<SpawnChainBolt>);
+    #[test]
+    fn fire_spawns_two_chain_bolts_and_marks_anchor() {
+        let mut world = World::new();
+        let anchor = world.spawn(Transform::from_translation(Vec3::ZERO)).id();
 
-    fn capture_spawn_chain(
-        mut reader: MessageReader<SpawnChainBolt>,
-        mut captured: ResMut<CapturedSpawnChainBolt>,
-    ) {
-        for msg in reader.read() {
-            captured.0.push(msg.clone());
+        fire(anchor, 50.0, &mut world);
+
+        // Should spawn TWO chain bolt entities.
+        let chain_bolts: Vec<(Entity, &ChainBoltMarker)> = world
+            .query::<(Entity, &ChainBoltMarker)>()
+            .iter(&world)
+            .collect();
+        assert_eq!(chain_bolts.len(), 2, "fire should spawn two chain bolts");
+
+        // Both should reference the anchor.
+        for (_, marker) in &chain_bolts {
+            assert_eq!(marker.0, anchor);
         }
-    }
 
-    fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<SpawnChainBolt>()
-            .init_resource::<CapturedSpawnChainBolt>()
-            .add_observer(handle_chain_bolt)
-            .add_systems(FixedUpdate, capture_spawn_chain);
-        app
-    }
-
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
-
-    // ── Behavior 13: Writes SpawnChainBolt message on ChainBolt effect ──
-
-    #[test]
-    fn handle_chain_bolt_sends_spawn_chain_bolt_message() {
-        use crate::effect::typed_events::ChainBoltFired;
-
-        let mut app = test_app();
-
-        let bolt_entity = app.world_mut().spawn_empty().id();
-
-        app.world_mut().commands().trigger(ChainBoltFired {
-            tether_distance: 200.0,
-            targets: vec![crate::effect::definition::EffectTarget::Entity(bolt_entity)],
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpawnChainBolt>();
-        assert_eq!(
-            captured.0.len(),
-            1,
-            "ChainBolt effect should write one SpawnChainBolt message"
-        );
-        assert_eq!(
-            captured.0[0].anchor, bolt_entity,
-            "SpawnChainBolt.anchor should be the bolt entity from EffectFired"
-        );
+        // Anchor should have `ChainBoltAnchor`.
         assert!(
-            (captured.0[0].tether_distance - 200.0).abs() < f32::EPSILON,
-            "SpawnChainBolt.tether_distance should be 200.0, got {}",
-            captured.0[0].tether_distance,
+            world.get::<ChainBoltAnchor>(anchor).is_some(),
+            "anchor should have ChainBoltAnchor component"
         );
     }
 
     #[test]
-    fn handle_chain_bolt_with_none_bolt_does_not_spawn() {
-        use crate::effect::typed_events::ChainBoltFired;
+    fn reverse_despawns_chain_bolts_and_removes_anchor_marker() {
+        let mut world = World::new();
+        let anchor = world
+            .spawn((Transform::from_translation(Vec3::ZERO), ChainBoltAnchor))
+            .id();
 
-        // Given: ChainBoltFired with bolt=None
-        // When: handle_chain_bolt runs
-        // Then: no SpawnChainBolt message is written
-        let mut app = test_app();
+        // Manually spawn two chain bolts referencing the anchor.
+        world.spawn((
+            ChainBoltMarker(anchor),
+            Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
+        ));
+        world.spawn((
+            ChainBoltMarker(anchor),
+            Transform::from_translation(Vec3::new(-10.0, 0.0, 0.0)),
+        ));
 
-        app.world_mut().commands().trigger(ChainBoltFired {
-            tether_distance: 200.0,
-            targets: vec![],
-            source_chip: None,
-        });
-        app.world_mut().flush();
-        tick(&mut app);
+        reverse(anchor, 50.0, &mut world);
 
-        let captured = app.world().resource::<CapturedSpawnChainBolt>();
-        assert_eq!(
-            captured.0.len(),
-            0,
-            "ChainBolt with bolt=None should not write any message"
+        // All chain bolts should be despawned.
+        let remaining: Vec<Entity> = world
+            .query_filtered::<Entity, With<ChainBoltMarker>>()
+            .iter(&world)
+            .collect();
+        assert!(remaining.is_empty(), "all chain bolts should be despawned");
+
+        // Anchor marker should be removed.
+        assert!(
+            world.get::<ChainBoltAnchor>(anchor).is_none(),
+            "ChainBoltAnchor should be removed from anchor"
+        );
+    }
+
+    #[test]
+    fn reverse_when_no_chain_bolts_is_noop() {
+        let mut world = World::new();
+        let anchor = world.spawn(Transform::from_translation(Vec3::ZERO)).id();
+
+        // reverse with no chain bolts and no anchor marker should not panic.
+        reverse(anchor, 50.0, &mut world);
+
+        assert!(
+            world.get::<ChainBoltAnchor>(anchor).is_none(),
+            "anchor should remain without ChainBoltAnchor"
         );
     }
 }

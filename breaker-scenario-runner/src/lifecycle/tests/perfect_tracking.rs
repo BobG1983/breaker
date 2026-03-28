@@ -410,10 +410,10 @@ fn perfect_tracking_with_multiple_bolts_tracks_first() {
     let pos = app.world().entity(breaker).get::<Position2D>().unwrap();
     let half_width = 60.0;
     // Must be in range of one of the bolts
-    let tracks_bolt_a =
-        pos.0.x >= (-0.8f32).mul_add(half_width, 100.0) && pos.0.x <= 0.8f32.mul_add(half_width, 100.0);
-    let tracks_bolt_b =
-        pos.0.x >= (-0.8f32).mul_add(half_width, -100.0) && pos.0.x <= 0.8f32.mul_add(half_width, -100.0);
+    let tracks_bolt_a = pos.0.x >= (-0.8f32).mul_add(half_width, 100.0)
+        && pos.0.x <= 0.8f32.mul_add(half_width, 100.0);
+    let tracks_bolt_b = pos.0.x >= (-0.8f32).mul_add(half_width, -100.0)
+        && pos.0.x <= 0.8f32.mul_add(half_width, -100.0);
     assert!(
         tracks_bolt_a || tracks_bolt_b,
         "expected breaker x in range of bolt A or B, got {}",
@@ -481,9 +481,10 @@ fn perfect_tracking_with_multiple_bolts_is_deterministic() {
 
     // First verify the system actually repositioned the breaker (not still at initial 300.0).
     let half_width = 60.0;
-    let tracks_bolt_a = pos_a >= (-0.8f32).mul_add(half_width, 100.0) && pos_a <= 0.8f32.mul_add(half_width, 100.0);
-    let tracks_bolt_b =
-        pos_a >= (-0.8f32).mul_add(half_width, -100.0) && pos_a <= 0.8f32.mul_add(half_width, -100.0);
+    let tracks_bolt_a =
+        pos_a >= (-0.8f32).mul_add(half_width, 100.0) && pos_a <= 0.8f32.mul_add(half_width, 100.0);
+    let tracks_bolt_b = pos_a >= (-0.8f32).mul_add(half_width, -100.0)
+        && pos_a <= 0.8f32.mul_add(half_width, -100.0);
     assert!(
         tracks_bolt_a || tracks_bolt_b,
         "expected breaker repositioned into bolt A or B range, got {pos_a}"

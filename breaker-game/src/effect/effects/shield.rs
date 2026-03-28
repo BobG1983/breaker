@@ -1,314 +1,185 @@
-//! Shield effect handler — temporary protection for the breaker.
-//!
-//! Observes [`ShieldFired`] and inserts or extends [`ShieldActive`] on the
-//! breaker entity. [`tick_shield`] decrements the remaining time each fixed tick
-//! and removes the component when it expires.
-
 use bevy::prelude::*;
 
-use crate::breaker::components::Breaker;
+use crate::shared::playing_state::PlayingState;
 
-// ---------------------------------------------------------------------------
-// Typed event
-// ---------------------------------------------------------------------------
-
-/// Fired when a shield effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct ShieldFired {
-    /// Base duration in seconds.
-    pub base_duration: f32,
-    /// Additional duration per stack beyond the first.
-    pub duration_per_level: f32,
-    /// Current stack count.
-    pub stacks: u32,
-    // FUTURE: may be used for upcoming phases
-    // /// The effect targets for this event.
-    // pub targets: Vec<EffectTarget>,
-    // /// The originating chip name, or `None` for breaker chains.
-    // pub source_chip: Option<String>,
-}
-
-// ---------------------------------------------------------------------------
-// Components
-// ---------------------------------------------------------------------------
-
-/// Marks a breaker as shielded. The `remaining` field counts down each tick.
-///
-/// When `remaining` reaches zero (or below), `tick_shield` removes the component.
-#[derive(Component, Debug, Clone, Copy)]
-pub(crate) struct ShieldActive {
-    /// Seconds of shield time remaining.
+/// Marks an active shield on the owning entity.
+#[derive(Component)]
+pub struct ShieldActive {
+    /// Remaining duration in seconds.
     pub remaining: f32,
+    /// Entity that owns this shield.
+    pub owner: Entity,
 }
 
-// ---------------------------------------------------------------------------
-// Observer — inserts / extends ShieldActive
-// ---------------------------------------------------------------------------
-
-/// Observer: handles shield activation — inserts or extends [`ShieldActive`]
-/// on the breaker entity.
-///
-/// Duration formula: `base_duration + (stacks.saturating_sub(1)) * duration_per_level`.
-/// If the breaker already has `ShieldActive`, the computed duration is added
-/// to the existing `remaining` time (additive extension).
-pub(crate) fn handle_shield(
-    trigger: On<ShieldFired>,
-    mut breaker_query: Query<(Entity, Option<&mut ShieldActive>), With<Breaker>>,
-    mut commands: Commands,
+pub(crate) fn fire(
+    entity: Entity,
+    base_duration: f32,
+    duration_per_level: f32,
+    stacks: u32,
+    world: &mut World,
 ) {
-    let event = trigger.event();
+    let extra_stacks = u16::try_from(stacks.saturating_sub(1)).unwrap_or(u16::MAX);
+    let effective_duration = base_duration + f32::from(extra_stacks) * duration_per_level;
 
-    let duration = event.base_duration
-        + f32::from(u16::try_from(event.stacks.saturating_sub(1)).unwrap_or(u16::MAX))
-            * event.duration_per_level;
-
-    let Ok((breaker_entity, existing_shield)) = breaker_query.single_mut() else {
-        return;
-    };
-
-    if let Some(mut shield) = existing_shield {
-        shield.remaining += duration;
+    // If entity already has a shield, extend remaining time.
+    if let Some(mut shield) = world.get_mut::<ShieldActive>(entity) {
+        shield.remaining += effective_duration;
     } else {
-        commands.entity(breaker_entity).insert(ShieldActive {
-            remaining: duration,
+        world.entity_mut(entity).insert(ShieldActive {
+            remaining: effective_duration,
+            owner: entity,
         });
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tick system — decrements and removes
-// ---------------------------------------------------------------------------
-
-/// Registers all observers and systems for the shield effect.
-pub(crate) fn register(app: &mut App) {
-    use crate::{effect::sets::EffectSystems, shared::PlayingState};
-
-    app.add_observer(handle_shield);
-
-    // Shield tick (decrement + remove)
-    app.add_systems(
-        FixedUpdate,
-        tick_shield
-            .after(EffectSystems::Bridge)
-            .run_if(in_state(PlayingState::Active)),
-    );
+pub(crate) fn reverse(entity: Entity, world: &mut World) {
+    world.entity_mut(entity).remove::<ShieldActive>();
 }
 
-/// Decrements `ShieldActive::remaining` each fixed tick and removes the
-/// component when it expires (<= 0.0).
-pub(crate) fn tick_shield(
+/// Tick shield timers and remove expired shields.
+fn tick_shield(
     mut commands: Commands,
     time: Res<Time>,
     mut query: Query<(Entity, &mut ShieldActive)>,
 ) {
+    let dt = time.delta_secs();
     for (entity, mut shield) in &mut query {
-        shield.remaining -= time.delta_secs();
+        shield.remaining -= dt;
         if shield.remaining <= 0.0 {
             commands.entity(entity).remove::<ShieldActive>();
         }
     }
 }
 
+pub(crate) fn register(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        tick_shield.run_if(in_state(PlayingState::Active)),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // --- Test infrastructure ---
+    // ── fire tests ──────────────────────────────────────────────────
+
+    #[test]
+    fn fire_inserts_shield_active_with_effective_duration() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        // stacks=1, base=5.0, per_level=2.0 → effective = 5.0 + 0*2.0 = 5.0
+        fire(entity, 5.0, 2.0, 1, &mut world);
+
+        let shield = world.get::<ShieldActive>(entity).unwrap();
+        assert!(
+            (shield.remaining - 5.0).abs() < f32::EPSILON,
+            "expected remaining 5.0, got {}",
+            shield.remaining
+        );
+        assert_eq!(shield.owner, entity);
+    }
+
+    #[test]
+    fn fire_extends_existing_shield_duration() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        // First fire: effective = 5.0
+        fire(entity, 5.0, 2.0, 1, &mut world);
+
+        // Second fire: effective = 5.0 + (2-1)*2.0 = 7.0
+        fire(entity, 5.0, 2.0, 2, &mut world);
+
+        let shield = world.get::<ShieldActive>(entity).unwrap();
+        // 5.0 from first + 7.0 from second = 12.0
+        assert!(
+            (shield.remaining - 12.0).abs() < f32::EPSILON,
+            "expected remaining 12.0, got {}",
+            shield.remaining
+        );
+    }
+
+    #[test]
+    fn reverse_removes_shield_active() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        fire(entity, 5.0, 2.0, 1, &mut world);
+        assert!(world.get::<ShieldActive>(entity).is_some());
+
+        reverse(entity, &mut world);
+        assert!(
+            world.get::<ShieldActive>(entity).is_none(),
+            "shield should be removed after reverse"
+        );
+    }
+
+    // ── system tests ────────────────────────────────────────────────
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_observer(handle_shield)
-            .add_systems(FixedUpdate, tick_shield);
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.init_state::<crate::shared::game_state::GameState>();
+        app.add_sub_state::<PlayingState>();
+        app.add_systems(Update, tick_shield);
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+    fn enter_playing(app: &mut App) {
         app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
+            .resource_mut::<NextState<crate::shared::game_state::GameState>>()
+            .set(crate::shared::game_state::GameState::Playing);
         app.update();
     }
 
-    fn spawn_breaker(app: &mut App) -> Entity {
-        app.world_mut().spawn(Breaker).id()
-    }
-
-    fn spawn_breaker_with_shield(app: &mut App, remaining: f32) -> Entity {
-        app.world_mut()
-            .spawn((Breaker, ShieldActive { remaining }))
-            .id()
-    }
-
-    fn trigger_shield(app: &mut App, base_duration: f32, duration_per_level: f32, stacks: u32) {
-        use crate::effect::typed_events::ShieldFired;
-
-        app.world_mut().commands().trigger(ShieldFired {
-            base_duration,
-            duration_per_level,
-            stacks,
-        });
-        app.world_mut().flush();
-    }
-
-    // --- Observer tests ---
-
     #[test]
-    fn shield_inserts_shield_active_on_breaker() {
+    fn tick_shield_decrements_remaining_and_removes_on_expiry() {
         let mut app = test_app();
-        let breaker = spawn_breaker(&mut app);
+        enter_playing(&mut app);
 
-        trigger_shield(&mut app, 5.0, 2.0, 1);
-        // Need a tick for commands to apply
-        tick(&mut app);
-
-        let shield = app
-            .world()
-            .get::<ShieldActive>(breaker)
-            .expect("breaker should have ShieldActive after Shield effect");
-        assert!(
-            (shield.remaining - 5.0).abs() < 0.1,
-            "ShieldActive remaining should be 5.0 (base only, stacks=1), got {:.2}",
-            shield.remaining
-        );
-    }
-
-    #[test]
-    fn shield_stacking_formula_base_plus_extra_stacks_times_per_level() {
-        let mut app = test_app();
-        let breaker = spawn_breaker(&mut app);
-
-        // Formula: 5.0 + (3-1)*2.0 = 5.0 + 4.0 = 9.0
-        trigger_shield(&mut app, 5.0, 2.0, 3);
-        tick(&mut app);
-
-        let shield = app
-            .world()
-            .get::<ShieldActive>(breaker)
-            .expect("breaker should have ShieldActive");
-        assert!(
-            (shield.remaining - 9.0).abs() < 0.1,
-            "ShieldActive remaining should be ~9.0 (5.0 + 2*2.0), got {:.2}",
-            shield.remaining
-        );
-    }
-
-    #[test]
-    fn shield_extends_existing_shield_additive() {
-        let mut app = test_app();
-        let breaker = spawn_breaker_with_shield(&mut app, 3.0);
-
-        trigger_shield(&mut app, 5.0, 0.0, 1);
-        tick(&mut app);
-
-        let shield = app
-            .world()
-            .get::<ShieldActive>(breaker)
-            .expect("breaker should still have ShieldActive");
-        // Existing 3.0 + new 5.0 = 8.0 (minus a small tick decrement is acceptable)
-        // But the observer should add to existing before the tick system decrements,
-        // so we check for approximately 8.0 minus one tick's worth.
-        // The key assertion: it must be significantly more than 5.0 (i.e., additive).
-        assert!(
-            shield.remaining > 7.0,
-            "ShieldActive should be additive: existing 3.0 + new 5.0 = ~8.0, got {:.2}",
-            shield.remaining
-        );
-    }
-
-    #[test]
-    fn shield_returns_early_when_no_breaker() {
-        let mut app = test_app();
-        // No breaker entity spawned
-
-        trigger_shield(&mut app, 5.0, 0.0, 1);
-        tick(&mut app);
-
-        // Should not panic — the test passing without panic is the assertion.
-        // Also verify no ShieldActive exists anywhere.
-        let mut query = app
+        let entity = app
             .world_mut()
-            .query_filtered::<Entity, With<ShieldActive>>();
-        let count = query.iter(app.world()).count();
-        assert_eq!(
-            count, 0,
-            "no ShieldActive should exist when there is no breaker"
-        );
-    }
+            .spawn(ShieldActive {
+                remaining: 0.0,
+                owner: Entity::PLACEHOLDER,
+            })
+            .id();
 
-    // --- tick_shield tests ---
-
-    #[test]
-    fn tick_shield_decrements_remaining() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(FixedUpdate, tick_shield);
-
-        let entity = app.world_mut().spawn(ShieldActive { remaining: 5.0 }).id();
-
-        tick(&mut app);
-
-        let shield = app
-            .world()
-            .get::<ShieldActive>(entity)
-            .expect("ShieldActive should still exist after one tick with remaining=5.0");
-        // dt = 1/64 = 0.015625
-        let expected = 5.0 - (1.0 / 64.0);
-        assert!(
-            (shield.remaining - expected).abs() < 0.01,
-            "remaining should decrease by delta_secs (~1/64), expected ~{expected:.4}, got {:.4}",
-            shield.remaining
-        );
-    }
-
-    #[test]
-    fn tick_shield_removes_at_zero_or_below() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(FixedUpdate, tick_shield);
-
-        // remaining=0.01, dt ~0.0167 => goes below zero => removed
-        let entity = app.world_mut().spawn(ShieldActive { remaining: 0.01 }).id();
-
-        tick(&mut app);
+        // After a tick, remaining should drop to <= 0 and shield gets removed
+        app.update();
 
         assert!(
             app.world().get::<ShieldActive>(entity).is_none(),
-            "ShieldActive should be removed when remaining drops to <= 0.0"
+            "shield should be removed when remaining <= 0"
         );
     }
 
     #[test]
-    fn tick_shield_does_nothing_without_shield_active() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(FixedUpdate, tick_shield);
+    fn tick_shield_decrements_but_keeps_when_time_remains() {
+        let mut app = test_app();
+        enter_playing(&mut app);
 
-        let entity = app.world_mut().spawn_empty().id();
+        let entity = app
+            .world_mut()
+            .spawn(ShieldActive {
+                remaining: 999.0,
+                owner: Entity::PLACEHOLDER,
+            })
+            .id();
 
-        tick(&mut app);
+        app.update();
 
-        // Should not panic — entity without ShieldActive is simply skipped.
+        let shield = app.world().get::<ShieldActive>(entity).unwrap();
         assert!(
-            app.world().get_entity(entity).is_ok(),
-            "entity without ShieldActive should survive tick_shield without panic"
+            shield.remaining < 999.0,
+            "shield remaining should have decremented"
         );
-    }
-
-    #[test]
-    fn tick_shield_removes_at_exactly_zero() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(FixedUpdate, tick_shield);
-
-        let entity = app.world_mut().spawn(ShieldActive { remaining: 0.0 }).id();
-
-        tick(&mut app);
-
         assert!(
-            app.world().get::<ShieldActive>(entity).is_none(),
-            "ShieldActive with remaining=0.0 should be removed on tick"
+            shield.remaining > 0.0,
+            "shield should still have time remaining"
         );
     }
 }

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{components::BoltServing, messages::BoltHitBreaker},
+    bolt::{components::BoltServing, messages::BoltImpactBreaker},
     breaker::{
         components::{Breaker, BreakerState, BreakerStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
@@ -110,7 +110,7 @@ pub(crate) fn update_bump(
 /// sending [`BumpWhiffed`] and setting whiff cooldown.
 pub(crate) fn grade_bump(
     mut bump_query: Query<BumpGradingQuery, With<Breaker>>,
-    mut hit_reader: MessageReader<BoltHitBreaker>,
+    mut hit_reader: MessageReader<BoltImpactBreaker>,
     mut writer: MessageWriter<BumpPerformed>,
     mut whiff_writer: MessageWriter<BumpWhiffed>,
     force_grade: Option<Res<ForceBumpGrade>>,

@@ -3,18 +3,18 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::{BoltHitBreaker, BoltHitCell},
+    bolt::messages::{BoltImpactBreaker, BoltImpactCell},
     run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
-/// Reads [`BoltHitCell`] and [`BoltHitBreaker`] messages
+/// Reads [`BoltImpactCell`] and [`BoltImpactBreaker`] messages
 /// to detect `PinballWizard` highlights.
 ///
-/// - `BoltHitCell` increments `cell_bounces_since_breaker`.
-/// - `BoltHitBreaker` checks the pinball threshold, records the highlight, and resets the counter.
+/// - `BoltImpactCell` increments `cell_bounces_since_breaker`.
+/// - `BoltImpactBreaker` checks the pinball threshold, records the highlight, and resets the counter.
 pub(crate) fn detect_pinball_wizard(
-    mut bolt_hit_cell_reader: MessageReader<BoltHitCell>,
-    mut bolt_hit_breaker_reader: MessageReader<BoltHitBreaker>,
+    mut bolt_hit_cell_reader: MessageReader<BoltImpactCell>,
+    mut bolt_hit_breaker_reader: MessageReader<BoltImpactBreaker>,
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
@@ -68,14 +68,14 @@ mod tests {
     // --- TestMessages resources for each message type ---
 
     #[derive(Resource, Default)]
-    struct TestBoltHitCell(Vec<BoltHitCell>);
+    struct TestBoltImpactCell(Vec<BoltImpactCell>);
 
     #[derive(Resource, Default)]
-    struct TestBoltHitBreaker(Vec<BoltHitBreaker>);
+    struct TestBoltImpactBreaker(Vec<BoltImpactBreaker>);
 
     fn enqueue_bolt_hit_cell(
-        msg_res: Res<TestBoltHitCell>,
-        mut writer: MessageWriter<BoltHitCell>,
+        msg_res: Res<TestBoltImpactCell>,
+        mut writer: MessageWriter<BoltImpactCell>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -83,8 +83,8 @@ mod tests {
     }
 
     fn enqueue_bolt_hit_breaker(
-        msg_res: Res<TestBoltHitBreaker>,
-        mut writer: MessageWriter<BoltHitBreaker>,
+        msg_res: Res<TestBoltImpactBreaker>,
+        mut writer: MessageWriter<BoltImpactBreaker>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -106,15 +106,15 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_message::<BoltHitCell>()
-            .add_message::<BoltHitBreaker>()
+            .add_message::<BoltImpactCell>()
+            .add_message::<BoltImpactBreaker>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
             .init_resource::<RunState>()
             .insert_resource(HighlightConfig::default())
-            .init_resource::<TestBoltHitCell>()
-            .init_resource::<TestBoltHitBreaker>()
+            .init_resource::<TestBoltImpactCell>()
+            .init_resource::<TestBoltImpactBreaker>()
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
                 FixedUpdate,
@@ -136,25 +136,25 @@ mod tests {
         app.update();
     }
 
-    // --- Behavior 10: BoltHitCell increments cell_bounces_since_breaker ---
+    // --- Behavior 10: BoltImpactCell increments cell_bounces_since_breaker ---
 
     #[test]
     fn bolt_hit_cell_increments_cell_bounces_since_breaker() {
         let mut app = test_app();
-        app.insert_resource(TestBoltHitCell(vec![
-            BoltHitCell {
+        app.insert_resource(TestBoltImpactCell(vec![
+            BoltImpactCell {
                 cell: Entity::PLACEHOLDER,
                 bolt: Entity::PLACEHOLDER,
             },
-            BoltHitCell {
+            BoltImpactCell {
                 cell: Entity::PLACEHOLDER,
                 bolt: Entity::PLACEHOLDER,
             },
-            BoltHitCell {
+            BoltImpactCell {
                 cell: Entity::PLACEHOLDER,
                 bolt: Entity::PLACEHOLDER,
             },
-            BoltHitCell {
+            BoltImpactCell {
                 cell: Entity::PLACEHOLDER,
                 bolt: Entity::PLACEHOLDER,
             },
@@ -164,7 +164,7 @@ mod tests {
         let tracker = app.world().resource::<HighlightTracker>();
         assert_eq!(
             tracker.cell_bounces_since_breaker, 4,
-            "4 BoltHitCell messages should set counter to 4"
+            "4 BoltImpactCell messages should set counter to 4"
         );
     }
 
@@ -174,11 +174,11 @@ mod tests {
     fn pinball_wizard_detected_when_bounces_reach_threshold() {
         let mut app = test_app();
         // Default pinball_wizard_bounces = 12
-        // Pre-set counter to 12 (at threshold), then send BoltHitBreaker
+        // Pre-set counter to 12 (at threshold), then send BoltImpactBreaker
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .cell_bounces_since_breaker = 12;
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -213,7 +213,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .cell_bounces_since_breaker = 11;
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -231,7 +231,7 @@ mod tests {
         let tracker = app.world().resource::<HighlightTracker>();
         assert_eq!(
             tracker.cell_bounces_since_breaker, 0,
-            "counter should reset to 0 after BoltHitBreaker"
+            "counter should reset to 0 after BoltImpactBreaker"
         );
         assert_eq!(
             tracker.best_pinball_rally, 11,
@@ -259,7 +259,7 @@ mod tests {
             let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
             tracker.cell_bounces_since_breaker = 15;
         }
-        app.insert_resource(TestBoltHitBreaker(vec![BoltHitBreaker {
+        app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);

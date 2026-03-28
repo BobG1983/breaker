@@ -23,10 +23,10 @@ fn bolt_entity_in_hit_message() {
     assert_eq!(
         captured.0.len(),
         1,
-        "should capture exactly one BoltHitBreaker message"
+        "should capture exactly one BoltImpactBreaker message"
     );
     assert_eq!(
         captured.0[0], bolt_entity,
-        "BoltHitBreaker.bolt should carry the actual bolt entity that hit the breaker"
+        "BoltImpactBreaker.bolt should carry the actual bolt entity that hit the breaker"
     );
 }

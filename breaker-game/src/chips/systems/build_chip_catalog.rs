@@ -121,7 +121,7 @@ mod tests {
             definition::{ChipTemplate, EvolutionIngredient, EvolutionTemplate, RaritySlot},
             resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry},
         },
-        effect::definition::{Effect, EffectNode, RootEffect, Target},
+        effect::{EffectKind, EffectNode, RootEffect, Target},
     };
 
     // ── Test helpers ────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ mod tests {
     fn piercing_effects(count: u32) -> Vec<RootEffect> {
         vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(count))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(count))],
         }]
     }
 
@@ -182,7 +182,7 @@ mod tests {
             max_stacks: 1,
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
-                then: vec![EffectNode::Do(Effect::Piercing(5))],
+                then: vec![EffectNode::Do(EffectKind::Piercing(5))],
             }],
             ingredients,
         }

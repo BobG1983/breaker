@@ -28,8 +28,7 @@
 - [pattern_field_type_change_semantic_shift.md](pattern_field_type_change_semantic_shift.md) — Field type change from leaf to tree type means consuming logic (wrapping) must also change, not just types
 - [pattern_file_move_test_import_cascade.md](pattern_file_move_test_import_cascade.md) — Moving handler files between modules breaks test imports in files that registered those handlers via glob imports
 
-- [pattern_activeeffects_global_resource_coupling.md](pattern_activeeffects_global_resource_coupling.md) — ActiveEffects read by 10+ bridges, written by 2 systems; migration requires updating all
-- [pattern_effect_target_field_is_load_bearing.md](pattern_effect_target_field_is_load_bearing.md) — Target on SpeedBoost/SizeBoost controls handler dispatch routing; removing breaks 5 handlers + 2 dispatch fns
+- [pattern_existing_tests_in_spec_scope.md](pattern_existing_tests_in_spec_scope.md) — "Write N tests per file" specs miss that some effect modules already have those tests; causes duplicate name compile errors
 
 ## Domain Quirks
 - `BoltHitCell` is `pub(crate)` (not `pub`) in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)

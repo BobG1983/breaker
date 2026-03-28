@@ -308,9 +308,7 @@ mod tests {
             "GlobalRotation2D should be registered for reflection"
         );
         assert!(
-            guard
-                .get(std::any::TypeId::of::<GlobalScale2D>())
-                .is_some(),
+            guard.get(std::any::TypeId::of::<GlobalScale2D>()).is_some(),
             "GlobalScale2D should be registered for reflection"
         );
         drop(guard);

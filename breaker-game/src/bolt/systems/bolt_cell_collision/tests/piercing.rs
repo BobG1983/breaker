@@ -10,7 +10,7 @@ use crate::{
 #[test]
 fn non_piercing_bolt_reflects_off_cell() {
     // Non-piercing bolt hitting a cell reflects (velocity.y < 0 after upward approach).
-    // BoltHitCell is sent. No PiercingRemaining component involved.
+    // BoltImpactCell is sent. No PiercingRemaining component involved.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -47,7 +47,7 @@ fn non_piercing_bolt_reflects_off_cell() {
     );
 
     let hits = app.world().resource::<HitCells>();
-    assert_eq!(hits.0.len(), 1, "BoltHitCell should be sent");
+    assert_eq!(hits.0.len(), 1, "BoltImpactCell should be sent");
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
     // Bolt with PiercingRemaining(2), no DamageBoost.
     // Cell with CellHealth(10) — base damage 10 would destroy it.
     // Bolt should NOT reflect (velocity.y > 0 after upward approach).
-    // BoltHitCell is sent. PiercingRemaining decremented to 1.
+    // BoltImpactCell is sent. PiercingRemaining decremented to 1.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -98,7 +98,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
     assert_eq!(
         hits.0.len(),
         1,
-        "BoltHitCell should be sent for pierced cell"
+        "BoltImpactCell should be sent for pierced cell"
     );
 
     let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -207,7 +207,7 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
     // Bolt with PiercingRemaining(2), high velocity (10000.0) to reach both cells
     // in one 64Hz frame (~156 units budget vs ~43 units needed).
     // Cell A at (0.0, 60.0), Cell B at (0.0, 90.0), both CellHealth(10).
-    // Two BoltHitCell messages. PiercingRemaining goes from 2 to 0.
+    // Two BoltImpactCell messages. PiercingRemaining goes from 2 to 0.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
@@ -240,7 +240,7 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
     assert_eq!(
         hits.0.len(),
         2,
-        "both stacked cells should be pierced in one frame (two BoltHitCell messages)"
+        "both stacked cells should be pierced in one frame (two BoltImpactCell messages)"
     );
 
     let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
@@ -253,7 +253,7 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
 #[test]
 fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
     // Two bolts each with PiercingRemaining(1), one cell in each bolt's path.
-    // Each bolt pierces its cell independently. Two BoltHitCell messages total.
+    // Each bolt pierces its cell independently. Two BoltImpactCell messages total.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -301,7 +301,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
     assert_eq!(
         hits.0.len(),
         2,
-        "both bolts should pierce their respective cells independently (two BoltHitCell messages)"
+        "both bolts should pierce their respective cells independently (two BoltImpactCell messages)"
     );
 
     // Both bolts should still be moving upward (they pierced, not reflected)

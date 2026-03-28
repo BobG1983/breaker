@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::super::{grade_bump, update_bump};
 use crate::{
-    bolt::messages::BoltHitBreaker,
+    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{
             BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
@@ -98,9 +98,12 @@ pub(super) fn tick(app: &mut App) {
 }
 
 #[derive(Resource)]
-pub(super) struct TestHitMessage(pub Option<BoltHitBreaker>);
+pub(super) struct TestHitMessage(pub Option<BoltImpactBreaker>);
 
-pub(super) fn enqueue_hit(msg_res: Res<TestHitMessage>, mut writer: MessageWriter<BoltHitBreaker>) {
+pub(super) fn enqueue_hit(
+    msg_res: Res<TestHitMessage>,
+    mut writer: MessageWriter<BoltImpactBreaker>,
+) {
     if let Some(msg) = msg_res.0.clone() {
         writer.write(msg);
     }
@@ -110,7 +113,7 @@ pub(super) fn grade_bump_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<BreakerConfig>()
-        .add_message::<BoltHitBreaker>()
+        .add_message::<BoltImpactBreaker>()
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
         .init_resource::<CapturedBumps>()
@@ -133,7 +136,7 @@ pub(super) fn combined_bump_test_app() -> App {
     app.add_plugins(MinimalPlugins)
         .init_resource::<BreakerConfig>()
         .init_resource::<InputActions>()
-        .add_message::<BoltHitBreaker>()
+        .add_message::<BoltImpactBreaker>()
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
         .init_resource::<CapturedBumps>()

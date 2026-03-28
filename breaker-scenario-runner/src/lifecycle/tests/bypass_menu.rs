@@ -72,4 +72,3 @@ fn restart_run_on_end_transitions_to_main_menu() {
         "expected restart_run_on_end to transition to MainMenu"
     );
 }
-

@@ -5,7 +5,7 @@
         prefix: "",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: OnNodeTimerThreshold(0.25), then: [
+                When(trigger: NodeTimerThreshold(0.25), then: [
                     Do(SpeedBoost(multiplier: 2.0)),
                 ]),
             ]),

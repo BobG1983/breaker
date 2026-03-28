@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-/// Sent by the breaker behavior system to spawn an additional bolt.
+/// Sent by the effect system to spawn an additional bolt.
 ///
-/// Consumed by `spawn_additional_bolt` in the bolt domain.
+/// Consumed by `handle_spawn_bolt` in the effect domain.
 #[derive(Message, Clone, Debug)]
 pub struct SpawnAdditionalBolt {
     /// The chip name that originated this spawn, for damage attribution.
@@ -25,7 +25,7 @@ pub struct BoltSpawned;
 ///
 /// Consumed by breaker (`grade_bump`).
 #[derive(Message, Clone, Debug)]
-pub(crate) struct BoltHitBreaker {
+pub(crate) struct BoltImpactBreaker {
     /// The bolt entity that hit the breaker.
     pub bolt: Entity,
 }
@@ -34,7 +34,7 @@ pub(crate) struct BoltHitBreaker {
 ///
 /// Consumed by chips, cells, and audio.
 #[derive(Message, Clone, Debug)]
-pub(crate) struct BoltHitCell {
+pub(crate) struct BoltImpactCell {
     /// The cell entity that was hit.
     pub cell: Entity,
     /// The bolt entity that caused the hit.
@@ -51,7 +51,7 @@ pub struct BoltLost;
 ///
 /// Consumed by bolt/behaviors (overclock wall impact bridge).
 #[derive(Message, Clone, Debug)]
-pub(crate) struct BoltHitWall {
+pub(crate) struct BoltImpactWall {
     /// The bolt entity that hit the wall.
     pub bolt: Entity,
     /// The wall entity that was hit.
@@ -60,7 +60,7 @@ pub(crate) struct BoltHitWall {
 
 /// Sent by `bolt_lost` when an extra bolt falls off screen. Entity is still alive.
 ///
-/// Consumed by `bridge_bolt_death` (evaluates `OnDeath` `EffectChains`) and
+/// Consumed by `bridge_bolt_death` (evaluates `OnDeath` `BoundEffects`) and
 /// `cleanup_destroyed_bolts` (despawns the entity).
 #[derive(Message, Clone, Debug)]
 pub(crate) struct RequestBoltDestroyed {
@@ -78,7 +78,7 @@ pub(crate) struct BoltDestroyedAt {
 
 /// Sent by the chain bolt effect handler to spawn a tethered chain bolt.
 ///
-/// Consumed by `spawn_chain_bolt` in the bolt domain.
+/// Consumed by `handle_chain_bolt` in the effect domain.
 #[derive(Message, Clone, Debug)]
 pub struct SpawnChainBolt {
     /// The bolt entity to tether the new chain bolt to.
@@ -110,17 +110,17 @@ mod tests {
     fn bolt_hit_cell_carries_both_cell_and_bolt_fields() {
         let cell_entity = Entity::PLACEHOLDER;
         let bolt_entity = Entity::PLACEHOLDER;
-        let msg = BoltHitCell {
+        let msg = BoltImpactCell {
             cell: cell_entity,
             bolt: bolt_entity,
         };
         assert_eq!(
             msg.cell, cell_entity,
-            "BoltHitCell.cell should be accessible and match the entity passed in"
+            "BoltImpactCell.cell should be accessible and match the entity passed in"
         );
         assert_eq!(
             msg.bolt, bolt_entity,
-            "BoltHitCell.bolt should be accessible and match the entity passed in"
+            "BoltImpactCell.bolt should be accessible and match the entity passed in"
         );
     }
 
@@ -172,22 +172,22 @@ mod tests {
 
     #[test]
     fn collision_messages_debug_format() {
-        let a = BoltHitBreaker {
+        let a = BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
         };
         let a_fmt = format!("{a:?}");
-        assert!(a_fmt.contains("BoltHitBreaker"));
+        assert!(a_fmt.contains("BoltImpactBreaker"));
         assert!(
             a_fmt.contains("bolt"),
-            "BoltHitBreaker debug format should include 'bolt' field name"
+            "BoltImpactBreaker debug format should include 'bolt' field name"
         );
 
-        let b = BoltHitCell {
+        let b = BoltImpactCell {
             cell: Entity::PLACEHOLDER,
             bolt: Entity::PLACEHOLDER,
         };
         let b_fmt = format!("{b:?}");
-        assert!(b_fmt.contains("BoltHitCell"));
+        assert!(b_fmt.contains("BoltImpactCell"));
         assert!(
             b_fmt.contains("bolt"),
             "debug format should include 'bolt' field name"
@@ -196,15 +196,15 @@ mod tests {
         let c = BoltLost;
         assert!(format!("{c:?}").contains("BoltLost"));
 
-        let d = BoltHitWall {
+        let d = BoltImpactWall {
             bolt: Entity::PLACEHOLDER,
             wall: Entity::PLACEHOLDER,
         };
         let d_fmt = format!("{d:?}");
-        assert!(d_fmt.contains("BoltHitWall"));
+        assert!(d_fmt.contains("BoltImpactWall"));
         assert!(
             d_fmt.contains("bolt"),
-            "BoltHitWall debug format should include 'bolt' field name"
+            "BoltImpactWall debug format should include 'bolt' field name"
         );
     }
 }

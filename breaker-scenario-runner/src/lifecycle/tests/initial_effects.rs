@@ -4,37 +4,37 @@ use super::helpers::*;
 // initial_effects Dispatch
 // =========================================================================
 
-/// Breaker-targeted effects are pushed to breaker `EffectChains`.
+/// Breaker-targeted effects are pushed to breaker `BoundEffects`.
 #[test]
 fn initial_effects_breaker_target_pushed_to_effect_chains() {
     let mut definition = make_scenario(100);
     definition.initial_effects = Some(vec![RootEffect::On {
         target: Target::Breaker,
-        then: vec![EffectNode::Do(Effect::Piercing(1))],
+        then: vec![EffectNode::Do(EffectKind::Piercing(1))],
     }]);
 
     let mut app = bypass_app(definition);
 
-    // Spawn a breaker entity with EffectChains
+    // Spawn a breaker entity with BoundEffects
     let breaker = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
 
     app.update();
 
-    let chains = app.world().get::<EffectChains>(breaker).unwrap();
+    let chains = app.world().get::<BoundEffects>(breaker).unwrap();
     assert_eq!(
         chains.0.len(),
         1,
-        "expected breaker EffectChains to have 1 entry from initial_effects, got {}",
+        "expected breaker BoundEffects to have 1 entry from initial_effects, got {}",
         chains.0.len()
     );
     // The On wrapper is unwrapped — only inner `then` children are pushed
     assert_eq!(
         chains.0[0],
-        (None, EffectNode::Do(Effect::Piercing(1))),
-        "expected (None, Do(Piercing(1))), got {:?}",
+        (String::new(), EffectNode::Do(EffectKind::Piercing(1))),
+        "expected (\"\", Do(Piercing(1))), got {:?}",
         chains.0[0]
     );
 }
@@ -45,7 +45,7 @@ fn initial_effects_bolt_target_stored_in_pending_bolt_effects() {
     let mut definition = make_scenario(100);
     definition.initial_effects = Some(vec![RootEffect::On {
         target: Target::Bolt,
-        then: vec![EffectNode::Do(Effect::Piercing(2))],
+        then: vec![EffectNode::Do(EffectKind::Piercing(2))],
     }]);
 
     let mut app = bypass_app(definition);
@@ -65,13 +65,13 @@ fn initial_effects_bolt_target_stored_in_pending_bolt_effects() {
     );
     assert_eq!(
         pending.0[0],
-        (None, EffectNode::Do(Effect::Piercing(2))),
-        "expected (None, Do(Piercing(2))), got {:?}",
+        (String::new(), EffectNode::Do(EffectKind::Piercing(2))),
+        "expected (\"\", Do(Piercing(2))), got {:?}",
         pending.0[0]
     );
 }
 
-/// When `initial_effects = None`, `EffectChains` stays empty and
+/// When `initial_effects = None`, `BoundEffects` stays empty and
 /// `PendingBoltEffects` is not inserted.
 #[test]
 fn initial_effects_none_leaves_effect_chains_empty() {
@@ -81,15 +81,15 @@ fn initial_effects_none_leaves_effect_chains_empty() {
 
     let breaker = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
 
     app.update();
 
-    let chains = app.world().get::<EffectChains>(breaker).unwrap();
+    let chains = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         chains.0.is_empty(),
-        "expected EffectChains empty when initial_effects is None, got {} entries",
+        "expected BoundEffects empty when initial_effects is None, got {} entries",
         chains.0.len()
     );
 
@@ -104,7 +104,7 @@ fn initial_effects_none_leaves_effect_chains_empty() {
 // apply_pending_bolt_effects
 // =========================================================================
 
-/// `apply_pending_bolt_effects` applies pending entries to bolt `EffectChains`.
+/// `apply_pending_bolt_effects` applies pending entries to bolt `BoundEffects`.
 #[test]
 fn pending_bolt_effects_applied_to_bolt_entities() {
     let mut app = App::new();
@@ -112,31 +112,31 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
 
     // Insert pending effects
     app.insert_resource(PendingBoltEffects(vec![(
-        None,
-        EffectNode::Do(Effect::Piercing(3)),
+        String::new(),
+        EffectNode::Do(EffectKind::Piercing(3)),
     )]));
 
     app.add_systems(Update, apply_pending_bolt_effects);
 
-    // Spawn bolt with ScenarioTagBolt + EffectChains
+    // Spawn bolt with ScenarioTagBolt + BoundEffects
     let bolt = app
         .world_mut()
-        .spawn((ScenarioTagBolt, EffectChains::default()))
+        .spawn((ScenarioTagBolt, BoundEffects::default()))
         .id();
 
     app.update();
 
-    let chains = app.world().get::<EffectChains>(bolt).unwrap();
+    let chains = app.world().get::<BoundEffects>(bolt).unwrap();
     assert_eq!(
         chains.0.len(),
         1,
-        "expected bolt EffectChains to have 1 entry from PendingBoltEffects, got {}",
+        "expected bolt BoundEffects to have 1 entry from PendingBoltEffects, got {}",
         chains.0.len()
     );
     assert_eq!(
         chains.0[0],
-        (None, EffectNode::Do(Effect::Piercing(3))),
-        "expected (None, Do(Piercing(3))), got {:?}",
+        (String::new(), EffectNode::Do(EffectKind::Piercing(3))),
+        "expected (\"\", Do(Piercing(3))), got {:?}",
         chains.0[0]
     );
 
@@ -150,14 +150,14 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
 
     // --- Local<bool> guard: a second update must NOT re-apply new pending effects ---
     app.insert_resource(PendingBoltEffects(vec![(
-        None,
-        EffectNode::Do(Effect::Piercing(99)),
+        String::new(),
+        EffectNode::Do(EffectKind::Piercing(99)),
     )]));
 
     app.update();
 
     // The bolt should still have only the original entry from the first application.
-    let chains = app.world().get::<EffectChains>(bolt).unwrap();
+    let chains = app.world().get::<BoundEffects>(bolt).unwrap();
     assert_eq!(
         chains.0.len(),
         1,
@@ -166,8 +166,8 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (None, EffectNode::Do(Effect::Piercing(3))),
-        "expected original (None, Do(Piercing(3))) preserved, got {:?}",
+        (String::new(), EffectNode::Do(EffectKind::Piercing(3))),
+        "expected original (\"\", Do(Piercing(3))) preserved, got {:?}",
         chains.0[0]
     );
 }
@@ -181,55 +181,55 @@ fn pending_bolt_effects_applied_to_multiple_bolts() {
 
     // Insert pending effects with one entry
     app.insert_resource(PendingBoltEffects(vec![(
-        None,
-        EffectNode::Do(Effect::Piercing(5)),
+        String::new(),
+        EffectNode::Do(EffectKind::Piercing(5)),
     )]));
 
     app.add_systems(Update, apply_pending_bolt_effects);
 
-    // Spawn two bolt entities with ScenarioTagBolt + EffectChains
+    // Spawn two bolt entities with ScenarioTagBolt + BoundEffects
     let bolt_a = app
         .world_mut()
-        .spawn((ScenarioTagBolt, EffectChains::default()))
+        .spawn((ScenarioTagBolt, BoundEffects::default()))
         .id();
     let bolt_b = app
         .world_mut()
-        .spawn((ScenarioTagBolt, EffectChains::default()))
+        .spawn((ScenarioTagBolt, BoundEffects::default()))
         .id();
 
     app.update();
 
-    let chains_a = app.world().get::<EffectChains>(bolt_a).unwrap();
+    let chains_a = app.world().get::<BoundEffects>(bolt_a).unwrap();
     assert_eq!(
         chains_a.0.len(),
         1,
-        "expected bolt A EffectChains to have 1 entry, got {}",
+        "expected bolt A BoundEffects to have 1 entry, got {}",
         chains_a.0.len()
     );
     assert_eq!(
         chains_a.0[0],
-        (None, EffectNode::Do(Effect::Piercing(5))),
-        "expected bolt A to have (None, Do(Piercing(5))), got {:?}",
+        (String::new(), EffectNode::Do(EffectKind::Piercing(5))),
+        "expected bolt A to have (\"\", Do(Piercing(5))), got {:?}",
         chains_a.0[0]
     );
 
-    let chains_b = app.world().get::<EffectChains>(bolt_b).unwrap();
+    let chains_b = app.world().get::<BoundEffects>(bolt_b).unwrap();
     assert_eq!(
         chains_b.0.len(),
         1,
-        "expected bolt B EffectChains to have 1 entry, got {}",
+        "expected bolt B BoundEffects to have 1 entry, got {}",
         chains_b.0.len()
     );
     assert_eq!(
         chains_b.0[0],
-        (None, EffectNode::Do(Effect::Piercing(5))),
-        "expected bolt B to have (None, Do(Piercing(5))), got {:?}",
+        (String::new(), EffectNode::Do(EffectKind::Piercing(5))),
+        "expected bolt B to have (\"\", Do(Piercing(5))), got {:?}",
         chains_b.0[0]
     );
 }
 
 /// When `PendingBoltEffects` resource is absent, `apply_pending_bolt_effects`
-/// must not panic and bolt `EffectChains` must remain empty.
+/// must not panic and bolt `BoundEffects` must remain empty.
 #[test]
 fn pending_bolt_effects_noop_when_resource_absent() {
     let mut app = App::new();
@@ -240,16 +240,16 @@ fn pending_bolt_effects_noop_when_resource_absent() {
 
     let bolt = app
         .world_mut()
-        .spawn((ScenarioTagBolt, EffectChains::default()))
+        .spawn((ScenarioTagBolt, BoundEffects::default()))
         .id();
 
     // Must not panic
     app.update();
 
-    let chains = app.world().get::<EffectChains>(bolt).unwrap();
+    let chains = app.world().get::<BoundEffects>(bolt).unwrap();
     assert!(
         chains.0.is_empty(),
-        "expected bolt EffectChains to remain empty when PendingBoltEffects absent, got {} entries",
+        "expected bolt BoundEffects to remain empty when PendingBoltEffects absent, got {} entries",
         chains.0.len()
     );
 }

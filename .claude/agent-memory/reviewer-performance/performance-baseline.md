@@ -80,7 +80,66 @@ type: reference
 - CCD collision inner loop is O(bolts × cells × MAX_BOUNCES=4). At 16K cells this becomes a real concern if typical grids reach that scale. Flagged as Moderate watch item. At current typical scale (50 cells) it remains clean.
 - `u16::try_from(col_idx).unwrap_or(u16::MAX)` / `u16::try_from(row_idx)` pattern: safe saturation for extreme grids. Accepted.
 
-## Confirmed-Clean New Systems (reviewed 2026-03-27, session 3)
+## Confirmed-Clean New Systems (reviewed 2026-03-27, session 4 — effect domain)
+
+### effect/triggers/evaluate.rs — evaluate_bound_effects / evaluate_staged_effects
+- Both are pure helper functions called by bridge systems; no query or archetype cost by themselves.
+- Vec iteration over BoundEffects/StagedEffects entries: typically <10 entries per entity (capped by chip stack limit). Linear scan is negligible at this scale.
+- `additions` Vec in `evaluate_staged_effects` allocated per call (not per frame — only called when a trigger fires). Acceptable at event-driven frequency.
+- `chip_name.to_string()` in `walk_bound_node` / `walk_staged_node`: clones the chip name string on every child pushed to additions. Called only on trigger match (event-driven). Fine at current scale.
+
+### effect/triggers/timer.rs — tick_time_expires
+- Queries all entities with `&mut StagedEffects` every FixedUpdate tick — no state guard.
+- At current scale: 1 bolt + 1 breaker = 2 entities with StagedEffects. Cost is trivial.
+- `additions` Vec allocated inside the per-entity loop body every FixedUpdate tick (line 13). Deferred: fine at 2 entities, moderate concern at scale if many entities have StagedEffects.
+- `chip_name.clone()` in the additions push path (line 39) and the inner `Reverse` branch clones `chains.clone()` (line 36). Only execute on timer expiry — event-driven effectively. Fine.
+- Missing `run_if(in_state(PlayingState::Active))` — system runs even in paused/menu states. Minor: cost is trivial (2 entities, early-return via retain if no TimeExpires nodes).
+
+### effect/triggers/until.rs — desugar_until
+- Queries all entities with `&mut BoundEffects` + `&mut StagedEffects` every FixedUpdate tick — no state guard.
+- Allocates `bound_untils`, `staged_untils`, `new_bound`, `new_staged` Vecs per entity per frame (lines 12-15, 26-27 etc). All four are allocated unconditionally every tick.
+- At current scale: 2 entities. Cost is ~4 Vec::new() per tick. Fine now.
+- Missing `run_if(in_state(PlayingState::Active))` — deferred concern only.
+
+### effect/triggers/ — 6 placeholder bridge systems (bump, bump_whiff, death, impact, impacted, no_bump)
+- All registered in FixedUpdate with no state guard and no-op bodies.
+- Query `(Entity, &BoundEffects, &mut StagedEffects)` — mutable access to StagedEffects blocks all other StagedEffects writers.
+- Placeholder systems do nothing but hold the query lock. Fine until Wave 8 wires them up; at that point the scheduling needs `run_if(in_state(PlayingState::Active))`.
+
+### effect/effects/shockwave.rs — tick_shockwave / despawn_finished_shockwave
+- Both gated `run_if(in_state(PlayingState::Active))`. Correct.
+- No archetype fragmentation: shockwave entities form a single archetype (ShockwaveSource + ShockwaveRadius + ShockwaveMaxRadius + ShockwaveSpeed + Transform). Clean.
+
+### effect/effects/gravity_well.rs — fire() max-cap enforcement
+- `world.query::<(Entity, &GravityWellConfig)>()` created ad-hoc inside `fire()` — creates a temporary query state on the call stack. Fine at 0–3 wells (event-driven, not per-frame).
+- `owned.remove(0)` inside the while loop: O(n) Vec shift, but n ≤ max_active (typically 2–3). Negligible.
+
+### effect/effects/spawn_phantom.rs — fire() max-cap enforcement
+- Same pattern as gravity_well: ad-hoc world query inside fire(). Same analysis applies — fine.
+
+### effect/effects/damage_boost.rs / speed_boost.rs / piercing.rs / size_boost.rs / bump_force.rs — placeholder recalculate_* systems
+- Five placeholder systems (`recalculate_damage`, `recalculate_speed`, `recalculate_piercing`, `recalculate_size`, `recalculate_bump_force`) registered in FixedUpdate with no state guard.
+- All query their respective `Active*` component with no filters — matches bolt/breaker entities that have the component (1 entity each, chip-selected). Bodies are no-ops (empty loop).
+- Zero work per tick (inner loop body executes 0 times at 0 chips selected, or iterates once over 1 entity). Negligible overhead now; will need `run_if(in_state(PlayingState::Active))` when wired.
+
+### effect/effects/attraction.rs — placeholder apply_attraction / manage_attraction_types
+- Both are truly empty bodies (no query, no system params). Registered in FixedUpdate with no state guard.
+- Zero cost — empty function bodies.
+
+### effect/effects/pulse.rs — fire()
+- `world.query_filtered::<&Transform, With<Bolt>>()` created ad-hoc. Collects bolt positions into a `Vec<Vec3>`. At 1 bolt: 1 allocation of 1 element. Spawns 1 shockwave entity per bolt position.
+- Called only on pulse trigger (event-driven). Fine.
+
+### effect/effects/chain_bolt.rs — reverse()
+- `world.query::<(Entity, &ChainBoltMarker)>()` ad-hoc, `.collect()` into Vec. Called on effect reversal (rare). Fine.
+
+### Known Watch Items (effect domain — deferred)
+- `tick_time_expires` and `desugar_until`: unconditional per-frame Vec allocation (4+ Vecs). Fine at 2 entities; becomes measurable at 10+ entities with complex effect trees. Add `run_if(in_state(PlayingState::Active))` when wiring Wave 8.
+- 11 placeholder FixedUpdate systems without state guards: 6 trigger bridges + 5 recalculate_* — all run every tick in all states. Fine now (trivial query cost or no-op body); need guards before Wave 8 ships.
+- `TransferCommand::apply` in commands.rs: `chip_name.clone()` on every non-Do child push (line 93/96). Called at chip-select time — not hot-path. Fine.
+- `gravity_well::fire` and `spawn_phantom::fire`: ad-hoc `world.query()` inside fire() — temporary QueryState created on each call. In Bevy 0.18 this re-registers the query each time (no caching). Fine at event frequency; would be a concern if called per-frame.
+
+## Confirmed-Clean New Systems (reviewed 2026-03-27, session 3 — chips domain)
 
 ### chips/systems/build_chip_catalog.rs — build_chip_catalog + propagate_chip_catalog
 - `build_chip_catalog`: `Local<bool>` guard makes it a true no-op on every frame after startup. No per-frame cost.

@@ -149,7 +149,10 @@ impl EvolutionTemplateRegistry {
     /// Look up an evolution template by name.
     #[cfg(test)]
     #[must_use]
-    pub(crate) fn get(&self, name: &str) -> Option<&(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
+    pub(crate) fn get(
+        &self,
+        name: &str,
+    ) -> Option<&(AssetId<EvolutionTemplate>, EvolutionTemplate)> {
         self.evolutions.get(name)
     }
 

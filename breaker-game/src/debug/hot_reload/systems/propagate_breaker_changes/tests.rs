@@ -2,14 +2,16 @@ use bevy::prelude::*;
 
 use super::system::*;
 use crate::{
-    breaker::{SelectedBreaker, components::Breaker, resources::BreakerConfig},
-    effect::{
-        definition::{
-            BreakerDefinition, BreakerStatOverrides, Effect, EffectChains, EffectNode, RootEffect,
-            Target, Trigger,
-        },
-        effects::life_lost::LivesCount,
+    breaker::{
+        SelectedBreaker,
+        components::Breaker,
+        definition::{BreakerDefinition, BreakerStatOverrides},
         registry::BreakerRegistry,
+        resources::BreakerConfig,
+    },
+    effect::{
+        BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger,
+        effects::life_lost::LivesCount,
     },
 };
 
@@ -135,7 +137,7 @@ fn active_chains_rebuilt_on_breaker_change() {
             target: Target::Breaker,
             then: vec![EffectNode::When {
                 trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
             }],
         }],
     };
@@ -150,7 +152,7 @@ fn active_chains_rebuilt_on_breaker_change() {
 
     let breaker_entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
 
     // Flush Added
@@ -169,28 +171,28 @@ fn active_chains_rebuilt_on_breaker_change() {
                     target: Target::Breaker,
                     then: vec![EffectNode::When {
                         trigger: Trigger::BoltLost,
-                        then: vec![EffectNode::Do(Effect::LoseLife)],
+                        then: vec![EffectNode::Do(EffectKind::LoseLife)],
                     }],
                 },
                 RootEffect::On {
                     target: Target::Breaker,
                     then: vec![EffectNode::When {
                         trigger: Trigger::PerfectBump,
-                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
                     }],
                 },
                 RootEffect::On {
                     target: Target::Breaker,
                     then: vec![EffectNode::When {
                         trigger: Trigger::EarlyBump,
-                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
                     }],
                 },
                 RootEffect::On {
                     target: Target::Breaker,
                     then: vec![EffectNode::When {
                         trigger: Trigger::LateBump,
-                        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
                     }],
                 },
             ],
@@ -201,7 +203,7 @@ fn active_chains_rebuilt_on_breaker_change() {
 
     app.update();
 
-    let chains = app.world().get::<EffectChains>(breaker_entity).unwrap();
+    let chains = app.world().get::<BoundEffects>(breaker_entity).unwrap();
     assert_eq!(
         chains.0.len(),
         4,
@@ -232,7 +234,7 @@ fn lives_count_reset_on_breaker_change() {
     // Spawn breaker with 1 life remaining (took damage)
     let entity = app
         .world_mut()
-        .spawn((Breaker, LivesCount(1), EffectChains::default()))
+        .spawn((Breaker, LivesCount(1), BoundEffects::default()))
         .id();
 
     // Flush Added
@@ -275,7 +277,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
             target: Target::Breaker,
             then: vec![EffectNode::When {
                 trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
             }],
         }],
     };
@@ -290,7 +292,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
 
     let breaker_entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
 
     // Flush Added
@@ -308,7 +310,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
                 }],
             }],
         };
@@ -318,7 +320,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
 
     app.update();
 
-    let chains = app.world().get::<EffectChains>(breaker_entity).unwrap();
+    let chains = app.world().get::<BoundEffects>(breaker_entity).unwrap();
     assert_eq!(
         chains.0.len(),
         1,
@@ -327,9 +329,9 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
     );
     assert!(matches!(
         &chains.0[0],
-        (None, EffectNode::When { trigger: Trigger::PerfectBump, then }) if then.len() == 1 && matches!(
+        (_, EffectNode::When { trigger: Trigger::PerfectBump, then }) if then.len() == 1 && matches!(
             &then[0],
-            EffectNode::Do(Effect::SpeedBoost { multiplier, .. }) if (*multiplier - 2.0).abs() < f32::EPSILON
+            EffectNode::Do(EffectKind::SpeedBoost { multiplier, .. }) if (*multiplier - 2.0).abs() < f32::EPSILON
         )
     ));
 }

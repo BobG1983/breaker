@@ -1,6 +1,6 @@
 # Shield
 
-Temporary breaker protection.
+Temporary protection — dual behavior depending on entity type.
 
 ## Parameters
 
@@ -14,8 +14,13 @@ Effective duration = `base_duration + (stacks - 1) * duration_per_level`.
 
 ## Behavior
 
-Spawns a shield entity on the breaker that blocks bolt loss for the duration. Despawns when the timer expires.
+Inserts `ShieldActive` component on the entity. Behavior depends on entity type:
+
+- **On Breaker**: immune to bolt loss for the duration (bolts bounce off bottom instead of being lost)
+- **On any entity with a health pool**: immune to damage for the duration
+
+Timer decrements each tick. When it expires, `ShieldActive` is removed. Multiple fires extend the remaining duration (additive).
 
 ## Reversal
 
-Despawns the shield entity if still alive.
+Removes the `ShieldActive` component from the entity.

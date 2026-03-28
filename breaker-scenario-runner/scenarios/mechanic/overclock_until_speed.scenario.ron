@@ -16,7 +16,7 @@
     initial_effects: [
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
-                Until(until: TimeExpires(1.0), then: [
+                Until(trigger: TimeExpires(1.0), then: [
                     Do(SpeedBoost(multiplier: 2.0)),
                 ]),
             ]),

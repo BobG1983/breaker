@@ -164,20 +164,14 @@ mod tests {
             .iter()
             .find(|pos| pos.x > playfield.right())
             .expect("should have right wall");
-        assert!(
-            (right.y).abs() < f32::EPSILON,
-            "right wall centered at y=0"
-        );
+        assert!((right.y).abs() < f32::EPSILON, "right wall centered at y=0");
 
         // Ceiling: y > playfield top
         let ceiling = walls
             .iter()
             .find(|pos| pos.y > playfield.top())
             .expect("should have ceiling wall");
-        assert!(
-            (ceiling.x).abs() < f32::EPSILON,
-            "ceiling centered at x=0"
-        );
+        assert!((ceiling.x).abs() < f32::EPSILON, "ceiling centered at x=0");
     }
 
     // --- Position2D migration tests ---

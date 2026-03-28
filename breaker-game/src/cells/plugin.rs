@@ -4,11 +4,11 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        messages::{CellDestroyedAt, DamageCell, RequestCellDestroyed},
+        messages::{CellDestroyedAt, CellImpactWall, DamageCell, RequestCellDestroyed},
         resources::CellConfig,
         systems::{
-            check_lock_release::check_lock_release, cleanup_destroyed_cells, handle_cell_hit,
-            rotate_shield_cells::rotate_shield_cells,
+            check_lock_release::check_lock_release, cleanup_destroyed_cells,
+            detect_cell_wall_collision, handle_cell_hit, rotate_shield_cells::rotate_shield_cells,
             sync_orbit_cell_positions::sync_orbit_cell_positions, tick_cell_regen::tick_cell_regen,
         },
     },
@@ -26,6 +26,7 @@ impl Plugin for CellsPlugin {
         app.add_message::<RequestCellDestroyed>()
             .add_message::<CellDestroyedAt>()
             .add_message::<DamageCell>()
+            .add_message::<CellImpactWall>()
             .init_resource::<CellConfig>()
             .add_systems(
                 FixedUpdate,
@@ -36,6 +37,7 @@ impl Plugin for CellsPlugin {
                     rotate_shield_cells,
                     sync_orbit_cell_positions.after(rotate_shield_cells),
                     cleanup_destroyed_cells.after(EffectSystems::Bridge),
+                    detect_cell_wall_collision,
                 )
                     .run_if(in_state(PlayingState::Active)),
             );
@@ -54,8 +56,8 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
-            // CellsPlugin reads BoltHitCell messages from bolt domain
-            .add_message::<crate::bolt::messages::BoltHitCell>()
+            // CellsPlugin reads BoltImpactCell messages from bolt domain
+            .add_message::<crate::bolt::messages::BoltImpactCell>()
             .add_plugins(CellsPlugin)
             .update();
     }
@@ -83,7 +85,7 @@ mod tests {
             .add_sub_state::<PlayingState>()
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
-            .add_message::<crate::bolt::messages::BoltHitCell>()
+            .add_message::<crate::bolt::messages::BoltImpactCell>()
             .add_plugins(CellsPlugin);
         // Enter Playing -> Active so run_if(in_state(PlayingState::Active)) gates pass
         app.world_mut()

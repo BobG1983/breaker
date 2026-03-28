@@ -4,12 +4,12 @@ use super::*;
 use crate::{
     breaker::{
         SelectedBreaker,
-        components::Breaker,
-        definition::BreakerDefinition,
+        components::{Breaker, BreakerInitialized},
+        definition::{BreakerDefinition, BreakerStatOverrides},
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
-    effect::{definition::*, effects::life_lost::LivesCount},
+    effect::{effects::life_lost::LivesCount, *},
 };
 
 const TEST_BREAKER_NAME: &str = "TestBreaker";
@@ -24,28 +24,28 @@ fn make_test_breaker() -> BreakerDefinition {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(Effect::LoseLife)],
+                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
                 }],
             },
             RootEffect::On {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
                 }],
             },
             RootEffect::On {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::EarlyBump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
                 }],
             },
             RootEffect::On {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::LateBump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.1 })],
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
                 }],
             },
         ],
@@ -68,7 +68,7 @@ fn init_breaker_stamps_lives_count() {
     let mut app = test_app_with_breaker(make_test_breaker());
     let entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
     app.update();
 
@@ -81,11 +81,11 @@ fn init_breaker_builds_active_chains() {
     let mut app = test_app_with_breaker(make_test_breaker());
     let entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
     app.update();
 
-    let chains = app.world().get::<EffectChains>(entity).unwrap();
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
     // 4 On(Breaker) entries -> 4 chains on breaker entity
     // When { BoltLost, [Do(LoseLife)] }
     // When { PerfectBump, [Do(SpeedBoost)] }
@@ -94,7 +94,7 @@ fn init_breaker_builds_active_chains() {
     assert_eq!(chains.0.len(), 4);
     assert!(matches!(
         &chains.0[0],
-        (None, EffectNode::When { trigger: Trigger::BoltLost, then }) if then.len() == 1 && matches!(then[0], EffectNode::Do(Effect::LoseLife))
+        (_, EffectNode::When { trigger: Trigger::BoltLost, then }) if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::LoseLife))
     ));
 }
 
@@ -109,14 +109,14 @@ fn init_breaker_builds_active_chains_with_non_speed_boost() {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(Effect::TimePenalty { seconds: 5.0 })],
+                    then: vec![EffectNode::Do(EffectKind::TimePenalty { seconds: 5.0 })],
                 }],
             },
             RootEffect::On {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::SpawnBolts {
+                    then: vec![EffectNode::Do(EffectKind::SpawnBolts {
                         count: 1,
                         lifespan: None,
                         inherit: false,
@@ -128,11 +128,11 @@ fn init_breaker_builds_active_chains_with_non_speed_boost() {
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
     app.update();
 
-    let chains = app.world().get::<EffectChains>(entity).unwrap();
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
     assert_eq!(chains.0.len(), 2);
 }
 
@@ -148,7 +148,7 @@ fn init_breaker_includes_chains_field() {
                 trigger: Trigger::PerfectBump,
                 then: vec![EffectNode::When {
                     trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+                    then: vec![EffectNode::Do(EffectKind::test_shockwave(64.0))],
                 }],
             }],
         }],
@@ -156,11 +156,11 @@ fn init_breaker_includes_chains_field() {
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
     app.update();
 
-    let chains = app.world().get::<EffectChains>(entity).unwrap();
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
     assert_eq!(chains.0.len(), 1);
 }
 
@@ -169,7 +169,12 @@ fn init_breaker_skips_already_initialized() {
     let mut app = test_app_with_breaker(make_test_breaker());
     let entity = app
         .world_mut()
-        .spawn((Breaker, LivesCount(99), EffectChains::default()))
+        .spawn((
+            Breaker,
+            BreakerInitialized,
+            LivesCount(99),
+            BoundEffects::default(),
+        ))
         .id();
     app.update();
 
@@ -278,73 +283,44 @@ fn no_life_pool_no_lives_count() {
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()
-        .spawn((Breaker, EffectChains::default()))
+        .spawn((Breaker, BoundEffects::default()))
         .id();
     app.update();
 
     assert!(app.world().get::<LivesCount>(entity).is_none());
 }
 
-// =========================================================================
-// B12b: init_breaker pass-through behavior with EffectNode (behavior 22)
-// =========================================================================
-
 #[test]
-fn effect_node_pass_through_bolt_lost_fires_correctly() {
-    use crate::effect::evaluate::evaluate_node;
-
-    // After migration, init_breaker pushes EffectNode directly
-    let node = EffectNode::When {
-        trigger: Trigger::BoltLost,
-        then: vec![EffectNode::Do(Effect::LoseLife)],
-    };
-    let result = evaluate_node(Trigger::BoltLost, &node);
-    assert_eq!(
-        result,
-        Some(vec![EffectNode::Do(Effect::LoseLife)].as_slice()),
-        "pass-through EffectNode should return children on BoltLost"
-    );
-}
-
-#[test]
-fn effect_node_pass_through_perfect_bump_fires_correctly() {
-    use crate::effect::evaluate::evaluate_node;
-
-    let node = EffectNode::When {
-        trigger: Trigger::PerfectBump,
-        then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
-    };
-    let result = evaluate_node(Trigger::PerfectBump, &node);
-    assert_eq!(
-        result,
-        Some(vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })].as_slice()),
-        "pass-through EffectNode should return children on PerfectBump"
-    );
-}
-
-#[test]
-fn effect_node_pass_through_chains_field_evaluates_correctly() {
-    use crate::effect::evaluate::evaluate_node;
-
-    // chains field entries are already full EffectNode trees -- verify evaluation
-    let node = EffectNode::When {
-        trigger: Trigger::PerfectBump,
-        then: vec![EffectNode::When {
-            trigger: Trigger::Impact(crate::effect::definition::ImpactTarget::Cell),
-            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
+fn init_breaker_no_duplicate_chains_on_reentry() {
+    let def = BreakerDefinition {
+        name: TEST_BREAKER_NAME.to_owned(),
+        stat_overrides: BreakerStatOverrides::default(),
+        life_pool: None,
+        effects: vec![RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::PerfectBump,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+            }],
         }],
     };
-    let result = evaluate_node(Trigger::PerfectBump, &node);
-    let children = result.expect("should match PerfectBump");
-    assert_eq!(children.len(), 1);
-    assert!(
-        matches!(
-            &children[0],
-            EffectNode::When {
-                trigger: Trigger::Impact(..),
-                ..
-            }
-        ),
-        "nested EffectNode should be returned as child on first trigger match"
+    let mut app = test_app_with_breaker(def);
+    let entity = app
+        .world_mut()
+        .spawn((Breaker, BoundEffects::default()))
+        .id();
+
+    // First invocation — should push 1 chain
+    app.update();
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
+    assert_eq!(chains.0.len(), 1, "first init should push 1 chain");
+
+    // Second invocation — should NOT push again (BreakerInitialized marker prevents it)
+    app.update();
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
+    assert_eq!(
+        chains.0.len(),
+        1,
+        "second init should not duplicate chains — BreakerInitialized should prevent re-entry"
     );
 }

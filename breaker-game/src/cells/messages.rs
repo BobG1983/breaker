@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// Sent by `handle_cell_hit` when a cell's HP reaches 0. The entity is still alive.
 ///
-/// Consumed by `bridge_cell_death` (evaluates `OnDeath` `EffectChains` while entity
+/// Consumed by `bridge_cell_death` (evaluates `OnDeath` `BoundEffects` while entity
 /// is still alive) and `cleanup_destroyed_cells` (despawns the entity).
 #[derive(Message, Clone, Debug)]
 pub(crate) struct RequestCellDestroyed {
@@ -22,6 +22,18 @@ pub(crate) struct CellDestroyedAt {
     // pub position: Vec2,
     /// Whether this cell counted toward node completion.
     pub was_required_to_clear: bool,
+}
+
+/// Sent when a cell collides with a wall.
+///
+/// Consumed by `bridge_wall_impact` and `bridge_cell_impacted` in the effect domain.
+/// Relevant for future moving-cell mechanics.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct CellImpactWall {
+    /// The cell entity that collided with the wall.
+    pub cell: Entity,
+    /// The wall entity that was hit.
+    pub wall: Entity,
 }
 
 /// Sent by physics (`bolt_cell_collision`) and bolt/behaviors (shockwave) to

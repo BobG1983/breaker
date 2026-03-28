@@ -1,6 +1,6 @@
 # ChainLightning
 
-Arc damage jumping between nearby cells using greedy nearest-neighbor traversal.
+Arc damage jumping between nearby cells using random selection.
 
 ## Parameters
 
@@ -12,8 +12,8 @@ Arc damage jumping between nearby cells using greedy nearest-neighbor traversal.
 
 ## Behavior
 
-Starting from the entity's position, finds the nearest cell within range and damages it. Then jumps to the nearest undamaged cell within range of that cell, repeating for `arcs` jumps. Each cell is hit at most once per chain.
+Starting from the entity's position, finds a random cell within range and damages it. Then jumps to a random undamaged cell within range of that cell, repeating for `arcs` jumps. Each cell is hit at most once per chain. Damage per cell = base bolt damage * `damage_mult`.
 
 ## Reversal
 
-Despawns any active lightning entities if still alive.
+No-op. Lightning arc entities self-despawn on their own lifecycle.

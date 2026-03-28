@@ -6,7 +6,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{
-        components::enforce_min_angle, filters::ActiveFilter, messages::BoltHitBreaker,
+        components::enforce_min_angle, filters::ActiveFilter, messages::BoltImpactBreaker,
         queries::CollisionQueryBolt,
     },
     breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
@@ -58,7 +58,7 @@ pub(crate) fn bolt_breaker_collision(
     time: Res<Time<Fixed>>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
     breaker_query: Query<CollisionQueryBreaker, CollisionFilterBreaker>,
-    mut writer: MessageWriter<BoltHitBreaker>,
+    mut writer: MessageWriter<BoltImpactBreaker>,
 ) {
     let Ok((
         breaker_position,
@@ -118,7 +118,7 @@ pub(crate) fn bolt_breaker_collision(
                     base_speed.0,
                     min_angle.0,
                 );
-                writer.write(BoltHitBreaker { bolt: bolt_entity });
+                writer.write(BoltImpactBreaker { bolt: bolt_entity });
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
                 }
@@ -167,7 +167,7 @@ pub(crate) fn bolt_breaker_collision(
             bolt_position.0.y = above_y;
         }
 
-        writer.write(BoltHitBreaker { bolt: bolt_entity });
+        writer.write(BoltImpactBreaker { bolt: bolt_entity });
         if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
             pr.0 = p.0;
         }

@@ -60,7 +60,7 @@ fn wall_hit_does_not_emit_cell_message() {
     let hits = app.world().resource::<HitCells>();
     assert!(
         hits.0.is_empty(),
-        "wall hit should not emit BoltHitCell message"
+        "wall hit should not emit BoltImpactCell message"
     );
 }
 

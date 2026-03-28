@@ -5,7 +5,7 @@
         prefix: "Minor",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: DestroyedCell, then: [
+                When(trigger: CellDestroyed, then: [
                     Do(Shockwave(base_range: 20.0, range_per_level: 5.0, stacks: 1, speed: 400.0)),
                 ]),
             ]),
@@ -15,7 +15,7 @@
         prefix: "Spreading",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: DestroyedCell, then: [
+                When(trigger: CellDestroyed, then: [
                     Do(Shockwave(base_range: 30.0, range_per_level: 8.0, stacks: 1, speed: 400.0)),
                 ]),
             ]),
@@ -25,7 +25,7 @@
         prefix: "Devastating",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: DestroyedCell, then: [
+                When(trigger: CellDestroyed, then: [
                     Do(Shockwave(base_range: 40.0, range_per_level: 12.0, stacks: 1, speed: 400.0)),
                 ]),
             ]),

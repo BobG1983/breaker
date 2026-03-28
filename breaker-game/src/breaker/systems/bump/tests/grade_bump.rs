@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    bolt::messages::BoltHitBreaker,
+    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{Breaker, BumpState},
         messages::BumpGrade,
@@ -28,7 +28,7 @@ fn bolt_hit_with_active_forward_perfect() {
         ))
         .id();
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -66,7 +66,7 @@ fn bolt_hit_with_active_forward_early() {
         ))
         .id();
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -94,7 +94,7 @@ fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
         .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
         .id();
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -136,13 +136,13 @@ fn no_hit_no_change() {
 
 #[test]
 fn grade_bump_forward_sends_bolt_entity() {
-    // Given: forward bump active, BoltHitBreaker arrives with a specific bolt entity
+    // Given: forward bump active, BoltImpactBreaker arrives with a specific bolt entity
     // When: grade_bump runs
-    // Then: BumpPerformed.bolt matches the bolt from BoltHitBreaker
+    // Then: BumpPerformed.bolt matches the bolt from BoltImpactBreaker
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<BreakerConfig>()
-        .add_message::<BoltHitBreaker>()
+        .add_message::<BoltImpactBreaker>()
         .add_message::<crate::breaker::messages::BumpPerformed>()
         .add_message::<crate::breaker::messages::BumpWhiffed>()
         .init_resource::<CapturedBumps>();
@@ -153,7 +153,9 @@ fn grade_bump_forward_sends_bolt_entity() {
     let bolt_entity = app.world_mut().spawn_empty().id();
 
     // Use a dedicated resource with the specific bolt entity
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker { bolt: bolt_entity })));
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
+        bolt: bolt_entity,
+    })));
     app.add_systems(
         FixedUpdate,
         (
@@ -180,19 +182,19 @@ fn grade_bump_forward_sends_bolt_entity() {
     assert_eq!(
         captured.0[0].bolt,
         Some(bolt_entity),
-        "BumpPerformed.bolt should match the bolt entity from BoltHitBreaker"
+        "BumpPerformed.bolt should match the bolt entity from BoltImpactBreaker"
     );
 }
 
 #[test]
 fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
-    // Given: no active forward bump, BoltHitBreaker arrives with a specific bolt entity
+    // Given: no active forward bump, BoltImpactBreaker arrives with a specific bolt entity
     // When: grade_bump runs
     // Then: BumpState.last_hit_bolt == Some(bolt_entity)
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<BreakerConfig>()
-        .add_message::<BoltHitBreaker>()
+        .add_message::<BoltImpactBreaker>()
         .add_message::<crate::breaker::messages::BumpPerformed>()
         .add_message::<crate::breaker::messages::BumpWhiffed>()
         .init_resource::<CapturedBumps>();
@@ -201,7 +203,9 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
 
     let bolt_entity = app.world_mut().spawn_empty().id();
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker { bolt: bolt_entity })));
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
+        bolt: bolt_entity,
+    })));
     app.add_systems(
         FixedUpdate,
         (
@@ -231,7 +235,7 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
 #[test]
 fn grade_bump_uses_force_grade_when_some() {
     // Given: ForceBumpGrade(Some(Late)), forward bump active in perfect zone
-    // When: grade_bump runs with a BoltHitBreaker
+    // When: grade_bump runs with a BoltImpactBreaker
     // Then: BumpPerformed.grade should be Late (overridden), not Perfect (calculated)
     let mut app = grade_bump_test_app();
     let config = app.world().resource::<BreakerConfig>().clone();
@@ -248,7 +252,7 @@ fn grade_bump_uses_force_grade_when_some() {
         bump_param_bundle(&config),
     ));
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -265,7 +269,7 @@ fn grade_bump_uses_force_grade_when_some() {
 #[test]
 fn grade_bump_ignores_force_grade_when_none() {
     // Given: ForceBumpGrade(None), forward bump active in perfect zone
-    // When: grade_bump runs with a BoltHitBreaker
+    // When: grade_bump runs with a BoltImpactBreaker
     // Then: BumpPerformed.grade should be Perfect (normal calculation)
     let mut app = grade_bump_test_app();
     let config = app.world().resource::<BreakerConfig>().clone();
@@ -282,7 +286,7 @@ fn grade_bump_ignores_force_grade_when_none() {
         bump_param_bundle(&config),
     ));
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -299,7 +303,7 @@ fn grade_bump_ignores_force_grade_when_none() {
 #[test]
 fn grade_bump_works_without_force_grade_resource() {
     // Given: no ForceBumpGrade resource inserted, forward bump active in perfect zone
-    // When: grade_bump runs with a BoltHitBreaker
+    // When: grade_bump runs with a BoltImpactBreaker
     // Then: BumpPerformed.grade should be Perfect (backward compatible)
     let mut app = grade_bump_test_app();
     let config = app.world().resource::<BreakerConfig>().clone();
@@ -316,7 +320,7 @@ fn grade_bump_works_without_force_grade_resource() {
         bump_param_bundle(&config),
     ));
 
-    app.insert_resource(TestHitMessage(Some(BoltHitBreaker {
+    app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
     })));
     tick(&mut app);

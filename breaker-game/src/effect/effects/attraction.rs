@@ -1,333 +1,156 @@
-//! Attraction chip effect observer — pulls nearby cells toward the bolt.
-
 use bevy::prelude::*;
 
-use super::stack_f32;
-use crate::{bolt::components::Bolt, effect::definition::AttractionType};
+use crate::effect::core::AttractionType;
 
-// ---------------------------------------------------------------------------
-// Components
-// ---------------------------------------------------------------------------
-
-/// Attraction force magnitude pulling nearby cells toward the bolt.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct AttractionForce(pub f32);
-
-/// Tracks per-type attraction state on a bolt entity.
-#[derive(Component, Debug, Clone, Default)]
-pub(crate) struct ActiveAttractions {
-    /// Individual attraction entries by type.
-    pub entries: Vec<AttractionEntry>,
-}
-
-/// A single attraction type entry with force magnitude and active state.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct AttractionEntry {
-    /// Which type of entity this attraction targets.
+/// An individual attraction entry tracking type, force, and active state.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AttractionEntry {
+    /// Which entity type to attract toward.
     pub attraction_type: AttractionType,
-    /// Force magnitude for this attraction.
+    /// Attraction strength.
     pub force: f32,
-    /// Whether this attraction is currently active.
+    /// Whether this attraction is currently active (deactivates on hit).
     pub active: bool,
 }
 
-// ---------------------------------------------------------------------------
-// Typed event
-// ---------------------------------------------------------------------------
+/// Component holding all active attractions on an entity.
+#[derive(Component, Debug, Default, Clone)]
+pub struct ActiveAttractions(pub Vec<AttractionEntry>);
 
-/// Fired when an attraction passive effect is applied via chip selection.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct AttractionApplied {
-    /// The type of entity attraction targets.
-    pub attraction_type: AttractionType,
-    /// Attraction force per stack.
-    pub per_stack: f32,
-    /// Maximum number of stacks allowed.
-    pub max_stacks: u32,
-    // FUTURE: may be used for upcoming phases
-    // /// Name of the chip that applied this effect.
-    // pub chip_name: String,
-}
+/// Adds an attraction entry to the entity.
+///
+/// Inserts `ActiveAttractions` if not already present.
+pub(crate) fn fire(entity: Entity, attraction_type: AttractionType, force: f32, world: &mut World) {
+    let entry = AttractionEntry {
+        attraction_type,
+        force,
+        active: true,
+    };
 
-type AttractionQuery = (
-    Entity,
-    Option<&'static mut AttractionForce>,
-    Option<&'static mut ActiveAttractions>,
-);
-
-/// Observer: applies attraction force stacking to all bolt entities and
-/// stamps `ActiveAttractions` with per-type tracking.
-pub(crate) fn handle_attraction(
-    trigger: On<AttractionApplied>,
-    mut query: Query<AttractionQuery, With<Bolt>>,
-    mut commands: Commands,
-) {
-    let event = trigger.event();
-    let per_stack = event.per_stack;
-    let max_stacks = event.max_stacks;
-    let attraction_type = event.attraction_type;
-    for (entity, mut existing, active) in &mut query {
-        stack_f32(
-            entity,
-            existing.as_deref_mut().map(|c| &mut c.0),
-            per_stack,
-            max_stacks,
-            &mut commands,
-            AttractionForce,
-        );
-
-        // Track per-type attraction state on the bolt.
-        if let Some(mut aa) = active {
-            if let Some(entry) = aa
-                .entries
-                .iter_mut()
-                .find(|e| e.attraction_type == attraction_type)
-            {
-                entry.force += per_stack;
-            } else {
-                aa.entries.push(AttractionEntry {
-                    attraction_type,
-                    force: per_stack,
-                    active: true,
-                });
-            }
-        } else {
-            commands.entity(entity).insert(ActiveAttractions {
-                entries: vec![AttractionEntry {
-                    attraction_type,
-                    force: per_stack,
-                    active: true,
-                }],
-            });
-        }
+    if let Some(mut attractions) = world.get_mut::<ActiveAttractions>(entity) {
+        attractions.0.push(entry);
+    } else if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
+        entity_mut.insert(ActiveAttractions(vec![entry]));
     }
 }
 
-/// Registers all observers and systems for the attraction effect.
+/// Removes a matching attraction entry from the entity.
+pub(crate) fn reverse(
+    entity: Entity,
+    attraction_type: AttractionType,
+    force: f32,
+    world: &mut World,
+) {
+    if let Some(mut attractions) = world.get_mut::<ActiveAttractions>(entity)
+        && let Some(idx) = attractions.0.iter().position(|e| {
+            e.attraction_type == attraction_type && (e.force - force).abs() < f32::EPSILON
+        })
+    {
+        attractions.0.remove(idx);
+    }
+}
+
+/// Placeholder — steers entity toward nearest target of the attracted type.
+fn apply_attraction() {
+    // Will query ActiveAttractions + Transform, find nearest target, apply force.
+}
+
+/// Placeholder — deactivates attraction on hit, reactivates on bounce off
+/// non-attracted type.
+fn manage_attraction_types() {
+    // Will query ActiveAttractions + collision events.
+}
+
+/// Registers attraction systems in `FixedUpdate`.
 pub(crate) fn register(app: &mut App) {
-    app.add_observer(handle_attraction);
+    app.add_systems(FixedUpdate, (apply_attraction, manage_attraction_types));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_observer(handle_attraction);
-        app
+    #[test]
+    fn fire_inserts_active_attractions_on_fresh_entity() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        fire(entity, AttractionType::Cell, 10.0, &mut world);
+
+        let attractions = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(attractions.0.len(), 1);
+        assert_eq!(attractions.0[0].attraction_type, AttractionType::Cell);
+        assert!((attractions.0[0].force - 10.0).abs() < f32::EPSILON);
+        assert!(attractions.0[0].active);
     }
 
     #[test]
-    fn inserts_attraction_force_on_bolt() {
-        let mut app = test_app();
-        let bolt = app.world_mut().spawn(Bolt).id();
-        // Non-bolt entity should NOT receive the component.
-        let non_bolt = app.world_mut().spawn_empty().id();
-
-        app.world_mut().commands().trigger(AttractionApplied {
-            attraction_type: crate::effect::definition::AttractionType::Cell,
-            per_stack: 8.0,
-            max_stacks: 3,
-        });
-        app.world_mut().flush();
-
-        let a = app
-            .world()
-            .entity(bolt)
-            .get::<AttractionForce>()
-            .expect("bolt should have AttractionForce after Attraction effect");
-        assert!((a.0 - 8.0).abs() < f32::EPSILON);
-
-        assert!(
-            app.world()
-                .entity(non_bolt)
-                .get::<AttractionForce>()
-                .is_none(),
-            "non-bolt entity should NOT receive AttractionForce"
-        );
-    }
-
-    #[test]
-    fn stacks_attraction_force() {
-        let mut app = test_app();
-        let bolt = app.world_mut().spawn((Bolt, AttractionForce(8.0))).id();
-
-        app.world_mut().commands().trigger(AttractionApplied {
-            attraction_type: crate::effect::definition::AttractionType::Cell,
-            per_stack: 8.0,
-            max_stacks: 3,
-        });
-        app.world_mut().flush();
-
-        let a = app.world().entity(bolt).get::<AttractionForce>().unwrap();
-        assert!(
-            (a.0 - 16.0).abs() < f32::EPSILON,
-            "AttractionForce should stack from 8.0 to 16.0, got {}",
-            a.0
-        );
-    }
-
-    #[test]
-    fn respects_max_stacks_attraction_force() {
-        let mut app = test_app();
-        // 3 stacks at 8.0 per stack = 24.0, which is at the cap of max_stacks: 3.
-        let bolt = app.world_mut().spawn((Bolt, AttractionForce(24.0))).id();
-
-        app.world_mut().commands().trigger(AttractionApplied {
-            attraction_type: crate::effect::definition::AttractionType::Cell,
-            per_stack: 8.0,
-            max_stacks: 3,
-        });
-        app.world_mut().flush();
-
-        let a = app.world().entity(bolt).get::<AttractionForce>().unwrap();
-        assert!(
-            (a.0 - 24.0).abs() < f32::EPSILON,
-            "AttractionForce should not exceed max_stacks cap, got {}",
-            a.0
-        );
-    }
-
-    // =========================================================================
-    // Part A: handle_attraction stamps ActiveAttractions with type tracking
-    // =========================================================================
-
-    #[test]
-    fn handle_attraction_stamps_active_attractions_with_applied_type() {
-        let mut app = test_app();
-        let bolt = app.world_mut().spawn(Bolt).id();
-
-        app.world_mut().commands().trigger(AttractionApplied {
-            attraction_type: AttractionType::Cell,
-            per_stack: 8.0,
-            max_stacks: 3,
-        });
-        app.world_mut().flush();
-
-        let aa = app
-            .world()
-            .entity(bolt)
-            .get::<ActiveAttractions>()
-            .expect("bolt should have ActiveAttractions after AttractionApplied fires");
-        assert_eq!(
-            aa.entries.len(),
-            1,
-            "should have exactly 1 entry, got {}",
-            aa.entries.len()
-        );
-        assert_eq!(
-            aa.entries[0].attraction_type,
-            AttractionType::Cell,
-            "entry type should be Cell"
-        );
-        assert!(
-            (aa.entries[0].force - 8.0).abs() < f32::EPSILON,
-            "entry force should be 8.0, got {}",
-            aa.entries[0].force
-        );
-        assert!(
-            aa.entries[0].active,
-            "newly inserted entry should be active"
-        );
-    }
-
-    #[test]
-    fn handle_attraction_adds_new_entry_for_different_type() {
-        let mut app = test_app();
-        let bolt = app
-            .world_mut()
-            .spawn((
-                Bolt,
-                ActiveAttractions {
-                    entries: vec![AttractionEntry {
-                        attraction_type: AttractionType::Cell,
-                        force: 8.0,
-                        active: true,
-                    }],
-                },
-            ))
+    fn fire_appends_entry_to_existing_active_attractions() {
+        let mut world = World::new();
+        let entity = world
+            .spawn(ActiveAttractions(vec![AttractionEntry {
+                attraction_type: AttractionType::Wall,
+                force: 5.0,
+                active: true,
+            }]))
             .id();
 
-        app.world_mut().commands().trigger(AttractionApplied {
-            attraction_type: AttractionType::Wall,
-            per_stack: 4.0,
-            max_stacks: 3,
-        });
-        app.world_mut().flush();
+        fire(entity, AttractionType::Breaker, 15.0, &mut world);
 
-        let aa = app
-            .world()
-            .entity(bolt)
-            .get::<ActiveAttractions>()
-            .expect("bolt should still have ActiveAttractions");
+        let attractions = world.get::<ActiveAttractions>(entity).unwrap();
         assert_eq!(
-            aa.entries.len(),
+            attractions.0.len(),
             2,
-            "should have 2 entries (Cell + Wall), got {}",
-            aa.entries.len()
+            "should have two entries after appending"
         );
-        // Verify both entries present
-        let cell_entry = aa
-            .entries
-            .iter()
-            .find(|e| e.attraction_type == AttractionType::Cell);
-        let wall_entry = aa
-            .entries
-            .iter()
-            .find(|e| e.attraction_type == AttractionType::Wall);
-        assert!(cell_entry.is_some(), "Cell entry should still exist");
-        assert!(wall_entry.is_some(), "Wall entry should be added");
-        assert!(
-            (cell_entry.unwrap().force - 8.0).abs() < f32::EPSILON,
-            "Cell force should remain 8.0"
-        );
-        assert!(
-            (wall_entry.unwrap().force - 4.0).abs() < f32::EPSILON,
-            "Wall force should be 4.0"
-        );
+        assert_eq!(attractions.0[1].attraction_type, AttractionType::Breaker);
+        assert!((attractions.0[1].force - 15.0).abs() < f32::EPSILON);
     }
 
     #[test]
-    fn handle_attraction_stacks_force_on_same_type() {
-        let mut app = test_app();
-        let bolt = app
-            .world_mut()
-            .spawn((
-                Bolt,
-                ActiveAttractions {
-                    entries: vec![AttractionEntry {
-                        attraction_type: AttractionType::Cell,
-                        force: 8.0,
-                        active: true,
-                    }],
+    fn reverse_removes_matching_entry() {
+        let mut world = World::new();
+        let entity = world
+            .spawn(ActiveAttractions(vec![
+                AttractionEntry {
+                    attraction_type: AttractionType::Cell,
+                    force: 10.0,
+                    active: true,
                 },
-            ))
+                AttractionEntry {
+                    attraction_type: AttractionType::Wall,
+                    force: 5.0,
+                    active: true,
+                },
+            ]))
             .id();
 
-        app.world_mut().commands().trigger(AttractionApplied {
-            attraction_type: AttractionType::Cell,
-            per_stack: 8.0,
-            max_stacks: 3,
-        });
-        app.world_mut().flush();
+        reverse(entity, AttractionType::Cell, 10.0, &mut world);
 
-        let aa = app
-            .world()
-            .entity(bolt)
-            .get::<ActiveAttractions>()
-            .expect("bolt should have ActiveAttractions");
+        let attractions = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(attractions.0.len(), 1, "matching entry should be removed");
+        assert_eq!(attractions.0[0].attraction_type, AttractionType::Wall);
+    }
+
+    #[test]
+    fn reverse_with_no_match_is_noop() {
+        let mut world = World::new();
+        let entity = world
+            .spawn(ActiveAttractions(vec![AttractionEntry {
+                attraction_type: AttractionType::Cell,
+                force: 10.0,
+                active: true,
+            }]))
+            .id();
+
+        // Different type — no match.
+        reverse(entity, AttractionType::Breaker, 10.0, &mut world);
+
+        let attractions = world.get::<ActiveAttractions>(entity).unwrap();
         assert_eq!(
-            aa.entries.len(),
+            attractions.0.len(),
             1,
-            "should still have exactly 1 entry (no duplicate), got {}",
-            aa.entries.len()
-        );
-        assert!(
-            (aa.entries[0].force - 16.0).abs() < f32::EPSILON,
-            "Cell force should stack from 8.0 to 16.0, got {}",
-            aa.entries[0].force
+            "no entry should be removed when no match"
         );
     }
 }

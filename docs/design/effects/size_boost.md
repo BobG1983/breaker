@@ -1,21 +1,26 @@
 # SizeBoost
 
-Increases the entity's size — radius for bolts, width for breakers.
+Increases the entity's size — varies by entity type.
 
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `value` | `f32` | Size increase in world units |
+| `value` | `f32` | Size multiplier (1.x format) |
 
 ## Behavior
 
-Pushes the value to the entity's ActiveSizeBoosts vec. A recalculation system computes `base_size + sum(all_boosts)`. The handler queries the entity — if it has bolt radius components, adjusts radius. If it has breaker width components, adjusts width.
+Pushes the multiplier to the entity's `ActiveSizeBoosts` vec. A recalculation system computes the effective size. Behavior varies by entity type:
+
+- **Breaker**: increases width only
+- **Cell**: increases full scale (width and height)
+- **Bolt**: increases radius
+- **Wall**: no-op
 
 ## Stacking
 
-Additive. Multiple applications add together.
+Multiplicative. Multiple boosts multiply together.
 
 ## Reversal
 
-Removes the matching value entry from ActiveSizeBoosts.
+Removes the matching multiplier entry from `ActiveSizeBoosts`.

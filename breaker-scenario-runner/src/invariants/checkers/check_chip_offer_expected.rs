@@ -59,7 +59,7 @@ mod tests {
     use bevy::prelude::*;
     use breaker::{
         chips::definition::{ChipDefinition, EvolutionIngredient, Rarity},
-        effect::{Effect, EffectNode, RootEffect, Target},
+        effect::{EffectKind, EffectNode, RootEffect, Target},
         screen::chip_select::{ChipOffering, ChipOffers},
     };
 
@@ -98,7 +98,7 @@ mod tests {
             max_stacks: 3,
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
-                then: vec![EffectNode::Do(Effect::Piercing(1))],
+                then: vec![EffectNode::Do(EffectKind::Piercing(1))],
             }],
             ingredients: None,
             template_name: None,
@@ -136,7 +136,7 @@ mod tests {
                 max_stacks: 1,
                 effects: vec![RootEffect::On {
                     target: Target::Bolt,
-                    then: vec![EffectNode::Do(Effect::Piercing(5))],
+                    then: vec![EffectNode::Do(EffectKind::Piercing(5))],
                 }],
                 ingredients: None,
                 template_name: None,

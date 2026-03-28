@@ -5,7 +5,7 @@
         prefix: "",
         effects: [
             On(target: Breaker, then: [
-                When(trigger: OnBoltLost, then: [
+                When(trigger: BoltLost, then: [
                     Do(SpeedBoost(multiplier: 2.0)),
                 ]),
             ]),

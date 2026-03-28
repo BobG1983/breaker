@@ -18,4 +18,4 @@ Spawns multiple extra bolts above the breaker. Functionally equivalent to multip
 
 ## Reversal
 
-Despawns the spawned bolt entities if still alive.
+No-op. Spawned bolts persist independently after creation.

@@ -4,6 +4,101 @@ description: Session-dated lint run logs — errors encountered, fixed, and conf
 type: reference
 ---
 
+## 2026-03-27 Session (run 5) — post-phase-4b, effect refactor + new shared/ module
+
+### Summary
+- Format: PASS (cargo fmt made no changes)
+- spatial2d: PASS (0 errors, 0 warnings)
+- physics2d: PASS (0 errors, 0 warnings)
+- dclippy: PASS — 0 errors; ~89 warnings (all nursery/pedantic, no action required)
+- dsclippy: PASS — 0 errors; scenario runner itself compiled clean
+
+### Notes
+- All prior errors (type_complexity in init_breaker, match_same_arms in evaluate.rs) are resolved.
+- Dominant warnings: missing_const_for_fn (nursery) on placeholder effect bridge fns and effect stub fns — expected, will go away when implementations land.
+- needless_pass_by_ref_mut (nursery) on placeholder `reverse` fns — same pattern; will clear when fns are implemented.
+
+## 2026-03-27 Session (run 4) — post-phase-4b, breaker/systems/init_breaker refactor
+
+### Summary
+- Format: PASS (cargo fmt made no changes)
+- spatial2d: PASS (0 errors, 0 warnings)
+- physics2d: PASS (0 errors, 0 warnings)
+- defaults: PASS (0 errors, 0 warnings)
+- dclippy: FAIL — 1 error in `breaker/systems/init_breaker/system.rs:73`; ~88 warnings
+- dsclippy: FAIL — same game crate error inherited; 0 scenario-runner-specific errors
+
+### Error
+- `type_complexity` ERROR: `breaker-game/src/breaker/systems/init_breaker/system.rs:73` — `Query<(Entity, &mut BoundEffects), (With<Breaker>, Without<LivesCount>)>` is too complex. Fix: extract a named type alias (e.g. `type BreakerInitQuery<'w, 's> = Query<'w, 's, (Entity, &'static mut BoundEffects), (With<Breaker>, Without<LivesCount>)>;`) in `breaker/queries.rs` and reference it in the system parameter.
+
+## 2026-03-27 Session (run 3) — post-phase-4b, new shared/ module additions
+
+### Summary
+- Format: PASS (cargo fmt made no changes)
+- spatial2d: PASS (0 errors, 0 warnings)
+- physics2d: PASS (0 errors, 0 warnings)
+- defaults: PASS (0 errors, 0 warnings)
+- dclippy: FAIL — 2 errors in `effect/triggers/evaluate.rs` (match_same_arms); 89 warnings
+- dsclippy: FAIL — same 2 game crate errors inherited; 0 scenario-runner-specific errors
+
+### Errors (persistent from run 2 — not yet fixed)
+- `match_same_arms` ERROR: `effect/triggers/evaluate.rs:104` — `EffectNode::When { .. } => false` arm is identical to wildcard arm `_ => false`. Fix: remove the `EffectNode::When { .. }` explicit arm.
+- `match_same_arms` ERROR: `effect/triggers/evaluate.rs:122` — `EffectNode::When { .. } => {}` arm is identical to wildcard arm `_ => {}`. Fix: remove the `EffectNode::When { .. }` explicit arm.
+
+### New warning observed (run 3)
+- `redundant_clone` warning: `effect/triggers/timer.rs:143` — `.clone()` on `inner` immediately consumed by `time_expires_node`. Nursery lint, warning only.
+
+## 2026-03-27 Session (run 2) — effect system new errors after phase-4b
+
+### Summary
+- Format: PASS (cargo fmt made no changes)
+- spatial2d: PASS
+- physics2d: PASS
+- defaults: PASS
+- dclippy: FAIL — 2 errors from `collapsible_match` and `collapsible_if` in `effect/triggers/evaluate.rs`; plus 29 additional errors in test-only code (float_cmp, uninlined_format_args, explicit_iter_loop, must_use_candidate, collapsible_if); 89 warnings
+- dsclippy: FAIL — inherits same 2 game crate errors; 0 scenario-runner-specific errors
+
+### New errors (2026-03-27 run 2, effect/triggers/evaluate.rs)
+- `collapsible_match` (2 errors, lib): `effect/triggers/evaluate.rs:81` and `:113` — nested `if` inside `match` arm. Fix: collapse `EffectNode::When { trigger: t, then } if t == trigger =>` (match guard pattern).
+- `collapsible_if` (1 error, test): `effect/triggers/until.rs:347` — `if let ... { if * == ... }` pattern. Fix: `if let ... = node && *t == trigger { ... }`.
+- `must_use_candidate` (1 error, test): `effect/core/types.rs:496` — `pub fn test_shockwave(base_range: f32) -> Self` needs `#[must_use]`.
+- `float_cmp` (18 errors, test): `assert_eq!` on `f32` values in `gravity_well.rs`, `ramping_damage.rs`, `shield.rs`, `shockwave.rs`, `spawn_phantom.rs`. Fix: use `approx::assert_relative_eq!` or `(a - b).abs() < f32::EPSILON`.
+- `uninlined_format_args` (2 errors, test): `gravity_well.rs:152` and `spawn_phantom.rs:112`. Fix: inline variable in format string with `{count}`.
+- `explicit_iter_loop` (5 errors, test): `evaluate.rs:173,183,193,203,213` — `query.iter_mut()` should be `&mut query`.
+
+### Previously identified warnings (still present)
+- `missing_const_for_fn` (nursery): placeholder bridge fns in `effect/triggers/` (bump, bump_whiff, etc.), effect `register`/`reverse` fns — all stub placeholders. Warnings only.
+- `dead_code` (many): forward-declared structs/functions not yet wired up (impact messages, breaker init fns, chip components, evaluate fns).
+- `needless_pass_by_ref_mut` (nursery): `&mut World` params not mutated in several `fire`/`reverse` fns.
+- `use_self` (nursery): `EffectNode::` self-references in `effect/core/types.rs`.
+
+## 2026-03-27 Session (run 1) — effect system refactor errors
+
+### Summary
+- Format: PASS (cargo fmt made no changes)
+- spatial2d: PASS (0 errors, 0 warnings)
+- physics2d: PASS (0 errors, 0 warnings)
+- defaults: PASS (0 errors, 0 warnings)
+- dclippy: FAIL — 61 clippy errors + 17 E0433 compiler errors = 78 errors total; 95 warnings
+- dsclippy: FAIL — same game crate errors (scenario runner inherits game dependency); 0 additional runner-specific errors
+
+### New errors (effect system refactor — 2026-03-27)
+
+- `semicolon_if_nothing_returned` (24 errors): `effect/core/types.rs` lines 326–476. All are `reverse()` call expressions in match arms that don't end with `;`. Fix: append `;` to each call.
+- `collapsible_if` / `collapsible_match` (9 + 2 errors): nested `if let` inside outer `if let`, and nested `if` inside outer `match`. Files: `effect/effects/attraction.rs:44`, `effect/effects/bump_force.rs:28`, `effect/effects/damage_boost.rs:27`, `effect/effects/life_lost.rs:9`, `effect/effects/piercing.rs:23`, `effect/effects/quick_stop.rs:32`, `effect/effects/size_boost.rs:28`, `effect/effects/speed_boost.rs:16`, `effect/triggers/evaluate.rs:54,81,113`.
+- `map_unwrap_or` (7 errors): `.map(...).unwrap_or(...)` pattern. Files: `effect/effects/chain_bolt.rs:15`, `chain_lightning.rs:4`, `explode.rs:4`, `gravity_well.rs:31`, `piercing_beam.rs:4`, `shockwave.rs:31`, `spawn_phantom.rs:36`. Fix: replace with `.map_or(fallback, |x| ...)`.
+- `float_cmp` strict comparison (5 errors): `f32 == f32` equality in effect files: `bump_force.rs:29`, `damage_boost.rs:28`, `quick_stop.rs:33`, `size_boost.rs:29`, `speed_boost.rs:17`. Fix: use `(a - b).abs() < f32::EPSILON` or restructure logic.
+- `doc_markdown` (5 errors): missing backticks in doc comments. Files: `breaker/systems/init_breaker/system.rs:66` (3 instances), `effect/core/types.rs:138`, `effect/effects/tether_beam.rs:7`.
+- `cast_precision_loss` (3 errors): `u32 as f32` cast. Files: `effect/effects/pulse.rs:14`, `effect/effects/shield.rs:21`, `effect/effects/shockwave.rs:29`. Fix: via `u16` intermediary if values are small, or explicit `as f32` with comment.
+- `type_complexity` (2 errors): complex inline Query tuples. Files: `breaker/systems/detect_breaker_cell_collision.rs:26`, `detect_breaker_wall_collision.rs:27`. Fix: extract named type aliases.
+- `must_use_candidate` (2 errors): pub fn returning value without `#[must_use]`. Files: `effect/effects/damage_boost.rs:11`, `effect/effects/piercing.rs:11`.
+- `too_many_lines` (1 error): function body >100 lines. File: `effect/core/types.rs:310`. Fix: split into helper methods.
+- `implicit_clone` (1 error): `.to_string()` on a deref of `String`. File: `screen/run_setup/systems/spawn_run_setup.rs:62`. Fix: `.clone()` or take ownership.
+- `E0433` `RootEffectKind` not in scope (17 errors): test files reference `RootEffectKind` which no longer exists — the type was renamed to `EffectKind`. Files: `chips/definition/tests.rs` (many lines), `chips/inventory/tests/helpers.rs`, `chips/resources/tests.rs`. Fix: replace `RootEffectKind` with `EffectKind` in all test files.
+- `unused_imports` (6 warnings): newly-dead imports in effect refactor. `bolt_wall_collision.rs:9`, `breaker/systems/mod.rs:25`, `chips/systems/dispatch_chip_effects/system.rs:11`, `chips/definition/tests.rs:2`, `chips/resources/tests.rs:12`, `effect/triggers/until.rs:317`.
+- `missing_const_for_fn` (51 warnings): large block from effect system — nursery lint, warnings only.
+- `mutable_reference_used` (9 warnings): `&mut World` params not mutated — nursery lint, warnings only.
+
 ## rantzsoft_physics2d Crate Patterns (first observed 2026-03-23)
 - `manual_midpoint` errors (quadtree.rs:47-50, 8 occurrences): `(min.x + mid.x) / 2.0` pattern in `child_bounds` function — all 4 quadrant center expressions use the same midpoint formula twice (x and y). Fix: replace `(a + b) / 2.0` with `a.midpoint(b)` (f32 method). 8 errors total — 4 expressions, 2 coordinates each. Error under `-D clippy::pedantic`. Affects production code. RESOLVED as of 2026-03-23 — no longer appears in physics2dclippy.
 - `drain_collect` error (quadtree.rs:94): `items.drain(..).collect()` — replace with `std::mem::take(items)`. Error under `-D clippy::all`. Affects production code. RESOLVED as of 2026-03-23 — no longer appears.
@@ -227,6 +322,20 @@ NOTE: `TriggerChain` was deleted in C7-R (2026-03-25). Entries referencing it ar
 - `cargo fmt --check`: PASS (0 files changed)
 - `cargo dclippy`: PASS — 0 errors (104 lib warnings + 84 lib-test warnings, all nursery/restriction)
 - `cargo dsclippy`: PASS — 0 errors (9 lib warnings + 19 lib-test warnings, all nursery/restriction)
+
+## New as of 2026-03-27 (develop branch, post-phase-4b effect system refactor)
+- `cargo fmt`: PASS — 0 files changed.
+- `cargo dclippy`: FAIL — 34 compile errors, 4 lib warnings. Root causes (3 clusters):
+  1. `E0603` (1 error) — `effect/effects/entropy_engine.rs:5`: `crate::effect::core::types::EffectNode` — module `types` is private. Fix: import via `crate::effect::EffectNode`.
+  2. `E0432` (7 errors) — unresolved imports: `crate::effect::definition`, `crate::effect::evaluate`, `crate::effect::typed_events`, `super::evaluate` — these modules were likely moved/renamed in the effect restructure. Affected files: `breaker/systems/init_breaker/tests.rs`, `debug/hot_reload/systems/propagate_breaker_changes/tests.rs`, `chips/plugin.rs`, `effect/triggers/until.rs`.
+  3. `E0063` (20 errors) — missing `effects` field in `CellTypeDefinition` struct initializers across many test helpers and production files. New field added to struct, not propagated to call sites.
+  4. `E0596` (5 errors) — cannot borrow `staged` as mutable in `effect/triggers/evaluate.rs:174,184,194,204,214` — the `staged` variable is a `&` reference but is passed as `&mut`.
+  5. `E0599` (1 error) — `Velocity2D::new(0.0, 0.0)` at `effect/effects/gravity_well.rs:239` — `Velocity2D` has no `new` constructor. Construction API changed.
+- `cargo spatial2dclippy`: PASS — 0 errors.
+- `cargo physics2dclippy`: PASS — 0 errors.
+- `cargo defaultsclippy`: PASS — 0 errors.
+- `cargo dsclippy`: BLOCKED — fails at same E0603 in game lib (scenario runner depends on breaker). Does not reach scenario runner code.
+- Pattern: `dsclippy` is always blocked when `dclippy` fails to compile the game lib.
 - Note: user requested errors-only report — `spatial2dclippy` and `physics2dclippy` were not run this session
 
 ## New as of 2026-03-27 (feature/seedable-registry — full lint run)

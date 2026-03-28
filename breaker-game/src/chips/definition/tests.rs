@@ -1,5 +1,5 @@
 use super::types::*;
-use crate::effect::definition::{Effect, EffectNode, ImpactTarget, RootEffect, Target, Trigger};
+use crate::effect::{EffectKind, EffectNode, ImpactTarget, RootEffect, Target, Trigger};
 
 // =========================================================================
 // ChipDefinition with Vec<RootEffect>
@@ -14,7 +14,7 @@ fn chip_definition_effects_is_vec_root_effect() {
         max_stacks: 3,
         effects: vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(1))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
         }],
         ingredients: None,
         template_name: None,
@@ -52,7 +52,7 @@ fn rarity_slot_effects_is_vec_root_effect() {
         prefix: "Basic".to_owned(),
         effects: vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.2 })],
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
         }],
     };
     assert_eq!(slot.effects.len(), 1);
@@ -96,7 +96,7 @@ fn expand_chip_template_produces_root_effect() {
                 target: Target::Bolt,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.2 })],
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
                 }],
             }],
         }),
@@ -127,7 +127,7 @@ fn expand_chip_template_preserves_target() {
             prefix: "Basic".to_owned(),
             effects: vec![RootEffect::On {
                 target: Target::Breaker,
-                then: vec![EffectNode::Do(Effect::SizeBoost(20.0))],
+                then: vec![EffectNode::Do(EffectKind::SizeBoost(20.0))],
             }],
         }),
         uncommon: None,
@@ -154,7 +154,7 @@ fn expanded_defs_have_correct_rarities_with_root_effect() {
         prefix: prefix.to_owned(),
         effects: vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(val))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(val))],
         }],
     };
     let template = ChipTemplate {
@@ -179,7 +179,7 @@ fn expanded_defs_have_correct_rarities_with_root_effect() {
 
 #[test]
 fn test_constructor_wraps_in_root_effect() {
-    let def = ChipDefinition::test("P", EffectNode::Do(Effect::Piercing(1)), 3);
+    let def = ChipDefinition::test("P", EffectNode::Do(EffectKind::Piercing(1)), 3);
     assert_eq!(def.name, "P");
     assert_eq!(def.max_stacks, 3);
     assert_eq!(def.effects.len(), 1);
@@ -218,7 +218,7 @@ fn test_on_uses_specified_target() {
     let def = ChipDefinition::test_on(
         "W",
         Target::Breaker,
-        EffectNode::Do(Effect::SizeBoost(20.0)),
+        EffectNode::Do(EffectKind::SizeBoost(20.0)),
         3,
     );
     assert_eq!(def.name, "W");
@@ -358,7 +358,7 @@ fn expanded_chip_empty_prefix_uses_template_name() {
             prefix: String::new(),
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
-                then: vec![EffectNode::Do(Effect::DamageBoost(1.0))],
+                then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
             }],
         }),
     };
@@ -380,7 +380,7 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
             prefix: "   ".to_owned(),
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
-                then: vec![EffectNode::Do(Effect::DamageBoost(1.0))],
+                then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
             }],
         }),
     };

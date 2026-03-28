@@ -114,14 +114,7 @@ fn insert_into_node(
                 };
                 // Re-insert all items
                 for (e, b, l) in old_items {
-                    insert_into_node(
-                        node,
-                        node_bounds,
-                        e,
-                        b,
-                        l,
-                        cfg,
-                    );
+                    insert_into_node(node, node_bounds, e, b, l, cfg);
                 }
             }
         }

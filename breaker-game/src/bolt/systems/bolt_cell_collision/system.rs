@@ -14,8 +14,8 @@
 //! reflecting, decrementing `PiercingRemaining` on each hit.
 //!
 //! Cell damage and destruction are handled by the cells domain via
-//! [`BoltHitCell`] and [`DamageCell`] messages. Wall hits send
-//! [`BoltHitWall`] messages for overclock triggers.
+//! [`BoltImpactCell`] and [`DamageCell`] messages. Wall hits send
+//! [`BoltImpactWall`] messages for overclock triggers.
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
@@ -34,7 +34,7 @@ use crate::{
         BASE_BOLT_DAMAGE,
         components::Bolt,
         filters::ActiveFilter,
-        messages::{BoltHitCell, BoltHitWall},
+        messages::{BoltImpactCell, BoltImpactWall},
         queries::CollisionQueryBolt,
     },
     cells::{
@@ -53,9 +53,9 @@ const MIN_REMAINING: f32 = 0.01;
 
 /// Message writers used by the bolt-cell-wall collision system.
 type CollisionWriters<'a> = (
-    MessageWriter<'a, BoltHitCell>,
+    MessageWriter<'a, BoltImpactCell>,
     MessageWriter<'a, DamageCell>,
-    MessageWriter<'a, BoltHitWall>,
+    MessageWriter<'a, BoltImpactWall>,
 );
 
 /// Query for looking up game-specific data by entity ID after `cast_circle`
@@ -87,8 +87,8 @@ fn find_first_non_pierced<'a>(
 /// For each bolt, traces a ray from its current position in the velocity
 /// direction. If a cell or wall is hit, the bolt is placed just before the
 /// impact point, the velocity is reflected off the hit face, and tracing
-/// continues with the remaining movement distance. Sends [`BoltHitCell`]
-/// and [`DamageCell`] messages for each cell hit. Sends [`BoltHitWall`]
+/// continues with the remaining movement distance. Sends [`BoltImpactCell`]
+/// and [`DamageCell`] messages for each cell hit. Sends [`BoltImpactWall`]
 /// messages for each wall hit.
 pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
@@ -182,7 +182,7 @@ pub(crate) fn bolt_cell_collision(
                     // NORMAL: reflect
                     velocity = reflect(velocity, hit.normal);
                 }
-                hit_writer.write(BoltHitCell {
+                hit_writer.write(BoltImpactCell {
                     cell: hit.entity,
                     bolt: bolt_entity,
                 });
@@ -198,7 +198,7 @@ pub(crate) fn bolt_cell_collision(
                 if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
                     pr.0 = p.0;
                 }
-                wall_hit_writer.write(BoltHitWall {
+                wall_hit_writer.write(BoltImpactWall {
                     bolt: bolt_entity,
                     wall: hit.entity,
                 });

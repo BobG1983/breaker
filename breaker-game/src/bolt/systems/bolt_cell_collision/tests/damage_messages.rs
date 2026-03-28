@@ -257,7 +257,11 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
     tick(&mut app);
 
     let hit_msgs = app.world().resource::<FullHitMessages>();
-    assert_eq!(hit_msgs.0.len(), 1, "should emit exactly one BoltHitCell");
+    assert_eq!(
+        hit_msgs.0.len(),
+        1,
+        "should emit exactly one BoltImpactCell"
+    );
     assert_eq!(hit_msgs.0[0].cell, cell_entity);
     assert_eq!(hit_msgs.0[0].bolt, bolt_entity);
 
@@ -265,7 +269,7 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
     assert_eq!(
         dmg_msgs.0.len(),
         1,
-        "should emit exactly one DamageCell alongside BoltHitCell"
+        "should emit exactly one DamageCell alongside BoltImpactCell"
     );
     assert_eq!(dmg_msgs.0[0].cell, cell_entity);
 }

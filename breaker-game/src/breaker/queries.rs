@@ -1,10 +1,11 @@
 //! Breaker domain query type aliases — clippy `type_complexity` lint.
 
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Scale2D};
 
 use crate::{
     breaker::components::{
-        BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+        BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
         BreakerHeight, BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt,
         BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
         BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
@@ -112,3 +113,14 @@ pub type BumpTelemetryQuery = (
     &'static BumpEarlyWindow,
     &'static BumpLateWindow,
 );
+
+/// Breaker init query — uninitialized breakers needing `LivesCount` and effect chains.
+pub(crate) type InitBreakerQuery<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static mut crate::effect::BoundEffects),
+    (
+        With<Breaker>,
+        Without<crate::breaker::components::BreakerInitialized>,
+    ),
+>;

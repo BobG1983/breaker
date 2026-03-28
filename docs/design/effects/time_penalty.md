@@ -14,4 +14,4 @@ Subtracts `seconds` from the current node timer.
 
 ## Reversal
 
-Restores the subtracted time to the node timer.
+Adds `seconds` back to the node timer.
