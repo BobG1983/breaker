@@ -1,32 +1,31 @@
 ---
 name: Current lint state
-description: Game crate clippy result as of 2026-03-28 — 1 error (too_many_lines in bolt_breaker_collision), 91-92 warnings from effect stubs
+description: Full workspace clippy result as of 2026-03-28 Phase 2 merge gate — game crate: 0 errors, 66 warnings; all other crates clean
 type: project
 ---
 
-Last run: 2026-03-28 (develop branch, after /simplify pass on feature/effect-system-rewrite merge)
+Last run: 2026-03-28 (develop branch, Phase 2 merge gate)
 
-## game crate (breaker-game): 1 ERROR, 91 warnings
+## game crate (breaker-game): 0 errors, 66 warnings
 
-### Errors (must fix)
-- `breaker-game/src/bolt/systems/bolt_breaker_collision/system.rs:99` — `clippy::too_many_lines` — function is 105 lines, limit is 100
+### Warning categories (all intentional stubs / nursery / dead_code)
 
-### Warning categories (all expected — stubs/nursery/dead_code)
-- `dead_code` — message struct fields on impact/collision messages not yet consumed (bolt/breaker/cells domains); chip components (ChainHit, BoltSizeBoost, BumpForceBoost); effect stub functions (evaluate.rs)
-- `unused_imports` — effect imports in dispatch stubs (chips, effect domain); breaker/systems/mod.rs
-- `missing_const_for_fn` (nursery) — ~49 placeholder `fn` stubs in effect triggers and effects that have empty bodies
-- `needless_pass_by_ref_mut` (nursery) — `world: &mut World` params on stub fire/reverse fns not yet implemented
-- `suboptimal_flops` (nursery) — `+=` with `*` in shockwave.rs
-- `redundant_clone` (nursery) — one `.clone()` in timer.rs test (line 143)
-- `unused_variables` — `world` param in random_effect.rs fire stub
-- `option_if_let_else` (nursery) — likely still in bolt_breaker_collision
-- `struct_variant_names` (nursery) — 6 occurrences of unnecessary structure name repetition
-- `InitBreakerQuery`, `apply_breaker_config_overrides`, `init_breaker`, `dispatch_breaker_effects` — dead code in breaker/init_breaker (pending wiring)
+- `unused_imports` (2) — breaker/systems/mod.rs:25 (init_breaker fns); chips/dispatch_chip_effects/system.rs:11 (effect imports)
+- `unused_variables` (1) — effect/effects/random_effect.rs:9 (`world` param in fire stub)
+- `dead_code` (7) — breaker/queries.rs:117 (InitBreakerQuery alias); breaker/systems/init_breaker/system.rs (apply_stat_overrides, apply_breaker_config_overrides, init_breaker, dispatch_breaker_effects); cells/definition.rs:94 (CellTypeDefinition.effects); cells/messages.rs:25 (CellDestroyedAt.position)
+- `dead_code` (3) — chips/components.rs (ChainHit, BoltSizeBoost, BumpForceBoost)
+- `option_if_let_else` (nursery, 1) — bolt/systems/bolt_breaker_collision/system.rs:101
+- `unwrap_used` (pedantic, 1) — bolt/systems/bolt_wall_collision.rs:110
+- `missing_const_for_fn` (nursery, ~30) — effect stubs across effects/ and triggers/no_bump.rs
+- `use_self` (nursery, 6) — effect/core/types.rs (EffectNode self-references in impl)
+- `suboptimal_flops` (nursery, 3) — gravity_well.rs:100-101, shockwave.rs:53
+- `needless_pass_by_ref_mut` (nursery, 9) — effect stub fire/reverse fns in chain_lightning, explode, piercing_beam, pulse, random_effect, shockwave
 
-## rantzsoft_spatial2d: PASS (0 errors, 0 warnings)
-## rantzsoft_physics2d: PASS (0 errors, 0 warnings)
-## scenario runner (breaker-scenario-runner): BLOCKED — game crate error prevents compilation
+## rantzsoft_spatial2d: PASS (0 warnings, 0 errors)
+## rantzsoft_physics2d: PASS (0 warnings, 0 errors)
+## rantzsoft_defaults: PASS (0 warnings, 0 errors)
+## breaker-scenario-runner: PASS (0 warnings, 0 errors)
 
-**Why:** The /simplify pass resolved type_complexity in bolt_wall_collision.rs. The remaining too_many_lines error needs writer-code to split bolt_breaker_collision into helper functions. The 91 warnings are from intentional placeholder stubs and will be resolved as Wave 8+ wiring completes.
+**Why:** All warnings are intentional effect system stubs (Phase 2) or nursery lints on partially-implemented code. The 5 `inconsistent_struct_constructor` errors from the previous session have been resolved (trigger test code was fixed).
 
-**How to apply:** 1 error needs a writer-code fix (split the function). Do not treat the warnings as actionable until Wave 8+ wiring is complete.
+**How to apply:** Treat all game crate warnings as expected until effect stubs are implemented. Only action needed if a new `error:` line appears.

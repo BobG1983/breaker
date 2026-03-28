@@ -1,1 +1,1 @@
-- [Current lint state](lint_state_current.md) — game crate: 2 errors (too_many_lines + type_complexity in bolt), 91 warnings (effect stubs / nursery / dead_code)
+- [Current lint state](lint_state_current.md) — full workspace: game crate 0 errors/66 warnings (effect stubs), all other crates clean (2026-03-28 Phase 2 merge gate)

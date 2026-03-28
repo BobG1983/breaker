@@ -32,6 +32,8 @@ pub mod impacted;
 
 /// Global — bolt was lost.
 pub mod bolt_lost;
+/// Global — a cell was destroyed.
+pub mod cell_destroyed;
 /// Global — something died; cell destroyed.
 pub mod death;
 /// Targeted — this entity died.
@@ -64,6 +66,7 @@ pub(crate) fn register(app: &mut bevy::prelude::App) {
     impact::register(app);
     impacted::register(app);
 
+    cell_destroyed::register(app);
     death::register(app);
     died::register(app);
     bolt_lost::register(app);
