@@ -6,10 +6,11 @@
 
 | Effect type | What reverse does |
 |------------|-------------------|
-| Passive buffs (SpeedBoost, DamageBoost, Piercing, SizeBoost, BumpForce, ChainHit) | Removes the matching entry from the Active* vec. Recalculation system picks up the change. |
-| Entity-spawning effects (Shockwave, SpawnBolts, ChainBolt, SpawnPhantom, GravityWell, Shield, SecondWind) | Despawns the spawned entity/entities if still alive. |
-| Component-inserting effects (Attraction, BreakerSpeed, RampingDamage) | Removes the inserted components from the entity. |
+| Passive buffs (SpeedBoost, DamageBoost, Piercing, SizeBoost, BumpForce) | Removes the matching entry from the Active* vec. Recalculation system picks up the change. |
+| Entity-spawning effects (Shockwave, SpawnBolts, ChainBolt, SpawnPhantom, GravityWell, Shield, SecondWind, Pulse, TetherBeam) | Despawns the spawned entity/entities if still alive. |
+| Component-inserting effects (Attraction, RampingDamage, QuickStop) | Removes the inserted components from the entity. |
 | State-modifying effects (LoseLife, TimePenalty) | Undoes the state change (restore life, restore time). |
+| Fire-and-forget effects (Explode, ChainLightning, PiercingBeam, RandomEffect, EntropyEngine) | No-op reverse — these are instant effects with no persistent state to undo. |
 
 ## The Two Kinds of Reversal
 

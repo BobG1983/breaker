@@ -87,43 +87,57 @@ The `effect/` domain evaluates `EffectNode` trees and dispatches leaf effects us
 ```
 src/effect/
 ├── mod.rs                 # Re-exports + pub mod declarations
-├── plugin.rs              # EffectPlugin — calls each effect's register(), wires bridges and Until timers
+├── plugin.rs              # EffectPlugin — calls effects::register() and triggers::register()
 ├── sets.rs                # EffectSystems set (Bridge variant for cross-domain ordering)
-├── definition.rs          # EffectNode (When/Do/Until/Once/On), RootEffect, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget
-├── evaluate.rs            # evaluate_node() pure function + NodeEvalResult enum
-├── active.rs              # ActiveEffects resource (Vec<(Option<String>, EffectNode)>)
-├── armed.rs               # ArmedEffects component (Vec<(Option<String>, EffectNode)> on bolt entities)
-├── typed_events.rs        # Re-exports all typed events; fire_typed_event / fire_passive_event dispatch
-├── helpers.rs             # Shared bridge helpers (evaluate_active_chains, evaluate_entity_chains, arm_bolt)
-├── registry.rs            # BreakerRegistry re-export (canonical: breaker/registry.rs)
-├── effect_nodes/          # EffectNode tree logic (NOT a sub-domain — no plugin.rs)
-│   └── until.rs           # UntilTimers, UntilTriggers, tick_until_timers, check_until_triggers
-├── effects/               # Per-effect handlers (NOT a sub-domain — no plugin.rs)
-│   ├── mod.rs             # Routing only + shared stack_u32/stack_f32 helpers
-│   ├── <effect_a>.rs      # Typed event + observer + systems + register() for effect A
-│   └── <effect_b>.rs      # Typed event + observer + register() for effect B
-└── triggers/              # Bridge systems (one file per trigger group — NOT a sub-domain)
-    ├── mod.rs             # Routing + re-exports
-    ├── on_bolt_lost.rs    # bridge_bolt_lost
-    ├── on_bump.rs         # bridge_bump, bridge_bump_whiff
-    ├── on_no_bump.rs      # bridge_no_bump
-    ├── on_impact.rs       # bridge_cell_impact, bridge_wall_impact, bridge_breaker_impact
-    ├── on_death.rs        # bridge_cell_death, bridge_bolt_death, cleanup systems, apply_once_nodes
-    └── on_timer.rs        # bridge_timer_threshold
+├── commands.rs            # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
+├── core/                  # Core types (NOT a sub-domain — no plugin.rs)
+│   ├── mod.rs             # Re-exports from types.rs
+│   └── types.rs           # Trigger, ImpactTarget, Target, AttractionType, RootEffect,
+│                          #   EffectNode, EffectKind, BoundEffects, StagedEffects
+├── effects/               # Per-effect modules (NOT a sub-domain — no plugin.rs)
+│   ├── mod.rs             # pub mod declarations + register() dispatcher
+│   ├── speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
+│   ├── damage_boost.rs    # fire(), reverse(), register()
+│   ├── shockwave.rs       # fire(), reverse(), register()
+│   ├── life_lost.rs       # fire(), reverse(), register()
+│   ├── chain_bolt.rs      # fire(), reverse(), register()
+│   ├── ramping_damage.rs  # fire(), reverse(), register()
+│   ├── explode.rs         # fire(), reverse(), register()
+│   ├── quick_stop.rs      # fire(), reverse(), register()
+│   ├── tether_beam.rs     # fire(), reverse(), register()
+│   └── ... (~24 total — one file per EffectKind variant)
+└── triggers/              # Bridge systems (one file per trigger type — NOT a sub-domain)
+    ├── mod.rs             # pub mod declarations + register() dispatcher
+    ├── evaluate.rs        # Shared chain evaluation helpers
+    ├── bump.rs            # Global: any successful bump
+    ├── perfect_bump.rs    # Global: perfect bump
+    ├── early_bump.rs      # Global: early bump
+    ├── late_bump.rs       # Global: late bump
+    ├── bump_whiff.rs      # Global: bump timing missed
+    ├── no_bump.rs         # Global: bolt hit breaker with no bump input
+    ├── bumped.rs          # Targeted on bolt: any successful bump
+    ├── perfect_bumped.rs  # Targeted on bolt: perfect bump
+    ├── early_bumped.rs    # Targeted on bolt: early bump
+    ├── late_bumped.rs     # Targeted on bolt: late bump
+    ├── impact.rs          # Global impact triggers
+    ├── impacted.rs        # Targeted impacted triggers on both collision participants
+    ├── bolt_lost.rs       # Global: bolt was lost
+    ├── death.rs           # Global: something died; cell destroyed
+    ├── died.rs            # Targeted: this entity died
+    ├── node_start.rs      # Global: node started
+    ├── node_end.rs        # Global: node ended
+    ├── timer.rs           # TimeExpires ticker system
+    └── until.rs           # Until desugaring system
 ```
 
 **Rules:**
-- One file per effect type. The file owns any typed events, `Component`s, and observers the effect needs, plus a `register(app: &mut App)` function.
-- `effects/` and `triggers/` and `effect_nodes/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectPlugin` registers all observers, bridges, and systems.
-- `definition.rs` holds the `EffectNode` enum (`When`, `Do`, `Until`, `Once`), the `Trigger` enum, the `Effect` enum, `EffectChains` component, `EffectEntity` marker, and `EffectTarget` runtime enum.
-- `evaluate.rs` holds the pure `evaluate_node(Trigger, &EffectNode) -> Vec<NodeEvalResult>` function. Bridge systems call this to determine whether a chain fires, arms, or does not match.
-- `active.rs` holds `ActiveEffects` — the global resource holding all breaker-definition and triggered-chip chains. Bridge helpers sweep it for global triggers.
-- `armed.rs` holds `ArmedEffects` — a component on bolt entities holding partially-resolved chains. Subsequent triggers re-evaluate these via bridge helpers.
-- `typed_events.rs` holds `fire_typed_event` (triggered effects) and `fire_passive_event` (passive/OnSelected effects) dispatch helpers. Each per-effect typed event struct lives in its effect file and is re-exported from `typed_events.rs`.
-- `helpers.rs` holds shared bridge helpers consumed by multiple trigger files.
-- `BreakerDefinition` lives in `breaker/definition.rs`. `BreakerRegistry` lives in `breaker/registry.rs`. Both are re-exported from `effect/` for historical reasons (`init_breaker` moved to `breaker/systems/init_breaker.rs`).
-- Adding a new leaf effect = new file in `effects/` + `mod.rs` entry + `Effect` variant in `definition.rs` + `register()` call in `plugin.rs`.
-- Adding a new trigger = new (or updated) file in `triggers/` + bridge system registered in `plugin.rs`.
+- One file per effect type. The file owns any active-state `Component`s, plus `fire()`, `reverse()`, and `register(app: &mut App)` free functions.
+- `effects/` and `triggers/` and `core/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectPlugin` registers all systems through `effects::register(app)` and `triggers::register(app)`.
+- `core/types.rs` holds all shared data types: `Trigger`, `ImpactTarget`, `Target`, `AttractionType`, `RootEffect`, `EffectNode`, `EffectKind`, `BoundEffects`, `StagedEffects`. No observers, no systems.
+- `commands.rs` holds `EffectCommandsExt` — the `Commands` extension trait for queuing fire/reverse/transfer operations.
+- `BreakerDefinition` lives in `breaker/definition.rs`. `BreakerRegistry` lives in `breaker/registry.rs`.
+- Adding a new leaf effect = new file in `effects/` + `mod.rs` entry + variant in `EffectKind` + `fire()`/`reverse()` arms in `EffectKind` match + `register()` call in `effects/mod.rs`.
+- Adding a new trigger = new file in `triggers/` + `pub mod` in `triggers/mod.rs` + `register()` call in `triggers/mod.rs::register()`.
 - Adding a new breaker = new RON file only (if using existing trigger fields and effects).
 - This layout applies **only** to the `effect/` domain. Standard domains use the canonical category-based layout.
 - `effect/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.

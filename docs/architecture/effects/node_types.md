@@ -47,7 +47,7 @@ Once(Vec<EffectNode>)
 One-shot wrapper. Evaluate children against the current trigger. If any child matches, fire/arm it AND remove the Once from whichever component it's in. If nothing matches, keep it.
 
 ```ron
-Once([When(trigger: BoltLost, then: [Do(SecondWind(invuln_secs: 1.0))])])
+Once([When(trigger: BoltLost, then: [Do(SecondWind)])])
 ```
 
 ## On

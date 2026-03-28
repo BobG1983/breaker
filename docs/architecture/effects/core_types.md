@@ -130,12 +130,15 @@ pub enum EffectKind {
     ChainLightning { arcs: u32, range: f32, damage_mult: f32 },
     PiercingBeam { damage_mult: f32, width: f32 },
     Pulse { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
-    SecondWind { invuln_secs: f32 },
+    SecondWind,           // unit variant — no fields
     SpawnPhantom { duration: f32, max_active: u32 },
     GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
     RandomEffect(Vec<(f32, EffectNode)>),
-    EntropyEngine { threshold: u32, pool: Vec<(f32, EffectNode)> },
+    EntropyEngine { max_effects: u32, pool: Vec<(f32, EffectNode)> },   // note: max_effects, not threshold
     RampingDamage { damage_per_trigger: f32 },
+    Explode { range: f32, damage_mult: f32 },
+    QuickStop { multiplier: f32 },
+    TetherBeam { damage_mult: f32 },
 }
 ```
 
@@ -154,7 +157,7 @@ pub enum AttractionType {
 
 ## fire() and reverse()
 
-The enum has `fire()` and `reverse()` methods. Each match arm destructures the variant and calls the per-module function:
+The enum has `fire()` and `reverse()` methods on `EffectKind`. Each match arm destructures the variant and calls the per-module free function:
 
 ```rust
 impl EffectKind {
@@ -163,16 +166,11 @@ impl EffectKind {
             Self::Shockwave { base_range, range_per_level, stacks, speed } => {
                 shockwave::fire(entity, *base_range, *range_per_level, *stacks, *speed, world)
             }
-            Self::SpeedBoost { multiplier } => {
-                speed_boost::fire(entity, *multiplier, world)
-            }
-            Self::DamageBoost(value) => {
-                damage_boost::fire(entity, *value, world)
-            }
-            Self::LoseLife => {
-                life_lost::fire(entity, world)
-            }
-            // ... one arm per variant
+            Self::SpeedBoost { multiplier } => speed_boost::fire(entity, *multiplier, world),
+            Self::DamageBoost(v) => damage_boost::fire(entity, *v, world),
+            Self::LoseLife => life_lost::fire(entity, world),
+            Self::SecondWind => second_wind::fire(entity, world),
+            // ... one arm per variant (exhaustive — no wildcard)
         }
     }
 
@@ -180,24 +178,29 @@ impl EffectKind {
         match self {
             Self::Shockwave { .. } => shockwave::reverse(entity, world),
             Self::SpeedBoost { multiplier } => speed_boost::reverse(entity, *multiplier, world),
-            Self::DamageBoost(value) => damage_boost::reverse(entity, *value, world),
+            Self::DamageBoost(v) => damage_boost::reverse(entity, *v, world),
             Self::LoseLife => life_lost::reverse(entity, world),
-            // ... ALL variants — every effect defines reverse
+            Self::SecondWind => second_wind::reverse(entity, world),
+            // ... ALL variants — exhaustive, no wildcard
         }
     }
 }
 ```
 
+The match is split across two methods (`fire` and `fire_aoe_and_spawn`) purely for line count. Both are exhaustive.
+
 ## Per-Effect Modules
 
-Each effect module (`effect/effects/<name>.rs`) defines free functions:
+Each effect module (`effect/effects/<name>.rs`) defines free functions and any active-state components:
 
 ```rust
 // effect/effects/speed_boost.rs
 
+// Active state component (tracks applied multipliers on the entity)
+pub struct ActiveSpeedBoosts(pub Vec<f32>);
+
 pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) {
-    // query entity for Velocity2D, BoltBaseSpeed, BoltMaxSpeed
-    // scale velocity, push to ActiveSpeedBoosts
+    // push multiplier to ActiveSpeedBoosts component
 }
 
 pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
@@ -205,7 +208,7 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, apply_speed_boosts.run_if(in_state(PlayingState::Active)));
+    app.add_systems(FixedUpdate, recalculate_speed);
 }
 ```
 
