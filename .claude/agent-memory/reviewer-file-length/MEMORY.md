@@ -1,0 +1,1 @@
+- [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/

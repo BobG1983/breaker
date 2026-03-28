@@ -1,0 +1,3 @@
+- [dependency-snapshot.md](dependency-snapshot.md) — Crate versions at last audit (2026-03-28); diff on next run
+- [known-findings.md](known-findings.md) — Accepted/wontfix transitive findings with rationale
+- [known-pins.md](known-pins.md) — Intentional version pins (Bevy ecosystem, ron, proc-macro2)
