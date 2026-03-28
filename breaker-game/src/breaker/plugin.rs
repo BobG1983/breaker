@@ -79,7 +79,8 @@ impl Plugin for BreakerPlugin {
                         spawn_bump_grade_text,
                         spawn_whiff_text,
                     )
-                        .after(grade_bump),
+                        .after(grade_bump)
+                        .before(BreakerSystems::UpdateState),
                     trigger_bump_visual.after(update_bump),
                     // Collision detection for effect triggers
                     detect_breaker_cell_collision.after(BreakerSystems::Move),
