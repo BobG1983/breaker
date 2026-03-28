@@ -94,8 +94,8 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 - **bolt** (collision systems) reads `Piercing`, `PiercingRemaining`, `DamageBoost` (chips domain) from bolt entities, `CellHealth`, `CellWidth`, `CellHeight` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
 - **cells** reads `DamageBoost` (chips domain) from bolt entities in `handle_cell_hit`.
-- **breaker** reads `TiltControlBoost`, `BreakerSpeedBoost`, `BumpForceBoost` (chips domain) from its own entity.
-- **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltHitCell`, `BoltHitBreaker`, `BoltHitWall`, `BoltLost` (bolt domain), and `RequestCellDestroyed` / `CellDestroyedAt` (cells domain) messages in bridge systems.
+- **breaker** reads `BreakerSpeedBoost`, `BumpForceBoost` (chips domain) from its own entity.
+- **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `RequestCellDestroyed` / `CellDestroyedAt` (cells domain) messages in bridge systems.
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the sole exception (read AND write, compiled out of release builds).
 
@@ -114,104 +114,79 @@ This exception does **not** extend to other domains. Production code still commu
 
 The `effect/` domain uses a self-registration pattern where each leaf effect is fully self-contained in a single file and registers itself with the app.
 
-### Target Structure
+### Actual Structure
 
 ```
 effect/
-  effect_nodes/        # EffectNode tree logic
-    until.rs           # UntilTimers, UntilTriggers, tick_until_timers, check_until_triggers
-  effects/             # Leaf effect handlers (one file per effect)
-    speed_boost.rs     # SpeedBoostFired, handle_speed_boost, register()
-    damage_boost.rs    # DamageBoostApplied, handle_damage_boost, register()
-    shockwave.rs       # ShockwaveFired, handle_shockwave, register()
-    life_lost.rs       # LoseLifeFired, handle_life_lost, spawn_lives_display, register()
-    chain_bolt.rs      # ChainBoltFired, handle_chain_bolt, register()
-    ramping_damage.rs  # RampingDamageApplied, handle_ramping_damage, increment/reset systems, register()
-    ... (one file per effect — ~20 total)
-  triggers/            # Bridge systems (one file per trigger event)
-    on_impact.rs       # bridge_cell_impact, bridge_wall_impact, bridge_breaker_impact
-    on_bump.rs         # bridge_bump, bridge_bump_whiff (all bump grades — excludes NoBump which is in on_no_bump.rs)
-    on_no_bump.rs      # bridge_no_bump
-    on_bolt_lost.rs    # bridge_bolt_lost
-    on_death.rs        # bridge_cell_death, bridge_bolt_death, cleanup systems, apply_once_nodes
-    on_timer.rs        # bridge_timer_threshold
-  helpers.rs           # Shared bridge helpers (evaluate_entity_chains, evaluate_active_chains, arm_bolt, etc.)
-  active.rs            # ActiveEffects resource (Vec<(Option<String>, EffectNode)>)
-  armed.rs             # ArmedEffects component (Vec<(Option<String>, EffectNode)> on bolt entities)
-  definition.rs        # EffectNode (When/Do/Until/Once/On), RootEffect, Trigger, Effect, EffectTarget, EffectChains, Target, ImpactTarget enums
-  evaluate.rs          # evaluate_node — pure trigger matching, NodeEvalResult
-  typed_events.rs      # Re-exports all typed events; fire_typed_event / fire_passive_event dispatch helpers
-  registry.rs          # BreakerRegistry re-export (canonical: breaker/registry.rs)
+  core/
+    mod.rs             # Re-exports from types.rs
+    types.rs           # All core types: Trigger, ImpactTarget, Target, AttractionType,
+                       #   RootEffect, EffectNode, EffectKind, BoundEffects, StagedEffects
+  effects/             # Per-effect modules with fire(), reverse(), register()
+    mod.rs             # pub mod declarations + register() dispatcher
+    speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
+    damage_boost.rs    # fire(), reverse(), register()
+    shockwave.rs       # fire(), reverse(), register()
+    life_lost.rs       # fire(), reverse(), register()
+    chain_bolt.rs      # fire(), reverse(), register()
+    ramping_damage.rs  # fire(), reverse(), register()
+    explode.rs         # fire(), reverse(), register()
+    quick_stop.rs      # fire(), reverse(), register()
+    tether_beam.rs     # fire(), reverse(), register()
+    ... (one file per effect — ~24 total)
+  triggers/            # Bridge systems (one file per trigger type)
+    mod.rs             # pub mod declarations + register() dispatcher
+    bump.rs / perfect_bump.rs / early_bump.rs / late_bump.rs
+    bump_whiff.rs / no_bump.rs
+    bumped.rs / perfect_bumped.rs / early_bumped.rs / late_bumped.rs
+    impact.rs / impacted.rs
+    bolt_lost.rs / death.rs / died.rs
+    node_start.rs / node_end.rs
+    timer.rs / until.rs
+    evaluate.rs        # Shared chain evaluation helpers
+  commands.rs          # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
+  mod.rs               # Re-exports + pub mod declarations
+  plugin.rs            # EffectPlugin — calls effects::register() and triggers::register()
   sets.rs              # EffectSystems::Bridge set
-  plugin.rs            # EffectPlugin — calls each effect's register() and wires trigger bridges
 ```
 
 ### Effect File Pattern
 
-Each leaf effect file in `effects/` owns its complete lifecycle:
+Each effect module provides three free functions and any active-state components it needs:
 
 ```rust
 // effect/effects/speed_boost.rs
 
-// Typed event (what gets fired by bridges)
-pub(crate) struct SpeedBoostFired { ... }
-
 // Active state (vec of applied multipliers on the entity)
-pub(crate) struct ActiveSpeedBoosts(pub Vec<f32>);
+pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
-// Removal message (fired by Until on expiry)
-pub(crate) struct RemoveSpeedBoost { pub entity: Entity, pub multiplier: f32 }
+// Fire: push multiplier onto the vec
+pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) { ... }
 
-// Apply observer (pushes to vec when typed event fires)
-fn handle_speed_boost(trigger: On<SpeedBoostFired>, ...) { ... }
+// Reverse: remove matching entry from the vec
+pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) { ... }
 
-// Recalculation system (recalculates stat from vec every tick)
-fn apply_speed_boosts(query: Query<(&mut Velocity2D, &BoltBaseSpeed, &ActiveSpeedBoosts), ...>) { ... }
-
-// Removal observer (removes entry from vec, end-of-frame)
-fn handle_remove_speed_boost(trigger: On<RemoveSpeedBoost>, ...) { ... }
-
-// Self-registration
+// Self-registration: adds recalculation system
 pub(crate) fn register(app: &mut App) {
-    app.add_observer(handle_speed_boost)
-       .add_message::<RemoveSpeedBoost>()
-       .add_observer(handle_remove_speed_boost)
-       .add_systems(FixedUpdate, apply_speed_boosts);
+    app.add_systems(FixedUpdate, recalculate_speed);
 }
 ```
 
-`EffectPlugin::build()` calls each effect's `register()`:
+`EffectKind` dispatches to each module via exhaustive match arms. `EffectPlugin::build()` calls `effects::register(app)` and `triggers::register(app)`.
 
-```rust
-fn build(&self, app: &mut App) {
-    speed_boost::register(app);
-    damage_boost::register(app);
-    shockwave::register(app);
-    piercing::register(app);
-    // ...
-}
-```
+### Effect Dispatch via Commands Extension
 
-### Passive Effects and Until Integration
+Effects are fired through `EffectCommandsExt` on `Commands`:
 
-Passive effects (SpeedBoost, DamageBoost, Piercing, SizeBoost, BumpForce) track state in per-entity vecs. The actual stat is **recalculated from the vec** — no incremental mutation.
-
-**Until removal**: `Until` nodes have zero knowledge of effect internals. On expiry, they fire `Remove*` messages for each passive child they applied. Each effect's own removal observer handles cleanup. The recalculation system picks up the change next tick.
-
-**Non-passive children in Until**: `When`/`Once` nodes nested inside `Until` live in the `UntilTimers`/`UntilTriggers` container. Bridges evaluate them while the Until is alive. When the Until expires, the container is removed — armed triggers are gone. No removal message needed.
+- `commands.fire_effect(entity, effect)` — queues `FireEffectCommand` → calls `effect.fire(entity, world)` at apply
+- `commands.reverse_effect(entity, effect)` — queues `ReverseEffectCommand` → calls `effect.reverse(entity, world)` at apply
+- `commands.transfer_effect(entity, name, children, permanent)` — pushes non-Do children to `BoundEffects` (permanent) or `StagedEffects` (one-shot); fires Do children immediately
 
 ### Chain Ownership Model
 
-Three effect stores serve different roles:
+Two effect stores serve different roles:
 
-- **`ActiveEffects`** — global resource (`Vec<(Option<String>, EffectNode)>`). Populated by `init_breaker` from the breaker definition and by `dispatch_chip_effects` when triggered chip chains are selected. Bridge helpers sweep this for global triggers (BoltLost, BumpWhiff, NoBump, CellDestroyed).
-- **`ArmedEffects`** — component on bolt entities. Partially resolved `When` trees waiting for a deeper trigger. Consumed on Fire, replaced on re-Arm.
-- **`EffectChains`** — component on individual entities (bolts, cells). Entity-local chains evaluated by `evaluate_entity_chains`. Used for `Once`-wrapped one-shot effects and cell-specific chains.
+- **`BoundEffects`** — component on entities (`Vec<(String, EffectNode)>`). Permanent chains that re-evaluate on every matching trigger. Populated at chip dispatch and by `On(permanent: true)` redirects.
+- **`StagedEffects`** — component on entities (`Vec<(String, EffectNode)>`). One-shot chains consumed when matched. Populated by `On(permanent: false)` redirects and `Once` wrappers.
 
-**Chip dispatch**: `dispatch_chip_effects` fires passive events (for `OnSelected` leaves) immediately via `fire_passive_event` and pushes all other triggered chains into `ActiveEffects`.
-
-**Evaluation routing**: Bridge systems call `evaluate_active_chains` (global triggers: BoltLost, BumpWhiff, NoBump) or `evaluate_entity_chains` + `evaluate_armed` (entity-specific triggers: Impact, Bump, Death). `evaluate_node` peels one layer, returning `Fire(effect)`, `Arm(remaining_chain)`, or `NoMatch`.
-
-**Note**: `CellDestroyed` trigger evaluation is handled by `bridge_cell_death` in `on_death.rs` — reads `RequestCellDestroyed` while the cell is still alive, evaluates chains, then `cleanup_destroyed_cells` despawns the entity.
-
-**Arm routing**: When `evaluate_node` returns `Arm(remaining)`, the remaining chain is pushed to the bolt entity's `ArmedEffects` component. Subsequent trigger events re-evaluate armed chains via `evaluate_armed`.
+**Until desugaring**: `Until` nodes are desugared by a dedicated system. Fires Do children immediately (via `fire_effect`), installs non-Do children into `BoundEffects`, then replaces itself with `When(trigger, [Reverse(effects, chains)])`. When the trigger fires, the Reverse node calls `reverse_effect` for each fired effect and removes chains from `BoundEffects`.

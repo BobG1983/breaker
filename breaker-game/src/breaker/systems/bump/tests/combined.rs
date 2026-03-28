@@ -31,6 +31,7 @@ fn same_frame_hit_and_expiry_grades_not_whiffs() {
     // Bolt hits the same frame the window would expire
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
 

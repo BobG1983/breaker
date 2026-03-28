@@ -85,6 +85,7 @@ mod tests {
     fn decrement_on_required_destroyed() {
         let mut app = test_app(3);
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -97,6 +98,7 @@ mod tests {
     fn ignore_non_required_destroyed() {
         let mut app = test_app(3);
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: false,
         }]));
         tick(&mut app);
@@ -114,6 +116,7 @@ mod tests {
             capture_node_cleared.after(track_node_completion),
         );
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -184,6 +187,7 @@ mod tests {
 
         let mut app = test_app_cell_destroyed_at(3);
         app.insert_resource(TestCellDestroyedAtMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -201,6 +205,7 @@ mod tests {
 
         let mut app = test_app_cell_destroyed_at(3);
         app.insert_resource(TestCellDestroyedAtMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: false,
         }]));
         tick(&mut app);
@@ -223,6 +228,7 @@ mod tests {
             capture_node_cleared.after(track_node_completion),
         );
         app.insert_resource(TestCellDestroyedAtMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: true,
         }]));
         tick(&mut app);
@@ -238,6 +244,7 @@ mod tests {
     fn node_cleared_does_not_fire_while_cells_remain() {
         let mut app = test_app(5);
         app.insert_resource(TestMessages(vec![CellDestroyedAt {
+            position: Vec2::ZERO,
             was_required_to_clear: true,
         }]));
         tick(&mut app);

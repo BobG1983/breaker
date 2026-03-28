@@ -1,96 +1,40 @@
 ---
 name: vetted_dependencies
-description: Verified dependency versions and audit state as of 2026-03-23 (Wave 4 audit)
+description: Known dependency state and audit findings for the brickbreaker workspace
 type: project
 ---
 
-Vetted as of 2026-03-26 (SeedableRegistry audit). Prior vetted: 2026-03-24 (spatial/physics extraction branch).
-
-## Direct Dependencies
-
-### rantzsoft_defaults (audited 2026-03-26)
-- bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted
-- ron 0.12 — current, no CVEs
-- serde 1 (features = ["derive"]) — current, trusted
-- iyes_progress 0.16 (optional, feature = "progress") — current, trusted
-- rantzsoft_defaults_derive (path) — internal
-
-### rantzsoft_spatial2d (new in spatial/physics extraction branch)
-- bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted
-- No external non-bevy dependencies
-
-### rantzsoft_physics2d (new in spatial/physics extraction branch)
-- bevy 0.18.1 (default-features = false, features = ["2d"]) — current, trusted
-- rantzsoft_spatial2d (path) — internal
-- No external non-bevy dependencies
+## Workspace direct dependencies (as of 2026-03-28)
 
 ### breaker-game
-- bevy 0.18.1 — current, trusted
-- bevy_egui 0.39.1 (optional dev feature) — current, trusted
-- breaker_derive (path) — internal
-- tracing 0.1 — current, trusted
-- tracing-appender 0.2 — current, trusted
-- tracing-subscriber 0.3 — current, trusted
-- serde 1 — current, trusted
-- ron 0.12 — upgraded from 0.11, no known CVEs
-- bevy_common_assets 0.15 — current, trusted
-- bevy_asset_loader 0.25 — current, trusted
-- iyes_progress 0.16 — current, trusted
-- rand 0.9 — current, trusted
-- rand_chacha 0.9 — current, trusted
-- proptest 1 (dev) — current, trusted
+- bevy 0.18.1 (default-features = false, features = ["2d", "serialize"])
+- bevy_egui 0.39 (optional, dev only)
+- rantzsoft_defaults, rantzsoft_physics2d, rantzsoft_spatial2d (workspace paths)
+- tracing 0.1, tracing-appender 0.2, tracing-subscriber 0.3
+- serde 1 (with derive)
+- ron 0.12
+- iyes_progress 0.16
+- rand 0.9, rand_chacha 0.9
+- proptest 1 (dev-dependency)
 
-### breaker-derive
-- syn 2 — current, trusted
-- quote 1 — current, trusted
-- proc-macro2 1 — machete false positive; suppressed via `[package.metadata.cargo-machete]`
+## cargo audit findings (2026-03-28)
 
-### breaker-scenario-runner
-- bevy 0.18.1 — current, trusted
-- breaker (path) — internal
-- clap 4 — current, trusted
-- tracing 0.1 — current, trusted
-- tracing-subscriber 0.3 — current, trusted
-- ron 0.12 — upgraded from 0.11, no known CVEs
-- serde 1 — current, trusted
-- rand 0.9 — current, trusted
+### Warnings (not errors)
+- `paste 1.0.15` — RUSTSEC-2024-0436 — unmaintained
+  - Transitive via: metal → wgpu-hal → wgpu → bevy_render → bevy
+  - Not directly controllable; no CVE, no known exploit. Info-level only.
+  - Resolution: wait for wgpu/bevy to update or replace metal backend.
 
-## cargo audit result (2026-03-24, spatial/physics extraction branch)
-- 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)
-- No CVEs or errors
-- Two new internal crates added (rantzsoft_spatial2d, rantzsoft_physics2d) — no new external dependencies.
+### cargo deny check findings
+- `error[unmaintained]`: paste — same as above, mapped to deny error by deny.toml policy
+- `warning[duplicate]`: 40+ crates have duplicate versions — all from transitive
+  Windows/wgpu/objc2 churn. None are direct dependencies. Normal for Bevy ecosystem.
+- `warning[license-not-encountered]`: Unicode-DFS-2016 in the allow list but not
+  encountered in this dep tree scan. Harmless — allowlist entry is forward-compatible.
 
-## cargo audit result (2026-03-23, Wave 4 audit)
-- 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)
-- No CVEs or errors
-- No new dependencies added in Wave 4. Dep list unchanged from Wave 3 audit.
+### cargo machete
+- No unused dependencies found.
 
-## cargo audit result (2026-03-22, Wave 3 audit)
-- 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)
-- No CVEs or errors
-
-## cargo audit result (2026-03-19, post-upgrade)
-- 1 warning only: RUSTSEC-2024-0436 — `paste` 1.0.15 unmaintained (transitive through metal → wgpu-hal → bevy_render)
-- No CVEs or errors
-- Same result as prior audit — upgrade to ron 0.12 introduced no new advisories
-
-## cargo machete result (2026-03-19)
-- No unused dependencies found (proc-macro2 correctly suppressed with cargo-machete ignore)
-
-## cargo deny check result (2026-03-19)
-Errors (deny.toml incomplete):
-- First-party workspace crates missing `license` field: breaker, breaker_derive, breaker_scenario_runner
-- `clipboard-win 5.4.1` uses BSL-1.0 — not in deny.toml allowlist (transitive: bevy_egui → arboard)
-- `encase 0.12.0` uses MIT-0 — not in deny.toml allowlist (transitive: bevy → bevy_color)
-
-All three are permissive, low-risk licenses. deny.toml needs updating to add exceptions.
-
-## Notes
-- Two `ron` versions in lock: 0.11.0 (transitive) and 0.12.0 (direct). Not a security concern.
-- First-party crates still have no `license` field — this causes `cargo deny` to fail but is a
-  project hygiene issue, not a security concern for a non-published crate.
-- Nightly toolchain pinned in rust-toolchain.toml (channel = "nightly", no version pin)
-- Wave 4 added NO new crate dependencies.
-
-**Why:** To detect new or changed deps in future audits without re-running full audit.
-**How to apply:** On the next audit, diff current Cargo.toml against this list to identify additions or version bumps.
+## Known unsafe blocks in workspace
+- None found in breaker-game/src/ (workspace lint: `unsafe_code = "deny"`)
+- No build.rs files anywhere in the workspace

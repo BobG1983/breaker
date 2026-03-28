@@ -1,169 +1,29 @@
 ---
-name: Intentional Patterns & Vocabulary
-description: Patterns that look wrong but are correct, plus vocabulary decisions
-type: reference
+name: Intentional Patterns — Phase 1 Collision Refactor
+description: Patterns that look like violations but are intentional in this codebase, established during Phase 1 collision refactor review
+type: project
 ---
 
-## Intentional Patterns (Do Not Flag)
-- `existing.iter().next().is_some()` in `spawn_lives_display` — minor inconsistency; prefer `!is_empty()` in new code.
-- `spawn_side_panels` uses `!existing.is_empty()` — preferred form.
-- `collect_scenarios_recursive` uses `&mut Vec<PathBuf>` out-parameter — intentional for recursive DFS.
-- `let _ = &defaults;` in `apply_archetype_config_overrides` — intentional placeholder.
-- Heavy `.unwrap()` in test code only — all production paths use fallible patterns.
-- `(ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)` tuple system param in `spawn_bolt` and `spawn_cells_from_layout` — intentional Bevy workaround for multiple `ResMut` borrows from the same world; Bevy disallows two separate `ResMut<T>` params for distinct types in the same system in some versions. Do not flag.
-- `#[cfg(all(test, not(target_os = "macos")))]` on integration tests — platform guard.
-- `#[allow(dead_code)]` on BumpPerformed and CellDestroyed — message type derive macro limitation. Intentional.
-- Double-insert in `init_breaker_params` — Bevy 15-component tuple limit workaround.
-- `handle_cell_hit.rs` `peekable().peek().is_none()` early-return — this pattern has been removed in the current codebase; `handle_cell_hit` now uses a `despawned: Local<Vec<Entity>>` guard and iterates normally. No longer present. CLOSED as of 2026-03-19.
-- `scenario_actions.len() as u32` in lifecycle.rs — safe in practice.
+## `is_inside_aabb` inline AABB check in `bolt_wall_collision`
 
-- `StressFailure` / `StressResult` / `copy_index` in execution.rs — runner-internal infrastructure terms; no game vocabulary rule applies to the scenario runner's own tooling types.
-- `stress_copy` flag in main.rs — internal CLI flag name for subprocess guard; not a game vocabulary term.
+The overlap detection in `bolt_wall_collision` (four individual comparisons for left/right/top/bottom distances) is not a violation — this system needs both the overlap test AND the nearest-face direction in one pass, which `Aabb2D::is_inside` would not provide. The manual inline implementation is intentional.
 
-- `make_layout` helper in `apply_entity_scale_to_breaker.rs` tests returns `NodeLayout` (caller wraps in `ActiveNodeLayout`); `make_layout` in `apply_entity_scale_to_bolt.rs` tests returns `ActiveNodeLayout` directly. Intentional asymmetry in helper return types — both are correct. Do not flag.
-- `_entity_scale` binding (bolt_lost.rs map closure): intentionally named-ignored because the filter closure already consumed the scale value. Do not flag as unused.
-- `LostBoltEntry::is_extra: bool` — two-state field (ExtraBolt or not), no third state, acceptable per established SeedEntry::focused pattern.
+**Why:** The nearest-face identification needs the individual per-axis distances regardless of whether `Aabb2D::is_inside()` exists. Splitting into two passes (is_inside + nearest_face) would redundantly recompute.
 
-- `SendBoltLostFlag(bool)` in bridges.rs tests — inconsistent with all other `Send*(Option<T>)` test helpers in the same file. Flag as a style inconsistency (should be `Option<BoltLost>`).
-- `pub enum ImpactTarget` / `pub enum TriggerChain` in definition.rs — `pub` (not `pub(crate)`) is justified: `chips/mod.rs` re-exports them as `pub use`, and the scenario runner crate uses `breaker::chips::TriggerChain` directly in `types/mod.rs:272`. Do not flag.
-- `armed_query: Query<(Entity, &mut ArmedTriggers)>` (no `mut` on binding) in `bridge_cell_destroyed` and `bridge_bolt_lost` — correct; the `mut` is inside the query type for `ArmedTriggers`. Binding mutability not needed because `evaluate_armed_all` takes the query by value (moves it). Do not flag.
+**How to apply:** Do not flag the four-comparison overlap block in `bolt_wall_collision` as a missed utility opportunity.
 
-## Vocabulary Decisions
-- `format_lives` in `life_lost.rs` — "lives" is correct game vocabulary (count of `LivesCount`).
-- `fire_consequences` in `bridges.rs` — "consequence" used in its precise game-system sense.
-- `upgrade` module/type names — infrastructure wrappers around Amp/Augment/Overclock; acceptable.
-- `ChaosDriver` — renamed from `ChaosMonkey` in feature/scenario-coverage-expansion. Rename is complete in production code (`src/input.rs`). Test bodies still use `monkey` as local variable names (`let mut monkey = ChaosDriver::new(...)`) — acceptable in test-only code.
-- `HybridInput` scripted phase boundary: doc says `0..scripted_frames` exclusive, implementation uses `frame < scripted_frames` (correct). The edge-case test probes frame 99 (not frame 100); comment in test says "last scripted frame". This is correct — 99 is inside scripted phase when scripted_frames=100.
-- `seed_archetype_registry` test fixture previously used `make_archetype("Flux")` — renamed to `make_archetype("Vortex")` in a subsequent PR. CLOSED as of 2026-03-19 full-codebase review.
-- `SeedEntry::value: String` field named `value` — flagged as vague in isolation but this is a UI resource where `value` is the canonical name for the text field's contents (mirroring HTML input semantics). Acceptable.
-- `SeedEntry::focused: bool` — acceptable; the alternative `is_focused` would be misread as a method name on the struct. The `bool` field for a two-state focus condition is not a candidate for an enum since there is no third state.
-- `stack_u32` / `stack_f32` private helpers — these are module-private (no `pub`), so `value` / `per_stack` parameter names are acceptable.
-- `apply_chip_effect` uses `use crate::chips::components::*` (glob import) — 9 types from the same path; this matches the project's 4+ items → glob rule. Intentional.
-- `PendingChipSelected` test-only resource in `apply_chip_effect.rs` — test infrastructure pattern, identical to `PendingChipSelected` used elsewhere. Do not flag.
-- `ArchetypeRegistry` exposes `archetypes: HashMap<String, ArchetypeDefinition>` as a `pub` field — does NOT follow the encapsulated registry pattern used by ChipRegistry and NodeLayoutRegistry. This is a pre-existing divergence, not new to the cleanup branch. data.md says "sorted by name for UI display" but the field is just a raw HashMap (sorting happens at the call site in handle_run_setup_input). Do not flag as a new issue.
-- `AugmentEffect::BumpForce` variant name vs `BumpForceBoost` component name — naming asymmetry is intentional: the enum variant describes the RON-facing effect name, the component adds the "Boost" suffix for clarity. Same for `TiltControl` vs `TiltControlBoost`. Acceptable.
-- Per-effect observer files (`bolt_speed_boost.rs`, `chain_hit.rs`, `bolt_size_boost.rs`, `breaker_speed_boost.rs`, `bump_force_boost.rs`, `tilt_control_boost.rs`) now have stacking + cap tests as of feature/phase4b2-effect-consumption. This gap is CLOSED.
-- `NodeType` enum in `difficulty.rs` — uses `Passive`/`Active`/`Boss` not game vocabulary (`Passive`/`Active`/`Boss` are structural names for the difficulty curve, not player-facing terms; acceptable).
-- `NodePool` enum in `definition.rs` — same reasoning as NodeType; `Passive`/`Active`/`Boss` are pool tags, not game vocabulary violations.
-- `run/definition.rs` vs `run/resources.rs` split — `definition.rs` holds RON-deserialized content types (`NodeType`, `TierNodeCount`, `TierDefinition`, `DifficultyCurveDefaults`); `resources.rs` holds Bevy `Resource` types and runtime state (`RunState`, `RunOutcome`, `NodeSequence`, `DifficultyCurve`). This is the established split; do not flag.
-- `handle_run_lost` and `handle_timer_expired` are `pub` (not `pub(crate)`) in `run/systems/mod.rs` — they are registered only inside `RunPlugin` (same crate), so `pub(crate)` would suffice. Pre-existing pattern; acceptable until a cleanup pass targets visibility across the run domain.
-- `bolt/systems/mod.rs`: `spawn_bolt_lost_text`, `hover_bolt`, `init_bolt_params`, `launch_bolt`, `spawn_additional_bolt` are `pub` but only consumed by `BoltPlugin` inside the same crate. Pre-existing pattern matching run-domain behavior. Do not flag as a new issue.
-- `CellSpawnContext` SystemParam in `spawn_cells_from_layout.rs` is `pub(crate)` — used only inside the node subdomain and by `spawn_cells_from_grid` (dev feature). Correct visibility.
-- `reader.read().count() == 0` early-exit in `bridge_cell_destroyed` and `bridge_bolt_lost` — consumes the message iterator entirely just to check for presence; the idiomatic alternative (`reader.is_empty()` or `peekable`) may not be available depending on the MessageReader API. Do not flag unless the API supports a non-consuming peek.
-- `_entity` in `for (_entity, mut armed) in &mut armed_query` in `evaluate_armed_all` — entity is destructured but not used because the function fires/re-arms based on chain state alone (CellDestroyed/BoltLost are global events). Acceptable.
-- `shockwave_no_op_when_bolt_despawned` test creates two separate `App` instances (proof-app and test-app pattern) — intentional, the first proves the observer is wired before the second proves the no-op; do not flag the two-app pattern as waste.
-- `pub fn perfect_bump_dash_cancel` in `bump.rs` — wider than `pub(crate)` needed. Pre-existing pattern matching other bump system functions; acceptable until a cleanup pass targets visibility.
-- `f32::from(u16::try_from(n).unwrap_or(u16::MAX))` pattern for safe u32→f32 conversion — appears 12+ times across spawn_cells_from_layout.rs, generate_node_sequence.rs, update_loading_bar.rs. Accepted as idiomatic in this codebase. Could be extracted to a shared helper in a future cleanup pass but is not a priority.
-- `Node { ... }` in `fx/transition.rs` spawn calls — this is Bevy's UI layout component (renamed from `Style` in Bevy 0.18), not the game vocabulary term "Node" (a level). Not a vocabulary violation; Bevy owns this type name. Do not flag.
-- `track_node_cleared_stats.rs` uses 5 named items from `crate::run::resources` (HighlightKind, HighlightTracker, RunHighlight, RunState, RunStats) — still below the 4+ glob trigger after the wave-3 refactor changed to an explicit import list. The explicit list is now correct; file no longer uses the wildcard import. Do not flag as of feature/wave-3-offerings-transitions.
-- `detect_combo_and_pinball.rs` `ComboMessages` SystemParam — `pub(crate)` because it is a named `SystemParam` that must be reachable by Bevy internals. The struct itself is defined and consumed in the same file. Acceptable; Bevy requires SystemParam to be pub(crate) at minimum.
-- `complete_transition_out.rs` doc comment "Will be replaced by timed transition animation in a later commit" — stale; animation is already in FxPlugin (wave 3 complete). Flag as stale comment.
-- `MassDestruction` and `FirstEvolution` in `HighlightKind` — CLOSED as of feature/wave-3-offerings-transitions. Both now have dedicated detection systems (`detect_mass_destruction.rs`, `detect_first_evolution.rs`) with full test coverage.
-- `CLUTCH_CLEAR_THRESHOLD`, `FAST_CLEAR_FRACTION`, `PERFECT_STREAK_THRESHOLD`, `MASS_DESTRUCTION_COUNT` — module-level constants in `run/resources.rs`. Defined as `pub` at crate root (not `pub(crate)`). Acceptable since they are consumed by multiple files across the run domain.
-- `EvolutionRecipe` / `EvolutionIngredient` in `chips/definition.rs` — vocabulary correct; "evolution" is the established game term for chip combination (ChipInventory doc references evolutions). Do not flag.
-- `ChipRegistry::insert` clones `name` twice (once for HashMap key, once for `order` vec) — this is the correct pattern given `insert` takes the `ChipDefinition` by value and must store both the key and preserve the definition. Do not flag.
-- Scenario runner checker files (`breaker-scenario-runner/src/invariants/checkers/`) do NOT have `//!` module-level doc comments — this is the established pattern for all checkers in this directory (bolt_in_bounds.rs, valid_breaker_state.rs, etc.). Do not flag new checkers for missing module docs.
-- `OfferingConfig::seen_decay_factor` field — defined in the struct but not used inside `offering.rs` itself; the field exists so callers can pass a complete config bundle (the actual decay recording happens in the caller, `generate_chip_offerings`). Intentional data-bag design. Do not flag as dead code.
-- Checker files in `breaker-scenario-runner/src/invariants/checkers/` that lack `//!` module docs — pre-existing pattern in this directory; all existing checkers (e.g., bolt_in_bounds.rs, valid_breaker_state.rs) also omit module docs. Only flag if the project convention is updated.
+## `breaker_cell_collision` / `breaker_wall_collision` as near-duplicates
 
-## feature/seedable-registry (2026-03-27)
-- `propagate_chip_catalog` contains a full copy of the sort+expand+insert loop from `build_chip_catalog` — intentional because the two functions have different access patterns (`ResMut<ChipCatalog>` vs `Commands::insert_resource`). The duplication is a known quality gap (no shared helper); flagged in review.
-- `split_decision.evolution.ron` uses `lifespan` field omitted (inherits `SpawnBolts` default) — correct RON format per the `SpawnBolts` effect definition which has `lifespan: None` as default. Do not flag missing field.
-- `build_chip_catalog` test file duplicates `template_asset_pairs` / `evolution_asset_pairs` helpers that also exist in `resources/tests.rs` — test isolation; two separate test modules. Acceptable per-module duplication.
-- `fn one() -> u32` private helper in `definition/types.rs` for `#[serde(default = "one")]` on `max_stacks` — required by serde; cannot use a closure. Do not flag as an unnecessarily named helper.
-- `Recipe` struct in `resources/data.rs` — the terminology doc now defines `Recipe` as the correct runtime name for an evolution recipe (distinct from `EvolutionRecipe` which was the old RON-deserialized name). The earlier open flag "should be `CatalogRecipe`" in intentional-patterns.md is now resolved. CLOSED as of feature/seedable-registry.
+These two files are structurally identical (same query type alias, same scale computation, same quadtree call, different layer constants and message type). They are intentionally separate because they send different messages and will diverge when moving-cell mechanics are added. Do not flag as reuse target without understanding the future divergence plan.
 
-## Phase 5c / Phase 6 (feature/wave-3-offerings-transitions, 2026-03-23)
-- `spawn_bolt.rs` calls `breaker_query.iter().next()` twice to get y and x separately — minor redundancy, but pre-existing; do not flag as new issue introduced by this PR.
-- `Wall` and `Cell` markers are `pub(crate)` — intentional; only spawned internally. Do not flag `pub(crate)` visibility on these markers.
-- `PreviousScale` struct mirrors `Scale2D` field layout (x: f32, y: f32) rather than being a newtype over Vec2 — intentional; matches `Scale2D`'s non-newtype design for easy field-by-field lerp in `propagate_scale`.
-- `save_previous_positions` stale name — CLOSED as of Wave 1 spatial2d review (2026-03-23). Function has been renamed to `save_previous` in the current code.
-- The `#[require]` tests for `Bolt`, `Breaker`, `Cell`, and `Wall` all verify negative cases (cleanup components NOT auto-inserted) — intentional regression guard pattern. Do not flag as over-testing.
+## `detect_*` rename to `breaker_*` / `cell_*`
 
-## Wave 1 + spatial2d VFX (feature/wave-3-offerings-transitions, 2026-03-23, simplify pass)
-- `tick` helper is module-local in every test module (74 files). This is the established pattern for the whole codebase — not a duplication issue. Do not flag per-module `tick` helpers as reuse candidates.
-- `animate_shockwave` in shockwave.rs tests spawns `Assets<ColorMaterial>` directly via `init_resource` — correct; the game's full asset pipeline is not needed in unit tests. The HDR `ColorMaterial` literal `Color::linear_rgba(0.0, 4.0, 4.0, 0.9)` with `AlphaMode2d::Blend` is repeated across 6 VFX tests; this is intentional (each test is self-contained) rather than a shared constant, consistent with test-isolation norms here.
-- `assert_standard_shockwave_components` helper in shockwave.rs tests — correctly extracted from the first test that spawned with all standard components; reduces duplication within the file only. Not a cross-file utility; do not flag.
-- `ShieldBehavior` field rename: `orbit_count/radius/speed/hp/color_rgb` → `count/radius/speed/hp/color_rgb` — vocabulary simplification approved in simplify pass. RON files must be updated to match; this is a RON-breaking rename.
+The old `detect_breaker_cell_collision`, `detect_breaker_wall_collision`, `detect_cell_wall_collision`, `cleanup_destroyed_cells` names were replaced with `breaker_cell_collision`, `breaker_wall_collision`, `cell_wall_collision`, `cleanup_cell`. This is a vocabulary / naming convention improvement, not a functional change.
 
-## Wave E — MultiBolt / Shield / MostPowerfulEvolution (feature/spatial-physics-extraction, 2026-03-24)
-- Two-step `commands.spawn(...).id()` + `commands.entity(id).insert(SpawnedByEvolution(name))` in `spawn_additional_bolt.rs` and `spawn_chain_bolt.rs` — intentional: the conditional `SpawnedByEvolution` cannot be in the initial spawn tuple because it is optional per-message. Do not flag as split-insert antipattern.
-- `if shield.is_some() { continue; }` inside `handle_life_lost` — intentional; the alternative `if let None = shield { ... }` would be awkward; `is_some()` guard is idiomatic here.
-- `config.as_ref()` called twice in `spawn_run_end_screen` (line 90 and 91) — see idiom note below. Flag for review (Option resolves to same ref, second `as_ref()` is redundant — should use `if let Some(c) = config.as_ref()` for the whole block).
-- `node_index: 0` hardcoded in `detect_most_powerful_evolution` — intentional; `MostPowerfulEvolution` is a run-end highlight, not tied to a specific node. The `0` is a sentinel consistent with the spec.
-- `enqueue_messages` in `track_evolution_damage.rs` tests iterates by reference (`for msg in &msg_res.0`) and calls `writer.write(msg.clone())` — intentional; `TestMessages` resource must remain usable after the borrow.
+## `hit_fraction` extracted function in `bolt_breaker_collision/system.rs`
 
-## B4-B6 — ChipTemplate, inventory template tracking, offering dedup (feature/spatial-physics-extraction, 2026-03-24)
-- `draw_offerings` in `offering.rs` is `pub(crate)` but not called from production paths after `generate_offerings` replaced it. Retained as a lower-level primitive. Do not flag as dead code if it is still under `pub(crate)` — it may be used by caller refactors. Flag only if it has no callers AND is not tested.
-- `template_maxes` HashMap in `ChipInventory` is lazily initialized on first `add_chip`. For all current chips, `template.max_taken` equals the chip's `max_stacks`, so the lazy init is always correct. The `u32::MAX` default in `is_template_maxed` when the key is absent means an unseeded template is never considered maxed — intentional.
-- `add_chip` uses `def.max_stacks` as the template-level cap threshold (line 50). This works because `expand_template` sets `max_stacks = template.max_taken` on every expanded def. The naming asymmetry (`max_taken` in template, `max_stacks` in def) is intentional: templates use a distinct field name to signal the shared-across-variants nature.
-- 15 `.chip.ron` files use the `ChipTemplate` format (not `ChipDefinition` format). All old `.amp.ron`/`.augment.ron`/`.overclock.ron` files remain alongside new `.chip.ron` files during the transition period (`seed_chip_registry` loads both). The coexistence is intentional and documented by the inline comment in `seed_chip_registry`.
+`hit_fraction` is a small extracted function that computes normalized hit position on the breaker surface. It appears in two call sites within the same file (overlap path and CCD path). This is correct extraction, not duplication.
 
-## B12c — Typed events refactor (feature/spatial-physics-extraction, 2026-03-24)
-- `#[cfg(test)] pub(super) use crate::effect::events::EffectFired` and `#[cfg(test)] pub(super) use crate::chips::definition::{ChipEffectApplied, TriggerChain}` in handler files (shockwave.rs, life_lost.rs, time_penalty.rs, shield.rs, spawn_bolt.rs, multi_bolt.rs, chain_lightning.rs, spawn_phantom.rs, second_wind.rs, gravity_well.rs, piercing_beam.rs; and chips/effects/*.rs) — intentional bridge pattern. The old-event tests prove the new typed observer does NOT react to the old event (self-selection guard). These re-exports must stay until the old types are fully removed from production code. Do not flag as unnecessary re-exports.
-- `convert_target(t: chips::definition::Target) -> effect::definition::Target` in `typed_events.rs` — the two `Target` enums are structurally identical but owned by different domains (`chips::definition` is the RON-deserialized source; `effect::definition` is the canonical runtime type). The conversion is necessary during the migration period while `TriggerChain` still embeds the chips-side `Target`. Flag as a code smell only after `chips::definition::Target` is removed and all sites use `effect::definition::Target` directly.
-- `trigger_chain_to_effect` in `typed_events.rs` panics in debug builds for non-leaf chains — intentional invariant enforcer. The debug panic + release warning pattern is the established guard for impossible-in-correct-code paths.
-- `fire_typed_event` and `fire_passive_event` are two separate dispatch functions (not unified) — intentional. Triggered effects carry `bolt: Option<Entity>` and `source_chip: Option<String>` for VFX; passive effects carry `max_stacks: u32` and `chip_name: String` for stacking logic. The signatures are fundamentally different. Do not flag the split as duplication.
-- Tests in `typed_events.rs` for stub events (`stub_event_chain_lightning_fired_accessible`, `stub_event_spawn_phantom_fired_accessible`, etc.) only assert field access, not dispatch behavior — intentional during stub phase. These tests prove type shapes are correct for when handlers are implemented.
-- `CapturedEffects` resource and `capture_effects` observer in `bridges.rs` tests still capture `EffectFired` — this is old-style capture for backward-compat test assertions; the new `CapturedShockwaveFired` / `CapturedLoseLifeFired` etc. resources are the typed equivalents. Both exist during the migration window.
-- `SendBoltLostFlag(bool)` in `bridges.rs` tests vs `SendBump(Option<BumpPerformed>)` etc. — inconsistent styles pre-exist from before B12c. Not introduced by this PR.
+## `spawn_bolt` / `spawn_wall` / `spawn_breaker_at` test helpers are local to each test module
 
-## Wave 2a — Two-Phase Destruction + Until effects (feature/spatial-physics-extraction, 2026-03-25)
-- `SendBoltLostFlag(bool)` in bridges.rs tests — pre-existing style inconsistency vs all other `Send*(Option<T>)` helpers. Same for `SendBumpWhiffFlag(bool)`. These two are wrappers for unit messages (`BoltLost`, `BumpWhiffed`) that carry no data, so `bool` is minimally correct. Inconsistency is a nit only; acceptable but not preferred. Do not flag as a blocking issue.
-- `UntilTimerEntry::remaining` is a bare `f32` (seconds). No units in name. The doc comment says "Seconds remaining" — this is sufficient context. Do not flag.
-- `expired_indices: Vec<usize>` in `tick_until_timers` — allocates every tick. This is a known small-vec use case; bounded by the number of Until entries per entity (typically 1-3). Acceptable; could be a `SmallVec` but not worth flagging now.
-- `reverse_children` takes `Option<&mut Velocity2D>` and other optionals as separate params instead of query components — intentional; the function is called from both `tick_until_timers` (query splits) and `check_until_triggers` (same pattern). The separate params avoid re-querying and allow the caller to pass the right mutable refs. Do not flag as a design smell.
-- `damage_boost.rs` tests use `.unwrap()` on `.get::<DamageBoost>(bolt)` in test bodies (lines 89, 105) — intentional; test-only `.unwrap()` is the established codebase pattern (see intentional-patterns.md).
-- `apply_once_nodes` in bridges.rs: inner `if let EffectNode::Do(effect) = child` after `all_bare_do` guard is technically redundant (guard already guarantees all children are Do) but Rust requires the pattern for the binding. Not a code quality issue.
-- `BoltLostWriters` SystemParam uses `Result<MessageWriter<'w, RequestBoltDestroyed>, SystemParamValidationError>` instead of requiring the message to be registered — intentional migration-safety shim; the fallback legacy path despawns directly when the new message type is not yet registered. Do not flag as a leaky abstraction. The legacy path will be removed once CellDestroyed is fully replaced.
-- `fire_bolt_effect` / `fire_global_effect` / `fire_pool_effect` private helpers in `typed_events.rs` each end with `_ => {}` — not dead arms; they are called with pre-filtered Effect variants from the outer `fire_typed_event` match. The `_ => {}` arms are unreachable in practice but required to compile. Do not flag as missing exhaustive handling.
-- `ComboMessages` renamed to `ComboReaders` in `detect_combo_and_pinball.rs` — vocabulary change to avoid implying the struct writes messages. Intentional clarity improvement. Do not flag as an inconsistency.
-- Two separate near-duplicate test helpers per file (`TestCellDestroyedAtMessages` + `TestMessages`, `make_cell_destroyed_at_batch` + `make_cell_destroyed_batch`) in `detect_mass_destruction.rs`, `track_cells_destroyed.rs`, etc. — these are migration-window artifacts: the old helpers prove the old message type still works (shouldn't exist at test time but document the rename), the new helpers prove the new type. Both will be collapsed once `CellDestroyed` is fully removed.
-
-## B1-B3 — Flatten ChipEffect into TriggerChain (feature/spatial-physics-extraction, 2026-03-24)
-- `.clone()` on `trigger.event().effect` in all 9 handler files — necessary because `On<T>` gives a shared reference to the event; binding-by-ref in the `let … else` pattern is not possible when destructuring to extract a `Copy` or non-ref field. This is the established pattern; do not flag as an unnecessary clone.
-- `result_definition: ChipDefinition` field name on `EvolutionRecipe` — "result" is a valid data-bag field name here because it refers to the output of a recipe transformation, not a `Result<_>` error type. Not a vocabulary violation. Established and documented in `terminology/chips.md`.
-- `damage_boost.rs` tests have only 2 tests (insert + stack), missing `respects_max_stacks` and `ignores_non_matching` — confirmed gap as of this review (2026-03-24).
-- `chain_hit.rs`, `bump_force_boost.rs`, `tilt_control_boost.rs`, `width_boost.rs` all have 3 tests (insert + stack + cap) but NO `ignores_non_matching` variant — confirmed gap as of this review (2026-03-24). Only `piercing.rs`, `damage_boost.rs` (partial), `bolt_speed_boost.rs`, `bolt_size_boost.rs`, `breaker_speed_boost.rs` have negative-variant tests. See `coverage-standards.md` for tracking note (4) under "Chips domain".
-
-## Wave E — highlight scoring + popups (feature/spatial-physics-extraction, 2026-03-24)
-- `config_f32(val: u32) -> f32` private helper in `select_highlights.rs` — module-private 2-line helper for lossless u32→f32 via u16::try_from. Consistent with the established `f32::from(u16::try_from(n).unwrap_or(u16::MAX))` pattern throughout the codebase. Do not flag.
-- `_ => unreachable!()` arm in `score_highlight` after the `match highlight.kind` block — the binary-type guard above the match uses an exhaustive early-return, so this arm is structurally unreachable. Intentional invariant enforcer. Do not flag.
-- `_config: Res<HighlightConfig>` parameter in `detect_first_evolution` — the cap check that required this param has been removed (cap moved to run-end selection). The `_` prefix suppresses the unused warning but leaves a dead Bevy system param. This is a known cleanup item: the parameter should be removed entirely. Flag if still present in a future cleanup pass.
-- 11 `max_expected_*` fields on `HighlightDefaults` (one per scored HighlightKind) — parallel constants for normalization ceilings. This is parameter sprawl by design (all configurable via RON). The alternative (HashMap<HighlightKind, f32>) would require a custom RON deserializer. Acceptable given the RON-first constraint. Do not flag the count of fields.
-- `select_highlights` returns `Vec<usize>` (indices into the input slice) rather than returning `RunHighlight` values directly — intentional to let callers control materialization and avoid allocation. Do not flag.
-
-## Part A — rantzsoft preludes + SpatialSystems (feature/spatial-physics-extraction, 2026-03-26)
-- `match self { Self::A => 0.0, Self::B => 1.0 }` on `TestDrawLayer` in plugin.rs tests — two-variant float-returning match; not a bool-match idiom violation. Do not flag.
-- `physics2d/prelude.rs` names each re-exported item individually (no `components::*` glob) while `spatial2d/prelude.rs` uses globs for components and propagation. Both styles are correct; the physics2d crate exports from separate top-level modules with no sub-glob, making the explicit list cleaner. Do not flag as inconsistency.
-- `rantzsoft_defaults/src/prelude.rs` re-exports `GameConfig`, `SeedableConfig`, `DefaultsHandle`, `RonAssetLoader`, `DefaultsSystems`, `RantzDefaultsPlugin`, `RantzDefaultsPluginBuilder` — all correct public API. Do not flag these as unnecessary re-exports.
-- `use crate::components::{ApplyVelocity, GlobalPosition2D, ...}` (6 items) in `plugin.rs` test module — technically redundant with `use super::*` which already pulls in all components via `crate::components::*`. Minor nit; do flag in review but record here so future sessions know the pattern is non-blocking.
-- `// ── Behavior N: ... ──` numbered comment headers in plugin.rs tests — numbers come from a broader spec document; gap-filled numbering (24, 35, 36…) is intentional for traceability. Flagged as a style nit (numbers should stay in the spec, not the source) but do not flag as a broken pattern. physics2d switches to description-only format mid-file — inconsistency is a nit only.
-- `PhysicsSystems` ordering tests absent in physics2d plugin — confirmed gap as of 2026-03-26 review. `SpatialSystems` has full ordering coverage in spatial2d/plugin.rs; physics2d lacks equivalent tests for `MaintainQuadtree` and `EnforceDistanceConstraints` sets. This is a KNOWN OPEN gap.
-- Inline tick blocks (3-line `accumulate_overstep` sequence) in physics2d/plugin.rs tests (lines 82–86, 255–259) — duplicated instead of extracted to `fn tick`. Should follow the spatial2d pattern (`fn tick(app: &mut App)` module-local helper). Not yet fixed as of this review.
-
-## C7-R — Trigger variants, RootEffect migration, dispatch rewrite (refactor/rantzsoft-prelude-and-defaults, 2026-03-26)
-- `NoBump`, `PerfectBumped`, `Bumped`, `EarlyBumped`, `LateBumped`, `Impacted(ImpactTarget)`, `Died`, `DestroyedCell` — new `Trigger` variants added without `#[serde(rename = "On...")]` attributes. This is intentional: only the old-style wrapper variants (`PerfectBump`, `Bump`, etc.) need `OnX` serde names for RON backwards compatibility. The new targeted variants use their Rust name directly in RON. Do not flag missing serde renames on new variants.
-- `NodeTimerThreshold` is covered by the `_ => false` arm in `trigger_matches` — this is correct because `NodeTimerThreshold` is a timer-ratio trigger that has no runtime `trigger_matches` path (like `TimeExpires`). No explicit match arm is needed. Do not flag as missing arm.
-- `let RootEffect::On { target, then } = root;` irrefutable pattern destructure in `dispatch_chip_effects` — `RootEffect` is a single-variant enum (`On`), so the irrefutable destructure is correct. Not a warning; do not flag.
-- `for root in &chip.effects` iterates `&Vec<RootEffect>` and immediately irrefutably destructures each `root` — this is clean; `RootEffect` is single-variant by design so no `if let` needed. Do not flag.
-- `let entry = (Some(msg.name.clone()), node.clone())` in `dispatch_chip_effects` — the `entry` binding with `.clone()` inside the `match target` arms is necessary: `entry` may be pushed to multiple bolt/breaker entities in the loop, requiring cloneability. Do not flag as unnecessary clone.
-- `effects::*` glob import in dispatch_chip_effects tests — correct per project 4+ items rule (9+ handler functions from the same effects module). Intentional.
-- `trigger_has_runtime_variants` test in evaluate.rs asserts `triggers.len() == 21` — count comment "(Selected removed, 5 new targeted added)" is accurate. Do not flag the assertion value as wrong.
-
-## Wave 1 — spatial2d new systems (feature/wave-3-offerings-transitions, 2026-03-23)
-- `compute_globals` uses a two-pass loop with a `HashMap<Entity, (Vec2, Rot2, (f32, f32))>` parent cache — intentional pattern to avoid conflicting mutable borrows. Do not flag the HashMap allocation as unnecessary.
-- `propagate_position`, `propagate_rotation`, `propagate_scale` — these are pub(crate) internal helpers in `rantzsoft_spatial2d`. They are NOT registered by `RantzSpatial2dPlugin`. The plugin uses `compute_globals` + `derive_transform` exclusively. Do not flag these as dead code if found in the crate — they may be used internally — but do flag if any code outside the crate attempts to reference them directly.
-- `save_previous` (save_previous.rs) splits into four separate sub-queries (query_pos, query_rot, query_scale, query_vel) — intentional; Bevy requires separate queries for separate borrows of the same component family when the filter (`With<InterpolateTransform2D>`) differs. Do not flag as query duplication.
-- Scale interpolation in `derive_transform` uses manual lerp `prev.x + (g_scale.x - prev.x) * alpha` rather than a `lerp` call — intentional; `f32` has no built-in `lerp` in stable Rust at the time of writing; this is the idiomatic manual form. Do not flag.
-- `GlobalScale2D` fields `x: f32, y: f32` match `Scale2D`'s non-newtype layout — intentional symmetry. Do not flag as inconsistent with `GlobalPosition2D(Vec2)` newtype style; scale requires field-level access for the propagation math.
-- `derive_transform` has the interpolation guard `if interp.is_some()` repeated three times (pos, rot, scale) — intentional; each field can be independently interpolated or not (the guard is per-field, not per-entity). Do not flag as duplication.
-
-## SeedableRegistry feature (refactor/rantzsoft-prelude-and-defaults, 2026-03-26)
-- `assert!()` in `CellTypeRegistry::seed()` for reserved alias '.' and duplicate alias — intentional panic-on-misconfiguration (data author error). The sibling `validate()` failure uses `warn!+skip` instead. This inconsistency is a known design tension (flagged in review) but not a new pattern to ignore — it should be resolved.
-- `assert!()` in `BreakerRegistry::seed()` for duplicate breaker name — same pattern as above.
-- `self.registrations.lock().expect("defaults plugin lock poisoned")` in `RantzDefaultsPlugin::build` — intentional; a poisoned Mutex is unrecoverable. Do not flag `expect` here.
-- `Recipe` (pub(crate) struct in chips/resources.rs) — flagged as vocabulary violation; should be `CatalogRecipe` or align with `EvolutionRecipe`. CLOSED as of feature/seedable-registry (2026-03-27): `chips.md` terminology doc now defines `Recipe` as the correct runtime name.
-- `propagate_registry` event reader consumes `.any()` for modified-handle detection — intentional short-circuit; missing test for foreign-asset Modified event not triggering rebuild. OPEN gap as of 2026-03-26.
-- `build_chip_catalog` asymmetric loading state (one handle loaded, one not) — missing test. OPEN gap as of 2026-03-26.
-- `propagate_node_layout_changes` CellConfig-only change path — missing test. OPEN gap as of 2026-03-26.
+Each collision test module (bolt_wall_collision, bolt_breaker_collision/tests) defines its own spawn helpers locally rather than sharing a crate-wide test utility. This is the established pattern in this codebase — test helpers are co-located with their test module. Do not flag as duplication without confirmation that a shared test utility module exists or is planned.

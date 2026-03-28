@@ -1,9 +1,2 @@
-## Rules
-- [rule_never_run_cargo.md](rule_never_run_cargo.md) — NEVER run cargo commands — only runner agents run cargo
-
-## Stable
-- [patterns_let_chains_clippy.md](patterns_let_chains_clippy.md) — Rust 2024 let-chains fix for clippy collapsible_if
-- [pattern_doc_markdown_clippy.md](pattern_doc_markdown_clippy.md) — CamelCase/field names in doc comments need backticks; derive Eq alongside PartialEq
-
-## Session History
-See [ephemeral/](ephemeral/) — not committed.
+## Patterns
+- [Quadtree collision narrow-phase](pattern_quadtree_collision_fallback.md) — always verify geometric overlap after broad-phase quadtree query before emitting messages

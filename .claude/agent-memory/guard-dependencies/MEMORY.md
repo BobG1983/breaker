@@ -1,8 +1,3 @@
-## Stable
-
-- [dependency-snapshot.md](dependency-snapshot.md) — Crate versions at last audit (2026-03-24); diff on next run
-- [known-pins.md](known-pins.md) — Intentional version pins (rand 0.9, rand_chacha 0.9) with rationale
-- [known-findings.md](known-findings.md) — Accepted/wontfix findings: machete false positive, dev feature leak, license notes
-
-## Session History
-See [ephemeral/](ephemeral/) — not committed.
+- [dependency-snapshot.md](dependency-snapshot.md) — Crate versions at last audit (2026-03-28); diff on next run
+- [known-findings.md](known-findings.md) — Accepted/wontfix transitive findings with rationale
+- [known-pins.md](known-pins.md) — Intentional version pins (Bevy ecosystem, ron, proc-macro2)

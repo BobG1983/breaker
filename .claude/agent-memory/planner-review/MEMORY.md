@@ -1,40 +1,35 @@
-# Planner-Review Memory
+# Planner Review Memory
 
-## Common Spec Issues
-- [pattern_message_field_additions.md](pattern_message_field_additions.md) — Message struct field additions miss the sender's test construction sites
-- [pattern_deferred_commands_observer.md](pattern_deferred_commands_observer.md) — Bevy observer commands.insert() is deferred; can't read back in same call
-- [pattern_ron_hp_scaling_scenario_impact.md](pattern_ron_hp_scaling_scenario_impact.md) — RON HP scaling changes scenario dynamics; frame limits may need updating
-- [pattern_cross_system_component_preservation.md](pattern_cross_system_component_preservation.md) — "Don't touch X" specs must enumerate ALL components in the category
-- [pattern_plugin_registration_in_impl_spec.md](pattern_plugin_registration_in_impl_spec.md) — New systems need plugin.rs registration (schedule, ordering, run_if, set)
-- [pattern_copy_derive_removal_cascade.md](pattern_copy_derive_removal_cascade.md) — Removing Copy from an enum breaks all pattern-match sites that relied on implicit copy
-- [pattern_default_vs_ron_test_values.md](pattern_default_vs_ron_test_values.md) — Specs citing RON values but tests using Default trait values; CellConfig and PlayfieldConfig defaults differ from RON
-- [pattern_onenter_resource_timing.md](pattern_onenter_resource_timing.md) — Systems reading resources inserted via deferred commands in OnEnter need explicit ordering after the inserting chain
-- [pattern_onenter_deferred_resource_chain.md](pattern_onenter_deferred_resource_chain.md) — Chained OnEnter systems using commands.insert_resource() need apply_deferred between producer and consumer
-- [pattern_enum_signature_migration.md](pattern_enum_signature_migration.md) — Changing enum variant signatures breaks ALL existing construction/match sites; spec must enumerate them as prerequisites
-- [pattern_refactor_atomicity.md](pattern_refactor_atomicity.md) — Multi-unit refactors that move/rename types cannot compile independently; must be atomic or use re-export bridge
-- [pattern_observer_mutation_vs_message.md](pattern_observer_mutation_vs_message.md) — Observers that mutate components need different query patterns than observers that write messages; spec must specify exact query
-- [pattern_message_field_removal_cascade.md](pattern_message_field_removal_cascade.md) — Removing a field from a Message struct breaks ALL construction sites; specs must enumerate every file
-- [pattern_onexit_stale_resource.md](pattern_onexit_stale_resource.md) — OnExit(StateA) systems read stale resource values if the resource is set during the NEXT state
-- [pattern_pub_struct_refactor_cascade.md](pattern_pub_struct_refactor_cascade.md) — Changing a pub struct's inner type cascades across workspace crates; writer agents can't fix cross-crate breakage
-- [pattern_component_type_migration_cascade.md](pattern_component_type_migration_cascade.md) — Migrating entity position type cascades through query aliases, test construction sites, scenario runner, debug/effect systems
-- [pattern_scale2d_zero_panic.md](pattern_scale2d_zero_panic.md) — Scale2D::new panics on zero; expanding-radius effects must guard initial frame
-- [pattern_global_component_change_detection.md](pattern_global_component_change_detection.md) — Global* components written every frame make Changed<Global*> always true, defeating incremental quadtree updates
-- [pattern_cap_removal_dedup_asymmetry.md](pattern_cap_removal_dedup_asymmetry.md) — Removing highlight cap exposes asymmetric dedup: per-event systems have per-kind checks, track_node_cleared_stats does not
-- [pattern_cross_domain_pure_function_visibility.md](pattern_cross_domain_pure_function_visibility.md) — Pure functions called cross-domain need explicit pub visibility and mod.rs export chain
-- [pattern_dual_semantic_enum_variant.md](pattern_dual_semantic_enum_variant.md) — Enum variant reused across dispatch contexts (triggered vs passive) has ambiguous field semantics
-- [pattern_test_app_resource_mismatch.md](pattern_test_app_resource_mismatch.md) — System gaining new Res/ResMut parameter requires test_app() to also init that resource
-- [pattern_struct_field_addition_crosscrate.md](pattern_struct_field_addition_crosscrate.md) — Adding a field to pub struct breaks ALL struct literal sites across workspace; serde(default) only helps RON
-- [pattern_dead_code_directory_vs_live.md](pattern_dead_code_directory_vs_live.md) — Module rename creates new directory but lib.rs still declares old one; specs targeting new dir won't compile
-- [pattern_field_type_change_semantic_shift.md](pattern_field_type_change_semantic_shift.md) — Field type change from leaf to tree type means consuming logic (wrapping) must also change, not just types
-- [pattern_file_move_test_import_cascade.md](pattern_file_move_test_import_cascade.md) — Moving handler files between modules breaks test imports in files that registered those handlers via glob imports
-
-- [pattern_existing_tests_in_spec_scope.md](pattern_existing_tests_in_spec_scope.md) — "Write N tests per file" specs miss that some effect modules already have those tests; causes duplicate name compile errors
-
-## Domain Quirks
-- `BoltHitCell` is `pub(crate)` (not `pub`) in `bolt/messages.rs` (moved from `physics/messages.rs` in 2026-03-24 spatial/physics extraction)
-- `CellHealth::new()` and `is_destroyed()` are `const fn` — new methods on the same impl should follow suit where possible
-- chips domain does NOT currently consume `BoltHitCell` despite messages.md listing it as a consumer
-- [pattern_nodetimer_field_names.md](pattern_nodetimer_field_names.md) — NodeTimer uses 'remaining' and 'total', not 'duration'; specs commonly get this wrong
+## Spec Patterns (What Goes Wrong)
+- [Asymmetric cap removal / dedup](pattern_cap_removal_dedup_asymmetry.md) — caps and dedup behave differently than expected
+- [Component type migration cascade](pattern_component_type_migration_cascade.md) — renaming a component cascades across all callers
+- [Copy derive removal cascade](pattern_copy_derive_removal_cascade.md) — removing Copy breaks implicit callers
+- [Cross-domain pure function visibility](pattern_cross_domain_pure_function_visibility.md) — pub(crate) functions not visible across domain boundaries
+- [Cross-system component preservation](pattern_cross_system_component_preservation.md) — systems clobbering components set by other systems
+- [Dead code directory vs live](pattern_dead_code_directory_vs_live.md) — referencing files in dead-code directories as if they are live
+- [Default vs RON test values](pattern_default_vs_ron_test_values.md) — tests using Default but RON overrides change behavior
+- [Deferred commands / observer](pattern_deferred_commands_observer.md) — commands deferred past observer scope
+- [Dual semantic enum variant](pattern_dual_semantic_enum_variant.md) — one variant carrying two semantic roles
+- [Enum signature migration](pattern_enum_signature_migration.md) — changing an enum field name breaks all match arms
+- [Existing tests in spec scope](pattern_existing_tests_in_spec_scope.md) — spec forgets to account for tests that already exist
+- [Field type change / semantic shift](pattern_field_type_change_semantic_shift.md) — changing a field's type implies behavior change not stated in spec
+- [File move / test import cascade](pattern_file_move_test_import_cascade.md) — moving a file breaks test use paths
+- [Global component change detection](pattern_global_component_change_detection.md) — change detection on global components fires every frame
+- [Message field additions](pattern_message_field_additions.md) — adding fields to messages breaks all construction sites
+- [Message field removal cascade](pattern_message_field_removal_cascade.md) — removing message fields breaks readers
+- [NodeTimer field names](pattern_nodetimer_field_names.md) — NodeTimer fields named differently than expected
+- [Observer mutation vs message](pattern_observer_mutation_vs_message.md) — mutating component in observer vs sending a message
+- [OnEnter deferred resource chain](pattern_onenter_deferred_resource_chain.md) — OnEnter systems creating resources that later systems depend on
+- [OnEnter resource timing](pattern_onenter_resource_timing.md) — resource not yet available when OnEnter system runs
+- [OnExit stale resource](pattern_onexit_stale_resource.md) — resource still holds state from previous run on re-entry
+- [Plugin registration in impl spec](pattern_plugin_registration_in_impl_spec.md) — impl spec forgets to note plugin registration step
+- [Pub struct refactor cascade](pattern_pub_struct_refactor_cascade.md) — making a struct's fields pub cascades to callers
+- [Refactor atomicity](pattern_refactor_atomicity.md) — spec splits a rename across multiple PRs, causing a broken intermediate state
+- [RON HP scaling / scenario impact](pattern_ron_hp_scaling_scenario_impact.md) — RON value changes break scenario invariants
+- [Scale2D zero panic](pattern_scale2d_zero_panic.md) — Scale2D(0.0) panics in spatial2d
+- [Struct field addition cross-crate](pattern_struct_field_addition_crosscrate.md) — adding a field to a public struct breaks constructors in other crates
+- [Test app resource mismatch](pattern_test_app_resource_mismatch.md) — test app missing resources that production app registers
+- [Rename with incomplete doc sweep](pattern_rename_incomplete_doc_sweep.md) — field rename spec lists some docs but misses others; use grep to verify all occurrences before approving
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

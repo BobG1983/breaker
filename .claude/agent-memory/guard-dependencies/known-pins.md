@@ -1,19 +1,29 @@
 ---
 name: known-pins
-description: Intentional version pins and their rationale — do not flag these as outdated
+description: Intentional version pins and their rationale — do not flag as outdated
 type: project
 ---
 
 ## Intentional Version Pins
 
-### rand = "0.9" and rand_chacha = "0.9"
-- **Why:** Bevy 0.18 uses `rand 0.9.x` transitively via `bevy_math`. Upgrading to `rand 0.10`
-  would introduce a second copy of `rand` in the dep tree (0.9 + 0.10), increasing compile time
-  and binary size. Pinning to 0.9 keeps a single unified rand version across the tree.
-- **Where:** `breaker-game/Cargo.toml` and `breaker-scenario-runner/Cargo.toml`
-- **When to re-evaluate:** When Bevy upgrades to use rand 0.10+ in its own internals.
+### bevy 0.18.1 — all workspace crates
+- Pinned to exact minor for Bevy ecosystem coherence.
+- bevy_egui 0.39, iyes_progress 0.16 are ecosystem crates paired to bevy 0.18.x.
+- Do NOT recommend updating any bevy_* crate independently of the Bevy version.
+- All rantzsoft_* crates must stay on the same bevy version as breaker-game.
 
-### ron = "0.12" (upgraded 2026-03-19)
-- **Why (historical):** Previously pinned at 0.11 causing a ron 0.11/0.12 split in the tree.
-  Upgraded to 0.12 in the 2026-03-19 session — now unified with Bevy 0.18's transitive ron 0.12.
-- **Status:** RESOLVED — no longer a pin concern. Both game crate and scenario runner use 0.12.
+### iyes_progress 0.16
+- Paired to Bevy 0.18. Do not update independently.
+
+### bevy_egui 0.39
+- Paired to Bevy 0.18 (bevy_egui 0.39 = bevy 0.18 compatibility release).
+- Do not update independently.
+
+### ron 0.12
+- Project uses RON for all asset/config files. API-breaking changes in RON would require
+  migrating all .ron asset files. Only update with explicit intent to migrate assets.
+
+### proc-macro2 1 (rantzsoft_defaults_derive)
+- Explicitly ignored by cargo-machete via [package.metadata.cargo-machete].
+- proc-macro2 is a required implicit dep for proc-macro crates even when not directly used.
+  This is a known cargo-machete false-positive for proc-macro crates.

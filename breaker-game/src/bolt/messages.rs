@@ -28,6 +28,8 @@ pub struct BoltSpawned;
 pub(crate) struct BoltImpactBreaker {
     /// The bolt entity that hit the breaker.
     pub bolt: Entity,
+    /// The breaker entity that was hit.
+    pub breaker: Entity,
 }
 
 /// Sent when the bolt collides with a cell.
@@ -66,14 +68,6 @@ pub(crate) struct BoltImpactWall {
 pub(crate) struct RequestBoltDestroyed {
     /// The bolt entity to be destroyed.
     pub bolt: Entity,
-}
-
-/// Sent by `bridge_bolt_death` after extracting entity data from the still-alive bolt.
-#[derive(Message, Clone, Debug)]
-pub(crate) struct BoltDestroyedAt {
-    // FUTURE: may be used for upcoming phases
-    // /// World-space position of the destroyed bolt.
-    // pub position: Vec2,
 }
 
 /// Sent by the chain bolt effect handler to spawn a tethered chain bolt.
@@ -139,13 +133,6 @@ mod tests {
     }
 
     #[test]
-    fn bolt_destroyed_at_debug_format() {
-        let msg = BoltDestroyedAt {};
-        let debug = format!("{msg:?}");
-        assert!(debug.contains("BoltDestroyedAt"));
-    }
-
-    #[test]
     fn spawn_chain_bolt_carries_anchor_and_tether_distance() {
         let anchor = Entity::PLACEHOLDER;
         let msg = SpawnChainBolt {
@@ -174,6 +161,7 @@ mod tests {
     fn collision_messages_debug_format() {
         let a = BoltImpactBreaker {
             bolt: Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
         };
         let a_fmt = format!("{a:?}");
         assert!(a_fmt.contains("BoltImpactBreaker"));

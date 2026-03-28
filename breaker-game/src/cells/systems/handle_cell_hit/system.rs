@@ -31,7 +31,7 @@ pub(crate) fn handle_cell_hit(
         if despawned.contains(&msg.cell) {
             continue;
         }
-        let Ok((mut health, material_handle, visuals, _is_required, is_locked)) =
+        let Ok((mut health, material_handle, visuals, is_required, is_locked, position)) =
             cell_query.get_mut(msg.cell)
         else {
             continue;
@@ -46,7 +46,11 @@ pub(crate) fn handle_cell_hit(
 
         if destroyed {
             // Two-phase destruction: write request (entity stays alive for bridge evaluation)
-            request_destroyed_writer.write(RequestCellDestroyed { cell: msg.cell });
+            request_destroyed_writer.write(RequestCellDestroyed {
+                cell: msg.cell,
+                position: position.0,
+                was_required_to_clear: is_required,
+            });
             despawned.push(msg.cell);
         } else {
             // Visual feedback — dim HDR intensity based on remaining health

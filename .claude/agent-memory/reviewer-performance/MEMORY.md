@@ -1,5 +1,1 @@
-## Stable
-- [performance-baseline.md](performance-baseline.md) — Entity scale, confirmed efficient patterns, fragmentation risks, hotspots
-
-## Session History
-See [ephemeral/](ephemeral/) — not committed.
+- [performance-baseline.md](performance-baseline.md) — Phase 1 entity scale, quadtree allocation costs, confirmed efficient/inefficient patterns, placeholder systems to watch

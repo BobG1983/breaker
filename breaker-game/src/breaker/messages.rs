@@ -59,27 +59,6 @@ pub(crate) struct BreakerImpactWall {
     pub wall: Entity,
 }
 
-/// Sent when the breaker should be destroyed. Entity is still alive.
-///
-/// Stub for two-phase destruction. Cleanup system reads this but does nothing
-/// if no messages arrive.
-#[derive(Message, Clone, Debug)]
-pub(crate) struct RequestBreakerDestroyed {
-    // FUTURE: may be used for upcoming phases
-    // /// The breaker entity to be destroyed.
-    // pub breaker: Entity,
-}
-
-/// Sent after extracting entity data from the still-alive breaker.
-///
-/// Stub for two-phase destruction.
-#[derive(Message, Clone, Debug)]
-pub(crate) struct BreakerDestroyedAt {
-    // FUTURE: may be used for upcoming phases
-    // /// World-space position of the destroyed breaker.
-    // pub position: Vec2,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,23 +85,6 @@ mod tests {
     fn bump_whiffed_debug_format() {
         let msg = BumpWhiffed;
         assert!(format!("{msg:?}").contains("BumpWhiffed"));
-    }
-
-    // =========================================================================
-    // C7 Wave 2a: Two-Phase Destruction stub types (behavior 36)
-    // =========================================================================
-
-    #[test]
-    fn request_breaker_destroyed_debug_format() {
-        let msg = RequestBreakerDestroyed {};
-        assert!(format!("{msg:?}").contains("RequestBreakerDestroyed"));
-    }
-
-    #[test]
-    fn breaker_destroyed_at_debug_format() {
-        let msg = BreakerDestroyedAt {};
-        let debug = format!("{msg:?}");
-        assert!(debug.contains("BreakerDestroyedAt"));
     }
 
     #[test]

@@ -1,78 +1,53 @@
 ---
 name: known-findings
-description: Accepted/wontfix findings with rationale from past audits
+description: Accepted / wontfix dependency findings with rationale — skip re-flagging these on future audits
 type: project
 ---
 
-## Accepted Findings (updated 2026-03-23)
+## Wontfix / Accepted Findings
 
-### proc-macro2 in breaker-derive flagged by machete
-- **Finding:** cargo machete reports proc-macro2 as unused in breaker-derive
-- **Status:** FALSE POSITIVE — proc-macro crate wontfix
-- **Why:** The `quote!` macro emits `proc_macro2::TokenStream` types internally. Even though
-  `proc_macro2` is not referenced directly in source, it is required for the crate to compile
-  correctly when used as a proc-macro. This is a known machete limitation.
-- **Fix applied:** `[package.metadata.cargo-machete] ignored = ["proc-macro2"]` — machete no longer flags it.
+### paste 1.0.15 — RUSTSEC-2024-0436 (unmaintained)
+- Advisory: paste is archived/unmaintained
+- Path: paste → metal → wgpu-hal → wgpu → bevy_render → bevy 0.18.1
+- Rationale: This is a transitive dep several layers deep inside Bevy's render stack. No direct
+  project action can fix it. It is NOT a vulnerability (no CVE, no unsound code) — purely a
+  maintenance status advisory. Will resolve automatically when Bevy upgrades its wgpu/metal deps.
+- Action: None. Re-check after any Bevy version bump.
 
-### bevy/serialize feature
-- **Finding:** `bevy = { features = ["2d", "serialize"] }` — serialize may not be directly needed
-- **Status:** DEFER — needs deeper investigation before removal
-- **Why:** The project uses `serde::Deserialize` on structs with primitive fields (`f32`, `[f32; 3]`),
-  not on Bevy math types. However, the `serialize` feature may be needed for internal Bevy
-  scene/asset system behavior. Removing requires a full build + test cycle to verify no regressions.
+### bitflags v1.3.2 + v2.11.0 dual versions
+- Path for v1: core-graphics → winit; coreaudio-rs → cpal → rodio → bevy_audio
+- Path for v2: everywhere else in Bevy
+- Rationale: bitflags v1 is required by macOS-specific platform libs (coreaudio-rs, core-graphics).
+  These are deep platform transitive deps owned by Bevy/wgpu. Not actionable at project level.
+- Impact: Small — bitflags is a lightweight crate, minimal binary/compile overhead.
+- Action: None. Re-check after Bevy upgrade.
 
-### default = ["dev"] activates dev features in scenario runner — RESOLVED
-- **Finding (historical):** `breaker-game/Cargo.toml` had `default = ["dev"]`, activating bevy_egui
-  in the scenario runner.
-- **Status:** FIXED — `breaker-scenario-runner/Cargo.toml` specifies
-  `breaker = { path = "../breaker-game", default-features = false }`.
-- **Residual:** The game crate still declares `default = ["dev"]`, which means bare `cargo build -p breaker`
-  still activates dev features. This is intentional for the dev workflow.
+### objc2 / objc2-app-kit / objc2-foundation dual versions (0.5.x + 0.6.x)
+- Rationale: Same root cause as bitflags — macOS platform libs in two generations of objc2 bindings.
+  Owned entirely by Bevy's macOS graphics stack. Not actionable at project level.
+- Action: None.
 
-### self_cell GPL-2.0-only OR Apache-2.0
-- **Finding:** self_cell 1.2.2 is licensed `Apache-2.0 OR GPL-2.0-only` (transitive via bevy_text)
-- **Status:** NOT a compliance issue — OR license allows Apache-2.0. Exception added in deny.toml.
-- **Why:** Using the crate under Apache-2.0 is explicitly permitted.
+### block2 v0.5.1 + v0.6.2 dual versions
+- Same root cause as objc2 above.
 
-### BSL-1.0 (clipboard-win) — RESOLVED
-- **Status:** RESOLVED 2026-03-22 — "BSL-1.0" added to deny.toml allow list. No longer fails.
+### core-foundation v0.9.4 + v0.10.1 dual versions
+- Same root cause. macOS platform transitive chain.
 
-### MIT-0 (encase) — RESOLVED
-- **Status:** RESOLVED 2026-03-22 — "MIT-0" added to deny.toml allow list. No longer fails.
+### hashbrown v0.15.5 + v0.16.1 dual versions
+- Two Bevy subcrates using different hashbrown minors. Not actionable.
 
-### Workspace crates missing license field — RESOLVED
-- **Status:** RESOLVED 2026-03-22 — `private.ignore = true` added to deny.toml [licenses] section.
+### read-fonts / skrifa dual versions
+- Parley text layout stack split between two font crate generations. Owned by Bevy.
 
-### bevy_common_assets + bevy_asset_loader — REMOVED (2026-03-26)
-- **Finding:** Both crates were removed from breaker-game/Cargo.toml.
-- **Status:** RESOLVED — no longer in Cargo.toml or Cargo.lock.
-- **Side effect resolved:** The `ron v0.11.0` transitive duplicate (caused by bevy_common_assets
-  requiring `ron ^0.11`) is also eliminated. Only `ron 0.12.0` remains in the tree.
+## Acknowledged — Low Priority
 
-### ron v0.11 transitive duplicate — RESOLVED (2026-03-26)
-- **Previous status:** WONTFIX (bevy_common_assets pinned ron ^0.11)
-- **Status:** RESOLVED — bevy_common_assets removed; ron tree is now unified at 0.12.0.
+### Unicode-DFS-2016 warning in cargo deny
+- deny.toml allowlist includes Unicode-DFS-2016 but no dep currently uses it.
+- This is a harmless pre-approval — keep for forward compatibility.
 
-### OFL-1.1 / Ubuntu-font-1.0 (epaint_default_fonts) — RESOLVED
-- **Status:** RESOLVED 2026-03-22 — "OFL-1.1" and "Ubuntu-font-1.0" added to deny.toml allow list.
+## Recommendations Deferred
 
-### CC0-1.0 (hexf-parse) — RESOLVED
-- **Status:** RESOLVED 2026-03-22 — "CC0-1.0" added to deny.toml allow list.
-
-### Unicode-3.0 (unicode-ident) — RESOLVED
-- **Status:** RESOLVED 2026-03-22 — "Unicode-3.0" added to deny.toml allow list.
-
-### Workspace crates unlicensed — RESOLVED (2026-03-24)
-- **Finding (historical):** `cargo deny check licenses` errors on workspace crates missing `publish = false`.
-- **Status:** RESOLVED — all six workspace crates have `publish = false`. `cargo deny check licenses`
-  passes cleanly with `licenses ok`.
-- **Note:** The `breaker-derive` crate referenced in 2026-03-23 audit no longer exists. It was
-  replaced by `rantzsoft_defaults_derive`, which carries `publish = false`.
-
-### macOS platform dep tree objc2 version split — ACCEPTED (2026-03-24)
-- **Finding:** `cargo tree -d` shows objc2 0.5.2 / 0.6.4, block2 0.5.1 / 0.6.2,
-  objc2-foundation 0.2.2 / 0.3.2, objc2-app-kit 0.2.2 / 0.3.2, core-foundation 0.9.4 / 0.10.1.
-- **Status:** WONTFIX (upstream) — driven by bevy_egui and winit pulling different objc2 generations.
-- **Impact:** Compile time increase on macOS only. No runtime conflict.
-- **Fix:** Resolves when bevy_egui or winit unify their objc2 version pins.
-  Re-evaluate at next Bevy upgrade.
+### rand 0.9 → 0.10 (BREAKING)
+- Deferred: rand 0.10 is a semver-breaking release. Widespread usage across the codebase
+  (bolt, chips, effect, run, shared/rng). Needs a dedicated migration task — not a casual bump.
+- Re-evaluate when Bevy ecosystem (bevy_rand etc.) stabilizes on rand 0.10.

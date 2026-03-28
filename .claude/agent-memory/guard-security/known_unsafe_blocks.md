@@ -1,16 +1,22 @@
 ---
 name: known_unsafe_blocks
-description: Inventory of unsafe code in the codebase — confirmed none as of 2026-03-19
+description: Inventory of unsafe blocks in the workspace and their justification status
 type: project
 ---
 
-Audited 2026-03-19 (develop, commit 7986274). Re-confirmed 2026-03-24 (spatial/physics extraction branch).
+## Unsafe block inventory (as of 2026-03-28)
 
-## Result: No unsafe blocks found
+**Result: None found.**
 
-All six crates (including new `rantzsoft_spatial2d` and `rantzsoft_physics2d`) have `unsafe_code = "deny"` in `[workspace.lints.rust]` (root Cargo.toml, `workspace = true` in all crate Cargo.tomls).
-A grep for the literal string `unsafe` across all source files returns zero results.
+The workspace lint configuration in `Cargo.toml` sets:
+```
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+undocumented_unsafe_blocks = "deny"
+```
 
-No unsafe blocks, no FFI boundaries, no raw pointer manipulation in any first-party code.
+No unsafe blocks exist anywhere in `breaker-game/src/`. Verified by grep across all
+changed files in the Phase 1 collision cleanup diff and full-source scan.
 
-**How to apply:** On future audits, re-grep for `unsafe` — any new result is a new finding that needs review.
+No FFI boundaries, no raw pointer manipulation, no proc macros with untrusted input.
+No `build.rs` files in any crate.

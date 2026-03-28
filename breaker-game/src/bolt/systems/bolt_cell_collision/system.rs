@@ -1,10 +1,10 @@
-//! Bolt-cell-wall collision detection via swept CCD (continuous collision detection).
+//! Bolt-cell collision detection via swept CCD (continuous collision detection).
 //!
 //! Instead of moving the bolt first and then checking for overlaps, this system
 //! traces the bolt's path forward using ray-vs-expanded-AABB intersection.
 //! On each hit, the bolt is placed just before the impact point, the velocity
 //! is reflected, and the remaining movement continues. The bolt never overlaps
-//! any cell or wall.
+//! any cell.
 //!
 //! A per-frame `MAX_BOUNCES` cap (4) prevents infinite bounce loops. Cell hits
 //! are naturally bounded: after reflection, the bolt travels away from the hit
@@ -14,8 +14,8 @@
 //! reflecting, decrementing `PiercingRemaining` on each hit.
 //!
 //! Cell damage and destruction are handled by the cells domain via
-//! [`BoltImpactCell`] and [`DamageCell`] messages. Wall hits send
-//! [`BoltImpactWall`] messages for overclock triggers.
+//! [`BoltImpactCell`] and [`DamageCell`] messages. Wall overlap detection
+//! is handled by `bolt_wall_collision`.
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
@@ -31,18 +31,14 @@ pub(crate) const MAX_BOUNCES: u32 = 4;
 
 use crate::{
     bolt::{
-        BASE_BOLT_DAMAGE,
-        components::Bolt,
-        filters::ActiveFilter,
-        messages::{BoltImpactCell, BoltImpactWall},
+        BASE_BOLT_DAMAGE, components::Bolt, filters::ActiveFilter, messages::BoltImpactCell,
         queries::CollisionQueryBolt,
     },
     cells::{
         components::{Cell, CellHealth},
         messages::DamageCell,
     },
-    shared::{CELL_LAYER, WALL_LAYER},
-    wall::components::Wall,
+    shared::CELL_LAYER,
 };
 
 /// Minimum remaining travel distance below which the CCD loop terminates.
@@ -51,11 +47,10 @@ use crate::{
 /// stops — there is not enough distance left for a meaningful collision.
 const MIN_REMAINING: f32 = 0.01;
 
-/// Message writers used by the bolt-cell-wall collision system.
+/// Message writers used by the bolt-cell collision system.
 type CollisionWriters<'a> = (
     MessageWriter<'a, BoltImpactCell>,
     MessageWriter<'a, DamageCell>,
-    MessageWriter<'a, BoltImpactWall>,
 );
 
 /// Query for looking up game-specific data by entity ID after `cast_circle`
@@ -63,7 +58,7 @@ type CollisionWriters<'a> = (
 ///
 /// Excludes bolts to avoid query conflicts with the mutable `bolt_query`.
 type CandidateLookup<'w, 's> =
-    Query<'w, 's, (Has<Cell>, Has<Wall>, Option<&'static CellHealth>), Without<Bolt>>;
+    Query<'w, 's, (Has<Cell>, Option<&'static CellHealth>), Without<Bolt>>;
 
 /// Returns the first `SweepHit` whose entity is not a pierced cell.
 ///
@@ -82,14 +77,13 @@ fn find_first_non_pierced<'a>(
     })
 }
 
-/// Advances bolts along their velocity, reflecting off cells and walls via swept CCD.
+/// Advances bolts along their velocity, reflecting off cells via swept CCD.
 ///
 /// For each bolt, traces a ray from its current position in the velocity
-/// direction. If a cell or wall is hit, the bolt is placed just before the
+/// direction. If a cell is hit, the bolt is placed just before the
 /// impact point, the velocity is reflected off the hit face, and tracing
 /// continues with the remaining movement distance. Sends [`BoltImpactCell`]
-/// and [`DamageCell`] messages for each cell hit. Sends [`BoltImpactWall`]
-/// messages for each wall hit.
+/// and [`DamageCell`] messages for each cell hit.
 pub(crate) fn bolt_cell_collision(
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
@@ -98,7 +92,7 @@ pub(crate) fn bolt_cell_collision(
     mut writers: CollisionWriters,
     mut pierced_this_frame: Local<Vec<Entity>>,
 ) {
-    let (ref mut hit_writer, ref mut damage_writer, ref mut wall_hit_writer) = writers;
+    let (ref mut hit_writer, ref mut damage_writer) = writers;
     let dt = time.delta_secs();
 
     for (
@@ -108,7 +102,7 @@ pub(crate) fn bolt_cell_collision(
         _,
         bolt_radius,
         mut piercing_remaining,
-        piercing,
+        _,
         damage_boost,
         bolt_entity_scale,
         spawned_by_evo,
@@ -127,7 +121,7 @@ pub(crate) fn bolt_cell_collision(
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
 
-        let collision_layers = CollisionLayers::new(0, CELL_LAYER | WALL_LAYER);
+        let collision_layers = CollisionLayers::new(0, CELL_LAYER);
 
         for _ in 0..MAX_BOUNCES {
             if remaining <= MIN_REMAINING {
@@ -160,49 +154,41 @@ pub(crate) fn bolt_cell_collision(
             remaining = hit.remaining;
 
             // Look up game-specific data for the hit entity
-            let Ok((is_cell, _is_wall, cell_health)) = candidate_lookup.get(hit.entity) else {
+            let Ok((is_cell, cell_health)) = candidate_lookup.get(hit.entity) else {
                 // Entity not in lookup (shouldn't happen) — skip
                 continue;
             };
 
-            if is_cell {
-                // Check if this bolt can pierce this cell
-                let can_pierce = piercing_remaining.as_deref().is_some_and(|pr| pr.0 > 0);
-                let cell_hp = cell_health.map(|h| h.current);
-                let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
-
-                if can_pierce && would_destroy {
-                    // PIERCE: do NOT reflect; decrement remaining pierces
-                    if let Some(ref mut pr) = piercing_remaining {
-                        pr.0 = pr.0.saturating_sub(1);
-                    }
-                    pierced_this_frame.push(hit.entity);
-                    // Continue CCD loop — velocity unchanged, direction unchanged
-                } else {
-                    // NORMAL: reflect
-                    velocity = reflect(velocity, hit.normal);
-                }
-                hit_writer.write(BoltImpactCell {
-                    cell: hit.entity,
-                    bolt: bolt_entity,
-                });
-                damage_writer.write(DamageCell {
-                    cell: hit.entity,
-                    damage: effective_damage,
-                    source_chip: spawned_by_evo.map(|s| s.0.clone()),
-                });
-            } else {
-                // WALL HIT: reflect and reset `PiercingRemaining`
-                velocity = reflect(velocity, hit.normal);
-                // Reset `PiercingRemaining` to `Piercing.0`
-                if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
-                    pr.0 = p.0;
-                }
-                wall_hit_writer.write(BoltImpactWall {
-                    bolt: bolt_entity,
-                    wall: hit.entity,
-                });
+            if !is_cell {
+                // Non-cell entity in cell-only query — skip
+                continue;
             }
+
+            // Check if this bolt can pierce this cell
+            let can_pierce = piercing_remaining.as_deref().is_some_and(|pr| pr.0 > 0);
+            let cell_hp = cell_health.map(|h| h.current);
+            let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
+
+            if can_pierce && would_destroy {
+                // PIERCE: do NOT reflect; decrement remaining pierces
+                if let Some(ref mut pr) = piercing_remaining {
+                    pr.0 = pr.0.saturating_sub(1);
+                }
+                pierced_this_frame.push(hit.entity);
+                // Continue CCD loop — velocity unchanged, direction unchanged
+            } else {
+                // NORMAL: reflect
+                velocity = reflect(velocity, hit.normal);
+            }
+            hit_writer.write(BoltImpactCell {
+                cell: hit.entity,
+                bolt: bolt_entity,
+            });
+            damage_writer.write(DamageCell {
+                cell: hit.entity,
+                damage: effective_damage,
+                source_chip: spawned_by_evo.map(|s| s.0.clone()),
+            });
         }
 
         bolt_position.0 = position;

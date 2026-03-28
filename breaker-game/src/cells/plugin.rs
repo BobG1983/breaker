@@ -7,8 +7,8 @@ use crate::{
         messages::{CellDestroyedAt, CellImpactWall, DamageCell, RequestCellDestroyed},
         resources::CellConfig,
         systems::{
-            check_lock_release::check_lock_release, cleanup_destroyed_cells,
-            detect_cell_wall_collision, handle_cell_hit, rotate_shield_cells::rotate_shield_cells,
+            cell_wall_collision, check_lock_release::check_lock_release, cleanup_cell,
+            handle_cell_hit, rotate_shield_cells::rotate_shield_cells,
             sync_orbit_cell_positions::sync_orbit_cell_positions, tick_cell_regen::tick_cell_regen,
         },
     },
@@ -36,8 +36,8 @@ impl Plugin for CellsPlugin {
                     tick_cell_regen,
                     rotate_shield_cells,
                     sync_orbit_cell_positions.after(rotate_shield_cells),
-                    cleanup_destroyed_cells.after(EffectSystems::Bridge),
-                    detect_cell_wall_collision,
+                    cleanup_cell.after(EffectSystems::Bridge),
+                    cell_wall_collision,
                 )
                     .run_if(in_state(PlayingState::Active)),
             );
@@ -46,6 +46,8 @@ impl Plugin for CellsPlugin {
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_physics2d::resources::CollisionQuadtree;
+
     use super::*;
     use crate::shared::GameState;
 
@@ -58,6 +60,7 @@ mod tests {
             .add_sub_state::<PlayingState>()
             // CellsPlugin reads BoltImpactCell messages from bolt domain
             .add_message::<crate::bolt::messages::BoltImpactCell>()
+            .insert_resource(CollisionQuadtree::default())
             .add_plugins(CellsPlugin)
             .update();
     }
@@ -86,6 +89,7 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<crate::bolt::messages::BoltImpactCell>()
+            .insert_resource(CollisionQuadtree::default())
             .add_plugins(CellsPlugin);
         // Enter Playing -> Active so run_if(in_state(PlayingState::Active)) gates pass
         app.world_mut()
