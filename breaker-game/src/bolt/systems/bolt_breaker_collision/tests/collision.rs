@@ -101,7 +101,7 @@ fn overlap_resolved_writes_position2d_y() {
     let hits = app.world().resource::<HitBreakers>();
     assert_eq!(
         hits.0, 1,
-        "overlap with downward bolt should send BoltHitBreaker"
+        "overlap with downward bolt should send BoltImpactBreaker"
     );
 }
 
@@ -144,7 +144,7 @@ fn upward_bolt_inside_breaker_pushed_out_no_message() {
     let hits = app.world().resource::<HitBreakers>();
     assert!(
         hits.0 == 0,
-        "upward bolt overlap should NOT send BoltHitBreaker"
+        "upward bolt overlap should NOT send BoltImpactBreaker"
     );
 }
 
@@ -176,7 +176,7 @@ fn upward_bolt_side_hit_is_not_reflected() {
     let hits = app.world().resource::<HitBreakers>();
     assert!(
         hits.0 == 0,
-        "upward side hit should NOT send BoltHitBreaker, got {} messages",
+        "upward side hit should NOT send BoltImpactBreaker, got {} messages",
         hits.0
     );
 }

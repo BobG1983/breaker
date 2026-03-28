@@ -50,7 +50,7 @@ fn chip_selections_defaults_to_none() {
 
 #[test]
 fn initial_effects_parses_from_ron() {
-    use breaker::effect::{Effect, EffectNode, RootEffect, Target};
+    use breaker::effect::{EffectKind, EffectNode, RootEffect, Target};
 
     let ron = r#"(
         breaker: "aegis",
@@ -72,7 +72,7 @@ fn initial_effects_parses_from_ron() {
         effects[0],
         RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(1))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
         },
         "initial_effects must contain On(target: Bolt, then: [Do(Piercing(1))])"
     );

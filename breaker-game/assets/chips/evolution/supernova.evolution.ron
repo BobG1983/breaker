@@ -5,8 +5,8 @@
         On(target: Bolt, then: [
             When(trigger: PerfectBumped, then: [
                 When(trigger: Impacted(Cell), then: [
-                    When(trigger: DestroyedCell, then: [
-                        Do(MultiBolt(base_count: 2, count_per_level: 0, stacks: 1)),
+                    When(trigger: CellDestroyed, then: [
+                        Do(SpawnBolts(count: 2, inherit: true)),
                         Do(Shockwave(base_range: 96.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
                     ]),
                 ]),

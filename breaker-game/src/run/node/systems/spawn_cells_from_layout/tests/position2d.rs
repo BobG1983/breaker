@@ -57,9 +57,7 @@ fn spawned_cell_has_position2d_at_grid_position() {
     // Row 0: 3 cells, Row 1: 3 cells
     let expected: Vec<Vec2> = (0..3)
         .map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y))
-        .chain(
-            (0..3).map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y - step_y)),
-        )
+        .chain((0..3).map(|col| Vec2::new((col as f32).mul_add(step_x, start_x), start_y - step_y)))
         .collect();
 
     for (i, (actual, exp)) in positions.iter().zip(expected.iter()).enumerate() {
@@ -375,6 +373,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
                 regen_rate: None,
                 ..Default::default()
             },
+            effects: None,
         },
     );
     registry.insert(
@@ -390,6 +389,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         },
     );
 

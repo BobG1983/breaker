@@ -6,15 +6,13 @@ use tracing::warn;
 use crate::{
     breaker::{
         SelectedBreaker,
-        components::Breaker,
+        components::{Breaker, BreakerInitialized},
         definition::BreakerStatOverrides,
+        queries::InitBreakerQuery,
         registry::BreakerRegistry,
         resources::{BreakerConfig, BreakerDefaults},
     },
-    effect::{
-        definition::{EffectChains, RootEffect, Target},
-        effects::life_lost::LivesCount,
-    },
+    effect::{RootEffect, Target, effects::life_lost::LivesCount},
 };
 
 /// Applies optional stat overrides to a `BreakerConfig`.
@@ -66,43 +64,47 @@ pub(crate) fn apply_breaker_config_overrides(
     apply_stat_overrides(&mut config, &def.stat_overrides);
 }
 
-/// Stamps init-time behavior components and populates entity `EffectChains`.
+/// Stamps init-time behavior components (`LivesCount`, `BoundEffects`, `StagedEffects`).
 ///
 /// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
-/// - Inserts `LivesCount` if breaker has `life_pool`
-/// - Resolves `On` targets to entity `EffectChains` for breaker and bolt entities
 pub(crate) fn init_breaker(
     mut commands: Commands,
     selected: Res<SelectedBreaker>,
     registry: Res<BreakerRegistry>,
-    breaker_query: Query<Entity, (With<Breaker>, Without<LivesCount>)>,
-    mut breaker_chains_query: Query<&mut EffectChains, With<Breaker>>,
+    mut breaker_query: InitBreakerQuery,
 ) {
     let Some(def) = registry.get(&selected.0) else {
         warn!("Breaker '{}' not found in registry", selected.0);
         return;
     };
 
-    // Stamp init-time components on breaker entity
-    for entity in &breaker_query {
+    for (entity, mut bound) in &mut breaker_query {
+        commands.entity(entity).insert(BreakerInitialized);
         if let Some(life_pool) = def.life_pool {
             commands.entity(entity).insert(LivesCount(life_pool));
         }
-    }
-
-    // Resolve On targets to entity EffectChains
-    for root in &def.effects {
-        let RootEffect::On { target, then } = root;
-        match target {
-            Target::Breaker => {
-                for mut chains in &mut breaker_chains_query {
-                    for child in then {
-                        chains.0.push((None, child.clone()));
-                    }
+        for root_effect in &def.effects {
+            let RootEffect::On { target, then } = root_effect;
+            if *target == Target::Breaker {
+                for child in then {
+                    bound.0.push((String::new(), child.clone()));
                 }
             }
-            // At init time, bolt/cell/wall targets are not yet available
-            Target::Bolt | Target::AllBolts | Target::Cell | Target::Wall | Target::AllCells => {}
         }
     }
+}
+
+/// Dispatches breaker-defined effects to target entities.
+///
+/// Resolves `RootEffect::On { target, then }` from the breaker definition
+/// and pushes children to target entity's `BoundEffects`.
+/// Stub — real implementation in Wave 6.
+pub(crate) fn dispatch_breaker_effects(
+    mut _commands: Commands,
+    _selected: Res<SelectedBreaker>,
+    _registry: Res<BreakerRegistry>,
+    _breaker_query: Query<Entity, With<Breaker>>,
+) {
+    // TODO: Wave 6 — resolve RootEffect targets, push to BoundEffects,
+    // fire bare Do children via commands.fire_effect()
 }

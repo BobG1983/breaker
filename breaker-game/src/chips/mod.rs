@@ -11,6 +11,6 @@ pub(crate) mod systems;
 pub(crate) use definition::ChipDefinition;
 pub(crate) use plugin::ChipsPlugin;
 pub use resources::ChipCatalog;
-pub(crate) use resources::{ChipTemplateRegistry, EvolutionTemplateRegistry};
 #[cfg(test)]
 pub(crate) use resources::Recipe;
+pub(crate) use resources::{ChipTemplateRegistry, EvolutionTemplateRegistry};

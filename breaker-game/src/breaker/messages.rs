@@ -37,6 +37,28 @@ pub struct BumpWhiffed;
 #[derive(Message, Clone, Debug)]
 pub struct BreakerSpawned;
 
+/// Sent when the breaker collides with a cell.
+///
+/// Consumed by `bridge_cell_impact` and `bridge_breaker_impacted` in the effect domain.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct BreakerImpactCell {
+    /// The breaker entity that collided with the cell.
+    pub breaker: Entity,
+    /// The cell entity that was hit.
+    pub cell: Entity,
+}
+
+/// Sent when the breaker collides with a wall.
+///
+/// Consumed by `bridge_wall_impact` and `bridge_breaker_impacted` in the effect domain.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct BreakerImpactWall {
+    /// The breaker entity that collided with the wall.
+    pub breaker: Entity,
+    /// The wall entity that was hit.
+    pub wall: Entity,
+}
+
 /// Sent when the breaker should be destroyed. Entity is still alive.
 ///
 /// Stub for two-phase destruction. Cleanup system reads this but does nothing

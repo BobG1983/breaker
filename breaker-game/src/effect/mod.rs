@@ -1,23 +1,20 @@
-//! Effect system — data-driven trigger->effect dispatch.
+//! Effect system — data-driven trigger→effect pipeline.
 
-pub(crate) mod armed;
-pub(crate) mod bridges;
-pub(crate) mod definition;
-pub(crate) mod effect_nodes;
-pub(crate) mod effects;
-pub(crate) mod evaluate;
-pub(crate) mod helpers;
-pub(crate) mod init;
-mod plugin;
-pub(crate) mod registry;
-pub(crate) mod sets;
-pub(crate) mod triggers;
-pub(crate) mod typed_events;
+/// Commands extension for firing and reversing effects.
+pub mod commands;
+/// Core types: triggers, targets, effect nodes, effect kinds, components.
+pub mod core;
+/// Per-effect modules with `fire()`, `reverse()`, `register()`.
+pub mod effects;
+/// `EffectPlugin` — registers all effect and trigger systems.
+pub mod plugin;
+/// System sets for cross-domain ordering.
+pub mod sets;
+/// Trigger bridge systems and evaluation helpers.
+pub mod triggers;
 
-pub use definition::{
-    AttractionType, Effect, EffectChains, EffectEntity, EffectNode, EffectTarget, ImpactTarget,
-    RootEffect, Target, Trigger,
-};
-pub(crate) use plugin::EffectPlugin;
-pub(crate) use registry::BreakerRegistry;
-pub(crate) use sets::EffectSystems;
+pub use core::*;
+
+pub use commands::EffectCommandsExt;
+pub use plugin::EffectPlugin;
+pub use sets::EffectSystems;

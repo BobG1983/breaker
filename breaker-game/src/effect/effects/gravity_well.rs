@@ -1,189 +1,273 @@
-//! Gravity well effect handler — creates a gravity well that pulls cells.
-//!
-//! Observes [`GravityWellFired`] and spawns a gravity well entity with a
-//! [`GravityWell`] marker, [`Position2D`], and a timer.
-
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::prelude::*;
 
-use crate::effect::definition::EffectTarget;
+use crate::{bolt::components::Bolt, shared::playing_state::PlayingState};
 
-// ---------------------------------------------------------------------------
-// Typed event
-// ---------------------------------------------------------------------------
+/// Marker for gravity well entities.
+#[derive(Component)]
+pub struct GravityWellMarker;
 
-/// Fired when a gravity well effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct GravityWellFired {
-    // FUTURE: may be used for upcoming phases
-    // /// Attraction strength.
-    // /// Duration in seconds.
-    // /// Effect radius in world units.
-    /// Maximum active wells at once.
-    pub max: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    // FUTURE: may be used for upcoming phases
-    // /// The originating chip name, or `None` for breaker chains.
-    // pub source_chip: Option<String>,
+/// Configuration and runtime state for a gravity well.
+#[derive(Component)]
+pub struct GravityWellConfig {
+    /// Pull strength applied to bolts within radius.
+    pub strength: f32,
+    /// Attraction radius in world units.
+    pub radius: f32,
+    /// Remaining duration in seconds.
+    pub remaining: f32,
+    /// Entity that spawned this well.
+    pub owner: Entity,
 }
 
-// ---------------------------------------------------------------------------
-// Components
-// ---------------------------------------------------------------------------
-
-/// Marker component for gravity well entities.
-///
-/// Used to identify and count active gravity wells for the `max` cap.
-#[derive(Component, Debug)]
-pub(crate) struct GravityWell;
-
-/// Observer: handles gravity well creation.
-///
-/// Spawns a new entity with [`GravityWell`] marker and [`Position2D`] at the
-/// source bolt's position. Respects the `max` cap — does not spawn if the
-/// cap is already reached.
-pub(crate) fn handle_gravity_well(
-    trigger: On<GravityWellFired>,
-    mut commands: Commands,
-    bolt_query: Query<&Position2D>,
-    well_query: Query<Entity, With<GravityWell>>,
+pub(crate) fn fire(
+    entity: Entity,
+    strength: f32,
+    duration: f32,
+    radius: f32,
+    max: u32,
+    world: &mut World,
 ) {
-    let event = trigger.event();
+    let position = world
+        .get::<Transform>(entity)
+        .map_or(Vec3::ZERO, |t| t.translation);
 
-    // Respect max cap
-    if well_query.iter().count() >= event.max as usize {
-        return;
+    // Enforce max active wells for this owner — despawn oldest if at cap.
+    let mut owned: Vec<Entity> = Vec::new();
+    {
+        let mut query = world.query::<(Entity, &GravityWellConfig)>();
+        for (well_entity, config) in query.iter(world) {
+            if config.owner == entity {
+                owned.push(well_entity);
+            }
+        }
     }
 
-    // Get origin from targets
-    let origin = event
-        .targets
-        .iter()
-        .find_map(|t| match t {
-            EffectTarget::Entity(e) => bolt_query.get(*e).ok().map(|p| p.0),
-            EffectTarget::Location(pos) => Some(*pos),
-        })
-        .unwrap_or(Vec2::ZERO);
+    // Despawn order is arbitrary (ECS query iteration is not guaranteed FIFO).
+    while owned.len() >= max as usize {
+        if let Some(oldest) = owned.first().copied() {
+            world.despawn(oldest);
+            owned.remove(0);
+        }
+    }
 
-    commands.spawn((GravityWell, Position2D(origin)));
+    world.spawn((
+        GravityWellMarker,
+        GravityWellConfig {
+            strength,
+            radius,
+            remaining: duration,
+            owner: entity,
+        },
+        Transform::from_translation(position),
+    ));
 }
 
-/// Registers all observers and systems for the gravity well effect.
+/// No-op — gravity wells self-despawn via their duration timer.
+pub(crate) fn reverse(_entity: Entity, _world: &mut World) {}
+
+/// Decrement well timers and despawn expired wells.
+fn tick_gravity_well(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut GravityWellConfig), With<GravityWellMarker>>,
+) {
+    let dt = time.delta_secs();
+    for (entity, mut config) in &mut query {
+        config.remaining -= dt;
+        if config.remaining <= 0.0 {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Pull bolts toward active gravity wells.
+fn apply_gravity_pull(
+    time: Res<Time>,
+    wells: Query<(&Transform, &GravityWellConfig), With<GravityWellMarker>>,
+    mut bolts: Query<(&Transform, &mut Velocity2D), With<Bolt>>,
+) {
+    let dt = time.delta_secs();
+    for (well_transform, config) in &wells {
+        let well_pos = well_transform.translation.truncate();
+        for (bolt_transform, mut velocity) in &mut bolts {
+            let bolt_pos = bolt_transform.translation.truncate();
+            let delta = well_pos - bolt_pos;
+            let distance = delta.length();
+            if distance > 0.0 && distance <= config.radius {
+                let direction = delta / distance;
+                let pull = config.strength * dt;
+                velocity.x += direction.x * pull;
+                velocity.y += direction.y * pull;
+            }
+        }
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
-    app.add_observer(handle_gravity_well);
+    app.add_systems(
+        FixedUpdate,
+        (tick_gravity_well, apply_gravity_pull).run_if(in_state(PlayingState::Active)),
+    );
 }
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
-
     use super::*;
-    use crate::bolt::components::Bolt;
+
+    // ── fire tests ──────────────────────────────────────────────────
+
+    #[test]
+    fn fire_spawns_well_entity_with_marker_and_config() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
+
+        fire(entity, 100.0, 5.0, 80.0, 3, &mut world);
+
+        let mut query = world.query::<(&GravityWellMarker, &GravityWellConfig, &Transform)>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(results.len(), 1, "expected exactly one gravity well");
+
+        let (_marker, config, transform) = results[0];
+        assert!(
+            (config.strength - 100.0).abs() < f32::EPSILON,
+            "expected strength 100.0, got {}",
+            config.strength
+        );
+        assert!(
+            (config.radius - 80.0).abs() < f32::EPSILON,
+            "expected radius 80.0, got {}",
+            config.radius
+        );
+        assert!(
+            (config.remaining - 5.0).abs() < f32::EPSILON,
+            "expected remaining 5.0, got {}",
+            config.remaining
+        );
+        assert_eq!(config.owner, entity);
+        assert!(
+            (transform.translation.x - 50.0).abs() < f32::EPSILON,
+            "expected x 50.0, got {}",
+            transform.translation.x
+        );
+        assert!(
+            (transform.translation.y - 75.0).abs() < f32::EPSILON,
+            "expected y 75.0, got {}",
+            transform.translation.y
+        );
+    }
+
+    #[test]
+    fn fire_enforces_max_cap_despawns_oldest() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+        // Spawn 3 wells with max=2
+        fire(entity, 100.0, 5.0, 80.0, 2, &mut world);
+        fire(entity, 100.0, 5.0, 80.0, 2, &mut world);
+        fire(entity, 100.0, 5.0, 80.0, 2, &mut world);
+
+        let mut query = world.query::<&GravityWellConfig>();
+        let count = query.iter(&world).count();
+        assert_eq!(count, 2, "should enforce max of 2 wells, got {count}");
+    }
+
+    #[test]
+    fn reverse_is_noop() {
+        let mut world = World::new();
+        let owner = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+        fire(owner, 100.0, 5.0, 80.0, 10, &mut world);
+        reverse(owner, &mut world);
+
+        // Wells should still exist — reverse is a no-op
+        let mut query = world.query::<&GravityWellConfig>();
+        let count = query.iter(&world).count();
+        assert_eq!(count, 1, "reverse should not despawn wells (no-op)");
+    }
+
+    // ── system tests ────────────────────────────────────────────────
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_observer(handle_gravity_well);
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.init_state::<crate::shared::game_state::GameState>();
+        app.add_sub_state::<PlayingState>();
+        app.add_systems(Update, tick_gravity_well);
+        app.add_systems(Update, apply_gravity_pull);
         app
     }
 
-    #[test]
-    fn handle_gravity_well_does_not_panic() {
-        use crate::effect::typed_events::GravityWellFired;
-
-        let mut app = test_app();
-
-        app.world_mut().commands().trigger(GravityWellFired {
-            max: 2,
-            targets: vec![],
-        });
-        app.world_mut().flush();
-
-        // Stub handler should not panic when receiving its typed event.
+    fn enter_playing(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<NextState<crate::shared::game_state::GameState>>()
+            .set(crate::shared::game_state::GameState::Playing);
+        app.update();
     }
 
-    /// Triggering `GravityWellFired` with a bolt target at (50,100) should
-    /// spawn a new entity with `GravityWell` marker and `Position2D(50,100)`.
     #[test]
-    fn gravity_well_spawns_entity_at_position() {
+    fn tick_gravity_well_despawns_expired_wells() {
         let mut app = test_app();
+        enter_playing(&mut app);
 
-        let bolt = app
+        let well = app
             .world_mut()
             .spawn((
-                Bolt,
-                Position2D(Vec2::new(50.0, 100.0)),
-                Velocity2D(Vec2::new(0.0, 400.0)),
+                GravityWellMarker,
+                GravityWellConfig {
+                    strength: 100.0,
+                    radius: 80.0,
+                    remaining: 0.0,
+                    owner: Entity::PLACEHOLDER,
+                },
+                Transform::from_xyz(0.0, 0.0, 0.0),
             ))
             .id();
 
-        app.world_mut().commands().trigger(GravityWellFired {
-            max: 3,
-            targets: vec![EffectTarget::Entity(bolt)],
-        });
-        app.world_mut().flush();
+        app.update();
 
-        // A new GravityWell entity should exist
-        let wells: Vec<(Entity, &Position2D)> = app
-            .world_mut()
-            .query_filtered::<(Entity, &Position2D), With<GravityWell>>()
-            .iter(app.world())
-            .collect();
-        assert_eq!(
-            wells.len(),
-            1,
-            "GravityWellFired should spawn 1 entity with GravityWell marker, found {}",
-            wells.len()
-        );
-
-        let (_, pos) = wells[0];
         assert!(
-            (pos.0.x - 50.0).abs() < f32::EPSILON && (pos.0.y - 100.0).abs() < f32::EPSILON,
-            "GravityWell should be at bolt position (50.0, 100.0), got ({}, {})",
-            pos.0.x,
-            pos.0.y,
+            app.world().get_entity(well).is_err(),
+            "expired gravity well should be despawned"
         );
     }
 
-    /// When `max` gravity wells already exist, triggering another
-    /// `GravityWellFired` should NOT spawn additional entities.
     #[test]
-    fn gravity_well_respects_max_active() {
+    fn apply_gravity_pull_steers_bolt_toward_well_within_radius() {
         let mut app = test_app();
+        enter_playing(&mut app);
 
+        // Gravity well at origin with large radius
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        // Bolt at (100, 0) with zero velocity — should be pulled toward (0,0)
         let bolt = app
             .world_mut()
             .spawn((
                 Bolt,
-                Position2D(Vec2::new(0.0, 0.0)),
-                Velocity2D(Vec2::new(0.0, 400.0)),
+                Velocity2D(Vec2::ZERO),
+                Transform::from_xyz(100.0, 0.0, 0.0),
             ))
             .id();
 
-        // Simulate 3 existing gravity wells
-        app.world_mut()
-            .spawn((GravityWell, Position2D(Vec2::new(10.0, 10.0))));
-        app.world_mut()
-            .spawn((GravityWell, Position2D(Vec2::new(20.0, 20.0))));
-        app.world_mut()
-            .spawn((GravityWell, Position2D(Vec2::new(30.0, 30.0))));
+        app.update();
 
-        // Trigger with max:3 -- should NOT spawn because 3 already exist
-        app.world_mut().commands().trigger(GravityWellFired {
-            max: 3,
-            targets: vec![EffectTarget::Entity(bolt)],
-        });
-        app.world_mut().flush();
-
-        let well_count = app
-            .world_mut()
-            .query_filtered::<Entity, With<GravityWell>>()
-            .iter(app.world())
-            .count();
-        assert_eq!(
-            well_count, 3,
-            "max:3 with 3 existing wells should not spawn more, found {well_count}"
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // Bolt should have been pulled in the -x direction (toward the well)
+        assert!(
+            velocity.x < 0.0,
+            "bolt velocity x should be negative (pulled toward well), got {}",
+            velocity.x
         );
     }
 }

@@ -1,225 +1,282 @@
-//! Bridge for `NodeTimer` — sweeps ALL entities with `EffectChains` for
-//! `Trigger::NodeTimerThreshold(t)` when the timer ratio crosses below the threshold.
-
 use bevy::prelude::*;
 
-use crate::{
-    effect::definition::{EffectChains, EffectNode, Trigger},
-    run::node::resources::NodeTimer,
-};
+use super::evaluate::RemoveChainsCommand;
+use crate::effect::{commands::EffectCommandsExt, core::*};
 
-/// Bridge for `NodeTimer` — fires `When(NodeTimerThreshold(t))` chains when
-/// the timer ratio crosses below the threshold. Fires once only (chain consumed).
-///
-/// FIX from old bridge: was breaker-only; now sweeps ALL entities.
-pub(crate) fn bridge_timer_threshold(
-    timer: Res<NodeTimer>,
-    mut chains_query: Query<&mut EffectChains>,
+fn tick_time_expires(
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    let ratio = if timer.total == 0.0 {
-        0.0
-    } else {
-        timer.remaining / timer.total
-    };
-
-    for mut chains in &mut chains_query {
-        let mut indices_to_remove = Vec::new();
-        for (i, (_chip_name, chain)) in chains.0.iter().enumerate() {
+    let dt = time.delta_secs();
+    for (entity, mut staged) in &mut query {
+        let mut additions = Vec::new();
+        staged.0.retain_mut(|(chip_name, node)| {
             if let EffectNode::When {
-                trigger: Trigger::NodeTimerThreshold(threshold),
+                trigger: Trigger::TimeExpires(remaining),
                 then,
-            } = chain
-                && ratio < *threshold
+            } = node
             {
-                // Fire children
-                for child in then {
-                    if let EffectNode::Do(effect) = child {
-                        crate::effect::typed_events::fire_typed_event(
-                            effect.clone(),
-                            vec![],
-                            None,
-                            &mut commands,
-                        );
+                *remaining -= dt;
+                if *remaining <= 0.0 {
+                    for child in then {
+                        match child {
+                            EffectNode::Do(effect) => {
+                                commands.fire_effect(entity, effect.clone());
+                            }
+                            EffectNode::Reverse { effects, chains } => {
+                                for effect in effects {
+                                    commands.reverse_effect(entity, effect.clone());
+                                }
+                                if !chains.is_empty() {
+                                    commands.queue(RemoveChainsCommand {
+                                        entity,
+                                        chains: chains.clone(),
+                                    });
+                                }
+                            }
+                            other => {
+                                additions.push((chip_name.clone(), other.clone()));
+                            }
+                        }
                     }
+                    return false; // consumed
                 }
-                indices_to_remove.push(i);
             }
-        }
-
-        // Remove fired chains in reverse order to preserve indices
-        for &i in indices_to_remove.iter().rev() {
-            chains.0.remove(i);
-        }
+            true // keep
+        });
+        staged.0.extend(additions);
     }
 }
 
-/// Registers bridge systems for timer threshold trigger.
 pub(crate) fn register(app: &mut App) {
-    use crate::{effect::sets::EffectSystems, shared::PlayingState};
-    app.add_systems(
-        FixedUpdate,
-        bridge_timer_threshold
-            .in_set(EffectSystems::Bridge)
-            .run_if(in_state(PlayingState::Active)),
-    );
+    app.add_systems(FixedUpdate, tick_time_expires);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{super::test_helpers::*, *};
-    use crate::{
-        breaker::components::Breaker,
-        effect::{
-            definition::{Effect, EffectNode, Trigger},
-            typed_events::*,
-        },
-    };
+    use bevy::prelude::*;
 
-    // --- Test infrastructure ---
+    use super::*;
 
-    #[derive(Resource, Default)]
-    struct CapturedSpeedBoostFired(Vec<SpeedBoostFired>);
-
-    fn capture_speed_boost_fired(
-        trigger: On<SpeedBoostFired>,
-        mut captured: ResMut<CapturedSpeedBoostFired>,
-    ) {
-        captured.0.push(trigger.event().clone());
+    fn test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(FixedUpdate, tick_time_expires);
+        app
     }
 
-    // --- Timer threshold bridge tests ---
+    /// Accumulates one fixed timestep then runs one update.
+    fn tick(app: &mut App) {
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        app.world_mut()
+            .resource_mut::<Time<Fixed>>()
+            .accumulate_overstep(timestep);
+        app.update();
+    }
 
-    /// Breaker + non-breaker both have `When(NodeTimerThreshold(0.5))` — both fire
-    /// when ratio < 0.5.
+    /// Helper: build a `When(TimeExpires(secs), [child])` node.
+    fn time_expires_node(secs: f32, child: EffectNode) -> EffectNode {
+        EffectNode::When {
+            trigger: Trigger::TimeExpires(secs),
+            then: vec![child],
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests
+    // -----------------------------------------------------------------------
+
     #[test]
-    fn bridge_timer_sweeps_all_entities() {
-        let chain = EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(0.5),
-            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
+    fn time_expires_decrements_remaining() {
+        // Entity with When(TimeExpires(2.0), ...) in StagedEffects.
+        // After one tick, remaining should be less than 2.0. Entry retained.
+        let mut app = test_app();
+
+        let inner = EffectNode::When {
+            trigger: Trigger::Death,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         };
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(NodeTimer {
-                remaining: 12.0,
-                total: 60.0, // ratio = 0.2, below 0.5
-            })
-            .init_resource::<CapturedSpeedBoostFired>()
-            .add_observer(capture_speed_boost_fired)
-            .add_systems(FixedUpdate, bridge_timer_threshold);
-
-        // Breaker entity with threshold chain
-        app.world_mut()
-            .spawn((Breaker, EffectChains(wrap_chains(vec![chain.clone()]))));
-
-        // Non-breaker entity with threshold chain
-        app.world_mut()
-            .spawn(EffectChains(wrap_chains(vec![chain])));
+        let node = time_expires_node(2.0, inner);
+        let entity = app
+            .world_mut()
+            .spawn(StagedEffects(vec![("chip_a".into(), node)]))
+            .id();
 
         tick(&mut app);
 
-        let captured = app.world().resource::<CapturedSpeedBoostFired>();
+        let staged = app.world().get::<StagedEffects>(entity).unwrap();
         assert_eq!(
-            captured.0.len(),
-            2,
-            "both breaker and non-breaker should fire when ratio < threshold — got {}",
-            captured.0.len()
-        );
-    }
-
-    /// Ratio above threshold should not fire.
-    #[test]
-    fn bridge_timer_no_fire_above_threshold() {
-        let chain = EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(0.25),
-            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 2.0 })],
-        };
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(NodeTimer {
-                remaining: 30.0,
-                total: 60.0, // ratio = 0.5, above 0.25
-            })
-            .init_resource::<CapturedSpeedBoostFired>()
-            .add_observer(capture_speed_boost_fired)
-            .add_systems(FixedUpdate, bridge_timer_threshold);
-
-        app.world_mut()
-            .spawn(EffectChains(wrap_chains(vec![chain])));
-
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedSpeedBoostFired>();
-        assert!(
-            captured.0.is_empty(),
-            "ratio 0.5 > 0.25 should NOT fire — got {}",
-            captured.0.len()
-        );
-    }
-
-    /// M4: Ratio exactly at threshold (0.5) does NOT fire — strict less-than comparison.
-    #[test]
-    fn bridge_timer_no_fire_at_exact_threshold() {
-        let chain = EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(0.5),
-            then: vec![EffectNode::Do(Effect::test_shockwave(64.0))],
-        };
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(NodeTimer {
-                remaining: 30.0,
-                total: 60.0, // ratio = 0.5, exactly at threshold
-            })
-            .init_resource::<CapturedShockwaveFired>()
-            .add_observer(capture_shockwave_fired)
-            .add_systems(FixedUpdate, bridge_timer_threshold);
-
-        app.world_mut()
-            .spawn(EffectChains(wrap_chains(vec![chain])));
-
-        tick(&mut app);
-
-        let captured = app.world().resource::<CapturedShockwaveFired>();
-        assert!(
-            captured.0.is_empty(),
-            "ratio 0.5 is NOT less than threshold 0.5 — should NOT fire (strict less-than). Got {}",
-            captured.0.len()
-        );
-    }
-
-    /// After firing, the chain is consumed. Second tick should not fire again.
-    #[test]
-    fn bridge_timer_fires_once_only() {
-        let chain = EffectNode::When {
-            trigger: Trigger::NodeTimerThreshold(0.5),
-            then: vec![EffectNode::Do(Effect::SpeedBoost { multiplier: 1.5 })],
-        };
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .insert_resource(NodeTimer {
-                remaining: 12.0,
-                total: 60.0, // ratio = 0.2, below 0.5
-            })
-            .init_resource::<CapturedSpeedBoostFired>()
-            .add_observer(capture_speed_boost_fired)
-            .add_systems(FixedUpdate, bridge_timer_threshold);
-
-        app.world_mut()
-            .spawn(EffectChains(wrap_chains(vec![chain])));
-
-        // First tick: should fire
-        tick(&mut app);
-        let captured = app.world().resource::<CapturedSpeedBoostFired>();
-        assert_eq!(captured.0.len(), 1, "first tick should fire");
-
-        // Second tick: should NOT fire again (chain consumed)
-        tick(&mut app);
-        let captured = app.world().resource::<CapturedSpeedBoostFired>();
-        assert_eq!(
-            captured.0.len(),
+            staged.0.len(),
             1,
-            "second tick should NOT fire again — chain should be consumed — got {}",
-            captured.0.len()
+            "Entry should be retained (timer not expired)"
+        );
+        if let EffectNode::When {
+            trigger: Trigger::TimeExpires(remaining),
+            ..
+        } = &staged.0[0].1
+        {
+            assert!(
+                *remaining < 2.0,
+                "Remaining should have been decremented from 2.0, got {remaining}"
+            );
+            assert!(
+                *remaining > 0.0,
+                "Timer should not have expired yet, got {remaining}"
+            );
+        } else {
+            panic!("Expected When(TimeExpires(...)) node");
+        }
+    }
+
+    #[test]
+    fn time_expires_consumes_entry_at_zero() {
+        // Entity with When(TimeExpires(0.001), [non-Do child]) in StagedEffects.
+        // After one tick (dt ~0.015625s), remaining goes below 0 → entry consumed.
+        // Use a non-Do child to avoid fire_effect command panics.
+        let mut app = test_app();
+
+        let inner = EffectNode::When {
+            trigger: Trigger::Death,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+        };
+        let node = time_expires_node(0.001, inner.clone());
+        let entity = app
+            .world_mut()
+            .spawn(StagedEffects(vec![("chip_a".into(), node)]))
+            .id();
+
+        tick(&mut app);
+
+        let staged = app.world().get::<StagedEffects>(entity).unwrap();
+        // The TimeExpires entry is consumed; inner non-Do child pushed to additions.
+        assert_eq!(
+            staged.0.len(),
+            1,
+            "TimeExpires consumed, non-Do child added as addition (net 1)"
+        );
+        assert!(
+            matches!(
+                &staged.0[0].1,
+                EffectNode::When {
+                    trigger: Trigger::Death,
+                    ..
+                }
+            ),
+            "Remaining entry should be the inner When(Death) child"
+        );
+    }
+
+    #[test]
+    fn non_time_expires_entries_untouched() {
+        // Entity with When(Bump, Do(X)) in StagedEffects. Timer ticks.
+        // Non-TimeExpires entries should be completely untouched.
+        let mut app = test_app();
+
+        let node = EffectNode::When {
+            trigger: Trigger::Bump,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+        };
+        let entity = app
+            .world_mut()
+            .spawn(StagedEffects(vec![("chip_a".into(), node.clone())]))
+            .id();
+
+        tick(&mut app);
+
+        let staged = app.world().get::<StagedEffects>(entity).unwrap();
+        assert_eq!(staged.0.len(), 1, "Non-TimeExpires entry must be retained");
+        assert_eq!(staged.0[0].1, node, "Entry should be unchanged");
+    }
+
+    #[test]
+    fn multiple_time_expires_tick_independently() {
+        // Two TimeExpires entries: one at 1.0 (retained) and one at 0.001 (consumed).
+        // Both use non-Do children to avoid command panics.
+        let mut app = test_app();
+
+        let inner_a = EffectNode::When {
+            trigger: Trigger::Death,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
+        };
+        let inner_b = EffectNode::When {
+            trigger: Trigger::Death,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+        };
+        let node_long = time_expires_node(1.0, inner_a);
+        let node_short = time_expires_node(0.001, inner_b);
+        let entity = app
+            .world_mut()
+            .spawn(StagedEffects(vec![
+                ("chip_a".into(), node_long),
+                ("chip_b".into(), node_short),
+            ]))
+            .id();
+
+        tick(&mut app);
+
+        let staged = app.world().get::<StagedEffects>(entity).unwrap();
+        // node_long retained (decremented), node_short consumed (addition pushed).
+        // Net: 2 entries (1 retained TimeExpires + 1 addition from consumed).
+        assert_eq!(
+            staged.0.len(),
+            2,
+            "One retained + one addition from consumed timer"
+        );
+
+        // Find the retained TimeExpires entry
+        let has_time_expires = staged.0.iter().any(|(_, node)| {
+            matches!(node, EffectNode::When { trigger: Trigger::TimeExpires(r), .. } if *r < 1.0 && *r > 0.0)
+        });
+        assert!(
+            has_time_expires,
+            "Long timer should be retained with decremented value"
+        );
+
+        // Find the addition (inner When(Death))
+        let has_addition = staged.0.iter().any(|(_, node)| {
+            matches!(
+                node,
+                EffectNode::When {
+                    trigger: Trigger::Death,
+                    ..
+                }
+            )
+        });
+        assert!(
+            has_addition,
+            "Short timer consumed, its non-Do child should be added"
+        );
+    }
+
+    #[test]
+    fn time_expires_pushes_non_do_children_to_additions() {
+        // When(TimeExpires(0.001), [When(Bump, Do(X))]) — on expiry,
+        // the inner When(Bump) is a non-Do child, so it should be pushed
+        // to StagedEffects as an addition.
+        let mut app = test_app();
+
+        let inner = EffectNode::When {
+            trigger: Trigger::Bump,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
+        };
+        let node = time_expires_node(0.001, inner.clone());
+        let entity = app
+            .world_mut()
+            .spawn(StagedEffects(vec![("chip_a".into(), node)]))
+            .id();
+
+        tick(&mut app);
+
+        let staged = app.world().get::<StagedEffects>(entity).unwrap();
+        assert_eq!(
+            staged.0.len(),
+            1,
+            "TimeExpires consumed, non-Do child added"
+        );
+        assert_eq!(
+            staged.0[0].1, inner,
+            "Addition should be the inner When(Bump, Do(DamageBoost(3.0)))"
         );
     }
 }

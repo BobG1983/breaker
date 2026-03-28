@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::effect::definition::RootEffect;
+use crate::effect::RootEffect;
 
 /// A breaker definition loaded from a RON file.
 ///

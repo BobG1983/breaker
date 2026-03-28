@@ -9,7 +9,8 @@ use crate::{
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
-            animate_bump_visual, animate_tilt_visual, apply_entity_scale_to_breaker, grade_bump,
+            animate_bump_visual, animate_tilt_visual, apply_entity_scale_to_breaker,
+            detect_breaker_cell_collision, detect_breaker_wall_collision, grade_bump,
             init_breaker_params, move_breaker, perfect_bump_dash_cancel, reset_breaker,
             spawn_breaker, spawn_bump_grade_text, spawn_whiff_text, trigger_bump_visual,
             update_breaker_state, update_bump, width_boost_visual,
@@ -27,13 +28,16 @@ pub struct BreakerPlugin;
 impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
         use crate::breaker::messages::{
-            BreakerDestroyedAt, BreakerSpawned, RequestBreakerDestroyed,
+            BreakerDestroyedAt, BreakerImpactCell, BreakerImpactWall, BreakerSpawned,
+            RequestBreakerDestroyed,
         };
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
             .add_message::<BreakerSpawned>()
             .add_message::<RequestBreakerDestroyed>()
             .add_message::<BreakerDestroyedAt>()
+            .add_message::<BreakerImpactCell>()
+            .add_message::<BreakerImpactWall>()
             .init_resource::<BreakerConfig>()
             .init_resource::<SelectedBreaker>()
             .init_resource::<ForceBumpGrade>()
@@ -77,6 +81,9 @@ impl Plugin for BreakerPlugin {
                     )
                         .after(grade_bump),
                     trigger_bump_visual.after(update_bump),
+                    // Collision detection for effect triggers
+                    detect_breaker_cell_collision.after(BreakerSystems::Move),
+                    detect_breaker_wall_collision.after(BreakerSystems::Move),
                 )
                     .run_if(in_state(PlayingState::Active)),
             )
@@ -106,8 +113,8 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
-            // BreakerPlugin reads BoltHitBreaker from the bolt domain
-            .add_message::<crate::bolt::messages::BoltHitBreaker>()
+            // BreakerPlugin reads BoltImpactBreaker from the bolt domain
+            .add_message::<crate::bolt::messages::BoltImpactBreaker>()
             .add_plugins(BreakerPlugin)
             .update();
     }

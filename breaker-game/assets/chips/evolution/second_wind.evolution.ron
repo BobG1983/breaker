@@ -3,8 +3,8 @@
     description: "Losing a bolt grants temporary invulnerability — cheat death once",
     effects: [
         On(target: Breaker, then: [
-            When(trigger: OnBoltLost, then: [
-                Do(SecondWind(invuln_secs: 3.0)),
+            When(trigger: BoltLost, then: [
+                Do(SecondWind),
             ]),
         ]),
     ],

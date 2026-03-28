@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    effect::BreakerRegistry,
+    breaker::BreakerRegistry,
     screen::run_setup::{
         components::{BreakerCard, RunSetupScreen, SeedDisplay},
         resources::{RunSetupSelection, SeedEntry},
@@ -130,7 +130,7 @@ fn description_for(name: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::effect::definition::{BreakerDefinition, BreakerStatOverrides};
+    use crate::breaker::definition::{BreakerDefinition, BreakerStatOverrides};
 
     fn make_breaker(name: &str) -> BreakerDefinition {
         BreakerDefinition {

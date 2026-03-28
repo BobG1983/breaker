@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use crate::breaker::{components::Breaker, queries::WidthBoostVisualQuery};
-
 #[cfg(test)]
 use crate::{
     breaker::components::{BreakerHeight, BreakerWidth},

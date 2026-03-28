@@ -96,7 +96,7 @@ impl Plugin for RunPlugin {
 mod tests {
     use super::*;
     use crate::{
-        bolt::messages::{BoltHitBreaker, BoltHitCell, BoltLost},
+        bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltLost},
         breaker::messages::BumpPerformed,
         cells::messages::DamageCell,
         chips::inventory::ChipInventory,
@@ -115,8 +115,8 @@ mod tests {
             .add_message::<DamageCell>()
             .add_message::<BumpPerformed>()
             .add_message::<BoltLost>()
-            .add_message::<BoltHitBreaker>()
-            .add_message::<BoltHitCell>()
+            .add_message::<BoltImpactBreaker>()
+            .add_message::<BoltImpactCell>()
             .add_message::<ChipSelected>()
             // Resources required by run domain systems
             .init_resource::<ChipInventory>()

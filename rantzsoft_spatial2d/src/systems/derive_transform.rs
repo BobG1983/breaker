@@ -91,10 +91,12 @@ pub(crate) fn derive_transform<D: DrawLayer>(
 
         // Scale: interpolate if markers present.
         let (mut sx, mut sy) = if interp.is_some() {
-            prev_scale.map_or((g_scale.x, g_scale.y), |prev| (
-                (g_scale.x - prev.x).mul_add(alpha, prev.x),
-                (g_scale.y - prev.y).mul_add(alpha, prev.y),
-            ))
+            prev_scale.map_or((g_scale.x, g_scale.y), |prev| {
+                (
+                    (g_scale.x - prev.x).mul_add(alpha, prev.x),
+                    (g_scale.y - prev.y).mul_add(alpha, prev.y),
+                )
+            })
         } else {
             (g_scale.x, g_scale.y)
         };

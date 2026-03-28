@@ -28,6 +28,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         },
     );
     registry.insert(
@@ -43,6 +44,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         },
     );
     registry

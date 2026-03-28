@@ -11,6 +11,8 @@ pub enum BoltSystems {
     PrepareVelocity,
     /// The `reset_bolt` system — resets bolt position and velocity at node start.
     Reset,
+    /// The `bolt_cell_collision` system — detects and resolves bolt-cell hits.
+    CellCollision,
     /// The `bolt_breaker_collision` system — detects and resolves bolt-breaker hits.
     BreakerCollision,
     /// The `bolt_lost` system — detects bolt below playfield and respawns.

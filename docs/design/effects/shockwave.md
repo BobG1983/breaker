@@ -15,7 +15,7 @@ Effective range = `base_range + (stacks - 1) * range_per_level`.
 
 ## Behavior
 
-Spawns a wavefront entity at the entity's position that expands outward. Damages cells within the expanding ring. Despawns when fully expanded.
+Spawns a wavefront entity at the entity's position that expands outward at `speed` units/sec. Damages cells within the expanding ring. Each cell can only be damaged once per shockwave. The ring thins visually as the circle expands. Despawns when fully expanded (radius >= max radius).
 
 ## Reversal
 

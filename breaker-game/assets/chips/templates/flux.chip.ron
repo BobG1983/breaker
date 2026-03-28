@@ -5,7 +5,7 @@
         prefix: "Minor",
         effects: [
             On(target: Breaker, then: [
-                When(trigger: OnBump, then: [
+                When(trigger: Bump, then: [
                     Do(RandomEffect([
                         (0.5, Do(SpeedBoost(multiplier: 1.1))),
                         (0.5, Do(Shockwave(base_range: 24.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
@@ -18,7 +18,7 @@
         prefix: "Volatile",
         effects: [
             On(target: Breaker, then: [
-                When(trigger: OnBump, then: [
+                When(trigger: Bump, then: [
                     Do(RandomEffect([
                         (0.35, Do(SpeedBoost(multiplier: 1.15))),
                         (0.35, Do(Shockwave(base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
@@ -32,7 +32,7 @@
         prefix: "Critical",
         effects: [
             On(target: Breaker, then: [
-                When(trigger: OnBump, then: [
+                When(trigger: Bump, then: [
                     Do(RandomEffect([
                         (0.3, Do(SpeedBoost(multiplier: 1.2))),
                         (0.25, Do(Shockwave(base_range: 40.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),

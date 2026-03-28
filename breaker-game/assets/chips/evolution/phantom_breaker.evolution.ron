@@ -3,7 +3,7 @@
     description: "Successful bumps summon a phantom breaker that mirrors your moves",
     effects: [
         On(target: Breaker, then: [
-            When(trigger: OnBump, then: [
+            When(trigger: Bump, then: [
                 Do(SpawnPhantom(duration: 5.0, max_active: 1)),
             ]),
         ]),

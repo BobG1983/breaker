@@ -1,0 +1,15 @@
+(
+    name: "Arcwelder",
+    description: "Two free-moving bolts connected by a crackling neon beam that damages everything it intersects",
+    effects: [
+        On(target: Bolt, then: [
+            When(trigger: Bumped, then: [
+                Do(TetherBeam(damage_mult: 1.5)),
+            ]),
+        ]),
+    ],
+    ingredients: [
+        (chip_name: "Chain Bolt", stacks_required: 2),
+        (chip_name: "Damage Boost", stacks_required: 1),
+    ],
+)

@@ -4,13 +4,12 @@ use rantzsoft_defaults::prelude::SeedableRegistry;
 use crate::{
     chips::{
         definition::{
-            ChipDefinition, ChipTemplate, EvolutionIngredient, EvolutionTemplate,
-            RaritySlot,
+            ChipDefinition, ChipTemplate, EvolutionIngredient, EvolutionTemplate, RaritySlot,
         },
         inventory::ChipInventory,
         resources::*,
     },
-    effect::definition::{Effect, EffectNode, RootEffect, Target},
+    effect::{EffectKind, EffectNode, RootEffect, Target},
 };
 
 #[test]
@@ -118,13 +117,13 @@ fn eligible_recipes_returns_recipe_when_all_ingredients_met() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
     let du_def = ChipDefinition::test(
         "Minor Damage Up",
-        EffectNode::Do(Effect::DamageBoost(0.5)),
+        EffectNode::Do(EffectKind::DamageBoost(0.5)),
         5,
     )
     .with_template("Damage Up");
@@ -148,7 +147,7 @@ fn eligible_recipes_exact_threshold_still_eligible() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
@@ -176,7 +175,7 @@ fn eligible_recipes_empty_when_one_ingredient_missing() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
@@ -221,7 +220,7 @@ fn eligible_recipes_empty_when_ingredient_stacks_insufficient() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
@@ -267,7 +266,7 @@ fn eligible_recipes_returns_only_eligible_among_multiple() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
@@ -298,13 +297,13 @@ fn eligible_recipes_returns_multiple_when_both_satisfied() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
     let du_def = ChipDefinition::test(
         "Minor Damage Up",
-        EffectNode::Do(Effect::DamageBoost(0.5)),
+        EffectNode::Do(EffectKind::DamageBoost(0.5)),
         5,
     )
     .with_template("Damage Up");
@@ -321,7 +320,7 @@ fn eligible_recipes_empty_for_default_registry_with_any_inventory() {
     let mut inventory = ChipInventory::default();
     let ps_def = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
@@ -348,12 +347,16 @@ fn eligible_recipes_matches_mixed_rarity_variants_of_same_template() {
     // Add different rarity variants of the same template
     let basic = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
-    let keen = ChipDefinition::test("Keen Piercing Shot", EffectNode::Do(Effect::Piercing(2)), 5)
-        .with_template("Piercing Shot");
+    let keen = ChipDefinition::test(
+        "Keen Piercing Shot",
+        EffectNode::Do(EffectKind::Piercing(2)),
+        5,
+    )
+    .with_template("Piercing Shot");
     let _ = inventory.add_chip("Basic Piercing Shot", &basic);
     let _ = inventory.add_chip("Basic Piercing Shot", &basic);
     let _ = inventory.add_chip("Keen Piercing Shot", &keen);
@@ -379,7 +382,7 @@ fn eligible_recipes_not_eligible_when_template_taken_below_threshold() {
     let mut inventory = ChipInventory::default();
     let basic = ChipDefinition::test(
         "Basic Piercing Shot",
-        EffectNode::Do(Effect::Piercing(1)),
+        EffectNode::Do(EffectKind::Piercing(1)),
         5,
     )
     .with_template("Piercing Shot");
@@ -406,7 +409,7 @@ fn make_chip_template(name: &str, max_taken: u32, prefix: &str) -> ChipTemplate 
             prefix: prefix.to_owned(),
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
-                then: vec![EffectNode::Do(Effect::Piercing(1))],
+                then: vec![EffectNode::Do(EffectKind::Piercing(1))],
             }],
         }),
         uncommon: None,
@@ -560,7 +563,7 @@ fn make_evolution_template(name: &str) -> EvolutionTemplate {
         max_stacks: 1,
         effects: vec![RootEffect::On {
             target: Target::Bolt,
-            then: vec![EffectNode::Do(Effect::Piercing(5))],
+            then: vec![EffectNode::Do(EffectKind::Piercing(5))],
         }],
         ingredients: vec![EvolutionIngredient {
             chip_name: "Piercing Shot".to_owned(),

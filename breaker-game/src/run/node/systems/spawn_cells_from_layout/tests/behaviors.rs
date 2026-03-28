@@ -38,6 +38,7 @@ fn behavior_registry() -> CellTypeRegistry {
                 regen_rate: None,
                 ..Default::default()
             },
+            effects: None,
         },
     );
     registry.insert(
@@ -57,6 +58,7 @@ fn behavior_registry() -> CellTypeRegistry {
                 regen_rate: Some(2.0),
                 ..Default::default()
             },
+            effects: None,
         },
     );
     registry.insert(
@@ -72,6 +74,7 @@ fn behavior_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         },
     );
     registry

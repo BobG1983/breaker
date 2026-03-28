@@ -8,8 +8,8 @@ None.
 
 ## Behavior
 
-Decrements `LivesCount` on the entity. When lives reach 0, sends `RunLost`.
+Decrements `LivesCount` on the entity. When lives reach 0, the run domain handles game over (not this effect's responsibility).
 
 ## Reversal
 
-No-op. Life loss is fire-and-forget.
+Restores one life to `LivesCount` (increments by 1).

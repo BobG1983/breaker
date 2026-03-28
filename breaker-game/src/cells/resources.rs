@@ -208,6 +208,7 @@ mod tests {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         };
         let def_b = CellTypeDefinition {
             id: "b".to_owned(),
@@ -220,6 +221,7 @@ mod tests {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         };
         let mut registry = CellTypeRegistry::default();
         registry.insert(def_a.alias, def_a);
@@ -244,6 +246,7 @@ mod tests {
             damage_blue_range: 0.5,
             damage_blue_base: 0.2,
             behavior: CellBehavior::default(),
+            effects: None,
         }
     }
 

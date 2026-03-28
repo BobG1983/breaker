@@ -25,18 +25,19 @@ impl Plugin for FxPlugin {
         // on TransitionDefaults. Insert with defaults so it is always available.
         app.init_resource::<TransitionConfig>()
             .add_systems(
-            Update,
-            (animate_fade_out, animate_punch_scale).run_if(in_state(PlayingState::Active)),
-        )
-        .add_systems(OnEnter(GameState::TransitionOut), spawn_transition_out)
-        .add_systems(OnEnter(GameState::TransitionIn), spawn_transition_in)
-        .add_systems(
-            Update,
-            animate_transition
-                .run_if(in_state(GameState::TransitionOut).or(in_state(GameState::TransitionIn))),
-        )
-        .add_systems(OnExit(GameState::TransitionOut), cleanup_transition)
-        .add_systems(OnExit(GameState::TransitionIn), cleanup_transition);
+                Update,
+                (animate_fade_out, animate_punch_scale).run_if(in_state(PlayingState::Active)),
+            )
+            .add_systems(OnEnter(GameState::TransitionOut), spawn_transition_out)
+            .add_systems(OnEnter(GameState::TransitionIn), spawn_transition_in)
+            .add_systems(
+                Update,
+                animate_transition.run_if(
+                    in_state(GameState::TransitionOut).or(in_state(GameState::TransitionIn)),
+                ),
+            )
+            .add_systems(OnExit(GameState::TransitionOut), cleanup_transition)
+            .add_systems(OnExit(GameState::TransitionIn), cleanup_transition);
     }
 }
 

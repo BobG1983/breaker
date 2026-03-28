@@ -14,4 +14,4 @@ Subtracts `seconds` from the current node timer.
 
 ## Reversal
 
-No-op. Time penalty is fire-and-forget.
+Adds `seconds` back to the node timer.

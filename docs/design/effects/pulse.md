@@ -1,20 +1,20 @@
 # Pulse
 
-Fires a shockwave at every active bolt position simultaneously.
+Timed effect — bolt emits repeated small shockwave-like rings while active.
 
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `base_range` | `f32` | Base radius per shockwave |
+| `base_range` | `f32` | Base radius per pulse ring |
 | `range_per_level` | `f32` | Extra radius per stack |
 | `stacks` | `u32` | Stack count |
 | `speed` | `f32` | Expansion speed in world units/sec |
 
 ## Behavior
 
-Queries all bolt entities and spawns a shockwave at each bolt's position. Functionally equivalent to a Shockwave on every bolt at once.
+For a duration, the bolt emits small expanding rings at its current position at regular intervals. Each ring expands outward (faster expansion, lower damage than Shockwave) and damages cells it passes, each cell only once per ring. The bolt continues moving while pulsing. Uses its own component types — does NOT reuse Shockwave types.
 
 ## Reversal
 
-No-op. Pulse shockwave entities self-despawn on their own lifecycle.
+No-op. Pulse ring entities self-despawn on their own lifecycle.

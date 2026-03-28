@@ -113,6 +113,7 @@ mod tests {
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
                 behavior: CellBehavior::default(),
+                effects: None,
             },
         );
         registry.insert(
@@ -128,6 +129,7 @@ mod tests {
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
                 behavior: CellBehavior::default(),
+                effects: None,
             },
         );
         registry

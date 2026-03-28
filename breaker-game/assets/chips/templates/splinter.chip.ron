@@ -5,7 +5,7 @@
         prefix: "Minor",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: DestroyedCell, then: [
+                When(trigger: CellDestroyed, then: [
                     Do(SpawnBolts(count: 1, lifespan: Some(2.0), inherit: false)),
                     Do(SizeBoost(-0.5)),
                 ]),
@@ -16,7 +16,7 @@
         prefix: "Spreading",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: DestroyedCell, then: [
+                When(trigger: CellDestroyed, then: [
                     Do(SpawnBolts(count: 2, lifespan: Some(2.5), inherit: false)),
                     Do(SizeBoost(-0.45)),
                 ]),
@@ -27,7 +27,7 @@
         prefix: "Devastating",
         effects: [
             On(target: Bolt, then: [
-                When(trigger: DestroyedCell, then: [
+                When(trigger: CellDestroyed, then: [
                     Do(SpawnBolts(count: 3, lifespan: Some(3.0), inherit: false)),
                     Do(SizeBoost(-0.4)),
                 ]),

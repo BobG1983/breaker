@@ -63,12 +63,15 @@ pub(crate) fn spawn_highlight_text(
         let spawn_order = existing_count + i;
 
         let order_f32 = f32::from(u16::try_from(spawn_order).unwrap_or(u16::MAX));
-        let y = config.popup_vertical_spacing.mul_add(order_f32, config.popup_base_y);
+        let y = config
+            .popup_vertical_spacing
+            .mul_add(order_f32, config.popup_base_y);
         let x = rng
             .0
             .random_range(config.popup_jitter_min_x..=config.popup_jitter_max_x);
-        let fade_timer =
-            config.popup_cascade_stagger_secs.mul_add(order_f32, config.popup_fade_duration_secs);
+        let fade_timer = config
+            .popup_cascade_stagger_secs
+            .mul_add(order_f32, config.popup_fade_duration_secs);
 
         let (text, color) = match msg.kind {
             HighlightKind::ClutchClear => ("CLUTCH CLEAR!", Color::srgb(0.0, 1.0, 1.0)),

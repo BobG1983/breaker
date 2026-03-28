@@ -113,7 +113,7 @@ mod tests {
 
     use crate::{
         chips::{ChipDefinition, definition::EvolutionIngredient, inventory::ChipInventory},
-        effect::definition::{Effect, EffectNode},
+        effect::{EffectKind, EffectNode},
         screen::chip_select::{
             ChipSelectConfig,
             resources::{ChipOffering, ChipOffers},
@@ -124,17 +124,17 @@ mod tests {
         ChipOffers(vec![
             ChipOffering::Normal(ChipDefinition::test(
                 "A",
-                EffectNode::Do(Effect::Piercing(1)),
+                EffectNode::Do(EffectKind::Piercing(1)),
                 3,
             )),
             ChipOffering::Normal(ChipDefinition::test(
                 "B",
-                EffectNode::Do(Effect::Piercing(1)),
+                EffectNode::Do(EffectKind::Piercing(1)),
                 3,
             )),
             ChipOffering::Normal(ChipDefinition::test(
                 "C",
-                EffectNode::Do(Effect::Piercing(1)),
+                EffectNode::Do(EffectKind::Piercing(1)),
                 3,
             )),
         ])
@@ -200,7 +200,7 @@ mod tests {
         let offers = ChipOffers(vec![
             ChipOffering::Normal(ChipDefinition::test(
                 "A",
-                EffectNode::Do(Effect::Piercing(1)),
+                EffectNode::Do(EffectKind::Piercing(1)),
                 3,
             )),
             ChipOffering::Evolution {
@@ -208,11 +208,11 @@ mod tests {
                     chip_name: "X".to_owned(),
                     stacks_required: 2,
                 }],
-                result: ChipDefinition::test("B+", EffectNode::Do(Effect::Piercing(5)), 1),
+                result: ChipDefinition::test("B+", EffectNode::Do(EffectKind::Piercing(5)), 1),
             },
             ChipOffering::Normal(ChipDefinition::test(
                 "C",
-                EffectNode::Do(Effect::Piercing(1)),
+                EffectNode::Do(EffectKind::Piercing(1)),
                 3,
             )),
         ]);

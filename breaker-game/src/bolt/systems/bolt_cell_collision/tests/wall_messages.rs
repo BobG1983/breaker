@@ -28,11 +28,11 @@ fn wall_hit_emits_bolt_hit_wall_with_correct_bolt_entity() {
     assert_eq!(
         msgs.0.len(),
         1,
-        "wall hit should emit exactly one BoltHitWall message"
+        "wall hit should emit exactly one BoltImpactWall message"
     );
     assert_eq!(
         msgs.0[0].bolt, bolt_entity,
-        "BoltHitWall.bolt should match the bolt entity that hit the wall"
+        "BoltImpactWall.bolt should match the bolt entity that hit the wall"
     );
 }
 
@@ -55,19 +55,19 @@ fn cell_hit_does_not_emit_bolt_hit_wall() {
 
     tick(&mut app);
 
-    // BoltHitCell should be sent (existing behavior)
+    // BoltImpactCell should be sent (existing behavior)
     let hit_msgs = app.world().resource::<FullHitMessages>();
     assert_eq!(
         hit_msgs.0.len(),
         1,
-        "BoltHitCell should be sent for cell hit"
+        "BoltImpactCell should be sent for cell hit"
     );
 
-    // BoltHitWall should NOT be sent
+    // BoltImpactWall should NOT be sent
     let wall_msgs = app.world().resource::<WallHitMessages>();
     assert!(
         wall_msgs.0.is_empty(),
-        "cell hit should NOT emit BoltHitWall, got {} messages",
+        "cell hit should NOT emit BoltImpactWall, got {} messages",
         wall_msgs.0.len()
     );
 }
@@ -108,11 +108,11 @@ fn bolt_hit_wall_identifies_correct_bolt_among_two() {
     assert_eq!(
         msgs.0.len(),
         1,
-        "only bolt A should hit the wall, got {} BoltHitWall messages",
+        "only bolt A should hit the wall, got {} BoltImpactWall messages",
         msgs.0.len()
     );
     assert_eq!(
         msgs.0[0].bolt, bolt_a,
-        "BoltHitWall.bolt should be bolt A (the one that hit the wall)"
+        "BoltImpactWall.bolt should be bolt A (the one that hit the wall)"
     );
 }

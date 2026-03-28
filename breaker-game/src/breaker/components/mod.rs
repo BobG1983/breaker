@@ -7,7 +7,8 @@ mod movement;
 mod state;
 
 pub use core::{
-    Breaker, BreakerBaseY, BreakerHeight, BreakerWidth, MaxReflectionAngle, MinAngleFromHorizontal,
+    Breaker, BreakerBaseY, BreakerHeight, BreakerInitialized, BreakerWidth, MaxReflectionAngle,
+    MinAngleFromHorizontal,
 };
 
 pub use bump::{

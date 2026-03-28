@@ -3,7 +3,7 @@
     description: "Destroying cells creates gravity wells that pull bolts toward the destruction point",
     effects: [
         On(target: Bolt, then: [
-            When(trigger: DestroyedCell, then: [
+            When(trigger: CellDestroyed, then: [
                 Do(GravityWell(strength: 500.0, duration: 3.0, radius: 128.0, max: 2)),
             ]),
         ]),

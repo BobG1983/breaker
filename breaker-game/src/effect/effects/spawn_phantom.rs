@@ -1,202 +1,190 @@
-//! Phantom bolt effect handler — spawns a temporary bolt with infinite piercing.
-//!
-//! Observes [`SpawnPhantomFired`] and spawns a phantom bolt entity with
-//! [`ExtraBolt`], [`BoltLifespan`], and infinite [`Piercing`].
-
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
-use crate::{
-    bolt::components::{Bolt, BoltLifespan, ExtraBolt},
-    chips::components::Piercing,
-    effect::definition::EffectTarget,
-};
+use crate::shared::playing_state::PlayingState;
 
-// ---------------------------------------------------------------------------
-// Typed event
-// ---------------------------------------------------------------------------
+/// Marker for phantom bolt entities.
+#[derive(Component)]
+pub struct PhantomBoltMarker;
 
-/// Fired when a spawn phantom effect resolves.
-#[derive(Event, Clone, Debug)]
-pub(crate) struct SpawnPhantomFired {
-    /// How long the phantom persists in seconds.
-    pub duration: f32,
-    /// Maximum active phantoms at once.
-    pub max_active: u32,
-    /// The effect targets for this event.
-    pub targets: Vec<EffectTarget>,
-    // FUTURE: may be used for upcoming phases
-    // /// The originating chip name, or `None` for breaker chains.
-    // pub source_chip: Option<String>,
-}
+/// Remaining lifespan of a phantom bolt in seconds.
+#[derive(Component)]
+pub struct PhantomTimer(pub f32);
 
-/// Marker component for phantom bolt entities spawned by this effect.
-///
-/// Used to count active phantoms and enforce `max_active` cap.
-#[derive(Component, Debug)]
-pub(crate) struct PhantomBolt;
+/// Entity that spawned this phantom bolt.
+#[derive(Component)]
+pub struct PhantomOwner(pub Entity);
 
-/// Observer: handles phantom bolt spawning.
-///
-/// Spawns a new entity with [`ExtraBolt`], [`PhantomBolt`], [`BoltLifespan`],
-/// and infinite [`Piercing`] at the source bolt's position. Respects the
-/// `max_active` cap — does not spawn if the cap is already reached.
-pub(crate) fn handle_spawn_phantom(
-    trigger: On<SpawnPhantomFired>,
-    mut commands: Commands,
-    bolt_query: Query<&Position2D, With<Bolt>>,
-    phantom_query: Query<Entity, With<PhantomBolt>>,
-) {
-    let event = trigger.event();
-
-    // Respect max_active cap
-    if phantom_query.iter().count() >= event.max_active as usize {
-        return;
+pub(crate) fn fire(entity: Entity, duration: f32, max_active: u32, world: &mut World) {
+    // Enforce max active phantoms for this owner — despawn oldest if at cap.
+    let mut owned: Vec<Entity> = Vec::new();
+    {
+        let mut query = world.query::<(Entity, &PhantomOwner)>();
+        for (phantom_entity, owner) in query.iter(world) {
+            if owner.0 == entity {
+                owned.push(phantom_entity);
+            }
+        }
     }
 
-    // Get origin from targets
-    let origin = event
-        .targets
-        .iter()
-        .find_map(|t| match t {
-            EffectTarget::Entity(e) => bolt_query.get(*e).ok().map(|p| p.0),
-            EffectTarget::Location(pos) => Some(*pos),
-        })
-        .unwrap_or(Vec2::ZERO);
+    while owned.len() >= max_active as usize {
+        if let Some(oldest) = owned.first().copied() {
+            world.despawn(oldest);
+            owned.remove(0);
+        }
+    }
 
-    commands.spawn((
-        Bolt,
-        ExtraBolt,
-        PhantomBolt,
-        Position2D(origin),
-        Piercing(u32::MAX),
-        BoltLifespan(Timer::from_seconds(event.duration, TimerMode::Once)),
+    let position = world
+        .get::<Transform>(entity)
+        .map_or(Vec3::ZERO, |t| t.translation);
+
+    world.spawn((
+        PhantomBoltMarker,
+        PhantomTimer(duration),
+        PhantomOwner(entity),
+        Transform::from_translation(position),
     ));
 }
 
-/// Registers all observers and systems for the spawn phantom effect.
+pub(crate) fn reverse(_entity: Entity, _world: &mut World) {
+    // No-op — phantoms have a lifespan timer and self-despawn via tick_phantom.
+}
+
+/// Decrement phantom bolt timers and despawn expired phantoms.
+fn tick_phantom(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut PhantomTimer), With<PhantomBoltMarker>>,
+) {
+    let dt = time.delta_secs();
+    for (entity, mut timer) in &mut query {
+        timer.0 -= dt;
+        if timer.0 <= 0.0 {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
-    app.add_observer(handle_spawn_phantom);
+    app.add_systems(
+        FixedUpdate,
+        tick_phantom.run_if(in_state(PlayingState::Active)),
+    );
 }
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
-
     use super::*;
-    use crate::{
-        bolt::components::{Bolt, BoltLifespan, ExtraBolt},
-        chips::components::Piercing,
-    };
+
+    // ── fire tests ──────────────────────────────────────────────────
+
+    #[test]
+    fn fire_spawns_phantom_with_marker_timer_and_owner() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(30.0, 40.0, 0.0)).id();
+
+        fire(entity, 5.0, 3, &mut world);
+
+        let mut query =
+            world.query::<(&PhantomBoltMarker, &PhantomTimer, &PhantomOwner, &Transform)>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(results.len(), 1, "expected exactly one phantom");
+
+        let (_marker, timer, owner, transform) = results[0];
+        assert!(
+            (timer.0 - 5.0).abs() < f32::EPSILON,
+            "expected timer 5.0, got {}",
+            timer.0
+        );
+        assert_eq!(owner.0, entity);
+        assert!(
+            (transform.translation.x - 30.0).abs() < f32::EPSILON,
+            "expected x 30.0, got {}",
+            transform.translation.x
+        );
+        assert!(
+            (transform.translation.y - 40.0).abs() < f32::EPSILON,
+            "expected y 40.0, got {}",
+            transform.translation.y
+        );
+    }
+
+    #[test]
+    fn fire_enforces_max_active_cap() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+        // Spawn 4 phantoms with max_active=2
+        fire(entity, 5.0, 2, &mut world);
+        fire(entity, 5.0, 2, &mut world);
+        fire(entity, 5.0, 2, &mut world);
+        fire(entity, 5.0, 2, &mut world);
+
+        let mut query = world.query::<&PhantomBoltMarker>();
+        let count = query.iter(&world).count();
+        assert_eq!(
+            count, 2,
+            "should enforce max of 2 active phantoms, got {count}"
+        );
+    }
+
+    #[test]
+    fn reverse_is_noop_phantoms_self_despawn() {
+        let mut world = World::new();
+        let owner = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+        fire(owner, 5.0, 10, &mut world);
+        fire(owner, 5.0, 10, &mut world);
+
+        reverse(owner, &mut world);
+
+        // Phantoms should still exist — they self-despawn via tick_phantom
+        let mut query = world.query::<&PhantomOwner>();
+        let remaining = query.iter(&world).count();
+        assert_eq!(
+            remaining, 2,
+            "reverse is no-op, phantoms persist until timer expires"
+        );
+    }
+
+    // ── system tests ────────────────────────────────────────────────
 
     fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_observer(handle_spawn_phantom);
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
+        app.init_state::<crate::shared::game_state::GameState>();
+        app.add_sub_state::<PlayingState>();
+        app.add_systems(Update, tick_phantom);
         app
     }
 
-    #[test]
-    fn handle_spawn_phantom_does_not_panic() {
-        use crate::effect::typed_events::SpawnPhantomFired;
-
-        let mut app = test_app();
-
-        app.world_mut().commands().trigger(SpawnPhantomFired {
-            duration: 5.0,
-            max_active: 2,
-            targets: vec![],
-        });
-        app.world_mut().flush();
-
-        // Stub handler should not panic when receiving its typed event.
+    fn enter_playing(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<NextState<crate::shared::game_state::GameState>>()
+            .set(crate::shared::game_state::GameState::Playing);
+        app.update();
     }
 
-    /// Triggering `SpawnPhantomFired` with a bolt target should spawn a new
-    /// entity with `ExtraBolt`, `BoltLifespan`, and `Piercing(u32::MAX)`.
     #[test]
-    fn spawn_phantom_spawns_bolt_with_lifespan() {
+    fn tick_phantom_despawns_expired_phantoms() {
         let mut app = test_app();
+        enter_playing(&mut app);
 
-        // Source bolt entity the phantom originates from
-        let bolt = app
+        let phantom = app
             .world_mut()
             .spawn((
-                Bolt,
-                Position2D(Vec2::new(100.0, 200.0)),
-                Velocity2D(Vec2::new(0.0, 400.0)),
+                PhantomBoltMarker,
+                PhantomTimer(0.0),
+                PhantomOwner(Entity::PLACEHOLDER),
+                Transform::from_xyz(0.0, 0.0, 0.0),
             ))
             .id();
 
-        app.world_mut().commands().trigger(SpawnPhantomFired {
-            duration: 3.0,
-            max_active: 5,
-            targets: vec![EffectTarget::Entity(bolt)],
-        });
-        app.world_mut().flush();
+        app.update();
 
-        // Check that a new entity was spawned with the expected components
-        let phantom_count = app
-            .world_mut()
-            .query_filtered::<Entity, (With<ExtraBolt>, With<BoltLifespan>, With<Piercing>)>()
-            .iter(app.world())
-            .count();
-        assert_eq!(
-            phantom_count, 1,
-            "SpawnPhantomFired should spawn 1 entity with ExtraBolt + BoltLifespan + Piercing, found {phantom_count}"
-        );
-
-        // Verify the piercing is set to infinite (u32::MAX)
-        let piercing = app
-            .world_mut()
-            .query_filtered::<&Piercing, With<ExtraBolt>>()
-            .iter(app.world())
-            .next()
-            .expect("phantom bolt should have Piercing");
-        assert_eq!(
-            piercing.0,
-            u32::MAX,
-            "phantom bolt Piercing should be u32::MAX (infinite), got {}",
-            piercing.0
-        );
-    }
-
-    /// When `max_active` phantoms already exist, triggering another
-    /// `SpawnPhantomFired` should NOT spawn additional entities.
-    #[test]
-    fn spawn_phantom_respects_max_active() {
-        let mut app = test_app();
-
-        let bolt = app
-            .world_mut()
-            .spawn((
-                Bolt,
-                Position2D(Vec2::new(50.0, 100.0)),
-                Velocity2D(Vec2::new(0.0, 400.0)),
-            ))
-            .id();
-
-        // Simulate 2 existing phantom bolts already active
-        app.world_mut().spawn((ExtraBolt, PhantomBolt));
-        app.world_mut().spawn((ExtraBolt, PhantomBolt));
-
-        // Trigger with max_active: 2 -- should NOT spawn because 2 already exist
-        app.world_mut().commands().trigger(SpawnPhantomFired {
-            duration: 3.0,
-            max_active: 2,
-            targets: vec![EffectTarget::Entity(bolt)],
-        });
-        app.world_mut().flush();
-
-        // Count phantom-marked entities (should still be 2, not 3)
-        let phantom_count = app
-            .world_mut()
-            .query_filtered::<Entity, With<PhantomBolt>>()
-            .iter(app.world())
-            .count();
-        assert_eq!(
-            phantom_count, 2,
-            "max_active:2 with 2 existing phantoms should not spawn more, found {phantom_count}"
+        assert!(
+            app.world().get_entity(phantom).is_err(),
+            "expired phantom should be despawned"
         );
     }
 }

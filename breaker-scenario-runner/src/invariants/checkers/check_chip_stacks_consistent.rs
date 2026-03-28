@@ -39,7 +39,7 @@ pub fn check_chip_stacks_consistent(
 mod tests {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{Effect, EffectNode, RootEffect, Target},
+        effect::{EffectKind, EffectNode, RootEffect, Target},
     };
 
     use super::*;
@@ -60,7 +60,7 @@ mod tests {
             max_stacks,
             effects: vec![RootEffect::On {
                 target: Target::Bolt,
-                then: vec![EffectNode::Do(Effect::Piercing(1))],
+                then: vec![EffectNode::Do(EffectKind::Piercing(1))],
             }],
             ingredients: None,
             template_name: None,

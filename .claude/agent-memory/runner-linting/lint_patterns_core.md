@@ -48,6 +48,10 @@ type: reference
 - `SystemParam` import pattern: `SystemParam` derive is NOT in `bevy::prelude`. Every file using `#[derive(SystemParam)]` must import it explicitly: `use bevy::{ecs::system::SystemParam, prelude::*};`. Missing this import produces "cannot find derive macro `SystemParam` in this scope" at the `#[derive]` line, then cascades E0277 errors at every `.add_systems(...)` call-site in tests.
 - `private_interfaces` error: any `#[derive(SystemParam)]` struct used by a `pub(crate)` system must itself be at least `pub(crate)` — private structs will compile within their own module but fail when the scheduler references them from outside (e.g., `detect_combo_and_pinball.rs`).
 - `doc_lazy_continuation` error: doc list item continuation line without indentation. Fix: add blank line before the continuation, OR indent it with `///   `.
+- `RootEffectKind` → `EffectKind` rename: after effect refactor (2026-03-27), test files in `chips/definition/tests.rs`, `chips/inventory/tests/helpers.rs`, `chips/resources/tests.rs` still reference `RootEffectKind`. Fix: replace all occurrences with `EffectKind`.
+- `semicolon_if_nothing_returned` error (effect/core/types.rs): `reverse()` calls in match arms in `EffectNode::reverse` function are missing trailing `;`. Fix: append `;` to every `module::reverse(...)` call in that match block.
+- `float_cmp` error: strict `f32 == f32` comparison in effect `fire` functions. Pattern: checking whether a stat modification value equals its default (e.g., `existing == 1.0`). Fix: use epsilon comparison or restructure logic.
+- `map_unwrap_or` error in effect files: `.map(...).unwrap_or(...)` → `.map_or(fallback, |x| ...)`. Appears in many effect `fire` fns that query components.
 - `match_wildcard_for_single_variants` errors: `_ =>` wildcard in match over `EffectTarget` or similar enum with only one remaining variant. Fix: replace `_` with explicit variant pattern (e.g. `EffectTarget::Location(_) => ...`).
 - `single_match_else` error: `match val { Variant(x) => ..., _ => ... }` — replace with `if let Variant(x) = val`.
 - `useless_vec` error: `vec![...]` in test — replace with array `[...]` since it's not passed to a `Vec`-requiring API.
@@ -66,3 +70,6 @@ type: reference
 - `must_use_candidate` ERROR: `pub fn` returns value without `#[must_use]`. Fix: add `#[must_use]` attribute.
 - `dsclippy` blocks on game crate errors: when `dclippy` fails to compile the game lib, `dsclippy` also fails at the same point (scenario runner depends on `breaker`). Fix game crate errors first.
 - `E0107` compile errors: `MessageReader<'w, CellDestroyedAt>` uses only 1 lifetime arg — `MessageReader` in Bevy 0.18.1 takes `'w` and `'s`. Fix: `MessageReader<'w, 'w, T>`.
+- `collapsible_match` error in `effect/triggers/evaluate.rs`: nested `if` inside `EffectNode::When` match arm. Fix: move the condition to a match guard: `EffectNode::When { trigger: t, then } if t == trigger => { ... }`. Affects both `walk_bound_node` and `walk_staged_node` functions.
+- `float_cmp` errors in effect test code: `assert_eq!` on `f32` values triggers pedantic `float_cmp`. Fix: replace with `assert!((a - b).abs() < f32::EPSILON)` or use `approx::assert_relative_eq!` if the crate is available.
+- `explicit_iter_loop` errors in effect `evaluate.rs` tests: `query.iter_mut()` in `for` loop should be `&mut query`. Pattern from pedantic lint; applies to all `Query::iter_mut()` calls in `for` loops.
