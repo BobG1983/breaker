@@ -1,11 +1,11 @@
-//! Bridge system for the `bolt_lost` trigger.
+//! Bridge system for the `cell_destroyed` trigger.
 //!
-//! Reads `BoltLost` messages and fires `Trigger::BoltLost` globally
+//! Reads `CellDestroyedAt` messages and fires `Trigger::CellDestroyed` globally
 //! on all entities with `BoundEffects`.
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{messages::BoltLost, sets::BoltSystems},
+    cells::messages::CellDestroyedAt,
     effect::{
         core::*,
         sets::EffectSystems,
@@ -14,21 +14,21 @@ use crate::{
     shared::playing_state::PlayingState,
 };
 
-fn bridge_bolt_lost(
-    mut reader: MessageReader<BoltLost>,
+fn bridge_cell_destroyed(
+    mut reader: MessageReader<CellDestroyedAt>,
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
     for _msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
-                &Trigger::BoltLost,
+                &Trigger::CellDestroyed,
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
             );
-            evaluate_staged_effects(&Trigger::BoltLost, entity, &mut staged, &mut commands);
+            evaluate_staged_effects(&Trigger::CellDestroyed, entity, &mut staged, &mut commands);
         }
     }
 }
@@ -37,9 +37,8 @@ fn bridge_bolt_lost(
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        bridge_bolt_lost
+        bridge_cell_destroyed
             .in_set(EffectSystems::Bridge)
-            .after(BoltSystems::BoltLost)
             .run_if(in_state(PlayingState::Active)),
     );
 }
@@ -50,21 +49,27 @@ mod tests {
     use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
 
     #[derive(Resource)]
-    struct TestBoltLostMsg(bool);
+    struct TestCellDestroyedMsg(Option<CellDestroyedAt>);
 
-    fn enqueue_bolt_lost(msg_res: Res<TestBoltLostMsg>, mut writer: MessageWriter<BoltLost>) {
-        if msg_res.0 {
-            writer.write(BoltLost);
+    fn enqueue_cell_destroyed(
+        msg_res: Res<TestCellDestroyedMsg>,
+        mut writer: MessageWriter<CellDestroyedAt>,
+    ) {
+        if let Some(msg) = msg_res.0.clone() {
+            writer.write(msg);
         }
     }
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_message::<BoltLost>()
+            .add_message::<CellDestroyedAt>()
             .add_systems(
                 FixedUpdate,
-                (enqueue_bolt_lost.before(bridge_bolt_lost), bridge_bolt_lost),
+                (
+                    enqueue_cell_destroyed.before(bridge_cell_destroyed),
+                    bridge_cell_destroyed,
+                ),
             );
         app
     }
@@ -78,15 +83,19 @@ mod tests {
     }
 
     #[test]
-    fn bridge_bolt_lost_fires_globally_on_bolt_lost() {
+    fn bridge_cell_destroyed_fires_globally_on_cell_destroyed_at() {
         let mut app = test_app();
-        app.insert_resource(TestBoltLostMsg(true));
+
+        app.insert_resource(TestCellDestroyedMsg(Some(CellDestroyedAt {
+            position: Vec2::new(100.0, 200.0),
+            was_required_to_clear: true,
+        })));
 
         app.world_mut().spawn((
             BoundEffects(vec![(
                 "test".into(),
                 EffectNode::When {
-                    trigger: Trigger::BoltLost,
+                    trigger: Trigger::CellDestroyed,
                     then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
                 },
             )]),
@@ -104,7 +113,7 @@ mod tests {
         assert_eq!(
             active.0.len(),
             1,
-            "bridge_bolt_lost should fire BoltLost globally on BoltLost message"
+            "bridge_cell_destroyed should fire CellDestroyed globally on CellDestroyedAt"
         );
         assert!(
             (active.0[0] - 1.5).abs() < f32::EPSILON,
@@ -113,15 +122,16 @@ mod tests {
     }
 
     #[test]
-    fn bridge_bolt_lost_no_message_no_fire() {
+    fn bridge_cell_destroyed_no_message_no_fire() {
         let mut app = test_app();
-        app.insert_resource(TestBoltLostMsg(false));
+
+        app.insert_resource(TestCellDestroyedMsg(None));
 
         app.world_mut().spawn((
             BoundEffects(vec![(
                 "test".into(),
                 EffectNode::When {
-                    trigger: Trigger::BoltLost,
+                    trigger: Trigger::CellDestroyed,
                     then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
                 },
             )]),
@@ -139,21 +149,25 @@ mod tests {
         assert_eq!(
             active.0.len(),
             0,
-            "No BoltLost message means no BoltLost trigger should fire"
+            "No CellDestroyedAt message means no CellDestroyed trigger should fire"
         );
     }
 
     #[test]
-    fn bridge_bolt_lost_fires_on_all_entities_with_bound_effects() {
+    fn bridge_cell_destroyed_fires_on_all_entities_with_bound_effects() {
         let mut app = test_app();
-        app.insert_resource(TestBoltLostMsg(true));
 
-        // Two entities both listening for BoltLost — both should fire
+        app.insert_resource(TestCellDestroyedMsg(Some(CellDestroyedAt {
+            position: Vec2::new(50.0, 75.0),
+            was_required_to_clear: false,
+        })));
+
+        // Two entities both listening for CellDestroyed — both should fire
         app.world_mut().spawn((
             BoundEffects(vec![(
                 "test_a".into(),
                 EffectNode::When {
-                    trigger: Trigger::BoltLost,
+                    trigger: Trigger::CellDestroyed,
                     then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
                 },
             )]),
@@ -165,7 +179,7 @@ mod tests {
             BoundEffects(vec![(
                 "test_b".into(),
                 EffectNode::When {
-                    trigger: Trigger::BoltLost,
+                    trigger: Trigger::CellDestroyed,
                     then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
                 },
             )]),
