@@ -20,3 +20,10 @@ Examples seen:
 - `apply_attraction_empty_attractions_no_steering` — same
 - `manage_attraction_impact_for_different_bolt_is_ignored` — active=true from spawn, stub does nothing, assert active=true passes
 - `manage_attraction_all_already_active_reactivation_is_noop` — active=true from spawn, stub does nothing, assert active=true passes
+- `fire_count_zero_spawns_no_bolts` (SpawnBolts) — stub spawns nothing, count=0 assertion passes
+- `fire_with_timer_already_at_zero_is_idempotent` (TimePenalty) — remaining starts at 0.0, stub does nothing, assert 0.0 passes
+- `reverse_at_total_is_idempotent` (TimePenalty) — remaining starts at total=60.0, stub does nothing, assert 60.0 passes
+- `fire_does_not_spawn_distance_constraint` (TetherBeam) — stub spawns nothing, count=0 assertion passes
+- `reverse_does_not_despawn_previously_spawned_bolts` (SpawnBolts) — fire is also no-op, count_before=count_after=0, assert equal passes
+- `fire_spawns_bolts_at_zero_when_owner_has_no_position2d` (TetherBeam) — no bolts spawned, for loop body never runs, vacuous pass
+- `reverse_preserves_existing_state` / `reverse_with_state_is_noop` (RandomEffect/EntropyEngine 5C) — spec defines reverse() as a permanent no-op; tests for it trivially pass against ANY stub. Tests for spec-defined no-ops cannot produce RED by definition — flag as BLOCKING when encountered, even if the function is intentionally a no-op per spec.

@@ -36,6 +36,18 @@ never move, so this is functionally correct. But shockwave/ring entities don't h
 GlobalPosition2D or Spatial2D — they are purely Transform-based. This is intentional
 (they're not `Position2D`-tracked spatial entities).
 
+## Phase 5 effect fire(): Transform vs Position2D for bolt position
+
+`chain_lightning::fire()` and `piercing_beam::fire()` read `world.get::<Transform>(entity)` to
+get the bolt's current position. This is 1 fixed-tick stale because `derive_transform` runs in
+`AfterFixedMainLoop`, after `FixedUpdate` collision systems. The correct approach is
+`world.get::<Position2D>(entity)` (as `spawn_bolts.rs`, `chain_bolt.rs`, `tether_beam.rs` do).
+
+The same stale-Transform pattern also exists in `explode.rs`, `gravity_well.rs`, `shockwave.rs`
+(Phase 4 effects) but those were reviewed separately.
+
+Impact: ~6px positional error at typical bolt speed (400px/s at 64Hz). Minor but incorrect.
+
 ## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
 
 Confirmed in Phase 3 review. The bolt/breaker consumer systems (`prepare_bolt_velocity`,

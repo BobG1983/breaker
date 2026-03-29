@@ -69,3 +69,13 @@ type: reference
 - `Local<Vec<T>>` as system param — valid; reuses allocation across frames
 - `commands.entity(e).despawn()` — correct for leaf entities (no children to recurse)
 - `Has<T>` in query data tuple (not filter) — correct; returns `bool`, confirmed for DamageVisualQuery and breaker queries
+
+## Position Source Pattern in fire()/reverse() World Functions
+- All World-access fire functions must use `world.get::<Position2D>(entity)` — NOT `world.get::<Transform>(entity)`
+- This is the project-wide convention: bolt domain uses Position2D exclusively; Transform is only for rendering
+- `chain_lightning.rs` and `piercing_beam.rs` both incorrectly use `world.get::<Transform>(entity)` — flagged in Phase 5 review
+- The fallback chain `GlobalPosition2D` then `Transform` in chain_lightning.rs (lines 75-82) is also wrong; should use `Position2D` or `GlobalPosition2D` only
+
+## EntropyEngine Component
+- `EntropyEngineState` is `pub` (not `pub(crate)`) because tests in same file need it and it's a component — correct
+- `OnEnter(PlayingState::Active)` for reset system is correct for sub-state entry scheduling

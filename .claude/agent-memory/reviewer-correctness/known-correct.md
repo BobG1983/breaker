@@ -123,6 +123,41 @@ In Bevy 0.18 FixedUpdate, `Time<Fixed>::timestep()` and `Time::delta_secs()` pro
 the same value. The inconsistency between `tick_pulse_emitter` (using `timestep()`)
 and `tick_pulse_ring` (using `delta_secs()`) is cosmetic, not a runtime bug.
 
+## Phase 5 tether_beam: zero-length beam uses origin_inside, not ray_vs_aabb
+
+When both tether bolts share the same position, `beam_vec.length() == 0`, `direction == Vec2::ZERO`,
+and `max_dist == 0`. `ray_vs_aabb` with `max_dist=0` always returns `None` (tmin starts at 0,
+`tmin <= 0.0` guard triggers). The `origin_inside` check covers this case correctly.
+Broadphase AABB for zero-length beam is `expand_by(beam_half_width)` on a degenerate AABB,
+correctly producing a square search region. This is correct.
+
+## Phase 5 chain_lightning: empty targets on arcs==0 skips request spawn
+
+When `arcs == 0`, `chain_lightning::fire()` returns early without spawning a `ChainLightningRequest`.
+This means no request entity exists and no damage is sent. For `range <= 0` with `arcs > 0`, a
+request with empty targets IS spawned (and immediately despawned by `process_chain_lightning`).
+This behavioral difference is intentional and correct for both cases.
+
+## Phase 5 entropy_engine: kill_count increments even with empty pool
+
+`entropy_engine::fire()` increments `kill_count` before the empty-pool guard. This means pool
+changes between node attempts still reflect the correct cumulative kill count. Tests
+`fire_with_empty_pool_increments_kill_count_but_fires_nothing` and `fire_with_max_effects_zero_fires_nothing`
+confirm this is intentional.
+
+## Phase 5 piercing_beam: center-distance narrowphase is intentional design
+
+`process_piercing_beam` checks distance from the CELL CENTER to the beam axis (not AABB-vs-beam).
+This means a cell whose edge enters the beam but whose center is outside `half_width` is not damaged.
+Test `process_piercing_beam_does_not_damage_cell_outside_beam_width` confirms this is the intended design.
+Contrast with `tether_beam` which uses Minkowski sum (expand cell AABB by half_width).
+
+## Phase 5 rantzsoft_physics2d::ccd made pub — intentional for tether_beam import
+
+`lib.rs` changed `ccd` from `pub(crate)` to `pub` so `tether_beam.rs` can import
+`rantzsoft_physics2d::ccd::ray_vs_aabb`. The prelude already re-exported these items — the
+module visibility change is necessary for direct path imports and is correct.
+
 ## ShieldActive on cell = cell damage immunity — matches design spec
 
 `shield.md` documents: "On any entity with a health pool: immune to damage for the duration."
