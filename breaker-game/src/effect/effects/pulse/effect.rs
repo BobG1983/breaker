@@ -8,10 +8,7 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::{
-        EffectiveDamageMultiplier,
-        core::{EffectSourceChip, chip_attribution},
-    },
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -89,7 +86,7 @@ type PulseDamageQuery = (
 
 pub fn fire(entity: Entity, emitter: PulseEmitter, source_chip: &str, world: &mut World) {
     if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
-        entity_mut.insert((emitter, EffectSourceChip(chip_attribution(source_chip))));
+        entity_mut.insert((emitter, EffectSourceChip::new(source_chip)));
     }
 }
 
@@ -159,6 +156,7 @@ pub fn apply_pulse_damage(
         }
         let center = transform.translation.truncate();
         let multiplier = damage_mult.map_or(1.0, |m| m.0);
+        let source_chip = esc.and_then(EffectSourceChip::source_chip);
         let candidates = quadtree
             .quadtree
             .query_circle_filtered(center, radius.0, query_layers);
@@ -167,7 +165,7 @@ pub fn apply_pulse_damage(
                 damage_writer.write(DamageCell {
                     cell,
                     damage: BASE_BOLT_DAMAGE * multiplier,
-                    source_chip: esc.and_then(|e| e.0.clone()),
+                    source_chip: source_chip.clone(),
                 });
             }
         }

@@ -6,10 +6,7 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::{
-        EffectiveDamageMultiplier,
-        core::{EffectSourceChip, chip_attribution},
-    },
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -40,7 +37,7 @@ pub fn fire(entity: Entity, range: f32, damage_mult: f32, source_chip: &str, wor
             range,
             damage_mult: damage_mult * edm,
         },
-        EffectSourceChip(chip_attribution(source_chip)),
+        EffectSourceChip::new(source_chip),
         Transform::from_translation(position),
         CleanupOnNodeExit,
     ));
@@ -78,7 +75,7 @@ pub fn process_explode_requests(
             damage_writer.write(DamageCell {
                 cell,
                 damage,
-                source_chip: esc.and_then(|e| e.0.clone()),
+                source_chip: esc.and_then(EffectSourceChip::source_chip),
             });
         }
         commands.entity(entity).despawn();

@@ -15,10 +15,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::{components::Cell, messages::DamageCell},
-    effect::{
-        EffectiveDamageMultiplier,
-        core::{EffectSourceChip, chip_attribution},
-    },
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState, rng::GameRng},
 };
 
@@ -74,33 +71,26 @@ pub(crate) fn fire(
     source_chip: &str,
     world: &mut World,
 ) {
-    // Early return: no arcs requested
     if arcs == 0 {
         return;
     }
 
-    // Early return: cannot find targets with non-positive range
     if range <= 0.0 {
         return;
     }
 
-    // Early return: arcs cannot travel with non-positive speed
     if arc_speed <= 0.0 {
         return;
     }
 
-    // Read entity position from Position2D
     let position = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
-    // Read effective damage multiplier
     let edm = world
         .get::<EffectiveDamageMultiplier>(entity)
         .map_or(1.0, |e| e.0);
 
-    // Pre-compute damage
     let damage = BASE_BOLT_DAMAGE * damage_mult * edm;
 
-    // Query quadtree for cells in range
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
     let candidates = world
         .resource::<CollisionQuadtree>()
@@ -111,7 +101,6 @@ pub(crate) fn fire(
         return;
     }
 
-    // RNG-pick one target from candidates
     let target = {
         let mut rng = world.resource_mut::<GameRng>();
         let Some(&picked) = candidates.choose(&mut rng.0) else {
@@ -120,31 +109,26 @@ pub(crate) fn fire(
         picked
     };
 
-    // Send DamageCell immediately for the first target
-    let chip = chip_attribution(source_chip);
+    let esc = EffectSourceChip::new(source_chip);
     world
         .resource_mut::<Messages<DamageCell>>()
         .write(DamageCell {
             cell: target,
             damage,
-            source_chip: chip.clone(),
+            source_chip: esc.source_chip(),
         });
 
-    // If arcs == 1, no chain entity needed (first target was the only arc)
     if arcs == 1 {
         return;
     }
 
-    // Read target's GlobalPosition2D for the new source position
     let target_pos = world
         .get::<GlobalPosition2D>(target)
         .map_or(Vec2::ZERO, |gp| gp.0);
 
-    // Build hit_set with the first target
     let mut hit_set = HashSet::new();
     hit_set.insert(target);
 
-    // Spawn ChainLightningChain entity for remaining jumps
     world.spawn((
         ChainLightningChain {
             source: target_pos,
@@ -155,7 +139,7 @@ pub(crate) fn fire(
             range,
             arc_speed,
         },
-        EffectSourceChip(chip),
+        esc,
         CleanupOnNodeExit,
     ));
 }
@@ -188,25 +172,21 @@ pub fn tick_chain_lightning(
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
 
     for (chain_entity, mut chain, esc) in &mut chains {
-        // Take ownership of the state to work with it
         let current_state = std::mem::replace(&mut chain.state, ChainState::Idle);
 
         match current_state {
             ChainState::Idle => {
-                // Guard: if no remaining jumps, despawn chain
                 if chain.remaining_jumps == 0 {
                     commands.entity(chain_entity).despawn();
                     continue;
                 }
 
-                // Query quadtree for cells in range of chain.source
                 let candidates = world.quadtree.quadtree.query_circle_filtered(
                     chain.source,
                     chain.range,
                     query_layers,
                 );
 
-                // Filter out entities in hit_set
                 let valid: Vec<Entity> = candidates
                     .into_iter()
                     .filter(|e| !chain.hit_set.contains(e))
@@ -217,19 +197,16 @@ pub fn tick_chain_lightning(
                     continue;
                 }
 
-                // RNG-pick one target from valid candidates
                 let Some(&target) = valid.choose(&mut world.rng.0) else {
                     commands.entity(chain_entity).despawn();
                     continue;
                 };
 
-                // Read target's GlobalPosition2D
                 let target_pos = world
                     .cell_positions
                     .get(target)
                     .map_or(Vec2::ZERO, |gp| gp.0);
 
-                // Spawn ChainLightningArc visual entity at source position
                 let arc_entity = commands
                     .spawn((
                         ChainLightningArc,
@@ -238,7 +215,6 @@ pub fn tick_chain_lightning(
                     ))
                     .id();
 
-                // Transition to ArcTraveling
                 chain.state = ChainState::ArcTraveling {
                     target,
                     target_pos,
@@ -255,19 +231,14 @@ pub fn tick_chain_lightning(
                 let diff = target_pos - arc_pos;
                 let distance = diff.length();
 
-                // Check if arc arrives this tick
                 let step = chain.arc_speed * dt;
 
                 if distance <= step || distance < f32::EPSILON {
-                    // Arc has arrived at target
-
-                    // Single fetch: check if target still exists and grab its position
                     let target_gp = world.cell_positions.get(target);
                     let target_exists = target_gp.is_ok();
 
                     if target_exists {
-                        // Send DamageCell for the target
-                        let source_chip = esc.and_then(|e| e.0.clone());
+                        let source_chip = esc.and_then(EffectSourceChip::source_chip);
                         damage_writer.write(DamageCell {
                             cell: target,
                             damage: chain.damage,
@@ -275,37 +246,27 @@ pub fn tick_chain_lightning(
                         });
                     }
 
-                    // Add target to hit_set
                     chain.hit_set.insert(target);
 
-                    // Update source to target position
                     // Use GlobalPosition2D if available, otherwise target_pos
                     chain.source = target_gp.map_or(target_pos, |gp| gp.0);
 
-                    // Decrement remaining jumps
                     chain.remaining_jumps -= 1;
-
-                    // Despawn arc entity
                     commands.entity(arc_entity).despawn();
 
                     if chain.remaining_jumps == 0 {
-                        // No more jumps: despawn chain
                         commands.entity(chain_entity).despawn();
                     } else {
-                        // Set state back to Idle
                         chain.state = ChainState::Idle;
                     }
                 } else {
-                    // Advance arc toward target
                     let direction = diff / distance;
                     let new_arc_pos = arc_pos + direction * step;
 
-                    // Update arc entity Transform
                     if let Ok(mut transform) = world.arc_transforms.get_mut(arc_entity) {
                         transform.translation = new_arc_pos.extend(0.0);
                     }
 
-                    // Update chain state with new arc position
                     chain.state = ChainState::ArcTraveling {
                         target,
                         target_pos,

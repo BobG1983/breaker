@@ -10,10 +10,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::{
-        EffectiveDamageMultiplier,
-        core::{EffectSourceChip, chip_attribution},
-    },
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig, PlayingState},
 };
 
@@ -80,7 +77,7 @@ pub fn fire(entity: Entity, damage_mult: f32, width: f32, source_chip: &str, wor
             half_width: width / 2.0,
             damage: BASE_BOLT_DAMAGE * damage_mult * edm,
         },
-        EffectSourceChip(chip_attribution(source_chip)),
+        EffectSourceChip::new(source_chip),
         CleanupOnNodeExit,
     ));
 }
@@ -155,7 +152,7 @@ pub fn process_piercing_beam(
             damage_writer.write(DamageCell {
                 cell,
                 damage: request.damage,
-                source_chip: esc.and_then(|e| e.0.clone()),
+                source_chip: esc.and_then(EffectSourceChip::source_chip),
             });
         }
 

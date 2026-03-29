@@ -8,10 +8,7 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::{
-        EffectiveDamageMultiplier,
-        core::{EffectSourceChip, chip_attribution},
-    },
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -76,7 +73,7 @@ pub fn fire(
         ShockwaveSpeed(speed),
         ShockwaveDamaged::default(),
         ShockwaveDamageMultiplier(edm),
-        EffectSourceChip(chip_attribution(source_chip)),
+        EffectSourceChip::new(source_chip),
         Transform::from_translation(position),
         CleanupOnNodeExit,
     ));
@@ -122,6 +119,7 @@ pub fn apply_shockwave_damage(
         }
         let center = transform.translation.truncate();
         let multiplier = damage_mult.map_or(1.0, |m| m.0);
+        let source_chip = esc.and_then(EffectSourceChip::source_chip);
         let candidates = quadtree
             .quadtree
             .query_circle_filtered(center, radius.0, query_layers);
@@ -130,7 +128,7 @@ pub fn apply_shockwave_damage(
                 damage_writer.write(DamageCell {
                     cell,
                     damage: BASE_BOLT_DAMAGE * multiplier,
-                    source_chip: esc.and_then(|e| e.0.clone()),
+                    source_chip: source_chip.clone(),
                 });
             }
         }

@@ -12,10 +12,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
     cells::{components::Cell, messages::DamageCell},
-    effect::{
-        EffectiveDamageMultiplier,
-        core::{EffectSourceChip, chip_attribution},
-    },
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -60,7 +57,7 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &
                 damage_mult,
                 effective_damage_multiplier: edm,
             },
-            EffectSourceChip(chip_attribution(source_chip)),
+            EffectSourceChip::new(source_chip),
             CleanupOnNodeExit,
         ))
         .id();
@@ -154,7 +151,7 @@ pub fn tick_tether_beam(
                 damage_writer.write(DamageCell {
                     cell,
                     damage,
-                    source_chip: esc.and_then(|e| e.0.clone()),
+                    source_chip: esc.and_then(EffectSourceChip::source_chip),
                 });
             }
         }

@@ -10,6 +10,20 @@ use serde::Deserialize;
 #[derive(Component, Debug, Clone, Default)]
 pub struct EffectSourceChip(pub Option<String>);
 
+impl EffectSourceChip {
+    /// Create from a chip name: empty string → `EffectSourceChip(None)`, non-empty → `Some(owned)`.
+    #[must_use]
+    pub fn new(source_chip: &str) -> Self {
+        Self(chip_attribution(source_chip))
+    }
+
+    /// Extract the chip attribution for `DamageCell.source_chip`.
+    #[must_use]
+    pub fn source_chip(&self) -> Option<String> {
+        self.0.clone()
+    }
+}
+
 /// Convert a `source_chip` string into an `Option<String>` suitable for
 /// `DamageCell.source_chip`. Empty string maps to `None`; non-empty maps to
 /// `Some(s.to_string())`.
