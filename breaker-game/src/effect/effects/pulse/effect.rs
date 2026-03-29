@@ -8,7 +8,10 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::EffectiveDamageMultiplier,
+    effect::{
+        EffectiveDamageMultiplier,
+        core::{EffectSourceChip, chip_attribution},
+    },
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -66,29 +69,31 @@ pub struct PulseDamaged(pub HashSet<Entity>);
 #[derive(Component)]
 pub struct PulseRingDamageMultiplier(pub f32);
 
-pub fn fire(
-    entity: Entity,
-    base_range: f32,
-    range_per_level: f32,
-    stacks: u32,
-    speed: f32,
-    interval: f32,
-    world: &mut World,
-) {
-    let emitter = PulseEmitter {
-        base_range,
-        range_per_level,
-        stacks,
-        speed,
-        interval,
-        timer: 0.0,
-    };
+/// Query data for [`tick_pulse_emitter`].
+type EmitterQuery = (
+    Entity,
+    &'static mut PulseEmitter,
+    &'static Transform,
+    Option<&'static EffectiveDamageMultiplier>,
+    Option<&'static EffectSourceChip>,
+);
+
+/// Query data for [`apply_pulse_damage`].
+type PulseDamageQuery = (
+    &'static Transform,
+    &'static PulseRadius,
+    &'static mut PulseDamaged,
+    Option<&'static PulseRingDamageMultiplier>,
+    Option<&'static EffectSourceChip>,
+);
+
+pub fn fire(entity: Entity, emitter: PulseEmitter, source_chip: &str, world: &mut World) {
     if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
-        entity_mut.insert(emitter);
+        entity_mut.insert((emitter, EffectSourceChip(chip_attribution(source_chip))));
     }
 }
 
-pub fn reverse(entity: Entity, world: &mut World) {
+pub fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
         entity_mut.remove::<PulseEmitter>();
     }
@@ -101,22 +106,17 @@ pub fn reverse(entity: Entity, world: &mut World) {
 pub fn tick_pulse_emitter(
     time: Res<Time<Fixed>>,
     mut commands: Commands,
-    mut emitters: Query<(
-        Entity,
-        &mut PulseEmitter,
-        &Transform,
-        Option<&EffectiveDamageMultiplier>,
-    )>,
+    mut emitters: Query<EmitterQuery>,
 ) {
     let dt = time.timestep().as_secs_f32();
-    for (entity, mut emitter, transform, edm) in &mut emitters {
+    for (entity, mut emitter, transform, edm, esc) in &mut emitters {
         emitter.timer += dt;
         if emitter.timer >= emitter.interval {
             emitter.timer -= emitter.interval;
             let effective_range = emitter.effective_max_radius();
             let speed = emitter.speed;
             let damage_multiplier = edm.map_or(1.0, |e| e.0);
-            commands.spawn((
+            let mut ring = commands.spawn((
                 PulseRing,
                 PulseSource(entity),
                 PulseRadius(0.0),
@@ -127,6 +127,7 @@ pub fn tick_pulse_emitter(
                 Transform::from_translation(transform.translation),
                 CleanupOnNodeExit,
             ));
+            ring.insert(esc.cloned().unwrap_or_default());
         }
     }
 }
@@ -148,19 +149,11 @@ pub fn tick_pulse_ring(
 /// and sends [`DamageCell`] for any cell not already in the [`PulseDamaged`] set.
 pub fn apply_pulse_damage(
     quadtree: Res<CollisionQuadtree>,
-    mut rings: Query<
-        (
-            &Transform,
-            &PulseRadius,
-            &mut PulseDamaged,
-            Option<&PulseRingDamageMultiplier>,
-        ),
-        With<PulseRing>,
-    >,
+    mut rings: Query<PulseDamageQuery, With<PulseRing>>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (transform, radius, mut damaged, damage_mult) in &mut rings {
+    for (transform, radius, mut damaged, damage_mult, esc) in &mut rings {
         if radius.0 <= 0.0 {
             continue;
         }
@@ -174,7 +167,7 @@ pub fn apply_pulse_damage(
                 damage_writer.write(DamageCell {
                     cell,
                     damage: BASE_BOLT_DAMAGE * multiplier,
-                    source_chip: None,
+                    source_chip: esc.and_then(|e| e.0.clone()),
                 });
             }
         }

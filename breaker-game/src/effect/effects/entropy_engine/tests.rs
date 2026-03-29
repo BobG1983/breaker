@@ -21,7 +21,7 @@ fn fire_inserts_state_and_fires_one_effect_when_no_prior_state() {
         .id();
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -51,7 +51,7 @@ fn fire_inserts_state_fresh_when_entity_has_none() {
     );
 
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     assert!(
         world.get::<EntropyEngineState>(entity).is_some(),
@@ -74,7 +74,7 @@ fn fire_increments_cells_destroyed_and_fires_n_effects() {
         .id();
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-    fire(entity, 5, &pool, &mut world);
+    fire(entity, 5, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -110,7 +110,7 @@ fn fire_with_cells_destroyed_4_max_5_fires_5_effects() {
         .id();
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-    fire(entity, 5, &pool, &mut world);
+    fire(entity, 5, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -138,7 +138,7 @@ fn fire_caps_at_max_effects() {
         .id();
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -170,7 +170,7 @@ fn fire_with_max_effects_1_fires_exactly_one() {
         .id();
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-    fire(entity, 1, &pool, &mut world);
+    fire(entity, 1, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -199,7 +199,7 @@ fn fire_with_empty_pool_increments_cells_destroyed_but_fires_nothing() {
         .id();
     let pool: Vec<(f32, EffectNode)> = vec![];
 
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -230,7 +230,7 @@ fn fire_selects_effects_independently_total_equals_n() {
         ),
     ];
 
-    fire(entity, 5, &pool, &mut world);
+    fire(entity, 5, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -266,7 +266,7 @@ fn fire_with_non_do_pushes_to_staged_effects() {
         .id();
     let pool = vec![(1.0, non_do_node.clone())];
 
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(state.cells_destroyed, 1, "cells_destroyed should be 1");
@@ -307,7 +307,7 @@ fn fire_deterministic_for_same_seed() {
             ActiveSpeedBoosts(vec![]),
         ))
         .id();
-    fire(entity1, 5, &pool, &mut world1);
+    fire(entity1, 5, &pool, "", &mut world1);
 
     // World 2
     let mut world2 = World::new();
@@ -320,7 +320,7 @@ fn fire_deterministic_for_same_seed() {
             ActiveSpeedBoosts(vec![]),
         ))
         .id();
-    fire(entity2, 5, &pool, &mut world2);
+    fire(entity2, 5, &pool, "", &mut world2);
 
     let damage1 = world1.get::<ActiveDamageBoosts>(entity1).unwrap();
     let damage2 = world2.get::<ActiveDamageBoosts>(entity2).unwrap();
@@ -362,7 +362,7 @@ fn fire_with_max_effects_zero_fires_nothing() {
         .id();
     let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-    fire(entity, 0, &pool, &mut world);
+    fire(entity, 0, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -398,7 +398,7 @@ fn fire_with_all_zero_weights_increments_cells_destroyed_but_no_effects() {
         ),
     ];
 
-    fire(entity, 5, &pool, &mut world);
+    fire(entity, 5, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -418,7 +418,7 @@ fn reverse_with_state_is_noop() {
     let mut world = World::new();
     let entity = world.spawn(EntropyEngineState { cells_destroyed: 5 }).id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -435,7 +435,7 @@ fn reverse_without_state_is_noop() {
     let entity = world.spawn_empty().id();
 
     // Should not panic
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get::<EntropyEngineState>(entity).is_none(),
@@ -588,7 +588,7 @@ fn fire_with_mixed_do_and_non_do_dispatches_correctly() {
         (1.0, non_do_node),
     ];
 
-    fire(entity, 5, &pool, &mut world);
+    fire(entity, 5, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(
@@ -620,7 +620,7 @@ fn fire_inserts_staged_effects_when_absent_and_non_do_selected() {
     let entity = world.spawn(EntropyEngineState { cells_destroyed: 0 }).id();
     let pool = vec![(1.0, non_do_node.clone())];
 
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(state.cells_destroyed, 1, "cells_destroyed should be 1");
@@ -653,7 +653,7 @@ fn fire_inserts_both_state_and_staged_effects_when_both_absent() {
     let entity = world.spawn_empty().id();
     let pool = vec![(1.0, non_do_node)];
 
-    fire(entity, 3, &pool, &mut world);
+    fire(entity, 3, &pool, "", &mut world);
 
     assert!(
         world.get::<EntropyEngineState>(entity).is_some(),
@@ -665,4 +665,72 @@ fn fire_inserts_both_state_and_staged_effects_when_both_absent() {
     );
     let state = world.get::<EntropyEngineState>(entity).unwrap();
     assert_eq!(state.cells_destroyed, 1);
+}
+
+// ── Section N: meta-effect forwards source_chip ──
+
+#[test]
+fn fire_forwards_source_chip_to_inner_do_effects() {
+    let mut world = World::new();
+    world.insert_resource(GameRng::from_seed(42));
+    let entity = world
+        .spawn((StagedEffects::default(), ActiveDamageBoosts(vec![])))
+        .id();
+    let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
+
+    fire(entity, 3, &pool, "entropy_chip", &mut world);
+
+    let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
+    assert!(
+        !active.0.is_empty(),
+        "inner effects should fire — proves source_chip was threaded through"
+    );
+}
+
+#[test]
+fn fire_forwards_source_chip_to_staged_effects_push() {
+    let mut world = World::new();
+    world.insert_resource(GameRng::from_seed(42));
+    let entity = world.spawn(StagedEffects::default()).id();
+    let non_do_node = EffectNode::When {
+        trigger: Trigger::CellDestroyed,
+        then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
+    };
+    let pool = vec![(1.0, non_do_node)];
+
+    fire(entity, 3, &pool, "entropy_chip", &mut world);
+
+    let staged = world.get::<StagedEffects>(entity).unwrap();
+    assert!(!staged.0.is_empty(), "StagedEffects should have entries");
+
+    for entry in &staged.0 {
+        assert_eq!(
+            entry.0, "entropy_chip",
+            "StagedEffects entry should have chip_name 'entropy_chip' forwarded from source_chip, not empty string"
+        );
+    }
+}
+
+#[test]
+fn fire_forwards_empty_source_chip_to_staged_effects_push() {
+    let mut world = World::new();
+    world.insert_resource(GameRng::from_seed(42));
+    let entity = world.spawn(StagedEffects::default()).id();
+    let non_do_node = EffectNode::When {
+        trigger: Trigger::CellDestroyed,
+        then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
+    };
+    let pool = vec![(1.0, non_do_node)];
+
+    fire(entity, 3, &pool, "", &mut world);
+
+    let staged = world.get::<StagedEffects>(entity).unwrap();
+    assert!(!staged.0.is_empty());
+
+    for entry in &staged.0 {
+        assert_eq!(
+            entry.0, "",
+            "empty source_chip should forward as empty chip_name"
+        );
+    }
 }

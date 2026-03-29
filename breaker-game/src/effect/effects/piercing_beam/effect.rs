@@ -10,7 +10,10 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::EffectiveDamageMultiplier,
+    effect::{
+        EffectiveDamageMultiplier,
+        core::{EffectSourceChip, chip_attribution},
+    },
     shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig, PlayingState},
 };
 
@@ -32,7 +35,7 @@ pub struct PiercingBeamRequest {
     pub damage: f32,
 }
 
-pub fn fire(entity: Entity, damage_mult: f32, width: f32, world: &mut World) {
+pub fn fire(entity: Entity, damage_mult: f32, width: f32, source_chip: &str, world: &mut World) {
     let pos = world
         .get::<Position2D>(entity)
         .map(|p| p.0)
@@ -77,11 +80,12 @@ pub fn fire(entity: Entity, damage_mult: f32, width: f32, world: &mut World) {
             half_width: width / 2.0,
             damage: BASE_BOLT_DAMAGE * damage_mult * edm,
         },
+        EffectSourceChip(chip_attribution(source_chip)),
         CleanupOnNodeExit,
     ));
 }
 
-pub fn reverse(_entity: Entity, world: &mut World) {
+pub fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
     let _ = world;
 }
 
@@ -93,14 +97,14 @@ pub fn reverse(_entity: Entity, world: &mut World) {
 /// request entity.
 pub fn process_piercing_beam(
     mut commands: Commands,
-    requests: Query<(Entity, &PiercingBeamRequest)>,
+    requests: Query<(Entity, &PiercingBeamRequest, Option<&EffectSourceChip>)>,
     quadtree: Res<CollisionQuadtree>,
     positions: Query<&GlobalPosition2D>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
 
-    for (entity, request) in &requests {
+    for (entity, request, esc) in &requests {
         let dir = request.direction;
         let origin = request.origin;
         let length = request.length;
@@ -151,7 +155,7 @@ pub fn process_piercing_beam(
             damage_writer.write(DamageCell {
                 cell,
                 damage: request.damage,
-                source_chip: None,
+                source_chip: esc.and_then(|e| e.0.clone()),
             });
         }
 

@@ -15,7 +15,7 @@ pub struct ChainBoltAnchor;
 #[derive(Component, Debug)]
 pub struct ChainBoltConstraint(pub Entity);
 
-pub fn fire(entity: Entity, tether_distance: f32, world: &mut World) {
+pub fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, world: &mut World) {
     let spawn_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
     let chain_bolt = super::super::spawn_extra_bolt(world, spawn_pos);
@@ -38,7 +38,7 @@ pub fn fire(entity: Entity, tether_distance: f32, world: &mut World) {
     }
 }
 
-pub fn reverse(entity: Entity, _tether_distance: f32, world: &mut World) {
+pub fn reverse(entity: Entity, _tether_distance: f32, _source_chip: &str, world: &mut World) {
     let chain_bolts: Vec<(Entity, Option<Entity>)> = world
         .query::<(Entity, &ChainBoltMarker, Option<&ChainBoltConstraint>)>()
         .iter(world)

@@ -12,7 +12,10 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::EffectiveDamageMultiplier,
+    effect::{
+        EffectiveDamageMultiplier,
+        core::{EffectSourceChip, chip_attribution},
+    },
     shared::{CELL_LAYER, CleanupOnNodeExit, GameRng, PlayingState},
 };
 
@@ -28,7 +31,14 @@ pub struct ChainLightningRequest {
     pub source: Vec2,
 }
 
-pub(crate) fn fire(entity: Entity, arcs: u32, range: f32, damage_mult: f32, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    arcs: u32,
+    range: f32,
+    damage_mult: f32,
+    source_chip: &str,
+    world: &mut World,
+) {
     let position = world
         .get::<Position2D>(entity)
         .map(|p| p.0)
@@ -93,11 +103,12 @@ pub(crate) fn fire(entity: Entity, arcs: u32, range: f32, damage_mult: f32, worl
             targets,
             source: position,
         },
+        EffectSourceChip(chip_attribution(source_chip)),
         CleanupOnNodeExit,
     ));
 }
 
-pub(crate) fn reverse(_entity: Entity, world: &mut World) {
+pub(crate) fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
     let _ = world;
 }
 
@@ -107,15 +118,15 @@ pub(crate) fn reverse(_entity: Entity, world: &mut World) {
 /// pre-computed target, then despawns the request entity.
 pub fn process_chain_lightning(
     mut commands: Commands,
-    requests: Query<(Entity, &ChainLightningRequest)>,
+    requests: Query<(Entity, &ChainLightningRequest, Option<&EffectSourceChip>)>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
-    for (entity, request) in &requests {
+    for (entity, request, esc) in &requests {
         for &(cell, damage) in &request.targets {
             damage_writer.write(DamageCell {
                 cell,
                 damage,
-                source_chip: None,
+                source_chip: esc.and_then(|e| e.0.clone()),
             });
         }
         commands.entity(entity).despawn();

@@ -17,7 +17,7 @@ fn reverse_is_noop() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(10.0, 20.0, 0.0)).id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -30,7 +30,7 @@ fn reverse_on_empty_entity_is_noop() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -285,7 +285,7 @@ fn chain_lightning_end_to_end_damage_includes_effective_damage_multiplier() {
     tick(&mut app);
 
     // fire() should read EDM and pre-compute scaled damage
-    fire(entity, 1, 100.0, 1.5, app.world_mut());
+    fire(entity, 1, 100.0, 1.5, "", app.world_mut());
 
     // Tick again to run process_chain_lightning
     tick(&mut app);
@@ -349,5 +349,115 @@ fn register_wires_process_chain_lightning_system() {
     assert!(
         app.world().get_entity(request).is_err(),
         "register() should wire process_chain_lightning — request should be despawned after tick"
+    );
+}
+
+// -- Section F: EffectSourceChip attribution tests ───────────────────
+
+use crate::effect::core::EffectSourceChip;
+
+#[test]
+fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
+        .id();
+
+    let _cell = spawn_test_cell(&mut app, 30.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 1, 100.0, 1.5, "zapper", app.world_mut());
+
+    let mut query = app.world_mut().query::<&EffectSourceChip>();
+    let results: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0,
+        Some("zapper".to_string()),
+        "spawned ChainLightningRequest should have EffectSourceChip(Some(\"zapper\"))"
+    );
+}
+
+#[test]
+fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
+        .id();
+
+    tick(&mut app);
+
+    fire(entity, 1, 100.0, 1.5, "", app.world_mut());
+
+    let mut query = app.world_mut().query::<&EffectSourceChip>();
+    let results: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0, None,
+        "empty source_chip should produce EffectSourceChip(None)"
+    );
+}
+
+#[test]
+fn process_chain_lightning_populates_source_chip_from_effect_source_chip() {
+    let mut app = chain_lightning_damage_test_app();
+
+    let cell_a = app.world_mut().spawn_empty().id();
+    let cell_b = app.world_mut().spawn_empty().id();
+
+    app.world_mut().spawn((
+        ChainLightningRequest {
+            targets: vec![(cell_a, 15.0), (cell_b, 15.0)],
+            source: Vec2::new(0.0, 0.0),
+        },
+        EffectSourceChip(Some("zapper".to_string())),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 2);
+
+    for msg in &collector.0 {
+        assert_eq!(
+            msg.source_chip,
+            Some("zapper".to_string()),
+            "DamageCell should have source_chip from EffectSourceChip"
+        );
+    }
+}
+
+#[test]
+fn process_chain_lightning_source_chip_none_when_no_effect_source_chip() {
+    let mut app = chain_lightning_damage_test_app();
+
+    let cell = app.world_mut().spawn_empty().id();
+
+    // No EffectSourceChip on request
+    app.world_mut().spawn(ChainLightningRequest {
+        targets: vec![(cell, 15.0)],
+        source: Vec2::ZERO,
+    });
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].source_chip, None,
+        "missing EffectSourceChip should default to source_chip None"
     );
 }

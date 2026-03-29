@@ -6,7 +6,7 @@ use crate::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
 ///
 /// The `apply_time_penalty` system in the node subdomain reads the message
 /// and applies the subtraction with clamping and expiry detection.
-pub(crate) fn fire(_entity: Entity, seconds: f32, world: &mut World) {
+pub(crate) fn fire(_entity: Entity, seconds: f32, _source_chip: &str, world: &mut World) {
     world
         .resource_mut::<Messages<ApplyTimePenalty>>()
         .write(ApplyTimePenalty { seconds });
@@ -16,7 +16,7 @@ pub(crate) fn fire(_entity: Entity, seconds: f32, world: &mut World) {
 ///
 /// The `reverse_time_penalty` system in the node subdomain reads the message
 /// and adds time back, clamping to `NodeTimer::total`.
-pub(crate) fn reverse(_entity: Entity, seconds: f32, world: &mut World) {
+pub(crate) fn reverse(_entity: Entity, seconds: f32, _source_chip: &str, world: &mut World) {
     world
         .resource_mut::<Messages<ReverseTimePenalty>>()
         .write(ReverseTimePenalty { seconds });
@@ -39,7 +39,7 @@ mod tests {
         app.add_message::<ApplyTimePenalty>();
         let entity = app.world_mut().spawn_empty().id();
 
-        fire(entity, 5.0, app.world_mut());
+        fire(entity, 5.0, "", app.world_mut());
 
         let messages = app.world().resource::<Messages<ApplyTimePenalty>>();
         let written: Vec<&ApplyTimePenalty> = messages.iter_current_update_messages().collect();
@@ -63,7 +63,7 @@ mod tests {
         app.add_message::<ApplyTimePenalty>();
         let entity = app.world_mut().spawn_empty().id();
 
-        fire(entity, 0.0, app.world_mut());
+        fire(entity, 0.0, "", app.world_mut());
 
         let messages = app.world().resource::<Messages<ApplyTimePenalty>>();
         let written: Vec<&ApplyTimePenalty> = messages.iter_current_update_messages().collect();
@@ -89,7 +89,7 @@ mod tests {
         app.add_message::<ReverseTimePenalty>();
         let entity = app.world_mut().spawn_empty().id();
 
-        reverse(entity, 5.0, app.world_mut());
+        reverse(entity, 5.0, "", app.world_mut());
 
         let messages = app.world().resource::<Messages<ReverseTimePenalty>>();
         let written: Vec<&ReverseTimePenalty> = messages.iter_current_update_messages().collect();
@@ -113,7 +113,7 @@ mod tests {
         app.add_message::<ReverseTimePenalty>();
         let entity = app.world_mut().spawn_empty().id();
 
-        reverse(entity, 0.0, app.world_mut());
+        reverse(entity, 0.0, "", app.world_mut());
 
         let messages = app.world().resource::<Messages<ReverseTimePenalty>>();
         let written: Vec<&ReverseTimePenalty> = messages.iter_current_update_messages().collect();

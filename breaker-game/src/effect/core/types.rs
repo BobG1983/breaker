@@ -3,6 +3,25 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+/// Deferred chip attribution stored on spawned effect entities (shockwave,
+/// pulse ring, explode request, chain lightning request, piercing beam request,
+/// tether beam). Damage-application systems read this to populate
+/// `DamageCell.source_chip`.
+#[derive(Component, Debug, Clone, Default)]
+pub struct EffectSourceChip(pub Option<String>);
+
+/// Convert a `source_chip` string into an `Option<String>` suitable for
+/// `DamageCell.source_chip`. Empty string maps to `None`; non-empty maps to
+/// `Some(s.to_string())`.
+#[must_use]
+pub fn chip_attribution(source_chip: &str) -> Option<String> {
+    if source_chip.is_empty() {
+        None
+    } else {
+        Some(source_chip.to_string())
+    }
+}
+
 /// A trigger that gates effect evaluation. Bridge systems fire triggers;
 /// `When` nodes match against them.
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -319,7 +338,7 @@ pub enum EffectKind {
 
 impl EffectKind {
     /// Fire this effect on the given entity. Dispatches to the per-module `fire()` function.
-    pub(crate) fn fire(&self, entity: Entity, world: &mut World) {
+    pub(crate) fn fire(&self, entity: Entity, source_chip: &str, world: &mut World) {
         match self {
             Self::Shockwave {
                 base_range,
@@ -332,15 +351,24 @@ impl EffectKind {
                 *range_per_level,
                 *stacks,
                 *speed,
+                source_chip,
                 world,
             ),
             Self::SpeedBoost { multiplier } => {
-                super::super::effects::speed_boost::fire(entity, *multiplier, world);
+                super::super::effects::speed_boost::fire(entity, *multiplier, source_chip, world);
             }
-            Self::DamageBoost(v) => super::super::effects::damage_boost::fire(entity, *v, world),
-            Self::Piercing(v) => super::super::effects::piercing::fire(entity, *v, world),
-            Self::SizeBoost(v) => super::super::effects::size_boost::fire(entity, *v, world),
-            Self::BumpForce(v) => super::super::effects::bump_force::fire(entity, *v, world),
+            Self::DamageBoost(v) => {
+                super::super::effects::damage_boost::fire(entity, *v, source_chip, world);
+            }
+            Self::Piercing(v) => {
+                super::super::effects::piercing::fire(entity, *v, source_chip, world);
+            }
+            Self::SizeBoost(v) => {
+                super::super::effects::size_boost::fire(entity, *v, source_chip, world);
+            }
+            Self::BumpForce(v) => {
+                super::super::effects::bump_force::fire(entity, *v, source_chip, world);
+            }
             Self::Attraction {
                 attraction_type,
                 force,
@@ -351,12 +379,15 @@ impl EffectKind {
                     *attraction_type,
                     *force,
                     *max_force,
+                    source_chip,
                     world,
                 );
             }
-            Self::LoseLife => super::super::effects::life_lost::fire(entity, world),
+            Self::LoseLife => {
+                super::super::effects::life_lost::fire(entity, source_chip, world);
+            }
             Self::TimePenalty { seconds } => {
-                super::super::effects::time_penalty::fire(entity, *seconds, world);
+                super::super::effects::time_penalty::fire(entity, *seconds, source_chip, world);
             }
             Self::SpawnBolts {
                 count,
@@ -364,21 +395,31 @@ impl EffectKind {
                 inherit,
             } => {
                 super::super::effects::spawn_bolts::fire(
-                    entity, *count, *lifespan, *inherit, world,
+                    entity,
+                    *count,
+                    *lifespan,
+                    *inherit,
+                    source_chip,
+                    world,
                 );
             }
             Self::ChainBolt { tether_distance } => {
-                super::super::effects::chain_bolt::fire(entity, *tether_distance, world);
+                super::super::effects::chain_bolt::fire(
+                    entity,
+                    *tether_distance,
+                    source_chip,
+                    world,
+                );
             }
-            _ => self.fire_aoe_and_spawn(entity, world),
+            _ => self.fire_aoe_and_spawn(entity, source_chip, world),
         }
     }
 
     /// Fire AOE, spawn, and utility effects — extracted from [`fire`] for line count.
-    fn fire_aoe_and_spawn(&self, entity: Entity, world: &mut World) {
+    fn fire_aoe_and_spawn(&self, entity: Entity, source_chip: &str, world: &mut World) {
         match self {
             Self::Shield { stacks } => {
-                super::super::effects::shield::fire(entity, *stacks, world);
+                super::super::effects::shield::fire(entity, *stacks, source_chip, world);
             }
             Self::ChainLightning {
                 arcs,
@@ -389,10 +430,17 @@ impl EffectKind {
                 *arcs,
                 *range,
                 *damage_mult,
+                source_chip,
                 world,
             ),
             Self::PiercingBeam { damage_mult, width } => {
-                super::super::effects::piercing_beam::fire(entity, *damage_mult, *width, world);
+                super::super::effects::piercing_beam::fire(
+                    entity,
+                    *damage_mult,
+                    *width,
+                    source_chip,
+                    world,
+                );
             }
             Self::Pulse {
                 base_range,
@@ -402,43 +450,85 @@ impl EffectKind {
                 interval,
             } => super::super::effects::pulse::fire(
                 entity,
-                *base_range,
-                *range_per_level,
-                *stacks,
-                *speed,
-                *interval,
+                super::super::effects::pulse::PulseEmitter {
+                    base_range: *base_range,
+                    range_per_level: *range_per_level,
+                    stacks: *stacks,
+                    speed: *speed,
+                    interval: *interval,
+                    timer: 0.0,
+                },
+                source_chip,
                 world,
             ),
-            Self::SecondWind => super::super::effects::second_wind::fire(entity, world),
+            Self::SecondWind => {
+                super::super::effects::second_wind::fire(entity, source_chip, world);
+            }
+            _ => self.fire_utility_and_spawn(entity, source_chip, world),
+        }
+    }
+
+    /// Fire utility, random, and spawn effects — extracted from [`fire_aoe_and_spawn`] for line count.
+    fn fire_utility_and_spawn(&self, entity: Entity, source_chip: &str, world: &mut World) {
+        match self {
             Self::SpawnPhantom {
                 duration,
                 max_active,
-            } => super::super::effects::spawn_phantom::fire(entity, *duration, *max_active, world),
+            } => super::super::effects::spawn_phantom::fire(
+                entity,
+                *duration,
+                *max_active,
+                source_chip,
+                world,
+            ),
             Self::GravityWell {
                 strength,
                 duration,
                 radius,
                 max,
             } => super::super::effects::gravity_well::fire(
-                entity, *strength, *duration, *radius, *max, world,
+                entity,
+                *strength,
+                *duration,
+                *radius,
+                *max,
+                source_chip,
+                world,
             ),
             Self::RandomEffect(pool) => {
-                super::super::effects::random_effect::fire(entity, pool, world);
+                super::super::effects::random_effect::fire(entity, pool, source_chip, world);
             }
             Self::EntropyEngine { max_effects, pool } => {
-                super::super::effects::entropy_engine::fire(entity, *max_effects, pool, world);
+                super::super::effects::entropy_engine::fire(
+                    entity,
+                    *max_effects,
+                    pool,
+                    source_chip,
+                    world,
+                );
             }
             Self::RampingDamage { damage_per_trigger } => {
-                super::super::effects::ramping_damage::fire(entity, *damage_per_trigger, world);
+                super::super::effects::ramping_damage::fire(
+                    entity,
+                    *damage_per_trigger,
+                    source_chip,
+                    world,
+                );
             }
             Self::Explode { range, damage_mult } => {
-                super::super::effects::explode::fire(entity, *range, *damage_mult, world);
+                super::super::effects::explode::fire(
+                    entity,
+                    *range,
+                    *damage_mult,
+                    source_chip,
+                    world,
+                );
             }
             Self::QuickStop { multiplier } => {
-                super::super::effects::quick_stop::fire(entity, *multiplier, world);
+                super::super::effects::quick_stop::fire(entity, *multiplier, source_chip, world);
             }
             Self::TetherBeam { damage_mult } => {
-                super::super::effects::tether_beam::fire(entity, *damage_mult, world);
+                super::super::effects::tether_beam::fire(entity, *damage_mult, source_chip, world);
             }
             _ => {
                 // Stat effects (SpeedBoost, DamageBoost, etc.) handled in primary fire() match.
@@ -448,16 +538,31 @@ impl EffectKind {
     }
 
     /// Reverse this effect on the given entity. Dispatches to the per-module `reverse()` function.
-    pub(crate) fn reverse(&self, entity: Entity, world: &mut World) {
+    pub(crate) fn reverse(&self, entity: Entity, source_chip: &str, world: &mut World) {
         match self {
-            Self::Shockwave { .. } => super::super::effects::shockwave::reverse(entity, world),
-            Self::SpeedBoost { multiplier } => {
-                super::super::effects::speed_boost::reverse(entity, *multiplier, world);
+            Self::Shockwave { .. } => {
+                super::super::effects::shockwave::reverse(entity, source_chip, world);
             }
-            Self::DamageBoost(v) => super::super::effects::damage_boost::reverse(entity, *v, world),
-            Self::Piercing(v) => super::super::effects::piercing::reverse(entity, *v, world),
-            Self::SizeBoost(v) => super::super::effects::size_boost::reverse(entity, *v, world),
-            Self::BumpForce(v) => super::super::effects::bump_force::reverse(entity, *v, world),
+            Self::SpeedBoost { multiplier } => {
+                super::super::effects::speed_boost::reverse(
+                    entity,
+                    *multiplier,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::DamageBoost(v) => {
+                super::super::effects::damage_boost::reverse(entity, *v, source_chip, world);
+            }
+            Self::Piercing(v) => {
+                super::super::effects::piercing::reverse(entity, *v, source_chip, world);
+            }
+            Self::SizeBoost(v) => {
+                super::super::effects::size_boost::reverse(entity, *v, source_chip, world);
+            }
+            Self::BumpForce(v) => {
+                super::super::effects::bump_force::reverse(entity, *v, source_chip, world);
+            }
             Self::Attraction {
                 attraction_type,
                 force,
@@ -468,52 +573,88 @@ impl EffectKind {
                     *attraction_type,
                     *force,
                     *max_force,
+                    source_chip,
                     world,
                 );
             }
-            Self::LoseLife => super::super::effects::life_lost::reverse(entity, world),
-            Self::TimePenalty { seconds } => {
-                super::super::effects::time_penalty::reverse(entity, *seconds, world);
+            Self::LoseLife => {
+                super::super::effects::life_lost::reverse(entity, source_chip, world);
             }
+            Self::TimePenalty { seconds } => {
+                super::super::effects::time_penalty::reverse(entity, *seconds, source_chip, world);
+            }
+            _ => self.reverse_aoe_and_spawn(entity, source_chip, world),
+        }
+    }
+
+    /// Reverse AOE, spawn, and utility effects — extracted from [`reverse`] for line count.
+    fn reverse_aoe_and_spawn(&self, entity: Entity, source_chip: &str, world: &mut World) {
+        match self {
             Self::SpawnBolts {
                 count,
                 lifespan,
                 inherit,
             } => super::super::effects::spawn_bolts::reverse(
-                entity, *count, *lifespan, *inherit, world,
+                entity,
+                *count,
+                *lifespan,
+                *inherit,
+                source_chip,
+                world,
             ),
             Self::ChainBolt { tether_distance } => {
-                super::super::effects::chain_bolt::reverse(entity, *tether_distance, world);
+                super::super::effects::chain_bolt::reverse(
+                    entity,
+                    *tether_distance,
+                    source_chip,
+                    world,
+                );
             }
-            Self::Shield { .. } => super::super::effects::shield::reverse(entity, world),
+            Self::Shield { .. } => {
+                super::super::effects::shield::reverse(entity, source_chip, world);
+            }
             Self::ChainLightning { .. } => {
-                super::super::effects::chain_lightning::reverse(entity, world);
+                super::super::effects::chain_lightning::reverse(entity, source_chip, world);
             }
             Self::PiercingBeam { .. } => {
-                super::super::effects::piercing_beam::reverse(entity, world);
+                super::super::effects::piercing_beam::reverse(entity, source_chip, world);
             }
-            Self::Pulse { .. } => super::super::effects::pulse::reverse(entity, world),
-            Self::SecondWind => super::super::effects::second_wind::reverse(entity, world),
+            Self::Pulse { .. } => {
+                super::super::effects::pulse::reverse(entity, source_chip, world);
+            }
+            Self::SecondWind => {
+                super::super::effects::second_wind::reverse(entity, source_chip, world);
+            }
             Self::SpawnPhantom { .. } => {
-                super::super::effects::spawn_phantom::reverse(entity, world);
+                super::super::effects::spawn_phantom::reverse(entity, source_chip, world);
             }
-            Self::GravityWell { .. } => super::super::effects::gravity_well::reverse(entity, world),
+            Self::GravityWell { .. } => {
+                super::super::effects::gravity_well::reverse(entity, source_chip, world);
+            }
             Self::RandomEffect(pool) => {
-                super::super::effects::random_effect::reverse(entity, pool, world);
+                super::super::effects::random_effect::reverse(entity, pool, source_chip, world);
             }
             Self::EntropyEngine { .. } => {
-                super::super::effects::entropy_engine::reverse(entity, world);
+                super::super::effects::entropy_engine::reverse(entity, source_chip, world);
             }
             Self::RampingDamage { .. } => {
-                super::super::effects::ramping_damage::reverse(entity, world);
+                super::super::effects::ramping_damage::reverse(entity, source_chip, world);
             }
-            Self::Explode { .. } => super::super::effects::explode::reverse(entity, world),
+            Self::Explode { .. } => {
+                super::super::effects::explode::reverse(entity, source_chip, world);
+            }
             Self::QuickStop { multiplier } => {
-                super::super::effects::quick_stop::reverse(entity, *multiplier, world);
+                super::super::effects::quick_stop::reverse(entity, *multiplier, source_chip, world);
             }
             Self::TetherBeam { damage_mult } => {
-                super::super::effects::tether_beam::reverse(entity, *damage_mult, world);
+                super::super::effects::tether_beam::reverse(
+                    entity,
+                    *damage_mult,
+                    source_chip,
+                    world,
+                );
             }
+            _ => {}
         }
     }
 }
@@ -650,5 +791,184 @@ mod tests {
             }
             other => panic!("expected Attraction variant, got {other:?}"),
         }
+    }
+
+    // ── Section A: chip_attribution helper ──
+
+    #[test]
+    fn chip_attribution_converts_empty_string_to_none() {
+        let result = chip_attribution("");
+        assert!(
+            result.is_none(),
+            "empty string should map to None, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn chip_attribution_converts_non_empty_string_to_some() {
+        let result = chip_attribution("shockwave_chip");
+        assert_eq!(
+            result,
+            Some("shockwave_chip".to_string()),
+            "non-empty string should map to Some(...)"
+        );
+    }
+
+    #[test]
+    fn chip_attribution_single_space_returns_some() {
+        let result = chip_attribution(" ");
+        assert_eq!(
+            result,
+            Some(" ".to_string()),
+            "single space should map to Some, not None"
+        );
+    }
+
+    #[test]
+    fn chip_attribution_single_char_returns_some() {
+        let result = chip_attribution("a");
+        assert_eq!(
+            result,
+            Some("a".to_string()),
+            "single char should map to Some"
+        );
+    }
+
+    // ── Section B: EffectKind::fire()/reverse() dispatch threading ──
+
+    #[test]
+    fn effect_kind_fire_passes_source_chip_to_shockwave_spawned_entity_has_effect_source_chip() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+        EffectKind::Shockwave {
+            base_range: 24.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+        }
+        .fire(entity, "test_chip", &mut world);
+
+        let mut query = world.query::<&EffectSourceChip>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(
+            results.len(),
+            1,
+            "expected one entity with EffectSourceChip"
+        );
+        assert_eq!(
+            results[0].0,
+            Some("test_chip".to_string()),
+            "spawned shockwave should have EffectSourceChip(Some(\"test_chip\"))"
+        );
+    }
+
+    #[test]
+    fn effect_kind_fire_passes_empty_source_chip_to_shockwave_spawned_entity_has_none() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+        EffectKind::Shockwave {
+            base_range: 24.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+        }
+        .fire(entity, "", &mut world);
+
+        let mut query = world.query::<&EffectSourceChip>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(
+            results.len(),
+            1,
+            "expected one entity with EffectSourceChip"
+        );
+        assert_eq!(
+            results[0].0, None,
+            "empty source_chip should produce EffectSourceChip(None)"
+        );
+    }
+
+    #[test]
+    fn effect_kind_fire_passes_source_chip_to_explode_spawned_request_has_effect_source_chip() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
+
+        EffectKind::Explode {
+            range: 60.0,
+            damage_mult: 2.0,
+        }
+        .fire(entity, "explode_chip", &mut world);
+
+        let mut query = world.query::<&EffectSourceChip>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(
+            results.len(),
+            1,
+            "expected one entity with EffectSourceChip"
+        );
+        assert_eq!(
+            results[0].0,
+            Some("explode_chip".to_string()),
+            "spawned ExplodeRequest should have EffectSourceChip(Some(\"explode_chip\"))"
+        );
+    }
+
+    #[test]
+    fn effect_kind_fire_passes_empty_source_chip_to_explode_spawned_request_has_none() {
+        let mut world = World::new();
+        let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
+
+        EffectKind::Explode {
+            range: 60.0,
+            damage_mult: 2.0,
+        }
+        .fire(entity, "", &mut world);
+
+        let mut query = world.query::<&EffectSourceChip>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(
+            results.len(),
+            1,
+            "expected one entity with EffectSourceChip"
+        );
+        assert_eq!(
+            results[0].0, None,
+            "empty source_chip should produce EffectSourceChip(None)"
+        );
+    }
+
+    #[test]
+    fn effect_kind_reverse_accepts_source_chip_without_panic_for_non_damage_effect() {
+        use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+
+        let mut world = World::new();
+        let entity = world.spawn(ActiveSpeedBoosts(vec![1.5])).id();
+
+        EffectKind::SpeedBoost { multiplier: 1.5 }.reverse(entity, "", &mut world);
+
+        let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
+        assert!(
+            active.0.is_empty(),
+            "reverse should remove the boost entry, got {:?}",
+            active.0
+        );
+    }
+
+    #[test]
+    fn effect_kind_reverse_with_non_empty_source_chip_same_behavior_for_non_damage_effect() {
+        use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+
+        let mut world = World::new();
+        let entity = world.spawn(ActiveSpeedBoosts(vec![1.5])).id();
+
+        EffectKind::SpeedBoost { multiplier: 1.5 }.reverse(entity, "any_chip", &mut world);
+
+        let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
+        assert!(
+            active.0.is_empty(),
+            "source_chip should be ignored for non-damage reverse, got {:?}",
+            active.0
+        );
     }
 }

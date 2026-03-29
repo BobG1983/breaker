@@ -415,3 +415,117 @@ fn tick_pulse_emitter_large_interval_does_not_emit() {
         emitter.timer
     );
 }
+
+// -- Pulse Tick: EffectSourceChip propagation from emitter to ring ───────────────────
+
+use crate::effect::core::EffectSourceChip;
+
+#[test]
+fn tick_pulse_emitter_copies_effect_source_chip_from_emitter_to_spawned_ring() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    app.world_mut().spawn((
+        Transform::from_xyz(50.0, 50.0, 0.0),
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.49, // About to fire
+        },
+        EffectSourceChip(Some("resonance".to_string())),
+    ));
+
+    app.update();
+
+    // Query spawned rings for EffectSourceChip
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &EffectSourceChip)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing with EffectSourceChip, got {}",
+        rings.len()
+    );
+
+    let (_ring, source_chip) = rings[0];
+    assert_eq!(
+        source_chip.0,
+        Some("resonance".to_string()),
+        "spawned ring should copy EffectSourceChip from emitter"
+    );
+}
+
+#[test]
+fn tick_pulse_emitter_copies_effect_source_chip_none_from_emitter() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    app.world_mut().spawn((
+        Transform::from_xyz(50.0, 50.0, 0.0),
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.49,
+        },
+        EffectSourceChip(None),
+    ));
+
+    app.update();
+
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &EffectSourceChip)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing with EffectSourceChip"
+    );
+
+    let (_ring, source_chip) = rings[0];
+    assert_eq!(
+        source_chip.0, None,
+        "spawned ring should copy EffectSourceChip(None) from emitter"
+    );
+}
+
+#[test]
+fn tick_pulse_emitter_spawns_ring_with_default_effect_source_chip_when_emitter_has_none() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    // Emitter with NO EffectSourceChip component
+    app.world_mut().spawn((
+        Transform::from_xyz(50.0, 50.0, 0.0),
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.49,
+        },
+    ));
+
+    app.update();
+
+    // Ring should exist and have EffectSourceChip(None) — the system always
+    // inserts EffectSourceChip, defaulting to None when the emitter lacks one.
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &EffectSourceChip)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing with EffectSourceChip"
+    );
+
+    let (_ring, source_chip) = rings[0];
+    assert_eq!(
+        source_chip.0, None,
+        "ring should have EffectSourceChip(None) when emitter has no EffectSourceChip component"
+    );
+}

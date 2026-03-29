@@ -18,13 +18,13 @@ impl ActiveDamageBoosts {
     }
 }
 
-pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveDamageBoosts>(entity) {
         active.0.push(multiplier);
     }
 }
 
-pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveDamageBoosts>(entity)
         && let Some(pos) = active
             .0
@@ -66,7 +66,7 @@ mod tests {
     fn fire_pushes_multiplier_onto_active_damage_boosts() {
         let mut world = World::new();
         let entity = world.spawn(ActiveDamageBoosts(vec![])).id();
-        fire(entity, 2.0, &mut world);
+        fire(entity, 2.0, "", &mut world);
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![2.0]);
     }
@@ -75,7 +75,7 @@ mod tests {
     fn fire_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        fire(entity, 2.0, &mut world);
+        fire(entity, 2.0, "", &mut world);
         assert!(world.get::<ActiveDamageBoosts>(entity).is_none());
     }
 
@@ -83,7 +83,7 @@ mod tests {
     fn reverse_removes_matching_multiplier() {
         let mut world = World::new();
         let entity = world.spawn(ActiveDamageBoosts(vec![2.0, 1.5])).id();
-        reverse(entity, 2.0, &mut world);
+        reverse(entity, 2.0, "", &mut world);
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(active.0.len(), 1);
         assert!(active.0.contains(&1.5));
@@ -93,7 +93,7 @@ mod tests {
     fn reverse_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        reverse(entity, 2.0, &mut world);
+        reverse(entity, 2.0, "", &mut world);
         assert!(world.get::<ActiveDamageBoosts>(entity).is_none());
     }
 
@@ -101,9 +101,9 @@ mod tests {
     fn multiple_fires_stack() {
         let mut world = World::new();
         let entity = world.spawn(ActiveDamageBoosts(vec![])).id();
-        fire(entity, 2.0, &mut world);
-        fire(entity, 1.5, &mut world);
-        fire(entity, 3.0, &mut world);
+        fire(entity, 2.0, "", &mut world);
+        fire(entity, 1.5, "", &mut world);
+        fire(entity, 3.0, "", &mut world);
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![2.0, 1.5, 3.0]);
     }
@@ -112,7 +112,7 @@ mod tests {
     fn reverse_removes_only_one_matching_entry() {
         let mut world = World::new();
         let entity = world.spawn(ActiveDamageBoosts(vec![2.0, 2.0, 1.5])).id();
-        reverse(entity, 2.0, &mut world);
+        reverse(entity, 2.0, "", &mut world);
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(active.0.len(), 2);
         assert!(active.0.contains(&2.0));

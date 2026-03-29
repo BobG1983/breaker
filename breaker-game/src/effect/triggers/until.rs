@@ -41,7 +41,7 @@ fn desugar_until(
                 for child in then {
                     match child {
                         EffectNode::Do(effect) => {
-                            commands.fire_effect(entity, effect.clone());
+                            commands.fire_effect(entity, effect.clone(), chip_name.clone());
                             fired_effects.push(effect);
                         }
                         other => {
@@ -471,6 +471,40 @@ mod tests {
         assert!(
             has_inner,
             "Inner non-Do child from Until should be pushed to BoundEffects"
+        );
+    }
+
+    // -- Section K: EffectSourceChip threading through desugar_until ───────────────────
+
+    use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+
+    #[test]
+    fn desugar_until_threads_chip_name_as_source_chip_to_fire_effect() {
+        // Until(TimeExpires(2.0), [Do(SpeedBoost(1.3))]) with chip_name "overclock"
+        // SpeedBoost ignores source_chip, but verifying plumbing via ActiveSpeedBoosts
+        let mut app = test_app();
+
+        let until_node = EffectNode::Until {
+            trigger: Trigger::TimeExpires(2.0),
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.3 })],
+        };
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                BoundEffects(vec![("overclock".into(), until_node)]),
+                StagedEffects::default(),
+                ActiveSpeedBoosts(vec![]),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let boosts = app.world().get::<ActiveSpeedBoosts>(entity).unwrap();
+        assert!(
+            boosts.0.contains(&1.3),
+            "SpeedBoost(1.3) should have been fired — ActiveSpeedBoosts should contain 1.3, got {:?}",
+            boosts.0
         );
     }
 }

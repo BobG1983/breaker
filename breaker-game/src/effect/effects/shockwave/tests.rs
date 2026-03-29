@@ -20,7 +20,7 @@ fn fire_spawns_shockwave_entity_at_source_position() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
 
-    fire(entity, 24.0, 8.0, 1, 50.0, &mut world);
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
 
     let mut query = world.query::<(
         &ShockwaveSource,
@@ -68,7 +68,7 @@ fn fire_effective_range_scales_with_stacks() {
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
     // stacks=3, base=24, per_level=8 -> effective = 24 + (3-1)*8 = 40
-    fire(entity, 24.0, 8.0, 3, 50.0, &mut world);
+    fire(entity, 24.0, 8.0, 3, 50.0, "", &mut world);
 
     let mut query = world.query::<&ShockwaveMaxRadius>();
     let max_radius = query.iter(&world).next().unwrap();
@@ -84,13 +84,13 @@ fn reverse_is_noop_shockwave_entity_remains() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
-    fire(entity, 24.0, 8.0, 1, 50.0, &mut world);
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
 
     // Verify shockwave exists before reverse
     let mut query = world.query::<&ShockwaveSource>();
     assert_eq!(query.iter(&world).count(), 1);
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     // Shockwave entity should still exist after reverse (no-op)
     assert_eq!(query.iter(&world).count(), 1);
@@ -103,7 +103,7 @@ fn fire_spawns_shockwave_damaged_component_on_entity() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
 
-    fire(entity, 24.0, 8.0, 1, 50.0, &mut world);
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
 
     let mut query = world.query::<&ShockwaveDamaged>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -123,8 +123,8 @@ fn fire_twice_spawns_two_independent_shockwave_damaged() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
 
-    fire(entity, 24.0, 8.0, 1, 50.0, &mut world);
-    fire(entity, 24.0, 8.0, 1, 50.0, &mut world);
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
 
     let mut query = world.query::<&ShockwaveDamaged>();
     let count = query.iter(&world).count();
@@ -670,5 +670,182 @@ fn shockwave_damage_zero_multiplier_produces_zero_damage() {
         (collector.0[0].damage - 0.0).abs() < f32::EPSILON,
         "zero multiplier should produce zero damage, got {}",
         collector.0[0].damage
+    );
+}
+
+// -- Section C: EffectSourceChip attribution tests ───────────────────
+
+use crate::effect::core::EffectSourceChip;
+
+#[test]
+fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
+
+    fire(entity, 24.0, 8.0, 1, 50.0, "seismic", &mut world);
+
+    let mut query = world.query::<&EffectSourceChip>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0,
+        Some("seismic".to_string()),
+        "spawned shockwave should have EffectSourceChip(Some(\"seismic\"))"
+    );
+}
+
+#[test]
+fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
+
+    let mut query = world.query::<&EffectSourceChip>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0, None,
+        "empty source_chip should produce EffectSourceChip(None)"
+    );
+}
+
+#[test]
+fn apply_shockwave_damage_populates_source_chip_from_effect_source_chip() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    app.world_mut().spawn((
+        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveRadius(35.0),
+        ShockwaveMaxRadius(100.0),
+        ShockwaveSpeed(50.0),
+        ShockwaveDamaged(HashSet::new()),
+        EffectSourceChip(Some("seismic".to_string())),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1, "expected one DamageCell message");
+    assert_eq!(collector.0[0].cell, cell);
+    assert_eq!(
+        collector.0[0].source_chip,
+        Some("seismic".to_string()),
+        "DamageCell should have source_chip from EffectSourceChip"
+    );
+}
+
+#[test]
+fn apply_shockwave_damage_source_chip_none_when_effect_source_chip_none() {
+    let mut app = damage_test_app();
+
+    spawn_test_cell(&mut app, 20.0, 0.0);
+
+    app.world_mut().spawn((
+        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveRadius(35.0),
+        ShockwaveMaxRadius(100.0),
+        ShockwaveSpeed(50.0),
+        ShockwaveDamaged(HashSet::new()),
+        EffectSourceChip(None),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].source_chip, None,
+        "EffectSourceChip(None) should produce source_chip None"
+    );
+}
+
+#[test]
+fn apply_shockwave_damage_defaults_to_none_when_no_effect_source_chip_component() {
+    let mut app = damage_test_app();
+
+    spawn_test_cell(&mut app, 20.0, 0.0);
+
+    // No EffectSourceChip component on shockwave
+    app.world_mut().spawn((
+        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveRadius(35.0),
+        ShockwaveMaxRadius(100.0),
+        ShockwaveSpeed(50.0),
+        ShockwaveDamaged(HashSet::new()),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].source_chip, None,
+        "missing EffectSourceChip should default to source_chip None"
+    );
+}
+
+#[test]
+fn multiple_shockwaves_with_different_source_chips_produce_correctly_attributed_damage() {
+    let mut app = damage_test_app();
+
+    let cell_a = spawn_test_cell(&mut app, 15.0, 0.0);
+    let cell_b = spawn_test_cell(&mut app, 90.0, 0.0);
+
+    app.world_mut().spawn((
+        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveRadius(25.0),
+        ShockwaveMaxRadius(100.0),
+        ShockwaveSpeed(50.0),
+        ShockwaveDamaged(HashSet::new()),
+        EffectSourceChip(Some("alpha".to_string())),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    app.world_mut().spawn((
+        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveRadius(25.0),
+        ShockwaveMaxRadius(100.0),
+        ShockwaveSpeed(50.0),
+        ShockwaveDamaged(HashSet::new()),
+        EffectSourceChip(Some("beta".to_string())),
+        Transform::from_xyz(100.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        2,
+        "expected 2 DamageCell messages, got {}",
+        collector.0.len()
+    );
+
+    let msg_a = collector.0.iter().find(|m| m.cell == cell_a).unwrap();
+    assert_eq!(
+        msg_a.source_chip,
+        Some("alpha".to_string()),
+        "cell near shockwave A should have source_chip alpha"
+    );
+
+    let msg_b = collector.0.iter().find(|m| m.cell == cell_b).unwrap();
+    assert_eq!(
+        msg_b.source_chip,
+        Some("beta".to_string()),
+        "cell near shockwave B should have source_chip beta"
     );
 }

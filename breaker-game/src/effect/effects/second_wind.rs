@@ -19,7 +19,7 @@ pub struct SecondWindWall;
 /// Spawns an invisible wall at the bottom of the playfield.
 ///
 /// Permanent until used — bounces one bolt, then despawns.
-pub(crate) fn fire(_entity: Entity, world: &mut World) {
+pub(crate) fn fire(_entity: Entity, _source_chip: &str, world: &mut World) {
     let playfield = world.resource::<PlayfieldConfig>();
     let bottom_y = playfield.bottom();
     let half_width = playfield.width / 2.0;
@@ -44,7 +44,7 @@ pub(crate) fn fire(_entity: Entity, world: &mut World) {
 }
 
 /// Despawns all `SecondWindWall` entities.
-pub(crate) fn reverse(_entity: Entity, world: &mut World) {
+pub(crate) fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
     let walls: Vec<Entity> = world
         .query_filtered::<Entity, With<SecondWindWall>>()
         .iter(world)
@@ -112,7 +112,7 @@ mod tests {
         world.insert_resource(PlayfieldConfig::default());
         let entity = world.spawn_empty().id();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let walls: Vec<Entity> = world
             .query_filtered::<Entity, With<SecondWindWall>>()
@@ -139,7 +139,7 @@ mod tests {
             Transform::from_translation(Vec3::new(0.0, -300.0, 0.0)),
         ));
 
-        reverse(entity, &mut world);
+        reverse(entity, "", &mut world);
 
         let remaining: Vec<Entity> = world
             .query_filtered::<Entity, With<SecondWindWall>>()
@@ -162,7 +162,7 @@ mod tests {
         world.insert_resource(PlayfieldConfig::default());
         let entity = world.spawn_empty().id();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let count = world
             .query_filtered::<Entity, (With<SecondWindWall>, With<Wall>)>()
@@ -184,7 +184,7 @@ mod tests {
         world.insert_resource(PlayfieldConfig::default());
         let entity = world.spawn_empty().id();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let positions: Vec<Vec2> = world
             .query_filtered::<&Position2D, With<SecondWindWall>>()
@@ -213,7 +213,7 @@ mod tests {
         world.insert_resource(PlayfieldConfig::default());
         let entity = world.spawn_empty().id();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let layers: Vec<&CollisionLayers> = world
             .query_filtered::<&CollisionLayers, With<SecondWindWall>>()
@@ -248,7 +248,7 @@ mod tests {
         let half_width = playfield.width / 2.0;
         let wall_ht = playfield.wall_half_thickness();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let aabbs: Vec<&Aabb2D> = world
             .query_filtered::<&Aabb2D, With<SecondWindWall>>()
@@ -284,7 +284,7 @@ mod tests {
         let half_width = playfield.width / 2.0;
         let wall_ht = playfield.wall_half_thickness();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let scales: Vec<&Scale2D> = world
             .query_filtered::<&Scale2D, With<SecondWindWall>>()

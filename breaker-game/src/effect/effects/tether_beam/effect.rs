@@ -12,7 +12,10 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
     cells::{components::Cell, messages::DamageCell},
-    effect::EffectiveDamageMultiplier,
+    effect::{
+        EffectiveDamageMultiplier,
+        core::{EffectSourceChip, chip_attribution},
+    },
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -38,7 +41,7 @@ pub struct TetherBeamComponent {
 ///
 /// Evolution of `ChainBolt`. The beam is a line segment between the two bolt
 /// positions — cells intersecting the beam take damage each tick.
-pub(crate) fn fire(entity: Entity, damage_mult: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
     let spawn_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
     let bolt_a = super::super::spawn_extra_bolt(world, spawn_pos);
@@ -57,6 +60,7 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, world: &mut World) {
                 damage_mult,
                 effective_damage_multiplier: edm,
             },
+            EffectSourceChip(chip_attribution(source_chip)),
             CleanupOnNodeExit,
         ))
         .id();
@@ -67,7 +71,7 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, world: &mut World) {
 }
 
 /// No-op — tether bolts have their own lifecycle.
-pub(crate) fn reverse(_entity: Entity, _damage_mult: f32, _world: &mut World) {}
+pub(crate) fn reverse(_entity: Entity, _damage_mult: f32, _source_chip: &str, _world: &mut World) {}
 
 /// Tick system: damages cells whose AABB intersects each tether beam segment.
 ///
@@ -81,7 +85,7 @@ pub(crate) fn reverse(_entity: Entity, _damage_mult: f32, _world: &mut World) {}
 /// line segment are considered intersecting.
 pub fn tick_tether_beam(
     mut commands: Commands,
-    beams: Query<(Entity, &TetherBeamComponent)>,
+    beams: Query<(Entity, &TetherBeamComponent, Option<&EffectSourceChip>)>,
     bolt_positions: Query<&Position2D, With<Bolt>>,
     quadtree: Res<CollisionQuadtree>,
     cell_aabbs: Query<(&Aabb2D, &GlobalPosition2D), With<Cell>>,
@@ -93,7 +97,7 @@ pub fn tick_tether_beam(
         .as_ref()
         .map_or(BoltConfig::default().radius, |c| c.radius);
 
-    for (beam_entity, component) in &beams {
+    for (beam_entity, component, esc) in &beams {
         // Look up both bolt positions; despawn beam if either is missing
         let pos_a = if let Ok(p) = bolt_positions.get(component.bolt_a) {
             p.0
@@ -150,7 +154,7 @@ pub fn tick_tether_beam(
                 damage_writer.write(DamageCell {
                     cell,
                     damage,
-                    source_chip: None,
+                    source_chip: esc.and_then(|e| e.0.clone()),
                 });
             }
         }

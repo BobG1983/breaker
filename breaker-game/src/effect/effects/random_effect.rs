@@ -9,7 +9,12 @@ use crate::{
 /// Selects a random effect from a weighted pool and fires it.
 ///
 /// Uses `GameRng` with `WeightedIndex` for deterministic weighted random selection.
-pub(crate) fn fire(entity: Entity, pool: &[(f32, EffectNode)], world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    pool: &[(f32, EffectNode)],
+    source_chip: &str,
+    world: &mut World,
+) {
     if pool.is_empty() {
         warn!("random_effect: empty pool for entity {:?}", entity);
         return;
@@ -27,18 +32,23 @@ pub(crate) fn fire(entity: Entity, pool: &[(f32, EffectNode)], world: &mut World
     };
 
     match selected_node {
-        EffectNode::Do(effect) => effect.fire(entity, world),
+        EffectNode::Do(effect) => effect.fire(entity, source_chip, world),
         other => {
             if let Some(mut staged) = world.get_mut::<StagedEffects>(entity) {
-                // Empty chip name — effect dispatched by system, not a specific chip
-                staged.0.push((String::new(), other));
+                staged.0.push((source_chip.to_string(), other));
             }
         }
     }
 }
 
 /// No-op — inner effects handle their own reversal.
-pub(crate) fn reverse(_entity: Entity, _pool: &[(f32, EffectNode)], _world: &mut World) {}
+pub(crate) fn reverse(
+    _entity: Entity,
+    _pool: &[(f32, EffectNode)],
+    _source_chip: &str,
+    _world: &mut World,
+) {
+}
 
 /// Registers systems for `RandomEffect` effect.
 pub(crate) fn register(_app: &mut App) {}
@@ -68,7 +78,7 @@ mod tests {
             .id();
         let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(
@@ -88,7 +98,7 @@ mod tests {
             .id();
         let pool = vec![(0.001, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(
@@ -119,7 +129,7 @@ mod tests {
             ),
         ];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let damage = world.get::<ActiveDamageBoosts>(entity).unwrap();
         let speed = world.get::<ActiveSpeedBoosts>(entity).unwrap();
@@ -148,7 +158,7 @@ mod tests {
             ),
         ];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let damage = world.get::<ActiveDamageBoosts>(entity).unwrap();
         let speed = world.get::<ActiveSpeedBoosts>(entity).unwrap();
@@ -173,7 +183,7 @@ mod tests {
         let pool: Vec<(f32, EffectNode)> = vec![];
 
         // Should not panic; early return on empty pool.
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         // Entity should remain unchanged — no Active* components added
         assert!(
@@ -189,7 +199,7 @@ mod tests {
         let entity = world.spawn(ActiveDamageBoosts(vec![5.0])).id();
         let pool: Vec<(f32, EffectNode)> = vec![];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(
@@ -212,7 +222,7 @@ mod tests {
         };
         let pool = vec![(1.0, non_do_node.clone())];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let staged = world.get::<StagedEffects>(entity).unwrap();
         assert_eq!(
@@ -243,7 +253,7 @@ mod tests {
         let pool = vec![(1.0, non_do_node)];
 
         // Should not panic — silently dropped
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         assert!(
             world.get::<StagedEffects>(entity).is_none(),
@@ -275,7 +285,7 @@ mod tests {
                 ActiveBumpForces(vec![]),
             ))
             .id();
-        fire(entity1, &pool, &mut world1);
+        fire(entity1, &pool, "", &mut world1);
 
         // World 2
         let mut world2 = World::new();
@@ -288,7 +298,7 @@ mod tests {
                 ActiveBumpForces(vec![]),
             ))
             .id();
-        fire(entity2, &pool, &mut world2);
+        fire(entity2, &pool, "", &mut world2);
 
         let damage1 = world1.get::<ActiveDamageBoosts>(entity1).unwrap();
         let damage2 = world2.get::<ActiveDamageBoosts>(entity2).unwrap();
@@ -328,7 +338,7 @@ mod tests {
             ),
         ];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let damage = world.get::<ActiveDamageBoosts>(entity).unwrap();
         let speed = world.get::<ActiveSpeedBoosts>(entity).unwrap();
@@ -349,7 +359,7 @@ mod tests {
         let entity = world.spawn(ActiveDamageBoosts(vec![])).id();
         let pool = vec![(0.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-        fire(entity, &pool, &mut world);
+        fire(entity, &pool, "", &mut world);
 
         let damage = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert!(
@@ -366,7 +376,7 @@ mod tests {
         let entity = world.spawn(ActiveDamageBoosts(vec![2.0])).id();
         let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
-        reverse(entity, &pool, &mut world);
+        reverse(entity, &pool, "", &mut world);
 
         let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
         assert_eq!(
@@ -383,11 +393,74 @@ mod tests {
         let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
 
         // Should not panic
-        reverse(entity, &pool, &mut world);
+        reverse(entity, &pool, "", &mut world);
 
         assert!(
             world.get_entity(entity).is_ok(),
             "entity should still exist after no-op reverse"
+        );
+    }
+
+    // ── Section N: meta-effect forwards source_chip ──
+
+    #[test]
+    fn fire_forwards_source_chip_to_inner_do_effect() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let entity = world
+            .spawn((StagedEffects::default(), ActiveDamageBoosts(vec![])))
+            .id();
+        let pool = vec![(1.0, EffectNode::Do(EffectKind::DamageBoost(2.0)))];
+
+        fire(entity, &pool, "chaos_chip", &mut world);
+
+        let active = world.get::<ActiveDamageBoosts>(entity).unwrap();
+        assert_eq!(
+            active.0,
+            vec![2.0],
+            "inner effect should fire — proves source_chip was threaded through"
+        );
+    }
+
+    #[test]
+    fn fire_forwards_source_chip_to_staged_effects_push() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let entity = world.spawn(StagedEffects::default()).id();
+        let non_do_node = EffectNode::When {
+            trigger: Trigger::CellDestroyed,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
+        };
+        let pool = vec![(1.0, non_do_node)];
+
+        fire(entity, &pool, "chaos_chip", &mut world);
+
+        let staged = world.get::<StagedEffects>(entity).unwrap();
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(
+            staged.0[0].0, "chaos_chip",
+            "StagedEffects entry should have chip_name 'chaos_chip' forwarded from source_chip, not empty string"
+        );
+    }
+
+    #[test]
+    fn fire_forwards_empty_source_chip_to_staged_effects_push() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let entity = world.spawn(StagedEffects::default()).id();
+        let non_do_node = EffectNode::When {
+            trigger: Trigger::CellDestroyed,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
+        };
+        let pool = vec![(1.0, non_do_node)];
+
+        fire(entity, &pool, "", &mut world);
+
+        let staged = world.get::<StagedEffects>(entity).unwrap();
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(
+            staged.0[0].0, "",
+            "empty source_chip should forward as empty chip_name"
         );
     }
 }

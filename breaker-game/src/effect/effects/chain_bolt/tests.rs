@@ -30,7 +30,7 @@ fn fire_spawns_one_chain_bolt_with_full_physics() {
     let mut world = world_with_bolt_config();
     let anchor = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     // Should spawn exactly ONE chain bolt entity.
     let chain_bolts: Vec<(Entity, &ChainBoltMarker)> = world
@@ -111,7 +111,7 @@ fn fire_spawns_chain_bolt_with_extra_bolt_and_cleanup_on_node_exit() {
     let mut world = world_with_bolt_config();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
     let chain_bolt = query.iter(&world).next().expect("chain bolt should exist");
@@ -135,7 +135,7 @@ fn fire_spawns_distance_constraint_entity() {
     let mut world = world_with_bolt_config();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     // Find the chain bolt entity
     let mut chain_query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
@@ -184,7 +184,7 @@ fn fire_stores_constraint_reference_on_chain_bolt() {
     let mut world = world_with_bolt_config();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     // Find chain bolt
     let mut chain_query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
@@ -211,7 +211,7 @@ fn fire_chain_bolt_velocity_magnitude_at_base_speed() {
     let mut world = world_with_bolt_config();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
     let chain_bolt = query.iter(&world).next().expect("chain bolt should exist");
@@ -237,7 +237,7 @@ fn fire_chain_bolt_custom_base_speed() {
 
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
     let chain_bolt = query.iter(&world).next().expect("chain bolt should exist");
@@ -262,7 +262,7 @@ fn fire_marks_anchor_with_chain_bolt_anchor() {
         "anchor should not have ChainBoltAnchor before fire"
     );
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     assert!(
         world.get::<ChainBoltAnchor>(anchor).is_some(),
@@ -276,7 +276,7 @@ fn fire_anchor_already_has_chain_bolt_anchor_no_panic() {
     let anchor = world.spawn((Position2D(Vec2::ZERO), ChainBoltAnchor)).id();
 
     // Should not panic when anchor already has ChainBoltAnchor
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     assert!(
         world.get::<ChainBoltAnchor>(anchor).is_some(),
@@ -289,7 +289,7 @@ fn fire_zero_tether_distance_spawns_constraint() {
     let mut world = world_with_bolt_config();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(anchor, 0.0, &mut world);
+    fire(anchor, 0.0, "", &mut world);
 
     let mut query = world.query::<&DistanceConstraint>();
     let constraints: Vec<_> = query.iter(&world).collect();
@@ -314,7 +314,7 @@ fn fire_reads_position_from_position2d_not_transform() {
         ))
         .id();
 
-    fire(anchor, 150.0, &mut world);
+    fire(anchor, 150.0, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
     let chain_bolt = query.iter(&world).next().expect("chain bolt should exist");
@@ -358,7 +358,7 @@ fn reverse_despawns_chain_bolt_and_constraint_and_removes_anchor_marker() {
         .unwrap()
         .entity_b = chain_bolt;
 
-    reverse(anchor, 150.0, &mut world);
+    reverse(anchor, 150.0, "", &mut world);
 
     // Chain bolt should be despawned
     assert!(
@@ -407,7 +407,7 @@ fn reverse_despawns_multiple_chain_bolts_and_constraints() {
         .spawn((ChainBoltMarker(anchor), ChainBoltConstraint(constraint_b)))
         .id();
 
-    reverse(anchor, 150.0, &mut world);
+    reverse(anchor, 150.0, "", &mut world);
 
     // Both chain bolts should be despawned
     assert!(
@@ -442,7 +442,7 @@ fn reverse_when_no_chain_bolts_is_noop() {
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // reverse with no chain bolts and no anchor marker should not panic.
-    reverse(anchor, 150.0, &mut world);
+    reverse(anchor, 150.0, "", &mut world);
 
     assert!(
         world.get::<ChainBoltAnchor>(anchor).is_none(),

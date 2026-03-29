@@ -26,6 +26,7 @@ pub(crate) fn fire(
     duration: f32,
     radius: f32,
     max: u32,
+    _source_chip: &str,
     world: &mut World,
 ) {
     let position = world
@@ -64,7 +65,7 @@ pub(crate) fn fire(
 }
 
 /// No-op — gravity wells self-despawn via their duration timer.
-pub(crate) fn reverse(_entity: Entity, _world: &mut World) {}
+pub(crate) fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Decrement well timers and despawn expired wells.
 fn tick_gravity_well(
@@ -122,7 +123,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
 
-        fire(entity, 100.0, 5.0, 80.0, 3, &mut world);
+        fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
         let mut query = world.query::<(&GravityWellMarker, &GravityWellConfig, &Transform)>();
         let results: Vec<_> = query.iter(&world).collect();
@@ -163,9 +164,9 @@ mod tests {
         let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
         // Spawn 3 wells with max=2
-        fire(entity, 100.0, 5.0, 80.0, 2, &mut world);
-        fire(entity, 100.0, 5.0, 80.0, 2, &mut world);
-        fire(entity, 100.0, 5.0, 80.0, 2, &mut world);
+        fire(entity, 100.0, 5.0, 80.0, 2, "", &mut world);
+        fire(entity, 100.0, 5.0, 80.0, 2, "", &mut world);
+        fire(entity, 100.0, 5.0, 80.0, 2, "", &mut world);
 
         let mut query = world.query::<&GravityWellConfig>();
         let count = query.iter(&world).count();
@@ -177,8 +178,8 @@ mod tests {
         let mut world = World::new();
         let owner = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
-        fire(owner, 100.0, 5.0, 80.0, 10, &mut world);
-        reverse(owner, &mut world);
+        fire(owner, 100.0, 5.0, 80.0, 10, "", &mut world);
+        reverse(owner, "", &mut world);
 
         // Wells should still exist — reverse is a no-op
         let mut query = world.query::<&GravityWellConfig>();

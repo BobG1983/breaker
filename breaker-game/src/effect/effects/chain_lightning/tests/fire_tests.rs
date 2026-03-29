@@ -29,7 +29,7 @@ fn fire_spawns_request_with_single_cell_target() {
     // Tick to populate quadtree
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.5, app.world_mut());
+    fire(entity, 3, 50.0, 1.5, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -79,7 +79,7 @@ fn fire_with_no_transform_defaults_position_to_zero() {
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -121,7 +121,7 @@ fn fire_chains_through_multiple_cells_up_to_arcs_count() {
 
     tick(&mut app);
 
-    fire(entity, 3, 25.0, 1.0, app.world_mut());
+    fire(entity, 3, 25.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -165,7 +165,7 @@ fn fire_does_not_include_same_cell_twice() {
 
     tick(&mut app);
 
-    fire(entity, 5, 20.0, 1.0, app.world_mut());
+    fire(entity, 5, 20.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -204,7 +204,7 @@ fn fire_single_cell_in_range_with_multiple_arcs_produces_one_target() {
 
     tick(&mut app);
 
-    fire(entity, 3, 20.0, 1.0, app.world_mut());
+    fire(entity, 3, 20.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -255,7 +255,7 @@ fn fire_only_targets_cells_on_cell_layer() {
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -301,7 +301,7 @@ fn fire_targets_entity_with_combined_cell_layer_membership() {
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -332,7 +332,7 @@ fn fire_terminates_chain_when_next_cell_out_of_range() {
 
     tick(&mut app);
 
-    fire(entity, 3, 25.0, 1.0, app.world_mut());
+    fire(entity, 3, 25.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -361,7 +361,7 @@ fn fire_with_no_cells_in_range_spawns_request_with_empty_targets() {
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -393,7 +393,7 @@ fn fire_uses_game_rng_deterministically() {
 
     // First call with seed 42
     app.world_mut().insert_resource(GameRng::from_seed(42));
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<(Entity, &ChainLightningRequest)>();
     let first_results: Vec<_> = query.iter(app.world()).collect();
@@ -406,7 +406,7 @@ fn fire_uses_game_rng_deterministically() {
 
     // Reset RNG to same seed and fire again
     app.world_mut().insert_resource(GameRng::from_seed(42));
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, "", app.world_mut());
 
     let mut query2 = app.world_mut().query::<&ChainLightningRequest>();
     let second_results: Vec<_> = query2.iter(app.world()).collect();
@@ -435,7 +435,7 @@ fn fire_single_candidate_always_selected_regardless_of_rng_seed() {
 
     tick(&mut app);
 
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -461,7 +461,7 @@ fn fire_applies_damage_mult_to_base_bolt_damage() {
 
     tick(&mut app);
 
-    fire(entity, 1, 50.0, 2.5, app.world_mut());
+    fire(entity, 1, 50.0, 2.5, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -489,7 +489,7 @@ fn fire_with_zero_damage_mult_produces_zero_damage() {
 
     tick(&mut app);
 
-    fire(entity, 1, 50.0, 0.0, app.world_mut());
+    fire(entity, 1, 50.0, 0.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -517,7 +517,7 @@ fn fire_with_arcs_zero_spawns_no_request() {
 
     tick(&mut app);
 
-    fire(entity, 0, 50.0, 1.0, app.world_mut());
+    fire(entity, 0, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -543,7 +543,7 @@ fn fire_with_zero_range_spawns_request_with_empty_targets() {
 
     tick(&mut app);
 
-    fire(entity, 3, 0.0, 1.0, app.world_mut());
+    fire(entity, 3, 0.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -573,7 +573,7 @@ fn fire_with_empty_quadtree_spawns_request_with_empty_targets() {
     // No cells spawned at all
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();
@@ -600,7 +600,7 @@ fn fire_request_entity_has_cleanup_on_node_exit() {
 
     tick(&mut app);
 
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, "", app.world_mut());
 
     let mut query = app
         .world_mut()
@@ -637,7 +637,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
 
     tick(&mut app);
 
-    fire(entity, 2, 100.0, 1.5, app.world_mut());
+    fire(entity, 2, 100.0, 1.5, "", app.world_mut());
 
     let mut query = app.world_mut().query::<&ChainLightningRequest>();
     let results: Vec<_> = query.iter(app.world()).collect();

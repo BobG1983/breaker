@@ -13,7 +13,7 @@ Temporary protection -- dual behavior depending on entity type.
 Inserts `ShieldActive { charges: stacks }` component on the entity. Behavior depends on entity type:
 
 - **On Breaker**: absorbs bolt losses. Each bolt saved by the shield costs one charge. Multiple bolts lost in the same frame each consume one charge independently. When charges are exhausted, remaining bolts fall through to normal handling. When charges reach zero, `ShieldActive` is removed.
-- **On any entity with a health pool**: immune to damage while `ShieldActive` is present (unchanged).
+- **On Cell (or any entity with a health pool)**: absorbs damage hits. Each hit absorbed costs one charge. When charges reach zero, `ShieldActive` is removed and subsequent hits deal damage normally. Multiple hits in the same frame each consume one charge independently (same per-hit model as breaker bolt absorption).
 
 Multiple fires add charges to any existing shield (additive stacking).
 

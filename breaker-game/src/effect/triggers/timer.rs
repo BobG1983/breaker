@@ -22,11 +22,15 @@ fn tick_time_expires(
                     for child in then {
                         match child {
                             EffectNode::Do(effect) => {
-                                commands.fire_effect(entity, effect.clone());
+                                commands.fire_effect(entity, effect.clone(), chip_name.clone());
                             }
                             EffectNode::Reverse { effects, chains } => {
                                 for effect in effects {
-                                    commands.reverse_effect(entity, effect.clone());
+                                    commands.reverse_effect(
+                                        entity,
+                                        effect.clone(),
+                                        chip_name.clone(),
+                                    );
                                 }
                                 if !chains.is_empty() {
                                     commands.queue(RemoveChainsCommand {
@@ -277,6 +281,82 @@ mod tests {
         assert_eq!(
             staged.0[0].1, inner,
             "Addition should be the inner When(Bump, Do(DamageBoost(3.0)))"
+        );
+    }
+
+    // -- Section L: EffectSourceChip threading through tick_time_expires ───────────────────
+
+    use crate::effect::{core::EffectSourceChip, effects::speed_boost::ActiveSpeedBoosts};
+
+    #[test]
+    fn tick_time_expires_threads_chip_name_as_source_chip_to_fire_effect() {
+        // When(TimeExpires(0.001), [Do(Explode)]) with chip_name "timer_chip"
+        // After timer expires, Explode fire() should be called with source_chip="timer_chip"
+        // which results in EffectSourceChip(Some("timer_chip")) on the spawned ExplodeRequest.
+        let mut app = test_app();
+
+        let node = time_expires_node(
+            0.001,
+            EffectNode::Do(EffectKind::Explode {
+                range: 60.0,
+                damage_mult: 2.0,
+            }),
+        );
+
+        app.world_mut().spawn((
+            StagedEffects(vec![("timer_chip".into(), node)]),
+            Transform::from_xyz(50.0, 50.0, 0.0),
+        ));
+
+        // First tick: timer expires, queues fire_effect command
+        tick(&mut app);
+        // Second tick: commands are applied (fire_effect → Explode::fire → spawn ExplodeRequest)
+        tick(&mut app);
+
+        let mut query = app.world_mut().query::<&EffectSourceChip>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(
+            results.len(),
+            1,
+            "expected one entity with EffectSourceChip (on ExplodeRequest)"
+        );
+        assert_eq!(
+            results[0].0,
+            Some("timer_chip".to_string()),
+            "tick_time_expires should thread chip_name 'timer_chip' to fire_effect"
+        );
+    }
+
+    #[test]
+    fn tick_time_expires_threads_chip_name_as_source_chip_to_reverse_effect() {
+        // When(TimeExpires(0.001), [Reverse { effects: [SpeedBoost(1.3)], chains: [] }])
+        // with chip_name "reversal_chip". SpeedBoost::reverse ignores source_chip
+        // but this verifies the plumbing compiles and doesn't panic.
+        let mut app = test_app();
+
+        let node = EffectNode::When {
+            trigger: Trigger::TimeExpires(0.001),
+            then: vec![EffectNode::Reverse {
+                effects: vec![EffectKind::SpeedBoost { multiplier: 1.3 }],
+                chains: vec![],
+            }],
+        };
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                StagedEffects(vec![("reversal_chip".into(), node)]),
+                ActiveSpeedBoosts(vec![1.3]),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let boosts = app.world().get::<ActiveSpeedBoosts>(entity).unwrap();
+        assert!(
+            !boosts.0.contains(&1.3),
+            "reverse_effect should have removed 1.3 from ActiveSpeedBoosts, got {:?}",
+            boosts.0
         );
     }
 }

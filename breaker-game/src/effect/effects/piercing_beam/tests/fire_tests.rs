@@ -13,7 +13,7 @@ fn fire_spawns_request_with_correct_upward_beam_geometry() {
         ))
         .id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -71,7 +71,7 @@ fn fire_entity_near_boundary_produces_short_beam() {
         ))
         .id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -99,7 +99,7 @@ fn fire_computes_beam_length_to_bottom_boundary() {
         ))
         .id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -140,7 +140,7 @@ fn fire_handles_diagonal_velocity_direction() {
         ))
         .id();
 
-    fire(entity, 1.0, 30.0, &mut world);
+    fire(entity, 1.0, 30.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -188,7 +188,7 @@ fn fire_applies_damage_mult_to_base_bolt_damage() {
         ))
         .id();
 
-    fire(entity, 3.0, 20.0, &mut world);
+    fire(entity, 3.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -214,7 +214,7 @@ fn fire_with_zero_damage_mult_produces_zero_damage() {
         ))
         .id();
 
-    fire(entity, 0.0, 20.0, &mut world);
+    fire(entity, 0.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -235,7 +235,7 @@ fn fire_with_missing_velocity_defaults_direction_to_y() {
 
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -268,7 +268,7 @@ fn fire_with_no_transform_and_no_velocity_defaults_both() {
 
     let entity = world.spawn_empty().id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -299,7 +299,7 @@ fn fire_with_zero_velocity_defaults_direction_to_y() {
         .spawn((Transform::from_xyz(0.0, 0.0, 0.0), Velocity2D(Vec2::ZERO)))
         .id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -326,7 +326,7 @@ fn fire_with_no_transform_defaults_origin_to_zero() {
 
     let entity = world.spawn(Velocity2D(Vec2::new(0.0, 400.0))).id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -365,7 +365,7 @@ fn fire_request_entity_has_cleanup_on_node_exit() {
         ))
         .id();
 
-    fire(entity, 1.0, 20.0, &mut world);
+    fire(entity, 1.0, 20.0, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PiercingBeamRequest>>();
     let request_entity = query.iter(&world).next().expect("request should exist");
@@ -383,7 +383,7 @@ fn reverse_is_noop() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(10.0, 20.0, 0.0)).id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -396,7 +396,7 @@ fn reverse_on_empty_entity_is_noop() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -418,7 +418,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
         ))
         .id();
 
-    fire(entity, 1.5, 20.0, &mut world);
+    fire(entity, 1.5, 20.0, "", &mut world);
 
     let mut query = world.query::<&PiercingBeamRequest>();
     let results: Vec<_> = query.iter(&world).collect();

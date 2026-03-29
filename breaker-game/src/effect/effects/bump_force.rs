@@ -18,13 +18,13 @@ impl ActiveBumpForces {
     }
 }
 
-pub(crate) fn fire(entity: Entity, force: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, force: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveBumpForces>(entity) {
         active.0.push(force);
     }
 }
 
-pub(crate) fn reverse(entity: Entity, force: f32, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, force: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveBumpForces>(entity)
         && let Some(pos) = active
             .0
@@ -66,7 +66,7 @@ mod tests {
     fn fire_pushes_force_onto_active_bump_forces() {
         let mut world = World::new();
         let entity = world.spawn(ActiveBumpForces(vec![])).id();
-        fire(entity, 50.0, &mut world);
+        fire(entity, 50.0, "", &mut world);
         let active = world.get::<ActiveBumpForces>(entity).unwrap();
         assert_eq!(active.0, vec![50.0]);
     }
@@ -75,7 +75,7 @@ mod tests {
     fn fire_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        fire(entity, 50.0, &mut world);
+        fire(entity, 50.0, "", &mut world);
         assert!(world.get::<ActiveBumpForces>(entity).is_none());
     }
 
@@ -83,7 +83,7 @@ mod tests {
     fn reverse_removes_matching_force() {
         let mut world = World::new();
         let entity = world.spawn(ActiveBumpForces(vec![50.0, 25.0])).id();
-        reverse(entity, 50.0, &mut world);
+        reverse(entity, 50.0, "", &mut world);
         let active = world.get::<ActiveBumpForces>(entity).unwrap();
         assert_eq!(active.0.len(), 1);
         assert!(active.0.contains(&25.0));
@@ -93,7 +93,7 @@ mod tests {
     fn reverse_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        reverse(entity, 50.0, &mut world);
+        reverse(entity, 50.0, "", &mut world);
         assert!(world.get::<ActiveBumpForces>(entity).is_none());
     }
 
@@ -101,9 +101,9 @@ mod tests {
     fn multiple_fires_stack() {
         let mut world = World::new();
         let entity = world.spawn(ActiveBumpForces(vec![])).id();
-        fire(entity, 50.0, &mut world);
-        fire(entity, 25.0, &mut world);
-        fire(entity, 10.0, &mut world);
+        fire(entity, 50.0, "", &mut world);
+        fire(entity, 25.0, "", &mut world);
+        fire(entity, 10.0, "", &mut world);
         let active = world.get::<ActiveBumpForces>(entity).unwrap();
         assert_eq!(active.0, vec![50.0, 25.0, 10.0]);
     }
@@ -112,7 +112,7 @@ mod tests {
     fn reverse_removes_only_one_matching_entry() {
         let mut world = World::new();
         let entity = world.spawn(ActiveBumpForces(vec![50.0, 50.0, 25.0])).id();
-        reverse(entity, 50.0, &mut world);
+        reverse(entity, 50.0, "", &mut world);
         let active = world.get::<ActiveBumpForces>(entity).unwrap();
         assert_eq!(active.0.len(), 2);
         assert!(active.0.contains(&50.0));

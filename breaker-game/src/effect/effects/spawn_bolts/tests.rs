@@ -31,7 +31,7 @@ fn fire_spawns_requested_count_with_full_physics_components() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::new(50.0, 100.0))).id();
 
-    fire(entity, 3, None, false, &mut world);
+    fire(entity, 3, None, false, "", &mut world);
 
     // Query for spawned bolt entities (excluding the owner)
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
@@ -119,7 +119,7 @@ fn fire_count_one_spawns_exactly_one_bolt() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let count = query.iter(&world).count();
@@ -134,7 +134,7 @@ fn fire_count_zero_spawns_no_bolts() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 0, None, false, &mut world);
+    fire(entity, 0, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let count = query.iter(&world).count();
@@ -146,7 +146,7 @@ fn fire_spawns_bolts_with_randomized_velocity_at_base_speed() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<&Velocity2D, (With<Bolt>, With<ExtraBolt>)>();
     let vel = query.iter(&world).next().expect("bolt should exist");
@@ -167,7 +167,7 @@ fn fire_spawns_bolt_with_custom_base_speed() {
     world.insert_resource(GameRng::default());
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<&Velocity2D, (With<Bolt>, With<ExtraBolt>)>();
     let vel = query.iter(&world).next().expect("bolt should exist");
@@ -188,7 +188,7 @@ fn fire_spawns_bolt_at_owner_position2d_not_transform() {
         ))
         .id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<&Position2D, (With<Bolt>, With<ExtraBolt>)>();
     let pos = query.iter(&world).next().expect("bolt should exist");
@@ -204,7 +204,7 @@ fn fire_spawns_bolt_at_zero_when_owner_has_no_position2d() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<&Position2D, (With<Bolt>, With<ExtraBolt>)>();
     let pos = query.iter(&world).next().expect("bolt should exist");
@@ -220,7 +220,7 @@ fn fire_marks_bolts_with_extra_bolt_and_cleanup_on_node_exit() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -244,7 +244,7 @@ fn fire_with_lifespan_adds_bolt_lifespan_timer() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, Some(5.0), false, &mut world);
+    fire(entity, 1, Some(5.0), false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -264,7 +264,7 @@ fn fire_with_very_short_lifespan_creates_valid_timer() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, Some(0.01), false, &mut world);
+    fire(entity, 1, Some(0.01), false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -284,7 +284,7 @@ fn fire_with_no_lifespan_does_not_add_bolt_lifespan() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -306,7 +306,7 @@ fn fire_with_inherit_true_copies_bound_effects() {
         .spawn((Position2D(Vec2::ZERO), bound, StagedEffects::default()))
         .id();
 
-    fire(entity, 2, None, true, &mut world);
+    fire(entity, 2, None, true, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolts: Vec<Entity> = query.iter(&world).collect();
@@ -333,7 +333,7 @@ fn fire_with_inherit_true_and_empty_bound_effects_spawns_empty() {
         .spawn((Position2D(Vec2::ZERO), BoundEffects::default()))
         .id();
 
-    fire(entity, 1, None, true, &mut world);
+    fire(entity, 1, None, true, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -357,7 +357,7 @@ fn fire_with_inherit_false_does_not_copy_bound_effects() {
     )]);
     let entity = world.spawn((Position2D(Vec2::ZERO), bound)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -379,7 +379,7 @@ fn fire_with_inherit_true_and_no_bound_effects_does_not_panic() {
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // Should not panic
-    fire(entity, 1, None, true, &mut world);
+    fire(entity, 1, None, true, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let count = query.iter(&world).count();
@@ -391,7 +391,7 @@ fn fire_spawns_multiple_bolts_with_distinct_velocity_directions() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 3, None, false, &mut world);
+    fire(entity, 3, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<&Velocity2D, (With<Bolt>, With<ExtraBolt>)>();
     let velocities: Vec<Vec2> = query.iter(&world).map(|v| v.0).collect();
@@ -426,7 +426,7 @@ fn fire_uses_custom_radius_from_bolt_config() {
     world.insert_resource(GameRng::default());
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 1, None, false, &mut world);
+    fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let bolt = query.iter(&world).next().expect("bolt should exist");
@@ -459,12 +459,12 @@ fn reverse_does_not_despawn_previously_spawned_bolts() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 2, None, false, &mut world);
+    fire(entity, 2, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let count_before = query.iter(&world).count();
 
-    reverse(entity, 2, None, false, &mut world);
+    reverse(entity, 2, None, false, "", &mut world);
 
     let count_after = query.iter(&world).count();
     assert_eq!(
@@ -479,5 +479,5 @@ fn reverse_with_no_prior_spawned_bolts_does_not_panic() {
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // Should not panic
-    reverse(entity, 2, None, false, &mut world);
+    reverse(entity, 2, None, false, "", &mut world);
 }

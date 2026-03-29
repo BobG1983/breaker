@@ -6,7 +6,10 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::EffectiveDamageMultiplier,
+    effect::{
+        EffectiveDamageMultiplier,
+        core::{EffectSourceChip, chip_attribution},
+    },
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -23,7 +26,7 @@ pub struct ExplodeRequest {
     pub damage_mult: f32,
 }
 
-pub fn fire(entity: Entity, range: f32, damage_mult: f32, world: &mut World) {
+pub fn fire(entity: Entity, range: f32, damage_mult: f32, source_chip: &str, world: &mut World) {
     let position = world
         .get::<Transform>(entity)
         .map_or(Vec3::ZERO, |t| t.translation);
@@ -37,12 +40,13 @@ pub fn fire(entity: Entity, range: f32, damage_mult: f32, world: &mut World) {
             range,
             damage_mult: damage_mult * edm,
         },
+        EffectSourceChip(chip_attribution(source_chip)),
         Transform::from_translation(position),
         CleanupOnNodeExit,
     ));
 }
 
-pub fn reverse(_entity: Entity, world: &mut World) {
+pub fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
     let _ = world;
 }
 
@@ -54,11 +58,16 @@ pub fn reverse(_entity: Entity, world: &mut World) {
 pub fn process_explode_requests(
     mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
-    requests: Query<(Entity, &Transform, &ExplodeRequest)>,
+    requests: Query<(
+        Entity,
+        &Transform,
+        &ExplodeRequest,
+        Option<&EffectSourceChip>,
+    )>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (entity, transform, request) in &requests {
+    for (entity, transform, request, esc) in &requests {
         let position = transform.translation.truncate();
         let damage = BASE_BOLT_DAMAGE * request.damage_mult;
         let candidates =
@@ -69,7 +78,7 @@ pub fn process_explode_requests(
             damage_writer.write(DamageCell {
                 cell,
                 damage,
-                source_chip: None,
+                source_chip: esc.and_then(|e| e.0.clone()),
             });
         }
         commands.entity(entity).despawn();

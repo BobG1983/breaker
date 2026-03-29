@@ -39,6 +39,7 @@ pub fn fire(
     attraction_type: AttractionType,
     force: f32,
     max_force: Option<f32>,
+    _source_chip: &str,
     world: &mut World,
 ) {
     let entry = AttractionEntry {
@@ -61,6 +62,7 @@ pub fn reverse(
     attraction_type: AttractionType,
     force: f32,
     max_force: Option<f32>,
+    _source_chip: &str,
     world: &mut World,
 ) {
     if let Some(mut attractions) = world.get_mut::<ActiveAttractions>(entity)
