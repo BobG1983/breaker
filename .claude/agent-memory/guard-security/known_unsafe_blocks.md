@@ -20,3 +20,5 @@ changed files in the Phase 1 collision cleanup diff and full-source scan.
 
 No FFI boundaries, no raw pointer manipulation, no proc macros with untrusted input.
 No `build.rs` files in any crate.
+
+Still confirmed after Phase 3 effect system + trigger bridge changes (2026-03-28).

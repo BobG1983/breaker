@@ -1,0 +1,1 @@
+- [Phase 3 FixedUpdate scheduling cycle (RESOLVED)](phase3_fixedupdate_cycle.md) — Cycle from b0b2159 resolved 2026-03-28; all 70 scenarios pass after removing .after(EffectSystems::Recalculate) from consumers

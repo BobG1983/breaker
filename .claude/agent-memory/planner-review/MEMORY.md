@@ -31,5 +31,7 @@
 - [Test app resource mismatch](pattern_test_app_resource_mismatch.md) — test app missing resources that production app registers
 - [Rename with incomplete doc sweep](pattern_rename_incomplete_doc_sweep.md) — field rename spec lists some docs but misses others; use grep to verify all occurrences before approving
 
+- [Missing prerequisite type gap](pattern_missing_prerequisite_type_gap.md) — spec assumes Effective* components exist from prior wave but they were never defined
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

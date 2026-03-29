@@ -27,3 +27,20 @@ correct IF `breaker_pos` is already world-space. Confirmed correct — no bug.
 
 Old notes referred to `query_circle_filtered` — current code uses `query_aabb_filtered`.
 The stale memory was corrected. Always verify which query function is actually used.
+
+## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
+
+Confirmed in Phase 3 review. The bolt/breaker consumer systems (`prepare_bolt_velocity`,
+`bolt_cell_collision`, `bolt_breaker_collision`, `move_breaker`) read `Effective*`
+components but have NO `.after(EffectSystems::Recalculate)` constraint. When an
+effect fires via Bridge and Recalculate updates the Effective* value, the consumer
+systems may have already run that frame — producing a 1-frame stale value.
+
+**Reproduces as**: bolt speed/damage/size does not immediately reflect the new
+multiplier in the same frame the effect fires.
+
+**Location**: `bolt/plugin.rs` (PrepareVelocity, CellCollision, BreakerCollision sets)
+and `breaker/plugin.rs` (Move set). Fix: add `.after(EffectSystems::Recalculate)`
+to those system registrations.
+
+**Status**: OPEN — filed in Phase 3 review.

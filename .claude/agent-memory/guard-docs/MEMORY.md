@@ -1,3 +1,3 @@
-- [known-state.md](known-state.md) — Confirmed doc/code alignment after effect system rewrite (2026-03-28); intentional forward-looking sections listed
-- [terminology.md](terminology.md) — Confirmed term mappings: collision messages, EffectKind variants, BoundEffects/StagedEffects, SpawnBolts
-- [phase-log.md](phase-log.md) — Review session log: what was checked, what was updated (2026-03-28 collision-cleanup review)
+- [known-state.md](known-state.md) — Confirmed doc/code alignment after effect system rewrite and stat-effects phase (2026-03-28); intentional forward-looking sections listed
+- [terminology.md](terminology.md) — Confirmed term mappings: collision messages, EffectKind variants, Active*/Effective* pairs, new system set variants
+- [phase-log.md](phase-log.md) — Review session log: what was checked, what was updated (two sessions on 2026-03-28)
