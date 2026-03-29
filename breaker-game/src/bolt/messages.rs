@@ -2,19 +2,6 @@
 
 use bevy::prelude::*;
 
-/// Sent by the effect system to spawn an additional bolt.
-///
-/// Consumed by `handle_spawn_bolt` in the effect domain.
-#[derive(Message, Clone, Debug)]
-pub struct SpawnAdditionalBolt {
-    /// The chip name that originated this spawn, for damage attribution.
-    pub source_chip: Option<String>,
-    /// Optional lifespan in seconds — if `Some`, the bolt despawns after this duration.
-    pub lifespan: Option<f32>,
-    /// Whether the spawned bolt inherits the parent bolt's velocity direction.
-    pub inherit: bool,
-}
-
 /// Sent by `spawn_bolt` after the bolt entity is spawned.
 ///
 /// Consumed by the spawn coordinator in the node subdomain.
@@ -76,13 +63,6 @@ mod tests {
 
     #[test]
     fn message_debug_format() {
-        let msg = SpawnAdditionalBolt {
-            source_chip: None,
-            lifespan: None,
-            inherit: false,
-        };
-        assert!(format!("{msg:?}").contains("SpawnAdditionalBolt"));
-
         let msg = BoltSpawned;
         assert!(format!("{msg:?}").contains("BoltSpawned"));
     }

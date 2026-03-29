@@ -30,6 +30,7 @@ pub(crate) fn fire(entity: Entity, pool: &[(f32, EffectNode)], world: &mut World
         EffectNode::Do(effect) => effect.fire(entity, world),
         other => {
             if let Some(mut staged) = world.get_mut::<StagedEffects>(entity) {
+                // Empty chip name — effect dispatched by system, not a specific chip
                 staged.0.push((String::new(), other));
             }
         }

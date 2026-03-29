@@ -48,6 +48,4 @@ Each effect module in `effect/effects/` provides `fire()`, `reverse()`, and `reg
 
 ## Registered Messages (no active producer/consumer)
 
-| Message | Notes |
-|---------|-------|
-| `SpawnAdditionalBolt` | Registered in BoltPlugin. No active producer or consumer — `spawn_bolts::fire()` and `chain_bolt::fire()` spawn directly via `&mut World`. May be placeholder for future cross-domain spawn coordination. |
+*None — all previously registered-but-unused messages have been removed.*

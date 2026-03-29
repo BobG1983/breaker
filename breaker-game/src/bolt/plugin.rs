@@ -5,9 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{
         BoltSystems,
-        messages::{
-            BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost, SpawnAdditionalBolt,
-        },
+        messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
         resources::BoltConfig,
         systems::{
             apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
@@ -33,7 +31,6 @@ impl Plugin for BoltPlugin {
         use crate::bolt::messages::{BoltSpawned, RequestBoltDestroyed};
         app.init_resource::<BoltConfig>()
             .init_resource::<GameRng>()
-            .add_message::<SpawnAdditionalBolt>()
             .add_message::<BoltSpawned>()
             .add_message::<BoltImpactBreaker>()
             .add_message::<BoltImpactCell>()

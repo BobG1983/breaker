@@ -2,6 +2,31 @@
 // Because `tests` is a direct child of `lifecycle`, this includes private items
 // (e.g., private `use` imports like `InputActions`, `ViolationLog`, etc.).
 // Sub-modules then access these through `super::*` or via `helpers.rs` re-exports.
+use bevy::prelude::*;
+use breaker::{
+    bolt::{BoltSystems, components::Bolt},
+    breaker::{
+        BreakerDefinition, BreakerRegistry, BreakerSystems, SelectedBreaker,
+        components::{Breaker, BreakerState, BreakerWidth},
+        definition::BreakerStatOverrides,
+        messages::BumpGrade,
+        resources::ForceBumpGrade,
+    },
+    chips::{ChipCatalog, inventory::ChipInventory},
+    effect::{BoundEffects, EffectNode, RootEffect, Target},
+    input::resources::InputActions,
+    run::{
+        NodeLayout, NodeLayoutRegistry, RunStats,
+        node::{
+            ScenarioLayoutOverride, definition::NodePool, messages::SpawnNodeComplete,
+            resources::NodeTimer, sets::NodeSystems,
+        },
+    },
+    screen::chip_select::{ChipOffering, ChipOffers},
+    shared::{GameState, PlayingState, RunSeed},
+    ui::messages::ChipSelected,
+};
+
 use super::*;
 
 mod bypass_menu;
