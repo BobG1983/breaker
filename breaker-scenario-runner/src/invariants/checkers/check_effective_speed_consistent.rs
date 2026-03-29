@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::{
-    EffectiveSpeedMultiplier,
-    effects::speed_boost::ActiveSpeedBoosts,
-};
+use breaker::effect::{EffectiveSpeedMultiplier, effects::speed_boost::ActiveSpeedBoosts};
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -82,10 +79,8 @@ mod tests {
     fn no_violation_when_components_are_consistent_empty_boosts() {
         // Empty boosts → product = 1.0 → EffectiveSpeedMultiplier should be 1.0
         let mut app = test_app();
-        app.world_mut().spawn((
-            ActiveSpeedBoosts(vec![]),
-            EffectiveSpeedMultiplier(1.0),
-        ));
+        app.world_mut()
+            .spawn((ActiveSpeedBoosts(vec![]), EffectiveSpeedMultiplier(1.0)));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert!(
@@ -97,10 +92,8 @@ mod tests {
     #[test]
     fn no_violation_when_single_boost_matches_effective() {
         let mut app = test_app();
-        app.world_mut().spawn((
-            ActiveSpeedBoosts(vec![1.5]),
-            EffectiveSpeedMultiplier(1.5),
-        ));
+        app.world_mut()
+            .spawn((ActiveSpeedBoosts(vec![1.5]), EffectiveSpeedMultiplier(1.5)));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert!(
@@ -129,10 +122,8 @@ mod tests {
     fn fires_when_effective_does_not_match_boosts() {
         // Boosts product = 1.5, but effective = 2.0 (stale/wrong)
         let mut app = test_app();
-        app.world_mut().spawn((
-            ActiveSpeedBoosts(vec![1.5]),
-            EffectiveSpeedMultiplier(2.0),
-        ));
+        app.world_mut()
+            .spawn((ActiveSpeedBoosts(vec![1.5]), EffectiveSpeedMultiplier(2.0)));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert_eq!(
@@ -140,25 +131,18 @@ mod tests {
             1,
             "expected one violation when effective (2.0) diverges from boosts product (1.5)"
         );
-        assert_eq!(
-            log.0[0].invariant,
-            InvariantKind::EffectiveSpeedConsistent
-        );
+        assert_eq!(log.0[0].invariant, InvariantKind::EffectiveSpeedConsistent);
     }
 
     #[test]
     fn fires_per_entity_with_inconsistent_speed() {
         let mut app = test_app();
         // Entity 1: consistent
-        app.world_mut().spawn((
-            ActiveSpeedBoosts(vec![1.5]),
-            EffectiveSpeedMultiplier(1.5),
-        ));
+        app.world_mut()
+            .spawn((ActiveSpeedBoosts(vec![1.5]), EffectiveSpeedMultiplier(1.5)));
         // Entity 2: inconsistent
-        app.world_mut().spawn((
-            ActiveSpeedBoosts(vec![2.0]),
-            EffectiveSpeedMultiplier(1.0),
-        ));
+        app.world_mut()
+            .spawn((ActiveSpeedBoosts(vec![2.0]), EffectiveSpeedMultiplier(1.0)));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert_eq!(
@@ -193,10 +177,8 @@ mod tests {
     #[test]
     fn violation_message_includes_effective_and_expected() {
         let mut app = test_app();
-        app.world_mut().spawn((
-            ActiveSpeedBoosts(vec![1.5]),
-            EffectiveSpeedMultiplier(2.0),
-        ));
+        app.world_mut()
+            .spawn((ActiveSpeedBoosts(vec![1.5]), EffectiveSpeedMultiplier(2.0)));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert!(

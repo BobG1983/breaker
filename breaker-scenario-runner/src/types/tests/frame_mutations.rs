@@ -169,8 +169,8 @@ fn frame_mutation_spawn_extra_pulse_rings_parses_from_ron() {
 #[test]
 fn frame_mutation_inject_wrong_effective_speed_parses_from_ron() {
     let ron = "(frame: 30, mutation: InjectWrongEffectiveSpeed(wrong_value: 99.0))";
-    let result: FrameMutation = ron::de::from_str(ron)
-        .expect("FrameMutation InjectWrongEffectiveSpeed should parse");
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectWrongEffectiveSpeed should parse");
     assert_eq!(result.frame, 30);
     assert!(
         matches!(

@@ -88,10 +88,7 @@ mod tests {
             "expected exactly one violation when 2 SecondWindWall entities exist, got {}",
             log.0.len()
         );
-        assert_eq!(
-            log.0[0].invariant,
-            InvariantKind::SecondWindWallAtMostOne,
-        );
+        assert_eq!(log.0[0].invariant, InvariantKind::SecondWindWallAtMostOne,);
     }
 
     #[test]

@@ -71,8 +71,9 @@ pub fn check_timer_monotonically_decreasing(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use breaker::run::node::messages::ReverseTimePenalty;
+
+    use super::*;
 
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();

@@ -14,9 +14,7 @@ use breaker::{
     effect::{
         BoundEffects, EffectNode, EffectiveSpeedMultiplier, RootEffect, Target,
         effects::{
-            pulse::PulseRing,
-            second_wind::SecondWindWall,
-            shield::ShieldActive,
+            pulse::PulseRing, second_wind::SecondWindWall, shield::ShieldActive,
             speed_boost::ActiveSpeedBoosts,
         },
     },
@@ -190,32 +188,55 @@ fn register_scenario_resources(app: &mut App) {
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
 fn register_scenario_systems(app: &mut App) {
-    let chip_select_condition =
-        in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>);
-    let playing_gate =
-        |stats: Option<Res<ScenarioStats>>| stats.is_some_and(|s| s.entered_playing);
+    let chip_select_condition = in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>);
+    let playing_gate = |stats: Option<Res<ScenarioStats>>| stats.is_some_and(|s| s.entered_playing);
     // Invariant checkers run in two chained batches after setup. All checkers share
     // `ResMut<ViolationLog>`, so Bevy serialises them automatically within each batch.
     let checkers_a = (
-        check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable,
-        check_breaker_in_bounds, check_no_nan, check_timer_non_negative,
-        check_valid_state_transitions, check_valid_breaker_state,
-        check_timer_monotonically_decreasing, check_breaker_position_clamped,
+        check_bolt_in_bounds,
+        check_bolt_speed_in_range,
+        check_bolt_count_reasonable,
+        check_breaker_in_bounds,
+        check_no_nan,
+        check_timer_non_negative,
+        check_valid_state_transitions,
+        check_valid_breaker_state,
+        check_timer_monotonically_decreasing,
+        check_breaker_position_clamped,
         check_physics_frozen_during_pause,
-    ).chain();
+    )
+        .chain();
     let checkers_b = (
-        check_no_entity_leaks, check_offering_no_duplicates, check_maxed_chip_never_offered,
-        check_chip_stacks_consistent, check_run_stats_monotonic,
-        check_second_wind_wall_at_most_one, check_shield_charges_consistent,
-        check_pulse_ring_accumulation, check_effective_speed_consistent,
-    ).chain();
+        check_no_entity_leaks,
+        check_offering_no_duplicates,
+        check_maxed_chip_never_offered,
+        check_chip_stacks_consistent,
+        check_run_stats_monotonic,
+        check_second_wind_wall_at_most_one,
+        check_shield_charges_consistent,
+        check_pulse_ring_accumulation,
+        check_effective_speed_consistent,
+    )
+        .chain();
     app.add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
-        .add_systems(Update, check_chip_offer_expected.run_if(chip_select_condition.clone()))
-        .add_systems(PostUpdate, auto_skip_chip_select.run_if(chip_select_condition))
+        .add_systems(
+            Update,
+            check_chip_offer_expected.run_if(chip_select_condition.clone()),
+        )
+        .add_systems(
+            PostUpdate,
+            auto_skip_chip_select.run_if(chip_select_condition),
+        )
         .add_systems(
             OnEnter(GameState::Playing),
-            (seed_initial_chips, init_scenario_input, ApplyDeferred,
-             tag_game_entities, ApplyDeferred, apply_debug_setup)
+            (
+                seed_initial_chips,
+                init_scenario_input,
+                ApplyDeferred,
+                tag_game_entities,
+                ApplyDeferred,
+                apply_debug_setup,
+            )
                 .chain()
                 .after(BoltSystems::InitParams)
                 .after(BreakerSystems::Reset)
@@ -223,7 +244,11 @@ fn register_scenario_systems(app: &mut App) {
         )
         .add_systems(
             FixedPreUpdate,
-            (inject_scenario_input, apply_perfect_tracking, update_force_bump_grade),
+            (
+                inject_scenario_input,
+                apply_perfect_tracking,
+                update_force_bump_grade,
+            ),
         )
         .add_systems(
             FixedUpdate,
@@ -232,7 +257,12 @@ fn register_scenario_systems(app: &mut App) {
                     .chain()
                     .run_if(entered_playing)
                     .before(breaker::breaker::sets::BreakerSystems::Move),
-                (enforce_frozen_positions, apply_debug_frame_mutations, checkers_a, checkers_b)
+                (
+                    enforce_frozen_positions,
+                    apply_debug_frame_mutations,
+                    checkers_a,
+                    checkers_b,
+                )
                     .chain()
                     .run_if(playing_gate)
                     .after(deferred_debug_setup)

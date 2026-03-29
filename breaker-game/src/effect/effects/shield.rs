@@ -162,7 +162,8 @@ mod tests {
 
         // Simulate 10 seconds worth of ticks (at default 64Hz fixed timestep)
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        let ticks_for_10_seconds = (10.0_f64 / timestep.as_secs_f64()).ceil().max(0.0) as u32;
+        let ticks_for_10_seconds: u32 =
+            u32::try_from((10.0_f64 / timestep.as_secs_f64()).ceil() as u64).unwrap_or(u32::MAX);
 
         for _ in 0..ticks_for_10_seconds {
             app.world_mut()
