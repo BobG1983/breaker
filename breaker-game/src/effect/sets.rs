@@ -7,4 +7,6 @@ use bevy::prelude::*;
 pub enum EffectSystems {
     /// Bridge systems that evaluate effect chains in response to triggers.
     Bridge,
+    /// Recalculate systems that compute Active* → Effective* intermediary components.
+    Recalculate,
 }

@@ -100,6 +100,29 @@ The `Without<BreakerMaxSpeed>` filter skips already-initialized entities (persis
 
 ---
 
+## Active/Effective Component Pattern
+
+Stat-modifying effects use a two-tier component model instead of accumulating flat deltas:
+
+```
+fire_effect(entity, DamageBoost(2.0))
+        ↓  (push onto Active stack)
+ActiveDamageBoosts(vec![2.0])
+        ↓  (recalculate_damage — FixedUpdate, in EffectSystems::Recalculate)
+EffectiveDamageMultiplier(2.0)    ← multiplier = product of all entries
+        ↓  (consumers: bolt_cell_collision, handle_cell_hit)
+```
+
+**Rules:**
+
+- **`Active*` components** (e.g., `ActiveDamageBoosts`, `ActiveSpeedBoosts`, `ActivePiercings`) live in the effect domain (`effect/effects/<name>.rs`). They are plain `Vec` stacks — each applied effect instance pushes one entry; `reverse_effect` removes it.
+- **`Effective*` components** (e.g., `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, `EffectivePiercing`) are computed each frame by `recalculate_*` systems in `EffectSystems::Recalculate`. Multiplier stats use the product of all entries; additive stats (piercing) use the sum.
+- **Consumers** (bolt collision, move_breaker, etc.) read only `Effective*` — never `Active*`. Consumers run `.after(EffectSystems::Recalculate)`.
+- **`PiercingRemaining`** is bolt gameplay state (lives in the bolt domain), not an effect stat. `EffectivePiercing` sets the cap that `PiercingRemaining` resets to on wall/breaker contact.
+- Both components are inserted by init systems (`init_bolt_params`, `init_breaker_params`) alongside base stat components. Without them, the entity is unaffected (collision code uses `Option<&EffectiveDamageMultiplier>` and maps to `1.0`).
+
+---
+
 ## Testing
 
 - **Init system tests** use `init_resource::<*Config>()` — they test the config→component bridge

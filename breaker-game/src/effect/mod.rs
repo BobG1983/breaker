@@ -16,5 +16,10 @@ pub mod triggers;
 pub use core::*;
 
 pub use commands::EffectCommandsExt;
+pub use effects::{
+    bump_force::EffectiveBumpForce, damage_boost::EffectiveDamageMultiplier,
+    piercing::EffectivePiercing, quick_stop::EffectiveQuickStop,
+    size_boost::EffectiveSizeMultiplier, speed_boost::EffectiveSpeedMultiplier,
+};
 pub use plugin::EffectPlugin;
 pub use sets::EffectSystems;

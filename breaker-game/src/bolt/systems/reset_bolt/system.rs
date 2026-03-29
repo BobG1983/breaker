@@ -20,8 +20,9 @@ use crate::{
 /// velocity and a [`BoltServing`] marker. On subsequent nodes it launches
 /// immediately at base speed.
 ///
-/// Chip effect components (e.g. [`Piercing`], [`DamageBoost`]) are NOT touched
-/// -- they persist across nodes. Only positional and velocity state is reset.
+/// Effect components (e.g. [`EffectivePiercing`], [`EffectiveDamageMultiplier`])
+/// are NOT touched -- they persist across nodes. Only positional and velocity
+/// state is reset. [`PiercingRemaining`] is reset to [`EffectivePiercing`].
 pub(crate) fn reset_bolt(
     mut commands: Commands,
     config: Res<BoltConfig>,
@@ -38,7 +39,7 @@ pub(crate) fn reset_bolt(
 
     let serving = run_state.node_index == 0;
 
-    for (entity, mut position, mut velocity, piercing_remaining, piercing, prev_pos) in
+    for (entity, mut position, mut velocity, piercing_remaining, effective_piercing, prev_pos) in
         &mut bolt_query
     {
         let new_pos = Vec2::new(breaker_x, breaker_y + config.spawn_offset_y);
@@ -57,8 +58,8 @@ pub(crate) fn reset_bolt(
             commands.entity(entity).remove::<BoltServing>();
         }
 
-        if let (Some(mut remaining), Some(pierce)) = (piercing_remaining, piercing) {
-            remaining.0 = pierce.0;
+        if let (Some(mut remaining), Some(ep)) = (piercing_remaining, effective_piercing) {
+            remaining.0 = ep.0;
         }
     }
 }

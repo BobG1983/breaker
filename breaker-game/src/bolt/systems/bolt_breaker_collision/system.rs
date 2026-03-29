@@ -8,11 +8,13 @@ use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{
-        components::enforce_min_angle, filters::ActiveFilter, messages::BoltImpactBreaker,
+        components::{PiercingRemaining, enforce_min_angle},
+        filters::ActiveFilter,
+        messages::BoltImpactBreaker,
         queries::CollisionQueryBolt,
     },
     breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
-    chips::components::{Piercing, PiercingRemaining},
+    effect::EffectivePiercing,
     shared::BREAKER_LAYER,
 };
 
@@ -48,14 +50,14 @@ impl BreakerSurface {
         writer: &mut MessageWriter<BoltImpactBreaker>,
         bolt: Entity,
         piercing_remaining: &mut Option<Mut<'_, PiercingRemaining>>,
-        piercing: Option<&Piercing>,
+        effective_piercing: Option<&EffectivePiercing>,
     ) {
         writer.write(BoltImpactBreaker {
             bolt,
             breaker: self.entity,
         });
-        if let (Some(pr), Some(p)) = (piercing_remaining, piercing) {
-            pr.0 = p.0;
+        if let (Some(pr), Some(ep)) = (piercing_remaining, effective_piercing) {
+            pr.0 = ep.0;
         }
     }
 }
@@ -130,7 +132,7 @@ pub(crate) fn bolt_breaker_collision(
             breaker_h,
             max_angle,
             min_angle,
-            width_boost,
+            size_mult,
             breaker_entity_scale,
         ),
     )) = breaker_query.single()
@@ -141,7 +143,7 @@ pub(crate) fn bolt_breaker_collision(
     let breaker_scale = breaker_entity_scale.map_or(1.0, |s| s.0);
     let surface = BreakerSurface {
         pos: breaker_position.0,
-        half_w: (breaker_w.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0)) * breaker_scale,
+        half_w: breaker_w.half_width() * size_mult.map_or(1.0, |e| e.0) * breaker_scale,
         half_h: breaker_h.half_height() * breaker_scale,
         tilt_angle: breaker_tilt.angle,
         max_angle: max_angle.0,
@@ -157,8 +159,8 @@ pub(crate) fn bolt_breaker_collision(
         base_speed,
         bolt_radius,
         mut piercing_remaining,
-        piercing,
-        _damage_boost,
+        effective_piercing,
+        _damage_mult,
         bolt_entity_scale,
         _,
     ) in &mut bolt_query
@@ -175,7 +177,12 @@ pub(crate) fn bolt_breaker_collision(
             bolt_position.0.y = above_y;
             if bolt_velocity.0.y <= 0.0 {
                 surface.reflect_top_hit(bolt_pos.x, &mut bolt_velocity, base_speed.0);
-                surface.emit_bump(&mut writer, bolt_entity, &mut piercing_remaining, piercing);
+                surface.emit_bump(
+                    &mut writer,
+                    bolt_entity,
+                    &mut piercing_remaining,
+                    effective_piercing,
+                );
             }
             continue;
         }
@@ -216,6 +223,11 @@ pub(crate) fn bolt_breaker_collision(
             bolt_position.0.y = above_y;
         }
 
-        surface.emit_bump(&mut writer, bolt_entity, &mut piercing_remaining, piercing);
+        surface.emit_bump(
+            &mut writer,
+            bolt_entity,
+            &mut piercing_remaining,
+            effective_piercing,
+        );
     }
 }

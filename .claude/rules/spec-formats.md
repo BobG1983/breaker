@@ -101,7 +101,7 @@ src/bolt/
 - Do NOT test: integration with bump system (tested separately)
 ```
 
-### Example: Bad Test Spec (don't do this)
+### Example: Bad Test Spec (DO NOT DO THIS)
 
 ```markdown
 ## Test Spec: Bolt Speed

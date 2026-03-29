@@ -3,8 +3,8 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::Bolt,
-    chips::components::{DamageBoost, Piercing, PiercingRemaining},
+    bolt::components::{Bolt, PiercingRemaining},
+    effect::{EffectiveDamageMultiplier, EffectivePiercing},
 };
 
 #[test]
@@ -28,7 +28,7 @@ fn non_piercing_bolt_reflects_off_cell() {
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 400.0)),
-        // No PiercingRemaining or Piercing component
+        // No PiercingRemaining or EffectivePiercing component
         Position2D(Vec2::new(0.0, start_y)),
     ));
 
@@ -50,12 +50,11 @@ fn non_piercing_bolt_reflects_off_cell() {
     assert_eq!(hits.0.len(), 1, "BoltImpactCell should be sent");
 }
 
+/// Spec behavior 8: `bolt_cell_collision` uses `EffectivePiercing` for pierce check.
+/// Bolt with `EffectivePiercing(2)`, `PiercingRemaining(2)`, cell with `CellHealth(10.0)`.
+/// Bolt pierces through, `PiercingRemaining` decremented to 1.
 #[test]
 fn piercing_bolt_passes_through_cell_it_would_destroy() {
-    // Bolt with PiercingRemaining(2), no DamageBoost.
-    // Cell with CellHealth(10) — base damage 10 would destroy it.
-    // Bolt should NOT reflect (velocity.y > 0 after upward approach).
-    // BoltImpactCell is sent. PiercingRemaining decremented to 1.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -74,7 +73,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            Piercing(2),
+            EffectivePiercing(2),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -110,7 +109,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
 
 #[test]
 fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
-    // Bolt with PiercingRemaining(1), no DamageBoost.
+    // Bolt with PiercingRemaining(1), no EffectiveDamageMultiplier.
     // Cell with CellHealth(30) — base damage 10, cell survives.
     // Bolt should reflect (velocity.y < 0). PiercingRemaining stays 1.
     let mut app = test_app();
@@ -127,7 +126,7 @@ fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            Piercing(1),
+            EffectivePiercing(1),
             PiercingRemaining(1),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -154,12 +153,13 @@ fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
     );
 }
 
+/// Spec behavior 3: Piercing lookahead uses `EffectiveDamageMultiplier` — pierce succeeds.
+/// Bolt with `EffectivePiercing(1)`, `PiercingRemaining(1)`, `EffectiveDamageMultiplier(1.5)`,
+/// cell with `CellHealth(12.0)`.
+/// Effective damage = 10.0 * 1.5 = 15.0 >= 12.0 => would destroy => bolt pierces.
+/// `PiercingRemaining` decremented to 0.
 #[test]
-fn piercing_with_damage_boost_uses_boosted_damage_for_lookahead() {
-    // Bolt with PiercingRemaining(1), DamageBoost(0.5).
-    // Cell with CellHealth(12).
-    // Effective damage = (10 * (1.0 + 0.5)).round() = 15 >= 12 -> would destroy.
-    // Bolt should pierce (velocity.y > 0).
+fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead() {
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -174,9 +174,9 @@ fn piercing_with_damage_boost_uses_boosted_damage_for_lookahead() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            Piercing(1),
+            EffectivePiercing(1),
             PiercingRemaining(1),
-            DamageBoost(0.5),
+            EffectiveDamageMultiplier(1.5),
             Position2D(Vec2::new(0.0, start_y)),
         ))
         .id();
@@ -191,7 +191,7 @@ fn piercing_with_damage_boost_uses_boosted_damage_for_lookahead() {
         .unwrap();
     assert!(
         vel.0.y > 0.0,
-        "bolt with DamageBoost(0.5) should pierce 12-HP cell (boosted damage=15), got vy={}",
+        "bolt with EffectiveDamageMultiplier(1.5) should pierce 12-HP cell (boosted damage=15), got vy={}",
         vel.0.y
     );
 
@@ -199,6 +199,55 @@ fn piercing_with_damage_boost_uses_boosted_damage_for_lookahead() {
     assert_eq!(
         pr.0, 0,
         "PiercingRemaining should decrement from 1 to 0 after piercing"
+    );
+}
+
+/// Spec behavior 4: Piercing lookahead without `EffectiveDamageMultiplier` — pierce fails, bolt reflects.
+/// Bolt with `EffectivePiercing(1)`, `PiercingRemaining(1)`, NO `EffectiveDamageMultiplier`,
+/// cell with `CellHealth(12.0)`.
+/// Base damage = 10.0 < 12.0 => cell not destroyed => bolt reflects.
+/// `PiercingRemaining` unchanged at 1.
+#[test]
+fn piercing_without_effective_damage_multiplier_reflects_off_tough_cell() {
+    let mut app = test_app();
+    let bc = crate::bolt::resources::BoltConfig::default();
+    let cc = crate::cells::resources::CellConfig::default();
+
+    let cell_y = 100.0;
+    spawn_cell_with_health(&mut app, 0.0, cell_y, 12.0);
+
+    let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+    let bolt_entity = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            bolt_param_bundle(),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+            EffectivePiercing(1),
+            PiercingRemaining(1),
+            // NO EffectiveDamageMultiplier => default base damage 10.0
+            Position2D(Vec2::new(0.0, start_y)),
+        ))
+        .id();
+
+    tick(&mut app);
+
+    let vel = app
+        .world_mut()
+        .query::<&Velocity2D>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(
+        vel.0.y < 0.0,
+        "bolt without EffectiveDamageMultiplier should reflect off 12-HP cell (base damage=10), got vy={}",
+        vel.0.y
+    );
+
+    let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
+    assert_eq!(
+        pr.0, 1,
+        "PiercingRemaining should remain 1 when pierce fails (cell not destroyed)"
     );
 }
 
@@ -228,7 +277,7 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 10000.0)), // 10000/64 ~ 156 units/frame -- covers both cells
-            Piercing(2),
+            EffectivePiercing(2),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -276,7 +325,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            Piercing(1),
+            EffectivePiercing(1),
             PiercingRemaining(1),
             Position2D(Vec2::new(-100.0, start_y)),
         ))
@@ -289,7 +338,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            Piercing(1),
+            EffectivePiercing(1),
             PiercingRemaining(1),
             Position2D(Vec2::new(100.0, start_y)),
         ))
@@ -319,7 +368,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
 
 #[test]
 fn bolt_with_exhausted_piercing_reflects_normally() {
-    // Bolt has Piercing(2) but PiercingRemaining(0) — all pierces used up.
+    // Bolt has EffectivePiercing(2) but PiercingRemaining(0) — all pierces used up.
     // It should reflect off a destroyable cell, not pierce through it.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
@@ -336,7 +385,7 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            Piercing(2),
+            EffectivePiercing(2),
             PiercingRemaining(0),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -366,7 +415,7 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
 
 #[test]
 fn piercing_bolt_hits_grid_adjacent_cells() {
-    // Bolt with Piercing(2), PiercingRemaining(2) should pierce through
+    // Bolt with EffectivePiercing(2), PiercingRemaining(2) should pierce through
     // both grid-adjacent cells (spaced GRID_STEP_Y=28 apart) in one frame.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
@@ -387,7 +436,7 @@ fn piercing_bolt_hits_grid_adjacent_cells() {
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 10000.0)), // very fast to cover both cells in one frame
-        Piercing(2),
+        EffectivePiercing(2),
         PiercingRemaining(2),
         Position2D(Vec2::new(0.0, start_y)),
     ));

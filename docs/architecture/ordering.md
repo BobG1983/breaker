@@ -36,7 +36,10 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `rantzsoft_spatial2d::SpatialSystems::ApplyVelocity` | `rantzsoft_spatial2d/src/plugin.rs` | `apply_velocity` (FixedUpdate — advances Position2D by Velocity2D * dt for entities with ApplyVelocity marker) |
 | `rantzsoft_spatial2d::SpatialSystems::ComputeGlobals` | `rantzsoft_spatial2d/src/plugin.rs` | `compute_globals` (RunFixedMainLoop AfterFixedMainLoop — resolves parent/child hierarchy into Global* components) |
 | `rantzsoft_spatial2d::SpatialSystems::DeriveTransform` | `rantzsoft_spatial2d/src/plugin.rs` | `derive_transform` (RunFixedMainLoop AfterFixedMainLoop — writes Transform from Global* + DrawLayer Z; runs after ComputeGlobals) |
+| `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before BreakerCollision) |
+| `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
 | `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_death`, `bridge_bolt_death`, `bridge_timer_threshold` |
+| `EffectSystems::Recalculate` | `effect/sets.rs` | `recalculate_speed`, `recalculate_damage`, `recalculate_piercing`, `recalculate_size`, `recalculate_bump_force`, `recalculate_quick_stop` — unordered relative to gameplay chain; `run_if(PlayingState::Active)` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
@@ -101,13 +104,20 @@ rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree
     <- shockwave_collision .after(tick_shockwave)
                            .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
 
-BreakerSystems::Move
-  <- (hover_bolt, prepare_bolt_velocity) .after(BreakerSystems::Move)
-    BoltSystems::PrepareVelocity
-      <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
-                             .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
-        <- bolt_breaker_collision .after(bolt_cell_collision)
-          BoltSystems::BreakerCollision
+EffectSystems::Recalculate
+  (recalculate_speed, recalculate_damage, recalculate_piercing,
+   recalculate_size, recalculate_bump_force, recalculate_quick_stop)
+  [effect domain — unordered relative to gameplay chain; reads Active* from previous frame]
+
+move_breaker .after(update_bump)
+  BreakerSystems::Move
+    <- (hover_bolt, prepare_bolt_velocity) .after(BreakerSystems::Move)
+      BoltSystems::PrepareVelocity
+            <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
+                                   .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
+              BoltSystems::CellCollision
+                <- bolt_breaker_collision .after(BoltSystems::CellCollision)
+                  BoltSystems::BreakerCollision
             <- grade_bump .after(update_bump)
                           .after(BoltSystems::BreakerCollision)
               BreakerSystems::GradeBump
@@ -141,7 +151,7 @@ BreakerSystems::Move
             <- spawn_chain_bolt .after(EffectSystems::Bridge)       [bolt domain]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted), then breaker moves, then bolt velocity is prepared, then cell collisions run (reading quadtree for broad-phase), then breaker collision (tagged `BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems (`bridge_bump`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_bolt_lost`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_death`, `bridge_bolt_death`, `bridge_timer_threshold`) run in `EffectSystems::Bridge` (exported from `effect/sets.rs`) — downstream consumers order `.after(EffectSystems::Bridge)`.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). `EffectSystems::Recalculate` converts `Active*` stacks into `Effective*` scalars (`EffectiveSpeedMultiplier`, `EffectiveDamageMultiplier`, `EffectivePiercing`, `EffectiveSizeMultiplier`, `EffectiveBumpForce`, `EffectiveQuickStop`) — it runs unordered relative to the gameplay chain, reading Active* state that is stable during gameplay (Active* vecs only change at chip selection between nodes). Then breaker moves, bolt velocity is prepared, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion
@@ -201,7 +211,7 @@ reset_run_state                                             [run domain]
 
 Reading: run state is reset and RNG is reseeded first, then the node sequence is generated from the freshly seeded `GameRng`.
 
-**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` → `update_breaker_state` (one chain); `grade_bump` runs `.after(update_bump).after(BoltSystems::BreakerCollision)` — it is NOT after `update_breaker_state`. `trigger_bump_visual` also runs `.after(update_bump)`.
+**Intra-domain constraints (breaker):** `update_bump` → `move_breaker` (`BreakerSystems::Move`) → `update_breaker_state` (`BreakerSystems::UpdateState`, with `(perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text)` also before `UpdateState`); `grade_bump` runs `.after(update_bump).after(BoltSystems::BreakerCollision)` — it is NOT after `update_breaker_state`. `trigger_bump_visual` also runs `.after(update_bump)`.
 
 ## Schedule Placement
 

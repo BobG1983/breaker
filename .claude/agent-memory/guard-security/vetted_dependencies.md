@@ -38,3 +38,7 @@ type: project
 ## Known unsafe blocks in workspace
 - None found in breaker-game/src/ (workspace lint: `unsafe_code = "deny"`)
 - No build.rs files anywhere in the workspace
+
+## Phase 3 note (2026-03-28)
+No new dependencies added in the effect system rewrite or trigger bridge phases.
+Dependency baseline unchanged from Phase 1 audit.

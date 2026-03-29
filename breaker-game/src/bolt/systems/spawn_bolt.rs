@@ -395,19 +395,11 @@ mod tests {
 
     #[test]
     fn existing_bolt_is_not_double_spawned() {
-        use crate::{
-            chips::components::{DamageBoost, Piercing},
-            shared::CleanupOnRunEnd,
-        };
+        use crate::shared::CleanupOnRunEnd;
 
         let mut app = test_app();
-        app.world_mut().spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            CleanupOnRunEnd,
-            Piercing(2),
-            DamageBoost(0.5),
-        ));
+        app.world_mut()
+            .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0)), CleanupOnRunEnd));
         app.add_systems(Startup, spawn_bolt);
         app.update();
 

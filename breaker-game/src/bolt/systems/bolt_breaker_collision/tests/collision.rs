@@ -3,9 +3,9 @@ use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::Bolt,
+    bolt::components::{Bolt, PiercingRemaining},
     breaker::components::{Breaker, BreakerTilt},
-    chips::components::{Piercing, PiercingRemaining, WidthBoost},
+    effect::{EffectivePiercing, EffectiveSizeMultiplier},
     shared::{EntityScale, GameDrawLayer},
 };
 
@@ -252,10 +252,11 @@ fn multiple_bolts_each_reflect_off_breaker() {
     );
 }
 
-// --- Chip effect reset tests ---
+// --- Piercing reset tests (using EffectivePiercing) ---
 
+/// Spec behavior 10: `bolt_breaker_collision` resets `PiercingRemaining` to `EffectivePiercing` on breaker hit.
 #[test]
-fn breaker_hit_resets_piercing_remaining() {
+fn breaker_hit_resets_piercing_remaining_to_effective_piercing() {
     let mut app = test_app();
     let hh = default_breaker_height();
     let y_pos = -250.0;
@@ -268,7 +269,7 @@ fn breaker_hit_resets_piercing_remaining() {
             Bolt,
             Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_param_bundle(),
-            Piercing(3),
+            EffectivePiercing(3),
             PiercingRemaining(0),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -286,13 +287,14 @@ fn breaker_hit_resets_piercing_remaining() {
     let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
     assert_eq!(
         pr.0, 3,
-        "breaker hit should reset PiercingRemaining to Piercing.0 (3), got {}",
+        "breaker hit should reset PiercingRemaining to EffectivePiercing.0 (3), got {}",
         pr.0
     );
 }
 
+/// Spec behavior 10 edge case: `PiercingRemaining(0)` without `EffectivePiercing` stays 0.
 #[test]
-fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
+fn piercing_remaining_without_effective_piercing_does_not_reset_on_breaker_hit() {
     let mut app = test_app();
     let hh = default_breaker_height();
     let y_pos = -250.0;
@@ -305,7 +307,8 @@ fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
             Bolt,
             Velocity2D(Vec2::new(0.0, -400.0)),
             bolt_param_bundle(),
-            PiercingRemaining(5),
+            PiercingRemaining(0),
+            // No EffectivePiercing
             Position2D(Vec2::new(0.0, start_y)),
         ))
         .id();
@@ -321,8 +324,8 @@ fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
 
     let pr = app.world().get::<PiercingRemaining>(bolt_entity).unwrap();
     assert_eq!(
-        pr.0, 5,
-        "PiercingRemaining without Piercing should not be reset on breaker hit, got {}",
+        pr.0, 0,
+        "PiercingRemaining(0) without EffectivePiercing should stay at 0 on breaker hit, got {}",
         pr.0
     );
 }
@@ -330,7 +333,7 @@ fn piercing_remaining_without_piercing_does_not_reset_on_breaker_hit() {
 // --- WidthBoost tests ---
 
 #[test]
-fn width_boost_widens_effective_breaker_collision_width() {
+fn effective_size_multiplier_widens_breaker_collision_width() {
     let mut app = test_app();
     let hh = default_breaker_height();
     let y_pos = -250.0;
@@ -342,7 +345,7 @@ fn width_boost_widens_effective_breaker_collision_width() {
         default_breaker_height(),
         default_max_reflection_angle(),
         default_min_angle(),
-        WidthBoost(40.0),
+        EffectiveSizeMultiplier(4.0_f32 / 3.0),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,
         GameDrawLayer::Breaker,
@@ -356,7 +359,7 @@ fn width_boost_widens_effective_breaker_collision_width() {
     let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
     assert!(
         vel.0.y > 0.0,
-        "bolt at x=75.0 (inside boosted width) should reflect upward, got vy={}",
+        "bolt at x=75.0 (inside effective half_w=80 from 60*4/3) should reflect upward, got vy={}",
         vel.0.y
     );
 }
@@ -402,7 +405,7 @@ fn bolt_outside_scaled_breaker_width_misses() {
 }
 
 #[test]
-fn width_boost_stacks_with_entity_scale() {
+fn effective_size_multiplier_stacks_with_entity_scale_in_collision() {
     let mut app = test_app();
     let hh = default_breaker_height();
     let y_pos = -250.0;
@@ -414,7 +417,7 @@ fn width_boost_stacks_with_entity_scale() {
         default_breaker_height(),
         default_max_reflection_angle(),
         default_min_angle(),
-        WidthBoost(40.0),
+        EffectiveSizeMultiplier(4.0_f32 / 3.0),
         EntityScale(0.7),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,
@@ -428,7 +431,7 @@ fn width_boost_stacks_with_entity_scale() {
     let vel = app.world().get::<Velocity2D>(bolt_entity).unwrap();
     assert!(
         vel.0.y < 0.0,
-        "bolt at x=70 should miss scaled breaker (expanded half_w=64), got vy={:.1}",
+        "bolt at x=70 should miss scaled breaker (effective half_w = 60 * 4/3 * 0.7 = 56), got vy={:.1}",
         vel.0.y
     );
 }

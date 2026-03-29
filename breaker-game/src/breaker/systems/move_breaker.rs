@@ -33,11 +33,11 @@ pub(crate) fn move_breaker(
         decel,
         easing,
         half_width,
-        speed_boost,
-        width_boost,
+        speed_mult,
+        size_mult,
     ) in &mut query
     {
-        let effective_max = max_speed.0 + speed_boost.map_or(0.0, |b| b.0);
+        let effective_max = max_speed.0 * speed_mult.map_or(1.0, |e| e.0);
 
         // Only allow direct input movement in Idle and Settling states
         let can_move = matches!(state, BreakerState::Idle | BreakerState::Settling);
@@ -72,7 +72,7 @@ pub(crate) fn move_breaker(
         position.0.x = velocity.x.mul_add(dt, position.0.x);
 
         // Clamp to playfield bounds (accounting for breaker effective half-width)
-        let effective_half_w = half_width.half_width() + width_boost.map_or(0.0, |b| b.0 / 2.0);
+        let effective_half_w = half_width.half_width() * size_mult.map_or(1.0, |e| e.0);
         let min_x = playfield.left() + effective_half_w;
         let max_x = playfield.right() - effective_half_w;
         position.0.x = position.0.x.clamp(min_x, max_x);
@@ -106,7 +106,7 @@ mod tests {
             },
             resources::BreakerConfig,
         },
-        chips::components::{BreakerSpeedBoost, WidthBoost},
+        effect::{EffectiveSizeMultiplier, EffectiveSpeedMultiplier},
     };
 
     #[test]
@@ -249,11 +249,11 @@ mod tests {
     }
 
     #[test]
-    fn speed_boost_raises_effective_max_speed() {
-        // Given: BreakerMaxSpeed(500.0) + BreakerSpeedBoost(100.0), velocity.x = 590.0
+    fn speed_multiplier_raises_effective_max_speed() {
+        // Given: BreakerMaxSpeed(500.0) + EffectiveSpeedMultiplier(1.2), velocity.x = 590.0
         //        MoveRight input active (so the acceleration+clamp path runs)
         // When: move_breaker system runs
-        // Then: velocity.x NOT clamped to 500 — effective max is 600, so velocity stays > 500
+        // Then: velocity.x > 500 AND velocity.x <= 600 (effective max = 500 * 1.2 = 600)
         let mut app = integration_app();
         let config = BreakerConfig::default();
         let entity = app
@@ -270,7 +270,7 @@ mod tests {
                     strength: config.decel_ease_strength,
                 },
                 BreakerWidth(config.width),
-                BreakerSpeedBoost(100.0),
+                EffectiveSpeedMultiplier(1.2),
                 Position2D(Vec2::new(0.0, config.y_position)),
             ))
             .id();
@@ -284,7 +284,12 @@ mod tests {
         let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
         assert!(
             vel.x > 500.0 + f32::EPSILON,
-            "velocity {:.3} should NOT be clamped to 500 when BreakerSpeedBoost(100.0) makes effective max 600",
+            "velocity {:.3} should NOT be clamped to base 500 when EffectiveSpeedMultiplier(1.2) makes effective max 600",
+            vel.x
+        );
+        assert!(
+            vel.x <= 600.0 + f32::EPSILON,
+            "velocity {:.3} should be clamped to effective max 600.0 (500 * 1.2)",
             vel.x
         );
     }
@@ -327,9 +332,9 @@ mod tests {
     }
 
     #[test]
-    fn width_boost_increases_effective_half_width_for_clamping() {
-        // Given: BreakerWidth(120.0), WidthBoost(40.0), PlayfieldConfig default (right=400)
-        //        effective half_w = (120+40)/2 = 80
+    fn size_multiplier_increases_effective_half_width_for_clamping() {
+        // Given: BreakerWidth(120.0), EffectiveSizeMultiplier(4/3), PlayfieldConfig default (right=400)
+        //        effective half_w = 60.0 * (4/3) = 80
         //        Breaker placed far right (9999.0) — position will be clamped during tick
         // When: move_breaker runs
         // Then: Position2D.0.x clamped to max_x = 400 - 80 = 320
@@ -357,7 +362,7 @@ mod tests {
                     strength: config.decel_ease_strength,
                 },
                 BreakerWidth(120.0),
-                WidthBoost(40.0),
+                EffectiveSizeMultiplier(4.0_f32 / 3.0),
                 Position2D(Vec2::new(9999.0, config.y_position)),
             ))
             .id();
@@ -368,7 +373,7 @@ mod tests {
         let expected_max_x = 320.0_f32;
         assert!(
             pos.0.x <= expected_max_x + f32::EPSILON,
-            "with WidthBoost effective half_w=80, Position2D.x {:.3} should be clamped to {:.3}, not to base {:.3}",
+            "with EffectiveSizeMultiplier(4/3) effective half_w=80, Position2D.x {:.3} should be clamped to {:.3}, not to base {:.3}",
             pos.0.x,
             expected_max_x,
             400.0 - 60.0

@@ -5,7 +5,7 @@
         prefix: "Broad",
         effects: [
             On(target: Bolt, then: [
-                Do(SizeBoost(0.15)),
+                Do(SizeBoost(1.15)),
             ]),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Expanded",
         effects: [
             On(target: Bolt, then: [
-                Do(SizeBoost(0.25)),
+                Do(SizeBoost(1.25)),
             ]),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Massive",
         effects: [
             On(target: Bolt, then: [
-                Do(SizeBoost(0.4)),
+                Do(SizeBoost(1.4)),
             ]),
         ],
     ),

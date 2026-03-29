@@ -8,9 +8,9 @@ use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 use crate::{
     bolt::components::{
         BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, ExtraBolt,
-        SpawnedByEvolution,
+        PiercingRemaining, SpawnedByEvolution,
     },
-    chips::components::{DamageBoost, Piercing, PiercingRemaining},
+    effect::{EffectiveDamageMultiplier, EffectivePiercing},
     shared::EntityScale,
 };
 
@@ -22,8 +22,8 @@ pub(crate) type CollisionQueryBolt = (
     &'static BoltBaseSpeed,
     &'static BoltRadius,
     Option<&'static mut PiercingRemaining>,
-    Option<&'static Piercing>,
-    Option<&'static DamageBoost>,
+    Option<&'static EffectivePiercing>,
+    Option<&'static EffectiveDamageMultiplier>,
     Option<&'static EntityScale>,
     Option<&'static SpawnedByEvolution>,
 );
@@ -34,7 +34,7 @@ pub(crate) type ResetBoltQuery = (
     &'static mut Position2D,
     &'static mut Velocity2D,
     Option<&'static mut PiercingRemaining>,
-    Option<&'static Piercing>,
+    Option<&'static EffectivePiercing>,
     Option<&'static mut PreviousPosition>,
 );
 

@@ -1,1 +1,2 @@
 - [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/
+- [Phase 3 file length findings](phase3_findings.md) — files flagged after feature/stat-effects; includes offering.rs, impact.rs, impacted.rs, bolt_wall_collision.rs

@@ -86,6 +86,14 @@ pub struct ExtraBolt;
 #[derive(Component, Debug, Clone)]
 pub struct SpawnedByEvolution(pub String);
 
+/// Remaining pierces before exhaustion. Reset to [`EffectivePiercing`] on
+/// wall/breaker contact.
+///
+/// This is bolt gameplay state — decremented by `bolt_cell_collision` on each
+/// pierce-through, reset by `bolt_wall_collision` and `bolt_breaker_collision`.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct PiercingRemaining(pub u32);
+
 /// Countdown timer that despawns the bolt when it expires.
 ///
 /// Used by phantom bolts and other temporary bolt-like entities

@@ -64,7 +64,8 @@ impl Plugin for BoltPlugin {
                     launch_bolt,
                     (
                         hover_bolt,
-                        prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity),
+                        prepare_bolt_velocity
+                            .in_set(BoltSystems::PrepareVelocity),
                     )
                         .after(BreakerSystems::Move),
                     spawn_bolt_lost_text,
