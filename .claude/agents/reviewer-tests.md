@@ -13,7 +13,7 @@ You are a test-vs-spec reviewer. Your job is to verify that writer-tests output 
 
 ## First Step
 
-Read the test spec (provided in your prompt) and the test file(s) written by writer-tests. Then systematically compare every numbered behavior in the spec against the test code.
+Read the test spec file at the path provided in your prompt (under `.claude/specs/`) and the test file(s) written by writer-tests. Then systematically compare every numbered behavior in the spec against the test code.
 
 ## Review Checklist
 

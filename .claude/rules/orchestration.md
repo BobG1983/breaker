@@ -1,36 +1,10 @@
 # Orchestration Rules
 
-Session state management, circuit breaking, RED gate, and context pruning for the main agent.
+Circuit breaking, RED gate, context pruning, and session-state for the main agent.
 
-## Session State Protocol
+## Session State
 
-Maintain `.claude/agent-memory/orchestrator/ephemeral/session-state.md`.
-
-**Create** at start of every task.
-**Update** after every phase transition.
-**Read** before every failure routing decision.
-
-Format (keep under 80 lines):
-
-```
-# Session State
-## Task
-[one-line description]
-## Decisions
-- [key decisions with rationale]
-## Specs
-| Domain | Spec Status | Writer-Tests | Test Review | RED Gate | Writer-Code | Notes |
-## Verification Results
-| Agent | Status | Action Needed |
-## Active Failures
-- [failure]: attempt N — [what was tried] → [result]
-## Resolved
-- [failure]: fixed attempt N, verified by [agent]
-## Stuck
-- [failure]: N attempts, needs human input
-```
-
-When a verification failure or fix attempt reveals an earlier decision was wrong, mark it REVISED in Decisions with rationale and list affected features. If completed code is now wrong, add rework entry to Active Failures. When a decision revision represents a recurring pattern, record in orchestrator stable memory.
+**See `.claude/rules/session-state.md`** for the complete session-state protocol — format, update triggers, and the cardinal rule. Session-state is critical infrastructure. Read that file.
 
 ## Context Pruning
 
@@ -71,7 +45,7 @@ All agents launch with `run_in_background: true` — see `delegated-implementati
 
 For single-domain work, the same sequence applies — it just has one agent per step.
 
-Track RED gate status in session-state.md (the `RED Gate` column in the Specs table).
+Track RED gate status in session-state.md (the `RED Gate` column in the Specs table). See `.claude/rules/session-state.md` for the full format.
 
 ## Verification Tiers
 

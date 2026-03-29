@@ -8,9 +8,11 @@ Used during the delegated implementation pipeline (see `delegated-implementation
 
 | Agent | Purpose | When to use |
 |-------|---------|-------------|
-| **planner-spec** | Translates feature descriptions into test specs + implementation specs | Starting a new feature — SPEC phase |
-| **planner-review** | Pressure-tests specs for missing behaviors, incorrect values, scope problems | After planner-spec produces specs — before writer-tests |
-| **writer-tests** | Writes failing tests from a test spec (RED phase) | After specs are reviewed and clean |
+| **planning-writer-specs-tests** | Writes behavioral test specs to `.claude/specs/` | Starting a new feature — SPEC phase (parallel with specs-code) |
+| **planning-writer-specs-code** | Writes implementation specs to `.claude/specs/` | Starting a new feature — SPEC phase (parallel with specs-tests) |
+| **planning-reviewer-specs-tests** | Pressure-tests test specs for missing behaviors, incorrect values, scope | After test spec is written — before writer-tests |
+| **planning-reviewer-specs-code** | Pressure-tests implementation specs for feasibility, alignment, patterns | After impl spec is written — before writer-code |
+| **writer-tests** | Writes failing tests from a test spec file (RED phase) | After specs are reviewed and clean |
 | **writer-code** | Implements production code to pass failing tests (GREEN phase) | After RED gate passes |
 | **reviewer-tests** | Verifies writer-tests output matches spec behaviors | After each writer-tests completes, before RED gate |
 

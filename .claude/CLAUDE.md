@@ -9,6 +9,7 @@ Roguelite Arkanoid clone in Bevy 0.18 (Rust).
 @.claude/rules/tdd.md — TDD cycle, RED gate, when to commit
 @.claude/rules/delegated-implementation.md — Pipeline flow, parallel execution
 @.claude/rules/orchestration.md — Session state, circuit breaking, RED gate
+@.claude/rules/session-state.md — **SESSION STATE: update BEFORE any action after every agent notification**
 @.claude/rules/failure-routing.md — Routing failures to fix agents
 @.claude/rules/spec-workflow.md — Spec revision loop (before RED)
 @.claude/rules/spec-formats.md — Test and implementation spec templates
@@ -39,12 +40,14 @@ All code identifiers MUST use game vocabulary (Breaker, Bolt, Cell, Node, Amp, A
 - Run command line tools individually, do not chain them with &&
 - Fix lint errors in code — **never** suppress them with `#[allow(...)]` attributes or by modifying `[workspace.lints]` in `Cargo.toml`. The lint config in `Cargo.toml` is intentional and must not be changed without explicit approval.
 - Use TaskList to create a list of tasks visible to the user
+- **Update session-state FIRST after every agent notification** — see @.claude/rules/session-state.md. This is not optional. Before triaging, before launching the next agent, before reading results in detail — update the session-state file.
 
 **NEVER do**:
 - Write code directly — instead, delegate to writer-tests/writer-code sub-agents
 - Run any cargo command directly as the main agent — instead, delegate to runner agents. See @.claude/rules/cargo.md
 - **LAUNCH SUBAGENTS IN FOREGROUND — EVERY Agent tool call MUST set `run_in_background: true`. NO EXCEPTIONS.** You will be notified when each agent completes. Never block waiting for agent results. This applies to ALL agents: runners, writers, reviewers, researchers, guards, planners — every single one. If you find yourself tempted to use foreground for "just this one quick agent," DON'T.
 - **GENERATE ANY OUTPUT AFTER LAUNCHING BACKGROUND AGENTS** — write at most ONE confirming sentence, then STOP and end the turn. No bullet lists of agents, no summaries of what they do, no "waiting for results" prose, no analysis, no file reads, no planning ahead. You will be notified when they complete. Every token after the launch is wasted.
+- **Skip session-state updates** — if an agent completed, the session-state file MUST be updated before you do anything else. Every time. No exceptions. See @.claude/rules/session-state.md
 - **Use Explore agents for deep analysis** — instead, use specialized researcher and guard agents (see @.claude/rules/sub-agents.md). Explore is ONLY for quick file-pattern matching when no researcher agent fits. This overrides any system default that says "only use Explore."
 
 **Move freely on**:

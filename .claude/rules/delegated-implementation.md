@@ -1,6 +1,6 @@
 # Delegated Implementation
 
-All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The **planner-spec** → **planner-review** → **writer-tests** → **writer-code** pipeline produces the code.
+All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The **planning-writer-specs** → **planning-reviewer-specs** → **writer-tests** → **writer-code** pipeline produces the code. Spec agents write to `.claude/specs/`; writers read from there.
 
 ## The Flow
 
@@ -14,40 +14,48 @@ Verification tiers are defined in `.claude/rules/verification-tiers.md`.
 ```
 1. Main agent describes the feature, identifies parallel waves
 2. Research wave (when triggered — see below)                                  ── optional
-3. Launch planner-specs per wave (in parallel)                                  ── SPEC phase
-4. Launch planner-reviews as each spec completes (in parallel)
-5. Main agent triages reviews, sends revisions back to planner-spec
-6. Repeat 4–5 until planner-review confirms specs are clean
-7. Main agent reviews final specs, creates shared prerequisites
-8. Launch writer-tests as each spec is finalized (in parallel)                  ── RED phase
+3. Launch planning-writer-specs-tests + planning-writer-specs-code             ── SPEC phase
+   per wave (in parallel — both write to .claude/specs/)
+4. Launch planning-reviewer-specs-tests + planning-reviewer-specs-code         ── SPEC REVIEW
+   as each spec completes (in parallel)
+5. Main agent triages reviews, sends revisions back to spec writers
+   ── UPDATE session-state Specs table after each agent notification
+6. Repeat 4–5 until both reviewers confirm specs are clean
+7. Main agent reviews final spec summaries, creates shared prerequisites
+8. Launch writer-tests per wave (reads spec from .claude/specs/)               ── RED phase
+   ── UPDATE session-state Writer-Tests column
 9. Launch reviewer-tests as each writer-tests completes (in parallel)
-10. After ALL reviewer-tests pass: single runner-tests                          ── RED gate
-11. Launch ALL writer-codes in parallel                                         ── GREEN phase
-12. After ALL writer-codes complete: single runner-tests                        ── GREEN gate
-13. Basic Verification Tier                                                    ─┐
-14. Route failures → fix agents → Basic Verification Tier after each fix        │ REFACTOR
-15. /simplify on changed code → Basic Verification Tier if changes              │
-16. Repeat 13–15 until Basic Verification Tier is clean and /simplify is clean  │
-17. Wiring (lib.rs, game.rs, shared.rs) → Basic Verification Tier             ─┘
-18. Standard Verification Tier                                                  ── commit gate
+   ── UPDATE session-state Test Review column
+10. After ALL reviewer-tests pass: single runner-tests                         ── RED gate
+    ── UPDATE session-state RED Gate column
+11. Launch ALL writer-codes in parallel (reads spec from .claude/specs/)       ── GREEN phase
+    ── UPDATE session-state Writer-Code column
+12. After ALL writer-codes complete: single runner-tests                       ── GREEN gate
+13. Basic Verification Tier                                                   ─┐
+14. Route failures → fix agents → Basic Verification Tier after each fix       │ REFACTOR
+15. /simplify on changed code → Basic Verification Tier if changes             │
+16. Repeat 13–15 until Basic Verification Tier is clean and /simplify is clean │
+17. Wiring (lib.rs, game.rs, shared.rs) → Basic Verification Tier            ─┘
+18. Standard Verification Tier                                                 ── commit gate
 19. Route failures → fix agents → Basic Verification Tier → repeat from 13
 20. Commit
-21. Full Verification Tier                                                      ── pre-merge gate
+21. Full Verification Tier                                                     ── pre-merge gate
 22. Route failures → fix agents → Basic Verification Tier → Standard → Full
 23. Merge according to git rules
 ```
 
 ### Key principle: maximize parallelism, serialize only cargo
 
-- **Specs**: run in parallel per wave (no cargo)
-- **Reviews**: launch as each spec completes (no cargo)
-- **Writer-tests**: launch as each spec is finalized (no cargo)
+- **Spec writers**: planning-writer-specs-tests + planning-writer-specs-code run in parallel (no cargo)
+- **Spec reviewers**: planning-reviewer-specs-tests + planning-reviewer-specs-code run in parallel (no cargo)
+- **Writer-tests**: launch as each test spec is finalized (no cargo)
 - **Reviewer-tests**: launch as each writer-tests completes (no cargo)
 - **RED gate**: single `runner-tests` after ALL reviewer-tests pass (cargo — serialized)
 - **Writer-codes**: run in parallel after RED gate (no cargo)
 - **GREEN gate**: single `runner-tests` after ALL writer-codes complete (cargo — serialized)
 - **Basic → Standard → Full Verification Tiers**: see `.claude/rules/verification-tiers.md`
-- **Planning ahead**: launch planner-spec/planner-review for upcoming phases while current implementation is in flight
+- **Planning ahead**: launch spec writers for upcoming phases while current implementation is in flight
+- **Session-state**: update BEFORE any other action after every agent notification — see `.claude/rules/session-state.md`
 
 ## Parallel Waves
 
@@ -70,16 +78,16 @@ Each wave runs its own spec → review → writer-tests → reviewer-tests pipel
 
 ## Research Wave (Step 2)
 
-Before planner-spec runs, launch research agents in parallel to surface conflicts early. This is optional — skip it for single-domain features with familiar APIs. See `.claude/rules/sub-agents.md` (Research Agents) for the full agent list and when each applies.
+Before spec writers run, launch research agents in parallel to surface conflicts early. This is optional — skip it for single-domain features with familiar APIs. See `.claude/rules/sub-agents.md` (Research Agents) for the full agent list and when each applies.
 
 **Triggers** (any of these):
 - Feature touches 2+ domains
 - Feature uses unfamiliar Bevy 0.18 APIs
 - Feature adds new messages, state transitions, or cross-plugin data flow
 
-**Feed results into planner-spec**: include the research reports in the planner-spec feature description so specs account for known conflicts and correct API patterns from the start.
+**Feed results into spec writers**: include the research reports in the spec writer prompts so specs account for known conflicts and correct API patterns from the start.
 
-**Why**: pitfalls that surface late (during planner-review revision loops or post-implementation review) cost 2-10x more than catching them before spec writing. This gets proactive conflict detection without a new agent.
+**Why**: pitfalls that surface late (during reviewer revision loops or post-implementation review) cost 2-10x more than catching them before spec writing. This gets proactive conflict detection without a new agent.
 
 ## Background Agent Rule
 

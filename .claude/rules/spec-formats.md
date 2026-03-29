@@ -1,6 +1,6 @@
 # Spec Formats
 
-Templates and quality rules for behavioral specs (consumed by writer-tests) and implementation specs (consumed by writer-code). Produced by planner-spec.
+Templates and quality rules for behavioral specs (consumed by writer-tests) and implementation specs (consumed by writer-code). Produced by planning-writer-specs-tests and planning-writer-specs-code respectively. Specs are written to files under `.claude/specs/`.
 
 See `.claude/rules/spec-workflow.md` for the revision loop specs must pass before reaching writers.
 
