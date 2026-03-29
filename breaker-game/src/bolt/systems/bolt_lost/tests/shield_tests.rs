@@ -14,41 +14,39 @@ use crate::{
 };
 
 // =========================================================================
-// Wave 4B: Shield Protection — bolt_lost shield-save behaviors
+// Shield Redesign: Charge-per-bolt decrement behaviors (Behaviors 8-15)
 // =========================================================================
 
 /// Spawns a breaker WITH `ShieldActive` for shield protection tests.
-fn spawn_shielded_breaker(app: &mut App, pos: Vec2, remaining: f32) -> Entity {
+fn spawn_shielded_breaker(app: &mut App, pos: Vec2, charges: u32) -> Entity {
     let entity = app
         .world_mut()
         .spawn((Breaker, Position2D(pos), Spatial2D, GameDrawLayer::Breaker))
         .id();
-    app.world_mut().entity_mut(entity).insert(ShieldActive {
-        remaining,
-        owner: entity,
-    });
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(ShieldActive { charges });
     entity
 }
 
+// ── Behavior 8: Shield absorbs bolt-loss and decrements charges by 1 ──
+
 #[test]
-fn shield_reflects_bolt_below_floor_upward() {
-    // Behavior 1: Bolt below floor bounces up when breaker has ShieldActive.
-    // Given: Breaker at (100.0, -250.0) with ShieldActive { remaining: 5.0 }.
+fn shield_absorbs_bolt_loss_and_decrements_charges() {
+    // Given: Breaker at (100.0, -250.0) with ShieldActive { charges: 3 }.
     //        Bolt at (0.0, -309.0) with velocity (100.0, -400.0), BoltRadius(8.0).
     //        PlayfieldConfig::default() so bottom() is -300.0.
     //        Bolt Y (-309.0) < bottom() - radius (-308.0), so bolt is detected as lost.
     // When: bolt_lost runs
-    // Then: Bolt velocity Y is positive (reflected upward). X sign is preserved.
-    //       Bolt is NOT respawned (no position reset to breaker).
-    //       No BoltLost message is sent.
-    // Note: Breaker X (100.0) differs from bolt X (0.0) so the position assertion
-    //       can distinguish "shield preserved bolt X" from "respawn teleported to breaker X".
+    // Then: Bolt velocity Y is positive (reflected upward). X sign preserved.
+    //       Bolt X stays at 0.0 (not teleported to breaker X 100.0).
+    //       No BoltLost message sent.
+    //       Breaker ShieldActive.charges is now 2 (decremented from 3).
     let mut app = test_app();
-    let _playfield = PlayfieldConfig::default();
     app.init_resource::<BoltLostCount>();
     app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
 
-    spawn_shielded_breaker(&mut app, Vec2::new(100.0, -250.0), 5.0);
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(100.0, -250.0), 3);
 
     app.world_mut().spawn((
         Bolt,
@@ -58,6 +56,7 @@ fn shield_reflects_bolt_below_floor_upward() {
     ));
     tick(&mut app);
 
+    // Bolt reflected upward
     let vel = app
         .world_mut()
         .query_filtered::<&Velocity2D, With<Bolt>>()
@@ -75,7 +74,7 @@ fn shield_reflects_bolt_below_floor_upward() {
         vel.0.x
     );
 
-    // Bolt should NOT have been teleported to breaker position (breaker X is 100.0)
+    // Bolt should NOT have been teleported to breaker position
     let pos = app
         .world_mut()
         .query_filtered::<&Position2D, With<Bolt>>()
@@ -94,15 +93,22 @@ fn shield_reflects_bolt_below_floor_upward() {
         count.0, 0,
         "shield-saved bolt should NOT send BoltLost message"
     );
+
+    // Charges decremented from 3 to 2
+    let shield = app.world().get::<ShieldActive>(breaker).unwrap();
+    assert_eq!(
+        shield.charges, 2,
+        "shield charges should decrement from 3 to 2 after absorbing one bolt, got {}",
+        shield.charges
+    );
 }
 
 #[test]
-fn shield_reflects_bolt_straight_down() {
-    // Behavior 1 edge case: Bolt velocity (0.0, -400.0) straight down.
-    // Y becomes positive (0.0, 400.0), X stays 0.0.
-    // Breaker X (100.0) differs from bolt X (0.0) to distinguish shield-save from respawn.
+fn shield_absorbs_bolt_straight_down_and_decrements() {
+    // Edge case: Bolt velocity (0.0, -400.0) straight down.
+    // Y becomes positive, X stays 0.0. Charges decrement by 1.
     let mut app = test_app();
-    spawn_shielded_breaker(&mut app, Vec2::new(100.0, -250.0), 5.0);
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(100.0, -250.0), 3);
 
     app.world_mut().spawn((
         Bolt,
@@ -129,42 +135,36 @@ fn shield_reflects_bolt_straight_down() {
         vel.0.y
     );
 
-    // Bolt X should remain at 0.0, NOT teleported to breaker X (100.0)
-    let pos = app
-        .world_mut()
-        .query_filtered::<&Position2D, With<Bolt>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
-        "shield-saved bolt X should stay at original X (0.0), not breaker X (100.0), got {:.1}",
-        pos.0.x
+    let shield = app.world().get::<ShieldActive>(breaker).unwrap();
+    assert_eq!(
+        shield.charges, 2,
+        "charges should decrement from 3 to 2, got {}",
+        shield.charges
     );
 }
 
+// ── Behavior 9: Shield charges decrement to 0 removes ShieldActive ──
+
 #[test]
-fn shield_active_bolt_above_floor_unaffected() {
-    // Behavior 5: Bolt above floor with ShieldActive breaker is not affected.
-    // Given: Breaker at (0.0, -250.0) with ShieldActive { remaining: 5.0 }.
-    //        Bolt at (0.0, 100.0) with velocity (100.0, -200.0), ABOVE floor threshold.
+fn shield_charges_decrement_to_0_removes_component() {
+    // Given: Breaker with ShieldActive { charges: 1 }. Bolt below floor.
     // When: bolt_lost runs
-    // Then: Bolt velocity unchanged (100.0, -200.0). Bolt position unchanged (0.0, 100.0).
-    //       No BoltLost message. Shield logic path is NOT entered for bolts above the floor.
+    // Then: Bolt reflected. No BoltLost. Breaker no longer has ShieldActive.
     let mut app = test_app();
     app.init_resource::<BoltLostCount>();
     app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
 
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5.0);
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 1);
 
     app.world_mut().spawn((
         Bolt,
-        Velocity2D(Vec2::new(100.0, -200.0)),
+        Velocity2D(Vec2::new(0.0, -400.0)),
         bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, 100.0)),
+        Position2D(Vec2::new(0.0, -309.0)),
     ));
     tick(&mut app);
 
+    // Bolt reflected
     let vel = app
         .world_mut()
         .query_filtered::<&Velocity2D, With<Bolt>>()
@@ -172,48 +172,173 @@ fn shield_active_bolt_above_floor_unaffected() {
         .next()
         .unwrap();
     assert!(
-        (vel.0.x - 100.0).abs() < f32::EPSILON,
-        "bolt above floor should keep vx=100.0, got {:.1}",
-        vel.0.x
-    );
-    assert!(
-        (vel.0.y - (-200.0)).abs() < f32::EPSILON,
-        "bolt above floor should keep vy=-200.0, got {:.1}",
+        vel.0.y > 0.0,
+        "shield should reflect bolt upward, got vy={:.1}",
         vel.0.y
     );
 
-    let pos = app
-        .world_mut()
-        .query_filtered::<&Position2D, With<Bolt>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    assert!(
-        (pos.0.x - 0.0).abs() < f32::EPSILON,
-        "bolt above floor should keep x=0.0, got {:.1}",
-        pos.0.x
-    );
-    assert!(
-        (pos.0.y - 100.0).abs() < f32::EPSILON,
-        "bolt above floor should keep y=100.0, got {:.1}",
-        pos.0.y
-    );
-
+    // No BoltLost
     let count = app.world().resource::<BoltLostCount>();
     assert_eq!(
         count.0, 0,
-        "bolt above floor should NOT send BoltLost message"
+        "shield-saved bolt should NOT send BoltLost message"
+    );
+
+    // ShieldActive removed (charges was 1, decremented to 0)
+    assert!(
+        app.world().get::<ShieldActive>(breaker).is_none(),
+        "ShieldActive should be removed when charges reach 0"
     );
 }
 
 #[test]
-fn shield_save_preserves_velocity_magnitude() {
-    // Behavior 2: Shield bolt-save reflects Y velocity while preserving magnitude.
-    // Given: Bolt at (50.0, -310.0) with velocity (200.0, -346.4) (magnitude 400.0).
+fn shield_charges_0_behaves_as_no_shield() {
+    // Edge case: Breaker with ShieldActive { charges: 0 } — bolt falls through.
+    // This is a degenerate state but the system must handle it defensively.
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .init_resource::<PlayfieldConfig>()
+        .init_resource::<GameRng>()
+        .add_message::<BoltLost>()
+        .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
+        .init_resource::<BoltLostCount>()
+        .add_systems(FixedUpdate, (bolt_lost, count_bolt_lost.after(bolt_lost)));
+
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 0);
+
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(0.0, -309.0)),
+    ));
+    tick(&mut app);
+
+    // BoltLost should be sent (no shield protection with charges: 0)
+    let count = app.world().resource::<BoltLostCount>();
+    assert_eq!(
+        count.0, 1,
+        "breaker with charges: 0 should NOT protect bolt, expected 1 BoltLost, got {}",
+        count.0
+    );
+}
+
+// ── Behavior 10: Multiple bolts lost in same frame each consume one charge ──
+
+#[test]
+fn three_bolts_lost_consume_three_charges() {
+    // Given: Breaker with ShieldActive { charges: 3 }. Three bolts below floor.
     // When: bolt_lost runs
-    // Then: Velocity becomes (200.0, 346.4) — Y negated, X preserved. Magnitude 400.0.
+    // Then: All three reflected. No BoltLost. ShieldActive removed (3 charges consumed).
     let mut app = test_app();
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 10.0);
+    app.init_resource::<BoltLostCount>();
+    app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
+
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
+
+    // Bolt A
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(-100.0, -309.0)),
+    ));
+    // Bolt B
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(0.0, -309.0)),
+    ));
+    // Bolt C
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(100.0, -309.0)),
+    ));
+    tick(&mut app);
+
+    // All three reflected upward
+    let vels: Vec<Vec2> = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .map(|v| v.0)
+        .collect();
+    assert_eq!(vels.len(), 3, "all three bolts should still exist");
+    for vel in &vels {
+        assert!(
+            vel.y > 0.0,
+            "all shield-saved bolts should have positive vy, got {:.1}",
+            vel.y
+        );
+    }
+
+    // No BoltLost
+    let count = app.world().resource::<BoltLostCount>();
+    assert_eq!(count.0, 0, "shield should prevent BoltLost for all 3 bolts");
+
+    // ShieldActive removed (3 charges consumed)
+    assert!(
+        app.world().get::<ShieldActive>(breaker).is_none(),
+        "ShieldActive should be removed after all 3 charges consumed"
+    );
+}
+
+#[test]
+fn four_bolts_lost_but_only_three_charges_fourth_falls_through() {
+    // Edge case: Four bolts lost but only 3 charges.
+    // First 3 reflected (shield saves them). 4th handled per normal bolt-lost logic.
+    // One BoltLost sent for the 4th bolt.
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .init_resource::<PlayfieldConfig>()
+        .init_resource::<GameRng>()
+        .add_message::<BoltLost>()
+        .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
+        .init_resource::<BoltLostCount>()
+        .add_systems(FixedUpdate, (bolt_lost, count_bolt_lost.after(bolt_lost)));
+
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
+
+    // Four bolts below floor
+    for x in [-150.0, -50.0, 50.0, 150.0] {
+        app.world_mut().spawn((
+            Bolt,
+            Velocity2D(Vec2::new(0.0, -400.0)),
+            bolt_lost_bundle(),
+            Position2D(Vec2::new(x, -309.0)),
+        ));
+    }
+    tick(&mut app);
+
+    // Exactly 1 BoltLost message (for the 4th bolt)
+    let count = app.world().resource::<BoltLostCount>();
+    assert_eq!(
+        count.0, 1,
+        "4 bolts lost with 3 charges: exactly 1 BoltLost for the unshielded bolt, got {}",
+        count.0
+    );
+
+    // ShieldActive should be removed
+    assert!(
+        app.world().get::<ShieldActive>(breaker).is_none(),
+        "ShieldActive should be removed after all charges consumed"
+    );
+}
+
+// ── Behavior 11: Shield reflects velocity and clamps position ──
+
+#[test]
+fn shield_reflects_velocity_and_clamps_position() {
+    // Given: Bolt at (50.0, -310.0) with velocity (200.0, -346.4) (magnitude ~400.0).
+    // When: bolt_lost runs
+    // Then: Velocity becomes (200.0, 346.4) — Y abs(), X preserved.
+    //       Position Y clamped to bottom() + radius = -300.0 + 8.0 = -292.0.
+    //       Position X preserved at 50.0.
+    let mut app = test_app();
+    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5);
 
     let original_vel = Vec2::new(200.0, -346.4);
     let original_magnitude = original_vel.length();
@@ -247,24 +372,6 @@ fn shield_save_preserves_velocity_magnitude() {
         (new_magnitude - original_magnitude).abs() < 1.0,
         "shield reflect should preserve magnitude ({original_magnitude:.1}), got {new_magnitude:.1}"
     );
-}
-
-#[test]
-fn shield_save_clamps_bolt_y_above_floor() {
-    // Behavior 2: Bolt Y position is clamped to playfield.bottom() + radius = -300.0 + 8.0 = -292.0.
-    // Bolt X position is preserved (50.0).
-    let mut app = test_app();
-    let playfield = PlayfieldConfig::default();
-    let bolt_config = BoltConfig::default();
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 10.0);
-
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(200.0, -346.4)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(50.0, -310.0)),
-    ));
-    tick(&mut app);
 
     let pos = app
         .world_mut()
@@ -272,6 +379,8 @@ fn shield_save_clamps_bolt_y_above_floor() {
         .iter(app.world())
         .next()
         .unwrap();
+    let playfield = PlayfieldConfig::default();
+    let bolt_config = BoltConfig::default();
     let expected_y = playfield.bottom() + bolt_config.radius;
     assert!(
         (pos.0.x - 50.0).abs() < f32::EPSILON,
@@ -280,163 +389,54 @@ fn shield_save_clamps_bolt_y_above_floor() {
     );
     assert!(
         (pos.0.y - expected_y).abs() < f32::EPSILON,
-        "shield-saved bolt Y should be clamped to bottom() + radius ({:.1}), got {:.1}",
-        expected_y,
+        "shield-saved bolt Y should be clamped to bottom() + radius ({expected_y:.1}), got {:.1}",
         pos.0.y
     );
 }
 
 #[test]
-fn shield_save_does_not_send_bolt_lost_message() {
-    // Behavior 3: Shield bolt-save does not send BoltLost message.
-    // Given: Breaker with ShieldActive. Bolt below floor.
-    // When: bolt_lost runs
-    // Then: No BoltLost message is written.
+fn shield_reflects_zero_velocity_unchanged() {
+    // Edge case: Velocity (0.0, 0.0) — remains (0.0, 0.0) after reflection.
+    // This is a degenerate case. The bolt is still below floor so it will be
+    // detected as lost, and the shield reflect produces (0.0, 0.0.abs()) = (0.0, 0.0).
+    // The test just verifies no panic and the velocity is "reflected" (trivially).
     let mut app = test_app();
-    app.init_resource::<BoltLostCount>();
-    app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
-
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5.0);
+    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5);
 
     app.world_mut().spawn((
         Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
+        Velocity2D(Vec2::new(0.0, 0.0)),
         bolt_lost_bundle(),
         Position2D(Vec2::new(0.0, -309.0)),
     ));
     tick(&mut app);
 
-    let count = app.world().resource::<BoltLostCount>();
-    assert_eq!(
-        count.0, 0,
-        "shield-saved bolt should NOT send BoltLost message"
-    );
-}
-
-#[test]
-fn shield_save_multiple_bolts_none_send_bolt_lost() {
-    // Behavior 3 edge case: Multiple bolts below floor, breaker has ShieldActive.
-    // None of them send BoltLost.
-    let mut app = test_app();
-    let playfield = PlayfieldConfig::default();
-    app.init_resource::<BoltLostCount>();
-    app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
-
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5.0);
-
-    // Two bolts below floor
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(50.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(-100.0, playfield.bottom() - 50.0)),
-    ));
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(-50.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(100.0, playfield.bottom() - 50.0)),
-    ));
-    tick(&mut app);
-
-    let count = app.world().resource::<BoltLostCount>();
-    assert_eq!(
-        count.0, 0,
-        "shield should prevent BoltLost for ALL bolts, got {} messages",
-        count.0
-    );
-}
-
-#[test]
-fn shield_protects_extra_bolt_equally() {
-    // Behavior 4: Shield protects ExtraBolts too (all bolts saved equally).
-    // Given: ExtraBolt at (0.0, -310.0) with velocity (0.0, -400.0) below floor.
-    // When: bolt_lost runs
-    // Then: ExtraBolt velocity Y is reflected to positive (0.0, 400.0).
-    //       Y position clamped to bottom() + radius = -292.0.
-    //       No RequestBoltDestroyed. No BoltLost.
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
-        .add_message::<BoltLost>()
-        .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
-        .init_resource::<BoltLostCount>()
-        .init_resource::<CapturedRequestBoltDestroyed>()
-        .add_systems(
-            FixedUpdate,
-            (
-                bolt_lost,
-                count_bolt_lost.after(bolt_lost),
-                capture_request_bolt_destroyed.after(bolt_lost),
-            ),
-        );
-
-    let playfield = PlayfieldConfig::default();
-    let bolt_config = BoltConfig::default();
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5.0);
-
-    let extra = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            ExtraBolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_lost_bundle(),
-            Position2D(Vec2::new(0.0, -310.0)),
-        ))
-        .id();
-    tick(&mut app);
-
-    // Entity should still exist (not despawned or destroyed)
-    assert!(
-        app.world().get_entity(extra).is_ok(),
-        "shield-saved extra bolt should still exist"
-    );
-
     let vel = app
         .world_mut()
-        .query_filtered::<&Velocity2D, (With<Bolt>, With<ExtraBolt>)>()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
         .iter(app.world())
         .next()
         .unwrap();
     assert!(
-        vel.0.y > 0.0,
-        "shield should reflect extra bolt upward, got vy={:.1}",
+        (vel.0.x).abs() < f32::EPSILON,
+        "zero velocity reflect vx should be 0.0, got {:.3}",
+        vel.0.x
+    );
+    assert!(
+        (vel.0.y).abs() < f32::EPSILON,
+        "zero velocity reflect vy should be 0.0, got {:.3}",
         vel.0.y
-    );
-
-    let pos = app
-        .world_mut()
-        .query_filtered::<&Position2D, (With<Bolt>, With<ExtraBolt>)>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    let expected_y = playfield.bottom() + bolt_config.radius;
-    assert!(
-        (pos.0.y - expected_y).abs() < f32::EPSILON,
-        "shield-saved extra bolt Y should be clamped to {expected_y:.1}, got {:.1}",
-        pos.0.y
-    );
-
-    // No messages
-    let count = app.world().resource::<BoltLostCount>();
-    assert_eq!(
-        count.0, 0,
-        "shield-saved extra bolt should NOT send BoltLost"
-    );
-
-    let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
-    assert!(
-        captured.0.is_empty(),
-        "shield-saved extra bolt should NOT send RequestBoltDestroyed"
     );
 }
 
+// ── Behavior 12: Shield protects ExtraBolt equally ──
+
 #[test]
-fn shield_protects_both_baseline_and_extra_bolt() {
-    // Behavior 4 edge case: Both a baseline bolt AND an ExtraBolt below floor with
-    // ShieldActive — both are reflected, neither sends BoltLost or RequestBoltDestroyed.
+fn shield_protects_extra_bolt_consuming_one_charge() {
+    // Given: Breaker with ShieldActive { charges: 2 }. One baseline bolt and one ExtraBolt
+    //        both below floor.
+    // When: bolt_lost runs
+    // Then: Both reflected upward. No BoltLost. No RequestBoltDestroyed. charges → 0, removed.
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<PlayfieldConfig>()
@@ -454,15 +454,14 @@ fn shield_protects_both_baseline_and_extra_bolt() {
             ),
         );
 
-    let playfield = PlayfieldConfig::default();
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5.0);
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 2);
 
     // Baseline bolt
     app.world_mut().spawn((
         Bolt,
         Velocity2D(Vec2::new(100.0, -400.0)),
         bolt_lost_bundle(),
-        Position2D(Vec2::new(-50.0, playfield.bottom() - 50.0)),
+        Position2D(Vec2::new(-50.0, -309.0)),
     ));
     // Extra bolt
     app.world_mut().spawn((
@@ -470,7 +469,7 @@ fn shield_protects_both_baseline_and_extra_bolt() {
         ExtraBolt,
         Velocity2D(Vec2::new(-100.0, -400.0)),
         bolt_lost_bundle(),
-        Position2D(Vec2::new(50.0, playfield.bottom() - 50.0)),
+        Position2D(Vec2::new(50.0, -309.0)),
     ));
     tick(&mut app);
 
@@ -502,29 +501,231 @@ fn shield_protects_both_baseline_and_extra_bolt() {
 
     // No messages
     let count = app.world().resource::<BoltLostCount>();
-    assert_eq!(count.0, 0, "no BoltLost messages when shield is active");
-
+    assert_eq!(count.0, 0, "no BoltLost messages when shield protects");
     let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
     assert!(
         captured.0.is_empty(),
-        "no RequestBoltDestroyed when shield is active"
+        "no RequestBoltDestroyed when shield protects"
+    );
+
+    // ShieldActive removed (2 charges consumed, one per bolt)
+    assert!(
+        app.world().get::<ShieldActive>(breaker).is_none(),
+        "ShieldActive should be removed after all charges consumed"
     );
 }
 
 #[test]
-fn shield_protects_bolt_barely_below_floor_threshold() {
-    // Behavior 7: Shield protects bolt at exact floor threshold.
-    // Given: Breaker with ShieldActive { remaining: 0.01 }.
-    //        Bolt at (0.0, -308.5) with velocity (0.0, -400.0). BoltRadius(8.0).
-    //        Floor threshold: bottom() - radius = -300.0 - 8.0 = -308.0.
-    //        Bolt Y (-308.5) is barely below the threshold.
+fn shield_protects_only_extra_bolt_below_floor() {
+    // Edge case: Only ExtraBolt below floor (baseline above). Shield absorbs it, charges 2→1.
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .init_resource::<PlayfieldConfig>()
+        .init_resource::<GameRng>()
+        .add_message::<BoltLost>()
+        .add_message::<crate::bolt::messages::RequestBoltDestroyed>()
+        .init_resource::<BoltLostCount>()
+        .init_resource::<CapturedRequestBoltDestroyed>()
+        .add_systems(
+            FixedUpdate,
+            (
+                bolt_lost,
+                count_bolt_lost.after(bolt_lost),
+                capture_request_bolt_destroyed.after(bolt_lost),
+            ),
+        );
+
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 2);
+
+    // ExtraBolt below floor
+    app.world_mut().spawn((
+        Bolt,
+        ExtraBolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(50.0, -309.0)),
+    ));
+    // Baseline bolt above floor
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(100.0, -200.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(0.0, 100.0)),
+    ));
+    tick(&mut app);
+
+    // No messages
+    let count = app.world().resource::<BoltLostCount>();
+    assert_eq!(
+        count.0, 0,
+        "shield should prevent BoltLost for the extra bolt"
+    );
+    let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
+    assert!(
+        captured.0.is_empty(),
+        "shield should prevent RequestBoltDestroyed for the extra bolt"
+    );
+
+    // Charges decremented from 2 to 1
+    let shield = app.world().get::<ShieldActive>(breaker).unwrap();
+    assert_eq!(
+        shield.charges, 1,
+        "shield charges should decrement from 2 to 1, got {}",
+        shield.charges
+    );
+}
+
+// ── Behavior 13: Bolt above floor does not consume shield charges ──
+
+#[test]
+fn bolt_above_floor_does_not_consume_charges() {
+    // Given: Breaker with ShieldActive { charges: 3 }. Bolt at (0.0, 100.0) above floor.
     // When: bolt_lost runs
-    // Then: Bolt velocity Y is reflected to positive. Shield saves the bolt.
+    // Then: Bolt velocity unchanged. Bolt position unchanged. charges remain 3.
     let mut app = test_app();
     app.init_resource::<BoltLostCount>();
     app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
 
-    spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 0.01);
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
+
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(100.0, -200.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(0.0, 100.0)),
+    ));
+    tick(&mut app);
+
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(
+        (vel.0.x - 100.0).abs() < f32::EPSILON,
+        "bolt above floor should keep vx=100.0, got {:.1}",
+        vel.0.x
+    );
+    assert!(
+        (vel.0.y - (-200.0)).abs() < f32::EPSILON,
+        "bolt above floor should keep vy=-200.0, got {:.1}",
+        vel.0.y
+    );
+
+    let pos = app
+        .world_mut()
+        .query_filtered::<&Position2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(
+        (pos.0.y - 100.0).abs() < f32::EPSILON,
+        "bolt above floor should keep y=100.0, got {:.1}",
+        pos.0.y
+    );
+
+    let count = app.world().resource::<BoltLostCount>();
+    assert_eq!(count.0, 0, "bolt above floor should not send BoltLost");
+
+    let shield = app.world().get::<ShieldActive>(breaker).unwrap();
+    assert_eq!(
+        shield.charges, 3,
+        "charges should remain 3 when no bolt is lost, got {}",
+        shield.charges
+    );
+}
+
+// ── Behavior 14: Bolt at exactly bottom()-radius is NOT lost (boundary) ──
+
+#[test]
+fn bolt_at_exactly_threshold_is_not_lost() {
+    // Given: Bolt at (0.0, -308.0) which is exactly bottom() - radius = -300.0 - 8.0 = -308.0.
+    //        Condition is strict `<`, so -308.0 is NOT below threshold.
+    // Then: Bolt NOT considered lost, velocity unchanged, charges remain 3.
+    let mut app = test_app();
+    app.init_resource::<BoltLostCount>();
+    app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
+
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
+
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(0.0, -308.0)),
+    ));
+    tick(&mut app);
+
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(
+        (vel.0.y - (-400.0)).abs() < f32::EPSILON,
+        "bolt at exact threshold should keep vy=-400.0, got {:.1}",
+        vel.0.y
+    );
+
+    let count = app.world().resource::<BoltLostCount>();
+    assert_eq!(count.0, 0, "bolt at exact threshold should NOT be lost");
+
+    let shield = app.world().get::<ShieldActive>(breaker).unwrap();
+    assert_eq!(
+        shield.charges, 3,
+        "charges should remain 3 (bolt was not lost), got {}",
+        shield.charges
+    );
+}
+
+#[test]
+fn bolt_barely_below_threshold_is_absorbed_by_shield() {
+    // Edge case: Bolt at (0.0, -308.001) — IS below threshold, shield absorbs, charges 3→2.
+    let mut app = test_app();
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
+
+    app.world_mut().spawn((
+        Bolt,
+        Velocity2D(Vec2::new(0.0, -400.0)),
+        bolt_lost_bundle(),
+        Position2D(Vec2::new(0.0, -308.001)),
+    ));
+    tick(&mut app);
+
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(
+        vel.0.y > 0.0,
+        "bolt barely below threshold should be reflected, got vy={:.1}",
+        vel.0.y
+    );
+
+    let shield = app.world().get::<ShieldActive>(breaker).unwrap();
+    assert_eq!(
+        shield.charges, 2,
+        "charges should decrement from 3 to 2, got {}",
+        shield.charges
+    );
+}
+
+// ── Behavior 15: Shield with barely-below-floor bolt still absorbs and decrements ──
+
+#[test]
+fn shield_absorbs_barely_below_floor_bolt_and_removes_on_last_charge() {
+    // Given: Breaker with ShieldActive { charges: 1 }. Bolt at (0.0, -308.5).
+    //        Floor threshold = -308.0. Bolt Y below threshold.
+    // Then: Bolt reflected. ShieldActive removed (charges was 1, now 0).
+    let mut app = test_app();
+    app.init_resource::<BoltLostCount>();
+    app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
+
+    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 1);
 
     app.world_mut().spawn((
         Bolt,
@@ -542,13 +743,15 @@ fn shield_protects_bolt_barely_below_floor_threshold() {
         .unwrap();
     assert!(
         vel.0.y > 0.0,
-        "shield should reflect bolt barely below threshold upward, got vy={:.1}",
+        "shield should reflect bolt barely below threshold, got vy={:.1}",
         vel.0.y
     );
 
     let count = app.world().resource::<BoltLostCount>();
-    assert_eq!(
-        count.0, 0,
-        "shield-saved bolt barely below threshold should NOT send BoltLost"
+    assert_eq!(count.0, 0, "shield should prevent BoltLost");
+
+    assert!(
+        app.world().get::<ShieldActive>(breaker).is_none(),
+        "ShieldActive should be removed when charges reach 0"
     );
 }

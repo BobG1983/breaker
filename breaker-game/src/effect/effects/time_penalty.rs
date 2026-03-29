@@ -1,25 +1,25 @@
 use bevy::prelude::*;
 
-use crate::run::node::resources::NodeTimer;
+use crate::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
 
-/// Subtracts seconds from the node timer.
+/// Sends an [`ApplyTimePenalty`] message to subtract seconds from the node timer.
 ///
-/// Directly mutates `NodeTimer::remaining`, clamping to 0.0 minimum.
-/// The `tick_node_timer` system handles expiry detection on the next tick.
+/// The `apply_time_penalty` system in the node subdomain reads the message
+/// and applies the subtraction with clamping and expiry detection.
 pub(crate) fn fire(_entity: Entity, seconds: f32, world: &mut World) {
-    if let Some(mut timer) = world.get_resource_mut::<NodeTimer>() {
-        timer.remaining = (timer.remaining - seconds).max(0.0);
-    }
+    world
+        .resource_mut::<Messages<ApplyTimePenalty>>()
+        .write(ApplyTimePenalty { seconds });
 }
 
-/// Adds seconds back to the node timer — reverses the penalty.
+/// Sends a [`ReverseTimePenalty`] message to add seconds back to the node timer.
 ///
-/// Clamps `remaining` to `total` so the timer never exceeds its configured duration.
+/// The `reverse_time_penalty` system in the node subdomain reads the message
+/// and adds time back, clamping to `NodeTimer::total`.
 pub(crate) fn reverse(_entity: Entity, seconds: f32, world: &mut World) {
-    if let Some(mut timer) = world.get_resource_mut::<NodeTimer>() {
-        let total = timer.total;
-        timer.remaining = (timer.remaining + seconds).min(total);
-    }
+    world
+        .resource_mut::<Messages<ReverseTimePenalty>>()
+        .write(ReverseTimePenalty { seconds });
 }
 
 /// Registers systems for `TimePenalty` effect.
@@ -28,200 +28,105 @@ pub(crate) fn register(_app: &mut App) {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::node::resources::NodeTimer;
+    use crate::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
 
-    // ── fire() tests ──────────────────────────────────────────────
+    // ── fire() message-writing tests ──────────────────────────────
 
     #[test]
-    fn fire_subtracts_seconds_from_node_timer_remaining() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 30.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
+    fn fire_sends_apply_time_penalty_message() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<ApplyTimePenalty>();
+        let entity = app.world_mut().spawn_empty().id();
 
-        fire(entity, 5.0, &mut world);
+        fire(entity, 5.0, app.world_mut());
 
-        let timer = world.resource::<NodeTimer>();
+        let messages = app.world().resource::<Messages<ApplyTimePenalty>>();
+        let written: Vec<&ApplyTimePenalty> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            1,
+            "fire() should write exactly 1 ApplyTimePenalty message, got {}",
+            written.len()
+        );
         assert!(
-            (timer.remaining - 25.0).abs() < f32::EPSILON,
-            "remaining should be 25.0, got {}",
-            timer.remaining
+            (written[0].seconds - 5.0).abs() < f32::EPSILON,
+            "message seconds should be 5.0, got {}",
+            written[0].seconds
         );
     }
 
     #[test]
-    fn fire_clamps_remaining_to_zero_not_negative() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 3.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
+    fn fire_with_zero_seconds_sends_message() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<ApplyTimePenalty>();
+        let entity = app.world_mut().spawn_empty().id();
 
-        fire(entity, 5.0, &mut world);
+        fire(entity, 0.0, app.world_mut());
 
-        let timer = world.resource::<NodeTimer>();
+        let messages = app.world().resource::<Messages<ApplyTimePenalty>>();
+        let written: Vec<&ApplyTimePenalty> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            1,
+            "fire() with 0.0 should still write exactly 1 message, got {}",
+            written.len()
+        );
         assert!(
-            (timer.remaining - 0.0).abs() < f32::EPSILON,
-            "remaining should clamp to 0.0, got {}",
-            timer.remaining
+            (written[0].seconds - 0.0).abs() < f32::EPSILON,
+            "message seconds should be 0.0, got {}",
+            written[0].seconds
+        );
+    }
+
+    // ── reverse() message-writing tests ───────────────────────────
+
+    #[test]
+    fn reverse_sends_reverse_time_penalty_message() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<ReverseTimePenalty>();
+        let entity = app.world_mut().spawn_empty().id();
+
+        reverse(entity, 5.0, app.world_mut());
+
+        let messages = app.world().resource::<Messages<ReverseTimePenalty>>();
+        let written: Vec<&ReverseTimePenalty> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            1,
+            "reverse() should write exactly 1 ReverseTimePenalty message, got {}",
+            written.len()
+        );
+        assert!(
+            (written[0].seconds - 5.0).abs() < f32::EPSILON,
+            "message seconds should be 5.0, got {}",
+            written[0].seconds
         );
     }
 
     #[test]
-    fn fire_does_not_modify_total() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 30.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
+    fn reverse_with_zero_seconds_sends_message() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<ReverseTimePenalty>();
+        let entity = app.world_mut().spawn_empty().id();
 
-        fire(entity, 10.0, &mut world);
+        reverse(entity, 0.0, app.world_mut());
 
-        let timer = world.resource::<NodeTimer>();
-        assert!(
-            (timer.total - 60.0).abs() < f32::EPSILON,
-            "total should remain 60.0, got {}",
-            timer.total
+        let messages = app.world().resource::<Messages<ReverseTimePenalty>>();
+        let written: Vec<&ReverseTimePenalty> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            1,
+            "reverse() with 0.0 should still write exactly 1 message, got {}",
+            written.len()
         );
-    }
-
-    #[test]
-    fn fire_with_timer_already_at_zero_is_idempotent() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 0.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
-
-        fire(entity, 5.0, &mut world);
-
-        let timer = world.resource::<NodeTimer>();
         assert!(
-            (timer.remaining - 0.0).abs() < f32::EPSILON,
-            "remaining should stay 0.0, got {}",
-            timer.remaining
+            (written[0].seconds - 0.0).abs() < f32::EPSILON,
+            "message seconds should be 0.0, got {}",
+            written[0].seconds
         );
-    }
-
-    #[test]
-    fn fire_with_no_node_timer_does_not_panic() {
-        let mut world = World::new();
-        // No NodeTimer resource inserted
-        let entity = world.spawn_empty().id();
-
-        // Should not panic
-        fire(entity, 5.0, &mut world);
-    }
-
-    // ── reverse() tests ───────────────────────────────────────────
-
-    #[test]
-    fn reverse_adds_seconds_back_to_remaining() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 25.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
-
-        reverse(entity, 5.0, &mut world);
-
-        let timer = world.resource::<NodeTimer>();
-        assert!(
-            (timer.remaining - 30.0).abs() < f32::EPSILON,
-            "remaining should be 30.0, got {}",
-            timer.remaining
-        );
-    }
-
-    #[test]
-    fn reverse_restores_time_from_zero() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 0.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
-
-        reverse(entity, 5.0, &mut world);
-
-        let timer = world.resource::<NodeTimer>();
-        assert!(
-            (timer.remaining - 5.0).abs() < f32::EPSILON,
-            "remaining should be 5.0, got {}",
-            timer.remaining
-        );
-    }
-
-    #[test]
-    fn reverse_does_not_modify_total() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 25.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
-
-        reverse(entity, 5.0, &mut world);
-
-        let timer = world.resource::<NodeTimer>();
-        assert!(
-            (timer.total - 60.0).abs() < f32::EPSILON,
-            "total should remain 60.0, got {}",
-            timer.total
-        );
-    }
-
-    #[test]
-    fn reverse_clamps_remaining_to_total_not_overflow() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 58.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
-
-        reverse(entity, 5.0, &mut world);
-
-        let timer = world.resource::<NodeTimer>();
-        assert!(
-            (timer.remaining - 60.0).abs() < f32::EPSILON,
-            "remaining should clamp to total (60.0), got {}",
-            timer.remaining
-        );
-    }
-
-    #[test]
-    fn reverse_at_total_is_idempotent() {
-        let mut world = World::new();
-        world.insert_resource(NodeTimer {
-            remaining: 60.0,
-            total: 60.0,
-        });
-        let entity = world.spawn_empty().id();
-
-        reverse(entity, 5.0, &mut world);
-
-        let timer = world.resource::<NodeTimer>();
-        assert!(
-            (timer.remaining - 60.0).abs() < f32::EPSILON,
-            "remaining should stay at total (60.0), got {}",
-            timer.remaining
-        );
-    }
-
-    #[test]
-    fn reverse_with_no_node_timer_does_not_panic() {
-        let mut world = World::new();
-        // No NodeTimer resource inserted
-        let entity = world.spawn_empty().id();
-
-        // Should not panic
-        reverse(entity, 5.0, &mut world);
     }
 }

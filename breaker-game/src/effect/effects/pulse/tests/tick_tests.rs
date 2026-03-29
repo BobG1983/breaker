@@ -271,3 +271,147 @@ fn despawn_finished_pulse_ring_when_radius_exceeds_max() {
         "pulse ring should be despawned when radius > max_radius"
     );
 }
+
+// ── Damage scaling: Pulse emitter propagates damage multiplier to spawned rings ──
+
+#[test]
+fn tick_pulse_emitter_propagates_damage_multiplier_to_spawned_ring() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    let _bolt = app
+        .world_mut()
+        .spawn((
+            Transform::from_xyz(50.0, 50.0, 0.0),
+            PulseEmitter {
+                base_range: 32.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 50.0,
+                interval: 0.5,
+                timer: 0.49,
+            },
+        ))
+        .id();
+
+    app.update();
+
+    // Query the spawned ring for PulseRingDamageMultiplier
+    let mut ring_query = app
+        .world_mut()
+        .query::<(&PulseRing, &PulseRingDamageMultiplier)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing spawned, got {}",
+        rings.len()
+    );
+
+    let (_ring, damage_mult) = rings[0];
+    // When PulseEmitter has no captured EDM, the ring should carry default 1.0
+    assert!(
+        (damage_mult.0 - 1.0).abs() < f32::EPSILON,
+        "ring should carry PulseRingDamageMultiplier(1.0) by default, got {}",
+        damage_mult.0
+    );
+}
+
+// Note: Testing propagation of a non-default multiplier (e.g., 2.5)
+// requires adding `effective_damage_multiplier` field to `PulseEmitter`.
+// The first test above covers the observable behavior: spawned rings
+// must carry `PulseRingDamageMultiplier`. The writer-code will add the
+// field to `PulseEmitter` and the full propagation test will be
+// validated by the damage_tests that exercise the ring with non-1.0 multipliers.
+
+// ── Behavior 4: tick_pulse_emitter respects custom interval ──
+
+#[test]
+fn tick_pulse_emitter_respects_custom_interval() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    let bolt = app
+        .world_mut()
+        .spawn((
+            Transform::from_xyz(80.0, 120.0, 0.0),
+            PulseEmitter {
+                base_range: 32.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 50.0,
+                interval: 0.25,
+                timer: 0.24,
+            },
+        ))
+        .id();
+
+    // One update tick should push timer past 0.25 and trigger emission
+    app.update();
+
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &Transform)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing spawned with custom interval 0.25, got {}",
+        rings.len()
+    );
+
+    let (_ring, transform) = rings[0];
+    assert!(
+        (transform.translation.x - 80.0).abs() < f32::EPSILON,
+        "ring should spawn at bolt x position (80.0), got {}",
+        transform.translation.x
+    );
+    assert!(
+        (transform.translation.y - 120.0).abs() < f32::EPSILON,
+        "ring should spawn at bolt y position (120.0), got {}",
+        transform.translation.y
+    );
+
+    // Emitter timer should have been reset
+    let emitter = app.world().get::<PulseEmitter>(bolt).unwrap();
+    assert!(
+        emitter.timer < 0.25,
+        "emitter timer should be reset after emission with custom interval, got {}",
+        emitter.timer
+    );
+}
+
+#[test]
+fn tick_pulse_emitter_large_interval_does_not_emit() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    let bolt = app
+        .world_mut()
+        .spawn((
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            PulseEmitter {
+                base_range: 32.0,
+                range_per_level: 0.0,
+                stacks: 1,
+                speed: 50.0,
+                interval: 100.0,
+                timer: 0.0,
+            },
+        ))
+        .id();
+
+    app.update();
+
+    let mut ring_query = app.world_mut().query::<&PulseRing>();
+    let count = ring_query.iter(app.world()).count();
+    assert_eq!(
+        count, 0,
+        "PulseEmitter with interval 100.0 and timer 0.0 should NOT emit after one tick"
+    );
+
+    let emitter = app.world().get::<PulseEmitter>(bolt).unwrap();
+    assert!(
+        emitter.timer > 0.0,
+        "emitter timer should advance even when not emitting, got {}",
+        emitter.timer
+    );
+}

@@ -4,12 +4,16 @@ use bevy::prelude::*;
 
 use crate::{
     run::node::{
-        messages::{ApplyTimePenalty, CellsSpawned, NodeCleared, SpawnNodeComplete, TimerExpired},
+        messages::{
+            ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
+            TimerExpired,
+        },
         resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
         sets::NodeSystems,
         systems::{
             apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
-            set_active_layout, spawn_cells_from_layout, tick_node_timer, track_node_completion,
+            reverse_time_penalty, set_active_layout, spawn_cells_from_layout, tick_node_timer,
+            track_node_completion,
         },
     },
     shared::{GameState, PlayingState},
@@ -29,6 +33,7 @@ impl Plugin for NodePlugin {
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_message::<ApplyTimePenalty>()
+            .add_message::<ReverseTimePenalty>()
             .add_message::<CellsSpawned>()
             .add_message::<SpawnNodeComplete>()
             .add_systems(
@@ -48,6 +53,10 @@ impl Plugin for NodePlugin {
                 (
                     track_node_completion.in_set(NodeSystems::TrackCompletion),
                     tick_node_timer.in_set(NodeSystems::TickTimer),
+                    reverse_time_penalty
+                        .in_set(NodeSystems::ApplyTimePenalty)
+                        .after(NodeSystems::TickTimer)
+                        .before(apply_time_penalty),
                     apply_time_penalty
                         .in_set(NodeSystems::ApplyTimePenalty)
                         .after(NodeSystems::TickTimer),

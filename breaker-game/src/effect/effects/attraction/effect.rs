@@ -21,6 +21,8 @@ pub struct AttractionEntry {
     pub attraction_type: AttractionType,
     /// Attraction strength.
     pub force: f32,
+    /// Optional maximum force magnitude per tick.
+    pub max_force: Option<f32>,
     /// Whether this attraction is currently active (deactivates on hit).
     pub active: bool,
 }
@@ -32,10 +34,17 @@ pub struct ActiveAttractions(pub Vec<AttractionEntry>);
 /// Adds an attraction entry to the entity.
 ///
 /// Inserts `ActiveAttractions` if not already present.
-pub fn fire(entity: Entity, attraction_type: AttractionType, force: f32, world: &mut World) {
+pub fn fire(
+    entity: Entity,
+    attraction_type: AttractionType,
+    force: f32,
+    max_force: Option<f32>,
+    world: &mut World,
+) {
     let entry = AttractionEntry {
         attraction_type,
         force,
+        max_force,
         active: true,
     };
 
@@ -47,10 +56,18 @@ pub fn fire(entity: Entity, attraction_type: AttractionType, force: f32, world: 
 }
 
 /// Removes a matching attraction entry from the entity.
-pub fn reverse(entity: Entity, attraction_type: AttractionType, force: f32, world: &mut World) {
+pub fn reverse(
+    entity: Entity,
+    attraction_type: AttractionType,
+    force: f32,
+    max_force: Option<f32>,
+    world: &mut World,
+) {
     if let Some(mut attractions) = world.get_mut::<ActiveAttractions>(entity)
         && let Some(idx) = attractions.0.iter().position(|e| {
-            e.attraction_type == attraction_type && (e.force - force).abs() < f32::EPSILON
+            e.attraction_type == attraction_type
+                && (e.force - force).abs() < f32::EPSILON
+                && e.max_force == max_force
         })
     {
         attractions.0.remove(idx);
@@ -83,6 +100,7 @@ pub fn apply_attraction(
         let mut nearest_dist = f32::MAX;
         let mut nearest_pos = Vec2::ZERO;
         let mut nearest_force = 0.0_f32;
+        let mut nearest_max_force: Option<f32> = None;
 
         for entry in attractions.0.iter().filter(|e| e.active) {
             let layer = match entry.attraction_type {
@@ -103,6 +121,7 @@ pub fn apply_attraction(
                         nearest_dist = dist;
                         nearest_pos = candidate_pos.0;
                         nearest_force = entry.force;
+                        nearest_max_force = entry.max_force;
                     }
                 }
             }
@@ -110,8 +129,13 @@ pub fn apply_attraction(
 
         if nearest_dist < f32::MAX {
             let direction = (nearest_pos - entity_pos).normalize_or_zero();
-            velocity.x += direction.x * nearest_force * dt;
-            velocity.y += direction.y * nearest_force * dt;
+            let effective_force = match nearest_max_force {
+                Some(cap) => nearest_force.min(cap),
+                None => nearest_force,
+            };
+            let delta_mag = effective_force * dt;
+            velocity.x += direction.x * delta_mag;
+            velocity.y += direction.y * delta_mag;
         }
     }
 }

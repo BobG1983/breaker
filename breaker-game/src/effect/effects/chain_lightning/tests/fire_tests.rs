@@ -617,3 +617,46 @@ fn fire_request_entity_has_cleanup_on_node_exit() {
         "ChainLightningRequest entity should have CleanupOnNodeExit"
     );
 }
+
+// ── Damage scaling: fire() includes EffectiveDamageMultiplier in pre-computed damage ──
+
+#[test]
+fn fire_scales_damage_by_effective_damage_multiplier() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            crate::effect::EffectiveDamageMultiplier(2.0),
+        ))
+        .id();
+
+    let _cell_a = spawn_test_cell(&mut app, 30.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 60.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 2, 100.0, 1.5, app.world_mut());
+
+    let mut query = app.world_mut().query::<&ChainLightningRequest>();
+    let results: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(results.len(), 1, "expected one request entity");
+
+    let request = results[0];
+    assert_eq!(
+        request.targets.len(),
+        2,
+        "expected 2 targets, got {}",
+        request.targets.len()
+    );
+
+    // damage = BASE_BOLT_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    for (_entity, damage) in &request.targets {
+        assert!(
+            (damage - expected_damage).abs() < f32::EPSILON,
+            "expected damage {expected_damage} (10.0 * 1.5 * 2.0), got {damage}",
+        );
+    }
+}

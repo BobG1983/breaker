@@ -6,6 +6,7 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
+    effect::EffectiveDamageMultiplier,
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -27,8 +28,15 @@ pub fn fire(entity: Entity, range: f32, damage_mult: f32, world: &mut World) {
         .get::<Transform>(entity)
         .map_or(Vec3::ZERO, |t| t.translation);
 
+    let edm = world
+        .get::<EffectiveDamageMultiplier>(entity)
+        .map_or(1.0, |e| e.0);
+
     world.spawn((
-        ExplodeRequest { range, damage_mult },
+        ExplodeRequest {
+            range,
+            damage_mult: damage_mult * edm,
+        },
         Transform::from_translation(position),
         CleanupOnNodeExit,
     ));

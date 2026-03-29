@@ -12,6 +12,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
+    effect::EffectiveDamageMultiplier,
     shared::{CELL_LAYER, CleanupOnNodeExit, GameRng, PlayingState},
 };
 
@@ -42,8 +43,12 @@ pub(crate) fn fire(entity: Entity, arcs: u32, range: f32, damage_mult: f32, worl
         return;
     }
 
+    let edm = world
+        .get::<EffectiveDamageMultiplier>(entity)
+        .map_or(1.0, |e| e.0);
+
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    let damage = BASE_BOLT_DAMAGE * damage_mult;
+    let damage = BASE_BOLT_DAMAGE * damage_mult * edm;
     let mut targets = Vec::new();
     let mut hit_set = HashSet::new();
     let mut current_pos = position;

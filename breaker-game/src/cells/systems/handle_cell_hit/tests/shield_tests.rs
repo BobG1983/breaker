@@ -13,7 +13,7 @@ use crate::{
 #[test]
 fn shielded_cell_ignores_damage_cell() {
     // Behavior 8: Cell with ShieldActive ignores DamageCell message.
-    // Given: Cell with CellHealth::new(10.0) and ShieldActive { remaining: 5.0 }.
+    // Given: Cell with CellHealth::new(10.0) and ShieldActive { charges: 3 }.
     //        DamageCell { cell, damage: 10.0, source_chip: None }.
     // When: handle_cell_hit runs
     // Then: Cell health remains 10.0. No RequestCellDestroyed.
@@ -191,7 +191,7 @@ fn both_shielded_cells_immune() {
 fn locked_and_shielded_cell_both_immune() {
     // Behavior 11: Cell with BOTH Locked AND ShieldActive is immune to damage.
     // Given: Cell with CellHealth::new(10.0), Locked component, AND
-    //        ShieldActive { remaining: 5.0, owner: cell_entity }.
+    //        ShieldActive { charges: 1 }.
     //        DamageCell { cell, damage: 10.0, source_chip: None }.
     // When: handle_cell_hit runs
     // Then: Cell health remains 10.0. No RequestCellDestroyed.
@@ -200,10 +200,9 @@ fn locked_and_shielded_cell_both_immune() {
     let mut app = test_app();
     let cell = spawn_locked_cell(&mut app, 10.0);
     // Add ShieldActive on top of Locked
-    app.world_mut().entity_mut(cell).insert(ShieldActive {
-        remaining: 5.0,
-        owner: cell,
-    });
+    app.world_mut()
+        .entity_mut(cell)
+        .insert(ShieldActive { charges: 1 });
 
     app.init_resource::<CapturedDestroyed>();
     app.insert_resource(TestMessage(Some(DamageCell {

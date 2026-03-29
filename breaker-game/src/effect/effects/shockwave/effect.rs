@@ -8,6 +8,7 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
+    effect::EffectiveDamageMultiplier,
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -32,6 +33,11 @@ pub struct ShockwaveSpeed(pub f32);
 #[derive(Component, Default)]
 pub struct ShockwaveDamaged(pub HashSet<Entity>);
 
+/// Damage multiplier snapshotted from the source entity's
+/// `EffectiveDamageMultiplier` at fire-time. Default `1.0`.
+#[derive(Component)]
+pub struct ShockwaveDamageMultiplier(pub f32);
+
 pub fn fire(
     entity: Entity,
     base_range: f32,
@@ -46,12 +52,17 @@ pub fn fire(
         .get::<Transform>(entity)
         .map_or(Vec3::ZERO, |t| t.translation);
 
+    let edm = world
+        .get::<EffectiveDamageMultiplier>(entity)
+        .map_or(1.0, |e| e.0);
+
     world.spawn((
         ShockwaveSource(entity),
         ShockwaveRadius(0.0),
         ShockwaveMaxRadius(effective_range),
         ShockwaveSpeed(speed),
         ShockwaveDamaged::default(),
+        ShockwaveDamageMultiplier(edm),
         Transform::from_translation(position),
         CleanupOnNodeExit,
     ));
@@ -88,17 +99,23 @@ pub fn despawn_finished_shockwave(
 pub fn apply_shockwave_damage(
     quadtree: Res<CollisionQuadtree>,
     mut shockwaves: Query<
-        (&Transform, &ShockwaveRadius, &mut ShockwaveDamaged),
+        (
+            &Transform,
+            &ShockwaveRadius,
+            &mut ShockwaveDamaged,
+            Option<&ShockwaveDamageMultiplier>,
+        ),
         With<ShockwaveSource>,
     >,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (transform, radius, mut damaged) in &mut shockwaves {
+    for (transform, radius, mut damaged, damage_mult) in &mut shockwaves {
         if radius.0 <= 0.0 {
             continue;
         }
         let center = transform.translation.truncate();
+        let multiplier = damage_mult.map_or(1.0, |m| m.0);
         let candidates = quadtree
             .quadtree
             .query_circle_filtered(center, radius.0, query_layers);
@@ -106,7 +123,7 @@ pub fn apply_shockwave_damage(
             if damaged.0.insert(cell) {
                 damage_writer.write(DamageCell {
                     cell,
-                    damage: BASE_BOLT_DAMAGE,
+                    damage: BASE_BOLT_DAMAGE * multiplier,
                     source_chip: None,
                 });
             }

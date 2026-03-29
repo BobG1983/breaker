@@ -91,6 +91,17 @@ fn spawn_tether_beam(
     pos_b: Vec2,
     damage_mult: f32,
 ) -> (Entity, Entity, Entity) {
+    spawn_tether_beam_with_edm(app, pos_a, pos_b, damage_mult, 1.0)
+}
+
+/// Spawn a tether beam with a specific `effective_damage_multiplier` value.
+fn spawn_tether_beam_with_edm(
+    app: &mut App,
+    pos_a: Vec2,
+    pos_b: Vec2,
+    damage_mult: f32,
+    effective_damage_multiplier: f32,
+) -> (Entity, Entity, Entity) {
     let bolt_a = app
         .world_mut()
         .spawn((Bolt, Position2D(pos_a), GlobalPosition2D(pos_a), Spatial2D))
@@ -106,6 +117,7 @@ fn spawn_tether_beam(
                 bolt_a,
                 bolt_b,
                 damage_mult,
+                effective_damage_multiplier,
             },
             CleanupOnNodeExit,
         ))

@@ -192,9 +192,8 @@ pub(super) fn spawn_cell_at(app: &mut App, hp: f32, pos: Vec2, required: bool) -
 
 pub(super) fn spawn_shielded_cell(app: &mut App, hp: f32) -> Entity {
     let entity = spawn_cell(app, hp);
-    app.world_mut().entity_mut(entity).insert(ShieldActive {
-        remaining: 5.0,
-        owner: entity,
-    });
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(ShieldActive { charges: 3 });
     entity
 }

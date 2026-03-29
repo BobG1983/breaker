@@ -188,3 +188,73 @@ fn pulse_ring_damages_entity_with_cell_layer_in_combined_mask() {
     );
     assert_eq!(collector.0[0].cell, cell);
 }
+
+// ── Damage scaling: Pulse ring damage scales by PulseRingDamageMultiplier ──
+
+#[test]
+fn pulse_ring_damage_scales_by_effective_damage_multiplier() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    app.world_mut().spawn((
+        PulseRing,
+        PulseRadius(25.0),
+        PulseMaxRadius(50.0),
+        PulseSpeed(0.0),
+        PulseDamaged::default(),
+        PulseRingDamageMultiplier(1.5),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected one DamageCell message, got {}",
+        collector.0.len()
+    );
+    assert_eq!(collector.0[0].cell, cell);
+
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5;
+    assert!(
+        (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {} (BASE_BOLT_DAMAGE * 1.5), got {}",
+        expected_damage,
+        collector.0[0].damage
+    );
+}
+
+#[test]
+fn pulse_ring_damage_zero_multiplier_produces_zero_damage() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    app.world_mut().spawn((
+        PulseRing,
+        PulseRadius(25.0),
+        PulseMaxRadius(50.0),
+        PulseSpeed(0.0),
+        PulseDamaged::default(),
+        PulseRingDamageMultiplier(0.0),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected one DamageCell even with zero multiplier"
+    );
+    assert_eq!(collector.0[0].cell, cell);
+    assert!(
+        (collector.0[0].damage - 0.0).abs() < f32::EPSILON,
+        "zero multiplier should produce zero damage, got {}",
+        collector.0[0].damage
+    );
+}

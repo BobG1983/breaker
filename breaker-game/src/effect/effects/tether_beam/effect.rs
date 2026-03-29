@@ -12,6 +12,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
     cells::{components::Cell, messages::DamageCell},
+    effect::EffectiveDamageMultiplier,
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -28,6 +29,9 @@ pub struct TetherBeamComponent {
     pub bolt_b: Entity,
     /// Damage multiplier applied to `BASE_BOLT_DAMAGE`.
     pub damage_mult: f32,
+    /// Effective damage multiplier snapshotted from the source entity's
+    /// `EffectiveDamageMultiplier` at fire-time. Default `1.0`.
+    pub effective_damage_multiplier: f32,
 }
 
 /// Spawns two tethered bolts with a damaging beam between them.
@@ -40,6 +44,10 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, world: &mut World) {
     let bolt_a = super::super::spawn_extra_bolt(world, spawn_pos);
     let bolt_b = super::super::spawn_extra_bolt(world, spawn_pos);
 
+    let edm = world
+        .get::<EffectiveDamageMultiplier>(entity)
+        .map_or(1.0, |e| e.0);
+
     // Spawn the beam entity linking both bolts
     let beam = world
         .spawn((
@@ -47,6 +55,7 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, world: &mut World) {
                 bolt_a,
                 bolt_b,
                 damage_mult,
+                effective_damage_multiplier: edm,
             },
             CleanupOnNodeExit,
         ))
@@ -112,7 +121,8 @@ pub fn tick_tether_beam(
         let beam_vec = pos_b - pos_a;
         let max_dist = beam_vec.length();
         let direction = beam_vec.normalize_or_zero();
-        let damage = BASE_BOLT_DAMAGE * component.damage_mult;
+        let damage =
+            BASE_BOLT_DAMAGE * component.damage_mult * component.effective_damage_multiplier;
 
         let mut damaged_this_tick: HashSet<Entity> = HashSet::new();
 

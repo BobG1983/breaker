@@ -1,13 +1,13 @@
 use super::*;
 
-// ── Behavior 8: fire() adds PulseEmitter to the target entity ──
+// ── Existing tests (updated for new interval parameter) ──
 
 #[test]
 fn fire_adds_pulse_emitter_to_entity() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
 
-    fire(entity, 32.0, 8.0, 1, 50.0, &mut world);
+    fire(entity, 32.0, 8.0, 1, 50.0, 0.5, &mut world);
 
     let emitter = world
         .get::<PulseEmitter>(entity)
@@ -46,8 +46,8 @@ fn fire_overwrites_existing_pulse_emitter() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
 
-    fire(entity, 32.0, 8.0, 1, 50.0, &mut world);
-    fire(entity, 64.0, 16.0, 2, 100.0, &mut world);
+    fire(entity, 32.0, 8.0, 1, 50.0, 0.5, &mut world);
+    fire(entity, 64.0, 16.0, 2, 100.0, 0.5, &mut world);
 
     let emitter = world
         .get::<PulseEmitter>(entity)
@@ -139,5 +139,93 @@ fn reverse_on_entity_without_emitter_does_not_panic() {
     assert!(
         world.get_entity(entity).is_ok(),
         "entity should still exist after no-op reverse"
+    );
+}
+
+// ── Behavior 2: pulse::fire() passes interval to PulseEmitter ──
+
+#[test]
+fn fire_passes_custom_interval_to_pulse_emitter() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
+
+    fire(entity, 32.0, 8.0, 1, 50.0, 0.25, &mut world);
+
+    let emitter = world
+        .get::<PulseEmitter>(entity)
+        .expect("entity should have PulseEmitter after fire()");
+
+    assert!(
+        (emitter.interval - 0.25).abs() < f32::EPSILON,
+        "expected interval 0.25, got {}",
+        emitter.interval
+    );
+    assert!(
+        (emitter.timer - 0.0).abs() < f32::EPSILON,
+        "expected timer 0.0, got {}",
+        emitter.timer
+    );
+    assert!(
+        (emitter.base_range - 32.0).abs() < f32::EPSILON,
+        "expected base_range 32.0, got {}",
+        emitter.base_range
+    );
+    assert!(
+        (emitter.range_per_level - 8.0).abs() < f32::EPSILON,
+        "expected range_per_level 8.0, got {}",
+        emitter.range_per_level
+    );
+    assert_eq!(emitter.stacks, 1, "expected stacks 1");
+    assert!(
+        (emitter.speed - 50.0).abs() < f32::EPSILON,
+        "expected speed 50.0, got {}",
+        emitter.speed
+    );
+}
+
+// ── Behavior 5: backward compatibility — explicit default interval ──
+
+#[test]
+fn fire_with_default_interval_produces_same_as_old_hardcoded() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+    fire(entity, 32.0, 8.0, 1, 50.0, 0.5, &mut world);
+
+    let emitter = world
+        .get::<PulseEmitter>(entity)
+        .expect("entity should have PulseEmitter after fire()");
+
+    assert!(
+        (emitter.interval - 0.5).abs() < f32::EPSILON,
+        "explicit 0.5 interval should match old hardcoded default, got {}",
+        emitter.interval
+    );
+}
+
+// ── Behavior 3: EffectKind::Pulse::fire() dispatch forwards interval ──
+
+#[test]
+fn effect_kind_pulse_fire_dispatch_forwards_interval() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+    let effect = crate::effect::core::EffectKind::Pulse {
+        base_range: 32.0,
+        range_per_level: 8.0,
+        stacks: 1,
+        speed: 50.0,
+        interval: 0.75,
+    };
+    effect.fire(entity, &mut world);
+
+    let emitter = world
+        .get::<PulseEmitter>(entity)
+        .expect("entity should have PulseEmitter after EffectKind::Pulse fire()");
+
+    assert!(
+        (emitter.interval - 0.75).abs() < f32::EPSILON,
+        "EffectKind::Pulse fire dispatch should forward interval 0.75, got {}",
+        emitter.interval
     );
 }

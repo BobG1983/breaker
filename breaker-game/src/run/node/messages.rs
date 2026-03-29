@@ -23,6 +23,15 @@ pub struct ApplyTimePenalty {
     pub seconds: f32,
 }
 
+/// Sent by effect reversal to add time back to the node timer.
+///
+/// Consumed by `reverse_time_penalty` in the node subdomain.
+#[derive(Message, Clone, Debug)]
+pub struct ReverseTimePenalty {
+    /// Seconds to add back to the node timer.
+    pub seconds: f32,
+}
+
 /// Sent by `spawn_cells_from_layout` after all cells are spawned.
 ///
 /// Consumed by the spawn coordinator.
@@ -48,5 +57,16 @@ mod tests {
         assert!(format!("{penalty:?}").contains("ApplyTimePenalty"));
         assert!(format!("{CellsSpawned:?}").contains("CellsSpawned"));
         assert!(format!("{SpawnNodeComplete:?}").contains("SpawnNodeComplete"));
+    }
+
+    #[test]
+    fn reverse_time_penalty_debug_format() {
+        let reverse = ReverseTimePenalty { seconds: 5.0 };
+        assert!(
+            (reverse.seconds - 5.0).abs() < f32::EPSILON,
+            "expected seconds to be 5.0, got {}",
+            reverse.seconds
+        );
+        assert!(format!("{reverse:?}").contains("ReverseTimePenalty"));
     }
 }

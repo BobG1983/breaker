@@ -16,11 +16,13 @@ fn manage_attraction_cell_impact_deactivates_cell_entry() {
             AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
+                max_force: None,
                 active: true,
             },
             AttractionEntry {
                 attraction_type: AttractionType::Wall,
                 force: 300.0,
+                max_force: None,
                 active: true,
             },
         ]))
@@ -68,6 +70,7 @@ fn manage_attraction_non_attracted_type_impact_reactivates_all() {
         .spawn(ActiveAttractions(vec![AttractionEntry {
             attraction_type: AttractionType::Cell,
             force: 500.0,
+            max_force: None,
             active: false,
         }]))
         .id();
@@ -99,6 +102,7 @@ fn manage_attraction_wall_impact_deactivates_wall_entry() {
         .spawn(ActiveAttractions(vec![AttractionEntry {
             attraction_type: AttractionType::Wall,
             force: 300.0,
+            max_force: None,
             active: true,
         }]))
         .id();
@@ -129,6 +133,7 @@ fn manage_attraction_breaker_impact_deactivates_breaker_entry() {
         .spawn(ActiveAttractions(vec![AttractionEntry {
             attraction_type: AttractionType::Breaker,
             force: 200.0,
+            max_force: None,
             active: true,
         }]))
         .id();
@@ -159,6 +164,7 @@ fn manage_attraction_impact_for_different_bolt_is_ignored() {
         .spawn(ActiveAttractions(vec![AttractionEntry {
             attraction_type: AttractionType::Cell,
             force: 500.0,
+            max_force: None,
             active: true,
         }]))
         .id();
@@ -193,11 +199,13 @@ fn manage_attraction_attracted_type_already_inactive_no_reactivation() {
             AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
+                max_force: None,
                 active: false,
             },
             AttractionEntry {
                 attraction_type: AttractionType::Wall,
                 force: 300.0,
+                max_force: None,
                 active: false,
             },
         ]))
@@ -236,11 +244,13 @@ fn manage_attraction_multiple_cell_entries_all_deactivated() {
             AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
+                max_force: None,
                 active: true,
             },
             AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 300.0,
+                max_force: None,
                 active: true,
             },
         ]))
@@ -275,6 +285,7 @@ fn manage_attraction_all_already_active_reactivation_is_noop() {
         .spawn(ActiveAttractions(vec![AttractionEntry {
             attraction_type: AttractionType::Cell,
             force: 500.0,
+            max_force: None,
             active: true,
         }]))
         .id();

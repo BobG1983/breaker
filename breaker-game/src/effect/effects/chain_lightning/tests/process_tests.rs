@@ -5,8 +5,9 @@ use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
 
 use super::helpers::*;
 use crate::{
+    bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    shared::{GameState, PlayingState},
+    shared::{GameRng, GameState, PlayingState},
 };
 
 // ── Behavior 11: reverse() is a no-op ──
@@ -253,6 +254,61 @@ fn both_requests_targeting_same_cell_produce_separate_damage_messages() {
     assert!(
         (damages[1] - 20.0).abs() < f32::EPSILON,
         "expected damage 20.0"
+    );
+}
+
+// ── Damage scaling: end-to-end chain lightning damage includes EDM ──
+
+#[test]
+fn chain_lightning_end_to_end_damage_includes_effective_damage_multiplier() {
+    // End-to-end test: fire() pre-computes damage with EDM, process sends DamageCell
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(RantzPhysics2dPlugin);
+    app.insert_resource(GameRng::from_seed(42));
+    app.add_message::<DamageCell>();
+    app.insert_resource(DamageCellCollector::default());
+    app.add_systems(Update, process_chain_lightning);
+    app.add_systems(Update, collect_damage_cells.after(process_chain_lightning));
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            crate::effect::EffectiveDamageMultiplier(2.0),
+        ))
+        .id();
+
+    let _cell = spawn_test_cell(&mut app, 30.0, 0.0);
+
+    // Tick to populate quadtree
+    tick(&mut app);
+
+    // fire() should read EDM and pre-compute scaled damage
+    fire(entity, 1, 100.0, 1.5, app.world_mut());
+
+    // Tick again to run process_chain_lightning
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected 1 DamageCell message, got {}",
+        collector.0.len()
+    );
+
+    // damage = BASE_BOLT_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    assert!(
+        (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
+        "end-to-end damage should be {} (10.0 * 1.5 * 2.0), got {}",
+        expected_damage,
+        collector.0[0].damage
+    );
+    assert!(
+        collector.0[0].source_chip.is_none(),
+        "source_chip should be None"
     );
 }
 

@@ -5,7 +5,7 @@
         prefix: "Faint",
         effects: [
             On(target: Bolt, then: [
-                Do(Attraction(Cell, 0.5)),
+                Do(Attraction(attraction_type: Cell, force: 0.5, max_force: Some(50.0))),
             ]),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Steady",
         effects: [
             On(target: Bolt, then: [
-                Do(Attraction(Cell, 1.0)),
+                Do(Attraction(attraction_type: Cell, force: 1.0, max_force: Some(80.0))),
             ]),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Powerful",
         effects: [
             On(target: Bolt, then: [
-                Do(Attraction(Cell, 1.5)),
+                Do(Attraction(attraction_type: Cell, force: 1.5, max_force: Some(120.0))),
                 Do(SizeBoost(1.1)),
             ]),
         ],

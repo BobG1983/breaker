@@ -403,3 +403,33 @@ fn reverse_on_empty_entity_is_noop() {
         "empty entity should still exist after no-op reverse"
     );
 }
+
+// ── Damage scaling: fire() includes EffectiveDamageMultiplier in pre-computed damage ──
+
+#[test]
+fn fire_scales_damage_by_effective_damage_multiplier() {
+    let mut world = piercing_beam_fire_world();
+
+    let entity = world
+        .spawn((
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+            crate::effect::EffectiveDamageMultiplier(2.0),
+        ))
+        .id();
+
+    fire(entity, 1.5, 20.0, &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    // damage = BASE_BOLT_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    assert!(
+        (results[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {} (10.0 * 1.5 * 2.0), got {}",
+        expected_damage,
+        results[0].damage
+    );
+}

@@ -419,3 +419,51 @@ fn register_wires_process_piercing_beam_system() {
         "register() should wire process_piercing_beam — request should be despawned after tick"
     );
 }
+
+// ── Damage scaling: end-to-end piercing beam damage includes EDM ──
+
+#[test]
+fn piercing_beam_end_to_end_damage_includes_effective_damage_multiplier() {
+    // End-to-end test: fire() pre-computes damage with EDM, process sends DamageCell
+    let mut app = piercing_beam_damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 0.0, 50.0);
+
+    // Source entity with EDM
+    let entity = app
+        .world_mut()
+        .spawn((
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+            crate::effect::EffectiveDamageMultiplier(2.0),
+        ))
+        .id();
+
+    // fire() should read EDM and pre-compute scaled damage
+    fire(entity, 1.5, 20.0, app.world_mut());
+
+    // Tick to run process_piercing_beam
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected 1 DamageCell message, got {}",
+        collector.0.len()
+    );
+    assert_eq!(collector.0[0].cell, cell);
+
+    // damage = BASE_BOLT_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    assert!(
+        (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
+        "end-to-end damage should be {} (10.0 * 1.5 * 2.0), got {}",
+        expected_damage,
+        collector.0[0].damage
+    );
+    assert!(
+        collector.0[0].source_chip.is_none(),
+        "source_chip should be None"
+    );
+}
