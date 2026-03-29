@@ -186,6 +186,11 @@ fn default_pulse_interval() -> f32 {
     0.5
 }
 
+/// Serde default helper for [`EffectKind::ChainLightning::arc_speed`].
+fn default_chain_lightning_arc_speed() -> f32 {
+    200.0
+}
+
 /// The action an effect performs. Each variant maps to a per-module `fire()`
 /// and `reverse()` function.
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -261,6 +266,9 @@ pub enum EffectKind {
         range: f32,
         /// Damage multiplier per arc.
         damage_mult: f32,
+        /// Arc travel speed in world units per second.
+        #[serde(default = "default_chain_lightning_arc_speed")]
+        arc_speed: f32,
     },
     /// Beam through cells in velocity direction.
     PiercingBeam {
@@ -425,11 +433,13 @@ impl EffectKind {
                 arcs,
                 range,
                 damage_mult,
+                arc_speed,
             } => super::super::effects::chain_lightning::fire(
                 entity,
                 *arcs,
                 *range,
                 *damage_mult,
+                *arc_speed,
                 source_chip,
                 world,
             ),
