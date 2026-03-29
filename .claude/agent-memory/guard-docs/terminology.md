@@ -33,6 +33,19 @@ type: project
 - `BoltSystems::CellCollision` — tags `bolt_cell_collision` (added when stat-effects needed ordering anchor)
 - `BreakerSystems::UpdateState` — tags `update_breaker_state`
 
+## ChainBolt Runtime Components (runtime-effects phase)
+
+- `ChainBoltMarker(Entity)` — on chain bolt entity, pointing to its anchor entity
+- `ChainBoltAnchor` — on anchor entity (marker, inserted by fire(), removed by reverse())
+- `ChainBoltConstraint(Entity)` — on chain bolt entity, pointing to the DistanceConstraint entity
+- `ActiveAttractions(Vec<AttractionEntry>)` — tracks active attraction entries (attraction effect)
+- `AttractionEntry { attraction_type, force, active }` — individual attraction tracking struct
+
+## Explode Runtime Pattern
+
+- `ExplodeRequest { range, damage_mult }` — deferred request entity spawned by fire(). Consumed (despawned) by `process_explode_requests` in the same or next tick. Position stored in Transform.
+- Neither SpawnChainBolt nor SpawnAdditionalBolt messages are actively used — chain_bolt::fire() and spawn_bolts::fire() spawn directly via &mut World.
+
 ## Intentional Shorthand in Docs (not drift)
 
 - chip-catalog.md trigger notation: `When(PerfectBumped)`, `When(OnBump)`, `When(OnBoltLost)` — authoring shorthand matching Trigger enum variants loosely. These are design docs, not RON syntax specs.

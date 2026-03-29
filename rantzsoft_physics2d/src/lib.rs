@@ -14,7 +14,7 @@
 )]
 
 pub mod aabb;
-pub(crate) mod ccd;
+pub mod ccd;
 pub mod collision_layers;
 pub mod constraint;
 pub mod plugin;

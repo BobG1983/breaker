@@ -1,6 +1,6 @@
 ---
 name: effect-domain-inventory
-description: Complete inventory of effect implementations and trigger bridges — which are real vs placeholders, what components each exposes. Last verified against commit 35c10d1.
+description: Complete inventory of effect implementations and trigger bridges — which are real vs placeholders, what components each exposes. Last verified against Phase 5 (feature/runtime-effects).
 type: project
 ---
 
@@ -60,7 +60,7 @@ Note: `NodeTimerThreshold(f32)` variant exists in `Trigger` enum but has NO brid
 | RampingDamage | `RampingDamageState { bonus_per_hit, accumulated, hits }` | insert fresh state | remove | none | 3 |
 | ChainBolt | `ChainBoltMarker`, `ChainBoltAnchor` | spawn 2 entities | despawn all + remove anchor | none | 3 |
 | SecondWind | `SecondWindWall` | spawn wall entity | despawn all SecondWindWall | none | 2 |
-| Pulse | reuses shockwave components | spawns shockwave per active bolt | noop | none | 0 |
+| Pulse | `PulseEmitter`, `PulseRing`, `PulseSource`, `PulseRadius`, `PulseMaxRadius`, `PulseSpeed`, `PulseDamaged` | adds PulseEmitter to entity | removes PulseEmitter | tick_pulse_emitter + tick_pulse_ring + apply_pulse_damage in FixedUpdate, run_if Active | 18 |
 
 #### PLACEHOLDERS (log only, no real behavior)
 

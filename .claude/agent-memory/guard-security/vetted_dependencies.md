@@ -42,3 +42,9 @@ type: project
 ## Phase 3 note (2026-03-28)
 No new dependencies added in the effect system rewrite or trigger bridge phases.
 Dependency baseline unchanged from Phase 1 audit.
+
+## Phase 4+5 note (2026-03-28, feature/runtime-effects)
+No new dependencies added in the runtime effects implementation (attraction, chain_bolt,
+explode, pulse, second_wind, shockwave, spawn_phantom). Dependency baseline unchanged.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo machete: no unused dependencies found.

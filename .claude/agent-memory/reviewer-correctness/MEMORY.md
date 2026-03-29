@@ -1,2 +1,3 @@
 - [bug-patterns.md](bug-patterns.md) — Recurring bug categories found in this codebase
-- [known-correct.md](known-correct.md) — Patterns confirmed intentionally correct (don't re-flag)
+- [known-correct.md](known-correct.md) — Phase 1 collision patterns confirmed intentionally correct (don't re-flag)
+- [known-correct-effects.md](known-correct-effects.md) — Phase 3–5 effect patterns confirmed intentionally correct (don't re-flag)

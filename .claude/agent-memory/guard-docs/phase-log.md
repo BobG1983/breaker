@@ -30,6 +30,33 @@ type: project
 - `docs/design/effects/ramping_damage.md` — `damage_per_trigger` matches code
 - `docs/plan/index.md` — phase completion status accurate
 
+## 2026-03-28 — feature/runtime-effects review
+
+**Branch:** feature/runtime-effects (2 commits: 5edba37 parent, implementing 15+ effect runtime behaviors)
+
+**Files reviewed:**
+- `breaker-game/src/effect/effects/` — all 25 modules (attraction, chain_bolt, explode, pulse, second_wind, shockwave, spawn_phantom, and all prior stat effects)
+- `breaker-game/src/bolt/messages.rs` — SpawnAdditionalBolt status
+- `breaker-game/src/bolt/plugin.rs` — system registration
+- `breaker-game/src/bolt/systems/bolt_lost/system.rs` — two-phase destruction, ShieldActive read
+- `breaker-game/src/cells/queries.rs` — ShieldActive in DamageVisualQuery
+- `breaker-game/src/cells/systems/handle_cell_hit/system.rs` — ShieldActive immunity
+
+**Drifts found and fixed:**
+- `docs/design/effects/explode.md` — removed "Not yet implemented" status line (explode is fully implemented)
+- `docs/architecture/messages.md` — DamageCell sender list expanded (shockwave was only entry; explode, pulse, chain_lightning, piercing_beam, tether_beam added)
+- `docs/architecture/messages.md` — removed SpawnChainBolt row (message type does not exist; chain_bolt::fire() spawns directly)
+- `docs/architecture/messages.md` — moved SpawnAdditionalBolt from Active to new Registered section (registered but no producer or consumer)
+- `docs/architecture/ordering.md` — removed spawn_additional_bolt and spawn_chain_bolt system entries (neither system exists)
+- `docs/design/terminology/core.md` — corrected ChainBolt entry (was: SpawnChainBolt message, ChainHit effect; now: ChainBolt effect, direct world spawn, correct component names)
+- `docs/plan/index.md` — added Runtime Effects entry to Current section (In Progress, feature/runtime-effects)
+
+**Items confirmed no-drift:**
+- `docs/architecture/effects/core_types.md` — EffectKind enum matches code, AttractionType correct
+- `docs/design/effects/` — all design docs match implemented behavior (pulse interval hardcoded at 0.5s, not documented — intentional, internal detail)
+- `docs/design/effects/attraction.md` — "nearest wins" and type deactivation/reactivation matches code exactly
+- `BoltImpactWall` consumer entry ("effect") covers both bridge triggers AND runtime effect systems — no change needed
+
 ## 2026-03-28 — feature/stat-effects review (merged to develop)
 
 **Branch:** feature/stat-effects (merge commit 74d538b)

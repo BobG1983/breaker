@@ -1,6 +1,6 @@
 ---
-name: Confirmed correct patterns — do not re-flag
-description: Patterns that look suspicious but are intentionally correct in this codebase
+name: Confirmed correct patterns — do not re-flag (Phase 1 collision)
+description: Phase 1 collision system patterns that look suspicious but are intentionally correct in this codebase
 type: project
 ---
 
@@ -78,19 +78,3 @@ so the narrow-phase `wall_pos.0 + wall_aabb.center` is consistent.
 `commands.entity(msg.cell).despawn()` is deferred. `CellDestroyedAt` is written
 in the same iteration before despawn executes. Entity is still alive when message
 is emitted — correct per two-phase destruction design.
-
-## Active*/Effective* pattern: silent no-op is intentional (WIP)
-
-`fire()` functions check `world.get_mut::<Active*>()` and silently do nothing if
-the component isn't present. `recalculate_*` systems only match entities with both
-`Active*` AND `Effective*`. Neither bolt nor breaker spawn currently inserts these
-components — this is intentional WIP (dispatch_chip_effects is a Wave 6 TODO stub).
-Consumers use `Option<&Effective*>` with `map_or(1.0)` fallback. The entire system
-is structurally correct but not yet connected to real entities.
-
-## Multiplicative stacking in Active*/Effective* — correct by design
-
-`ActiveDamageBoosts.multiplier()` = product of all entries (not sum). Empty vec
-returns 1.0. This is correct for the stated design (additive→multiplicative
-migration in Phase 3). The `BASE * multiplier` formula in `bolt_cell_collision`
-is correct: when no boost, multiplier=1.0, so damage = BASE * 1.0 = BASE.

@@ -1,2 +1,4 @@
 - [intentional-patterns.md](intentional-patterns.md) — Intentional patterns from Phase 1 collision refactor: inline overlap detection, near-duplicate collision systems, local test helpers
 - [phase3-stat-effects-patterns.md](phase3-stat-effects-patterns.md) — Phase 3 Active*/Effective* pair convention, map_or(1.0) pattern, stub functions, and the safe unwrap in face selection
+- [phase4-runtime-effects-patterns.md](phase4-runtime-effects-patterns.md) — Phase 4 nested tuple spawning, max_active eviction, _entity interface params, PhantomTimer stub, reverse() let _ = world, WallSize {}
+- [phase5-complex-effects-patterns.md](phase5-complex-effects-patterns.md) — Phase 5 TetherBeamComponent naming, kill_count vocabulary, bolt spawn duplication, Option<Res<BoltConfig>> pattern, borrow-scope comments

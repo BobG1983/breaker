@@ -46,6 +46,9 @@ Keep under 80 lines. Use this exact structure:
 ```
 # Session State
 
+## Plan
+[The full filepath to the current plan that is being worked on]
+
 ## Task
 [one-line description]
 

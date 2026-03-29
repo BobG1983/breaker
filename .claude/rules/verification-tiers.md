@@ -48,6 +48,7 @@ Includes everything in Standard Verification Tier, plus:
 | **guard-dependencies** | Unused/outdated/duplicate deps, license compliance |
 | **guard-agent-memory** | Stale/duplicated memories, MEMORY.md accuracy |
 | **reviewer-file-length** | Large files needing splits, refactor spec hints |
+| **reviewer-scenarios** | Scenario coverage gaps, weak invariants, missing mechanics |
 
 **Question answered**: "Is everything clean across all cross-cutting concerns?"
 

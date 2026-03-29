@@ -2,8 +2,6 @@
 
 Instant area damage centered on the entity's position. Unlike [Shockwave](shockwave.md), damage is applied immediately to all cells in range — there is no expanding wavefront. Uses a distinct visual effect (flash/burst rather than expanding ring).
 
-**Status**: Not yet implemented.
-
 ## Parameters
 
 | Parameter | Type | Description |
