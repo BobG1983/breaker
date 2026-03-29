@@ -1,1 +1,1 @@
-- [Current lint state](lint_state_current.md) — full workspace: game crate 0 errors/63 warnings (lib), all other crates clean (2026-03-28 post-doc_markdown fix)
+- [Current lint state](lint_state_current.md) — feature/runtime-effects: game crate 0 errors/~59 warnings (lib); all other crates clean (2026-03-28)

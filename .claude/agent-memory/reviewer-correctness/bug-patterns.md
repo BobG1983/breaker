@@ -28,6 +28,14 @@ correct IF `breaker_pos` is already world-space. Confirmed correct — no bug.
 Old notes referred to `query_circle_filtered` — current code uses `query_aabb_filtered`.
 The stale memory was corrected. Always verify which query function is actually used.
 
+## Phase 4 effect systems: shockwave/pulse use Transform (not Position2D) for center
+
+`apply_shockwave_damage` and `apply_pulse_damage` read `transform.translation.truncate()`
+as the circle center for quadtree queries. These entities have Transform set at spawn and
+never move, so this is functionally correct. But shockwave/ring entities don't have
+GlobalPosition2D or Spatial2D — they are purely Transform-based. This is intentional
+(they're not `Position2D`-tracked spatial entities).
+
 ## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
 
 Confirmed in Phase 3 review. The bolt/breaker consumer systems (`prepare_bolt_velocity`,

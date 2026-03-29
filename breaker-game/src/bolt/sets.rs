@@ -13,6 +13,8 @@ pub enum BoltSystems {
     Reset,
     /// The `bolt_cell_collision` system — detects and resolves bolt-cell hits.
     CellCollision,
+    /// The `bolt_wall_collision` system — detects and resolves bolt-wall hits.
+    WallCollision,
     /// The `bolt_breaker_collision` system — detects and resolves bolt-breaker hits.
     BreakerCollision,
     /// The `bolt_lost` system — detects bolt below playfield and respawns.

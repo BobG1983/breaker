@@ -7,7 +7,6 @@ use crate::{
         BoltSystems,
         messages::{
             BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost, SpawnAdditionalBolt,
-            SpawnChainBolt,
         },
         resources::BoltConfig,
         systems::{
@@ -41,7 +40,6 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltLost>()
             .add_message::<BoltImpactWall>()
             .add_message::<RequestBoltDestroyed>()
-            .add_message::<SpawnChainBolt>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -64,8 +62,7 @@ impl Plugin for BoltPlugin {
                     launch_bolt,
                     (
                         hover_bolt,
-                        prepare_bolt_velocity
-                            .in_set(BoltSystems::PrepareVelocity),
+                        prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity),
                     )
                         .after(BreakerSystems::Move),
                     spawn_bolt_lost_text,
@@ -74,7 +71,9 @@ impl Plugin for BoltPlugin {
                         .after(BoltSystems::PrepareVelocity)
                         .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
                         .in_set(BoltSystems::CellCollision),
-                    bolt_wall_collision.after(BoltSystems::CellCollision),
+                    bolt_wall_collision
+                        .after(BoltSystems::CellCollision)
+                        .in_set(BoltSystems::WallCollision),
                     bolt_breaker_collision
                         .after(BoltSystems::CellCollision)
                         .in_set(BoltSystems::BreakerCollision),

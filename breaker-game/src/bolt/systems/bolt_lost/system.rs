@@ -14,6 +14,7 @@ use crate::{
         queries::LostQuery,
     },
     breaker::filters::CollisionFilterBreaker,
+    effect::effects::shield::ShieldActive,
     shared::{GameRng, PlayfieldConfig},
 };
 
@@ -35,6 +36,9 @@ pub(crate) struct LostBoltEntry {
     respawn_offset: f32,
     angle_spread: f32,
     is_extra: bool,
+    effective_radius: f32,
+    current_velocity: Vec2,
+    current_position: Vec2,
 }
 
 /// Detects when the bolt falls below the playfield.
@@ -47,11 +51,11 @@ pub(crate) fn bolt_lost(
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
     bolt_query: Query<LostQuery, ActiveFilter>,
-    breaker_query: Query<&Position2D, CollisionFilterBreaker>,
+    breaker_query: Query<(&Position2D, Has<ShieldActive>), CollisionFilterBreaker>,
     mut writers: BoltLostWriters,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
-    let Ok(breaker_position) = breaker_query.single() else {
+    let Ok((breaker_position, has_shield)) = breaker_query.single() else {
         return;
     };
     let breaker_pos = breaker_position.0;
@@ -69,14 +73,14 @@ pub(crate) fn bolt_lost(
             .map(
                 |(
                     entity,
-                    _,
-                    _,
+                    pos,
+                    vel,
                     base_speed,
-                    _,
+                    radius,
                     respawn_offset,
                     angle_spread,
                     is_extra,
-                    _entity_scale,
+                    entity_scale,
                 )| {
                     LostBoltEntry {
                         entity,
@@ -84,15 +88,27 @@ pub(crate) fn bolt_lost(
                         respawn_offset: respawn_offset.0,
                         angle_spread: angle_spread.0,
                         is_extra,
+                        effective_radius: radius.0 * entity_scale.map_or(1.0, |s| s.0),
+                        current_velocity: vel.0,
+                        current_position: pos.0,
                     }
                 },
             ),
     );
 
     for entry in &*lost_bolts {
-        writers.writer.write(BoltLost);
-
-        if entry.is_extra {
+        if has_shield {
+            // Shield reflection — no BoltLost sent, applies to ALL bolts (baseline + extra)
+            let reflected_vel = Vec2::new(entry.current_velocity.x, entry.current_velocity.y.abs());
+            let clamped_y = playfield.bottom() + entry.effective_radius;
+            let clamped_pos = Vec2::new(entry.current_position.x, clamped_y);
+            commands.entity(entry.entity).insert((
+                Position2D(clamped_pos),
+                PreviousPosition(clamped_pos),
+                Velocity2D(reflected_vel),
+            ));
+        } else if entry.is_extra {
+            writers.writer.write(BoltLost);
             if let Ok(ref mut destroyed_writer) = writers.request_destroyed_writer {
                 // Two-phase destruction: write request (entity stays alive for bridge evaluation)
                 destroyed_writer.write(RequestBoltDestroyed { bolt: entry.entity });
@@ -101,6 +117,7 @@ pub(crate) fn bolt_lost(
                 commands.entity(entry.entity).despawn();
             }
         } else {
+            writers.writer.write(BoltLost);
             // Respawn above breaker
             let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);
             // Angle from vertical: sin->X, cos->Y; positive Y is upward.

@@ -51,8 +51,21 @@ type: reference
 ## SystemSet
 - `#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]` — correct derive for system sets
 
+## World Direct Access (fire/reverse functions)
+- `world.despawn(entity)` — valid in Bevy 0.18.1; called from `fire()`/`reverse()` World-access functions where entities confirmed to exist via prior query
+- `world.get_entity_mut(entity)` returns `Result` — correct guard before insert/remove
+- `world.get::<C>(entity)` / `world.get_mut::<C>(entity)` — correct direct component access
+- `world.query::<T>()` / `world.query_filtered::<T, F>()` — correct for fire/reverse World access functions
+
+## Time API (FixedUpdate systems)
+- `Res<Time<Fixed>>` + `.timestep().as_secs_f32()` — correct in FixedUpdate; timestep == delta inside FixedUpdate
+- `Res<Time>` + `.delta_secs()` — also correct in FixedUpdate (resolves to Time<Fixed> automatically)
+- Both patterns are functionally equivalent inside FixedUpdate; style inconsistency is NOT a bug
+- `Res<Time<Fixed>>` + `.timestep()` used for emitter timer accumulation (distinct from expansion dt)
+
 ## Other
 - `Bloom` from `bevy::post_process::bloom::Bloom` — correct 0.18 path
 - `Projection::from(OrthographicProjection { ... })` — correct 0.18 API
 - `Local<Vec<T>>` as system param — valid; reuses allocation across frames
 - `commands.entity(e).despawn()` — correct for leaf entities (no children to recurse)
+- `Has<T>` in query data tuple (not filter) — correct; returns `bool`, confirmed for DamageVisualQuery and breaker queries

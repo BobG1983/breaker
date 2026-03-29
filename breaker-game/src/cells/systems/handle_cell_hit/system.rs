@@ -31,14 +31,26 @@ pub(crate) fn handle_cell_hit(
         if despawned.contains(&msg.cell) {
             continue;
         }
-        let Ok((mut health, material_handle, visuals, is_required, is_locked, position)) =
-            cell_query.get_mut(msg.cell)
+        let Ok((
+            mut health,
+            material_handle,
+            visuals,
+            is_required,
+            is_locked,
+            position,
+            is_shielded,
+        )) = cell_query.get_mut(msg.cell)
         else {
             continue;
         };
 
         // Locked cells are immune to damage until unlocked.
         if is_locked {
+            continue;
+        }
+
+        // Shielded cells are immune to damage while shield is active.
+        if is_shielded {
             continue;
         }
 

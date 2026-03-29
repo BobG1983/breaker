@@ -70,19 +70,6 @@ pub(crate) struct RequestBoltDestroyed {
     pub bolt: Entity,
 }
 
-/// Sent by the chain bolt effect handler to spawn a tethered chain bolt.
-///
-/// Consumed by `handle_chain_bolt` in the effect domain.
-#[derive(Message, Clone, Debug)]
-pub struct SpawnChainBolt {
-    /// The bolt entity to tether the new chain bolt to.
-    pub anchor: Entity,
-    /// Maximum distance the chain bolt can travel from its anchor.
-    pub tether_distance: f32,
-    /// The chip name that originated this spawn, for damage attribution.
-    pub source_chip: Option<String>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,31 +117,6 @@ mod tests {
         let debug = format!("{msg:?}");
         assert!(debug.contains("RequestBoltDestroyed"));
         assert!(debug.contains("bolt"));
-    }
-
-    #[test]
-    fn spawn_chain_bolt_carries_anchor_and_tether_distance() {
-        let anchor = Entity::PLACEHOLDER;
-        let msg = SpawnChainBolt {
-            anchor,
-            tether_distance: 200.0,
-            source_chip: None,
-        };
-        assert_eq!(msg.anchor, anchor);
-        assert!((msg.tether_distance - 200.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn spawn_chain_bolt_debug_format() {
-        let msg = SpawnChainBolt {
-            anchor: Entity::PLACEHOLDER,
-            tether_distance: 150.0,
-            source_chip: None,
-        };
-        let debug = format!("{msg:?}");
-        assert!(debug.contains("SpawnChainBolt"));
-        assert!(debug.contains("anchor"));
-        assert!(debug.contains("tether_distance"));
     }
 
     #[test]

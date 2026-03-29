@@ -46,28 +46,29 @@ StagedEffects(Vec<(String, EffectNode)>) — working set, consumed when matched
 
 ## Trigger bridge system state (src/effect/triggers/)
 
-ALL trigger bridges are stubs as of the effect-system-rewrite. Each registers a
-FixedUpdate system that does nothing. "Wired in Wave 8" comments throughout.
+Most trigger bridges are stubs. "Wired in Wave 8" comments throughout.
 
 - bump, perfect_bump, early_bump, late_bump, bump_whiff, no_bump — stubs
 - bumped, perfect_bumped, early_bumped, late_bumped — stubs
 - impact, impacted — stubs (these consume the collision messages)
-- death, died — stubs (these consume RequestCellDestroyed / RequestBoltDestroyed)
+- death — REAL: bridge_death reads RequestCellDestroyed/RequestBoltDestroyed, fires Trigger::Death globally on all BoundEffects entities (in EffectSystems::Bridge, FixedUpdate)
+- died — REAL: bridge_died reads same messages, fires Trigger::Died only on the dying entity (targeted, in EffectSystems::Bridge, FixedUpdate)
 - bolt_lost — stub
 - node_start, node_end — stubs
-- timer, until — stubs
+- timer — REAL: tick_time_expires (was already noted below)
+- until — REAL: desugar_until (was already noted below)
 
 ## EffectSystems set (src/effect/sets.rs)
 
 EffectSystems::Bridge — the label for all trigger bridge systems
 
-## Gap: bridge_cell_death / bridge_bolt_death
+## Confirmed: death/died bridges are live (corrected from earlier memory)
 
-Documentation in bolt/messages.rs and cells/messages.rs references "bridge_cell_death"
-and "bridge_bolt_death" as consumers of RequestCellDestroyed/RequestBoltDestroyed.
-These systems do NOT exist yet. The effect death/died triggers are stubs.
-As a result, CellDestroyedAt is NOT currently emitted by any real bridge system —
-the docs are forward-looking placeholders for Wave 8 wiring.
+bridge_death and bridge_died both exist in src/effect/triggers/ and are fully implemented
+with tests. They consume RequestCellDestroyed and RequestBoltDestroyed and fire Trigger::Death
+(global) and Trigger::Died (targeted) respectively into the BoundEffects evaluation pipeline.
+cleanup_cell (which emits CellDestroyedAt) runs after EffectSystems::Bridge to ensure bridges
+see the entity before it is despawned.
 
 ## Dispatch location (NOT in effect domain)
 

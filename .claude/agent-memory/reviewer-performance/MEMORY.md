@@ -1,2 +1,3 @@
 - [performance-baseline.md](performance-baseline.md) — Phase 1 entity scale, quadtree allocation costs, confirmed efficient/inefficient patterns, placeholder systems to watch
 - [phase3-stat-effects.md](phase3-stat-effects.md) — Phase 3 recalculate system analysis: run_if gap, unconditional recalc, Vec allocation, archetype impact, entity scale (0-5 entities)
+- [phase4-runtime-effects.md](phase4-runtime-effects.md) — Phase 4 shockwave/pulse/explode/attraction/second_wind: quadtree patterns, archetype impact, HashSet allocation timing, entity scale
