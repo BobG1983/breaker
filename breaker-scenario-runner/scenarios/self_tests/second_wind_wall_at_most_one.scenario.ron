@@ -1,0 +1,20 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [SecondWindWallAtMostOne],
+    expected_violations: Some([SecondWindWallAtMostOne]),
+    debug_setup: (
+        disable_physics: true,
+    ),
+    allow_early_end: false,
+    // Spawn 2 extra SecondWindWall entities at frame 30 — count becomes ≥ 2
+    // (at least 2 bare markers, likely more if effect spawned one already).
+    // The invariant fires as soon as count > 1.
+    frame_mutations: [
+        (frame: 30, mutation: SpawnExtraSecondWindWalls(2)),
+    ],
+)

@@ -1,47 +1,38 @@
 ---
 name: Current lint state
-description: Full workspace clippy result as of 2026-03-28 on feature/runtime-effects — game crate: 9 errors / 56+ warnings; all other crates clean except dsclippy fails due to game crate dependency
+description: Full workspace clippy result as of 2026-03-28 on feature/runtime-effects — Wave 2 run — game crate (lib test): 5 errors / 128 warnings; dsclippy: 1 warning (scenario runner test file)
 type: project
 ---
 
-Last run: 2026-03-28 (feature/runtime-effects branch) — post runtime-effects changes
+Last run: 2026-03-28 (feature/runtime-effects branch) — after Wave 2 changes
 
 ## Format: PASS
 
-## game crate (breaker-game): 9 errors, 56+ warnings (lib)
+## game crate (breaker-game, dclippy): 5 errors (lib test), 128 warnings (lib + lib test)
 
-### Errors (new — from recently modified files)
+### Errors (lib test)
 
-- `chain_lightning.rs:994` — `clippy::similar_names` — `cell_b_damage` too similar to `cell_a_damage`
-- `entropy_engine.rs:72` — `clippy::manual_string_new` — `"".into()` should be `String::new()`
-- `entropy_engine.rs:76` — `clippy::manual_string_new` — `"".into()` should be `String::new()`
-- `piercing_beam.rs:39` — `clippy::map_unwrap_or` — `.map(...).unwrap_or(...)` should be `.map_or(..., ...)`
-- `piercing_beam.rs:133` — `clippy::map_unwrap_or` — `.map(...).unwrap_or(...)` should be `.map_or(..., ...)`
-- `random_effect.rs:33` — `clippy::manual_string_new` — `"".into()` should be `String::new()`
-- `tether_beam.rs:152` — `clippy::doc_markdown` — `bolt_a` missing backticks in doc comment
-- `tether_beam.rs:152` — `clippy::doc_markdown` — `bolt_b` missing backticks in doc comment
-- `tether_beam.rs:176` — `clippy::single_match_else` — `match` with single pattern should be `if let`
-- `tether_beam.rs:183` — `clippy::single_match_else` — `match` with single pattern should be `if let`
-- `chain_lightning.rs:325` — `clippy::uninlined_format_args` (lib test) — use inlined format args
-- `entropy_engine.rs:190` — `clippy::uninlined_format_args` (lib test) — use inlined format args
+- `effect/effects/chain_lightning/tests/fire_tests.rs:657` — `clippy::uninlined_format_args` — variables can be used directly in format string
+- `effect/effects/shield.rs:165` — `clippy::cast_possible_truncation` — `f64 as u32` may truncate
+- `effect/effects/shield.rs:165` — `clippy::cast_sign_loss` — `f64 as u32` may lose sign
+- `effect/effects/tether_beam/tests/mod.rs:97` — `clippy::doc_markdown` — `effective_damage_multiplier` missing backticks in doc comment
+- `run/node/messages.rs:65` — `clippy::float_cmp` — strict `assert_eq!` on f32
 
-Note: lib reports 9 errors; lib test reports 12 (3 additional from test code in chain_lightning.rs)
-
-### Warning categories (lib — pre-existing / stubs)
-- `unused_imports` (2) — breaker/systems/mod.rs:25; chips/dispatch_chip_effects/system.rs:11; effect/triggers/until.rs:317
-- `dead_code` (5) — breaker/queries.rs:117; breaker/systems/init_breaker/system.rs (3 fns); cells/definition.rs:94; cells/messages.rs:25
-- `private_interfaces` (4) — chain_lightning.rs:102; piercing_beam.rs:88; tether_beam.rs:160 (2x)
-- `option_if_let_else` (nursery) — bolt/systems/bolt_breaker_collision/system.rs:103
-- `unwrap_used` (pedantic/warn) — bolt/systems/bolt_wall_collision.rs:110; chain_lightning.rs:66; entropy_engine.rs:37
+### Warning categories (lib — recurring stubs/effects)
+- `unused_imports` (3) — breaker/systems/mod.rs:25; chips/dispatch_chip_effects/system.rs:11; effect/triggers/until.rs:317
+- `dead_code` (4+) — breaker/queries.rs:117; breaker/systems/init_breaker/system.rs (3 fns + 1 const fn); cells/definition.rs:94; cells/messages.rs:25; chain_lightning.rs:28; pulse.rs:46; shockwave.rs:17; tether_beam.rs:21
 - `missing_const_for_fn` (nursery, ~20+) — effect stubs across effects/ and triggers/
 - `use_self` (nursery, 6) — effect/core/types.rs
-- `suboptimal_flops` (nursery, ~5) — attraction.rs, gravity_well.rs, pulse.rs, shockwave.rs
-- `needless_pass_by_ref_mut` (nursery, 4) — chain_lightning.rs:94; explode.rs:37; piercing_beam.rs:78; shockwave.rs:61
+- `suboptimal_flops` (nursery, 6) — attraction.rs, gravity_well.rs, pulse.rs, shockwave.rs
+- `needless_pass_by_ref_mut` (nursery, 4) — chain_lightning.rs:100; explode.rs:45; piercing_beam.rs:84; shockwave.rs:71
 - `derive_partial_eq_without_eq` (nursery, 2) — bolt/components.rs:94; piercing.rs:32
+- `option_if_let_else` (nursery, 2) — bolt_breaker_collision/system.rs:103; attraction.rs:132
+- `unwrap_used` (pedantic/warn, 4) — bolt_lost/system.rs:118; bolt_wall_collision.rs:110; chain_lightning.rs:78; entropy_engine.rs:38
 - `redundant_clone` (nursery, 1) — effect/triggers/timer.rs:143
-- `or_fun_call` (nursery, 1) — tether_beam.rs:172
+- `or_fun_call` (nursery, 1) — tether_beam.rs:94
+- `unreachable_pub` (~50+) — effect/* items that should be pub(crate)
 
 ## rantzsoft_spatial2d: PASS (0 warnings, 0 errors)
 ## rantzsoft_physics2d: PASS (0 warnings, 0 errors)
 ## rantzsoft_defaults: PASS (0 warnings, 0 errors)
-## breaker-scenario-runner: FAIL (game crate compilation fails; no scenario-runner-specific errors)
+## breaker-scenario-runner (dsclippy): 1 warning — lifecycle/tests/mod.rs:7 unused imports (pre-existing)

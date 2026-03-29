@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::run::node::resources::NodeTimer;
+use breaker::run::node::{messages::ReverseTimePenalty, resources::NodeTimer};
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -10,13 +10,23 @@ use crate::{invariants::*, types::InvariantKind};
 /// (same-duration node transition). If `remaining` increases otherwise, appends a
 /// [`ViolationEntry`] with [`InvariantKind::TimerMonotonicallyDecreasing`].
 ///
+/// **`ReverseTimePenalty` exemption**: when a [`ReverseTimePenalty`] message is
+/// present in the current tick, a timer increase is expected (the effect adds
+/// seconds back) and is silently skipped. This prevents false positives when the
+/// `TimePenalty` effect is reversed (e.g. on node end or effect expiry).
+///
 /// Skips and resets when [`NodeTimer`] is absent.
 pub fn check_timer_monotonically_decreasing(
     timer: Option<Res<NodeTimer>>,
     mut previous: Local<Option<(f32, f32)>>,
     frame: Res<ScenarioFrame>,
+    mut reverse_reader: MessageReader<ReverseTimePenalty>,
     mut log: ResMut<ViolationLog>,
 ) {
+    // Consume all ReverseTimePenalty messages this tick.
+    // If any were sent, a timer increase is legitimate.
+    let reverse_penalty_this_tick = reverse_reader.read().next().is_some();
+
     let Some(timer) = timer else {
         *previous = None;
         return;
@@ -40,6 +50,11 @@ pub fn check_timer_monotonically_decreasing(
                 *previous = Some((current, current_total));
                 return;
             }
+            // Legitimate increase from ReverseTimePenalty — skip, don't fire.
+            if reverse_penalty_this_tick {
+                *previous = Some((current, current_total));
+                return;
+            }
             log.0.push(ViolationEntry {
                 frame: frame.0,
                 invariant: InvariantKind::TimerMonotonicallyDecreasing,
@@ -56,6 +71,8 @@ pub fn check_timer_monotonically_decreasing(
 
 #[cfg(test)]
 mod tests {
+    use breaker::run::node::messages::ReverseTimePenalty;
+
     use super::*;
 
     fn tick(app: &mut App) {
@@ -69,6 +86,7 @@ mod tests {
     fn test_app_timer_monotonic() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
+            .add_message::<ReverseTimePenalty>()
             .insert_resource(ViolationLog::default())
             .insert_resource(ScenarioFrame::default())
             .add_systems(FixedUpdate, check_timer_monotonically_decreasing);
@@ -368,6 +386,95 @@ mod tests {
             1,
             "expected exactly 1 TimerMonotonicallyDecreasing violation when remaining \
             increases from 0.0 to 80.0, got: {:?}",
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)
+                .map(|e| &e.message)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// When `ReverseTimePenalty` is sent on the same tick that the timer increases,
+    /// no violation should fire — the increase is legitimate (seconds added back).
+    #[test]
+    fn timer_monotonically_decreasing_no_violation_when_reverse_time_penalty_sent() {
+        let mut app = test_app_timer_monotonic();
+
+        app.insert_resource(NodeTimer {
+            remaining: 20.0,
+            total: 60.0,
+        });
+
+        // Tick 1: seeds Local with (20.0, 60.0)
+        tick(&mut app);
+
+        assert!(
+            app.world().resource::<ViolationLog>().0.is_empty(),
+            "no violation expected after seeding tick"
+        );
+
+        // Timer increases to 25.0 — normally a violation.
+        app.world_mut().resource_mut::<NodeTimer>().remaining = 25.0;
+
+        // Send a ReverseTimePenalty message — exempts this increase.
+        app.world_mut()
+            .resource_mut::<Messages<ReverseTimePenalty>>()
+            .write(ReverseTimePenalty { seconds: 5.0 });
+
+        // Tick 2: remaining 20.0 → 25.0 with ReverseTimePenalty → no violation.
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert!(
+            !log.0
+                .iter()
+                .any(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing),
+            "expected no TimerMonotonicallyDecreasing violation when ReverseTimePenalty \
+            was sent on the same tick the timer increased, got: {:?}",
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)
+                .map(|e| &e.message)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// Without `ReverseTimePenalty`, the same timer increase IS a violation.
+    ///
+    /// Regression guard: verifies the exemption is not silently applied when no
+    /// message was sent (guards against off-by-one or always-exempt bugs).
+    #[test]
+    fn timer_monotonically_decreasing_fires_when_no_reverse_penalty_despite_increase() {
+        let mut app = test_app_timer_monotonic();
+
+        app.insert_resource(NodeTimer {
+            remaining: 20.0,
+            total: 60.0,
+        });
+
+        // Tick 1: seeds Local with (20.0, 60.0)
+        tick(&mut app);
+
+        assert!(
+            app.world().resource::<ViolationLog>().0.is_empty(),
+            "no violation expected after seeding tick"
+        );
+
+        // Timer increases — no ReverseTimePenalty → violation.
+        app.world_mut().resource_mut::<NodeTimer>().remaining = 25.0;
+
+        // Tick 2: remaining 20.0 → 25.0, no message → violation.
+        tick(&mut app);
+
+        let log = app.world().resource::<ViolationLog>();
+        assert_eq!(
+            log.0
+                .iter()
+                .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)
+                .count(),
+            1,
+            "expected exactly 1 TimerMonotonicallyDecreasing violation when remaining \
+            increases without ReverseTimePenalty, got: {:?}",
             log.0
                 .iter()
                 .filter(|v| v.invariant == InvariantKind::TimerMonotonicallyDecreasing)

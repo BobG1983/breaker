@@ -139,6 +139,49 @@ fn frame_mutation_inject_maxed_chip_offer_parses_from_ron() {
     );
 }
 
+#[test]
+fn frame_mutation_spawn_extra_second_wind_walls_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraSecondWindWalls(2))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraSecondWindWalls should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraSecondWindWalls(2));
+}
+
+#[test]
+fn frame_mutation_inject_zero_charge_shield_parses_from_ron() {
+    let ron = "(frame: 30, mutation: InjectZeroChargeShield)";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectZeroChargeShield should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::InjectZeroChargeShield);
+}
+
+#[test]
+fn frame_mutation_spawn_extra_pulse_rings_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraPulseRings(25))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraPulseRings should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraPulseRings(25));
+}
+
+#[test]
+fn frame_mutation_inject_wrong_effective_speed_parses_from_ron() {
+    let ron = "(frame: 30, mutation: InjectWrongEffectiveSpeed(wrong_value: 99.0))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectWrongEffectiveSpeed should parse");
+    assert_eq!(result.frame, 30);
+    assert!(
+        matches!(
+            result.mutation,
+            MutationKind::InjectWrongEffectiveSpeed { wrong_value }
+            if (wrong_value - 99.0).abs() < f32::EPSILON
+        ),
+        "InjectWrongEffectiveSpeed should parse with wrong_value=99.0"
+    );
+}
+
 // -------------------------------------------------------------------------
 // ScenarioBreakerState — all variants parse from RON
 // -------------------------------------------------------------------------

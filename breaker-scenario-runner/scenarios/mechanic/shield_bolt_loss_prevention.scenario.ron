@@ -1,0 +1,26 @@
+// Adversarial: Shield fires at NodeStart with 3 charges. The breaker is nearly stationary
+// (action_prob 0.01), so the bolt will frequently reach the bottom of the playfield and
+// trigger bolt-loss events. Each charge should absorb one bolt loss without decrementing
+// the run's live count. If Shield charges are double-consumed on a single loss event,
+// or if charges don't decrement at all (making Shield permanent), the charge tracking
+// is broken. NoEntityLeaks catches if Shield component entities leak after charge exhaustion.
+// BoltInBounds catches if Shield prevents the bolt-loss path but leaves the bolt outside bounds.
+// 10000 frames gives enough time to exhaust all charges and verify normal bolt-loss resumes.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.01)),
+    max_frames: 10000,
+    invariants: [NoEntityLeaks, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 5555,
+    initial_effects: [
+        On(target: Breaker, then: [
+            When(trigger: NodeStart, then: [
+                Do(Shield(stacks: 3)),
+            ]),
+        ]),
+    ],
+)

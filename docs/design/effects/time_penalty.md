@@ -10,8 +10,8 @@ Subtracts time from the node timer.
 
 ## Behavior
 
-Subtracts `seconds` from the current node timer.
+Sends `ApplyTimePenalty { seconds }` message. The `apply_time_penalty` system in the node subdomain reads the message and subtracts `seconds` from `NodeTimer::remaining`, clamping to 0.0 minimum.
 
 ## Reversal
 
-Adds `seconds` back to the node timer.
+Sends `ReverseTimePenalty { seconds }` message. The `reverse_time_penalty` system in the node subdomain reads the message and adds `seconds` back to `NodeTimer::remaining`, clamping to `NodeTimer::total`.

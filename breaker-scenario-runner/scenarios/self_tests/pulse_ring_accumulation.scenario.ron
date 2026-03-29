@@ -1,0 +1,20 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [PulseRingAccumulation],
+    expected_violations: Some([PulseRingAccumulation]),
+    debug_setup: (
+        disable_physics: true,
+    ),
+    allow_early_end: false,
+    // PulseRing count ceiling is max_pulse_ring_count (default 20).
+    // Spawn 25 bare PulseRing entities — 5 over the default threshold.
+    // Simulates a despawn-system failure causing rings to accumulate.
+    frame_mutations: [
+        (frame: 30, mutation: SpawnExtraPulseRings(25)),
+    ],
+)

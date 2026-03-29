@@ -29,7 +29,8 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `NodeCleared` | run/node (track_node_completion) | run (handle_node_cleared) |
 | `TimerExpired` | run/node (tick_node_timer) | run (handle_timer_expired) |
 | `RunLost` | effect/effects/life_lost (handle_life_lost) | run (handle_run_lost) |
-| `ApplyTimePenalty { seconds }` | effect/effects/time_penalty (handle_time_penalty) | run/node (apply_time_penalty) |
+| `ApplyTimePenalty { seconds }` | effect/effects/time_penalty (fire) | run/node (apply_time_penalty) |
+| `ReverseTimePenalty { seconds }` | effect/effects/time_penalty (reverse) | run/node (reverse_time_penalty) |
 | `RequestBoltDestroyed { bolt }` | bolt (bolt_lost) | effect (bridge_bolt_death), bolt (cleanup_destroyed_bolts) |
 | `ChipSelected { name }` | UI (handle_chip_input) | chips (dispatch_chip_effects) |
 | `HighlightTriggered { kind }` | run (detect_mass_destruction, detect_close_save, detect_combo_king, detect_pinball_wizard, detect_nail_biter, detect_first_evolution, detect_most_powerful_evolution, track_node_cleared_stats) | run (spawn_highlight_text) |
@@ -48,6 +49,4 @@ Each effect module in `effect/effects/` provides `fire()`, `reverse()`, and `reg
 
 ## Registered Messages (no active producer/consumer)
 
-| Message | Notes |
-|---------|-------|
-| `SpawnAdditionalBolt` | Registered in BoltPlugin. No active producer or consumer — `spawn_bolts::fire()` and `chain_bolt::fire()` spawn directly via `&mut World`. May be placeholder for future cross-domain spawn coordination. |
+*None — all previously registered-but-unused messages have been removed.*

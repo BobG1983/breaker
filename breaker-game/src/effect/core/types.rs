@@ -162,6 +162,11 @@ fn one() -> u32 {
     1
 }
 
+/// Serde default helper for [`EffectKind::Pulse::interval`].
+fn default_pulse_interval() -> f32 {
+    0.5
+}
+
 /// The action an effect performs. Each variant maps to a per-module `fire()`
 /// and `reverse()` function.
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -191,7 +196,15 @@ pub enum EffectKind {
     /// Flat bump force increase.
     BumpForce(f32),
     /// Steer toward nearest entity of a type.
-    Attraction(AttractionType, f32),
+    Attraction {
+        /// Which entity type to attract toward.
+        attraction_type: AttractionType,
+        /// Attraction strength.
+        force: f32,
+        /// Optional maximum force magnitude per tick. Clamps velocity delta.
+        #[serde(default)]
+        max_force: Option<f32>,
+    },
     /// Decrement lives.
     LoseLife,
     /// Subtract time from node timer.
@@ -216,13 +229,9 @@ pub enum EffectKind {
         /// Maximum distance between the two chained bolts.
         tether_distance: f32,
     },
-    /// Temporary breaker protection.
+    /// Temporary breaker protection (charge-based).
     Shield {
-        /// Base duration in seconds.
-        base_duration: f32,
-        /// Extra duration per stack.
-        duration_per_level: f32,
-        /// Current stack count.
+        /// Current stack count (becomes charge count).
         stacks: u32,
     },
     /// Arc damage jumping between nearby cells.
@@ -251,6 +260,9 @@ pub enum EffectKind {
         stacks: u32,
         /// Expansion speed.
         speed: f32,
+        /// Seconds between ring emissions.
+        #[serde(default = "default_pulse_interval")]
+        interval: f32,
     },
     /// Invisible bottom wall that bounces bolt once.
     SecondWind,
@@ -329,8 +341,18 @@ impl EffectKind {
             Self::Piercing(v) => super::super::effects::piercing::fire(entity, *v, world),
             Self::SizeBoost(v) => super::super::effects::size_boost::fire(entity, *v, world),
             Self::BumpForce(v) => super::super::effects::bump_force::fire(entity, *v, world),
-            Self::Attraction(t, f) => {
-                super::super::effects::attraction::fire(entity, *t, *f, world);
+            Self::Attraction {
+                attraction_type,
+                force,
+                max_force,
+            } => {
+                super::super::effects::attraction::fire(
+                    entity,
+                    *attraction_type,
+                    *force,
+                    *max_force,
+                    world,
+                );
             }
             Self::LoseLife => super::super::effects::life_lost::fire(entity, world),
             Self::TimePenalty { seconds } => {
@@ -355,17 +377,9 @@ impl EffectKind {
     /// Fire AOE, spawn, and utility effects — extracted from [`fire`] for line count.
     fn fire_aoe_and_spawn(&self, entity: Entity, world: &mut World) {
         match self {
-            Self::Shield {
-                base_duration,
-                duration_per_level,
-                stacks,
-            } => super::super::effects::shield::fire(
-                entity,
-                *base_duration,
-                *duration_per_level,
-                *stacks,
-                world,
-            ),
+            Self::Shield { stacks } => {
+                super::super::effects::shield::fire(entity, *stacks, world);
+            }
             Self::ChainLightning {
                 arcs,
                 range,
@@ -385,12 +399,14 @@ impl EffectKind {
                 range_per_level,
                 stacks,
                 speed,
+                interval,
             } => super::super::effects::pulse::fire(
                 entity,
                 *base_range,
                 *range_per_level,
                 *stacks,
                 *speed,
+                *interval,
                 world,
             ),
             Self::SecondWind => super::super::effects::second_wind::fire(entity, world),
@@ -442,8 +458,18 @@ impl EffectKind {
             Self::Piercing(v) => super::super::effects::piercing::reverse(entity, *v, world),
             Self::SizeBoost(v) => super::super::effects::size_boost::reverse(entity, *v, world),
             Self::BumpForce(v) => super::super::effects::bump_force::reverse(entity, *v, world),
-            Self::Attraction(t, f) => {
-                super::super::effects::attraction::reverse(entity, *t, *f, world);
+            Self::Attraction {
+                attraction_type,
+                force,
+                max_force,
+            } => {
+                super::super::effects::attraction::reverse(
+                    entity,
+                    *attraction_type,
+                    *force,
+                    *max_force,
+                    world,
+                );
             }
             Self::LoseLife => super::super::effects::life_lost::reverse(entity, world),
             Self::TimePenalty { seconds } => {
@@ -515,3 +541,114 @@ pub struct BoundEffects(pub Vec<(String, EffectNode)>);
 /// Each entry is `(chip_name, node)`.
 #[derive(Component, Debug, Default, Clone)]
 pub struct StagedEffects(pub Vec<(String, EffectNode)>);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Behavior 1: EffectKind::Pulse carries an interval field (serde round-trip) ──
+
+    #[test]
+    fn pulse_serde_round_trip_with_explicit_interval() {
+        let ron_str =
+            "Pulse(base_range: 32.0, range_per_level: 8.0, stacks: 1, speed: 50.0, interval: 0.25)";
+        let effect: EffectKind =
+            ron::from_str(ron_str).expect("should deserialize Pulse with explicit interval");
+
+        match &effect {
+            EffectKind::Pulse {
+                base_range,
+                range_per_level,
+                stacks,
+                speed,
+                interval,
+            } => {
+                assert!(
+                    (*base_range - 32.0).abs() < f32::EPSILON,
+                    "expected base_range 32.0, got {base_range}"
+                );
+                assert!(
+                    (*range_per_level - 8.0).abs() < f32::EPSILON,
+                    "expected range_per_level 8.0, got {range_per_level}"
+                );
+                assert_eq!(*stacks, 1, "expected stacks 1");
+                assert!(
+                    (*speed - 50.0).abs() < f32::EPSILON,
+                    "expected speed 50.0, got {speed}"
+                );
+                assert!(
+                    (*interval - 0.25).abs() < f32::EPSILON,
+                    "expected interval 0.25, got {interval}"
+                );
+            }
+            other => panic!("expected Pulse variant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn pulse_serde_default_interval_when_omitted() {
+        let ron_str = "Pulse(base_range: 32.0, range_per_level: 8.0, stacks: 1, speed: 50.0)";
+        let effect: EffectKind = ron::from_str(ron_str)
+            .expect("should deserialize Pulse with omitted interval using serde default");
+
+        match &effect {
+            EffectKind::Pulse { interval, .. } => {
+                assert!(
+                    (*interval - 0.5).abs() < f32::EPSILON,
+                    "expected default interval 0.5, got {interval}"
+                );
+            }
+            other => panic!("expected Pulse variant, got {other:?}"),
+        }
+    }
+
+    // ── Behavior 6: EffectKind::Attraction carries a max_force field (serde round-trip) ──
+
+    #[test]
+    fn attraction_serde_round_trip_with_explicit_max_force() {
+        let ron_str = "Attraction(attraction_type: Cell, force: 500.0, max_force: Some(300.0))";
+        let effect: EffectKind =
+            ron::from_str(ron_str).expect("should deserialize Attraction with explicit max_force");
+
+        match &effect {
+            EffectKind::Attraction {
+                attraction_type,
+                force,
+                max_force,
+            } => {
+                assert_eq!(
+                    *attraction_type,
+                    AttractionType::Cell,
+                    "expected attraction_type Cell"
+                );
+                assert!(
+                    (*force - 500.0).abs() < f32::EPSILON,
+                    "expected force 500.0, got {force}"
+                );
+                assert_eq!(
+                    *max_force,
+                    Some(300.0),
+                    "expected max_force Some(300.0), got {max_force:?}"
+                );
+            }
+            other => panic!("expected Attraction variant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn attraction_serde_default_max_force_when_omitted() {
+        let ron_str = "Attraction(attraction_type: Cell, force: 500.0)";
+        let effect: EffectKind = ron::from_str(ron_str)
+            .expect("should deserialize Attraction with omitted max_force using serde default");
+
+        match &effect {
+            EffectKind::Attraction { max_force, .. } => {
+                assert_eq!(
+                    *max_force, None,
+                    "expected default max_force None, got {max_force:?}"
+                );
+            }
+            other => panic!("expected Attraction variant, got {other:?}"),
+        }
+    }
+}

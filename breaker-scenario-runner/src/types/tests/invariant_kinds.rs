@@ -66,6 +66,34 @@ fn invariant_kind_run_stats_monotonic_parses() {
     assert_eq!(result, InvariantKind::RunStatsMonotonic);
 }
 
+#[test]
+fn invariant_kind_second_wind_wall_at_most_one_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("SecondWindWallAtMostOne").expect("SecondWindWallAtMostOne should parse");
+    assert_eq!(result, InvariantKind::SecondWindWallAtMostOne);
+}
+
+#[test]
+fn invariant_kind_shield_charges_consistent_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("ShieldChargesConsistent").expect("ShieldChargesConsistent should parse");
+    assert_eq!(result, InvariantKind::ShieldChargesConsistent);
+}
+
+#[test]
+fn invariant_kind_pulse_ring_accumulation_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("PulseRingAccumulation").expect("PulseRingAccumulation should parse");
+    assert_eq!(result, InvariantKind::PulseRingAccumulation);
+}
+
+#[test]
+fn invariant_kind_effective_speed_consistent_parses() {
+    let result: InvariantKind = ron::de::from_str("EffectiveSpeedConsistent")
+        .expect("EffectiveSpeedConsistent should parse");
+    assert_eq!(result, InvariantKind::EffectiveSpeedConsistent);
+}
+
 // -------------------------------------------------------------------------
 // InvariantKind::fail_reason — each variant returns non-empty string
 // -------------------------------------------------------------------------

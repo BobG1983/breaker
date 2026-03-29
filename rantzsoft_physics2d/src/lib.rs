@@ -19,6 +19,7 @@ pub mod collision_layers;
 pub mod constraint;
 pub mod plugin;
 pub mod prelude;
+/// Spatial partitioning quadtree for broad-phase collision queries.
 pub mod quadtree;
 pub mod resources;
 pub(crate) mod systems;

@@ -51,11 +51,14 @@ pub(crate) fn bolt_lost(
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
     bolt_query: Query<LostQuery, ActiveFilter>,
-    breaker_query: Query<(&Position2D, Has<ShieldActive>), CollisionFilterBreaker>,
+    mut breaker_query: Query<
+        (Entity, &Position2D, Option<&mut ShieldActive>),
+        CollisionFilterBreaker,
+    >,
     mut writers: BoltLostWriters,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
-    let Ok((breaker_position, has_shield)) = breaker_query.single() else {
+    let Ok((breaker_entity, breaker_position, mut shield_opt)) = breaker_query.single_mut() else {
         return;
     };
     let breaker_pos = breaker_position.0;
@@ -97,7 +100,10 @@ pub(crate) fn bolt_lost(
     );
 
     for entry in &*lost_bolts {
-        if has_shield {
+        // Check shield charge per bolt — each bolt consumes one charge independently
+        let shield_active = shield_opt.as_mut().is_some_and(|s| s.charges > 0);
+
+        if shield_active {
             // Shield reflection — no BoltLost sent, applies to ALL bolts (baseline + extra)
             let reflected_vel = Vec2::new(entry.current_velocity.x, entry.current_velocity.y.abs());
             let clamped_y = playfield.bottom() + entry.effective_radius;
@@ -107,6 +113,13 @@ pub(crate) fn bolt_lost(
                 PreviousPosition(clamped_pos),
                 Velocity2D(reflected_vel),
             ));
+
+            // Decrement shield charge
+            let shield = shield_opt.as_mut().unwrap();
+            shield.charges -= 1;
+            if shield.charges == 0 {
+                commands.entity(breaker_entity).remove::<ShieldActive>();
+            }
         } else if entry.is_extra {
             writers.writer.write(BoltLost);
             if let Ok(ref mut destroyed_writer) = writers.request_destroyed_writer {

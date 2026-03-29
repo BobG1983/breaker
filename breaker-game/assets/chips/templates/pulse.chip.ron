@@ -6,7 +6,7 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: PerfectBumped, then: [
-                    Do(Pulse(base_range: 16.0, range_per_level: 4.0, stacks: 1, speed: 600.0)),
+                    Do(Pulse(base_range: 16.0, range_per_level: 4.0, stacks: 1, speed: 600.0, interval: 0.5)),
                 ]),
             ]),
         ],
@@ -16,7 +16,7 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: Bumped, then: [
-                    Do(Pulse(base_range: 20.0, range_per_level: 5.0, stacks: 1, speed: 600.0)),
+                    Do(Pulse(base_range: 20.0, range_per_level: 5.0, stacks: 1, speed: 600.0, interval: 0.4)),
                 ]),
             ]),
         ],
@@ -26,7 +26,7 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: Bumped, then: [
-                    Do(Pulse(base_range: 24.0, range_per_level: 6.0, stacks: 2, speed: 700.0)),
+                    Do(Pulse(base_range: 24.0, range_per_level: 6.0, stacks: 2, speed: 700.0, interval: 0.3)),
                 ]),
             ]),
         ],

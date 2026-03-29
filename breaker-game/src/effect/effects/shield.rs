@@ -1,34 +1,27 @@
 use bevy::prelude::*;
 
-use crate::shared::playing_state::PlayingState;
-
 /// Marks an active shield on the owning entity.
+///
+/// Charges decrement on each bolt saved. When charges reach zero the component
+/// is removed.
 #[derive(Component)]
 pub struct ShieldActive {
-    /// Remaining duration in seconds.
-    pub remaining: f32,
-    /// Entity that owns this shield.
-    pub owner: Entity,
+    /// Number of bolt-saves remaining.
+    pub charges: u32,
 }
 
-pub(crate) fn fire(
-    entity: Entity,
-    base_duration: f32,
-    duration_per_level: f32,
-    stacks: u32,
-    world: &mut World,
-) {
-    let extra_stacks = u16::try_from(stacks.saturating_sub(1)).unwrap_or(u16::MAX);
-    let effective_duration = base_duration + f32::from(extra_stacks) * duration_per_level;
-
-    // If entity already has a shield, extend remaining time.
+/// Inserts or adds charges to `ShieldActive`.
+///
+/// If the entity already has a shield, adds `stacks` to existing charges.
+/// If the entity has no shield and `stacks > 0`, inserts a new shield.
+/// If the entity has no shield and `stacks == 0`, does nothing (no-op).
+pub(crate) fn fire(entity: Entity, stacks: u32, world: &mut World) {
     if let Some(mut shield) = world.get_mut::<ShieldActive>(entity) {
-        shield.remaining += effective_duration;
-    } else {
-        world.entity_mut(entity).insert(ShieldActive {
-            remaining: effective_duration,
-            owner: entity,
-        });
+        shield.charges += stacks;
+    } else if stacks > 0 {
+        world
+            .entity_mut(entity)
+            .insert(ShieldActive { charges: stacks });
     }
 }
 
@@ -36,150 +29,186 @@ pub(crate) fn reverse(entity: Entity, world: &mut World) {
     world.entity_mut(entity).remove::<ShieldActive>();
 }
 
-/// Tick shield timers and remove expired shields.
-fn tick_shield(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut ShieldActive)>,
-) {
-    let dt = time.delta_secs();
-    for (entity, mut shield) in &mut query {
-        shield.remaining -= dt;
-        if shield.remaining <= 0.0 {
-            commands.entity(entity).remove::<ShieldActive>();
-        }
-    }
-}
-
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        tick_shield.run_if(in_state(PlayingState::Active)),
-    );
+pub(crate) fn register(_app: &mut App) {
+    // No runtime systems — charge decrement happens in bolt_lost.
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // ── fire tests ──────────────────────────────────────────────────
+    // ── Behavior 1: fire() inserts ShieldActive with charges equal to stacks ──
 
     #[test]
-    fn fire_inserts_shield_active_with_effective_duration() {
+    fn fire_inserts_shield_active_with_charges_equal_to_stacks() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        // stacks=1, base=5.0, per_level=2.0 → effective = 5.0 + 0*2.0 = 5.0
-        fire(entity, 5.0, 2.0, 1, &mut world);
+        fire(entity, 3, &mut world);
 
         let shield = world.get::<ShieldActive>(entity).unwrap();
-        assert!(
-            (shield.remaining - 5.0).abs() < f32::EPSILON,
-            "expected remaining 5.0, got {}",
-            shield.remaining
+        assert_eq!(
+            shield.charges, 3,
+            "fire(entity, 3) should insert ShieldActive {{ charges: 3 }}, got {}",
+            shield.charges
         );
-        assert_eq!(shield.owner, entity);
     }
 
     #[test]
-    fn fire_extends_existing_shield_duration() {
+    fn fire_inserts_shield_active_with_charges_1_minimum_meaningful() {
+        // Edge case: stacks = 1 results in ShieldActive { charges: 1 }
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        // First fire: effective = 5.0
-        fire(entity, 5.0, 2.0, 1, &mut world);
-
-        // Second fire: effective = 5.0 + (2-1)*2.0 = 7.0
-        fire(entity, 5.0, 2.0, 2, &mut world);
+        fire(entity, 1, &mut world);
 
         let shield = world.get::<ShieldActive>(entity).unwrap();
-        // 5.0 from first + 7.0 from second = 12.0
-        assert!(
-            (shield.remaining - 12.0).abs() < f32::EPSILON,
-            "expected remaining 12.0, got {}",
-            shield.remaining
+        assert_eq!(
+            shield.charges, 1,
+            "fire(entity, 1) should insert ShieldActive {{ charges: 1 }}, got {}",
+            shield.charges
         );
     }
+
+    // ── Behavior 2: fire() on entity with existing ShieldActive adds charges ──
+
+    #[test]
+    fn fire_on_existing_shield_adds_charges() {
+        let mut world = World::new();
+        let entity = world.spawn(ShieldActive { charges: 2 }).id();
+
+        fire(entity, 3, &mut world);
+
+        let shield = world.get::<ShieldActive>(entity).unwrap();
+        assert_eq!(
+            shield.charges, 5,
+            "fire(entity, 3) on existing charges: 2 should result in 5, got {}",
+            shield.charges
+        );
+    }
+
+    #[test]
+    fn fire_stacks_0_on_existing_shield_leaves_charges_unchanged() {
+        // Edge case: stacks = 0 adds 0 charges
+        let mut world = World::new();
+        let entity = world.spawn(ShieldActive { charges: 2 }).id();
+
+        fire(entity, 0, &mut world);
+
+        let shield = world.get::<ShieldActive>(entity).unwrap();
+        assert_eq!(
+            shield.charges, 2,
+            "fire(entity, 0) on existing charges: 2 should remain 2, got {}",
+            shield.charges
+        );
+    }
+
+    // ── Behavior 3: fire() with stacks=0 on entity WITHOUT ShieldActive is no-op ──
+
+    #[test]
+    fn fire_stacks_0_without_shield_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        fire(entity, 0, &mut world);
+
+        assert!(
+            world.get::<ShieldActive>(entity).is_none(),
+            "fire(entity, 0) without existing ShieldActive should not insert component"
+        );
+    }
+
+    // ── Behavior 4: reverse() removes ShieldActive ──
 
     #[test]
     fn reverse_removes_shield_active() {
         let mut world = World::new();
-        let entity = world.spawn_empty().id();
-
-        fire(entity, 5.0, 2.0, 1, &mut world);
-        assert!(world.get::<ShieldActive>(entity).is_some());
+        let entity = world.spawn(ShieldActive { charges: 5 }).id();
 
         reverse(entity, &mut world);
+
         assert!(
             world.get::<ShieldActive>(entity).is_none(),
-            "shield should be removed after reverse"
+            "reverse should remove ShieldActive component"
         );
     }
 
-    // ── system tests ────────────────────────────────────────────────
+    #[test]
+    fn reverse_without_shield_does_not_panic() {
+        // Edge case: reverse on entity without ShieldActive should not panic
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
 
-    fn test_app() -> App {
+        reverse(entity, &mut world); // should not panic
+    }
+
+    // ── Behavior 5: fire() uses new signature (compile-time constraint) ──
+    // This is implicitly verified by all tests above calling fire(entity, stacks, world).
+
+    // ── Behavior 6: tick_shield no longer exists — charges do not decay over time ──
+
+    #[test]
+    fn charges_do_not_decay_over_time() {
+        // Given: Entity with ShieldActive { charges: 3 }
+        // When: 10 seconds of game time elapse
+        // Then: charges remain 3, component still present
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
-        app.init_state::<crate::shared::game_state::GameState>();
-        app.add_sub_state::<PlayingState>();
-        app.add_systems(Update, tick_shield);
-        app
-    }
 
-    fn enter_playing(app: &mut App) {
-        app.world_mut()
-            .resource_mut::<NextState<crate::shared::game_state::GameState>>()
-            .set(crate::shared::game_state::GameState::Playing);
-        app.update();
-    }
+        // Register the shield module (which should be a no-op now)
+        register(&mut app);
 
-    #[test]
-    fn tick_shield_decrements_remaining_and_removes_on_expiry() {
-        let mut app = test_app();
-        enter_playing(&mut app);
+        let entity = app.world_mut().spawn(ShieldActive { charges: 3 }).id();
 
-        let entity = app
-            .world_mut()
-            .spawn(ShieldActive {
-                remaining: 0.0,
-                owner: Entity::PLACEHOLDER,
-            })
-            .id();
+        // Simulate 10 seconds worth of ticks (at default 64Hz fixed timestep)
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        let ticks_for_10_seconds: u32 =
+            u32::try_from((10.0_f64 / timestep.as_secs_f64()).ceil() as u64).unwrap_or(u32::MAX);
 
-        // After a tick, remaining should drop to <= 0 and shield gets removed
-        app.update();
-
-        assert!(
-            app.world().get::<ShieldActive>(entity).is_none(),
-            "shield should be removed when remaining <= 0"
-        );
-    }
-
-    #[test]
-    fn tick_shield_decrements_but_keeps_when_time_remains() {
-        let mut app = test_app();
-        enter_playing(&mut app);
-
-        let entity = app
-            .world_mut()
-            .spawn(ShieldActive {
-                remaining: 999.0,
-                owner: Entity::PLACEHOLDER,
-            })
-            .id();
-
-        app.update();
+        for _ in 0..ticks_for_10_seconds {
+            app.world_mut()
+                .resource_mut::<Time<Fixed>>()
+                .accumulate_overstep(timestep);
+            app.update();
+        }
 
         let shield = app.world().get::<ShieldActive>(entity).unwrap();
-        assert!(
-            shield.remaining < 999.0,
-            "shield remaining should have decremented"
-        );
-        assert!(
-            shield.remaining > 0.0,
-            "shield should still have time remaining"
+        assert_eq!(
+            shield.charges, 3,
+            "charges should not decay over time, expected 3, got {}",
+            shield.charges
         );
     }
+
+    #[test]
+    fn charges_1_does_not_decay_after_60_seconds() {
+        // Edge case: charges: 1 after 60 seconds — still charges: 1
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        register(&mut app);
+
+        let entity = app.world_mut().spawn(ShieldActive { charges: 1 }).id();
+
+        // 60 seconds at 64Hz = ~3840 ticks. Run a subset to keep test fast.
+        // Even a few hundred ticks proves no decay system is running.
+        let timestep = app.world().resource::<Time<Fixed>>().timestep();
+        for _ in 0..200 {
+            app.world_mut()
+                .resource_mut::<Time<Fixed>>()
+                .accumulate_overstep(timestep);
+            app.update();
+        }
+
+        let shield = app.world().get::<ShieldActive>(entity).unwrap();
+        assert_eq!(
+            shield.charges, 1,
+            "charges: 1 should not decay after time, expected 1, got {}",
+            shield.charges
+        );
+    }
+
+    // ── Behavior 7: ShieldActive no longer has remaining or owner fields ──
+    // This is a compile-time constraint verified by all tests constructing
+    // ShieldActive { charges: N } directly. If old fields existed without
+    // defaults, these constructions would fail to compile.
 }

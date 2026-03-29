@@ -1,0 +1,24 @@
+// Adversarial: SecondWind fires unconditionally at NodeStart, placing an invisible bottom wall.
+// The wall must despawn after the first bolt contact and must not re-spawn from the same trigger
+// in the same node. Chaos action_prob 0.05 keeps the breaker mostly stationary so the bolt
+// reaches the bottom wall repeatedly — if the wall isn't consumed on first contact and
+// accumulates as extra entities, NoEntityLeaks fires. BoltInBounds catches if the wall
+// mis-positions or the bolt escapes the playfield. 5000 frames gives many potential contacts.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.05)),
+    max_frames: 5000,
+    invariants: [NoEntityLeaks, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 1111,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: NodeStart, then: [
+                Do(SecondWind),
+            ]),
+        ]),
+    ],
+)

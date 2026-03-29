@@ -12,8 +12,10 @@ pub enum NodeSystems {
     TrackCompletion,
     /// Tick the node countdown timer.
     TickTimer,
-    /// Apply time penalties from breaker consequences.
+    /// Apply and reverse time penalties from effect consequences.
     ///
+    /// Contains both `apply_time_penalty` (subtracts) and `reverse_time_penalty` (adds back).
+    /// `reverse_time_penalty` runs before `apply_time_penalty` within this set.
     /// Runs after `TickTimer`. Systems that read `TimerExpired` should
     /// order `.after(NodeSystems::ApplyTimePenalty)` to see penalty-induced
     /// expirations in the same tick.

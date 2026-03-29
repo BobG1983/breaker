@@ -1,0 +1,26 @@
+// Adversarial: Pulse fires permanently on all bolts via Until(TimeExpires(0.5)), creating a
+// recurring cycle of pulse-install, expiry, reinstall. Dense layout means each pulse ring
+// immediately contacts many cells. If the Until cleanup fails to remove the Pulse entry from
+// BoundEffects, pulse rings accumulate permanently — each cycle adds another concurrent ring
+// emitter. NoEntityLeaks catches ring entities that outlive their emitters. NoNaN catches
+// NaN in pulse ring position when the source bolt is mid-despawn. 10000 frames gives many
+// Until-expiry cycles to compound. Stress: 32 runs to explore diverse timing overlaps.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 10000,
+    invariants: [NoEntityLeaks, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 4444,
+    initial_effects: [
+        On(target: Bolt, then: [
+            Until(trigger: TimeExpires(0.5), then: [
+                Do(Pulse(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 300.0, interval: 0.2)),
+            ]),
+        ]),
+    ],
+)

@@ -1,0 +1,30 @@
+// Adversarial: TetherBeam fires on every Bumped event. TetherBeam spawns two free-moving
+// bolts connected by a damaging beam — this doubles the bolt population on each bump and
+// exercises the beam contact lifecycle (spawn, tick, despawn) under sustained chaos.
+// Dense layout maximises cell coverage; chaos 0.5 drives repeated bumps that re-trigger
+// TetherBeam before prior beams have fully despawned. The adversarial risks: if TetherBeam
+// entities are not cleaned up, NoEntityLeaks fires. If the beam position is derived from
+// a bolt that went NaN (e.g. a tether partner despawned unexpectedly), NoNaN fires.
+// If tethered bolts escape CCD under extreme velocities, BoltCountReasonable fires when
+// the cleanup system fails to find them. max_bolt_count is raised to 16 to allow for
+// legitimate transient accumulation while still bounding unbounded growth.
+// 8000 frames of sustained chaos gives the cleanup cycle maximum opportunity to fail.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 8000,
+    invariants: [NoEntityLeaks, NoNaN, BoltCountReasonable],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 16),
+    allow_early_end: false,
+    seed: 6561,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Bumped, then: [
+                Do(TetherBeam(damage_mult: 1.5)),
+            ]),
+        ]),
+    ],
+)

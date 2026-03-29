@@ -1,0 +1,33 @@
+// Adversarial: Three SpeedBoost effects registered on distinct bump-timing triggers —
+// EarlyBumped (0.85x, a slight penalty), PerfectBumped (1.3x), LateBumped (0.9x, mild
+// penalty). Dense layout and chaos 0.5 drive a mix of all three timing outcomes.
+// The adversarial risk: if the trigger bridge incorrectly fires multiple timing variants
+// for the same bump event, stacked multipliers compound and blow past BoltMaxSpeed.
+// If timing tags are never cleared between bumps, old multipliers accumulate silently.
+// BoltSpeedInRange is the primary detector — it fires the moment bolt speed leaves the
+// configured min/max envelope. 5000 frames at moderate chaos ensures enough bump events
+// to exercise the full timing spectrum including back-to-back mixed timings.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 5000,
+    invariants: [BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 6174,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: EarlyBumped, then: [
+                Do(SpeedBoost(multiplier: 0.85)),
+            ]),
+            When(trigger: PerfectBumped, then: [
+                Do(SpeedBoost(multiplier: 1.3)),
+            ]),
+            When(trigger: LateBumped, then: [
+                Do(SpeedBoost(multiplier: 0.9)),
+            ]),
+        ]),
+    ],
+)
