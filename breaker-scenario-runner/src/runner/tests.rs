@@ -493,7 +493,7 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
                 invariants: vec![],
                 expected_violations: None,
                 debug_setup: None,
-                invariant_params: InvariantParams { max_bolt_count: 8 },
+                invariant_params: InvariantParams { max_bolt_count: 8, ..InvariantParams::default() },
                 allow_early_end: true,
                 stress: None,
                 ..Default::default()

@@ -1,0 +1,24 @@
+// Adversarial: PiercingBeam fires on every PerfectBumped event. Dense layout means the beam
+// can traverse an entire column of cells in one frame — the beam sweep must handle overlapping
+// hit registrations without leaking beam entities or corrupting cell positions into NaN.
+// The adversarial risk: if the beam fires at frame 1 before cells have settled into position,
+// or if a beam entity is not cleaned up before the next PerfectBumped, NoEntityLeaks fires.
+// 8000 frames at high chaos action probability (0.6) maximises perfect bump attempts.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 8000,
+    invariants: [NoEntityLeaks, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 7722,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                Do(PiercingBeam(damage_mult: 2.0, width: 16.0)),
+            ]),
+        ]),
+    ],
+)

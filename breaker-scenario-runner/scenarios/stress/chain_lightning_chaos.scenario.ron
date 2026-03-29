@@ -1,0 +1,26 @@
+// Adversarial: ChainLightning fires on every cell impact after an Impacted(Cell) trigger.
+// Dense layout maximises simultaneous cell hits — multiple arcs can be emitted in the same
+// frame when the bolt clips a cluster. Each arc jumps up to 3 cells at 96.0 range; overlapping
+// jump graphs test the arc cleanup cycle under concurrency. If arc entities leak, or if a
+// destroyed-cell position becomes NaN and propagates into the jump target calculation, one of
+// NoEntityLeaks/NoNaN/BoltInBounds will fire. Stress: 16 runs at different seeds to reach
+// varied cluster geometries.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 8000,
+    invariants: [NoEntityLeaks, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 5513,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Impacted(Cell), then: [
+                Do(ChainLightning(arcs: 3, range: 96.0, damage_mult: 1.5)),
+            ]),
+        ]),
+    ],
+)

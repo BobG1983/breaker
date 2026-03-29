@@ -1,0 +1,27 @@
+// Adversarial: Explode fires on every cell impact (Impacted(Cell)), producing an instant area
+// damage burst at the bolt's position. Dense layout means impacts are nearly continuous —
+// if Explode entities (or any intermediary damage-dispatch components) aren't cleaned up
+// frame-to-frame, NoEntityLeaks fires. High action_prob (0.6) drives rapid breaker movement
+// and bumps, ensuring impacts occur from many angles. A chain reaction where Explode damage
+// destroys adjacent cells triggering more Explode events is the critical path — if this
+// cascade creates unbounded work NoEntityLeaks or NoNaN will surface it.
+// Stress: 32 runs to explore diverse impact angles and cascade depths.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 8000,
+    invariants: [NoEntityLeaks, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 7777,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Impacted(Cell), then: [
+                Do(Explode(range: 64.0, damage_mult: 1.5)),
+            ]),
+        ]),
+    ],
+)

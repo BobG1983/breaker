@@ -1,0 +1,27 @@
+// Adversarial: SecondWind fires on BoltLost — the wall spawns reactively after the bolt
+// is already gone. This tests the edge case where the effect fires on a trigger that
+// indicates the bolt has left play: the wall must spawn correctly even though the bolt
+// entity that triggered it no longer exists in the playfield. The next served bolt should
+// then interact with the wall. Low action_prob (0.05) keeps the breaker stationary so
+// the bolt reaches the bottom repeatedly, exhausting the single-use wall on each loss cycle.
+// If the BoltLost handler fires SecondWind but the wall entity leaks (not consumed by the
+// next bolt), NoEntityLeaks fires. BoltInBounds ensures the wall doesn't misplace the bolt.
+// 5000 frames allows many bolt-loss / SecondWind-spawn / wall-contact cycles.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.05)),
+    max_frames: 5000,
+    invariants: [NoEntityLeaks, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 8888,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: BoltLost, then: [
+                Do(SecondWind),
+            ]),
+        ]),
+    ],
+)

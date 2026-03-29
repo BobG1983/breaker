@@ -48,7 +48,7 @@ mod tests {
                     input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
                     max_frames: 1000,
                     invariants: vec![],
-                    invariant_params: InvariantParams { max_bolt_count },
+                    invariant_params: InvariantParams { max_bolt_count, ..InvariantParams::default() },
                     ..Default::default()
                 },
             })

@@ -1,0 +1,25 @@
+// Adversarial: Attraction(Cell) fires permanently on all bolts, continuously steering the bolt
+// toward the nearest cell. Dense layout packs cells at varying distances — attraction force
+// interacts with every reflection, potentially amplifying velocity to unsafe magnitudes or
+// corrupting direction after a cell is destroyed mid-attraction. High action_prob (0.6)
+// drives rapid breaker movement and bumps that compete with the attraction force.
+// BoltSpeedInRange catches runaway speed if attraction bypasses clamping.
+// NoNaN catches direction corruption when the nearest-cell query returns a despawned entity.
+// Stress: 32 runs to explore different cell destruction orderings.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 8000,
+    invariants: [BoltInBounds, NoNaN, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 2222,
+    initial_effects: [
+        On(target: Bolt, then: [
+            Do(Attraction(attraction_type: Cell, force: 600.0, max_force: Some(400.0))),
+        ]),
+    ],
+)

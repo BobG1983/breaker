@@ -1,0 +1,28 @@
+// Adversarial: BumpForce(2.5) fires on every Bumped event in a Corridor layout under
+// extreme chaos (0.9). Corridor geometry guarantees near-continuous wall bounces, and the
+// high chaos probability drives frequent bump attempts including during dashes. Each bump
+// force application compounds the launch velocity applied to the bolt on the next bump.
+// The adversarial risk: if BumpForce values accumulate without being reversed (e.g. an
+// Until wrapper isn't present, so each Bumped permanently adds to ActiveBumpForces), the
+// effective force multiplier grows without bound and the bolt's post-bump velocity
+// exceeds BoltMaxSpeed. BoltSpeedInRange is the primary detector; BoltInBounds catches
+// position corruption if the high-speed bolt escapes CCD. NoNaN covers overflow.
+// 5000 frames of extreme chaos ensures hundreds of bumps and force applications.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.9)),
+    max_frames: 5000,
+    invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 2357,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Bumped, then: [
+                Do(BumpForce(2.5)),
+            ]),
+        ]),
+    ],
+)

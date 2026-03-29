@@ -1,0 +1,27 @@
+// Adversarial: QuickStop on the Breaker with a 3.0x deceleration multiplier under extreme
+// chaos (0.8 action probability). Corridor layout with hard left/right walls means the
+// breaker reaches edges frequently. The adversarial conditions: rapid direction reversals
+// at wall edges, dash attempts mid-deceleration, and QuickStop multiplier stacking if
+// reverse() is missed. If the breaker position is not clamped after a dash that overshoots,
+// BreakerPositionClamped fires. If EffectiveQuickStop accumulates without reversal,
+// the breaker freezes in a degenerated state and BreakerInBounds may fire on the next
+// dash. NoNaN covers f32 corruption in velocity/position under extreme deceleration.
+// 5000 frames of high-chaos input maximises edge-case breaker state machine transitions.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.8)),
+    max_frames: 5000,
+    invariants: [BreakerInBounds, BreakerPositionClamped, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 8191,
+    initial_effects: [
+        On(target: Breaker, then: [
+            When(trigger: Bumped, then: [
+                Do(QuickStop(multiplier: 3.0)),
+            ]),
+        ]),
+    ],
+)

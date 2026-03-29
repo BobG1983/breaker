@@ -144,6 +144,19 @@ pub enum InvariantKind {
     RunStatsMonotonic,
     /// Expected chip name not found in offerings during chip select.
     ChipOfferExpected,
+    /// At most 1 [`SecondWindWall`](breaker::effect::effects::second_wind::SecondWindWall)
+    /// entity should exist at any frame.
+    SecondWindWallAtMostOne,
+    /// [`ShieldActive`](breaker::effect::effects::shield::ShieldActive) must never
+    /// have `charges == 0` — zero-charge shields should be removed immediately.
+    ShieldChargesConsistent,
+    /// [`PulseRing`](breaker::effect::effects::pulse::PulseRing) entity count stays
+    /// within `invariant_params.max_pulse_ring_count`.
+    PulseRingAccumulation,
+    /// [`EffectiveSpeedMultiplier`](breaker::effect::EffectiveSpeedMultiplier) must
+    /// equal the product of all [`ActiveSpeedBoosts`](breaker::effect::effects::speed_boost::ActiveSpeedBoosts)
+    /// entries within floating-point epsilon.
+    EffectiveSpeedConsistent,
 }
 
 impl InvariantKind {
@@ -170,6 +183,10 @@ impl InvariantKind {
         Self::ChipStacksConsistent,
         Self::RunStatsMonotonic,
         Self::ChipOfferExpected,
+        Self::SecondWindWallAtMostOne,
+        Self::ShieldChargesConsistent,
+        Self::PulseRingAccumulation,
+        Self::EffectiveSpeedConsistent,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -196,6 +213,12 @@ impl InvariantKind {
             Self::ChipStacksConsistent => "held chip stacks exceed max_stacks",
             Self::RunStatsMonotonic => "run stats counter decreased mid-run",
             Self::ChipOfferExpected => "expected chip not found in offerings",
+            Self::SecondWindWallAtMostOne => "more than one SecondWindWall entity exists",
+            Self::ShieldChargesConsistent => "ShieldActive with zero charges not removed",
+            Self::PulseRingAccumulation => "PulseRing entity count exceeds maximum",
+            Self::EffectiveSpeedConsistent => {
+                "EffectiveSpeedMultiplier diverged from ActiveSpeedBoosts product"
+            }
         }
     }
 }
@@ -262,11 +285,21 @@ pub struct InvariantParams {
     /// Maximum bolt count before [`InvariantKind::BoltCountReasonable`] fires.
     #[serde(default = "InvariantParams::default_max_bolt_count")]
     pub max_bolt_count: usize,
+    /// Maximum [`PulseRing`](breaker::effect::effects::pulse::PulseRing) entity count before [`InvariantKind::PulseRingAccumulation`] fires.
+    ///
+    /// Default 20: conservative ceiling that catches accumulation bugs while tolerating
+    /// burst spawning from multiple simultaneous bolt emitters.
+    #[serde(default = "InvariantParams::default_max_pulse_ring_count")]
+    pub max_pulse_ring_count: usize,
 }
 
 impl InvariantParams {
     const fn default_max_bolt_count() -> usize {
         8
+    }
+
+    const fn default_max_pulse_ring_count() -> usize {
+        20
     }
 }
 
@@ -274,6 +307,7 @@ impl Default for InvariantParams {
     fn default() -> Self {
         Self {
             max_bolt_count: Self::default_max_bolt_count(),
+            max_pulse_ring_count: Self::default_max_pulse_ring_count(),
         }
     }
 }
@@ -487,6 +521,31 @@ pub enum MutationKind {
     InjectMaxedChipOffer {
         /// The chip name to inject as maxed in both inventory and offers.
         chip_name: String,
+    },
+    /// Spawn N extra `SecondWindWall` marker entities (no physics components).
+    ///
+    /// Used by the `second_wind_wall_at_most_one` self-test to trigger an
+    /// [`InvariantKind::SecondWindWallAtMostOne`] violation.
+    SpawnExtraSecondWindWalls(usize),
+    /// Inject a `ShieldActive { charges: 0 }` component on the breaker entity.
+    ///
+    /// Used by the `shield_charges_consistent` self-test to trigger a
+    /// [`InvariantKind::ShieldChargesConsistent`] violation.
+    InjectZeroChargeShield,
+    /// Spawn N extra `PulseRing` marker entities to push count above the threshold.
+    ///
+    /// Used by the `pulse_ring_accumulation` self-test to trigger a
+    /// [`InvariantKind::PulseRingAccumulation`] violation.
+    SpawnExtraPulseRings(usize),
+    /// Override `EffectiveSpeedMultiplier` to a wrong value on all entities that
+    /// also have `ActiveSpeedBoosts`.
+    ///
+    /// Used by the `effective_speed_consistent` self-test to trigger a
+    /// [`InvariantKind::EffectiveSpeedConsistent`] violation by creating
+    /// a stale/diverged multiplier.
+    InjectWrongEffectiveSpeed {
+        /// The incorrect value to set on `EffectiveSpeedMultiplier`.
+        wrong_value: f32,
     },
 }
 

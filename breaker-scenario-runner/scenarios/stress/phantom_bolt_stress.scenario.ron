@@ -1,0 +1,27 @@
+// Adversarial: SpawnPhantom fires on every PerfectBumped, spawning a temporary bolt with
+// infinite piercing. Dense layout gives phantoms many cells to pass through. High action_prob
+// (0.7) maximises perfect bump attempts, potentially spawning phantoms faster than they expire.
+// If phantom despawn on lifespan expiry is missed, BoltCountReasonable fires (cap: 16).
+// NoEntityLeaks catches lingering phantom components after the bolt entity is gone.
+// NoNaN catches direction corruption when a phantom travels through a just-destroyed cell.
+// Stress: 16 runs to explore diverse bump timing and phantom overlap patterns.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 8000,
+    invariants: [BoltCountReasonable, NoEntityLeaks, NoNaN],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 16),
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 3333,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                Do(SpawnPhantom(duration: 2.0, max_active: 3)),
+            ]),
+        ]),
+    ],
+)

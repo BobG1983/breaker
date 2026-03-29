@@ -1,0 +1,20 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [EffectiveSpeedConsistent],
+    expected_violations: Some([EffectiveSpeedConsistent]),
+    debug_setup: (
+        disable_physics: true,
+    ),
+    allow_early_end: false,
+    // Spawn an entity with ActiveSpeedBoosts([1.5]) and EffectiveSpeedMultiplier(99.0).
+    // Product = 1.5, effective = 99.0 → divergence well beyond epsilon.
+    // Simulates a stale/uncalculated EffectiveSpeedMultiplier after boosts change.
+    frame_mutations: [
+        (frame: 30, mutation: InjectWrongEffectiveSpeed(wrong_value: 99.0)),
+    ],
+)

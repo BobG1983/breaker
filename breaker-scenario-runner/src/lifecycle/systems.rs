@@ -11,7 +11,15 @@ use breaker::{
         resources::ForceBumpGrade,
     },
     chips::{ChipCatalog, inventory::ChipInventory},
-    effect::{BoundEffects, EffectNode, RootEffect, Target},
+    effect::{
+        BoundEffects, EffectNode, EffectiveSpeedMultiplier, RootEffect, Target,
+        effects::{
+            pulse::PulseRing,
+            second_wind::SecondWindWall,
+            shield::ShieldActive,
+            speed_boost::ActiveSpeedBoosts,
+        },
+    },
     input::resources::InputActions,
     run::{
         NodeLayout, NodeLayoutRegistry, RunStats,
@@ -34,8 +42,10 @@ use crate::{
         ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_count_reasonable,
         check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
         check_breaker_position_clamped, check_chip_offer_expected, check_chip_stacks_consistent,
-        check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-        check_offering_no_duplicates, check_physics_frozen_during_pause, check_run_stats_monotonic,
+        check_effective_speed_consistent, check_maxed_chip_never_offered, check_no_entity_leaks,
+        check_no_nan, check_offering_no_duplicates, check_physics_frozen_during_pause,
+        check_pulse_ring_accumulation, check_run_stats_monotonic,
+        check_second_wind_wall_at_most_one, check_shield_charges_consistent,
         check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
         check_valid_state_transitions,
     },
@@ -152,112 +162,89 @@ impl Plugin for ScenarioLifecycle {
             .definition
             .allow_early_end;
 
-        app.init_resource::<ScenarioFrame>()
-            .init_resource::<ViolationLog>()
-            .init_resource::<PreviousGameState>()
-            .init_resource::<EntityLeakBaseline>()
-            .init_resource::<ScenarioStats>()
-            .init_resource::<ChipSelectionIndex>()
-            // Registered here (not just in game plugins) so isolated test apps work
-            // without loading the full Game plugin group.
-            .add_message::<SpawnNodeComplete>()
-            .add_message::<ChipSelected>()
-            .add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
-            .add_systems(
-                Update,
-                check_chip_offer_expected
-                    .run_if(in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>)),
-            )
-            .add_systems(
-                PostUpdate,
-                auto_skip_chip_select
-                    .run_if(in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>)),
-            )
-            .add_systems(
-                OnEnter(GameState::Playing),
-                (
-                    seed_initial_chips,
-                    init_scenario_input,
-                    ApplyDeferred,
-                    tag_game_entities,
-                    ApplyDeferred,
-                    apply_debug_setup,
-                )
-                    .chain()
-                    .after(BoltSystems::InitParams)
-                    .after(BreakerSystems::Reset)
-                    .after(NodeSystems::InitTimer),
-            )
-            // Input injection runs in FixedPreUpdate so it executes after
-            // clear_input_actions (FixedPostUpdate of previous tick) and before
-            // all FixedUpdate game systems that read InputActions.
-            .add_systems(
-                FixedPreUpdate,
-                (
-                    inject_scenario_input,
-                    apply_perfect_tracking,
-                    update_force_bump_grade,
-                ),
-            )
-            .add_systems(
-                FixedUpdate,
-                (
-                    (tick_scenario_frame, check_frame_limit)
-                        .chain()
-                        .run_if(entered_playing)
-                        .before(breaker::breaker::sets::BreakerSystems::Move),
-                    // Invariant checkers and frozen position enforcement must run
-                    // BEFORE physics systems. Otherwise bolt_lost respawns OOB
-                    // bolts before invariants can detect them.
-                    //
-                    // Gated on entered_playing: during Loading/MainMenu, entities
-                    // may not be fully initialized (especially under parallel I/O
-                    // contention). Checkers only fire once Playing has been entered.
-                    (
-                        enforce_frozen_positions,
-                        apply_debug_frame_mutations,
-                        check_bolt_in_bounds,
-                        check_bolt_speed_in_range,
-                        check_bolt_count_reasonable,
-                        check_breaker_in_bounds,
-                        check_no_nan,
-                        check_timer_non_negative,
-                        check_valid_state_transitions,
-                        check_valid_breaker_state,
-                        check_timer_monotonically_decreasing,
-                        check_breaker_position_clamped,
-                        check_physics_frozen_during_pause,
-                        check_no_entity_leaks,
-                        check_offering_no_duplicates,
-                        check_maxed_chip_never_offered,
-                        check_chip_stacks_consistent,
-                        check_run_stats_monotonic,
-                    )
-                        .chain()
-                        .run_if(|stats: Option<Res<ScenarioStats>>| {
-                            stats.is_some_and(|s| s.entered_playing)
-                        })
-                        .after(deferred_debug_setup)
-                        .after(tag_game_entities)
-                        .after(BreakerSystems::UpdateState)
-                        .before(breaker::bolt::BoltSystems::BoltLost),
-                    tag_game_entities,
-                    deferred_debug_setup.after(tag_game_entities),
-                    apply_pending_bolt_effects.after(tag_game_entities),
-                    mark_entered_playing_on_spawn_complete,
-                ),
-            );
+        register_scenario_resources(app);
+        register_scenario_systems(app);
 
         if allow_early_end {
-            // Normal: exit when run ends naturally.
-            // Runs every frame while in RunEnd to avoid one-shot timing issues
-            // where Winit misses a single AppExit message.
             app.add_systems(Update, exit_on_run_end.run_if(in_state(GameState::RunEnd)));
         } else {
-            // Stress: restart when run ends, only max_frames triggers exit.
             app.add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
         }
     }
+}
+
+/// Initialises all resources and messages required by the scenario lifecycle.
+fn register_scenario_resources(app: &mut App) {
+    app.init_resource::<ScenarioFrame>()
+        .init_resource::<ViolationLog>()
+        .init_resource::<PreviousGameState>()
+        .init_resource::<EntityLeakBaseline>()
+        .init_resource::<ScenarioStats>()
+        .init_resource::<ChipSelectionIndex>()
+        // Registered here (not just in game plugins) so isolated test apps work.
+        .add_message::<SpawnNodeComplete>()
+        .add_message::<ChipSelected>()
+        // Needed by check_timer_monotonically_decreasing exemption logic.
+        .add_message::<breaker::run::node::messages::ReverseTimePenalty>();
+}
+
+/// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
+fn register_scenario_systems(app: &mut App) {
+    let chip_select_condition =
+        in_state(GameState::ChipSelect).and(resource_exists::<ChipOffers>);
+    let playing_gate =
+        |stats: Option<Res<ScenarioStats>>| stats.is_some_and(|s| s.entered_playing);
+    // Invariant checkers run in two chained batches after setup. All checkers share
+    // `ResMut<ViolationLog>`, so Bevy serialises them automatically within each batch.
+    let checkers_a = (
+        check_bolt_in_bounds, check_bolt_speed_in_range, check_bolt_count_reasonable,
+        check_breaker_in_bounds, check_no_nan, check_timer_non_negative,
+        check_valid_state_transitions, check_valid_breaker_state,
+        check_timer_monotonically_decreasing, check_breaker_position_clamped,
+        check_physics_frozen_during_pause,
+    ).chain();
+    let checkers_b = (
+        check_no_entity_leaks, check_offering_no_duplicates, check_maxed_chip_never_offered,
+        check_chip_stacks_consistent, check_run_stats_monotonic,
+        check_second_wind_wall_at_most_one, check_shield_charges_consistent,
+        check_pulse_ring_accumulation, check_effective_speed_consistent,
+    ).chain();
+    app.add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
+        .add_systems(Update, check_chip_offer_expected.run_if(chip_select_condition.clone()))
+        .add_systems(PostUpdate, auto_skip_chip_select.run_if(chip_select_condition))
+        .add_systems(
+            OnEnter(GameState::Playing),
+            (seed_initial_chips, init_scenario_input, ApplyDeferred,
+             tag_game_entities, ApplyDeferred, apply_debug_setup)
+                .chain()
+                .after(BoltSystems::InitParams)
+                .after(BreakerSystems::Reset)
+                .after(NodeSystems::InitTimer),
+        )
+        .add_systems(
+            FixedPreUpdate,
+            (inject_scenario_input, apply_perfect_tracking, update_force_bump_grade),
+        )
+        .add_systems(
+            FixedUpdate,
+            (
+                (tick_scenario_frame, check_frame_limit)
+                    .chain()
+                    .run_if(entered_playing)
+                    .before(breaker::breaker::sets::BreakerSystems::Move),
+                (enforce_frozen_positions, apply_debug_frame_mutations, checkers_a, checkers_b)
+                    .chain()
+                    .run_if(playing_gate)
+                    .after(deferred_debug_setup)
+                    .after(tag_game_entities)
+                    .after(BreakerSystems::UpdateState)
+                    .before(breaker::bolt::BoltSystems::BoltLost),
+                tag_game_entities,
+                deferred_debug_setup.after(tag_game_entities),
+                apply_pending_bolt_effects.after(tag_game_entities),
+                mark_entered_playing_on_spawn_complete,
+            ),
+        );
 }
 
 /// Grouped system parameters for [`bypass_menu_to_playing`].
@@ -759,6 +746,24 @@ pub fn apply_debug_frame_mutations(
                     &mut targets.commands,
                 );
             }
+            MutationKind::SpawnExtraSecondWindWalls(count) => {
+                for _ in 0..*count {
+                    targets.commands.spawn(SecondWindWall);
+                }
+            }
+            MutationKind::InjectZeroChargeShield => {
+                // Spawn a free-floating entity with a zero-charge shield so the
+                // invariant fires without requiring a live breaker entity.
+                targets.commands.spawn(ShieldActive { charges: 0 });
+            }
+            MutationKind::SpawnExtraPulseRings(count) => {
+                for _ in 0..*count {
+                    targets.commands.spawn(PulseRing);
+                }
+            }
+            MutationKind::InjectWrongEffectiveSpeed { wrong_value } => {
+                apply_inject_wrong_effective_speed(*wrong_value, &mut targets.commands);
+            }
         }
     }
 }
@@ -862,6 +867,19 @@ pub fn apply_inject_maxed_chip_offer(
     } else {
         commands.insert_resource(offers);
     }
+}
+
+/// Spawns an entity with `ActiveSpeedBoosts([1.5])` and `EffectiveSpeedMultiplier(wrong_value)`.
+///
+/// Since `1.5 != wrong_value`, `check_effective_speed_consistent` will detect the
+/// divergence and fire a [`InvariantKind::EffectiveSpeedConsistent`] violation.
+///
+/// Used exclusively by the `effective_speed_consistent` self-test scenario.
+pub fn apply_inject_wrong_effective_speed(wrong_value: f32, commands: &mut Commands) {
+    commands.spawn((
+        ActiveSpeedBoosts(vec![1.5]),
+        EffectiveSpeedMultiplier(wrong_value),
+    ));
 }
 
 /// Sets [`ScenarioStats::entered_playing`] to `true` when [`SpawnNodeComplete`]

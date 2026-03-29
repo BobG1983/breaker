@@ -1,0 +1,29 @@
+// Adversarial: TimePenalty fires when the node timer crosses the 0.5 threshold (halfway
+// through). Dense layout extends the node long enough for the threshold to trigger.
+// The adversarial risk: if NodeTimerThreshold fires repeatedly (e.g. the timer briefly
+// rebounds across the threshold due to floating point, or the threshold check isn't
+// consumed as a one-shot), multiple TimePenalty deductions compound and drive the timer
+// to a large negative value faster than normal expiry — or the timer hits 0.0 too early
+// and the node ends before cells are cleared, masking the violation. TimerNonNegative
+// catches any case where the timer goes below 0.0 under penalty accumulation.
+// Note: TimerMonotonicallyDecreasing is intentionally excluded — TimePenalty causes
+// an instantaneous jump DOWN, which is valid, but the invariant is not designed for
+// penalty-driven scenarios and would generate false violations here.
+(
+    breaker: "Chrono",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.4)),
+    max_frames: 5000,
+    invariants: [TimerNonNegative],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 4096,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: NodeTimerThreshold(0.5), then: [
+                Do(TimePenalty(seconds: 5.0)),
+            ]),
+        ]),
+    ],
+)
