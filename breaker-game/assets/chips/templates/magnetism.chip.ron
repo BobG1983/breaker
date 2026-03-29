@@ -22,7 +22,7 @@
         effects: [
             On(target: Bolt, then: [
                 Do(Attraction(Cell, 1.5)),
-                Do(SizeBoost(0.1)),
+                Do(SizeBoost(1.1)),
             ]),
         ],
     ),

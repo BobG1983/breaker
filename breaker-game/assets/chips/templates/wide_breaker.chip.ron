@@ -5,7 +5,7 @@
         prefix: "Slight",
         effects: [
             On(target: Breaker, then: [
-                Do(SizeBoost(10.0)),
+                Do(SizeBoost(1.05)),
             ]),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Sturdy",
         effects: [
             On(target: Breaker, then: [
-                Do(SizeBoost(20.0)),
+                Do(SizeBoost(1.1)),
             ]),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Massive",
         effects: [
             On(target: Breaker, then: [
-                Do(SizeBoost(30.0)),
+                Do(SizeBoost(1.15)),
             ]),
         ],
     ),

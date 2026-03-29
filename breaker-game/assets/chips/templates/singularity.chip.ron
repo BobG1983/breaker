@@ -5,8 +5,8 @@
         prefix: "",
         effects: [
             On(target: Bolt, then: [
-                Do(SizeBoost(-0.4)),
-                Do(DamageBoost(1.5)),
+                Do(SizeBoost(0.6)),
+                Do(DamageBoost(2.5)),
                 Do(SpeedBoost(multiplier: 1.4)),
             ]),
         ],

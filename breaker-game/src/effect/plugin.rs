@@ -10,9 +10,7 @@ impl Plugin for EffectPlugin {
     fn build(&self, app: &mut App) {
         app.configure_sets(
             FixedUpdate,
-            EffectSystems::Recalculate
-                .after(EffectSystems::Bridge)
-                .run_if(in_state(PlayingState::Active)),
+            EffectSystems::Recalculate.run_if(in_state(PlayingState::Active)),
         );
         super::effects::register(app);
         super::triggers::register(app);

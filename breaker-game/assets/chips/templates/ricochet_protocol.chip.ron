@@ -7,7 +7,7 @@
             On(target: Bolt, then: [
                 When(trigger: Impacted(Wall), then: [
                     Until(trigger: Impacted(Cell), then: [
-                        Do(DamageBoost(2.0)),
+                        Do(DamageBoost(3.0)),
                     ]),
                 ]),
             ]),

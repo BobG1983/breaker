@@ -5,7 +5,7 @@
         prefix: "Firm",
         effects: [
             On(target: Breaker, then: [
-                Do(BumpForce(10.0)),
+                Do(BumpForce(1.1)),
             ]),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Strong",
         effects: [
             On(target: Breaker, then: [
-                Do(BumpForce(20.0)),
+                Do(BumpForce(1.2)),
             ]),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Crushing",
         effects: [
             On(target: Breaker, then: [
-                Do(BumpForce(35.0)),
+                Do(BumpForce(1.35)),
             ]),
         ],
     ),

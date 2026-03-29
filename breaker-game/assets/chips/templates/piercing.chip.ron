@@ -22,7 +22,7 @@
         effects: [
             On(target: Bolt, then: [
                 Do(Piercing(3)),
-                Do(DamageBoost(0.1)),
+                Do(DamageBoost(1.1)),
             ]),
         ],
     ),
