@@ -4,12 +4,16 @@ use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, V
 use super::*;
 use crate::{
     bolt::{
-        components::{Bolt, BoltServing, ExtraBolt},
+        components::{Bolt, BoltServing, ExtraBolt, PiercingRemaining},
         resources::BoltConfig,
     },
     breaker::components::Breaker,
-    chips::components::{
-        BoltSizeBoost, BoltSpeedBoost, ChainHit, DamageBoost, Piercing, PiercingRemaining,
+    effect::{
+        EffectiveDamageMultiplier, EffectivePiercing,
+        effects::{
+            damage_boost::ActiveDamageBoosts, piercing::ActivePiercings,
+            speed_boost::ActiveSpeedBoosts,
+        },
     },
     run::RunState,
     shared::GameDrawLayer,
@@ -212,8 +216,9 @@ fn reset_bolt_removes_serving_on_subsequent_nodes() {
     );
 }
 
+/// Spec behavior 11: `reset_bolt` resets `PiercingRemaining` to `EffectivePiercing` on node start.
 #[test]
-fn reset_bolt_resets_piercing_remaining_to_piercing() {
+fn reset_bolt_resets_piercing_remaining_to_effective_piercing() {
     let mut app = test_app();
     let bolt_id = app
         .world_mut()
@@ -222,7 +227,7 @@ fn reset_bolt_resets_piercing_remaining_to_piercing() {
             Velocity2D(Vec2::new(0.0, 0.0)),
             Position2D(Vec2::new(0.0, 0.0)),
             PreviousPosition(Vec2::new(0.0, 0.0)),
-            Piercing(3),
+            EffectivePiercing(3),
             PiercingRemaining(0),
         ))
         .id();
@@ -236,13 +241,15 @@ fn reset_bolt_resets_piercing_remaining_to_piercing() {
         .expect("bolt should have PiercingRemaining");
     assert_eq!(
         remaining.0, 3,
-        "PiercingRemaining should be reset to Piercing(3), got {}",
+        "PiercingRemaining should be reset to EffectivePiercing(3), got {}",
         remaining.0
     );
 }
 
+/// Spec behavior 12: `reset_bolt` preserves Active*/Effective* effect state.
+/// Replaces old test that checked `BoltSpeedBoost`, `BoltSizeBoost`, `ChainHit`, `DamageBoost`.
 #[test]
-fn reset_bolt_does_not_touch_chip_effect_components() {
+fn reset_bolt_preserves_effect_state() {
     let mut app = test_app();
     let bolt_id = app
         .world_mut()
@@ -251,11 +258,12 @@ fn reset_bolt_does_not_touch_chip_effect_components() {
             Velocity2D(Vec2::new(0.0, 0.0)),
             Position2D(Vec2::new(0.0, 0.0)),
             PreviousPosition(Vec2::new(0.0, 0.0)),
-            Piercing(3),
-            DamageBoost(0.5),
-            BoltSpeedBoost(100.0),
-            BoltSizeBoost(2.0),
-            ChainHit(1),
+            ActiveDamageBoosts(vec![1.5]),
+            ActiveSpeedBoosts(vec![1.2]),
+            ActivePiercings(vec![3]),
+            EffectiveDamageMultiplier(1.5),
+            EffectivePiercing(3),
+            PiercingRemaining(0),
         ))
         .id();
     spawn_breaker(&mut app, 0.0, -250.0);
@@ -263,30 +271,44 @@ fn reset_bolt_does_not_touch_chip_effect_components() {
     app.update();
 
     let world = app.world();
+
+    // Active* components should be unchanged
+    let active_dmg = world
+        .get::<ActiveDamageBoosts>(bolt_id)
+        .expect("ActiveDamageBoosts should be present");
     assert_eq!(
-        world.get::<Piercing>(bolt_id),
-        Some(&Piercing(3)),
-        "Piercing should be unchanged"
+        active_dmg.0,
+        vec![1.5],
+        "ActiveDamageBoosts should be unchanged after reset"
     );
+
+    let active_spd = world
+        .get::<ActiveSpeedBoosts>(bolt_id)
+        .expect("ActiveSpeedBoosts should be present");
     assert_eq!(
-        world.get::<DamageBoost>(bolt_id),
-        Some(&DamageBoost(0.5)),
-        "DamageBoost should be unchanged"
+        active_spd.0,
+        vec![1.2],
+        "ActiveSpeedBoosts should be unchanged after reset"
     );
-    assert_eq!(
-        world.get::<BoltSpeedBoost>(bolt_id),
-        Some(&BoltSpeedBoost(100.0)),
-        "BoltSpeedBoost should be unchanged"
+
+    // Effective* components should be unchanged
+    let effective_dmg = world
+        .get::<EffectiveDamageMultiplier>(bolt_id)
+        .expect("EffectiveDamageMultiplier should be present");
+    assert!(
+        (effective_dmg.0 - 1.5).abs() < f32::EPSILON,
+        "EffectiveDamageMultiplier should be unchanged at 1.5 after reset, got {}",
+        effective_dmg.0
     );
+
+    // PiercingRemaining should be RESET to EffectivePiercing (3), not preserved
+    let pr = world
+        .get::<PiercingRemaining>(bolt_id)
+        .expect("PiercingRemaining should be present");
     assert_eq!(
-        world.get::<BoltSizeBoost>(bolt_id),
-        Some(&BoltSizeBoost(2.0)),
-        "BoltSizeBoost should be unchanged"
-    );
-    assert_eq!(
-        world.get::<ChainHit>(bolt_id),
-        Some(&ChainHit(1)),
-        "ChainHit should be unchanged"
+        pr.0, 3,
+        "PiercingRemaining should be reset to EffectivePiercing(3), got {}",
+        pr.0
     );
 }
 

@@ -29,7 +29,7 @@ type WallLookup<'w, 's> =
 /// For each active bolt, queries the quadtree for walls within the bolt's radius.
 /// If a wall overlap is confirmed, the bolt is pushed out to a safe position,
 /// its velocity is reflected off the nearest wall face, and `PiercingRemaining`
-/// is reset to `Piercing.0`.
+/// is reset to `EffectivePiercing.0`.
 pub(crate) fn bolt_wall_collision(
     quadtree: Res<CollisionQuadtree>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
@@ -45,7 +45,7 @@ pub(crate) fn bolt_wall_collision(
         _,
         bolt_radius,
         mut piercing_remaining,
-        piercing,
+        effective_piercing,
         _,
         bolt_entity_scale,
         _,
@@ -116,9 +116,9 @@ pub(crate) fn bolt_wall_collision(
             bolt_position.0 = push_pos;
             bolt_vel.0 = reflect(velocity, normal);
 
-            // Reset PiercingRemaining to Piercing.0
-            if let (Some(pr), Some(p)) = (&mut piercing_remaining, piercing) {
-                pr.0 = p.0;
+            // Reset PiercingRemaining to EffectivePiercing.0
+            if let (Some(pr), Some(ep)) = (&mut piercing_remaining, effective_piercing) {
+                pr.0 = ep.0;
             }
 
             writer.write(BoltImpactWall {
@@ -143,11 +143,11 @@ mod tests {
     use super::bolt_wall_collision;
     use crate::{
         bolt::{
-            components::{Bolt, BoltBaseSpeed, BoltRadius},
+            components::{Bolt, BoltBaseSpeed, BoltRadius, PiercingRemaining},
             messages::BoltImpactWall,
             resources::BoltConfig,
         },
-        chips::components::{Piercing, PiercingRemaining},
+        effect::EffectivePiercing,
         shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
         wall::components::Wall,
     };
@@ -202,14 +202,14 @@ mod tests {
             .id()
     }
 
-    /// Spawns a bolt with `Piercing` and `PiercingRemaining` components.
+    /// Spawns a bolt with `EffectivePiercing` and `PiercingRemaining` components.
     fn spawn_piercing_bolt(
         app: &mut App,
         x: f32,
         y: f32,
         vx: f32,
         vy: f32,
-        piercing: u32,
+        effective_piercing: u32,
         piercing_remaining: u32,
     ) -> Entity {
         let bc = BoltConfig::default();
@@ -225,7 +225,7 @@ mod tests {
                 Aabb2D::new(Vec2::ZERO, Vec2::splat(bc.radius)),
                 CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
                 GameDrawLayer::Bolt,
-                Piercing(piercing),
+                EffectivePiercing(effective_piercing),
                 PiercingRemaining(piercing_remaining),
             ))
             .id()
@@ -307,14 +307,14 @@ mod tests {
         );
     }
 
-    // ── Behavior 3: bolt_wall_collision resets PiercingRemaining on wall overlap ──
+    // ── Behavior 9: bolt_wall_collision resets PiercingRemaining to EffectivePiercing on wall overlap ──
 
     #[test]
     fn bolt_overlapping_wall_resets_piercing_remaining() {
-        // Spec behavior 3:
-        // Given: Bolt overlapping a wall, with Piercing(3) and PiercingRemaining(1)
+        // Spec behavior 9:
+        // Given: Bolt overlapping a wall, with EffectivePiercing(3) and PiercingRemaining(1)
         // When: bolt_wall_collision detects wall overlap
-        // Then: PiercingRemaining resets to 3 (matching Piercing.0)
+        // Then: PiercingRemaining resets to 3 (matching EffectivePiercing.0)
         let mut app = test_app();
 
         // Wall at x=-5 with half_width=5, bolt at x=-2 with radius 8 => overlap
@@ -322,7 +322,7 @@ mod tests {
         let bolt_entity = spawn_piercing_bolt(
             &mut app, -2.0, 200.0, // position: inside wall's expanded AABB
             -400.0, 0.0, // velocity: moving left
-            3,   // Piercing(3)
+            3,   // EffectivePiercing(3)
             1,   // PiercingRemaining(1) — partially spent
         );
 
@@ -334,7 +334,48 @@ mod tests {
             .expect("PiercingRemaining should still be present on bolt");
         assert_eq!(
             pr.0, 3,
-            "PiercingRemaining should reset to Piercing.0 (3) on wall overlap, got {}",
+            "PiercingRemaining should reset to EffectivePiercing.0 (3) on wall overlap, got {}",
+            pr.0
+        );
+    }
+
+    /// Spec behavior 9 edge case: `PiercingRemaining` without `EffectivePiercing` stays unchanged.
+    #[test]
+    fn bolt_with_piercing_remaining_but_no_effective_piercing_unchanged_on_wall_hit() {
+        let mut app = test_app();
+
+        // Wall at x=-5 with half_width=5, bolt at x=-2 with radius 8 => overlap
+        spawn_wall(&mut app, -5.0, 200.0, 5.0, 400.0);
+
+        // Spawn bolt with PiercingRemaining but NO EffectivePiercing
+        let bc = BoltConfig::default();
+        let pos = Vec2::new(-2.0, 200.0);
+        let bolt_entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                bolt_param_bundle(),
+                Velocity2D(Vec2::new(-400.0, 0.0)),
+                Position2D(pos),
+                GlobalPosition2D(pos),
+                Spatial2D,
+                Aabb2D::new(Vec2::ZERO, Vec2::splat(bc.radius)),
+                CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
+                GameDrawLayer::Bolt,
+                PiercingRemaining(1),
+                // No EffectivePiercing
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let pr = app
+            .world()
+            .get::<PiercingRemaining>(bolt_entity)
+            .expect("PiercingRemaining should still be present on bolt");
+        assert_eq!(
+            pr.0, 1,
+            "PiercingRemaining without EffectivePiercing should stay at 1 on wall overlap, got {}",
             pr.0
         );
     }

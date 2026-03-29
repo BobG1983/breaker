@@ -16,6 +16,7 @@ use crate::{
             update_bump, width_boost_visual,
         },
     },
+    effect::EffectSystems,
     run::node::sets::NodeSystems,
     shared::{GameState, PlayingState},
 };
@@ -61,7 +62,10 @@ impl Plugin for BreakerPlugin {
                 FixedUpdate,
                 (
                     update_bump,
-                    move_breaker.after(update_bump).in_set(BreakerSystems::Move),
+                    move_breaker
+                        .after(update_bump)
+                        .after(EffectSystems::Recalculate)
+                        .in_set(BreakerSystems::Move),
                     update_breaker_state
                         .after(move_breaker)
                         .in_set(BreakerSystems::UpdateState),

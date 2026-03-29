@@ -35,13 +35,27 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
     }
 }
 
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_damage);
+/// Effective damage multiplier computed by `recalculate_damage`.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct EffectiveDamageMultiplier(pub f32);
+
+impl Default for EffectiveDamageMultiplier {
+    fn default() -> Self {
+        Self(1.0)
+    }
 }
 
-fn recalculate_damage(query: Query<&ActiveDamageBoosts>) {
-    // Placeholder -- exact recalculation wired in Wave 6
-    for _active in &query {}
+pub(crate) fn register(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        recalculate_damage.in_set(crate::effect::sets::EffectSystems::Recalculate),
+    );
+}
+
+fn recalculate_damage(mut query: Query<(&ActiveDamageBoosts, &mut EffectiveDamageMultiplier)>) {
+    for (active, mut effective) in &mut query {
+        effective.0 = active.multiplier();
+    }
 }
 
 #[cfg(test)]
@@ -115,5 +129,62 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let boosts = ActiveDamageBoosts(vec![]);
         assert!((boosts.multiplier() - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_damage_single_boost() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_damage);
+        let entity = app
+            .world_mut()
+            .spawn((
+                ActiveDamageBoosts(vec![2.0]),
+                EffectiveDamageMultiplier(1.0),
+            ))
+            .id();
+        app.update();
+        let effective = app
+            .world()
+            .get::<EffectiveDamageMultiplier>(entity)
+            .unwrap();
+        assert!((effective.0 - 2.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_damage_multiple_boosts_multiplicative() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_damage);
+        let entity = app
+            .world_mut()
+            .spawn((
+                ActiveDamageBoosts(vec![2.0, 1.5, 3.0]),
+                EffectiveDamageMultiplier(1.0),
+            ))
+            .id();
+        app.update();
+        let effective = app
+            .world()
+            .get::<EffectiveDamageMultiplier>(entity)
+            .unwrap();
+        assert!((effective.0 - 9.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_damage_empty_boosts_resets_to_default() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_damage);
+        let entity = app
+            .world_mut()
+            .spawn((ActiveDamageBoosts(vec![]), EffectiveDamageMultiplier(5.0)))
+            .id();
+        app.update();
+        let effective = app
+            .world()
+            .get::<EffectiveDamageMultiplier>(entity)
+            .unwrap();
+        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 }

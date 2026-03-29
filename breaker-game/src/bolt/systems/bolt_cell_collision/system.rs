@@ -102,8 +102,8 @@ pub(crate) fn bolt_cell_collision(
         _,
         bolt_radius,
         mut piercing_remaining,
-        _,
-        damage_boost,
+        _effective_piercing,
+        damage_mult,
         bolt_entity_scale,
         spawned_by_evo,
     ) in &mut bolt_query
@@ -116,7 +116,7 @@ pub(crate) fn bolt_cell_collision(
 
         // Effective damage for pierce lookahead (compared against cell HP).
         // must match `handle_cell_hit` damage formula
-        let effective_damage = BASE_BOLT_DAMAGE * (1.0 + damage_boost.map_or(0.0, |b| b.0));
+        let effective_damage = BASE_BOLT_DAMAGE * damage_mult.map_or(1.0, |e| e.0);
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();

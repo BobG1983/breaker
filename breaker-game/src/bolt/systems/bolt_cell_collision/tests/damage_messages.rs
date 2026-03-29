@@ -3,8 +3,8 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::Bolt,
-    chips::components::{DamageBoost, Piercing, PiercingRemaining},
+    bolt::components::{Bolt, PiercingRemaining},
+    effect::{EffectiveDamageMultiplier, EffectivePiercing},
 };
 
 #[test]
@@ -46,8 +46,10 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
     );
 }
 
+/// Spec behavior 1: Base damage with no `EffectiveDamageMultiplier` component.
+/// `EffectiveDamageMultiplier` absent => identity (1.0), damage = 10.0 * 1.0 = 10.0.
 #[test]
-fn cell_collision_emits_damage_cell_with_zero_damage_boost() {
+fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -60,7 +62,7 @@ fn cell_collision_emits_damage_cell_with_zero_damage_boost() {
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 400.0)),
-        DamageBoost(0.0),
+        // No EffectiveDamageMultiplier component
         Position2D(Vec2::new(0.0, start_y)),
     ));
 
@@ -70,15 +72,17 @@ fn cell_collision_emits_damage_cell_with_zero_damage_boost() {
     assert_eq!(
         msgs.0.len(),
         1,
-        "DamageBoost(0.0) bolt should emit one DamageCell"
+        "bolt with no EffectiveDamageMultiplier should emit one DamageCell"
     );
     assert!(
         (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
-        "DamageBoost(0.0) should produce damage == 10.0, got {}",
+        "no EffectiveDamageMultiplier should produce damage == 10.0 (identity), got {}",
         msgs.0[0].damage
     );
 }
 
+/// Spec behavior 2: Boosted damage with `EffectiveDamageMultiplier(1.5)`.
+/// Formula: 10.0 * 1.5 = 15.0.
 #[test]
 fn cell_collision_emits_damage_cell_with_boosted_damage() {
     let mut app = test_app_with_damage_and_wall_messages();
@@ -95,7 +99,7 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            DamageBoost(0.5),
+            EffectiveDamageMultiplier(1.5),
             Position2D(Vec2::new(0.0, start_y)),
         ))
         .id();
@@ -106,7 +110,41 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
     assert_eq!(msgs.0.len(), 1, "boosted bolt should emit one DamageCell");
     assert!(
         (msgs.0[0].damage - 15.0).abs() < f32::EPSILON,
-        "DamageCell.damage with DamageBoost(0.5) should be 15.0, got {}",
+        "DamageCell.damage with EffectiveDamageMultiplier(1.5) should be 15.0, got {}",
+        msgs.0[0].damage
+    );
+}
+
+/// Spec behavior 2 edge case: `EffectiveDamageMultiplier(1.0)` is identity.
+#[test]
+fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() {
+    let mut app = test_app_with_damage_and_wall_messages();
+    let bc = crate::bolt::resources::BoltConfig::default();
+    let cc = crate::cells::resources::CellConfig::default();
+
+    let cell_y = 100.0;
+    spawn_cell(&mut app, 0.0, cell_y);
+
+    let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+    app.world_mut().spawn((
+        Bolt,
+        bolt_param_bundle(),
+        Velocity2D(Vec2::new(0.0, 400.0)),
+        EffectiveDamageMultiplier(1.0),
+        Position2D(Vec2::new(0.0, start_y)),
+    ));
+
+    tick(&mut app);
+
+    let msgs = app.world().resource::<DamageCellMessages>();
+    assert_eq!(
+        msgs.0.len(),
+        1,
+        "EffectiveDamageMultiplier(1.0) bolt should emit one DamageCell"
+    );
+    assert!(
+        (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
+        "EffectiveDamageMultiplier(1.0) should produce damage == 10.0, got {}",
         msgs.0[0].damage
     );
 }
@@ -199,7 +237,7 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 10000.0)),
-            Piercing(2),
+            EffectivePiercing(2),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))

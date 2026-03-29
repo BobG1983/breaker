@@ -23,8 +23,21 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
     }
 }
 
+/// Effective speed multiplier computed by `recalculate_speed`.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct EffectiveSpeedMultiplier(pub f32);
+
+impl Default for EffectiveSpeedMultiplier {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_speed);
+    app.add_systems(
+        FixedUpdate,
+        recalculate_speed.in_set(crate::effect::sets::EffectSystems::Recalculate),
+    );
 }
 
 impl ActiveSpeedBoosts {
@@ -39,9 +52,10 @@ impl ActiveSpeedBoosts {
     }
 }
 
-fn recalculate_speed(query: Query<&ActiveSpeedBoosts>) {
-    // Placeholder -- exact recalculation wired in Wave 6
-    for _active in &query {}
+fn recalculate_speed(mut query: Query<(&ActiveSpeedBoosts, &mut EffectiveSpeedMultiplier)>) {
+    for (active, mut effective) in &mut query {
+        effective.0 = active.multiplier();
+    }
 }
 
 #[cfg(test)]
@@ -115,5 +129,50 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let boosts = ActiveSpeedBoosts(vec![]);
         assert!((boosts.multiplier() - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_speed_single_boost() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_speed);
+        let entity = app
+            .world_mut()
+            .spawn((ActiveSpeedBoosts(vec![1.5]), EffectiveSpeedMultiplier(1.0)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectiveSpeedMultiplier>(entity).unwrap();
+        assert!((effective.0 - 1.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_speed_multiple_boosts_multiplicative() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_speed);
+        let entity = app
+            .world_mut()
+            .spawn((
+                ActiveSpeedBoosts(vec![1.5, 2.0]),
+                EffectiveSpeedMultiplier(1.0),
+            ))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectiveSpeedMultiplier>(entity).unwrap();
+        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_speed_empty_boosts_resets_to_default() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_speed);
+        let entity = app
+            .world_mut()
+            .spawn((ActiveSpeedBoosts(vec![]), EffectiveSpeedMultiplier(3.0)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectiveSpeedMultiplier>(entity).unwrap();
+        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 }

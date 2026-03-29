@@ -35,13 +35,27 @@ pub(crate) fn reverse(entity: Entity, value: f32, world: &mut World) {
     }
 }
 
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_size);
+/// Effective size multiplier computed by `recalculate_size`.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct EffectiveSizeMultiplier(pub f32);
+
+impl Default for EffectiveSizeMultiplier {
+    fn default() -> Self {
+        Self(1.0)
+    }
 }
 
-fn recalculate_size(query: Query<&ActiveSizeBoosts>) {
-    // Placeholder -- exact recalculation wired in Wave 6
-    for _active in &query {}
+pub(crate) fn register(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        recalculate_size.in_set(crate::effect::sets::EffectSystems::Recalculate),
+    );
+}
+
+fn recalculate_size(mut query: Query<(&ActiveSizeBoosts, &mut EffectiveSizeMultiplier)>) {
+    for (active, mut effective) in &mut query {
+        effective.0 = active.multiplier();
+    }
 }
 
 #[cfg(test)]
@@ -115,5 +129,50 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let boosts = ActiveSizeBoosts(vec![]);
         assert!((boosts.multiplier() - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_size_single_boost() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_size);
+        let entity = app
+            .world_mut()
+            .spawn((ActiveSizeBoosts(vec![1.5]), EffectiveSizeMultiplier(1.0)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectiveSizeMultiplier>(entity).unwrap();
+        assert!((effective.0 - 1.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_size_multiple_boosts_multiplicative() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_size);
+        let entity = app
+            .world_mut()
+            .spawn((
+                ActiveSizeBoosts(vec![1.5, 2.0]),
+                EffectiveSizeMultiplier(1.0),
+            ))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectiveSizeMultiplier>(entity).unwrap();
+        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn recalculate_size_empty_boosts_resets_to_default() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_size);
+        let entity = app
+            .world_mut()
+            .spawn((ActiveSizeBoosts(vec![]), EffectiveSizeMultiplier(2.0)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectiveSizeMultiplier>(entity).unwrap();
+        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 }

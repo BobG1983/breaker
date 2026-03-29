@@ -28,13 +28,21 @@ pub(crate) fn reverse(entity: Entity, count: u32, world: &mut World) {
     }
 }
 
+/// Effective piercing count computed by `recalculate_piercing`.
+#[derive(Component, Debug, Default, Clone, Copy, PartialEq)]
+pub struct EffectivePiercing(pub u32);
+
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_piercing);
+    app.add_systems(
+        FixedUpdate,
+        recalculate_piercing.in_set(crate::effect::sets::EffectSystems::Recalculate),
+    );
 }
 
-fn recalculate_piercing(query: Query<&ActivePiercings>) {
-    // Placeholder -- exact recalculation wired in Wave 6
-    for _active in &query {}
+fn recalculate_piercing(mut query: Query<(&ActivePiercings, &mut EffectivePiercing)>) {
+    for (active, mut effective) in &mut query {
+        effective.0 = active.total();
+    }
 }
 
 #[cfg(test)]
@@ -108,5 +116,47 @@ mod tests {
     fn total_returns_zero_for_empty() {
         let piercings = ActivePiercings(vec![]);
         assert_eq!(piercings.total(), 0);
+    }
+
+    #[test]
+    fn recalculate_piercing_single_entry() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_piercing);
+        let entity = app
+            .world_mut()
+            .spawn((ActivePiercings(vec![3]), EffectivePiercing(0)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectivePiercing>(entity).unwrap();
+        assert_eq!(effective.0, 3);
+    }
+
+    #[test]
+    fn recalculate_piercing_multiple_entries_additive() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_piercing);
+        let entity = app
+            .world_mut()
+            .spawn((ActivePiercings(vec![3, 2, 1]), EffectivePiercing(0)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectivePiercing>(entity).unwrap();
+        assert_eq!(effective.0, 6);
+    }
+
+    #[test]
+    fn recalculate_piercing_empty_entries_resets_to_zero() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_systems(Update, recalculate_piercing);
+        let entity = app
+            .world_mut()
+            .spawn((ActivePiercings(vec![]), EffectivePiercing(5)))
+            .id();
+        app.update();
+        let effective = app.world().get::<EffectivePiercing>(entity).unwrap();
+        assert_eq!(effective.0, 0);
     }
 }

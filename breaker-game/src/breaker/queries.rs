@@ -12,7 +12,7 @@ use crate::{
         DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal,
         SettleDuration, SettleTiltEase,
     },
-    chips::components::{BreakerSpeedBoost, WidthBoost},
+    effect::{EffectiveSizeMultiplier, EffectiveSpeedMultiplier},
     shared::EntityScale,
 };
 
@@ -24,7 +24,7 @@ pub(crate) type CollisionQueryBreaker = (
     &'static BreakerHeight,
     &'static MaxReflectionAngle,
     &'static MinAngleFromHorizontal,
-    Option<&'static WidthBoost>,
+    Option<&'static EffectiveSizeMultiplier>,
     Option<&'static EntityScale>,
 );
 
@@ -38,8 +38,8 @@ pub(crate) type MovementQuery = (
     &'static BreakerDeceleration,
     &'static DecelEasing,
     &'static BreakerWidth,
-    Option<&'static BreakerSpeedBoost>,
-    Option<&'static WidthBoost>,
+    Option<&'static EffectiveSpeedMultiplier>,
+    Option<&'static EffectiveSizeMultiplier>,
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
@@ -95,7 +95,7 @@ pub(crate) type BumpGradingQuery = (
 /// Breaker data needed by the width boost visual system.
 pub(crate) type WidthBoostVisualQuery = (
     &'static BreakerWidth,
-    Option<&'static WidthBoost>,
+    Option<&'static EffectiveSizeMultiplier>,
     &'static BreakerHeight,
     Option<&'static EntityScale>,
     &'static mut Scale2D,

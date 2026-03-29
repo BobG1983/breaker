@@ -9,7 +9,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use crate::{
     bolt::{components::*, filters::ActiveFilter},
     breaker::components::{Breaker, MinAngleFromHorizontal},
-    chips::components::BoltSpeedBoost,
+    effect::EffectiveSpeedMultiplier,
 };
 
 /// Prepares the bolt velocity for the current timestep.
@@ -23,7 +23,7 @@ pub(crate) fn prepare_bolt_velocity(
             &mut Velocity2D,
             &BoltMinSpeed,
             &BoltMaxSpeed,
-            Option<&BoltSpeedBoost>,
+            Option<&EffectiveSpeedMultiplier>,
         ),
         ActiveFilter,
     >,
@@ -33,10 +33,10 @@ pub(crate) fn prepare_bolt_velocity(
         return;
     };
 
-    for (mut velocity, min_speed, max_speed, speed_boost) in &mut query {
-        let boost = speed_boost.map_or(0.0, |b| b.0);
-        let effective_min = min_speed.0 + boost;
-        let effective_max = max_speed.0 + boost;
+    for (mut velocity, min_speed, max_speed, speed_mult) in &mut query {
+        let mult = speed_mult.map_or(1.0, |e| e.0);
+        let effective_min = min_speed.0 * mult;
+        let effective_max = max_speed.0 * mult;
 
         let speed = velocity.speed();
         if speed > f32::EPSILON {
