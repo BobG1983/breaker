@@ -64,6 +64,8 @@ Do(QuickStop(multiplier: 3.0))
 // AOE effects (spawn entities)
 Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))
 Do(ChainLightning(arcs: 3, range: 96.0, damage_mult: 1.5))
+    // arc_speed is optional, serde default is 200.0 — use arc_speed: 50.0 for slow-arc stress
+Do(ChainLightning(arcs: 5, range: 112.0, damage_mult: 1.5, arc_speed: 50.0))
 Do(PiercingBeam(damage_mult: 2.0, width: 16.0))
 Do(Explode(range: 80.0, damage_mult: 2.0))
 Do(Pulse(base_range: 32.0, range_per_level: 8.0, stacks: 1, speed: 400.0))

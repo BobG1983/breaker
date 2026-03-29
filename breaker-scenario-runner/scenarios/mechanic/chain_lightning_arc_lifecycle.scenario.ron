@@ -1,0 +1,30 @@
+// Adversarial: ChainLightning fires with arc_speed: 50.0 — deliberately slow so that
+// multiple ChainLightningChain and ChainLightningArc entities are in-flight simultaneously
+// across many fixed-update ticks. Dense layout maximises simultaneous cell hits so many
+// chains are spawned per run. The ArcTraveling → arrived → Idle → next-target state
+// machine must handle target-cell destruction while an arc is mid-flight: if the target
+// is despawned before the arc arrives, the chain must still clean up both the arc marker
+// entity and the chain entity without leaking. With action_prob: 0.8 the breaker moves
+// aggressively, maximising simultaneous cell impacts and chain spawns. NoEntityLeaks fires
+// if any arc or chain entity is orphaned; NoNaN catches position corruption from
+// destroyed-target lookups; BoltInBounds ensures arc-entity positions don't corrupt the
+// bolt's quadtree slot. Stress: 16 runs at varied seeds to cover arc-count combinatorics.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.8)),
+    max_frames: 10000,
+    invariants: [NoEntityLeaks, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 7331,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Impacted(Cell), then: [
+                Do(ChainLightning(arcs: 5, range: 112.0, damage_mult: 1.5, arc_speed: 50.0)),
+            ]),
+        ]),
+    ],
+)
