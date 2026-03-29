@@ -147,8 +147,6 @@ move_breaker .after(update_bump)
                [effect domain, unordered relative to physics chain]
             <- bridge_timer_threshold .in_set(EffectSystems::Bridge)
                [effect domain, unordered relative to physics chain]
-            <- spawn_additional_bolt .after(EffectSystems::Bridge)  [bolt domain]
-            <- spawn_chain_bolt .after(EffectSystems::Bridge)       [bolt domain]
 ```
 
 Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). `EffectSystems::Recalculate` converts `Active*` stacks into `Effective*` scalars (`EffectiveSpeedMultiplier`, `EffectiveDamageMultiplier`, `EffectivePiercing`, `EffectiveSizeMultiplier`, `EffectiveBumpForce`, `EffectiveQuickStop`) — it runs unordered relative to the gameplay chain, reading Active* state that is stable during gameplay (Active* vecs only change at chip selection between nodes). Then breaker moves, bolt velocity is prepared, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.

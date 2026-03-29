@@ -1,6 +1,6 @@
 ---
 name: effect-system-domain-map
-description: Complete map of the effect/trigger pipeline — triggers, effects, dispatch, evaluation flow, and system ordering. Updated post effect-system-rewrite (commit 35c1...).
+description: Complete map of the effect/trigger pipeline — triggers, effects, dispatch, evaluation flow, and system ordering. Last verified against Phase 5 (feature/runtime-effects).
 type: project
 ---
 

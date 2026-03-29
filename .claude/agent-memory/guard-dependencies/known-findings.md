@@ -39,6 +39,65 @@ type: project
 ### read-fonts / skrifa dual versions
 - Parley text layout stack split between two font crate generations. Owned by Bevy.
 
+### core-graphics-types v0.1.3 + v0.2.0 dual versions
+- macOS graphics transitive chain. Owned by Bevy/wgpu. Not actionable.
+
+### getrandom v0.3.4 + v0.4.2 dual versions
+- v0.3.4: rand_core 0.9 → rand 0.9 (project's direct dep)
+- v0.4.2: uuid → bevy_animation/bevy_asset/bevy_picking (deep Bevy transitive)
+- Rationale: The split is caused by rand 0.9 pinning getrandom 0.3 and Bevy's UUID stack
+  pulling getrandom 0.4. Both are lightweight crates. Not actionable without a breaking rand
+  upgrade (0.10 would align getrandom to 0.4). Will resolve when rand 0.10 is adopted.
+- Action: None. See rand 0.9 → 0.10 deferral below.
+
+### foldhash v0.1.5 + v0.2.0 dual versions
+- v0.1.5: hashbrown 0.15 → accesskit_consumer/accesskit_macos, petgraph (Bevy a11y stack)
+- v0.2.0: bevy_platform → most of Bevy
+- Rationale: Bevy's accessibility/petgraph layer uses an older hashbrown generation with foldhash 0.1.
+  Not actionable at project level. Owned by Bevy.
+- Action: None.
+
+### itertools v0.13.0 + v0.14.0 dual versions
+- v0.13.0: bindgen (build dep for coreaudio-sys → bevy_audio macOS stack)
+- v0.14.0: bevy_egui, bevy_math
+- Rationale: bindgen is a build-time-only dep for the macOS audio stack. The two versions don't
+  coexist in the final binary (build deps compile separately). Not actionable.
+- Action: None.
+
+### quick-error v1.2.3 + v2.0.1 dual versions
+- v1.2.3: rusty-fork → proptest (dev-only dependency)
+- v2.0.1: tiff → image → Bevy rendering
+- Rationale: v1 is dev-only (proptest) and v2 is production rendering. No runtime conflict.
+  Not actionable — both owned by upstream crates.
+- Action: None.
+
+### rustc-hash v1.1.0 + v2.1.1 dual versions
+- v1.1.0: cosmic-text, naga, naga_oil, wgpu-core (Bevy render stack)
+- v2.1.1: bindgen (build dep for macOS audio stack)
+- Rationale: bindgen is build-time only; v1 and v2 are in different compilation contexts.
+  Not actionable — all owned by Bevy's render/audio stack.
+- Action: None.
+
+### either v1.15.0 dual paths
+- One path via itertools 0.13 → bindgen; one path via bevy_animation/bevy_asset and itertools 0.14
+- Same version, just referenced from two dep chains. Not a real duplicate (unified by cargo).
+- Action: None.
+
+### libc v0.2.183 dual paths
+- Same version, multiple paths (clang-sys/bindgen and macOS platform stack).
+  Not a real duplicate — unified by cargo.
+- Action: None.
+
+### memchr v2.8.0 dual paths
+- Same version, multiple paths (regex stack and nom → bindgen).
+  Not a real duplicate — unified by cargo.
+- Action: None.
+
+### regex / regex-automata / regex-syntax dual paths
+- Same versions (regex v1.12.3, regex-automata v0.4.14, regex-syntax v0.8.10) from two paths.
+  Not real duplicates — cargo unifies same-version deps.
+- Action: None.
+
 ## Acknowledged — Low Priority
 
 ### Unicode-DFS-2016 warning in cargo deny
@@ -51,3 +110,4 @@ type: project
 - Deferred: rand 0.10 is a semver-breaking release. Widespread usage across the codebase
   (bolt, chips, effect, run, shared/rng). Needs a dedicated migration task — not a casual bump.
 - Re-evaluate when Bevy ecosystem (bevy_rand etc.) stabilizes on rand 0.10.
+- Note: adopting rand 0.10 would also unify the getrandom v0.3/v0.4 split.

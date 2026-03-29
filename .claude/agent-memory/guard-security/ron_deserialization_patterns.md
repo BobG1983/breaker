@@ -65,3 +65,50 @@ type: project
 - `ramping_damage.rs` accumulates damage bonus in `RampingDamageState::accumulated`
 - As of Phase 3, no system reads `accumulated` to add it to effective damage
 - This is expected for Phase 3 (state tracking complete, consumption wired later)
+
+## Phase 4+5 new findings (runtime effects, 2026-03-28, feature/runtime-effects)
+
+### Evolution chip RON files — no new panic risk
+- New `.evolution.ron` files (phantom_breaker, voltchain, supernova, gravity_well,
+  second_wind, split_decision, nova_lance, etc.) all loaded via Bevy asset pipeline
+- All numeric values are bounded literals, no user-provided strings that feed into
+  paths or format strings. No injection risk.
+- `SpawnPhantom(duration: 5.0, max_active: 1)` — `max_active: 1` is a `u32` field;
+  worst-case a large RON value causes excessive phantom despawning but not a panic.
+
+### spawn_phantom.rs: max_active=0 is a silent no-op (Info-level)
+- `spawn_phantom::fire`: `while owned.len() >= max_active as usize` — if `max_active=0`,
+  the condition is `owned.len() >= 0` which is always true, so it despawns all existing
+  phantoms then immediately spawns one, leaving count=1 instead of 0.
+- The RON files set `max_active: 1`; this edge case doesn't occur in practice.
+- Not a panic, not a security issue. Info-level only.
+
+### spawn_phantom.rs: Vec::remove(0) is O(n) (Info-level)
+- `while owned.len() >= max_active as usize { owned.remove(0); }` — O(n) per removal.
+- `max_active` caps at the RON-configured value (1 in the current evolution chip),
+  so at worst removes a handful of elements. Not a panic surface.
+
+### PulseDamaged / ShockwaveDamaged HashSets — unbounded growth (Info-level)
+- `PulseDamaged(pub HashSet<Entity>)` and `ShockwaveDamaged(pub HashSet<Entity>)`
+  grow by one entry per unique cell hit. Cell counts are bounded by the level layout
+  (small fixed grid); not a memory concern in practice.
+
+### apply_pulse_damage / apply_shockwave_damage: radius > 0.0 guard is correct (Safe)
+- Both systems guard `if radius.0 <= 0.0 { continue; }` before querying the quadtree.
+  Zero-radius query would query nothing; the guard is defensive and safe.
+
+### Confirmed safe: no division by zero in new effect code
+- `effective_max_radius` in pulse.rs: `base_range + f32::from(extra) * range_per_level`
+  — pure multiply-add, no division.
+- `shockwave::fire` effective range computation: same pattern, no division.
+- `apply_attraction` uses `normalize_or_zero()` — zero vector returns Vec2::ZERO safely.
+
+### attraction.rs: velocity accumulates unboundedly (Warning-level)
+- `apply_attraction` adds `direction * nearest_force * dt` to velocity each fixed tick.
+- No speed cap is applied inside attraction.rs itself. The bolt's speed-clamping system
+  (`clamp_bolt_speed`) is expected to cap velocity after attraction runs.
+- If attraction runs WITHOUT the speed clamp (e.g., in isolated unit tests or if system
+  ordering is wrong), velocity can grow without bound. Not a crash, but a gameplay logic
+  issue with security-adjacent risk (unbounded velocity could bypass CCD bounds).
+- Confirmed: in production the systems are ordered correctly (attraction before physics
+  resolution, speed clamp also in FixedUpdate). Info/Warning-level only.

@@ -1,2 +1,3 @@
 - [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/
 - [Phase 3 file length findings](phase3_findings.md) — files flagged after feature/stat-effects; includes offering.rs, impact.rs, impacted.rs, bolt_wall_collision.rs
+- [Phase 4+5 file length findings](phase4_findings.md) — major growth on feature/runtime-effects; effect/effects/ all large, new files in bolt/cells/run/wall, quadtree.rs, lifecycle/mod.rs violation

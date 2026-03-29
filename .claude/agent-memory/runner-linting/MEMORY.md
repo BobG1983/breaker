@@ -1,1 +1,2 @@
-- [Current lint state](lint_state_current.md) — feature/runtime-effects: game crate 0 errors/~59 warnings (lib); all other crates clean (2026-03-28)
+- [Current lint state](lint_state_current.md) — feature/runtime-effects: game crate 9 errors/56+ warnings (lib) from Phase 5 effects; all other crates clean (2026-03-28)
+- [Core lint patterns](lint_patterns_core.md) — Recurring warning categories from effect system rewrite (missing_const_for_fn, needless_pass_by_ref_mut, dead_code, use_self, suboptimal_flops, redundant_clone)

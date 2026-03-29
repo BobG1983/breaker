@@ -61,9 +61,7 @@ impl Plugin for BreakerPlugin {
                 FixedUpdate,
                 (
                     update_bump,
-                    move_breaker
-                        .after(update_bump)
-                        .in_set(BreakerSystems::Move),
+                    move_breaker.after(update_bump).in_set(BreakerSystems::Move),
                     update_breaker_state
                         .after(move_breaker)
                         .in_set(BreakerSystems::UpdateState),

@@ -8,9 +8,9 @@ Several effect entities rely on self-despawn (timer expiry or radius reaching ma
 
 **Affected files (as of 2026-03-28):**
 - `effect/effects/gravity_well.rs` — GravityWellMarker entity, no cleanup marker
-- `effect/effects/shockwave.rs` — Shockwave entity, no cleanup marker (flagged in Phase 4 review)
 
 **Not affected (correctly handled):**
+- `effect/effects/shockwave.rs` — Shockwave entity now has `CleanupOnNodeExit` (fixed in Phase 4)
 - `effect/effects/pulse.rs` — PulseRing entities have `CleanupOnNodeExit`
 - `effect/effects/explode.rs` — ExplodeRequest entities have `CleanupOnNodeExit`
 - `effect/effects/second_wind.rs` — Wall `#[require]` auto-inserts `CleanupOnNodeExit`

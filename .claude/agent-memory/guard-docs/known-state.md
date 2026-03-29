@@ -4,6 +4,20 @@ description: Confirmed doc/code alignment state; covers effect system rewrite (2
 type: project
 ---
 
+## Confirmed Correct (as of runtime-effects branch, 2026-03-28)
+
+- `docs/design/effects/explode.md` — "Not yet implemented" removed; explode is fully implemented
+- `docs/architecture/messages.md` — DamageCell sender list now includes all effect senders (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam). SpawnChainBolt removed (never existed). SpawnAdditionalBolt moved to Registered section (registered but no active producer/consumer).
+- `docs/architecture/ordering.md` — spawn_additional_bolt and spawn_chain_bolt entries removed (neither system exists; effects spawn directly via &mut World)
+- `docs/design/terminology/core.md` — ChainBolt entry corrected (now references ChainBoltMarker, ChainBoltAnchor, ChainBoltConstraint, DistanceConstraint; removed SpawnChainBolt/spawn_chain_bolt/break_chain_on_bolt_lost which never existed)
+- `docs/plan/index.md` — Runtime Effects entry added to Current section (In Progress)
+- `docs/architecture/effects/core_types.md` — EffectKind enum is complete and current for all 25 effect modules
+- `docs/design/effects/` — all 25 design docs match implemented behavior
+
+## SpawnAdditionalBolt — Intentional Dead Registration
+
+Registered in BoltPlugin but no producer or consumer exists. `spawn_bolts::fire()` and `chain_bolt::fire()` spawn directly via `&mut World`. This is likely a placeholder or legacy from a pre-direct-spawn design. Recorded in messages.md Registered section. Do NOT flag as missing code — it may be intentionally unused until future cross-domain spawn coordination is needed.
+
 ## Confirmed Correct (as of effect system rewrite, 2026-03-28)
 
 - `docs/architecture/messages.md` — Collision messages use `BoltImpactCell`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `CellImpactWall`. `DamageCell.source_chip` (not `source_bolt`). Observer Events section replaced with Effect Dispatch section.
