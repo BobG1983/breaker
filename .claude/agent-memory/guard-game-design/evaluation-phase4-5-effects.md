@@ -14,19 +14,17 @@ type: project
 - **14 of 15 effects approved** — serve the core identity of speed, tension, build variety
 - **Shield flagged for redesign** — violates Pillar 1 (Escalation) and Pillar 5 (Pressure Not Panic) by creating a safe harbor with zero skill expression
 
-### Shield Redesign Recommendation
+### Shield Status (Updated 2026-03-29)
 
-Current: timed damage/bolt-loss immunity. Problem: helps everyone equally, no skill expression, relieves tension.
+Redesigned from timed immunity to charge-based absorption. Breaker shield: per-bolt charge cost, approved. Cell shield: per-hit charge cost, approved with flag — works as baseline HP variant but lacks skill expression and synergy interaction. Flagged for Phase 7 enrichment (add secondary behavior: reflection, timer penalty, or adjacency buff when shield absorbs).
 
-Proposed: Shield absorbs N hits before breaking, each hit while shielded triggers a counter-effect (shockwave, speed boost). This makes Shield an offensive tool (seek hits while shielded), preserves tension, and opens synergy paths.
+Original recommendation for counter-effect on shield hit still stands for Phase 7.
 
-Alternative: Keep timed immunity but cap at 0.5-1.0s (dodge-frame feel, not vacation).
+### Implementation Gaps
 
-### Implementation Gaps Found
+1. **RESOLVED: DamageCell source_chip threading** — All combat effects now thread chip attribution via `EffectSourceChip` component. Closed 2026-03-29.
 
-1. **DamageCell source_chip: None everywhere** — combat effects (Shockwave, Pulse, Explode, ChainLightning, PiercingBeam) all send DamageCell with source_chip: None. Blocks damage attribution for run-end highlights.
-
-2. **BASE_BOLT_DAMAGE hardcoding** — Shockwave and Pulse use BASE_BOLT_DAMAGE constant instead of effective damage multiplier. DamageBoost stacking doesn't amplify these effects. Weakens synergy web.
+2. **OPEN: BASE_BOLT_DAMAGE hardcoding** — Shockwave and Pulse use BASE_BOLT_DAMAGE constant instead of effective damage multiplier. DamageBoost stacking amplifies via `EffectiveDamageMultiplier` but bolt base damage changes won't propagate. Weakens synergy web.
 
 ### Tuning Watch
 

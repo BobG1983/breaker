@@ -43,3 +43,7 @@ Each stat type is a separate component. Entities that have some but not all stat
 ## Intentional Pattern: Silent No-Op Until Chip Fires
 
 The design intent is that recalculate systems produce zero results until at least one chip fires the matching stat. This is correct behavior. The zero-entity case is not a bug.
+
+## Note: recalculate systems are REAL (not placeholder) as of feature/runtime-effects
+
+All 6 recalculate systems (recalculate_speed, recalculate_damage, recalculate_piercing, recalculate_size, recalculate_bump_force, recalculate_quick_stop) are fully implemented — they query (&ActiveXxx, &mut EffectiveXxx) and update the scalar. The "Wave 6 placeholder" comment from earlier phases no longer applies.

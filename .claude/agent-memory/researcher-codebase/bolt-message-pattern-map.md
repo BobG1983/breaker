@@ -1,46 +1,33 @@
 ---
 name: bolt-message-pattern-map
-description: Bolt domain message status (SpawnAdditionalBolt placeholder), ExtraBolt/phantom/lifespan patterns, and DistanceConstraint wiring for ChainBolt
+description: Bolt domain message inventory, ExtraBolt/phantom/lifespan patterns, and DistanceConstraint wiring for ChainBolt
 type: reference
 ---
 
 # Bolt Message & Pattern Map
 
-## SpawnAdditionalBolt Message — Status: PLACEHOLDER
+## Bolt Domain Messages (src/bolt/messages.rs)
 
-`SpawnAdditionalBolt` is defined in `src/bolt/messages.rs`:
-```rust
-pub struct SpawnAdditionalBolt {
-    pub source_chip: Option<String>,
-    pub lifespan: Option<f32>,
-    pub inherit: bool,
-}
-```
+Current messages as of feature/runtime-effects:
+- `BoltSpawned` — sent after bolt entity spawns; consumed by node spawn coordinator
+- `BoltImpactBreaker` — bolt hits breaker; consumed by `grade_bump`
+- `BoltImpactCell` — bolt hits cell; consumed by chips, cells, audio
+- `BoltLost` — bolt falls below breaker; consumed by breaker plugin (penalty)
+- `BoltImpactWall` — bolt reflects off wall; consumed by overclock wall impact bridge
+- `RequestBoltDestroyed` — extra bolt falls off screen; consumed by `bridge_bolt_death` and `cleanup_destroyed_bolts`
 
-The docstring says "Consumed by `handle_spawn_bolt` in the effect domain" but that handler
-**does not exist**. The effect handler in `src/effect/effects/spawn_bolts.rs::fire()` is a
-placeholder — it just logs, does not write `SpawnAdditionalBolt` or spawn actual bolt entities.
+`SpawnAdditionalBolt` was removed from `messages.rs`. `SpawnChainBolt` was also removed.
+Effect `fire()` functions spawn bolt entities directly (direct-spawn pattern).
 
-Note: `SpawnChainBolt` was removed from `messages.rs`. The `chain_bolt.rs::fire()` effect
-directly spawns full bolt entities with all required components (`ChainBoltMarker`, `Position2D`,
-`Velocity2D`, `Aabb2D`, `CollisionLayers`, `BoltBaseSpeed`, etc.) plus a `DistanceConstraint`
-entity referencing the chain bolt and the anchor entity. This is the established direct-spawn
-pattern (see `reviewer-architecture` memory).
+## Phantom Bolt — Status: REAL (feature/runtime-effects)
 
-## Phantom Bolt — Status: PLACEHOLDER
+`src/effect/effects/spawn_phantom/effect.rs` uses the real bolt approach via `spawn_extra_bolt`:
+- Calls `spawn_extra_bolt(world, spawn_pos)` which spawns a full bolt entity with all physics components
+- Then inserts `(PhantomBoltMarker, PhantomOwner(entity), BoltLifespan(Timer), PiercingRemaining(u32::MAX))`
+- Uses `Position2D` (not `Transform`) for spawn position
+- `PhantomTimer` component is gone — replaced by `BoltLifespan`
 
-`src/effect/effects/spawn_phantom.rs` exists but is NOT the ECS-bolt approach.
-It spawns `(PhantomBoltMarker, PhantomTimer, PhantomOwner, Transform)` — no
-`Bolt` marker, no physics components. Reads `Transform` (NOT `Position2D`).
-Uses `PhantomTimer(f32)` float instead of `BoltLifespan(Timer)`.
-
-This is the OLD placeholder approach. The PLANNED approach (for SpawnPhantom spec work)
-would be a real bolt entity with:
-- All bolt spawn components (Bolt, Position2D, Velocity2D, Aabb2D, CollisionLayers, ...)
-- `ExtraBolt` marker (so it despawns on loss rather than respawning)
-- `BoltLifespan(Timer::from_seconds(duration, TimerMode::Once))`
-- `PiercingRemaining(u32::MAX)` — or equivalent infinite piercing
-- `CleanupOnNodeExit` (NOT `CleanupOnRunEnd` — phantom dies with the node)
+The old placeholder components (`PhantomTimer`, `Transform`-based spawn) are fully removed from the codebase.
 
 ## Extra Bolt Pattern (from ExtraBolt marker)
 

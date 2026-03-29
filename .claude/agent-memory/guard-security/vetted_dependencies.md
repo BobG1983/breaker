@@ -48,3 +48,8 @@ No new dependencies added in the runtime effects implementation (attraction, cha
 explode, pulse, second_wind, shockwave, spawn_phantom). Dependency baseline unchanged.
 cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
 cargo machete: no unused dependencies found.
+
+## Phase 6 note (2026-03-29, feature/source-chip-shield-absorption)
+No new dependencies added. Dependency baseline unchanged.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo machete: no unused dependencies found.

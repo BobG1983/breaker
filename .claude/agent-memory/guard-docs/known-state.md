@@ -7,16 +7,18 @@ type: project
 ## Confirmed Correct (as of runtime-effects branch, 2026-03-28)
 
 - `docs/design/effects/explode.md` — "Not yet implemented" removed; explode is fully implemented
-- `docs/architecture/messages.md` — DamageCell sender list now includes all effect senders (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam). SpawnChainBolt removed (never existed). SpawnAdditionalBolt moved to Registered section (registered but no active producer/consumer).
+- `docs/architecture/messages.md` — DamageCell sender list now includes all effect senders (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam). SpawnChainBolt removed (never existed). SpawnAdditionalBolt removed entirely from both code and docs.
 - `docs/architecture/ordering.md` — spawn_additional_bolt and spawn_chain_bolt entries removed (neither system exists; effects spawn directly via &mut World)
 - `docs/design/terminology/core.md` — ChainBolt entry corrected (now references ChainBoltMarker, ChainBoltAnchor, ChainBoltConstraint, DistanceConstraint; removed SpawnChainBolt/spawn_chain_bolt/break_chain_on_bolt_lost which never existed)
 - `docs/plan/index.md` — Runtime Effects entry added to Current section (In Progress)
 - `docs/architecture/effects/core_types.md` — EffectKind enum is complete and current for all 25 effect modules
 - `docs/design/effects/` — all 25 design docs match implemented behavior
 
-## SpawnAdditionalBolt — Intentional Dead Registration
+## SpawnAdditionalBolt — REMOVED (feature/runtime-effects)
 
-Registered in BoltPlugin but no producer or consumer exists. `spawn_bolts::fire()` and `chain_bolt::fire()` spawn directly via `&mut World`. This is likely a placeholder or legacy from a pre-direct-spawn design. Recorded in messages.md Registered section. Do NOT flag as missing code — it may be intentionally unused until future cross-domain spawn coordination is needed.
+`SpawnAdditionalBolt` was removed from `bolt/messages.rs` and from `docs/architecture/messages.md`.
+`spawn_bolts::fire()` and `chain_bolt::fire()` spawn directly via `&mut World`. Do NOT flag its
+absence as missing functionality — direct World spawning is the established pattern.
 
 ## Confirmed Correct (as of effect system rewrite, 2026-03-28)
 
@@ -56,12 +58,23 @@ The file contains only a doc comment explaining legacy stat components were remo
 **Why:** stat-effects phase migration removed all flat chip stat components.
 **How to apply:** When reviewing chips domain, expect components.rs to be a stub with doc comment only.
 
-## Architecture Confirmed (effect system post-rewrite)
+## Architecture Confirmed (source-chip-shield-absorption, 2026-03-29)
 
-- Effect dispatch: `EffectKind::fire(entity, world)` / `reverse(entity, world)` via `EffectCommandsExt` on `Commands`
+- Effect dispatch: `EffectKind::fire(entity, source_chip: &str, world)` / `reverse(entity, source_chip: &str, world)` — source_chip added to ALL fire/reverse signatures
+- `EffectCommandsExt` methods: `fire_effect(entity, effect, source_chip: String)`, `reverse_effect(entity, effect, source_chip: String)`, `transfer_effect(entity, chip_name: String, children, permanent)`
+- `EffectSourceChip(Option<String>)` — component on AoE/spawn effect entities; carries chip attribution from dispatch to damage-application tick
+- `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
+- fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)
+- reverse() method split: `reverse` → `reverse_aoe_and_spawn` (2 methods)
+- `EffectKind::Shield { stacks: u32 }` — only field is stacks (NO base_duration, NO duration_per_level)
+- `EffectKind::Attraction { attraction_type, force, max_force: Option<f32> }` — named fields (NOT tuple)
+- `EffectKind::ChainLightning { arcs, range, damage_mult, arc_speed }` — arc_speed field (default 200.0 via serde)
+- `EffectKind::Pulse { base_range, range_per_level, stacks, speed, interval }` — interval field (default 0.5 via serde)
+- `BoltSystems::WallCollision` — defined in bolt/sets.rs, tags bolt_wall_collision, runs after CellCollision
+- ShieldActive cross-domain writes: bolt domain writes ShieldActive on breaker entity (bolt_lost); cells domain writes ShieldActive on cell entities (handle_cell_hit). Both are accepted architectural exceptions.
 - No typed observer events. No `ActiveEffects`/`ArmedEffects`/`EffectChains` resources.
 - Chain stores: `BoundEffects` (permanent) + `StagedEffects` (one-shot)
-- Effect file pattern: `fire()` + `reverse()` + `register()` free functions per module
+- Effect file pattern: `fire(entity, ..params.., source_chip: &str, world)` + `reverse(...)` + `register()` free functions per module
 - Stat model: `Active*` stacks (effect domain) → `Effective*` scalars (computed by Recalculate) → consumers
 - `PiercingRemaining` is bolt domain (gameplay state), not an effect stat. `EffectivePiercing` is the cap.
 - `EffectSystems::Recalculate` ordering: `.after(EffectSystems::Bridge)`, run_if `in_state(PlayingState::Active)`

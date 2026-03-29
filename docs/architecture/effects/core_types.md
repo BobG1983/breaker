@@ -121,15 +121,30 @@ pub enum EffectKind {
     Piercing(u32),
     SizeBoost(f32),
     BumpForce(f32),
-    Attraction(AttractionType, f32),
+    Attraction {
+        attraction_type: AttractionType,
+        force: f32,
+        #[serde(default)] max_force: Option<f32>,  // clamps velocity delta per tick
+    },
     LoseLife,
     TimePenalty { seconds: f32 },
     SpawnBolts { #[serde(default = "one")] count: u32, #[serde(default)] lifespan: Option<f32>, #[serde(default)] inherit: bool },
     ChainBolt { tether_distance: f32 },
-    Shield { base_duration: f32, duration_per_level: f32, stacks: u32 },
-    ChainLightning { arcs: u32, range: f32, damage_mult: f32 },
+    Shield { stacks: u32 },                        // stacks become charge count; no duration
+    ChainLightning {
+        arcs: u32,
+        range: f32,
+        damage_mult: f32,
+        #[serde(default = "default_chain_lightning_arc_speed")] arc_speed: f32,  // default 200.0
+    },
     PiercingBeam { damage_mult: f32, width: f32 },
-    Pulse { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
+    Pulse {
+        base_range: f32,
+        range_per_level: f32,
+        stacks: u32,
+        speed: f32,
+        #[serde(default = "default_pulse_interval")] interval: f32,  // default 0.5
+    },
     SecondWind,           // unit variant — no fields
     SpawnPhantom { duration: f32, max_active: u32 },
     GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
@@ -155,39 +170,68 @@ pub enum AttractionType {
 }
 ```
 
+## EffectSourceChip
+
+```rust
+/// Deferred chip attribution stored on spawned effect entities (shockwave,
+/// pulse ring, explode request, chain lightning chain, piercing beam request,
+/// tether beam). Damage-application systems read this to populate
+/// DamageCell.source_chip.
+#[derive(Component, Debug, Clone, Default)]
+pub struct EffectSourceChip(pub Option<String>);
+
+impl EffectSourceChip {
+    /// Create from a chip name: empty string → EffectSourceChip(None), non-empty → Some(owned).
+    pub fn new(source_chip: &str) -> Self { ... }
+    /// Extract the chip attribution for DamageCell.source_chip.
+    pub fn source_chip(&self) -> Option<String> { ... }
+}
+
+/// Convert a source_chip string into Option<String>.
+/// Empty string → None; non-empty → Some(s.to_string()).
+pub fn chip_attribution(source_chip: &str) -> Option<String> { ... }
+```
+
+Lives in `effect/core/types.rs`. Used by AoE/spawn effects that need to carry chip attribution
+from dispatch time to damage-application time (since those effects damage cells on a later tick).
+
 ## fire() and reverse()
 
-The enum has `fire()` and `reverse()` methods on `EffectKind`. Each match arm destructures the variant and calls the per-module free function:
+The enum has `fire()` and `reverse()` methods on `EffectKind`. Both take a `source_chip: &str`
+parameter for chip attribution. Each match arm destructures the variant and calls the per-module
+free function:
 
 ```rust
 impl EffectKind {
-    pub(crate) fn fire(&self, entity: Entity, world: &mut World) {
+    pub(crate) fn fire(&self, entity: Entity, source_chip: &str, world: &mut World) {
         match self {
             Self::Shockwave { base_range, range_per_level, stacks, speed } => {
-                shockwave::fire(entity, *base_range, *range_per_level, *stacks, *speed, world)
+                shockwave::fire(entity, *base_range, *range_per_level, *stacks, *speed, source_chip, world)
             }
-            Self::SpeedBoost { multiplier } => speed_boost::fire(entity, *multiplier, world),
-            Self::DamageBoost(v) => damage_boost::fire(entity, *v, world),
-            Self::LoseLife => life_lost::fire(entity, world),
-            Self::SecondWind => second_wind::fire(entity, world),
-            // ... one arm per variant (exhaustive — no wildcard)
+            Self::SpeedBoost { multiplier } => speed_boost::fire(entity, *multiplier, source_chip, world),
+            Self::DamageBoost(v) => damage_boost::fire(entity, *v, source_chip, world),
+            Self::LoseLife => life_lost::fire(entity, source_chip, world),
+            Self::SecondWind => second_wind::fire(entity, source_chip, world),
+            // ... one arm per variant; falls through to fire_aoe_and_spawn / fire_utility_and_spawn
         }
     }
 
-    pub(crate) fn reverse(&self, entity: Entity, world: &mut World) {
+    pub(crate) fn reverse(&self, entity: Entity, source_chip: &str, world: &mut World) {
         match self {
-            Self::Shockwave { .. } => shockwave::reverse(entity, world),
-            Self::SpeedBoost { multiplier } => speed_boost::reverse(entity, *multiplier, world),
-            Self::DamageBoost(v) => damage_boost::reverse(entity, *v, world),
-            Self::LoseLife => life_lost::reverse(entity, world),
-            Self::SecondWind => second_wind::reverse(entity, world),
-            // ... ALL variants — exhaustive, no wildcard
+            Self::Shockwave { .. } => shockwave::reverse(entity, source_chip, world),
+            Self::SpeedBoost { multiplier } => speed_boost::reverse(entity, *multiplier, source_chip, world),
+            Self::DamageBoost(v) => damage_boost::reverse(entity, *v, source_chip, world),
+            Self::LoseLife => life_lost::reverse(entity, source_chip, world),
+            Self::SecondWind => second_wind::reverse(entity, source_chip, world),
+            // ... falls through to reverse_aoe_and_spawn — ALL variants covered
         }
     }
 }
 ```
 
-The match is split across two methods (`fire` and `fire_aoe_and_spawn`) purely for line count. Both are exhaustive.
+The `fire` match is split across **three** private methods (`fire`, `fire_aoe_and_spawn`,
+`fire_utility_and_spawn`) purely for line count. The `reverse` match is split across **two**
+private methods (`reverse`, `reverse_aoe_and_spawn`). All splits are exhaustive.
 
 ## Per-Effect Modules
 
@@ -199,11 +243,12 @@ Each effect module (`effect/effects/<name>.rs`) defines free functions and any a
 // Active state component (tracks applied multipliers on the entity)
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
-pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, multiplier: f32, source_chip: &str, world: &mut World) {
     // push multiplier to ActiveSpeedBoosts component
+    // source_chip is accepted for API uniformity but not used by stat effects
 }
 
-pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, multiplier: f32, source_chip: &str, world: &mut World) {
     // remove matching entry from ActiveSpeedBoosts
 }
 

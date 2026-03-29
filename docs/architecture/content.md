@@ -28,92 +28,68 @@ See `docs/design/decisions/chip-template-system.md` for the full design decision
 
 ### Unified Effect Model
 
+All chip and breaker effects are `EffectNode` trees referencing `EffectKind` — the actual action enum. There is no separate `Effect` enum. The canonical location is `effect/core/types.rs`.
+
 ```rust
-// effect/definition.rs (canonical location for Effect types)
+// effect/core/types.rs
 
-// ALL chip and breaker effects are EffectNode trees — no wrapper enums
 pub enum EffectNode {
-    When { trigger: Trigger, then: Vec<EffectNode> },  // trigger gate
-    Do(Effect),                                          // leaf action
-    Until { until: Trigger, then: Vec<EffectNode> },   // conditional removal
-    Once(Vec<EffectNode>),                              // one-shot fire
+    When { trigger: Trigger, then: Vec<EffectNode> },
+    Do(EffectKind),
+    Once(Vec<EffectNode>),
+    On { target: Target, #[serde(default)] permanent: bool, then: Vec<EffectNode> },
+    Until { trigger: Trigger, then: Vec<EffectNode> },
+    Reverse { effects: Vec<EffectKind>, chains: Vec<EffectNode> },  // internal only
 }
 
-pub enum Trigger {
-    PerfectBump, Bump, EarlyBump, LateBump, BumpWhiff, NoBump,
-    PerfectBumped, Bumped, EarlyBumped, LateBumped,
-    Impact(ImpactTarget), CellDestroyed, BoltLost, Death,
-    Selected, TimeExpires(f32), NodeTimerThreshold(f32),
-    // serde renames keep RON files backward-compatible (e.g., OnPerfectBump → PerfectBump)
-}
-
-pub enum Effect {
-    // Passive effects (via OnSelected / When(Selected, ...))
+pub enum EffectKind {
+    // Stat effects — applied via fire(), reversed via reverse()
     Piercing(u32),
     DamageBoost(f32),
-    SpeedBoost { multiplier: f32 },    // target resolved from On{} context
-    ChainHit(u32),
-    SizeBoost(f32),                    // Bolt = radius, Breaker = width (handler-determined)
-    Attraction(AttractionType, f32),
+    SpeedBoost { multiplier: f32 },
+    SizeBoost(f32),
     BumpForce(f32),
-    RampingDamage { damage_per_trigger: f32 },  // no max_bonus — uncapped accumulation
+    Attraction { attraction_type: AttractionType, force: f32, #[serde(default)] max_force: Option<f32> },
+    RampingDamage { damage_per_trigger: f32 },
+    QuickStop { multiplier: f32 },
 
-    // Triggered effects (via bridge systems)
+    // AoE / spawn effects
     Shockwave { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
+    Pulse { base_range: f32, range_per_level: f32, stacks: u32, speed: f32, #[serde(default = "default_pulse_interval")] interval: f32 },
+    Explode { range: f32, damage_mult: f32 },
+    ChainLightning { arcs: u32, range: f32, damage_mult: f32, #[serde(default = "default_chain_lightning_arc_speed")] arc_speed: f32 },
+    PiercingBeam { damage_mult: f32, width: f32 },
+    TetherBeam { damage_mult: f32 },
+
+    // Spawn effects
+    SpawnBolts { #[serde(default = "one")] count: u32, #[serde(default)] lifespan: Option<f32>, #[serde(default)] inherit: bool },
     ChainBolt { tether_distance: f32 },
+    SpawnPhantom { duration: f32, max_active: u32 },
+    GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
+
+    // Protection / special
+    Shield { stacks: u32 },           // stacks become ShieldActive.charges (no duration)
+    SecondWind,                        // unit variant — no fields
     LoseLife,
     TimePenalty { seconds: f32 },
-    SpawnBolts { count: u32, lifespan: Option<f32>, inherit: bool },
-    Shield { base_duration: f32, duration_per_level: f32, stacks: u32 },
-    ChainLightning { arcs: u32, range: f32, damage_mult: f32 },
-    SpawnPhantom { duration: f32, max_active: u32 },
-    PiercingBeam { damage_mult: f32, width: f32 },
-    GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
-    SecondWind { invuln_secs: f32 },
-    Pulse { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
+
+    // Meta effects
     RandomEffect(Vec<(f32, EffectNode)>),
-    EntropyEngine { threshold: u32, pool: Vec<(f32, EffectNode)> },
-    // ... (see effect/definition.rs for full list)
-}
-
-pub enum Target { Bolt, Breaker, AllBolts, Cell, Wall, AllCells }
-pub enum ImpactTarget { Cell, Breaker, Wall }
-pub enum AttractionType { Cell, Wall, Breaker }
-
-// chips/definition.rs — chip content uses EffectNode directly
-#[derive(Asset, TypePath, Deserialize)]
-pub struct ChipDefinition {
-    pub name: String,
-    pub description: String,
-    pub rarity: Rarity,
-    pub max_stacks: u32,              // renamed from max_taken
-    pub effects: Vec<EffectNode>,     // EffectNode trees (not TriggerChain)
-    pub ingredients: Option<Vec<EvolutionIngredient>>,
-    pub template_name: Option<String>,
+    EntropyEngine { max_effects: u32, pool: Vec<(f32, EffectNode)> },
 }
 ```
+
+See `docs/architecture/effects/core_types.md` for full field-level documentation of each variant.
 
 ### Effect Application
 
-When a player selects a chip, `dispatch_chip_effects` dispatches based on the effect type:
+When a player selects a chip, the chip dispatch system pushes the chip's `EffectNode` trees onto the breaker/bolt entity's `BoundEffects`. Bridge systems in `effect/triggers/` evaluate `BoundEffects` and `StagedEffects` on every matching trigger, calling `commands.fire_effect(entity, effect_kind, chip_name)` for each `Do` leaf they encounter.
 
-- **`When(trigger: OnSelected, ...)` nodes**: Evaluated immediately. Each `Do(effect)` leaf fires a typed passive event (e.g., `PiercingApplied`, `DamageBoostApplied`) via `fire_passive_event`. Per-effect observer handlers in `effect/effects/` insert or update flat components on bolt or breaker entities.
-- **Other `EffectNode` trees** (When(OnPerfectBump, ...), Until(...), etc.): Pushed to `ActiveEffects` resource for evaluation by bridge systems on matching game events.
+- **Stat effects** (`SpeedBoost`, `DamageBoost`, `Piercing`, `SizeBoost`, `BumpForce`, `QuickStop`): `fire()` pushes a value onto an `Active*` stack component (e.g., `ActiveSpeedBoosts(Vec<f32>)`). `EffectSystems::Recalculate` systems reduce each stack into a single `Effective*` scalar consumed by gameplay systems.
+- **AoE/spawn effects** (`Shockwave`, `ChainLightning`, `Explode`, etc.): `fire()` spawns a request entity or directly damages nearby cells via `DamageCell` message. These carry chip attribution via `EffectSourceChip` component for damage tracking.
+- **Shield**: `fire()` inserts or adds charges to `ShieldActive` on the entity. Charge decrement happens in `bolt_lost` (breaker entity) and `handle_cell_hit` (cell entities) — not in a separate effect system.
 
-```rust
-// Passive effects land as flat components on entities
-struct Piercing(pub u32);           // bolt: max pierces
-struct DamageBoost(pub f32);        // bolt: accumulated damage bonus
-struct BoltSpeedBoost(pub f32);     // bolt: accumulated flat speed bonus
-struct BoltSizeBoost(pub f32);      // bolt: accumulated fractional radius bonus
-struct ChainHit(pub u32);           // bolt: chain hit count
-struct BreakerSpeedBoost(pub f32);  // breaker: accumulated flat speed bonus
-struct BumpForceBoost(pub f32);     // breaker: accumulated flat bump force bonus
-```
-
-Stacking increments the existing component's value. Production systems query for these components directly — if absent, the system uses the base value.
-
-**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `Effect` variant in `effect/definition.rs` + new file in `effect/effects/` + `register()` call in `EffectPlugin`, requires recompile (appropriate — new behavior means new code).
+**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types.rs` + new file in `effect/effects/` + `register()` call, requires recompile.
 
 ### Registries
 

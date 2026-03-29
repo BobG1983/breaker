@@ -53,7 +53,7 @@ Most trigger bridges are stubs. "Wired in Wave 8" comments throughout.
 - impact, impacted — stubs (these consume the collision messages)
 - death — REAL: bridge_death reads RequestCellDestroyed/RequestBoltDestroyed, fires Trigger::Death globally on all BoundEffects entities (in EffectSystems::Bridge, FixedUpdate)
 - died — REAL: bridge_died reads same messages, fires Trigger::Died only on the dying entity (targeted, in EffectSystems::Bridge, FixedUpdate)
-- bolt_lost — stub
+- bolt_lost — REAL: bridge_bolt_lost reads BoltLost message, fires Trigger::BoltLost globally on all BoundEffects entities
 - node_start, node_end — stubs
 - timer — REAL: tick_time_expires (was already noted below)
 - until — REAL: desugar_until (was already noted below)

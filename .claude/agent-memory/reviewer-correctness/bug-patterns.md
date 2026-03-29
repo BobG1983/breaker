@@ -38,13 +38,10 @@ GlobalPosition2D or Spatial2D — they are purely Transform-based. This is inten
 
 ## Phase 5 effect fire(): Transform vs Position2D for bolt position
 
-`chain_lightning::fire()` and `piercing_beam::fire()` read `world.get::<Transform>(entity)` to
-get the bolt's current position. This is 1 fixed-tick stale because `derive_transform` runs in
-`AfterFixedMainLoop`, after `FixedUpdate` collision systems. The correct approach is
-`world.get::<Position2D>(entity)` (as `spawn_bolts.rs`, `chain_bolt.rs`, `tether_beam.rs` do).
+`chain_lightning::fire()` — FIXED in rework: now uses `Position2D` directly.
 
-The same stale-Transform pattern also exists in `explode.rs`, `gravity_well.rs`, `shockwave.rs`
-(Phase 4 effects) but those were reviewed separately.
+`piercing_beam::fire()` — STILL uses `Position2D -> Transform fallback` (line 37-41). The
+Transform fallback is wrong — should be `Position2D -> Vec2::ZERO` only. OPEN.
 
 Impact: ~6px positional error at typical bolt speed (400px/s at 64Hz). Minor but incorrect.
 

@@ -9,6 +9,7 @@ Arc damage jumping sequentially between nearby cells with visual lightning arcs.
 | `arcs` | `u32` | Number of jumps (each jump damages one cell) |
 | `range` | `f32` | Maximum jump distance from current source to next target |
 | `damage_mult` | `f32` | Damage multiplier per arc (1.x format) |
+| `arc_speed` | `f32` | Arc travel speed in world units per second (default: 200.0) |
 
 ## Behavior
 

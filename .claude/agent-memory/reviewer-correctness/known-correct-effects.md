@@ -56,12 +56,18 @@ and `max_dist == 0`. `ray_vs_aabb` with `max_dist=0` always returns `None` (tmin
 Broadphase AABB for zero-length beam is `expand_by(beam_half_width)` on a degenerate AABB,
 correctly producing a square search region. This is correct.
 
-## Phase 5 chain_lightning: empty targets on arcs==0 skips request spawn
+## Phase 5 chain_lightning rework: arcs==0 / range<=0 early returns (REWORKED)
 
-When `arcs == 0`, `chain_lightning::fire()` returns early without spawning a `ChainLightningRequest`.
-This means no request entity exists and no damage is sent. For `range <= 0` with `arcs > 0`, a
-request with empty targets IS spawned (and immediately despawned by `process_chain_lightning`).
-This behavioral difference is intentional and correct for both cases.
+The old `ChainLightningRequest`/`process_chain_lightning` design was replaced with
+`ChainLightningChain`/`tick_chain_lightning` sequential arc design.
+
+In the new implementation: `arcs==0` returns immediately (no DamageCell, no chain entity).
+`range<=0` also returns immediately. Both are correct early exits. `arcs==1` damages first target
+and returns without spawning a chain entity (remaining_jumps would be 0, chain not needed).
+
+**Bug FIXED**: `arc_speed <= 0.0` now triggers an early return in `fire()` (effect.rs line 82-84).
+No chain entity is spawned when arc_speed is zero or negative. The permanently-stuck-chain bug
+no longer applies.
 
 ## Phase 5 entropy_engine: kill_count increments even with empty pool
 
@@ -83,8 +89,20 @@ Contrast with `tether_beam` which uses Minkowski sum (expand cell AABB by half_w
 `rantzsoft_physics2d::ccd::ray_vs_aabb`. The prelude already re-exported these items — the
 module visibility change is necessary for direct path imports and is correct.
 
-## ShieldActive on cell = cell damage immunity — matches design spec
+## ShieldActive charge-decrement: deferred remove + eager in-memory decrement is intentional
 
-`shield.md` documents: "On any entity with a health pool: immune to damage for the duration."
-`DamageVisualQuery` includes `Has<ShieldActive>`, and `handle_cell_hit` checks `is_shielded`
-before applying damage. This is correct per design.
+`handle_cell_hit` and `bolt_lost` both use the same pattern:
+- Decrement `shield.charges` directly (eager, in-memory)
+- Queue `commands.entity(...).remove::<ShieldActive>()` when charges reach 0 (deferred)
+
+On the SAME frame's next message for the same entity, the in-memory charges value is already
+0, so the `charges > 0` guard fails and subsequent hits fall through to normal damage.
+This is correct. The `DamageVisualQuery` field was changed from `Has<ShieldActive>` to
+`Option<&'static mut ShieldActive>` to support charge mutation in the system.
+
+`bolt_lost` uses `shield_opt` captured once from `breaker_query.single_mut()`. The loop
+over `lost_bolts` re-reads `shield_opt.as_mut().is_some_and(|s| s.charges > 0)` each
+iteration — correctly seeing the updated in-memory value from the previous decrement.
+
+Both behaviors are fully tested in `handle_cell_hit/tests/shield_tests.rs` and
+`bolt_lost/tests/shield_tests.rs`.

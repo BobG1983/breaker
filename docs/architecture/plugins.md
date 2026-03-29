@@ -97,7 +97,16 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 - **breaker** reads `EffectiveSpeedMultiplier`, `EffectiveSizeMultiplier` (effect domain) from its own entity.
 - **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `RequestCellDestroyed` / `CellDestroyedAt` (cells domain) messages in bridge systems.
 
-**The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the sole exception (read AND write, compiled out of release builds).
+**The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the accepted exception (read AND write, compiled out of release builds). There is one additional narrow production exception — see "ShieldActive Cross-Domain Write" below.
+
+## ShieldActive Cross-Domain Write Exception
+
+`ShieldActive` (effect domain component) is written by two non-effect domains as an accepted architectural exception:
+
+- **bolt** (`bolt_lost` system): reads `ShieldActive` on the **breaker** entity to absorb bolt losses. Decrements `charges` directly; removes `ShieldActive` when charges reach zero. This avoids the round-trip cost of a message for a tight gameplay loop (bolt-lost detection must immediately suppress the `BoltLost` message, not react to it in a subsequent frame).
+- **cells** (`handle_cell_hit` system): reads `ShieldActive` on **cell** entities to absorb damage hits. Decrements `charges` directly; removes `ShieldActive` when charges reach zero. Same rationale: damage absorption must short-circuit within the same frame as the hit.
+
+Both systems use `Commands::remove::<ShieldActive>()` to despawn the component when charges are exhausted — the removal is deferred to apply-deferred, not immediate. Neither system fires messages in lieu of writing directly. This pattern is intentional and narrow: `ShieldActive` charge management is co-located with the systems that trigger the absorption.
 
 ## Debug Domain — Cross-Domain Exception
 

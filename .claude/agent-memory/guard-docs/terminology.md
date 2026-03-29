@@ -44,7 +44,19 @@ type: project
 ## Explode Runtime Pattern
 
 - `ExplodeRequest { range, damage_mult }` — deferred request entity spawned by fire(). Consumed (despawned) by `process_explode_requests` in the same or next tick. Position stored in Transform.
-- Neither SpawnChainBolt nor SpawnAdditionalBolt messages are actively used — chain_bolt::fire() and spawn_bolts::fire() spawn directly via &mut World.
+- SpawnChainBolt and SpawnAdditionalBolt messages are REMOVED — chain_bolt::fire() and spawn_bolts::fire() spawn directly via &mut World.
+
+## Source Chip Attribution (source-chip-shield-absorption phase)
+
+- `source_chip: &str` — parameter on all `fire()`/`reverse()` free functions; passed through from `EffectCommandsExt`
+- `EffectSourceChip(Option<String>)` — component on spawned AoE/spawn entities (shockwave, pulse, explode request, chain lightning chain, piercing beam request, tether beam). Carries attribution from dispatch to damage tick.
+- `chip_attribution(s: &str) -> Option<String>` — empty → None, non-empty → Some. Helper in core/types.rs.
+- `BoltSystems::WallCollision` — system set tagging `bolt_wall_collision`; runs after CellCollision
+
+## ShieldActive Variants
+
+- `ShieldActive { charges: u32 }` — only field. No `remaining`, no `owner`, no duration fields.
+- Charge decrement: handled in `bolt_lost` (breaker shield) and `handle_cell_hit` (cell shield) — NOT in a dedicated shield tick system.
 
 ## Intentional Shorthand in Docs (not drift)
 
