@@ -725,13 +725,14 @@ fn tick_arc_arrival_target_despawned_chain_transitions_to_idle() {
 
     // Chain should not panic, should transition back to idle or despawn
     // Per spec: despawn the arc and transition back to idle
-    let chain = app.world().get::<ChainLightningChain>(chain_entity);
-    if let Some(chain) = chain {
-        assert!(
-            matches!(chain.state, ChainState::Idle),
-            "chain should transition to Idle when target despawned"
-        );
-    }
+    let chain = app
+        .world()
+        .get::<ChainLightningChain>(chain_entity)
+        .expect("chain entity should still exist after target despawned");
+    assert!(
+        matches!(chain.state, ChainState::Idle),
+        "chain should transition to Idle when target despawned"
+    );
     // Arc should be despawned regardless
     assert!(
         app.world().get_entity(arc).is_err(),

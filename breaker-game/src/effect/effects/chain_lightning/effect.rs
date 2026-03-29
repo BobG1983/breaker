@@ -43,6 +43,7 @@ pub struct ChainLightningChain {
 }
 
 /// State machine for the chain lightning chain entity.
+#[derive(Debug)]
 pub enum ChainState {
     /// Waiting to select the next target and spawn an arc.
     Idle,
@@ -83,16 +84,13 @@ pub(crate) fn fire(
         return;
     }
 
-    // Read entity position: Position2D > Transform > Vec2::ZERO
-    let position = world
-        .get::<Position2D>(entity)
-        .map(|p| p.0)
-        .or_else(|| {
-            world
-                .get::<Transform>(entity)
-                .map(|t| t.translation.truncate())
-        })
-        .unwrap_or(Vec2::ZERO);
+    // Early return: arcs cannot travel with non-positive speed
+    if arc_speed <= 0.0 {
+        return;
+    }
+
+    // Read entity position from Position2D
+    let position = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
     // Read effective damage multiplier
     let edm = world
@@ -263,8 +261,9 @@ pub fn tick_chain_lightning(
                 if distance <= step || distance < f32::EPSILON {
                     // Arc has arrived at target
 
-                    // Check if target entity still exists
-                    let target_exists = world.cell_positions.get(target).is_ok();
+                    // Single fetch: check if target still exists and grab its position
+                    let target_gp = world.cell_positions.get(target);
+                    let target_exists = target_gp.is_ok();
 
                     if target_exists {
                         // Send DamageCell for the target
@@ -281,14 +280,7 @@ pub fn tick_chain_lightning(
 
                     // Update source to target position
                     // Use GlobalPosition2D if available, otherwise target_pos
-                    chain.source = if target_exists {
-                        world
-                            .cell_positions
-                            .get(target)
-                            .map_or(target_pos, |gp| gp.0)
-                    } else {
-                        target_pos
-                    };
+                    chain.source = target_gp.map_or(target_pos, |gp| gp.0);
 
                     // Decrement remaining jumps
                     chain.remaining_jumps -= 1;

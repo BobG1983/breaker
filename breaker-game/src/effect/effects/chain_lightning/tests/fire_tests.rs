@@ -18,7 +18,7 @@ fn fire_damages_first_target_immediately_via_damage_cell() {
 
     let entity = app
         .world_mut()
-        .spawn(Transform::from_xyz(100.0, 200.0, 0.0))
+        .spawn(Position2D(Vec2::new(100.0, 200.0)))
         .id();
 
     let cell = spawn_test_cell(&mut app, 120.0, 200.0);
@@ -62,7 +62,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
     let entity = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(100.0, 200.0, 0.0),
+            Position2D(Vec2::new(100.0, 200.0)),
             crate::effect::EffectiveDamageMultiplier(2.0),
         ))
         .id();
@@ -94,10 +94,7 @@ fn fire_spawns_chain_entity_with_correct_initial_state() {
     let mut app = chain_lightning_test_app();
     app.world_mut().insert_resource(GameRng::from_seed(0));
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
@@ -163,10 +160,7 @@ fn fire_spawns_chain_entity_with_correct_initial_state() {
 fn fire_chain_entity_has_cleanup_on_node_exit() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
@@ -193,10 +187,7 @@ fn fire_chain_entity_has_cleanup_on_node_exit() {
 fn fire_chain_entity_has_effect_source_chip_none_for_empty_chip() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
@@ -227,7 +218,7 @@ fn fire_chain_entity_damage_includes_effective_damage_multiplier() {
     let entity = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::ZERO),
             crate::effect::EffectiveDamageMultiplier(2.0),
         ))
         .id();
@@ -258,10 +249,7 @@ fn fire_chain_entity_damage_includes_effective_damage_multiplier() {
 fn fire_with_arcs_zero_does_nothing() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
@@ -290,10 +278,7 @@ fn fire_with_arcs_zero_does_nothing() {
 fn fire_with_arcs_zero_and_multiple_cells_does_nothing() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 15.0, 0.0);
@@ -316,10 +301,7 @@ fn fire_with_arcs_zero_and_multiple_cells_does_nothing() {
 fn fire_with_arcs_one_damages_first_target_and_spawns_no_chain() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
@@ -345,10 +327,7 @@ fn fire_with_arcs_one_damages_first_target_and_spawns_no_chain() {
 fn fire_with_arcs_one_and_no_cells_in_range_does_nothing() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     // Cell far away
     let _cell = spawn_test_cell(&mut app, 500.0, 0.0);
@@ -377,10 +356,7 @@ fn fire_with_arcs_one_and_no_cells_in_range_does_nothing() {
 fn fire_with_no_targets_in_range_damages_nothing_and_spawns_no_chain() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell = spawn_test_cell(&mut app, 500.0, 0.0);
 
@@ -406,10 +382,7 @@ fn fire_with_no_targets_in_range_damages_nothing_and_spawns_no_chain() {
 fn fire_with_empty_quadtree_damages_nothing() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     // No cells at all
     tick(&mut app);
@@ -436,10 +409,7 @@ fn fire_with_empty_quadtree_damages_nothing() {
 fn fire_with_zero_range_damages_nothing() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell = spawn_test_cell(&mut app, 0.0, 0.0);
 
@@ -462,10 +432,7 @@ fn fire_with_zero_range_damages_nothing() {
 fn fire_with_negative_range_damages_nothing() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell = spawn_test_cell(&mut app, 0.0, 0.0);
 
@@ -493,10 +460,7 @@ fn fire_with_negative_range_damages_nothing() {
 fn fire_only_targets_cells_on_cell_layer() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     // Cell on CELL_LAYER
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
@@ -543,10 +507,7 @@ fn fire_only_targets_cells_on_cell_layer() {
 fn fire_targets_entity_with_combined_cell_layer_membership() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     // Entity with CELL_LAYER | BOLT_LAYER
     let pos = Vec2::new(10.0, 0.0);
@@ -577,7 +538,7 @@ fn fire_targets_entity_with_combined_cell_layer_membership() {
     assert_eq!(written[0].cell, combined);
 }
 
-// ── Behavior 8: fire() reads position from Position2D first, then Transform, then Vec2::ZERO ──
+// ── Behavior 8: fire() reads position from Position2D (no Transform fallback) ──
 
 #[test]
 fn fire_defaults_position_to_zero_with_no_position_or_transform() {
@@ -608,6 +569,8 @@ fn fire_prefers_position2d_over_transform() {
     let mut app = chain_lightning_test_app();
 
     // Entity with Position2D(50, 50) and Transform at (100, 100)
+    // Production code reads Position2D only (no Transform fallback),
+    // so Transform is ignored.
     let entity = app
         .world_mut()
         .spawn((
@@ -616,7 +579,7 @@ fn fire_prefers_position2d_over_transform() {
         ))
         .id();
 
-    // Cell at (60, 50) — 10 units from Position2D but 50+ from Transform
+    // Cell at (60, 50) — 10 units from Position2D, out of range from Transform origin
     let cell = spawn_test_cell(&mut app, 60.0, 50.0);
 
     tick(&mut app);
@@ -640,10 +603,7 @@ fn fire_prefers_position2d_over_transform() {
 fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 20.0, 0.0);
@@ -668,10 +628,7 @@ fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
 fn fire_stores_effect_source_chip_none_for_empty_chip_name() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 20.0, 0.0);
@@ -697,10 +654,7 @@ fn fire_stores_effect_source_chip_none_for_empty_chip_name() {
 fn fire_uses_game_rng_deterministically() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 0.0, 10.0);
@@ -720,10 +674,7 @@ fn fire_uses_game_rng_deterministically() {
     // Reset by creating a new app with same setup for clean message state
     let mut app2 = chain_lightning_test_app();
 
-    let entity2 = app2
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity2 = app2.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a2 = spawn_test_cell(&mut app2, 10.0, 0.0);
     let _cell_b2 = spawn_test_cell(&mut app2, 0.0, 10.0);
@@ -757,10 +708,7 @@ fn fire_uses_game_rng_deterministically() {
 fn fire_with_zero_damage_mult_sends_damage_cell_with_zero_damage() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
@@ -787,10 +735,7 @@ fn fire_with_zero_damage_mult_sends_damage_cell_with_zero_damage() {
 fn fire_with_zero_damage_mult_and_multiple_arcs_spawns_chain_with_zero_damage() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 20.0, 0.0);
@@ -815,10 +760,7 @@ fn fire_with_zero_damage_mult_and_multiple_arcs_spawns_chain_with_zero_damage() 
 fn fire_damage_cell_includes_source_chip() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
