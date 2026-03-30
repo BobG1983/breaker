@@ -18,7 +18,7 @@ You are adversarial by nature. Your default assumption is that the spec has miss
 3. Read `docs/architecture/layout.md` for domain structure
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards
-6. Read `.claude/rules/spec-formats.md` for the Implementation Spec Format requirements
+6. Read `.claude/rules/spec-format-code.md` for the format requirements
 7. **Read the implementation spec file** at the path provided in your prompt
 8. **Read the test spec file** at the path provided in your prompt — the implementation spec must align with it
 9. Read the domain code referenced in the spec — verify patterns exist, check existing systems

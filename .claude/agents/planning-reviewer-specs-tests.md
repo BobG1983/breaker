@@ -18,7 +18,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 3. Read `docs/architecture/layout.md` for domain structure
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards
-6. Read `.claude/rules/spec-formats.md` for the Test Spec Format requirements
+6. Read `.claude/rules/spec-format-tests.md` for the format requirements
 7. **Read the test spec file** at the path provided in your prompt
 8. Read the domain code referenced in the spec — understand what already exists
 9. **If an implementation spec file exists** (path in your prompt), read it for cross-spec alignment
@@ -43,7 +43,7 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 - Are domain boundaries respected? Does the spec ask writer-tests to test cross-domain behavior from within a single domain?
 
 ### Format
-- Does it follow the exact format in `spec-formats.md`?
+- Does it follow the exact format in `spec-format-tests.md`?
 - Are Given/When/Then statements concrete (specific values) or vague (descriptions)?
 - Are reference files pointed to real, existing files?
 - Is the test file location specified?

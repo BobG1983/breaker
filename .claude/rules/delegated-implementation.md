@@ -6,7 +6,7 @@ All implementation goes through the delegated pipeline. The main agent is the or
 
 See `.claude/rules/tdd.md` for the TDD cycle definition and when to commit.
 See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6).
-See `.claude/rules/spec-formats.md` for spec templates and quality rules.
+See `.claude/rules/spec-format-tests.md` and `.claude/rules/spec-format-code.md` for spec templates and quality rules.
 See `.claude/rules/git.md` for git usage and rules.
 
 Verification tiers are defined in `.claude/rules/verification-tiers.md`.

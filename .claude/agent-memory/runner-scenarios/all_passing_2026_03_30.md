@@ -1,13 +1,13 @@
 ---
-name: All 103 scenarios passing as of 2026-03-30 (post-new-scenarios)
-description: Full run on develop branch after adding 8 new scenarios; 86 named PASS + 15 stress suites all-passed; 0 failures; all previously-known bugs remain resolved
+name: All 103 scenarios passing (confirmed re-run on fad7dfa)
+description: Full run on develop branch; 86 named PASS + 17 stress suites all-passed; 0 failures; Coverage Report clean
 type: project
 ---
 
-## Run date: 2026-03-30
+## Run date: 2026-03-30 (re-confirmed)
 
 Branch: develop
-Last commit: 14dddcd (Merge branch 'feature/source-chip-shield-absorption' into develop)
+Last commit: fad7dfa (Merge branch 'feature/missing-unit-tests' into develop)
 
 ## Results
 
@@ -15,17 +15,11 @@ Last commit: 14dddcd (Merge branch 'feature/source-chip-shield-absorption' into 
 - 17 stress suites: all-passed
 - 0 failures
 - 0 violations in gameplay scenarios (self-test scenarios correctly fired their expected violations)
+- Coverage Report: "All invariants have self-test coverage. All layouts are referenced."
 
-## New scenarios added (all PASS)
+## Runner output summary
 
-chaos/whiplash_whiff_chaos
-chaos/node_end_speed_purge
-chaos/cell_death_speed_burst
-chaos/breaker_impact_trigger_chaos
-mechanic/once_damage_single_fire
-mechanic/supernova_active_play
-mechanic/dead_mans_hand_bolt_loss
-mechanic/voltchain_cell_chain
+scenario result: ok. 103 passed; 0 failed
 
 ## Previously known bugs — all resolved
 
@@ -56,3 +50,9 @@ Stress suites passed:
 - supernova_chain_stress: 16/16
 - surge_speed_stress: 32/32
 - tether_chain_bolt_stress: 16/16
+
+## Note on output file reading
+
+When reading background task output for `cargo scenario -- --all`, always read from the
+*end* of the output file (use `tail`), not the middle. The stress suite summary lines
+appear last and the file may still be growing when an earlier `cat` is captured.

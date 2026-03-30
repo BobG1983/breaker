@@ -19,7 +19,7 @@ You write your spec to a file at the path given in your prompt. The full spec go
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards
 6. Read `docs/design/pillars/` — scan all pillar files
-7. Read `.claude/rules/spec-formats.md` — the "Implementation Spec Format" section is your template
+7. Read `.claude/rules/spec-format-code.md` — this is your template
 8. Read the specific domain code mentioned in the feature description
 9. **If a test spec file exists** (path will be in your prompt), read it — your implementation spec must align with the test spec's behaviors and types
 
@@ -27,7 +27,7 @@ You write your spec to a file at the path given in your prompt. The full spec go
 
 ### An Implementation Spec File
 
-Write to the file path provided in your prompt (under `.claude/specs/`). Follow the **Implementation Spec Format** in `spec-formats.md` exactly. The key requirements:
+Write to the file path provided in your prompt (under `.claude/specs/`). Follow the template in `spec-format-code.md` exactly. The key requirements:
 
 - **Point to the failing tests.** File path and count. Use the test file location from the test spec if available.
 - **Name what to implement.** System names, component names, resource names — every concrete type.
