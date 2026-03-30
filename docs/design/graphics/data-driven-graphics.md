@@ -119,7 +119,18 @@ Chip effects that modify entity appearance define their visual changes as data:
 - `shape_modifier: Option<ShapeModifier>` — changes the shape (Spikier, Smoother, Larger)
 - `additional_effect: Option<String>` — named additional effect (e.g., "dripping_energy", "electric_crackle")
 
-Modifiers **stack additively**. A bolt with 3 speed boosts has `trail_length_multiplier: 1.5^3 = 3.375`. A bolt with speed boost + damage boost has both the longer trail AND the color shift toward hot. The visual is the sum of all active modifiers.
+Modifiers **stack with diminishing returns on visuals**. Each additional stack of the same modifier contributes less visual scaling than the previous:
+
+- 1st stack: full multiplier (e.g., 1.5x trail length)
+- 2nd stack: reduced multiplier (e.g., 1.35x)
+- 3rd stack: further reduced (e.g., 1.2x)
+- 4th+ stacks: minimal additional visual scaling (e.g., 1.1x)
+
+The exact diminishing curve is tunable per modifier type. The goal is to prevent late-run bolts from becoming screen-filling blurs while still making high-stack builds look visually distinct.
+
+**IMPORTANT**: Diminishing returns apply ONLY to visual modifiers, NOT to gameplay effects. A bolt with 5 speed boost stacks still gets the full gameplay speed multiplier — it just doesn't render with a 7.5x trail length. The visual representation is an approximation of power, not a 1:1 mapping.
+
+Different modifier types stack independently — a bolt with speed boost + damage boost has both the longer trail AND the color shift toward hot. The visual is the combination of all active modifiers, each with its own diminishing curve applied.
 
 ## Evolution Visual Definitions
 

@@ -112,16 +112,35 @@ Each highlight type needs a distinctive visual treatment that communicates what 
 
 ### DR-9: Evolution VFX Designs
 
-**Context**: Each of the 8 evolutions needs bespoke VFX. These are the most visually ambitious effects in the game. Each needs individual design attention.
+**Context**: Each evolution needs bespoke VFX. These are the most visually ambitious effects in the game. Each needs individual design attention.
 
-**Evolutions needing VFX design**:
+**Evolutions with VFX directions defined** (in `effects-particles.md`):
 1. Nova Lance — massive beam
 2. Voltchain — branching lightning web
-3. Phantom Breaker — ghost breaker mirror
+3. Phantom Breaker — ghost bolt with infinite piercing, spectral shader (NOT a ghost breaker — see SpawnPhantom effect)
 4. Supernova — screen-filling explosion
-5. Dead Man's Hand — synchronized bolt pulse
+5. Dead Man's Hand — synchronized bolt pulse (NOTE: redesign pending — current effect is single shockwave, target is multi-bolt pulse)
 6. Railgun — instantaneous thin beam
-7. Gravity Well — distortion void (partially designed)
+7. Gravity Well — distortion lens (no dark void)
 8. Second Wind — invisible wall materialization
 
-**What's needed**: Individual VFX design documents or concept sketches for each evolution. These are the visual crown jewels and deserve dedicated design time.
+**Evolutions MISSING VFX directions** (exist in chip catalog but not in graphics guide):
+9. Entropy Engine — needs VFX direction
+10. Chain Reaction — needs VFX direction
+11. Feedback Loop — needs VFX direction
+12. Split Decision — needs VFX direction
+13. FlashStep — needs VFX direction
+
+**What's needed**: Individual VFX design documents or concept sketches for all 13 evolutions. The catalog phase will surface these. The 5 missing ones need VFX directions before they can be implemented.
+
+### DR-10: Discovery / Achievement UI Visual Language
+
+**Context**: Pillar 7 (Discovery is the Long Game) needs a visual vocabulary for showing the player what they haven't found yet. Reference: Vampire Survivors' achievement/unlock screen.
+
+**Design direction** (decided):
+- Achievements the player knows about: show name + unlock condition, but NOT the reward description
+- Achievements the player doesn't know about yet (2nd-order consequences): show as "????" for both the condition and reward
+- Evolutions not yet discovered: show name but NOT description or effects
+- "Almost unlocked" teases on defeat run-end screen: show evolution name + icon for evolutions the player was 1 chip away from
+
+**What's needed**: Visual mockup of the achievement/collection screen with this tiered information hiding. Define the visual treatment for "known but locked," "unknown," and "almost unlocked" states. This is a Phase 10 (meta-progression) feature but the visual language should be consistent with the style guide.

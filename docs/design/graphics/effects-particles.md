@@ -42,8 +42,8 @@ This separation means effects are always readable (geo layer) AND satisfying (sh
 
 ### Gravity Well
 - **Geo layer**: Circle showing the well's radius of influence. Faint radial lines pulling inward.
-- **Shader layer**: Screen-space **distortion lens** — the area inside the well warps what's beneath it, bending light toward the center. The center is a **dark void** — an area darker than the background void, potentially with color inversion or heavy desaturation of whatever is beneath it. This makes gravity wells visually distinct from every other element (which emits light).
-- **Duration**: Persistent while active. The distortion and void are constant, with subtle animation (slow rotation of the distortion pattern).
+- **Shader layer**: Screen-space **distortion lens** — the area inside the well warps what's beneath it, bending light toward the center. The distortion intensifies toward the center. No dark void — the gravity well stays within the "light is the material" identity, using warping and refraction rather than absence of light.
+- **Duration**: Persistent while active. The distortion is constant, with subtle animation (slow rotation of the distortion pattern).
 
 ### Tether Beam
 - **Geo layer**: Visible line connecting two tethered bolts. Line has slight elasticity — stretches when bolts are far apart, slackens when close.
@@ -71,7 +71,7 @@ Each evolution has **completely unique, bespoke VFX**. Evolutions are the ultima
 |-----------|-----------------|
 | Nova Lance | Massive beam effect — full-screen-height piercing laser with heavy bloom and distortion |
 | Voltchain | Dense branching lightning web — screen fills with electric arcs between all targets |
-| Phantom Breaker | Ghost/afterimage breaker that mirrors the real one — translucent, phasing, ethereal |
+| Phantom Breaker | Ghost bolt — translucent/phasing bolt with infinite piercing, spectral shader (flickering, afterimage trail, distinct non-white core color) |
 | Supernova | Screen-filling explosion — radial burst from center, everything white-hot for a frame, then resolving |
 | Dead Man's Hand | All bolts pulse simultaneously with shockwave rings — synchronized detonation feel |
 | Railgun | Thin, hyper-bright beam that punches across the entire screen — instantaneous, no travel time |

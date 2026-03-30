@@ -106,4 +106,15 @@ When the player triggers a memorable moment during gameplay (Close Save, Mass De
 - **No text labels**: The visual effect itself communicates what happened. A close save might flash the barrier. Mass destruction might pulse the entire cell field. Combo King might streak the bolt's trail.
 - **Duration**: Very brief (~0.5-1.0s). Must not distract from active gameplay.
 
-The exact visual treatment for each highlight type needs design — see `decisions-required.md`.
+Each moment type gets a brief **stylized text label** in Display typography with full glitch treatment (scan lines, chromatic split, jitter). The text IS spectacle — projected neon light, not a UI overlay:
+
+| Highlight | Text Label | Visual Emphasis |
+|-----------|-----------|-----------------|
+| Close Save | "SAVE." | Flashes at bottom edge near the barrier |
+| Mass Destruction | "OBLITERATE." | Flashes center-screen over the cell field |
+| Combo King | "COMBO." | Flashes near the bolt's current position |
+| Pinball Wizard | "RICOCHET." | Flashes at the wall the bolt just bounced from |
+| First Evolution | "EVOLVE." | Flashes center-screen with evolution-tier glow |
+| Nail Biter | "CLUTCH." | Flashes near the timer |
+
+Labels last ~0.3s, use Display typography at large size, and include the punch-scale animation (scale up briefly, settle). The text fades with a scan-line dissolve effect.

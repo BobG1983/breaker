@@ -57,10 +57,14 @@ Cards respond to being the "current selection" (the card under the cursor/select
 
 ### Timer Pressure Visualization
 
-The countdown timer creates urgency beyond just a ticking number:
-- **Audio pulse**: Background heartbeat/pulse sound that accelerates as time drops. This is the primary pressure signal.
-- **Timer visual**: The timer itself is a visible element (bar, circle, or number) that uses the Data typography style — clean, stable, immediately readable.
-- **Critical time**: When timer enters the last 20-30%, the pulse accelerates noticeably. The timer visual may shift to danger color (red-orange).
+The countdown timer creates urgency beyond just a ticking number. This is the key Pillar 5 moment — the visual pressure escalates progressively:
+
+- **Audio pulse**: Background heartbeat/pulse sound that accelerates as time drops. This is the primary pressure signal throughout.
+- **Timer visual**: The timer itself uses the Data typography style — clean, stable, immediately readable.
+- **At 50% remaining**: Cards begin to pulse in sync with the audio heartbeat. The pulse is subtle — a brief brightness fluctuation on the card borders.
+- **At 25% remaining**: The void visibly encroaches on card edges — card borders dim, darkness creeps inward from the corners. Cards feel like they're sinking. The pulse accelerates. Timer shifts to danger color (red-orange).
+- **At 10% remaining**: All unselected cards flicker and destabilize — glitch artifacts, scan line distortion, brightness stuttering. The cards are barely holding together. Only the currently-selected card remains stable and readable.
+- **At 0% (time expired)**: Remaining cards shatter — fracture into shards that scatter into the void. Selection is lost. The timer has won.
 
 ## Main Menu
 
@@ -90,7 +94,22 @@ The run-end shows highlights from the run ("Every Run Tells a Story" — Pillar 
 - The run-end screen itself is a spectacle, the final "moment" of the run
 - More emotional, more celebratory (or mourning on defeat)
 
-Both options should display the same information: run outcome, nodes cleared, highlight moments, flux earned, and notable build milestones.
+Both options should display the same information: run outcome, nodes cleared, highlight moments, flux earned, notable build milestones, and the **run seed** (monospace Data typography, prominent placement, with a copy-to-clipboard affordance — serves Pillar 6 seed-sharing and competition).
+
+### Defeat Presentation — Context-Sensitive
+
+Different deaths deserve different visual treatments (Pillar 8):
+
+- **Early death** (nodes 1-3): Minimal fanfare. Quick summary, fast transition to "try again." Low investment = low ceremony.
+- **Late death** (nodes 6+): Show what was forming — the evolution you were one chip away from, the synergy that almost came online. Display "almost unlocked" teases: evolution name and/or icon (but NOT description) for evolutions the player was close to discovering. The "so close" burn that motivates the next run.
+- **Spectacular death** (high highlight count, broken build): Highlight reel of the chaos. Show the peak moments even though the run failed. "That was sick anyway" (Pillar 8).
+
+### "Almost Unlocked" Teases
+
+On defeat, the run-end screen can show:
+- Evolutions the player was 1 chip away from qualifying for: show evolution name + icon, description hidden
+- Achievements the player was close to triggering: show achievement name, progress bar showing how close
+- These teases turn defeat into discovery — the player learns what's possible and what to chase next run
 
 ## HUD (During Gameplay)
 
