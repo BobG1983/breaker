@@ -1,11 +1,10 @@
 # Continuous Integration for Brickbreaker
 #
 # Runs on pushes to develop and PRs targeting develop or main.
-# Four jobs:
-#   - test-game: fmt + clippy + tests on Linux (gates scenario run)
-#   - test-game-cross-platform: clippy + tests on macOS/Windows (informational)
-#   - test-scenarios: clippy + tests for the scenario runner on Linux
-#   - run-scenarios: headless scenario run, gated on Linux test jobs only
+# Three jobs:
+#   - test: fmt + clippy + tests for all workspace crates on Linux (gates scenario run)
+#   - test-cross-platform: clippy + tests for all workspace crates on macOS/Windows (informational)
+#   - run-scenarios: headless scenario run, gated on Linux test job
 #
 # Does NOT use bevy/dynamic_linking — static linking is simpler and
 # avoids dylib resolution issues in CI environments.
@@ -27,8 +26,8 @@ env:
   CARGO_PROFILE_DEV_DEBUG: 0
 
 jobs:
-  test-game:
-    name: Test Game (Linux)
+  test:
+    name: Test (Linux)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,14 +56,14 @@ jobs:
       - name: Check formatting
         run: cargo fmt --check
 
-      - name: Lint with Clippy (game + defaults)
-        run: cargo clippy -p breaker -p rantzsoft_defaults --all-targets -- -D warnings
+      - name: Lint with Clippy (all workspace crates)
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run tests (game + defaults)
-        run: cargo test -p breaker -p rantzsoft_defaults
+      - name: Run tests (all workspace crates)
+        run: cargo test --workspace
 
-  test-game-cross-platform:
-    name: Test Game (${{ matrix.os }})
+  test-cross-platform:
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -85,48 +84,15 @@ jobs:
           shared-key: "ci-${{ matrix.os }}"
           save-if: ${{ github.ref == 'refs/heads/develop' }}
 
-      - name: Lint with Clippy (game + defaults)
-        run: cargo clippy -p breaker -p rantzsoft_defaults --all-targets -- -D warnings
+      - name: Lint with Clippy (all workspace crates)
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run tests (game + defaults)
-        run: cargo test -p breaker -p rantzsoft_defaults
-
-  test-scenarios:
-    name: Test Scenarios
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: clippy
-
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libasound2-dev \
-            libudev-dev \
-            libwayland-dev \
-            libxkbcommon-dev
-
-      - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "ci-scenarios"
-          save-if: ${{ github.ref == 'refs/heads/develop' }}
-
-      - name: Lint scenario runner
-        run: cargo clippy -p breaker_scenario_runner --all-targets -- -D warnings
-
-      - name: Test scenario runner
-        run: cargo test -p breaker_scenario_runner
+      - name: Run tests (all workspace crates)
+        run: cargo test --workspace
 
   run-scenarios:
     name: Run Scenarios
-    needs: [test-game, test-scenarios]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
