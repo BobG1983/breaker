@@ -65,18 +65,14 @@ Target:
 - **Enhanced by**: 5o (glitch text shader could apply to node progress indicators)
 - DR-1 resolved: Diegetic/Integrated
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/ui-screens.md` (HUD Elements):
-- Node timer: PLACEHOLDER → wall glow bar + monospace readout
-- Lives display: NONE → energy orbs near breaker
-- Node progress: NONE → playfield frame segments
-- Active chips display: NONE → entity visual state (5n) is the display
-- Side panels: PLACEHOLDER → removed (diegetic replaces them)
-- HUD style: NONE → diegetic/integrated
-
-From `catalog/ui-screens.md` (Typography):
-- Data font (monospace): NONE → implemented
+- Diegetic timer (top wall glow bar + small monospace readout, color shifts at danger thresholds)
+- Lives display (energy orbs near breaker, archetype-tinted, dissolve on loss)
+- Node progress (segment markers in playfield frame)
+- Side panel removal (replaced by diegetic elements)
+- Monospace data font asset
+- Active chip display via entity visual state (builds on 5n visual modifier system)
 
 ## Verification
 

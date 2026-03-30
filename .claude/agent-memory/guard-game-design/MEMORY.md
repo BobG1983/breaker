@@ -6,5 +6,8 @@
 - [Runtime Effects Round 2](evaluation-runtime-effects-round2.md) — source_chip threading, Shield charges, Chain Lightning arcs all approved; tuning notes
 - [Full Verification 2026-03-30](evaluation-full-verification-2026-03-30.md) — 2 blockers (BASE_BOLT_DAMAGE, catalog drift), 3 concerns (breaker diff, Surge stacking, Attraction gate)
 
+## Audits
+- [Chip/Evolution Coherence Audit](audit-chip-evolution-coherence.md) — 3 critical overlaps, 6 orphan chips, 5 missing RON files, power curve issues
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

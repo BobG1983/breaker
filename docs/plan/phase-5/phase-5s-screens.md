@@ -2,12 +2,10 @@
 
 **Goal**: Overhaul all non-gameplay screens to match the visual identity. Main menu, run-end, breaker select, pause, and loading screens.
 
-## **DECISION REQUIRED: DR-2 (Run-End Screen)**
+## Run-End Style: Hybrid (Context-Sensitive)
 
-Run-end style must be resolved in 5b. Options:
-- **Scorecard Hologram**: Calm debriefing, stats as floating holographic display
-- **Victory/Defeat Splash**: Dramatic reveal, stats slam in with energy effects
-- **Hybrid**: Victory gets splash, defeat gets hologram
+- **Victory**: Splash treatment — stats slam in with energy effects, screen shake per reveal, celebratory
+- **Defeat**: Hologram treatment — floating holographic display, stats appear one by one, calm/contemplative, includes "almost unlocked" teases
 
 ## What to Build
 
@@ -22,9 +20,9 @@ Target:
 - Cool palette (early-run temperature), low particle density
 - Relaxed "exhale" mood (Pillar 1)
 
-### 2. Run-End Screen — DR-2
+### 2. Run-End Screen (Hybrid)
 
-Implement the chosen style from DR-2. Both options share these elements:
+Victory gets the splash treatment, defeat gets the hologram treatment. Both share these elements:
 - Run outcome (victory/defeat)
 - Nodes cleared
 - Highlight moments from the run
@@ -73,23 +71,21 @@ Target:
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5b (DR-2 resolved), 5d (post-processing: desaturation for pause), 5f (temperature palette), 5h (breaker visuals for archetype previews), 5o (glitch text shader), 5q (HUD typography established)
+- **Requires**: 5c (rendering/), 5d (post-processing: desaturation for pause), 5f (temperature palette), 5h (breaker visuals for archetype previews), 5o (glitch text shader), 5q (HUD typography established)
 - **Enhanced by**: 5k (screen effects for run-end dramatic moments)
+- DR-2 resolved: hybrid (victory=splash, defeat=hologram)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/ui-screens.md` (Screens):
-- Loading screen: PLACEHOLDER → styled
-- Main menu: PLACEHOLDER → interactive idle
-- Run setup (breaker select): PLACEHOLDER → visual previews
-- Chip select screen: handled in 5r (separate step)
-- Pause menu: PLACEHOLDER → desaturation + glitch text
-- Run-end screen: PLACEHOLDER → DR-2 style
-- Run-end "almost unlocked": NONE → implemented
-
-From `catalog/ui-screens.md` (Typography):
-- Display font (Orbitron-Bold): PARTIAL → full glitch treatment
-- Body font (Rajdhani-Medium): PARTIAL → scan line treatment
+- Main menu interactive idle (playfield + breaker + bolt, no cells, cool palette)
+- Run-end screen: victory = splash (stats slam in), defeat = hologram (stats appear calmly)
+- Context-sensitive defeat presentation (early/late/spectacular)
+- "Almost unlocked" teases on defeat (evolution name + icon)
+- Breaker select screen with archetype visual previews
+- Pause menu with desaturation overlay + glitch text
+- Loading screen with styled indicator + void + grid
+- Full glitch treatment on Display font (Orbitron-Bold)
+- Scan line treatment on Body font (Rajdhani-Medium)
 
 ## Verification
 

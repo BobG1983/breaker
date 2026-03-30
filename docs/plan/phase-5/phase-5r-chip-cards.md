@@ -77,25 +77,15 @@ When timer hits zero during chip select:
 - **Enhanced by**: 5k (screen effects for timer pressure vignette)
 - DR-5 resolved: abstract geometric symbols
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/ui-screens.md` (Chip Cards):
-- Card shape: NONE → cyber chip outline
-- Common rarity: NONE → implemented
-- Rare rarity: NONE → implemented
-- Epic rarity: NONE → implemented
-- Legendary rarity: NONE → implemented
-- Evolution rarity: NONE → holographic shader
-- Card icon/illustration: NONE → abstract geometric symbols
-- Card selection animation: NONE → implemented
-- Card confirm animation: NONE → implemented
-- Card shatter (timer expired): NONE → implemented
-- Timer pressure (50% pulse): NONE → implemented
-- Timer pressure (25% encroach): NONE → implemented
-- Timer pressure (10% destabilize): NONE → implemented
-
-From `catalog/systems.md`:
-- Holographic card shader: NONE → implemented
+- Cyber chip card outline (angular/circuit-board shape, glowing line border)
+- 5 rarity treatments (Common: silver, Rare: blue pulse, Epic: magenta shimmer, Legendary: gold + particles, Evolution: holographic shader)
+- Abstract geometric symbol icons per chip effect type
+- Card selection animation (hover scale + energy pulse, confirm collapse)
+- Card shatter VFX on timer expiry (Shard particles)
+- Timer pressure escalation (50% pulse, 25% void encroach, 10% destabilize, 0% shatter)
+- Holographic card shader for Evolution rarity
 
 ## Verification
 

@@ -1,61 +1,43 @@
 # 5t: Evolution VFX Batch 1 — Beams
 
-**Goal**: Implement bespoke VFX for the beam-type evolutions. These are crown jewels — they must look fundamentally different from base chip effects.
+**Goal**: Implement bespoke VFX for the beam evolution. Crown jewel — must look fundamentally different from base chip effects.
 
-## **DECISION REQUIRED: DR-9 (partial)**
+## Evolution
 
-VFX directions exist for both evolutions in this batch. DR-9 may refine details.
+### Nova Lance
 
-## Evolutions
+**Behavior**: PiercingBeam on perfect bump + cell impact.
+NOTE: Mechanic currently uses Shockwave in the RON file — needs updating to PiercingBeam. If mechanic change hasn't happened by this step, VFX should still be a beam (design intent) and will connect to the mechanic when it's updated.
 
-### 1. Nova Lance
-
-**VFX direction**: Massive beam — full-screen-height piercing laser.
-
-- Full-height beam from bolt through all cells in line
+**VFX direction**: Massive beam along bolt's trajectory.
+- Beam appears at max width, fully formed
+- Width shrinks over a short but noticeable duration (not instant — the beam lingers)
 - Heavy bloom (HDR >2.0) with glow spilling into surrounding space
 - Screen distortion along beam path (radial distortion from 5d)
-- Beam appears near-instantly, holds for ~0.2s, then fades with afterimage
 - Chromatic aberration pulse on fire (from 5k)
 - Medium screen shake on fire
-- Distinct from base Piercing Beam (5m) — wider, more intense, full-screen height
+- Distinct from base Piercing Beam (5m) — thicker, more intense, longer duration, width-shrink animation
 
-### 2. Railgun
+### Beam Infrastructure
 
-**VFX direction**: Thin hyper-bright beam, instantaneous, no travel time.
-
-- Razor-thin beam across entire screen width/height
-- Hyper-bright core (HDR >3.0) — the brightest single element in the game
-- Chromatic aberration trail along beam path
-- No travel time — appears fully formed in a single frame
-- Brief screen flash (white) on fire
-- Small directional shake along beam axis
-- Distinct from Nova Lance — thinner, brighter, more instantaneous
-
-### Shared Beam Infrastructure
-
-Both beams share rendering infrastructure:
+Beam rendering infrastructure for Nova Lance (and any future beam effects):
 - Beam entity with start/end positions, width, HDR intensity
 - Beam Material2d shader (bright core + bloom + optional distortion)
+- Width-over-time animation (starts at max, shrinks to zero)
 - Afterimage fade system (beam lingers as fading ghost)
 
-Build this shared infrastructure, then specialize per evolution.
+Nova Lance is the sole beam evolution.
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5d (post-processing: bloom, distortion, chromatic aberration), 5k (screen effects: shake, flash), 5m (base Piercing Beam VFX as reference — evolution beams should feel like a tier above)
-
-## Catalog Elements Addressed
-
-From `catalog/evolutions.md`:
-- Nova Lance: NONE → bespoke VFX
-- Railgun: NONE → bespoke VFX
+- **Requires**: 5c (rendering/), 5d (post-processing: bloom, distortion, chromatic aberration), 5k (screen effects: shake, flash), 5m (base Piercing Beam VFX as reference — evolution beam is a tier above)
+- DR-9 resolved: Nova Lance VFX corrected to match beam fantasy
 
 ## Verification
 
-- Nova Lance beam spans full screen height with heavy distortion
-- Railgun beam is thinner, brighter, and instantaneous
-- Both are visually distinct from base Piercing Beam (5m)
+- Nova Lance beam spans bolt trajectory with heavy distortion
+- Beam appears at max width and shrinks over time (not instant)
+- Visually distinct from base Piercing Beam (5m) — clearly an evolution-tier effect
 - Screen effects (shake, flash, chromatic aberration) fire correctly
-- Beam afterimages fade smoothly
+- Beam afterimage fades smoothly
 - All existing tests pass

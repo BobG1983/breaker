@@ -74,15 +74,11 @@ Add debug menu controls:
 - **Independent of**: 5d (post-processing pipeline) — can be done in either order
 - **Enhanced by**: 5d (additive blending, bloom) — particles look better with post-processing but work without it
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/feedback.md` (Particle Types section):
-- Spark particles: NONE → implemented
-- Trail particles: NONE → implemented
-- Shard particles: NONE → implemented
-- Glow mote particles: NONE → implemented
-- Energy ring particles: NONE → implemented
-- Electric arc particles: NONE → implemented
+- `rantzsoft_particles` crate (GPU compute, Material2d additive blending, HDR color, RON config)
+- 6 particle types: Spark, Trail, Shard, Glow Mote, Energy Ring, Electric Arc
+- Debug menu: particle count display, per-type test buttons, performance overlay
 
 ## Verification
 

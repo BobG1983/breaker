@@ -45,14 +45,14 @@ Ship with 4 styles. System is **extensible** — adding a new transition means a
 - **Requires**: 5c (rendering/ absorbed fx/transition code), 5d (post-processing for distortion/chromatic in Glitch transition), 5e (particles for Sweep beam edge), 5f (temperature palette for flash tinting)
 - DR-8 resolved: 4 + extensible
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/systems.md` (Transitions):
-- Flash transition: PLACEHOLDER → bloom spike + temperature tint
-- Sweep transition: PLACEHOLDER → energy beam edge
-- Glitch transition: NONE → implemented
-- Collapse/Rebuild transition: NONE → implemented
-- Random transition selection: NONE → implemented
+- Upgraded Flash transition (bloom spike + temperature tint, replacing plain alpha fade)
+- Upgraded Sweep transition (energy beam edge, replacing solid color rect)
+- New Glitch transition (static/distortion → resolve or blackout)
+- New Collapse/Rebuild transition (elements build outward / collapse inward)
+- Random transition selection system (seed-driven, In and Out styles can differ)
+- Extensible transition pool (enum + module pattern: rendering/transition/<name>/*)
 
 ## Verification
 

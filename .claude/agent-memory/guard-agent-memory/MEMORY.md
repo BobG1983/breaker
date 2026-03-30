@@ -1,1 +1,2 @@
-- [audit-history.md](audit-history.md) — Audit history, recurring staleness patterns, and which agents accumulate stale memory fastest
+- [audit-history.md](audit-history.md) — Latest audit + recurring staleness patterns + which agents accumulate stale memory fastest
+- [audit-history-archive.md](audit-history-archive.md) — Audits prior to develop 2026-03-30 (archived)

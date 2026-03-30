@@ -29,7 +29,7 @@ Visual changes driven by `BoltRenderState`:
 | Piercing active | Sharper angular glow, energy spikes on halo |
 | Damage boosted | Core shifts amber/white, halo brightens |
 | Shield on bolt | Additional aura ring around bolt (distinct from halo) |
-| Size boosted | Glow scales proportionally with `Scale2D` (PARTIAL → complete) |
+| Size boosted | Glow scales proportionally with size |
 
 ### 4. BoltRenderState Component
 
@@ -90,22 +90,18 @@ When a bolt spawns:
 - **Requires**: 5c (rendering/ domain), 5d (post-processing for bloom/additive), 5e (particle system for trail/sparks), 5f (BoltVisualIdentity component)
 - **Independent of**: 5h, 5i, 5j (other entity visuals)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/entities.md` (Bolt section):
-- Bolt (base): PLACEHOLDER → full shader
-- Bolt wake/trail: NONE → implemented
-- Bolt speed state: NONE → implemented
-- Bolt piercing state: NONE → implemented
-- Bolt damage-boosted state: NONE → implemented
-- Bolt shield aura: NONE → implemented
-- Bolt size-boosted state: PARTIAL → complete
-- Bolt serving (hover): NONE → implemented
-- ExtraBolt distinction: NONE → implemented
-- ChainBolt + tether: NONE → implemented
-- PhantomBolt: NONE → implemented
-- Bolt lifespan indicator: NONE → implemented
-- Bolt spawn moment: NONE → implemented
+- Bolt base shader (energy orb with HDR core + halo + additive blending)
+- Wake/trail particle emitter (Trail type, length scales with speed)
+- State-driven visuals (speed, piercing, damage, shield, size — all reflected in appearance)
+- BoltRenderState component (synced each frame by bolt/ domain)
+- Serving/hover state (pulsing orb, no trail, halo breathes)
+- ExtraBolt visual distinction (archetype-tinted halo, shorter trail)
+- ChainBolt tether visual (energy filament to anchor bolt)
+- PhantomBolt spectral visual (translucent, non-white core, afterimage trail)
+- Lifespan indicator (dim/flicker below thresholds, implosion at expiry)
+- Spawn moment VFX (energy ring + point-source flash)
 
 ## Verification
 

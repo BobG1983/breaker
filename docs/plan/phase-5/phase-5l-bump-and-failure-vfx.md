@@ -79,21 +79,16 @@ Remove all existing floating text feedback:
 
 - **Requires**: 5c (rendering/), 5d (post-processing: desaturation, flash), 5e (particles: Spark, Shard), 5g (bolt visuals for exit streak, spawn flash), 5j (shield barrier for absorption VFX), 5k (screen effects: shake, slow-mo, vignette, flash)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/feedback.md` (Bump Grade section):
-- Perfect bump: PLACEHOLDER → visual-only
-- Early bump: PLACEHOLDER → visual-only
-- Late bump: PLACEHOLDER → visual-only
-- Whiff: PLACEHOLDER → silence (correct)
-
-From `catalog/feedback.md` (Failure States section):
-- Bolt lost: PLACEHOLDER → slow-mo + streak + desaturation
-- Shield absorption: NONE → barrier flash + cracks
-- Life lost: NONE → slow-mo + vignette
-- Run won: NONE → freeze-frame + flash
-- Run over (defeat): NONE → extended slow-mo + desaturation
-- Time expired: NONE → timer shatter + pulse
+- Visual-only bump grade feedback (Perfect: gold flash + sparks + shake; Early/Late: dim flash + few sparks; Whiff: nothing)
+- Bolt lost VFX (slow-mo + exit streak + desaturation)
+- Shield absorption VFX (barrier flash + cracks, no slow-mo)
+- Life lost VFX (longer slow-mo + danger vignette)
+- Run won VFX (freeze-frame + white flash)
+- Run over VFX (extended slow-mo + full desaturation)
+- Time expired VFX (timer shatter + red-orange pulse + dark wave)
+- Remove all floating text feedback (PERFECT, EARLY, LATE, WHIFF, BOLT LOST)
 
 ## Verification
 

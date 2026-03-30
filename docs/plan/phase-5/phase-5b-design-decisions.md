@@ -14,7 +14,7 @@
 | **DR-6**: Grid Density | Configurable via debug menu, stored in RenderingDefaults RON | 5j |
 | **DR-7**: CRT/Scanline | Off by default, configurable in debug menu, stored in RenderingDefaults RON | 5d |
 | **DR-8**: Transitions | 4 + extensible — enum + module pattern (rendering/transition/<name>/*) | 5p |
-| **DR-9**: Evolution VFX | All reviewed against behaviors — corrections applied, Railgun dropped | 5t-5w |
+| **DR-9**: Evolution VFX | All reviewed against behaviors — corrections applied | 5t-5w |
 | **DR-10**: Discovery UI | Visual language defined (locked/unknown/almost-unlocked states), screen deferred to Phase 10 | 5s |
 
 ## Architecture Decisions

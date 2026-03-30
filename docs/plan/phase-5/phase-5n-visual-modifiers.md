@@ -29,8 +29,8 @@ Exact curve tunable per modifier type.
 |--------|--------------|
 | Speed Boost | Trail length multiplier, glow intensity up, halo color warmer |
 | Damage Boost | Core brightness up, color shift toward amber/white |
-| Piercing | Angular glow, energy spikes (already in 5g as state, here as modifier strength) |
-| Size Boost | Glow scales with size (already partially in 5g, here with proper scaling) |
+| Piercing | Angular glow, energy spikes — modifier controls intensity |
+| Size Boost | Glow scales proportionally with size — modifier controls scaling |
 
 Different modifier types stack independently — speed + damage = longer trail AND color shift.
 
@@ -38,9 +38,9 @@ Different modifier types stack independently — speed + damage = longer trail A
 
 | Effect | Visual Change |
 |--------|--------------|
-| Speed Boost | Aura stretches in movement direction, trailing wisps, dash trail intensity (built in 5h, driven by modifier here) |
-| Width Boost | Aura pulse on activation, stretch animation (built in 5h, driven by modifier here) |
-| Bump Force | Front face glow, pulsing (built in 5h, driven by modifier here) |
+| Speed Boost | Aura stretches in movement direction, trailing wisps, dash trail intensity — modifier controls strength |
+| Width Boost | Aura pulse on activation, stretch animation — modifier controls strength |
+| Bump Force | Front face glow, pulsing — modifier controls strength |
 
 ### 5. Modifier-Driven Rendering
 
@@ -66,15 +66,14 @@ Debug menu:
 - **Requires**: 5g (bolt visuals: trail, glow, state rendering), 5h (breaker visuals: aura, trail, state rendering), 5f (VisualModifier types)
 - **Enhanced by**: 5m (combat effects may also have visual modifiers)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/effects.md` (Visual Modifiers):
-- Speed Boost (bolt): NONE → modifier-driven
-- Damage Boost (bolt): NONE → modifier-driven
-- Piercing (bolt state): NONE → modifier-driven strength
-- Size Boost (bolt): PARTIAL → complete
-- Size Boost (breaker): PARTIAL → complete
-- Visual Modifier System: NONE → implemented with diminishing returns
+- Visual modifier application system (reads active chip effects, maps to visual changes)
+- Diminishing returns stacking (1st stack full, 2nd reduced, etc. — visual only, not gameplay)
+- Bolt modifiers: speed→trail length, damage→color shift, piercing→angular glow, size→glow scaling
+- Breaker modifiers: speed→aura stretch, width→aura pulse, bump force→front face glow
+- ComputedBoltModifiers / ComputedBreakerModifiers components consumed by rendering
+- Debug menu: display active modifier values, override for tuning, toggle diminishing returns
 
 ## Verification
 

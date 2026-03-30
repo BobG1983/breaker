@@ -60,10 +60,10 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - [5n: Visual Modifier System](phase-5/phase-5n-visual-modifiers.md)
   - [5o: Highlight Moments](phase-5/phase-5o-highlight-moments.md)
   - [5p: Transitions](phase-5/phase-5p-transitions.md)
-  - [5q: HUD & Gameplay UI](phase-5/phase-5q-hud-ui.md) — **DR-1**
-  - [5r: Chip Cards](phase-5/phase-5r-chip-cards.md) — **DR-5**
-  - [5s: Screens](phase-5/phase-5s-screens.md) — **DR-2**
-  - [5t: Evolution VFX Batch 1 — Beams](phase-5/phase-5t-evo-beams.md)
+  - [5q: HUD & Gameplay UI](phase-5/phase-5q-hud-ui.md) — Diegetic HUD
+  - [5r: Chip Cards](phase-5/phase-5r-chip-cards.md) — Abstract symbol icons
+  - [5s: Screens](phase-5/phase-5s-screens.md) — Hybrid run-end
+  - [5t: Evolution VFX Batch 1 — Beams](phase-5/phase-5t-evo-beams.md) — Nova Lance
   - [5u: Evolution VFX Batch 2 — AoE](phase-5/phase-5u-evo-aoe.md)
   - [5v: Evolution VFX Batch 3 — Chain/Spawn](phase-5/phase-5v-evo-chain-spawn.md)
   - [5w: Evolution VFX Batch 4 — Entity Effects](phase-5/phase-5w-evo-entity-effects.md)

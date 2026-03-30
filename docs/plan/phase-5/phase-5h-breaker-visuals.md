@@ -56,7 +56,7 @@ Visual transitions between states:
 | State | Visual |
 |-------|--------|
 | Idle | Base appearance with ambient aura |
-| Moving | Aura intensifies in movement direction. Existing tilt rotation preserved. |
+| Moving | Aura intensifies in movement direction. Tilt rotation (currently in codebase) replaced by rendering/ implementation. |
 | Dashing | Full trail active, glow intensifies, archetype-specific dash VFX |
 | Settling (post-dash) | Trail fading, aura returning to idle intensity |
 
@@ -65,18 +65,20 @@ Visual transitions between states:
 Defined in breaker/ domain, synced each frame:
 - `state: BreakerMovementState` — idle, moving, dashing, settling
 - `velocity: f32` — current speed for visual intensity
-- `tilt: f32` — current tilt angle (existing)
+- `tilt: f32` — current tilt angle
 - `dash_progress: f32` — 0.0-1.0 during dash for trail timing
 
-### 7. Bump Pop Upgrade
+### 7. Bump Pop
 
-Current: Y-offset pop animation exists (PARTIAL).
-Add: Scale overshoot at peak (punch scale), brief archetype-color flash at contact point.
+Replace current placeholder Y-offset pop with full VFX:
+- Scale overshoot at peak (punch scale)
+- Brief archetype-color flash at contact point
 
 ### 8. Width Boost Visual
 
-Current: `Scale2D` scales correctly (PARTIAL).
-Add: Brief stretch animation on width change, aura pulse on activation.
+Replace current placeholder scale-only behavior with full VFX:
+- Brief stretch animation on width change
+- Aura pulse on activation
 
 ### 9. Speed Boost Visual
 
@@ -97,20 +99,16 @@ When breaker has bump force boost:
 - **Requires**: 5c (rendering/ domain), 5d (post-processing), 5e (particles for trails), 5f (visual composition enums)
 - **Independent of**: 5g, 5i, 5j (other entity visuals)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/entities.md` (Breaker section):
-- Breaker — Aegis: PLACEHOLDER → full visual identity
-- Breaker — Chrono: PLACEHOLDER → full visual identity
-- Breaker — Prism: PLACEHOLDER → full visual identity
-- Breaker aura (idle): NONE → implemented
-- Breaker moving state: PARTIAL → complete
-- Breaker dash state: NONE → implemented
-- Breaker settling state: NONE → implemented
-- Breaker bump pop: PARTIAL → complete
-- Breaker width boost: PARTIAL → complete
-- Breaker speed boost visual: NONE → implemented
-- Breaker bump force visual: NONE → implemented
+- 3 distinct archetype shapes (Shield/Angular/Crystalline) with custom Material2d
+- Per-archetype color accents (BlueCyan/Amber/Magenta)
+- Per-archetype aura system (ShieldShimmer/TimeDistortion/PrismaticSplit)
+- Per-archetype dash trail system (ShieldEnergy/Afterimage/PrismaticSplit)
+- Breaker state transitions (idle → moving → dashing → settling)
+- BreakerRenderState component (synced each frame by breaker/ domain)
+- Bump pop VFX (scale overshoot + archetype flash)
+- Width/speed/force boost visuals
 
 ## Verification
 

@@ -74,7 +74,7 @@ Screen effects debug controls:
 - Screen shake intensity multiplier
 - Chromatic aberration intensity slider
 - Bloom intensity override
-- CRT toggle (if DR-7 decides yes)
+- CRT toggle (off by default)
 - Test buttons for each effect tier
 
 ## What NOT to Do
@@ -87,16 +87,15 @@ Screen effects debug controls:
 - **Requires**: 5c (rendering/), 5d (post-processing shaders for distortion/flash/chromatic/desaturation)
 - **Independent of**: 5e-5j (particles and entity visuals)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/feedback.md` (Screen Effects section):
-- Screen shake system: NONE → implemented (4 tiers)
-- Chromatic aberration pulse: NONE → trigger system
-- Screen distortion (radial): NONE → trigger system
-- Screen flash: NONE → trigger system
-- Desaturation: NONE → trigger system (from 5d, triggers here)
-- Slow-motion / time dilation: NONE → implemented
-- Danger vignette: NONE → implemented
+- Screen shake system (4 tiers: Micro/Small/Medium/Heavy, directional, exponential decay, stacking with cap)
+- Screen flash trigger system (per-event color/intensity, gold/white/red-orange)
+- Slow-motion / time dilation system (configurable factor + duration, affects game clock)
+- Danger vignette (red-orange gradient, pulsing at danger-scaled rhythm, threshold-based)
+- Radial distortion trigger interface (for shockwave/explosion, managed lifecycle)
+- Chromatic aberration trigger interface (for big hits/evolution triggers)
+- Debug menu: intensity sliders, test buttons for each tier, CRT toggle
 
 ## Verification
 

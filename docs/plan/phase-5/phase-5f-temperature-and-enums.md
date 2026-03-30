@@ -49,19 +49,15 @@ Update existing RON data files with the new enum fields:
 - Breaker archetype RON files: add breaker_shape, color_accent, aura_type, trail_type
 - Use sensible defaults matching current placeholder visuals
 
-### 6. Visual Identity Components — **DECISION REQUIRED**
+### 6. Visual Identity Components (Separate Components)
 
-Define the spawn-time visual identity components (part of the rendering communication pattern). Open question: bundled struct per entity type vs. separate components per visual property.
+Each visual property is its own component. Entities only get the ones that apply:
+- `Shape(Shape)`, `Color(Color)`, `AuraType(AuraType)`, `TrailType(TrailType)`, `DamageDisplay(DamageDisplay)`, `DeathEffect(DeathEffect)`
+- Cell gets: Shape + Color + DamageDisplay + DeathEffect
+- Breaker gets: Shape + Color + AuraType + TrailType
+- Bolt gets: Color (mostly state-driven)
 
-**Option A — Bundled struct:**
-- `VisualIdentity { shape, color, aura_type, trail_type, damage_display, death_effect }` — one component, attached by owning domain at spawn
-- Not all fields apply to all entities (breaker doesn't have damage_display; bolt doesn't have shape)
-
-**Option B — Separate components:**
-- `Shape(Shape)`, `Color(Color)`, `AuraType(AuraType)`, `DamageDisplay(DamageDisplay)`, etc. — each attached individually
-- More query-friendly, allows partial updates, entities only get the components that apply to them
-
-Both options: owning domain attaches at spawn, rendering/ reads via queries. Decision to be resolved in 5a (architecture doc) or 5b.
+Owning domain attaches at spawn from RON data. rendering/ reads via queries.
 
 ## What NOT to Do
 
@@ -74,22 +70,13 @@ Both options: owning domain attaches at spawn, rendering/ reads via queries. Dec
 - **Requires**: 5c (rendering/ domain exists, visual identity component pattern established)
 - **Enhanced by**: 5b (design decisions may refine some enum variants)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/systems.md` (Data-Driven Composition Enums):
-- Shape enum: NONE → implemented (replaces CellShape + BreakerShape)
-- Color enum: NONE → implemented (replaces CellColor + ColorAccent)
-- DamageDisplay enum: NONE → implemented
-- DeathEffect enum: NONE → implemented
-- BreakerShape enum: NONE → merged into Shape
-- ColorAccent enum: NONE → merged into Color
-- AuraType enum: NONE → implemented
-- TrailType enum: NONE → implemented
-- VisualModifier system: NONE → types defined (logic in 5n)
-
-From `catalog/systems.md` (Temperature):
-- Run temperature resource: NONE → implemented
-- Temperature application: NONE → resource built (per-element application in 5g-5j)
+- RunTemperature resource + system that updates on node transitions
+- Generic visual enums in rendering/: Shape, Color, DamageDisplay, DeathEffect, AuraType, TrailType
+- VisualModifier types (trail_length_multiplier, glow_intensity_multiplier, color_shift, etc.)
+- Separate visual identity components (Shape, Color, AuraType, etc.) attached at spawn
+- RON integration for cell definitions and breaker archetypes
 
 ## Verification
 

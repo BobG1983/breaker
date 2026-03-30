@@ -73,18 +73,16 @@ Post-processing pass for reducing color saturation:
 - **Independent of**: 5e (particle system) — can be done in either order
 - DR-7 resolved: CRT off by default, configurable
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/systems.md`:
-- Bloom (tunable per-entity): PARTIAL → foundation built
-- Additive blending: NONE → implemented
-- Screen distortion shader: NONE → implemented
-- Post-processing pipeline entries
-
-From `catalog/feedback.md`:
-- Screen flash: NONE → system built (triggers come in 5k-5l)
-- Chromatic aberration pulse: NONE → system built
-- Desaturation: NONE → system built
+- Configurable bloom system (per-entity HDR emissive, debug tuning)
+- Additive blending Material2d base for all light-on-dark elements
+- Screen distortion post-processing pass (radial + directional)
+- Chromatic aberration post-processing pass
+- Screen flash system (full-screen additive HDR overlay, color/intensity/duration)
+- Desaturation post-processing pass (animated 0.0–1.0 saturation blend)
+- CRT/scanline overlay pass (off by default, configurable)
+- RenderingDefaults RON file + RenderingConfig resource
 
 ## Verification
 

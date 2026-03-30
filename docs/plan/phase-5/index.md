@@ -11,7 +11,7 @@ Phase 5 introduces a new `rendering/` domain that owns all visual rendering code
 | Direction | Mechanism | Examples |
 |-----------|-----------|---------|
 | Gameplay → Rendering (continuous) | 1+ `*RenderState` components on entities | `BoltRenderState { speed, direction }`, `CellRenderState { health_fraction }` |
-| Gameplay → Rendering (identity) | Visual data components set at spawn | DECISION REQUIRED: bundled struct (e.g., `VisualIdentity { shape, color, aura }`) or separate components (`Shape`, `Color`, `AuraType`) |
+| Gameplay → Rendering (identity) | Separate visual components set at spawn | `Shape`, `Color`, `AuraType`, `TrailType`, `DamageDisplay`, `DeathEffect` — entities get only the ones that apply |
 | Gameplay → Rendering (events) | Module-owned messages (Bevy `Message`, not observers) | `SpawnShockwaveVfx { pos, radius }`, `PlayBumpFeedbackVfx { grade, pos }` |
 | Rendering → Gameplay (completion) | Module-owned completion messages | `ChainLightningVfxComplete { .. }`, `TransitionAnimationComplete` |
 
@@ -93,13 +93,13 @@ Steps 5d and 5e are independent and can be done in either order.
 ### UI & Screens
 
 - [5p: Transitions](phase-5p-transitions.md) — Glitch, collapse/rebuild, random selection, upgrade existing
-- [5q: HUD & Gameplay UI](phase-5q-hud-ui.md) — HUD overhaul, lives display, node progress, active chips **DECISION REQUIRED (DR-1)**
-- [5r: Chip Cards](phase-5r-chip-cards.md) — Card shape, rarity treatments, selection animations, timer pressure **DECISION REQUIRED (DR-5)**
-- [5s: Screens](phase-5s-screens.md) — Main menu, run-end, breaker select, pause, loading **DECISION REQUIRED (DR-2)**
+- [5q: HUD & Gameplay UI](phase-5q-hud-ui.md) — Diegetic HUD: timer in wall glow, lives as orbs, node progress in frame
+- [5r: Chip Cards](phase-5r-chip-cards.md) — Card shape, rarity treatments, abstract symbol icons, timer pressure
+- [5s: Screens](phase-5s-screens.md) — Main menu, run-end (hybrid: victory=splash, defeat=hologram), breaker select, pause, loading
 
 ### Evolution VFX
 
-- [5t: Evolution VFX Batch 1 — Beams](phase-5t-evo-beams.md) — Nova Lance, Railgun
+- [5t: Evolution VFX Batch 1 — Beams](phase-5t-evo-beams.md) — Nova Lance (Railgun dropped)
 - [5u: Evolution VFX Batch 2 — AoE](phase-5u-evo-aoe.md) — Supernova, Gravity Well, Dead Man's Hand
 - [5v: Evolution VFX Batch 3 — Chain/Spawn](phase-5v-evo-chain-spawn.md) — Chain Reaction, Split Decision, Feedback Loop, Entropy Engine
 - [5w: Evolution VFX Batch 4 — Entity Effects](phase-5w-evo-entity-effects.md) — Phantom Breaker, Voltchain, ArcWelder, FlashStep, Second Wind

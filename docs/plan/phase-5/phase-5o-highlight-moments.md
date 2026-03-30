@@ -28,14 +28,16 @@ Each highlight type gets a stylized glitch text label PLUS a game element VFX at
 | Pinball Wizard | "RICOCHET." | At the wall the bolt bounced from | Wall streak effect |
 | First Evolution | "EVOLVE." | Center-screen with evolution-tier glow | Screen glow shift |
 | Nail Biter | "CLUTCH." | Near the timer | Timer pulses |
-| Perfect Streak | Label TBD | Near breaker | Breaker glow intensifies |
-| Fast Clear | Label TBD | Center-screen | Cell field flash |
-| No Damage Node | Label TBD | Center-screen | Shield shimmer |
-| Speed Demon | Label TBD | Near bolt trail | Bolt trail flares |
-| Untouchable | Label TBD | Near breaker | Breaker aura pulse |
-| Comeback | Label TBD | Near timer | Timer flash green |
-| Perfect Node | Label TBD | Center-screen | Full playfield flash |
-| Most Powerful Evolution | Label TBD | Center-screen with max glow | Screen-wide glow shift |
+| Perfect Streak | "STREAK." | Near breaker | Breaker glow intensifies |
+| Fast Clear | "BLITZ." | Center-screen | Cell field flash |
+| No Damage Node | "FLAWLESS." | Center-screen | Shield shimmer |
+| Speed Demon | "DEMON." | Near bolt trail | Bolt trail flares |
+| Untouchable | "GHOST." | Near breaker | Breaker aura pulse |
+| Comeback | "SURGE." | Near timer | Timer flash green |
+| Perfect Node | "PERFECT." | Center-screen | Full playfield flash |
+| Most Powerful Evolution | "APEX." | Center-screen with max glow | Screen-wide glow shift |
+
+**Node-end highlights** (FLAWLESS, BLITZ, PERFECT, GHOST, STREAK, DEMON): These are determined at node completion, not during live gameplay. They should display on the chip select screen rather than during gameplay — shown briefly as the chip select appears, before the player focuses on card choices.
 
 ### 3. Remove Existing Text Popups
 
@@ -56,20 +58,13 @@ Existing highlight gameplay messages → module-owned render message:
 - DR-4 resolved: contextual emphasis (glitch text + game element VFX per highlight)
 - **Enhanced by**: 5k (screen effects — highlights may trigger micro-shake)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/feedback.md` (Highlight Moment Popups):
-- Highlight system (shared): PLACEHOLDER → glitch text shader
-- "SAVE." (Close Save): PLACEHOLDER → glitch text
-- "OBLITERATE." (Mass Destruction): PLACEHOLDER → glitch text
-- "COMBO." (Combo King): PLACEHOLDER → glitch text
-- "RICOCHET." (Pinball Wizard): PLACEHOLDER → glitch text
-- "EVOLVE." (First Evolution): PLACEHOLDER → glitch text
-- "CLUTCH." (Nail Biter): PLACEHOLDER → glitch text
-- Other highlights (9 more): PLACEHOLDER → glitch text
-
-From `catalog/systems.md`:
-- Glitch text shader: NONE → implemented
+- Glitch text shader (scan lines + chromatic split + jitter + punch scale + scan-line dissolve)
+- 14 highlight labels with contextual emphasis (glitch text + per-highlight game element VFX)
+- Translation layer: HighlightTriggered → SpawnHighlightLabelVfx
+- Remove all existing floating text popups
+- Node-end highlights display on chip select screen
 
 ## Verification
 

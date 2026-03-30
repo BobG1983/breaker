@@ -22,7 +22,7 @@ A comprehensive architecture document covering:
 - Examples: `BoltRenderState`, `CellRenderState`, `BreakerRenderState`
 
 **Gameplay → Rendering (identity)**:
-- Visual identity components set at spawn — DECISION REQUIRED: bundled struct vs separate components
+- Visual identity components set at spawn — separate components (`Shape`, `Color`, `AuraType`, etc.)
 - How rendering/ detects new entities (`Added<*>` queries)
 - How rendering/ attaches visual components (mesh, material, shader)
 
@@ -75,7 +75,6 @@ Step-by-step instructions for common operations:
 ## What NOT to Do
 
 - Do NOT write any code — this is a documentation step
-- Do NOT resolve DR-1 through DR-10 — that's step 5b
 - Do NOT design specific VFX — that's steps 5g-5w
 
 ## Dependencies

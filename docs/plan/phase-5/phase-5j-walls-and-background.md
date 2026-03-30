@@ -52,7 +52,7 @@ Occasional bright points traveling along grid lines:
 
 ### 6. Void Background Color
 
-Current: `ClearColor` dark blue-purple (PARTIAL — close but slightly more purple).
+Current: `ClearColor` dark blue-purple — slightly too purple.
 
 Target: Near-black (#050510 range) — deep blue-black that allows gravity well voids to register as even darker.
 
@@ -62,15 +62,14 @@ Target: Near-black (#050510 range) — deep blue-black that allows gravity well 
 - DR-3 resolved: patterned white shield. DR-6 resolved: configurable grid density.
 - **Independent of**: 5g, 5h, 5i (other entity visuals)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/entities.md` (Walls & Background section):
-- Walls (left, right, ceiling): NONE → glowing borders
-- Wall bolt-impact flash: NONE → implemented
-- Bottom wall shield barrier: NONE → implemented
-- Background grid: NONE → implemented
-- Background energy sprites: NONE → implemented
-- Void background color: PARTIAL → corrected
+- Wall meshes (thin glowing border lines, temperature-tinted)
+- Wall bolt-impact flash (pulse at impact point, travels along wall)
+- Shield barrier (patterned white hexagonal, shimmering, cracks on charge loss, shatter on last)
+- Background grid (configurable density, temperature-tinted, very dim)
+- Background energy sprites (Glow Mote particles along grid lines)
+- Corrected void background color (#050510 deep blue-black)
 
 ## Verification
 

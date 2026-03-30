@@ -97,20 +97,18 @@ When a cell has the Powder Keg chip modifier:
 - **Requires**: 5c (rendering/), 5d (post-processing/bloom), 5e (particles: Spark, Shard, Energy Ring, Trail, Glow Mote), 5f (visual composition enums)
 - **Independent of**: 5g, 5h, 5j (other entity visuals)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/entities.md` (Cells section):
-- Standard Cell: PLACEHOLDER → full visual
-- Tough Cell: PLACEHOLDER → hexagonal
-- Lock Cell: PLACEHOLDER → octagonal with glyph
-- Regen Cell: PLACEHOLDER → circular with pulse
-- Shield Cell (orbiting): PARTIAL → complete
-- Cell damage states (full/damaged/near death): PLACEHOLDER/PARTIAL → per-enum
-- Cell destruction: NONE → context-adaptive
-- Cell hit impact: NONE → implemented
-- Lock cell unlock: NONE → implemented
-- Regen cell healing pulse: NONE → implemented
-- Cell Powder Keg modifier: NONE → implemented
+- Per-type cell shapes (Rectangle, Hexagon, Octagon, Circle) with custom meshes
+- Cell color system (temperature-following + fixed overrides)
+- 5 damage display modes (Fracture, Fade, Flicker, Shrink, ColorShift)
+- CellRenderState component (synced on health change)
+- Context-adaptive destruction VFX (Dissolve/Shatter/EnergyRelease based on combo context)
+- Cell hit impact particles (directional sparks + micro-flash)
+- Lock cell unlock VFX (glyph fracture + golden shards + color transition)
+- Regen cell healing pulse (green glow + motes + crack sealing)
+- Shield cell orbit visuals (distinct brightness + orbit trail)
+- Powder Keg modifier overlay (flickering/sparking)
 
 ## Verification
 

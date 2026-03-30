@@ -102,26 +102,13 @@ Gameplay effect messages → module-owned render messages:
 - **Requires**: 5c (rendering/), 5d (post-processing: distortion, bloom, flash), 5e (particles: Spark, Energy Ring, Glow Mote, Electric Arc, Trail), 5k (screen effects: shake, distortion triggers)
 - **Enhanced by**: 5g (bolt visuals for halo tinting in ramping damage), 5h (breaker visuals for quick stop)
 
-## Catalog Elements Addressed
+## What This Step Builds
 
-From `catalog/effects.md` (Combat Effects):
-- Shockwave: NONE → full Geo + Shader
-- Chain Lightning: NONE → full Geo + Shader
-- Piercing Beam: NONE → full Geo + Shader
-- Pulse: NONE → full Geo + Shader
-- Explode: NONE → full Geo + Shader
-- Gravity Well: NONE → full Geo + Shader
-- Tether Beam: NONE → full Geo + Shader
-- Attraction/Magnetism: NONE → implemented
-- Ramping Damage: NONE → implemented
-- Random Effect (Flux): NONE → implemented
-
-From `catalog/effects.md` (Defensive/Utility):
-- Quick Stop: NONE → implemented
-- Time Penalty: NONE → implemented
-
-From `catalog/effects.md` (Visual Modifiers):
-- Bump Force Boost: NONE → implemented
+- 7 combat effects with full Geo + Shader layers: Shockwave, Chain Lightning, Piercing Beam, Pulse, Explode, Gravity Well, Tether Beam
+- 3 ambient/passive effect visuals: Attraction/Magnetism, Ramping Damage, Random Effect (Flux)
+- 3 utility effect visuals: Quick Stop, Time Penalty, Bump Force Boost
+- Translation layer: gameplay effect messages → module-owned render messages per VFX module
+- VfxKind enum for RON data dispatch
 
 ## Verification
 
