@@ -205,6 +205,89 @@ fn frame_mutation_spawn_extra_chain_arcs_zero_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
+// FrameMutation — InjectMismatchedBoltAabb RON deserialization (behaviors 14-15)
+// -------------------------------------------------------------------------
+
+#[test]
+fn frame_mutation_inject_mismatched_bolt_aabb_parses_from_ron() {
+    let ron = "(frame: 30, mutation: InjectMismatchedBoltAabb)";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectMismatchedBoltAabb should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::InjectMismatchedBoltAabb);
+}
+
+#[test]
+fn mutation_kind_inject_mismatched_bolt_aabb_equality() {
+    let a = MutationKind::InjectMismatchedBoltAabb;
+    let b = MutationKind::InjectMismatchedBoltAabb;
+    assert_eq!(a, b, "Two InjectMismatchedBoltAabb values should be equal");
+    assert_ne!(
+        a,
+        MutationKind::InjectWrongSizeMultiplier { wrong_value: 0.0 },
+        "InjectMismatchedBoltAabb should not equal InjectWrongSizeMultiplier"
+    );
+}
+
+// -------------------------------------------------------------------------
+// FrameMutation — SpawnExtraGravityWells RON deserialization (behaviors 16-17)
+// -------------------------------------------------------------------------
+
+#[test]
+fn frame_mutation_spawn_extra_gravity_wells_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraGravityWells(15))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraGravityWells should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraGravityWells(15));
+}
+
+#[test]
+fn frame_mutation_spawn_extra_gravity_wells_zero_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraGravityWells(0))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraGravityWells(0) should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraGravityWells(0));
+}
+
+// -------------------------------------------------------------------------
+// FrameMutation — InjectWrongSizeMultiplier RON deserialization (behaviors 18-19)
+// -------------------------------------------------------------------------
+
+#[test]
+fn frame_mutation_inject_wrong_size_multiplier_parses_from_ron() {
+    let ron = "(frame: 30, mutation: InjectWrongSizeMultiplier(wrong_value: 99.0))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation InjectWrongSizeMultiplier should parse");
+    assert_eq!(result.frame, 30);
+    assert!(
+        matches!(
+            result.mutation,
+            MutationKind::InjectWrongSizeMultiplier { wrong_value }
+            if (wrong_value - 99.0).abs() < f32::EPSILON
+        ),
+        "InjectWrongSizeMultiplier should parse with wrong_value=99.0"
+    );
+}
+
+#[test]
+fn frame_mutation_inject_wrong_size_multiplier_negative_parses_from_ron() {
+    let ron = "(frame: 5, mutation: InjectWrongSizeMultiplier(wrong_value: -1.0))";
+    let result: FrameMutation = ron::de::from_str(ron)
+        .expect("FrameMutation InjectWrongSizeMultiplier with negative should parse");
+    assert_eq!(result.frame, 5);
+    assert!(
+        matches!(
+            result.mutation,
+            MutationKind::InjectWrongSizeMultiplier { wrong_value }
+            if (wrong_value - (-1.0)).abs() < f32::EPSILON
+        ),
+        "InjectWrongSizeMultiplier should parse with wrong_value=-1.0"
+    );
+}
+
+// -------------------------------------------------------------------------
 // ScenarioBreakerState — all variants parse from RON
 // -------------------------------------------------------------------------
 

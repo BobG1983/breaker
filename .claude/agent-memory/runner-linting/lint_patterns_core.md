@@ -1,20 +1,21 @@
 ---
-name: Core lint patterns — effect system (historical + current)
-description: Historical Wave 8 stub warning patterns (now resolved) and current warning patterns as of feature/source-chip-shield-absorption
+name: Core lint patterns — effect system (historical)
+description: Historical Wave 8 stub warning patterns (now resolved); source marker dead_code warnings resolved; see lint_state_current.md for current state
 type: project
 ---
 
-## Current State (feature/source-chip-shield-absorption, 2026-03-29)
+## Current State (as of 2026-03-30)
 
-All Wave 8 stubs are fully implemented. The warning patterns below are RESOLVED. Current state is 0 errors, 4 warnings — all `dead_code` on unused tuple fields in source marker structs. See `lint_state_current.md` for exact locations.
+All Wave 8 stubs are fully implemented and all dead_code warnings are resolved.
+Current state: 0 errors, 1 doc-style nursery warning in breaker-scenario-runner.
+See `lint_state_current.md` for exact location.
 
-**Current warnings (all dead_code on field `0`):**
-- `cells/messages.rs:25` — `CellDestroyedAt.position`
-- `effect/effects/pulse/effect.rs:46` — `PulseSource.0`
-- `effect/effects/shockwave/effect.rs:17` — `ShockwaveSource.0`
-- `effect/effects/tether_beam/effect.rs:21` — `TetherBoltMarker.0`
+**Previously tracked dead_code warnings — ALL RESOLVED:**
 
-These are source-chip attribution marker types whose fields are currently populated but not read downstream. Will resolve when attribution display/scoring is wired.
+The four source-chip marker types (`CellDestroyedAt`, `PulseSource`, `ShockwaveSource`,
+`TetherBoltMarker`) were previously tuple structs with an unused `.0` field, generating
+`dead_code` warnings. They have since been converted to unit structs (no tuple field),
+eliminating all four warnings. Verified by inspection of effect.rs files 2026-03-30.
 
 ## Historical (RESOLVED — no longer present)
 

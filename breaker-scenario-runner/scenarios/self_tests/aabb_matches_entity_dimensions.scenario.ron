@@ -1,0 +1,25 @@
+// Self-test: InjectMismatchedBoltAabb corrupts the first tagged bolt's Aabb2D
+// half_extents to a value that no longer matches the entity's actual dimensions.
+// Physics is frozen so the bolt does not move and the discrepancy is stable across
+// frames. The invariant fires the first tick after frame 30 when the checker
+// compares stored Aabb2D against the entity's computed extents and finds a mismatch.
+// Simulates a resize path that updates visual scale but forgets to recalculate Aabb2D,
+// or an Aabb2D that was written with wrong units (half vs full extent confusion).
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [AabbMatchesEntityDimensions],
+    expected_violations: Some([AabbMatchesEntityDimensions]),
+    debug_setup: (
+        disable_physics: true,
+        bolt_velocity: (0.0, 0.0),
+    ),
+    allow_early_end: false,
+    frame_mutations: [
+        (frame: 30, mutation: InjectMismatchedBoltAabb),
+    ],
+)

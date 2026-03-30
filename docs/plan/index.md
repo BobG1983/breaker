@@ -14,7 +14,7 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - [1b: Bolt](done/phase-1/phase-1b-bolt.md)
   - [1c: Cells](done/phase-1/phase-1c-cells.md)
   - [1d: Bump & Perfect Bump](done/phase-1/phase-1d-bump.md)
-- [Phase 2: Game Loop & Time Pressure](phase-2/index.md)
+- [Phase 2: Game Loop & Time Pressure](done/phase-2/index.md)
   - [2a: Level Loading](done/phase-2/phase-2a-level-loading.md)
   - [2b: Run Structure & Node Timer](done/phase-2/phase-2b-run-and-timer.md)
   - [2c: Archetype System & Aegis](done/phase-2/phase-2c-archetype-system.md)
@@ -41,9 +41,34 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - Post-Wave: Stat Effects — Done
   - Post-Wave: Runtime Effects — Done
 
+### In Progress
+- ~~Graphics & Sound Audit~~ — Done. Catalog at `docs/design/graphics/catalog/`
+- [Phase 5: Visual Identity](phase-5/index.md) — 23 steps: architecture, rendering/ domain, post-processing, particles, entity visuals, effects, UI, evolution VFX
+  - [5a: Rendering Architecture](phase-5/phase-5a-rendering-architecture.md) — `docs/architecture/rendering.md`
+  - [5b: Design Decisions](phase-5/phase-5b-design-decisions.md) — **DECISION REQUIRED**
+  - [5c: Render Plugin Separation](phase-5/phase-5c-render-plugin-separation.md)
+  - [5d: Post-Processing Pipeline](phase-5/phase-5d-post-processing-pipeline.md)
+  - [5e: Particle System](phase-5/phase-5e-particle-system.md)
+  - [5f: Temperature Palette & Data-Driven Enums](phase-5/phase-5f-temperature-and-enums.md)
+  - [5g: Bolt Visuals](phase-5/phase-5g-bolt-visuals.md)
+  - [5h: Breaker Visuals](phase-5/phase-5h-breaker-visuals.md)
+  - [5i: Cell Visuals](phase-5/phase-5i-cell-visuals.md)
+  - [5j: Walls & Background](phase-5/phase-5j-walls-and-background.md)
+  - [5k: Screen Effects & Feedback](phase-5/phase-5k-screen-effects.md)
+  - [5l: Bump Grade & Failure State VFX](phase-5/phase-5l-bump-and-failure-vfx.md)
+  - [5m: Combat Effect VFX](phase-5/phase-5m-combat-effect-vfx.md)
+  - [5n: Visual Modifier System](phase-5/phase-5n-visual-modifiers.md)
+  - [5o: Highlight Moments](phase-5/phase-5o-highlight-moments.md)
+  - [5p: Transitions](phase-5/phase-5p-transitions.md)
+  - [5q: HUD & Gameplay UI](phase-5/phase-5q-hud-ui.md) — Diegetic HUD
+  - [5r: Chip Cards](phase-5/phase-5r-chip-cards.md) — Abstract symbol icons
+  - [5s: Screens](phase-5/phase-5s-screens.md) — Hybrid run-end
+  - [5t: Evolution VFX Batch 1 — Beams](phase-5/phase-5t-evo-beams.md) — Nova Lance
+  - [5u: Evolution VFX Batch 2 — AoE](phase-5/phase-5u-evo-aoe.md)
+  - [5v: Evolution VFX Batch 3 — Chain/Spawn](phase-5/phase-5v-evo-chain-spawn.md)
+  - [5w: Evolution VFX Batch 4 — Entity Effects](phase-5/phase-5w-evo-entity-effects.md)
+
 ### Upcoming
-- Graphics & Sound Audit — Full scan of every entity, effect, cell type, breaker, and event to catalog missing graphics and sounds. Produces the work list for Phases 5 and 6 - to be stored under design/ as a markdown, with a table for every missing asset.
-- [Phase 5: Visual Identity](phase-5-visual-identity.md) — Prerequisite: Render Plugin Separation — extract visual-only concerns from gameplay plugins before adding new visual systems
 - [Phase 6: Audio Foundation](phase-6-audio.md)
 - [Phase 7: Content & Variety](phase-7-content.md)
 - [Phase 8: Roguelite Progression](phase-8-roguelite.md)

@@ -72,3 +72,12 @@ test access. No new dependencies added. Dependency baseline unchanged.
 cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
 All test .unwrap()/.expect() calls are inside #[cfg(test)] modules — not production panic
 surface. No new unsafe blocks.
+
+## feature/scenario-coverage note (2026-03-30)
+One new direct dependency: rantzsoft_physics2d (workspace path) added to
+breaker-scenario-runner/Cargo.toml. This is the workspace-internal physics2d crate —
+already vetted in prior audits, no CVEs, no unsafe code.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo deny: same error (paste unmaintained) + same warnings (Unicode-DFS-2016 unmatched, 40+ duplicate transitive).
+cargo machete: no unused dependencies found.
+No new external crates introduced.

@@ -10,7 +10,7 @@ type: project
 - `docs/architecture/messages.md` — DamageCell sender list now includes all effect senders (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam). SpawnChainBolt removed (never existed). SpawnAdditionalBolt removed entirely from both code and docs.
 - `docs/architecture/ordering.md` — spawn_additional_bolt and spawn_chain_bolt entries removed (neither system exists; effects spawn directly via &mut World)
 - `docs/design/terminology/core.md` — ChainBolt entry corrected (now references ChainBoltMarker, ChainBoltAnchor, ChainBoltConstraint, DistanceConstraint; removed SpawnChainBolt/spawn_chain_bolt/break_chain_on_bolt_lost which never existed)
-- `docs/plan/index.md` — Runtime Effects entry added to Current section (In Progress)
+- `docs/plan/index.md` — Runtime Effects entry marked Done (updated 2026-03-30 full verification)
 - `docs/architecture/effects/core_types.md` — EffectKind enum is complete and current for all 25 effect modules
 - `docs/design/effects/` — all 25 design docs match implemented behavior
 
@@ -69,8 +69,8 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `dispatch_wall_effects` — wall system; `OnEnter(GameState::Playing)` chained after `spawn_walls`; currently a no-op stub (walls have no RON-defined effects)
 - `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
 - `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
-- InvariantKind total: 22 variants (was 16 documented — `ChipOfferExpected`, `SecondWindWallAtMostOne`, `ShieldChargesConsistent`, `PulseRingAccumulation`, `EffectiveSpeedConsistent`, `ChainArcCountReasonable` were undocumented)
-- MutationKind total: 15 variants (was 5 documented — added in multiple prior sessions)
+- InvariantKind total: 25 variants (22 + `AabbMatchesEntityDimensions`, `GravityWellCountReasonable`, `SizeBoostInRange` added in feature/missing-unit-tests)
+- MutationKind total: 18 variants (`InjectMismatchedBoltAabb`, `SpawnExtraGravityWells`, `InjectWrongSizeMultiplier` added in feature/missing-unit-tests)
 - `EffectSourceChip(Option<String>)` — component on AoE/spawn effect entities; carries chip attribution from dispatch to damage-application tick
 - `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
 - fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)

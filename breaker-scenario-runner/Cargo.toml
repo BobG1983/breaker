@@ -12,6 +12,7 @@ path = "src/main.rs"
 bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
 breaker = { path = "../breaker-game", default-features = false }
 rantzsoft_spatial2d = { path = "../rantzsoft_spatial2d" }
+rantzsoft_physics2d = { path = "../rantzsoft_physics2d" }
 clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

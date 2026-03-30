@@ -10,9 +10,11 @@ use breaker::{
         EffectiveSpeedMultiplier,
         effects::{
             chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
+            gravity_well::{GravityWellConfig, GravityWellMarker},
             pulse::PulseRing,
             second_wind::SecondWindWall,
             shield::ShieldActive,
+            size_boost::{ActiveSizeBoosts, EffectiveSizeMultiplier},
             speed_boost::ActiveSpeedBoosts,
         },
     },
@@ -20,9 +22,10 @@ use breaker::{
     screen::chip_select::{ChipOffering, ChipOffers},
     shared::{CleanupOnNodeExit, PlayingState},
 };
+use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::{entity_tagging::map_scenario_breaker_state, types::ScenarioConfig};
+use super::super::{entity_tagging::map_scenario_breaker_state, types::ScenarioConfig};
 use crate::{
     invariants::{ScenarioFrame, ScenarioTagBolt, ScenarioTagBreaker},
     types::{MutationKind, RunStatCounter},
@@ -52,6 +55,8 @@ pub struct MutationTargets<'w, 's> {
     chip_offers: Option<ResMut<'w, ChipOffers>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
     commands: Commands<'w, 's>,
+    /// Bolt entities with `Aabb2D` — for [`MutationKind::InjectMismatchedBoltAabb`].
+    bolt_aabbs: Query<'w, 's, &'static mut Aabb2D, With<ScenarioTagBolt>>,
 }
 
 /// Applies per-frame mutations from [`ScenarioConfig`] at matching frames.
@@ -101,14 +106,7 @@ pub fn apply_debug_frame_mutations(
                 }
             }
             MutationKind::TogglePause => {
-                if let Some(ref state) = pause.state
-                    && let Some(ref mut next) = pause.next
-                {
-                    match ***state {
-                        PlayingState::Active => next.set(PlayingState::Paused),
-                        PlayingState::Paused => next.set(PlayingState::Active),
-                    }
-                }
+                apply_toggle_pause(&mut pause);
             }
             MutationKind::SetRunStat(counter, value) => {
                 if let Some(ref mut stats) = targets.run_stats {
@@ -150,8 +148,6 @@ pub fn apply_debug_frame_mutations(
                 }
             }
             MutationKind::InjectZeroChargeShield => {
-                // Spawn a free-floating entity with a zero-charge shield so the
-                // invariant fires without requiring a live breaker entity.
                 targets.commands.spawn(ShieldActive { charges: 0 });
             }
             MutationKind::SpawnExtraPulseRings(count) => {
@@ -165,6 +161,29 @@ pub fn apply_debug_frame_mutations(
             MutationKind::SpawnExtraChainArcs(count) => {
                 apply_spawn_extra_chain_arcs(*count, &mut targets.commands);
             }
+            MutationKind::InjectMismatchedBoltAabb => {
+                apply_inject_mismatched_bolt_aabb(&mut targets.bolt_aabbs);
+            }
+            MutationKind::SpawnExtraGravityWells(count) => {
+                apply_spawn_extra_gravity_wells(*count, &mut targets.commands);
+            }
+            MutationKind::InjectWrongSizeMultiplier { wrong_value } => {
+                apply_inject_wrong_size_multiplier(*wrong_value, &mut targets.commands);
+            }
+        }
+    }
+}
+
+/// Toggles [`PlayingState`] between `Active` and `Paused`.
+///
+/// No-op if the state or next-state resources are absent.
+fn apply_toggle_pause(pause: &mut PauseControl) {
+    if let Some(ref state) = pause.state
+        && let Some(ref mut next) = pause.next
+    {
+        match ***state {
+            PlayingState::Active => next.set(PlayingState::Paused),
+            PlayingState::Paused => next.set(PlayingState::Active),
         }
     }
 }
@@ -298,5 +317,43 @@ pub fn apply_inject_wrong_effective_speed(wrong_value: f32, commands: &mut Comma
     commands.spawn((
         ActiveSpeedBoosts(vec![1.5]),
         EffectiveSpeedMultiplier(wrong_value),
+    ));
+}
+
+/// Sets the first tagged bolt's `Aabb2D.half_extents` to `Vec2::splat(999.0)`.
+///
+/// No-op if no bolts exist. Used exclusively by the `aabb_matches_entity_dimensions`
+/// self-test scenario.
+pub fn apply_inject_mismatched_bolt_aabb(bolts: &mut Query<&mut Aabb2D, With<ScenarioTagBolt>>) {
+    if let Some(mut aabb) = bolts.iter_mut().next() {
+        aabb.half_extents = Vec2::splat(999.0);
+    }
+}
+
+/// Spawns `count` extra [`GravityWellMarker`] entities.
+///
+/// Used exclusively by the `gravity_well_count_reasonable` self-test scenario.
+pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
+    for _ in 0..count {
+        commands.spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 0.0,
+                radius: 0.0,
+                remaining: 999.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            CleanupOnNodeExit,
+        ));
+    }
+}
+
+/// Spawns one entity with `ActiveSizeBoosts([1.5])` and `EffectiveSizeMultiplier(wrong_value)`.
+///
+/// Used exclusively by the `size_boost_in_range` self-test scenario.
+pub fn apply_inject_wrong_size_multiplier(wrong_value: f32, commands: &mut Commands) {
+    commands.spawn((
+        ActiveSizeBoosts(vec![1.5]),
+        EffectiveSizeMultiplier(wrong_value),
     ));
 }

@@ -85,6 +85,12 @@ pub struct InvariantParams {
     /// so 50 allows multiple simultaneous chains while catching unbounded accumulation.
     #[serde(default = "InvariantParams::default_max_chain_arc_count")]
     pub max_chain_arc_count: usize,
+    /// Maximum [`GravityWellMarker`] entity count before
+    /// [`InvariantKind::GravityWellCountReasonable`] fires.
+    ///
+    /// Default 10: conservative ceiling for gravity well entities.
+    #[serde(default = "InvariantParams::default_max_gravity_well_count")]
+    pub max_gravity_well_count: usize,
 }
 
 impl InvariantParams {
@@ -99,6 +105,10 @@ impl InvariantParams {
     const fn default_max_chain_arc_count() -> usize {
         50
     }
+
+    const fn default_max_gravity_well_count() -> usize {
+        10
+    }
 }
 
 impl Default for InvariantParams {
@@ -107,6 +117,7 @@ impl Default for InvariantParams {
             max_bolt_count: Self::default_max_bolt_count(),
             max_pulse_ring_count: Self::default_max_pulse_ring_count(),
             max_chain_arc_count: Self::default_max_chain_arc_count(),
+            max_gravity_well_count: Self::default_max_gravity_well_count(),
         }
     }
 }

@@ -39,7 +39,7 @@ returns `None` → the inner `if let` never executes → infinite loop.
 The RON file (`gravity_well.evolution.ron`) always uses `max: 2`, so this is not triggered in
 production today. But it is a confirmed logic bug.
 
-**Status**: OPEN — filed in 2026-03-30 review of full-verification-fixes branch.
+**Status**: FIXED in scenario-coverage branch — `fire()` now has `if max == 0 { return; }` guard at line 35-37.
 
 ## Phase 4 effect systems: shockwave/pulse migrated to Position2D (FIXED in full-verification-fixes)
 
@@ -89,6 +89,27 @@ by `if let Some(...)`. If the entity lacks `BoundEffects` and `permanent: true`,
 **Status**: FIXED in full-verification-fixes branch. `ensure_effect_components()` helper now inserts
 both `BoundEffects` and `StagedEffects` as defaults before the `get_mut` calls. Tests in
 `commands.rs` section II cover all absent-component combinations.
+
+## check_aabb_matches_entity_dimensions: false positive for breakers in non-1.0 EntityScale layouts
+
+`check_aabb_matches_entity_dimensions` computes `expected = width.half_width() * scale` for breakers
+and `expected = Vec2::splat(BoltRadius.0)` for bolts (no scale applied to bolt check).
+
+The stored `Aabb2D` on both bolt and breaker entities is NEVER updated when `EntityScale` changes.
+`apply_entity_scale_to_bolt` and `apply_entity_scale_to_breaker` only insert `EntityScale` on the
+entity — neither touches `Aabb2D`. Physics systems compute live AABB from `BoltRadius * scale` /
+`BreakerWidth * scale` directly; they do not use the stored component.
+
+Result: for breakers in layouts with `entity_scale != 1.0` (e.g., `boss_arena.node.ron` has `entity_scale: 0.7`),
+the checker fires false-positive `AabbMatchesEntityDimensions` violations because
+`stored_half_extents (60.0, 10.0) != expected (42.0, 7.0)`.
+
+For bolts, the checker uses `Vec2::splat(radius.0)` without multiplying by scale — so bolt checks
+are always scale-1.0 semantics. This means bolt invariant is wrong for scaled layouts too.
+
+**Status**: OPEN — confirmed on scenario-coverage branch review 2026-03-30.
+Scenarios using Corridor (entity_scale=1.0) are not affected. Affects any scenario that adds
+`AabbMatchesEntityDimensions` invariant to a non-1.0-scale layout.
 
 ## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
 

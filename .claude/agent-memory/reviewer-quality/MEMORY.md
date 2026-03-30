@@ -5,3 +5,4 @@
 - [chain-lightning-rework-patterns.md](chain-lightning-rework-patterns.md) — Chain lightning rework: dual test-app split, ChainLightningWorld SystemParam name, pub fields on ChainLightningChain
 - [source-chip-shield-dispatch-patterns.md](source-chip-shield-dispatch-patterns.md) — Dispatch system patterns: Bolt vs AllBolts asymmetry in cell dispatch, PushBoundEffects pub(crate), const fn wall stub, BypassExtras SystemParam
 - [dispatch-systems-patterns.md](dispatch-systems-patterns.md) — Per-target clone() in dispatch systems is intentional; GravityWell pub visibility is a nit; value param in size_boost is vague; duplicate test infra in track_cells_destroyed
+- [scenario-coverage-patterns.md](scenario-coverage-patterns.md) — feature/scenario-coverage: duplicate tick/test_app helpers are intentional, chip_a.clone() is required, bolt_count_test_app naming is intentional

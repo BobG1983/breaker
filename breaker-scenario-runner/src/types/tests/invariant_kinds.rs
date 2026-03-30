@@ -224,3 +224,195 @@ fn invariant_params_max_chain_arc_count_defaults_when_absent_in_ron() {
         "max_chain_arc_count should default to 50 when absent from RON"
     );
 }
+
+// -------------------------------------------------------------------------
+// InvariantKind::AabbMatchesEntityDimensions — behaviors 1-4
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_kind_aabb_matches_entity_dimensions_parses() {
+    let result: InvariantKind = ron::de::from_str("AabbMatchesEntityDimensions")
+        .expect("AabbMatchesEntityDimensions should parse");
+    assert_eq!(result, InvariantKind::AabbMatchesEntityDimensions);
+}
+
+#[test]
+fn invariant_kind_all_includes_aabb_matches_entity_dimensions() {
+    assert!(
+        InvariantKind::ALL.contains(&InvariantKind::AabbMatchesEntityDimensions),
+        "InvariantKind::ALL must include AabbMatchesEntityDimensions"
+    );
+}
+
+#[test]
+fn fail_reason_aabb_matches_entity_dimensions() {
+    assert_eq!(
+        InvariantKind::AabbMatchesEntityDimensions.fail_reason(),
+        "Aabb2D half_extents do not match entity dimensions"
+    );
+}
+
+#[test]
+fn invariant_kind_aabb_matches_entity_dimensions_debug_round_trip() {
+    let debug_str = format!("{:?}", InvariantKind::AabbMatchesEntityDimensions);
+    assert!(
+        debug_str.contains("AabbMatchesEntityDimensions"),
+        "Debug output should contain 'AabbMatchesEntityDimensions', got: {debug_str}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InvariantKind::GravityWellCountReasonable — behaviors 5-8
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_kind_gravity_well_count_reasonable_parses() {
+    let result: InvariantKind = ron::de::from_str("GravityWellCountReasonable")
+        .expect("GravityWellCountReasonable should parse");
+    assert_eq!(result, InvariantKind::GravityWellCountReasonable);
+}
+
+#[test]
+fn invariant_kind_all_includes_gravity_well_count_reasonable() {
+    assert!(
+        InvariantKind::ALL.contains(&InvariantKind::GravityWellCountReasonable),
+        "InvariantKind::ALL must include GravityWellCountReasonable"
+    );
+}
+
+#[test]
+fn fail_reason_gravity_well_count_reasonable() {
+    assert_eq!(
+        InvariantKind::GravityWellCountReasonable.fail_reason(),
+        "gravity well entity count exceeds maximum"
+    );
+}
+
+#[test]
+fn invariant_kind_gravity_well_count_reasonable_debug_round_trip() {
+    let debug_str = format!("{:?}", InvariantKind::GravityWellCountReasonable);
+    assert!(
+        debug_str.contains("GravityWellCountReasonable"),
+        "Debug output should contain 'GravityWellCountReasonable', got: {debug_str}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InvariantKind::SizeBoostInRange — behaviors 9-12
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_kind_size_boost_in_range_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("SizeBoostInRange").expect("SizeBoostInRange should parse");
+    assert_eq!(result, InvariantKind::SizeBoostInRange);
+}
+
+#[test]
+fn invariant_kind_all_includes_size_boost_in_range() {
+    assert!(
+        InvariantKind::ALL.contains(&InvariantKind::SizeBoostInRange),
+        "InvariantKind::ALL must include SizeBoostInRange"
+    );
+}
+
+#[test]
+fn fail_reason_size_boost_in_range() {
+    assert_eq!(
+        InvariantKind::SizeBoostInRange.fail_reason(),
+        "EffectiveSizeMultiplier diverged from ActiveSizeBoosts product"
+    );
+}
+
+#[test]
+fn invariant_kind_size_boost_in_range_debug_round_trip() {
+    let debug_str = format!("{:?}", InvariantKind::SizeBoostInRange);
+    assert!(
+        debug_str.contains("SizeBoostInRange"),
+        "Debug output should contain 'SizeBoostInRange', got: {debug_str}"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InvariantKind::ALL — count after additions (behavior 13)
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_kind_all_contains_25_variants() {
+    assert_eq!(
+        InvariantKind::ALL.len(),
+        25,
+        "InvariantKind::ALL should contain 25 variants (22 existing + 3 new)"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InvariantParams::max_gravity_well_count — behaviors 20-23
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_params_defaults_max_gravity_well_count_to_10() {
+    let params = InvariantParams::default();
+    assert_eq!(
+        params.max_gravity_well_count, 10,
+        "InvariantParams::default().max_gravity_well_count should be 10"
+    );
+}
+
+#[test]
+fn invariant_params_max_gravity_well_count_overridable_via_ron() {
+    let ron = "(max_gravity_well_count: 5)";
+    let params: InvariantParams =
+        ron::de::from_str(ron).expect("InvariantParams with max_gravity_well_count should parse");
+    assert_eq!(
+        params.max_gravity_well_count, 5,
+        "max_gravity_well_count should be overridden to 5"
+    );
+    // Other fields should retain defaults
+    assert_eq!(
+        params.max_bolt_count, 8,
+        "max_bolt_count should retain default of 8"
+    );
+    assert_eq!(
+        params.max_pulse_ring_count, 20,
+        "max_pulse_ring_count should retain default of 20"
+    );
+    assert_eq!(
+        params.max_chain_arc_count, 50,
+        "max_chain_arc_count should retain default of 50"
+    );
+}
+
+#[test]
+fn invariant_params_max_gravity_well_count_defaults_when_absent_in_ron() {
+    let ron = "()";
+    let params: InvariantParams =
+        ron::de::from_str(ron).expect("InvariantParams with no fields should parse");
+    assert_eq!(
+        params.max_gravity_well_count, 10,
+        "max_gravity_well_count should default to 10 when absent from RON"
+    );
+}
+
+#[test]
+fn invariant_params_partial_override_preserves_defaults_for_unspecified_fields() {
+    let ron = "(max_bolt_count: 12)";
+    let params: InvariantParams =
+        ron::de::from_str(ron).expect("InvariantParams with only max_bolt_count should parse");
+    assert_eq!(
+        params.max_bolt_count, 12,
+        "max_bolt_count should be overridden to 12"
+    );
+    assert_eq!(
+        params.max_gravity_well_count, 10,
+        "max_gravity_well_count should retain default of 10"
+    );
+    assert_eq!(
+        params.max_pulse_ring_count, 20,
+        "max_pulse_ring_count should retain default of 20"
+    );
+    assert_eq!(
+        params.max_chain_arc_count, 50,
+        "max_chain_arc_count should retain default of 50"
+    );
+}

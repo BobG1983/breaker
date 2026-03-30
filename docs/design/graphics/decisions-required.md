@@ -1,146 +1,119 @@
 # Decisions Required
 
-Open visual design questions that need prototyping, visual exploration, or generative AI mockups before they can be resolved.
+Visual design decisions for Phase 5. Most have been resolved; remaining open items noted.
 
-## High Priority (Blocks Other Decisions)
+## Resolved
 
-### DR-1: HUD Style — Diegetic vs Neon Dashboard
+### DR-1: HUD Style — RESOLVED: Diegetic/Integrated
 
-**Context**: The HUD displays timer, lives, node progress, and optionally active chips during gameplay. Two candidate styles exist.
+Timer is a bar along the top wall (glow intensity represents time remaining). Lives are orbs near the breaker or along the bottom edge. Node progress is integrated into the playfield frame. No overlaid panels or dashboards — all information lives in the game world.
 
-**Option A: Diegetic/Integrated**
-- Timer is a bar along the top wall (or built into the wall glow intensity)
-- Lives are orbs near the breaker or along the bottom edge
-- Node progress is integrated into the playfield frame
-- Pro: Maximum immersion. Nothing "overlaid" on the game.
-- Con: Harder to read at a glance. Competes with gameplay elements for visual space.
+All HUD data uses monospace typography where numeric (timer, node count). Readability maintained through brightness and positioning rather than UI chrome.
 
-**Option B: Neon Dashboard**
-- HUD elements are holographic neon readouts floating above/beside the playfield
-- Styled as projected displays matching the game's typography (glitched/stylized)
-- Pro: Instantly readable. Clear separation between game and info. Cohesive with sci-fi aesthetic.
-- Con: Less immersive. Takes screen real estate.
+### DR-2: Run-End Screen Style — RESOLVED: Hybrid (Context-Sensitive)
 
-**What's needed**: Generative AI mockups of both styles overlaid on a gameplay screenshot. Compare readability, immersion, and how each handles the "critical timer" state.
+- **Victory**: Splash treatment. Stats slam in with energy effects. Highlights animate with impact. Screen shake per reveal. Celebratory.
+- **Defeat**: Hologram treatment. Floating holographic display. Stats appear one by one with subtle animation. Calm, contemplative. Includes "almost unlocked" teases. The "exhale" moment.
 
-### DR-2: Run-End Screen Style — Hologram vs Splash
+Both display: run outcome, nodes cleared, highlight moments, flux earned, notable build milestones, run seed (monospace, prominent, copy-to-clipboard).
 
-**Context**: The run-end screen shows highlights ("Every Run Tells a Story"). Two candidate styles exist.
+Defeat presentation is context-sensitive: early death (1-3) = minimal fanfare; late death (6+) = show what was forming; spectacular death = highlight reel of chaos.
 
-**Option A: Scorecard Hologram**
-- Calm, debriefing feel. Stats projected as a holographic floating display.
-- Highlights appear one by one with subtle animation.
-- Pro: Fits the sci-fi aesthetic. The "exhale" moment (Pillar 1). Feels like reviewing a mission log.
-- Con: Might feel anticlimactic after an intense run.
+### DR-3: Shield Color — RESOLVED: Patterned White
 
-**Option B: Victory/Defeat Splash**
-- Dramatic reveal. Stats slam in with energy effects. Highlights animate with impact.
-- Pro: The run-end is itself a spectacle — the final "moment." Emotionally charged.
-- Con: Might feel exhausting after an already-intense run. Might undermine the relief of Pillar 1's "exhale."
+Pulsing white with a distinctive hexagonal/honeycomb pattern. Distinguished by pattern rather than color — works against any temperature palette and any archetype color. Most future-proof choice.
 
-**Option C: Hybrid** (potential compromise)
-- Victory gets the splash treatment (celebratory). Defeat gets the hologram treatment (contemplative).
-- Different emotions for different outcomes.
+### DR-4: Memorable Moment Visual Treatments — RESOLVED: Contextual Emphasis
 
-**What's needed**: Generative AI mockups of both styles, plus the hybrid. Test whether the hologram feels anticlimactic and whether the splash feels exhausting.
+Each highlight type = glitch text label + game element VFX at the relevant location:
 
-## Medium Priority (Needed Before Catalog)
+| Highlight | Text | Game Element VFX |
+|-----------|------|-----------------|
+| Close Save | "SAVE." at bottom edge | Barrier flashes |
+| Mass Destruction | "OBLITERATE." center-screen | Cell field pulses |
+| Combo King | "COMBO." near bolt | Bolt trail intensifies |
+| Pinball Wizard | "RICOCHET." at wall | Wall streak effect |
+| First Evolution | "EVOLVE." center-screen | Screen glow shift |
+| Nail Biter | "CLUTCH." near timer | Timer pulses |
 
-### DR-3: Shield Color
+The glitch text shader (scan lines + chromatic split + jitter + punch scale) is the shared infrastructure. The game element VFX is per-highlight.
 
-**Context**: Shields (bolt-loss protection) appear as an energy barrier along the bottom wall. The shield color must be:
-- Instantly distinguishable from the bolt (white/warm glow)
-- Instantly distinguishable from the breaker's archetype color
-- Readable against any temperature palette (cool and hot)
+### DR-5: Chip Card Icons — RESOLVED: Abstract Symbols
 
-**Candidates**:
-- Green (distinct from all archetypes, but conflicts with Regen cell color)
-- Bright cyan (distinct from warm archetypes, but close to Aegis blue)
-- Amber/gold (high visibility, but conflicts with Chrono archetype and danger color)
-- Unique: pulsing white with a distinctive pattern (hexagonal grid, honeycomb) that distinguishes it by pattern rather than color
+Geometric shapes representing effects — circle for AoE, arrow for speed, shield for protection, etc. Consistent with the abstract neon aesthetic. Scales well across 20+ chips without per-chip art. Icons defined as simple geometric compositions, not illustrations.
 
-**What's needed**: Test each candidate against all three archetype color schemes and both temperature extremes (cool and hot palette).
+### DR-6: Grid Line Density — RESOLVED: Configurable (Debug Menu)
 
-### DR-4: Memorable Moment Visual Treatments
+Start with medium density. Add a debug menu slider. Tune in-engine once distortion effects exist (step 5k). Grid density is stored in `RenderingDefaults` RON file. Final value determined during implementation.
 
-**Context**: In-game highlight popups (Close Save, Mass Destruction, Combo King, Pinball Wizard, First Evolution, Nail Biter) are currently text-based. They need to be redesigned as visual-only effects.
+### DR-7: CRT/Scanline Effect — RESOLVED: Off by Default, Configurable
 
-Each highlight type needs a distinctive visual treatment that communicates what happened without text:
+CRT/scanline overlay exists as a post-processing pass. OFF by default. Configurable in debug menu and eventually in player settings. Default state and intensity stored in `RenderingDefaults` RON file. When a settings menu is added, it writes a user preferences file that overrides `RenderingConfig` after the loading pipeline.
 
-| Highlight | Current (text) | Needs Visual Equivalent |
-|-----------|---------------|------------------------|
-| Close Save | Text popup "Close Save!" | Bottom-edge flash? Shield shimmer? Near-miss streak? |
-| Mass Destruction | Text popup "Mass Destruction!" | Screen-wide particle burst? Brief white-hot flash? |
-| Combo King | Text popup "Combo King!" | Bolt trail intensifies? Combo streak visual? |
-| Pinball Wizard | Text popup "Pinball Wizard!" | Wall-bounce streak effect? Ricochet trails? |
-| First Evolution | Text popup "First Evolution!" | Evolution-specific flash? Build-glow change? |
-| Nail Biter | Text popup "Nail Biter!" | Timer pulse? Edge-of-screen urgency flash? |
+### DR-8: Transition Style Pool Size — RESOLVED: 4 + Extensible
 
-**What's needed**: Design a consistent visual language for highlight moments. Options: (A) each gets a bespoke visual, (B) all share a common "moment" frame (brief slow-mo + distinctive icon flash) with per-type color/shape, (C) highlight type determines which game element gets the visual emphasis (Close Save emphasizes the barrier, Combo King emphasizes the bolt).
+Ship with 4 styles (Flash, Sweep, Glitch, Collapse/Rebuild). System is extensible — adding a new transition means adding an enum variant and defining `rendering/transition/<name>/*`. Add more in Phase 11 polish if playtesting reveals repetition.
 
-### DR-5: Chip Card Icons/Illustrations
+### DR-9: Evolution VFX Designs — RESOLVED
 
-**Context**: Each chip card needs a visual icon/illustration representing its effect. With 20+ chips, plus rarity variants and evolutions, this is a significant art requirement.
+All evolution VFX directions reviewed against actual RON behaviors. Key changes from catalog:
 
-**Options**:
-- Abstract symbols (geometric shapes representing effects — circle for AoE, arrow for speed, etc.)
-- Miniature effect previews (tiny version of the actual VFX the chip produces)
-- Unique illustrations per chip (highest quality, most expensive to produce)
-- Combination (abstract symbol for common, miniature preview for rare+, unique for evolutions)
+**Dropped:** Railgun (merged with Nova Lance — ingredient collision, both from Piercing Shot + Bolt Speed).
 
-**What's needed**: Decide on the icon strategy before the catalog. This affects how many unique graphics need to be created vs generated from the effect system.
+**VFX direction corrections:**
+- **Nova Lance**: Mechanic needs changing from Shockwave to PiercingBeam (beam fantasy). VFX: thick beam, appears at max width, shrinks over a short duration. Not instant.
+- **Railgun**: Dropped (merged into Nova Lance as the beam evolution).
+- **Supernova**: NOT a single screen-filling blast. Mechanic is chain reaction (perfect bump → cell destroy → spawn bolts + shockwaves). VFX: base shockwave/bolt-spawn effects with subtle visual marker distinguishing Supernova-triggered effects (brighter ring, extra spark density). Spectacle is emergent from cascade overlap, not a single authored blast.
+- **Dead Man's Hand**: Mechanic needs bigger payoff rethink. Current (shockwave + speed boost on bolt loss) is underwhelming. Design deferred to Phase 7.
+- **ArcWelder**: VFX matches actual behavior (TetherBeam between bolts, not bolt-to-cells arcs). Enhanced crackling tether, electric corona on both bolts. NOT a Tesla coil.
+- **Voltchain**: VFX toned to match mechanic (3 arcs per cell destroy, not screen-filling web). But arcs have LARGE max jumps and louder visual than base chain lightning. Density comes from many cell-destroys in succession.
+- **Entropy Engine**: No counter gauge (mechanic has no counter). VFX: prismatic flash on each cell destroy (like Flux), then selected random effect fires. Bolt has prismatic shimmer while active.
+- **Phantom Breaker**: Spawns a PhantomBolt (ghost bolt), not a ghost breaker. Future: will have BOTH a Phantom Bolt evolution and a Phantom Breaker evolution (ghost breaker that mirrors movement and bumps).
 
-## Lower Priority (Can Be Resolved During Implementation)
+**VFX directions confirmed as-is:**
+- Gravity Well (evolution) — larger/more intense distortion lens
+- Split Decision — cell fission effect, energy filaments, prismatic birth trails
+- Chain Reaction — recursive shockwaves with escalating light rings (mechanic: cell destroy → small shockwave, shockwave kills → more shockwaves)
+- Feedback Loop — three-node triangle charge indicator (mechanic: track 3 perfect bumps → spawn bolt + large shockwave)
+- Entropy Engine — prismatic flash per trigger (see correction above)
+- FlashStep — breaker teleport on dash (disintegrate → streak → rematerialize)
+- Second Wind — invisible wall materialization salvation moment
 
-### DR-6: Grid Line Density and Spacing
+**Unimplemented evolutions (no RON file, need mechanic + RON in Phase 7):**
+- Chain Reaction, Feedback Loop, FlashStep
 
-**Context**: The background grid's line density affects how visible distortion effects are (more lines = more visible warping) but also affects visual cleanliness (fewer lines = cleaner).
+**Evolutions needing mechanic changes (Phase 7):**
+- Nova Lance (Shockwave → PiercingBeam)
+- Dead Man's Hand (full rethink)
+- Phantom Breaker (split into Phantom Bolt + Phantom Breaker evolutions)
 
-**What's needed**: Test 3-4 grid densities in-engine against a gravity well distortion to find the sweet spot.
+### DR-10: Discovery/Achievement UI — RESOLVED: Visual Language Only
 
-### DR-7: CRT/Scanline Effect
+Define the visual treatment vocabulary now; build the screen in Phase 10.
 
-**Context**: The debug menu should allow toggling a CRT/scanline overlay for the retro-digital feel. Questions: default on or off? How intense? Applied to the whole screen or just UI text?
+| State | Visual Treatment |
+|-------|-----------------|
+| Known but locked | Name visible, icon visible, description/reward hidden. Dim glow border, "locked" overlay pattern. |
+| Unknown ("????") | Both condition and reward show as "????" placeholder. No glow, minimal styling. Mystery is the aesthetic. |
+| Almost unlocked (defeat tease) | Evolution name + abstract symbol icon. Pulsing glow suggesting proximity. "So close" energy. |
+| Discovered/Unlocked | Full reveal with rarity-appropriate glow treatment. |
 
-**What's needed**: In-engine testing with CRT shader at various intensities. This is a tuning question, not a design question.
+## Architecture Decisions (Phase 5 specific)
 
-### DR-8: Transition Style Pool Size
+### Visual Identity Components — RESOLVED: Separate Components
 
-**Context**: Four transition styles are defined (Flash, Sweep, Glitch, Collapse/Rebuild). Are four enough variety, or should more be designed?
+Each visual property is its own component (`Shape`, `Color`, `AuraType`, `TrailType`, `DamageDisplay`, `DeathEffect`). Entities only get the components that apply to them. Enum types defined in rendering/, attached by owning domain at spawn.
 
-**What's needed**: Implement the four, playtest across multiple runs, see if transitions feel repetitive. Add more only if needed.
+### Render Messages — RESOLVED: Module-Owned Messages
 
-### DR-9: Evolution VFX Designs
+Each VFX module defines its own Bevy message type. Standard systems (not observers) read messages in parallel. A `VfxKind` enum exists for RON data authoring only — the effect/ domain dispatches enum → module message.
 
-**Context**: Each evolution needs bespoke VFX. These are the most visually ambitious effects in the game. Each needs individual design attention.
+### Particle System — RESOLVED: Custom `rantzsoft_particles` Crate
 
-**Evolutions with VFX directions defined** (in `effects-particles.md`):
-1. Nova Lance — massive beam
-2. Voltchain — branching lightning web
-3. Phantom Breaker — ghost bolt with infinite piercing, spectral shader (NOT a ghost breaker — see SpawnPhantom effect)
-4. Supernova — screen-filling explosion
-5. Dead Man's Hand — synchronized bolt pulse (NOTE: redesign pending — current effect is single shockwave, target is multi-bolt pulse)
-6. Railgun — instantaneous thin beam
-7. Gravity Well — distortion lens (no dark void)
-8. Second Wind — invisible wall materialization
+Evaluated bevy_hanabi (macOS pink screen bug #523), bevy_enoki (no additive blending, CPU-only, broken docs), bevy_firework/bevy_sprinkles (3D only), bevy_particle_systems (Bevy 0.14 era). All had disqualifying issues.
 
-**Evolutions MISSING VFX directions** (exist in chip catalog but not in graphics guide):
-9. Entropy Engine — needs VFX direction
-10. Chain Reaction — needs VFX direction
-11. Feedback Loop — needs VFX direction
-12. Split Decision — needs VFX direction
-13. FlashStep — needs VFX direction
+Building `rantzsoft_particles` as a new workspace crate. GPU compute shader particle simulation, `Material2d` with additive blending, HDR color support, RON-configurable emitters. Follows rantzsoft_* conventions (game-agnostic, zero game vocabulary).
 
-**What's needed**: Individual VFX design documents or concept sketches for all 13 evolutions. The catalog phase will surface these. The 5 missing ones need VFX directions before they can be implemented.
+### Rendering Config — RESOLVED: New RenderingDefaults
 
-### DR-10: Discovery / Achievement UI Visual Language
-
-**Context**: Pillar 7 (Discovery is the Long Game) needs a visual vocabulary for showing the player what they haven't found yet. Reference: Vampire Survivors' achievement/unlock screen.
-
-**Design direction** (decided):
-- Achievements the player knows about: show name + unlock condition, but NOT the reward description
-- Achievements the player doesn't know about yet (2nd-order consequences): show as "????" for both the condition and reward
-- Evolutions not yet discovered: show name but NOT description or effects
-- "Almost unlocked" teases on defeat run-end screen: show evolution name + icon for evolutions the player was 1 chip away from
-
-**What's needed**: Visual mockup of the achievement/collection screen with this tiered information hiding. Define the visual treatment for "known but locked," "unknown," and "almost unlocked" states. This is a Phase 10 (meta-progression) feature but the visual language should be consistent with the style guide.
+New `rendering_defaults.ron` file and `RenderingConfig` resource via the `rantzsoft_defaults` pipeline. Stores CRT toggle, grid density, bloom settings, and other rendering tuning values. rendering/ domain owns it.

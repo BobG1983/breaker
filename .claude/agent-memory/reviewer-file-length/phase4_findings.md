@@ -1,10 +1,10 @@
 ---
 name: Post-refactor file length findings
-description: Phase 7+ open findings updated 2026-03-30; all HIGH priority and mod.rs violations from source-chip-shield-absorption have been split; MEDIUM priority items remain
+description: Phase 7+ open findings; updated 2026-03-30 after feature/scenario-coverage scan; HIGH items remain open; 25 MEDIUM items remain open
 type: project
 ---
 
-Updated after full scan post-new-scenarios merge (2026-03-30).
+Updated after full scan post-new-scenarios merge (2026-03-30) and feature/scenario-coverage branch review.
 
 ## Previously HIGH priority — ALL SPLIT (as of post-new-scenarios merge)
 
@@ -22,9 +22,27 @@ All 7 files listed as HIGH priority after source-chip-shield-absorption have bee
 - `breaker-scenario-runner/src/input/mod.rs` — now routing-only (drivers/ + re-exports)
 - `breaker-scenario-runner/src/verdict/mod.rs` — now routing-only (evaluation/ + re-exports)
 
-## MEDIUM priority still open (as of 2026-03-30)
+## NEW HIGH priority — feature/scenario-coverage branch (2026-03-30)
 
-These are the MEDIUM items from the phase4 list that have NOT been confirmed split yet.
+| File | Total | Prod | Tests | Test Fns | Strategy | Priority |
+|------|-------|------|-------|----------|----------|----------|
+| `breaker-scenario-runner/src/invariants/checkers/check_aabb_matches_entity_dimensions.rs` | 581 | 76 | 505 | 20 | A: test extraction | HIGH |
+
+## NEW MEDIUM priority — feature/scenario-coverage branch (2026-03-30)
+
+| File | Total | Prod | Tests | Test Fns | Strategy | Priority |
+|------|-------|------|-------|----------|----------|----------|
+| `breaker-scenario-runner/src/lifecycle/systems/frame_mutations.rs` | 504 | 360 | 144 | 5 | A: test extraction | MEDIUM |
+
+## NEW LOW priority — feature/scenario-coverage branch (2026-03-30)
+
+| File | Total | Notes |
+|------|-------|-------|
+| `breaker-scenario-runner/src/types/tests/invariant_kinds.rs` | 418 | Already separate test file; under 800-line sub-split threshold |
+
+## MEDIUM priority still open (as of 2026-03-30 pre-branch scan)
+
+These are the MEDIUM items from the previous phase4 list that have NOT been confirmed split yet.
 Run a fresh `reviewer-file-length` pass before acting — some may have been addressed.
 
 | File | ~Lines | Strategy |

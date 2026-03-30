@@ -1,0 +1,23 @@
+// Adversarial: Corridor layout funnels the breaker into repeated wall contacts
+// by narrowing lateral movement range. High action_prob (0.9) drives near-maximum
+// dash frequency, so the breaker hits the left and right walls many times per
+// second. This exercises the BreakerImpactWall dispatch path, which is distinct
+// from BoltImpactWall — it fires when the breaker body reaches the lateral
+// playfield boundary and is clamped by BreakerPositionClamped.
+// Risks: if BreakerImpactWall fires an effect that modifies bolt velocity, and
+// the bolt is simultaneously near a wall, two impulses can compound in the same
+// fixed-update tick. BoltSpeedInRange catches velocity going outside [min, max].
+// BreakerInBounds guards against the clamp system failing to prevent the breaker
+// from escaping bounds on a rapid successive-dash sequence. NoNaN guards against
+// floating-point corruption from repeated wall-snap corrections at high velocity.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.9)),
+    max_frames: 6000,
+    invariants: [NoNaN, BoltInBounds, BreakerInBounds, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 2207,
+)
