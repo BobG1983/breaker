@@ -37,11 +37,9 @@ See `../design/` for core design principles and decisions, `../architecture/` fo
   - [4h: Chip Evolution](done/phase-4/phase-4h-chip-evolution.md)
   - [4i: Run Stats & Summary](done/phase-4/phase-4i-run-stats.md)
   - [4j: Release Infrastructure](done/phase-4/phase-4j-release-infrastructure.md)
-
-### Current
-- **Spatial/Physics Extraction** — **Done**. Extracted `rantzsoft_spatial2d` and `rantzsoft_physics2d` as game-agnostic workspace crates. Chain bolts and spreading shockwave implemented. `breaker-derive/` replaced by `rantzsoft_defaults` + `rantzsoft_defaults_derive`. `SeedableRegistry` trait added to `rantzsoft_defaults` — `BreakerRegistry`, `ChipTemplateRegistry`, and `EvolutionTemplateRegistry` all implement it; `ChipRegistry` renamed to `ChipCatalog`.
-- **Stat Effects (Active/Effective component model)** — **Done**. Effect domain rebuilt from scratch. Flat chip stat components (`DamageBoost`, `BoltSpeedBoost`, `BreakerSpeedBoost`, `BumpForceBoost`, `Piercing`, etc.) removed from chips domain. Replaced by `Active*` stacks (e.g., `ActiveDamageBoosts`, `ActiveSpeedBoosts`, `ActivePiercings`, `ActiveSizeBoosts`, `ActiveBumpForces`, `ActiveQuickStops`) in the effect domain, with corresponding `Effective*` components (`EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, `EffectivePiercing`, `EffectiveSizeMultiplier`, `EffectiveBumpForce`, `EffectiveQuickStop`) computed each frame by `EffectSystems::Recalculate` (runs `.after(EffectSystems::Bridge)`). `PiercingRemaining` moved from chips to bolt domain. Formulas changed from additive to multiplicative for damage, speed, and size. Bolt/breaker consumers updated to read `Effective*` components from the effect domain.
-- **Runtime Effects** — **Done**. Implemented `fire()` / `reverse()` logic and runtime systems for all 24 effects. Stat-modifier effects: `SpeedBoost`, `DamageBoost`, `Piercing`, `SizeBoost`, `BumpForce`, `QuickStop`, `RampingDamage`. Simulation effects: `Shockwave`, `ChainLightning`, `PiercingBeam`, `Pulse`, `Explode`, `TetherBeam`, `ChainBolt`, `SpawnBolts`, `SpawnPhantom`, `Attraction`, `SecondWind`, `Shield`, `GravityWell`, `LoseLife`, `TimePenalty`, `RandomEffect`, `EntropyEngine`. Each effect module is fully self-contained with its own `fire()`, `reverse()`, `register()`, components, and runtime systems. Source chip attribution (`source_chip: &str`) added to all fire/reverse signatures. Shield absorption wired to bolt domain (bolt_lost) and cells domain (handle_cell_hit).
+  - Post-Wave: Spatial/Physics Extraction — Done
+  - Post-Wave: Stat Effects — Done
+  - Post-Wave: Runtime Effects — Done
 
 ### Upcoming
 - Graphics & Sound Audit — Full scan of every entity, effect, cell type, breaker, and event to catalog missing graphics and sounds. Produces the work list for Phases 5 and 6 - to be stored under design/ as a markdown, with a table for every missing asset.
