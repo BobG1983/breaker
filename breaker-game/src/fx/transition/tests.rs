@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{prelude::*, state::app::StatesPlugin, time::TimeUpdateStrategy};
 
-use super::*;
+use super::system::*;
 use crate::shared::{GameRng, GameState};
 
 fn test_app() -> App {

@@ -9,4 +9,7 @@ mod system;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::*;
+pub(crate) use system::{
+    TransitionConfig, animate_transition, cleanup_transition, spawn_transition_in,
+    spawn_transition_out,
+};
