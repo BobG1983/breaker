@@ -22,8 +22,7 @@ fn fire_spawns_shockwave_entity_at_source_position() {
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one shockwave entity");
 
-    let (source, radius, max_radius, speed, transform) = results[0];
-    assert_eq!(source.0, entity);
+    let (_source, radius, max_radius, speed, transform) = results[0];
     assert!(
         (radius.0 - 0.0).abs() < f32::EPSILON,
         "expected radius 0.0, got {}",

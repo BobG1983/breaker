@@ -1,1 +1,4 @@
 - [Phase 3 FixedUpdate scheduling cycle (RESOLVED)](phase3_fixedupdate_cycle.md) — Cycle from b0b2159 resolved 2026-03-28; all 70 scenarios pass after removing .after(EffectSystems::Recalculate) from consumers
+- [BoltSpeedInRange: velocity-modifying systems bypass clamp](game_bug_speed_clamp_bypass.md) — gravity_well apply_gravity_pull and enforce_distance_constraints both run after prepare_bolt_velocity, pushing speed above max; confirmed 2026-03-30
+- [SecondWindWallAtMostOne: fire() spawns wall unconditionally](game_bug_second_wind_multi_wall.md) — fire() in second_wind.rs never checks for existing walls; walls accumulate on rapid BoltLost cycles; confirmed 2026-03-30
+- [BoltCountReasonable: EntropyEngine+SpawnBolts has no bolt cap](game_bug_entropy_engine_bolt_storm.md) — entropy_engine escalates to max_effects; Dense layout + rapid destruction overwhelms 2s lifespan drain; confirmed 2026-03-30

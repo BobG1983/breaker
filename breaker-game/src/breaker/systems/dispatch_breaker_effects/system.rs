@@ -43,6 +43,8 @@ pub(crate) fn dispatch_breaker_effects(
         for child in then {
             match child {
                 EffectNode::Do(effect) => do_effects.push(effect.clone()),
+                // Breaker-sourced effects use empty source_chip — they come from
+                // the breaker definition, not from an evolution chip.
                 other => bound_children.push((String::new(), other.clone())),
             }
         }
@@ -56,7 +58,8 @@ pub(crate) fn dispatch_breaker_effects(
         };
 
         for entity in target_entities {
-            // Fire bare Do children immediately
+            // Fire bare Do children immediately. Empty source_chip because
+            // breaker-sourced effects are not attributed to any evolution chip.
             for effect in &do_effects {
                 commands.fire_effect(entity, effect.clone(), String::new());
             }

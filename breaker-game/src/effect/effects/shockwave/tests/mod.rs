@@ -80,7 +80,7 @@ fn spawn_test_cell(app: &mut App, x: f32, y: f32) -> Entity {
 fn spawn_shockwave(app: &mut App, x: f32, y: f32, radius: f32, damaged: HashSet<Entity>) -> Entity {
     app.world_mut()
         .spawn((
-            ShockwaveSource(Entity::PLACEHOLDER),
+            ShockwaveSource,
             ShockwaveRadius(radius),
             ShockwaveMaxRadius(100.0),
             ShockwaveSpeed(50.0),

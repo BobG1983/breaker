@@ -41,9 +41,9 @@ impl PulseEmitter {
 #[derive(Component)]
 pub struct PulseRing;
 
-/// The entity that spawned this ring (typically a bolt).
+/// Marker for pulse rings, indicating they were spawned by a pulse emitter.
 #[derive(Component)]
-pub(crate) struct PulseSource(pub(crate) Entity);
+pub(crate) struct PulseSource;
 
 /// Current expanding radius of the ring.
 #[derive(Component)]
@@ -106,7 +106,7 @@ pub(crate) fn tick_pulse_emitter(
     mut emitters: Query<EmitterQuery>,
 ) {
     let dt = time.timestep().as_secs_f32();
-    for (entity, mut emitter, transform, edm, esc) in &mut emitters {
+    for (_entity, mut emitter, transform, edm, esc) in &mut emitters {
         emitter.timer += dt;
         if emitter.timer >= emitter.interval {
             emitter.timer -= emitter.interval;
@@ -115,7 +115,7 @@ pub(crate) fn tick_pulse_emitter(
             let damage_multiplier = edm.map_or(1.0, |e| e.0);
             let mut ring = commands.spawn((
                 PulseRing,
-                PulseSource(entity),
+                PulseSource,
                 PulseRadius(0.0),
                 PulseMaxRadius(effective_range),
                 PulseSpeed(speed),

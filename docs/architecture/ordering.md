@@ -79,12 +79,22 @@ apply_breaker_config_overrides         [effect domain]
     BreakerSystems::InitParams
     (init_breaker_params)              [breaker domain]
       <- init_breaker .after(BreakerSystems::InitParams)     [effect domain]
+         (init_breaker, dispatch_breaker_effects).chain()
+           .after(BreakerSystems::InitParams)
+           .after(NodeSystems::Spawn)                        [breaker domain]
       <- reset_breaker .after(BreakerSystems::InitParams)
          BreakerSystems::Reset                                [breaker domain]
       <- UiSystems::SpawnTimerHud
          (spawn_timer_hud)             [ui domain]
            <- spawn_lives_display .after(init_breaker)
                                   .after(UiSystems::SpawnTimerHud)  [effect domain]
+
+NodeSystems::Spawn
+  (spawn_cells_from_layout)           [run/node domain — OnEnter]
+    <- dispatch_cell_effects .after(NodeSystems::Spawn)      [cells domain]
+
+(spawn_walls, dispatch_wall_effects).chain()                 [wall domain]
+  [dispatch_wall_effects is currently a no-op stub]
 
 spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
   BoltSystems::InitParams
@@ -93,7 +103,7 @@ spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
        BoltSystems::Reset              [bolt domain]
 ```
 
-Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained inside the breaker plugin. `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin, so `UiSystems::SpawnTimerHud` is the externally-visible anchor. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init.
+Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained inside the breaker plugin. `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin, so `UiSystems::SpawnTimerHud` is the externally-visible anchor. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` and `dispatch_breaker_effects` run after `NodeSystems::Spawn` to ensure cells and the breaker entity are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet) but is registered for consistency.
 
 ### FixedUpdate
 

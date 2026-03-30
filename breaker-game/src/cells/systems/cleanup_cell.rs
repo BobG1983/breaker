@@ -15,7 +15,6 @@ pub(crate) fn cleanup_cell(
 ) {
     for msg in reader.read() {
         writer.write(CellDestroyedAt {
-            position: msg.position,
             was_required_to_clear: msg.was_required_to_clear,
         });
         commands.entity(msg.cell).despawn();
@@ -86,11 +85,9 @@ mod tests {
 
     /// Behavior 1: `cleanup_cell` fires `CellDestroyedAt` with correct fields.
     ///
-    /// Given: Cell entity exists, `RequestCellDestroyed` with position (50.0, 100.0)
-    ///        and `was_required_to_clear` = true
+    /// Given: Cell entity exists, `RequestCellDestroyed` with `was_required_to_clear` = true
     /// When: `cleanup_cell` runs
-    /// Then: `CellDestroyedAt` emitted with position (50.0, 100.0) and
-    ///       `was_required_to_clear` = true
+    /// Then: `CellDestroyedAt` emitted with `was_required_to_clear` = true
     #[test]
     fn cleanup_cell_fires_cell_destroyed_at_with_correct_fields() {
         let mut app = test_app();
@@ -101,7 +98,6 @@ mod tests {
             .0
             .push(RequestCellDestroyed {
                 cell,
-                position: Vec2::new(50.0, 100.0),
                 was_required_to_clear: true,
             });
 
@@ -114,11 +110,6 @@ mod tests {
             "expected exactly one CellDestroyedAt message, got {}",
             captured.0.len()
         );
-        assert_eq!(
-            captured.0[0].position,
-            Vec2::new(50.0, 100.0),
-            "CellDestroyedAt position should match RequestCellDestroyed position"
-        );
         assert!(
             captured.0[0].was_required_to_clear,
             "CellDestroyedAt was_required_to_clear should be true"
@@ -127,11 +118,9 @@ mod tests {
 
     /// Behavior 2: `cleanup_cell` fires `CellDestroyedAt` for non-required cells.
     ///
-    /// Given: Cell entity exists, `RequestCellDestroyed` with position ZERO
-    ///        and `was_required_to_clear` = false
+    /// Given: Cell entity exists, `RequestCellDestroyed` with `was_required_to_clear` = false
     /// When: `cleanup_cell` runs
-    /// Then: `CellDestroyedAt` emitted with position ZERO and
-    ///       `was_required_to_clear` = false
+    /// Then: `CellDestroyedAt` emitted with `was_required_to_clear` = false
     #[test]
     fn cleanup_cell_fires_cell_destroyed_at_for_non_required_cell() {
         let mut app = test_app();
@@ -142,7 +131,6 @@ mod tests {
             .0
             .push(RequestCellDestroyed {
                 cell,
-                position: Vec2::ZERO,
                 was_required_to_clear: false,
             });
 
@@ -154,11 +142,6 @@ mod tests {
             1,
             "expected exactly one CellDestroyedAt message, got {}",
             captured.0.len()
-        );
-        assert_eq!(
-            captured.0[0].position,
-            Vec2::ZERO,
-            "CellDestroyedAt position should be ZERO"
         );
         assert!(
             !captured.0[0].was_required_to_clear,
@@ -181,7 +164,6 @@ mod tests {
             .0
             .push(RequestCellDestroyed {
                 cell,
-                position: Vec2::ZERO,
                 was_required_to_clear: false,
             });
 
@@ -196,7 +178,7 @@ mod tests {
     /// Behavior 4: `cleanup_cell` fires `CellDestroyedAt` for each `RequestCellDestroyed`.
     ///
     /// Given: Two cell entities exist, two `RequestCellDestroyed` messages sent
-    ///        (different positions and `was_required_to_clear` values)
+    ///        (different `was_required_to_clear` values)
     /// When: `cleanup_cell` runs
     /// Then: Two `CellDestroyedAt` messages emitted with matching fields
     #[test]
@@ -212,12 +194,10 @@ mod tests {
                 .resource_mut::<EnqueueRequestCellDestroyed>();
             enqueue.0.push(RequestCellDestroyed {
                 cell: cell_a,
-                position: Vec2::new(10.0, 20.0),
                 was_required_to_clear: true,
             });
             enqueue.0.push(RequestCellDestroyed {
                 cell: cell_b,
-                position: Vec2::new(30.0, 40.0),
                 was_required_to_clear: false,
             });
         }
@@ -233,22 +213,16 @@ mod tests {
         );
 
         // Messages should correspond to the two requests (order matches iteration order)
-        let has_first = captured
-            .0
-            .iter()
-            .any(|m| m.position == Vec2::new(10.0, 20.0) && m.was_required_to_clear);
-        let has_second = captured
-            .0
-            .iter()
-            .any(|m| m.position == Vec2::new(30.0, 40.0) && !m.was_required_to_clear);
+        let has_required = captured.0.iter().any(|m| m.was_required_to_clear);
+        let has_non_required = captured.0.iter().any(|m| !m.was_required_to_clear);
 
         assert!(
-            has_first,
-            "should contain CellDestroyedAt with position (10.0, 20.0) and was_required_to_clear = true"
+            has_required,
+            "should contain CellDestroyedAt with was_required_to_clear = true"
         );
         assert!(
-            has_second,
-            "should contain CellDestroyedAt with position (30.0, 40.0) and was_required_to_clear = false"
+            has_non_required,
+            "should contain CellDestroyedAt with was_required_to_clear = false"
         );
     }
 

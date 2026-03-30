@@ -329,7 +329,7 @@ fn tick_tether_beam_populates_source_chip_from_effect_source_chip() {
             Spatial2D,
         ))
         .id();
-    let beam = app
+    let _beam = app
         .world_mut()
         .spawn((
             TetherBeamComponent {
@@ -342,12 +342,8 @@ fn tick_tether_beam_populates_source_chip_from_effect_source_chip() {
             CleanupOnNodeExit,
         ))
         .id();
-    app.world_mut()
-        .entity_mut(bolt_a)
-        .insert(TetherBoltMarker(beam));
-    app.world_mut()
-        .entity_mut(bolt_b)
-        .insert(TetherBoltMarker(beam));
+    app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
+    app.world_mut().entity_mut(bolt_b).insert(TetherBoltMarker);
 
     let cell = spawn_test_cell(&mut app, 50.0, 0.0);
 
@@ -390,7 +386,7 @@ fn tick_tether_beam_source_chip_none_when_effect_source_chip_none() {
             Spatial2D,
         ))
         .id();
-    let beam = app
+    let _beam = app
         .world_mut()
         .spawn((
             TetherBeamComponent {
@@ -403,12 +399,8 @@ fn tick_tether_beam_source_chip_none_when_effect_source_chip_none() {
             CleanupOnNodeExit,
         ))
         .id();
-    app.world_mut()
-        .entity_mut(bolt_a)
-        .insert(TetherBoltMarker(beam));
-    app.world_mut()
-        .entity_mut(bolt_b)
-        .insert(TetherBoltMarker(beam));
+    app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
+    app.world_mut().entity_mut(bolt_b).insert(TetherBoltMarker);
 
     spawn_test_cell(&mut app, 50.0, 0.0);
 
@@ -444,7 +436,7 @@ fn tick_tether_beam_defaults_to_none_when_no_effect_source_chip() {
             Spatial2D,
         ))
         .id();
-    let beam = app
+    let _beam = app
         .world_mut()
         .spawn((
             TetherBeamComponent {
@@ -456,12 +448,8 @@ fn tick_tether_beam_defaults_to_none_when_no_effect_source_chip() {
             CleanupOnNodeExit,
         ))
         .id();
-    app.world_mut()
-        .entity_mut(bolt_a)
-        .insert(TetherBoltMarker(beam));
-    app.world_mut()
-        .entity_mut(bolt_b)
-        .insert(TetherBoltMarker(beam));
+    app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
+    app.world_mut().entity_mut(bolt_b).insert(TetherBoltMarker);
 
     spawn_test_cell(&mut app, 50.0, 0.0);
 
@@ -498,7 +486,7 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
             Spatial2D,
         ))
         .id();
-    let beam_a = app
+    let _beam_a = app
         .world_mut()
         .spawn((
             TetherBeamComponent {
@@ -513,10 +501,10 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
         .id();
     app.world_mut()
         .entity_mut(alpha_left)
-        .insert(TetherBoltMarker(beam_a));
+        .insert(TetherBoltMarker);
     app.world_mut()
         .entity_mut(alpha_right)
-        .insert(TetherBoltMarker(beam_a));
+        .insert(TetherBoltMarker);
 
     // Beam B: horizontal at y=200
     let beta_left = app
@@ -537,7 +525,7 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
             Spatial2D,
         ))
         .id();
-    let beam_b = app
+    let _beam_b = app
         .world_mut()
         .spawn((
             TetherBeamComponent {
@@ -552,10 +540,10 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
         .id();
     app.world_mut()
         .entity_mut(beta_left)
-        .insert(TetherBoltMarker(beam_b));
+        .insert(TetherBoltMarker);
     app.world_mut()
         .entity_mut(beta_right)
-        .insert(TetherBoltMarker(beam_b));
+        .insert(TetherBoltMarker);
 
     let cell_a = spawn_test_cell(&mut app, 50.0, 0.0);
     let cell_b = spawn_test_cell(&mut app, 50.0, 200.0);

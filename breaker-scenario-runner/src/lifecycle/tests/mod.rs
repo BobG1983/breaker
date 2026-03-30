@@ -17,6 +17,7 @@ mod helpers;
 mod initial_effects;
 mod input_injection;
 mod invariant_gating;
+mod pending_breaker_effects;
 mod pending_cell_effects;
 mod pending_wall_effects;
 mod perfect_tracking;

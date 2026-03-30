@@ -109,11 +109,11 @@ impl Command for PushBoundEffects {
     }
 }
 
-struct TransferCommand {
-    entity: Entity,
-    chip_name: String,
-    children: Vec<EffectNode>,
-    permanent: bool,
+pub(crate) struct TransferCommand {
+    pub(crate) entity: Entity,
+    pub(crate) chip_name: String,
+    pub(crate) children: Vec<EffectNode>,
+    pub(crate) permanent: bool,
 }
 
 impl Command for TransferCommand {
@@ -142,6 +142,60 @@ impl Command for TransferCommand {
 
         for effect in do_effects {
             effect.fire(self.entity, &self.chip_name, world);
+        }
+    }
+}
+
+use super::core::Target;
+use crate::{
+    bolt::components::Bolt, breaker::components::Breaker, cells::components::Cell,
+    wall::components::Wall,
+};
+
+/// Command that resolves an `On` node: queries entities matching the target,
+/// then transfers children to each resolved entity.
+pub(crate) struct ResolveOnCommand {
+    pub(crate) target: Target,
+    pub(crate) chip_name: String,
+    pub(crate) children: Vec<EffectNode>,
+    pub(crate) permanent: bool,
+}
+
+impl Command for ResolveOnCommand {
+    fn apply(self, world: &mut World) {
+        let entities = resolve_target_from_world(self.target, world);
+        for entity in entities {
+            TransferCommand {
+                entity,
+                chip_name: self.chip_name.clone(),
+                children: self.children.clone(),
+                permanent: self.permanent,
+            }
+            .apply(world);
+        }
+    }
+}
+
+/// Resolve a [`Target`] to entities using direct world queries.
+/// Used by [`ResolveOnCommand`] at command-apply time when system queries
+/// are not available.
+fn resolve_target_from_world(target: Target, world: &mut World) -> Vec<Entity> {
+    match target {
+        Target::Breaker => {
+            let mut query = world.query_filtered::<Entity, With<Breaker>>();
+            query.iter(world).collect()
+        }
+        Target::Bolt | Target::AllBolts => {
+            let mut query = world.query_filtered::<Entity, With<Bolt>>();
+            query.iter(world).collect()
+        }
+        Target::Cell | Target::AllCells => {
+            let mut query = world.query_filtered::<Entity, With<Cell>>();
+            query.iter(world).collect()
+        }
+        Target::Wall | Target::AllWalls => {
+            let mut query = world.query_filtered::<Entity, With<Wall>>();
+            query.iter(world).collect()
         }
     }
 }

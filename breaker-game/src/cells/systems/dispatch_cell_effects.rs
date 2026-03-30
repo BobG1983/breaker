@@ -60,6 +60,8 @@ pub(crate) fn dispatch_cell_effects(
             for child in then {
                 match child {
                     EffectNode::Do(effect) => do_children.push(effect.clone()),
+                    // Cell-sourced effects use empty source_chip — they come from
+                    // the cell type definition, not from an evolution chip.
                     other => non_do_children.push((String::new(), other.clone())),
                 }
             }
@@ -67,24 +69,17 @@ pub(crate) fn dispatch_cell_effects(
             // Resolve target entities
             let target_entities: Vec<Entity> = match target {
                 Target::Cell => vec![entity],
-                Target::Bolt => bolt_query
-                    .iter()
-                    .next()
-                    .map_or_else(Vec::new, |bolt| vec![bolt]),
-                Target::AllBolts => bolt_query.iter().collect(),
+                Target::Bolt | Target::AllBolts => bolt_query.iter().collect(),
                 Target::Breaker => breaker_query
                     .single()
                     .map_or_else(|_| Vec::new(), |breaker| vec![breaker]),
                 Target::AllCells => all_cells_query.iter().collect(),
-                Target::Wall => wall_query
-                    .iter()
-                    .next()
-                    .map_or_else(Vec::new, |wall| vec![wall]),
-                Target::AllWalls => wall_query.iter().collect(),
+                Target::Wall | Target::AllWalls => wall_query.iter().collect(),
             };
 
             for target_entity in &target_entities {
-                // Fire Do children immediately
+                // Fire Do children immediately. Empty source_chip because
+                // cell-sourced effects are not attributed to any evolution chip.
                 for effect in &do_children {
                     commands.fire_effect(*target_entity, effect.clone(), String::new());
                 }
@@ -117,6 +112,7 @@ mod tests {
             BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, StagedEffects, Target,
             Trigger,
         },
+        wall::components::Wall,
     };
 
     // ── Test helpers ────────────────────────────────────────────────
@@ -1520,6 +1516,164 @@ mod tests {
             bound.0.len(),
             1,
             "bolt BoundEffects should have 1 dispatched entry"
+        );
+    }
+
+    // ── Regression: Target::Bolt dispatches to ALL bolt entities, not just first ──
+
+    #[test]
+    fn cell_with_target_bolt_dispatches_to_all_bolt_entities() {
+        let mut registry = CellTypeRegistry::default();
+        registry.insert(
+            'B',
+            make_cell_def(
+                "bolt_boost_cell",
+                'B',
+                10.0,
+                Some(vec![RootEffect::On {
+                    target: Target::Bolt,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Bumped,
+                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.4 })],
+                    }],
+                }]),
+            ),
+        );
+
+        let mut app = test_app(registry);
+        let _cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('B'))).id();
+        let bolt_a = app.world_mut().spawn(Bolt).id();
+        let bolt_b = app.world_mut().spawn(Bolt).id();
+        app.update();
+
+        // BOTH bolts should have BoundEffects with 1 entry each
+        let bound_a = app
+            .world()
+            .get::<BoundEffects>(bolt_a)
+            .expect("bolt A should have BoundEffects from Target::Bolt dispatch");
+        assert_eq!(
+            bound_a.0.len(),
+            1,
+            "bolt A should have exactly 1 BoundEffects entry"
+        );
+        let (chip_name_a, node_a) = &bound_a.0[0];
+        assert_eq!(
+            chip_name_a, "",
+            "chip_name should be empty string for cell-defined effects"
+        );
+        assert!(
+            matches!(
+                node_a,
+                EffectNode::When {
+                    trigger: Trigger::Bumped,
+                    then,
+                } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::SpeedBoost { multiplier }) if (multiplier - 1.4).abs() < f32::EPSILON)
+            ),
+            "bolt A expected When {{ Bumped, [Do(SpeedBoost {{ multiplier: 1.4 }})] }}, got {node_a:?}"
+        );
+
+        let bound_b = app
+            .world()
+            .get::<BoundEffects>(bolt_b)
+            .expect("bolt B should have BoundEffects from Target::Bolt dispatch");
+        assert_eq!(
+            bound_b.0.len(),
+            1,
+            "bolt B should have exactly 1 BoundEffects entry"
+        );
+        let (chip_name_b, node_b) = &bound_b.0[0];
+        assert_eq!(
+            chip_name_b, "",
+            "chip_name should be empty string for cell-defined effects"
+        );
+        assert!(
+            matches!(
+                node_b,
+                EffectNode::When {
+                    trigger: Trigger::Bumped,
+                    then,
+                } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::SpeedBoost { multiplier }) if (multiplier - 1.4).abs() < f32::EPSILON)
+            ),
+            "bolt B expected When {{ Bumped, [Do(SpeedBoost {{ multiplier: 1.4 }})] }}, got {node_b:?}"
+        );
+    }
+
+    // ── Regression: Target::Wall dispatches to ALL wall entities, not just first ──
+
+    #[test]
+    fn cell_with_target_wall_dispatches_to_all_wall_entities() {
+        let mut registry = CellTypeRegistry::default();
+        registry.insert(
+            'W',
+            make_cell_def(
+                "wall_buff_cell",
+                'W',
+                10.0,
+                Some(vec![RootEffect::On {
+                    target: Target::Wall,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Impacted(ImpactTarget::Bolt),
+                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 0.8 })],
+                    }],
+                }]),
+            ),
+        );
+
+        let mut app = test_app(registry);
+        let _cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('W'))).id();
+        let wall_a = app.world_mut().spawn(Wall).id();
+        let wall_b = app.world_mut().spawn(Wall).id();
+        app.update();
+
+        // BOTH walls should have BoundEffects with 1 entry each
+        let bound_a = app
+            .world()
+            .get::<BoundEffects>(wall_a)
+            .expect("wall A should have BoundEffects from Target::Wall dispatch");
+        assert_eq!(
+            bound_a.0.len(),
+            1,
+            "wall A should have exactly 1 BoundEffects entry"
+        );
+        let (chip_name_a, node_a) = &bound_a.0[0];
+        assert_eq!(
+            chip_name_a, "",
+            "chip_name should be empty string for cell-defined effects"
+        );
+        assert!(
+            matches!(
+                node_a,
+                EffectNode::When {
+                    trigger: Trigger::Impacted(ImpactTarget::Bolt),
+                    then,
+                } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::SpeedBoost { multiplier }) if (multiplier - 0.8).abs() < f32::EPSILON)
+            ),
+            "wall A expected When {{ Impacted(Bolt), [Do(SpeedBoost {{ multiplier: 0.8 }})] }}, got {node_a:?}"
+        );
+
+        let bound_b = app
+            .world()
+            .get::<BoundEffects>(wall_b)
+            .expect("wall B should have BoundEffects from Target::Wall dispatch");
+        assert_eq!(
+            bound_b.0.len(),
+            1,
+            "wall B should have exactly 1 BoundEffects entry"
+        );
+        let (chip_name_b, node_b) = &bound_b.0[0];
+        assert_eq!(
+            chip_name_b, "",
+            "chip_name should be empty string for cell-defined effects"
+        );
+        assert!(
+            matches!(
+                node_b,
+                EffectNode::When {
+                    trigger: Trigger::Impacted(ImpactTarget::Bolt),
+                    then,
+                } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::SpeedBoost { multiplier }) if (multiplier - 0.8).abs() < f32::EPSILON)
+            ),
+            "wall B expected When {{ Impacted(Bolt), [Do(SpeedBoost {{ multiplier: 0.8 }})] }}, got {node_b:?}"
         );
     }
 }

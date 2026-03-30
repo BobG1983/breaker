@@ -57,7 +57,37 @@ type: project
 - `docs/design/effects/attraction.md` — "nearest wins" and type deactivation/reactivation matches code exactly
 - `BoltImpactWall` consumer entry ("effect") covers both bridge triggers AND runtime effect systems — no change needed
 
-## 2026-03-29 — feature/runtime-effects source-chip-shield-absorption review
+## 2026-03-29 — feature/source-chip-shield-absorption (second review session)
+
+**Branch:** feature/source-chip-shield-absorption
+
+**Files reviewed:**
+- `breaker-game/src/effect/commands.rs` — push_bound_effects method, PushBoundEffects command
+- `breaker-game/src/cells/components/types.rs` — CellEffectsDispatched marker component
+- `breaker-game/src/cells/systems/dispatch_cell_effects.rs` — dispatch logic, CellDispatchQuery
+- `breaker-game/src/cells/plugin.rs` — dispatch_cell_effects registration after NodeSystems::Spawn
+- `breaker-game/src/wall/systems/dispatch_wall_effects.rs` — no-op stub
+- `breaker-game/src/wall/plugin.rs` — (spawn_walls, dispatch_wall_effects).chain() registration
+- `breaker-game/src/breaker/systems/dispatch_breaker_effects/system.rs` — dispatch logic
+- `breaker-game/src/breaker/plugin.rs` — dispatch_breaker_effects registration
+- `breaker-scenario-runner/src/types/mod.rs` — InvariantKind (22 variants), MutationKind (15 variants)
+- `breaker-scenario-runner/src/invariants/checkers/check_chain_arc_count_reasonable.rs` — new checker
+- `breaker-scenario-runner/src/invariants/checkers/mod.rs` — confirmed check_chain_arc_count_reasonable wired
+
+**Drifts found and fixed:**
+- `docs/architecture/messages.md` — fire_effect/reverse_effect missing source_chip param; push_bound_effects not listed
+- `docs/architecture/plugins.md` — fire_effect/reverse_effect missing source_chip; push_bound_effects absent from Effect Dispatch section
+- `docs/architecture/effects/commands.md` — EffectCommandsExt trait missing push_bound_effects; PushBoundEffects command not documented
+- `docs/architecture/standards.md` — invariant list missing 6 variants (ChipOfferExpected, SecondWindWallAtMostOne, ShieldChargesConsistent, PulseRingAccumulation, EffectiveSpeedConsistent, ChainArcCountReasonable); count "16" changed to "22" (twice)
+- `docs/design/terminology/scenarios.md` — MutationKind listed only 5 variants; expanded to all 15
+- `docs/architecture/ordering.md` — OnEnter(GameState::Playing) chain missing dispatch_cell_effects, dispatch_wall_effects, dispatch_breaker_effects
+
+**Items confirmed no-drift:**
+- `lib.rs` pub mod visibility — cells and wall already listed in scenario runner exception
+- game.rs plugin registration order — unchanged
+- InvariantKind ALL slice — matches enum variants exactly
+
+## 2026-03-29 — feature/runtime-effects source-chip-shield-absorption review (first session)
 
 **Branch:** feature/runtime-effects (source_chip and shield absorption phase)
 

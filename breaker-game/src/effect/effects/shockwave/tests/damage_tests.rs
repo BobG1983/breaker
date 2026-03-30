@@ -301,7 +301,7 @@ fn shockwave_damage_scales_by_effective_damage_multiplier() {
 
     // Spawn shockwave with ShockwaveDamageMultiplier(2.0)
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(35.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -341,7 +341,7 @@ fn shockwave_damage_scales_with_high_multiplier_across_multiple_cells() {
     let cell3 = spawn_test_cell(&mut app, -20.0, 0.0);
 
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(25.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -383,7 +383,7 @@ fn shockwave_damage_zero_multiplier_produces_zero_damage() {
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(25.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -417,7 +417,7 @@ fn apply_shockwave_damage_populates_source_chip_from_effect_source_chip() {
     let cell = spawn_test_cell(&mut app, 20.0, 0.0);
 
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(35.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -445,7 +445,7 @@ fn apply_shockwave_damage_source_chip_none_when_effect_source_chip_none() {
     spawn_test_cell(&mut app, 20.0, 0.0);
 
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(35.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -472,7 +472,7 @@ fn apply_shockwave_damage_defaults_to_none_when_no_effect_source_chip_component(
 
     // No EffectSourceChip component on shockwave
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(35.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -498,7 +498,7 @@ fn multiple_shockwaves_with_different_source_chips_produce_correctly_attributed_
     let cell_b = spawn_test_cell(&mut app, 90.0, 0.0);
 
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(25.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
@@ -508,7 +508,7 @@ fn multiple_shockwaves_with_different_source_chips_produce_correctly_attributed_
     ));
 
     app.world_mut().spawn((
-        ShockwaveSource(Entity::PLACEHOLDER),
+        ShockwaveSource,
         ShockwaveRadius(25.0),
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),

@@ -64,13 +64,9 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | License issue | Main agent evaluates — may need to replace the crate |
 | Duplicate transitive | Main agent evaluates — may need to pin or unify |
 
-## reviewer-file-length findings
+## guard-file-length findings
 
-| Priority | Route |
-|---|---|
-| HIGH (1000+ lines or 800+ test lines) | Refactor spec hint → **writer-code** (mechanical split, no tests needed) |
-| MEDIUM (600-999 lines) | Queue for next refactor opportunity — not urgent |
-| LOW (400-599 lines) | Note only — split when file is next modified |
+guard-file-length splits files directly — no routing needed. If it encounters a compilation issue after splitting, it reports the error for the orchestrator to route to writer-code.
 
 ## reviewer-tests findings
 

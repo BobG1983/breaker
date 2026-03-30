@@ -123,11 +123,7 @@ fn spawn_tether_beam_with_edm(
         ))
         .id();
     // Add TetherBoltMarker to each bolt
-    app.world_mut()
-        .entity_mut(bolt_a)
-        .insert(TetherBoltMarker(beam));
-    app.world_mut()
-        .entity_mut(bolt_b)
-        .insert(TetherBoltMarker(beam));
+    app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
+    app.world_mut().entity_mut(bolt_b).insert(TetherBoltMarker);
     (bolt_a, bolt_b, beam)
 }

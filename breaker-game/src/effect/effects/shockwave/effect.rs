@@ -12,9 +12,9 @@ use crate::{
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
-/// Marks the entity that spawned this shockwave.
+/// Marker component for shockwave entities.
 #[derive(Component)]
-pub(crate) struct ShockwaveSource(pub(crate) Entity);
+pub(crate) struct ShockwaveSource;
 
 /// Current radius of the expanding shockwave.
 #[derive(Component)]
@@ -67,7 +67,7 @@ pub(crate) fn fire(
         .map_or(1.0, |e| e.0);
 
     world.spawn((
-        ShockwaveSource(entity),
+        ShockwaveSource,
         ShockwaveRadius(0.0),
         ShockwaveMaxRadius(effective_range),
         ShockwaveSpeed(speed),

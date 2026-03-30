@@ -61,7 +61,16 @@ The file contains only a doc comment explaining legacy stat components were remo
 ## Architecture Confirmed (source-chip-shield-absorption, 2026-03-29)
 
 - Effect dispatch: `EffectKind::fire(entity, source_chip: &str, world)` / `reverse(entity, source_chip: &str, world)` — source_chip added to ALL fire/reverse signatures
-- `EffectCommandsExt` methods: `fire_effect(entity, effect, source_chip: String)`, `reverse_effect(entity, effect, source_chip: String)`, `transfer_effect(entity, chip_name: String, children, permanent)`
+- `EffectCommandsExt` methods: `fire_effect(entity, effect, source_chip: String)`, `reverse_effect(entity, effect, source_chip: String)`, `transfer_effect(entity, chip_name: String, children, permanent)`, `push_bound_effects(entity, effects: Vec<(String, EffectNode)>)`
+- `PushBoundEffects` — custom `Command` struct in `effect/commands.rs`; inserts `BoundEffects`+`StagedEffects` if absent, appends entries. Used by `dispatch_cell_effects` and `dispatch_breaker_effects`.
+- `CellEffectsDispatched` — marker component in `cells/components/types.rs`; prevents double-dispatch by `dispatch_cell_effects`
+- `dispatch_cell_effects` — cells system; `OnEnter(GameState::Playing)` after `NodeSystems::Spawn`; skips cells with `CellEffectsDispatched`
+- `dispatch_breaker_effects` — breaker system; `OnEnter(GameState::Playing)` chained after `init_breaker`, both after `BreakerSystems::InitParams` and `NodeSystems::Spawn`
+- `dispatch_wall_effects` — wall system; `OnEnter(GameState::Playing)` chained after `spawn_walls`; currently a no-op stub (walls have no RON-defined effects)
+- `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
+- `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
+- InvariantKind total: 22 variants (was 16 documented — `ChipOfferExpected`, `SecondWindWallAtMostOne`, `ShieldChargesConsistent`, `PulseRingAccumulation`, `EffectiveSpeedConsistent`, `ChainArcCountReasonable` were undocumented)
+- MutationKind total: 15 variants (was 5 documented — added in multiple prior sessions)
 - `EffectSourceChip(Option<String>)` — component on AoE/spawn effect entities; carries chip attribution from dispatch to damage-application tick
 - `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
 - fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)

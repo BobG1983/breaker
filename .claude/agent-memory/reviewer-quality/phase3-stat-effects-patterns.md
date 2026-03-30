@@ -20,9 +20,9 @@ Consumers read **only** the `Effective*` component via `Option<&Effective*>` in 
 
 `ActiveSpeedBoosts`, `ActiveDamageBoosts`, `ActiveSizeBoosts`, `ActiveBumpForces`, `ActiveQuickStops` all have a `multiplier()` method with the same empty-returns-1.0 / product logic. This is intentional repetition per the plugin-per-domain convention rather than a shared trait. Do not flag without confirmation a shared trait is desired.
 
-## `dispatch_breaker_effects` is a documented stub
+## `dispatch_breaker_effects` is a REAL system (FIXED — no longer a stub)
 
-`breaker/systems/init_breaker/system.rs` contains a `dispatch_breaker_effects` stub with a `// TODO: Wave 6` comment. This is a tracked in-progress item, not forgotten dead code. The TODO does not reference an issue number — flag the missing ticket reference.
+`dispatch_breaker_effects` is now a real system at `breaker/systems/dispatch_breaker_effects/system.rs`. It is registered in `OnEnter(GameState::Playing)` chained after `init_breaker`. Do NOT flag as a stub or TODO item.
 
 ## `unwrap()` in `bolt_wall_collision` face selection is safe
 

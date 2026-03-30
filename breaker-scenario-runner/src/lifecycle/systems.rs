@@ -281,6 +281,7 @@ fn register_scenario_systems(app: &mut App) {
                 tag_game_entities,
                 deferred_debug_setup.after(tag_game_entities),
                 apply_pending_bolt_effects.after(tag_game_entities),
+                apply_pending_breaker_effects.after(tag_game_entities),
                 apply_pending_cell_effects.after(tag_game_entities),
                 apply_pending_wall_effects.after(tag_game_entities),
                 mark_entered_playing_on_spawn_complete,
@@ -313,7 +314,6 @@ pub fn bypass_menu_to_playing(
     mut layout_override: ResMut<ScenarioLayoutOverride>,
     mut next_state: ResMut<NextState<GameState>>,
     mut run_seed: ResMut<RunSeed>,
-    mut breaker_query: Query<&mut BoundEffects, With<Breaker>>,
     mut extras: BypassExtras,
 ) {
     if config.definition.breaker == GODMODE_BREAKER_SENTINEL {
@@ -353,9 +353,12 @@ pub fn bypass_menu_to_playing(
     // initial_chips are seeded by `seed_initial_chips` on OnEnter(Playing),
     // AFTER reset_run_state clears the inventory on OnExit(MainMenu).
 
-    // Dispatch initial_effects to the correct target's pending resource or breaker chains
+    // Dispatch initial_effects to the correct target's pending resource.
+    // All targets use deferred pending resources because no game entities
+    // exist when this system runs (OnEnter(MainMenu)).
     if let Some(ref effects) = config.definition.initial_effects {
         let mut bolt_entries: Vec<(String, EffectNode)> = Vec::new();
+        let mut breaker_entries: Vec<(String, EffectNode)> = Vec::new();
         let mut cell_entries: Vec<(String, EffectNode)> = Vec::new();
         let mut wall_entries: Vec<(String, EffectNode)> = Vec::new();
         for root_effect in effects {
@@ -365,11 +368,7 @@ pub fn bypass_menu_to_playing(
                     bolt_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
                 }
                 Target::Breaker => {
-                    for mut chains in &mut breaker_query {
-                        chains
-                            .0
-                            .extend(then.iter().cloned().map(|node| (String::new(), node)));
-                    }
+                    breaker_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
                 }
                 Target::Cell | Target::AllCells => {
                     cell_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
@@ -383,6 +382,11 @@ pub fn bypass_menu_to_playing(
             extras
                 .commands
                 .insert_resource(PendingBoltEffects(bolt_entries));
+        }
+        if !breaker_entries.is_empty() {
+            extras
+                .commands
+                .insert_resource(PendingBreakerEffects(breaker_entries));
         }
         if !cell_entries.is_empty() {
             extras
@@ -1036,6 +1040,51 @@ pub struct PendingCellEffects(pub Vec<(String, EffectNode)>);
 #[derive(Resource, Default)]
 pub struct PendingWallEffects(pub Vec<(String, EffectNode)>);
 
+/// Holds breaker-targeted initial effects until breaker entities are spawned and tagged.
+///
+/// Inserted by [`bypass_menu_to_playing`] when `initial_effects` contains a
+/// `Target::Breaker` entry. Applied once by [`apply_pending_breaker_effects`]
+/// after tagged breaker entities exist; cleared after application.
+#[derive(Resource, Default)]
+pub struct PendingBreakerEffects(pub Vec<(String, EffectNode)>);
+
+/// Applies deferred breaker effects from [`PendingBreakerEffects`] to tagged breaker entities.
+///
+/// Runs in `FixedUpdate` after [`tag_game_entities`]. Uses a `Local<bool>` guard
+/// so it fires at most once. Waits until at least one `ScenarioTagBreaker` entity
+/// exists before applying. Inserts `BoundEffects` and `StagedEffects` on entities
+/// that lack them.
+pub fn apply_pending_breaker_effects(
+    mut done: Local<bool>,
+    mut pending: Option<ResMut<PendingBreakerEffects>>,
+    breaker_query: Query<Entity, With<ScenarioTagBreaker>>,
+    mut commands: Commands,
+) {
+    if *done {
+        return;
+    }
+    let Some(ref mut pending) = pending else {
+        return;
+    };
+    if breaker_query.is_empty() {
+        return;
+    }
+    let entries = pending.0.clone();
+    for entity in &breaker_query {
+        commands
+            .entity(entity)
+            .insert_if_new((BoundEffects::default(), StagedEffects::default()));
+        let entries_clone = entries.clone();
+        commands.queue(move |world: &mut World| {
+            if let Some(mut bound) = world.entity_mut(entity).get_mut::<BoundEffects>() {
+                bound.0.extend(entries_clone);
+            }
+        });
+    }
+    pending.0.clear();
+    *done = true;
+}
+
 /// Sentinel breaker name for scenarios that need an indestructible breaker.
 ///
 /// Case-sensitive — RON `breaker` field must match exactly.
@@ -1172,10 +1221,16 @@ pub fn update_force_bump_grade(
 }
 
 /// Applies deferred bolt effects from [`PendingBoltEffects`] to tagged bolt entities.
+///
+/// Runs in `FixedUpdate` after [`tag_game_entities`]. Uses a `Local<bool>` guard
+/// so it fires at most once. Waits until at least one `ScenarioTagBolt` entity
+/// exists before applying. Inserts `BoundEffects` and `StagedEffects` on entities
+/// that lack them (bolts may not be spawned with effect components).
 pub fn apply_pending_bolt_effects(
     mut done: Local<bool>,
     mut pending: Option<ResMut<PendingBoltEffects>>,
-    mut bolt_query: Query<&mut BoundEffects, With<ScenarioTagBolt>>,
+    bolt_query: Query<Entity, With<ScenarioTagBolt>>,
+    mut commands: Commands,
 ) {
     if *done {
         return;
@@ -1186,8 +1241,17 @@ pub fn apply_pending_bolt_effects(
     if bolt_query.is_empty() {
         return;
     }
-    for mut chains in &mut bolt_query {
-        chains.0.extend(pending.0.iter().cloned());
+    let entries = pending.0.clone();
+    for entity in &bolt_query {
+        commands
+            .entity(entity)
+            .insert_if_new((BoundEffects::default(), StagedEffects::default()));
+        let entries_clone = entries.clone();
+        commands.queue(move |world: &mut World| {
+            if let Some(mut bound) = world.entity_mut(entity).get_mut::<BoundEffects>() {
+                bound.0.extend(entries_clone);
+            }
+        });
     }
     pending.0.clear();
     *done = true;

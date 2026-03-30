@@ -102,3 +102,38 @@ type: reference
 ## commands.entity(e).remove::<T>() for Deferred Component Removal
 - `commands.entity(cell).remove::<ShieldActive>()` — correct deferred component removal in Bevy 0.18; `Commands::entity().remove()` buffers the removal for end-of-frame application
 - This is correct when the system also reads/writes the component in the same frame via a `Query`; the deferred removal doesn't conflict with current frame query access
+
+## insert_if_new with Tuple Bundles
+- `commands.entity(entity).insert_if_new((BoundEffects::default(), StagedEffects::default()))` — correct; insert_if_new accepts `impl Bundle`, and tuples of components are Bundles; confirmed Bevy 0.18.1
+- `entity_ref.insert_if_new(...)` on `EntityWorldMut` — also valid; same Bundle acceptance
+
+## commands.queue with Closures
+- `commands.queue(move |world: &mut World| { ... })` — correct; Commands::queue (renamed from Commands::add in 0.15) accepts closures matching `|&mut World|` as well as types implementing Command
+- This is the correct pattern for deferred World-access within a system that also uses Commands
+
+## Option<Res<T>> and Option<ResMut<T>> as SystemParams
+- `catalog: Option<Res<ChipCatalog>>` in a system signature — valid Bevy 0.18 SystemParam; returns None when resource is not present
+- `mut inventory: Option<ResMut<ChipInventory>>` — valid; same pattern
+- These allow graceful degradation when resources may not be registered (e.g., during scenario seeding)
+
+## SystemParam Derive with Query Fields ('w, 's)
+- `#[derive(SystemParam)] struct Foo<'w, 's> { q: Query<'w, 's, Entity, With<T>>, ... }` — correct when struct contains Query fields; both lifetimes required for Query
+- `#[derive(SystemParam)] struct Foo<'w> { ... }` — correct when struct contains only Res/ResMut/MessageWriter (no Query)
+- Both patterns confirmed in this codebase (DispatchTargets, ChainLightningWorld, CellSpawnContext, etc.)
+
+## ApplyDeferred in OnEnter Chains
+- `(seed_initial_chips, init_scenario_input, ApplyDeferred, tag_game_entities, ...).chain()` in `OnEnter(GameState::Playing)` — valid Bevy 0.18 pattern; ApplyDeferred flushes deferred commands between steps in a chained system set
+- `.after(BoltSystems::InitParams)` on an OnEnter chain — valid scheduling constraint
+
+## Local<bool> Guard Pattern
+- `mut done: Local<bool>` in a system + `if *done { return; }` then `*done = true;` — correct Bevy 0.18 one-shot pattern; Local persists across invocations within the app lifetime
+- Used in scenario runner for apply_pending_bolt_effects, apply_pending_cell_effects, apply_pending_wall_effects, seed_initial_chips, deferred_debug_setup
+
+## world.entity_mut() vs world.get_entity_mut()
+- `world.entity_mut(entity).insert(...)` — panics if entity doesn't exist; used in fire() functions where entity existence is guaranteed by prior query match
+- `world.entity_mut(entity).remove::<T>()` — panics if entity doesn't exist; used in reverse() functions; established convention for fire/reverse functions
+- `world.get_entity_mut(entity)` returns Result — used in Command::apply implementations (PushBoundEffects, TransferCommand) where entity existence is NOT guaranteed
+- The distinction is: World-access fire/reverse functions (confirmed entity exists) use entity_mut(); Command impls use get_entity_mut()
+
+## for _ in reader.read() {} — Message Drain Pattern
+- `for _ in reader.read() {}` — valid pattern to drain a MessageReader without processing messages (e.g., when a required resource is absent)

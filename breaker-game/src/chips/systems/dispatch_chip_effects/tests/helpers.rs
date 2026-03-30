@@ -96,27 +96,14 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
         .id()
 }
 
-/// Spawn a Bolt entity without `BoundEffects` or `StagedEffects`.
-pub(super) fn spawn_bolt_bare(app: &mut App) -> Entity {
-    use crate::{
-        bolt::components::Bolt,
-        effect::effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
-    };
-
-    app.world_mut()
-        .spawn((
-            Bolt,
-            ActiveDamageBoosts::default(),
-            ActiveSpeedBoosts::default(),
-        ))
-        .id()
-}
-
 /// Spawn a Breaker entity with effect components.
 pub(super) fn spawn_breaker(app: &mut App) -> Entity {
     use crate::{
         breaker::components::Breaker,
-        effect::effects::{bump_force::ActiveBumpForces, size_boost::ActiveSizeBoosts},
+        effect::effects::{
+            bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
+            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
+        },
     };
 
     app.world_mut()
@@ -126,6 +113,8 @@ pub(super) fn spawn_breaker(app: &mut App) -> Entity {
             StagedEffects::default(),
             ActiveBumpForces::default(),
             ActiveSizeBoosts::default(),
+            ActiveDamageBoosts::default(),
+            ActiveSpeedBoosts::default(),
         ))
         .id()
 }
@@ -134,7 +123,10 @@ pub(super) fn spawn_breaker(app: &mut App) -> Entity {
 pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
     use crate::{
         breaker::components::Breaker,
-        effect::effects::{bump_force::ActiveBumpForces, size_boost::ActiveSizeBoosts},
+        effect::effects::{
+            bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
+            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
+        },
     };
 
     app.world_mut()
@@ -142,6 +134,8 @@ pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
             Breaker,
             ActiveBumpForces::default(),
             ActiveSizeBoosts::default(),
+            ActiveDamageBoosts::default(),
+            ActiveSpeedBoosts::default(),
         ))
         .id()
 }
@@ -153,27 +147,4 @@ pub(super) fn spawn_cell(app: &mut App) -> Entity {
     app.world_mut()
         .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
         .id()
-}
-
-/// Spawn a Cell entity without `BoundEffects` or `StagedEffects`.
-pub(super) fn spawn_cell_bare(app: &mut App) -> Entity {
-    use crate::cells::components::Cell;
-
-    app.world_mut().spawn(Cell).id()
-}
-
-/// Spawn a Wall entity with effect components.
-pub(super) fn spawn_wall(app: &mut App) -> Entity {
-    use crate::wall::components::Wall;
-
-    app.world_mut()
-        .spawn((Wall, BoundEffects::default(), StagedEffects::default()))
-        .id()
-}
-
-/// Spawn a Wall entity without `BoundEffects` or `StagedEffects`.
-pub(super) fn spawn_wall_bare(app: &mut App) -> Entity {
-    use crate::wall::components::Wall;
-
-    app.world_mut().spawn(Wall).id()
 }

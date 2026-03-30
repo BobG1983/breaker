@@ -1,6 +1,6 @@
 ---
 name: effect-system-domain-map
-description: Complete map of the effect/trigger pipeline — triggers, effects, dispatch, evaluation flow, and system ordering. Last verified against Phase 5 (feature/runtime-effects).
+description: Complete map of the effect/trigger pipeline — triggers, effects, dispatch, evaluation flow, and system ordering. Last verified against feature/source-chip-shield-absorption (all bridges real).
 type: project
 ---
 
@@ -46,17 +46,20 @@ StagedEffects(Vec<(String, EffectNode)>) — working set, consumed when matched
 
 ## Trigger bridge system state (src/effect/triggers/)
 
-Most trigger bridges are stubs. "Wired in Wave 8" comments throughout.
+ALL trigger bridges are REAL as of feature/source-chip-shield-absorption (2026-03-29). No stubs remain.
 
-- bump, perfect_bump, early_bump, late_bump, bump_whiff, no_bump — stubs
-- bumped, perfect_bumped, early_bumped, late_bumped — stubs
-- impact, impacted — stubs (these consume the collision messages)
-- death — REAL: bridge_death reads RequestCellDestroyed/RequestBoltDestroyed, fires Trigger::Death globally on all BoundEffects entities (in EffectSystems::Bridge, FixedUpdate)
-- died — REAL: bridge_died reads same messages, fires Trigger::Died only on the dying entity (targeted, in EffectSystems::Bridge, FixedUpdate)
-- bolt_lost — REAL: bridge_bolt_lost reads BoltLost message, fires Trigger::BoltLost globally on all BoundEffects entities
-- node_start, node_end — stubs
-- timer — REAL: tick_time_expires (was already noted below)
-- until — REAL: desugar_until (was already noted below)
+- bump, perfect_bump, early_bump, late_bump, bump_whiff, no_bump — REAL: consume BumpPerformed (with BumpGrade), fire respective Trigger variants globally on all BoundEffects entities
+- bumped, perfect_bumped, early_bumped, late_bumped — REAL: fire respective Trigger variants targeted on the bolt entity that was bumped
+- impact — REAL: 6 bridge functions consuming all 6 collision message types, fire Impact(X) globally on all BoundEffects entities
+- impacted — REAL: 6 bridge functions, fire Impacted(X) targeted on each participant entity
+- death — REAL: bridge_death reads RequestCellDestroyed/RequestBoltDestroyed, fires Trigger::Death globally
+- died — REAL: bridge_died reads same messages, fires Trigger::Died targeted on the dying entity
+- bolt_lost — REAL: bridge_bolt_lost reads BoltLost message, fires Trigger::BoltLost globally
+- cell_destroyed — REAL: bridge_cell_destroyed reads CellDestroyedAt, fires Trigger::CellDestroyed globally
+- node_start — REAL: OnEnter(PlayingState::Active), fires Trigger::NodeStart globally
+- node_end — REAL: fires Trigger::NodeEnd globally when node is cleared
+- timer — REAL: tick_time_expires (ticks When(TimeExpires) nodes)
+- until — REAL: desugar_until (desugars Until nodes to When+Reverse)
 
 ## EffectSystems set (src/effect/sets.rs)
 

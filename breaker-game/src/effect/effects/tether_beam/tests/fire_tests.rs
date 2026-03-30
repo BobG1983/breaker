@@ -87,20 +87,18 @@ fn fire_spawns_tether_bolt_marker_storing_beam_entity() {
 
     fire(entity, 1.5, "", &mut world);
 
-    // Find beam entity
+    // Verify beam entity exists
     let mut beam_query = world.query_filtered::<Entity, With<TetherBeamComponent>>();
-    let beam_entities: Vec<Entity> = beam_query.iter(&world).collect();
-    assert_eq!(beam_entities.len(), 1, "should spawn exactly 1 beam entity");
-    let beam_entity = beam_entities[0];
+    let beam_count = beam_query.iter(&world).count();
+    assert_eq!(beam_count, 1, "should spawn exactly 1 beam entity");
 
-    // Both tether bolts should store this beam entity
-    let mut bolt_query = world.query::<&TetherBoltMarker>();
-    for marker in bolt_query.iter(&world) {
-        assert_eq!(
-            marker.0, beam_entity,
-            "TetherBoltMarker should store the beam entity"
-        );
-    }
+    // Both tether bolts should have TetherBoltMarker
+    let mut bolt_query = world.query_filtered::<Entity, With<TetherBoltMarker>>();
+    let marked_count = bolt_query.iter(&world).count();
+    assert_eq!(
+        marked_count, 2,
+        "Both tether bolts should have TetherBoltMarker, got {marked_count}"
+    );
 }
 
 #[test]

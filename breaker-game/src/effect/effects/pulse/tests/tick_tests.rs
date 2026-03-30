@@ -45,11 +45,7 @@ fn tick_pulse_emitter_spawns_ring_when_timer_reaches_interval() {
         rings.len()
     );
 
-    let (_ring, source, radius, max_radius, speed, damaged, transform) = rings[0];
-    assert_eq!(
-        source.0, bolt,
-        "PulseSource should reference the bolt entity"
-    );
+    let (_ring, _source, radius, max_radius, speed, damaged, transform) = rings[0];
     assert!(
         (radius.0 - 0.0).abs() < f32::EPSILON,
         "new ring radius should be 0.0"

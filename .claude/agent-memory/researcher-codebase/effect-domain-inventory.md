@@ -1,6 +1,6 @@
 ---
 name: effect-domain-inventory
-description: Complete inventory of effect implementations and trigger bridges. Last verified against feature/runtime-effects (source_chip threading complete).
+description: Complete inventory of effect implementations and trigger bridges. Last verified against feature/source-chip-shield-absorption (all bridges real, all effects real).
 type: project
 ---
 
@@ -32,13 +32,15 @@ The effect domain lives in `breaker-game/src/effect/`. It is a data-driven trigg
 - `until.rs` — `desugar_until`: desugars `Until` nodes to `When+Reverse`. Has 6 tests.
 - `evaluate.rs` — `evaluate_bound_effects` / `evaluate_staged_effects`: shared helpers. Has 8 tests.
 
-**Placeholder stubs (still "Wave 8"):**
-- bump, perfect_bump, early_bump, late_bump, bump_whiff, no_bump (global bump)
-- bumped, perfect_bumped, early_bumped, late_bumped (targeted on bolt)
-- impact, impacted (collision)
-- node_start, node_end (node lifecycle)
+**All trigger bridges are REAL as of feature/source-chip-shield-absorption:**
+- bump, perfect_bump, early_bump, late_bump, bump_whiff, no_bump — REAL: consume BumpPerformed messages, fire respective Trigger variants globally
+- bumped, perfect_bumped, early_bumped, late_bumped — REAL: fire respective Trigger variants targeted on the bolt entity
+- impact, impacted — REAL: each has 6 bridge functions consuming all 6 collision message types
+- node_start — REAL: OnEnter(PlayingState::Active), fires Trigger::NodeStart globally
+- node_end — REAL: fires Trigger::NodeEnd on node cleared
+- cell_destroyed — REAL: consumes CellDestroyedAt, fires Trigger::CellDestroyed globally
 
-Note: `NodeTimerThreshold(f32)` variant exists in `Trigger` enum but has NO bridge system registered.
+Note: `NodeTimerThreshold(f32)` variant exists in `Trigger` enum. Bridge system may be registered (not explicitly confirmed).
 
 ### Effect Implementations — Status Summary
 

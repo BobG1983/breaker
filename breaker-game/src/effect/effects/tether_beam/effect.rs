@@ -16,9 +16,9 @@ use crate::{
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
-/// Marker on a tether bolt entity, pointing to its beam entity.
+/// Marker on a tether bolt entity, indicating it belongs to a tether beam.
 #[derive(Component)]
-pub(crate) struct TetherBoltMarker(pub(crate) Entity);
+pub(crate) struct TetherBoltMarker;
 
 /// The beam entity linking two tether bolts.
 #[derive(Component)]
@@ -49,7 +49,7 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &
         .map_or(1.0, |e| e.0);
 
     // Spawn the beam entity linking both bolts
-    let beam = world
+    let _beam = world
         .spawn((
             TetherBeamComponent {
                 bolt_a,
@@ -62,9 +62,9 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &
         ))
         .id();
 
-    // Add TetherBoltMarker to each bolt, pointing to the beam
-    world.entity_mut(bolt_a).insert(TetherBoltMarker(beam));
-    world.entity_mut(bolt_b).insert(TetherBoltMarker(beam));
+    // Add TetherBoltMarker to each bolt
+    world.entity_mut(bolt_a).insert(TetherBoltMarker);
+    world.entity_mut(bolt_b).insert(TetherBoltMarker);
 }
 
 /// No-op — tether bolts have their own lifecycle.

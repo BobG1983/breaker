@@ -4,6 +4,41 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Targeted Audit — 2026-03-29 (pre-merge gate, feature/source-chip-shield-absorption)
+
+**Scope:** All agent memory directories (full audit)
+
+**Issues found and fixed (9):**
+
+1. **runner-tests/MEMORY.md** — empty despite `build-failure-bolt-breaker-query.md` existing. Fixed: added link and Session History line.
+
+2. **guard-architecture/MEMORY.md** — completely empty file. Fixed: added Session History line per convention.
+
+3. **researcher-impact/MEMORY.md** — header-only, no content. Fixed: replaced with Session History line.
+
+4. **runner-linting/lint_patterns_core.md** — stale: described "Wave 8 stub" warning patterns (missing_const_for_fn, needless_pass_by_ref_mut, dead_code on init_breaker/dispatch_breaker_effects, use_self, suboptimal_flops, redundant_clone) that are all resolved. Current warnings are only 4 dead_code on unused tuple fields in source marker structs. Fixed: rewrote file to reflect current state; moved old patterns to Historical section.
+
+5. **runner-linting/MEMORY.md** — description for lint_patterns_core.md listed stale warning category names. Fixed: updated description to note it's historical.
+
+6. **researcher-codebase/effect-domain-inventory.md** — "Placeholder stubs (still Wave 8)" section listed all bump/bumped/impact/impacted/node_start/node_end/cell_destroyed triggers as stubs — ALL are fully real implementations. Fixed: replaced stub section with REAL status for all bridges.
+
+7. **researcher-codebase/effect-system-domain-map.md** — "Most trigger bridges are stubs" — completely false. All are real. Fixed: replaced stubs list with accurate REAL status for each bridge.
+
+8. **researcher-quality/phase3-stat-effects-patterns.md** — `dispatch_breaker_effects` described as "documented stub with TODO: Wave 6 comment" — it's now a real system in its own directory. Fixed: updated to REAL status.
+
+9. **reviewer-architecture/pattern_effect_direct_spawn.md** — still said "The messages.md doc lists SpawnChainBolt as a message" — that doc drift was fixed in a prior session. Fixed: updated to note inconsistency is resolved.
+
+**Stale patterns still open (confirmed correct):**
+- gravity_well.rs still lacks CleanupOnNodeExit (reviewer-architecture/known_gap_cleanup_markers.md — confirmed by code)
+- piercing_beam.rs Transform fallback still open (reviewer-bevy-api/confirmed-patterns.md — confirmed by code at lines 43-49)
+- dispatch_chip_effects max-stacks double-dispatch bug still open (reviewer-correctness/bug-patterns.md — confirmed by code at system.rs lines 52-56)
+- 1-frame stale ordering gap for Effective* consumers still open (reviewer-correctness/bug-patterns.md — correct)
+
+**Key new finding (trigger bridges all real):**
+This branch included Wave 8 trigger bridge implementation that converted ALL trigger bridges from stubs to real implementations. Future audits after this branch merges should NOT flag these as stubs.
+
+---
+
 ## Targeted Audit — 2026-03-29 (post source_chip threading, feature/runtime-effects)
 
 **Scope:** orchestrator, reviewer-tests, reviewer-correctness, reviewer-quality, reviewer-bevy-api, reviewer-architecture, reviewer-performance, runner-linting, plus dependent researcher-codebase and guard-docs files
@@ -77,7 +112,9 @@ type: project
 
 ## Recurring Staleness Patterns
 
-- **Effect domain evolves fast**: researcher-codebase effect inventory files go stale after each phase. After any phase touching `effect/effects/*.rs`, verify: test counts, placeholder status, component lists, and message references.
+- **Effect domain evolves fast**: researcher-codebase effect inventory files go stale after each phase. After any phase touching `effect/effects/*.rs` or `effect/triggers/*.rs`, verify: test counts, placeholder status, component lists, and message references.
+- **Trigger bridge stub → real transitions**: All trigger bridges moved from stubs to real implementations in the feature/source-chip-shield-absorption branch. Any future audit noting "stubs" for bump/bumped/impact/impacted/node_start/node_end/cell_destroyed should verify against the codebase — they are real.
+- **lint_patterns_core.md description drift**: This file describes historical warning patterns from effect system stub phases. After any major cleanup round, verify the "current" vs "historical" sections are accurate.
 - **Cleanup marker gaps**: reviewer-architecture tracks which effect entities lack `CleanupOnNodeExit`. Check this file after any new effect that spawns entities.
 - **runner-linting state**: `lint_state_current.md` is a session snapshot — its MEMORY.md description drifts if the description is updated without updating the file, or vice versa. After any lint-fixing session, verify both match.
 - **Message removals**: When messages are removed from `messages.rs`, any memory referencing them goes stale instantly. researcher-codebase bolt-message-pattern-map.md and guard-docs/known-state.md are the primary risk areas.

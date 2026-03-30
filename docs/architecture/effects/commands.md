@@ -9,6 +9,7 @@ pub trait EffectCommandsExt {
     fn fire_effect(&mut self, entity: Entity, effect: EffectKind, source_chip: String);
     fn reverse_effect(&mut self, entity: Entity, effect: EffectKind, source_chip: String);
     fn transfer_effect(&mut self, entity: Entity, chip_name: String, children: Vec<EffectNode>, permanent: bool);
+    fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>);
 }
 ```
 
@@ -23,6 +24,8 @@ The `source_chip` / `chip_name` parameter carries chip attribution for damage tr
 **`ReverseEffectCommand`** — carries `entity`, `effect: EffectKind`, and `source_chip: String`. Calls `effect.reverse(entity, &source_chip, world)` at apply time. The reverse handler undoes whatever `fire()` did.
 
 **`TransferCommand`** — pushes non-`Do` children to the target entity's `StagedEffects` (default) or `BoundEffects` (if `permanent: true`). `Do` children in the transfer are fired directly on the target entity via `effect.fire(entity, &chip_name, world)`.
+
+**`PushBoundEffects`** — inserts `BoundEffects` and `StagedEffects` if absent on the entity, then appends pre-built `(String, EffectNode)` entries to `BoundEffects`. Used by `dispatch_cell_effects` and `dispatch_breaker_effects` which resolve target entities before constructing the entries, bypassing the chip-name-per-child routing that `TransferCommand` provides.
 
 ## Why Commands
 

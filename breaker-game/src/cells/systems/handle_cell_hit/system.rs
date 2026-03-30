@@ -41,7 +41,7 @@ pub(crate) fn handle_cell_hit(
             visuals,
             is_required,
             is_locked,
-            position,
+            _position,
             mut shield_opt,
         )) = cell_query.get_mut(msg.cell)
         else {
@@ -70,7 +70,6 @@ pub(crate) fn handle_cell_hit(
             // Two-phase destruction: write request (entity stays alive for bridge evaluation)
             request_destroyed_writer.write(RequestCellDestroyed {
                 cell: msg.cell,
-                position: position.0,
                 was_required_to_clear: is_required,
             });
             despawned.push(msg.cell);

@@ -3,3 +3,4 @@
 - [phase4-runtime-effects-patterns.md](phase4-runtime-effects-patterns.md) — Phase 4 nested tuple spawning, max_active eviction, _entity interface params, PhantomTimer removed (use BoltLifespan now), reverse() let _ = world, WallSize {}
 - [phase5-complex-effects-patterns.md](phase5-complex-effects-patterns.md) — Phase 5 TetherBeamComponent naming, kill_count vocabulary, bolt spawn duplication, Option<Res<BoltConfig>> pattern, borrow-scope comments
 - [chain-lightning-rework-patterns.md](chain-lightning-rework-patterns.md) — Chain lightning rework: dual test-app split, ChainLightningWorld SystemParam name, pub fields on ChainLightningChain
+- [source-chip-shield-dispatch-patterns.md](source-chip-shield-dispatch-patterns.md) — Dispatch system patterns: Bolt vs AllBolts asymmetry in cell dispatch, PushBoundEffects pub(crate), const fn wall stub, BypassExtras SystemParam

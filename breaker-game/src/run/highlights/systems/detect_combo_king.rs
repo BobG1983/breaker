@@ -182,11 +182,9 @@ mod tests {
 
         app.insert_resource(TestCellDestroyedAt(vec![
             CellDestroyedAt {
-                position: Vec2::ZERO,
                 was_required_to_clear: true,
             },
             CellDestroyedAt {
-                position: Vec2::ZERO,
                 was_required_to_clear: false,
             },
         ]));
@@ -206,15 +204,12 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestCellDestroyed(vec![
             CellDestroyedAt {
-                position: Vec2::ZERO,
                 was_required_to_clear: true,
             },
             CellDestroyedAt {
-                position: Vec2::ZERO,
                 was_required_to_clear: true,
             },
             CellDestroyedAt {
-                position: Vec2::ZERO,
                 was_required_to_clear: false,
             },
         ]));

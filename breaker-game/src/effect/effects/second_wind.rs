@@ -19,7 +19,17 @@ pub struct SecondWindWall;
 /// Spawns an invisible wall at the bottom of the playfield.
 ///
 /// Permanent until used — bounces one bolt, then despawns.
+/// If a `SecondWindWall` entity already exists, skips spawning.
 pub(crate) fn fire(_entity: Entity, _source_chip: &str, world: &mut World) {
+    // Guard: do not spawn a second wall if one already exists.
+    let existing = world
+        .query_filtered::<Entity, With<SecondWindWall>>()
+        .iter(world)
+        .count();
+    if existing > 0 {
+        return;
+    }
+
     let playfield = world.resource::<PlayfieldConfig>();
     let bottom_y = playfield.bottom();
     let half_width = playfield.width / 2.0;
@@ -435,6 +445,69 @@ mod tests {
         assert!(
             app.world().get_entity(wall).is_err(),
             "SecondWind wall should be despawned even with two impacts"
+        );
+    }
+
+    // ── Regression: fire() must not spawn duplicate walls ────────────
+
+    #[test]
+    fn fire_with_existing_wall_does_not_spawn_second() {
+        // Regression: fire() spawned a wall unconditionally, allowing wall count > 1.
+        // Given: A SecondWindWall entity already exists.
+        // When: fire() is called again.
+        // Then: Wall count remains 1 (no additional wall spawned).
+        let mut world = World::new();
+        world.insert_resource(PlayfieldConfig::default());
+        let entity = world.spawn_empty().id();
+
+        // First fire — should spawn the wall
+        fire(entity, "", &mut world);
+        let count_after_first: usize = world
+            .query_filtered::<Entity, With<SecondWindWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            count_after_first, 1,
+            "first fire should spawn exactly one SecondWindWall"
+        );
+
+        // Second fire — should NOT spawn another wall
+        fire(entity, "", &mut world);
+        let count_after_second: usize = world
+            .query_filtered::<Entity, With<SecondWindWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            count_after_second, 1,
+            "second fire should not spawn another wall when one already exists, got {count_after_second}"
+        );
+    }
+
+    #[test]
+    fn fire_without_existing_wall_spawns_wall() {
+        // Positive companion: fire() spawns a wall when none exists.
+        // Given: No SecondWindWall entities exist.
+        // When: fire() is called.
+        // Then: Exactly one SecondWindWall is spawned.
+        let mut world = World::new();
+        world.insert_resource(PlayfieldConfig::default());
+        let entity = world.spawn_empty().id();
+
+        let count_before: usize = world
+            .query_filtered::<Entity, With<SecondWindWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(count_before, 0, "precondition: no walls should exist");
+
+        fire(entity, "", &mut world);
+
+        let count_after: usize = world
+            .query_filtered::<Entity, With<SecondWindWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            count_after, 1,
+            "fire should spawn exactly one SecondWindWall when none exists"
         );
     }
 }

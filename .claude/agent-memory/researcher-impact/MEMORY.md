@@ -1,2 +1,2 @@
-# researcher-impact memory index
-
+## Session History
+See [ephemeral/](ephemeral/) — not committed.

@@ -5,7 +5,7 @@ type: project
 ---
 
 Audit date: 2026-03-29
-Branch: feature/runtime-effects (no new crate deps added since 2026-03-28 audit)
+Branch: feature/source-chip-shield-absorption (no new crate deps added since prior audit)
 
 ## Direct Dependencies
 
@@ -73,8 +73,9 @@ Branch: feature/runtime-effects (no new crate deps added since 2026-03-28 audit)
   No actionable fix: upstream Bevy 0.18 owns this dep. Will resolve with Bevy upgrade.
   Confirmed still present 2026-03-29 via cargo deny check advisories.
 
-## Branch-Specific Notes (feature/runtime-effects)
-- No new crate dependencies were added vs develop.
+## Branch-Specific Notes (feature/source-chip-shield-absorption)
+- No new crate dependencies were added vs prior audit (feature/runtime-effects).
 - cargo-machete confirmed zero unused dependencies across all workspace crates.
-- cargo deny check licenses: clean (Unicode-DFS-2016 allowlist pre-approval still harmless).
-- bevy/dynamic_linking confirmed dev-only (cargo aliases only, not in release or scenario runner).
+- cargo deny check licenses: clean. Unicode-DFS-2016 pre-approval warning is harmless.
+- cargo deny check advisories: FAIL on paste RUSTSEC-2024-0436 — known wontfix transitive.
+- bevy/dynamic_linking confirmed dev-only (cargo aliases in .cargo/config.toml only, not in any Cargo.toml or release profile).

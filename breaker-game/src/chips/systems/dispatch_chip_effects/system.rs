@@ -11,7 +11,9 @@ use crate::{
     breaker::components::Breaker,
     cells::components::Cell,
     chips::{inventory::ChipInventory, resources::ChipCatalog},
-    effect::{BoundEffects, EffectCommandsExt, EffectNode, RootEffect, StagedEffects, Target},
+    effect::{
+        BoundEffects, EffectCommandsExt, EffectNode, RootEffect, StagedEffects, Target, Trigger,
+    },
     ui::messages::ChipSelected,
     wall::components::Wall,
 };
@@ -53,14 +55,36 @@ pub(crate) fn dispatch_chip_effects(
             && !inv.add_chip(&msg.name, def)
         {
             warn!("Chip '{}' already at max stacks", msg.name);
+            continue;
         }
 
         for root_effect in &effects {
             let RootEffect::On { target, then } = root_effect;
-            let entities = resolve_target_entities(*target, &targets);
 
-            for entity in entities {
-                dispatch_children(entity, then, &chip_name, &targets, &mut commands);
+            if *target == Target::Breaker {
+                // Direct dispatch: breaker exists during ChipSelect
+                let entities = resolve_target_entities(Target::Breaker, &targets);
+                for entity in entities {
+                    dispatch_children(entity, then, &chip_name, &targets, &mut commands);
+                }
+            } else {
+                // Deferred dispatch: non-Breaker entities don't exist during ChipSelect.
+                // Wrap in When(NodeStart, On(original_target, original_children))
+                // and push to the Breaker's BoundEffects.
+                let wrapped = EffectNode::When {
+                    trigger: Trigger::NodeStart,
+                    then: vec![EffectNode::On {
+                        target: *target,
+                        permanent: true,
+                        then: then.clone(),
+                    }],
+                };
+                for breaker_entity in targets.breakers.iter() {
+                    commands.push_bound_effects(
+                        breaker_entity,
+                        vec![(chip_name.clone(), wrapped.clone())],
+                    );
+                }
             }
         }
     }

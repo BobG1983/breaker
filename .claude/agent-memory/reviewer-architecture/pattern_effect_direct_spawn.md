@@ -8,4 +8,4 @@ Effect `fire()` functions that need to create new game entities (chain bolts, ph
 
 **Why:** The `fire()` function has `&mut World` access by design (see `docs/architecture/effects/commands.md`). Direct spawning is simpler than adding message round-trips. Established by `chain_bolt.rs`, `spawn_phantom.rs`, `second_wind.rs`, `gravity_well.rs`, and `shockwave.rs`.
 
-**How to apply:** When reviewing new effects that spawn entities, accept direct spawning in `fire()` as the established pattern. However, flag it if the spawned entity is missing a cleanup marker (`CleanupOnNodeExit` or equivalent via `#[require]`). The `messages.md` doc lists `SpawnChainBolt` as a message, but the actual implementation uses direct spawning — this doc/code inconsistency should be tracked.
+**How to apply:** When reviewing new effects that spawn entities, accept direct spawning in `fire()` as the established pattern. However, flag it if the spawned entity is missing a cleanup marker (`CleanupOnNodeExit` or equivalent via `#[require]`). Note: `SpawnChainBolt` was removed from both code and docs (`docs/architecture/messages.md`) — this doc/code inconsistency is resolved.

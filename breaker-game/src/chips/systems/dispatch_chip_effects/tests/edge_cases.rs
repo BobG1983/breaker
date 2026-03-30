@@ -17,15 +17,16 @@ use crate::{
 fn unknown_chip_name_does_not_panic() {
     let mut app = test_app();
 
-    // Insert a valid chip so we can prove the system actually runs
-    let valid_def = ChipDefinition::test(
+    // Insert a valid chip targeting Breaker so dispatch fires immediately
+    let valid_def = ChipDefinition::test_on(
         "Valid Chip",
+        Target::Breaker,
         EffectNode::Do(EffectKind::DamageBoost(1.1)),
         5,
     );
     insert_chip(&mut app, valid_def);
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
 
     // Send both a valid AND an unknown chip selection in the same frame
     select_chip(&mut app, "Valid Chip");
@@ -35,7 +36,7 @@ fn unknown_chip_name_does_not_panic() {
     app.update();
 
     // The valid chip should have fired — proves the system actually ran
-    let damage = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
+    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
     assert_eq!(
         damage.0,
         vec![1.1],
@@ -43,7 +44,7 @@ fn unknown_chip_name_does_not_panic() {
     );
 
     // The unknown chip should NOT have added any extra BoundEffects entries
-    let bound = app.world().get::<BoundEffects>(bolt).unwrap();
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
         "Unknown chip should not have added any BoundEffects entries"
@@ -61,15 +62,20 @@ fn missing_chip_catalog_resource_does_not_panic() {
 
     // --- First prove the system WORKS with catalog ---
     let mut proof_app = test_app();
-    let proof_def = ChipDefinition::test("Proof", EffectNode::Do(EffectKind::DamageBoost(1.1)), 5);
+    let proof_def = ChipDefinition::test_on(
+        "Proof",
+        Target::Breaker,
+        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        5,
+    );
     insert_chip(&mut proof_app, proof_def);
-    let proof_bolt = spawn_bolt(&mut proof_app);
+    let proof_breaker = spawn_breaker(&mut proof_app);
     select_chip(&mut proof_app, "Proof");
     proof_app.update();
 
     let proof_damage = proof_app
         .world()
-        .get::<ActiveDamageBoosts>(proof_bolt)
+        .get::<ActiveDamageBoosts>(proof_breaker)
         .unwrap();
     assert_eq!(
         proof_damage.0,
@@ -98,16 +104,11 @@ fn missing_chip_catalog_resource_does_not_panic() {
     next_state.set(GameState::ChipSelect);
     app.update();
 
-    // Spawn a bolt and send a message — system should handle missing catalog gracefully
-    let bolt = {
-        use crate::{
-            bolt::components::Bolt,
-            effect::effects::{
-                damage_boost::ActiveDamageBoosts as ADB, speed_boost::ActiveSpeedBoosts as ASB,
-            },
-        };
+    // Spawn a breaker and send a message — system should handle missing catalog gracefully
+    let breaker = {
+        use crate::breaker::components::Breaker;
         app.world_mut()
-            .spawn((Bolt, ADB::default(), ASB::default()))
+            .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
             .id()
     };
 
@@ -116,11 +117,11 @@ fn missing_chip_catalog_resource_does_not_panic() {
     // Should not panic
     app.update();
 
-    // Bolt should have no BoundEffects since catalog was missing
-    let bound = app.world().get::<BoundEffects>(bolt);
+    // Breaker should have no new BoundEffects entries since catalog was missing
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
-        bound.is_none(),
-        "Without ChipCatalog, no BoundEffects should be inserted on bolt"
+        bound.0.is_empty(),
+        "Without ChipCatalog, no BoundEffects should be added on breaker"
     );
 }
 
@@ -135,15 +136,20 @@ fn missing_chip_inventory_resource_does_not_panic() {
 
     // --- First prove the system WORKS with inventory ---
     let mut proof_app = test_app();
-    let proof_def = ChipDefinition::test("Proof", EffectNode::Do(EffectKind::DamageBoost(1.1)), 5);
+    let proof_def = ChipDefinition::test_on(
+        "Proof",
+        Target::Breaker,
+        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        5,
+    );
     insert_chip(&mut proof_app, proof_def);
-    let proof_bolt = spawn_bolt(&mut proof_app);
+    let proof_breaker = spawn_breaker(&mut proof_app);
     select_chip(&mut proof_app, "Proof");
     proof_app.update();
 
     let proof_damage = proof_app
         .world()
-        .get::<ActiveDamageBoosts>(proof_bolt)
+        .get::<ActiveDamageBoosts>(proof_breaker)
         .unwrap();
     assert_eq!(
         proof_damage.0,
@@ -170,7 +176,12 @@ fn missing_chip_inventory_resource_does_not_panic() {
 
     // Insert chip into catalog so lookup succeeds
     {
-        let def = ChipDefinition::test("Any Chip", EffectNode::Do(EffectKind::DamageBoost(1.5)), 5);
+        let def = ChipDefinition::test_on(
+            "Any Chip",
+            Target::Breaker,
+            EffectNode::Do(EffectKind::DamageBoost(1.5)),
+            5,
+        );
         app.world_mut().resource_mut::<ChipCatalog>().insert(def);
     }
 
@@ -178,21 +189,16 @@ fn missing_chip_inventory_resource_does_not_panic() {
     next_state.set(GameState::ChipSelect);
     app.update();
 
-    // Spawn a bolt so dispatch has targets
-    let bolt = {
-        use crate::{
-            bolt::components::Bolt,
-            effect::effects::{
-                damage_boost::ActiveDamageBoosts as ADB, speed_boost::ActiveSpeedBoosts as ASB,
-            },
-        };
+    // Spawn a breaker so dispatch has targets
+    let breaker = {
+        use crate::breaker::components::Breaker;
         app.world_mut()
             .spawn((
-                Bolt,
+                Breaker,
                 BoundEffects::default(),
                 StagedEffects::default(),
-                ADB::default(),
-                ASB::default(),
+                ActiveDamageBoosts::default(),
+                ActiveSpeedBoosts::default(),
             ))
             .id()
     };
@@ -203,7 +209,7 @@ fn missing_chip_inventory_resource_does_not_panic() {
     app.update();
 
     // Effects should still dispatch even without inventory
-    let damage = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
+    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
     assert_eq!(
         damage.0,
         vec![1.5],
@@ -217,16 +223,21 @@ fn missing_chip_inventory_resource_does_not_panic() {
 fn no_messages_pending_no_entities_modified() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test("Unused", EffectNode::Do(EffectKind::DamageBoost(1.5)), 5);
+    let def = ChipDefinition::test_on(
+        "Unused",
+        Target::Breaker,
+        EffectNode::Do(EffectKind::DamageBoost(1.5)),
+        5,
+    );
     insert_chip(&mut app, def);
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
 
     // --- First prove the system WORKS by sending a message ---
     select_chip(&mut app, "Unused");
     app.update();
 
-    let damage = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
+    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
     assert_eq!(
         damage.0,
         vec![1.5],
@@ -244,14 +255,14 @@ fn no_messages_pending_no_entities_modified() {
     app.update();
 
     // Damage should still be [1.5] from the first round — no new effects added
-    let damage_after = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
+    let damage_after = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
     assert_eq!(
         damage_after.0,
         vec![1.5],
         "No messages sent in second update — damage should remain [1.5], not grow"
     );
 
-    let bound = app.world().get::<BoundEffects>(bolt).unwrap();
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
         "No messages sent — BoundEffects should remain empty"
@@ -264,14 +275,15 @@ fn no_messages_pending_no_entities_modified() {
 fn chip_added_to_inventory_on_dispatch() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Minor Damage Boost",
+        Target::Breaker,
         EffectNode::Do(EffectKind::DamageBoost(1.1)),
         5,
     );
     insert_chip(&mut app, def);
 
-    let _bolt = spawn_bolt(&mut app);
+    let _breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Minor Damage Boost");
 
     app.update();
@@ -284,14 +296,15 @@ fn chip_added_to_inventory_on_dispatch() {
     );
 }
 
-// ── Behavior 17 edge case: Chip at max stacks — still dispatches effects ──
+// ── Behavior 17 edge case: Chip at max stacks — effects NOT dispatched ──
 
 #[test]
-fn chip_at_max_stacks_still_dispatches_effects() {
+fn chip_at_max_stacks_does_not_dispatch_effects() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Capped Chip",
+        Target::Breaker,
         EffectNode::Do(EffectKind::DamageBoost(1.5)),
         1, // max_stacks = 1
     );
@@ -305,17 +318,17 @@ fn chip_at_max_stacks_still_dispatches_effects() {
         let _ = inventory.add_chip("Capped Chip", &chip_def);
     }
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Capped Chip");
 
     app.update();
 
-    // add_chip returns false, but effects should still dispatch
-    let damage = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
-    assert_eq!(
-        damage.0,
-        vec![1.5],
-        "Effects should still be dispatched even when add_chip returns false (maxed)"
+    // Chip is at max stacks — effects should NOT be dispatched
+    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    assert!(
+        damage.0.is_empty(),
+        "Effects should NOT be dispatched when chip is at max stacks, got {:?}",
+        damage.0
     );
 }
 
@@ -325,22 +338,22 @@ fn chip_at_max_stacks_still_dispatches_effects() {
 fn source_chip_is_chip_display_name() {
     let mut app = test_app();
 
-    // The chip name with spaces and mixed case
-    let def = ChipDefinition::test(
+    // Use Breaker target so effect fires immediately
+    let def = ChipDefinition::test_on(
         "Blazing Bolt Speed",
+        Target::Breaker,
         EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.3 }),
         5,
     );
     insert_chip(&mut app, def);
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Blazing Bolt Speed");
 
     app.update();
 
     // The fire_effect was called — SpeedBoost should be active.
-    // We verify indirectly by confirming the effect was applied.
-    let speed = app.world().get::<ActiveSpeedBoosts>(bolt).unwrap();
+    let speed = app.world().get::<ActiveSpeedBoosts>(breaker).unwrap();
     assert_eq!(
         speed.0,
         vec![1.3],
@@ -354,8 +367,9 @@ fn source_chip_is_chip_display_name() {
 fn bound_effects_chip_name_is_display_name() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Chain Reaction",
+        Target::Breaker,
         EffectNode::When {
             trigger: Trigger::CellDestroyed,
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
@@ -364,12 +378,12 @@ fn bound_effects_chip_name_is_display_name() {
     );
     insert_chip(&mut app, def);
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Chain Reaction");
 
     app.update();
 
-    let bound = app.world().get::<BoundEffects>(bolt).unwrap();
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert_eq!(bound.0.len(), 1);
     assert_eq!(
         bound.0[0].0, "Chain Reaction",
@@ -383,29 +397,35 @@ fn bound_effects_chip_name_is_display_name() {
 fn multiple_chip_selections_in_same_frame_all_processed() {
     let mut app = test_app();
 
-    let def_a = ChipDefinition::test("Chip A", EffectNode::Do(EffectKind::DamageBoost(1.1)), 5);
-    let def_b = ChipDefinition::test(
+    let def_a = ChipDefinition::test_on(
+        "Chip A",
+        Target::Breaker,
+        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        5,
+    );
+    let def_b = ChipDefinition::test_on(
         "Chip B",
+        Target::Breaker,
         EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 }),
         5,
     );
     insert_chip(&mut app, def_a);
     insert_chip(&mut app, def_b);
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Chip A");
     select_chip(&mut app, "Chip B");
 
     app.update();
 
-    let damage = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
+    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
     assert_eq!(
         damage.0,
         vec![1.1],
         "Chip A's DamageBoost(1.1) should have been applied"
     );
 
-    let speed = app.world().get::<ActiveSpeedBoosts>(bolt).unwrap();
+    let speed = app.world().get::<ActiveSpeedBoosts>(breaker).unwrap();
     assert_eq!(
         speed.0,
         vec![1.2],
@@ -431,20 +451,21 @@ fn multiple_chip_selections_in_same_frame_all_processed() {
 fn same_chip_selected_twice_in_one_frame_both_processed() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Double Pick",
+        Target::Breaker,
         EffectNode::Do(EffectKind::DamageBoost(1.1)),
         5,
     );
     insert_chip(&mut app, def);
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Double Pick");
     select_chip(&mut app, "Double Pick");
 
     app.update();
 
-    let damage = app.world().get::<ActiveDamageBoosts>(bolt).unwrap();
+    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
     assert_eq!(
         damage.0,
         vec![1.1, 1.1],
@@ -465,8 +486,9 @@ fn same_chip_selected_twice_in_one_frame_both_processed() {
 fn bound_effects_inserted_on_entity_missing_it() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Test",
+        Target::Breaker,
         EffectNode::When {
             trigger: Trigger::Bump,
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
@@ -475,13 +497,13 @@ fn bound_effects_inserted_on_entity_missing_it() {
     );
     insert_chip(&mut app, def);
 
-    // Spawn bolt WITHOUT BoundEffects or StagedEffects
-    let bolt = spawn_bolt_bare(&mut app);
+    // Spawn breaker WITHOUT BoundEffects or StagedEffects
+    let breaker = spawn_breaker_bare(&mut app);
     select_chip(&mut app, "Test");
 
     app.update();
 
-    let bound = app.world().get::<BoundEffects>(bolt);
+    let bound = app.world().get::<BoundEffects>(breaker);
     assert!(
         bound.is_some(),
         "BoundEffects should have been inserted on the entity"
@@ -492,7 +514,7 @@ fn bound_effects_inserted_on_entity_missing_it() {
         "BoundEffects should have 1 entry after dispatch"
     );
 
-    let staged = app.world().get::<StagedEffects>(bolt);
+    let staged = app.world().get::<StagedEffects>(breaker);
     assert!(
         staged.is_some(),
         "StagedEffects should also have been inserted"
@@ -505,8 +527,9 @@ fn bound_effects_inserted_on_entity_missing_it() {
 fn existing_bound_effects_preserved_new_entry_appended() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Append",
+        Target::Breaker,
         EffectNode::When {
             trigger: Trigger::Bump,
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
@@ -515,11 +538,11 @@ fn existing_bound_effects_preserved_new_entry_appended() {
     );
     insert_chip(&mut app, def);
 
-    // Spawn bolt with 2 existing BoundEffects entries
-    let bolt = {
+    // Spawn breaker with 2 existing BoundEffects entries
+    let breaker = {
         use crate::{
-            bolt::components::Bolt,
-            effect::effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
+            breaker::components::Breaker,
+            effect::effects::{bump_force::ActiveBumpForces, size_boost::ActiveSizeBoosts},
         };
 
         let existing = BoundEffects(vec![
@@ -541,11 +564,13 @@ fn existing_bound_effects_preserved_new_entry_appended() {
 
         app.world_mut()
             .spawn((
-                Bolt,
+                Breaker,
                 existing,
                 StagedEffects::default(),
                 ActiveDamageBoosts::default(),
                 ActiveSpeedBoosts::default(),
+                ActiveBumpForces::default(),
+                ActiveSizeBoosts::default(),
             ))
             .id()
     };
@@ -554,7 +579,7 @@ fn existing_bound_effects_preserved_new_entry_appended() {
 
     app.update();
 
-    let bound = app.world().get::<BoundEffects>(bolt).unwrap();
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert_eq!(
         bound.0.len(),
         3,
@@ -605,10 +630,10 @@ fn breaker_missing_bound_effects_inserted_before_push() {
     );
 }
 
-// ── Behavior 9 edge case: Cell entity missing BoundEffects — inserted ──
+// ── Behavior 9 edge case: Cell target desugars to Breaker — BoundEffects on Breaker ──
 
 #[test]
-fn cell_missing_bound_effects_inserted_before_push() {
+fn cell_target_desugars_to_breaker_bound_effects() {
     let mut app = test_app();
 
     let def = ChipDefinition::test_on(
@@ -622,27 +647,27 @@ fn cell_missing_bound_effects_inserted_before_push() {
     );
     insert_chip(&mut app, def);
 
-    let cell = spawn_cell_bare(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Cell Push");
 
     app.update();
 
-    let bound = app.world().get::<BoundEffects>(cell);
+    let bound = app.world().get::<BoundEffects>(breaker);
     assert!(
         bound.is_some(),
-        "BoundEffects should have been inserted on cell"
+        "BoundEffects should be present on Breaker (desugared from AllCells)"
     );
     assert_eq!(
         bound.unwrap().0.len(),
         1,
-        "BoundEffects should have 1 entry"
+        "Breaker should have 1 desugared BoundEffects entry for AllCells"
     );
 }
 
-// ── Behavior 11 edge case: Wall entity missing BoundEffects — inserted ──
+// ── Behavior 11 edge case: Wall target desugars to Breaker — BoundEffects on Breaker ──
 
 #[test]
-fn wall_missing_bound_effects_inserted_before_push() {
+fn wall_target_desugars_to_breaker_bound_effects() {
     let mut app = test_app();
 
     let def = ChipDefinition::test_on(
@@ -656,20 +681,20 @@ fn wall_missing_bound_effects_inserted_before_push() {
     );
     insert_chip(&mut app, def);
 
-    let wall = spawn_wall_bare(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Wall Push");
 
     app.update();
 
-    let bound = app.world().get::<BoundEffects>(wall);
+    let bound = app.world().get::<BoundEffects>(breaker);
     assert!(
         bound.is_some(),
-        "BoundEffects should have been inserted on wall"
+        "BoundEffects should be present on Breaker (desugared from AllWalls)"
     );
     assert_eq!(
         bound.unwrap().0.len(),
         1,
-        "BoundEffects should have 1 entry"
+        "Breaker should have 1 desugared BoundEffects entry for AllWalls"
     );
 }
 
@@ -679,8 +704,9 @@ fn wall_missing_bound_effects_inserted_before_push() {
 fn inventory_increments_from_existing_stacks() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Stackable Chip",
+        Target::Breaker,
         EffectNode::Do(EffectKind::DamageBoost(1.1)),
         5, // max_stacks = 5
     );
@@ -705,7 +731,7 @@ fn inventory_increments_from_existing_stacks() {
         "Precondition: should have 2 stacks before dispatch"
     );
 
-    let _bolt = spawn_bolt(&mut app);
+    let _breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Stackable Chip");
 
     app.update();
@@ -718,14 +744,15 @@ fn inventory_increments_from_existing_stacks() {
     );
 }
 
-// ── Behavior 17 edge case: Max stacks with When child — warn, When still pushed ──
+// ── Behavior 17 edge case: Max stacks with When child — effects NOT dispatched ──
 
 #[test]
-fn chip_at_max_stacks_with_when_child_still_pushes_to_bound_effects() {
+fn chip_at_max_stacks_with_when_child_does_not_push_to_bound_effects() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test(
+    let def = ChipDefinition::test_on(
         "Maxed When",
+        Target::Breaker,
         EffectNode::When {
             trigger: Trigger::CellDestroyed,
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
@@ -742,19 +769,18 @@ fn chip_at_max_stacks_with_when_child_still_pushes_to_bound_effects() {
         let _ = inventory.add_chip("Maxed When", &chip_def);
     }
 
-    let bolt = spawn_bolt(&mut app);
+    let breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Maxed When");
 
     app.update();
 
-    // Even though add_chip returns false (maxed), When should still push to BoundEffects
-    let bound = app.world().get::<BoundEffects>(bolt).unwrap();
-    assert_eq!(
-        bound.0.len(),
-        1,
-        "When node should still be pushed to BoundEffects even when chip is maxed"
+    // Chip is at max stacks — When node should NOT be pushed to BoundEffects
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
+    assert!(
+        bound.0.is_empty(),
+        "When node should NOT be pushed to BoundEffects when chip is at max stacks, got {} entries",
+        bound.0.len()
     );
-    assert_eq!(bound.0[0].0, "Maxed When");
 }
 
 // ── Behavior 15 edge case: Both ChipCatalog AND ChipInventory absent ──
@@ -768,15 +794,20 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
 
     // --- First prove the system WORKS with both resources ---
     let mut proof_app = test_app();
-    let proof_def = ChipDefinition::test("Proof", EffectNode::Do(EffectKind::DamageBoost(1.1)), 5);
+    let proof_def = ChipDefinition::test_on(
+        "Proof",
+        Target::Breaker,
+        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        5,
+    );
     insert_chip(&mut proof_app, proof_def);
-    let proof_bolt = spawn_bolt(&mut proof_app);
+    let proof_breaker = spawn_breaker(&mut proof_app);
     select_chip(&mut proof_app, "Proof");
     proof_app.update();
 
     let proof_damage = proof_app
         .world()
-        .get::<ActiveDamageBoosts>(proof_bolt)
+        .get::<ActiveDamageBoosts>(proof_breaker)
         .unwrap();
     assert_eq!(
         proof_damage.0,

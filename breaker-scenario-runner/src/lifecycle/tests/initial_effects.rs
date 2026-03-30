@@ -4,7 +4,8 @@ use super::helpers::*;
 // initial_effects Dispatch
 // =========================================================================
 
-/// Breaker-targeted effects are pushed to breaker `BoundEffects`.
+/// Breaker-targeted effects are stored in `PendingBreakerEffects` (deferred
+/// because no breaker entity exists when `bypass_menu_to_playing` runs).
 #[test]
 fn initial_effects_breaker_target_pushed_to_effect_chains() {
     let mut definition = make_scenario(100);
@@ -14,28 +15,27 @@ fn initial_effects_breaker_target_pushed_to_effect_chains() {
     }]);
 
     let mut app = bypass_app(definition);
-
-    // Spawn a breaker entity with BoundEffects
-    let breaker = app
-        .world_mut()
-        .spawn((Breaker, BoundEffects::default()))
-        .id();
-
     app.update();
 
-    let chains = app.world().get::<BoundEffects>(breaker).unwrap();
+    // Breaker effects are deferred to PendingBreakerEffects
+    let pending = app.world().get_resource::<PendingBreakerEffects>();
+    assert!(
+        pending.is_some(),
+        "expected PendingBreakerEffects resource to be inserted for Breaker target"
+    );
+    let pending = pending.unwrap();
     assert_eq!(
-        chains.0.len(),
+        pending.0.len(),
         1,
-        "expected breaker BoundEffects to have 1 entry from initial_effects, got {}",
-        chains.0.len()
+        "expected PendingBreakerEffects to have 1 entry from initial_effects, got {}",
+        pending.0.len()
     );
     // The On wrapper is unwrapped — only inner `then` children are pushed
     assert_eq!(
-        chains.0[0],
+        pending.0[0],
         (String::new(), EffectNode::Do(EffectKind::Piercing(1))),
         "expected (\"\", Do(Piercing(1))), got {:?}",
-        chains.0[0]
+        pending.0[0]
     );
 }
 
@@ -651,6 +651,120 @@ fn initial_effects_multiple_same_target_accumulate() {
     );
 }
 
+// =========================================================================
+// Regression: apply_pending_bolt_effects must insert BoundEffects on bolts
+// that lack it (matching apply_pending_cell_effects / wall_effects pattern)
+// =========================================================================
+
+/// `apply_pending_bolt_effects` inserts `BoundEffects` on bolt entities that
+/// lack it, using `Commands` + `insert_if_new` (matching cell/wall pattern).
+/// Regression: the broken version queries `&mut BoundEffects, With<ScenarioTagBolt>`
+/// which silently skips bolts without `BoundEffects`.
+#[test]
+fn apply_pending_bolt_effects_inserts_bound_effects_on_bolt_without_it() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+
+    app.insert_resource(PendingBoltEffects(vec![(
+        String::new(),
+        EffectNode::Do(EffectKind::Piercing(15)),
+    )]));
+
+    app.add_systems(Update, apply_pending_bolt_effects);
+
+    // Spawn bolt with ONLY ScenarioTagBolt — NO BoundEffects
+    let bolt = app.world_mut().spawn(ScenarioTagBolt).id();
+
+    // Two updates: first runs system + queues commands, second flushes
+    app.update();
+    app.update();
+
+    // BoundEffects should have been inserted with the pending entry
+    let chains = app.world().get::<BoundEffects>(bolt);
+    assert!(
+        chains.is_some(),
+        "expected BoundEffects to be inserted on bolt entity that lacked it"
+    );
+    let chains = chains.unwrap();
+    assert_eq!(
+        chains.0.len(),
+        1,
+        "expected bolt BoundEffects to have 1 entry, got {}",
+        chains.0.len()
+    );
+    assert_eq!(
+        chains.0[0],
+        (String::new(), EffectNode::Do(EffectKind::Piercing(15))),
+        "expected (\"\", Do(Piercing(15))), got {:?}",
+        chains.0[0]
+    );
+
+    // PendingBoltEffects should be cleared
+    let pending = app.world().resource::<PendingBoltEffects>();
+    assert!(
+        pending.0.is_empty(),
+        "expected PendingBoltEffects cleared after deferred apply, got {} entries",
+        pending.0.len()
+    );
+}
+
+/// When a bolt entity already has `BoundEffects`, `apply_pending_bolt_effects`
+/// extends the existing entries rather than overwriting.
+#[test]
+fn apply_pending_bolt_effects_extends_existing_bound_effects() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+
+    app.insert_resource(PendingBoltEffects(vec![(
+        String::new(),
+        EffectNode::Do(EffectKind::Piercing(16)),
+    )]));
+
+    app.add_systems(Update, apply_pending_bolt_effects);
+
+    // Spawn bolt WITH existing BoundEffects containing a pre-existing entry
+    let existing_entries = vec![(
+        "existing".to_owned(),
+        EffectNode::Do(EffectKind::DamageBoost(5.0)),
+    )];
+    let bolt = app
+        .world_mut()
+        .spawn((
+            ScenarioTagBolt,
+            BoundEffects(existing_entries),
+            StagedEffects::default(),
+        ))
+        .id();
+
+    // Two updates to ensure deferred commands flush
+    app.update();
+    app.update();
+
+    let chains = app.world().get::<BoundEffects>(bolt).unwrap();
+    // Should have the pre-existing entry PLUS the new pending entry
+    assert_eq!(
+        chains.0.len(),
+        2,
+        "expected bolt BoundEffects to have 2 entries (1 existing + 1 pending), got {}",
+        chains.0.len()
+    );
+    assert_eq!(
+        chains.0[0],
+        (
+            "existing".to_owned(),
+            EffectNode::Do(EffectKind::DamageBoost(5.0))
+        ),
+        "expected first entry to be the pre-existing one, got {:?}",
+        chains.0[0]
+    );
+    assert_eq!(
+        chains.0[1],
+        (String::new(), EffectNode::Do(EffectKind::Piercing(16))),
+        "expected second entry to be the pending one, got {:?}",
+        chains.0[1]
+    );
+}
+
 /// Mixed targets route to correct pending resources with no cross-contamination.
 #[test]
 fn initial_effects_mixed_targets_route_correctly() {
@@ -675,27 +789,21 @@ fn initial_effects_mixed_targets_route_correctly() {
     ]);
 
     let mut app = bypass_app(definition);
-
-    let breaker = app
-        .world_mut()
-        .spawn((Breaker, BoundEffects::default()))
-        .id();
-
     app.update();
 
-    // Breaker gets Target::Breaker effect
-    let chains = app.world().get::<BoundEffects>(breaker).unwrap();
+    // PendingBreakerEffects gets Target::Breaker effect (deferred)
+    let breaker_pending = app.world().get_resource::<PendingBreakerEffects>().unwrap();
     assert_eq!(
-        chains.0.len(),
+        breaker_pending.0.len(),
         1,
-        "expected breaker BoundEffects to have exactly 1 entry, got {}",
-        chains.0.len()
+        "expected 1 pending breaker effect, got {}",
+        breaker_pending.0.len()
     );
     assert_eq!(
-        chains.0[0],
+        breaker_pending.0[0],
         (String::new(), EffectNode::Do(EffectKind::Piercing(1))),
-        "expected breaker entry (\"\", Do(Piercing(1))), got {:?}",
-        chains.0[0]
+        "expected breaker pending (\"\", Do(Piercing(1))), got {:?}",
+        breaker_pending.0[0]
     );
 
     // PendingBoltEffects gets Target::Bolt effect
@@ -741,5 +849,48 @@ fn initial_effects_mixed_targets_route_correctly() {
         (String::new(), EffectNode::Do(EffectKind::Piercing(4))),
         "expected wall pending (\"\", Do(Piercing(4))), got {:?}",
         wall_pending.0[0]
+    );
+}
+
+// =========================================================================
+// Regression: bypass_menu_to_playing stores breaker-targeted effects
+// in PendingBreakerEffects instead of querying breaker entities directly
+// (no breaker exists at OnEnter(MainMenu))
+// =========================================================================
+
+/// `bypass_menu_to_playing` stores `Target::Breaker` effects in
+/// `PendingBreakerEffects` resource for deferred application, because
+/// no breaker entity exists when this system runs (OnEnter(MainMenu)).
+#[test]
+fn bypass_stores_breaker_target_in_pending_breaker_effects() {
+    let mut definition = make_scenario(100);
+    definition.initial_effects = Some(vec![RootEffect::On {
+        target: Target::Breaker,
+        then: vec![EffectNode::Do(EffectKind::Piercing(20))],
+    }]);
+
+    let mut app = bypass_app(definition);
+
+    // Do NOT spawn a breaker entity — this is the point:
+    // bypass runs at OnEnter(MainMenu) when no breaker exists yet.
+    app.update();
+
+    let pending = app.world().get_resource::<PendingBreakerEffects>();
+    assert!(
+        pending.is_some(),
+        "expected PendingBreakerEffects resource to be inserted for Breaker target"
+    );
+    let pending = pending.unwrap();
+    assert_eq!(
+        pending.0.len(),
+        1,
+        "expected 1 pending breaker effect, got {}",
+        pending.0.len()
+    );
+    assert_eq!(
+        pending.0[0],
+        (String::new(), EffectNode::Do(EffectKind::Piercing(20))),
+        "expected (\"\", Do(Piercing(20))), got {:?}",
+        pending.0[0]
     );
 }
