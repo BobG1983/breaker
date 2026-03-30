@@ -11,14 +11,13 @@ All chip content lives in the `chips/` domain. A single `ChipDefinition` type co
 Chips are authored as **templates** — one RON file per chip concept with per-rarity slots. The loader expands templates into individual `ChipDefinition`s at load time.
 
 ```ron
-// assets/chips/piercing.chip.ron
+// assets/chips/templates/piercing.chip.ron
 (
-    name: "Piercing",
+    name: "Piercing Shot",
     max_taken: 3,
-    common: Some((prefix: "Basic", effects: [OnSelected([Piercing(1)])])),
-    uncommon: Some((prefix: "Keen", effects: [OnSelected([Piercing(2)])])),
-    rare: Some((prefix: "Brutal", effects: [OnSelected([Piercing(3), DamageBoost(0.1)])])),
-    legendary: None,
+    common: (prefix: "Basic", effects: [On(target: Bolt, then: [Do(Piercing(1))])]),
+    uncommon: (prefix: "Keen", effects: [On(target: Bolt, then: [Do(Piercing(2))])]),
+    rare: (prefix: "Brutal", effects: [On(target: Bolt, then: [Do(Piercing(3)), Do(DamageBoost(1.1))])]),
 )
 ```
 
@@ -28,10 +27,10 @@ See `docs/design/decisions/chip-template-system.md` for the full design decision
 
 ### Unified Effect Model
 
-All chip and breaker effects are `EffectNode` trees referencing `EffectKind` — the actual action enum. There is no separate `Effect` enum. The canonical location is `effect/core/types.rs`.
+All chip and breaker effects are `EffectNode` trees referencing `EffectKind` — the actual action enum. There is no separate `Effect` enum. The canonical location is `effect/core/types/definitions.rs`.
 
 ```rust
-// effect/core/types.rs
+// effect/core/types/definitions.rs
 
 pub enum EffectNode {
     When { trigger: Trigger, then: Vec<EffectNode> },
@@ -89,12 +88,13 @@ When a player selects a chip, the chip dispatch system pushes the chip's `Effect
 - **AoE/spawn effects** (`Shockwave`, `ChainLightning`, `Explode`, etc.): `fire()` spawns a request entity or directly damages nearby cells via `DamageCell` message. These carry chip attribution via `EffectSourceChip` component for damage tracking.
 - **Shield**: `fire()` inserts or adds charges to `ShieldActive` on the entity. Charge decrement happens in `bolt_lost` (breaker entity) and `handle_cell_hit` (cell entities) — not in a separate effect system.
 
-**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types.rs` + new file in `effect/effects/` + `register()` call, requires recompile.
+**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types/definitions.rs` + new module in `effect/effects/` + `register()` call, requires recompile.
 
 ### Registries
 
-- **`ChipRegistry`** (`Resource`) loads all chip template RON files and expands them into `ChipDefinition`s at boot. Game logic looks up definitions through the registry.
-- **`EvolutionRegistry`** (`Resource`) loads evolution recipe RON files separately. Evolution recipes combine chip ingredients into evolved chips at boss nodes.
+- **`ChipTemplateRegistry`** (`SeedableRegistry` `Resource`) loads all `.chip.ron` template files from `assets/chips/templates/`. Templates are expanded into `ChipDefinition`s at catalog-build time via `populate_catalog`.
+- **`ChipCatalog`** (`Resource`) holds all expanded `ChipDefinition`s plus `Recipe`s. Built at load time from `ChipTemplateRegistry` + `EvolutionTemplateRegistry`. Paired `Vec<String>` preserves insertion order for deterministic chip offers.
+- **`EvolutionTemplateRegistry`** (`SeedableRegistry` `Resource`) loads `.evolution.ron` files from `assets/chips/evolution/`. Evolution templates are expanded into `ChipDefinition`s with `rarity: Evolution` and `Recipe` entries at catalog-build time.
 
 ## Cell Type Content System (Implemented — Phase 2)
 

@@ -1,4 +1,4 @@
-#[allow(clippy::expect_used, reason = "tests panic on failure")]
+#![allow(clippy::expect_used, reason = "tests panic on failure")]
 use std::collections::HashMap;
 
 use bevy::prelude::*;

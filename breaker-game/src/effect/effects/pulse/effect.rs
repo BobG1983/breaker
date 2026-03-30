@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
@@ -70,14 +71,14 @@ pub(crate) struct PulseRingDamageMultiplier(pub(crate) f32);
 type EmitterQuery = (
     Entity,
     &'static mut PulseEmitter,
-    &'static Transform,
+    &'static Position2D,
     Option<&'static EffectiveDamageMultiplier>,
     Option<&'static EffectSourceChip>,
 );
 
 /// Query data for [`apply_pulse_damage`].
 type PulseDamageQuery = (
-    &'static Transform,
+    &'static Position2D,
     &'static PulseRadius,
     &'static mut PulseDamaged,
     Option<&'static PulseRingDamageMultiplier>,
@@ -106,7 +107,7 @@ pub(crate) fn tick_pulse_emitter(
     mut emitters: Query<EmitterQuery>,
 ) {
     let dt = time.timestep().as_secs_f32();
-    for (_entity, mut emitter, transform, edm, esc) in &mut emitters {
+    for (_entity, mut emitter, position, edm, esc) in &mut emitters {
         emitter.timer += dt;
         if emitter.timer >= emitter.interval {
             emitter.timer -= emitter.interval;
@@ -121,7 +122,7 @@ pub(crate) fn tick_pulse_emitter(
                 PulseSpeed(speed),
                 PulseDamaged(HashSet::new()),
                 PulseRingDamageMultiplier(damage_multiplier),
-                Transform::from_translation(transform.translation),
+                Position2D(position.0),
                 CleanupOnNodeExit,
             ));
             ring.insert(esc.cloned().unwrap_or_default());
@@ -150,11 +151,11 @@ pub(crate) fn apply_pulse_damage(
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (transform, radius, mut damaged, damage_mult, esc) in &mut rings {
+    for (position, radius, mut damaged, damage_mult, esc) in &mut rings {
         if radius.0 <= 0.0 {
             continue;
         }
-        let center = transform.translation.truncate();
+        let center = position.0;
         let multiplier = damage_mult.map_or(1.0, |m| m.0);
         let source_chip = esc.and_then(EffectSourceChip::source_chip);
         let candidates = quadtree

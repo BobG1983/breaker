@@ -433,7 +433,7 @@ fn piercing_beam_end_to_end_damage_includes_effective_damage_multiplier() {
     let entity = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::ZERO),
             Velocity2D(Vec2::new(0.0, 400.0)),
             crate::effect::EffectiveDamageMultiplier(2.0),
         ))
@@ -477,10 +477,7 @@ fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(0.0, 400.0))))
         .id();
 
     fire(entity, 2.0, 10.0, "laser", &mut world);
@@ -504,10 +501,7 @@ fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(0.0, 400.0))))
         .id();
 
     fire(entity, 2.0, 10.0, "", &mut world);

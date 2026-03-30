@@ -61,7 +61,7 @@ src/
 ├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
 ├── wall/             # Invisible boundary entities (left, right, ceiling)
-├── chips/            # Chip system — ChipTemplateRegistry (SeedableRegistry) + ChipCatalog (expanded definitions + recipes); EvolutionRegistry (SeedableRegistry for evolution definitions); observer-based effect application
+├── chips/            # Chip system — ChipTemplateRegistry (SeedableRegistry) + ChipCatalog (expanded definitions + recipes); EvolutionTemplateRegistry (SeedableRegistry for evolution definitions); observer-based effect application
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
 ├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker, highlight detection (highlights/ sub-domain), spawn_highlight_text juice
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
@@ -71,7 +71,7 @@ src/
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
 
-**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `run`, and `wall` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. This mirrors the existing debug domain exception.
+**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `run`, `screen`, and `wall` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `screen` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. `wall` and `ui` are also `pub mod` but are not currently imported by the scenario runner. This mirrors the existing debug domain exception.
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
@@ -108,6 +108,15 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 Both systems use `Commands::remove::<ShieldActive>()` to despawn the component when charges are exhausted — the removal is deferred to apply-deferred, not immediate. Neither system fires messages in lieu of writing directly. This pattern is intentional and narrow: `ShieldActive` charge management is co-located with the systems that trigger the absorption.
 
+## Velocity2D Cross-Domain Write Exception
+
+`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by two effect domain runtime systems as an accepted architectural exception:
+
+- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to apply gravitational pull toward active gravity wells. Ordered `.before(BoltSystems::PrepareVelocity)` so the bolt domain's speed clamping still applies.
+- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to steer bolts toward the nearest attraction target. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+
+Both systems apply simple arithmetic forces to bolt velocity. Adding message indirection (effect writes a force message, bolt reads and applies) would add complexity without benefit. The bolt domain's `prepare_bolt_velocity` speed clamping runs after these writes, so bolt speed limits are always enforced.
+
 ## Debug Domain — Cross-Domain Exception
 
 The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:
@@ -128,31 +137,33 @@ The `effect/` domain uses a self-registration pattern where each leaf effect is 
 ```
 effect/
   core/
-    mod.rs             # Re-exports from types.rs
-    types.rs           # All core types: Trigger, ImpactTarget, Target, AttractionType,
-                       #   RootEffect, EffectNode, EffectKind, BoundEffects, StagedEffects
+    mod.rs             # Re-exports from types/
+    types/             # Directory module (split from types.rs)
+      mod.rs           # Re-exports from definitions.rs
+      definitions.rs   # All core types: Trigger, ImpactTarget, Target, AttractionType,
+                       #   RootEffect, EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
   effects/             # Per-effect modules with fire(), reverse(), register()
-    mod.rs             # pub mod declarations + register() dispatcher
+    mod.rs             # pub mod declarations + register() dispatcher + spawn_extra_bolt helper
     speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
     damage_boost.rs    # fire(), reverse(), register()
-    shockwave.rs       # fire(), reverse(), register()
     life_lost.rs       # fire(), reverse(), register()
-    chain_bolt.rs      # fire(), reverse(), register()
     ramping_damage.rs  # fire(), reverse(), register()
-    explode.rs         # fire(), reverse(), register()
     quick_stop.rs      # fire(), reverse(), register()
-    tether_beam.rs     # fire(), reverse(), register()
-    ... (one file per effect — ~24 total)
-  triggers/            # Bridge systems (one file per trigger type)
+    piercing.rs / size_boost.rs / bump_force.rs / shield.rs / gravity_well.rs / time_penalty.rs
+    shockwave/ chain_bolt/ chain_lightning/ explode/ tether_beam/ pulse/ piercing_beam/
+    attraction/ spawn_bolts/ spawn_phantom/ entropy_engine/ second_wind/ random_effect/
+    ... (directory modules — split per System File Split Convention when tests exceed ~400 lines)
+  triggers/            # Bridge systems (one file or dir per trigger type)
     mod.rs             # pub mod declarations + register() dispatcher
+    evaluate/          # Directory module — shared chain evaluation helpers (has tests)
+    impact/            # Directory module — global impact triggers (has tests)
+    impacted/          # Directory module — targeted impacted triggers (has tests)
+    until/             # Directory module — Until desugaring system (has tests)
     bump.rs / perfect_bump.rs / early_bump.rs / late_bump.rs
     bump_whiff.rs / no_bump.rs
     bumped.rs / perfect_bumped.rs / early_bumped.rs / late_bumped.rs
-    impact.rs / impacted.rs
-    bolt_lost.rs / death.rs / died.rs
-    node_start.rs / node_end.rs
-    timer.rs / until.rs
-    evaluate.rs        # Shared chain evaluation helpers
+    bolt_lost.rs / cell_destroyed.rs / death.rs / died.rs
+    node_start.rs / node_end.rs / timer.rs
   commands.rs          # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
   mod.rs               # Re-exports + pub mod declarations
   plugin.rs            # EffectPlugin — calls effects::register() and triggers::register()

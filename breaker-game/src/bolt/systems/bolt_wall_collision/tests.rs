@@ -115,10 +115,7 @@ fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_height: f32) 
 #[derive(Resource, Default)]
 struct WallHitMessages(Vec<BoltImpactWall>);
 
-fn collect_wall_hits(
-    mut reader: MessageReader<BoltImpactWall>,
-    mut msgs: ResMut<WallHitMessages>,
-) {
+fn collect_wall_hits(mut reader: MessageReader<BoltImpactWall>, mut msgs: ResMut<WallHitMessages>) {
     for msg in reader.read() {
         msgs.0.push(msg.clone());
     }

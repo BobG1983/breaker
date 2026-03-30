@@ -107,6 +107,10 @@ type: reference
 - `commands.entity(entity).insert_if_new((BoundEffects::default(), StagedEffects::default()))` — correct; insert_if_new accepts `impl Bundle`, and tuples of components are Bundles; confirmed Bevy 0.18.1
 - `entity_ref.insert_if_new(...)` on `EntityWorldMut` — also valid; same Bundle acceptance
 
+## Manual insert-if-absent via get + insert on EntityWorldMut (commands.rs)
+- `if entity_ref.get::<T>().is_none() { entity_ref.insert(T::default()); }` — correct pattern in Bevy 0.18 when you need conditional insert inside a `Command::apply`; `EntityWorldMut::get` returns `Option<&T>`, `EntityWorldMut::insert` accepts `impl Bundle`
+- Used in `ensure_effect_components` in `effect/commands.rs` — CORRECT; distinct from `insert_if_new` (same end result, explicit guard approach)
+
 ## commands.queue with Closures
 - `commands.queue(move |world: &mut World| { ... })` — correct; Commands::queue (renamed from Commands::add in 0.15) accepts closures matching `|&mut World|` as well as types implementing Command
 - This is the correct pattern for deferred World-access within a system that also uses Commands
@@ -137,3 +141,29 @@ type: reference
 
 ## for _ in reader.read() {} — Message Drain Pattern
 - `for _ in reader.read() {}` — valid pattern to drain a MessageReader without processing messages (e.g., when a required resource is absent)
+
+## despawn() is Recursive in Bevy 0.16+
+- `commands.entity(e).despawn()` — in Bevy 0.16+, this recursively despawns all children (equivalent to old `despawn_recursive()`)
+- `despawn_children()` — despawns children but NOT the parent entity
+- `despawn_related::<Children>()` — the 0.16+ way to despawn only children
+- No `despawn_recursive()` needed in Bevy 0.18; plain `despawn()` is recursive
+
+## ChildOf and Children in Bevy 0.18
+- `ChildOf(parent_entity)` — correct component for establishing parent relationship
+- `ChildOf::parent()` — correct method to get the parent Entity from a ChildOf component
+- `Children` component — auto-populated when ChildOf is inserted; provides slice iteration via `Deref<Target=[Entity]>`
+- `children.iter()` — correct iteration over child entity slice
+- `EntityWorldMut::add_child(entity)` — correct API to add a child in 0.18
+- `entity_mut(parent).add_child(child)` — correct World-access variant
+
+## Transform vs Position2D in Physics vs Rendering Systems (CRITICAL RULE)
+- Bolt entities use `Position2D` (authoritative physics position) + `InterpolateTransform2D` (renders by interpolating to Transform)
+- `Transform` on bolt entities is a RENDERED/INTERPOLATED value — one-tick stale relative to physics
+- Physics systems (FixedUpdate) MUST query `Position2D` or `GlobalPosition2D` for bolt/cell position
+- Rendering/debug systems (Update, gizmos, egui) MAY query `Transform` — they're displaying visual position
+- `gravity_well.rs` — FIXED (feature/full-verification-fixes): `apply_gravity_pull` queries `&Position2D` on wells and bolts; `fire()` uses `super::super::entity_position()` (Position2D only, no Transform fallback). All correct.
+- `piercing_beam/effect.rs` — FIXED (feature/full-verification-fixes): `fire()` now uses `super::super::entity_position(world, entity)` (Position2D → Vec2::ZERO only). Process system uses `GlobalPosition2D` for cell positions. No Transform involved. Correct.
+- `shockwave/effect.rs` — FIXED (feature/full-verification-fixes): `fire()` now uses `super::super::entity_position()` (Position2D); spawned entity carries `Position2D`, not Transform. Correct.
+- `explode/effect.rs` — FIXED (feature/full-verification-fixes): `fire()` now uses `super::super::entity_position()` (Position2D); spawned entity carries `Position2D`. Correct.
+- `chain_lightning/effect.rs` arc_transforms — CORRECT: ChainLightningArc entities are pure rendering objects; using Transform on them is right
+- `pulse/effect.rs` — CORRECT: emitter reads `&Position2D` from emitter entity; ring carries `Position2D`; `apply_pulse_damage` reads `&Position2D` from ring entity. No Transform. Correct.

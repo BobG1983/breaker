@@ -2,7 +2,6 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{bolt::components::BoltLifespan, effect::BoundEffects};
 
@@ -19,7 +18,7 @@ pub(crate) fn fire(
     _source_chip: &str,
     world: &mut World,
 ) {
-    let spawn_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
+    let spawn_pos = super::super::entity_position(world, entity);
 
     let bound_effects = if inherit {
         world.get::<BoundEffects>(entity).cloned()

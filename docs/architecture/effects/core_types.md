@@ -1,6 +1,6 @@
 # Core Types
 
-All core types live in `effect/core/types.rs`.
+All core types live in `effect/core/types/` (directory module: `definitions.rs` holds the types, exposed via `mod.rs`).
 
 ## Trigger
 
@@ -192,7 +192,7 @@ impl EffectSourceChip {
 pub fn chip_attribution(source_chip: &str) -> Option<String> { ... }
 ```
 
-Lives in `effect/core/types.rs`. Used by AoE/spawn effects that need to carry chip attribution
+Lives in `effect/core/types/definitions.rs`. Used by AoE/spawn effects that need to carry chip attribution
 from dispatch time to damage-application time (since those effects damage cells on a later tick).
 
 ## fire() and reverse()
@@ -235,7 +235,7 @@ private methods (`reverse`, `reverse_aoe_and_spawn`). All splits are exhaustive.
 
 ## Per-Effect Modules
 
-Each effect module (`effect/effects/<name>.rs`) defines free functions and any active-state components:
+Each effect module (`effect/effects/<name>.rs` or `effect/effects/<name>/` directory module) defines free functions and any active-state components:
 
 ```rust
 // effect/effects/speed_boost.rs

@@ -85,7 +85,7 @@ fn spawn_shockwave(app: &mut App, x: f32, y: f32, radius: f32, damaged: HashSet<
             ShockwaveMaxRadius(100.0),
             ShockwaveSpeed(50.0),
             ShockwaveDamaged(damaged),
-            Transform::from_xyz(x, y, 0.0),
+            Position2D(Vec2::new(x, y)),
         ))
         .id()
 }

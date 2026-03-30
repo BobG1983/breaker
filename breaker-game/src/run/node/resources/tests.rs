@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
 
-use super::definitions::*;
-use super::super::definition::{NodeLayout, NodePool};
+use super::{
+    super::definition::{NodeLayout, NodePool},
+    definitions::*,
+};
 
 fn make_layout(name: &str) -> NodeLayout {
     NodeLayout {

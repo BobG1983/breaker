@@ -51,7 +51,7 @@ Each evolution tracks cumulative damage dealt across the run. At run-end, the ev
 
 ## Integration with EffectNode
 
-Evolutions are implemented as chips with `EffectNode` effect trees. The chip's effect nodes are pushed to the entity's `EffectChains` when selected and evaluated by bridge systems on matching game events. Each evolution carries its chip name through the evaluation pipeline for damage attribution.
+Evolutions are implemented as chips with `EffectNode` effect trees. The chip's effect nodes are pushed to the entity's `BoundEffects` when selected and evaluated by bridge systems on matching game events. Each evolution carries its chip name through the evaluation pipeline for damage attribution.
 
 ## Evolution Catalog
 
@@ -114,4 +114,4 @@ Destroying cells creates gravity wells that pull bolts toward the destruction po
 
 Invisible wall that bounces the bolt once per node. Cheat death once.
 
-**Redesign note (C7)**: Now uses `Once` node type instead of a custom one-shot mechanism. The invisible wall effect is placed on the breaker's `EffectChains`, not as a global resource. Fires exactly once per node, then the `Once` node is permanently consumed from the chain.
+**Redesign note (C7)**: Now uses `Once` node type instead of a custom one-shot mechanism. The invisible wall effect is placed on the breaker's `BoundEffects`, not as a global resource. Fires exactly once per node, then the `Once` node is permanently consumed from the chain.

@@ -52,7 +52,14 @@ These aliases include `--features hot-reload` to ensure propagation systems and 
 
 ## All crates
 
-**runner-tests** and **runner-linting** must test/lint ALL workspace crates, not just the game and scenario runner. Run all of these:
+| Task | Alias |
+|------|-------|
+| Test all | `cargo all-dtest` |
+| Lint all | `cargo all-dclippy` |
+
+These workspace-wide aliases include `--features bevy/dynamic_linking,hot-reload` and cover every workspace member in a single invocation.
+
+**runner-tests** and **runner-linting** should use `cargo all-dtest` and `cargo all-dclippy` instead of running per-crate aliases individually. The per-crate aliases below are still available for targeted runs:
 - `cargo dtest` + `cargo spatial2dtest` + `cargo physics2dtest` + `cargo defaultstest` + `cargo dstest`
 - `cargo dclippy` + `cargo spatial2dclippy` + `cargo physics2dclippy` + `cargo defaultsclippy` + `cargo dsclippy`
 

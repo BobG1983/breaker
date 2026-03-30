@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use super::evaluate::RemoveChainsCommand;
-use crate::effect::{commands::EffectCommandsExt, core::*};
+use crate::{
+    effect::{commands::EffectCommandsExt, core::*},
+    shared::playing_state::PlayingState,
+};
 
 fn tick_time_expires(
     time: Res<Time>,
@@ -54,7 +57,10 @@ fn tick_time_expires(
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, tick_time_expires);
+    app.add_systems(
+        FixedUpdate,
+        tick_time_expires.run_if(in_state(PlayingState::Active)),
+    );
 }
 
 #[cfg(test)]
@@ -286,6 +292,8 @@ mod tests {
 
     // -- Section L: EffectSourceChip threading through tick_time_expires ───────────────────
 
+    use rantzsoft_spatial2d::components::Position2D;
+
     use crate::effect::{core::EffectSourceChip, effects::speed_boost::ActiveSpeedBoosts};
 
     #[test]
@@ -305,7 +313,7 @@ mod tests {
 
         app.world_mut().spawn((
             StagedEffects(vec![("timer_chip".into(), node)]),
-            Transform::from_xyz(50.0, 50.0, 0.0),
+            Position2D(Vec2::new(50.0, 50.0)),
         ));
 
         // First tick: timer expires, queues fire_effect command

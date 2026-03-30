@@ -1,11 +1,7 @@
 use bevy::prelude::*;
 
 use super::super::system::dispatch_breaker_effects;
-use crate::breaker::{
-    SelectedBreaker,
-    definition::BreakerDefinition,
-    registry::BreakerRegistry,
-};
+use crate::breaker::{SelectedBreaker, definition::BreakerDefinition, registry::BreakerRegistry};
 
 pub(super) const TEST_BREAKER_NAME: &str = "TestBreaker";
 

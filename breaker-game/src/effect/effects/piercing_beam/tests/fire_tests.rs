@@ -7,10 +7,7 @@ fn fire_spawns_request_with_correct_upward_beam_geometry() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(0.0, 400.0))))
         .id();
 
     fire(entity, 1.0, 20.0, "", &mut world);
@@ -66,7 +63,7 @@ fn fire_entity_near_boundary_produces_short_beam() {
 
     let entity = world
         .spawn((
-            Transform::from_xyz(0.0, 290.0, 0.0),
+            Position2D(Vec2::new(0.0, 290.0)),
             Velocity2D(Vec2::new(0.0, 400.0)),
         ))
         .id();
@@ -94,7 +91,7 @@ fn fire_computes_beam_length_to_bottom_boundary() {
 
     let entity = world
         .spawn((
-            Transform::from_xyz(0.0, 200.0, 0.0),
+            Position2D(Vec2::new(0.0, 200.0)),
             Velocity2D(Vec2::new(0.0, -400.0)),
         ))
         .id();
@@ -134,10 +131,7 @@ fn fire_handles_diagonal_velocity_direction() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(300.0, 300.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(300.0, 300.0))))
         .id();
 
     fire(entity, 1.0, 30.0, "", &mut world);
@@ -182,10 +176,7 @@ fn fire_applies_damage_mult_to_base_bolt_damage() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(0.0, 400.0))))
         .id();
 
     fire(entity, 3.0, 20.0, "", &mut world);
@@ -208,10 +199,7 @@ fn fire_with_zero_damage_mult_produces_zero_damage() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(0.0, 400.0))))
         .id();
 
     fire(entity, 0.0, 20.0, "", &mut world);
@@ -233,7 +221,7 @@ fn fire_with_zero_damage_mult_produces_zero_damage() {
 fn fire_with_missing_velocity_defaults_direction_to_y() {
     let mut world = piercing_beam_fire_world();
 
-    let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.0, 20.0, "", &mut world);
 
@@ -296,7 +284,7 @@ fn fire_with_zero_velocity_defaults_direction_to_y() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((Transform::from_xyz(0.0, 0.0, 0.0), Velocity2D(Vec2::ZERO)))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::ZERO)))
         .id();
 
     fire(entity, 1.0, 20.0, "", &mut world);
@@ -359,10 +347,7 @@ fn fire_request_entity_has_cleanup_on_node_exit() {
     let mut world = piercing_beam_fire_world();
 
     let entity = world
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-        ))
+        .spawn((Position2D(Vec2::ZERO), Velocity2D(Vec2::new(0.0, 400.0))))
         .id();
 
     fire(entity, 1.0, 20.0, "", &mut world);
@@ -412,7 +397,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
 
     let entity = world
         .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::ZERO),
             Velocity2D(Vec2::new(0.0, 400.0)),
             crate::effect::EffectiveDamageMultiplier(2.0),
         ))
@@ -431,5 +416,239 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
         "expected damage {} (10.0 * 1.5 * 2.0), got {}",
         expected_damage,
         results[0].damage
+    );
+}
+
+// ── Regression: fire() reads Position2D for origin, NOT Transform ──
+
+#[test]
+fn fire_reads_position2d_not_transform_for_beam_origin() {
+    let mut world = piercing_beam_fire_world();
+
+    // Position2D and Transform deliberately diverge — fire() must use Position2D.
+    let entity = world
+        .spawn((
+            Position2D(Vec2::new(100.0, 150.0)),
+            Transform::from_xyz(-50.0, -75.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    fire(entity, 1.0, 20.0, "", &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    let request = results[0];
+    assert!(
+        (request.origin.x - 100.0).abs() < f32::EPSILON,
+        "origin x should be 100.0 (from Position2D), got {}",
+        request.origin.x
+    );
+    assert!(
+        (request.origin.y - 150.0).abs() < f32::EPSILON,
+        "origin y should be 150.0 (from Position2D), got {}",
+        request.origin.y
+    );
+    // top=300, Position2D.y=150 -> beam length = 300 - 150 = 150
+    assert!(
+        (request.length - 150.0).abs() < 0.01,
+        "beam length should be 150.0 (from Position2D.y=150 to top=300), got {}",
+        request.length
+    );
+}
+
+#[test]
+fn fire_reads_position2d_zero_not_transform_for_beam_origin() {
+    let mut world = piercing_beam_fire_world();
+
+    // Edge case: Position2D at zero with divergent Transform — must use Position2D.
+    let entity = world
+        .spawn((
+            Position2D(Vec2::ZERO),
+            Transform::from_xyz(200.0, 200.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    fire(entity, 1.0, 20.0, "", &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    let request = results[0];
+    assert!(
+        (request.origin.x).abs() < f32::EPSILON,
+        "origin x should be 0.0 (from Position2D), NOT 200.0 (from Transform), got {}",
+        request.origin.x
+    );
+    assert!(
+        (request.origin.y).abs() < f32::EPSILON,
+        "origin y should be 0.0 (from Position2D), NOT 200.0 (from Transform), got {}",
+        request.origin.y
+    );
+    // top=300, Position2D.y=0 -> beam length = 300
+    assert!(
+        (request.length - 300.0).abs() < 0.01,
+        "beam length should be 300.0 (from y=0 to top=300), got {}",
+        request.length
+    );
+}
+
+// ── Regression: fire() falls back to Vec2::ZERO when Position2D absent (NOT to Transform) ──
+
+#[test]
+fn fire_without_position2d_falls_back_to_zero_not_transform() {
+    let mut world = piercing_beam_fire_world();
+
+    // Entity has Transform but NO Position2D — fire() must use Vec2::ZERO, NOT Transform.
+    let entity = world
+        .spawn((
+            Transform::from_xyz(100.0, 200.0, 0.0),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    fire(entity, 1.0, 20.0, "", &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    let request = results[0];
+    assert!(
+        (request.origin.x).abs() < f32::EPSILON,
+        "origin x should be 0.0 (Vec2::ZERO fallback), NOT 100.0 (Transform), got {}",
+        request.origin.x
+    );
+    assert!(
+        (request.origin.y).abs() < f32::EPSILON,
+        "origin y should be 0.0 (Vec2::ZERO fallback), NOT 200.0 (Transform), got {}",
+        request.origin.y
+    );
+    // top=300, origin at y=0 -> beam length = 300
+    assert!(
+        (request.length - 300.0).abs() < 0.01,
+        "beam length should be 300.0 (from y=0 to top=300), got {}",
+        request.length
+    );
+}
+
+#[test]
+fn fire_with_only_transform_no_position2d_no_velocity_falls_back_to_zero() {
+    let mut world = piercing_beam_fire_world();
+
+    // Edge case: ONLY Transform (no Position2D, no Velocity2D) — origin must be Vec2::ZERO.
+    let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
+
+    fire(entity, 1.0, 20.0, "", &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    let request = results[0];
+    assert!(
+        (request.origin.x).abs() < f32::EPSILON,
+        "origin x should be 0.0 (Vec2::ZERO fallback), NOT 100.0 (Transform), got {}",
+        request.origin.x
+    );
+    assert!(
+        (request.origin.y).abs() < f32::EPSILON,
+        "origin y should be 0.0 (Vec2::ZERO fallback), NOT 200.0 (Transform), got {}",
+        request.origin.y
+    );
+    // No velocity -> direction defaults to Vec2::Y, beam from y=0 to top=300 -> length = 300
+    assert!(
+        (request.direction.y - 1.0).abs() < 0.01,
+        "missing velocity should default direction to Vec2::Y"
+    );
+    assert!(
+        (request.length - 300.0).abs() < 0.01,
+        "beam length should be 300.0 (from y=0 to top=300), got {}",
+        request.length
+    );
+}
+
+// ── Regression: fire() with Position2D but no Transform works correctly ──
+
+#[test]
+fn fire_with_position2d_but_no_transform_uses_position2d() {
+    let mut world = piercing_beam_fire_world();
+
+    // Entity has Position2D and Velocity2D but NO Transform.
+    let entity = world
+        .spawn((
+            Position2D(Vec2::new(50.0, -100.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    fire(entity, 1.0, 20.0, "", &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    let request = results[0];
+    assert!(
+        (request.origin.x - 50.0).abs() < f32::EPSILON,
+        "origin x should be 50.0 (from Position2D), got {}",
+        request.origin.x
+    );
+    assert!(
+        (request.origin.y - (-100.0)).abs() < f32::EPSILON,
+        "origin y should be -100.0 (from Position2D), got {}",
+        request.origin.y
+    );
+    assert!(
+        (request.direction.x - 0.0).abs() < 0.01,
+        "direction x should be 0.0, got {}",
+        request.direction.x
+    );
+    assert!(
+        (request.direction.y - 1.0).abs() < 0.01,
+        "direction y should be 1.0, got {}",
+        request.direction.y
+    );
+    // top=300, Position2D.y=-100 -> beam length = 300 - (-100) = 400
+    assert!(
+        (request.length - 400.0).abs() < 0.01,
+        "beam length should be 400.0 (from y=-100 to top=300), got {}",
+        request.length
+    );
+}
+
+#[test]
+fn fire_with_position2d_near_top_boundary_produces_short_beam() {
+    let mut world = piercing_beam_fire_world();
+
+    // Edge case: Position2D very close to top boundary.
+    let entity = world
+        .spawn((
+            Position2D(Vec2::new(0.0, 299.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    fire(entity, 1.0, 20.0, "", &mut world);
+
+    let mut query = world.query::<&PiercingBeamRequest>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected one PiercingBeamRequest entity");
+
+    let request = results[0];
+    assert!(
+        (request.origin.y - 299.0).abs() < f32::EPSILON,
+        "origin y should be 299.0 (from Position2D), got {}",
+        request.origin.y
+    );
+    // top=300, Position2D.y=299 -> beam length = 300 - 299 = 1.0
+    assert!(
+        (request.length - 1.0).abs() < 0.01,
+        "beam length should be 1.0 (from y=299 to top=300), got {}",
+        request.length
     );
 }

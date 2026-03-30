@@ -1,0 +1,32 @@
+// Adversarial: SpeedBoost(1.05) fires on the global Death trigger — meaning every cell
+// or bolt destruction applies a 1.05x multiplier to the bolt's ActiveSpeedBoosts.
+// Dense layout is chosen deliberately: it maximises simultaneous multi-cell destruction
+// events from a single bolt pass-through. If the Death bridge fires multiple times per
+// single RequestCellDestroyed event (e.g., due to duplicate message dispatch or a
+// for-loop over all entities that re-enters the same entity), multipliers compound
+// within a single fixed-update tick: 1.05^N overflows BoltMaxSpeed quickly.
+// If each individual cell impact in a piercing chain generates a separate Death event,
+// a single bolt pass through 8 cells fires SpeedBoost 8 times: 1.05^8 ≈ 1.48x.
+// BoltSpeedInRange is the primary detector. NoNaN guards against floating-point
+// corruption from very large velocity magnitudes. NoEntityLeaks ensures no orphaned
+// SpeedBoost component entries accumulate on destroyed entities.
+// 5000 frames at moderate chaos gives enough cell destruction events to expose both
+// single-event double-fire and multi-cell chain-fire patterns.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 5000,
+    invariants: [BoltSpeedInRange, NoNaN, NoEntityLeaks],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 4271,
+    initial_effects: [
+        On(target: AllBolts, then: [
+            When(trigger: Death, then: [
+                Do(SpeedBoost(multiplier: 1.05)),
+            ]),
+        ]),
+    ],
+)

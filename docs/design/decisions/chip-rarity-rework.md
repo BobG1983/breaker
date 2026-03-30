@@ -18,9 +18,9 @@ Rare is the "intended" version of every chip — the version that fully realizes
 Rare versions include effects that create synergy hooks which lower rarities lack. This makes Rare genuinely exciting to find, not just "more damage":
 
 **Example — Piercing:**
-- Common: `OnSelected([Piercing(1)])` — bolt passes through 1 cell
-- Uncommon: `OnSelected([Piercing(2)])` — bolt passes through 2 cells
-- Rare: `OnSelected([Piercing(3), DamageBoost(0.1)])` — bolt passes through 3 cells AND gets a damage bonus, which amplifies other damage-scaling effects
+- Common: `On(target: Bolt, then: [Do(Piercing(1))])` — bolt passes through 1 cell
+- Uncommon: `On(target: Bolt, then: [Do(Piercing(2))])` — bolt passes through 2 cells
+- Rare: `On(target: Bolt, then: [Do(Piercing(3)), Do(DamageBoost(1.1))])` — bolt passes through 3 cells AND gets a damage bonus, which amplifies other damage-scaling effects
 
 The Rare version interacts with the DamageBoost ecosystem. The Common/Uncommon versions are useful but don't unlock that synergy path.
 

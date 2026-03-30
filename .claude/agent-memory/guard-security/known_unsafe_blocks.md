@@ -28,3 +28,7 @@ attraction, chain_bolt, explode, pulse, second_wind, shockwave, spawn_phantom �
 Still confirmed after Phase 6 changes (2026-03-29, feature/source-chip-shield-absorption):
 source_chip threading, EffectSourceChip component, shield charge absorption, chain lightning
 arc-based rework — no unsafe. All mem::replace usage is safe Rust (not unsafe).
+
+Still confirmed after refactor (2026-03-30, develop post-merge, c9964b7):
+23 files split into directory modules — code-only structural moves. No unsafe introduced.
+Grep for "unsafe" across all .rs files: no matches.

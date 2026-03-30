@@ -1,17 +1,13 @@
 //! Frame counting, frame limit checking, exit/restart, and game-state mapping.
 
 use bevy::prelude::*;
-use breaker::{
-    run::node::messages::SpawnNodeComplete,
-    shared::GameState,
-};
+use breaker::{run::node::messages::SpawnNodeComplete, shared::GameState};
 
+use super::types::ScenarioConfig;
 use crate::{
     invariants::{ScenarioFrame, ScenarioStats},
     types::ForcedGameState,
 };
-
-use super::types::ScenarioConfig;
 
 /// Increments [`ScenarioFrame`] by 1 each fixed-update tick.
 ///

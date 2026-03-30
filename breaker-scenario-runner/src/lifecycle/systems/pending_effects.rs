@@ -3,11 +3,10 @@
 use bevy::prelude::*;
 use breaker::effect::{BoundEffects, StagedEffects};
 
-use crate::invariants::{ScenarioTagBolt, ScenarioTagBreaker, ScenarioTagCell, ScenarioTagWall};
-
 use super::types::{
     PendingBoltEffects, PendingBreakerEffects, PendingCellEffects, PendingWallEffects,
 };
+use crate::invariants::{ScenarioTagBolt, ScenarioTagBreaker, ScenarioTagCell, ScenarioTagWall};
 
 /// Applies deferred breaker effects from [`PendingBreakerEffects`] to tagged breaker entities.
 ///

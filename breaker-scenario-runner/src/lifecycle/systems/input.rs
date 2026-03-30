@@ -3,12 +3,11 @@
 use bevy::prelude::*;
 use breaker::input::resources::InputActions;
 
+use super::types::{ScenarioConfig, ScenarioInputDriver};
 use crate::{
     invariants::{ScenarioFrame, ScenarioStats},
     types::GameAction as ScenarioGameAction,
 };
-
-use super::types::{ScenarioConfig, ScenarioInputDriver};
 
 /// Reads [`ScenarioConfig`] and inserts a [`ScenarioInputDriver`] into the world.
 ///

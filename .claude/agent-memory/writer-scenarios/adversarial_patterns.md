@@ -52,8 +52,42 @@ type: reference
 - 16 = for: TetherBeam (spawns 2 per bump), stacking spawn effects
 - 20+ = for: deep chain spawns (Supernova pattern)
 
+## Global trigger + AllBolts binding pattern
+
+Global triggers (BumpWhiff, Death, Impact(Breaker), NodeStart, NodeEnd, BoltLost) fire on
+ALL entities with BoundEffects, not just bolts. To bind a global trigger effect to the bolt:
+use `On(target: AllBolts, then: [When(trigger: GlobalTrigger, ...)])`. This installs the
+When node into each bolt's BoundEffects. When the trigger fires globally, each bolt evaluates
+its own When node and fires the effect on itself.
+
+This pattern is correct and validated for: BumpWhiff, Death, Impact(Breaker), NodeStart.
+
+## Death trigger adversarial risk (Dense layout)
+
+Dense layout + `When(trigger: Death, ...)` with a stat multiplier effect is the canonical
+stress test for multi-cell destruction. In a single-tick pierce pass through N cells,
+Death fires N times, compounding SpeedBoost(1.05) to 1.05^N per tick. Use a small
+multiplier (1.05) so single-fire is safe but double-fire accumulates detectably.
+BoltSpeedInRange is the primary detector.
+
+## Impact(Breaker) + Corridor accumulation
+
+Corridor layout + `When(trigger: Impact(Breaker), ...)` + small SpeedBoost (1.05x) is
+the canonical "does double-fire on breaker contact accumulate?" test. The narrow channel
+forces high-frequency breaker contacts. 8000 frames at 64 Hz = ~500+ contacts.
+1.05^500 is astronomical — any double-fire is immediately detectable via BoltSpeedInRange.
+
+## BumpWhiff with Once + AOE combined
+
+`When(trigger: BumpWhiff, then: [Once([Do(DamageBoost(N))]), Do(Shockwave(...))])`
+stress-tests two independent dispatch paths in one whiff event: Once (consumed on first
+match) and an unconditional AOE spawn. If the bridge double-reads the message, Once fires
+twice (consuming and then silently failing) while Shockwave spawns two rings per whiff.
+Use NoEntityLeaks to catch the ring accumulation and BoltSpeedInRange for DamageBoost leakage.
+
 ## Seed selection
 
 Use distinct primes or memorable numbers per scenario to avoid identical RNG paths:
 - 5513, 7722, 3377, 1984, 6174, 8191, 2357, 1024, 4096, 6561
 - Avoid seeds already used: 0, 42, 200, 1337, 2718, 3141, 4242, 7331, 8080, 9999
+- chaos/ scenario seeds used: 2311 (whiff), 1301 (node_end), 4271 (death), 5003 (impact_breaker)

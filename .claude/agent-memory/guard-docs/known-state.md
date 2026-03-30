@@ -1,6 +1,6 @@
 ---
 name: known-state
-description: Confirmed doc/code alignment state; covers effect system rewrite (2026-03-28) and stat-effects phase (feature/stat-effects, merged to develop)
+description: Confirmed doc/code alignment state; covers effect system rewrite (2026-03-28), stat-effects phase (feature/stat-effects), and file-split refactor (2026-03-30)
 type: project
 ---
 
@@ -87,3 +87,27 @@ The file contains only a doc comment explaining legacy stat components were remo
 - Stat model: `Active*` stacks (effect domain) → `Effective*` scalars (computed by Recalculate) → consumers
 - `PiercingRemaining` is bolt domain (gameplay state), not an effect stat. `EffectivePiercing` is the cap.
 - `EffectSystems::Recalculate` ordering: `.after(EffectSystems::Bridge)`, run_if `in_state(PlayingState::Active)`
+
+## Confirmed Correct / Fixed (file-split refactor, 2026-03-30)
+
+- `effect/core/types.rs` is now `effect/core/types/` directory module (`mod.rs` + `definitions.rs` + `tests.rs`). All docs updated: `core_types.md`, `layout.md`, `plugins.md`, `structure.md`, `adding_effects.md`, `adding_triggers.md`, `content.md`.
+- Many effect modules are now directory modules (shockwave/, chain_bolt/, chain_lightning/, explode/, tether_beam/, pulse/, piercing_beam/, attraction/, spawn_bolts/, spawn_phantom/, entropy_engine/, second_wind/, random_effect/). Layout docs updated.
+- Trigger modules evaluate/, impact/, impacted/, until/ are now directory modules. Layout docs updated.
+- `EffectChains`, `ActiveEffects`, `ArmedEffects` — removed from `chips.md` terminology (old architecture). Replaced with `BoundEffects` and `StagedEffects` entries.
+- `OnSelected` trigger — never existed as a code variant. Removed from chips.md. Correct pattern is `On(target: X, then: [...])` via `RootEffect::On`. `dispatch.md` already documents this correctly.
+- `OnBump` — removed from chips.md; correct variant is `Bump`.
+- `OnPerfectBump` → `PerfectBump` in When example in chips.md.
+- `EffectNode` node count: updated to 6 (was incorrectly stated as 4).
+- `Target::AllWalls` — added to chips.md; was missing from the variant list.
+- `EvolutionRegistry` → `EvolutionTemplateRegistry` in plugins.md and plan/index.md.
+- `ChipRegistry` → `ChipTemplateRegistry`/`ChipCatalog` in content.md registries section.
+- RON examples in chip-rarity-rework.md, chip-template-system.md, content.md updated to use `On(target: X, then: [...])` notation.
+- `EffectChains` references in evolutions.md replaced with `BoundEffects`.
+- `RootEffect` entry in chips.md: updated file reference from `effect/definition.rs` to `effect/core/types/definitions.rs`.
+- `plan/index.md`: Runtime Effects updated from "In Progress" to "Done" (all 24 effects implemented and merged).
+
+## RON Format Confirmed (2026-03-30)
+
+- Chip template fields: `common:`, `uncommon:`, `rare:`, `legendary:` — NOT `Some((...))`; absence means the slot is not present
+- Effect dispatch in RON: `On(target: Bolt, then: [Do(Piercing(1))])` — top-level wrapper is `RootEffect::On`, not `When(trigger: OnSelected, ...)`
+- Trigger chip names: `DamageBoost(1.1)` not `DamageBoost(0.1)` for the rare Piercing chip example

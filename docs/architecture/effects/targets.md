@@ -21,7 +21,7 @@ The `Target` enum is used in `On { target, then }` nodes. Resolution depends on 
 | `Bolt` | Primary bolt entity |
 | `Breaker` | The breaker entity |
 | `Cell` / `Wall` | No-op (entities may not exist yet) |
-| `AllBolts` / `AllCells` / `AllWalls` | Desugared to `Once(When(NodeStart, On(All*, ...)))` — see [Dispatch](dispatch.md#all-target-desugaring) |
+| `AllBolts` / `AllCells` / `AllWalls` | Desugared to `When(NodeStart, On(All*, permanent: true, ...))` pushed to Breaker BoundEffects. Re-fires every node start for the rest of the run. See [Dispatch](dispatch.md#all-target-desugaring) |
 
 New bolts inherit the primary bolt's BoundEffects if spawned with `SpawnBolts(inherit: true)`.
 

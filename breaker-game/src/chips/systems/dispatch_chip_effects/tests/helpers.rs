@@ -148,3 +148,12 @@ pub(super) fn spawn_cell(app: &mut App) -> Entity {
         .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
         .id()
 }
+
+/// Spawn a Wall entity with effect components.
+pub(super) fn spawn_wall(app: &mut App) -> Entity {
+    use crate::wall::components::Wall;
+
+    app.world_mut()
+        .spawn((Wall, BoundEffects::default(), StagedEffects::default()))
+        .id()
+}

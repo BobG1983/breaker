@@ -4,14 +4,13 @@ use bevy::prelude::*;
 use breaker::run::node::resources::NodeTimer;
 use rantzsoft_spatial2d::components::Position2D;
 
-use crate::{
-    invariants::{PreviousGameState, ScenarioPhysicsFrozen, ScenarioTagBolt},
-    types::DebugSetup,
-};
-
 use super::{
     frame_control::map_forced_game_state,
     types::{BoltDebugQuery, BreakerDebugQuery, ScenarioConfig},
+};
+use crate::{
+    invariants::{PreviousGameState, ScenarioPhysicsFrozen, ScenarioTagBolt},
+    types::DebugSetup,
 };
 
 /// Applies entity-dependent debug overrides (position, velocity, physics freeze)

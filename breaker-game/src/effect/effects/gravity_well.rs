@@ -1,15 +1,18 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
-use crate::{bolt::components::Bolt, shared::playing_state::PlayingState};
+use crate::{
+    bolt::components::Bolt,
+    shared::{CleanupOnNodeExit, playing_state::PlayingState},
+};
 
 /// Marker for gravity well entities.
 #[derive(Component)]
-pub struct GravityWellMarker;
+pub(crate) struct GravityWellMarker;
 
 /// Configuration and runtime state for a gravity well.
 #[derive(Component)]
-pub struct GravityWellConfig {
+pub(crate) struct GravityWellConfig {
     /// Pull strength applied to bolts within radius.
     pub strength: f32,
     /// Attraction radius in world units.
@@ -29,9 +32,11 @@ pub(crate) fn fire(
     _source_chip: &str,
     world: &mut World,
 ) {
-    let position = world
-        .get::<Transform>(entity)
-        .map_or(Vec3::ZERO, |t| t.translation);
+    if max == 0 {
+        return;
+    }
+
+    let position = super::entity_position(world, entity);
 
     // Enforce max active wells for this owner — despawn oldest if at cap.
     let mut owned: Vec<Entity> = Vec::new();
@@ -60,7 +65,8 @@ pub(crate) fn fire(
             remaining: duration,
             owner: entity,
         },
-        Transform::from_translation(position),
+        Position2D(position),
+        CleanupOnNodeExit,
     ));
 }
 
@@ -85,14 +91,14 @@ fn tick_gravity_well(
 /// Pull bolts toward active gravity wells.
 fn apply_gravity_pull(
     time: Res<Time>,
-    wells: Query<(&Transform, &GravityWellConfig), With<GravityWellMarker>>,
-    mut bolts: Query<(&Transform, &mut Velocity2D), With<Bolt>>,
+    wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>,
+    mut bolts: Query<(&Position2D, &mut Velocity2D), With<Bolt>>,
 ) {
     let dt = time.delta_secs();
-    for (well_transform, config) in &wells {
-        let well_pos = well_transform.translation.truncate();
-        for (bolt_transform, mut velocity) in &mut bolts {
-            let bolt_pos = bolt_transform.translation.truncate();
+    for (well_position, config) in &wells {
+        let well_pos = well_position.0;
+        for (bolt_position, mut velocity) in &mut bolts {
+            let bolt_pos = bolt_position.0;
             let delta = well_pos - bolt_pos;
             let distance = delta.length();
             if distance > 0.0 && distance <= config.radius {
@@ -125,17 +131,29 @@ mod tests {
     // ── fire tests ──────────────────────────────────────────────────
 
     #[test]
+    fn fire_with_max_zero_returns_immediately() {
+        let mut world = World::new();
+        let entity = world.spawn(Position2D(Vec2::new(50.0, 75.0))).id();
+
+        fire(entity, 100.0, 5.0, 80.0, 0, "", &mut world);
+
+        let mut query = world.query::<&GravityWellConfig>();
+        let count = query.iter(&world).count();
+        assert_eq!(count, 0, "no well entities should be spawned when max is 0");
+    }
+
+    #[test]
     fn fire_spawns_well_entity_with_marker_and_config() {
         let mut world = World::new();
-        let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
+        let entity = world.spawn(Position2D(Vec2::new(50.0, 75.0))).id();
 
         fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-        let mut query = world.query::<(&GravityWellMarker, &GravityWellConfig, &Transform)>();
+        let mut query = world.query::<(&GravityWellMarker, &GravityWellConfig, &Position2D)>();
         let results: Vec<_> = query.iter(&world).collect();
         assert_eq!(results.len(), 1, "expected exactly one gravity well");
 
-        let (_marker, config, transform) = results[0];
+        let (_marker, config, position) = results[0];
         assert!(
             (config.strength - 100.0).abs() < f32::EPSILON,
             "expected strength 100.0, got {}",
@@ -153,21 +171,21 @@ mod tests {
         );
         assert_eq!(config.owner, entity);
         assert!(
-            (transform.translation.x - 50.0).abs() < f32::EPSILON,
+            (position.0.x - 50.0).abs() < f32::EPSILON,
             "expected x 50.0, got {}",
-            transform.translation.x
+            position.0.x
         );
         assert!(
-            (transform.translation.y - 75.0).abs() < f32::EPSILON,
+            (position.0.y - 75.0).abs() < f32::EPSILON,
             "expected y 75.0, got {}",
-            transform.translation.y
+            position.0.y
         );
     }
 
     #[test]
     fn fire_enforces_max_cap_despawns_oldest() {
         let mut world = World::new();
-        let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+        let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
         // Spawn 3 wells with max=2
         fire(entity, 100.0, 5.0, 80.0, 2, "", &mut world);
@@ -182,7 +200,7 @@ mod tests {
     #[test]
     fn reverse_is_noop() {
         let mut world = World::new();
-        let owner = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+        let owner = world.spawn(Position2D(Vec2::ZERO)).id();
 
         fire(owner, 100.0, 5.0, 80.0, 10, "", &mut world);
         reverse(owner, "", &mut world);
@@ -228,7 +246,7 @@ mod tests {
                     remaining: 0.0,
                     owner: Entity::PLACEHOLDER,
                 },
-                Transform::from_xyz(0.0, 0.0, 0.0),
+                Position2D(Vec2::ZERO),
             ))
             .id();
 
@@ -254,7 +272,7 @@ mod tests {
                 remaining: 10.0,
                 owner: Entity::PLACEHOLDER,
             },
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::ZERO),
         ));
 
         // Bolt at (100, 0) with zero velocity — should be pulled toward (0,0)
@@ -263,7 +281,7 @@ mod tests {
             .spawn((
                 Bolt,
                 Velocity2D(Vec2::ZERO),
-                Transform::from_xyz(100.0, 0.0, 0.0),
+                Position2D(Vec2::new(100.0, 0.0)),
             ))
             .id();
 
@@ -274,6 +292,485 @@ mod tests {
         assert!(
             velocity.x < 0.0,
             "bolt velocity x should be negative (pulled toward well), got {}",
+            velocity.x
+        );
+    }
+
+    // ── fire() reads Position2D, not Transform ────────────────────
+
+    #[test]
+    fn fire_reads_position2d_not_transform_for_well_spawn_position() {
+        let mut world = World::new();
+        // Position2D and Transform are deliberately different to catch the wrong read.
+        let entity = world
+            .spawn((
+                Position2D(Vec2::new(100.0, 200.0)),
+                Transform::from_xyz(999.0, 999.0, 0.0),
+            ))
+            .id();
+
+        fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
+
+        let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(results.len(), 1, "expected exactly one gravity well");
+
+        let (_marker, pos) = results[0];
+        assert_eq!(
+            pos.0,
+            Vec2::new(100.0, 200.0),
+            "well should spawn at Position2D (100, 200), not Transform (999, 999)"
+        );
+    }
+
+    #[test]
+    fn fire_reads_position2d_zero_not_transform_for_well_spawn_position() {
+        let mut world = World::new();
+        // Edge case: Position2D at origin, Transform at a non-zero position.
+        let entity = world
+            .spawn((Position2D(Vec2::ZERO), Transform::from_xyz(50.0, 50.0, 0.0)))
+            .id();
+
+        fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
+
+        let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(results.len(), 1, "expected exactly one gravity well");
+
+        let (_marker, pos) = results[0];
+        assert_eq!(
+            pos.0,
+            Vec2::ZERO,
+            "well should spawn at Position2D (0, 0), not Transform (50, 50)"
+        );
+    }
+
+    #[test]
+    fn fire_falls_back_to_zero_when_entity_has_no_position2d() {
+        let mut world = World::new();
+        // Entity has only Transform, no Position2D. fire() should fall back to Vec2::ZERO.
+        let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
+
+        fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
+
+        let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(results.len(), 1, "expected exactly one gravity well");
+
+        let (_marker, pos) = results[0];
+        assert_eq!(
+            pos.0,
+            Vec2::ZERO,
+            "well should default to Position2D(Vec2::ZERO) when owner has no Position2D"
+        );
+    }
+
+    #[test]
+    fn fire_falls_back_to_zero_when_entity_is_empty() {
+        let mut world = World::new();
+        // Entity has neither Position2D nor Transform.
+        let entity = world.spawn_empty().id();
+
+        fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
+
+        let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+        let results: Vec<_> = query.iter(&world).collect();
+        assert_eq!(results.len(), 1, "expected exactly one gravity well");
+
+        let (_marker, pos) = results[0];
+        assert_eq!(
+            pos.0,
+            Vec2::ZERO,
+            "well should default to Position2D(Vec2::ZERO) when owner is empty"
+        );
+    }
+
+    // ── Spawned well entity has CleanupOnNodeExit ───────────────
+
+    #[test]
+    fn fire_spawns_well_with_cleanup_on_node_exit() {
+        use crate::shared::CleanupOnNodeExit;
+
+        let mut world = World::new();
+        let entity = world.spawn(Position2D(Vec2::new(50.0, 75.0))).id();
+
+        fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
+
+        let mut query = world.query_filtered::<Entity, With<GravityWellMarker>>();
+        let well = query.iter(&world).next().expect("well should exist");
+
+        assert!(
+            world.get::<CleanupOnNodeExit>(well).is_some(),
+            "spawned gravity well should have CleanupOnNodeExit"
+        );
+    }
+
+    #[test]
+    fn fire_multiple_wells_all_have_cleanup_on_node_exit() {
+        use crate::shared::CleanupOnNodeExit;
+
+        let mut world = World::new();
+        let entity = world.spawn(Position2D(Vec2::new(10.0, 20.0))).id();
+
+        // Spawn 3 wells with max=5 so none get despawned.
+        fire(entity, 100.0, 5.0, 80.0, 5, "", &mut world);
+        fire(entity, 200.0, 3.0, 60.0, 5, "", &mut world);
+        fire(entity, 300.0, 4.0, 70.0, 5, "", &mut world);
+
+        let mut query = world.query_filtered::<Entity, With<GravityWellMarker>>();
+        let wells: Vec<Entity> = query.iter(&world).collect();
+        assert_eq!(wells.len(), 3, "expected 3 gravity wells");
+
+        for well in &wells {
+            assert!(
+                world.get::<CleanupOnNodeExit>(*well).is_some(),
+                "ALL spawned gravity wells should have CleanupOnNodeExit"
+            );
+        }
+    }
+
+    // ── apply_gravity_pull uses Position2D ──────────────────────
+
+    #[test]
+    fn apply_gravity_pull_uses_position2d_for_bolt_distance() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Gravity well at Position2D origin with deliberately different Transform.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::new(0.0, 0.0)),
+            Transform::from_xyz(999.0, 999.0, 0.0),
+        ));
+
+        // Bolt at Position2D (100, 0) with deliberately different Transform.
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::new(100.0, 0.0)),
+                Transform::from_xyz(999.0, 999.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // Bolt should be pulled toward (0,0) via Position2D, not toward Transform positions.
+        // Direction from bolt (100,0) to well (0,0) = (-1, 0), so velocity.x should be negative.
+        assert!(
+            velocity.x < 0.0,
+            "bolt should be pulled in -x direction toward well at Position2D (0,0), got velocity.x = {}",
+            velocity.x
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_uses_position2d_for_well_position_not_transform() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well at Position2D (0,0) but Transform at (500, 500). If the system reads
+        // Transform, the bolt at (100, 0) would be pulled toward (500, 500) instead of (0,0).
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::new(0.0, 0.0)),
+            Transform::from_xyz(500.0, 500.0, 0.0),
+        ));
+
+        // Bolt at Position2D (100, 0).
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::new(100.0, 0.0)),
+                Transform::from_xyz(100.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // If using Position2D: delta = (0,0) - (100,0) = (-100, 0) → bolt pulled in -x.
+        assert!(
+            velocity.x < 0.0,
+            "bolt should be pulled toward well at Position2D (0,0), not Transform (500,500). Got velocity.x = {}",
+            velocity.x
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_uses_position2d_radius_check_not_transform() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well at Position2D (200, 0) with small radius 50. Transform at (30, 0).
+        // By Position2D, bolt at (0,0) is 200 units away (outside radius 50).
+        // By Transform, bolt at (0,0) would appear 30 units away (inside radius 50).
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 50.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::new(200.0, 0.0)),
+            Transform::from_xyz(30.0, 0.0, 0.0),
+        ));
+
+        // Bolt at Position2D origin.
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::ZERO),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // Bolt is outside radius by Position2D distance (200 > 50), should NOT be pulled.
+        assert!(
+            velocity.x.abs() < f32::EPSILON && velocity.y.abs() < f32::EPSILON,
+            "bolt should NOT be pulled when outside radius by Position2D distance. Got velocity = ({}, {})",
+            velocity.x,
+            velocity.y
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_does_not_pull_bolt_outside_radius_by_position2d() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well at Position2D origin, radius 50. Transform at (0,0) matches.
+        // Bolt at Position2D (100, 0) = distance 100 > radius 50.
+        // Transform at (10, 0) would be within radius if the system reads Transform.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 50.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::ZERO),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::new(100.0, 0.0)),
+                Transform::from_xyz(10.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // By Position2D: distance 100 > radius 50 → no pull.
+        // By Transform: distance 10 < radius 50 → would incorrectly pull.
+        assert!(
+            velocity.x.abs() < f32::EPSILON && velocity.y.abs() < f32::EPSILON,
+            "bolt at Position2D distance 100 should NOT be pulled (radius 50). Got velocity = ({}, {})",
+            velocity.x,
+            velocity.y
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_pulls_bolt_at_exact_radius_boundary() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well at Position2D origin, radius 50.
+        // Bolt at Position2D (50, 0) = distance exactly 50 (inside).
+        // Transform at (999, 0) — if system reads Transform, distance 999 > 50, would NOT pull.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 50.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::ZERO),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::new(50.0, 0.0)),
+                Transform::from_xyz(999.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // By Position2D: distance 50.0 <= radius 50.0 → should pull in -x direction.
+        // By Transform: distance 999.0 > radius 50.0 → would not pull.
+        assert!(
+            velocity.x < 0.0,
+            "bolt at exact radius boundary by Position2D (50.0) should be pulled toward well. Got velocity.x = {}",
+            velocity.x
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_no_pull_when_bolt_at_same_position2d_as_well() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well and bolt both at Position2D origin — distance = 0, no pull.
+        // Transform values differ to ensure the system reads Position2D.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::ZERO),
+            Transform::from_xyz(100.0, 0.0, 0.0),
+        ));
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::ZERO),
+                Transform::from_xyz(50.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // By Position2D: distance = 0, guard prevents pull.
+        // By Transform: distance = 50, would incorrectly pull.
+        assert!(
+            velocity.x.abs() < f32::EPSILON && velocity.y.abs() < f32::EPSILON,
+            "bolt at same Position2D as well (distance 0) should not be pulled. Got velocity = ({}, {})",
+            velocity.x,
+            velocity.y
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_skips_well_without_position2d() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well with NO Position2D — only Transform. The query should not match this well.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::new(10.0, 0.0)),
+                Transform::from_xyz(10.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // Well lacks Position2D, so it should not appear in the query.
+        assert!(
+            velocity.x.abs() < f32::EPSILON && velocity.y.abs() < f32::EPSILON,
+            "well without Position2D should not affect bolt. Got velocity = ({}, {})",
+            velocity.x,
+            velocity.y
+        );
+    }
+
+    #[test]
+    fn apply_gravity_pull_only_well_with_position2d_affects_bolt() {
+        let mut app = test_app();
+        enter_playing(&mut app);
+
+        // Well A: has Position2D at (0, 0), radius 200 — should affect bolt.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Position2D(Vec2::ZERO),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        // Well B: NO Position2D, only Transform — should be skipped.
+        app.world_mut().spawn((
+            GravityWellMarker,
+            GravityWellConfig {
+                strength: 500.0,
+                radius: 200.0,
+                remaining: 10.0,
+                owner: Entity::PLACEHOLDER,
+            },
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        // Bolt at Position2D (100, 0) — within radius of well A.
+        let bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::new(100.0, 0.0)),
+                Transform::from_xyz(100.0, 0.0, 0.0),
+            ))
+            .id();
+
+        app.update();
+
+        let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+        // Only well A (with Position2D) should pull the bolt.
+        // The bolt should be pulled in -x direction toward well A at (0,0).
+        assert!(
+            velocity.x < 0.0,
+            "bolt should be pulled by well with Position2D. Got velocity.x = {}",
             velocity.x
         );
     }
@@ -349,7 +846,7 @@ mod tests {
                 remaining: 10.0,
                 owner: Entity::PLACEHOLDER,
             },
-            Transform::from_xyz(0.0, 200.0, 0.0),
+            Position2D(Vec2::new(0.0, 200.0)),
         ));
 
         // Bolt already at max speed heading upward, positioned at (0,0)
@@ -361,7 +858,7 @@ mod tests {
                 Velocity2D(Vec2::new(0.0, max_speed)),
                 BoltMinSpeed(200.0),
                 BoltMaxSpeed(max_speed),
-                Transform::from_xyz(0.0, 0.0, 0.0),
+                Position2D(Vec2::ZERO),
             ))
             .id();
 

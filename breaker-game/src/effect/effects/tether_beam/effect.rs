@@ -39,7 +39,7 @@ pub(crate) struct TetherBeamComponent {
 /// Evolution of `ChainBolt`. The beam is a line segment between the two bolt
 /// positions — cells intersecting the beam take damage each tick.
 pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
-    let spawn_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
+    let spawn_pos = super::super::entity_position(world, entity);
 
     let bolt_a = super::super::spawn_extra_bolt(world, spawn_pos);
     let bolt_b = super::super::spawn_extra_bolt(world, spawn_pos);

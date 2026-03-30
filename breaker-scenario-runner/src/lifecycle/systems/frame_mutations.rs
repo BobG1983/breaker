@@ -6,12 +6,15 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     breaker::components::BreakerState,
     chips::inventory::ChipInventory,
-    effect::{EffectiveSpeedMultiplier, effects::speed_boost::ActiveSpeedBoosts},
-    effect::effects::{
-        chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
-        pulse::PulseRing,
-        second_wind::SecondWindWall,
-        shield::ShieldActive,
+    effect::{
+        EffectiveSpeedMultiplier,
+        effects::{
+            chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
+            pulse::PulseRing,
+            second_wind::SecondWindWall,
+            shield::ShieldActive,
+            speed_boost::ActiveSpeedBoosts,
+        },
     },
     run::{RunStats, node::resources::NodeTimer},
     screen::chip_select::{ChipOffering, ChipOffers},
@@ -19,12 +22,11 @@ use breaker::{
 };
 use rantzsoft_spatial2d::components::Position2D;
 
+use super::{entity_tagging::map_scenario_breaker_state, types::ScenarioConfig};
 use crate::{
     invariants::{ScenarioFrame, ScenarioTagBolt, ScenarioTagBreaker},
     types::{MutationKind, RunStatCounter},
 };
-
-use super::{entity_tagging::map_scenario_breaker_state, types::ScenarioConfig};
 
 /// Grouped system parameters for pause toggle control.
 ///

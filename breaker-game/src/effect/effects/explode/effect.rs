@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
@@ -14,7 +15,7 @@ use crate::{
 ///
 /// Spawned by `fire()` as a marker entity, consumed (and despawned) by
 /// `process_explode_requests` in the same or next tick. Position is stored
-/// in the entity's `Transform` component.
+/// in the entity's `Position2D` component.
 #[derive(Component)]
 pub(crate) struct ExplodeRequest {
     /// Damage radius in world units.
@@ -30,9 +31,7 @@ pub(crate) fn fire(
     source_chip: &str,
     world: &mut World,
 ) {
-    let position = world
-        .get::<Transform>(entity)
-        .map_or(Vec3::ZERO, |t| t.translation);
+    let position = super::super::entity_position(world, entity);
 
     let edm = world
         .get::<EffectiveDamageMultiplier>(entity)
@@ -44,7 +43,7 @@ pub(crate) fn fire(
             damage_mult: damage_mult * edm,
         },
         EffectSourceChip::new(source_chip),
-        Transform::from_translation(position),
+        Position2D(position),
         CleanupOnNodeExit,
     ));
 }
@@ -61,15 +60,15 @@ pub(crate) fn process_explode_requests(
     quadtree: Res<CollisionQuadtree>,
     requests: Query<(
         Entity,
-        &Transform,
+        &Position2D,
         &ExplodeRequest,
         Option<&EffectSourceChip>,
     )>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (entity, transform, request, esc) in &requests {
-        let position = transform.translation.truncate();
+    for (entity, position, request, esc) in &requests {
+        let position = position.0;
         let damage = BASE_BOLT_DAMAGE * request.damage_mult;
         let candidates =
             quadtree

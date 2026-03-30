@@ -39,7 +39,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before WallCollision and BreakerCollision) |
 | `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
-| `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_death`, `bridge_bolt_death`, `bridge_timer_threshold` |
+| `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_death`, `bridge_timer_threshold` |
 | `EffectSystems::Recalculate` | `effect/sets.rs` | `recalculate_speed`, `recalculate_damage`, `recalculate_piercing`, `recalculate_size`, `recalculate_bump_force`, `recalculate_quick_stop` — unordered relative to gameplay chain; `run_if(PlayingState::Active)` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
@@ -152,7 +152,7 @@ move_breaker .after(update_bump)
                 <- bridge_bolt_lost .after(BoltSystems::BoltLost)
                    .in_set(EffectSystems::Bridge)          [effect domain]
                 <- break_chain_on_bolt_lost .after(BoltSystems::BoltLost)  [bolt domain]
-            <- bridge_cell_death .in_set(EffectSystems::Bridge)
+            <- bridge_cell_destroyed .in_set(EffectSystems::Bridge)
                [effect domain, unordered relative to physics chain]
             <- bridge_bolt_death .in_set(EffectSystems::Bridge)
                [effect domain, unordered relative to physics chain]

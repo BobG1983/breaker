@@ -84,6 +84,30 @@ exceptional path — fires at most once per bolt per bounce, not every frame. Cl
 
 Local<Vec<LostBoltEntry>> reuse was already noted as intentional in prior analysis.
 
+## Position2D Migration (completed in feature/full-verification-fixes)
+
+All fire() functions now use entity_position() helper in effects/helpers.rs:
+  world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)
+No Transform fallback anywhere. All processing systems use Position2D in queries. Fully clean.
+
+- shockwave/effect.rs: fire() + apply_shockwave_damage both use Position2D. Clean.
+- pulse/effect.rs: tick_pulse_emitter + apply_pulse_damage both use Position2D. Clean.
+- explode/effect.rs: fire() + process_explode_requests both use Position2D. Clean.
+- gravity_well.rs: fire() + apply_gravity_pull both use Position2D. Clean.
+- piercing_beam/effect.rs: fire() uses entity_position(). process_piercing_beam uses GlobalPosition2D
+  for cell positions (narrow-phase OBB check). Clean.
+
+entity_position() is a single world.get() call — O(1), no allocation. Pure lookup pattern.
+
+Note: gravity_well.rs fire() still allocates Vec<Entity> for cap enforcement on every fire() call,
+but fire() is episodic (chip activation), not FixedUpdate. No concern.
+
+## TransferCommand insert-if-absent (commands.rs)
+
+New insert-if-absent logic added before other_children processing (lines 131-136 in commands.rs).
+Two get::<Component>().is_none() checks + conditional insert(). Commands run in command flush,
+not per-frame. Called at most once per chip transfer event. Not a hot path. Clean.
+
 ## Intentional Patterns
 
 - query_circle_filtered in shockwave/pulse: correct — callers NEED circle containment, not

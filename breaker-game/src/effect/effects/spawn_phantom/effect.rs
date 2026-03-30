@@ -2,7 +2,6 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::bolt::components::{BoltLifespan, PiercingRemaining};
 
@@ -43,7 +42,7 @@ pub(crate) fn fire(
         }
     }
 
-    let spawn_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
+    let spawn_pos = super::super::entity_position(world, entity);
 
     let phantom = super::super::spawn_extra_bolt(world, spawn_pos);
     world.entity_mut(phantom).insert((

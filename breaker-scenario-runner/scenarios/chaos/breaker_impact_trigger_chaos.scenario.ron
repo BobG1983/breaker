@@ -1,0 +1,32 @@
+// Adversarial: SpeedBoost(1.05) fires on Impact(Breaker) — every bolt-breaker contact
+// applies a small multiplicative speed increase. Corridor layout is chosen because it
+// maximises wall bounces and breaker contacts: the narrow channel funnels the bolt back
+// to the breaker repeatedly at high frequency. chaos 0.3 keeps the breaker moving but
+// not erratically, so the bolt reliably returns to the breaker rather than draining.
+// The adversarial risk: if Impact(Breaker) fires on both BoltImpactBreaker AND a
+// secondary event (e.g., BreakerImpactCell when the breaker body passes a cell),
+// SpeedBoost fires twice per breaker contact. In a Corridor layout with 8000 frames at
+// ~64 Hz the bolt may contact the breaker hundreds of times: 1.05^200 ≈ 1.7 billion.
+// A secondary risk: if the bridge system iterates all entities with BoundEffects and
+// the bolt entity is processed multiple times in the same frame (duplicate query result),
+// the same boost fires N times per tick. BoltSpeedInRange fires the moment speed leaves
+// the configured envelope. NoNaN detects velocity overflow to infinity. BoltInBounds
+// catches the bolt escaping bounds after extreme velocity magnitudes.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.3)),
+    max_frames: 8000,
+    invariants: [BoltSpeedInRange, NoNaN, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 5003,
+    initial_effects: [
+        On(target: AllBolts, then: [
+            When(trigger: Impact(Breaker), then: [
+                Do(SpeedBoost(multiplier: 1.05)),
+            ]),
+        ]),
+    ],
+)

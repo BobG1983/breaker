@@ -90,15 +90,14 @@ different lifetime pattern (chain lives for the full arc sequence rather than 1 
 - run_if(in_state(PlayingState::Active)): present. Confirmed fixed from pre-rework.
 - arc_transforms &mut Transform: narrowed to ChainLightningArc archetype. Acceptable.
 
-## piercing_beam.rs — process_piercing_beam: Missing run_if guard
+## piercing_beam.rs — process_piercing_beam: run_if guard FIXED (feature/full-verification-fixes)
 
-Same gap as chain_lightning: process_piercing_beam in FixedUpdate without run_if guard (line 153-157).
-Same reasoning: requests are 0 while not in PlayingState::Active. Minor.
+process_piercing_beam now has run_if(in_state(PlayingState::Active)) at line 163-164. Confirmed fixed.
 
-## piercing_beam.rs — Uses Position2D with Transform fallback (OPEN)
+## piercing_beam.rs — Transform fallback FIXED (feature/full-verification-fixes)
 
-fire() reads Position2D first, then falls back to Transform (line 37-41). The Transform fallback
-is wrong — chain_lightning was fixed to use Position2D-only fallback; piercing_beam has not been fixed yet.
+fire() now uses entity_position() helper (world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)).
+No Transform fallback. Confirmed fixed.
 
 ## piercing_beam.rs — query_aabb_filtered in process_piercing_beam — CORRECT CHOICE
 

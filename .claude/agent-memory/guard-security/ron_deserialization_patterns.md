@@ -151,3 +151,15 @@ type: project
   `&str`. This allocates one String per queued command. In a typical frame with a handful
   of triggered effects this is negligible. No security concern; noted for performance
   awareness if this becomes a hot path.
+
+## Refactor (2026-03-30, develop post-merge, c9964b7)
+
+### File-splitting structural refactor — no new panic surface introduced (Safe)
+- 23 .rs files were split into directory modules (mod.rs wiring + system.rs + tests.rs).
+- All production RON deserialization sites are unchanged; only file/module layout changed.
+- Specifically confirmed: bolt_breaker_collision/system.rs:80 hit_fraction division
+  (Warning-level, carry-forward), cells/components/types.rs:114 take_damage with no
+  sign guard (Warning-level, carry-forward) — both unchanged by the refactor.
+- No new .expect() or .unwrap() calls in production (non-test, non-debug) code.
+- All new .expect()/.unwrap() occurrences are inside #[cfg(test)] modules or
+  debug/hot_reload/ (dev-feature only, never in release build).

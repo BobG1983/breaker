@@ -1,0 +1,24 @@
+#!/bin/sh
+# Pre-commit hook: format, lint, and test
+
+# Format all staged Rust files
+cargo fmt
+
+# Re-stage any files that were reformatted
+git diff --name-only | grep '\.rs$' | xargs -r git add
+
+# Clippy — reject commit on any warnings/errors
+echo "Running workspace clippy..."
+cargo all-dclippy -- -D warnings
+if [ $? -ne 0 ]; then
+    echo "❌ Clippy failed. Fix warnings before committing."
+    exit 1
+fi
+
+# Tests — reject commit on any failures
+echo "Running workspace tests..."
+cargo all-dtest
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Fix failures before committing."
+    exit 1
+fi

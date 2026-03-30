@@ -55,9 +55,9 @@ if let Ok((entity, chains, armed)) = query.get_mut(cell_entity) {
 
 ## Example: Impact and Impacted bridging BoltImpactCell
 
-A single collision message (`BoltImpactCell { bolt, cell }`) is handled by separate systems in `impact.rs` (global) and `impacted.rs` (targeted). Each collision type gets its own system — one per message type per module.
+A single collision message (`BoltImpactCell { bolt, cell }`) is handled by separate systems in the `impact/` module (global) and `impacted/` module (targeted). Each collision type gets its own system — one per message type per module.
 
-### impact.rs — One system per collision type, global triggers
+### impact/ — One system per collision type, global triggers
 
 ```rust
 pub(crate) fn register(app: &mut App) {
@@ -106,7 +106,7 @@ fn bridge_impact_bolt_wall(
 // bridge_impact_bolt_breaker, bridge_impact_breaker_cell, etc. — same pattern
 ```
 
-### impacted.rs — One system per collision type, targeted triggers
+### impacted/ — One system per collision type, targeted triggers
 
 ```rust
 pub(crate) fn register(app: &mut App) {
@@ -156,7 +156,7 @@ fn bridge_impacted_bolt_wall(
 
 ### The full picture for one BoltImpactCell message
 
-The bolt domain detects the collision and sends `BoltImpactCell { bolt, cell }`. Four systems pick it up (two in impact.rs, two... actually just one each):
+The bolt domain detects the collision and sends `BoltImpactCell { bolt, cell }`. Four systems pick it up (two in the `impact/` module, two in the `impacted/` module — actually just one each per collision type):
 
 1. **bridge_impact_bolt_cell** fires two global triggers:
    - `Impact(Cell)` — sweeps all entities, evaluates chains matching `Impact(Cell)`

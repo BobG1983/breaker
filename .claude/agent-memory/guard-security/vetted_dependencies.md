@@ -4,7 +4,7 @@ description: Known dependency state and audit findings for the brickbreaker work
 type: project
 ---
 
-## Workspace direct dependencies (as of 2026-03-28)
+## Workspace direct dependencies (as of 2026-03-30)
 
 ### breaker-game
 - bevy 0.18.1 (default-features = false, features = ["2d", "serialize"])
@@ -15,7 +15,7 @@ type: project
 - ron 0.12
 - iyes_progress 0.16
 - rand 0.9, rand_chacha 0.9
-- proptest 1 (dev-dependency)
+- (proptest removed — no dev-dependencies remaining)
 
 ## cargo audit findings (2026-03-28)
 
@@ -53,3 +53,14 @@ cargo machete: no unused dependencies found.
 No new dependencies added. Dependency baseline unchanged.
 cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
 cargo machete: no unused dependencies found.
+
+## develop post-merge note (2026-03-30, refactor/split-23-files)
+Refactor commit c9964b7 split 23 oversized .rs files into directory modules (code-only
+structural change, no logic changes). No new dependencies added. Dependency baseline
+unchanged from Phase 6.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
+cargo deny: exits code 1 due to deny.toml treating paste warning as error — same as before.
+  Also warns on Unicode-DFS-2016 license not encountered (harmless allowlist forward-compat entry).
+  40+ transitive duplicate crates (all wgpu/Windows ecosystem churn, no direct deps affected).
+cargo machete: no unused dependencies found.
+All vetted direct dependencies confirmed unchanged.

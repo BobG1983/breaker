@@ -18,18 +18,18 @@ impl ActiveSizeBoosts {
     }
 }
 
-pub(crate) fn fire(entity: Entity, value: f32, _source_chip: &str, world: &mut World) {
+pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveSizeBoosts>(entity) {
-        active.0.push(value);
+        active.0.push(multiplier);
     }
 }
 
-pub(crate) fn reverse(entity: Entity, value: f32, _source_chip: &str, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveSizeBoosts>(entity)
         && let Some(pos) = active
             .0
             .iter()
-            .position(|&v| (v - value).abs() < f32::EPSILON)
+            .position(|&v| (v - multiplier).abs() < f32::EPSILON)
     {
         active.0.swap_remove(pos);
     }

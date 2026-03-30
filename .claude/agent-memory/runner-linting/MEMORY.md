@@ -1,2 +1,2 @@
-- [Current lint state](lint_state_current.md) — feature/source-chip-shield-absorption 2026-03-29: fmt PASS, dclippy 1 error (doc_markdown in test doc comment), all other crates PASS
+- [Current lint state](lint_state_current.md) — develop 2026-03-30: ALL PASS — fmt, all clippy, all tests clean after split-fix wave
 - [Core lint patterns](lint_patterns_core.md) — Historical: Wave 8 stub warning patterns (now resolved); see lint_state_current.md for current state

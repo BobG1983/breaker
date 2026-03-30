@@ -18,9 +18,26 @@ On(target: AllBolts, then: [...])
 When(trigger: PerfectBumped, then: [...])
 Do(SpeedBoost(multiplier: 1.5))
 Until(trigger: TimeExpires(1.0), then: [...])
-Once([...])
+Once([...])          // Vec<EffectNode> — consumes on first match, never re-fires
 On(target: Cell, permanent: false, then: [...])
 ```
+
+## Once variant — exact RON syntax
+
+`Once` takes a bare vec of child EffectNodes. It is a one-shot wrapper:
+the children fire on the first match of whatever parent trigger arms them,
+then the Once is consumed. Subsequent trigger fires are silently ignored.
+
+```ron
+When(trigger: Impacted(Cell), then: [
+    Once([
+        Do(DamageBoost(3.0)),
+    ]),
+]),
+```
+
+No parenthesised struct fields — just `Once([children])`. The closing bracket
+precedes the comma: `]),`.
 
 ## Trigger variants
 

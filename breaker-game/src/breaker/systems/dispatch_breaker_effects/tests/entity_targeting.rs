@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use super::helpers::{TEST_BREAKER_NAME, test_app_with_dispatch};
 use crate::{
     bolt::components::Bolt,
-    breaker::{components::Breaker, definition::{BreakerDefinition, BreakerStatOverrides}},
+    breaker::{
+        components::Breaker,
+        definition::{BreakerDefinition, BreakerStatOverrides},
+    },
     cells::components::Cell,
     effect::{
         BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, StagedEffects, Target,

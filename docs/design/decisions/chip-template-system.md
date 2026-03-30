@@ -8,18 +8,17 @@ Each template defines the chip concept (name, max_taken) and up to four rarity s
 
 ```ron
 (
-    name: "Piercing",
+    name: "Piercing Shot",
     max_taken: 3,
-    common: Some((prefix: "Basic", effects: [When(trigger: OnSelected, then: [Do(Piercing(1))])])),
-    uncommon: Some((prefix: "Keen", effects: [When(trigger: OnSelected, then: [Do(Piercing(2))])])),
-    rare: Some((prefix: "Brutal", effects: [When(trigger: OnSelected, then: [Do(Piercing(3)), Do(DamageBoost(0.1))])])),
-    legendary: None,
+    common: (prefix: "Basic", effects: [On(target: Bolt, then: [Do(Piercing(1))])]),
+    uncommon: (prefix: "Keen", effects: [On(target: Bolt, then: [Do(Piercing(2))])]),
+    rare: (prefix: "Brutal", effects: [On(target: Bolt, then: [Do(Piercing(3)), Do(DamageBoost(1.1))])]),
 )
 ```
 
-Each slot is `Option<RaritySlot>` where `RaritySlot` has:
-- `prefix: String` — adjective prepended to the template name (e.g., "Basic Piercing")
-- `effects: Vec<EffectNode>` — full effect list for that rarity (no magic scaling, no inheritance)
+Each slot is an optional `RaritySlot` (slots with no entry are omitted entirely in RON). `RaritySlot` has:
+- `prefix: String` — adjective prepended to the template name (e.g., "Basic Piercing Shot"). Empty string means no prefix.
+- `effects: Vec<RootEffect>` — full effect list for that rarity (no magic scaling, no inheritance). `RootEffect::On { target, then }` is the top-level wrapper ensuring all effects name a target entity before trigger dispatch.
 
 ## Structural Guarantees
 
