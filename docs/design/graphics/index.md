@@ -15,3 +15,4 @@ Visual identity documentation for the game's art direction, organized by concern
 | [Audio-Visual Sync](audio-visual-sync.md) | How audio and visuals relate, layered intensity, per-event sounds |
 | [Data-Driven Graphics](data-driven-graphics.md) | RON-driven visual composition — how cells, breakers, and effects define their look |
 | [Decisions Required](decisions-required.md) | Open questions needing visual exploration or prototyping |
+| [Catalog](catalog/index.md) | Every visual element with status (none/placeholder/partial), priority ratings, and style guide coverage |
