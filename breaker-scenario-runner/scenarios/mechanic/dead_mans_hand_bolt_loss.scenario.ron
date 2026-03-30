@@ -1,0 +1,24 @@
+// Adversarial: Dead Man's Hand evolution chip (Damage Boost x3 + Last Stand) is injected via
+// chip_selections. DMH fires its on-death effect when the last bolt is lost, applying a large
+// damage modifier and potentially spawning additional effects. Fortress layout with chaos 0.1
+// keeps the breaker nearly stationary — low action probability maximises bolt loss events as
+// the breaker fails to intercept the bolt. This drives repeated death-trigger cycles through
+// the BoltLost path so the DMH on-death chain fires multiple times across 10000 frames.
+// The adversarial risk: if DMH's death effect incorrectly re-arms after firing, ActiveSpeedBoosts
+// or similar stat components accumulate without being reversed, causing EffectiveSpeedConsistent
+// to diverge. NoEntityLeaks catches any death-trigger entities left behind after the chain fires.
+// NoNaN guards against multiplier overflow if DamageBoost stacks unchecked. BoltSpeedInRange
+// catches speed-floor violations from a corrupted EffectiveSpeedMultiplier after repeated
+// bolt-loss cycles.
+(
+    breaker: "Aegis",
+    layout: "Fortress",
+    input: Chaos((action_prob: 0.1)),
+    max_frames: 10000,
+    invariants: [EffectiveSpeedConsistent, NoEntityLeaks, NoNaN, BoltSpeedInRange],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 1984,
+    chip_selections: ["Dead Man's Hand"],
+)

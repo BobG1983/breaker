@@ -1,6 +1,6 @@
 ---
-name: All 95 scenarios passing as of 2026-03-30
-description: Full Verification Tier run on develop branch; 78 named PASS + 17 stress suites all-passed; 0 failures; all previously-known bugs resolved
+name: All 103 scenarios passing as of 2026-03-30 (post-new-scenarios)
+description: Full run on develop branch after adding 8 new scenarios; 86 named PASS + 15 stress suites all-passed; 0 failures; all previously-known bugs remain resolved
 type: project
 ---
 
@@ -11,10 +11,21 @@ Last commit: 14dddcd (Merge branch 'feature/source-chip-shield-absorption' into 
 
 ## Results
 
-- 78 named scenario PASS (mechanic, self_test, stress non-stress runs)
-- 17 stress suites: all-passed (totaling 488 individual runs)
+- 86 named scenario PASS (chaos, mechanic, self_test, and non-stress stress scenarios)
+- 15 stress suites: all-passed
 - 0 failures
 - 0 violations in gameplay scenarios (self-test scenarios correctly fired their expected violations)
+
+## New scenarios added (all PASS)
+
+chaos/whiplash_whiff_chaos
+chaos/node_end_speed_purge
+chaos/cell_death_speed_burst
+chaos/breaker_impact_trigger_chaos
+mechanic/once_damage_single_fire
+mechanic/supernova_active_play
+mechanic/dead_mans_hand_bolt_loss
+mechanic/voltchain_cell_chain
 
 ## Previously known bugs — all resolved
 
@@ -23,9 +34,9 @@ Last commit: 14dddcd (Merge branch 'feature/source-chip-shield-absorption' into 
 3. BoltCountReasonable — entropy_engine_stress threshold: RESOLVED (loosened via commit 53596f5)
 4. Phase 3 FixedUpdate scheduling cycle: RESOLVED (2026-03-28)
 
-## Coverage parity
+## Coverage
 
-95 scenario RON files, 95 scenarios ran. No missing self-tests. All layouts referenced.
+103 scenario RON files total, 103 scenarios ran. No missing self-tests.
 
 Stress suites passed:
 - attraction_cell_chaos: 32/32

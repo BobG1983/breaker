@@ -1,0 +1,33 @@
+// Adversarial: BumpWhiff fires a DamageBoost(2.5) via Once (consumed on first whiff)
+// and a Shockwave on every whiff. Dense layout maximises bolt-breaker contact events,
+// and chaos 0.5 produces a natural mix of successful bumps and mistimed whiffs.
+// The adversarial risk: if the BumpWhiff bridge evaluates the When node more than once
+// per whiff event (e.g., due to double-read of BumpWhiffed), DamageBoost stacks
+// silently and the Shockwave spawns duplicate rings that are never cleaned up.
+// If BumpWhiff fires even when no bump input was registered, the Once is consumed
+// prematurely and the effect is lost. NoEntityLeaks detects leaked Shockwave ring
+// entities that fail to expand and despawn. BoltSpeedInRange catches indirect
+// speed corruption from a runaway DamageBoost multiplier. NoNaN guards against
+// uninitialized velocity in spawned Shockwave entities. 5000 frames at moderate
+// chaos ensures many whiff events without exhausting the node prematurely.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 5000,
+    invariants: [BoltSpeedInRange, NoNaN, NoEntityLeaks, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 2311,
+    initial_effects: [
+        On(target: AllBolts, then: [
+            When(trigger: BumpWhiff, then: [
+                Once([
+                    Do(DamageBoost(2.5)),
+                ]),
+                Do(Shockwave(base_range: 50.0, range_per_level: 0.0, stacks: 1, speed: 200.0)),
+            ]),
+        ]),
+    ],
+)

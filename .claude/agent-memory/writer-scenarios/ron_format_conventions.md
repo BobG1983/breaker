@@ -67,6 +67,8 @@ Note: stress scenarios use the non-`Some()` form in practice (see existing scena
 - `breaker-scenario-runner/scenarios/mechanic/` — single-run mechanic scenarios
 - `breaker-scenario-runner/scenarios/self_tests/` — invariant self-tests with expected_violations
 - `breaker-scenario-runner/scenarios/regressions/` — regression scenarios
+- `breaker-scenario-runner/scenarios/chaos/` — adversarial single-run chaos scenarios
+  (created 2026-03-30; the runner recursively discovers all subdirs, so new dirs work fine)
 
 ## Key gotcha: initial_effects target routing in the scenario runner
 
