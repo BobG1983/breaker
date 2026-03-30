@@ -1,8 +1,8 @@
 use bevy::log::Level;
 
-use super::*;
+use super::evaluation::*;
 use crate::{
-    invariants::ScenarioStats,
+    invariants::{ScenarioStats, ViolationEntry},
     log_capture::LogEntry,
     types::{ChaosParams, InputStrategy, InvariantKind, ScenarioDefinition},
 };

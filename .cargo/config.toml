@@ -27,6 +27,10 @@ dstest = "test -p breaker_scenario_runner"
 dsclippy = "clippy -p breaker_scenario_runner --all-targets"
 dscheck = "check -p breaker_scenario_runner"
 
+# workspace-wide (dynamic linking + hot-reload for all crates)
+all-dtest = "test --workspace --features bevy/dynamic_linking,hot-reload"
+all-dclippy = "clippy --workspace --all-targets --features bevy/dynamic_linking,hot-reload"
+
 # scenario runner (release — ALWAYS use this for scenario validation)
 # Usage:
 #   cargo scenario -- --all              All scenarios, parallel (default 32 jobs)

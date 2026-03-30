@@ -1,5 +1,7 @@
-use super::*;
-use crate::types::{BumpMode, ChaosParams, HybridParams, ScriptedFrame, ScriptedParams};
+use super::drivers::*;
+use crate::types::{
+    BumpMode, ChaosParams, GameAction, HybridParams, InputStrategy, ScriptedFrame, ScriptedParams,
+};
 
 // -------------------------------------------------------------------------
 // ChaosDriver — statistical probability
