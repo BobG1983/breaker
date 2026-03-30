@@ -71,7 +71,7 @@ src/
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
 
-**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `run`, and `wall` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. This mirrors the existing debug domain exception.
+**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `run`, `screen`, and `wall` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `screen` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. `wall` and `ui` are also `pub mod` but are not currently imported by the scenario runner. This mirrors the existing debug domain exception.
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
@@ -107,6 +107,15 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 - **cells** (`handle_cell_hit` system): reads `ShieldActive` on **cell** entities to absorb damage hits. Decrements `charges` directly; removes `ShieldActive` when charges reach zero. Same rationale: damage absorption must short-circuit within the same frame as the hit.
 
 Both systems use `Commands::remove::<ShieldActive>()` to despawn the component when charges are exhausted — the removal is deferred to apply-deferred, not immediate. Neither system fires messages in lieu of writing directly. This pattern is intentional and narrow: `ShieldActive` charge management is co-located with the systems that trigger the absorption.
+
+## Velocity2D Cross-Domain Write Exception
+
+`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by two effect domain runtime systems as an accepted architectural exception:
+
+- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to apply gravitational pull toward active gravity wells. Ordered `.before(BoltSystems::PrepareVelocity)` so the bolt domain's speed clamping still applies.
+- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to steer bolts toward the nearest attraction target. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+
+Both systems apply simple arithmetic forces to bolt velocity. Adding message indirection (effect writes a force message, bolt reads and applies) would add complexity without benefit. The bolt domain's `prepare_bolt_velocity` speed clamping runs after these writes, so bolt speed limits are always enforced.
 
 ## Debug Domain — Cross-Domain Exception
 
