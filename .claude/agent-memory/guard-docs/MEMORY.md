@@ -1,3 +1,3 @@
-- [known-state.md](known-state.md) — Confirmed doc/code alignment after effect system rewrite and stat-effects phase (2026-03-28); intentional forward-looking sections listed
+- [known-state.md](known-state.md) — Confirmed doc/code alignment as of develop 2026-03-30; covers effect rewrite, stat-effects, runtime-effects, full-verification-fixes; forward-looking sections listed
 - [terminology.md](terminology.md) — Confirmed term mappings: collision messages, EffectKind variants, Active*/Effective* pairs, new system set variants
-- [phase-log.md](phase-log.md) — Review session log: what was checked, what was updated (two sessions on 2026-03-28)
+- [phase-log.md](phase-log.md) — Review session log: what was checked, what was updated per session (2026-03-28 through 2026-03-30)

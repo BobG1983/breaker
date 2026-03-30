@@ -169,3 +169,33 @@ in production code.
 - No new .expect() or .unwrap() calls in production (non-test, non-debug) code.
 - All new .expect()/.unwrap() occurrences are inside #[cfg(test)] modules or
   debug/hot_reload/ (dev-feature only, never in release build).
+
+## feature/scenario-coverage (2026-03-30)
+
+### New scenario RON files — no new panic risk (Safe)
+- 8 new .scenario.ron files: 3 chaos, 1 mechanic, 3 self_tests, 1 stress.
+- All parsed via `load_scenario()` in discovery.rs which returns `Option` (no panic on
+  malformed input).
+- `SpawnExtraGravityWells(usize)` count field: u size deserialized from RON. A very large
+  value (e.g., usize::MAX) would cause iterative `commands.spawn()` per count — potential
+  memory exhaustion in a dev scenario if a malformed RON file is loaded. This is a
+  Warning-level finding unique to the scenario runner tool (never ships to end users).
+  All shipped RON files use reasonable values (max 15 in self-tests, 32 in stress).
+  Pattern is identical to the pre-existing SpawnExtraPulseRings and SpawnExtraChainArcs
+  mutations which have the same unbounded-count behavior.
+
+### New InvariantParams field max_gravity_well_count (Safe)
+- Deserialized via serde with `#[serde(default)]` — missing field defaults to 10.
+  A RON file setting max_gravity_well_count: 0 would mean any 1+ wells violate the
+  invariant immediately. Not a panic; just a strict (possibly noisy) invariant.
+
+### Entity::PLACEHOLDER in apply_spawn_extra_gravity_wells (Safe)
+- Spawned test wells use owner: Entity::PLACEHOLDER. The gravity_well fire() system
+  compares config.owner == entity to count per-owner wells. PLACEHOLDER never matches
+  any real entity, so test wells bypass the per-owner cap and accumulate as intended.
+  No panic risk.
+
+### Production RON loading path unchanged (confirmed Safe)
+- discovery.rs:load_scenario() uses .map_err(eprintln).ok() — malformed scenario files
+  produce an error message and return None, not a panic. This is the same pattern as
+  prior audits. No new production .expect()/.unwrap() on file-controlled data.

@@ -86,7 +86,7 @@ Local<Vec<LostBoltEntry>> reuse was already noted as intentional in prior analys
 
 ## Position2D Migration (completed in feature/full-verification-fixes)
 
-All fire() functions now use entity_position() helper in effects/helpers.rs:
+All fire() functions now use entity_position() helper in effects/fire_helpers.rs:
   world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)
 No Transform fallback anywhere. All processing systems use Position2D in queries. Fully clean.
 

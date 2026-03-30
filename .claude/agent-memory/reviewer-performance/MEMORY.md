@@ -1,7 +1,7 @@
 - [performance-baseline.md](performance-baseline.md) — Phase 1 entity scale, quadtree allocation costs, confirmed efficient/inefficient patterns, placeholder systems to watch
-- [phase3-stat-effects.md](phase3-stat-effects.md) — Phase 3 recalculate system analysis: run_if gap, unconditional recalc, Vec allocation, archetype impact, entity scale (0-5 entities)
+- [phase3-stat-effects.md](phase3-stat-effects.md) — Phase 3 recalculate system analysis: run_if gap FIXED (plugin.rs line 13); unconditional recalc and Vec alloc minor; entity scale (0-5 entities)
 - [phase4-runtime-effects.md](phase4-runtime-effects.md) — Phase 4 shockwave/pulse/explode/attraction/second_wind: quadtree patterns, archetype impact, HashSet allocation timing, entity scale
-- [phase5-complex-effects.md](phase5-complex-effects.md) — Phase 5 chain_lightning/piercing_beam/tether_beam/spawn_bolts/entropy_engine: run_if gaps, Transform vs Position2D, per-arc allocations, per-tick HashSet, archetype impact
+- [phase5-complex-effects.md](phase5-complex-effects.md) — Phase 5 chain_lightning/piercing_beam/tether_beam/spawn_bolts/entropy_engine: all run_if gaps FIXED; Transform vs Position2D FIXED; per-arc allocs, per-tick HashSet, archetype impact
 - [source-chip-threading.md](source-chip-threading.md) — source_chip/EffectSourceChip threading: archetype impact, chip_attribution alloc, per-DamageCell clone, DamageVisualQuery shield change, tether HashSet
 - [dispatch-effects.md](dispatch-effects.md) — dispatch_breaker/cell/chip_effects: all one-shot or event-driven, clone patterns bounded, CellEffectsDispatched archetype split is correct, scenario pending effects are single-fire
 - [trigger-bridge-systems.md](trigger-bridge-systems.md) — desugar_until/tick_time_expires missing run_if (Minor, zero heap cost), impact/* global scan bounded, impacted/* targeted lookup efficient, ~52-59 entities with BoundEffects

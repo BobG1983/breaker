@@ -172,7 +172,6 @@ All archetype changes are episodic (chip dispatch / cell kill / arc arrival), no
   run_if guard present. 0-1 chains active at any time. Correct.
 - query_circle_filtered in tick_chain_lightning Idle: correct choice for arc-to-arc chaining
   (circle containment semantics needed). Valid: Vec filter is necessary for hit_set exclusion.
-- process_piercing_beam: FixedUpdate deferred-request pattern is correct. run_if gap is
-  acceptable at current scale.
+- process_piercing_beam: FixedUpdate deferred-request pattern is correct. run_if gap FIXED (full-verification-fixes branch).
 - damaged_this_tick HashSet in tether_beam: necessary for dedup, per-beam not per-frame in practice.
 - Transform vs Position2D in piercing_beam: consistency gap but not perf issue (O(1) lookup).

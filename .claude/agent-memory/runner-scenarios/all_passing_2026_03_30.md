@@ -1,13 +1,20 @@
 ---
-name: All 103 scenarios passing (confirmed re-run on fad7dfa)
-description: Full run on develop branch; 86 named PASS + 17 stress suites all-passed; 0 failures; Coverage Report clean
+name: Scenario run status (develop, post-fad7dfa)
+description: Last clean run was fad7dfa (103/103). After new scenarios added, boss_arena_chaos FAILS with AabbMatchesEntityDimensions game bug
 type: project
 ---
 
-## Run date: 2026-03-30 (re-confirmed)
+## Last clean run: 2026-03-30 on commit fad7dfa
 
 Branch: develop
 Last commit: fad7dfa (Merge branch 'feature/missing-unit-tests' into develop)
+
+## Current status (8 new scenarios added after fad7dfa)
+
+1 FAIL: boss_arena_chaos — AabbMatchesEntityDimensions x19997 frames 0..20000
+
+Root cause: game bug — breaker Aabb2D.half_extents is never updated when EntityScale is applied.
+See game_bug_breaker_aabb_not_scaled.md for full diagnosis.
 
 ## Results
 

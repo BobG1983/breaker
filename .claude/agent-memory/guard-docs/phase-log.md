@@ -188,6 +188,26 @@ type: project
 - `docs/architecture/effects/commands.md` — correct
 - game.rs plugin registration order — unchanged
 
+## 2026-03-30 — develop: new invariants and mutations drift fix
+
+**Branch:** develop (commit fad7dfa — feature/missing-unit-tests merged; 58 unit tests + 3 new invariants)
+
+**Files reviewed:**
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — confirmed 25 variants in ALL
+- `breaker-scenario-runner/src/types/definitions/mutations.rs` — confirmed 18 MutationKind variants
+- `breaker-scenario-runner/src/types/tests/invariant_kinds.rs` — count test asserts 25
+- `breaker-scenario-runner/scenarios/chaos/` — confirmed chaos/ directory exists on disk
+
+**Drifts found and fixed:**
+- `docs/architecture/standards.md` — invariant list in "Scenario Coverage" section: added AabbMatchesEntityDimensions, GravityWellCountReasonable, SizeBoostInRange (22 → 25)
+- `docs/architecture/standards.md` — scenario categories list: added chaos/ directory
+- `docs/architecture/standards.md` — coverage manifest line: "All 22 invariants" → "All 25 invariants"
+- `docs/architecture/standards.md` — Scenario Runner "Invariants checked each frame" list: added same 3 variants
+- `docs/design/terminology/scenarios.md` — MutationKind list: added InjectMismatchedBoltAabb, SpawnExtraGravityWells, InjectWrongSizeMultiplier (15 → 18 variants)
+
+**Items confirmed no-drift:**
+- `docs/plan/index.md` — no plan entry for individual invariant additions; no update needed
+
 ## 2026-03-30 — feature/missing-unit-tests review
 
 **Branch:** feature/missing-unit-tests (58 new unit tests + overlay_color pub(super) visibility change)

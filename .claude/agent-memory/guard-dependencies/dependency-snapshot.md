@@ -4,7 +4,7 @@ description: Crate versions at last audit (2026-03-30) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-03-30 (updated 2026-03-30, test-only branch)
+Audit date: 2026-03-30 (updated 2026-03-30, rantzsoft_physics2d added to breaker-scenario-runner)
 Branch: develop
 
 ## Direct Dependencies
@@ -23,12 +23,13 @@ Branch: develop
 - iyes_progress 0.16 → resolved 0.16.0
 - rand 0.9 → resolved 0.9.2
 - rand_chacha 0.9 → resolved 0.9.0
-- [dev-dependencies]: EMPTY (proptest removed since prior audit)
+- [dev-dependencies]: EMPTY
 
 ### breaker-scenario-runner
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - breaker (path, default-features = false)
 - rantzsoft_spatial2d (path)
+- rantzsoft_physics2d (path)  ← NEW as of this audit
 - clap 4 (features = ["derive"])
 - tracing 0.1
 - tracing-subscriber 0.3 (features = ["env-filter"])
@@ -59,27 +60,23 @@ Branch: develop
 - rand 0.9.2, rand_chacha 0.9.0
 - bevy_egui 0.39.1
 - iyes_progress 0.16.0
+- ron 0.12.0 (0.12.1 now available — patch bump eligible, see known-findings)
 - objc2 v0.5.2 + v0.6.4 (dual — known wontfix)
 - bitflags v1.3.2 + v2.11.0 (dual — known wontfix)
 - getrandom v0.3.4 + v0.4.2 (dual — known wontfix)
 - foldhash v0.1.5 + v0.2.0 (dual — known wontfix)
 - r-efi v5.3.0 + v6.0.0 (dual — platform-conditional, WASM+Android targets only; not loaded on macOS)
 
-## Changes since 2026-03-29 audit
-- proptest removed entirely from breaker-game dev-dependencies and Cargo.lock
-- r-efi dual versions newly observed (v5.3.0 via getrandom 0.3 → cc build-dep; v6.0.0 via getrandom 0.4 → uuid → Bevy)
-  Both are target-conditional (Android/WASM) and not present in macOS host build.
-
-## Changes since 2026-03-30 audit (test-only branch pass)
-- No Cargo.toml changes on this branch; all direct dependencies identical.
-- cargo machete: clean (no unused deps).
-- cargo outdated -R: same two outdated entries (rand 0.9.2 → 0.10.0, rand_chacha 0.9.0 → 0.10.0). No new entries.
-- cargo tree -d: no new duplicates; all known duplicates confirmed unchanged.
-- cargo deny check licenses: PASS (Unicode-DFS-2016 pre-allowlist warning unchanged, licenses ok).
+## Changes since 2026-03-30 prior audit
+- rantzsoft_physics2d added to breaker-scenario-runner/Cargo.toml
+  Usage confirmed: Aabb2D imported in frame_mutations.rs and check_aabb_matches_entity_dimensions.rs
+  No new duplicate transitive deps introduced by this addition.
+- ron 0.12.1 now available (was 0.12.0 at prior audit) — patch-only, see known-findings for action item.
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)
 - rand_chacha: 0.9.0 → 0.10.0 (BREAKING — must match rand; deferred)
+- ron: 0.12.0 → 0.12.1 (PATCH — no breaking changes; low-risk bump; three Cargo.toml files)
 - cargo outdated -R shows no other outdated direct deps
 
 ## Transitive Advisory

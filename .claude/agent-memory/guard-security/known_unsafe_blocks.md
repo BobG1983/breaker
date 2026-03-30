@@ -36,3 +36,10 @@ Grep for "unsafe" across all .rs files: no matches.
 Still confirmed after feature/missing-unit-tests (2026-03-30):
 Branch adds test code only (plus one pub(super) visibility widening). No unsafe blocks added.
 Workspace lint unsafe_code = "deny" remains in force.
+
+Still confirmed after feature/scenario-coverage (2026-03-30):
+New scenario runner checkers (check_aabb_matches_entity_dimensions.rs,
+check_gravity_well_count_reasonable.rs, check_size_boost_in_range.rs), new frame mutation
+helpers (apply_inject_mismatched_bolt_aabb, apply_spawn_extra_gravity_wells,
+apply_inject_wrong_size_multiplier), and gravity_well visibility widening
+(pub instead of pub(crate)) — no unsafe blocks anywhere. Grep confirmed zero matches.

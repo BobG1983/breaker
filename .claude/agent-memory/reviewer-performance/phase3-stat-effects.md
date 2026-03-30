@@ -1,6 +1,6 @@
 ---
 name: Phase 3 stat-effects performance analysis
-description: Analysis of 6 recalculate systems added in Phase 3 (feature/stat-effects): entity scale, query patterns, archetype impact, and run_if gap
+description: Analysis of 6 recalculate systems added in Phase 3 (feature/stat-effects): entity scale, query patterns, archetype impact (run_if gap FIXED)
 type: project
 ---
 
@@ -16,11 +16,9 @@ So each recalculate query matches at most 5 entities in worst case. This is the 
 
 `fire()` for each stat effect does `world.get_mut::<Active*>(entity)` — push only if component already exists. The component must be pre-inserted at spawn time. Bolt spawn (`spawn_bolt.rs`) and breaker init (`init_breaker_params.rs`) do NOT insert them — they are inserted at chip dispatch time. This means the recalculate queries match ZERO entities until a chip fires. This is significant: 6 queries running over zero entities every FixedUpdate frame — trivial cost now but the `run_if` gap is still worth noting for correctness.
 
-## run_if Gap Confirmed
+## run_if Gap — FIXED (2026-03-30)
 
-`EffectPlugin::build()` configures the Recalculate set but attaches NO `run_if` guard. Individual `register()` calls (e.g., `recalculate_damage`) also have no `run_if`. The systems run every FixedUpdate including during pause, ChipSelect state, and any other non-playing game state. Compare: BoltPlugin and BreakerPlugin both use `.run_if(in_state(PlayingState::Active))` on their FixedUpdate systems.
-
-**Why:** Not a real issue at current entity scale (0-5 entities). Queries over 0 entities are near-free. Flag as Minor.
+`EffectPlugin::build()` now configures `EffectSystems::Recalculate.run_if(in_state(PlayingState::Active))` (effect/plugin.rs line 13). Confirmed by code inspection. The previously flagged minor gap is resolved — recalculate systems no longer run during pause, ChipSelect, or non-playing states.
 
 ## Unconditional Recalculation: No Change Detection
 

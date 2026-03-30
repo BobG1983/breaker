@@ -127,6 +127,12 @@ type: project
 - Action: None. Exception already in deny.toml. Re-check after any Bevy upgrade (Bevy may
   replace cosmic-text or self_cell upstream).
 
+### indexmap v2.13.0 dual paths (NOT a real duplicate)
+- Both entries are the same version appearing via two dep chains (hashbrown 0.16.1 from
+  bevy_platform and from the Bevy asset stack). Cargo unifies same-version deps.
+- Same pattern as libc, memchr, regex in this list.
+- Action: None.
+
 ## Recommendations Deferred
 
 ### rand 0.9 → 0.10 (BREAKING)
@@ -134,3 +140,11 @@ type: project
   (bolt, chips, effect, run, shared/rng). Needs a dedicated migration task — not a casual bump.
 - Re-evaluate when Bevy ecosystem (bevy_rand etc.) stabilizes on rand 0.10.
 - Note: adopting rand 0.10 would also unify the getrandom v0.3/v0.4 split.
+
+### ron 0.12.0 → 0.12.1 (patch bump available)
+- ron 0.12.1 was released; this is a semver-compatible patch (no API breakage expected).
+- Affects three Cargo.toml files: breaker-game, rantzsoft_defaults, breaker-scenario-runner.
+  All declare `ron = "0.12"` (no `=` pin), so they will pick up 0.12.1 on next `cargo update`.
+- Low risk. Eligible when ready for a dependency maintenance pass.
+- Note: ron is listed as an intentional pin in known-pins.md for asset migration reasons,
+  but 0.12.1 is a patch within the same minor — asset files are unaffected.

@@ -4,6 +4,65 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-03-30 (develop branch, post feature/missing-unit-tests + feature/scenario-coverage merge)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** develop branch at fad7dfa. Two recent branches: feature/missing-unit-tests (58 tests,
+3 new invariants, source marker structs converted to unit structs) and feature/scenario-coverage
+(8 new scenarios, 3 new invariant checkers, new frame mutation helpers).
+
+**Issues found and fixed (8):**
+
+1. **runner-linting/lint_patterns_core.md** — Stale: claimed dead_code warnings on `PulseSource.0`,
+   `ShockwaveSource.0`, `TetherBoltMarker.0`, `CellDestroyedAt.position`. All four source markers
+   are now unit structs (no tuple field). lint_state_current.md correctly shows only 1 doc warning.
+   Fixed: rewrote "Current State" section; moved dead_code entries to Historical as RESOLVED.
+
+2. **runner-linting/MEMORY.md** — Description for lint_patterns_core.md didn't mention source-marker
+   dead_code resolution. Fixed: updated description.
+
+3. **researcher-system-dependencies/MEMORY.md** — Linked specific ephemeral file
+   (ephemeral/invariant-infrastructure-map.md) as an indexed entry under "Session History".
+   Violates convention (ephemeral = one line only). Fixed: removed individual link, left just
+   "See ephemeral/ — not committed."
+
+4. **reviewer-performance/phase4-runtime-effects.md** — Referenced `effects/helpers.rs` for
+   `entity_position()` helper. Correct path is `effects/fire_helpers.rs`. Fixed.
+
+5. **reviewer-performance/phase3-stat-effects.md** — "run_if Gap Confirmed" section described
+   `EffectSystems::Recalculate` as lacking `run_if`. Code confirms it now has
+   `.run_if(in_state(PlayingState::Active))` at plugin.rs line 13. Fixed: marked FIXED.
+
+6. **reviewer-performance/phase5-complex-effects.md** — "Intentional Patterns" section still said
+   `process_piercing_beam` run_if gap "acceptable at current scale" but earlier in the same file
+   it was correctly marked FIXED. Fixed: corrected the Intentional Patterns entry.
+
+7. **guard-docs/known-state.md** — Line said "Runtime Effects entry added to Current section (In
+   Progress)" but full verification phase-log confirms it was changed to Done on 2026-03-30.
+   Fixed: updated to "marked Done."
+
+8. **writer-scenarios/pattern_invariant_substitution.md** — Main variant list had 21 items
+   (missing `ChainArcCountReasonable`), then listed the remaining 4 in a separate section.
+   Fixed: consolidated into single list of 25 variants with correct date.
+
+9. **guard-docs/MEMORY.md** — Description for known-state.md said "2026-03-28" only; file covers
+   through 2026-03-30. Description for phase-log.md said "two sessions on 2026-03-28" but file
+   has 7+ sessions through 2026-03-30. Fixed: updated both descriptions.
+
+10. **reviewer-performance/MEMORY.md** — Descriptions for phase3 and phase5 files didn't reflect
+    the run_if fixes. Fixed: updated both descriptions.
+
+**No new cross-agent duplication found.**
+
+**No MEMORY.md broken links found** (all linked files verified to exist).
+
+**New staleness pattern detected:**
+- **Source marker struct-to-unit-struct conversions**: When tuple struct markers (e.g., `PulseSource(Entity)`) are simplified to unit structs (`PulseSource`), dead_code lint warnings about field `.0` go away. runner-linting/lint_patterns_core.md is the primary risk file for this pattern — check it after any refactor that touches source attribution marker types.
+- **EffectPlugin run_if gaps**: The Recalculate set run_if gap has been fixed. If new system sets are added to EffectPlugin, check that they carry a run_if guard before flagging as open.
+- **Stale "In Progress" plan.md entries**: plan/index.md phase entries change from "In Progress" to "Done" as branches merge. known-state.md and similar reference files can lag. After any phase merge, verify forward-looking "In Progress" labels.
+- **ephemeral link convention**: MEMORY.md for agents with only ephemeral content should have exactly one line: "See ephemeral/ — not committed." Specific file links within ephemeral/ are not appropriate in MEMORY.md.
+
 ## Full Audit — 2026-03-30 (post feature/full-verification-fixes merge)
 
 **Scope:** All agent memory directories (full audit)
