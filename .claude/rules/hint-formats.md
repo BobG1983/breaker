@@ -71,9 +71,9 @@ Standardized output formats that verification agents produce and failure routing
 - Delegate: main agent fixes inline (warning/info) or writer-code (critical with test coverage)
 ```
 
-## guard-file-length
+## reviewer-file-length
 
-guard-file-length splits files directly — no hint format needed. It reports a summary table of what it split.
+reviewer-file-length produces a split spec at `.claude/specs/file-splits.md` — no hint format needed. The orchestrator launches parallel writer-code agents to execute the splits.
 
 ## Dependency finding (guard-dependencies)
 

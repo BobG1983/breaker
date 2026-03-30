@@ -99,7 +99,7 @@ Write parent/some_file/tests.rs
 ```
 Contents: everything from `#[cfg(test)]` onwards. Update `use super::*;` to `use super::system::*;` (or specific items). Add any imports from the original header that tests need.
 
-If sub-splitting tests (800+ lines), write each sub-file:
+If sub-splitting tests (400+ lines), write each sub-file:
 ```
 Write parent/some_file/tests/mod.rs    // mod group_a; mod group_b; ...
 Write parent/some_file/tests/group_a.rs

@@ -64,9 +64,9 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | License issue | Main agent evaluates — may need to replace the crate |
 | Duplicate transitive | Main agent evaluates — may need to pin or unify |
 
-## guard-file-length findings
+## reviewer-file-length findings
 
-guard-file-length splits files directly — no routing needed. If it encounters a compilation issue after splitting, it reports the error for the orchestrator to route to writer-code.
+reviewer-file-length produces a split spec at `.claude/specs/file-splits.md`. The orchestrator launches parallel writer-code agents to execute the splits, then removes orphaned `.rs` files and runs Basic Verification Tier.
 
 ## reviewer-tests findings
 

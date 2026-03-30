@@ -47,7 +47,7 @@ Includes everything in Standard Verification Tier, plus:
 | **guard-game-design** | Mechanic changes against design pillars |
 | **guard-dependencies** | Unused/outdated/duplicate deps, license compliance |
 | **guard-agent-memory** | Stale/duplicated memories, MEMORY.md accuracy |
-| **guard-file-length** | Finds and splits large files directly |
+| **reviewer-file-length** | Finds oversized files, produces split spec for writer-code |
 | **reviewer-scenarios** | Scenario coverage gaps, weak invariants, missing mechanics |
 
 **Question answered**: "Is everything clean across all cross-cutting concerns?"
