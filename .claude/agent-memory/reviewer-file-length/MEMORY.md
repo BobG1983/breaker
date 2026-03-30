@@ -1,3 +1,3 @@
 - [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/ and now broadly across all domains
 - [Phase 3 file length findings (archived)](phase3_findings.md) — all Phase 3 flagged files split by c9964b7; archived reference only
-- [Post-refactor file length findings](phase4_findings.md) — Phase 7 open findings (2026-03-30 after source-chip-shield-absorption); 7 new HIGH + 25 MEDIUM + mod.rs violations; spec in .claude/specs/file-splits.md
+- [Post-refactor file length findings](phase4_findings.md) — All HIGH priority and mod.rs violations split (post-new-scenarios); 25 MEDIUM items remain open; run fresh reviewer-file-length before acting

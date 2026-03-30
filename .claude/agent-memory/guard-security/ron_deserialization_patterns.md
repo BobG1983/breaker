@@ -152,6 +152,12 @@ type: project
   of triggered effects this is negligible. No security concern; noted for performance
   awareness if this becomes a hot path.
 
+## feature/missing-unit-tests (2026-03-30)
+
+No new RON files, no new deserialization sites. Carry-forward warnings from Phase 3
+(hit_fraction unguarded division, negative damage) remain unchanged. No new panic surface
+in production code.
+
 ## Refactor (2026-03-30, develop post-merge, c9964b7)
 
 ### File-splitting structural refactor — no new panic surface introduced (Safe)

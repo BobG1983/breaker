@@ -1,5 +1,15 @@
 # rantzsoft_* Crates
 
+## Always Use — Never Bypass
+
+Game code (`breaker-game`) must ALWAYS use `rantzsoft_*` APIs for spatial queries, collision detection, physics, and constraint logic. NEVER write custom spatial or physics code in the game crate.
+
+- If the crate **lacks a capability** that's within its domain — **add it to the crate**.
+- If the crate's API **is not performant enough** — **improve the crate's performance**.
+- If the capability is **outside the crate's domain** — ask before putting it anywhere.
+
+This applies to specs too — specs must mandate `rantzsoft_*` usage and must never spec custom spatial/physics logic in game code.
+
 ## Zero Game Knowledge
 
 `rantzsoft_*` crates must contain **ZERO** game-specific code:

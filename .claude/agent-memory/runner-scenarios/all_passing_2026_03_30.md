@@ -12,7 +12,7 @@ Last commit: 14dddcd (Merge branch 'feature/source-chip-shield-absorption' into 
 ## Results
 
 - 86 named scenario PASS (chaos, mechanic, self_test, and non-stress stress scenarios)
-- 15 stress suites: all-passed
+- 17 stress suites: all-passed
 - 0 failures
 - 0 violations in gameplay scenarios (self-test scenarios correctly fired their expected violations)
 

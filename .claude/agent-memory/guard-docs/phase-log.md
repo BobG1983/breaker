@@ -187,3 +187,29 @@ type: project
 - `docs/architecture/effects/evaluation.md` — correct
 - `docs/architecture/effects/commands.md` — correct
 - game.rs plugin registration order — unchanged
+
+## 2026-03-30 — feature/missing-unit-tests review
+
+**Branch:** feature/missing-unit-tests (58 new unit tests + overlay_color pub(super) visibility change)
+
+**Files reviewed:**
+- `breaker-game/src/fx/transition/system.rs` — overlay_color fn, TransitionConfig, TransitionStyle, TransitionDirection
+- `breaker-game/src/fx/transition/tests.rs` — 10 tests covering spawn/animate/cleanup/color helpers
+- `docs/architecture/standards.md` — test placement description
+- `docs/architecture/layout.md` — System File Split Convention
+- `docs/plan/index.md` — phase completion status
+- `docs/architecture/messages.md` — unchanged
+- `docs/architecture/plugins.md` — unchanged
+- `docs/architecture/ordering.md` — unchanged
+- `docs/architecture/data.md` — unchanged
+- `docs/design/graphics/` — working-tree modifications confirmed consistent (catalog/ exists, index.md links to it)
+
+**Drifts found and fixed:**
+- `docs/architecture/standards.md` line 33 — "Tests live next to the code they test (in-module `#[cfg(test)]` blocks)." → updated to acknowledge both in-module AND split-file patterns (split is the dominant form per layout.md System File Split Convention)
+
+**Items confirmed no-drift:**
+- `overlay_color` visibility change (pub(super)) — not a doc-level concern; internal helper not referenced in any architecture doc
+- 58 new tests — all follow split-file pattern already documented in layout.md; no new behaviors, systems, or components introduced
+- `docs/plan/index.md` — phase completion status accurate; no new phases
+- `docs/design/graphics/index.md` modification — references catalog/ which exists on disk; consistent
+- `docs/design/graphics/effects-particles.md` modification — working-tree change; design doc (forward-looking Phase 5 content), not architecture drift

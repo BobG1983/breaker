@@ -46,7 +46,7 @@ absence as missing functionality — direct World spawning is the established pa
 
 ## Intentionally Forward-Looking (do NOT flag as drift)
 
-- `docs/design/chip-catalog.md` — Chip RON files do not exist yet (Phase 7 content). Design spec only.
+- `docs/design/chip-catalog.md` — Chip RON files now exist under `breaker-game/assets/chips/` (34+ templates). The doc's additive format vs RON multiplicative format divergence is a known blocker (guard-game-design evaluation-full-verification-2026-03-30.md). Do NOT flag RON file existence as missing.
 - `docs/design/effects/ramping_damage.md` — `damage_per_trigger` is correct per code.
 - Evolution chips (Entropy Engine, Nova Lance, etc.) — Not yet implemented in code. Design spec only.
 - `docs/plan/index.md` — Spatial/Physics Extraction and Stat Effects are both correctly marked Done.

@@ -2,4 +2,4 @@
 - [BoltSpeedInRange: velocity-modifying systems bypass clamp (RESOLVED)](game_bug_speed_clamp_bypass.md) — gravity_well apply_gravity_pull and enforce_distance_constraints both previously ran after prepare_bolt_velocity; resolved by 2026-03-30 run
 - [SecondWindWallAtMostOne: fire() spawns wall unconditionally (RESOLVED)](game_bug_second_wind_multi_wall.md) — fire() in second_wind.rs previously never checked for existing walls; resolved by 2026-03-30 run
 - [BoltCountReasonable: EntropyEngine+SpawnBolts has no bolt cap (RESOLVED)](game_bug_entropy_engine_bolt_storm.md) — entropy_engine_stress fixed by loosening max_bolt_count threshold (commit 53596f5); resolved by 2026-03-30 run
-- [All 95 scenarios passing as of 2026-03-30](all_passing_2026_03_30.md) — Full Verification Tier run: 78 PASS + 17 stress suites all-passed; 0 failures; develop branch clean
+- [All 103 scenarios passing as of 2026-03-30](all_passing_2026_03_30.md) — Full Verification Tier run: 86 named PASS + 17 stress suites all-passed; 0 failures; develop branch clean
