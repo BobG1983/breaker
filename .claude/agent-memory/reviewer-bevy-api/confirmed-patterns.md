@@ -179,3 +179,16 @@ type: reference
 - `explode/effect.rs` — FIXED (feature/full-verification-fixes): `fire()` now uses `super::super::entity_position()` (Position2D); spawned entity carries `Position2D`. Correct.
 - `chain_lightning/effect.rs` arc_transforms — CORRECT: ChainLightningArc entities are pure rendering objects; using Transform on them is right
 - `pulse/effect.rs` — CORRECT: emitter reads `&Position2D` from emitter entity; ring carries `Position2D`; `apply_pulse_damage` reads `&Position2D` from ring entity. No Transform. Correct.
+
+## Invariant Checker Query Patterns (feature/scenario-coverage — confirmed correct)
+- Two queries with overlapping components but disjoint filters are NOT a conflict: `Query<..., With<ScenarioTagBolt>>` + `Query<..., With<ScenarioTagBreaker>>` both reading `&Aabb2D` — valid in Bevy 0.18; disjoint filters on different tags prevent archetype overlap
+- `type BreakerAabbQuery<'w, 's> = Query<'w, 's, (Entity, &'static Aabb2D, &'static BreakerWidth, &'static BreakerHeight, Option<&'static EntityScale>), With<ScenarioTagBreaker>>` — correct Bevy 0.18 lifetime-annotated query alias with static component refs
+- `check_size_boost_in_range`: `Query<(Entity, &ActiveSizeBoosts, &EffectiveSizeMultiplier)>` — both immutable, no filter conflict; correct
+- `check_gravity_well_count_reasonable`: `Query<Entity, With<GravityWellMarker>>` — correct entity-only query with marker filter
+
+## SystemParam Derive with Option<Res> + Option<ResMut> (confirmed in frame_mutations.rs)
+- `PauseControl<'w>` with `Option<Res<'w, State<PlayingState>>>` + `Option<ResMut<'w, NextState<PlayingState>>>` — valid `#[derive(SystemParam)]`; no conflict because `State<T>` and `NextState<T>` are distinct resource types
+- `MutationTargets<'w, 's>` mixing `Option<ResMut<RunStats>>`, `Option<ResMut<ChipInventory>>`, `Commands`, and `Query` — valid; all distinct types; 'w, 's lifetimes required because of Query field
+
+## apply_gravity_pull Query Analysis (confirmed correct in Bevy 0.18)
+- `wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>` + `bolts: Query<(&Position2D, &mut Velocity2D), With<Bolt>>` — safe because Bolt and GravityWellMarker are disjoint tags; no entity can have both; Position2D read-only in wells, Position2D read-only in bolts — no write conflict

@@ -23,3 +23,13 @@ As of 2026-03-29, the available invariants are:
 **Note:** `ShieldChargesConsistent`, `SecondWindWallAtMostOne`, `PulseRingAccumulation`, and
 `EffectiveSpeedConsistent` ARE real `InvariantKind` variants as of 2026-03-29. The earlier
 memory entry saying they needed substitution was stale — they were added to the enum.
+
+As of 2026-03-30, additionally confirmed real variants:
+`ChainArcCountReasonable`, `AabbMatchesEntityDimensions`, `GravityWellCountReasonable`, `SizeBoostInRange`
+
+Their self-test mutation kinds:
+- `AabbMatchesEntityDimensions` → `InjectMismatchedBoltAabb` (no fields)
+- `GravityWellCountReasonable` → `SpawnExtraGravityWells(N)` — also requires `invariant_params: (max_gravity_well_count: M)` when lowering threshold below default 10
+- `SizeBoostInRange` → `InjectWrongSizeMultiplier(wrong_value: 99.0)` (named field)
+
+`InvariantParams` now has 4 fields: `max_bolt_count`, `max_pulse_ring_count`, `max_chain_arc_count`, `max_gravity_well_count` (defaults: 8, 20, 50, 10).
