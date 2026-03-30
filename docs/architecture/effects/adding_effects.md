@@ -6,7 +6,7 @@
    - `pub(crate) fn register(app: &mut App)` (if runtime systems needed)
    - Any per-effect components, runtime systems
 
-2. **Add variant** to `EffectKind` enum in `effect/core/types.rs`:
+2. **Add variant** to `EffectKind` enum in `effect/core/types/definitions.rs`:
    ```rust
    FreezeBolt { duration: f32 },
    ```

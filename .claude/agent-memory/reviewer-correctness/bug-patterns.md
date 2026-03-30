@@ -28,67 +28,67 @@ correct IF `breaker_pos` is already world-space. Confirmed correct — no bug.
 Old notes referred to `query_circle_filtered` — current code uses `query_aabb_filtered`.
 The stale memory was corrected. Always verify which query function is actually used.
 
-## Phase 4 effect systems: shockwave/pulse use Transform (not Position2D) for center
+## gravity_well::fire() infinite loop when max == 0
 
-`apply_shockwave_damage` and `apply_pulse_damage` read `transform.translation.truncate()`
-as the circle center for quadtree queries. These entities have Transform set at spawn and
-never move, so this is functionally correct. But shockwave/ring entities don't have
-GlobalPosition2D or Spatial2D — they are purely Transform-based. This is intentional
-(they're not `Position2D`-tracked spatial entities).
+`gravity_well::fire()` does `while owned.len() >= max as usize` to cap active wells.
+When `max == 0`, `owned.len() >= 0` is always true. After draining `owned`, `owned.first()`
+returns `None` → the inner `if let` never executes → infinite loop.
+
+`spawn_phantom::fire()` has `if max_active == 0 { return; }` guard. `gravity_well` does not.
+
+The RON file (`gravity_well.evolution.ron`) always uses `max: 2`, so this is not triggered in
+production today. But it is a confirmed logic bug.
+
+**Status**: OPEN — filed in 2026-03-30 review of full-verification-fixes branch.
+
+## Phase 4 effect systems: shockwave/pulse migrated to Position2D (FIXED in full-verification-fixes)
+
+`apply_shockwave_damage`, `apply_pulse_damage`, and `process_explode_requests` previously read
+`transform.translation.truncate()` as the center. These were migrated to query `Position2D`
+directly. Spawned shockwave/explode/ring entities now have `Position2D(position)` set at
+fire-time. They still do NOT have `GlobalPosition2D` or `Spatial2D` — they are ephemeral
+effect entities that do not move after spawn.
 
 ## Phase 5 effect fire(): Transform vs Position2D for bolt position
 
 `chain_lightning::fire()` — FIXED in rework: now uses `Position2D` directly.
 
-`piercing_beam::fire()` — STILL uses `Position2D -> Transform fallback` (line 37-41). The
-Transform fallback is wrong — should be `Position2D -> Vec2::ZERO` only. OPEN.
+`piercing_beam::fire()` — FIXED in full-verification-fixes branch: now uses `entity_position()`
+helper which returns `Position2D -> Vec2::ZERO` (no Transform fallback). Confirmed by tests in
+`fire_tests.rs` (`fire_without_position2d_falls_back_to_zero_not_transform`, etc.).
 
-Impact: ~6px positional error at typical bolt speed (400px/s at 64Hz). Minor but incorrect.
+## dispatch_chip_effects: effects dispatched even on max-stack add_chip failure — FIXED
 
-## dispatch_chip_effects: effects dispatched even on max-stack add_chip failure
+`dispatch_chip_effects` now has `continue;` after the `add_chip` max-stacks warning
+(system.rs line 57-59). The `for root_effect in &effects` loop is skipped when max stacks hit.
 
-`dispatch_chip_effects` (chips/systems/dispatch_chip_effects/system.rs) logs a warning when
-`add_chip` returns false (chip at max stacks), but does NOT `continue` to skip effect dispatch.
-The `for root_effect in &effects` loop runs unconditionally, causing double-application of all
-effect trees on the target entities.
+**Status**: FIXED — confirmed in code. Test: `chip_at_max_stacks_does_not_dispatch_effects`.
 
-Fix: add `continue;` after the warning so effects are not re-dispatched when max stacks is hit.
+## apply_pending_bolt_effects: silently drops effects if bolt lacks BoundEffects — FIXED
 
-**Status**: OPEN — still present as of branch feature/source-chip-shield-absorption review.
+`apply_pending_bolt_effects` (scenario-runner lifecycle/systems/pending_effects.rs) now uses
+`commands.entity(entity).insert_if_new((BoundEffects::default(), StagedEffects::default()))`
+before extending — matching the cell/wall variants.
 
-## apply_pending_bolt_effects: silently drops effects if bolt lacks BoundEffects
+**Status**: FIXED — confirmed in code.
 
-`apply_pending_bolt_effects` (scenario-runner/src/lifecycle/systems.rs) queries
-`&mut BoundEffects` on tagged bolt entities. If no prior system (e.g. dispatch_breaker_effects)
-has inserted `BoundEffects` on the bolt, the query matches zero entities and returns early.
-Effects in `PendingBoltEffects` are permanently lost because the `Local<bool>` guard means
-the system only successfully applies once (and `pending.0.clear()` is never called).
-`spawn_breaker` does NOT insert `BoundEffects` on bolts — confirmed by reading spawn_breaker/system.rs.
+## bypass_menu_to_playing: Target::Breaker initial_effects always dropped — FIXED
 
-Contrast with `apply_pending_cell_effects` and `apply_pending_wall_effects` which correctly
-use `commands.entity(entity).insert_if_new((BoundEffects::default(), StagedEffects::default()))`
-before extending.
+`PendingBreakerEffects` resource introduced in scenario-runner `lifecycle/systems/types.rs`.
+`apply_pending_breaker_effects` registered in FixedUpdate after `tag_game_entities`.
+`bypass_menu_to_playing` uses `commands.insert_resource(PendingBreakerEffects(...))`.
 
-Fix: insert `BoundEffects`+`StagedEffects` via commands before extending, like the cell/wall
-variants do. Cannot use `&mut BoundEffects` query directly; needs the insert_if_new + deferred
-world callback pattern.
+**Status**: FIXED — confirmed in code. `menu_bypass.rs` handles all 4 target types via Pending*Effects.
 
-**Status**: OPEN — still present as of branch feature/source-chip-shield-absorption review.
+## TransferCommand silently drops non-Do children when BoundEffects/StagedEffects absent
 
-## bypass_menu_to_playing: Target::Breaker initial_effects always dropped
+`TransferCommand::apply` (effect/commands.rs) uses `entity_ref.get_mut::<BoundEffects>()` guarded
+by `if let Some(...)`. If the entity lacks `BoundEffects` and `permanent: true`, non-`Do` children
+(When/Once/Until nodes) are silently dropped. Same for `StagedEffects` when `permanent: false`.
 
-`bypass_menu_to_playing` (scenario-runner/src/lifecycle/systems.rs) runs OnEnter(MainMenu).
-It dispatches Target::Breaker initial_effects directly to breaker_query (Query<&mut BoundEffects, With<Breaker>>).
-But no Breaker entity exists at MainMenu time (breaker spawns OnEnter(Playing)). Query returns
-zero results and breaker-targeted initial_effects are silently dropped with no warning.
-
-Cell, bolt, and wall effects are correctly deferred via PendingCellEffects/PendingBoltEffects/
-PendingWallEffects. Breaker effects have no deferred path.
-
-Fix: introduce PendingBreakerEffects resource and apply it in a deferred system like the other
-pending-effect systems, after tag_game_entities.
-
-**Status**: OPEN — found in branch feature/source-chip-shield-absorption review.
+**Status**: FIXED in full-verification-fixes branch. `ensure_effect_components()` helper now inserts
+both `BoundEffects` and `StagedEffects` as defaults before the `get_mut` calls. Tests in
+`commands.rs` section II cover all absent-component combinations.
 
 ## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
 

@@ -148,3 +148,42 @@ type: project
 **Items confirmed no-drift:**
 - `chips/components.rs` is intentionally a stub — correct, not a missing file
 - `effect/effects/` module list in plugins.md is marked "(~24 total)" — non-exhaustive by design
+
+## 2026-03-30 — Full Verification Tier doc check on develop
+
+**Branch:** develop (commit c9964b7 refactor: split 23 oversized .rs files into directory modules)
+
+**Files reviewed:**
+- `breaker-game/src/effect/core/types/` — confirmed directory module split
+- `breaker-game/src/effect/effects/` — confirmed multiple directory module splits
+- `breaker-game/src/effect/triggers/evaluate/`, `impact/`, `impacted/`, `until/` — confirmed directory module splits
+- `breaker-game/src/effect/effects/gravity_well.rs`, `second_wind/system.rs` — confirmed all effects implemented
+- `breaker-game/assets/chips/templates/piercing.chip.ron`, `augment.chip.ron` — confirmed RON syntax
+- `breaker-game/src/chips/systems/dispatch_chip_effects/system.rs` — confirmed no OnSelected trigger
+- `breaker-game/src/effect/core/types/definitions.rs` — confirmed Trigger enum (no OnSelected/OnBump)
+- `breaker-game/src/game.rs` — confirmed plugin order unchanged
+
+**Drifts found and fixed:**
+- `docs/plan/index.md` — Runtime Effects: "In Progress" → "Done" (all 24 effects implemented and merged)
+- `docs/plan/index.md` — EvolutionRegistry → EvolutionTemplateRegistry
+- `docs/architecture/effects/core_types.md` — "All core types live in effect/core/types.rs" → types/ directory
+- `docs/architecture/effects/core_types.md` — EffectSourceChip location updated; Per-Effect Modules expanded to include dir modules
+- `docs/architecture/layout.md` — effect domain tree updated: core/types/, effect dir modules, trigger dir modules; rule updated to "one module per effect"
+- `docs/architecture/plugins.md` — "Actual Structure" block updated to reflect dir modules; EvolutionRegistry → EvolutionTemplateRegistry
+- `docs/architecture/effects/structure.md` — domain tree updated (types/, commands.rs + PushBoundEffects, dir modules notation)
+- `docs/architecture/effects/adding_effects.md` — types.rs → types/definitions.rs
+- `docs/architecture/effects/adding_triggers.md` — types.rs → types/definitions.rs
+- `docs/architecture/effects/trigger_systems.md` — impact.rs/impacted.rs → impact//impacted/ directory modules
+- `docs/architecture/content.md` — types.rs → types/definitions.rs (x2); RON example updated to current syntax; ChipRegistry/EvolutionRegistry → ChipTemplateRegistry/ChipCatalog/EvolutionTemplateRegistry
+- `docs/design/terminology/chips.md` — removed stale EffectChains/ActiveEffects/ArmedEffects; replaced with BoundEffects/StagedEffects; removed OnSelected/OnBump; fixed OnPerfectBump → PerfectBump; fixed Until field name; added AllWalls to Target list; updated EffectNode count to 6; updated RootEffect file reference
+- `docs/design/evolutions.md` — EffectChains → BoundEffects (x2)
+- `docs/design/decisions/chip-template-system.md` — RON example updated to current syntax; slot description updated
+- `docs/design/decisions/chip-rarity-rework.md` — RON examples updated to current syntax
+
+**Items confirmed no-drift:**
+- `docs/architecture/messages.md` — unchanged; correct
+- `docs/architecture/ordering.md` — unchanged; correct
+- `docs/architecture/effects/dispatch.md` — already correctly documents no OnSelected trigger
+- `docs/architecture/effects/evaluation.md` — correct
+- `docs/architecture/effects/commands.md` — correct
+- game.rs plugin registration order — unchanged

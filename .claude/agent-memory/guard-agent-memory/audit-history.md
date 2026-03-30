@@ -4,6 +4,83 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-03-30 (Full Verification Tier, develop post-merge c9964b7)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** Refactor commit c9964b7 split 23 oversized .rs files into directory modules.
+This made the reviewer-file-length phase findings massively stale.
+Also: three bugs previously tracked as OPEN in reviewer-correctness/bug-patterns.md were
+actually FIXED in the feature/source-chip-shield-absorption branch.
+
+**Issues found and fixed (15):**
+
+1. **runner-tests/build-failure-bolt-breaker-query.md** — Bug was fixed; code at line 127-142
+   uses correct 2-level tuple nesting. Tombstoned file, removed from MEMORY.md.
+
+2. **runner-tests/build-failure-dstest-2026-03-29.md** — Already marked RESOLVED in MEMORY.md
+   but file had full error details. Replaced with brief tombstone. Removed from MEMORY.md.
+
+3. **reviewer-correctness/bug-patterns.md** — Three OPEN bugs were actually FIXED:
+   dispatch_chip_effects max-stacks (has `continue;`), bypass_menu PendingBreakerEffects
+   (fully implemented), apply_pending_bolt_effects (uses insert_if_new). Updated all three
+   to FIXED status with confirmation details.
+
+4. **reviewer-correctness/known-correct-effects.md** — `kill_count` stale field name in
+   entropy_engine section; field is `cells_destroyed`. Test name also stale. Updated both.
+
+5. **reviewer-quality/MEMORY.md** — Description for phase5 still said "kill_count vocabulary".
+   Updated to "cells_destroyed vocabulary (not kill_count)".
+
+6. **guard-security/vetted_dependencies.md** — Listed `proptest 1 (dev-dependency)` which was
+   removed. Updated to note removal.
+
+7. **researcher-bevy-api/MEMORY.md** — Empty (1 line) despite `confirmed-patterns.md` existing.
+   Added link to confirmed-patterns.md.
+
+8. **guard-performance/MEMORY.md** — Empty (1 line). Added Session History convention line.
+
+9. **researcher-crates/MEMORY.md** — Empty. Added Session History line.
+
+10. **researcher-rust-errors/MEMORY.md** — Empty. Added Session History line.
+
+11. **researcher-rust-idioms/MEMORY.md** — Empty. Added Session History line.
+
+12. **researcher-system-dependencies/MEMORY.md** — Empty. Added Session History line.
+
+13. **runner-release/MEMORY.md** — Empty. Added Session History line.
+
+14. **reviewer-file-length/phase4_findings.md** — Massively stale: all HIGH and most MEDIUM
+    files from c9964b7 list are now split. Rewrote entirely to show post-refactor state with
+    remaining MEDIUM open items. Updated MEMORY.md description.
+
+15. **reviewer-file-length/phase3_findings.md** — All Phase 3 flagged files split. Converted
+    to archived reference. Updated MEMORY.md description.
+
+16. **guard-file-length/split-patterns.md** — "Only dispatch_breaker_effects/tests.rs at 812
+    lines needs Strategy C conversion" — it was split. Updated to note resolution.
+
+17. **guard-file-length/ephemeral/{phase3,phase4}_findings.md + pattern_bolt_module_structure.md**
+    — Exact duplicates of reviewer-file-length stable files, stored in wrong agent's ephemeral
+    directory. Replaced with tombstone content pointing to reviewer-file-length.
+
+18. **guard-file-length/MEMORY.md** — Added cross-reference to reviewer-file-length for
+    per-phase findings, and Session History line.
+
+**Stale patterns confirmed still open:**
+- gravity_well.rs still lacks CleanupOnNodeExit (reviewer-architecture/known_gap_cleanup_markers.md)
+- piercing_beam.rs Transform fallback still open (reviewer-bevy-api/confirmed-patterns.md line 78)
+- TransferCommand silently drops non-Do children (reviewer-correctness/bug-patterns.md)
+- 1-frame stale ordering gap for Effective* consumers (reviewer-correctness/bug-patterns.md)
+- runner-scenarios bugs: speed_clamp_bypass, second_wind_multi_wall, entropy_engine_bolt_storm
+
+**Key new pattern (c9964b7 fallout):**
+Phase findings files in reviewer-file-length go stale after any large refactor that splits files.
+After any commit with "split" or "refactor" in the message touching many .rs files, immediately
+verify the HIGH/MEDIUM open lists in reviewer-file-length/phase4_findings.md.
+
+---
+
 ## Targeted Audit — 2026-03-29 (pre-merge gate, feature/source-chip-shield-absorption)
 
 **Scope:** All agent memory directories (full audit)
@@ -112,7 +189,9 @@ This branch included Wave 8 trigger bridge implementation that converted ALL tri
 
 ## Recurring Staleness Patterns
 
+- **File-split refactors**: reviewer-file-length phase findings go stale after any commit that splits multiple files. After any "refactor: split" commit, verify HIGH/MEDIUM open lists immediately. This is the highest-velocity staleness source for file-length memory.
 - **Effect domain evolves fast**: researcher-codebase effect inventory files go stale after each phase. After any phase touching `effect/effects/*.rs` or `effect/triggers/*.rs`, verify: test counts, placeholder status, component lists, and message references.
+- **Bug status drift**: reviewer-correctness/bug-patterns.md OPEN items should be verified against the codebase each audit — bugs get fixed but the memory lags. Cross-check with known-correct-effects.md which often records the FIXED status first.
 - **Trigger bridge stub → real transitions**: All trigger bridges moved from stubs to real implementations in the feature/source-chip-shield-absorption branch. Any future audit noting "stubs" for bump/bumped/impact/impacted/node_start/node_end/cell_destroyed should verify against the codebase — they are real.
 - **lint_patterns_core.md description drift**: This file describes historical warning patterns from effect system stub phases. After any major cleanup round, verify the "current" vs "historical" sections are accurate.
 - **Cleanup marker gaps**: reviewer-architecture tracks which effect entities lack `CleanupOnNodeExit`. Check this file after any new effect that spawns entities.
@@ -121,10 +200,12 @@ This branch included Wave 8 trigger bridge implementation that converted ALL tri
 - **Component renames and removals**: When components like PhantomTimer are removed from the codebase, multiple memory files across reviewer-quality and researcher-codebase reference them. grep for the old name before auditing.
 - **Placeholder-to-real transitions**: Each effect phase converts placeholders to real implementations. The inventory (`effect-domain-inventory.md`) must be updated at each phase; so must reviewer-performance phase files that note entity scale and run_if gaps.
 - **EntropyEngineState field names**: The field was renamed from `kill_count` to `cells_destroyed`. Watch for similar renames in game-vocabulary cleanup sessions.
+- **guard-file-length vs reviewer-file-length duplication**: guard-file-length should NOT maintain per-phase findings; those belong in reviewer-file-length. If guard-file-length/ephemeral/ contains phase findings files, they are duplicates.
 
 ## Agents Accumulating Memory Fastest
 
-1. **researcher-codebase** — Highest staleness risk. Effect domain changes every phase.
-2. **runner-linting** — lint_state_current.md is point-in-time; description drift is likely.
-3. **reviewer-architecture** — known_gap_cleanup_markers.md tracks open gaps that close over time.
-4. **reviewer-correctness** — known-correct.md grows with each phase and may exceed size limits.
+1. **reviewer-file-length** — Highest staleness risk after large refactors. phase findings go stale every time a split commit lands.
+2. **researcher-codebase** — Effect domain changes every phase; inventory goes stale.
+3. **reviewer-correctness** — bug-patterns.md OPEN items lag behind fixes; cross-check known-correct-effects.md.
+4. **runner-linting** — lint_state_current.md is point-in-time; description drift is likely.
+5. **reviewer-architecture** — known_gap_cleanup_markers.md tracks open gaps that close over time.

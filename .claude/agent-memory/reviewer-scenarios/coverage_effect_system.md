@@ -1,19 +1,19 @@
 ---
 name: Effect System Coverage Map
-description: Which effects/triggers have scenario coverage and which are completely untested — updated after feature/source-chip-shield-absorption branch audit
+description: Which effects/triggers have scenario coverage and which are completely untested — updated develop branch full audit
 type: project
 ---
 
-## Effects with Scenario Coverage (feature/source-chip-shield-absorption state)
+## Effects with Scenario Coverage (develop branch state)
 
 | Effect | Scenario(s) | Quality |
 |--------|-------------|---------|
-| SpeedBoost | surge_speed_stress, impacted_wall_speed, overclock_until_speed, initial_effects_bolt, passive_chips_chaos | Good — multiple triggers, stress, Until reversal |
+| SpeedBoost | surge_speed_stress, impacted_wall_speed, overclock_until_speed, initial_effects_bolt, passive_chips_chaos, early_late_bump_effects, node_start_speed_boost | Good — multiple triggers, stress, Until reversal |
 | DamageBoost | passive_chips_chaos, damage_boost_until_reversal | Good — reversal path covered |
 | Piercing | passive_chips_chaos | Minimal — no scenario verifying cell pass-through count |
-| SizeBoost | passive_chips_chaos | Minimal — applied but no size invariant checks it |
+| SizeBoost | passive_chips_chaos | Minimal — applied but no size invariant, no breaker SizeBoost scenario |
 | Shockwave | surge_overclock, cascade_shockwave_stress, supernova_chain_stress, entropy_engine_stress, flux_random_chaos | Good |
-| SpawnBolts | spawn_bolts_stress, supernova_chain_stress, entropy_engine_stress | Good |
+| SpawnBolts | spawn_bolts_stress, supernova_chain_stress, entropy_engine_stress | Good (inherit:true path only in spawn_bolts_stress) |
 | ChainBolt | tether_chain_bolt_stress | Good |
 | EntropyEngine | entropy_engine_stress | Good |
 | RandomEffect | flux_random_chaos | Good |
@@ -21,7 +21,7 @@ type: project
 | Attraction | attraction_cell_chaos | Good |
 | SpawnPhantom | phantom_bolt_stress | Good |
 | Shield (Breaker) | shield_bolt_loss_prevention | Adequate for bolt-loss path |
-| Shield (Cell) | shield_cell_charge_depletion | NEW — added this branch. Covers charge decrement via Shockwave + Dense layout. Good. |
+| Shield (Cell) | shield_cell_charge_depletion | Good — stress 16 runs |
 | GravityWell | gravity_well_chaos | Good |
 | Pulse | pulse_accumulation_stress | Good |
 | Explode | explode_chaos | Good |
@@ -30,64 +30,64 @@ type: project
 | BumpForce | bump_force_stress | Good |
 | RampingDamage | ramping_damage_reset | Good |
 | QuickStop | quick_stop_dash_edges | Good |
-| ChainLightning | chain_lightning_chaos + chain_lightning_arc_lifecycle | NEW arc model now covered. chain_lightning_chaos uses default arc_speed; arc_lifecycle uses slow arc_speed: 50.0 for mid-flight destruction. ChainArcCountReasonable invariant adds leak detection. |
+| ChainLightning | chain_lightning_chaos + chain_lightning_arc_lifecycle | Good — ChainArcCountReasonable in both |
+| TimePenalty | timer_threshold_penalty (via initial_effects) | MINIMAL — exercises timer subtraction path only; no scenario for the Chrono breaker's built-in TimePenalty on bolt loss |
+| LoseLife | ZERO scenarios using LoseLife via initial_effects | NONE — aegis_lives_exhaustion uses organic bolt loss, not LoseLife effect directly |
 
 ## Effects with NO Scenario Coverage
 
-- **TimePenalty** — zero scenarios (chrono scenarios don't exercise it via initial_effects)
-- **LoseLife** — zero scenarios (aegis_lives_exhaustion uses organic bolt loss, not LoseLife effect)
+- **LoseLife via initial_effects** — never exercised as an injected effect; only the built-in Aegis breaker definition triggers it organically. No scenario verifies LoseLife fires correctly when used as a chip effect.
 
-## New Dispatch Paths from feature/source-chip-shield-absorption Branch
+## Triggers with NO Scenario Coverage (any initial_effects block)
 
-This branch added 6 new Impact trigger bridge systems (global) and 6 new Impacted trigger bridge systems (targeted):
+- **NoBump** — no scenario ever uses `trigger: NoBump`
+- **BumpWhiff** — no scenario ever uses `trigger: BumpWhiff` (despite Whiplash chip using it)
+- **Death** — no scenario ever uses `trigger: Death`
+- **Died** — no scenario ever uses `trigger: Died`
+- **NodeEnd** — no scenario ever uses `trigger: NodeEnd`
+- **Impact(Breaker)** — no scenario exercises Impact(Breaker) from any collision
+- **Impact(Bolt)** — no scenario exercises Impact(Bolt) (emitted on every BoltImpact* message)
+- **Impacted(Bolt)** on breaker — no scenario exercises this (BoltImpactBreaker → Impacted(Bolt) on breaker)
+- **Impacted(Breaker)** — no scenario exercises this on any entity
+
+## New Dispatch Paths Still Uncovered (since feature/source-chip-shield-absorption)
 
 | New Dispatch Path | Scenario Coverage |
 |-------------------|-------------------|
-| BreakerImpactCell → Impacted(Cell) on breaker | NONE — no scenario uses `On(target: Breaker, When: Impacted(Cell))` |
-| BreakerImpactCell → Impacted(Breaker) on cell | NONE — no scenario uses `On(target: Cell, When: Impacted(Breaker))` |
-| BreakerImpactWall → Impacted(Wall) on breaker | NONE — no scenario uses `On(target: Breaker, When: Impacted(Wall))` |
-| BreakerImpactWall → Impacted(Breaker) on wall | NONE — no scenario uses `On(target: Wall, When: Impacted(Breaker))` |
-| CellImpactWall → Impacted(Wall) on cell | NONE — CellImpactWall message is "for future moving-cell mechanics" |
-| CellImpactWall → Impacted(Cell) on wall | NONE — same |
-| BoltImpactBreaker → Impacted(Bolt) on breaker | quick_stop_dash_edges uses On(Breaker, Bumped) not Impacted(Bolt) — NONE for Impacted(Bolt) on breaker specifically |
-| Impact(Breaker) global | NONE — no scenario exercises Impact(Breaker) from any collision |
-| Impact(Cell) global from BreakerImpactCell | NONE |
+| BreakerImpactCell → Impacted(Cell) on breaker | NONE |
+| BreakerImpactCell → Impacted(Breaker) on cell | NONE |
+| BreakerImpactWall → Impacted(Wall) on breaker | NONE |
+| BreakerImpactWall → Impacted(Breaker) on wall | NONE |
 
-Unit tests exist for all bridge systems (impacted.rs tests module, impact.rs tests module) but NO scenario verifies these paths under load with real game entities.
+## Target Scope Coverage Gaps
 
-## Cell-Level Shield Coverage
+- **AllBolts** target — only shield_cell_charge_depletion uses `AllCells`; **no scenario uses `On(target: AllBolts, ...)`** with a trigger. Parry chip fires Shockwave on AllBolts on PerfectBump — untested in scenarios.
+- **AllCells** target beyond NodeStart — only NodeStart trigger used for AllCells.
 
-- **ShieldActive on cells** — now covered by shield_cell_charge_depletion (added this branch).
-  Stress: 16 runs, Dense layout, 8000 frames. Covers charge decrement and ShieldChargesConsistent.
+## Chip-Level Coverage Gaps (chips with NO scenario exercising them)
 
-## source_chip Attribution Coverage Gap (UNCHANGED from prior branch)
+- **Whiplash** — BumpWhiff trigger + Once wrapper + Shockwave + DamageBoost combination: zero coverage
+- **Ricochet Protocol** — Until(Impacted(Cell)) removal from wall trigger: zero coverage
+- **Feedback Loop** — 3-level nested trigger (PerfectBumped→Impacted(Cell)→CellDestroyed→Until): zero coverage
+- **Chain Reaction** — nested CellDestroyed→CellDestroyed→SpawnBolts: only tested by supernova_chain_stress indirectly
+- **Deadline** — NodeTimerThreshold(0.25) only; timer_threshold_penalty uses 0.5 threshold — distinct timing path
+- **Tempo** — Until(BumpWhiff) removal path; zero coverage (BumpWhiff trigger never used in scenarios)
+- **Parry** — AllBolts target + PerfectBump + Shield on Breaker simultaneous: zero coverage
+- **Desperation / Last Stand** — BoltLost → SpeedBoost on Breaker (not bolt): only tested organically via aegis; no initial_effects scenario
 
-- **DamageCell.source_chip propagation end-to-end** — unit tests verify each link.
-  But NO scenario verifies the complete chain: chip-attributed bolt hits cell → DamageCell
-  carries chip name → track_evolution_damage accumulates it. Integration path untested.
+## source_chip Attribution Coverage Gap (UNCHANGED)
 
-## Triggers with NO Scenario Coverage
+- **DamageCell.source_chip propagation end-to-end** — unit tests verify each link. But NO scenario verifies the complete chain: chip-attributed bolt hits cell → DamageCell carries chip name → track_evolution_damage accumulates it.
 
-- NoBump — never used in any initial_effects block
-- BumpWhiff — never used in any initial_effects block
-- Death / Died — never used in any initial_effects block
-- Impacted(Breaker) — no scenario exercises this trigger firing on any entity
-
-## Invariant Gaps (updated)
+## Invariant Gaps (develop branch)
 
 Properties with no invariant checker:
-- Active bolt count > configured max_bolt_count: partially covered by BoltCountReasonable but not per-effect
-- GravityWell entity count vs max cap: no invariant
-- RampingDamage accumulated bonus is NaN-free and non-negative: NoNaN partially covers this
-- Cell ShieldActive charges never go negative: ShieldChargesConsistent covers zero, but negative is not checked
+- GravityWell entity count vs max cap: no invariant (gravity_well_chaos does not verify cap enforcement)
+- RampingDamage accumulated bonus: NoNaN partially covers but no monotonicity invariant
+- Cell ShieldActive charges never go negative: ShieldChargesConsistent covers zero, but negative unchecked
 - DamageCell.source_chip correctness end-to-end: no invariant
-- ChainArcCountReasonable: NEW invariant added this branch — self-test exists (chain_arc_count_exceeded). chaos scenario is chain_lightning_chaos (uses ChainArcCountReasonable? NO — see below)
+- SizeBoost: no invariant validates breaker/bolt size stays within plausible bounds
+- Bolt lifespan bolts are fully cleaned up: covered by NoEntityLeaks but no dedicated check
+- AllBolts/AllCells effect targeting correctness: no invariant verifies all bolts/cells received an effect that was targeted at all of them
 
-## ChainArcCountReasonable Invariant Status
-
-- Self-test scenario: chain_arc_count_exceeded.scenario.ron — EXISTS, uses SpawnExtraChainArcs frame mutation. Good.
-- Chaos/stress scenario: chain_lightning_chaos does NOT include ChainArcCountReasonable in its invariants list — it only has NoEntityLeaks, NoNaN, BoltInBounds, ShieldChargesConsistent.
-- chain_lightning_arc_lifecycle does NOT include ChainArcCountReasonable either — only NoEntityLeaks, NoNaN, BoltInBounds.
-- RESULT: The new invariant has a self-test but NO chaos/stress scenario enables it. This is a gap.
-
-**How to apply:** When writing scenarios for new dispatch paths, flag missing invariants as HIGH priority.
+**How to apply:** When writing scenarios for new dispatch paths or chip types, flag missing invariants for BumpWhiff, NodeEnd, Death, Died triggers as HIGH priority.

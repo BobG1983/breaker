@@ -25,9 +25,9 @@ The max_active eviction loop uses `owned.remove(0)` to despawn the oldest phanto
 
 The `unwrap()` calls at test lines (e.g., `query.iter().next().unwrap()`) are all inside `#[cfg(test)]` test code. Per project conventions, `unwrap()` is acceptable in tests.
 
-## `reverse()` no-op implementations with `let _ = world`
+## `reverse()` no-op implementations — `const fn` pattern (updated)
 
-`explode.rs` and `shockwave.rs` both implement `reverse(_entity: Entity, world: &mut World) { let _ = world; }`. The `let _ = world` is a deliberate suppression of the unused-variable warning for the `world` parameter that must be present to satisfy the uniform `reverse` interface. This is the established project pattern for no-op reversals.
+After the full-verification-fixes branch, `explode.rs`, `shockwave.rs`, `gravity_well.rs`, `piercing_beam/effect.rs`, and `life_lost.rs` implement no-op reversals as `pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}`. The `const fn` form is now the established pattern — it avoids the need for `let _ = world` by using underscore-prefixed parameters. Do NOT flag as an idiom violation.
 
 ## `WallSize {}` in second_wind.rs
 

@@ -69,12 +69,12 @@ and returns without spawning a chain entity (remaining_jumps would be 0, chain n
 No chain entity is spawned when arc_speed is zero or negative. The permanently-stuck-chain bug
 no longer applies.
 
-## Phase 5 entropy_engine: kill_count increments even with empty pool
+## Phase 5 entropy_engine: cells_destroyed increments even with empty pool
 
-`entropy_engine::fire()` increments `kill_count` before the empty-pool guard. This means pool
-changes between node attempts still reflect the correct cumulative kill count. Tests
-`fire_with_empty_pool_increments_kill_count_but_fires_nothing` and `fire_with_max_effects_zero_fires_nothing`
-confirm this is intentional.
+`entropy_engine::fire()` increments `cells_destroyed` (field on `EntropyEngineState`) before
+the empty-pool guard. This means pool changes between node attempts still reflect the correct
+cumulative count. Tests `fire_with_empty_pool_increments_cells_destroyed_but_fires_nothing` and
+`fire_with_max_effects_zero_fires_nothing` confirm this is intentional.
 
 ## Phase 5 piercing_beam: center-distance narrowphase is intentional design
 
@@ -88,6 +88,24 @@ Contrast with `tether_beam` which uses Minkowski sum (expand cell AABB by half_w
 `lib.rs` changed `ccd` from `pub(crate)` to `pub` so `tether_beam.rs` can import
 `rantzsoft_physics2d::ccd::ray_vs_aabb`. The prelude already re-exported these items — the
 module visibility change is necessary for direct path imports and is correct.
+
+## dispatch_chip_effects: max-stacks continue is FIXED
+
+`dispatch_chip_effects` now has `continue;` after the `add_chip` max-stacks warning (line 57-59).
+The old bug (effects dispatched even on max-stack failure) is fixed. Confirmed by test
+`chip_at_max_stacks_does_not_dispatch_effects`.
+
+## bypass_menu_to_playing: PendingBreakerEffects FIXED
+
+`bypass_menu_to_playing` now dispatches all four target types (Bolt/Breaker/Cell/Wall) through
+`Pending*Effects` resources. `apply_pending_breaker_effects` is registered in `FixedUpdate`
+after `tag_game_entities`. Both bugs from the prior review are fixed.
+
+## apply_pending_bolt_effects: FIXED
+
+`apply_pending_bolt_effects` (scenario-runner) now uses `insert_if_new((BoundEffects, StagedEffects))`
+before extending, matching the cell/wall variants. Previously it queried `&mut BoundEffects` directly
+and silently dropped effects if the component was absent.
 
 ## ShieldActive charge-decrement: deferred remove + eager in-memory decrement is intentional
 

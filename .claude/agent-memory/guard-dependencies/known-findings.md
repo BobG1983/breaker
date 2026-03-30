@@ -104,6 +104,29 @@ type: project
 - deny.toml allowlist includes Unicode-DFS-2016 but no dep currently uses it.
 - This is a harmless pre-approval — keep for forward compatibility.
 
+### r-efi v5.3.0 + v6.0.0 dual versions
+- v5.3.0: getrandom 0.3 → cc (build-dep for android-activity → bevy_android) — Android target only
+- v6.0.0: getrandom 0.4 → uuid → Bevy animation/asset/picking
+- Rationale: Both are platform-conditional (Android/WASM) or deep Bevy transitive. The v5.3.0
+  path is a build-dependency for the Android platform layer; neither version is loaded in the
+  macOS host build. Not actionable at project level.
+- The deny.toml exception for r-efi covers LGPL-2.1-or-later. This is appropriate for
+  platform-target-only deps, but should be reviewed before shipping an Android/WASM build.
+- Action: None for desktop builds. Flag when targeting Android/WASM.
+
+### self_cell v1.2.2 (GPL-2.0-only)
+- Path: self_cell → cosmic-text → bevy_text → bevy_internal → bevy
+- deny.toml exception: `{ allow = ["GPL-2.0-only"], crate = "self_cell" }`
+- Rationale: self_cell is a runtime dep on all platforms (bevy_text is not platform-conditional).
+  GPL-2.0-only is a copyleft license. For a proprietary game this needs conscious acceptance:
+  self_cell's license permits use as a library dependency (it is NOT a viral infection of the
+  whole binary under GPL2 "mere aggregation" interpretation, but legal teams disagree on this).
+  Bevy's upstream dependency chain owns this — it is not a project-level decision.
+- Recommendation: Acknowledge. If the project ever ships commercially, obtain a legal opinion
+  on the self_cell GPL-2.0-only exception. For hobby/indie use, the exception is standard practice.
+- Action: None. Exception already in deny.toml. Re-check after any Bevy upgrade (Bevy may
+  replace cosmic-text or self_cell upstream).
+
 ## Recommendations Deferred
 
 ### rand 0.9 → 0.10 (BREAKING)

@@ -4,3 +4,4 @@
 - [phase5-complex-effects.md](phase5-complex-effects.md) — Phase 5 chain_lightning/piercing_beam/tether_beam/spawn_bolts/entropy_engine: run_if gaps, Transform vs Position2D, per-arc allocations, per-tick HashSet, archetype impact
 - [source-chip-threading.md](source-chip-threading.md) — source_chip/EffectSourceChip threading: archetype impact, chip_attribution alloc, per-DamageCell clone, DamageVisualQuery shield change, tether HashSet
 - [dispatch-effects.md](dispatch-effects.md) — dispatch_breaker/cell/chip_effects: all one-shot or event-driven, clone patterns bounded, CellEffectsDispatched archetype split is correct, scenario pending effects are single-fire
+- [trigger-bridge-systems.md](trigger-bridge-systems.md) — desugar_until/tick_time_expires missing run_if (Minor, zero heap cost), impact/* global scan bounded, impacted/* targeted lookup efficient, ~52-59 entities with BoundEffects

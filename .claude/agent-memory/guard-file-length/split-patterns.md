@@ -37,4 +37,5 @@ Key files that grow back:
 ### Pure Test Files Over Threshold
 Many files in `tests/` directories are 400-800 lines. These are already extracted and under the 800-line Strategy C threshold. They don't need further splitting unless they exceed 800 lines.
 
-Only `dispatch_breaker_effects/tests.rs` at 812 lines needs Strategy C conversion to a tests/ directory.
+`dispatch_breaker_effects/tests.rs` (812 lines) was split into a tests/ directory by c9964b7.
+Remaining files in the 600-800 range are all in the reviewer-file-length/phase4_findings.md list.

@@ -1,3 +1,3 @@
-- [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/
-- [Phase 3 file length findings](phase3_findings.md) — files flagged after feature/stat-effects; includes offering.rs, impact.rs, impacted.rs, bolt_wall_collision.rs
-- [Phase 4+5+6 file length findings](phase4_findings.md) — updated 2026-03-29 for feature/source-chip-shield-absorption; dispatch_cell_effects.rs 1525 lines new HIGH; chip/breaker dispatch tests new MEDIUM
+- [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/ and now broadly across all domains
+- [Phase 3 file length findings (archived)](phase3_findings.md) — all Phase 3 flagged files split by c9964b7; archived reference only
+- [Post-refactor file length findings](phase4_findings.md) — Phase 7 open findings (2026-03-30 after source-chip-shield-absorption); 7 new HIGH + 25 MEDIUM + mod.rs violations; spec in .claude/specs/file-splits.md
