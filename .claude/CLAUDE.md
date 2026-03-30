@@ -12,7 +12,8 @@ Roguelite Arkanoid clone in Bevy 0.18 (Rust).
 @.claude/rules/session-state.md — **SESSION STATE: update BEFORE any action after every agent notification**
 @.claude/rules/failure-routing.md — Routing failures to fix agents
 @.claude/rules/spec-workflow.md — Spec revision loop (before RED)
-@.claude/rules/spec-formats.md — Test and implementation spec templates
+@.claude/rules/spec-format-tests.md — Test spec template
+@.claude/rules/spec-format-code.md — Implementation spec template
 @.claude/rules/hint-formats.md — Standardized hint block formats
 @.claude/rules/git.md — Git workflow, branching, pre-merge gate
 @.claude/rules/cargo.md — Build aliases and cargo rules

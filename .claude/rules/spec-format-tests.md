@@ -1,10 +1,10 @@
-# Spec Formats
+# Test Spec Format
 
-Templates and quality rules for behavioral specs (consumed by writer-tests) and implementation specs (consumed by writer-code). Produced by planning-writer-specs-tests and planning-writer-specs-code respectively. Specs are written to files under `.claude/specs/`.
+Template and quality rules for behavioral test specs (consumed by writer-tests). Produced by planning-writer-specs-tests. Specs are written to files under `.claude/specs/`.
 
 See `.claude/rules/spec-workflow.md` for the revision loop specs must pass before reaching writers.
 
-## Test Spec Format (for writer-tests)
+## Template
 
 ```markdown
 ## Test Spec: [Domain] — [Feature]
@@ -47,7 +47,7 @@ src/[domain]/
 - Do NOT test: [anything explicitly out of scope]
 ```
 
-### Rules for Good Test Specs
+## Rules for Good Test Specs
 
 1. **Use concrete values, not descriptions.** "Bolt at position (0.0, 50.0) with velocity (0.0, 400.0)" — not "a bolt moving upward."
 2. **One behavior per numbered item.** Don't combine multiple behaviors into one description.
@@ -57,7 +57,7 @@ src/[domain]/
 6. **Scope explicitly.** State what's in scope and what's out of scope.
 7. **Consider scenario coverage.** State whether existing invariants cover the feature, whether new invariants are needed, and whether new scenario RON files should be added for chaos/stress testing.
 
-### Example: Good Test Spec
+## Example: Good Test Spec
 
 ```markdown
 ## Test Spec: Bolt — Speed Clamping
@@ -101,7 +101,7 @@ src/bolt/
 - Do NOT test: integration with bump system (tested separately)
 ```
 
-### Example: Bad Test Spec (DO NOT DO THIS)
+## Example: Bad Test Spec (DO NOT DO THIS)
 
 ```markdown
 ## Test Spec: Bolt Speed
@@ -111,44 +111,3 @@ Use the existing bolt components.
 ```
 
 Problems: no concrete values, no explicit behaviors, no edge cases, no file references, no scope.
-
-## Implementation Spec Format (for writer-code)
-
-```markdown
-## Implementation Spec: [Domain] — [Feature]
-
-### Domain
-src/[domain]/
-
-### Failing Tests
-- `src/[domain]/[file].rs` — [N] tests to satisfy
-
-### What to Implement
-- [System/component/resource name]: [one-line description]
-- [System/component/resource name]: [one-line description]
-
-### Patterns to Follow
-- Follow the pattern in `src/[domain]/systems/[existing].rs`
-- [Specific convention or constraint]
-
-### RON Data (if applicable)
-- Add fields to `assets/[file].ron`: [field names and types]
-- Add to defaults: [defaults resource path]
-
-### Schedule
-- [System] runs in [FixedUpdate/Update/OnEnter(State)]
-- [Ordering constraints: after X, before Y]
-
-### Constraints
-- Do NOT modify: [files explicitly off-limits]
-- Do NOT add: [features explicitly out of scope]
-```
-
-### Rules for Good Implementation Specs
-
-1. **Point to the failing tests.** The writer-code reads them first.
-2. **Name what to implement.** System names, component names, resource names.
-3. **Point to reference patterns.** The writer-code should match existing code.
-4. **Specify schedule placement.** FixedUpdate vs Update vs OnEnter.
-5. **Specify ordering.** After which system sets, before which.
-6. **State what's off-limits.** Especially shared files and other domains.

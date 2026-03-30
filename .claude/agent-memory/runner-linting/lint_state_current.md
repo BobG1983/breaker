@@ -1,27 +1,25 @@
 ---
 name: Current lint state
-description: Full workspace lint result as of 2026-03-30 on develop — ALL PASS after error-fix wave
+description: Full workspace lint result as of 2026-03-30 on develop — ALL PASS after module_inception + unused import fixes
 type: project
 ---
 
 Last run: 2026-03-30 (develop branch)
-Branch HEAD: 408fa19 (docs(design): refine graphics design docs) + fx/transition/tests.rs import fix
+Branch HEAD: post file-split refactor wave + lint fix wave
 
 ## Format: PASS (no changes)
 
 ## Clippy (all-dclippy): PASS
-- rantzsoft_spatial2d: PASS
-- rantzsoft_physics2d: PASS
-- rantzsoft_defaults: PASS
-- breaker-game: PASS
-- breaker-scenario-runner: PASS
 
-## Previous errors (now resolved)
-- `rantzsoft_physics2d/src/quadtree/tests/basic_ops_tests.rs:549` — `clippy::similar_names` — FIXED
-- `breaker-game/src/chips/definition/tests.rs:515` — `clippy::manual_string_new` — FIXED
-- `breaker-game/src/effect/effects/fire_helpers.rs:148` — `clippy::cast_lossless` — FIXED
+### breaker-game: PASS
+### rantzsoft_spatial2d: PASS
+### rantzsoft_physics2d: PASS
+### rantzsoft_defaults: PASS
+### breaker-scenario-runner: PASS
 
-## Previous warnings (now resolved)
-- `breaker-game/src/bolt/resources.rs:133` — `clippy::redundant_clone` — FIXED
-- `breaker-game/src/chips/resources/tests/chip_catalog.rs:406` — `clippy::redundant_clone` — FIXED
-- `breaker-game/src/effect/commands.rs:1083` — `clippy::redundant_clone` — FIXED
+## Previous state (failing)
+- 2026-03-30: FAIL — 1 error (`clippy::module_inception` in `effect/commands/mod.rs`) + 2 warnings (unused re-exports in `commands/mod.rs` and `gravity_well/mod.rs`)
+- Fixes applied: renamed `commands/commands.rs` → `commands/ext.rs`, removed unused `PushBoundEffects`/`TransferCommand` re-exports, removed unused `GravityWellConfig`/`GravityWellMarker` re-exports
+
+## Clean baseline (pre-split)
+- 2026-03-30: ALL PASS after error-fix wave (resolve `similar_names`, `manual_string_new`, `cast_lossless`)

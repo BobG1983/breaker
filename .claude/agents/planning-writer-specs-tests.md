@@ -19,14 +19,14 @@ You write your spec to a file at the path given in your prompt. The full spec go
 4. Read `docs/architecture/messages.md` for inter-domain communication
 5. Read `docs/architecture/standards.md` for code and testing standards
 6. Read `docs/design/pillars/` — scan all pillar files to understand design constraints
-7. Read `.claude/rules/spec-formats.md` — the "Test Spec Format" section is your template
+7. Read `.claude/rules/spec-format-tests.md` — this is your template
 8. Read the specific domain code mentioned in the feature description to understand existing patterns, types, and systems
 
 ## What You Produce
 
 ### A Behavioral Test Spec File
 
-Write to the file path provided in your prompt (under `.claude/specs/`). Follow the **Test Spec Format** in `spec-formats.md` exactly. The key requirements:
+Write to the file path provided in your prompt (under `.claude/specs/`). Follow the template in `spec-format-tests.md` exactly. The key requirements:
 
 - **Concrete values, not descriptions.** "Bolt at position (0.0, 50.0) with velocity (0.0, 400.0)" — not "a bolt moving upward."
 - **One behavior per numbered item.** Don't combine multiple behaviors.

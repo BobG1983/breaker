@@ -2,7 +2,7 @@
 
 Read this before creating or reviewing specs. This is the process that produces clean specs before the RED phase begins.
 
-See `.claude/rules/spec-formats.md` for the spec templates and quality rules.
+See `.claude/rules/spec-format-tests.md` and `.claude/rules/spec-format-code.md` for spec templates and quality rules.
 See `.claude/rules/tdd.md` for the TDD cycle that specs feed into.
 See `.claude/rules/session-state.md` for session-state update requirements at each step.
 
@@ -13,6 +13,37 @@ All specs are written to `.claude/specs/` (gitignored). Naming convention:
 - Implementation spec: `.claude/specs/<wave>-<feature>-code.md`
 
 The orchestrator provides the exact file paths when launching spec agents.
+
+## Briefing Spec Writers
+
+Every spec writer prompt must include the following. The goal is that the agent never needs to ask the orchestrator a question that could have been answered upfront. Incomplete briefings produce incomplete specs, which cost a full revision loop to fix.
+
+### Required in Every Briefing
+
+| Item | Why |
+|------|-----|
+| **Feature description** | What the feature does, in plain language. Not a task list — the intent. |
+| **Scope boundaries** | What's in and what's explicitly out. Name the excluded concerns. |
+| **Domains involved** | Which domains this feature touches (bolt, breaker, cells, effect, etc.) |
+| **Design decisions already made** | Any choices the orchestrator has made — don't leave the spec writer to guess between options. |
+| **Spec file path** | The exact `.claude/specs/<name>-{tests,code,goal}.md` path to write to. |
+
+### Required When Applicable
+
+| Item | When | Why |
+|------|------|-----|
+| **Research results** | A research wave ran | Spec writers can't see what researchers found unless you tell them. Include the key findings, not the full report. |
+| **Relevant design docs** | Feature connects to a specific design doc | Point to the file path — e.g., "See `docs/design/effects/piercing.md` for the design." |
+| **Relevant architecture docs** | Feature touches scheduling, messages, or cross-domain wiring | Point to the file path — e.g., "See `docs/architecture/messages.md` for message conventions." |
+| **Known constraints or interactions** | Feature interacts with existing systems in non-obvious ways | State the interaction explicitly — e.g., "This runs after `clamp_bolt_speed` in FixedUpdate — the order matters." |
+| **Existing code to reference** | The domain has established patterns the spec should follow | Point to the specific file — e.g., "Follow the pattern in `src/effect/effects/shockwave/`." |
+| **Cross-spec file paths** | Other specs in the same wave exist or are in progress | Provide paths so reviewers can cross-check alignment — e.g., "Implementation spec at `.claude/specs/wave1-piercing-code.md`." |
+
+### What NOT to Include
+
+- Full file contents — the agent reads files itself. Provide paths, not content.
+- Implementation opinions — the spec writer decides how to structure the spec. Provide constraints, not solutions.
+- Previous conversation context — the agent has no memory of earlier discussion. If a decision was made in conversation, state the decision, not "as we discussed."
 
 ## Phase 1 — Research and Spec Creation
 
