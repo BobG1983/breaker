@@ -4,14 +4,15 @@ description: Effect system patterns (Active*/Effective*, Phase 4 runtime effects
 type: project
 ---
 
-## Active*/Effective* pattern: silent no-op is intentional (WIP)
+## Active*/Effective* pattern: silent no-op is intentional
 
 `fire()` functions check `world.get_mut::<Active*>()` and silently do nothing if
 the component isn't present. `recalculate_*` systems only match entities with both
-`Active*` AND `Effective*`. Neither bolt nor breaker spawn currently inserts these
-components — this is intentional WIP (dispatch_chip_effects is a Wave 6 TODO stub).
+`Active*` AND `Effective*`. `dispatch_chip_effects` is a real system (not a stub) that
+fires chip effects via `BoundEffects`/`StagedEffects` — but `Active*` components are only
+inserted when an effect's `fire()` actually runs on a bolt or breaker entity.
 Consumers use `Option<&Effective*>` with `map_or(1.0)` fallback. The entire system
-is structurally correct but not yet connected to real entities.
+is structurally correct and connected end-to-end.
 
 ## Multiplicative stacking in Active*/Effective* — correct by design
 

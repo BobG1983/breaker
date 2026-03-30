@@ -247,3 +247,62 @@ fn query_circle_filtered_excludes_entity_outside_radius_on_correct_layer() {
     );
     assert_eq!(results[0], entities[0]);
 }
+
+// ── D5: query_aabb_filtered finds branch-level items after split ──
+
+#[test]
+fn query_aabb_filtered_finds_branch_level_items_after_split() {
+    use crate::quadtree::Quadtree;
+
+    // Capacity 2 forces split with 3+ entities
+    let mut tree = Quadtree::new(Aabb2D::new(Vec2::ZERO, Vec2::new(500.0, 500.0)), 2, 8);
+    let entities = spawn_entities(4);
+
+    // entities[0]: large AABB spanning quadrants, membership = 0x01
+    tree.insert(
+        entities[0],
+        Aabb2D::new(Vec2::ZERO, Vec2::new(100.0, 100.0)),
+        CollisionLayers::new(0x01, 0x02),
+    );
+    // Small entities in distinct quadrants with membership = 0x02
+    tree.insert(
+        entities[1],
+        small_aabb(200.0, 200.0),
+        CollisionLayers::new(0x02, 0x01),
+    );
+    tree.insert(
+        entities[2],
+        small_aabb(-200.0, -200.0),
+        CollisionLayers::new(0x02, 0x01),
+    );
+    tree.insert(
+        entities[3],
+        small_aabb(200.0, -200.0),
+        CollisionLayers::new(0x02, 0x01),
+    );
+
+    // Query with mask = 0x01, matching only entities with membership 0x01 (entities[0])
+    let results = tree.query_aabb_filtered(
+        &Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 50.0)),
+        CollisionLayers::new(0x00, 0x01),
+    );
+    assert_eq!(
+        results.len(),
+        1,
+        "should find exactly the branch-level entity with membership 0x01"
+    );
+    assert_eq!(
+        results[0], entities[0],
+        "result should be entities[0] (branch-level item)"
+    );
+
+    // Edge case: query with mask = 0x04 (no entity has membership 0x04)
+    let results_empty = tree.query_aabb_filtered(
+        &Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 50.0)),
+        CollisionLayers::new(0x00, 0x04),
+    );
+    assert!(
+        results_empty.is_empty(),
+        "query with mask=0x04 should return empty — no entity has membership 0x04"
+    );
+}

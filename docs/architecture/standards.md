@@ -30,7 +30,7 @@ See `.claude/rules/tdd.md` for the full RED → GREEN → REFACTOR cycle definit
 - **Integration tests**: Use `MinimalPlugins` + headless app to test system interactions
 - **Do NOT test**: Rendering, visual output, shader correctness — manual playtesting only
 
-Tests live next to the code they test (in-module `#[cfg(test)]` blocks).
+Tests live next to the code they test. Small test suites use in-module `#[cfg(test)]` blocks. Larger suites are split into a sibling `tests.rs` or `tests/` directory module per the [System File Split Convention](layout.md#system-file-split-convention) in `layout.md`.
 
 ### Scenario Coverage
 

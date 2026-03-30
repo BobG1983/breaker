@@ -4,7 +4,7 @@ description: Crate versions at last audit (2026-03-30) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-03-30
+Audit date: 2026-03-30 (updated 2026-03-30, test-only branch)
 Branch: develop
 
 ## Direct Dependencies
@@ -69,6 +69,13 @@ Branch: develop
 - proptest removed entirely from breaker-game dev-dependencies and Cargo.lock
 - r-efi dual versions newly observed (v5.3.0 via getrandom 0.3 → cc build-dep; v6.0.0 via getrandom 0.4 → uuid → Bevy)
   Both are target-conditional (Android/WASM) and not present in macOS host build.
+
+## Changes since 2026-03-30 audit (test-only branch pass)
+- No Cargo.toml changes on this branch; all direct dependencies identical.
+- cargo machete: clean (no unused deps).
+- cargo outdated -R: same two outdated entries (rand 0.9.2 → 0.10.0, rand_chacha 0.9.0 → 0.10.0). No new entries.
+- cargo tree -d: no new duplicates; all known duplicates confirmed unchanged.
+- cargo deny check licenses: PASS (Unicode-DFS-2016 pre-allowlist warning unchanged, licenses ok).
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)

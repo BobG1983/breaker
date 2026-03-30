@@ -32,3 +32,7 @@ arc-based rework — no unsafe. All mem::replace usage is safe Rust (not unsafe)
 Still confirmed after refactor (2026-03-30, develop post-merge, c9964b7):
 23 files split into directory modules — code-only structural moves. No unsafe introduced.
 Grep for "unsafe" across all .rs files: no matches.
+
+Still confirmed after feature/missing-unit-tests (2026-03-30):
+Branch adds test code only (plus one pub(super) visibility widening). No unsafe blocks added.
+Workspace lint unsafe_code = "deny" remains in force.

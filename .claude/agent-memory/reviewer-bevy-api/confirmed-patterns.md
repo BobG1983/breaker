@@ -71,11 +71,24 @@ type: reference
 - `commands.entity(e).despawn()` — correct for leaf entities (no children to recurse)
 - `Has<T>` in query data tuple (not filter) — correct; returns `bool`, confirmed for DamageVisualQuery and breaker queries
 
+## Test App Patterns (feature/missing-unit-tests — confirmed correct)
+- `App::new().add_plugins(MinimalPlugins)` — correct minimal test harness for ECS+FixedUpdate tests
+- `add_message::<T>()` in test_app() — correct message registration for test harness
+- `app.world().resource::<Time<Fixed>>().timestep()` + `app.world_mut().resource_mut::<Time<Fixed>>().accumulate_overstep(timestep)` then `app.update()` — correct pattern to advance one FixedUpdate tick
+- `app.world_mut().query::<&T>().iter(app.world()).next().unwrap()` — correct in narrow tests where the entity count is constrained; lint is `clippy::unwrap_used` (warn not deny) so allowed in tests
+- `app.world_mut().query_filtered::<&T, With<U>>().iter(app.world())` — correct; mutable borrow for QueryState then immutable for iteration
+- `app.add_systems(FixedUpdate, system.after(PhysicsSystems::MaintainQuadtree))` — correct ordering for collision systems that depend on quadtree being populated
+- `app.world().get::<T>(entity)` — correct direct component access in test assertions (Bevy 0.18)
+- `app.world().get_entity(entity).is_err()` — correct way to check entity despawned in Bevy 0.16+ (returns `Result`)
+- `init_resource::<Assets<Mesh>>()` + `init_resource::<Assets<ColorMaterial>>()` in test apps that call spawning systems needing asset handles — correct; avoids panic when system accesses these asset stores
+- `add_systems(Startup, spawn_cells_from_layout)` — correct when testing a one-shot spawn system that should only run once on startup
+- Entities MUST have `Aabb2D` + `CollisionLayers` + `GlobalPosition2D` to be registered in `CollisionQuadtree`; entities missing these are invisible to collision systems
+
 ## Position Source Pattern in fire()/reverse() World Functions
 - All World-access fire functions must use `world.get::<Position2D>(entity)` — NOT `world.get::<Transform>(entity)`
 - This is the project-wide convention: bolt domain uses Position2D exclusively; Transform is only for rendering
 - `chain_lightning/effect.rs` — FIXED in rework: now uses `world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)`. No Transform fallback. Correct.
-- `piercing_beam.rs` — STILL has `Position2D -> Transform fallback -> Vec2::ZERO` chain. The Transform fallback is wrong — should be `Position2D -> Vec2::ZERO` only. Still open as of feature/runtime-effects.
+- `piercing_beam/effect.rs` — FIXED (feature/full-verification-fixes): `fire()` uses `super::super::entity_position(world, entity)` which is `Position2D -> Vec2::ZERO` only. No Transform fallback. Correct.
 
 ## EntropyEngine Component
 - `EntropyEngineState` is `pub` (not `pub(crate)`) because tests in same file need it and it's a component — correct
@@ -94,10 +107,9 @@ type: reference
 - `world.query_filtered::<&T, With<U>>()` in unit tests — correct Bevy 0.18 direct World API
 - `app.world_mut().query_filtered::<&T, With<U>>()` then `.iter(app.world())` — correct pattern; mutable borrow to create QueryState, then immutable to iterate
 
-## Position Source — shockwave/explode fire() Exception
-- `shockwave::fire()` and `explode::fire()` use `world.get::<Transform>(entity)` — this is intentional; these effects spawn entities carrying a `Transform` for rendering-integrated position tracking (the shockwave/explode entities are rendering objects, not physics entities)
-- The project convention (Position2D not Transform) applies to bolt/cell physics objects, not to standalone effect-spawn entities that carry Transform for their own spatial representation
-- Only `chain_lightning.rs` and `piercing_beam.rs` are confirmed wrong (use Transform on the source bolt entity)
+## Position Source — shockwave/explode/gravity_well fire() (ALL FIXED)
+- `shockwave::fire()`, `explode::fire()`, `gravity_well::fire()`, `piercing_beam::fire()` — ALL FIXED in feature/full-verification-fixes: all now use `super::super::entity_position()` (Position2D → Vec2::ZERO), and spawned entities carry `Position2D`, not Transform
+- See the CRITICAL RULE section below for the complete status of all effects
 
 ## commands.entity(e).remove::<T>() for Deferred Component Removal
 - `commands.entity(cell).remove::<ShieldActive>()` — correct deferred component removal in Bevy 0.18; `Commands::entity().remove()` buffers the removal for end-of-frame application

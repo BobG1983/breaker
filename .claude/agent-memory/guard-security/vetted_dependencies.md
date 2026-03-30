@@ -64,3 +64,11 @@ cargo deny: exits code 1 due to deny.toml treating paste warning as error — sa
   40+ transitive duplicate crates (all wgpu/Windows ecosystem churn, no direct deps affected).
 cargo machete: no unused dependencies found.
 All vetted direct dependencies confirmed unchanged.
+
+## feature/missing-unit-tests note (2026-03-30)
+Branch adds unit tests only; one production change: overlay_color in
+breaker-game/src/fx/transition/system.rs widened from private to pub(super) to enable
+test access. No new dependencies added. Dependency baseline unchanged.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
+All test .unwrap()/.expect() calls are inside #[cfg(test)] modules — not production panic
+surface. No new unsafe blocks.

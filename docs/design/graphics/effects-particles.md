@@ -63,6 +63,30 @@ This separation means effects are always readable (geo layer) AND satisfying (sh
 - **Geo layer**: No persistent geo — modifies bolt core brightness.
 - **Shader layer**: Bolt core shifts toward hotter color (amber/white). Impact effects on cells become more intense.
 
+### Attraction/Magnetism
+- **Geo layer**: Faint curved arcs (2-3 thin lines, <0.3 HDR) between bolt and attraction target, bending in pull direction. Bolt's wake trail bends toward target.
+- **Shader layer**: Lines flicker in and out with slight jitter — momentary glimpses of the force field. Brighten at close range. Intentionally minimal — attraction is ambient steering, not spectacle.
+
+### Ramping Damage (Amp)
+- **Geo layer**: Faint energy ring orbiting the bolt, growing brighter and spinning faster with each consecutive hit.
+- **Shader layer**: Bolt halo shifts progressively warmer (base → amber → white-hot) as ramp counter climbs. At high stacks (6+), afterimage frames linger in wake. On whiff reset: heat drains visibly over ~0.3s, orbital ring shatters outward in dim sparks. The cooldown is a punishing visual moment.
+
+### Random Effect (Flux)
+- **Geo layer**: Brief multi-colored spark starburst from entity on selection.
+- **Shader layer**: Rapid prismatic flash (~0.1s, 3-4 spectral color cycle) before resolving to selected effect's visual. Fast and subtle — Flux modifies other effects, isn't a spectacle itself.
+
+### Quick Stop
+- **Geo layer**: Brief compression (squash 2-3 frames) + small energy spark spray forward from breaker's leading edge.
+- **Shader layer**: Trail from dash abruptly terminates at stop point. At high stacks, micro-distortion ripple emanates from breaker position (one frame of grid bending). "Momentum converted to stillness."
+
+### Bump Force Boost
+- **Geo layer**: Concentrated impact flash at contact point, radius scaled by force multiplier. At 2x+: compact radial ring expands from impact (~0.1s).
+- **Shader layer**: At 3x+: HDR >2.0 bloom engulfs breaker's front edge. Distinct from Shockwave (which is large expanding ring) — force ring is compact and immediate.
+
+### Time Penalty
+- **Geo layer**: Red-orange energy line streaks from event source to timer's screen position, fading over ~0.2s.
+- **Shader layer**: Timer HUD glitches briefly (chromatic split, scan line distortion, 2-3 frames). Timer flashes danger-red for ~0.3s. Single brief danger vignette pulse at screen edges. Connects cause to consequence visually.
+
 ## Evolution Effects
 
 Each evolution has **completely unique, bespoke VFX**. Evolutions are the ultimate power fantasy reward — their visuals must feel like they come from a higher tier of visual quality. They should look fundamentally different from base chip effects — more complex, more particles, more screen presence.
@@ -77,8 +101,14 @@ Each evolution has **completely unique, bespoke VFX**. Evolutions are the ultima
 | Railgun | Thin, hyper-bright beam that punches across the entire screen — instantaneous, no travel time |
 | Gravity Well | See above (Gravity Well section) — the evolution version is larger and more intense |
 | Second Wind | Invisible bottom wall briefly materializes with a bright flash when the bolt would be lost — salvation effect |
+| Entropy Engine | Ring of prismatic motes orbiting bolt as counter gauge. On fill: motes converge, detonate in multi-colored burst (HDR >2.0, chromatic aberration). Mote ring grows denser across node. |
+| Chain Reaction | Each recursive spawn: expanding light ring + inheritance streamers. Bright lines flash between destroyed cell and spawned bolts. Additive blending creates white-hot cascade zones. Chromatic aberration per generation tier. |
+| Feedback Loop | Three-node triangle charge indicator near bolt, lights per perfect bump. On completion: nodes flash white-hot, collapse, circuit closes (HDR >1.5). Spawned bolt + shockwave fire amplified. Screen flash + medium shake. |
+| Split Decision | Fission effect: cell glow splits along axis, halves condense into bolt orbs (~0.15s). Energy filaments connect during split. Spawned bolts inherit parent visual modifiers. Prismatic birth trails. |
+| ArcWelder | Persistent electric arcs from bolt to cells in range. Jagged, flickering, refreshing geometry every 3-4 frames. Cells show surface flicker under damage. Bolt gains electric corona. Moving Tesla coil aesthetic. |
+| FlashStep | Breaker disintegrates into energy streak, rematerializes at bolt's X in one frame. Departure afterimage fades ~0.3s. Arrival radial burst + distortion. Light-streak connects departure/arrival 1-2 frames. |
 
-Evolution VFX should be designed and prototyped individually. Each is a visual set-piece.
+Evolution VFX should be designed and prototyped individually. Each is a visual set-piece. See `catalog/evolutions.md` for the complete list with status tracking.
 
 ## Particle Systems
 

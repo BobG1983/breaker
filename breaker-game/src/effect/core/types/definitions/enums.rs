@@ -368,3 +368,72 @@ pub struct BoundEffects(pub Vec<(String, EffectNode)>);
 /// Each entry is `(chip_name, node)`.
 #[derive(Component, Debug, Default, Clone)]
 pub struct StagedEffects(pub Vec<(String, EffectNode)>);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_root_effect_on_for_effect_node_sets_permanent_false() {
+        let root = RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+        };
+
+        let node = EffectNode::from(root);
+
+        assert_eq!(
+            node,
+            EffectNode::On {
+                target: Target::Bolt,
+                permanent: false,
+                then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+            },
+            "From<RootEffect> should produce On with permanent=false"
+        );
+    }
+
+    #[test]
+    fn from_root_effect_on_all_cells_with_empty_then() {
+        let root = RootEffect::On {
+            target: Target::AllCells,
+            then: vec![],
+        };
+
+        let node = EffectNode::from(root);
+
+        assert_eq!(
+            node,
+            EffectNode::On {
+                target: Target::AllCells,
+                permanent: false,
+                then: vec![],
+            },
+            "From<RootEffect> with AllCells and empty then should produce On with permanent=false"
+        );
+    }
+
+    #[test]
+    fn from_root_effect_on_breaker_with_nested_children_preserves_structure() {
+        let nested_children = vec![EffectNode::When {
+            trigger: Trigger::Bump,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+        }];
+        let root = RootEffect::On {
+            target: Target::Breaker,
+            then: nested_children.clone(),
+        };
+
+        let node = EffectNode::from(root);
+
+        assert_eq!(
+            node,
+            EffectNode::On {
+                target: Target::Breaker,
+                permanent: false,
+                then: nested_children,
+            },
+            "From<RootEffect> with Breaker should preserve nested children with permanent=false"
+        );
+    }
+}

@@ -6,7 +6,7 @@ Session-state is the orchestrator's single source of truth for task progress. Wi
 
 ## Location
 
-`.claude/agent-memory/orchestrator/ephemeral/session-state.md`
+`.claude/specs/session-state.md`
 
 ## Lifecycle
 

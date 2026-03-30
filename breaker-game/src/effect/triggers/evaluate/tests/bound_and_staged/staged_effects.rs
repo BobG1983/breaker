@@ -156,3 +156,115 @@ fn bare_do_in_staged_not_consumed() {
         "Retained entry should still be a Do node"
     );
 }
+
+// -- A11: Reverse node fires reverse_effect and queues RemoveChainsCommand ─
+
+use crate::effect::effects::damage_boost::ActiveDamageBoosts;
+
+#[test]
+fn reverse_node_fires_reverse_effect_and_removes_bound_chain() {
+    let mut app = test_app();
+    app.add_systems(Update, sys_evaluate_staged_for_bump);
+
+    let matching_chain = EffectNode::When {
+        trigger: Trigger::PerfectBump,
+        then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+    };
+
+    let reverse_node = EffectNode::Reverse {
+        effects: vec![EffectKind::DamageBoost(2.0)],
+        chains: vec![matching_chain.clone()],
+    };
+
+    let staged_entry = EffectNode::When {
+        trigger: Trigger::Bump,
+        then: vec![reverse_node],
+    };
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            StagedEffects(vec![("aegis".into(), staged_entry)]),
+            BoundEffects(vec![("aegis".into(), matching_chain)]),
+            ActiveDamageBoosts(vec![2.0]),
+        ))
+        .id();
+
+    app.update();
+
+    // The When(Bump) entry should be consumed from StagedEffects
+    let staged = app.world().get::<StagedEffects>(entity).unwrap();
+    assert!(
+        staged.0.is_empty(),
+        "When(Bump) entry should be consumed from StagedEffects, got {} entries",
+        staged.0.len()
+    );
+
+    // reverse_effect for DamageBoost(2.0) should have removed it from ActiveDamageBoosts
+    let boosts = app.world().get::<ActiveDamageBoosts>(entity).unwrap();
+    assert!(
+        boosts.0.is_empty(),
+        "ActiveDamageBoosts should be empty after reverse_effect, got {:?}",
+        boosts.0
+    );
+
+    // RemoveChainsCommand should have removed the matching chain from BoundEffects
+    let bound = app.world().get::<BoundEffects>(entity).unwrap();
+    assert!(
+        bound.0.is_empty(),
+        "BoundEffects should be empty after RemoveChainsCommand removed the chain, got {} entries",
+        bound.0.len()
+    );
+}
+
+#[test]
+fn reverse_node_with_empty_chains_fires_reverse_effect_only() {
+    let mut app = test_app();
+    app.add_systems(Update, sys_evaluate_staged_for_bump);
+
+    let reverse_node = EffectNode::Reverse {
+        effects: vec![EffectKind::DamageBoost(2.0)],
+        chains: vec![],
+    };
+
+    let staged_entry = EffectNode::When {
+        trigger: Trigger::Bump,
+        then: vec![reverse_node],
+    };
+
+    let bound_chain = EffectNode::When {
+        trigger: Trigger::PerfectBump,
+        then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+    };
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            StagedEffects(vec![("aegis".into(), staged_entry)]),
+            BoundEffects(vec![("aegis".into(), bound_chain.clone())]),
+            ActiveDamageBoosts(vec![2.0]),
+        ))
+        .id();
+
+    app.update();
+
+    // reverse_effect should still fire
+    let boosts = app.world().get::<ActiveDamageBoosts>(entity).unwrap();
+    assert!(
+        boosts.0.is_empty(),
+        "ActiveDamageBoosts should be empty after reverse_effect, got {:?}",
+        boosts.0
+    );
+
+    // But RemoveChainsCommand should NOT have been queued (chains is empty)
+    let bound = app.world().get::<BoundEffects>(entity).unwrap();
+    assert_eq!(
+        bound.0.len(),
+        1,
+        "BoundEffects should be unchanged when reverse has empty chains"
+    );
+    assert_eq!(
+        bound.0[0].1, bound_chain,
+        "Original bound chain should still be present"
+    );
+}

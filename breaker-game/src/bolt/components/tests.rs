@@ -228,3 +228,50 @@ fn bolt_collision_layers_have_correct_values() {
         layers.mask
     );
 }
+
+// ── enforce_min_angle: horizontal velocity defaults upward ───
+
+#[test]
+fn free_enforce_min_angle_horizontal_velocity_defaults_upward() {
+    use std::f32::consts::FRAC_PI_4;
+
+    // Exactly horizontal positive-x: y == 0.0
+    let mut velocity = Vec2::new(400.0, 0.0);
+    enforce_min_angle(&mut velocity, FRAC_PI_4);
+
+    // Should default upward (positive y)
+    assert!(
+        velocity.y > 0.0,
+        "exactly horizontal velocity should be deflected upward, got y={}",
+        velocity.y
+    );
+
+    // Speed preserved
+    assert!(
+        (velocity.length() - 400.0).abs() < 1e-3,
+        "speed should be preserved at 400.0, got {}",
+        velocity.length()
+    );
+
+    // Angle from horizontal is at least PI/4
+    let angle = velocity.y.abs().atan2(velocity.x.abs());
+    assert!(
+        angle >= FRAC_PI_4 - 1e-4,
+        "angle from horizontal {angle} should be >= PI/4 ({FRAC_PI_4})"
+    );
+
+    // Edge case: negative-x horizontal also defaults upward
+    let mut velocity_neg = Vec2::new(-400.0, 0.0);
+    enforce_min_angle(&mut velocity_neg, FRAC_PI_4);
+
+    assert!(
+        velocity_neg.y > 0.0,
+        "negative-x horizontal should also default upward, got y={}",
+        velocity_neg.y
+    );
+    assert!(
+        velocity_neg.x < 0.0,
+        "x sign should remain negative, got x={}",
+        velocity_neg.x
+    );
+}

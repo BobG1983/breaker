@@ -393,3 +393,39 @@ fn eligible_recipes_not_eligible_when_template_taken_below_threshold() {
         "2 of 3 required template chips should not satisfy the recipe"
     );
 }
+
+// --- Behavior: duplicate insert overwrites HashMap but pushes to order Vec ---
+
+#[test]
+fn chip_catalog_insert_duplicate_name_overwrites_map_but_pushes_order() {
+    let mut catalog = ChipCatalog::default();
+
+    let def = ChipDefinition::test("TestChip", EffectNode::Do(EffectKind::Piercing(1)), 3);
+
+    catalog.insert(def.clone());
+    catalog.insert(def);
+
+    // HashMap entry exists (only one copy)
+    assert!(
+        catalog.get("TestChip").is_some(),
+        "get(\"TestChip\") should return Some after duplicate insert"
+    );
+
+    // Order Vec has TWO entries for the same name
+    assert_eq!(
+        catalog.ordered_values().count(),
+        2,
+        "ordered_values should yield 2 entries after inserting the same chip twice \
+         (order Vec grows on duplicate insert)"
+    );
+
+    // Both resolve to the same chip name through the HashMap
+    assert_eq!(
+        catalog
+            .ordered_values()
+            .filter(|d| d.name == "TestChip")
+            .count(),
+        2,
+        "both ordered_values entries should resolve to TestChip"
+    );
+}

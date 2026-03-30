@@ -4,6 +4,56 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-03-30 (post feature/full-verification-fixes merge)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/full-verification-fixes branch fixed Transform/Position2D violations in gravity_well, shockwave, explode, pulse, and piercing_beam. It also added CleanupOnNodeExit to gravity_well. This made four reviewer-architecture and reviewer-bevy-api memory files stale.
+
+**Issues found and fixed (9):**
+
+1. **reviewer-architecture/known_gap_cleanup_markers.md** — Still listed gravity_well as lacking CleanupOnNodeExit. Verified line 69 of gravity_well.rs includes CleanupOnNodeExit. Updated: moved gravity_well to "correctly handled" list; noted no open gaps remain.
+
+2. **reviewer-architecture/MEMORY.md** — Description for cleanup markers file said "gravity_well entities lack CleanupOnNodeExit markers". Updated to reflect no open gaps.
+
+3. **reviewer-architecture/known_gap_transform_usage.md** — Listed gravity_well, shockwave, explode, pulse, piercing_beam as having Transform violations. All are FIXED in full-verification-fixes. Only chain_lightning arc_transforms remains — confirmed correct (rendering objects). Rewrote file to reflect current state.
+
+4. **reviewer-architecture/MEMORY.md** — Description for transform usage file said "several effects read/write Transform". Updated to describe current state.
+
+5. **reviewer-correctness/known-correct-effects.md** — "dispatch_chip_effects is a Wave 6 TODO stub" — it's a real system. Updated to remove stale WIP framing.
+
+6. **reviewer-bevy-api/confirmed-patterns.md** — Line 91 (Position Source section) said piercing_beam "STILL has Transform fallback...Still open as of feature/runtime-effects." The later CRITICAL RULE section (line 178) correctly says it's FIXED. Removed the stale "Still open" line. Also removed stale "shockwave/explode fire() Exception" section that claimed those used Transform intentionally — they're now using Position2D.
+
+7. **runner-scenarios/MEMORY.md** — Description for all_passing file said "95 scenarios...78 PASS + 17 stress suites" but the file itself says "103 scenarios...86 named PASS + 15 stress suites." Fixed description to match file (103, 86 named, 17 stress — the "15" in the file body is itself wrong: listing shows 17 suites).
+
+8. **runner-scenarios/all_passing_2026_03_30.md** — Body said "15 stress suites" but lists 17. Fixed to "17 stress suites."
+
+9. **runner-tests** — Two tombstone files (build-failure-bolt-breaker-query.md, build-failure-dstest-2026-03-29.md) explicitly said "delete on next audit." Overwritten with minimal deletion markers. Already not linked from MEMORY.md.
+
+10. **reviewer-architecture/known_gap_effects_mod_production_logic.md** — Still described helpers.rs as "remaining issue" (banned name). File was renamed to fire_helpers.rs (allowed). Updated to RESOLVED status. Updated MEMORY.md description.
+
+11. **reviewer-correctness/MEMORY.md** — Missing "Session History" line despite ephemeral/ dir containing content. Added convention line.
+
+12. **reviewer-file-length/phase4_findings.md** — The "NEW HIGH priority" section (7 files) and "mod.rs violations" section (2 files) are all now split/fixed. Rewrote to move those to "ALL SPLIT/FIXED" history sections and preserve the 25 open MEDIUM items. Updated MEMORY.md description.
+
+13. **runner-scenarios/MEMORY.md and all_passing_2026_03_30.md** — Description in MEMORY.md said "95 scenarios / 78 PASS / 17 stress suites" but file said "103 scenarios / 86 named / 15 stress suites". MEMORY.md now matches file (103 / 86 / 17). File body internal count corrected from "15" to "17" stress suites.
+
+14. **guard-docs/known-state.md** — "Chip RON files do not exist yet (Phase 7 content)" is stale; 34+ chip RON templates now exist in `breaker-game/assets/chips/templates/`. Updated to note files exist, and cross-referenced the known chip-catalog doc drift blocker.
+
+**Stale patterns confirmed still open:**
+- gravity_well::fire() infinite loop when max == 0 (reviewer-correctness/bug-patterns.md)
+- 1-frame stale ordering for Effective* consumers (bolt/plugin.rs lacks .after(EffectSystems::Recalculate) on prepare_bolt_velocity, bolt_cell_collision, bolt_breaker_collision)
+- chain_lightning arc_transforms uses Transform (correct — rendering objects, not a bug)
+- BASE_BOLT_DAMAGE hardcoding in combat effects (guard-game-design/evaluation-full-verification-2026-03-30.md blocker 1)
+- chip-catalog doc drift (guard-game-design blocker 2 — RON uses multiplicative 1.x, docs use old additive format)
+- MEDIUM file-length items (25 files, reviewer-file-length/phase4_findings.md)
+
+**New staleness pattern detected:**
+- **File-split audits miss subsequent splits**: The phase4_findings HIGH items were split AFTER the last audit recorded them. After any commit touching many .rs files (especially test extraction), re-check ALL "HIGH priority open" items in phase4_findings before treating them as open work.
+- **Forward-looking items in known-state.md**: guard-docs/known-state.md had a "Phase 7 content (not yet implemented)" note about chip RON files that became stale when the files were created. After any phase that ships content, verify forward-looking items in known-state.md.
+
+---
+
 ## Full Audit — 2026-03-30 (Full Verification Tier, develop post-merge c9964b7)
 
 **Scope:** All agent memory directories (full audit)
@@ -201,6 +251,9 @@ This branch included Wave 8 trigger bridge implementation that converted ALL tri
 - **Placeholder-to-real transitions**: Each effect phase converts placeholders to real implementations. The inventory (`effect-domain-inventory.md`) must be updated at each phase; so must reviewer-performance phase files that note entity scale and run_if gaps.
 - **EntropyEngineState field names**: The field was renamed from `kill_count` to `cells_destroyed`. Watch for similar renames in game-vocabulary cleanup sessions.
 - **guard-file-length vs reviewer-file-length duplication**: guard-file-length should NOT maintain per-phase findings; those belong in reviewer-file-length. If guard-file-length/ephemeral/ contains phase findings files, they are duplicates.
+- **Transform/Position2D gap files**: reviewer-architecture and reviewer-bevy-api both track Transform vs Position2D violations. After any branch fixing these (e.g., full-verification-fixes), check BOTH files: known_gap_transform_usage.md (reviewer-architecture) and confirmed-patterns.md Position Source section (reviewer-bevy-api). They can diverge.
+- **"Forward-looking" items in guard-docs/known-state.md**: After any phase that ships content (chip RONs, new effects, new systems), verify the "Intentionally Forward-Looking" section — items like "does not exist yet" go stale when the code ships.
+- **Phase4 HIGH items can be split silently**: reviewer-file-length/phase4_findings.md HIGH items go stale when splitting happens as part of normal feature work (not just dedicated split commits). After any large feature merge, re-check the HIGH priority list.
 
 ## Agents Accumulating Memory Fastest
 
