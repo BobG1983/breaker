@@ -111,45 +111,10 @@ fn handle_cell_hit_non_required_cell_produces_request_cell_destroyed() {
 }
 
 // =========================================================================
-// Phase 1B: RequestCellDestroyed carries position and was_required_to_clear
+// Phase 1B: RequestCellDestroyed carries was_required_to_clear
 // =========================================================================
 
-// --- Behavior 1: RequestCellDestroyed includes position of destroyed cell ---
-
-#[test]
-fn request_cell_destroyed_includes_cell_position() {
-    let mut app = test_app();
-    let cell = spawn_cell_at(&mut app, 10.0, Vec2::new(100.0, 200.0), true);
-
-    app.init_resource::<CapturedDestroyed>();
-    app.insert_resource(TestMessage(Some(DamageCell {
-        cell,
-        damage: 10.0,
-        source_chip: None,
-    })));
-    app.add_systems(
-        FixedUpdate,
-        (
-            enqueue_from_resource.before(handle_cell_hit),
-            capture_destroyed.after(handle_cell_hit),
-        ),
-    );
-    tick(&mut app);
-
-    let captured = app.world().resource::<CapturedDestroyed>();
-    assert_eq!(
-        captured.0.len(),
-        1,
-        "exactly one RequestCellDestroyed expected"
-    );
-    assert_eq!(
-        captured.0[0].position,
-        Vec2::new(100.0, 200.0),
-        "RequestCellDestroyed.position should match the cell's Position2D"
-    );
-}
-
-// --- Behavior 2: RequestCellDestroyed.was_required_to_clear=true for required cells ---
+// --- Behavior 1: RequestCellDestroyed.was_required_to_clear=true for required cells ---
 
 #[test]
 fn request_cell_destroyed_was_required_true_for_required_cell() {
@@ -183,7 +148,7 @@ fn request_cell_destroyed_was_required_true_for_required_cell() {
     );
 }
 
-// --- Behavior 3: RequestCellDestroyed.was_required_to_clear=false for non-required cells ---
+// --- Behavior 2: RequestCellDestroyed.was_required_to_clear=false for non-required cells ---
 
 #[test]
 fn request_cell_destroyed_was_required_false_for_non_required_cell() {

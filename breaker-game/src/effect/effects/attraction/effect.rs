@@ -16,7 +16,7 @@ const ATTRACTION_SEARCH_RADIUS: f32 = 500.0;
 
 /// An individual attraction entry tracking type, force, and active state.
 #[derive(Clone, Debug, PartialEq)]
-pub struct AttractionEntry {
+pub(crate) struct AttractionEntry {
     /// Which entity type to attract toward.
     pub attraction_type: AttractionType,
     /// Attraction strength.
@@ -29,16 +29,17 @@ pub struct AttractionEntry {
 
 /// Component holding all active attractions on an entity.
 #[derive(Component, Debug, Default, Clone)]
-pub struct ActiveAttractions(pub Vec<AttractionEntry>);
+pub(crate) struct ActiveAttractions(pub(crate) Vec<AttractionEntry>);
 
 /// Adds an attraction entry to the entity.
 ///
 /// Inserts `ActiveAttractions` if not already present.
-pub fn fire(
+pub(crate) fn fire(
     entity: Entity,
     attraction_type: AttractionType,
     force: f32,
     max_force: Option<f32>,
+    _source_chip: &str,
     world: &mut World,
 ) {
     let entry = AttractionEntry {
@@ -56,11 +57,12 @@ pub fn fire(
 }
 
 /// Removes a matching attraction entry from the entity.
-pub fn reverse(
+pub(crate) fn reverse(
     entity: Entity,
     attraction_type: AttractionType,
     force: f32,
     max_force: Option<f32>,
+    _source_chip: &str,
     world: &mut World,
 ) {
     if let Some(mut attractions) = world.get_mut::<ActiveAttractions>(entity)
@@ -76,7 +78,7 @@ pub fn reverse(
 
 /// Steers entities with [`ActiveAttractions`] toward the nearest target of each
 /// attracted type using the [`CollisionQuadtree`].
-pub fn apply_attraction(
+pub(crate) fn apply_attraction(
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
     positions: Query<&GlobalPosition2D>,
@@ -129,13 +131,11 @@ pub fn apply_attraction(
 
         if nearest_dist < f32::MAX {
             let direction = (nearest_pos - entity_pos).normalize_or_zero();
-            let effective_force = match nearest_max_force {
-                Some(cap) => nearest_force.min(cap),
-                None => nearest_force,
-            };
+            let effective_force =
+                nearest_max_force.map_or(nearest_force, |cap| nearest_force.min(cap));
             let delta_mag = effective_force * dt;
-            velocity.x += direction.x * delta_mag;
-            velocity.y += direction.y * delta_mag;
+            velocity.x = direction.x.mul_add(delta_mag, velocity.x);
+            velocity.y = direction.y.mul_add(delta_mag, velocity.y);
         }
     }
 }
@@ -143,7 +143,7 @@ pub fn apply_attraction(
 /// Reads bolt impact messages and deactivates attraction entries on hit with an
 /// attracted type, reactivates all deactivated entries on hit with a
 /// non-attracted type.
-pub fn manage_attraction_types(
+pub(crate) fn manage_attraction_types(
     mut impact_cell: MessageReader<BoltImpactCell>,
     mut impact_wall: MessageReader<BoltImpactWall>,
     mut impact_breaker: MessageReader<BoltImpactBreaker>,
@@ -197,7 +197,7 @@ fn process_impact(attractions: &mut ActiveAttractions, impact_type: AttractionTy
 }
 
 /// Registers attraction systems in `FixedUpdate`.
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     use crate::shared::PlayingState;
     app.add_systems(
         FixedUpdate,

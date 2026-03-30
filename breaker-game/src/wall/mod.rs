@@ -1,6 +1,6 @@
 //! Wall domain plugin — invisible boundary entities for CCD collision.
 
-pub(crate) mod components;
+pub mod components;
 pub(crate) mod filters;
 pub(crate) mod messages;
 mod plugin;

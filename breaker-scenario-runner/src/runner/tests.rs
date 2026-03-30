@@ -483,6 +483,7 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
             entered_playing: true,
             bolts_tagged: 1,
             breakers_tagged: 1,
+            ..Default::default()
         })
         .insert_resource(ScenarioConfig {
             definition: ScenarioDefinition {

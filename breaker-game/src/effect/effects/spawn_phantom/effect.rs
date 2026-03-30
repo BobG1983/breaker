@@ -8,13 +8,19 @@ use crate::bolt::components::{BoltLifespan, PiercingRemaining};
 
 /// Marker for phantom bolt entities.
 #[derive(Component)]
-pub struct PhantomBoltMarker;
+pub(crate) struct PhantomBoltMarker;
 
 /// Entity that spawned this phantom bolt.
 #[derive(Component)]
-pub struct PhantomOwner(pub Entity);
+pub(crate) struct PhantomOwner(pub(crate) Entity);
 
-pub fn fire(entity: Entity, duration: f32, max_active: u32, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    duration: f32,
+    max_active: u32,
+    _source_chip: &str,
+    world: &mut World,
+) {
     if max_active == 0 {
         return;
     }
@@ -49,7 +55,7 @@ pub fn fire(entity: Entity, duration: f32, max_active: u32, world: &mut World) {
 }
 
 /// No-op — phantoms self-despawn via `BoltLifespan`/`tick_bolt_lifespan`.
-pub fn reverse(_entity: Entity, _world: &mut World) {}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Registers systems for `SpawnPhantom` effect.
-pub fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}

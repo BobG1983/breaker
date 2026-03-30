@@ -1,27 +1,24 @@
-use std::collections::HashSet;
-
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
-};
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::helpers::*;
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
-    cells::components::Cell,
+    cells::messages::DamageCell,
+    effect::core::EffectSourceChip,
     shared::{BOLT_LAYER, CELL_LAYER, CleanupOnNodeExit, GameRng, WALL_LAYER},
 };
 
-// ── Behavior 1: fire() spawns a ChainLightningRequest with targets from quadtree ──
+// ── Behavior 1: fire() damages the first valid target cell immediately via DamageCell ──
 
 #[test]
-fn fire_spawns_request_with_single_cell_target() {
+fn fire_damages_first_target_immediately_via_damage_cell() {
     let mut app = chain_lightning_test_app();
 
     let entity = app
         .world_mut()
-        .spawn(Transform::from_xyz(100.0, 200.0, 0.0))
+        .spawn(Position2D(Vec2::new(100.0, 200.0)))
         .id();
 
     let cell = spawn_test_cell(&mut app, 120.0, 200.0);
@@ -29,91 +26,75 @@ fn fire_spawns_request_with_single_cell_target() {
     // Tick to populate quadtree
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.5, app.world_mut());
+    fire(entity, 3, 50.0, 1.5, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(
-        results.len(),
-        1,
-        "expected exactly one ChainLightningRequest entity"
-    );
+    // DamageCell should be present immediately after fire(), without needing a tick
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
 
-    let request = results[0];
     assert_eq!(
-        request.targets.len(),
+        written.len(),
         1,
-        "expected exactly one target (one cell within range)"
+        "fire() should write exactly 1 DamageCell for the first target, got {}",
+        written.len()
     );
     assert_eq!(
-        request.targets[0].0, cell,
-        "target should be the cell entity"
+        written[0].cell, cell,
+        "DamageCell should target the spawned cell"
     );
 
     let expected_damage = BASE_BOLT_DAMAGE * 1.5;
     assert!(
-        (request.targets[0].1 - expected_damage).abs() < f32::EPSILON,
-        "expected damage {}, got {}",
-        expected_damage,
-        request.targets[0].1
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {expected_damage}, got {}",
+        written[0].damage
     );
-    assert!(
-        (request.source.x - 100.0).abs() < f32::EPSILON,
-        "expected source x 100.0, got {}",
-        request.source.x
-    );
-    assert!(
-        (request.source.y - 200.0).abs() < f32::EPSILON,
-        "expected source y 200.0, got {}",
-        request.source.y
+    assert_eq!(
+        written[0].source_chip, None,
+        "source_chip should be None for empty chip name"
     );
 }
 
 #[test]
-fn fire_with_no_transform_defaults_position_to_zero() {
+fn fire_scales_damage_by_effective_damage_multiplier() {
     let mut app = chain_lightning_test_app();
-
-    let entity = app.world_mut().spawn_empty().id();
-
-    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-
-    // Request should exist (cell is within range of origin)
-    assert!(
-        !results.is_empty(),
-        "request should be spawned even without Transform"
-    );
-
-    let request = results[0];
-    assert!(
-        (request.source.x).abs() < f32::EPSILON,
-        "source should default to 0.0 x"
-    );
-    assert!(
-        (request.source.y).abs() < f32::EPSILON,
-        "source should default to 0.0 y"
-    );
-}
-
-// ── Behavior 2: fire() chains through multiple cells up to arcs count ──
-
-#[test]
-fn fire_chains_through_multiple_cells_up_to_arcs_count() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(RantzPhysics2dPlugin);
-    app.insert_resource(GameRng::from_seed(0));
 
     let entity = app
         .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
+        .spawn((
+            Position2D(Vec2::new(100.0, 200.0)),
+            crate::effect::EffectiveDamageMultiplier(2.0),
+        ))
         .id();
+
+    let _cell = spawn_test_cell(&mut app, 120.0, 200.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.5, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(written.len(), 1, "expected 1 DamageCell");
+
+    // damage = BASE_BOLT_DAMAGE * 1.5 * 2.0 = 30.0
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    assert!(
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {expected_damage} (10.0 * 1.5 * 2.0), got {}",
+        written[0].damage
+    );
+}
+
+// ── Behavior 2: fire() spawns a ChainLightningChain entity with correct initial state ──
+
+#[test]
+fn fire_spawns_chain_entity_with_correct_initial_state() {
+    let mut app = chain_lightning_test_app();
+    app.world_mut().insert_resource(GameRng::from_seed(0));
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
@@ -121,119 +102,366 @@ fn fire_chains_through_multiple_cells_up_to_arcs_count() {
 
     tick(&mut app);
 
-    fire(entity, 3, 25.0, 1.0, app.world_mut());
+    fire(entity, 3, 25.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
-
-    let request = results[0];
-    // With range=25, chain should jump from origin -> cell_a (20 away),
-    // then cell_a -> cell_b (20 away), then cell_b -> cell_c (20 away).
-    // All 3 cells reachable with arcs=3.
+    let mut query = app.world_mut().query::<&ChainLightningChain>();
+    let chains: Vec<_> = query.iter(app.world()).collect();
     assert_eq!(
-        request.targets.len(),
-        3,
-        "expected 3 targets (all reachable with range 25.0 and arcs 3)"
+        chains.len(),
+        1,
+        "expected exactly one ChainLightningChain entity, got {}",
+        chains.len()
     );
 
-    for (_entity, damage) in &request.targets {
-        let expected = BASE_BOLT_DAMAGE * 1.0;
-        assert!(
-            (damage - expected).abs() < f32::EPSILON,
-            "each target should have damage {expected}, got {damage}"
-        );
-    }
+    let chain = chains[0];
+    assert_eq!(
+        chain.remaining_jumps, 2,
+        "remaining_jumps should be 2 (arcs=3 minus 1 for initial target)"
+    );
+
+    let expected_damage = BASE_BOLT_DAMAGE * 1.0;
+    assert!(
+        (chain.damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {expected_damage}, got {}",
+        chain.damage
+    );
+
+    assert_eq!(
+        chain.hit_set.len(),
+        1,
+        "hit_set should contain exactly the first target"
+    );
+
+    assert!(
+        matches!(chain.state, ChainState::Idle),
+        "initial state should be Idle"
+    );
+
+    assert!(
+        (chain.range - 25.0).abs() < f32::EPSILON,
+        "range should be 25.0, got {}",
+        chain.range
+    );
+
+    assert!(
+        (chain.arc_speed - 200.0).abs() < f32::EPSILON,
+        "arc_speed should be 200.0, got {}",
+        chain.arc_speed
+    );
+
+    assert_eq!(
+        chain.source,
+        Vec2::new(20.0, 0.0),
+        "chain source should be the position of the first target"
+    );
 }
 
-// ── Behavior 3: fire() does not include the same cell twice ──
-
 #[test]
-fn fire_does_not_include_same_cell_twice() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(RantzPhysics2dPlugin);
-    app.insert_resource(GameRng::from_seed(0));
+fn fire_chain_entity_has_cleanup_on_node_exit() {
+    let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
-    let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
-    let _cell_b = spawn_test_cell(&mut app, 15.0, 0.0);
+    let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
 
     tick(&mut app);
 
-    fire(entity, 5, 20.0, 1.0, app.world_mut());
+    fire(entity, 3, 25.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
+    let mut query = app
+        .world_mut()
+        .query_filtered::<Entity, With<ChainLightningChain>>();
+    let chain_entity = query
+        .iter(app.world())
+        .next()
+        .expect("chain entity should exist");
 
-    let request = results[0];
-    // With only 2 cells available, even arcs=5, max targets is 2
     assert!(
-        request.targets.len() <= 2,
-        "targets should contain at most 2 entries (one per unique cell), got {}",
-        request.targets.len()
-    );
-
-    // Check uniqueness
-    let unique_entities: HashSet<Entity> = request.targets.iter().map(|(e, _)| *e).collect();
-    assert_eq!(
-        unique_entities.len(),
-        request.targets.len(),
-        "each cell entity should appear at most once in targets"
+        app.world().get::<CleanupOnNodeExit>(chain_entity).is_some(),
+        "ChainLightningChain entity should have CleanupOnNodeExit"
     );
 }
 
 #[test]
-fn fire_single_cell_in_range_with_multiple_arcs_produces_one_target() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(RantzPhysics2dPlugin);
-    app.insert_resource(GameRng::from_seed(0));
+fn fire_chain_entity_has_effect_source_chip_none_for_empty_chip() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 25.0, 1.0, 200.0, "", app.world_mut());
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&EffectSourceChip, With<ChainLightningChain>>();
+    let results: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one chain entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0, None,
+        "empty source_chip should produce EffectSourceChip(None)"
+    );
+}
+
+#[test]
+fn fire_chain_entity_damage_includes_effective_damage_multiplier() {
+    let mut app = chain_lightning_test_app();
 
     let entity = app
         .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
+        .spawn((
+            Position2D(Vec2::ZERO),
+            crate::effect::EffectiveDamageMultiplier(2.0),
+        ))
         .id();
+
+    let _cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 25.0, 1.0, 200.0, "", app.world_mut());
+
+    let mut query = app.world_mut().query::<&ChainLightningChain>();
+    let chains: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(chains.len(), 1);
+
+    // damage = BASE_BOLT_DAMAGE * 1.0 * 2.0 = 20.0
+    let expected_damage = BASE_BOLT_DAMAGE * 1.0 * 2.0;
+    assert!(
+        (chains[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected chain damage {expected_damage}, got {}",
+        chains[0].damage
+    );
+}
+
+// ── Behavior 3: fire() with arcs=0 does nothing ──
+
+#[test]
+fn fire_with_arcs_zero_does_nothing() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 0, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    // No ChainLightningChain entity
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "arcs=0 should not spawn any chain entity"
+    );
+
+    // No DamageCell message
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "arcs=0 should not write any DamageCell message"
+    );
+}
+
+#[test]
+fn fire_with_arcs_zero_and_multiple_cells_does_nothing() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 15.0, 0.0);
+    let _cell_c = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 0, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "arcs=0 with multiple cells should still do nothing"
+    );
+}
+
+// ── Behavior 4: fire() with arcs=1 damages first target, spawns no chain entity ──
+
+#[test]
+fn fire_with_arcs_one_damages_first_target_and_spawns_no_chain() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
     tick(&mut app);
 
-    fire(entity, 3, 20.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
+    // DamageCell should be written
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+    assert_eq!(written.len(), 1, "arcs=1 should damage the first target");
+    assert_eq!(written[0].cell, cell);
 
-    let request = results[0];
-    assert_eq!(
-        request.targets.len(),
-        1,
-        "single cell in range, arcs=3 should produce exactly 1 target"
+    // No chain entity (remaining_jumps would be 0)
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "arcs=1 should not spawn a chain entity (remaining_jumps=0)"
     );
-    assert_eq!(request.targets[0].0, cell);
 }
 
-// ── Behavior 4: fire() only targets cells on CELL_LAYER ──
+#[test]
+fn fire_with_arcs_one_and_no_cells_in_range_does_nothing() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    // Cell far away
+    let _cell = spawn_test_cell(&mut app, 500.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 1, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "arcs=1 with no cells in range should not damage anything"
+    );
+
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "arcs=1 with no cells in range should not spawn a chain"
+    );
+}
+
+// ── Behavior 5: fire() with no valid targets in range ──
+
+#[test]
+fn fire_with_no_targets_in_range_damages_nothing_and_spawns_no_chain() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell = spawn_test_cell(&mut app, 500.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "no targets in range should produce no DamageCell"
+    );
+
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "no targets in range should not spawn a chain"
+    );
+}
+
+#[test]
+fn fire_with_empty_quadtree_damages_nothing() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    // No cells at all
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "empty quadtree should produce no DamageCell"
+    );
+
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "empty quadtree should not spawn a chain"
+    );
+}
+
+// ── Behavior 6: fire() with range=0 or negative range ──
+
+#[test]
+fn fire_with_zero_range_damages_nothing() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell = spawn_test_cell(&mut app, 0.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 0.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "range=0.0 should produce no DamageCell"
+    );
+
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "range=0.0 should not spawn a chain"
+    );
+}
+
+#[test]
+fn fire_with_negative_range_damages_nothing() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell = spawn_test_cell(&mut app, 0.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, -5.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "negative range should produce no DamageCell"
+    );
+
+    let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
+    assert!(
+        chain_query.iter(app.world()).next().is_none(),
+        "negative range should not spawn a chain"
+    );
+}
+
+// ── Behavior 7: fire() only targets cells on CELL_LAYER ──
 
 #[test]
 fn fire_only_targets_cells_on_cell_layer() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     // Cell on CELL_LAYER
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
-    // Entity on WALL_LAYER (not a cell)
+    // Wall entity on WALL_LAYER (not a cell)
     let wall_pos = Vec2::new(5.0, 0.0);
     app.world_mut().spawn((
         Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
@@ -243,7 +471,7 @@ fn fire_only_targets_cells_on_cell_layer() {
         Spatial2D,
     ));
 
-    // Entity on BOLT_LAYER (not a cell)
+    // Bolt entity on BOLT_LAYER (not a cell)
     let bolt_pos = Vec2::new(8.0, 0.0);
     app.world_mut().spawn((
         Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
@@ -255,24 +483,19 @@ fn fire_only_targets_cells_on_cell_layer() {
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
 
-    let request = results[0];
-    // Only CELL_LAYER entity should be in targets
-    let target_entities: Vec<Entity> = request.targets.iter().map(|(e, _)| *e).collect();
-    assert!(
-        target_entities.contains(&cell),
-        "CELL_LAYER entity should be in targets"
+    assert_eq!(
+        written.len(),
+        1,
+        "only CELL_LAYER entity should be targeted"
     );
     assert_eq!(
-        target_entities.len(),
-        1,
-        "only CELL_LAYER entities should be targeted, got {}",
-        target_entities.len()
+        written[0].cell, cell,
+        "DamageCell should target the CELL_LAYER entity"
     );
 }
 
@@ -280,17 +503,14 @@ fn fire_only_targets_cells_on_cell_layer() {
 fn fire_targets_entity_with_combined_cell_layer_membership() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
-    // Entity with CELL_LAYER | BOLT_LAYER — should be found since it includes CELL_LAYER
+    // Entity with CELL_LAYER | BOLT_LAYER
     let pos = Vec2::new(10.0, 0.0);
     let combined = app
         .world_mut()
         .spawn((
-            Cell,
+            crate::cells::components::Cell,
             Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
             CollisionLayers::new(CELL_LAYER | BOLT_LAYER, 0),
             Position2D(pos),
@@ -301,89 +521,136 @@ fn fire_targets_entity_with_combined_cell_layer_membership() {
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
 
-    let request = results[0];
-    let target_entities: Vec<Entity> = request.targets.iter().map(|(e, _)| *e).collect();
-    assert!(
-        target_entities.contains(&combined),
-        "entity with CELL_LAYER in combined mask should be targeted"
-    );
-}
-
-// ── Behavior 5: fire() terminates chain when no targets in range ──
-
-#[test]
-fn fire_terminates_chain_when_next_cell_out_of_range() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
-
-    let cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
-    // cell_b is far away from cell_a — beyond range=25
-    let _cell_b = spawn_test_cell(&mut app, 200.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 3, 25.0, 1.0, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
-
-    let request = results[0];
     assert_eq!(
-        request.targets.len(),
+        written.len(),
         1,
-        "chain should stop after cell_a because cell_b is too far"
+        "combined CELL_LAYER entity should be targeted"
     );
-    assert_eq!(request.targets[0].0, cell_a);
+    assert_eq!(written[0].cell, combined);
 }
 
+// ── Behavior 8: fire() reads position from Position2D (no Transform fallback) ──
+
 #[test]
-fn fire_with_no_cells_in_range_spawns_request_with_empty_targets() {
+fn fire_defaults_position_to_zero_with_no_position_or_transform() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn_empty().id();
 
-    // Cell far away — outside range
-    let _cell = spawn_test_cell(&mut app, 500.0, 0.0);
+    // Cell at (10, 0) — within range 50 from origin
+    let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
     tick(&mut app);
 
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(
+        written.len(),
+        1,
+        "cell at (10,0) should be in range from default (0,0)"
+    );
+    assert_eq!(written[0].cell, cell);
+}
+
+#[test]
+fn fire_prefers_position2d_over_transform() {
+    let mut app = chain_lightning_test_app();
+
+    // Entity with Position2D(50, 50) and Transform at (100, 100)
+    // Production code reads Position2D only (no Transform fallback),
+    // so Transform is ignored.
+    let entity = app
+        .world_mut()
+        .spawn((
+            rantzsoft_spatial2d::components::Position2D(Vec2::new(50.0, 50.0)),
+            Transform::from_xyz(100.0, 100.0, 0.0),
+        ))
+        .id();
+
+    // Cell at (60, 50) — 10 units from Position2D, out of range from Transform origin
+    let cell = spawn_test_cell(&mut app, 60.0, 50.0);
+
+    tick(&mut app);
+
+    fire(entity, 1, 15.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(
+        written.len(),
+        1,
+        "should use Position2D (50,50), cell at (60,50) is 10 units away, within range 15"
+    );
+    assert_eq!(written[0].cell, cell);
+}
+
+// ── Behavior 9: fire() stores EffectSourceChip on chain entity ──
+
+#[test]
+fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.0, 200.0, "zapper", app.world_mut());
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&EffectSourceChip, With<ChainLightningChain>>();
     let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
-
-    let request = results[0];
-    assert!(
-        request.targets.is_empty(),
-        "no cells in range — targets should be empty"
+    assert_eq!(results.len(), 1, "expected one chain entity");
+    assert_eq!(
+        results[0].0,
+        Some("zapper".to_string()),
+        "spawned chain should have EffectSourceChip(Some(\"zapper\"))"
     );
 }
 
-// ── Behavior 6: fire() uses GameRng deterministically ──
+#[test]
+fn fire_stores_effect_source_chip_none_for_empty_chip_name() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&EffectSourceChip, With<ChainLightningChain>>();
+    let results: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(results.len(), 1, "expected one chain entity");
+    assert_eq!(
+        results[0].0, None,
+        "empty source_chip should produce EffectSourceChip(None)"
+    );
+}
+
+// ── Behavior 10: fire() uses GameRng deterministically ──
 
 #[test]
 fn fire_uses_game_rng_deterministically() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
     let _cell_b = spawn_test_cell(&mut app, 0.0, 10.0);
@@ -393,270 +660,122 @@ fn fire_uses_game_rng_deterministically() {
 
     // First call with seed 42
     app.world_mut().insert_resource(GameRng::from_seed(42));
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 1.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<(Entity, &ChainLightningRequest)>();
-    let first_results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(first_results.len(), 1);
-    let first_target = first_results[0].1.targets[0].0;
-    let first_request_entity = first_results[0].0;
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let first_written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+    assert_eq!(first_written.len(), 1, "first fire should damage one cell");
+    let first_target = first_written[0].cell;
 
-    // Remove first request
-    app.world_mut().despawn(first_request_entity);
+    // Reset by creating a new app with same setup for clean message state
+    let mut app2 = chain_lightning_test_app();
 
-    // Reset RNG to same seed and fire again
-    app.world_mut().insert_resource(GameRng::from_seed(42));
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    let entity2 = app2.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
-    let mut query2 = app.world_mut().query::<&ChainLightningRequest>();
-    let second_results: Vec<_> = query2.iter(app.world()).collect();
-    assert_eq!(second_results.len(), 1);
-    let second_target = second_results[0].targets[0].0;
+    let _cell_a2 = spawn_test_cell(&mut app2, 10.0, 0.0);
+    let _cell_b2 = spawn_test_cell(&mut app2, 0.0, 10.0);
+    let _cell_c2 = spawn_test_cell(&mut app2, -10.0, 0.0);
 
+    tick(&mut app2);
+
+    // Same seed
+    app2.world_mut().insert_resource(GameRng::from_seed(42));
+    fire(entity2, 1, 50.0, 1.0, 200.0, "", app2.world_mut());
+
+    let messages2 = app2.world().resource::<Messages<DamageCell>>();
+    let second_written: Vec<&DamageCell> = messages2.iter_current_update_messages().collect();
+    assert_eq!(
+        second_written.len(),
+        1,
+        "second fire should damage one cell"
+    );
+    let second_target = second_written[0].cell;
+
+    // Entity IDs may differ across apps, but with same entity spawn order they should be the same
     assert_eq!(
         first_target, second_target,
         "same RNG seed should produce same target selection"
     );
 }
 
-#[test]
-fn fire_single_candidate_always_selected_regardless_of_rng_seed() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(RantzPhysics2dPlugin);
-    app.insert_resource(GameRng::from_seed(999));
+// ── Behavior 10b: fire() with damage_mult=0.0 ──
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+#[test]
+fn fire_with_zero_damage_mult_sends_damage_cell_with_zero_damage() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
     tick(&mut app);
 
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
+    fire(entity, 1, 50.0, 0.0, 200.0, "", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1);
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert_eq!(
-        results[0].targets[0].0, cell,
-        "only one candidate — must be selected regardless of RNG state"
+        written.len(),
+        1,
+        "should still write DamageCell with 0 damage"
+    );
+    assert_eq!(written[0].cell, cell);
+    assert!(
+        (written[0].damage - 0.0).abs() < f32::EPSILON,
+        "damage should be 0.0, got {}",
+        written[0].damage
     );
 }
 
-// ── Behavior 7: fire() applies damage_mult to BASE_BOLT_DAMAGE ──
-
 #[test]
-fn fire_applies_damage_mult_to_base_bolt_damage() {
+fn fire_with_zero_damage_mult_and_multiple_arcs_spawns_chain_with_zero_damage() {
     let mut app = chain_lightning_test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
+
+    let _cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 20.0, 0.0);
+    let _cell_c = spawn_test_cell(&mut app, 30.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 0.0, 200.0, "", app.world_mut());
+
+    let mut query = app.world_mut().query::<&ChainLightningChain>();
+    let chains: Vec<_> = query.iter(app.world()).collect();
+    assert_eq!(chains.len(), 1, "should spawn chain entity with damage=0.0");
+    assert!(
+        (chains[0].damage - 0.0).abs() < f32::EPSILON,
+        "chain damage should be 0.0"
+    );
+}
+
+// ── Behavior 21: DamageCell from fire() includes source_chip ──
+
+#[test]
+fn fire_damage_cell_includes_source_chip() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app.world_mut().spawn(Position2D(Vec2::ZERO)).id();
 
     let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
 
     tick(&mut app);
 
-    fire(entity, 1, 50.0, 2.5, app.world_mut());
+    fire(entity, 1, 50.0, 1.5, 200.0, "zapper", app.world_mut());
 
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1);
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+    assert_eq!(written.len(), 1);
 
-    let expected_damage = BASE_BOLT_DAMAGE * 2.5;
+    let expected_damage = BASE_BOLT_DAMAGE * 1.5;
     assert!(
-        (results[0].targets[0].1 - expected_damage).abs() < f32::EPSILON,
-        "expected damage {}, got {}",
-        expected_damage,
-        results[0].targets[0].1
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {expected_damage}"
     );
-}
-
-#[test]
-fn fire_with_zero_damage_mult_produces_zero_damage() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
-
-    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 1, 50.0, 0.0, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1);
-
-    assert!(
-        (results[0].targets[0].1 - 0.0).abs() < f32::EPSILON,
-        "damage_mult 0.0 should produce damage 0.0, got {}",
-        results[0].targets[0].1
-    );
-}
-
-// ── Behavior 8: fire() with arcs=0 spawns no request entity ──
-
-#[test]
-fn fire_with_arcs_zero_spawns_no_request() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
-
-    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 0, 50.0, 1.0, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert!(
-        results.is_empty(),
-        "arcs=0 should not spawn any request entity"
-    );
-}
-
-// ── Behavior 9: fire() with range=0 spawns request with empty targets ──
-
-#[test]
-fn fire_with_zero_range_spawns_request_with_empty_targets() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
-
-    // Cell at same position
-    let _cell = spawn_test_cell(&mut app, 0.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 3, 0.0, 1.0, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "request should be spawned");
-
-    assert!(
-        results[0].targets.is_empty(),
-        "range=0.0 should produce empty targets (circle query with radius 0 returns nothing)"
-    );
-    assert!(
-        (results[0].source.x).abs() < f32::EPSILON,
-        "source should be (0, 0)"
-    );
-}
-
-// ── Behavior 10: fire() with no cells in range spawns request with empty targets ──
-
-#[test]
-fn fire_with_empty_quadtree_spawns_request_with_empty_targets() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
-
-    // No cells spawned at all
-    tick(&mut app);
-
-    fire(entity, 3, 50.0, 1.0, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "request should be spawned");
-
-    assert!(
-        results[0].targets.is_empty(),
-        "no cells in quadtree — targets should be empty"
-    );
-}
-
-// ── Behavior 1 edge case: request entity has CleanupOnNodeExit ──
-
-#[test]
-fn fire_request_entity_has_cleanup_on_node_exit() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn(Transform::from_xyz(0.0, 0.0, 0.0))
-        .id();
-
-    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 1, 50.0, 1.0, app.world_mut());
-
-    let mut query = app
-        .world_mut()
-        .query_filtered::<Entity, With<ChainLightningRequest>>();
-    let request_entity = query
-        .iter(app.world())
-        .next()
-        .expect("request should exist");
-
-    assert!(
-        app.world()
-            .get::<CleanupOnNodeExit>(request_entity)
-            .is_some(),
-        "ChainLightningRequest entity should have CleanupOnNodeExit"
-    );
-}
-
-// ── Damage scaling: fire() includes EffectiveDamageMultiplier in pre-computed damage ──
-
-#[test]
-fn fire_scales_damage_by_effective_damage_multiplier() {
-    let mut app = chain_lightning_test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            crate::effect::EffectiveDamageMultiplier(2.0),
-        ))
-        .id();
-
-    let _cell_a = spawn_test_cell(&mut app, 30.0, 0.0);
-    let _cell_b = spawn_test_cell(&mut app, 60.0, 0.0);
-
-    tick(&mut app);
-
-    fire(entity, 2, 100.0, 1.5, app.world_mut());
-
-    let mut query = app.world_mut().query::<&ChainLightningRequest>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(results.len(), 1, "expected one request entity");
-
-    let request = results[0];
     assert_eq!(
-        request.targets.len(),
-        2,
-        "expected 2 targets, got {}",
-        request.targets.len()
+        written[0].source_chip,
+        Some("zapper".to_string()),
+        "DamageCell should include source_chip"
     );
-
-    // damage = BASE_BOLT_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
-    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
-    for (_entity, damage) in &request.targets {
-        assert!(
-            (damage - expected_damage).abs() < f32::EPSILON,
-            "expected damage {expected_damage} (10.0 * 1.5 * 2.0), got {damage}",
-        );
-    }
 }

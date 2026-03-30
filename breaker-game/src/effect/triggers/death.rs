@@ -120,7 +120,6 @@ mod tests {
 
         app.insert_resource(TestCellDestroyedMsg(Some(RequestCellDestroyed {
             cell,
-            position: Vec2::new(100.0, 200.0),
             was_required_to_clear: true,
         })));
         app.insert_resource(TestBoltDestroyedMsg(None));

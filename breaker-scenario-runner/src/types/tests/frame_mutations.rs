@@ -183,6 +183,28 @@ fn frame_mutation_inject_wrong_effective_speed_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
+// FrameMutation — SpawnExtraChainArcs RON deserialization
+// -------------------------------------------------------------------------
+
+#[test]
+fn frame_mutation_spawn_extra_chain_arcs_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraChainArcs(10))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraChainArcs should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraChainArcs(10));
+}
+
+#[test]
+fn frame_mutation_spawn_extra_chain_arcs_zero_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraChainArcs(0))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraChainArcs(0) should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraChainArcs(0));
+}
+
+// -------------------------------------------------------------------------
 // ScenarioBreakerState — all variants parse from RON
 // -------------------------------------------------------------------------
 

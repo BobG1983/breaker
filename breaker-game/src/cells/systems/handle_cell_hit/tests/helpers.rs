@@ -190,10 +190,14 @@ pub(super) fn spawn_cell_at(app: &mut App, hp: f32, pos: Vec2, required: bool) -
     entity.id()
 }
 
-pub(super) fn spawn_shielded_cell(app: &mut App, hp: f32) -> Entity {
+pub(super) fn spawn_shielded_cell_with_charges(app: &mut App, hp: f32, charges: u32) -> Entity {
     let entity = spawn_cell(app, hp);
     app.world_mut()
         .entity_mut(entity)
-        .insert(ShieldActive { charges: 3 });
+        .insert(ShieldActive { charges });
     entity
+}
+
+pub(super) fn spawn_shielded_cell(app: &mut App, hp: f32) -> Entity {
+    spawn_shielded_cell_with_charges(app, hp, 3)
 }

@@ -1,8 +1,8 @@
 ---
 name: reviewer-file-length
 description: "Use this agent to find overly large source files and produce refactor specs for splitting them. Identifies files over 400 lines, analyzes test-to-production ratio, and outputs a prioritized table with concrete split recommendations. Produces refactor spec hints that writer-code can execute directly.\n\nExamples:\n\n- At a phase boundary:\n  Assistant: \"Phase complete. Let me use the reviewer-file-length agent to check for files that need splitting.\"\n\n- After a feature adds many tests:\n  Assistant: \"Let me use the reviewer-file-length agent to check if any files have grown too large.\"\n\n- When agents are reading files in multiple chunks:\n  Assistant: \"Context pollution suspected. Let me use the reviewer-file-length agent to identify split candidates.\"\n\n- Parallel note: Run alongside reviewer-quality, reviewer-correctness, runner-tests, and other post-implementation agents — all are independent."
-tools: Read, Glob, Grep, Bash
-model: sonnet
+tools: Read, Write, Edit, Glob, Grep
+model: opus
 color: orange
 memory: project
 ---
@@ -83,7 +83,19 @@ domain/
       group_b.rs
 ```
 
-## Output Format
+## Output
+
+**Write the complete plan to `.claude/specs/file-splits.md`** using the format below. This spec file is consumed by writer-code agents.
+
+For each file, also check:
+- What the **parent module** declares (`mod original_file;`) — confirm it doesn't need changes
+- What **external files** import from this module — list them so the writer-code knows what to re-export
+- Whether the original file has a `//!` doc comment — copy it to the mod.rs plan
+
+Return to the orchestrator:
+1. The spec file path: `.claude/specs/file-splits.md`
+2. A summary table of all files and their priorities
+3. A recommended batching for parallel writer-code agents (group files that don't touch the same crate together)
 
 ### Summary Table
 

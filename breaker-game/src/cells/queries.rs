@@ -18,5 +18,5 @@ pub(crate) type DamageVisualQuery = (
     Has<RequiredToClear>,
     Has<Locked>,
     &'static Position2D,
-    Has<ShieldActive>,
+    Option<&'static mut ShieldActive>,
 );

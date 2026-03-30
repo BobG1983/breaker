@@ -10,8 +10,6 @@ use bevy::prelude::*;
 pub(crate) struct RequestCellDestroyed {
     /// The cell entity to be destroyed.
     pub cell: Entity,
-    /// World-space position of the destroyed cell.
-    pub position: Vec2,
     /// Whether this cell had the `RequiredToClear` component.
     pub was_required_to_clear: bool,
 }
@@ -21,8 +19,6 @@ pub(crate) struct RequestCellDestroyed {
 /// Replaces `CellDestroyed` for all downstream consumers (run tracking, lock release, etc.).
 #[derive(Message, Clone, Debug)]
 pub(crate) struct CellDestroyedAt {
-    /// World-space position of the destroyed cell.
-    pub position: Vec2,
     /// Whether this cell counted toward node completion.
     pub was_required_to_clear: bool,
 }
@@ -70,7 +66,6 @@ mod tests {
     fn request_cell_destroyed_debug_format() {
         let msg = RequestCellDestroyed {
             cell: Entity::PLACEHOLDER,
-            position: Vec2::ZERO,
             was_required_to_clear: false,
         };
         let debug = format!("{msg:?}");
@@ -81,7 +76,6 @@ mod tests {
     #[test]
     fn cell_destroyed_at_debug_format() {
         let msg = CellDestroyedAt {
-            position: Vec2::ZERO,
             was_required_to_clear: true,
         };
         let debug = format!("{msg:?}");
@@ -92,7 +86,6 @@ mod tests {
     #[test]
     fn cell_destroyed_at_non_required() {
         let msg = CellDestroyedAt {
-            position: Vec2::ZERO,
             was_required_to_clear: false,
         };
         assert!(!msg.was_required_to_clear);

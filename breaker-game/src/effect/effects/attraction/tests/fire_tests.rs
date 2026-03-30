@@ -10,7 +10,7 @@ fn fire_inserts_active_attractions_on_fresh_entity() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    fire(entity, AttractionType::Cell, 10.0, None, &mut world);
+    fire(entity, AttractionType::Cell, 10.0, None, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(attractions.0.len(), 1);
@@ -31,7 +31,7 @@ fn fire_appends_entry_to_existing_active_attractions() {
         }]))
         .id();
 
-    fire(entity, AttractionType::Breaker, 15.0, None, &mut world);
+    fire(entity, AttractionType::Breaker, 15.0, None, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -63,7 +63,7 @@ fn reverse_removes_matching_entry() {
         ]))
         .id();
 
-    reverse(entity, AttractionType::Cell, 10.0, None, &mut world);
+    reverse(entity, AttractionType::Cell, 10.0, None, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(attractions.0.len(), 1, "matching entry should be removed");
@@ -83,7 +83,7 @@ fn reverse_with_no_match_is_noop() {
         .id();
 
     // Different type -- no match.
-    reverse(entity, AttractionType::Breaker, 10.0, None, &mut world);
+    reverse(entity, AttractionType::Breaker, 10.0, None, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -100,7 +100,14 @@ fn fire_stores_max_force_in_attraction_entry() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    fire(entity, AttractionType::Cell, 500.0, Some(300.0), &mut world);
+    fire(
+        entity,
+        AttractionType::Cell,
+        500.0,
+        Some(300.0),
+        "",
+        &mut world,
+    );
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(attractions.0.len(), 1);
@@ -124,7 +131,7 @@ fn fire_stores_none_max_force_when_none_passed() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    fire(entity, AttractionType::Cell, 500.0, None, &mut world);
+    fire(entity, AttractionType::Cell, 500.0, None, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -148,7 +155,14 @@ fn fire_appends_entry_with_max_force_to_existing() {
         }]))
         .id();
 
-    fire(entity, AttractionType::Wall, 800.0, Some(400.0), &mut world);
+    fire(
+        entity,
+        AttractionType::Wall,
+        800.0,
+        Some(400.0),
+        "",
+        &mut world,
+    );
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -184,7 +198,14 @@ fn reverse_matches_on_type_force_and_max_force() {
         }]))
         .id();
 
-    reverse(entity, AttractionType::Cell, 500.0, Some(300.0), &mut world);
+    reverse(
+        entity,
+        AttractionType::Cell,
+        500.0,
+        Some(300.0),
+        "",
+        &mut world,
+    );
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert!(
@@ -213,7 +234,14 @@ fn reverse_removes_only_matching_max_force_entry() {
         ]))
         .id();
 
-    reverse(entity, AttractionType::Cell, 500.0, Some(300.0), &mut world);
+    reverse(
+        entity,
+        AttractionType::Cell,
+        500.0,
+        Some(300.0),
+        "",
+        &mut world,
+    );
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -242,7 +270,14 @@ fn reverse_does_not_remove_entry_with_different_max_force() {
         }]))
         .id();
 
-    reverse(entity, AttractionType::Cell, 500.0, Some(999.0), &mut world);
+    reverse(
+        entity,
+        AttractionType::Cell,
+        500.0,
+        Some(999.0),
+        "",
+        &mut world,
+    );
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -264,7 +299,7 @@ fn reverse_none_max_force_does_not_match_some_max_force() {
         }]))
         .id();
 
-    reverse(entity, AttractionType::Cell, 500.0, None, &mut world);
+    reverse(entity, AttractionType::Cell, 500.0, None, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert_eq!(
@@ -293,7 +328,7 @@ fn effect_kind_attraction_reverse_dispatch_forwards_max_force() {
         force: 500.0,
         max_force: Some(300.0),
     };
-    effect.reverse(entity, &mut world);
+    effect.reverse(entity, "", &mut world);
 
     let attractions = world.get::<ActiveAttractions>(entity).unwrap();
     assert!(
@@ -314,7 +349,7 @@ fn effect_kind_attraction_fire_dispatch_forwards_max_force() {
         force: 500.0,
         max_force: Some(300.0),
     };
-    effect.fire(entity, &mut world);
+    effect.fire(entity, "", &mut world);
 
     let attractions = world
         .get::<ActiveAttractions>(entity)

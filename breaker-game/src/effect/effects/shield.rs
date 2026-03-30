@@ -6,7 +6,7 @@ use bevy::prelude::*;
 /// is removed.
 #[derive(Component)]
 pub struct ShieldActive {
-    /// Number of bolt-saves remaining.
+    /// Remaining absorptions — each bolt loss (on Breaker) or damage hit (on Cell) decrements by one.
     pub charges: u32,
 }
 
@@ -15,7 +15,7 @@ pub struct ShieldActive {
 /// If the entity already has a shield, adds `stacks` to existing charges.
 /// If the entity has no shield and `stacks > 0`, inserts a new shield.
 /// If the entity has no shield and `stacks == 0`, does nothing (no-op).
-pub(crate) fn fire(entity: Entity, stacks: u32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, stacks: u32, _source_chip: &str, world: &mut World) {
     if let Some(mut shield) = world.get_mut::<ShieldActive>(entity) {
         shield.charges += stacks;
     } else if stacks > 0 {
@@ -25,12 +25,12 @@ pub(crate) fn fire(entity: Entity, stacks: u32, world: &mut World) {
     }
 }
 
-pub(crate) fn reverse(entity: Entity, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     world.entity_mut(entity).remove::<ShieldActive>();
 }
 
-pub(crate) fn register(_app: &mut App) {
-    // No runtime systems — charge decrement happens in bolt_lost.
+pub(crate) const fn register(_app: &mut App) {
+    // No runtime systems — charge decrement happens in bolt_lost and handle_cell_hit.
 }
 
 #[cfg(test)]
@@ -44,7 +44,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        fire(entity, 3, &mut world);
+        fire(entity, 3, "", &mut world);
 
         let shield = world.get::<ShieldActive>(entity).unwrap();
         assert_eq!(
@@ -60,7 +60,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        fire(entity, 1, &mut world);
+        fire(entity, 1, "", &mut world);
 
         let shield = world.get::<ShieldActive>(entity).unwrap();
         assert_eq!(
@@ -77,7 +77,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(ShieldActive { charges: 2 }).id();
 
-        fire(entity, 3, &mut world);
+        fire(entity, 3, "", &mut world);
 
         let shield = world.get::<ShieldActive>(entity).unwrap();
         assert_eq!(
@@ -93,7 +93,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(ShieldActive { charges: 2 }).id();
 
-        fire(entity, 0, &mut world);
+        fire(entity, 0, "", &mut world);
 
         let shield = world.get::<ShieldActive>(entity).unwrap();
         assert_eq!(
@@ -110,7 +110,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        fire(entity, 0, &mut world);
+        fire(entity, 0, "", &mut world);
 
         assert!(
             world.get::<ShieldActive>(entity).is_none(),
@@ -125,7 +125,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(ShieldActive { charges: 5 }).id();
 
-        reverse(entity, &mut world);
+        reverse(entity, "", &mut world);
 
         assert!(
             world.get::<ShieldActive>(entity).is_none(),
@@ -139,7 +139,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        reverse(entity, &mut world); // should not panic
+        reverse(entity, "", &mut world); // should not panic
     }
 
     // ── Behavior 5: fire() uses new signature (compile-time constraint) ──
@@ -162,8 +162,10 @@ mod tests {
 
         // Simulate 10 seconds worth of ticks (at default 64Hz fixed timestep)
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        let ticks_for_10_seconds: u32 =
-            u32::try_from((10.0_f64 / timestep.as_secs_f64()).ceil() as u64).unwrap_or(u32::MAX);
+        let tick_count = std::time::Duration::from_secs(10)
+            .as_nanos()
+            .div_ceil(timestep.as_nanos());
+        let ticks_for_10_seconds = u32::try_from(tick_count).unwrap_or(u32::MAX);
 
         for _ in 0..ticks_for_10_seconds {
             app.world_mut()

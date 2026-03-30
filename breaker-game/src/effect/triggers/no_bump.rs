@@ -3,9 +3,9 @@ use bevy::prelude::*;
 
 use crate::effect::core::*;
 
-fn bridge_no_bump(
-    mut _query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
-    mut _commands: Commands,
+const fn bridge_no_bump(
+    _query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
+    _commands: Commands,
 ) {
     // Placeholder — message reading wired in Wave 8
 }

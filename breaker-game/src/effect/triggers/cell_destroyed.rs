@@ -87,7 +87,6 @@ mod tests {
         let mut app = test_app();
 
         app.insert_resource(TestCellDestroyedMsg(Some(CellDestroyedAt {
-            position: Vec2::new(100.0, 200.0),
             was_required_to_clear: true,
         })));
 
@@ -158,7 +157,6 @@ mod tests {
         let mut app = test_app();
 
         app.insert_resource(TestCellDestroyedMsg(Some(CellDestroyedAt {
-            position: Vec2::new(50.0, 75.0),
             was_required_to_clear: false,
         })));
 

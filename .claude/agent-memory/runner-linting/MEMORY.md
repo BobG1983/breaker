@@ -1,2 +1,2 @@
-- [Current lint state](lint_state_current.md) — feature/runtime-effects Wave 2: game crate 5 errors (lib test) / 128 warnings; scenario runner 1 warning; spatial2d/physics2d/defaults clean (2026-03-28)
-- [Core lint patterns](lint_patterns_core.md) — Recurring warning categories from effect system rewrite (missing_const_for_fn, needless_pass_by_ref_mut, dead_code, use_self, suboptimal_flops, redundant_clone)
+- [Current lint state](lint_state_current.md) — feature/source-chip-shield-absorption 2026-03-29: fmt PASS, dclippy 1 error (doc_markdown in test doc comment), all other crates PASS
+- [Core lint patterns](lint_patterns_core.md) — Historical: Wave 8 stub warning patterns (now resolved); see lint_state_current.md for current state

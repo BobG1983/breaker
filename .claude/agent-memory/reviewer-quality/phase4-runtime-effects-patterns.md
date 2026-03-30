@@ -16,9 +16,10 @@ The max_active eviction loop uses `owned.remove(0)` to despawn the oldest phanto
 
 `fire(_entity: Entity, ...)` and `reverse(_entity: Entity, ...)` — the entity parameter is part of the uniform `fire/reverse` interface for all effect handlers but is not used by second_wind (position comes from PlayfieldConfig, not the entity). The underscore prefix is correct.
 
-## `PhantomTimer` kept as backward-compatibility stub
+## `PhantomTimer` — REMOVED (feature/runtime-effects)
 
-`PhantomTimer(pub f32)` in spawn_phantom.rs exists only to satisfy tests that assert its absence (`assert!(world.get::<PhantomTimer>(phantom).is_none())`). The component is declared but never inserted. This is a deliberate migration breadcrumb, not dead code.
+`PhantomTimer` was a backward-compatibility stub component. It has been removed entirely.
+`spawn_phantom.rs` now uses `BoltLifespan(Timer)` from the bolt domain. Do NOT flag the absence of `PhantomTimer` as a missing component — it is intentionally gone.
 
 ## `unwrap()` calls in bolt_lost/tests.rs
 

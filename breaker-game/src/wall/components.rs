@@ -8,7 +8,7 @@ use crate::shared::CleanupOnNodeExit;
 /// Marker component identifying wall entities (left, right, ceiling).
 #[derive(Component, Debug, Default)]
 #[require(Spatial2D, CleanupOnNodeExit)]
-pub(crate) struct Wall;
+pub struct Wall;
 
 /// Half-extents for a wall entity used in CCD collision.
 ///

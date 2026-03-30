@@ -10,7 +10,7 @@ use crate::{
 
 /// Tracks cells destroyed within the current node for entropy scaling.
 #[derive(Component, Debug, Clone)]
-pub struct EntropyEngineState {
+pub(crate) struct EntropyEngineState {
     /// Cells destroyed this node (resets between nodes).
     pub cells_destroyed: u32,
 }
@@ -23,6 +23,7 @@ pub(crate) fn fire(
     entity: Entity,
     max_effects: u32,
     pool: &[(f32, EffectNode)],
+    source_chip: &str,
     world: &mut World,
 ) {
     // Step 1: Insert EntropyEngineState if absent
@@ -34,8 +35,10 @@ pub(crate) fn fire(
 
     // Step 2: Increment cells_destroyed and compute effects to fire
     let effects_to_fire = {
-        // unwrap OK: EntropyEngineState was just inserted above if absent
-        let mut state = world.get_mut::<EntropyEngineState>(entity).unwrap();
+        // EntropyEngineState was just inserted above if absent
+        let Some(mut state) = world.get_mut::<EntropyEngineState>(entity) else {
+            return;
+        };
         state.cells_destroyed = state.cells_destroyed.saturating_add(1);
         state.cells_destroyed.min(max_effects)
     };
@@ -67,16 +70,14 @@ pub(crate) fn fire(
     for idx in selected_indices {
         let node = pool[idx].1.clone();
         match node {
-            EffectNode::Do(effect) => effect.fire(entity, world),
+            EffectNode::Do(effect) => effect.fire(entity, source_chip, world),
             other => {
                 if let Some(mut staged) = world.get_mut::<StagedEffects>(entity) {
-                    // Empty chip name — effect dispatched by system, not a specific chip
-                    staged.0.push((String::new(), other));
+                    staged.0.push((source_chip.to_string(), other));
                 } else {
-                    // Empty chip name — effect dispatched by system, not a specific chip
                     world
                         .entity_mut(entity)
-                        .insert(StagedEffects(vec![(String::new(), other)]));
+                        .insert(StagedEffects(vec![(source_chip.to_string(), other)]));
                 }
             }
         }
@@ -84,7 +85,7 @@ pub(crate) fn fire(
 }
 
 /// No-op — inner effects handle their own reversal.
-pub(crate) fn reverse(_entity: Entity, _world: &mut World) {}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Registers systems for `EntropyEngine` effect.
 pub(crate) fn register(app: &mut App) {

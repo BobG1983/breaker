@@ -7,7 +7,19 @@ fn fire_adds_pulse_emitter_to_entity() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
 
-    fire(entity, 32.0, 8.0, 1, 50.0, 0.5, &mut world);
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.0,
+        },
+        "",
+        &mut world,
+    );
 
     let emitter = world
         .get::<PulseEmitter>(entity)
@@ -46,8 +58,32 @@ fn fire_overwrites_existing_pulse_emitter() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
 
-    fire(entity, 32.0, 8.0, 1, 50.0, 0.5, &mut world);
-    fire(entity, 64.0, 16.0, 2, 100.0, 0.5, &mut world);
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.0,
+        },
+        "",
+        &mut world,
+    );
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 64.0,
+            range_per_level: 16.0,
+            stacks: 2,
+            speed: 100.0,
+            interval: 0.5,
+            timer: 0.0,
+        },
+        "",
+        &mut world,
+    );
 
     let emitter = world
         .get::<PulseEmitter>(entity)
@@ -120,7 +156,7 @@ fn reverse_removes_pulse_emitter() {
         ))
         .id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get::<PulseEmitter>(entity).is_none(),
@@ -134,7 +170,7 @@ fn reverse_on_entity_without_emitter_does_not_panic() {
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
     // Should not panic
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -149,7 +185,19 @@ fn fire_passes_custom_interval_to_pulse_emitter() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
 
-    fire(entity, 32.0, 8.0, 1, 50.0, 0.25, &mut world);
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.25,
+            timer: 0.0,
+        },
+        "",
+        &mut world,
+    );
 
     let emitter = world
         .get::<PulseEmitter>(entity)
@@ -190,7 +238,19 @@ fn fire_with_default_interval_produces_same_as_old_hardcoded() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
-    fire(entity, 32.0, 8.0, 1, 50.0, 0.5, &mut world);
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.0,
+        },
+        "",
+        &mut world,
+    );
 
     let emitter = world
         .get::<PulseEmitter>(entity)
@@ -217,7 +277,7 @@ fn effect_kind_pulse_fire_dispatch_forwards_interval() {
         speed: 50.0,
         interval: 0.75,
     };
-    effect.fire(entity, &mut world);
+    effect.fire(entity, "", &mut world);
 
     let emitter = world
         .get::<PulseEmitter>(entity)

@@ -71,27 +71,9 @@ Standardized output formats that verification agents produce and failure routing
 - Delegate: main agent fixes inline (warning/info) or writer-code (critical with test coverage)
 ```
 
-## Refactor spec hint (reviewer-file-length)
+## reviewer-file-length
 
-```
-**Refactor spec hint:**
-- Source file: `path/to/original_file.rs`
-- Total lines: N (prod: N, tests: N)
-- Strategy: A (test extraction) | B (concern separation) | C (test sub-split)
-- Target structure:
-  ```
-  path/to/
-    new_dir/
-      mod.rs      // [exact contents]
-      system.rs   // [what goes here]
-      tests.rs    // [what goes here, or tests/ breakdown]
-  ```
-- Test groups (for sub-splitting):
-  - `group_name.rs`: test_fn_1, test_fn_2, ... (N tests, ~M lines)
-- Imports needed: [use statements split files will need]
-- Re-exports needed: [what mod.rs must re-export to maintain public API]
-- Delegate: writer-code can execute this refactor directly
-```
+reviewer-file-length produces a split spec at `.claude/specs/file-splits.md` — no hint format needed. The orchestrator launches parallel writer-code agents to execute the splits.
 
 ## Dependency finding (guard-dependencies)
 

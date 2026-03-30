@@ -6,13 +6,13 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Default, Clone)]
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
-pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveSpeedBoosts>(entity) {
         active.0.push(multiplier);
     }
 }
 
-pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveSpeedBoosts>(entity)
         && let Some(pos) = active
             .0
@@ -66,7 +66,7 @@ mod tests {
     fn fire_pushes_multiplier_onto_active_speed_boosts() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSpeedBoosts(vec![])).id();
-        fire(entity, 1.5, &mut world);
+        fire(entity, 1.5, "", &mut world);
         let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![1.5]);
     }
@@ -75,7 +75,7 @@ mod tests {
     fn fire_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        fire(entity, 1.5, &mut world);
+        fire(entity, 1.5, "", &mut world);
         assert!(world.get::<ActiveSpeedBoosts>(entity).is_none());
     }
 
@@ -83,7 +83,7 @@ mod tests {
     fn reverse_removes_matching_multiplier() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSpeedBoosts(vec![1.5, 2.0])).id();
-        reverse(entity, 1.5, &mut world);
+        reverse(entity, 1.5, "", &mut world);
         let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
         assert_eq!(active.0.len(), 1);
         assert!(active.0.contains(&2.0));
@@ -93,7 +93,7 @@ mod tests {
     fn reverse_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        reverse(entity, 1.5, &mut world);
+        reverse(entity, 1.5, "", &mut world);
         assert!(world.get::<ActiveSpeedBoosts>(entity).is_none());
     }
 
@@ -101,9 +101,9 @@ mod tests {
     fn multiple_fires_stack() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSpeedBoosts(vec![])).id();
-        fire(entity, 1.5, &mut world);
-        fire(entity, 2.0, &mut world);
-        fire(entity, 1.25, &mut world);
+        fire(entity, 1.5, "", &mut world);
+        fire(entity, 2.0, "", &mut world);
+        fire(entity, 1.25, "", &mut world);
         let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![1.5, 2.0, 1.25]);
     }
@@ -112,7 +112,7 @@ mod tests {
     fn reverse_removes_only_one_matching_entry() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSpeedBoosts(vec![1.5, 1.5, 2.0])).id();
-        reverse(entity, 1.5, &mut world);
+        reverse(entity, 1.5, "", &mut world);
         let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
         assert_eq!(active.0.len(), 2);
         assert!(active.0.contains(&1.5));

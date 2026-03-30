@@ -20,7 +20,7 @@ fn fire_spawns_explode_request_entity_at_source_position() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
 
-    fire(entity, 60.0, 2.0, &mut world);
+    fire(entity, 60.0, 2.0, "", &mut world);
 
     let mut query = world.query::<(&ExplodeRequest, &Transform)>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -58,7 +58,7 @@ fn fire_with_no_transform_defaults_position_to_zero() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 60.0, 2.0, &mut world);
+    fire(entity, 60.0, 2.0, "", &mut world);
 
     let mut query = world.query::<(&ExplodeRequest, &Transform)>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -82,7 +82,7 @@ fn fire_with_custom_damage_mult() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
-    fire(entity, 40.0, 1.5, &mut world);
+    fire(entity, 40.0, 1.5, "", &mut world);
 
     let mut query = world.query::<&ExplodeRequest>();
     let request = query
@@ -106,7 +106,7 @@ fn fire_with_zero_damage_mult() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
-    fire(entity, 40.0, 0.0, &mut world);
+    fire(entity, 40.0, 0.0, "", &mut world);
 
     let mut query = world.query::<&ExplodeRequest>();
     let request = query
@@ -128,7 +128,7 @@ fn reverse_is_noop() {
     let entity = world.spawn(Transform::from_xyz(10.0, 20.0, 0.0)).id();
 
     // reverse should complete without panicking or modifying anything
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     // Entity still exists
     assert!(
@@ -142,7 +142,7 @@ fn reverse_on_empty_entity_is_noop() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    reverse(entity, &mut world);
+    reverse(entity, "", &mut world);
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -355,7 +355,7 @@ fn process_explode_requests_despawns_request_with_no_cells_in_range() {
 fn process_explode_requests_handles_multiple_requests_in_same_frame() {
     let mut app = damage_test_app();
 
-    let cell = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
     let req1 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 1.0);
     let req2 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 2.0);
 
@@ -483,7 +483,7 @@ fn explode_damage_scales_by_effective_damage_multiplier() {
         ))
         .id();
 
-    fire(source, 50.0, 2.0, app.world_mut());
+    fire(source, 50.0, 2.0, "", app.world_mut());
 
     tick(&mut app);
 
@@ -520,7 +520,7 @@ fn explode_damage_with_edm_and_unit_damage_mult() {
         ))
         .id();
 
-    fire(source, 50.0, 1.0, app.world_mut());
+    fire(source, 50.0, 1.0, "", app.world_mut());
 
     tick(&mut app);
 
@@ -534,5 +534,152 @@ fn explode_damage_with_edm_and_unit_damage_mult() {
         "expected damage {} (10.0 * 1.0 * 2.0), got {}",
         expected_damage,
         collector.0[0].damage
+    );
+}
+
+// -- Section E: EffectSourceChip attribution tests ───────────────────
+
+use crate::effect::core::EffectSourceChip;
+
+#[test]
+fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(50.0, 75.0, 0.0)).id();
+
+    fire(entity, 60.0, 2.0, "blast", &mut world);
+
+    let mut query = world.query::<&EffectSourceChip>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0,
+        Some("blast".to_string()),
+        "spawned ExplodeRequest should have EffectSourceChip(Some(\"blast\"))"
+    );
+}
+
+#[test]
+fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+    fire(entity, 60.0, 2.0, "", &mut world);
+
+    let mut query = world.query::<&EffectSourceChip>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "expected one entity with EffectSourceChip"
+    );
+    assert_eq!(
+        results[0].0, None,
+        "empty source_chip should produce EffectSourceChip(None)"
+    );
+}
+
+#[test]
+fn process_explode_requests_populates_source_chip_from_effect_source_chip() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 30.0, 0.0);
+
+    app.world_mut().spawn((
+        ExplodeRequest {
+            range: 50.0,
+            damage_mult: 1.0,
+        },
+        EffectSourceChip(Some("blast".to_string())),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(collector.0[0].cell, cell);
+    assert_eq!(
+        collector.0[0].source_chip,
+        Some("blast".to_string()),
+        "DamageCell should have source_chip from EffectSourceChip"
+    );
+}
+
+#[test]
+fn process_explode_requests_source_chip_none_when_no_effect_source_chip() {
+    let mut app = damage_test_app();
+
+    spawn_test_cell(&mut app, 30.0, 0.0);
+
+    // No EffectSourceChip on request
+    app.world_mut().spawn((
+        ExplodeRequest {
+            range: 50.0,
+            damage_mult: 1.0,
+        },
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].source_chip, None,
+        "missing EffectSourceChip should default to source_chip None"
+    );
+}
+
+#[test]
+fn multiple_explode_requests_with_different_source_chips_produce_correctly_attributed_damage() {
+    let mut app = damage_test_app();
+
+    let cell_a = spawn_test_cell(&mut app, 10.0, 0.0);
+    let cell_b = spawn_test_cell(&mut app, 210.0, 0.0);
+
+    app.world_mut().spawn((
+        ExplodeRequest {
+            range: 50.0,
+            damage_mult: 1.0,
+        },
+        EffectSourceChip(Some("alpha".to_string())),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    app.world_mut().spawn((
+        ExplodeRequest {
+            range: 50.0,
+            damage_mult: 1.0,
+        },
+        EffectSourceChip(Some("beta".to_string())),
+        Transform::from_xyz(200.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        2,
+        "expected 2 DamageCell messages, got {}",
+        collector.0.len()
+    );
+
+    let msg_a = collector.0.iter().find(|m| m.cell == cell_a).unwrap();
+    assert_eq!(
+        msg_a.source_chip,
+        Some("alpha".to_string()),
+        "cell near request A should have source_chip alpha"
+    );
+
+    let msg_b = collector.0.iter().find(|m| m.cell == cell_b).unwrap();
+    assert_eq!(
+        msg_b.source_chip,
+        Some("beta".to_string()),
+        "cell near request B should have source_chip beta"
     );
 }

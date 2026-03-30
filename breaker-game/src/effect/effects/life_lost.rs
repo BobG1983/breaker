@@ -5,7 +5,7 @@ use bevy::prelude::*;
 pub struct LivesCount(pub u32);
 
 /// Decrements `LivesCount` on the entity if present and greater than zero.
-pub(crate) fn fire(entity: Entity, world: &mut World) {
+pub(crate) fn fire(entity: Entity, _source_chip: &str, world: &mut World) {
     if let Some(mut lives) = world.get_mut::<LivesCount>(entity)
         && lives.0 > 0
     {
@@ -14,14 +14,14 @@ pub(crate) fn fire(entity: Entity, world: &mut World) {
 }
 
 /// Restores one life — increments `LivesCount` on the entity.
-pub(crate) fn reverse(entity: Entity, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     if let Some(mut lives) = world.get_mut::<LivesCount>(entity) {
         lives.0 += 1;
     }
 }
 
 /// Registers systems for `LifeLost` effect.
-pub(crate) fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {
@@ -32,7 +32,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(LivesCount(3)).id();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let lives = world.get::<LivesCount>(entity).unwrap();
         assert_eq!(lives.0, 2, "LivesCount(3) should become LivesCount(2)");
@@ -43,7 +43,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(LivesCount(0)).id();
 
-        fire(entity, &mut world);
+        fire(entity, "", &mut world);
 
         let lives = world.get::<LivesCount>(entity).unwrap();
         assert_eq!(lives.0, 0, "LivesCount(0) should remain 0");
@@ -54,7 +54,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn(LivesCount(2)).id();
 
-        reverse(entity, &mut world);
+        reverse(entity, "", &mut world);
 
         let lives = world.get::<LivesCount>(entity).unwrap();
         assert_eq!(lives.0, 3, "reverse should increment LivesCount by 1");

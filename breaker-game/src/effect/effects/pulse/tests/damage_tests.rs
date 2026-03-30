@@ -258,3 +258,118 @@ fn pulse_ring_damage_zero_multiplier_produces_zero_damage() {
         collector.0[0].damage
     );
 }
+
+// -- Section D: EffectSourceChip attribution tests ───────────────────
+
+use crate::effect::core::EffectSourceChip;
+
+#[test]
+fn pulse_fire_stores_effect_source_chip_with_non_empty_chip_name() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
+
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.0,
+        },
+        "resonance",
+        &mut world,
+    );
+
+    let source_chip = world
+        .get::<EffectSourceChip>(entity)
+        .expect("entity should have EffectSourceChip after fire()");
+    assert_eq!(
+        source_chip.0,
+        Some("resonance".to_string()),
+        "fire() with non-empty source_chip should store EffectSourceChip(Some(...))"
+    );
+}
+
+#[test]
+fn pulse_fire_stores_effect_source_chip_none_with_empty_chip_name() {
+    let mut world = World::new();
+    let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
+
+    fire(
+        entity,
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 8.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.0,
+        },
+        "",
+        &mut world,
+    );
+
+    let source_chip = world
+        .get::<EffectSourceChip>(entity)
+        .expect("entity should have EffectSourceChip after fire()");
+    assert_eq!(
+        source_chip.0, None,
+        "fire() with empty source_chip should store EffectSourceChip(None)"
+    );
+}
+
+#[test]
+fn apply_pulse_damage_populates_source_chip_from_ring_effect_source_chip() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    app.world_mut().spawn((
+        PulseRing,
+        PulseRadius(25.0),
+        PulseMaxRadius(50.0),
+        PulseSpeed(0.0),
+        PulseDamaged::default(),
+        EffectSourceChip(Some("resonance".to_string())),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(collector.0[0].cell, cell);
+    assert_eq!(
+        collector.0[0].source_chip,
+        Some("resonance".to_string()),
+        "DamageCell should have source_chip from ring's EffectSourceChip"
+    );
+}
+
+#[test]
+fn apply_pulse_damage_source_chip_none_when_no_effect_source_chip_on_ring() {
+    let mut app = damage_test_app();
+
+    spawn_test_cell(&mut app, 20.0, 0.0);
+
+    // No EffectSourceChip on the ring
+    app.world_mut().spawn((
+        PulseRing,
+        PulseRadius(25.0),
+        PulseMaxRadius(50.0),
+        PulseSpeed(0.0),
+        PulseDamaged::default(),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].source_chip, None,
+        "missing EffectSourceChip on ring should default to source_chip None"
+    );
+}

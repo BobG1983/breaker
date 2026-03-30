@@ -13,6 +13,7 @@ type: reference
 - `MessageReader<'w, T>` — correct system param for reading messages
 - `Messages<T>` resource — accessed via `app.world().resource::<Messages<T>>()` in tests
 - `.iter_current_update_messages()` — correct method on `Messages<T>` to read this frame's messages
+- `Messages<T>.write(msg)` — valid direct write method on `Messages<T>` resource (confirmed docs.rs 0.18.1); used in `fire()` World-access functions via `world.resource_mut::<Messages<T>>().write(...)`
 - `MessageWriter` is `SystemParam` — two writers for different types in one system are valid
 - `type CollisionWriters<'a> = (MessageWriter<'a, A>, MessageWriter<'a, B>)` — valid tuple SystemParam alias
 
@@ -73,9 +74,66 @@ type: reference
 ## Position Source Pattern in fire()/reverse() World Functions
 - All World-access fire functions must use `world.get::<Position2D>(entity)` — NOT `world.get::<Transform>(entity)`
 - This is the project-wide convention: bolt domain uses Position2D exclusively; Transform is only for rendering
-- `chain_lightning.rs` and `piercing_beam.rs` both incorrectly use `world.get::<Transform>(entity)` — flagged in Phase 5 review
-- The fallback chain `GlobalPosition2D` then `Transform` in chain_lightning.rs (lines 75-82) is also wrong; should use `Position2D` or `GlobalPosition2D` only
+- `chain_lightning/effect.rs` — FIXED in rework: now uses `world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)`. No Transform fallback. Correct.
+- `piercing_beam.rs` — STILL has `Position2D -> Transform fallback -> Vec2::ZERO` chain. The Transform fallback is wrong — should be `Position2D -> Vec2::ZERO` only. Still open as of feature/runtime-effects.
 
 ## EntropyEngine Component
 - `EntropyEngineState` is `pub` (not `pub(crate)`) because tests in same file need it and it's a component — correct
 - `OnEnter(PlayingState::Active)` for reset system is correct for sub-state entry scheduling
+
+## Option<&'static mut T> in Query Type Aliases
+- `Option<&'static mut ShieldActive>` in a `type DamageVisualQuery = (...)` alias — correct for Bevy 0.18 query tuples; `'static` lifetime required in type aliases
+- Same applies to any `Option<&'static T>` or `Option<&'static mut T>` in query data tuples
+- Confirmed: `type DamageVisualQuery` in `cells/queries.rs` is correct Bevy 0.18 usage
+
+## Let-Chain Syntax in System Code
+- `if let Some(ref mut x) = opt && x.field > 0 { ... }` — valid Rust 2024 edition feature; edition 2024 stabilized `let_chains`; breaker-game uses `edition = "2024"`
+- No feature flag needed; this is a stable language feature in edition 2024
+
+## query_filtered in Tests
+- `world.query_filtered::<&T, With<U>>()` in unit tests — correct Bevy 0.18 direct World API
+- `app.world_mut().query_filtered::<&T, With<U>>()` then `.iter(app.world())` — correct pattern; mutable borrow to create QueryState, then immutable to iterate
+
+## Position Source — shockwave/explode fire() Exception
+- `shockwave::fire()` and `explode::fire()` use `world.get::<Transform>(entity)` — this is intentional; these effects spawn entities carrying a `Transform` for rendering-integrated position tracking (the shockwave/explode entities are rendering objects, not physics entities)
+- The project convention (Position2D not Transform) applies to bolt/cell physics objects, not to standalone effect-spawn entities that carry Transform for their own spatial representation
+- Only `chain_lightning.rs` and `piercing_beam.rs` are confirmed wrong (use Transform on the source bolt entity)
+
+## commands.entity(e).remove::<T>() for Deferred Component Removal
+- `commands.entity(cell).remove::<ShieldActive>()` — correct deferred component removal in Bevy 0.18; `Commands::entity().remove()` buffers the removal for end-of-frame application
+- This is correct when the system also reads/writes the component in the same frame via a `Query`; the deferred removal doesn't conflict with current frame query access
+
+## insert_if_new with Tuple Bundles
+- `commands.entity(entity).insert_if_new((BoundEffects::default(), StagedEffects::default()))` — correct; insert_if_new accepts `impl Bundle`, and tuples of components are Bundles; confirmed Bevy 0.18.1
+- `entity_ref.insert_if_new(...)` on `EntityWorldMut` — also valid; same Bundle acceptance
+
+## commands.queue with Closures
+- `commands.queue(move |world: &mut World| { ... })` — correct; Commands::queue (renamed from Commands::add in 0.15) accepts closures matching `|&mut World|` as well as types implementing Command
+- This is the correct pattern for deferred World-access within a system that also uses Commands
+
+## Option<Res<T>> and Option<ResMut<T>> as SystemParams
+- `catalog: Option<Res<ChipCatalog>>` in a system signature — valid Bevy 0.18 SystemParam; returns None when resource is not present
+- `mut inventory: Option<ResMut<ChipInventory>>` — valid; same pattern
+- These allow graceful degradation when resources may not be registered (e.g., during scenario seeding)
+
+## SystemParam Derive with Query Fields ('w, 's)
+- `#[derive(SystemParam)] struct Foo<'w, 's> { q: Query<'w, 's, Entity, With<T>>, ... }` — correct when struct contains Query fields; both lifetimes required for Query
+- `#[derive(SystemParam)] struct Foo<'w> { ... }` — correct when struct contains only Res/ResMut/MessageWriter (no Query)
+- Both patterns confirmed in this codebase (DispatchTargets, ChainLightningWorld, CellSpawnContext, etc.)
+
+## ApplyDeferred in OnEnter Chains
+- `(seed_initial_chips, init_scenario_input, ApplyDeferred, tag_game_entities, ...).chain()` in `OnEnter(GameState::Playing)` — valid Bevy 0.18 pattern; ApplyDeferred flushes deferred commands between steps in a chained system set
+- `.after(BoltSystems::InitParams)` on an OnEnter chain — valid scheduling constraint
+
+## Local<bool> Guard Pattern
+- `mut done: Local<bool>` in a system + `if *done { return; }` then `*done = true;` — correct Bevy 0.18 one-shot pattern; Local persists across invocations within the app lifetime
+- Used in scenario runner for apply_pending_bolt_effects, apply_pending_cell_effects, apply_pending_wall_effects, seed_initial_chips, deferred_debug_setup
+
+## world.entity_mut() vs world.get_entity_mut()
+- `world.entity_mut(entity).insert(...)` — panics if entity doesn't exist; used in fire() functions where entity existence is guaranteed by prior query match
+- `world.entity_mut(entity).remove::<T>()` — panics if entity doesn't exist; used in reverse() functions; established convention for fire/reverse functions
+- `world.get_entity_mut(entity)` returns Result — used in Command::apply implementations (PushBoundEffects, TransferCommand) where entity existence is NOT guaranteed
+- The distinction is: World-access fire/reverse functions (confirmed entity exists) use entity_mut(); Command impls use get_entity_mut()
+
+## for _ in reader.read() {} — Message Drain Pattern
+- `for _ in reader.read() {}` — valid pattern to drain a MessageReader without processing messages (e.g., when a required resource is absent)

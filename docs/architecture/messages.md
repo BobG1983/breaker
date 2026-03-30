@@ -41,9 +41,10 @@ Effect firing does not use `#[derive(Message)]` or `commands.trigger()`. Instead
 
 | Method | Queued by | Applies via |
 |--------|-----------|-------------|
-| `commands.fire_effect(entity, effect)` | trigger bridge systems evaluating `Do(effect)` nodes | `FireEffectCommand::apply` → `effect.fire(entity, world)` |
-| `commands.reverse_effect(entity, effect)` | `Reverse` node unwinding | `ReverseEffectCommand::apply` → `effect.reverse(entity, world)` |
+| `commands.fire_effect(entity, effect, source_chip)` | trigger bridge systems evaluating `Do(effect)` nodes | `FireEffectCommand::apply` → `effect.fire(entity, &source_chip, world)` |
+| `commands.reverse_effect(entity, effect, source_chip)` | `Reverse` node unwinding | `ReverseEffectCommand::apply` → `effect.reverse(entity, &source_chip, world)` |
 | `commands.transfer_effect(entity, name, children, permanent)` | `On` node redirect | `TransferCommand::apply` → pushes to `BoundEffects` or `StagedEffects` |
+| `commands.push_bound_effects(entity, effects)` | `dispatch_cell_effects`, `dispatch_breaker_effects` dispatch systems | `PushBoundEffects::apply` → inserts `BoundEffects`/`StagedEffects` if absent, then appends entries |
 
 Each effect module in `effect/effects/` provides `fire()`, `reverse()`, and `register()`. The enum match in `EffectKind` is mechanical dispatch only.
 

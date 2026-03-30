@@ -57,6 +57,70 @@ type: project
 - `docs/design/effects/attraction.md` — "nearest wins" and type deactivation/reactivation matches code exactly
 - `BoltImpactWall` consumer entry ("effect") covers both bridge triggers AND runtime effect systems — no change needed
 
+## 2026-03-29 — feature/source-chip-shield-absorption (second review session)
+
+**Branch:** feature/source-chip-shield-absorption
+
+**Files reviewed:**
+- `breaker-game/src/effect/commands.rs` — push_bound_effects method, PushBoundEffects command
+- `breaker-game/src/cells/components/types.rs` — CellEffectsDispatched marker component
+- `breaker-game/src/cells/systems/dispatch_cell_effects.rs` — dispatch logic, CellDispatchQuery
+- `breaker-game/src/cells/plugin.rs` — dispatch_cell_effects registration after NodeSystems::Spawn
+- `breaker-game/src/wall/systems/dispatch_wall_effects.rs` — no-op stub
+- `breaker-game/src/wall/plugin.rs` — (spawn_walls, dispatch_wall_effects).chain() registration
+- `breaker-game/src/breaker/systems/dispatch_breaker_effects/system.rs` — dispatch logic
+- `breaker-game/src/breaker/plugin.rs` — dispatch_breaker_effects registration
+- `breaker-scenario-runner/src/types/mod.rs` — InvariantKind (22 variants), MutationKind (15 variants)
+- `breaker-scenario-runner/src/invariants/checkers/check_chain_arc_count_reasonable.rs` — new checker
+- `breaker-scenario-runner/src/invariants/checkers/mod.rs` — confirmed check_chain_arc_count_reasonable wired
+
+**Drifts found and fixed:**
+- `docs/architecture/messages.md` — fire_effect/reverse_effect missing source_chip param; push_bound_effects not listed
+- `docs/architecture/plugins.md` — fire_effect/reverse_effect missing source_chip; push_bound_effects absent from Effect Dispatch section
+- `docs/architecture/effects/commands.md` — EffectCommandsExt trait missing push_bound_effects; PushBoundEffects command not documented
+- `docs/architecture/standards.md` — invariant list missing 6 variants (ChipOfferExpected, SecondWindWallAtMostOne, ShieldChargesConsistent, PulseRingAccumulation, EffectiveSpeedConsistent, ChainArcCountReasonable); count "16" changed to "22" (twice)
+- `docs/design/terminology/scenarios.md` — MutationKind listed only 5 variants; expanded to all 15
+- `docs/architecture/ordering.md` — OnEnter(GameState::Playing) chain missing dispatch_cell_effects, dispatch_wall_effects, dispatch_breaker_effects
+
+**Items confirmed no-drift:**
+- `lib.rs` pub mod visibility — cells and wall already listed in scenario runner exception
+- game.rs plugin registration order — unchanged
+- InvariantKind ALL slice — matches enum variants exactly
+
+## 2026-03-29 — feature/runtime-effects source-chip-shield-absorption review (first session)
+
+**Branch:** feature/runtime-effects (source_chip and shield absorption phase)
+
+**Files reviewed:**
+- `breaker-game/src/effect/core/types.rs` — EffectKind, EffectSourceChip, chip_attribution, fire/reverse method signatures
+- `breaker-game/src/effect/commands.rs` — EffectCommandsExt signatures with source_chip
+- `breaker-game/src/effect/effects/shield.rs` — Shield { stacks } only, fire/reverse/register signatures
+- `breaker-game/src/effect/effects/chain_lightning/effect.rs` — arc_speed field, EffectSourceChip usage
+- `breaker-game/src/bolt/sets.rs` — WallCollision variant present
+- `breaker-game/src/bolt/plugin.rs` — WallCollision registration
+- `breaker-game/src/bolt/systems/bolt_lost/system.rs` — ShieldActive cross-domain write
+- `breaker-game/src/cells/systems/handle_cell_hit/system.rs` — ShieldActive cross-domain write
+- `docs/design/effects/shield.md` — verified accurate
+- `docs/design/effects/chain_lightning.md` — verified accurate (arc_speed not in parameters table — see needs-human note)
+
+**Drifts found and fixed:**
+- `docs/architecture/effects/core_types.md` — Attraction variant: tuple → named fields with max_force
+- `docs/architecture/effects/core_types.md` — Shield variant: old {base_duration, duration_per_level, stacks} → {stacks} only
+- `docs/architecture/effects/core_types.md` — ChainLightning variant: added arc_speed field (default 200.0)
+- `docs/architecture/effects/core_types.md` — Pulse variant: added interval field (default 0.5)
+- `docs/architecture/effects/core_types.md` — fire()/reverse() signatures: added source_chip: &str param
+- `docs/architecture/effects/core_types.md` — method split: updated from "fire + fire_aoe_and_spawn" to "fire + fire_aoe_and_spawn + fire_utility_and_spawn" (3 fire methods), "reverse + reverse_aoe_and_spawn" (2 reverse methods)
+- `docs/architecture/effects/core_types.md` — EffectSourceChip type + chip_attribution(): new section added
+- `docs/architecture/effects/core_types.md` — Per-Effect Modules: added source_chip param to function signatures
+- `docs/architecture/effects/commands.md` — fire_effect/reverse_effect signatures: added source_chip: String param; transfer_effect: chip_name param documented
+- `docs/architecture/ordering.md` — BoltSystems::WallCollision: added to Defined Sets table
+- `docs/architecture/plugins.md` — ShieldActive cross-domain write: new "ShieldActive Cross-Domain Write Exception" section added; "debug only" claim in rule sentence updated
+- `docs/architecture/content.md` — Unified Effect Model: complete replacement of stale Effect enum (ChainHit, ActiveEffects, PiercingApplied, flat passive components, wrong Attraction/Shield/SecondWind/EntropyEngine signatures) with current EffectKind model
+
+**Items confirmed no-drift:**
+- `docs/design/effects/shield.md` — matches shield.rs behavior exactly
+- `docs/design/effects/chain_lightning.md` — arc_speed omitted from parameter table (see known-state for decision)
+
 ## 2026-03-28 — feature/stat-effects review (merged to develop)
 
 **Branch:** feature/stat-effects (merge commit 74d538b)

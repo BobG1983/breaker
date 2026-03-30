@@ -429,6 +429,7 @@ mod tests {
             entered_playing: true,
             bolts_tagged: 1,
             breakers_tagged: 1,
+            ..Default::default()
         };
         let snapshot = EvalSnapshot {
             violations: vec![],

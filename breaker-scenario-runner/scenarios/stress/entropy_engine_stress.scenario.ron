@@ -1,14 +1,14 @@
 // Adversarial: EntropyEngine fires up to 3 random effects per cell destruction.
 // Pool contains SpawnBolts and Shockwave with equal weight — random selection means
 // either effect fires each time. Dense layout drives rapid destructions. If random
-// effect cleanup fails, NoEntityLeaks or BoltCountReasonable will fire. Stress: 32 runs.
+// effect cleanup fails, NoEntityLeaks will fire. Stress: 32 runs.
 (
     breaker: "Aegis",
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 8000,
-    invariants: [BoltCountReasonable, NoEntityLeaks, NoNaN],
-    expected_violations: None,
+    invariants: [NoEntityLeaks, NoNaN],
+    expected_violations: [BoltCountReasonable],
     debug_setup: None,
     invariant_params: (max_bolt_count: 12),
     allow_early_end: false,

@@ -12,9 +12,9 @@ type: project
 
 **How to apply:** Accept `TetherBeamComponent` as intentional disambiguation. If `TetherBeam` is renamed in `EffectKind`, then `TetherBeamComponent` could be revisited.
 
-## `kill_count` in `EntropyEngineState`
+## `cells_destroyed` in `EntropyEngineState` — vocabulary FIXED
 
-`kill_count` uses the word "kill" which is not a project vocabulary term. The correct vocabulary for cells destroyed is `cells_destroyed` (as in `RunStats::cells_destroyed`). However `kill_count` is scoped entirely within the `EntropyEngineState` component and refers specifically to the escalation counter for the EntropyEngine chip (cells destroyed this node). The terminology docs don't explicitly prohibit "kill" for component-local counters. Flag as a vocabulary issue but note it's minor — the correct field name would be `cells_destroyed` per codebase convention.
+The field is `cells_destroyed: u32` (fixed from prior `kill_count` naming). This is now correct project vocabulary — consistent with `RunStats::cells_destroyed`. Do NOT re-flag as a vocabulary issue.
 
 ## Bolt spawn deduplication in `spawn_bolts.rs` and `tether_beam.rs`
 

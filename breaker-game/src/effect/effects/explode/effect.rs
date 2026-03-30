@@ -6,7 +6,7 @@ use rantzsoft_physics2d::{
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::EffectiveDamageMultiplier,
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -16,14 +16,20 @@ use crate::{
 /// `process_explode_requests` in the same or next tick. Position is stored
 /// in the entity's `Transform` component.
 #[derive(Component)]
-pub struct ExplodeRequest {
+pub(crate) struct ExplodeRequest {
     /// Damage radius in world units.
     pub range: f32,
     /// Multiplicative damage factor applied to `BASE_BOLT_DAMAGE`.
     pub damage_mult: f32,
 }
 
-pub fn fire(entity: Entity, range: f32, damage_mult: f32, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    range: f32,
+    damage_mult: f32,
+    source_chip: &str,
+    world: &mut World,
+) {
     let position = world
         .get::<Transform>(entity)
         .map_or(Vec3::ZERO, |t| t.translation);
@@ -37,28 +43,32 @@ pub fn fire(entity: Entity, range: f32, damage_mult: f32, world: &mut World) {
             range,
             damage_mult: damage_mult * edm,
         },
+        EffectSourceChip::new(source_chip),
         Transform::from_translation(position),
         CleanupOnNodeExit,
     ));
 }
 
-pub fn reverse(_entity: Entity, world: &mut World) {
-    let _ = world;
-}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Process all pending explode requests: query cells in range, send damage, despawn request.
 ///
 /// For each request, queries the quadtree for cells within range, computes
 /// damage as `BASE_BOLT_DAMAGE * damage_mult`, sends [`DamageCell`] for each
 /// cell found, then despawns the request entity.
-pub fn process_explode_requests(
+pub(crate) fn process_explode_requests(
     mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
-    requests: Query<(Entity, &Transform, &ExplodeRequest)>,
+    requests: Query<(
+        Entity,
+        &Transform,
+        &ExplodeRequest,
+        Option<&EffectSourceChip>,
+    )>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (entity, transform, request) in &requests {
+    for (entity, transform, request, esc) in &requests {
         let position = transform.translation.truncate();
         let damage = BASE_BOLT_DAMAGE * request.damage_mult;
         let candidates =
@@ -69,14 +79,14 @@ pub fn process_explode_requests(
             damage_writer.write(DamageCell {
                 cell,
                 damage,
-                source_chip: None,
+                source_chip: esc.and_then(EffectSourceChip::source_chip),
             });
         }
         commands.entity(entity).despawn();
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         process_explode_requests

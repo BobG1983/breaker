@@ -66,11 +66,7 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 
 ## reviewer-file-length findings
 
-| Priority | Route |
-|---|---|
-| HIGH (1000+ lines or 800+ test lines) | Refactor spec hint → **writer-code** (mechanical split, no tests needed) |
-| MEDIUM (600-999 lines) | Queue for next refactor opportunity — not urgent |
-| LOW (400-599 lines) | Note only — split when file is next modified |
+reviewer-file-length produces a split spec at `.claude/specs/file-splits.md`. The orchestrator launches parallel writer-code agents to execute the splits, then removes orphaned `.rs` files and runs Basic Verification Tier.
 
 ## reviewer-tests findings
 

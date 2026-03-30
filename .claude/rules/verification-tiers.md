@@ -47,12 +47,12 @@ Includes everything in Standard Verification Tier, plus:
 | **guard-game-design** | Mechanic changes against design pillars |
 | **guard-dependencies** | Unused/outdated/duplicate deps, license compliance |
 | **guard-agent-memory** | Stale/duplicated memories, MEMORY.md accuracy |
-| **reviewer-file-length** | Large files needing splits, refactor spec hints |
+| **reviewer-file-length** | Finds oversized files, produces split spec for writer-code |
 | **reviewer-scenarios** | Scenario coverage gaps, weak invariants, missing mechanics |
 
 **Question answered**: "Is everything clean across all cross-cutting concerns?"
 
-ALL compiler and clippy errors and warnings, ALL failing tests, ALL failing scenarios, and all feedback from all agents MUST be fixed for this tier to be complete, DEFER NONE, FIX EVERYTHING.
+ALL compiler and clippy ERRORS AND WARNINGS, ALL failing tests, ALL failing scenarios, and all feedback from all agents MUST be fixed for this tier to be complete, DEFER NONE, FIX EVERYTHING, UNLESS IT IS A SUGGESTION FROM ANOTHER AGENT. SUGGESTIONS MUST BE INVESTIGATED AND EITHER FIXED OR CALLED OUT AS WILL NEVER FIX. ***IF YOU WOULD HAVE TO FIX IT EVENTUALLY IT MUST BE FIXED NOW***
 
 ## Pipeline Summary
 

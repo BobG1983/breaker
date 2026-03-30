@@ -22,6 +22,10 @@ pub struct ScenarioStats {
     pub bolts_tagged: u32,
     /// Number of breaker entities that were tagged with [`ScenarioTagBreaker`].
     pub breakers_tagged: u32,
+    /// Number of cell entities that were tagged with [`ScenarioTagCell`].
+    pub cells_tagged: u32,
+    /// Number of wall entities that were tagged with [`ScenarioTagWall`].
+    pub walls_tagged: u32,
 }
 
 /// Marker — attached by the lifecycle plugin to the bolt entity for invariant checking.
@@ -31,6 +35,16 @@ pub struct ScenarioTagBolt;
 /// Marker — attached by the lifecycle plugin to the breaker entity for invariant checking.
 #[derive(Component)]
 pub struct ScenarioTagBreaker;
+
+/// Marker — attached by the lifecycle plugin to cell entities for invariant checking
+/// and deferred effect application.
+#[derive(Component)]
+pub struct ScenarioTagCell;
+
+/// Marker — attached by the lifecycle plugin to wall entities for invariant checking
+/// and deferred effect application.
+#[derive(Component)]
+pub struct ScenarioTagWall;
 
 /// Tracks the current fixed-update frame number for violation logging.
 #[derive(Resource, Default)]

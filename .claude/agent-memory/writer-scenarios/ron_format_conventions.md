@@ -68,6 +68,17 @@ Note: stress scenarios use the non-`Some()` form in practice (see existing scena
 - `breaker-scenario-runner/scenarios/self_tests/` — invariant self-tests with expected_violations
 - `breaker-scenario-runner/scenarios/regressions/` — regression scenarios
 
+## Key gotcha: initial_effects target routing in the scenario runner
+
+The scenario runner's `initial_effects` dispatch (in `lifecycle/systems.rs`) only has two branches:
+- `Target::Bolt` → deferred to `PendingBoltEffects`, applied once bolt entities exist
+- `Target::*` (everything else — Breaker, AllCells, Cell, Wall, AllWalls) → pushed to the **breaker entity's** `BoundEffects`
+
+This means `On(target: AllCells, ...)` does NOT apply effects to cell entities. It applies to the breaker.
+Cells do not carry `BoundEffects` in current game code (cell effect dispatch is a Wave 6 TODO stub).
+If a spec asks for cell-level Shield via `AllCells`, use `On(target: Breaker, ...)` instead,
+which is what the runner actually supports, and document this in the scenario's adversarial comment.
+
 ## Key gotcha: dscheck may show pre-existing errors
 
 On the `feature/runtime-effects` branch, `cargo dscheck` may show compile errors in `breaker-scenario-runner` from in-progress `MutationKind` variants. These are NOT caused by scenario RON files. The release binary (`target/release/breaker_scenario_runner`) can still be used directly to validate RON parsing when dscheck fails to compile due to pre-existing errors.

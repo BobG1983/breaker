@@ -28,7 +28,7 @@ fn fire_spawns_phantom_with_bolt_marker_and_physics_components() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::new(50.0, 100.0))).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     // Query for the spawned phantom entity
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
@@ -118,7 +118,7 @@ fn fire_spawns_phantom_with_extra_bolt_marker() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -133,7 +133,7 @@ fn fire_spawns_phantom_with_bolt_lifespan() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -158,7 +158,7 @@ fn fire_spawns_phantom_with_infinite_piercing() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -179,7 +179,7 @@ fn fire_spawns_phantom_with_cleanup_on_node_exit_not_run_end() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -199,7 +199,7 @@ fn fire_spawns_phantom_with_marker_and_owner() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::new(30.0, 40.0))).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query::<(&PhantomBoltMarker, &PhantomOwner)>();
     let results: Vec<_> = query.iter(&world).collect();
@@ -217,7 +217,7 @@ fn fire_spawns_phantom_with_velocity_magnitude_at_base_speed() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -243,7 +243,7 @@ fn fire_spawns_phantom_with_custom_base_speed() {
 
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -264,10 +264,10 @@ fn fire_enforces_max_active_cap() {
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // Spawn 4 phantoms with max_active=2
-    fire(entity, 5.0, 2, &mut world);
-    fire(entity, 5.0, 2, &mut world);
-    fire(entity, 5.0, 2, &mut world);
-    fire(entity, 5.0, 2, &mut world);
+    fire(entity, 5.0, 2, "", &mut world);
+    fire(entity, 5.0, 2, "", &mut world);
+    fire(entity, 5.0, 2, "", &mut world);
+    fire(entity, 5.0, 2, "", &mut world);
 
     let mut query = world.query::<&PhantomBoltMarker>();
     let count = query.iter(&world).count();
@@ -290,8 +290,8 @@ fn fire_max_active_one_replaces_previous() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 1, &mut world);
-    fire(entity, 5.0, 1, &mut world);
+    fire(entity, 5.0, 1, "", &mut world);
+    fire(entity, 5.0, 1, "", &mut world);
 
     let mut query = world.query::<&PhantomBoltMarker>();
     let count = query.iter(&world).count();
@@ -306,10 +306,10 @@ fn reverse_is_noop_phantoms_self_despawn() {
     let mut world = world_with_bolt_config();
     let owner = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(owner, 5.0, 10, &mut world);
-    fire(owner, 5.0, 10, &mut world);
+    fire(owner, 5.0, 10, "", &mut world);
+    fire(owner, 5.0, 10, "", &mut world);
 
-    reverse(owner, &mut world);
+    reverse(owner, "", &mut world);
 
     // Phantoms should still exist — they self-despawn via BoltLifespan
     let mut query = world.query::<&PhantomOwner>();
@@ -330,7 +330,7 @@ fn fire_reads_position_from_position2d_not_transform() {
         ))
         .id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -351,7 +351,7 @@ fn fire_short_duration_creates_valid_lifespan() {
     let mut world = world_with_bolt_config();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 0.01, 3, &mut world);
+    fire(entity, 0.01, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
@@ -377,7 +377,7 @@ fn fire_custom_radius_in_bolt_config() {
 
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
-    fire(entity, 5.0, 3, &mut world);
+    fire(entity, 5.0, 3, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");

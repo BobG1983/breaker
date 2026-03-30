@@ -112,3 +112,42 @@ type: project
   issue with security-adjacent risk (unbounded velocity could bypass CCD bounds).
 - Confirmed: in production the systems are ordered correctly (attraction before physics
   resolution, speed clamp also in FixedUpdate). Info/Warning-level only.
+
+## Phase 6 new findings (source-chip threading + shield absorption, 2026-03-29, feature/source-chip-shield-absorption)
+
+### arc_speed serde default — zero/negative arc_speed is guarded at fire() (Safe)
+- `EffectKind::ChainLightning::arc_speed` is a new RON field with `#[serde(default =
+  "default_chain_lightning_arc_speed")]` → default value 200.0.
+- The only existing RON using ChainLightning (`voltchain.evolution.ron`) omits `arc_speed`,
+  so it will receive the serde default of 200.0 at load time. Correct and safe.
+- `fire()` in chain_lightning/effect.rs guards `if arc_speed <= 0.0 { return; }` before
+  any use. A RON file setting `arc_speed: 0.0` or negative results in a silent no-op,
+  not a panic. This is the same defensive pattern used for `arcs` and `range`.
+
+### EffectSourceChip::new with whitespace-only strings (Info-level)
+- `chip_attribution(" ")` returns `Some(" ".to_string())` (tested explicitly).
+- A chip RON file whose `name` field is a single space would produce a
+  `EffectSourceChip(Some(" "))` attribution. This is not a panic or crash — the string is
+  stored as-is in the DamageCell message and used for display/scoring only.
+- No user-controlled input reaches chip names; they are hardcoded RON asset strings.
+
+### remaining_jumps underflow in tick_chain_lightning (Safe)
+- `chain.remaining_jumps -= 1` at effect.rs:254 is only reached in the `ArcTraveling`
+  branch, after `fire()` has already verified `remaining_jumps >= 1` by spawning the chain
+  only when `arcs > 1` (remaining_jumps = arcs - 1 ≥ 1). The `Idle` branch guards
+  `remaining_jumps == 0` before selecting a target — it despawns without entering
+  `ArcTraveling`. No underflow path exists. Safe.
+
+### std::mem::replace pattern in tick_chain_lightning (Safe)
+- `std::mem::replace(&mut chain.state, ChainState::Idle)` is used to move state out of the
+  mutable borrow for matching. This is idiomatic safe Rust; no unsafe involved.
+
+### ShieldActive::charges underflow on cell absorb (Safe)
+- `shield.charges -= 1` in handle_cell_hit/system.rs is guarded by `shield.charges > 0`
+  immediately above it. No underflow possible.
+
+### source_chip String allocation per fire/reverse call (Info-level)
+- `fire_effect` and `reverse_effect` now accept `source_chip: String` (owned) rather than
+  `&str`. This allocates one String per queued command. In a typical frame with a handful
+  of triggered effects this is negligible. No security concern; noted for performance
+  awareness if this becomes a hot path.

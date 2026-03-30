@@ -10,7 +10,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::EffectiveDamageMultiplier,
+    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
     shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig, PlayingState},
 };
 
@@ -19,7 +19,7 @@ use crate::{
 /// Spawned by `fire()` with pre-computed beam geometry,
 /// consumed (and despawned) by `process_piercing_beam` in the same or next tick.
 #[derive(Component)]
-pub struct PiercingBeamRequest {
+pub(crate) struct PiercingBeamRequest {
     /// Beam origin (entity position).
     pub origin: Vec2,
     /// Normalized beam direction.
@@ -32,7 +32,13 @@ pub struct PiercingBeamRequest {
     pub damage: f32,
 }
 
-pub fn fire(entity: Entity, damage_mult: f32, width: f32, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    damage_mult: f32,
+    width: f32,
+    source_chip: &str,
+    world: &mut World,
+) {
     let pos = world
         .get::<Position2D>(entity)
         .map(|p| p.0)
@@ -77,13 +83,12 @@ pub fn fire(entity: Entity, damage_mult: f32, width: f32, world: &mut World) {
             half_width: width / 2.0,
             damage: BASE_BOLT_DAMAGE * damage_mult * edm,
         },
+        EffectSourceChip::new(source_chip),
         CleanupOnNodeExit,
     ));
 }
 
-pub fn reverse(_entity: Entity, world: &mut World) {
-    let _ = world;
-}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Process all pending piercing beam requests: query quadtree, send damage, despawn request.
 ///
@@ -91,16 +96,16 @@ pub fn reverse(_entity: Entity, world: &mut World) {
 /// for candidate cells, performs narrow-phase filtering against the oriented beam
 /// rectangle, sends [`DamageCell`] for each intersecting cell, then despawns the
 /// request entity.
-pub fn process_piercing_beam(
+pub(crate) fn process_piercing_beam(
     mut commands: Commands,
-    requests: Query<(Entity, &PiercingBeamRequest)>,
+    requests: Query<(Entity, &PiercingBeamRequest, Option<&EffectSourceChip>)>,
     quadtree: Res<CollisionQuadtree>,
     positions: Query<&GlobalPosition2D>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
 
-    for (entity, request) in &requests {
+    for (entity, request, esc) in &requests {
         let dir = request.direction;
         let origin = request.origin;
         let length = request.length;
@@ -151,7 +156,7 @@ pub fn process_piercing_beam(
             damage_writer.write(DamageCell {
                 cell,
                 damage: request.damage,
-                source_chip: None,
+                source_chip: esc.and_then(EffectSourceChip::source_chip),
             });
         }
 
@@ -159,7 +164,7 @@ pub fn process_piercing_beam(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         process_piercing_beam

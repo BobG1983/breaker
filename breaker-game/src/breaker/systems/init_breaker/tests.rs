@@ -77,7 +77,22 @@ fn init_breaker_stamps_lives_count() {
 }
 
 #[test]
-fn init_breaker_builds_active_chains() {
+fn init_breaker_stamps_breaker_initialized_marker() {
+    let mut app = test_app_with_breaker(make_test_breaker());
+    let entity = app
+        .world_mut()
+        .spawn((Breaker, BoundEffects::default()))
+        .id();
+    app.update();
+
+    assert!(
+        app.world().get::<BreakerInitialized>(entity).is_some(),
+        "init_breaker should insert BreakerInitialized marker component"
+    );
+}
+
+#[test]
+fn init_breaker_does_not_push_effects() {
     let mut app = test_app_with_breaker(make_test_breaker());
     let entity = app
         .world_mut()
@@ -86,20 +101,62 @@ fn init_breaker_builds_active_chains() {
     app.update();
 
     let chains = app.world().get::<BoundEffects>(entity).unwrap();
-    // 4 On(Breaker) entries -> 4 chains on breaker entity
-    // When { BoltLost, [Do(LoseLife)] }
-    // When { PerfectBump, [Do(SpeedBoost)] }
-    // When { EarlyBump, [Do(SpeedBoost)] }
-    // When { LateBump, [Do(SpeedBoost)] }
-    assert_eq!(chains.0.len(), 4);
-    assert!(matches!(
-        &chains.0[0],
-        (_, EffectNode::When { trigger: Trigger::BoltLost, then }) if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::LoseLife))
-    ));
+    // init_breaker should NOT push effects to BoundEffects -- that is
+    // dispatch_breaker_effects' responsibility
+    assert_eq!(
+        chains.0.len(),
+        0,
+        "init_breaker should not push any effects to BoundEffects"
+    );
 }
 
 #[test]
-fn init_breaker_builds_active_chains_with_non_speed_boost() {
+fn init_breaker_does_not_push_effects_mixed_targets() {
+    let def = BreakerDefinition {
+        name: TEST_BREAKER_NAME.to_owned(),
+        stat_overrides: BreakerStatOverrides::default(),
+        life_pool: None,
+        effects: vec![
+            RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::BoltLost,
+                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
+                }],
+            },
+            RootEffect::On {
+                target: Target::Bolt,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::PerfectBumped,
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                }],
+            },
+            RootEffect::On {
+                target: Target::AllCells,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::Impacted(ImpactTarget::Bolt),
+                    then: vec![EffectNode::Do(EffectKind::test_shockwave(32.0))],
+                }],
+            },
+        ],
+    };
+    let mut app = test_app_with_breaker(def);
+    let entity = app
+        .world_mut()
+        .spawn((Breaker, BoundEffects::default()))
+        .id();
+    app.update();
+
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
+    assert_eq!(
+        chains.0.len(),
+        0,
+        "init_breaker should not push any effects (including Breaker-targeted) to BoundEffects"
+    );
+}
+
+#[test]
+fn init_breaker_does_not_push_effects_chrono_style() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
@@ -133,11 +190,15 @@ fn init_breaker_builds_active_chains_with_non_speed_boost() {
     app.update();
 
     let chains = app.world().get::<BoundEffects>(entity).unwrap();
-    assert_eq!(chains.0.len(), 2);
+    assert_eq!(
+        chains.0.len(),
+        0,
+        "init_breaker should not push any effects to BoundEffects"
+    );
 }
 
 #[test]
-fn init_breaker_includes_chains_field() {
+fn init_breaker_does_not_push_nested_chains() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
@@ -161,7 +222,11 @@ fn init_breaker_includes_chains_field() {
     app.update();
 
     let chains = app.world().get::<BoundEffects>(entity).unwrap();
-    assert_eq!(chains.0.len(), 1);
+    assert_eq!(
+        chains.0.len(),
+        0,
+        "init_breaker should not push any effects to BoundEffects"
+    );
 }
 
 #[test]
@@ -291,7 +356,7 @@ fn no_life_pool_no_lives_count() {
 }
 
 #[test]
-fn init_breaker_no_duplicate_chains_on_reentry() {
+fn init_breaker_no_duplicate_init_on_reentry() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
@@ -310,17 +375,21 @@ fn init_breaker_no_duplicate_chains_on_reentry() {
         .spawn((Breaker, BoundEffects::default()))
         .id();
 
-    // First invocation — should push 1 chain
-    app.update();
-    let chains = app.world().get::<BoundEffects>(entity).unwrap();
-    assert_eq!(chains.0.len(), 1, "first init should push 1 chain");
-
-    // Second invocation — should NOT push again (BreakerInitialized marker prevents it)
+    // First invocation — init_breaker no longer pushes effects
     app.update();
     let chains = app.world().get::<BoundEffects>(entity).unwrap();
     assert_eq!(
         chains.0.len(),
-        1,
-        "second init should not duplicate chains — BreakerInitialized should prevent re-entry"
+        0,
+        "init_breaker should not push any effects to BoundEffects"
+    );
+
+    // Second invocation — BreakerInitialized marker should prevent re-entry
+    app.update();
+    let chains = app.world().get::<BoundEffects>(entity).unwrap();
+    assert_eq!(
+        chains.0.len(),
+        0,
+        "second init should still leave BoundEffects empty"
     );
 }

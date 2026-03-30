@@ -36,7 +36,8 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `rantzsoft_spatial2d::SpatialSystems::ApplyVelocity` | `rantzsoft_spatial2d/src/plugin.rs` | `apply_velocity` (FixedUpdate — advances Position2D by Velocity2D * dt for entities with ApplyVelocity marker) |
 | `rantzsoft_spatial2d::SpatialSystems::ComputeGlobals` | `rantzsoft_spatial2d/src/plugin.rs` | `compute_globals` (RunFixedMainLoop AfterFixedMainLoop — resolves parent/child hierarchy into Global* components) |
 | `rantzsoft_spatial2d::SpatialSystems::DeriveTransform` | `rantzsoft_spatial2d/src/plugin.rs` | `derive_transform` (RunFixedMainLoop AfterFixedMainLoop — writes Transform from Global* + DrawLayer Z; runs after ComputeGlobals) |
-| `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before BreakerCollision) |
+| `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before WallCollision and BreakerCollision) |
+| `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
 | `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_death`, `bridge_bolt_death`, `bridge_timer_threshold` |
 | `EffectSystems::Recalculate` | `effect/sets.rs` | `recalculate_speed`, `recalculate_damage`, `recalculate_piercing`, `recalculate_size`, `recalculate_bump_force`, `recalculate_quick_stop` — unordered relative to gameplay chain; `run_if(PlayingState::Active)` |
@@ -78,12 +79,22 @@ apply_breaker_config_overrides         [effect domain]
     BreakerSystems::InitParams
     (init_breaker_params)              [breaker domain]
       <- init_breaker .after(BreakerSystems::InitParams)     [effect domain]
+         (init_breaker, dispatch_breaker_effects).chain()
+           .after(BreakerSystems::InitParams)
+           .after(NodeSystems::Spawn)                        [breaker domain]
       <- reset_breaker .after(BreakerSystems::InitParams)
          BreakerSystems::Reset                                [breaker domain]
       <- UiSystems::SpawnTimerHud
          (spawn_timer_hud)             [ui domain]
            <- spawn_lives_display .after(init_breaker)
                                   .after(UiSystems::SpawnTimerHud)  [effect domain]
+
+NodeSystems::Spawn
+  (spawn_cells_from_layout)           [run/node domain — OnEnter]
+    <- dispatch_cell_effects .after(NodeSystems::Spawn)      [cells domain]
+
+(spawn_walls, dispatch_wall_effects).chain()                 [wall domain]
+  [dispatch_wall_effects is currently a no-op stub]
 
 spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
   BoltSystems::InitParams
@@ -92,7 +103,7 @@ spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
        BoltSystems::Reset              [bolt domain]
 ```
 
-Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained inside the breaker plugin. `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin, so `UiSystems::SpawnTimerHud` is the externally-visible anchor. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init.
+Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained inside the breaker plugin. `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin, so `UiSystems::SpawnTimerHud` is the externally-visible anchor. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` and `dispatch_breaker_effects` run after `NodeSystems::Spawn` to ensure cells and the breaker entity are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet) but is registered for consistency.
 
 ### FixedUpdate
 

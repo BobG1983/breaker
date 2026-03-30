@@ -3,22 +3,24 @@
 use bevy::prelude::*;
 use tracing::warn;
 
+#[cfg(test)]
+use crate::breaker::resources::BreakerDefaults;
+#[cfg(any(test, feature = "dev"))]
+use crate::breaker::{definition::BreakerStatOverrides, resources::BreakerConfig};
 use crate::{
     breaker::{
         SelectedBreaker,
         components::{Breaker, BreakerInitialized},
-        definition::BreakerStatOverrides,
-        queries::InitBreakerQuery,
         registry::BreakerRegistry,
-        resources::{BreakerConfig, BreakerDefaults},
     },
-    effect::{RootEffect, Target, effects::life_lost::LivesCount},
+    effect::effects::life_lost::LivesCount,
 };
 
 /// Applies optional stat overrides to a `BreakerConfig`.
 ///
 /// Each `Some` field in `overrides` replaces the corresponding field in `config`.
 /// Used by both `apply_breaker_config_overrides` (at init) and hot-reload propagation (at runtime).
+#[cfg(any(test, feature = "dev"))]
 pub(crate) const fn apply_stat_overrides(
     config: &mut BreakerConfig,
     overrides: &BreakerStatOverrides,
@@ -44,6 +46,7 @@ pub(crate) const fn apply_stat_overrides(
 ///
 /// Runs `OnEnter(GameState::Playing)` BEFORE `init_breaker_params` so that
 /// stamped components reflect the overridden config values.
+#[cfg(test)]
 pub(crate) fn apply_breaker_config_overrides(
     selected: Res<SelectedBreaker>,
     registry: Res<BreakerRegistry>,
@@ -64,47 +67,24 @@ pub(crate) fn apply_breaker_config_overrides(
     apply_stat_overrides(&mut config, &def.stat_overrides);
 }
 
-/// Stamps init-time behavior components (`LivesCount`, `BoundEffects`, `StagedEffects`).
+/// Stamps init-time behavior components (`LivesCount`, `BreakerInitialized`).
 ///
 /// Runs `OnEnter(GameState::Playing)` AFTER `init_breaker_params`.
 pub(crate) fn init_breaker(
     mut commands: Commands,
     selected: Res<SelectedBreaker>,
     registry: Res<BreakerRegistry>,
-    mut breaker_query: InitBreakerQuery,
+    breaker_query: Query<Entity, (With<Breaker>, Without<BreakerInitialized>)>,
 ) {
     let Some(def) = registry.get(&selected.0) else {
         warn!("Breaker '{}' not found in registry", selected.0);
         return;
     };
 
-    for (entity, mut bound) in &mut breaker_query {
+    for entity in &breaker_query {
         commands.entity(entity).insert(BreakerInitialized);
         if let Some(life_pool) = def.life_pool {
             commands.entity(entity).insert(LivesCount(life_pool));
         }
-        for root_effect in &def.effects {
-            let RootEffect::On { target, then } = root_effect;
-            if *target == Target::Breaker {
-                for child in then {
-                    bound.0.push((String::new(), child.clone()));
-                }
-            }
-        }
     }
-}
-
-/// Dispatches breaker-defined effects to target entities.
-///
-/// Resolves `RootEffect::On { target, then }` from the breaker definition
-/// and pushes children to target entity's `BoundEffects`.
-/// Stub — real implementation in Wave 6.
-pub(crate) fn dispatch_breaker_effects(
-    mut _commands: Commands,
-    _selected: Res<SelectedBreaker>,
-    _registry: Res<BreakerRegistry>,
-    _breaker_query: Query<Entity, With<Breaker>>,
-) {
-    // TODO: Wave 6 — resolve RootEffect targets, push to BoundEffects,
-    // fire bare Do children via commands.fire_effect()
 }

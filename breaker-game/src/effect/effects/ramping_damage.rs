@@ -11,7 +11,7 @@ pub struct RampingDamageState {
     pub trigger_count: u32,
 }
 
-pub(crate) fn fire(entity: Entity, damage_per_trigger: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, damage_per_trigger: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut state) = world.get_mut::<RampingDamageState>(entity) {
         state.accumulated += damage_per_trigger;
         state.trigger_count += 1;
@@ -24,11 +24,11 @@ pub(crate) fn fire(entity: Entity, damage_per_trigger: f32, world: &mut World) {
     }
 }
 
-pub(crate) fn reverse(entity: Entity, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     world.entity_mut(entity).remove::<RampingDamageState>();
 }
 
-pub(crate) fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {
@@ -39,7 +39,7 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        fire(entity, 1.5, &mut world);
+        fire(entity, 1.5, "", &mut world);
 
         let state = world
             .get::<RampingDamageState>(entity)
@@ -73,7 +73,7 @@ mod tests {
             trigger_count: 2,
         });
 
-        fire(entity, 1.5, &mut world);
+        fire(entity, 1.5, "", &mut world);
 
         let state = world
             .get::<RampingDamageState>(entity)
@@ -101,12 +101,12 @@ mod tests {
         let entity = world.spawn_empty().id();
 
         // First call inserts fresh state
-        fire(entity, 0.5, &mut world);
+        fire(entity, 0.5, "", &mut world);
 
         // Three more calls should increment linearly
-        fire(entity, 0.5, &mut world);
-        fire(entity, 0.5, &mut world);
-        fire(entity, 0.5, &mut world);
+        fire(entity, 0.5, "", &mut world);
+        fire(entity, 0.5, "", &mut world);
+        fire(entity, 0.5, "", &mut world);
 
         let state = world
             .get::<RampingDamageState>(entity)
@@ -134,7 +134,7 @@ mod tests {
             trigger_count: 5,
         });
 
-        reverse(entity, &mut world);
+        reverse(entity, "", &mut world);
 
         assert!(
             world.get::<RampingDamageState>(entity).is_none(),
@@ -148,7 +148,7 @@ mod tests {
         let entity = world.spawn_empty().id();
 
         // Should not panic
-        reverse(entity, &mut world);
+        reverse(entity, "", &mut world);
 
         assert!(
             world.get::<RampingDamageState>(entity).is_none(),

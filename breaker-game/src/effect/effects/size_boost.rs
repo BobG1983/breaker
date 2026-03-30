@@ -18,13 +18,13 @@ impl ActiveSizeBoosts {
     }
 }
 
-pub(crate) fn fire(entity: Entity, value: f32, world: &mut World) {
+pub(crate) fn fire(entity: Entity, value: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveSizeBoosts>(entity) {
         active.0.push(value);
     }
 }
 
-pub(crate) fn reverse(entity: Entity, value: f32, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, value: f32, _source_chip: &str, world: &mut World) {
     if let Some(mut active) = world.get_mut::<ActiveSizeBoosts>(entity)
         && let Some(pos) = active
             .0
@@ -66,7 +66,7 @@ mod tests {
     fn fire_pushes_value_onto_active_size_boosts() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSizeBoosts(vec![])).id();
-        fire(entity, 5.0, &mut world);
+        fire(entity, 5.0, "", &mut world);
         let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![5.0]);
     }
@@ -75,7 +75,7 @@ mod tests {
     fn fire_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        fire(entity, 5.0, &mut world);
+        fire(entity, 5.0, "", &mut world);
         assert!(world.get::<ActiveSizeBoosts>(entity).is_none());
     }
 
@@ -83,7 +83,7 @@ mod tests {
     fn reverse_removes_matching_value() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSizeBoosts(vec![5.0, 3.0])).id();
-        reverse(entity, 5.0, &mut world);
+        reverse(entity, 5.0, "", &mut world);
         let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
         assert_eq!(active.0.len(), 1);
         assert!(active.0.contains(&3.0));
@@ -93,7 +93,7 @@ mod tests {
     fn reverse_without_component_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        reverse(entity, 5.0, &mut world);
+        reverse(entity, 5.0, "", &mut world);
         assert!(world.get::<ActiveSizeBoosts>(entity).is_none());
     }
 
@@ -101,9 +101,9 @@ mod tests {
     fn multiple_fires_stack() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSizeBoosts(vec![])).id();
-        fire(entity, 5.0, &mut world);
-        fire(entity, 3.0, &mut world);
-        fire(entity, 2.0, &mut world);
+        fire(entity, 5.0, "", &mut world);
+        fire(entity, 3.0, "", &mut world);
+        fire(entity, 2.0, "", &mut world);
         let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![5.0, 3.0, 2.0]);
     }
@@ -112,7 +112,7 @@ mod tests {
     fn reverse_removes_only_one_matching_entry() {
         let mut world = World::new();
         let entity = world.spawn(ActiveSizeBoosts(vec![5.0, 5.0, 3.0])).id();
-        reverse(entity, 5.0, &mut world);
+        reverse(entity, 5.0, "", &mut world);
         let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
         assert_eq!(active.0.len(), 2);
         assert!(active.0.contains(&5.0));

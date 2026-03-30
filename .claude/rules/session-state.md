@@ -49,6 +49,9 @@ Keep under 80 lines. Use this exact structure:
 ## Plan
 [The full filepath to the current plan that is being worked on]
 
+## Specs
+[The full file path to every fully completed, reviewed, and accepted spec with a one line description. One spec per line.]
+
 ## Task
 [one-line description]
 
