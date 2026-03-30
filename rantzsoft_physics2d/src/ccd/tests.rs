@@ -269,3 +269,94 @@ fn reflect_preserves_speed() {
     let r = reflect(v, n);
     assert!((v.length() - r.length()).abs() < 1e-3);
 }
+
+// ── D8: reflect() off vertical wall (normal = Vec2::X) ──
+
+#[test]
+fn reflect_off_vertical_wall_flips_x_preserves_y() {
+    // Moving left and up, hitting a left vertical wall (normal pointing right)
+    let v = Vec2::new(-350.0, 200.0);
+    let r = reflect(v, Vec2::X);
+
+    assert!(
+        (r.x - 350.0).abs() < 1e-3,
+        "X should be flipped to 350.0, got {}",
+        r.x
+    );
+    assert!(
+        (r.y - 200.0).abs() < 1e-3,
+        "Y should be preserved as 200.0, got {}",
+        r.y
+    );
+
+    // Speed preservation
+    let speed_before = v.length();
+    let speed_after = r.length();
+    assert!(
+        (speed_before - speed_after).abs() < 1e-3,
+        "speed should be preserved: {speed_before} vs {speed_after}"
+    );
+
+    // Edge case: NEG_X normal (right wall)
+    let v2 = Vec2::new(350.0, 200.0);
+    let r2 = reflect(v2, Vec2::NEG_X);
+
+    assert!(
+        (r2.x - (-350.0)).abs() < 1e-3,
+        "X should be flipped to -350.0, got {}",
+        r2.x
+    );
+    assert!(
+        (r2.y - 200.0).abs() < 1e-3,
+        "Y should be preserved as 200.0, got {}",
+        r2.y
+    );
+}
+
+// ── D9: ray_vs_aabb with non-axis-aligned ray ──
+
+#[test]
+fn ray_vs_aabb_diagonal_hit() {
+    let aabb = Aabb2D::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+
+    // Ray origin = (-30, -15), direction = (1, 0.5).normalize()
+    let origin = Vec2::new(-30.0, -15.0);
+    let direction = Vec2::new(1.0, 0.5).normalize();
+    let max_dist = 100.0;
+
+    let hit = ray_vs_aabb(origin, direction, max_dist, &aabb).expect("should hit left face");
+
+    // X slab entry at x=-10: t_x = (-10 - (-30)) / dir.x = 20 / 0.8944 ~ 22.361
+    // Y slab entry at y=-10: t_y = (-10 - (-15)) / dir.y = 5 / 0.4472 ~ 11.180
+    // tmin = max(22.361, 11.180) = 22.361 — X slab dominates
+    assert!(
+        (hit.distance - 22.361).abs() < 0.1,
+        "distance should be ~22.361, got {}",
+        hit.distance
+    );
+    assert_eq!(
+        hit.normal,
+        Vec2::NEG_X,
+        "should hit left face (X slab dominates)"
+    );
+
+    // Edge case: ray from below, Y slab dominates
+    let origin2 = Vec2::new(-5.0, -30.0);
+    let direction2 = Vec2::new(0.5, 1.0).normalize();
+
+    let hit2 = ray_vs_aabb(origin2, direction2, max_dist, &aabb).expect("should hit bottom face");
+
+    // Y slab entry at y=-10: t_y = (-10 - (-30)) / dir2.y = 20 / 0.8944 ~ 22.361
+    // X slab entry at x=-10: t_x = (-10 - (-5)) / dir2.x = -5 / 0.4472 ~ -11.180 (negative)
+    // tmin = max(-11.180, 22.361) = 22.361 — Y slab dominates
+    assert!(
+        (hit2.distance - 22.361).abs() < 0.1,
+        "distance should be ~22.361, got {}",
+        hit2.distance
+    );
+    assert_eq!(
+        hit2.normal,
+        Vec2::NEG_Y,
+        "should hit bottom face (Y slab dominates)"
+    );
+}

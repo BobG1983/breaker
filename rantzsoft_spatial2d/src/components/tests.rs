@@ -440,3 +440,52 @@ fn spatial2d_does_not_require_velocity() {
         "Spatial2D should NOT require PreviousVelocity"
     );
 }
+
+// ── D1: Velocity2D::clamped() preserves direction for diagonal velocity ──
+
+#[test]
+fn velocity_clamped_preserves_direction_diagonal() {
+    // Positive diagonal: magnitude 500.0, direction (0.6, 0.8)
+    let v = Velocity2D(Vec2::new(300.0, 400.0));
+    let result = v.clamped(200.0, 400.0);
+
+    let speed = result.0.length();
+    assert!(
+        (speed - 400.0).abs() < 1e-3,
+        "magnitude should be clamped to 400.0, got {speed}"
+    );
+
+    let dir = result.0.normalize();
+    assert!(
+        (dir.x - 0.6).abs() < 1e-5,
+        "direction x should be 0.6, got {}",
+        dir.x
+    );
+    assert!(
+        (dir.y - 0.8).abs() < 1e-5,
+        "direction y should be 0.8, got {}",
+        dir.y
+    );
+
+    // Edge case: negative diagonal, same magnitude 500.0, clamped to 400.0
+    let v_neg = Velocity2D(Vec2::new(-300.0, -400.0));
+    let result_neg = v_neg.clamped(200.0, 400.0);
+
+    let speed_neg = result_neg.0.length();
+    assert!(
+        (speed_neg - 400.0).abs() < 1e-3,
+        "negative diagonal magnitude should be clamped to 400.0, got {speed_neg}"
+    );
+
+    let dir_neg = result_neg.0.normalize();
+    assert!(
+        (dir_neg.x - (-0.6)).abs() < 1e-5,
+        "negative direction x should be -0.6, got {}",
+        dir_neg.x
+    );
+    assert!(
+        (dir_neg.y - (-0.8)).abs() < 1e-5,
+        "negative direction y should be -0.8, got {}",
+        dir_neg.y
+    );
+}

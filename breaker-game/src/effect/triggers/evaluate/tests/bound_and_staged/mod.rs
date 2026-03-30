@@ -6,6 +6,7 @@ use super::super::system::*;
 use crate::effect::core::*;
 
 mod bound_effects;
+mod remove_chains;
 mod source_chip;
 mod staged_effects;
 

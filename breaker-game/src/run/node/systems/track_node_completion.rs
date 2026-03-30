@@ -245,4 +245,92 @@ mod tests {
         let count = app.world().resource::<ClearRemainingCount>();
         assert_eq!(count.remaining, 4);
     }
+
+    // ── Counter-based capture helper for counting NodeCleared messages ────
+
+    #[derive(Resource, Default)]
+    struct NodeClearedCount(u32);
+
+    fn capture_node_cleared_count(
+        mut reader: MessageReader<NodeCleared>,
+        mut count: ResMut<NodeClearedCount>,
+    ) {
+        for _ in reader.read() {
+            count.0 += 1;
+        }
+    }
+
+    #[test]
+    fn node_cleared_fires_exactly_once_for_same_frame_multiple_cell_destruction() {
+        let mut app = test_app(3);
+        app.init_resource::<NodeClearedCount>();
+        app.add_systems(
+            FixedUpdate,
+            capture_node_cleared_count.after(track_node_completion),
+        );
+
+        // Three required cells destroyed in the same frame
+        app.insert_resource(TestMessages(vec![
+            CellDestroyedAt {
+                was_required_to_clear: true,
+            },
+            CellDestroyedAt {
+                was_required_to_clear: true,
+            },
+            CellDestroyedAt {
+                was_required_to_clear: true,
+            },
+        ]));
+        tick(&mut app);
+
+        let remaining = app.world().resource::<ClearRemainingCount>();
+        assert_eq!(
+            remaining.remaining, 0,
+            "all 3 required cells should decrement count to 0"
+        );
+
+        let cleared_count = app.world().resource::<NodeClearedCount>();
+        assert_eq!(
+            cleared_count.0, 1,
+            "NodeCleared should fire exactly once, not {} times",
+            cleared_count.0
+        );
+    }
+
+    #[test]
+    fn node_cleared_fires_once_with_mixed_required_and_non_required() {
+        // 2 required + 1 non-required, remaining = 2
+        let mut app = test_app(2);
+        app.init_resource::<NodeClearedCount>();
+        app.add_systems(
+            FixedUpdate,
+            capture_node_cleared_count.after(track_node_completion),
+        );
+
+        app.insert_resource(TestMessages(vec![
+            CellDestroyedAt {
+                was_required_to_clear: true,
+            },
+            CellDestroyedAt {
+                was_required_to_clear: false,
+            },
+            CellDestroyedAt {
+                was_required_to_clear: true,
+            },
+        ]));
+        tick(&mut app);
+
+        let remaining = app.world().resource::<ClearRemainingCount>();
+        assert_eq!(
+            remaining.remaining, 0,
+            "only required cells should decrement: 2 - 2 = 0"
+        );
+
+        let cleared_count = app.world().resource::<NodeClearedCount>();
+        assert_eq!(
+            cleared_count.0, 1,
+            "NodeCleared should fire exactly once when remaining hits 0, got {}",
+            cleared_count.0
+        );
+    }
 }

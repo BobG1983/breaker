@@ -260,3 +260,80 @@ fn transition_duration_configurable() {
         timer.duration
     );
 }
+
+// -- A12: overlay_color returns correct alpha for Flash/Sweep x In/Out ─────
+
+#[test]
+fn overlay_color_returns_correct_alpha_for_all_style_direction_combinations() {
+    let config = TransitionConfig::default();
+
+    // Flash + Out: starts transparent (alpha 0.0)
+    let flash_out = overlay_color(&config, TransitionStyle::Flash, TransitionDirection::Out);
+    assert_eq!(
+        flash_out,
+        Color::srgba(1.0, 1.0, 1.0, 0.0),
+        "Flash+Out should start transparent"
+    );
+
+    // Flash + In: starts opaque (alpha 1.0)
+    let flash_in = overlay_color(&config, TransitionStyle::Flash, TransitionDirection::In);
+    assert_eq!(
+        flash_in,
+        Color::srgba(1.0, 1.0, 1.0, 1.0),
+        "Flash+In should start opaque"
+    );
+
+    // Sweep + Out: always starts opaque
+    let sweep_out = overlay_color(&config, TransitionStyle::Sweep, TransitionDirection::Out);
+    assert_eq!(
+        sweep_out,
+        Color::srgba(0.0, 0.8, 1.0, 1.0),
+        "Sweep+Out should start opaque"
+    );
+
+    // Sweep + In: always starts opaque
+    let sweep_in = overlay_color(&config, TransitionStyle::Sweep, TransitionDirection::In);
+    assert_eq!(
+        sweep_in,
+        Color::srgba(0.0, 0.8, 1.0, 1.0),
+        "Sweep+In should start opaque"
+    );
+}
+
+#[test]
+fn overlay_color_threads_custom_rgb_values_correctly() {
+    let config = TransitionConfig {
+        out_duration: 0.5,
+        in_duration: 0.3,
+        flash_color_rgb: [0.5, 0.3, 0.1],
+        sweep_color_rgb: [0.9, 0.1, 0.0],
+    };
+
+    let flash_out = overlay_color(&config, TransitionStyle::Flash, TransitionDirection::Out);
+    assert_eq!(
+        flash_out,
+        Color::srgba(0.5, 0.3, 0.1, 0.0),
+        "Custom Flash+Out should use custom RGB with alpha 0.0"
+    );
+
+    let flash_in = overlay_color(&config, TransitionStyle::Flash, TransitionDirection::In);
+    assert_eq!(
+        flash_in,
+        Color::srgba(0.5, 0.3, 0.1, 1.0),
+        "Custom Flash+In should use custom RGB with alpha 1.0"
+    );
+
+    let sweep_out = overlay_color(&config, TransitionStyle::Sweep, TransitionDirection::Out);
+    assert_eq!(
+        sweep_out,
+        Color::srgba(0.9, 0.1, 0.0, 1.0),
+        "Custom Sweep+Out should use custom RGB with alpha 1.0"
+    );
+
+    let sweep_in = overlay_color(&config, TransitionStyle::Sweep, TransitionDirection::In);
+    assert_eq!(
+        sweep_in,
+        Color::srgba(0.9, 0.1, 0.0, 1.0),
+        "Custom Sweep+In should use custom RGB with alpha 1.0"
+    );
+}

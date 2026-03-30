@@ -92,4 +92,57 @@ mod tests {
     fn base_bolt_damage_equals_10() {
         assert!((BASE_BOLT_DAMAGE - 10.0_f32).abs() < f32::EPSILON);
     }
+
+    #[test]
+    fn initial_velocity_trig_math() {
+        let config = BoltConfig::default();
+        // default: base_speed = 400.0, initial_angle = 0.26
+        let v = config.initial_velocity();
+
+        let expected_x = 400.0 * 0.26_f32.sin();
+        let expected_y = 400.0 * 0.26_f32.cos();
+
+        assert!(
+            (v.x - expected_x).abs() < 1e-2,
+            "x should be ~{expected_x}, got {}",
+            v.x
+        );
+        assert!(
+            (v.y - expected_y).abs() < 1e-2,
+            "y should be ~{expected_y}, got {}",
+            v.y
+        );
+
+        // Edge case: initial_angle = 0.0 -> straight up
+        let mut config_zero = config.clone();
+        config_zero.initial_angle = 0.0;
+        let v_zero = config_zero.initial_velocity();
+        assert!(
+            v_zero.x.abs() < 1e-6,
+            "angle 0.0 should give x=0.0, got {}",
+            v_zero.x
+        );
+        assert!(
+            (v_zero.y - config_zero.base_speed).abs() < 1e-2,
+            "angle 0.0 should give y=base_speed ({}), got {}",
+            config_zero.base_speed,
+            v_zero.y
+        );
+
+        // Edge case: initial_angle = PI/2 -> horizontal
+        let mut config_half_pi = config;
+        config_half_pi.initial_angle = std::f32::consts::FRAC_PI_2;
+        let v_half = config_half_pi.initial_velocity();
+        assert!(
+            (v_half.x - config_half_pi.base_speed).abs() < 1e-2,
+            "angle PI/2 should give x=base_speed ({}), got {}",
+            config_half_pi.base_speed,
+            v_half.x
+        );
+        assert!(
+            v_half.y.abs() < 1e-2,
+            "angle PI/2 should give y~0.0, got {}",
+            v_half.y
+        );
+    }
 }

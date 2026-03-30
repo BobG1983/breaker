@@ -282,3 +282,38 @@ fn cell_collision_layers_have_correct_values() {
         layers.mask
     );
 }
+
+// -- take_damage(0.0) on living cell ------------------------------------------
+
+#[test]
+fn take_damage_zero_on_living_cell_returns_false() {
+    let mut health = CellHealth::new(10.0);
+    let destroyed = health.take_damage(0.0);
+
+    assert!(
+        !destroyed,
+        "take_damage(0.0) on a living cell should return false"
+    );
+    assert!(
+        (health.current - 10.0).abs() < f32::EPSILON,
+        "health.current should remain 10.0 after zero damage, got {}",
+        health.current
+    );
+    assert!(
+        !health.is_destroyed(),
+        "cell should not be destroyed after zero damage"
+    );
+
+    // Edge case: barely alive cell with take_damage(0.0)
+    let mut barely = CellHealth::new(0.001);
+    let destroyed_barely = barely.take_damage(0.0);
+    assert!(
+        !destroyed_barely,
+        "take_damage(0.0) on barely alive cell (0.001 HP) should return false"
+    );
+    assert!(
+        (barely.current - 0.001).abs() < f32::EPSILON,
+        "barely alive cell should remain at 0.001 HP, got {}",
+        barely.current
+    );
+}
