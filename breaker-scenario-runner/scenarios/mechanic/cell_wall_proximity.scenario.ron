@@ -1,0 +1,24 @@
+// Adversarial: Scripted empty input lets the bolt bounce freely under its
+// own physics without breaker interference — pure cell-wall proximity geometry.
+// The Fortress layout is used because it places cells near the lateral walls,
+// creating narrow gaps where a bolt can be in contact with both a cell edge and a
+// wall surface in the same tick. This exercises the CellImpactWall dispatch path:
+// a cell entity near a wall that the bolt brushes simultaneously, which can trigger
+// a secondary wall impact message alongside the primary cell impact.
+// Risks: if the dual-contact frame generates two wall-bump messages and the bolt
+// velocity is reversed twice (once per message) the net result is a zero-velocity
+// or identity transform — NoNaN and NoEntityLeaks detect the fallout.
+// 600 frames is enough for the bolt to traverse the full layout geometry multiple
+// times and probe all cell-wall proximity corners.
+(
+    breaker: "Aegis",
+    layout: "Fortress",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 600,
+    invariants: [NoNaN, NoEntityLeaks],
+    expected_violations: None,
+    debug_setup: None,
+    seed: 1111,
+)

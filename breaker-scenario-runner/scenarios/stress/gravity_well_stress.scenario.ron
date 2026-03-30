@@ -1,0 +1,39 @@
+// Adversarial: GravityWell fires on every CellDestroyed event, spawning a new
+// attractor entity each time a cell is cleared. Dense layout provides the highest
+// cell density so many wells can be spawned in a short burst. Chaos input at 0.7
+// action_prob drives continuous breaker movement, generating bolt-cell contacts
+// at the maximum rate. If the GravityWell cleanup system is slower than the spawn
+// rate — or if duration accounting drifts under fixed-timestep jitter — well entities
+// accumulate beyond the configured ceiling and GravityWellCountReasonable fires.
+// max_gravity_well_count raised to 20 (from default 10) to tolerate legitimate burst
+// spawning under rapid cell destruction sequences while still catching unbounded growth.
+// NoEntityLeaks guards against well entities surviving past their duration entirely.
+// BoltInBounds guards against compound attraction forces from many simultaneous wells
+// directing the bolt into a wall at extreme velocity and then failing to reflect.
+// NoNaN catches force summation overflow if too many wells apply their attraction
+// simultaneously to the same bolt.
+// Stress: 32 runs explore different random destruction orderings, well overlap
+// geometries, and chaos input seeds to maximise the probability of hitting the
+// spawn/cleanup race condition.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 8000,
+    invariants: [GravityWellCountReasonable, NoNaN, NoEntityLeaks, BoltInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    invariant_params: (
+        max_gravity_well_count: 20,
+    ),
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 7411,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: CellDestroyed, then: [
+                Do(GravityWell(strength: 600.0, duration: 2.0, radius: 150.0, max: 5)),
+            ]),
+        ]),
+    ],
+)

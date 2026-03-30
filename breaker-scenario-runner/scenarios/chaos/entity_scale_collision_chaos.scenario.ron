@@ -1,0 +1,31 @@
+// Adversarial: Tests the interaction between EntityScale-aware collision and
+// Aabb2D integrity under live gameplay conditions. When a SizeBoost effect is
+// active the bolt's visual scale and Aabb2D half_extents are updated together;
+// if either the recalculation or the Aabb2D write is skipped for a frame
+// (race with collision detection, wrong system ordering) AabbMatchesEntityDimensions fires.
+// Dense layout maximises bolt-cell contacts per second so the resize path is
+// exercised at peak collision frequency. Chaos input with moderate action_prob (0.6)
+// keeps the breaker repositioning to deliver the bolt into cells from varied angles.
+// The SizeBoost(0.3) effect grows the bolt's effective size by 30% on every breaker
+// bump — after several bumps the bolt is noticeably larger and collisions occur at
+// different intersection depths, stressing any cached collision geometry.
+// NoNaN and BoltInBounds guard against downstream physics corruption if a stale
+// Aabb2D causes the bolt to tunnel through a wall or gain a degenerate velocity.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 6000,
+    invariants: [NoNaN, BoltInBounds, BreakerInBounds, AabbMatchesEntityDimensions],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 3317,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Bumped, then: [
+                Do(SizeBoost(0.3)),
+            ]),
+        ]),
+    ],
+)

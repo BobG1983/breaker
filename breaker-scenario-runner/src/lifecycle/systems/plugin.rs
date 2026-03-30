@@ -28,14 +28,15 @@ use super::{
 };
 use crate::invariants::{
     EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioStats, ViolationLog,
-    check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_in_range,
-    check_breaker_in_bounds, check_breaker_position_clamped, check_chain_arc_count_reasonable,
-    check_chip_offer_expected, check_chip_stacks_consistent, check_effective_speed_consistent,
+    check_aabb_matches_entity_dimensions, check_bolt_count_reasonable, check_bolt_in_bounds,
+    check_bolt_speed_in_range, check_breaker_in_bounds, check_breaker_position_clamped,
+    check_chain_arc_count_reasonable, check_chip_offer_expected, check_chip_stacks_consistent,
+    check_effective_speed_consistent, check_gravity_well_count_reasonable,
     check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
     check_offering_no_duplicates, check_physics_frozen_during_pause, check_pulse_ring_accumulation,
     check_run_stats_monotonic, check_second_wind_wall_at_most_one, check_shield_charges_consistent,
-    check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
-    check_valid_state_transitions,
+    check_size_boost_in_range, check_timer_monotonically_decreasing, check_timer_non_negative,
+    check_valid_breaker_state, check_valid_state_transitions,
 };
 
 /// Plugin that drives the scenario lifecycle.
@@ -109,6 +110,12 @@ fn register_scenario_systems(app: &mut App) {
         check_chain_arc_count_reasonable,
     )
         .chain();
+    let checkers_c = (
+        check_aabb_matches_entity_dimensions,
+        check_gravity_well_count_reasonable,
+        check_size_boost_in_range,
+    )
+        .chain();
     app.add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
         .add_systems(
             Update,
@@ -153,6 +160,7 @@ fn register_scenario_systems(app: &mut App) {
                     apply_debug_frame_mutations,
                     checkers_a,
                     checkers_b,
+                    checkers_c,
                 )
                     .chain()
                     .run_if(playing_gate)

@@ -1,0 +1,27 @@
+// Self-test: InjectWrongSizeMultiplier(wrong_value: 99.0) overrides
+// EffectiveSizeMultiplier on any entity that carries ActiveSizeBoosts,
+// creating a divergence between the stored multiplier and the product of
+// the boost stack. Physics is frozen so no normal size-boost recalculation
+// runs and the stale value persists until the checker fires.
+// Simulates a resize path where the consolidation system is skipped (e.g.,
+// filtered out during pause) but the raw multiplier component remains cached
+// at the pre-pause value. A wrong_value of 99.0 is far outside any plausible
+// boost product, making the violation unambiguous.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [SizeBoostInRange],
+    expected_violations: Some([SizeBoostInRange]),
+    debug_setup: (
+        disable_physics: true,
+        bolt_velocity: (0.0, 0.0),
+    ),
+    allow_early_end: false,
+    frame_mutations: [
+        (frame: 30, mutation: InjectWrongSizeMultiplier(wrong_value: 99.0)),
+    ],
+)

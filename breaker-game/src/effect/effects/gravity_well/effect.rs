@@ -8,11 +8,11 @@ use crate::{
 
 /// Marker for gravity well entities.
 #[derive(Component)]
-pub(crate) struct GravityWellMarker;
+pub struct GravityWellMarker;
 
 /// Configuration and runtime state for a gravity well.
 #[derive(Component)]
-pub(crate) struct GravityWellConfig {
+pub struct GravityWellConfig {
     /// Pull strength applied to bolts within radius.
     pub strength: f32,
     /// Attraction radius in world units.

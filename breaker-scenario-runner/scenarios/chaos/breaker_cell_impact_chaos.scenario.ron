@@ -1,0 +1,25 @@
+// Adversarial: High action_prob (0.8) chaos drives the breaker across the Dense
+// layout at near-maximum velocity, maximising the chance of the breaker body
+// overlapping a cell during a frame — the BreakerImpactCell dispatch path.
+// This path is less exercised than BoltImpactCell; bugs in the breaker-side
+// impact bridge (double dispatch, missing message filter, wrong target routing)
+// tend to surface only when the breaker physically crosses a cell boundary at
+// speed. Dense layout packs cells to the edges so the breaker reaches them on
+// any leftward or rightward dash from the default centre spawn.
+// If BreakerImpactCell fires multiple times for a single contact (duplicate event),
+// NoEntityLeaks catches orphaned effect or impact entities that didn't clean up.
+// BreakerInBounds guards against a velocity-integration bug flinging the breaker
+// outside the playfield after a cell impact impulse.
+// BoltInBounds and NoNaN cover downstream bolt physics corruption from the same
+// impact event chain.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.8)),
+    max_frames: 6000,
+    invariants: [NoNaN, BoltInBounds, NoEntityLeaks, BreakerInBounds],
+    expected_violations: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 1301,
+)

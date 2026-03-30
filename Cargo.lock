@@ -1846,6 +1846,7 @@ dependencies = [
  "breaker",
  "clap",
  "rand",
+ "rantzsoft_physics2d",
  "rantzsoft_spatial2d",
  "ron",
  "serde",

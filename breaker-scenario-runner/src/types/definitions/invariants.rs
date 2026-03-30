@@ -54,6 +54,12 @@ pub enum InvariantKind {
     EffectiveSpeedConsistent,
     /// Chain lightning chain + arc entity count stays within `invariant_params.max_chain_arc_count`.
     ChainArcCountReasonable,
+    /// Bolt `Aabb2D` `half_extents` match the entity's actual dimensions.
+    AabbMatchesEntityDimensions,
+    /// Gravity well entity count stays within `invariant_params.max_gravity_well_count`.
+    GravityWellCountReasonable,
+    /// `EffectiveSizeMultiplier` equals `ActiveSizeBoosts` product within epsilon.
+    SizeBoostInRange,
 }
 
 impl InvariantKind {
@@ -85,6 +91,9 @@ impl InvariantKind {
         Self::PulseRingAccumulation,
         Self::EffectiveSpeedConsistent,
         Self::ChainArcCountReasonable,
+        Self::AabbMatchesEntityDimensions,
+        Self::GravityWellCountReasonable,
+        Self::SizeBoostInRange,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -118,6 +127,13 @@ impl InvariantKind {
                 "EffectiveSpeedMultiplier diverged from ActiveSpeedBoosts product"
             }
             Self::ChainArcCountReasonable => "chain lightning arc/chain count exceeds maximum",
+            Self::AabbMatchesEntityDimensions => {
+                "Aabb2D half_extents do not match entity dimensions"
+            }
+            Self::GravityWellCountReasonable => "gravity well entity count exceeds maximum",
+            Self::SizeBoostInRange => {
+                "EffectiveSizeMultiplier diverged from ActiveSizeBoosts product"
+            }
         }
     }
 }

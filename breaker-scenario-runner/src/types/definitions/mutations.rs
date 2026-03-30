@@ -113,6 +113,25 @@ pub enum MutationKind {
     /// Used by the `chain_arc_count_exceeded` self-test to trigger a
     /// [`InvariantKind::ChainArcCountReasonable`] violation.
     SpawnExtraChainArcs(usize),
+    /// Set the first tagged bolt's `Aabb2D.half_extents` to a wrong value.
+    ///
+    /// Used by the `aabb_matches_entity_dimensions` self-test to trigger a
+    /// [`InvariantKind::AabbMatchesEntityDimensions`] violation.
+    InjectMismatchedBoltAabb,
+    /// Spawn N extra [`GravityWellMarker`] entities to push count above threshold.
+    ///
+    /// Used by the `gravity_well_count_reasonable` self-test to trigger a
+    /// [`InvariantKind::GravityWellCountReasonable`] violation.
+    SpawnExtraGravityWells(usize),
+    /// Override `EffectiveSizeMultiplier` to a wrong value on a spawned entity
+    /// that also has `ActiveSizeBoosts`.
+    ///
+    /// Used by the `size_boost_in_range` self-test to trigger a
+    /// [`InvariantKind::SizeBoostInRange`] violation.
+    InjectWrongSizeMultiplier {
+        /// The incorrect value to set on `EffectiveSizeMultiplier`.
+        wrong_value: f32,
+    },
 }
 
 /// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.

@@ -1,0 +1,28 @@
+// Self-test: SpawnExtraGravityWells(15) pushes the GravityWellMarker entity count
+// to 15, which exceeds the configured max_gravity_well_count of 5.
+// Physics is frozen so no game events fire and the spawned markers remain stable.
+// The invariant fires on the next checker tick after frame 30, exposing any
+// despawn-system failure that lets well entities accumulate without bound.
+// Simulates a scenario where the GravityWell duration expires but the cleanup
+// system has a query filter bug and skips entities that lack a physics component.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    invariants: [GravityWellCountReasonable],
+    expected_violations: Some([GravityWellCountReasonable]),
+    debug_setup: (
+        disable_physics: true,
+        bolt_velocity: (0.0, 0.0),
+    ),
+    invariant_params: (
+        max_gravity_well_count: 5,
+    ),
+    allow_early_end: false,
+    frame_mutations: [
+        (frame: 30, mutation: SpawnExtraGravityWells(15)),
+    ],
+)
