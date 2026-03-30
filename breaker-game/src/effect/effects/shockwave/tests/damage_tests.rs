@@ -5,11 +5,7 @@ use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::*;
-use crate::{
-    bolt::BASE_BOLT_DAMAGE,
-    effect::core::EffectSourceChip,
-    shared::WALL_LAYER,
-};
+use crate::{bolt::BASE_BOLT_DAMAGE, effect::core::EffectSourceChip, shared::WALL_LAYER};
 
 // -- Behavior 1: Shockwave damages a cell within its current radius ──
 

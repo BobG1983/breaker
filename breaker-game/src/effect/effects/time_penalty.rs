@@ -23,7 +23,7 @@ pub(crate) fn reverse(_entity: Entity, seconds: f32, _source_chip: &str, world: 
 }
 
 /// Registers systems for `TimePenalty` effect.
-pub(crate) fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {

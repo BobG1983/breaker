@@ -29,7 +29,7 @@ pub(crate) fn reverse(entity: Entity, count: u32, _source_chip: &str, world: &mu
 }
 
 /// Effective piercing count computed by `recalculate_piercing`.
-#[derive(Component, Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct EffectivePiercing(pub u32);
 
 pub(crate) fn register(app: &mut App) {

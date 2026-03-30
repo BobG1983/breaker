@@ -11,7 +11,7 @@ use crate::{bolt::components::BoltLifespan, effect::BoundEffects};
 /// Each spawned bolt gets full physics components, a random velocity at
 /// `BoltConfig.base_speed`, and `CleanupOnNodeExit`. If `inherit` is true,
 /// `BoundEffects` from the source entity are cloned onto each spawned bolt.
-pub fn fire(
+pub(crate) fn fire(
     entity: Entity,
     count: u32,
     lifespan: Option<f32>,
@@ -43,7 +43,7 @@ pub fn fire(
 }
 
 /// No-op — bolts persist independently once spawned.
-pub fn reverse(
+pub(crate) const fn reverse(
     _entity: Entity,
     _count: u32,
     _lifespan: Option<f32>,
@@ -54,4 +54,4 @@ pub fn reverse(
 }
 
 /// Registers systems for `SpawnBolts` effect.
-pub fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}

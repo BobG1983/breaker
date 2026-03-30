@@ -28,7 +28,7 @@ pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     world.entity_mut(entity).remove::<RampingDamageState>();
 }
 
-pub(crate) fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {

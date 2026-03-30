@@ -14,29 +14,29 @@ use crate::{
 
 /// Marks the entity that spawned this shockwave.
 #[derive(Component)]
-pub struct ShockwaveSource(pub Entity);
+pub(crate) struct ShockwaveSource(pub(crate) Entity);
 
 /// Current radius of the expanding shockwave.
 #[derive(Component)]
-pub struct ShockwaveRadius(pub f32);
+pub(crate) struct ShockwaveRadius(pub(crate) f32);
 
 /// Maximum radius the shockwave expands to before despawning.
 #[derive(Component)]
-pub struct ShockwaveMaxRadius(pub f32);
+pub(crate) struct ShockwaveMaxRadius(pub(crate) f32);
 
 /// Expansion speed of the shockwave in world units per second.
 #[derive(Component)]
-pub struct ShockwaveSpeed(pub f32);
+pub(crate) struct ShockwaveSpeed(pub(crate) f32);
 
 /// Tracks which cell entities have already been damaged by this specific
 /// shockwave instance to enforce at-most-once damage.
 #[derive(Component, Default)]
-pub struct ShockwaveDamaged(pub HashSet<Entity>);
+pub(crate) struct ShockwaveDamaged(pub(crate) HashSet<Entity>);
 
 /// Damage multiplier snapshotted from the source entity's
 /// `EffectiveDamageMultiplier` at fire-time. Default `1.0`.
 #[derive(Component)]
-pub struct ShockwaveDamageMultiplier(pub f32);
+pub(crate) struct ShockwaveDamageMultiplier(pub(crate) f32);
 
 /// Query data for [`apply_shockwave_damage`].
 type ShockwaveDamageQuery = (
@@ -47,7 +47,7 @@ type ShockwaveDamageQuery = (
     Option<&'static EffectSourceChip>,
 );
 
-pub fn fire(
+pub(crate) fn fire(
     entity: Entity,
     base_range: f32,
     range_per_level: f32,
@@ -79,20 +79,21 @@ pub fn fire(
     ));
 }
 
-pub fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
-    let _ = world;
-}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Expand shockwave radius by speed * delta time each fixed tick.
-pub fn tick_shockwave(time: Res<Time>, mut query: Query<(&mut ShockwaveRadius, &ShockwaveSpeed)>) {
+pub(crate) fn tick_shockwave(
+    time: Res<Time>,
+    mut query: Query<(&mut ShockwaveRadius, &ShockwaveSpeed)>,
+) {
     let dt = time.delta_secs();
     for (mut radius, speed) in &mut query {
-        radius.0 += speed.0 * dt;
+        radius.0 = speed.0.mul_add(dt, radius.0);
     }
 }
 
 /// Despawn shockwaves that have reached their maximum radius.
-pub fn despawn_finished_shockwave(
+pub(crate) fn despawn_finished_shockwave(
     mut commands: Commands,
     query: Query<(Entity, &ShockwaveRadius, &ShockwaveMaxRadius)>,
 ) {
@@ -107,7 +108,7 @@ pub fn despawn_finished_shockwave(
 ///
 /// For each shockwave, queries the quadtree for cells within the current radius
 /// and sends [`DamageCell`] for any cell not already in the [`ShockwaveDamaged`] set.
-pub fn apply_shockwave_damage(
+pub(crate) fn apply_shockwave_damage(
     quadtree: Res<CollisionQuadtree>,
     mut shockwaves: Query<ShockwaveDamageQuery, With<ShockwaveSource>>,
     mut damage_writer: MessageWriter<DamageCell>,
@@ -135,7 +136,7 @@ pub fn apply_shockwave_damage(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

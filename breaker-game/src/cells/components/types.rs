@@ -8,7 +8,7 @@ use crate::shared::CleanupOnNodeExit;
 /// Marker component identifying a cell entity.
 #[derive(Component, Debug, Default)]
 #[require(Spatial2D, CleanupOnNodeExit)]
-pub(crate) struct Cell;
+pub struct Cell;
 
 /// Marker for cells that count toward node completion.
 #[derive(Component, Debug)]
@@ -161,3 +161,10 @@ pub(crate) struct OrbitConfig {
     /// Angular speed in radians per second.
     pub speed: f32,
 }
+
+/// Marker component — cell has had its definition effects dispatched.
+///
+/// Inserted by `dispatch_cell_effects` after processing. Prevents double-dispatch
+/// if the system re-runs (e.g., hot-reload re-entry).
+#[derive(Component, Debug)]
+pub(crate) struct CellEffectsDispatched;

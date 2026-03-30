@@ -28,7 +28,7 @@ use crate::{
 /// On the first node (`RunState.node_index == 0`), the bolt spawns with
 /// zero velocity and a [`BoltServing`] marker — it hovers until the player
 /// presses the bump button. On subsequent nodes it launches immediately.
-pub fn spawn_bolt(
+pub(crate) fn spawn_bolt(
     mut commands: Commands,
     configs: (Res<BoltConfig>, Res<BreakerConfig>),
     run_state: Res<RunState>,

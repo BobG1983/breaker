@@ -18,11 +18,11 @@ use crate::{
 
 /// Marker on a tether bolt entity, pointing to its beam entity.
 #[derive(Component)]
-pub struct TetherBoltMarker(pub Entity);
+pub(crate) struct TetherBoltMarker(pub(crate) Entity);
 
 /// The beam entity linking two tether bolts.
 #[derive(Component)]
-pub struct TetherBeamComponent {
+pub(crate) struct TetherBeamComponent {
     /// First tether bolt entity.
     pub bolt_a: Entity,
     /// Second tether bolt entity.
@@ -68,7 +68,13 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &
 }
 
 /// No-op — tether bolts have their own lifecycle.
-pub(crate) fn reverse(_entity: Entity, _damage_mult: f32, _source_chip: &str, _world: &mut World) {}
+pub(crate) const fn reverse(
+    _entity: Entity,
+    _damage_mult: f32,
+    _source_chip: &str,
+    _world: &mut World,
+) {
+}
 
 /// Tick system: damages cells whose AABB intersects each tether beam segment.
 ///
@@ -80,7 +86,7 @@ pub(crate) fn reverse(_entity: Entity, _damage_mult: f32, _source_chip: &str, _w
 /// The beam has an effective half-width equal to the bolt radius (from
 /// `BoltConfig`), so cells whose AABBs are within the bolt radius of the beam
 /// line segment are considered intersecting.
-pub fn tick_tether_beam(
+pub(crate) fn tick_tether_beam(
     mut commands: Commands,
     beams: Query<(Entity, &TetherBeamComponent, Option<&EffectSourceChip>)>,
     bolt_positions: Query<&Position2D, With<Bolt>>,
@@ -92,7 +98,7 @@ pub fn tick_tether_beam(
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
     let beam_half_width = bolt_config
         .as_ref()
-        .map_or(BoltConfig::default().radius, |c| c.radius);
+        .map_or_else(|| BoltConfig::default().radius, |c| c.radius);
 
     for (beam_entity, component, esc) in &beams {
         // Look up both bolt positions; despawn beam if either is missing

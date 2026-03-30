@@ -65,7 +65,7 @@ pub(crate) fn fire(
 }
 
 /// No-op — gravity wells self-despawn via their duration timer.
-pub(crate) fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Decrement well timers and despawn expired wells.
 fn tick_gravity_well(
@@ -98,8 +98,8 @@ fn apply_gravity_pull(
             if distance > 0.0 && distance <= config.radius {
                 let direction = delta / distance;
                 let pull = config.strength * dt;
-                velocity.x += direction.x * pull;
-                velocity.y += direction.y * pull;
+                velocity.x = direction.x.mul_add(pull, velocity.x);
+                velocity.y = direction.y.mul_add(pull, velocity.y);
             }
         }
     }

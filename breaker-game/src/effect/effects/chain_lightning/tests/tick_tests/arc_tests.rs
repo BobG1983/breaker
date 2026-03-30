@@ -3,10 +3,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 
 use super::*;
-use crate::{
-    effect::core::EffectSourceChip,
-    shared::CleanupOnNodeExit,
-};
+use crate::{effect::core::EffectSourceChip, shared::CleanupOnNodeExit};
 
 // ── Behavior 15: Arc spawned with marker and chain transitions to ArcTraveling ──
 
@@ -15,7 +12,7 @@ fn arc_entity_has_chain_lightning_arc_marker_and_no_extra_fields() {
     let mut app = chain_lightning_damage_test_app();
 
     let cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
-    let cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
 
     tick(&mut app);
 

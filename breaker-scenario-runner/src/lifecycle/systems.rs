@@ -1,5 +1,7 @@
 //! Production code for the scenario lifecycle module.
 
+use std::collections::HashSet;
+
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     bolt::{BoltSystems, components::Bolt},
@@ -10,11 +12,15 @@ use breaker::{
         messages::BumpGrade,
         resources::ForceBumpGrade,
     },
+    cells::components::Cell,
     chips::{ChipCatalog, inventory::ChipInventory},
     effect::{
-        BoundEffects, EffectNode, EffectiveSpeedMultiplier, RootEffect, Target,
+        BoundEffects, EffectNode, EffectiveSpeedMultiplier, RootEffect, StagedEffects, Target,
         effects::{
-            pulse::PulseRing, second_wind::SecondWindWall, shield::ShieldActive,
+            chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
+            pulse::PulseRing,
+            second_wind::SecondWindWall,
+            shield::ShieldActive,
             speed_boost::ActiveSpeedBoosts,
         },
     },
@@ -27,8 +33,9 @@ use breaker::{
         },
     },
     screen::chip_select::{ChipOffering, ChipOffers},
-    shared::{GameState, PlayingState, RunSeed},
+    shared::{CleanupOnNodeExit, GameState, PlayingState, RunSeed},
     ui::messages::ChipSelected,
+    wall::components::Wall,
 };
 use rand::{Rng, prelude::IndexedRandom};
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
@@ -37,11 +44,12 @@ use crate::{
     input::InputDriver,
     invariants::{
         EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats,
-        ScenarioTagBolt, ScenarioTagBreaker, ViolationLog, check_bolt_count_reasonable,
-        check_bolt_in_bounds, check_bolt_speed_in_range, check_breaker_in_bounds,
-        check_breaker_position_clamped, check_chip_offer_expected, check_chip_stacks_consistent,
-        check_effective_speed_consistent, check_maxed_chip_never_offered, check_no_entity_leaks,
-        check_no_nan, check_offering_no_duplicates, check_physics_frozen_during_pause,
+        ScenarioTagBolt, ScenarioTagBreaker, ScenarioTagCell, ScenarioTagWall, ViolationLog,
+        check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_in_range,
+        check_breaker_in_bounds, check_breaker_position_clamped, check_chain_arc_count_reasonable,
+        check_chip_offer_expected, check_chip_stacks_consistent, check_effective_speed_consistent,
+        check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
+        check_offering_no_duplicates, check_physics_frozen_during_pause,
         check_pulse_ring_accumulation, check_run_stats_monotonic,
         check_second_wind_wall_at_most_one, check_shield_charges_consistent,
         check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
@@ -216,6 +224,7 @@ fn register_scenario_systems(app: &mut App) {
         check_shield_charges_consistent,
         check_pulse_ring_accumulation,
         check_effective_speed_consistent,
+        check_chain_arc_count_reasonable,
     )
         .chain();
     app.add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
@@ -272,6 +281,8 @@ fn register_scenario_systems(app: &mut App) {
                 tag_game_entities,
                 deferred_debug_setup.after(tag_game_entities),
                 apply_pending_bolt_effects.after(tag_game_entities),
+                apply_pending_cell_effects.after(tag_game_entities),
+                apply_pending_wall_effects.after(tag_game_entities),
                 mark_entered_playing_on_spawn_complete,
             ),
         );
@@ -290,8 +301,6 @@ pub struct BypassExtras<'w, 's> {
     commands: Commands<'w, 's>,
     /// Chip selection index — reset on each run.
     chip_index: ResMut<'w, ChipSelectionIndex>,
-    // /// Writer for dispatching [`ChipSelected`] messages from `initial_chips`.
-    // chip_writer: MessageWriter<'w, ChipSelected>,
 }
 
 /// Sets the breaker and layout override, then immediately enters `Playing`.
@@ -344,21 +353,29 @@ pub fn bypass_menu_to_playing(
     // initial_chips are seeded by `seed_initial_chips` on OnEnter(Playing),
     // AFTER reset_run_state clears the inventory on OnExit(MainMenu).
 
-    // Dispatch initial_effects to breaker chains or PendingBoltEffects
+    // Dispatch initial_effects to the correct target's pending resource or breaker chains
     if let Some(ref effects) = config.definition.initial_effects {
         let mut bolt_entries: Vec<(String, EffectNode)> = Vec::new();
+        let mut cell_entries: Vec<(String, EffectNode)> = Vec::new();
+        let mut wall_entries: Vec<(String, EffectNode)> = Vec::new();
         for root_effect in effects {
             let RootEffect::On { target, then } = root_effect;
             match target {
-                Target::Bolt => {
+                Target::Bolt | Target::AllBolts => {
                     bolt_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
                 }
-                _ => {
+                Target::Breaker => {
                     for mut chains in &mut breaker_query {
                         chains
                             .0
                             .extend(then.iter().cloned().map(|node| (String::new(), node)));
                     }
+                }
+                Target::Cell | Target::AllCells => {
+                    cell_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
+                }
+                Target::Wall | Target::AllWalls => {
+                    wall_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
                 }
             }
         }
@@ -366,6 +383,16 @@ pub fn bypass_menu_to_playing(
             extras
                 .commands
                 .insert_resource(PendingBoltEffects(bolt_entries));
+        }
+        if !cell_entries.is_empty() {
+            extras
+                .commands
+                .insert_resource(PendingCellEffects(cell_entries));
+        }
+        if !wall_entries.is_empty() {
+            extras
+                .commands
+                .insert_resource(PendingWallEffects(wall_entries));
         }
     }
 
@@ -621,15 +648,21 @@ pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut 
 ///
 /// Finds all untagged [`Bolt`] entities and inserts [`ScenarioTagBolt`].
 /// Finds all untagged [`Breaker`] entities and inserts [`ScenarioTagBreaker`].
+/// Finds all untagged [`Cell`] entities and inserts [`ScenarioTagCell`].
+/// Finds all untagged [`Wall`] entities and inserts [`ScenarioTagWall`].
 /// Runs in `OnEnter(GameState::Playing)` before [`apply_debug_setup`].
 pub fn tag_game_entities(
     bolt_query: Query<Entity, (With<Bolt>, Without<ScenarioTagBolt>)>,
     breaker_query: Query<Entity, (With<Breaker>, Without<ScenarioTagBreaker>)>,
+    cell_query: Query<Entity, (With<Cell>, Without<ScenarioTagCell>)>,
+    wall_query: Query<Entity, (With<Wall>, Without<ScenarioTagWall>)>,
     mut commands: Commands,
     mut stats: Option<ResMut<ScenarioStats>>,
 ) {
     let mut bolts_tagged = 0u32;
     let mut breakers_tagged = 0u32;
+    let mut cells_tagged = 0u32;
+    let mut walls_tagged = 0u32;
 
     for entity in &bolt_query {
         commands.entity(entity).insert(ScenarioTagBolt);
@@ -639,10 +672,20 @@ pub fn tag_game_entities(
         commands.entity(entity).insert(ScenarioTagBreaker);
         breakers_tagged += 1;
     }
+    for entity in &cell_query {
+        commands.entity(entity).insert(ScenarioTagCell);
+        cells_tagged += 1;
+    }
+    for entity in &wall_query {
+        commands.entity(entity).insert(ScenarioTagWall);
+        walls_tagged += 1;
+    }
 
     if let Some(ref mut s) = stats {
         s.bolts_tagged += bolts_tagged;
         s.breakers_tagged += breakers_tagged;
+        s.cells_tagged += cells_tagged;
+        s.walls_tagged += walls_tagged;
     }
 }
 
@@ -794,7 +837,28 @@ pub fn apply_debug_frame_mutations(
             MutationKind::InjectWrongEffectiveSpeed { wrong_value } => {
                 apply_inject_wrong_effective_speed(*wrong_value, &mut targets.commands);
             }
+            MutationKind::SpawnExtraChainArcs(count) => {
+                apply_spawn_extra_chain_arcs(*count, &mut targets.commands);
+            }
         }
+    }
+}
+
+fn apply_spawn_extra_chain_arcs(count: usize, commands: &mut Commands) {
+    for _ in 0..count {
+        commands.spawn((
+            ChainLightningChain {
+                source: Vec2::ZERO,
+                remaining_jumps: 0,
+                damage: 0.0,
+                hit_set: HashSet::new(),
+                state: ChainState::Idle,
+                range: 0.0,
+                arc_speed: 0.0,
+            },
+            CleanupOnNodeExit,
+        ));
+        commands.spawn((ChainLightningArc, CleanupOnNodeExit));
     }
 }
 
@@ -954,6 +1018,24 @@ pub struct ChipSelectionIndex(pub usize);
 #[derive(Resource, Default)]
 pub struct PendingBoltEffects(pub Vec<(String, EffectNode)>);
 
+/// Holds cell-targeted initial effects until cell entities are spawned and tagged.
+///
+/// Inserted by [`bypass_menu_to_playing`] when `initial_effects` contains a
+/// `Target::Cell` or `Target::AllCells` entry. Applied once by
+/// [`apply_pending_cell_effects`] after tagged cell entities exist; cleared
+/// after application.
+#[derive(Resource, Default)]
+pub struct PendingCellEffects(pub Vec<(String, EffectNode)>);
+
+/// Holds wall-targeted initial effects until wall entities are spawned and tagged.
+///
+/// Inserted by [`bypass_menu_to_playing`] when `initial_effects` contains a
+/// `Target::Wall` or `Target::AllWalls` entry. Applied once by
+/// [`apply_pending_wall_effects`] after tagged wall entities exist; cleared
+/// after application.
+#[derive(Resource, Default)]
+pub struct PendingWallEffects(pub Vec<(String, EffectNode)>);
+
 /// Sentinel breaker name for scenarios that need an indestructible breaker.
 ///
 /// Case-sensitive — RON `breaker` field must match exactly.
@@ -1106,6 +1188,80 @@ pub fn apply_pending_bolt_effects(
     }
     for mut chains in &mut bolt_query {
         chains.0.extend(pending.0.iter().cloned());
+    }
+    pending.0.clear();
+    *done = true;
+}
+
+/// Applies deferred cell effects from [`PendingCellEffects`] to tagged cell entities.
+///
+/// Runs in `FixedUpdate` after [`tag_game_entities`]. Uses a `Local<bool>` guard
+/// so it fires at most once. Waits until at least one `ScenarioTagCell` entity
+/// exists before applying. Inserts `BoundEffects` and `StagedEffects` on entities
+/// that lack them (cells are not spawned with effect components).
+pub fn apply_pending_cell_effects(
+    mut done: Local<bool>,
+    mut pending: Option<ResMut<PendingCellEffects>>,
+    cell_query: Query<Entity, With<ScenarioTagCell>>,
+    mut commands: Commands,
+) {
+    if *done {
+        return;
+    }
+    let Some(ref mut pending) = pending else {
+        return;
+    };
+    if cell_query.is_empty() {
+        return;
+    }
+    let entries = pending.0.clone();
+    for entity in &cell_query {
+        commands
+            .entity(entity)
+            .insert_if_new((BoundEffects::default(), StagedEffects::default()));
+        let entries_clone = entries.clone();
+        commands.queue(move |world: &mut World| {
+            if let Some(mut bound) = world.entity_mut(entity).get_mut::<BoundEffects>() {
+                bound.0.extend(entries_clone);
+            }
+        });
+    }
+    pending.0.clear();
+    *done = true;
+}
+
+/// Applies deferred wall effects from [`PendingWallEffects`] to tagged wall entities.
+///
+/// Runs in `FixedUpdate` after [`tag_game_entities`]. Uses a `Local<bool>` guard
+/// so it fires at most once. Waits until at least one `ScenarioTagWall` entity
+/// exists before applying. Inserts `BoundEffects` and `StagedEffects` on entities
+/// that lack them (walls are not spawned with effect components).
+pub fn apply_pending_wall_effects(
+    mut done: Local<bool>,
+    mut pending: Option<ResMut<PendingWallEffects>>,
+    wall_query: Query<Entity, With<ScenarioTagWall>>,
+    mut commands: Commands,
+) {
+    if *done {
+        return;
+    }
+    let Some(ref mut pending) = pending else {
+        return;
+    };
+    if wall_query.is_empty() {
+        return;
+    }
+    let entries = pending.0.clone();
+    for entity in &wall_query {
+        commands
+            .entity(entity)
+            .insert_if_new((BoundEffects::default(), StagedEffects::default()));
+        let entries_clone = entries.clone();
+        commands.queue(move |world: &mut World| {
+            if let Some(mut bound) = world.entity_mut(entity).get_mut::<BoundEffects>() {
+                bound.0.extend(entries_clone);
+            }
+        });
     }
     pending.0.clear();
     *done = true;

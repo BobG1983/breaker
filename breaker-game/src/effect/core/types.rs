@@ -3,10 +3,11 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-/// Deferred chip attribution stored on spawned effect entities (shockwave,
-/// pulse ring, explode request, chain lightning request, piercing beam request,
-/// tether beam). Damage-application systems read this to populate
-/// `DamageCell.source_chip`.
+/// Deferred chip attribution stored on spawned effect entities.
+///
+/// Used by shockwave, pulse ring, explode request, chain lightning request,
+/// piercing beam request, and tether beam. Damage-application systems read
+/// this to populate `DamageCell.source_chip`.
 #[derive(Component, Debug, Clone, Default)]
 pub struct EffectSourceChip(pub Option<String>);
 
@@ -141,7 +142,7 @@ pub enum RootEffect {
 impl From<RootEffect> for EffectNode {
     fn from(r: RootEffect) -> Self {
         let RootEffect::On { target, then } = r;
-        EffectNode::On {
+        Self::On {
             target,
             permanent: false,
             then,
@@ -158,12 +159,12 @@ pub enum EffectNode {
         /// The trigger to match against.
         trigger: Trigger,
         /// Children to evaluate on match.
-        then: Vec<EffectNode>,
+        then: Vec<Self>,
     },
     /// Terminal — fire the effect on the entity.
     Do(EffectKind),
     /// One-shot — evaluate children; if any match, consume the `Once`.
-    Once(Vec<EffectNode>),
+    Once(Vec<Self>),
     /// Redirect — transfer children to the target entity.
     On {
         /// Target entity to transfer to.
@@ -172,36 +173,36 @@ pub enum EffectNode {
         #[serde(default)]
         permanent: bool,
         /// Children to transfer.
-        then: Vec<EffectNode>,
+        then: Vec<Self>,
     },
     /// Duration-scoped — apply effects now, undo when trigger fires.
     Until {
         /// The trigger that ends the duration.
         trigger: Trigger,
         /// Effects to apply (`Do`) and chains to install (non-`Do`).
-        then: Vec<EffectNode>,
+        then: Vec<Self>,
     },
     /// Internal — created by `Until` desugaring. Carries reversal data.
     Reverse {
         /// Effects that were fired and need reversing.
         effects: Vec<EffectKind>,
         /// Chains that were pushed to `BoundEffects` and need removing.
-        chains: Vec<EffectNode>,
+        chains: Vec<Self>,
     },
 }
 
 /// Serde default helper for [`EffectKind::SpawnBolts::count`].
-fn one() -> u32 {
+const fn one() -> u32 {
     1
 }
 
 /// Serde default helper for [`EffectKind::Pulse::interval`].
-fn default_pulse_interval() -> f32 {
+const fn default_pulse_interval() -> f32 {
     0.5
 }
 
 /// Serde default helper for [`EffectKind::ChainLightning::arc_speed`].
-fn default_chain_lightning_arc_speed() -> f32 {
+const fn default_chain_lightning_arc_speed() -> f32 {
     200.0
 }
 

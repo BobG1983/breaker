@@ -18,6 +18,9 @@ pub trait EffectCommandsExt {
         children: Vec<EffectNode>,
         permanent: bool,
     );
+    /// Queue pushing pre-built effect entries to an entity's [`BoundEffects`],
+    /// inserting [`BoundEffects`] and [`StagedEffects`] if absent.
+    fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>);
 }
 
 impl EffectCommandsExt for Commands<'_, '_> {
@@ -51,6 +54,10 @@ impl EffectCommandsExt for Commands<'_, '_> {
             permanent,
         });
     }
+
+    fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>) {
+        self.queue(PushBoundEffects { entity, effects });
+    }
 }
 
 struct FireEffectCommand {
@@ -74,6 +81,31 @@ struct ReverseEffectCommand {
 impl Command for ReverseEffectCommand {
     fn apply(self, world: &mut World) {
         self.effect.reverse(self.entity, &self.source_chip, world);
+    }
+}
+
+/// Custom command that inserts `BoundEffects` + `StagedEffects` if absent,
+/// then appends effect entries to the entity's `BoundEffects`.
+pub(crate) struct PushBoundEffects {
+    entity: Entity,
+    effects: Vec<(String, EffectNode)>,
+}
+
+impl Command for PushBoundEffects {
+    fn apply(self, world: &mut World) {
+        if let Ok(mut entity_ref) = world.get_entity_mut(self.entity) {
+            if entity_ref.get::<BoundEffects>().is_none() {
+                entity_ref.insert(BoundEffects::default());
+            }
+            if entity_ref.get::<StagedEffects>().is_none() {
+                entity_ref.insert(StagedEffects::default());
+            }
+            if let Some(mut bound) = entity_ref.get_mut::<BoundEffects>() {
+                for entry in self.effects {
+                    bound.0.push(entry);
+                }
+            }
+        }
     }
 }
 

@@ -107,10 +107,12 @@ pub(crate) fn bolt_wall_collision(
                     Vec2::new(position.x, wall_center.y + expanded_half.y),
                 ),
             ];
-            let (_, normal, push_pos) = faces
+            let Some((_, normal, push_pos)) = faces
                 .into_iter()
                 .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal))
-                .unwrap();
+            else {
+                continue;
+            };
 
             // Push bolt to the nearest face and reflect velocity
             bolt_position.0 = push_pos;

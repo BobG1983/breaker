@@ -42,7 +42,7 @@ pub(crate) fn fire(
 }
 
 /// No-op — inner effects handle their own reversal.
-pub(crate) fn reverse(
+pub(crate) const fn reverse(
     _entity: Entity,
     _pool: &[(f32, EffectNode)],
     _source_chip: &str,
@@ -51,7 +51,7 @@ pub(crate) fn reverse(
 }
 
 /// Registers systems for `RandomEffect` effect.
-pub(crate) fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {

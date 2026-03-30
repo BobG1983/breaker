@@ -91,7 +91,7 @@ pub struct SpawnedByEvolution(pub String);
 ///
 /// This is bolt gameplay state — decremented by `bolt_cell_collision` on each
 /// pierce-through, reset by `bolt_wall_collision` and `bolt_breaker_collision`.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PiercingRemaining(pub u32);
 
 /// Countdown timer that despawns the bolt when it expires.

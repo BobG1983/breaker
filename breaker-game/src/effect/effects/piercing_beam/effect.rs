@@ -19,7 +19,7 @@ use crate::{
 /// Spawned by `fire()` with pre-computed beam geometry,
 /// consumed (and despawned) by `process_piercing_beam` in the same or next tick.
 #[derive(Component)]
-pub struct PiercingBeamRequest {
+pub(crate) struct PiercingBeamRequest {
     /// Beam origin (entity position).
     pub origin: Vec2,
     /// Normalized beam direction.
@@ -32,7 +32,13 @@ pub struct PiercingBeamRequest {
     pub damage: f32,
 }
 
-pub fn fire(entity: Entity, damage_mult: f32, width: f32, source_chip: &str, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    damage_mult: f32,
+    width: f32,
+    source_chip: &str,
+    world: &mut World,
+) {
     let pos = world
         .get::<Position2D>(entity)
         .map(|p| p.0)
@@ -82,9 +88,7 @@ pub fn fire(entity: Entity, damage_mult: f32, width: f32, source_chip: &str, wor
     ));
 }
 
-pub fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
-    let _ = world;
-}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Process all pending piercing beam requests: query quadtree, send damage, despawn request.
 ///
@@ -92,7 +96,7 @@ pub fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
 /// for candidate cells, performs narrow-phase filtering against the oriented beam
 /// rectangle, sends [`DamageCell`] for each intersecting cell, then despawns the
 /// request entity.
-pub fn process_piercing_beam(
+pub(crate) fn process_piercing_beam(
     mut commands: Commands,
     requests: Query<(Entity, &PiercingBeamRequest, Option<&EffectSourceChip>)>,
     quadtree: Res<CollisionQuadtree>,
@@ -160,7 +164,7 @@ pub fn process_piercing_beam(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         process_piercing_beam

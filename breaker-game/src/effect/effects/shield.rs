@@ -29,7 +29,7 @@ pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     world.entity_mut(entity).remove::<ShieldActive>();
 }
 
-pub(crate) fn register(_app: &mut App) {
+pub(crate) const fn register(_app: &mut App) {
     // No runtime systems — charge decrement happens in bolt_lost and handle_cell_hit.
 }
 

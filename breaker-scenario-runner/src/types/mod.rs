@@ -157,6 +157,8 @@ pub enum InvariantKind {
     /// equal the product of all [`ActiveSpeedBoosts`](breaker::effect::effects::speed_boost::ActiveSpeedBoosts)
     /// entries within floating-point epsilon.
     EffectiveSpeedConsistent,
+    /// Chain lightning chain + arc entity count stays within `invariant_params.max_chain_arc_count`.
+    ChainArcCountReasonable,
 }
 
 impl InvariantKind {
@@ -187,6 +189,7 @@ impl InvariantKind {
         Self::ShieldChargesConsistent,
         Self::PulseRingAccumulation,
         Self::EffectiveSpeedConsistent,
+        Self::ChainArcCountReasonable,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -219,6 +222,7 @@ impl InvariantKind {
             Self::EffectiveSpeedConsistent => {
                 "EffectiveSpeedMultiplier diverged from ActiveSpeedBoosts product"
             }
+            Self::ChainArcCountReasonable => "chain lightning arc/chain count exceeds maximum",
         }
     }
 }
@@ -291,6 +295,14 @@ pub struct InvariantParams {
     /// burst spawning from multiple simultaneous bolt emitters.
     #[serde(default = "InvariantParams::default_max_pulse_ring_count")]
     pub max_pulse_ring_count: usize,
+    /// Maximum combined [`ChainLightningChain`](breaker::effect::effects::chain_lightning::ChainLightningChain) +
+    /// [`ChainLightningArc`](breaker::effect::effects::chain_lightning::ChainLightningArc) entity count
+    /// before [`InvariantKind::ChainArcCountReasonable`] fires.
+    ///
+    /// Default 50: conservative ceiling — a single chain lightning fires at most ~10 arcs,
+    /// so 50 allows multiple simultaneous chains while catching unbounded accumulation.
+    #[serde(default = "InvariantParams::default_max_chain_arc_count")]
+    pub max_chain_arc_count: usize,
 }
 
 impl InvariantParams {
@@ -301,6 +313,10 @@ impl InvariantParams {
     const fn default_max_pulse_ring_count() -> usize {
         20
     }
+
+    const fn default_max_chain_arc_count() -> usize {
+        50
+    }
 }
 
 impl Default for InvariantParams {
@@ -308,6 +324,7 @@ impl Default for InvariantParams {
         Self {
             max_bolt_count: Self::default_max_bolt_count(),
             max_pulse_ring_count: Self::default_max_pulse_ring_count(),
+            max_chain_arc_count: Self::default_max_chain_arc_count(),
         }
     }
 }
@@ -547,6 +564,11 @@ pub enum MutationKind {
         /// The incorrect value to set on `EffectiveSpeedMultiplier`.
         wrong_value: f32,
     },
+    /// Spawn N [`ChainLightningChain`] + N [`ChainLightningArc`] marker entities (2N total).
+    ///
+    /// Used by the `chain_arc_count_exceeded` self-test to trigger a
+    /// [`InvariantKind::ChainArcCountReasonable`] violation.
+    SpawnExtraChainArcs(usize),
 }
 
 /// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.

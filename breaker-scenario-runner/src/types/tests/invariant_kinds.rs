@@ -135,3 +135,92 @@ fn all_variants_covered_by_invariant_kind_all() {
         "InvariantKind::ALL must not contain duplicates"
     );
 }
+
+// -------------------------------------------------------------------------
+// InvariantKind::ChainArcCountReasonable — behaviors 1-3
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_kind_chain_arc_count_reasonable_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("ChainArcCountReasonable").expect("ChainArcCountReasonable should parse");
+    assert_eq!(result, InvariantKind::ChainArcCountReasonable);
+}
+
+#[test]
+fn invariant_kind_chain_arc_count_reasonable_debug_round_trip() {
+    let debug_str = format!("{:?}", InvariantKind::ChainArcCountReasonable);
+    assert!(
+        debug_str.contains("ChainArcCountReasonable"),
+        "Debug output should contain 'ChainArcCountReasonable', got: {debug_str}"
+    );
+}
+
+#[test]
+fn invariant_kind_all_includes_chain_arc_count_reasonable() {
+    assert!(
+        InvariantKind::ALL.contains(&InvariantKind::ChainArcCountReasonable),
+        "InvariantKind::ALL must include ChainArcCountReasonable"
+    );
+}
+
+#[test]
+fn fail_reason_chain_arc_count_reasonable() {
+    assert_eq!(
+        InvariantKind::ChainArcCountReasonable.fail_reason(),
+        "chain lightning arc/chain count exceeds maximum"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InvariantParams::max_chain_arc_count — behaviors 4-5
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_params_defaults_max_chain_arc_count_to_50() {
+    let params = InvariantParams::default();
+    assert_eq!(
+        params.max_chain_arc_count, 50,
+        "InvariantParams::default().max_chain_arc_count should be 50"
+    );
+}
+
+#[test]
+fn invariant_params_max_chain_arc_count_preserved_with_struct_update() {
+    let params = InvariantParams::default();
+    assert_eq!(
+        params.max_chain_arc_count, 50,
+        "max_chain_arc_count should be preserved via ..InvariantParams::default()"
+    );
+}
+
+#[test]
+fn invariant_params_max_chain_arc_count_overridable_via_ron() {
+    let ron = "(max_chain_arc_count: 10)";
+    let params: InvariantParams =
+        ron::de::from_str(ron).expect("InvariantParams with max_chain_arc_count should parse");
+    assert_eq!(
+        params.max_chain_arc_count, 10,
+        "max_chain_arc_count should be overridden to 10"
+    );
+    // Other fields should retain defaults
+    assert_eq!(
+        params.max_bolt_count, 8,
+        "max_bolt_count should retain default of 8"
+    );
+    assert_eq!(
+        params.max_pulse_ring_count, 20,
+        "max_pulse_ring_count should retain default of 20"
+    );
+}
+
+#[test]
+fn invariant_params_max_chain_arc_count_defaults_when_absent_in_ron() {
+    let ron = "()";
+    let params: InvariantParams =
+        ron::de::from_str(ron).expect("InvariantParams with no fields should parse");
+    assert_eq!(
+        params.max_chain_arc_count, 50,
+        "max_chain_arc_count should default to 50 when absent from RON"
+    );
+}

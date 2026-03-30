@@ -3,10 +3,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 
 use super::*;
-use crate::{
-    cells::messages::DamageCell,
-    shared::CleanupOnNodeExit,
-};
+use crate::shared::CleanupOnNodeExit;
 
 // ── Section B: tick_chain_lightning -- Idle State ──────────────────
 

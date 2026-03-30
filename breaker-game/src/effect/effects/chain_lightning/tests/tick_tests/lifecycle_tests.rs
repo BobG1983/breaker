@@ -125,11 +125,11 @@ fn multiple_chains_tick_independently() {
 
     // Cells near chain_1
     let first_near = spawn_test_cell(&mut app, 10.0, 0.0);
-    let first_far = spawn_test_cell(&mut app, 20.0, 0.0);
+    let _first_far = spawn_test_cell(&mut app, 20.0, 0.0);
 
     // Cells near chain_2
     let second_near = spawn_test_cell(&mut app, 210.0, 0.0);
-    let second_far = spawn_test_cell(&mut app, 220.0, 0.0);
+    let _second_far = spawn_test_cell(&mut app, 220.0, 0.0);
 
     tick(&mut app);
 
@@ -315,7 +315,7 @@ fn register_wires_tick_chain_lightning_system() {
     app.update();
 
     // Spawn a chain in Idle with a valid target -- if register() wires the system, tick will process it
-    let cell = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
     tick(&mut app);
 
     let chain_entity = spawn_chain(
@@ -360,7 +360,7 @@ fn arc_entity_has_cleanup_on_node_exit() {
     let mut app = chain_lightning_damage_test_app();
 
     let cell_a = spawn_test_cell(&mut app, 20.0, 0.0);
-    let cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
+    let _cell_b = spawn_test_cell(&mut app, 40.0, 0.0);
 
     tick(&mut app);
 

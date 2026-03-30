@@ -100,14 +100,15 @@ fn ccd_sweep_breaker(
         bolt_radius,
         CollisionLayers::new(0, BREAKER_LAYER),
     );
-    if let Some(qt_hit) = hits.first() {
-        Some((qt_hit.normal, qt_hit.position))
-    } else {
-        let expanded = Aabb2D::new(breaker_pos, expanded_half);
-        expanded
-            .ray_intersect(bolt_pos, direction, max_dist)
-            .map(|ray_hit| (ray_hit.normal, ray_hit.safe_position(bolt_pos, direction)))
-    }
+    hits.first().map_or_else(
+        || {
+            let expanded = Aabb2D::new(breaker_pos, expanded_half);
+            expanded
+                .ray_intersect(bolt_pos, direction, max_dist)
+                .map(|ray_hit| (ray_hit.normal, ray_hit.safe_position(bolt_pos, direction)))
+        },
+        |qt_hit| Some((qt_hit.normal, qt_hit.position)),
+    )
 }
 
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.

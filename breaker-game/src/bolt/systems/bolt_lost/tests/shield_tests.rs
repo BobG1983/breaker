@@ -204,7 +204,7 @@ fn shield_charges_0_behaves_as_no_shield() {
         .init_resource::<BoltLostCount>()
         .add_systems(FixedUpdate, (bolt_lost, count_bolt_lost.after(bolt_lost)));
 
-    let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 0);
+    let _breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 0);
 
     app.world_mut().spawn((
         Bolt,

@@ -48,6 +48,7 @@ fn make_healthy_stats() -> ScenarioStats {
         entered_playing: true,
         bolts_tagged: 1,
         breakers_tagged: 1,
+        ..Default::default()
     }
 }
 
@@ -277,6 +278,7 @@ fn health_warning_no_actions_injected_evaluates_to_fail() {
         entered_playing: true,
         bolts_tagged: 1,
         breakers_tagged: 1,
+        ..Default::default()
     };
     let definition = make_chaos_definition();
 
@@ -308,6 +310,7 @@ fn health_warning_never_entered_playing_evaluates_to_fail() {
         entered_playing: false,
         bolts_tagged: 1,
         breakers_tagged: 1,
+        ..Default::default()
     };
     let definition = make_chaos_definition();
 
@@ -339,6 +342,7 @@ fn health_warning_no_bolts_tagged_evaluates_to_fail() {
         entered_playing: true,
         bolts_tagged: 0,
         breakers_tagged: 1,
+        ..Default::default()
     };
     let definition = make_chaos_definition();
 
@@ -370,6 +374,7 @@ fn health_warning_no_breakers_tagged_evaluates_to_fail() {
         entered_playing: true,
         bolts_tagged: 1,
         breakers_tagged: 0,
+        ..Default::default()
     };
     let definition = make_chaos_definition();
 
@@ -401,6 +406,7 @@ fn health_warning_early_exit_evaluates_to_fail() {
         entered_playing: true,
         bolts_tagged: 1,
         breakers_tagged: 1,
+        ..Default::default()
     };
     let definition = make_chaos_definition();
 
@@ -435,6 +441,7 @@ fn health_warning_no_invariant_checks_evaluates_to_fail() {
         entered_playing: true,
         bolts_tagged: 1,
         breakers_tagged: 1,
+        ..Default::default()
     };
     let definition = make_chaos_definition();
 

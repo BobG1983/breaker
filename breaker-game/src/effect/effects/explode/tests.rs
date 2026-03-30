@@ -355,7 +355,7 @@ fn process_explode_requests_despawns_request_with_no_cells_in_range() {
 fn process_explode_requests_handles_multiple_requests_in_same_frame() {
     let mut app = damage_test_app();
 
-    let cell = spawn_test_cell(&mut app, 10.0, 0.0);
+    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
     let req1 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 1.0);
     let req2 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 2.0);
 

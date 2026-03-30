@@ -314,8 +314,6 @@ mod tests {
         //         StagedEffects has When(TimeExpires(2.0), [Reverse { effects: [SpeedBoost(1.3)], chains: [] }])
         //         SpeedBoost was fired.
         //         No duplication — When(TimeExpires) only in StagedEffects, not BoundEffects.
-        use crate::effect::triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects};
-
         let mut app = test_app();
 
         let until_node = EffectNode::Until {

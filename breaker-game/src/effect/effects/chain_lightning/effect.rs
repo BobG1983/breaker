@@ -144,9 +144,7 @@ pub(crate) fn fire(
     ));
 }
 
-pub(crate) fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
-    let _ = world;
-}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Bundled world queries for chain lightning tick — reduces system parameter count.
 #[derive(SystemParam)]
@@ -161,7 +159,7 @@ pub struct ChainLightningWorld<'w, 's> {
 ///
 /// - In `Idle` state: select next target, spawn arc, transition to `ArcTraveling`
 /// - In `ArcTraveling` state: advance arc toward target, damage on arrival
-pub fn tick_chain_lightning(
+pub(crate) fn tick_chain_lightning(
     mut commands: Commands,
     time: Res<Time<Fixed>>,
     mut chains: Query<(Entity, &mut ChainLightningChain, Option<&EffectSourceChip>)>,

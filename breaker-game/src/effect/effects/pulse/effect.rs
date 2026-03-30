@@ -14,7 +14,7 @@ use crate::{
 
 /// Emitter component attached to a bolt entity. Drives periodic ring emission.
 #[derive(Component)]
-pub struct PulseEmitter {
+pub(crate) struct PulseEmitter {
     /// Base range of emitted rings.
     pub base_range: f32,
     /// Additional range per stack level.
@@ -32,7 +32,7 @@ pub struct PulseEmitter {
 impl PulseEmitter {
     /// Effective maximum radius: `base_range + (stacks - 1) * range_per_level`.
     #[must_use]
-    pub fn effective_max_radius(&self) -> f32 {
+    pub(crate) fn effective_max_radius(&self) -> f32 {
         super::super::effective_range(self.base_range, self.range_per_level, self.stacks)
     }
 }
@@ -43,28 +43,28 @@ pub struct PulseRing;
 
 /// The entity that spawned this ring (typically a bolt).
 #[derive(Component)]
-pub struct PulseSource(pub Entity);
+pub(crate) struct PulseSource(pub(crate) Entity);
 
 /// Current expanding radius of the ring.
 #[derive(Component)]
-pub struct PulseRadius(pub f32);
+pub(crate) struct PulseRadius(pub(crate) f32);
 
 /// Maximum radius before the ring despawns.
 #[derive(Component)]
-pub struct PulseMaxRadius(pub f32);
+pub(crate) struct PulseMaxRadius(pub(crate) f32);
 
 /// Expansion speed in world units per second.
 #[derive(Component)]
-pub struct PulseSpeed(pub f32);
+pub(crate) struct PulseSpeed(pub(crate) f32);
 
 /// Tracks which cells have been damaged by this specific ring.
 #[derive(Component, Default)]
-pub struct PulseDamaged(pub HashSet<Entity>);
+pub(crate) struct PulseDamaged(pub(crate) HashSet<Entity>);
 
 /// Damage multiplier snapshotted from the emitter's captured
 /// `EffectiveDamageMultiplier` at ring-spawn time. Default `1.0`.
 #[derive(Component)]
-pub struct PulseRingDamageMultiplier(pub f32);
+pub(crate) struct PulseRingDamageMultiplier(pub(crate) f32);
 
 /// Query data for [`tick_pulse_emitter`].
 type EmitterQuery = (
@@ -84,13 +84,13 @@ type PulseDamageQuery = (
     Option<&'static EffectSourceChip>,
 );
 
-pub fn fire(entity: Entity, emitter: PulseEmitter, source_chip: &str, world: &mut World) {
+pub(crate) fn fire(entity: Entity, emitter: PulseEmitter, source_chip: &str, world: &mut World) {
     if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
         entity_mut.insert((emitter, EffectSourceChip::new(source_chip)));
     }
 }
 
-pub fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
+pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
         entity_mut.remove::<PulseEmitter>();
     }
@@ -100,7 +100,7 @@ pub fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
 ///
 /// Uses manual `f32` timer accumulation. When the timer reaches the interval,
 /// spawns a [`PulseRing`] entity at the emitter's current position.
-pub fn tick_pulse_emitter(
+pub(crate) fn tick_pulse_emitter(
     time: Res<Time<Fixed>>,
     mut commands: Commands,
     mut emitters: Query<EmitterQuery>,
@@ -130,13 +130,13 @@ pub fn tick_pulse_emitter(
 }
 
 /// Expand pulse ring radius by speed * dt each tick.
-pub fn tick_pulse_ring(
+pub(crate) fn tick_pulse_ring(
     time: Res<Time>,
     mut rings: Query<(&mut PulseRadius, &PulseSpeed), With<PulseRing>>,
 ) {
     let dt = time.delta_secs();
     for (mut radius, speed) in &mut rings {
-        radius.0 += speed.0 * dt;
+        radius.0 = speed.0.mul_add(dt, radius.0);
     }
 }
 
@@ -144,7 +144,7 @@ pub fn tick_pulse_ring(
 ///
 /// For each ring, queries the quadtree for cells within the current radius
 /// and sends [`DamageCell`] for any cell not already in the [`PulseDamaged`] set.
-pub fn apply_pulse_damage(
+pub(crate) fn apply_pulse_damage(
     quadtree: Res<CollisionQuadtree>,
     mut rings: Query<PulseDamageQuery, With<PulseRing>>,
     mut damage_writer: MessageWriter<DamageCell>,
@@ -173,7 +173,7 @@ pub fn apply_pulse_damage(
 }
 
 /// Despawn pulse rings that have reached their maximum radius.
-pub fn despawn_finished_pulse_ring(
+pub(crate) fn despawn_finished_pulse_ring(
     mut commands: Commands,
     rings: Query<(Entity, &PulseRadius, &PulseMaxRadius), With<PulseRing>>,
 ) {
@@ -184,7 +184,7 @@ pub fn despawn_finished_pulse_ring(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

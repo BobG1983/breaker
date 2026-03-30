@@ -9,7 +9,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 use super::effect::*;
 use crate::{
     cells::{components::Cell, messages::DamageCell},
-    shared::{CELL_LAYER, WALL_LAYER},
+    shared::CELL_LAYER,
 };
 
 /// Collects [`DamageCell`] messages into a resource for test assertions.

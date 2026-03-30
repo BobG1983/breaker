@@ -259,17 +259,15 @@ fn fire_with_arcs_zero_does_nothing() {
 
     // No ChainLightningChain entity
     let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
-    let chains: Vec<_> = chain_query.iter(app.world()).collect();
     assert!(
-        chains.is_empty(),
+        chain_query.iter(app.world()).next().is_none(),
         "arcs=0 should not spawn any chain entity"
     );
 
     // No DamageCell message
     let messages = app.world().resource::<Messages<DamageCell>>();
-    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert!(
-        written.is_empty(),
+        messages.iter_current_update_messages().next().is_none(),
         "arcs=0 should not write any DamageCell message"
     );
 }
@@ -337,9 +335,8 @@ fn fire_with_arcs_one_and_no_cells_in_range_does_nothing() {
     fire(entity, 1, 50.0, 1.0, 200.0, "", app.world_mut());
 
     let messages = app.world().resource::<Messages<DamageCell>>();
-    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert!(
-        written.is_empty(),
+        messages.iter_current_update_messages().next().is_none(),
         "arcs=1 with no cells in range should not damage anything"
     );
 
@@ -365,9 +362,8 @@ fn fire_with_no_targets_in_range_damages_nothing_and_spawns_no_chain() {
     fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
 
     let messages = app.world().resource::<Messages<DamageCell>>();
-    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert!(
-        written.is_empty(),
+        messages.iter_current_update_messages().next().is_none(),
         "no targets in range should produce no DamageCell"
     );
 
@@ -390,9 +386,8 @@ fn fire_with_empty_quadtree_damages_nothing() {
     fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
 
     let messages = app.world().resource::<Messages<DamageCell>>();
-    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert!(
-        written.is_empty(),
+        messages.iter_current_update_messages().next().is_none(),
         "empty quadtree should produce no DamageCell"
     );
 
@@ -418,8 +413,10 @@ fn fire_with_zero_range_damages_nothing() {
     fire(entity, 3, 0.0, 1.0, 200.0, "", app.world_mut());
 
     let messages = app.world().resource::<Messages<DamageCell>>();
-    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
-    assert!(written.is_empty(), "range=0.0 should produce no DamageCell");
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "range=0.0 should produce no DamageCell"
+    );
 
     let mut chain_query = app.world_mut().query::<&ChainLightningChain>();
     assert!(
@@ -441,9 +438,8 @@ fn fire_with_negative_range_damages_nothing() {
     fire(entity, 3, -5.0, 1.0, 200.0, "", app.world_mut());
 
     let messages = app.world().resource::<Messages<DamageCell>>();
-    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert!(
-        written.is_empty(),
+        messages.iter_current_update_messages().next().is_none(),
         "negative range should produce no DamageCell"
     );
 

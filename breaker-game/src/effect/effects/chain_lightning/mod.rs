@@ -1,4 +1,4 @@
-pub(crate) use effect::*;
+pub use effect::*;
 
 mod effect;
 

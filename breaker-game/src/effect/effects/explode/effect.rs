@@ -16,14 +16,20 @@ use crate::{
 /// `process_explode_requests` in the same or next tick. Position is stored
 /// in the entity's `Transform` component.
 #[derive(Component)]
-pub struct ExplodeRequest {
+pub(crate) struct ExplodeRequest {
     /// Damage radius in world units.
     pub range: f32,
     /// Multiplicative damage factor applied to `BASE_BOLT_DAMAGE`.
     pub damage_mult: f32,
 }
 
-pub fn fire(entity: Entity, range: f32, damage_mult: f32, source_chip: &str, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    range: f32,
+    damage_mult: f32,
+    source_chip: &str,
+    world: &mut World,
+) {
     let position = world
         .get::<Transform>(entity)
         .map_or(Vec3::ZERO, |t| t.translation);
@@ -43,16 +49,14 @@ pub fn fire(entity: Entity, range: f32, damage_mult: f32, source_chip: &str, wor
     ));
 }
 
-pub fn reverse(_entity: Entity, _source_chip: &str, world: &mut World) {
-    let _ = world;
-}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Process all pending explode requests: query cells in range, send damage, despawn request.
 ///
 /// For each request, queries the quadtree for cells within range, computes
 /// damage as `BASE_BOLT_DAMAGE * damage_mult`, sends [`DamageCell`] for each
 /// cell found, then despawns the request entity.
-pub fn process_explode_requests(
+pub(crate) fn process_explode_requests(
     mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
     requests: Query<(
@@ -82,7 +86,7 @@ pub fn process_explode_requests(
     }
 }
 
-pub fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         process_explode_requests

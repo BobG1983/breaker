@@ -529,8 +529,8 @@ fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
 fn process_piercing_beam_populates_source_chip_from_effect_source_chip() {
     let mut app = piercing_beam_damage_test_app();
 
-    let cell_a = spawn_test_cell(&mut app, 0.0, 50.0);
-    let cell_b = spawn_test_cell(&mut app, 0.0, 150.0);
+    let _cell_a = spawn_test_cell(&mut app, 0.0, 50.0);
+    let _cell_b = spawn_test_cell(&mut app, 0.0, 150.0);
 
     app.world_mut().spawn((
         PiercingBeamRequest {

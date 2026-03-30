@@ -7,11 +7,13 @@ pub(super) use breaker::{
         messages::BumpGrade,
         resources::ForceBumpGrade,
     },
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target},
+    cells::components::Cell,
+    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target},
     input::resources::InputActions,
     run::{NodeLayoutRegistry, node::resources::NodeTimer},
     shared::{GameState, PlayfieldConfig, PlayingState},
     ui::messages::ChipSelected,
+    wall::components::Wall,
 };
 pub(super) use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
@@ -20,7 +22,7 @@ pub(super) use crate::{
     input::{InputDriver, PerfectDriver},
     invariants::{
         PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats, ScenarioTagBolt,
-        ScenarioTagBreaker, ViolationLog,
+        ScenarioTagBreaker, ScenarioTagCell, ScenarioTagWall, ViolationLog,
     },
     types::{
         BumpMode, ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy,

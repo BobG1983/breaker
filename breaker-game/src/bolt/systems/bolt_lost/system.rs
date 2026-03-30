@@ -114,11 +114,12 @@ pub(crate) fn bolt_lost(
                 Velocity2D(reflected_vel),
             ));
 
-            // Decrement shield charge
-            let shield = shield_opt.as_mut().unwrap();
-            shield.charges -= 1;
-            if shield.charges == 0 {
-                commands.entity(breaker_entity).remove::<ShieldActive>();
+            // Decrement shield charge — shield_active guard ensures Some
+            if let Some(shield) = shield_opt.as_mut() {
+                shield.charges -= 1;
+                if shield.charges == 0 {
+                    commands.entity(breaker_entity).remove::<ShieldActive>();
+                }
             }
         } else if entry.is_extra {
             writers.writer.write(BoltLost);

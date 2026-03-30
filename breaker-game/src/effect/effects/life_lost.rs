@@ -21,7 +21,7 @@ pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
 }
 
 /// Registers systems for `LifeLost` effect.
-pub(crate) fn register(_app: &mut App) {}
+pub(crate) const fn register(_app: &mut App) {}
 
 #[cfg(test)]
 mod tests {

@@ -144,7 +144,7 @@ mod tests {
             trigger: Trigger::Death,
             then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         };
-        let node = time_expires_node(0.001, inner.clone());
+        let node = time_expires_node(0.001, inner);
         let entity = app
             .world_mut()
             .spawn(StagedEffects(vec![("chip_a".into(), node)]))

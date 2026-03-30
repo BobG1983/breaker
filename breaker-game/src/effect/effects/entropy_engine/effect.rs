@@ -10,7 +10,7 @@ use crate::{
 
 /// Tracks cells destroyed within the current node for entropy scaling.
 #[derive(Component, Debug, Clone)]
-pub struct EntropyEngineState {
+pub(crate) struct EntropyEngineState {
     /// Cells destroyed this node (resets between nodes).
     pub cells_destroyed: u32,
 }
@@ -35,8 +35,10 @@ pub(crate) fn fire(
 
     // Step 2: Increment cells_destroyed and compute effects to fire
     let effects_to_fire = {
-        // unwrap OK: EntropyEngineState was just inserted above if absent
-        let mut state = world.get_mut::<EntropyEngineState>(entity).unwrap();
+        // EntropyEngineState was just inserted above if absent
+        let Some(mut state) = world.get_mut::<EntropyEngineState>(entity) else {
+            return;
+        };
         state.cells_destroyed = state.cells_destroyed.saturating_add(1);
         state.cells_destroyed.min(max_effects)
     };
@@ -83,7 +85,7 @@ pub(crate) fn fire(
 }
 
 /// No-op — inner effects handle their own reversal.
-pub(crate) fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
+pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
 
 /// Registers systems for `EntropyEngine` effect.
 pub(crate) fn register(app: &mut App) {
