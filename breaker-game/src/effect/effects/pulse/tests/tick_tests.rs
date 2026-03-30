@@ -10,7 +10,7 @@ fn tick_pulse_emitter_spawns_ring_when_timer_reaches_interval() {
     let bolt = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(80.0, 120.0, 0.0),
+            Position2D(Vec2::new(80.0, 120.0)),
             PulseEmitter {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -35,7 +35,7 @@ fn tick_pulse_emitter_spawns_ring_when_timer_reaches_interval() {
         &PulseMaxRadius,
         &PulseSpeed,
         &PulseDamaged,
-        &Transform,
+        &Position2D,
     )>();
     let rings: Vec<_> = ring_query.iter(app.world()).collect();
     assert_eq!(
@@ -45,7 +45,7 @@ fn tick_pulse_emitter_spawns_ring_when_timer_reaches_interval() {
         rings.len()
     );
 
-    let (_ring, _source, radius, max_radius, speed, damaged, transform) = rings[0];
+    let (_ring, _source, radius, max_radius, speed, damaged, pos) = rings[0];
     assert!(
         (radius.0 - 0.0).abs() < f32::EPSILON,
         "new ring radius should be 0.0"
@@ -60,11 +60,11 @@ fn tick_pulse_emitter_spawns_ring_when_timer_reaches_interval() {
     );
     assert!(damaged.0.is_empty(), "ring PulseDamaged should be empty");
     assert!(
-        (transform.translation.x - 80.0).abs() < f32::EPSILON,
+        (pos.0.x - 80.0).abs() < f32::EPSILON,
         "ring should spawn at bolt x position"
     );
     assert!(
-        (transform.translation.y - 120.0).abs() < f32::EPSILON,
+        (pos.0.y - 120.0).abs() < f32::EPSILON,
         "ring should spawn at bolt y position"
     );
 
@@ -87,7 +87,7 @@ fn tick_pulse_emitter_does_not_spawn_before_interval() {
     let bolt = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::new(0.0, 0.0)),
             PulseEmitter {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -128,7 +128,7 @@ fn tick_pulse_emitter_reads_current_bolt_position() {
     let _bolt = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(200.0, 300.0, 0.0),
+            Position2D(Vec2::new(200.0, 300.0)),
             PulseEmitter {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -142,20 +142,20 @@ fn tick_pulse_emitter_reads_current_bolt_position() {
 
     app.update();
 
-    let mut ring_query = app.world_mut().query::<(&PulseRing, &Transform)>();
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &Position2D)>();
     let rings: Vec<_> = ring_query.iter(app.world()).collect();
     assert_eq!(rings.len(), 1, "expected one ring spawned");
 
-    let (_ring, transform) = rings[0];
+    let (_ring, pos) = rings[0];
     assert!(
-        (transform.translation.x - 200.0).abs() < f32::EPSILON,
+        (pos.0.x - 200.0).abs() < f32::EPSILON,
         "ring should spawn at bolt's current x (200.0), got {}",
-        transform.translation.x
+        pos.0.x
     );
     assert!(
-        (transform.translation.y - 300.0).abs() < f32::EPSILON,
+        (pos.0.y - 300.0).abs() < f32::EPSILON,
         "ring should spawn at bolt's current y (300.0), got {}",
-        transform.translation.y
+        pos.0.y
     );
 }
 
@@ -278,7 +278,7 @@ fn tick_pulse_emitter_propagates_damage_multiplier_to_spawned_ring() {
     let _bolt = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(50.0, 50.0, 0.0),
+            Position2D(Vec2::new(50.0, 50.0)),
             PulseEmitter {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -330,7 +330,7 @@ fn tick_pulse_emitter_respects_custom_interval() {
     let bolt = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(80.0, 120.0, 0.0),
+            Position2D(Vec2::new(80.0, 120.0)),
             PulseEmitter {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -345,7 +345,7 @@ fn tick_pulse_emitter_respects_custom_interval() {
     // One update tick should push timer past 0.25 and trigger emission
     app.update();
 
-    let mut ring_query = app.world_mut().query::<(&PulseRing, &Transform)>();
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &Position2D)>();
     let rings: Vec<_> = ring_query.iter(app.world()).collect();
     assert_eq!(
         rings.len(),
@@ -354,16 +354,16 @@ fn tick_pulse_emitter_respects_custom_interval() {
         rings.len()
     );
 
-    let (_ring, transform) = rings[0];
+    let (_ring, pos) = rings[0];
     assert!(
-        (transform.translation.x - 80.0).abs() < f32::EPSILON,
+        (pos.0.x - 80.0).abs() < f32::EPSILON,
         "ring should spawn at bolt x position (80.0), got {}",
-        transform.translation.x
+        pos.0.x
     );
     assert!(
-        (transform.translation.y - 120.0).abs() < f32::EPSILON,
+        (pos.0.y - 120.0).abs() < f32::EPSILON,
         "ring should spawn at bolt y position (120.0), got {}",
-        transform.translation.y
+        pos.0.y
     );
 
     // Emitter timer should have been reset
@@ -383,7 +383,7 @@ fn tick_pulse_emitter_large_interval_does_not_emit() {
     let bolt = app
         .world_mut()
         .spawn((
-            Transform::from_xyz(0.0, 0.0, 0.0),
+            Position2D(Vec2::new(0.0, 0.0)),
             PulseEmitter {
                 base_range: 32.0,
                 range_per_level: 0.0,
@@ -422,7 +422,7 @@ fn tick_pulse_emitter_copies_effect_source_chip_from_emitter_to_spawned_ring() {
     enter_playing(&mut app);
 
     app.world_mut().spawn((
-        Transform::from_xyz(50.0, 50.0, 0.0),
+        Position2D(Vec2::new(50.0, 50.0)),
         PulseEmitter {
             base_range: 32.0,
             range_per_level: 0.0,
@@ -460,7 +460,7 @@ fn tick_pulse_emitter_copies_effect_source_chip_none_from_emitter() {
     enter_playing(&mut app);
 
     app.world_mut().spawn((
-        Transform::from_xyz(50.0, 50.0, 0.0),
+        Position2D(Vec2::new(50.0, 50.0)),
         PulseEmitter {
             base_range: 32.0,
             range_per_level: 0.0,
@@ -496,7 +496,7 @@ fn tick_pulse_emitter_spawns_ring_with_default_effect_source_chip_when_emitter_h
 
     // Emitter with NO EffectSourceChip component
     app.world_mut().spawn((
-        Transform::from_xyz(50.0, 50.0, 0.0),
+        Position2D(Vec2::new(50.0, 50.0)),
         PulseEmitter {
             base_range: 32.0,
             range_per_level: 0.0,
@@ -523,5 +523,94 @@ fn tick_pulse_emitter_spawns_ring_with_default_effect_source_chip_when_emitter_h
     assert_eq!(
         source_chip.0, None,
         "ring should have EffectSourceChip(None) when emitter has no EffectSourceChip component"
+    );
+}
+
+// ── Behavior: tick_pulse_emitter reads Position2D for ring spawn position ──
+
+#[test]
+fn tick_pulse_emitter_reads_position2d_for_ring_spawn_position() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    // Emitter at Position2D(200, 300) with NO Transform
+    app.world_mut().spawn((
+        Position2D(Vec2::new(200.0, 300.0)),
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.49,
+        },
+    ));
+
+    app.update();
+
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &Position2D)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing spawned, got {}",
+        rings.len()
+    );
+
+    let (_ring, pos) = rings[0];
+    assert!(
+        (pos.0.x - 200.0).abs() < f32::EPSILON,
+        "ring should spawn at emitter Position2D x=200.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - 300.0).abs() < f32::EPSILON,
+        "ring should spawn at emitter Position2D y=300.0, got {}",
+        pos.0.y
+    );
+}
+
+// ── Behavior: tick_pulse_emitter uses Position2D not Transform when both present ──
+
+#[test]
+fn tick_pulse_emitter_uses_position2d_not_transform_when_both_present() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    // Position2D and Transform are intentionally divergent
+    app.world_mut().spawn((
+        Position2D(Vec2::new(200.0, 300.0)),
+        Transform::from_xyz(999.0, 888.0, 0.0),
+        PulseEmitter {
+            base_range: 32.0,
+            range_per_level: 0.0,
+            stacks: 1,
+            speed: 50.0,
+            interval: 0.5,
+            timer: 0.49,
+        },
+    ));
+
+    app.update();
+
+    let mut ring_query = app.world_mut().query::<(&PulseRing, &Position2D)>();
+    let rings: Vec<_> = ring_query.iter(app.world()).collect();
+    assert_eq!(
+        rings.len(),
+        1,
+        "expected one PulseRing spawned, got {}",
+        rings.len()
+    );
+
+    let (_ring, pos) = rings[0];
+    assert!(
+        (pos.0.x - 200.0).abs() < f32::EPSILON,
+        "ring should use Position2D x=200.0, not Transform x=999.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - 300.0).abs() < f32::EPSILON,
+        "ring should use Position2D y=300.0, not Transform y=888.0, got {}",
+        pos.0.y
     );
 }

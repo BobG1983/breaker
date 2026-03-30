@@ -10,7 +10,7 @@ use rand::prelude::IndexedRandom;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
+use rantzsoft_spatial2d::components::GlobalPosition2D;
 
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
@@ -83,7 +83,7 @@ pub(crate) fn fire(
         return;
     }
 
-    let position = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
+    let position = super::super::entity_position(world, entity);
 
     let edm = world
         .get::<EffectiveDamageMultiplier>(entity)

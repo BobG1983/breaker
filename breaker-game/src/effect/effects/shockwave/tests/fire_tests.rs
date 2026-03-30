@@ -8,7 +8,7 @@ use crate::effect::core::EffectSourceChip;
 #[test]
 fn fire_spawns_shockwave_entity_at_source_position() {
     let mut world = World::new();
-    let entity = world.spawn(Transform::from_xyz(100.0, 200.0, 0.0)).id();
+    let entity = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
 
     fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
 
@@ -17,12 +17,12 @@ fn fire_spawns_shockwave_entity_at_source_position() {
         &ShockwaveRadius,
         &ShockwaveMaxRadius,
         &ShockwaveSpeed,
-        &Transform,
+        &Position2D,
     )>();
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one shockwave entity");
 
-    let (_source, radius, max_radius, speed, transform) = results[0];
+    let (_source, radius, max_radius, speed, pos) = results[0];
     assert!(
         (radius.0 - 0.0).abs() < f32::EPSILON,
         "expected radius 0.0, got {}",
@@ -40,14 +40,14 @@ fn fire_spawns_shockwave_entity_at_source_position() {
         speed.0
     );
     assert!(
-        (transform.translation.x - 100.0).abs() < f32::EPSILON,
+        (pos.0.x - 100.0).abs() < f32::EPSILON,
         "expected x 100.0, got {}",
-        transform.translation.x
+        pos.0.x
     );
     assert!(
-        (transform.translation.y - 200.0).abs() < f32::EPSILON,
+        (pos.0.y - 200.0).abs() < f32::EPSILON,
         "expected y 200.0, got {}",
-        transform.translation.y
+        pos.0.y
     );
 }
 
@@ -153,5 +153,89 @@ fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
     assert_eq!(
         results[0].0, None,
         "empty source_chip should produce EffectSourceChip(None)"
+    );
+}
+
+// ── Behavior: shockwave fire() reads Position2D for spawn position ──
+
+#[test]
+fn fire_reads_position2d_for_spawn_position() {
+    let mut world = World::new();
+    let entity = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
+
+    let mut query = world.query::<(&ShockwaveSource, &Position2D)>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected exactly one shockwave entity");
+
+    let (_source, pos) = results[0];
+    assert!(
+        (pos.0.x - 100.0).abs() < f32::EPSILON,
+        "expected shockwave Position2D x=100.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - 200.0).abs() < f32::EPSILON,
+        "expected shockwave Position2D y=200.0, got {}",
+        pos.0.y
+    );
+}
+
+// ── Behavior: shockwave fire() uses Position2D not Transform when both present ──
+
+#[test]
+fn fire_uses_position2d_not_transform_when_both_present() {
+    let mut world = World::new();
+    // Position2D and Transform are intentionally divergent
+    let entity = world
+        .spawn((
+            Position2D(Vec2::new(50.0, 75.0)),
+            Transform::from_xyz(999.0, 888.0, 0.0),
+        ))
+        .id();
+
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
+
+    let mut query = world.query::<(&ShockwaveSource, &Position2D)>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected exactly one shockwave entity");
+
+    let (_source, pos) = results[0];
+    assert!(
+        (pos.0.x - 50.0).abs() < f32::EPSILON,
+        "shockwave should use Position2D x=50.0, not Transform x=999.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - 75.0).abs() < f32::EPSILON,
+        "shockwave should use Position2D y=75.0, not Transform y=888.0, got {}",
+        pos.0.y
+    );
+}
+
+// ── Behavior: shockwave fire() falls back to Vec2::ZERO when Position2D absent ──
+
+#[test]
+fn fire_falls_back_to_zero_when_position2d_absent() {
+    let mut world = World::new();
+    let entity = world.spawn_empty().id();
+
+    fire(entity, 24.0, 8.0, 1, 50.0, "", &mut world);
+
+    let mut query = world.query::<(&ShockwaveSource, &Position2D)>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(results.len(), 1, "expected exactly one shockwave entity");
+
+    let (_source, pos) = results[0];
+    assert!(
+        (pos.0.x).abs() < f32::EPSILON,
+        "shockwave Position2D x should default to 0.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y).abs() < f32::EPSILON,
+        "shockwave Position2D y should default to 0.0, got {}",
+        pos.0.y
     );
 }

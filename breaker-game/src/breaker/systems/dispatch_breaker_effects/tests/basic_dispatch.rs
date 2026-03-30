@@ -2,7 +2,10 @@ use bevy::prelude::*;
 
 use super::helpers::{TEST_BREAKER_NAME, test_app_with_dispatch};
 use crate::{
-    breaker::{components::Breaker, definition::{BreakerDefinition, BreakerStatOverrides}},
+    breaker::{
+        components::Breaker,
+        definition::{BreakerDefinition, BreakerStatOverrides},
+    },
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
 };
 

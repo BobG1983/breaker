@@ -20,11 +20,7 @@ use crate::{
 ///
 /// Draws `count` chip names from the weighted pool without replacement.
 #[must_use]
-fn draw_offerings(
-    pool: &[(String, f32)],
-    count: usize,
-    rng: &mut impl Rng,
-) -> Vec<String> {
+fn draw_offerings(pool: &[(String, f32)], count: usize, rng: &mut impl Rng) -> Vec<String> {
     if pool.is_empty() {
         return Vec::new();
     }
@@ -434,11 +430,7 @@ fn draw_offerings_returns_all_distinct_names() {
 // ======================================================================
 
 /// Helper: create a chip def with a `template_name` for offering tests.
-fn test_chip_template(
-    name: &str,
-    template_name: Option<&str>,
-    max_stacks: u32,
-) -> ChipDefinition {
+fn test_chip_template(name: &str, template_name: Option<&str>, max_stacks: u32) -> ChipDefinition {
     ChipDefinition {
         template_name: template_name.map(str::to_owned),
         ..ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)

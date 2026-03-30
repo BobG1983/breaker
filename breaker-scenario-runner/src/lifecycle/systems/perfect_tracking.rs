@@ -5,15 +5,8 @@ use breaker::{
     breaker::{messages::BumpGrade, resources::ForceBumpGrade},
     input::resources::InputActions,
 };
-use rand::prelude::IndexedRandom;
-use rand::Rng;
+use rand::{Rng, prelude::IndexedRandom};
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
-
-use crate::{
-    input::InputDriver,
-    invariants::{ScenarioStats, ScenarioTagBolt},
-    types::{BumpMode, GameAction as ScenarioGameAction},
-};
 
 use super::{
     input::map_action,
@@ -21,6 +14,11 @@ use super::{
         BreakerTrackingQuery, PERFECT_TRACKING_BUMP_THRESHOLD, PERFECT_TRACKING_WIDTH_FACTOR,
         ScenarioInputDriver,
     },
+};
+use crate::{
+    input::InputDriver,
+    invariants::{ScenarioStats, ScenarioTagBolt},
+    types::{BumpMode, GameAction as ScenarioGameAction},
 };
 
 /// Positions breaker under bolt with random offset at all times.

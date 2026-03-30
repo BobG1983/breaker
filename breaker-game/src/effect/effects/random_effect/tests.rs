@@ -1,5 +1,6 @@
-use super::system::*;
 use bevy::prelude::*;
+
+use super::system::*;
 use crate::{
     effect::{
         core::{EffectKind, EffectNode, StagedEffects, Trigger},

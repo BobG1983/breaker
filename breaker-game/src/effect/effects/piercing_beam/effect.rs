@@ -5,7 +5,7 @@ use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::PhysicsSystems,
     resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Velocity2D};
 
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
@@ -39,15 +39,7 @@ pub(crate) fn fire(
     source_chip: &str,
     world: &mut World,
 ) {
-    let pos = world
-        .get::<Position2D>(entity)
-        .map(|p| p.0)
-        .or_else(|| {
-            world
-                .get::<Transform>(entity)
-                .map(|t| t.translation.truncate())
-        })
-        .unwrap_or(Vec2::ZERO);
+    let pos = super::super::entity_position(world, entity);
 
     let velocity = world.get::<Velocity2D>(entity).map_or(Vec2::ZERO, |v| v.0);
 

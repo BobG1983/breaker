@@ -307,7 +307,7 @@ fn shockwave_damage_scales_by_effective_damage_multiplier() {
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         ShockwaveDamageMultiplier(2.0),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -347,7 +347,7 @@ fn shockwave_damage_scales_with_high_multiplier_across_multiple_cells() {
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         ShockwaveDamageMultiplier(3.5),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -389,7 +389,7 @@ fn shockwave_damage_zero_multiplier_produces_zero_damage() {
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         ShockwaveDamageMultiplier(0.0),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -423,7 +423,7 @@ fn apply_shockwave_damage_populates_source_chip_from_effect_source_chip() {
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         EffectSourceChip(Some("seismic".to_string())),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -451,7 +451,7 @@ fn apply_shockwave_damage_source_chip_none_when_effect_source_chip_none() {
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         EffectSourceChip(None),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -477,7 +477,7 @@ fn apply_shockwave_damage_defaults_to_none_when_no_effect_source_chip_component(
         ShockwaveMaxRadius(100.0),
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -504,7 +504,7 @@ fn multiple_shockwaves_with_different_source_chips_produce_correctly_attributed_
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         EffectSourceChip(Some("alpha".to_string())),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::new(0.0, 0.0)),
     ));
 
     app.world_mut().spawn((
@@ -514,7 +514,7 @@ fn multiple_shockwaves_with_different_source_chips_produce_correctly_attributed_
         ShockwaveSpeed(50.0),
         ShockwaveDamaged(HashSet::new()),
         EffectSourceChip(Some("beta".to_string())),
-        Transform::from_xyz(100.0, 0.0, 0.0),
+        Position2D(Vec2::new(100.0, 0.0)),
     ));
 
     tick(&mut app);
@@ -539,5 +539,41 @@ fn multiple_shockwaves_with_different_source_chips_produce_correctly_attributed_
         msg_b.source_chip,
         Some("beta".to_string()),
         "cell near shockwave B should have source_chip beta"
+    );
+}
+
+// ── Behavior: apply_shockwave_damage uses Position2D not Transform when both present ──
+
+#[test]
+fn apply_shockwave_damage_uses_position2d_not_transform_when_both_present() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 30.0, 0.0);
+
+    // Shockwave at Position2D origin (0,0), but Transform at (500,500) — divergent.
+    // If the system reads Position2D, cell at (30,0) is within radius 35.
+    // If the system incorrectly reads Transform, cell would be ~530 units away — outside radius.
+    app.world_mut().spawn((
+        ShockwaveSource,
+        ShockwaveRadius(35.0),
+        ShockwaveMaxRadius(100.0),
+        ShockwaveSpeed(50.0),
+        ShockwaveDamaged(HashSet::new()),
+        Position2D(Vec2::new(0.0, 0.0)),
+        Transform::from_xyz(500.0, 500.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "cell at (30,0) should be within radius 35 of Position2D (0,0), got {} messages",
+        collector.0.len()
+    );
+    assert_eq!(
+        collector.0[0].cell, cell,
+        "DamageCell should target the cell within Position2D-based radius"
     );
 }

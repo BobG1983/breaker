@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
-use super::helpers::{TEST_BREAKER_NAME, test_app_with_dispatch};
-use super::super::system::dispatch_breaker_effects;
+use super::{
+    super::system::dispatch_breaker_effects,
+    helpers::{TEST_BREAKER_NAME, test_app_with_dispatch},
+};
 use crate::{
     bolt::components::Bolt,
     breaker::{
@@ -10,9 +12,7 @@ use crate::{
         definition::{BreakerDefinition, BreakerStatOverrides},
         registry::BreakerRegistry,
     },
-    effect::{
-        BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger,
-    },
+    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
 };
 
 // ---- Behavior 15: Mixed targets (Aegis-style) ----

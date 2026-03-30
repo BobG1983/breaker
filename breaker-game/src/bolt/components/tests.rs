@@ -1,6 +1,7 @@
-use super::definitions::*;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
+
+use super::definitions::*;
 
 // ── Bolt #[require] tests ────────────────────────────────────
 
@@ -66,8 +67,7 @@ fn bolt_explicit_values_override_require_defaults() {
         .get::<Velocity2D>(entity)
         .expect("Velocity2D should be present");
     assert!(
-        (velocity.0.x - 0.0).abs() < f32::EPSILON
-            && (velocity.0.y - 400.0).abs() < f32::EPSILON,
+        (velocity.0.x - 0.0).abs() < f32::EPSILON && (velocity.0.y - 400.0).abs() < f32::EPSILON,
         "explicit Velocity2D(0.0, 400.0) should override the default, got {:?}",
         velocity.0
     );

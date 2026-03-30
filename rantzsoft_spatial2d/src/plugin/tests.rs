@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 
 use super::definition::*;
-use crate::{
-    components::*,
-    draw_layer::DrawLayer,
-};
+use crate::{components::*, draw_layer::DrawLayer};
 
 #[derive(Component, Clone, Copy, Debug, Default, Reflect)]
 enum TestDrawLayer {

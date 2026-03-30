@@ -16,7 +16,7 @@ pub(crate) fn fire(entity: Entity, _source_chip: &str, world: &mut World) {
 /// Restores one life — increments `LivesCount` on the entity.
 pub(crate) fn reverse(entity: Entity, _source_chip: &str, world: &mut World) {
     if let Some(mut lives) = world.get_mut::<LivesCount>(entity) {
-        lives.0 += 1;
+        lives.0 = lives.0.saturating_add(1);
     }
 }
 
@@ -58,5 +58,46 @@ mod tests {
 
         let lives = world.get::<LivesCount>(entity).unwrap();
         assert_eq!(lives.0, 3, "reverse should increment LivesCount by 1");
+    }
+
+    #[test]
+    fn reverse_saturates_at_max_lives() {
+        let mut world = World::new();
+        let entity = world.spawn(LivesCount(u32::MAX)).id();
+
+        reverse(entity, "", &mut world);
+
+        let lives = world.get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0,
+            u32::MAX,
+            "reverse at u32::MAX should saturate, not overflow"
+        );
+    }
+
+    #[test]
+    fn reverse_without_component_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        reverse(entity, "", &mut world);
+
+        assert!(
+            world.get::<LivesCount>(entity).is_none(),
+            "reverse on entity without LivesCount should not add the component"
+        );
+    }
+
+    #[test]
+    fn fire_without_component_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        fire(entity, "", &mut world);
+
+        assert!(
+            world.get::<LivesCount>(entity).is_none(),
+            "fire on entity without LivesCount should not add the component"
+        );
     }
 }

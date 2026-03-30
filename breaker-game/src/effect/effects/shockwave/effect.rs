@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
@@ -40,7 +41,7 @@ pub(crate) struct ShockwaveDamageMultiplier(pub(crate) f32);
 
 /// Query data for [`apply_shockwave_damage`].
 type ShockwaveDamageQuery = (
-    &'static Transform,
+    &'static Position2D,
     &'static ShockwaveRadius,
     &'static mut ShockwaveDamaged,
     Option<&'static ShockwaveDamageMultiplier>,
@@ -58,9 +59,7 @@ pub(crate) fn fire(
 ) {
     let effective_range = super::super::effective_range(base_range, range_per_level, stacks);
 
-    let position = world
-        .get::<Transform>(entity)
-        .map_or(Vec3::ZERO, |t| t.translation);
+    let position = super::super::entity_position(world, entity);
 
     let edm = world
         .get::<EffectiveDamageMultiplier>(entity)
@@ -74,7 +73,7 @@ pub(crate) fn fire(
         ShockwaveDamaged::default(),
         ShockwaveDamageMultiplier(edm),
         EffectSourceChip::new(source_chip),
-        Transform::from_translation(position),
+        Position2D(position),
         CleanupOnNodeExit,
     ));
 }
@@ -114,11 +113,11 @@ pub(crate) fn apply_shockwave_damage(
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (transform, radius, mut damaged, damage_mult, esc) in &mut shockwaves {
+    for (position, radius, mut damaged, damage_mult, esc) in &mut shockwaves {
         if radius.0 <= 0.0 {
             continue;
         }
-        let center = transform.translation.truncate();
+        let center = position.0;
         let multiplier = damage_mult.map_or(1.0, |m| m.0);
         let source_chip = esc.and_then(EffectSourceChip::source_chip);
         let candidates = quadtree

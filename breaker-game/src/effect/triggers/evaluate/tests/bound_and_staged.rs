@@ -1,4 +1,4 @@
-//! Tests for evaluate_bound_effects and evaluate_staged_effects (behaviors 1-13).
+//! Tests for `evaluate_bound_effects` and `evaluate_staged_effects` (behaviors 1-13).
 
 use bevy::prelude::*;
 
@@ -85,10 +85,7 @@ struct Snapshot {
     staged_entries: Vec<(String, EffectNode)>,
 }
 
-fn sys_snapshot(
-    query: Query<(Option<&BoundEffects>, &StagedEffects)>,
-    mut snap: ResMut<Snapshot>,
-) {
+fn sys_snapshot(query: Query<(Option<&BoundEffects>, &StagedEffects)>, mut snap: ResMut<Snapshot>) {
     for (bound, staged) in &query {
         snap.bound_len = bound.map_or(0, |b| b.0.len());
         snap.staged_len = staged.0.len();

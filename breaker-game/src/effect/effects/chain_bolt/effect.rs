@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
-use rantzsoft_spatial2d::components::Position2D;
-
 /// Marker on a chain bolt entity, pointing to its anchor entity.
 #[derive(Component)]
 pub(crate) struct ChainBoltMarker(pub(crate) Entity);
@@ -16,7 +14,7 @@ pub(crate) struct ChainBoltAnchor;
 pub(crate) struct ChainBoltConstraint(pub(crate) Entity);
 
 pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, world: &mut World) {
-    let spawn_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
+    let spawn_pos = super::super::entity_position(world, entity);
 
     let chain_bolt = super::super::spawn_extra_bolt(world, spawn_pos);
     world.entity_mut(chain_bolt).insert(ChainBoltMarker(entity));

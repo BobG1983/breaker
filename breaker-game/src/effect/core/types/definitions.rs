@@ -378,7 +378,12 @@ impl EffectKind {
                 world,
             ),
             Self::SpeedBoost { multiplier } => {
-                super::super::super::effects::speed_boost::fire(entity, *multiplier, source_chip, world);
+                super::super::super::effects::speed_boost::fire(
+                    entity,
+                    *multiplier,
+                    source_chip,
+                    world,
+                );
             }
             Self::DamageBoost(v) => {
                 super::super::super::effects::damage_boost::fire(entity, *v, source_chip, world);
@@ -410,7 +415,12 @@ impl EffectKind {
                 super::super::super::effects::life_lost::fire(entity, source_chip, world);
             }
             Self::TimePenalty { seconds } => {
-                super::super::super::effects::time_penalty::fire(entity, *seconds, source_chip, world);
+                super::super::super::effects::time_penalty::fire(
+                    entity,
+                    *seconds,
+                    source_chip,
+                    world,
+                );
             }
             Self::SpawnBolts {
                 count,
@@ -550,10 +560,20 @@ impl EffectKind {
                 );
             }
             Self::QuickStop { multiplier } => {
-                super::super::super::effects::quick_stop::fire(entity, *multiplier, source_chip, world);
+                super::super::super::effects::quick_stop::fire(
+                    entity,
+                    *multiplier,
+                    source_chip,
+                    world,
+                );
             }
             Self::TetherBeam { damage_mult } => {
-                super::super::super::effects::tether_beam::fire(entity, *damage_mult, source_chip, world);
+                super::super::super::effects::tether_beam::fire(
+                    entity,
+                    *damage_mult,
+                    source_chip,
+                    world,
+                );
             }
             _ => {
                 // Stat effects (SpeedBoost, DamageBoost, etc.) handled in primary fire() match.
@@ -606,7 +626,12 @@ impl EffectKind {
                 super::super::super::effects::life_lost::reverse(entity, source_chip, world);
             }
             Self::TimePenalty { seconds } => {
-                super::super::super::effects::time_penalty::reverse(entity, *seconds, source_chip, world);
+                super::super::super::effects::time_penalty::reverse(
+                    entity,
+                    *seconds,
+                    source_chip,
+                    world,
+                );
             }
             _ => self.reverse_aoe_and_spawn(entity, source_chip, world),
         }
@@ -657,7 +682,12 @@ impl EffectKind {
                 super::super::super::effects::gravity_well::reverse(entity, source_chip, world);
             }
             Self::RandomEffect(pool) => {
-                super::super::super::effects::random_effect::reverse(entity, pool, source_chip, world);
+                super::super::super::effects::random_effect::reverse(
+                    entity,
+                    pool,
+                    source_chip,
+                    world,
+                );
             }
             Self::EntropyEngine { .. } => {
                 super::super::super::effects::entropy_engine::reverse(entity, source_chip, world);
@@ -669,7 +699,12 @@ impl EffectKind {
                 super::super::super::effects::explode::reverse(entity, source_chip, world);
             }
             Self::QuickStop { multiplier } => {
-                super::super::super::effects::quick_stop::reverse(entity, *multiplier, source_chip, world);
+                super::super::super::effects::quick_stop::reverse(
+                    entity,
+                    *multiplier,
+                    source_chip,
+                    world,
+                );
             }
             Self::TetherBeam { damage_mult } => {
                 super::super::super::effects::tether_beam::reverse(

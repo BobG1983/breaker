@@ -1,5 +1,6 @@
-use super::definitions::*;
 use bevy::prelude::*;
+
+use super::definitions::*;
 
 /// Helper: assert speed is preserved within tolerance.
 fn assert_speed_preserved(vx: f32, vy: f32, min_deg: f32) {

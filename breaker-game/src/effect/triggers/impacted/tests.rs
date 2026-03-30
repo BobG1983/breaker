@@ -5,10 +5,7 @@ use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
     breaker::messages::{BreakerImpactCell, BreakerImpactWall},
     cells::messages::CellImpactWall,
-    effect::{
-        core::*,
-        effects::speed_boost::ActiveSpeedBoosts,
-    },
+    effect::{core::*, effects::speed_boost::ActiveSpeedBoosts},
 };
 
 // -- BoltImpactCell helper --

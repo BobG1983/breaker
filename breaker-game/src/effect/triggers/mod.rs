@@ -51,6 +51,10 @@ pub mod until;
 
 /// Register all trigger bridge systems.
 pub(crate) fn register(app: &mut bevy::prelude::App) {
+    use bevy::prelude::*;
+
+    use crate::shared::playing_state::PlayingState;
+
     bump::register(app);
     perfect_bump::register(app);
     early_bump::register(app);
@@ -75,5 +79,9 @@ pub(crate) fn register(app: &mut bevy::prelude::App) {
     node_end::register(app);
 
     timer::register(app);
-    until::register(app);
+
+    app.add_systems(
+        FixedUpdate,
+        until::desugar_until.run_if(in_state(PlayingState::Active)),
+    );
 }

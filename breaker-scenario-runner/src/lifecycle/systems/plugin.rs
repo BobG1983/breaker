@@ -9,25 +9,12 @@ use breaker::{
     ui::messages::ChipSelected,
 };
 
-use crate::invariants::{
-    EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioStats, ViolationLog,
-    check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_in_range,
-    check_breaker_in_bounds, check_breaker_position_clamped, check_chain_arc_count_reasonable,
-    check_chip_offer_expected, check_chip_stacks_consistent, check_effective_speed_consistent,
-    check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-    check_offering_no_duplicates, check_physics_frozen_during_pause,
-    check_pulse_ring_accumulation, check_run_stats_monotonic,
-    check_second_wind_wall_at_most_one, check_shield_charges_consistent,
-    check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
-    check_valid_state_transitions,
-};
-
 use super::{
     debug_setup::{apply_debug_setup, deferred_debug_setup, enforce_frozen_positions},
     entity_tagging::tag_game_entities,
     frame_control::{
-        check_frame_limit, entered_playing, exit_on_run_end, mark_entered_playing_on_spawn_complete,
-        restart_run_on_end, tick_scenario_frame,
+        check_frame_limit, entered_playing, exit_on_run_end,
+        mark_entered_playing_on_spawn_complete, restart_run_on_end, tick_scenario_frame,
     },
     frame_mutations::apply_debug_frame_mutations,
     input::{init_scenario_input, inject_scenario_input},
@@ -38,6 +25,17 @@ use super::{
     },
     perfect_tracking::{apply_perfect_tracking, update_force_bump_grade},
     types::{ChipSelectionIndex, ScenarioConfig},
+};
+use crate::invariants::{
+    EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioStats, ViolationLog,
+    check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_in_range,
+    check_breaker_in_bounds, check_breaker_position_clamped, check_chain_arc_count_reasonable,
+    check_chip_offer_expected, check_chip_stacks_consistent, check_effective_speed_consistent,
+    check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
+    check_offering_no_duplicates, check_physics_frozen_during_pause, check_pulse_ring_accumulation,
+    check_run_stats_monotonic, check_second_wind_wall_at_most_one, check_shield_charges_consistent,
+    check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
+    check_valid_state_transitions,
 };
 
 /// Plugin that drives the scenario lifecycle.
@@ -79,7 +77,8 @@ fn register_scenario_resources(app: &mut App) {
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
 fn register_scenario_systems(app: &mut App) {
-    let chip_select_condition = in_state(GameState::ChipSelect).and(resource_exists::<breaker::screen::chip_select::ChipOffers>);
+    let chip_select_condition = in_state(GameState::ChipSelect)
+        .and(resource_exists::<breaker::screen::chip_select::ChipOffers>);
     let playing_gate = |stats: Option<Res<ScenarioStats>>| stats.is_some_and(|s| s.entered_playing);
     // Invariant checkers run in two chained batches after setup. All checkers share
     // `ResMut<ViolationLog>`, so Bevy serialises them automatically within each batch.

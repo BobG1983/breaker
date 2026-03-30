@@ -14,7 +14,7 @@ fn pulse_ring_damages_cell_within_radius() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged::default(),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -54,7 +54,7 @@ fn pulse_ring_does_not_damage_already_damaged_cell() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged(already_damaged),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -81,7 +81,7 @@ fn each_pulse_ring_damages_cells_independently() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged::default(),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
     app.world_mut().spawn((
         PulseRing,
@@ -89,7 +89,7 @@ fn each_pulse_ring_damages_cells_independently() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged::default(),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -139,7 +139,7 @@ fn pulse_ring_does_not_damage_non_cell_layer_entities() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged::default(),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -175,7 +175,7 @@ fn pulse_ring_damages_entity_with_cell_layer_in_combined_mask() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged::default(),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -204,7 +204,7 @@ fn pulse_ring_damage_scales_by_effective_damage_multiplier() {
         PulseSpeed(0.0),
         PulseDamaged::default(),
         PulseRingDamageMultiplier(1.5),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -240,7 +240,7 @@ fn pulse_ring_damage_zero_multiplier_produces_zero_damage() {
         PulseSpeed(0.0),
         PulseDamaged::default(),
         PulseRingDamageMultiplier(0.0),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -333,7 +333,7 @@ fn apply_pulse_damage_populates_source_chip_from_ring_effect_source_chip() {
         PulseSpeed(0.0),
         PulseDamaged::default(),
         EffectSourceChip(Some("resonance".to_string())),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -361,7 +361,7 @@ fn apply_pulse_damage_source_chip_none_when_no_effect_source_chip_on_ring() {
         PulseMaxRadius(50.0),
         PulseSpeed(0.0),
         PulseDamaged::default(),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Position2D(Vec2::ZERO),
     ));
 
     tick(&mut app);
@@ -371,5 +371,41 @@ fn apply_pulse_damage_source_chip_none_when_no_effect_source_chip_on_ring() {
     assert_eq!(
         collector.0[0].source_chip, None,
         "missing EffectSourceChip on ring should default to source_chip None"
+    );
+}
+
+// ── Behavior: apply_pulse_damage uses Position2D not Transform when both present ──
+
+#[test]
+fn apply_pulse_damage_uses_position2d_not_transform_when_both_present() {
+    let mut app = damage_test_app();
+
+    let cell = spawn_test_cell(&mut app, 20.0, 0.0);
+
+    // PulseRing at Position2D origin (0,0), but Transform at (500,500) — divergent.
+    // If the system reads Position2D, cell at (20,0) is within radius 25.
+    // If the system incorrectly reads Transform, cell would be ~500+ units away — outside radius.
+    app.world_mut().spawn((
+        PulseRing,
+        PulseRadius(25.0),
+        PulseMaxRadius(50.0),
+        PulseSpeed(0.0),
+        PulseDamaged::default(),
+        Position2D(Vec2::ZERO),
+        Transform::from_xyz(500.0, 500.0, 0.0),
+    ));
+
+    tick(&mut app);
+
+    let collector = app.world().resource::<DamageCellCollector>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "cell at (20,0) should be within radius 25 of Position2D (0,0), got {} messages",
+        collector.0.len()
+    );
+    assert_eq!(
+        collector.0[0].cell, cell,
+        "DamageCell should target the cell within Position2D-based radius"
     );
 }

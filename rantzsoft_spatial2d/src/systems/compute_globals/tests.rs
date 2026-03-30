@@ -1,3 +1,5 @@
+use bevy::prelude::*;
+
 use super::system::*;
 use crate::{
     components::{
@@ -6,7 +8,6 @@ use crate::{
     },
     propagation::{PositionPropagation, RotationPropagation, ScalePropagation},
 };
-use bevy::prelude::*;
 
 fn tick(app: &mut App) {
     let timestep = app.world().resource::<Time<Fixed>>().timestep();

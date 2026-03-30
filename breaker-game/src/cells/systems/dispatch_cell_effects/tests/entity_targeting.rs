@@ -5,9 +5,7 @@ use crate::{
     bolt::components::Bolt,
     breaker::components::Breaker,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
-    effect::{
-        BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger,
-    },
+    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
 };
 
 // ── Behavior 4: Multiple cells each get their own effects dispatched independently ──

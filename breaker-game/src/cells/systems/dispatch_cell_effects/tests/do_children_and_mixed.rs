@@ -4,9 +4,7 @@ use super::helpers::{make_cell_def, test_app};
 use crate::{
     bolt::components::Bolt,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
-    effect::{
-        BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, Target, Trigger,
-    },
+    effect::{BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, Target, Trigger},
 };
 
 // ── Behavior 8: Do children are fired immediately, not stored in BoundEffects ──
