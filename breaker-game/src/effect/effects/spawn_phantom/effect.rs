@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
@@ -13,6 +15,19 @@ pub(crate) struct PhantomBoltMarker;
 #[derive(Component)]
 pub(crate) struct PhantomOwner(pub(crate) Entity);
 
+/// Monotonically increasing per-owner spawn order for FIFO despawn.
+///
+/// Lowest value = oldest phantom = first to be despawned when over cap.
+#[derive(Component, Debug)]
+pub(crate) struct PhantomSpawnOrder(pub(crate) u64);
+
+/// Tracks the next spawn order value per owner entity.
+///
+/// Lazily initialized on first `fire()` call. Each owner's counter starts
+/// at 0 and increments by 1 per phantom spawned.
+#[derive(Resource, Default, Debug)]
+pub(crate) struct PhantomSpawnCounter(pub(crate) HashMap<Entity, u64>);
+
 pub(crate) fn fire(
     entity: Entity,
     duration: f32,
@@ -20,25 +35,46 @@ pub(crate) fn fire(
     _source_chip: &str,
     world: &mut World,
 ) {
+    if world.get_entity(entity).is_err() {
+        return;
+    }
+
+    // Early return BEFORE accessing PhantomSpawnCounter — tests assert the
+    // resource is NOT created when max_active == 0.
     if max_active == 0 {
         return;
     }
 
-    // Enforce max_active cap — despawn oldest phantoms for this owner if at cap.
-    let mut owned: Vec<Entity> = Vec::new();
+    // Enforce max_active cap — despawn oldest phantoms (lowest spawn order) first.
+    let mut owned: Vec<(Entity, u64)> = Vec::new();
     {
-        let mut query = world.query::<(Entity, &PhantomOwner)>();
-        for (phantom_entity, owner) in query.iter(world) {
+        let mut query = world.query::<(Entity, &PhantomOwner, &PhantomSpawnOrder)>();
+        for (phantom_entity, owner, order) in query.iter(world) {
             if owner.0 == entity {
-                owned.push(phantom_entity);
+                owned.push((phantom_entity, order.0));
             }
         }
     }
 
+    // Sort by spawn order ascending — lowest = oldest = first to despawn.
+    owned.sort_unstable_by_key(|&(_, order)| order);
+
     while owned.len() >= max_active as usize {
-        if let Some(oldest) = owned.first().copied() {
+        if let Some(&(oldest, _)) = owned.first() {
             world.despawn(oldest);
             owned.remove(0);
+        }
+    }
+
+    // Read-then-increment: get the current counter value, then bump it.
+    let counter_value;
+    {
+        let counter = world.get_resource_or_insert_with(PhantomSpawnCounter::default);
+        counter_value = counter.0.get(&entity).copied().unwrap_or(0);
+    }
+    {
+        if let Some(mut counter) = world.get_resource_mut::<PhantomSpawnCounter>() {
+            counter.0.insert(entity, counter_value + 1);
         }
     }
 
@@ -48,6 +84,7 @@ pub(crate) fn fire(
     world.entity_mut(phantom).insert((
         PhantomBoltMarker,
         PhantomOwner(entity),
+        PhantomSpawnOrder(counter_value),
         BoltLifespan(Timer::from_seconds(duration, TimerMode::Once)),
         PiercingRemaining(u32::MAX),
     ));

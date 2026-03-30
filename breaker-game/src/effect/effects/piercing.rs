@@ -15,6 +15,22 @@ impl ActivePiercings {
 }
 
 pub(crate) fn fire(entity: Entity, count: u32, _source_chip: &str, world: &mut World) {
+    if world.get_entity(entity).is_err() {
+        return;
+    }
+
+    if world.get::<ActivePiercings>(entity).is_none() {
+        world
+            .entity_mut(entity)
+            .insert((ActivePiercings::default(), EffectivePiercing::default()));
+    }
+
+    if world.get::<EffectivePiercing>(entity).is_none() {
+        world
+            .entity_mut(entity)
+            .insert(EffectivePiercing::default());
+    }
+
     if let Some(mut active) = world.get_mut::<ActivePiercings>(entity) {
         active.0.push(count);
     }
@@ -59,11 +75,70 @@ mod tests {
     }
 
     #[test]
-    fn fire_without_component_is_noop() {
+    fn fire_on_bare_entity_inserts_and_populates() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         fire(entity, 3, "", &mut world);
+        let active = world.get::<ActivePiercings>(entity).unwrap();
+        assert_eq!(active.0, vec![3]);
+        assert!(world.get::<EffectivePiercing>(entity).is_some());
+    }
+
+    #[test]
+    fn fire_on_bare_entity_second_fire_appends() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        fire(entity, 3, "", &mut world);
+        fire(entity, 2, "", &mut world);
+        let active = world.get::<ActivePiercings>(entity).unwrap();
+        assert_eq!(active.0, vec![3, 2]);
+        // Effective retains default from first fire — not recalculated until system runs
+        let effective = world.get::<EffectivePiercing>(entity).unwrap();
+        assert_eq!(effective.0, 0);
+    }
+
+    #[test]
+    fn fire_with_existing_components_preserves_effective() {
+        let mut world = World::new();
+        let entity = world
+            .spawn((ActivePiercings(vec![]), EffectivePiercing(5)))
+            .id();
+        fire(entity, 3, "", &mut world);
+        let active = world.get::<ActivePiercings>(entity).unwrap();
+        assert_eq!(active.0, vec![3]);
+        // fire() must not overwrite the pre-existing effective value
+        let effective = world.get::<EffectivePiercing>(entity).unwrap();
+        assert_eq!(effective.0, 5);
+    }
+
+    #[test]
+    fn reverse_on_bare_entity_double_call_no_panic() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        reverse(entity, 3, "", &mut world);
+        reverse(entity, 3, "", &mut world);
         assert!(world.get::<ActivePiercings>(entity).is_none());
+        assert!(world.get::<EffectivePiercing>(entity).is_none());
+    }
+
+    #[test]
+    fn reverse_with_non_matching_value_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn(ActivePiercings(vec![3, 2])).id();
+        reverse(entity, 999, "", &mut world);
+        let active = world.get::<ActivePiercings>(entity).unwrap();
+        assert_eq!(active.0, vec![3, 2]);
+    }
+
+    #[test]
+    fn fire_on_half_initialized_entity_inserts_effective() {
+        let mut world = World::new();
+        let entity = world.spawn(ActivePiercings(vec![])).id();
+        fire(entity, 3, "", &mut world);
+        let active = world.get::<ActivePiercings>(entity).unwrap();
+        assert_eq!(active.0, vec![3]);
+        let effective = world.get::<EffectivePiercing>(entity).unwrap();
+        assert_eq!(effective.0, 0);
     }
 
     #[test]

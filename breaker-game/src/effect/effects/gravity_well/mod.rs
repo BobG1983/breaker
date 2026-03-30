@@ -3,5 +3,7 @@ pub(crate) mod effect;
 #[cfg(test)]
 mod tests;
 
-pub use effect::{GravityWellConfig, GravityWellMarker};
+pub use effect::{
+    GravityWellConfig, GravityWellMarker, GravityWellSpawnCounter, GravityWellSpawnOrder,
+};
 pub(crate) use effect::{fire, register, reverse};

@@ -1,10 +1,10 @@
 (
-    name: "Phantom Breaker",
-    description: "Successful bumps summon a phantom breaker that mirrors your moves",
+    name: "Phantom Bolt",
+    description: "Successful bumps summon a spectral phantom bolt",
     effects: [
         On(target: Breaker, then: [
             When(trigger: Bump, then: [
-                Do(SpawnPhantom(duration: 5.0, max_active: 1)),
+                Do(SpawnPhantom(duration: 5.0, max_active: 5)),
             ]),
         ]),
     ],

@@ -1,0 +1,16 @@
+(
+    name: "Anchor",
+    description: "Plant the breaker for doubled bump force and a wider perfect window",
+    effects: [
+        On(target: Breaker, then: [
+            Do(Anchor(
+                bump_force_multiplier: 2.0,
+                perfect_window_multiplier: 1.5,
+            )),
+        ]),
+    ],
+    ingredients: [
+        (chip_name: "Quick Stop", stacks_required: 2),
+        (chip_name: "Bump Force", stacks_required: 2),
+    ],
+)

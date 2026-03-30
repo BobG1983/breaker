@@ -6,7 +6,9 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: PerfectBumped, then: [
-                    Do(SpeedBoost(multiplier: 1.2)),
+                    Until(trigger: TimeExpires(1.5), then: [
+                        Do(SpeedBoost(multiplier: 1.5)),
+                    ]),
                 ]),
             ]),
         ],
@@ -16,7 +18,9 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: PerfectBumped, then: [
-                    Do(SpeedBoost(multiplier: 1.35)),
+                    Until(trigger: TimeExpires(1.5), then: [
+                        Do(SpeedBoost(multiplier: 1.75)),
+                    ]),
                 ]),
             ]),
         ],
@@ -26,7 +30,9 @@
         effects: [
             On(target: Bolt, then: [
                 When(trigger: PerfectBumped, then: [
-                    Do(SpeedBoost(multiplier: 1.5)),
+                    Until(trigger: TimeExpires(1.5), then: [
+                        Do(SpeedBoost(multiplier: 2.0)),
+                    ]),
                 ]),
             ]),
         ],

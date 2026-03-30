@@ -1,0 +1,21 @@
+(
+    name: "Circuit Breaker",
+    description: "Three perfect bumps close the circuit — spawning a bolt and unleashing a massive shockwave",
+    effects: [
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                Do(CircuitBreaker(
+                    bumps_required: 3,
+                    spawn_count: 1,
+                    inherit: true,
+                    shockwave_range: 160.0,
+                    shockwave_speed: 500.0,
+                )),
+            ]),
+        ]),
+    ],
+    ingredients: [
+        (chip_name: "Feedback Loop", stacks_required: 1),
+        (chip_name: "Bump Force", stacks_required: 2),
+    ],
+)

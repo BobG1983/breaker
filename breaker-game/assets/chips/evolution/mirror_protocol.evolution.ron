@@ -1,0 +1,15 @@
+(
+    name: "Mirror Protocol",
+    description: "Perfect bumps spawn mirrored piercing bolts that spread in controlled directions",
+    effects: [
+        On(target: Breaker, then: [
+            When(trigger: PerfectBump, then: [
+                Do(MirrorProtocol(count: 2, inherit_from_primary: true)),
+            ]),
+        ]),
+    ],
+    ingredients: [
+        (chip_name: "Reflex", stacks_required: 1),
+        (chip_name: "Piercing Shot", stacks_required: 2),
+    ],
+)
