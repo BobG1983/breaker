@@ -2,6 +2,16 @@
 
 A roguelite Arkanoid clone — the reflex pressure of Ikaruga meets the build-crafting depth of Slay the Spire, in a breakout game that never lets you breathe.
 
+## Setup
+
+After cloning, enable the tracked pre-commit hooks:
+
+```
+git config --local core.hooksPath .githooks
+```
+
+This runs `cargo fmt`, `cargo all-dclippy`, and `cargo all-dtest` before each commit.
+
 ## Build & Run
 
 **Prerequisites:** Rust toolchain (nightly). [mold](https://github.com/rui314/mold) or lld recommended for fast linking.
@@ -9,8 +19,10 @@ A roguelite Arkanoid clone — the reflex pressure of Ikaruga meets the build-cr
 ```
 cargo dev                    # Dev build + run (dynamic linking)
 cargo dtest                  # Run all tests (dynamic linking)
+cargo all-dtest              # Run all workspace tests (dynamic linking)
 cargo dcheck                 # Type check (dynamic linking)
 cargo dclippy                # Lint (dynamic linking)
+cargo all-dclippy            # Lint all workspace crates (dynamic linking)
 cargo run --release          # Release build
 cargo fmt --check            # Format check
 ```
