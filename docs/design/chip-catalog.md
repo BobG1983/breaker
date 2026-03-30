@@ -52,15 +52,6 @@ Percentage-based bolt speed increase per stack. Stacks multiplicatively.
 
 `max_taken: 4`
 
-### Chain Hit
-Bolt chains to additional cells on hit.
-
-| Rarity | Prefix | Effects | Synergy Notes |
-|--------|--------|---------|---------------|
-| Common | Linked | `On(Bolt) → Do(ChainHit(1))` | Single chain |
-| Uncommon | Branching | `On(Bolt) → Do(ChainHit(2))` | Multi-chain |
-| Rare | Arcing | `On(Bolt) → Do(ChainHit(3)), Do(DamageBoost(0.05))` | Chains + damage |
-
 `max_taken: 3`
 
 ### Bolt Size

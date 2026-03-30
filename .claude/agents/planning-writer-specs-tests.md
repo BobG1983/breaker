@@ -14,6 +14,7 @@ You write your spec to a file at the path given in your prompt. The full spec go
 
 ## First Step — Always
 
+1. Read `.claude/rules/project-context.md` for project overview, workspace layout, architecture, and terminology
 2. Read `docs/design/terminology/` for required vocabulary
 3. Read `docs/architecture/layout.md` for domain structure
 4. Read `docs/architecture/messages.md` for inter-domain communication

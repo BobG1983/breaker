@@ -18,4 +18,4 @@ For a duration, the bolt emits small expanding rings at its current position at 
 
 ## Reversal
 
-No-op. Pulse ring entities self-despawn on their own lifecycle.
+Removes the `PulseEmitter` component from the entity, stopping further ring emissions. Existing rings continue their lifecycle and self-despawn.

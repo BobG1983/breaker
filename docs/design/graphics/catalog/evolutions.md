@@ -4,17 +4,19 @@ Each evolution requires bespoke VFX that looks fundamentally different from base
 
 | Evolution | Status | Juice | Style Guide | VFX Direction |
 |-----------|--------|-------|-------------|---------------|
-| Nova Lance | NONE | High | COVERED | Massive beam — full-screen-height piercing laser, heavy bloom + distortion |
-| Voltchain | NONE | High | COVERED | Dense branching lightning web — screen fills with electric arcs |
-| Phantom Breaker | NONE | High | COVERED | Ghost bolt — translucent/phasing, spectral shader, flickering, afterimage trail, non-white core |
-| Supernova | NONE | High | COVERED | Screen-filling explosion — radial burst, white-hot frame, then resolving |
-| Dead Man's Hand | NONE | High | COVERED | All bolts pulse simultaneously — synchronized shockwave rings (redesign pending) |
-| Railgun | NONE | High | COVERED | Thin hyper-bright beam — instantaneous, no travel time, chromatic aberration |
-| Gravity Well (evo) | NONE | High | COVERED | Larger/more intense distortion lens — stronger warping, wider radius |
-| Second Wind | NONE | High | COVERED | Invisible wall materializes with bright flash on save — salvation moment |
-| Entropy Engine | NONE | High | COVERED | Ring of prismatic motes orbiting bolt as counter gauge. On fill: motes converge, detonate in multi-colored burst (HDR >2.0, chromatic aberration). Mote ring grows denser across node. |
-| Chain Reaction | NONE | High | COVERED | Each recursive spawn: expanding light ring + inheritance streamers. Bright lines flash between destroyed cell and spawned bolts. Additive blending creates white-hot zones. Chromatic aberration per generation tier. |
-| Feedback Loop | NONE | High | COVERED | Three-node triangle charge indicator near bolt, lights per perfect bump. On completion: nodes flash white-hot, collapse inward, circuit closes. Spawned bolt + shockwave fire amplified. Screen flash + medium shake. |
-| Split Decision | NONE | High | COVERED | Fission effect: cell glow splits along axis, halves condense into bolt orbs (~0.15s). Energy filaments connect during split. Spawned bolts inherit parent visual modifiers. Prismatic birth trails. |
-| ArcWelder | NONE | High | COVERED | Persistent electric arcs crackle from bolt to cells in range. Jagged, flickering, refreshing geometry every 3-4 frames. Cells show surface flicker under arc damage. Bolt gains electric corona. Moving Tesla coil. |
-| FlashStep | NONE | High | COVERED | Breaker disintegrates into energy streak, rematerializes at bolt's X position in one frame. Departure afterimage fades ~0.3s. Arrival radial burst + distortion. Light-streak connects departure/arrival 1-2 frames. |
+| Nova Lance | NONE | High | COVERED | Massive beam along trajectory — appears at max width, shrinks over time. Heavy bloom + distortion. |
+| Voltchain | NONE | High | COVERED | Enhanced chain lightning — 6 arcs, large max jumps, brighter than base. Electric corona on bolt. |
+| Phantom Bolt | NONE | High | COVERED | Ghost bolt — translucent/phasing, spectral blue-violet core, afterimage trail, flickering. |
+| Supernova | NONE | High | COVERED | Cascade marker — base effects with Supernova visual distinction (brighter ring, extra sparks). Spectacle is emergent. |
+| Dead Man's Hand | NONE | High | COVERED | Pending mechanic rework. Provisional: dramatic shockwave from loss position + speed-up on remaining bolts. |
+| Gravity Well (evo) | NONE | High | COVERED | Larger distortion lens — wider radius (160), stronger warping, 4 active, more glow motes. |
+| Second Wind | NONE | High | COVERED | Invisible wall materializes with bright flash on save — salvation moment. Brief slow-mo. |
+| Entropy Engine | NONE | High | COVERED | Prismatic flash per cell destroy, then selected effect fires. Bolt has persistent prismatic shimmer. No counter gauge. |
+| Chain Reaction | NONE | High | COVERED | Recursive shockwaves with escalating intensity per generation. Chromatic aberration scales with depth. |
+| Circuit Breaker | NONE | High | COVERED | Three-node triangle charge indicator. Each perfect bump lights a node. On completion: nodes collapse, circuit closes, spawn + shockwave. |
+| Split Decision | NONE | High | COVERED | Fission effect: cell splits, halves condense into bolt orbs. Energy filaments. Prismatic birth trails. |
+| ArcWelder | NONE | High | COVERED | Crackling electric tether beams connecting ALL bolts in sequence. Electric corona on all connected bolts. Web aesthetic. |
+| FlashStep | NONE | High | COVERED | Breaker disintegrates on dash-reversal during settling. Departure afterimage. Arrival burst + distortion. Light-streak. |
+| Mirror Protocol | NONE | High | COVERED | Prismatic flash on perfect bump. Mirrored bolts emerge at spread angles with prismatic birth trails. |
+| Anchor | NONE | Medium | COVERED | Ground-anchor glow while planted. Concentrated impact flash on planted bump. |
+| Resonance Cascade | NONE | High | COVERED | Persistent pulse aura — visible expanding rings at fixed interval. Larger bolt = larger rings. |

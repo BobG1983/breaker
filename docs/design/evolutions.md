@@ -55,63 +55,82 @@ Evolutions are implemented as chips with `EffectNode` effect trees. The chip's e
 
 ## Evolution Catalog
 
-### Entropy Engine
-**Ingredients**: Cascade + Flux
-
-Counter-gated random effect — every 5th cell destroyed, roll from weighted pool. Cascade provides the trigger domain, Flux provides the randomness mechanic, evolution adds the counter gate.
-
-### Chain Reaction
-**Ingredients**: Cascade x3 + Splinter x2 + Piercing x3
-
-Recursive bolt spawning with effect inheritance. Destroyed cells spawn temporary bolts that inherit the parent's effects — including piercing and cascading shockwaves. Creates exponential chain reactions that spread across the field.
-
-**Design notes**: This is the evolution that most dramatically changes the feel of the game. A well-built Chain Reaction setup can clear an entire field from a single cell destruction. The inheritance mechanic means every chip the player has invested in amplifies the chain.
-
-### Feedback Loop
-**Ingredients**: TBD
-
-3 perfect bumps trigger bolt spawn + shockwave. Counter-gated burst that rewards consistent precision over time rather than single-hit spikes.
-
 ### Nova Lance
-**Ingredients**: Damage Boost x2 + Bolt Speed x2
+**Ingredients**: Impact x2 + Bolt Speed x3
 
-Perfect bumps unleash devastating shockwaves on cell impact.
+Perfect bumps unleash a devastating piercing beam through all cells in the bolt's path. Beam appears at max width, shrinks over time.
 
 ### Voltchain
-**Ingredients**: Chain Hit x2 + Damage Boost x2
+**Ingredients**: Chain Reaction x1 + Aftershock x2
 
-Destroying cells unleashes chain lightning to nearby targets.
+Destroying cells unleashes enhanced chain lightning (6 arcs, large max jumps) to nearby targets.
 
-### Phantom Breaker
+### Phantom Bolt
 **Ingredients**: Wide Breaker x2 + Bump Force x2
 
-Successful bumps summon a phantom breaker that mirrors your moves.
+Successful bumps summon spectral phantom bolts (up to 5 active). Ghost bolts with translucent/phasing visual and afterimage trail.
 
 ### Supernova
 **Ingredients**: Piercing Shot x3 + Surge x1
 
-Perfect bumps trigger chain explosions — cells destroyed spawn bolts and shockwaves.
+Perfect bumps trigger chain explosions — cells destroyed spawn inheriting bolts and shockwaves. Cascade spectacle emerges from overlapping base effects.
 
 ### Dead Man's Hand
 **Ingredients**: Damage Boost x3 + Last Stand x1
 
-Losing a bolt triggers a shockwave and boosts all remaining bolts.
-
-**Redesign note (C7)**: Planned rework to Pulse effect — all bolts shockwave on bolt lost, creating a distributed damage response across the field rather than a single point-source shockwave.
-
-### Railgun
-**Ingredients**: Piercing Shot x3 + Bolt Speed x4
-
-Perfect bumps fire a devastating piercing beam through all cells in the bolt's path.
+Losing a bolt triggers a shockwave and boosts all remaining bolts. Mechanic rework pending — current payoff is underwhelming for an evolution.
 
 ### Gravity Well
 **Ingredients**: Bolt Size x2 + Magnetism x2
 
-Destroying cells creates gravity wells that pull bolts toward the destruction point.
+Destroying cells creates gravity wells (up to 4 active, 5s duration, 160 radius) that pull bolts toward the destruction point.
 
 ### Second Wind
-**Ingredients**: Wide Breaker x3 + Breaker Speed x3
+**Ingredients**: Wide Breaker x2 + Last Stand x1
 
 Invisible wall that bounces the bolt once per node. Cheat death once.
 
-**Redesign note (C7)**: Now uses `Once` node type instead of a custom one-shot mechanism. The invisible wall effect is placed on the breaker's `BoundEffects`, not as a global resource. Fires exactly once per node, then the `Once` node is permanently consumed from the chain.
+### ArcWelder
+**Ingredients**: Tether x2 + Amp x2
+
+All active bolts connected by crackling neon beams in sequence (1→2→3→4). Beams damage everything they intersect. Chain repairs when bolts are lost.
+
+### Entropy Engine
+**Ingredients**: Cascade x2 + Flux x2
+
+Random effect from weighted pool fires on every cell destroyed. Prismatic flash per trigger, bolt gains persistent shimmer.
+
+### Split Decision
+**Ingredients**: Splinter x2 + Piercing Shot x2
+
+Destroyed cells spawn 2 permanent inheriting bolts. Fission visual — cell splits into bolt orbs.
+
+### Chain Reaction
+**Ingredients**: Chain Reaction x1 + Aftershock x2 + Cascade x2
+
+Destroyed cells trigger recursive shockwaves — each shockwave kill spawns another shockwave. Escalating intensity per generation depth.
+
+### Circuit Breaker
+**Ingredients**: Feedback Loop x1 + Bump Force x2
+
+3 perfect bumps charge a counter. On completion: spawn bolt + large shockwave, reset. Triangle charge indicator near bolt.
+
+### Mirror Protocol
+**Ingredients**: Reflex x1 + Piercing Shot x2
+
+Perfect bumps spawn 2 mirrored bolts that inherit the PRIMARY BOLT's effects (not the breaker's). Spread controlled by bump angle.
+
+### Anchor
+**Ingredients**: Quick Stop x2 + Bump Force x2
+
+Plant mechanic — while braking/stopped, bump force doubled and perfect window widened. Creates dash→plant→bump→dash rhythm.
+
+### FlashStep
+**Ingredients**: Breaker Speed x2 + Reflex x1
+
+Dash reversal during settling becomes a teleport — breaker disintegrates and rematerializes instantly. Skips settling penalty.
+
+### Resonance Cascade
+**Ingredients**: Pulse x2 + Bolt Size x2
+
+Bolt constantly emits damage pulses at a fixed interval (no trigger needed). Larger bolt = larger pulse radius. Changes the verb from "aim" to "navigate."

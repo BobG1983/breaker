@@ -11,7 +11,7 @@ A fast-expanding beam rectangle in the entity's velocity direction.
 
 ## Behavior
 
-Spawns a thin rectangle entity at the entity's position that expands very quickly along the entity's velocity direction. Damages all cells the rectangle touches as it expands. Each cell is damaged at most once per beam. Damage per cell = base bolt damage * `damage_mult`. The beam entity despawns after reaching the playfield boundary.
+Fires all damage in a single tick via a deferred `PiercingBeamRequest` entity. All cells along the bolt's velocity direction within `width` are damaged simultaneously. Each cell is damaged at most once per beam. Damage per cell = base bolt damage * `damage_mult`. The request entity is consumed after processing.
 
 ## Reversal
 

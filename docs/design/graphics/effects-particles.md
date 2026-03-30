@@ -93,20 +93,22 @@ Each evolution has **completely unique, bespoke VFX**. Evolutions are the ultima
 
 | Evolution | Visual Direction |
 |-----------|-----------------|
-| Nova Lance | Massive beam effect — full-screen-height piercing laser with heavy bloom and distortion |
-| Voltchain | Dense branching lightning web — screen fills with electric arcs between all targets |
-| Phantom Breaker | Ghost bolt — translucent/phasing bolt with infinite piercing, spectral shader (flickering, afterimage trail, distinct non-white core color) |
-| Supernova | Screen-filling explosion — radial burst from center, everything white-hot for a frame, then resolving |
-| Dead Man's Hand | All bolts pulse simultaneously with shockwave rings — synchronized detonation feel |
-| Railgun | Thin, hyper-bright beam that punches across the entire screen — instantaneous, no travel time |
-| Gravity Well | See above (Gravity Well section) — the evolution version is larger and more intense |
-| Second Wind | Invisible bottom wall briefly materializes with a bright flash when the bolt would be lost — salvation effect |
-| Entropy Engine | Ring of prismatic motes orbiting bolt as counter gauge. On fill: motes converge, detonate in multi-colored burst (HDR >2.0, chromatic aberration). Mote ring grows denser across node. |
-| Chain Reaction | Each recursive spawn: expanding light ring + inheritance streamers. Bright lines flash between destroyed cell and spawned bolts. Additive blending creates white-hot cascade zones. Chromatic aberration per generation tier. |
-| Feedback Loop | Three-node triangle charge indicator near bolt, lights per perfect bump. On completion: nodes flash white-hot, collapse, circuit closes (HDR >1.5). Spawned bolt + shockwave fire amplified. Screen flash + medium shake. |
+| Nova Lance | Massive beam along bolt trajectory — appears at max width, shrinks over short duration. Heavy bloom (HDR >2.0), screen distortion along path, chromatic aberration. |
+| Voltchain | Enhanced chain lightning — 6 arcs with large max jumps, brighter/thicker than base. Bolt gains electric corona. Density from many cell-destroys in succession. |
+| Phantom Bolt | Ghost bolt — translucent/phasing (alpha oscillation), spectral blue-violet core, afterimage trail (copies ARE the trail), flickering. Dim spark dissolve on loss. |
+| Supernova | Chain cascade — base shockwave/bolt-spawn effects with Supernova visual marker (brighter ring, extra spark density). Spectacle is emergent from cascade overlap, not a single blast. |
+| Dead Man's Hand | Pending mechanic rework. Provisional: dramatic shockwave from bolt-loss position + speed-up visual on remaining bolts. |
+| Gravity Well | Larger/more intense distortion lens — wider radius (160), stronger warping, more glow motes, 4 active wells. |
+| Second Wind | Invisible bottom wall materializes with bright flash (HDR >2.0) on save. Brief slow-mo (~0.1s). Wall visible momentarily then fades. |
+| Entropy Engine | Prismatic flash per cell destroy (~0.1s, spectral cycle), then selected random effect fires. Bolt has persistent prismatic shimmer. No counter gauge. |
+| Chain Reaction | Recursive shockwaves with escalating intensity per generation depth. Chromatic aberration scales with depth. Screen shake scales with total chain size. |
+| Circuit Breaker | Three-node triangle charge indicator near bolt. Each perfect bump lights a node. On completion: nodes flash white-hot, collapse, circuit closes. Spawn + amplified shockwave. Screen flash + medium shake. |
 | Split Decision | Fission effect: cell glow splits along axis, halves condense into bolt orbs (~0.15s). Energy filaments connect during split. Spawned bolts inherit parent visual modifiers. Prismatic birth trails. |
-| ArcWelder | Persistent electric arcs from bolt to cells in range. Jagged, flickering, refreshing geometry every 3-4 frames. Cells show surface flicker under damage. Bolt gains electric corona. Moving Tesla coil aesthetic. |
-| FlashStep | Breaker disintegrates into energy streak, rematerializes at bolt's X in one frame. Departure afterimage fades ~0.3s. Arrival radial burst + distortion. Light-streak connects departure/arrival 1-2 frames. |
+| ArcWelder | Crackling electric tether beams connecting ALL active bolts in sequence. Electric corona on all connected bolts. Chain forms visible electric web when many bolts active. |
+| FlashStep | Breaker disintegrates into energy streak on dash-reversal during settling. Departure afterimage fades ~0.3s. Arrival radial burst + distortion. Light-streak connects departure/arrival 1-2 frames. |
+| Mirror Protocol | Prismatic flash at breaker on perfect bump. Mirrored bolts emerge at spread angles with prismatic birth trails. |
+| Anchor | Subtle ground-anchor glow beneath breaker while planted. Concentrated impact flash on planted bump. |
+| Resonance Cascade | Persistent pulse aura around bolt — visible expanding rings at fixed interval. Larger bolt = larger rings. |
 
 Evolution VFX should be designed and prototyped individually. Each is a visual set-piece. See `catalog/evolutions.md` for the complete list with status tracking.
 

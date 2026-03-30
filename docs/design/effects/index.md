@@ -10,16 +10,17 @@ All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half).
 
 - [Shockwave](shockwave.md) — expanding ring of area damage
 - [ChainLightning](chain_lightning.md) — arc damage jumping between random cells in range
-- [PiercingBeam](piercing_beam.md) — fast-expanding beam rectangle in velocity direction
+- [PiercingBeam](piercing_beam.md) — instant damage along velocity direction within a width
 - [Pulse](pulse.md) — timed bolt aura, repeatedly pulses small damage rings
 - [Explode](explode.md) — instant area damage burst
-- [TetherBeam](tether_beam.md) — damaging beam between two free-moving bolts *(evolution)*
+- [TetherBeam](tether_beam.md) — damaging beam between bolts *(evolution)*
 
 ## Bolt Spawning
 
 - [SpawnBolts](spawn_bolts.md) — spawn additional bolts
 - [ChainBolt](chain_bolt.md) — spawn two bolts chained together
 - [SpawnPhantom](spawn_phantom.md) — temporary phantom bolt with infinite piercing
+- [MirrorProtocol](mirror_protocol.md) — spawn mirrored bolts inheriting primary bolt's effects *(evolution)*
 
 ## Stat Modifiers
 
@@ -34,6 +35,8 @@ All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half).
 ## Breaker Modifiers
 
 - [QuickStop](quick_stop.md) — breaker deceleration multiplier for precise stops
+- [Anchor](anchor.md) — plant mechanic: boosted bump force + wider perfect window while braking *(evolution)*
+- [FlashStep](flash_step.md) — teleport on dash reversal during settling *(evolution)*
 
 ## Defensive
 
@@ -50,6 +53,7 @@ All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half).
 
 - [RandomEffect](random_effect.md) — weighted random selection from pool
 - [EntropyEngine](entropy_engine.md) — escalating chaos, multiple effects per cell destroyed
+- [CircuitBreaker](circuit_breaker.md) — charge counter on perfect bumps, fires spawn + shockwave on completion *(evolution)*
 
 ## Buff Stacking
 
