@@ -17,20 +17,25 @@ type: project
 - `EffectCommandsExt` — Commands extension for firing/reversing effects
 - `SpawnBolts` — correct effect name (not `MultiBolt`)
 
-## Active/Effective Component Pairs (stat-effects phase)
+## Active Component Types (Effective* cache REMOVED — direct-read model)
 
-- `ActiveDamageBoosts` / `EffectiveDamageMultiplier` — damage stat (multiplicative)
-- `ActiveSpeedBoosts` / `EffectiveSpeedMultiplier` — speed stat (multiplicative)
-- `ActivePiercings` / `EffectivePiercing` — piercing stat (additive/sum)
-- `ActiveSizeBoosts` / `EffectiveSizeMultiplier` — size stat (multiplicative)
-- `ActiveBumpForces` / `EffectiveBumpForce` — bump force stat (multiplicative)
-- `ActiveQuickStops` / `EffectiveQuickStop` — deceleration multiplier (multiplicative)
-- `PiercingRemaining` — bolt gameplay state (bolt domain), NOT an effect stat
+After the Effective* cache removal refactor, there are NO `Effective*` components. Consumers call `.multiplier()` / `.total()` on `Active*` directly.
 
-## New System Set Variants (stat-effects phase)
+- `ActiveDamageBoosts` — damage multipliers (Vec<f32>), `.multiplier()` = product
+- `ActiveSpeedBoosts` — speed multipliers (Vec<f32>), `.multiplier()` = product
+- `ActivePiercings` — piercing counts (Vec<u32>), `.total()` = sum
+- `ActiveSizeBoosts` — size multipliers (Vec<f32>), `.multiplier()` = product
+- `ActiveBumpForces` — bump force multipliers (Vec<f32>), `.multiplier()` = product
+- `ActiveQuickStops` — deceleration multipliers (Vec<f32>), `.multiplier()` = product
+- `PiercingRemaining` — bolt gameplay state (bolt domain), NOT an effect stat; cap is `ActivePiercings::total()`
 
-- `EffectSystems::Recalculate` — recalculate systems computing Active* → Effective* (runs after Bridge)
-- `BoltSystems::CellCollision` — tags `bolt_cell_collision` (added when stat-effects needed ordering anchor)
+Do NOT flag absence of `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, `EffectiveSizeMultiplier`, `EffectivePiercing`, `EffectiveBumpForce`, `EffectiveQuickStop` — these were removed intentionally.
+
+## System Set Variants
+
+- `EffectSystems::Bridge` — the ONLY `EffectSystems` variant (Recalculate was REMOVED with the cache)
+- `BoltSystems::CellCollision` — tags `bolt_cell_collision`
+- `BoltSystems::WallCollision` — tags `bolt_wall_collision`; runs after CellCollision
 - `BreakerSystems::UpdateState` — tags `update_breaker_state`
 
 ## Wave 3 New Types (feature/scenario-coverage)

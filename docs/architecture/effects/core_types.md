@@ -269,7 +269,8 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, source_chip: &str, world:
 }
 
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_speed);
+    // simple stat effects have no runtime systems to register;
+    // effects with runtime behavior (shockwave tick, tether beam, etc.) add systems here
 }
 ```
 

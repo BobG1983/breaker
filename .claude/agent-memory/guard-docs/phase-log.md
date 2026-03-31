@@ -234,6 +234,30 @@ type: project
 - `docs/design/graphics/index.md` modification — references catalog/ which exists on disk; consistent
 - `docs/design/graphics/effects-particles.md` modification — working-tree change; design doc (forward-looking Phase 5 content), not architecture drift
 
+## 2026-03-30 — feature/scenario-coverage Effective* cache removal review
+
+**Branch:** feature/scenario-coverage
+
+**Scope:** Checked all docs for references to deleted Effective* cache components and EffectSystems::Recalculate after the refactor that removed all 6 Effective* cache components, their recalculate systems, and 2 invariant checkers (SizeBoostInRange + InjectWrongSizeMultiplier).
+
+**Files reviewed:**
+- `breaker-game/src/effect/sets.rs` — confirmed only Bridge variant remains
+- `breaker-game/src/effect/effects/speed_boost.rs`, `damage_boost.rs`, `size_boost.rs`, `piercing.rs` — confirmed no Effective* types, no recalculate_* systems
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — confirmed 23 variants (SizeBoostInRange removed)
+- `breaker-scenario-runner/src/types/definitions/mutations.rs` — confirmed InjectWrongSizeMultiplier removed
+- `docs/architecture/data.md`, `docs/architecture/plugins.md`, `docs/architecture/ordering.md`
+
+**Drifts found and fixed:**
+- `docs/architecture/data.md` — "Active/Effective Component Pattern" section rewrote to "Active Component Pattern" (removed Effective* cache description, EffectSystems::Recalculate reference, EffectivePiercing as cap; updated to direct-read model with .multiplier()/.total())
+- `docs/architecture/plugins.md` — Effect File Pattern code snippet: removed `recalculate_speed` from register(); added `_source_chip: &str` to fire()/reverse() signatures; added `.multiplier()` method; updated comment from "adds recalculation system" to "wires app systems"
+- `docs/architecture/effects/core_types.md` — Per-Effect Modules section: replaced `app.add_systems(FixedUpdate, recalculate_speed)` in register() body with a comment explaining simple stat effects have no runtime systems
+
+**Items confirmed no-drift (already updated by team before this session):**
+- `docs/architecture/ordering.md` — EffectSystems::Recalculate already removed from Defined Sets table; Reading paragraph already says "Consumers read Active* components directly via .multiplier()/.total() methods"
+- `docs/architecture/plugins.md` — EffectSystems variants entry already shows `Bridge` only (no Recalculate)
+- `docs/architecture/standards.md` — invariant list already correct (23 invariants, no SizeBoostInRange)
+- `docs/architecture/plugins.md` — Cross-Domain Read Access section already references ActiveDamageBoosts/ActiveSpeedBoosts/ActiveSizeBoosts/ActivePiercings (not Effective* types)
+
 ## 2026-03-30 — feature/scenario-coverage Wave 3 review
 
 **Branch:** feature/scenario-coverage

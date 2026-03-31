@@ -185,16 +185,19 @@ Each effect module provides three free functions and any active-state components
 // Active state (vec of applied multipliers on the entity)
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
-// Fire: push multiplier onto the vec
-pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) { ... }
+impl ActiveSpeedBoosts {
+    // Consumers call this inline — no separate cache component
+    pub fn multiplier(&self) -> f32 { ... }
+}
+
+// Fire: push multiplier onto the vec (inserts component if absent)
+pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
 
 // Reverse: remove matching entry from the vec
-pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) { ... }
+pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
 
-// Self-registration: adds recalculation system
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_speed);
-}
+// Self-registration: wires app systems (effects with no runtime systems may be empty)
+pub(crate) fn register(app: &mut App) { ... }
 ```
 
 `EffectKind` dispatches to each module via exhaustive match arms. `EffectPlugin::build()` calls `effects::register(app)` and `triggers::register(app)`.

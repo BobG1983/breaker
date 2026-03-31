@@ -100,26 +100,24 @@ The `Without<BreakerMaxSpeed>` filter skips already-initialized entities (persis
 
 ---
 
-## Active/Effective Component Pattern
+## Active Component Pattern
 
-Stat-modifying effects use a two-tier component model instead of accumulating flat deltas:
+Stat-modifying effects use a single-tier `Active*` stack model — consumers read `Active*` directly via accessor methods:
 
 ```
 fire_effect(entity, DamageBoost(2.0))
         ↓  (push onto Active stack)
 ActiveDamageBoosts(vec![2.0])
-        ↓  (recalculate_damage — FixedUpdate, in EffectSystems::Recalculate)
-EffectiveDamageMultiplier(2.0)    ← multiplier = product of all entries
-        ↓  (consumers: bolt_cell_collision, handle_cell_hit)
+        ↓  (consumers call .multiplier() inline)
+bolt_cell_collision: effective_damage = BASE_BOLT_DAMAGE * active.multiplier()
 ```
 
 **Rules:**
 
 - **`Active*` components** (e.g., `ActiveDamageBoosts`, `ActiveSpeedBoosts`, `ActivePiercings`) live in the effect domain (`effect/effects/<name>.rs`). They are plain `Vec` stacks — each applied effect instance pushes one entry; `reverse_effect` removes it.
-- **`Effective*` components** (e.g., `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, `EffectivePiercing`) are computed each frame by `recalculate_*` systems in `EffectSystems::Recalculate`. Multiplier stats use the product of all entries; additive stats (piercing) use the sum.
-- **Consumers** (bolt collision, move_breaker, etc.) read only `Effective*` — never `Active*`. Consumers run `.after(EffectSystems::Recalculate)`.
-- **`PiercingRemaining`** is bolt gameplay state (lives in the bolt domain), not an effect stat. `EffectivePiercing` sets the cap that `PiercingRemaining` resets to on wall/breaker contact.
-- Both components are inserted by init systems (`init_bolt_params`, `init_breaker_params`) alongside base stat components. Without them, the entity is unaffected (collision code uses `Option<&EffectiveDamageMultiplier>` and maps to `1.0`).
+- **Consumers** (bolt collision, move_breaker, etc.) read `Active*` directly using the `.multiplier()` method (product of all entries, default 1.0) or `.total()` (sum of all entries, for additive stats like piercing). No separate cache component is computed.
+- **`PiercingRemaining`** is bolt gameplay state (lives in the bolt domain), not an effect stat. `ActivePiercings::total()` gives the cap that `PiercingRemaining` resets to on wall/breaker contact.
+- `Active*` components are inserted lazily by `fire()` when first needed. Consumers handle the absent case via `Option<&Active*>` and map to the identity value (1.0 for multipliers, 0 for sums).
 
 ---
 

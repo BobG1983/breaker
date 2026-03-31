@@ -22,8 +22,13 @@ type BoltSpeedQuery<'w, 's> = Query<
 
 /// Checks that bolt speed stays within configured min/max bounds.
 ///
-/// Reads speed from `Velocity2D`. Computes effective bounds from
-/// `ActiveSpeedBoosts` (same source as `prepare_bolt_velocity`).
+/// Reads speed from `Velocity2D`. The upper bound uses `effective_max =
+/// BoltMaxSpeed * ActiveSpeedBoosts.multiplier()`. The lower bound uses
+/// raw `BoltMinSpeed` (without multiplier) because speed boosts can be
+/// applied mid-frame by Bridge systems — a bolt that was correctly clamped
+/// by `prepare_bolt_velocity` may appear below `effective_min` if the
+/// multiplier increased after clamping but before this checker runs.
+///
 /// Skips bolts with zero speed (serving or dead bolts).
 pub fn check_bolt_speed_in_range(
     bolts: BoltSpeedQuery,
@@ -37,16 +42,17 @@ pub fn check_bolt_speed_in_range(
             continue;
         }
         let mult = active_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier);
-        let effective_min = min_speed.0 * mult;
         let effective_max = max_speed.0 * mult;
-        if speed < effective_min - SPEED_TOLERANCE || speed > effective_max + SPEED_TOLERANCE {
+        // Lower bound: raw min_speed (no multiplier) — see doc comment.
+        let lower_bound = min_speed.0;
+        if speed < lower_bound - SPEED_TOLERANCE || speed > effective_max + SPEED_TOLERANCE {
             log.0.push(ViolationEntry {
                 frame: frame.0,
                 invariant: InvariantKind::BoltSpeedInRange,
                 entity: Some(entity),
                 message: format!(
                     "BoltSpeedInRange FAIL frame={} entity={entity:?} speed={speed:.1} bounds=[{:.1}, {:.1}] mult={mult:.2}",
-                    frame.0, effective_min, effective_max,
+                    frame.0, lower_bound, effective_max,
                 ),
             });
         }
@@ -188,7 +194,7 @@ mod tests {
         );
     }
 
-    /// Bolt speed 199.5 with min=200.0 is within 1.0 tolerance -- no violation.
+    /// Bolt speed 199.5 with raw min=200.0 is within 1.0 tolerance -- no violation.
     #[test]
     fn bolt_speed_in_range_does_not_fire_when_speed_is_slightly_below_min_within_tolerance() {
         let mut app = test_app_bolt_speed();

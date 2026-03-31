@@ -84,9 +84,8 @@ The file contains only a doc comment explaining legacy stat components were remo
 - No typed observer events. No `ActiveEffects`/`ArmedEffects`/`EffectChains` resources.
 - Chain stores: `BoundEffects` (permanent) + `StagedEffects` (one-shot)
 - Effect file pattern: `fire(entity, ..params.., source_chip: &str, world)` + `reverse(...)` + `register()` free functions per module
-- Stat model: `Active*` stacks (effect domain) → `Effective*` scalars (computed by Recalculate) → consumers
-- `PiercingRemaining` is bolt domain (gameplay state), not an effect stat. `EffectivePiercing` is the cap.
-- `EffectSystems::Recalculate` ordering: `.after(EffectSystems::Bridge)`, run_if `in_state(PlayingState::Active)`
+- Stat model (AFTER Effective* cache removal): `Active*` stacks → consumers call `.multiplier()` / `.total()` directly. NO `Effective*` components. NO `EffectSystems::Recalculate`. `EffectSystems` has only `Bridge`.
+- `PiercingRemaining` is bolt domain (gameplay state), not an effect stat. Cap is `ActivePiercings::total()` (not `EffectivePiercing`).
 
 ## Confirmed Correct / Fixed (file-split refactor, 2026-03-30)
 
@@ -141,6 +140,18 @@ The file contains only a doc comment explaining legacy stat components were remo
 **New layout modules confirmed as directory modules:**
 - `anchor/`, `circuit_breaker/`, `mirror_protocol/` — directory modules.
 - `flash_step.rs` — single file.
+
+## Confirmed Correct / Fixed (Effective* cache removal, feature/scenario-coverage, 2026-03-30)
+
+- All 6 `Effective*` components removed: `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, `EffectiveSizeMultiplier`, `EffectivePiercing`, `EffectiveBumpForce`, `EffectiveQuickStop`.
+- `EffectSystems::Recalculate` set removed from `effect/sets.rs` (only `Bridge` remains).
+- `recalculate_*` systems removed from all effect modules; `register()` may be empty or wire only non-recalculate systems.
+- `SizeBoostInRange` and `InjectWrongSizeMultiplier` invariant/mutation removed from scenario runner.
+- `docs/architecture/data.md` — "Active/Effective Component Pattern" section rewritten to "Active Component Pattern" (direct-read model).
+- `docs/architecture/plugins.md` — Effect File Pattern code snippet updated: removed `recalculate_speed` from `register()`, added `_source_chip: &str` to `fire()`/`reverse()` signatures, added `.multiplier()` method.
+- `docs/architecture/effects/core_types.md` — Per-Effect Modules section: `app.add_systems(FixedUpdate, recalculate_speed)` in register() body replaced with a comment explaining simple stat effects have no runtime systems.
+- `docs/architecture/ordering.md` and `docs/architecture/plugins.md` — `EffectSystems::Recalculate` already removed from Defined Sets table by team before this session.
+- `docs/architecture/standards.md` — already correct: 23 invariants, `SizeBoostInRange` not in list.
 
 ## RON Format Confirmed (2026-03-30)
 
