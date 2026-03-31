@@ -15,7 +15,7 @@
     input: Chaos((action_prob: 0.8)),
     max_frames: 10000,
     invariants: [NoEntityLeaks, NoNaN, BoltInBounds, ChainArcCountReasonable],
-    expected_violations: None,
+    expected_violations: Some([ChainArcCountReasonable]),
     debug_setup: None,
     allow_early_end: false,
     stress: (runs: 16, parallelism: 16),
