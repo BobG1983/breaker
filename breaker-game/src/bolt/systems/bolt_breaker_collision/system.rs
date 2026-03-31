@@ -4,11 +4,13 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::Velocity2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     bolt::{
-        components::{PiercingRemaining, enforce_min_angle},
+        components::{
+            ImpactSide, LastImpact, PiercingRemaining, ccd_normal_to_impact_side, enforce_min_angle,
+        },
         filters::ActiveFilter,
         messages::BoltImpactBreaker,
         queries::CollisionQueryBolt,
@@ -17,6 +19,30 @@ use crate::{
     effect::EffectivePiercing,
     shared::BREAKER_LAYER,
 };
+
+/// Data bundling a CCD sweep result for breaker reflection.
+struct CcdHit {
+    normal: Vec2,
+    safe_pos: Vec2,
+    above_y: f32,
+    base_speed: f32,
+}
+
+/// Shared per-frame physics context for CCD sweeps.
+struct SweepContext<'a> {
+    quadtree: &'a CollisionQuadtree,
+    dt: f32,
+}
+
+/// Precomputed per-bolt geometry for collision checks.
+struct BoltGeometry {
+    entity: Entity,
+    bolt_pos: Vec2,
+    r: f32,
+    expanded_half: Vec2,
+    above_y: f32,
+    base_speed: f32,
+}
 
 /// Precomputed breaker surface properties used for bolt reflection.
 struct BreakerSurface {
@@ -58,6 +84,128 @@ impl BreakerSurface {
         });
         if let (Some(pr), Some(ep)) = (piercing_remaining, effective_piercing) {
             pr.0 = ep.0;
+        }
+    }
+
+    /// Reflects a downward-moving bolt off the breaker top surface during overlap.
+    ///
+    /// Returns `true` if the bolt was reflected (and bump should be emitted),
+    /// `false` if the bolt was moving upward (no reflection needed).
+    fn reflect_overlap(
+        &self,
+        commands: &mut Commands,
+        bolt_entity: Entity,
+        bolt_pos: Vec2,
+        bolt_velocity: &mut Velocity2D,
+        base_speed: f32,
+        last_impact: &mut Option<Mut<'_, LastImpact>>,
+    ) -> bool {
+        if bolt_velocity.0.y > 0.0 {
+            return false;
+        }
+        self.reflect_top_hit(bolt_pos.x, bolt_velocity, base_speed);
+        let impact_pos = Vec2::new(bolt_pos.x, self.pos.y + self.half_h);
+        stamp_last_impact(
+            commands,
+            bolt_entity,
+            last_impact,
+            impact_pos,
+            ImpactSide::Top,
+        );
+        true
+    }
+
+    /// Processes a single bolt-breaker collision: overlap resolution then CCD sweep.
+    ///
+    /// Returns `true` if a bump occurred and the caller should emit [`BoltImpactBreaker`].
+    fn process_bolt(
+        &self,
+        commands: &mut Commands,
+        sweep: &SweepContext,
+        geom: &BoltGeometry,
+        bolt_position: &mut Position2D,
+        bolt_velocity: &mut Velocity2D,
+        last_impact: &mut Option<Mut<'_, LastImpact>>,
+    ) -> bool {
+        // Overlap resolution: breaker may have moved into the bolt (e.g., bump pop).
+        if is_inside_aabb(geom.bolt_pos, self.pos, geom.expanded_half) {
+            bolt_position.0.y = geom.above_y;
+            return self.reflect_overlap(
+                commands,
+                geom.entity,
+                geom.bolt_pos,
+                bolt_velocity,
+                geom.base_speed,
+                last_impact,
+            );
+        }
+
+        let speed = bolt_velocity.0.length();
+        if speed < f32::EPSILON {
+            return false;
+        }
+        let (direction, max_dist) = (bolt_velocity.0 / speed, speed * sweep.dt);
+        let Some((normal, safe_pos)) = ccd_sweep_breaker(
+            sweep.quadtree,
+            geom.bolt_pos,
+            direction,
+            max_dist,
+            geom.r,
+            self.pos,
+            geom.expanded_half,
+        ) else {
+            return false;
+        };
+        // Only reflect downward-moving bolts; upward bolts pass through.
+        if bolt_velocity.0.y > 0.0 {
+            return false;
+        }
+
+        let hit = CcdHit {
+            normal,
+            safe_pos,
+            above_y: geom.above_y,
+            base_speed: geom.base_speed,
+        };
+        self.reflect_ccd_hit(
+            commands,
+            geom.entity,
+            &mut bolt_position.0,
+            bolt_velocity,
+            hit,
+            last_impact,
+        );
+        true
+    }
+
+    /// Reflects a bolt off this breaker surface based on a CCD hit normal and
+    /// repositions it at the safe position.
+    fn reflect_ccd_hit(
+        &self,
+        commands: &mut Commands,
+        bolt_entity: Entity,
+        bolt_position: &mut Vec2,
+        bolt_velocity: &mut Velocity2D,
+        hit: CcdHit,
+        last_impact: &mut Option<Mut<'_, LastImpact>>,
+    ) {
+        if hit.normal.x.abs() > hit.normal.y.abs() {
+            bolt_velocity.0.x = -bolt_velocity.0.x;
+            *bolt_position = hit.safe_pos;
+            let side = ccd_normal_to_impact_side(hit.normal);
+            stamp_last_impact(commands, bolt_entity, last_impact, hit.safe_pos, side);
+        } else {
+            self.reflect_top_hit(hit.safe_pos.x, bolt_velocity, hit.base_speed);
+            bolt_position.x = hit.safe_pos.x;
+            bolt_position.y = hit.above_y;
+            let impact_pos = Vec2::new(hit.safe_pos.x, self.pos.y + self.half_h);
+            stamp_last_impact(
+                commands,
+                bolt_entity,
+                last_impact,
+                impact_pos,
+                ImpactSide::Top,
+            );
         }
     }
 }
@@ -111,6 +259,24 @@ fn ccd_sweep_breaker(
     )
 }
 
+/// Inserts or updates `LastImpact` on a bolt entity.
+fn stamp_last_impact(
+    commands: &mut Commands,
+    bolt_entity: Entity,
+    last_impact: &mut Option<Mut<'_, LastImpact>>,
+    position: Vec2,
+    side: ImpactSide,
+) {
+    if let Some(li) = last_impact {
+        li.position = position;
+        li.side = side;
+    } else {
+        commands
+            .entity(bolt_entity)
+            .insert(LastImpact { position, side });
+    }
+}
+
 /// Detects bolt-breaker collisions via swept CCD and overwrites bolt direction.
 ///
 /// Includes overlap resolution: if the breaker has moved into the bolt (e.g.,
@@ -118,6 +284,7 @@ fn ccd_sweep_breaker(
 /// downward. CCD alone cannot detect this case since it only sweeps bolt
 /// movement.
 pub(crate) fn bolt_breaker_collision(
+    mut commands: Commands,
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
@@ -151,7 +318,10 @@ pub(crate) fn bolt_breaker_collision(
         min_angle_from_horizontal: min_angle.0,
         entity: breaker_entity,
     };
-    let dt = time.delta_secs();
+    let sweep = SweepContext {
+        quadtree: &quadtree,
+        dt: time.delta_secs(),
+    };
 
     for (
         bolt_entity,
@@ -164,71 +334,34 @@ pub(crate) fn bolt_breaker_collision(
         _damage_mult,
         bolt_entity_scale,
         _,
+        mut last_impact,
     ) in &mut bolt_query
     {
-        let bolt_pos = bolt_position.0;
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
         let r = bolt_radius.0 * bolt_scale;
-        let expanded_half = Vec2::new(surface.half_w + r, surface.half_h + r);
-        let above_y = surface.pos.y + surface.half_h + r;
-
-        // Overlap resolution: breaker may have moved into the bolt (e.g., bump pop).
-        // CCD can't detect this since it only sweeps bolt movement.
-        if is_inside_aabb(bolt_pos, surface.pos, expanded_half) {
-            bolt_position.0.y = above_y;
-            if bolt_velocity.0.y <= 0.0 {
-                surface.reflect_top_hit(bolt_pos.x, &mut bolt_velocity, base_speed.0);
-                surface.emit_bump(
-                    &mut writer,
-                    bolt_entity,
-                    &mut piercing_remaining,
-                    effective_piercing,
-                );
-            }
-            continue;
-        }
-
-        let speed = bolt_velocity.0.length();
-        if speed < f32::EPSILON {
-            continue;
-        }
-
-        let (direction, max_dist) = (bolt_velocity.0 / speed, speed * dt);
-
-        let Some((normal, safe_pos)) = ccd_sweep_breaker(
-            &quadtree,
-            bolt_pos,
-            direction,
-            max_dist,
+        let geom = BoltGeometry {
+            entity: bolt_entity,
+            bolt_pos: bolt_position.0,
             r,
-            surface.pos,
-            expanded_half,
-        ) else {
-            continue;
+            expanded_half: Vec2::new(surface.half_w + r, surface.half_h + r),
+            above_y: surface.pos.y + surface.half_h + r,
+            base_speed: base_speed.0,
         };
 
-        // Only reflect downward-moving bolts; upward bolts pass through on all faces
-        if bolt_velocity.0.y > 0.0 {
-            continue;
+        if surface.process_bolt(
+            &mut commands,
+            &sweep,
+            &geom,
+            &mut bolt_position,
+            &mut bolt_velocity,
+            &mut last_impact,
+        ) {
+            surface.emit_bump(
+                &mut writer,
+                bolt_entity,
+                &mut piercing_remaining,
+                effective_piercing,
+            );
         }
-
-        // Determine if this is a side hit or top hit based on the normal
-        if normal.x.abs() > normal.y.abs() {
-            // Side hit — reflect X only, preserve Y velocity
-            bolt_velocity.0.x = -bolt_velocity.0.x;
-            bolt_position.0 = safe_pos;
-        } else {
-            // Top/bottom hit — move to impact point, reflect, push above breaker
-            surface.reflect_top_hit(safe_pos.x, &mut bolt_velocity, base_speed.0);
-            bolt_position.0.x = safe_pos.x;
-            bolt_position.0.y = above_y;
-        }
-
-        surface.emit_bump(
-            &mut writer,
-            bolt_entity,
-            &mut piercing_remaining,
-            effective_piercing,
-        );
     }
 }

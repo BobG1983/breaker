@@ -8,7 +8,7 @@ use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 use crate::{
     bolt::components::{
         BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, ExtraBolt,
-        PiercingRemaining, SpawnedByEvolution,
+        LastImpact, PiercingRemaining, SpawnedByEvolution,
     },
     effect::{EffectiveDamageMultiplier, EffectivePiercing},
     shared::EntityScale,
@@ -26,6 +26,7 @@ pub(crate) type CollisionQueryBolt = (
     Option<&'static EffectiveDamageMultiplier>,
     Option<&'static EntityScale>,
     Option<&'static SpawnedByEvolution>,
+    Option<&'static mut LastImpact>,
 );
 
 /// Bolt entity data needed by the reset system at node start.

@@ -13,7 +13,9 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
-        components::Bolt, filters::ActiveFilter, messages::BoltImpactWall,
+        components::{Bolt, LastImpact, wall_normal_to_impact_side},
+        filters::ActiveFilter,
+        messages::BoltImpactWall,
         queries::CollisionQueryBolt,
     },
     shared::WALL_LAYER,
@@ -31,6 +33,7 @@ type WallLookup<'w, 's> =
 /// its velocity is reflected off the nearest wall face, and `PiercingRemaining`
 /// is reset to `EffectivePiercing.0`.
 pub(crate) fn bolt_wall_collision(
+    mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
     wall_lookup: WallLookup,
@@ -49,6 +52,7 @@ pub(crate) fn bolt_wall_collision(
         _,
         bolt_entity_scale,
         _,
+        mut last_impact,
     ) in &mut bolt_query
     {
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
@@ -117,6 +121,19 @@ pub(crate) fn bolt_wall_collision(
             // Push bolt to the nearest face and reflect velocity
             bolt_position.0 = push_pos;
             bolt_vel.0 = reflect(velocity, normal);
+
+            // Stamp LastImpact at the push-out position with the side
+            // derived from the wall push-out normal (inverted mapping).
+            let side = wall_normal_to_impact_side(normal);
+            if let Some(li) = last_impact.as_mut() {
+                li.position = push_pos;
+                li.side = side;
+            } else {
+                commands.entity(bolt_entity).insert(LastImpact {
+                    position: push_pos,
+                    side,
+                });
+            }
 
             // Reset PiercingRemaining to EffectivePiercing.0
             if let (Some(pr), Some(ep)) = (&mut piercing_remaining, effective_piercing) {

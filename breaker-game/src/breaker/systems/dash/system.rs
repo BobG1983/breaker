@@ -4,17 +4,23 @@ use bevy::{
     math::curve::{Curve, easing::EaseFunction},
     prelude::*,
 };
+use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     breaker::{
         components::{
             BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
-            BreakerStateTimer, BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier,
-            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration,
+            DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
+            SettleTiltEase,
         },
         queries::DashQuery,
     },
+    effect::{
+        EffectiveSizeMultiplier, EffectiveSpeedMultiplier, effects::flash_step::FlashStepActive,
+    },
     input::resources::{GameAction, InputActions},
+    shared::PlayfieldConfig,
 };
 
 /// Read-only dash configuration components, bundled to reduce argument count.
@@ -32,6 +38,19 @@ struct DashParams<'a> {
     settle_tilt_ease: &'a SettleTiltEase,
 }
 
+/// Idle/Settling context — input, timing, and optional `FlashStep` teleport data.
+/// Bundled to keep `handle_idle_or_settling` under the argument-count lint threshold.
+struct SettleContext<'a> {
+    actions: &'a InputActions,
+    dt: f32,
+    flash_step: Option<&'a FlashStepActive>,
+    position: Option<&'a mut Position2D>,
+    breaker_width: Option<&'a BreakerWidth>,
+    playfield: &'a PlayfieldConfig,
+    speed_mult: Option<&'a EffectiveSpeedMultiplier>,
+    size_mult: Option<&'a EffectiveSizeMultiplier>,
+}
+
 /// Handles dash input and the Dashing → Braking → Settling → Idle state machine.
 ///
 /// - Dash input (`DashLeft`/`DashRight` from input domain): triggers dash from Idle or Settling
@@ -41,26 +60,30 @@ struct DashParams<'a> {
 pub fn update_breaker_state(
     actions: Res<InputActions>,
     time: Res<Time<Fixed>>,
+    playfield: Res<PlayfieldConfig>,
     mut query: Query<DashQuery, With<Breaker>>,
 ) {
     let dt = time.delta_secs();
 
     for (
-        mut state,
-        mut velocity,
-        mut tilt,
-        mut timer,
-        max_speed,
-        decel,
-        easing,
-        dash_speed,
-        dash_duration,
-        dash_tilt,
-        dash_tilt_ease,
-        brake_tilt,
-        brake_decel,
-        settle_duration,
-        settle_tilt_ease,
+        (
+            mut state,
+            mut velocity,
+            mut tilt,
+            mut timer,
+            max_speed,
+            decel,
+            easing,
+            dash_speed,
+            dash_duration,
+            dash_tilt,
+            dash_tilt_ease,
+            brake_tilt,
+            brake_decel,
+            settle_duration,
+            settle_tilt_ease,
+        ),
+        (flash_step, mut position, breaker_width, speed_mult, size_mult),
     ) in &mut query
     {
         let params = DashParams {
@@ -77,16 +100,26 @@ pub fn update_breaker_state(
             settle_tilt_ease,
         };
 
+        let ctx = SettleContext {
+            actions: &actions,
+            dt,
+            flash_step,
+            position: position.as_deref_mut(),
+            breaker_width,
+            playfield: &playfield,
+            speed_mult,
+            size_mult,
+        };
+
         match *state {
             BreakerState::Idle | BreakerState::Settling => {
                 handle_idle_or_settling(
-                    &actions,
-                    dt,
                     &mut state,
                     &mut velocity,
                     &mut tilt,
                     &mut timer,
                     &params,
+                    ctx,
                 );
             }
             BreakerState::Dashing => {
@@ -107,18 +140,23 @@ pub fn update_breaker_state(
 }
 
 /// In Idle or Settling: check for dash actions from the input domain.
+///
+/// During Settling with `FlashStepActive`, a reversal dash (new direction sign
+/// equals `tilt.ease_start` sign) triggers a teleport instead of a normal dash.
 fn handle_idle_or_settling(
-    actions: &InputActions,
-    dt: f32,
     state: &mut BreakerState,
     velocity: &mut BreakerVelocity,
     tilt: &mut BreakerTilt,
     timer: &mut BreakerStateTimer,
     p: &DashParams,
+    mut ctx: SettleContext,
 ) {
-    if *state == BreakerState::Settling {
+    let is_settling = *state == BreakerState::Settling;
+    let ease_start_before_tick = tilt.ease_start;
+
+    if is_settling {
         // Tick settle timer, return tilt toward zero with easing
-        timer.remaining -= dt;
+        timer.remaining -= ctx.dt;
         let settle_progress = if p.settle_duration.0 > f32::EPSILON {
             1.0 - (timer.remaining / p.settle_duration.0).clamp(0.0, 1.0)
         } else {
@@ -133,16 +171,51 @@ fn handle_idle_or_settling(
         }
     }
 
-    // Dash left
-    if actions.active(GameAction::DashLeft) {
-        start_dash(-1.0, state, velocity, tilt, timer, p);
+    // Determine dash direction from input
+    let direction = if ctx.actions.active(GameAction::DashLeft) {
+        Some(-1.0_f32)
+    } else if ctx.actions.active(GameAction::DashRight) {
+        Some(1.0_f32)
+    } else {
+        None
+    };
+
+    let Some(direction) = direction else {
+        return;
+    };
+
+    // Check for FlashStep teleport: only during Settling with FlashStepActive,
+    // and only when the dash direction is a reversal (direction sign == ease_start sign,
+    // with ease_start != 0.0). Using product > 0 avoids exact float comparison.
+    if is_settling
+        && ctx.flash_step.is_some()
+        && direction * ease_start_before_tick > 0.0
+        && let Some(pos) = ctx.position.as_deref_mut()
+    {
+        let effective_max_speed = p.max_speed.0 * ctx.speed_mult.map_or(1.0, |e| e.0);
+        let teleport_distance =
+            direction * effective_max_speed * p.dash_speed.0 * p.dash_duration.0;
+        pos.0.x += teleport_distance;
+
+        // Clamp to playfield bounds accounting for effective half-width
+        let effective_half_width = ctx.breaker_width.map_or(0.0, BreakerWidth::half_width)
+            * ctx.size_mult.map_or(1.0, |e| e.0);
+        let min_x = ctx.playfield.left() + effective_half_width;
+        let max_x = ctx.playfield.right() - effective_half_width;
+        pos.0.x = pos.0.x.clamp(min_x, max_x);
+
+        // Reset to clean Idle state
+        velocity.x = 0.0;
+        tilt.angle = 0.0;
+        tilt.ease_start = 0.0;
+        tilt.ease_target = 0.0;
+        timer.remaining = 0.0;
+        *state = BreakerState::Idle;
         return;
     }
 
-    // Dash right
-    if actions.active(GameAction::DashRight) {
-        start_dash(1.0, state, velocity, tilt, timer, p);
-    }
+    // Normal dash
+    start_dash(direction, state, velocity, tilt, timer, p);
 }
 
 /// Enters the Dashing state in the given direction.

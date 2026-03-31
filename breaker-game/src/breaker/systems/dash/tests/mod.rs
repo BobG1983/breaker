@@ -11,7 +11,10 @@ use crate::{
         resources::BreakerConfig,
     },
     input::resources::{GameAction, InputActions},
+    shared::PlayfieldConfig,
 };
+
+mod flash_step;
 
 fn breaker_param_bundle(
     config: &BreakerConfig,
@@ -69,6 +72,7 @@ fn test_app() -> App {
     app.add_plugins(MinimalPlugins)
         .init_resource::<BreakerConfig>()
         .init_resource::<InputActions>()
+        .init_resource::<PlayfieldConfig>()
         .add_systems(FixedUpdate, update_breaker_state);
     app
 }
@@ -353,7 +357,7 @@ fn brake_tilt_eases_not_snaps() {
         .unwrap()
         .remaining = 0.0;
 
-    // Tick once: transitions Dashing → Braking (tilt unchanged)
+    // Tick once: transitions Dashing -> Braking (tilt unchanged)
     tick(&mut app);
     assert_eq!(
         *app.world().get::<BreakerState>(entity).unwrap(),
@@ -422,7 +426,7 @@ fn settle_timer_initialized_on_braking_end() {
     assert_eq!(*state, BreakerState::Idle);
 }
 
-// ── eased_decel unit tests ────────────────────────────────────────
+// -- eased_decel unit tests ----------------------------------------
 
 #[test]
 fn eased_decel_stronger_at_high_speed() {

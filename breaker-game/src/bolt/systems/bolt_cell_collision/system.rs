@@ -31,7 +31,10 @@ pub(crate) const MAX_BOUNCES: u32 = 4;
 
 use crate::{
     bolt::{
-        BASE_BOLT_DAMAGE, components::Bolt, filters::ActiveFilter, messages::BoltImpactCell,
+        BASE_BOLT_DAMAGE,
+        components::{Bolt, LastImpact, ccd_normal_to_impact_side},
+        filters::ActiveFilter,
+        messages::BoltImpactCell,
         queries::CollisionQueryBolt,
     },
     cells::{
@@ -85,6 +88,7 @@ fn find_first_non_pierced<'a>(
 /// continues with the remaining movement distance. Sends [`BoltImpactCell`]
 /// and [`DamageCell`] messages for each cell hit.
 pub(crate) fn bolt_cell_collision(
+    mut commands: Commands,
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
     mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
@@ -106,6 +110,7 @@ pub(crate) fn bolt_cell_collision(
         damage_mult,
         bolt_entity_scale,
         spawned_by_evo,
+        mut last_impact,
     ) in &mut bolt_query
     {
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
@@ -171,6 +176,7 @@ pub(crate) fn bolt_cell_collision(
 
             if can_pierce && would_destroy {
                 // PIERCE: do NOT reflect; decrement remaining pierces
+                // Do NOT stamp LastImpact on pierce-through.
                 if let Some(ref mut pr) = piercing_remaining {
                     pr.0 = pr.0.saturating_sub(1);
                 }
@@ -179,6 +185,17 @@ pub(crate) fn bolt_cell_collision(
             } else {
                 // NORMAL: reflect
                 velocity = reflect(velocity, hit.normal);
+                // Stamp LastImpact on reflect only
+                let side = ccd_normal_to_impact_side(hit.normal);
+                if let Some(li) = last_impact.as_mut() {
+                    li.position = hit.position;
+                    li.side = side;
+                } else {
+                    commands.entity(bolt_entity).insert(LastImpact {
+                        position: hit.position,
+                        side,
+                    });
+                }
             }
             hit_writer.write(BoltImpactCell {
                 cell: hit.entity,

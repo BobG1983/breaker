@@ -106,7 +106,7 @@ Each evolution has **completely unique, bespoke VFX**. Evolutions are the ultima
 | Split Decision | Fission effect: cell glow splits along axis, halves condense into bolt orbs (~0.15s). Energy filaments connect during split. Spawned bolts inherit parent visual modifiers. Prismatic birth trails. |
 | ArcWelder | Crackling electric tether beams connecting ALL active bolts in sequence. Electric corona on all connected bolts. Chain forms visible electric web when many bolts active. |
 | FlashStep | Breaker disintegrates into energy streak on dash-reversal during settling. Departure afterimage fades ~0.3s. Arrival radial burst + distortion. Light-streak connects departure/arrival 1-2 frames. |
-| Mirror Protocol | Prismatic flash at breaker on perfect bump. Mirrored bolts emerge at spread angles with prismatic birth trails. |
+| Mirror Protocol | Prismatic flash at bolt's impact point. Mirrored bolt emerges from flash with prismatic birth trail. Flash orientation (horizontal/vertical) reflects the mirror axis. |
 | Anchor | Subtle ground-anchor glow beneath breaker while planted. Concentrated impact flash on planted bump. |
 | Resonance Cascade | Persistent pulse aura around bolt — visible expanding rings at fixed interval. Larger bolt = larger rings. |
 

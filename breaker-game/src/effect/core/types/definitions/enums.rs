@@ -308,6 +308,8 @@ pub enum EffectKind {
     },
     /// Invisible bottom wall that bounces bolt once.
     SecondWind,
+    /// Breaker dash teleport on reverse-direction input.
+    FlashStep,
     /// Temporary phantom bolt with infinite piercing.
     SpawnPhantom {
         /// Lifespan in seconds.
@@ -356,6 +358,36 @@ pub enum EffectKind {
     TetherBeam {
         /// Damage multiplier for beam contact (1.x format).
         damage_mult: f32,
+    },
+    /// Spawn a mirrored bolt reflected across the last impact surface.
+    MirrorProtocol {
+        /// If true, spawned bolt inherits parent's `BoundEffects`.
+        #[serde(default)]
+        inherit: bool,
+    },
+    /// Breaker plants after stationary delay, modifying bump behavior.
+    Anchor {
+        /// Bump force multiplier when planted.
+        bump_force_multiplier: f32,
+        /// Perfect window multiplier when planted.
+        perfect_window_multiplier: f32,
+        /// Seconds breaker must remain stationary before planting.
+        plant_delay: f32,
+    },
+    /// Charge-and-release: count bumps, then spawn bolts + shockwave.
+    CircuitBreaker {
+        /// Number of bumps required per cycle.
+        bumps_required: u32,
+        /// Number of extra bolts to spawn on reward.
+        #[serde(default = "one")]
+        spawn_count: u32,
+        /// Whether spawned bolts inherit parent's `BoundEffects`.
+        #[serde(default)]
+        inherit: bool,
+        /// Shockwave maximum radius.
+        shockwave_range: f32,
+        /// Shockwave expansion speed.
+        shockwave_speed: f32,
     },
 }
 

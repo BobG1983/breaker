@@ -2,9 +2,9 @@
     name: "Mirror Protocol",
     description: "Perfect bumps spawn mirrored piercing bolts that spread in controlled directions",
     effects: [
-        On(target: Breaker, then: [
+        On(target: Bolt, then: [
             When(trigger: PerfectBump, then: [
-                Do(MirrorProtocol(count: 2, inherit_from_primary: true)),
+                Do(MirrorProtocol(inherit: true)),
             ]),
         ]),
     ],

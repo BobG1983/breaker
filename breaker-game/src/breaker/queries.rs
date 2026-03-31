@@ -11,7 +11,10 @@ use crate::{
         DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal,
         SettleDuration, SettleTiltEase,
     },
-    effect::{EffectiveSizeMultiplier, EffectiveSpeedMultiplier},
+    effect::{
+        AnchorActive, AnchorPlanted, EffectiveSizeMultiplier, EffectiveSpeedMultiplier,
+        effects::flash_step::FlashStepActive,
+    },
     shared::EntityScale,
 };
 
@@ -42,22 +45,35 @@ pub(crate) type MovementQuery = (
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
+///
+/// Split into nested tuples to stay within Bevy's `QueryData` tuple element limit:
+/// - Group 1: core dash state (mutable state + read-only config)
+/// - Group 2: flash-step optional fields
 pub(crate) type DashQuery = (
-    &'static mut BreakerState,
-    &'static mut BreakerVelocity,
-    &'static mut BreakerTilt,
-    &'static mut BreakerStateTimer,
-    &'static BreakerMaxSpeed,
-    &'static BreakerDeceleration,
-    &'static DecelEasing,
-    &'static DashSpeedMultiplier,
-    &'static DashDuration,
-    &'static DashTilt,
-    &'static DashTiltEase,
-    &'static BrakeTilt,
-    &'static BrakeDecel,
-    &'static SettleDuration,
-    &'static SettleTiltEase,
+    (
+        &'static mut BreakerState,
+        &'static mut BreakerVelocity,
+        &'static mut BreakerTilt,
+        &'static mut BreakerStateTimer,
+        &'static BreakerMaxSpeed,
+        &'static BreakerDeceleration,
+        &'static DecelEasing,
+        &'static DashSpeedMultiplier,
+        &'static DashDuration,
+        &'static DashTilt,
+        &'static DashTiltEase,
+        &'static BrakeTilt,
+        &'static BrakeDecel,
+        &'static SettleDuration,
+        &'static SettleTiltEase,
+    ),
+    (
+        Option<&'static FlashStepActive>,
+        Option<&'static mut Position2D>,
+        Option<&'static BreakerWidth>,
+        Option<&'static EffectiveSpeedMultiplier>,
+        Option<&'static EffectiveSizeMultiplier>,
+    ),
 );
 
 /// Breaker reset data — mutable state cleared at node start.
@@ -80,6 +96,8 @@ pub(crate) type BumpTimingQuery = (
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
+    Option<&'static AnchorPlanted>,
+    Option<&'static AnchorActive>,
 );
 
 /// Bump grading data — state, timing windows, and cooldowns for `grade_bump`.
@@ -89,6 +107,8 @@ pub(crate) type BumpGradingQuery = (
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
+    Option<&'static AnchorPlanted>,
+    Option<&'static AnchorActive>,
 );
 
 /// Breaker data needed by the width boost visual system.

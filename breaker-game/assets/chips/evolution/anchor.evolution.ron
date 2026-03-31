@@ -6,6 +6,7 @@
             Do(Anchor(
                 bump_force_multiplier: 2.0,
                 perfect_window_multiplier: 1.5,
+                plant_delay: 0.3,
             )),
         ]),
     ],

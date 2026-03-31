@@ -176,6 +176,13 @@ impl EffectKind {
             Self::Explode { .. } => {
                 super::super::super::super::effects::explode::reverse(entity, source_chip, world);
             }
+            _ => self.reverse_breaker_effects(entity, source_chip, world),
+        }
+    }
+
+    /// Reverse breaker-targeted utility effects -- extracted from [`reverse_utility`] for line count.
+    fn reverse_breaker_effects(&self, entity: Entity, source_chip: &str, world: &mut World) {
+        match self {
             Self::QuickStop { multiplier } => {
                 super::super::super::super::effects::quick_stop::reverse(
                     entity,
@@ -188,6 +195,42 @@ impl EffectKind {
                 super::super::super::super::effects::tether_beam::reverse(
                     entity,
                     *damage_mult,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::MirrorProtocol { inherit } => {
+                super::super::super::super::effects::mirror_protocol::reverse(
+                    entity,
+                    *inherit,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::Anchor {
+                bump_force_multiplier,
+                perfect_window_multiplier,
+                plant_delay,
+            } => {
+                super::super::super::super::effects::anchor::reverse(
+                    entity,
+                    *bump_force_multiplier,
+                    *perfect_window_multiplier,
+                    *plant_delay,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::FlashStep => {
+                super::super::super::super::effects::flash_step::reverse(
+                    entity,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::CircuitBreaker { .. } => {
+                super::super::super::super::effects::circuit_breaker::reverse(
+                    entity,
                     source_chip,
                     world,
                 );

@@ -17,6 +17,6 @@ Each evolution requires bespoke VFX that looks fundamentally different from base
 | Split Decision | NONE | High | COVERED | Fission effect: cell splits, halves condense into bolt orbs. Energy filaments. Prismatic birth trails. |
 | ArcWelder | NONE | High | COVERED | Crackling electric tether beams connecting ALL bolts in sequence. Electric corona on all connected bolts. Web aesthetic. |
 | FlashStep | NONE | High | COVERED | Breaker disintegrates on dash-reversal during settling. Departure afterimage. Arrival burst + distortion. Light-streak. |
-| Mirror Protocol | NONE | High | COVERED | Prismatic flash on perfect bump. Mirrored bolts emerge at spread angles with prismatic birth trails. |
-| Anchor | NONE | Medium | COVERED | Ground-anchor glow while planted. Concentrated impact flash on planted bump. |
+| Mirror Protocol | NONE | High | COVERED | Prismatic flash at bolt's impact point. Mirrored bolt emerges from flash with prismatic birth trail. Flash orientation reflects mirror axis (horizontal or vertical). |
+| Anchor | NONE | Medium | COVERED | Charging glow while timer counts down. Ground-anchor lock-in flash when planted. Concentrated impact flash on planted bump. Glow dissipates on movement. |
 | Resonance Cascade | NONE | High | COVERED | Persistent pulse aura — visible expanding rings at fixed interval. Larger bolt = larger rings. |

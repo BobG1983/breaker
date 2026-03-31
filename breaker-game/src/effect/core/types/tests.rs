@@ -300,3 +300,112 @@ fn effect_kind_reverse_with_non_empty_source_chip_same_behavior_for_non_damage_e
         active.0
     );
 }
+
+// -- MirrorProtocol serde round-trip --
+
+#[test]
+fn mirror_protocol_serde_round_trip_inherit_true() {
+    let ron_str = "MirrorProtocol(inherit: true)";
+    let effect: EffectKind =
+        ron::from_str(ron_str).expect("should deserialize MirrorProtocol(inherit: true)");
+
+    assert_eq!(
+        effect,
+        EffectKind::MirrorProtocol { inherit: true },
+        "deserialized MirrorProtocol should match expected variant"
+    );
+}
+
+#[test]
+fn mirror_protocol_serde_round_trip_inherit_false() {
+    let ron_str = "MirrorProtocol(inherit: false)";
+    let effect: EffectKind =
+        ron::from_str(ron_str).expect("should deserialize MirrorProtocol(inherit: false)");
+
+    assert_eq!(
+        effect,
+        EffectKind::MirrorProtocol { inherit: false },
+        "deserialized MirrorProtocol edge case should match"
+    );
+}
+
+// -- MirrorProtocol EffectKind dispatch --
+
+#[test]
+fn effect_kind_fire_dispatches_mirror_protocol_spawns_mirrored_bolts() {
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+
+    use crate::{
+        bolt::{
+            components::{Bolt, ExtraBolt, ImpactSide, LastImpact},
+            resources::BoltConfig,
+        },
+        shared::rng::GameRng,
+    };
+
+    let mut world = World::new();
+    world.insert_resource(BoltConfig::default());
+    world.insert_resource(GameRng::default());
+
+    let bolt_entity = world
+        .spawn((
+            Bolt,
+            Position2D(Vec2::new(60.0, 250.0)),
+            Velocity2D(Vec2::new(100.0, 400.0)),
+            LastImpact {
+                position: Vec2::new(50.0, 200.0),
+                side: ImpactSide::Top,
+            },
+        ))
+        .id();
+
+    EffectKind::MirrorProtocol { inherit: true }.fire(bolt_entity, "mirror_protocol", &mut world);
+
+    let mut query =
+        world.query_filtered::<(&Position2D, &Velocity2D), (With<Bolt>, With<ExtraBolt>)>();
+    let results: Vec<_> = query.iter(&world).collect();
+    assert_eq!(
+        results.len(),
+        1,
+        "EffectKind::fire dispatch should spawn 1 mirrored bolt"
+    );
+
+    let (pos, vel) = results[0];
+    assert_eq!(
+        pos.0,
+        Vec2::new(40.0, 250.0),
+        "mirrored bolt position via dispatch"
+    );
+    assert_eq!(
+        vel.0,
+        Vec2::new(-100.0, 400.0),
+        "mirrored bolt velocity via dispatch"
+    );
+}
+
+#[test]
+fn effect_kind_reverse_dispatches_mirror_protocol_noop() {
+    use crate::{
+        bolt::{components::Bolt, resources::BoltConfig},
+        shared::rng::GameRng,
+    };
+
+    let mut world = World::new();
+    world.insert_resource(BoltConfig::default());
+    world.insert_resource(GameRng::default());
+
+    let bolt_entity = world.spawn(Bolt).id();
+
+    // Should not panic -- noop behavior
+    EffectKind::MirrorProtocol { inherit: true }.reverse(
+        bolt_entity,
+        "mirror_protocol",
+        &mut world,
+    );
+
+    // Verify no entities were despawned (bolt_entity still exists)
+    assert!(
+        world.get_entity(bolt_entity).is_ok(),
+        "reverse should not despawn any entities"
+    );
+}

@@ -118,7 +118,7 @@ Destroyed cells trigger recursive shockwaves — each shockwave kill spawns anot
 ### Mirror Protocol
 **Ingredients**: Reflex x1 + Piercing Shot x2
 
-Perfect bumps spawn 2 mirrored bolts that inherit the PRIMARY BOLT's effects (not the breaker's). Spread controlled by bump angle.
+Bolt impacts spawn a mirrored bolt at the geometric reflection point. Mirror axis depends on which side was hit (top/bottom flips X, left/right flips Y). Inherits the source bolt's effects.
 
 ### Anchor
 **Ingredients**: Quick Stop x2 + Bump Force x2
