@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [PulseRingAccumulation],
-    expected_violations: Some([PulseRingAccumulation]),
+    disallowed_failures: [PulseRingAccumulation],
+    allowed_failures: Some([PulseRingAccumulation]),
     debug_setup: (
         disable_physics: true,
     ),

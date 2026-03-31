@@ -4,15 +4,14 @@ use bevy::{
     math::curve::{Curve, easing::EaseFunction},
     prelude::*,
 };
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D};
 
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
-            BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration,
-            DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
-            SettleTiltEase,
+            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
+            BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration, DashSpeedMultiplier,
+            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
         },
         queries::DashQuery,
     },
@@ -25,7 +24,7 @@ use crate::{
 
 /// Read-only dash configuration components, bundled to reduce argument count.
 struct DashParams<'a> {
-    max_speed: &'a BreakerMaxSpeed,
+    max_speed: &'a MaxSpeed,
     decel: &'a BreakerDeceleration,
     easing: &'a DecelEasing,
     dash_speed: &'a DashSpeedMultiplier,

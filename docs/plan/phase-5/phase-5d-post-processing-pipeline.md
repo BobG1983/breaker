@@ -38,6 +38,8 @@ Build these FullscreenMaterial implementations:
 | Vignette | `vignette.wgsl` | After Tonemapping |
 | CRT overlay | `crt.wgsl` | Last |
 
+**Step 1 of 5d: FullscreenMaterial verification spike.** Before building all 7 effects, verify that multiple `FullscreenMaterial` types chain correctly on one camera entity. Register 2 FullscreenMaterials (one pre-bloom via `node_edges()`, one post-tonemapping), confirm they render in the correct order and that `post_process_write()` ping-pong works. If this fails, pivot to custom `ViewNode` implementations. See `docs/architecture/rendering/research/custom-render-node-pre-bloom.md` for the ViewNode fallback pattern.
+
 Key details:
 - Screen flash must use `ViewTarget::TEXTURE_FORMAT_HDR` for the pipeline color target
 - Distortion buffer: 16-source fixed array uniform (see `docs/architecture/rendering/screen_effects.md`)

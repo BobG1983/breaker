@@ -3,7 +3,7 @@
     layout: "quick_boss",
     input: Perfect(AlwaysPerfect),
     max_frames: 3000,
-    invariants: [ChipOfferExpected, BoltInBounds, NoNaN, ValidStateTransitions],
+    disallowed_failures: [ChipOfferExpected, BoltInBounds, NoNaN, ValidStateTransitions],
     allow_early_end: true,
     initial_chips: Some([
         "Basic Piercing Shot",

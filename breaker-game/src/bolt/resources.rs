@@ -33,6 +33,12 @@ pub struct BoltConfig {
     /// On bolt loss, the respawn direction is randomized within
     /// `[-respawn_angle_spread, +respawn_angle_spread]` from straight up.
     pub respawn_angle_spread: f32,
+    /// Minimum angle from horizontal in degrees. Prevents the bolt from
+    /// traveling too close to horizontal.
+    pub min_angle_horizontal: f32,
+    /// Minimum angle from vertical in degrees. Prevents the bolt from
+    /// traveling too close to vertical.
+    pub min_angle_vertical: f32,
     /// RGB values for the bolt HDR color.
     pub color_rgb: [f32; 3],
 }
@@ -48,6 +54,8 @@ impl Default for BoltConfig {
             initial_angle: 0.26,
             respawn_offset_y: 30.0,
             respawn_angle_spread: 0.524, // ~30 degrees
+            min_angle_horizontal: 5.0,   // degrees
+            min_angle_vertical: 5.0,     // degrees
             color_rgb: [6.0, 5.0, 0.5],
         }
     }

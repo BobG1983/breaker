@@ -73,8 +73,6 @@ pub struct BreakerConfig {
     pub decel_ease_strength: f32,
     /// Maximum reflection angle from vertical in degrees.
     pub max_reflection_angle: f32,
-    /// Minimum angle from horizontal in degrees.
-    pub min_angle_from_horizontal: f32,
 }
 
 impl Default for BreakerConfig {
@@ -110,7 +108,6 @@ impl Default for BreakerConfig {
             decel_ease: EaseFunction::QuadraticIn,
             decel_ease_strength: 1.0,
             max_reflection_angle: 75.0,
-            min_angle_from_horizontal: 10.0,
         }
     }
 }
@@ -161,10 +158,6 @@ mod tests {
         assert!(
             result.max_reflection_angle > 0.0,
             "RON should include max_reflection_angle"
-        );
-        assert!(
-            result.min_angle_from_horizontal > 0.0,
-            "RON should include min_angle_from_horizontal"
         );
     }
 

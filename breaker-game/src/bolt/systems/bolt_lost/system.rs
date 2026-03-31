@@ -5,13 +5,13 @@ use bevy::{
     prelude::*,
 };
 use rand::Rng;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
+use rantzsoft_spatial2d::components::PreviousPosition;
 
 use crate::{
     bolt::{
         filters::ActiveFilter,
         messages::{BoltLost, RequestBoltDestroyed},
-        queries::LostQuery,
+        queries::{LostBoltData, apply_velocity_formula},
     },
     breaker::filters::CollisionFilterBreaker,
     effect::effects::shield::ShieldActive,
@@ -32,7 +32,6 @@ pub(crate) struct BoltLostWriters<'w> {
 #[derive(Clone, Copy)]
 pub(crate) struct LostBoltEntry {
     entity: Entity,
-    base_speed: f32,
     respawn_offset: f32,
     angle_spread: f32,
     is_extra: bool,
@@ -50,9 +49,13 @@ pub(crate) fn bolt_lost(
     mut commands: Commands,
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
-    bolt_query: Query<LostQuery, ActiveFilter>,
+    mut bolt_query: Query<LostBoltData, ActiveFilter>,
     mut breaker_query: Query<
-        (Entity, &Position2D, Option<&mut ShieldActive>),
+        (
+            Entity,
+            &rantzsoft_spatial2d::components::Position2D,
+            Option<&mut ShieldActive>,
+        ),
         CollisionFilterBreaker,
     >,
     mut writers: BoltLostWriters,
@@ -69,34 +72,19 @@ pub(crate) fn bolt_lost(
     lost_bolts.extend(
         bolt_query
             .iter()
-            .filter(|(_, pos, _, _, radius, _, _, _, entity_scale)| {
-                let r = radius.0 * entity_scale.map_or(1.0, |s| s.0);
-                pos.0.y < playfield.bottom() - r
+            .filter(|bolt| {
+                let r = bolt.radius.0 * bolt.entity_scale.map_or(1.0, |s| s.0);
+                bolt.spatial.position.0.y < playfield.bottom() - r
             })
-            .map(
-                |(
-                    entity,
-                    pos,
-                    vel,
-                    base_speed,
-                    radius,
-                    respawn_offset,
-                    angle_spread,
-                    is_extra,
-                    entity_scale,
-                )| {
-                    LostBoltEntry {
-                        entity,
-                        base_speed: base_speed.0,
-                        respawn_offset: respawn_offset.0,
-                        angle_spread: angle_spread.0,
-                        is_extra,
-                        effective_radius: radius.0 * entity_scale.map_or(1.0, |s| s.0),
-                        current_velocity: vel.0,
-                        current_position: pos.0,
-                    }
-                },
-            ),
+            .map(|bolt| LostBoltEntry {
+                entity: bolt.entity,
+                respawn_offset: bolt.respawn_offset.0,
+                angle_spread: bolt.angle_spread.0,
+                is_extra: bolt.is_extra,
+                effective_radius: bolt.radius.0 * bolt.entity_scale.map_or(1.0, |s| s.0),
+                current_velocity: bolt.spatial.velocity.0,
+                current_position: bolt.spatial.position.0,
+            }),
     );
 
     for entry in &*lost_bolts {
@@ -105,14 +93,17 @@ pub(crate) fn bolt_lost(
 
         if shield_active {
             // Shield reflection — no BoltLost sent, applies to ALL bolts (baseline + extra)
-            let reflected_vel = Vec2::new(entry.current_velocity.x, entry.current_velocity.y.abs());
-            let clamped_y = playfield.bottom() + entry.effective_radius;
-            let clamped_pos = Vec2::new(entry.current_position.x, clamped_y);
-            commands.entity(entry.entity).insert((
-                Position2D(clamped_pos),
-                PreviousPosition(clamped_pos),
-                Velocity2D(reflected_vel),
-            ));
+            if let Ok(mut bolt) = bolt_query.get_mut(entry.entity) {
+                bolt.spatial.velocity.0 =
+                    Vec2::new(entry.current_velocity.x, entry.current_velocity.y.abs());
+                apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+                let clamped_y = playfield.bottom() + entry.effective_radius;
+                let clamped_pos = Vec2::new(entry.current_position.x, clamped_y);
+                bolt.spatial.position.0 = clamped_pos;
+                commands
+                    .entity(entry.entity)
+                    .insert(PreviousPosition(clamped_pos));
+            }
 
             // Decrement shield charge — shield_active guard ensures Some
             if let Some(shield) = shield_opt.as_mut() {
@@ -135,16 +126,16 @@ pub(crate) fn bolt_lost(
             // Respawn above breaker
             let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);
             // Angle from vertical: sin->X, cos->Y; positive Y is upward.
-            let new_velocity = Vec2::new(
-                entry.base_speed * angle.sin(),
-                entry.base_speed * angle.cos(),
-            );
-            let new_pos = Vec2::new(breaker_pos.x, breaker_pos.y + entry.respawn_offset);
-            commands.entity(entry.entity).insert((
-                Position2D(new_pos),
-                PreviousPosition(new_pos),
-                Velocity2D(new_velocity),
-            ));
+            // Set direction only; speed is applied by the velocity formula.
+            if let Ok(mut bolt) = bolt_query.get_mut(entry.entity) {
+                bolt.spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
+                apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+                let new_pos = Vec2::new(breaker_pos.x, breaker_pos.y + entry.respawn_offset);
+                bolt.spatial.position.0 = new_pos;
+                commands
+                    .entity(entry.entity)
+                    .insert(PreviousPosition(new_pos));
+            }
         }
     }
 }

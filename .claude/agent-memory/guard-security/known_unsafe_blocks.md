@@ -48,3 +48,10 @@ check_gravity_well_count_reasonable.rs, check_size_boost_in_range.rs), new frame
 helpers (apply_inject_mismatched_bolt_aabb, apply_spawn_extra_gravity_wells,
 apply_inject_wrong_size_multiplier), and gravity_well visibility widening
 (pub instead of pub(crate)) — no unsafe blocks anywhere. Grep confirmed zero matches.
+
+Still confirmed after cache removal refactor (2026-03-30, commits d6d9b80 + 2bdb81b):
+check_effective_speed_consistent.rs and check_size_boost_in_range.rs deleted. All
+production code (prepare_bolt_velocity, bolt_breaker_collision, move_breaker, dash)
+now reads ActiveSpeedBoosts.multiplier() / ActiveSizeBoosts.multiplier() on-demand.
+EffectiveSpeedMultiplier and EffectiveSizeMultiplier types no longer exist in the codebase.
+No unsafe blocks in any new or changed code. Grep confirmed zero matches.

@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [ValidStateTransitions],
-    expected_violations: [ValidStateTransitions],
+    disallowed_failures: [ValidStateTransitions],
+    allowed_failures: [ValidStateTransitions],
     debug_setup: (
         force_previous_game_state: Loading,
         disable_physics: true,

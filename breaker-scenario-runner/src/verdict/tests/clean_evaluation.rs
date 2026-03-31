@@ -31,7 +31,7 @@ fn empty_expected_list_with_no_violations_evaluates_to_pass() {
     let mut verdict = ScenarioVerdict::default();
     let stats = make_healthy_stats();
     let mut definition = make_chaos_definition();
-    definition.expected_violations = Some(vec![]);
+    definition.allowed_failures = Some(vec![]);
 
     verdict.evaluate(&[], &[], &stats, &definition);
 

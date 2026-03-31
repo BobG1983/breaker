@@ -5,14 +5,14 @@ use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
 use rantzsoft_spatial2d::components::{
-    GlobalPosition2D, Position2D, Scale2D, Spatial2D, Velocity2D,
+    BaseSpeed, GlobalPosition2D, MaxSpeed, MinSpeed, Position2D, Scale2D, Spatial2D, Velocity2D,
 };
 
 use super::*;
 use crate::{
     bolt::{
         BASE_BOLT_DAMAGE,
-        components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltMinSpeed, BoltRadius, ExtraBolt},
+        components::{Bolt, BoltRadius, ExtraBolt},
         resources::BoltConfig,
     },
     cells::{components::Cell, messages::DamageCell},

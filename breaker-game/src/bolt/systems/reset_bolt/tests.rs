@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use super::*;
 use crate::{
@@ -26,9 +26,12 @@ fn test_app() -> App {
 
 /// Spawns a bolt entity with spatial2d components for reset testing.
 fn spawn_bolt_entity(app: &mut App, pos: Vec2, velocity: Velocity2D) -> Entity {
-    app.world_mut()
-        .spawn((Bolt, velocity, Position2D(pos), PreviousPosition(pos)))
-        .id()
+    Bolt::builder()
+        .at_position(pos)
+        .config(&BoltConfig::default())
+        .with_velocity(velocity)
+        .primary()
+        .spawn(app.world_mut())
 }
 
 /// Spawns a breaker entity at the given position using `Position2D`.
@@ -37,7 +40,7 @@ fn spawn_breaker(app: &mut App, x: f32, y: f32) -> Entity {
         .spawn((
             Breaker,
             Position2D(Vec2::new(x, y)),
-            Spatial2D,
+            rantzsoft_spatial2d::components::Spatial2D,
             GameDrawLayer::Breaker,
         ))
         .id()
@@ -83,15 +86,11 @@ fn reset_bolt_snaps_previous_position_to_prevent_interpolation_teleport() {
     // When: reset_bolt runs
     // Then: PreviousPosition.0 matches new Position2D.0
     let mut app = test_app();
-    let bolt_id = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(300.0, 400.0)),
-            Position2D(Vec2::new(150.0, 100.0)),
-            PreviousPosition(Vec2::new(140.0, 90.0)),
-        ))
-        .id();
+    let bolt_id = spawn_bolt_entity(
+        &mut app,
+        Vec2::new(150.0, 100.0),
+        Velocity2D(Vec2::new(300.0, 400.0)),
+    );
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -192,16 +191,12 @@ fn reset_bolt_inserts_serving_on_node_zero() {
 fn reset_bolt_removes_serving_on_subsequent_nodes() {
     let mut app = test_app();
     app.world_mut().resource_mut::<RunState>().node_index = 1;
-    let bolt_id = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            BoltServing,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            Position2D(Vec2::new(0.0, 0.0)),
-            PreviousPosition(Vec2::new(0.0, 0.0)),
-        ))
-        .id();
+    let bolt_id = Bolt::builder()
+        .at_position(Vec2::ZERO)
+        .config(&BoltConfig::default())
+        .serving()
+        .primary()
+        .spawn(app.world_mut());
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -216,17 +211,10 @@ fn reset_bolt_removes_serving_on_subsequent_nodes() {
 #[test]
 fn reset_bolt_resets_piercing_remaining_to_active_piercings_total() {
     let mut app = test_app();
-    let bolt_id = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            Position2D(Vec2::new(0.0, 0.0)),
-            PreviousPosition(Vec2::new(0.0, 0.0)),
-            ActivePiercings(vec![3]),
-            PiercingRemaining(0),
-        ))
-        .id();
+    let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+    app.world_mut()
+        .entity_mut(bolt_id)
+        .insert((ActivePiercings(vec![3]), PiercingRemaining(0)));
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -246,19 +234,13 @@ fn reset_bolt_resets_piercing_remaining_to_active_piercings_total() {
 #[test]
 fn reset_bolt_preserves_effect_state() {
     let mut app = test_app();
-    let bolt_id = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            Position2D(Vec2::new(0.0, 0.0)),
-            PreviousPosition(Vec2::new(0.0, 0.0)),
-            ActiveDamageBoosts(vec![1.5]),
-            ActiveSpeedBoosts(vec![1.2]),
-            ActivePiercings(vec![3]),
-            PiercingRemaining(0),
-        ))
-        .id();
+    let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+    app.world_mut().entity_mut(bolt_id).insert((
+        ActiveDamageBoosts(vec![1.5]),
+        ActiveSpeedBoosts(vec![1.2]),
+        ActivePiercings(vec![3]),
+        PiercingRemaining(0),
+    ));
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -376,17 +358,10 @@ fn reset_bolt_ignores_extra_bolt_entities() {
 #[test]
 fn reset_bolt_resets_piercing_remaining_from_multi_entry_active_piercings() {
     let mut app = test_app();
-    let bolt_id = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            Position2D(Vec2::new(0.0, 0.0)),
-            PreviousPosition(Vec2::new(0.0, 0.0)),
-            ActivePiercings(vec![2, 1]),
-            PiercingRemaining(0),
-        ))
-        .id();
+    let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+    app.world_mut()
+        .entity_mut(bolt_id)
+        .insert((ActivePiercings(vec![2, 1]), PiercingRemaining(0)));
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();

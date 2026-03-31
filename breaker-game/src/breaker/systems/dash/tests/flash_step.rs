@@ -2,16 +2,15 @@
 //! teleports the breaker instantly instead of doing a normal dash.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D};
 
 use super::super::system::update_breaker_state;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
-            BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration,
-            DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
-            SettleTiltEase,
+            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
+            BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration, DashSpeedMultiplier,
+            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
         },
         resources::BreakerConfig,
     },
@@ -27,7 +26,7 @@ use crate::{
 fn breaker_param_bundle(
     config: &BreakerConfig,
 ) -> (
-    BreakerMaxSpeed,
+    MaxSpeed,
     BreakerDeceleration,
     DecelEasing,
     DashSpeedMultiplier,
@@ -40,7 +39,7 @@ fn breaker_param_bundle(
     SettleTiltEase,
 ) {
     (
-        BreakerMaxSpeed(config.max_speed),
+        MaxSpeed(config.max_speed),
         BreakerDeceleration(config.deceleration),
         DecelEasing {
             ease: config.decel_ease,
@@ -141,7 +140,7 @@ fn spawn_settling_breaker_leftward_dash(app: &mut App, position: Vec2, flash_ste
 #[test]
 fn reversal_dash_left_during_settling_with_flash_step_teleports_to_endpoint() {
     // Given: Breaker in Settling at (0.0, -250.0), last dash rightward (ease_start=-0.35),
-    //        FlashStepActive, BreakerMaxSpeed(500), DashSpeedMultiplier(4), DashDuration(0.15)
+    //        FlashStepActive, MaxSpeed(500), DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashLeft active
     // Then: Position2D.x == -300.0, BreakerState == Idle, velocity.x == 0.0
     let mut app = test_app();
@@ -201,7 +200,7 @@ fn reversal_dash_left_clamps_to_playfield_left_bound() {
 #[test]
 fn reversal_dash_right_during_settling_with_flash_step_teleports_to_endpoint() {
     // Given: Breaker in Settling at (0.0, -250.0), last dash leftward (ease_start=0.35),
-    //        FlashStepActive, BreakerMaxSpeed(500), DashSpeedMultiplier(4), DashDuration(0.15)
+    //        FlashStepActive, MaxSpeed(500), DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashRight active
     // Then: Position2D.x == 300.0, BreakerState == Idle, velocity.x == 0.0
     let mut app = test_app();
@@ -256,7 +255,7 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
             Position2D(Vec2::new(0.0, -250.0)),
             BreakerWidth(120.0),
             FlashStepActive,
-            BreakerMaxSpeed(500.0),
+            MaxSpeed(500.0),
             BreakerDeceleration(config.deceleration),
             DecelEasing {
                 ease: config.decel_ease,
@@ -627,7 +626,7 @@ fn flash_step_teleport_with_size_multiplier_one_matches_no_multiplier() {
 #[test]
 fn flash_step_teleport_respects_speed_multiplier_for_distance() {
     // Given: Breaker at (200, -250), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), BreakerMaxSpeed(500),
+    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(500),
     //        DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashLeft
     // Then: Position2D.x == -250.0 (200 + (-1)*500*1.5*4*0.15 = 200 - 450)
@@ -828,7 +827,7 @@ fn flash_step_teleport_resets_cleanly_with_nearly_expired_timer() {
 #[test]
 fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
     // Given: Breaker at (200.0, -250.0), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), BreakerMaxSpeed(500),
+    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(500),
     //        DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashLeft
     // Then: Position2D.x = 200.0 + (-1) * 500.0 * 1.5 * 4.0 * 0.15 = 200.0 - 450.0 = -250.0

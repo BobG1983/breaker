@@ -18,7 +18,7 @@ fn unexpected_violation_with_no_expected_list_evaluates_to_fail() {
 
     assert!(
         !verdict.passed(),
-        "unexpected violation must cause Fail when no expected_violations list"
+        "unexpected violation must cause Fail when no allowed_failures list"
     );
     let has_reason = verdict
         .reasons
@@ -36,12 +36,12 @@ fn unexpected_violation_with_no_expected_list_evaluates_to_fail() {
 // -------------------------------------------------------------------------
 
 #[test]
-fn expected_violations_match_exactly_evaluates_to_pass() {
+fn allowed_failures_match_exactly_evaluates_to_pass() {
     let mut verdict = ScenarioVerdict::default();
     let violations = vec![make_violation(InvariantKind::BoltInBounds)];
     let stats = make_healthy_stats();
     let mut definition = make_chaos_definition();
-    definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+    definition.allowed_failures = Some(vec![InvariantKind::BoltInBounds]);
 
     verdict.evaluate(&violations, &[], &stats, &definition);
 
@@ -65,7 +65,7 @@ fn expected_violation_not_fired_evaluates_to_fail() {
     let mut verdict = ScenarioVerdict::default();
     let stats = make_healthy_stats();
     let mut definition = make_chaos_definition();
-    definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+    definition.allowed_failures = Some(vec![InvariantKind::BoltInBounds]);
 
     verdict.evaluate(&[], &[], &stats, &definition);
 
@@ -94,7 +94,7 @@ fn unexpected_violation_not_in_expected_list_evaluates_to_fail() {
     let violations = vec![make_violation(InvariantKind::NoNaN)];
     let stats = make_healthy_stats();
     let mut definition = make_chaos_definition();
-    definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+    definition.allowed_failures = Some(vec![InvariantKind::BoltInBounds]);
 
     verdict.evaluate(&violations, &[], &stats, &definition);
 
@@ -187,7 +187,7 @@ fn duplicate_unexpected_with_expected_list_produce_single_reason() {
     ];
     let stats = make_healthy_stats();
     let mut definition = make_chaos_definition();
-    definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+    definition.allowed_failures = Some(vec![InvariantKind::BoltInBounds]);
 
     verdict.evaluate(&violations, &[], &stats, &definition);
 

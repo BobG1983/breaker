@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 300,
-    invariants: [PhysicsFrozenDuringPause],
-    expected_violations: [PhysicsFrozenDuringPause],
+    disallowed_failures: [PhysicsFrozenDuringPause],
+    allowed_failures: [PhysicsFrozenDuringPause],
     debug_setup: (
         disable_physics: true,
     ),

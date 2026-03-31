@@ -1,8 +1,7 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
-use crate::bolt::components::{Bolt, SpawnedByEvolution};
+use crate::bolt::components::SpawnedByEvolution;
 
 // ── SpawnedByEvolution → DamageCell.source_chip attribution tests ──
 
@@ -16,16 +15,10 @@ fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let _bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-            SpawnedByEvolution("chain_lightning".to_owned()),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(SpawnedByEvolution("chain_lightning".to_owned()));
 
     tick(&mut app);
 
@@ -56,12 +49,7 @@ fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() 
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -89,21 +77,13 @@ fn multiple_bolts_with_different_attributions_produce_correctly_attributed_damag
     let start_y = 100.0 - cc.height / 2.0 - bc.radius - 2.0;
 
     // Bolt A: attributed to "alpha"
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(-200.0, start_y)),
-        SpawnedByEvolution("alpha".to_owned()),
-    ));
+    let bolt_a = spawn_bolt(&mut app, -200.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_a)
+        .insert(SpawnedByEvolution("alpha".to_owned()));
 
     // Bolt B: no attribution
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(200.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 200.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 

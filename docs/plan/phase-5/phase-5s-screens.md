@@ -10,7 +10,7 @@ Architecture: `docs/architecture/rendering/screens.md`
 - Entity lifecycle: spawn on `OnEnter`, despawn on `OnExit` via cleanup markers
 - VFX via `rantzsoft_vfx` primitives (ExecuteRecipe, AttachVisuals, modifiers)
 - Text rendering: Bevy `Text2d` with monospace font, GlitchText overlay where appropriate
-- No Bevy UI nodes — all world-space entities
+- Input handling is per-screen — menus may use Bevy UI (Node, Button, Interaction) or world-space entities with cursor-to-world input, whichever fits
 
 ## What to Build
 

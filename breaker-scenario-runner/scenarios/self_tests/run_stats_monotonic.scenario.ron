@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [RunStatsMonotonic],
-    expected_violations: [RunStatsMonotonic],
+    disallowed_failures: [RunStatsMonotonic],
+    allowed_failures: [RunStatsMonotonic],
     allow_early_end: false,
     debug_setup: (
         disable_physics: true,

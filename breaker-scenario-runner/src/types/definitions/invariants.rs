@@ -7,8 +7,8 @@ use serde::Deserialize;
 pub enum InvariantKind {
     /// Bolt position stays within playfield bounds.
     BoltInBounds,
-    /// Bolt speed stays within configured min/max bounds.
-    BoltSpeedInRange,
+    /// Bolt speed matches the expected derived value.
+    BoltSpeedAccurate,
     /// Bolt count stays within `invariant_params.max_bolt_count`.
     BoltCountReasonable,
     /// Breaker position stays within playfield bounds.
@@ -64,7 +64,7 @@ impl InvariantKind {
     /// the `fail_reason()` exhaustive match.
     pub const ALL: &[Self] = &[
         Self::BoltInBounds,
-        Self::BoltSpeedInRange,
+        Self::BoltSpeedAccurate,
         Self::BoltCountReasonable,
         Self::BreakerInBounds,
         Self::NoEntityLeaks,
@@ -96,7 +96,7 @@ impl InvariantKind {
     pub const fn fail_reason(&self) -> &'static str {
         match self {
             Self::BoltInBounds => "bolt position outside playfield bounds",
-            Self::BoltSpeedInRange => "bolt speed outside configured min/max",
+            Self::BoltSpeedAccurate => "bolt speed outside configured min/max",
             Self::BoltCountReasonable => "bolt count exceeds maximum",
             Self::BreakerInBounds => "breaker position outside playfield bounds",
             Self::NoEntityLeaks => "unexpected entity accumulation detected",

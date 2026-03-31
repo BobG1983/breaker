@@ -1,5 +1,6 @@
 ## Scenario Runner Memory
 
+- [ChainArcCountReasonable self-test threshold too high](bug_chain_arc_self_test.md) — chain_lightning_arc_lifecycle and chain_lightning_chaos self-tests never trigger invariant; max_chain_arc_count=50 exceeds what current game generates per node cycle
 - [Universal failure: Chain Reaction name collision bug](bug_chain_reaction_collision.md) — Chain Reaction template overwritten by evolution of same name, causing WARN logs that fail every scenario
 - [Universal failure: EffectiveSpeedConsistent / SizeBoostInRange state-gate mismatch](bug_effective_speed_state_gate.md) — recalculate_speed/size only runs in PlayingState::Active; fire()/reverse() can update Active* outside that state
 - [Missing evolution: Railgun not in assets](bug_railgun_missing.md) — evolution_railgun scenario expects Railgun evolution chip that has no .evolution.ron file

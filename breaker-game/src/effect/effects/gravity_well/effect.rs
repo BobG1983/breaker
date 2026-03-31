@@ -122,11 +122,14 @@ pub(crate) fn tick_gravity_well(
     }
 }
 
+/// Filter for bolt entities that are not gravity wells.
+type BoltNotWell = (With<Bolt>, Without<GravityWellMarker>);
+
 /// Pull bolts toward active gravity wells.
 pub(crate) fn apply_gravity_pull(
     time: Res<Time>,
     wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>,
-    mut bolts: Query<(&Position2D, &mut Velocity2D), With<Bolt>>,
+    mut bolts: Query<(&Position2D, &mut Velocity2D), BoltNotWell>,
 ) {
     let dt = time.delta_secs();
     for (well_position, config) in &wells {
@@ -146,14 +149,8 @@ pub(crate) fn apply_gravity_pull(
 }
 
 pub(crate) fn register(app: &mut App) {
-    use crate::bolt::BoltSystems;
-
     app.add_systems(
         FixedUpdate,
-        (
-            tick_gravity_well,
-            apply_gravity_pull.before(BoltSystems::PrepareVelocity),
-        )
-            .run_if(in_state(PlayingState::Active)),
+        (tick_gravity_well, apply_gravity_pull).run_if(in_state(PlayingState::Active)),
     );
 }

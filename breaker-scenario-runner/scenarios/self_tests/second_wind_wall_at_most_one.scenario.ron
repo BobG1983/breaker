@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [SecondWindWallAtMostOne],
-    expected_violations: Some([SecondWindWallAtMostOne]),
+    disallowed_failures: [SecondWindWallAtMostOne],
+    allowed_failures: Some([SecondWindWallAtMostOne]),
     debug_setup: (
         disable_physics: true,
     ),

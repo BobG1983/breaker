@@ -8,15 +8,15 @@
 // cascades from multiple Voltchain triggers can create enough in-flight arcs to exhaust the
 // default 50-entity ceiling if any arc-or-chain entity leaks. NoEntityLeaks detects orphaned
 // ChainLightningChain/Arc entities that survive past their expected cleanup frame. NoNaN
-// guards against position corruption from mid-flight target despawn. BoltSpeedInRange catches
+// guards against position corruption from mid-flight target despawn. BoltSpeedAccurate catches
 // any physics corruption from the arc-damage application path.
 (
     breaker: "Aegis",
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 8000,
-    invariants: [ChainArcCountReasonable, NoEntityLeaks, NoNaN, BoltSpeedInRange],
-    expected_violations: None,
+    disallowed_failures: [ChainArcCountReasonable, NoEntityLeaks, NoNaN, BoltSpeedAccurate],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 4321,

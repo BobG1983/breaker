@@ -2,14 +2,14 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
 
 // Re-export constants used by test modules
 pub(super) use super::super::system::MAX_BOUNCES;
 use super::super::system::bolt_cell_collision;
 use crate::{
     bolt::{
-        components::{BoltBaseSpeed, BoltRadius},
+        components::Bolt,
         messages::{BoltImpactCell, BoltImpactWall},
         resources::BoltConfig,
     },
@@ -42,9 +42,14 @@ pub(super) fn test_app() -> App {
     app
 }
 
-pub(super) fn bolt_param_bundle() -> (BoltBaseSpeed, BoltRadius) {
-    let bc = BoltConfig::default();
-    (BoltBaseSpeed(bc.base_speed), BoltRadius(bc.radius))
+/// Spawns a bolt at the given position with the given velocity using the builder.
+pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
+    Bolt::builder()
+        .at_position(Vec2::new(x, y))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+        .primary()
+        .spawn(app.world_mut())
 }
 
 pub(super) fn default_cell_dims() -> (CellWidth, CellHeight) {

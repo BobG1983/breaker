@@ -4,8 +4,16 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
+use rand::Rng;
+use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::bolt::components::{BoltLifespan, PiercingRemaining};
+use crate::{
+    bolt::{
+        components::{Bolt, BoltLifespan, PiercingRemaining},
+        resources::BoltConfig,
+    },
+    shared::rng::GameRng,
+};
 
 /// Marker for phantom bolt entities.
 #[derive(Component)]
@@ -80,7 +88,19 @@ pub(crate) fn fire(
 
     let spawn_pos = super::super::entity_position(world, entity);
 
-    let phantom = super::super::spawn_extra_bolt(world, spawn_pos);
+    let config = world.resource::<BoltConfig>().clone();
+    let angle = {
+        let mut rng = world.resource_mut::<GameRng>();
+        rng.0.random_range(0.0..std::f32::consts::TAU)
+    };
+    let direction = Vec2::new(angle.cos(), angle.sin());
+    let velocity = Velocity2D(direction * config.base_speed);
+    let phantom = Bolt::builder()
+        .at_position(spawn_pos)
+        .config(&config)
+        .with_velocity(velocity)
+        .extra()
+        .spawn(world);
     world.entity_mut(phantom).insert((
         PhantomBoltMarker,
         PhantomOwner(entity),

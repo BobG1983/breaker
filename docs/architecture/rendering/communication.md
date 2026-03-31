@@ -62,9 +62,39 @@ Shader updates: crate updates material uniforms from computed modifiers
     → Interpolation for smooth display between FixedUpdate ticks
 ```
 
+### Trail Position Sampling (PostUpdate)
+
+Trail entities sample the tracked entity's `GlobalTransform::translation()` in `PostUpdate`, **after** `TransformSystems::Propagate`. This ensures the position is final for the frame. One-frame lag is acceptable.
+
+### Particle Update (Update)
+
+Particle position/velocity/lifetime update runs in `Update` (not FixedUpdate). Particles are visual-only — they don't interact with gameplay systems. Running in Update gives smooth motion without being tied to the fixed timestep.
+
 ### Post-Processing Pipeline (Render Graph)
 
 See [screen_effects.md](screen_effects.md) for the full pipeline order and FullscreenMaterial implementation details.
+
+---
+
+## Camera Entity Acquisition
+
+Screen effect messages require `camera: Entity`. The game acquires the main camera entity via a query:
+
+```rust
+fn get_camera(camera_query: Query<Entity, With<Camera2d>>) -> Entity {
+    camera_query.single()
+}
+```
+
+Systems that send screen effect messages include `Query<Entity, With<Camera2d>>` as a system parameter. For `ExecuteRecipe`, the game passes the camera entity in `ExecuteRecipe.camera`.
+
+## Recipe Loading
+
+Recipes load via `SeedableRegistry` in the same loading state as other registries (`GameState::Loading`). The game configures the recipe loading pipeline in the same place it configures `BreakerRegistry`, `ChipTemplateRegistry`, etc. — during plugin setup. Asset path: `assets/recipes/*.recipe.ron`.
+
+## Modifier No-Op Before 5n
+
+Steps 5g-5m send `SetModifier`/`AddModifier`/`RemoveModifier` messages as part of their scope. Until step 5n implements the `ModifierStack` computation system, these messages are received but have no visual effect — the modifier handler exists (message type is registered in 5c) but the computation + shader update system is a stub. This is expected and does not block 5g-5m.
 
 ---
 

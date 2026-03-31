@@ -30,5 +30,4 @@
     decel_ease: QuadraticIn,
     decel_ease_strength: 1.0,
     max_reflection_angle: 75.0,
-    min_angle_from_horizontal: 10.0,
 )

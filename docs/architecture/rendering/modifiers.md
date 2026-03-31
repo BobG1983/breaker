@@ -35,6 +35,8 @@ pub struct RemoveModifier {
 - `AddModifier`: stacks with diminishing returns. Used for chip effects (fired once, removed on reverse).
 - `RemoveModifier`: removes by source key. Used when chip effects reverse.
 
+**`source: &'static str`** is intentional — source keys are string literals (`"bolt_speed"`, `"speed_boost"`, etc.), not runtime-generated strings. This avoids per-frame `String` allocation for `SetModifier` messages sent every FixedUpdate. All source keys are known at compile time. If a future need arises for dynamic source keys, the type can be changed to `Cow<'static, str>`.
+
 ## How Gameplay Uses It
 
 ```rust

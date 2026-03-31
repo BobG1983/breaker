@@ -1,10 +1,11 @@
 //! System to launch a serving bolt when the player presses the bump button.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
+use rantzsoft_spatial2d::queries::SpatialData;
 
 use crate::{
-    bolt::{components::*, filters::ServingFilter},
+    bolt::{components::*, filters::ServingFilter, queries::apply_velocity_formula},
+    effect::effects::speed_boost::ActiveSpeedBoosts,
     input::resources::{GameAction, InputActions},
 };
 
@@ -12,26 +13,38 @@ use crate::{
 ///
 /// Removes [`BoltServing`] and sets the launch velocity. Only affects
 /// bolts that are currently serving.
-pub fn launch_bolt(
+pub(crate) fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Velocity2D, &BoltBaseSpeed, &BoltInitialAngle), ServingFilter>,
+    mut query: Query<
+        (
+            Entity,
+            SpatialData,
+            Option<&ActiveSpeedBoosts>,
+            &BoltInitialAngle,
+        ),
+        ServingFilter,
+    >,
 ) {
     if !actions.active(GameAction::Bump) {
         return;
     }
 
-    for (entity, mut velocity, base_speed, initial_angle) in &mut query {
-        velocity.0 = Vec2::new(
-            base_speed.0 * initial_angle.0.sin(),
-            base_speed.0 * initial_angle.0.cos(),
-        );
+    for (entity, mut spatial, boosts, initial_angle) in &mut query {
+        // Set direction only; speed is applied by the velocity formula
+        spatial.velocity.0 = Vec2::new(initial_angle.0.sin(), initial_angle.0.cos());
+
+        // Apply the canonical velocity formula
+        apply_velocity_formula(&mut spatial, boosts);
+
         commands.entity(entity).remove::<BoltServing>();
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
     use super::*;
     use crate::bolt::resources::BoltConfig;
 
@@ -51,24 +64,21 @@ mod tests {
         app.update();
     }
 
-    fn bolt_launch_bundle() -> (BoltBaseSpeed, BoltInitialAngle) {
-        let config = BoltConfig::default();
-        (
-            BoltBaseSpeed(config.base_speed),
-            BoltInitialAngle(config.initial_angle),
-        )
+    /// Spawns a serving bolt using the builder.
+    fn spawn_serving_bolt(app: &mut App) -> Entity {
+        Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .config(&BoltConfig::default())
+            .serving()
+            .primary()
+            .spawn(app.world_mut())
     }
 
     #[test]
     fn bump_launches_serving_bolt() {
         let mut app = test_app();
 
-        app.world_mut().spawn((
-            Bolt,
-            BoltServing,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            bolt_launch_bundle(),
-        ));
+        spawn_serving_bolt(&mut app);
 
         app.world_mut()
             .resource_mut::<InputActions>()
@@ -102,12 +112,7 @@ mod tests {
     fn no_input_keeps_serving() {
         let mut app = test_app();
 
-        app.world_mut().spawn((
-            Bolt,
-            BoltServing,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            bolt_launch_bundle(),
-        ));
+        spawn_serving_bolt(&mut app);
 
         tick(&mut app);
 
@@ -138,12 +143,7 @@ mod tests {
         let mut app = test_app();
         let config = BoltConfig::default();
 
-        app.world_mut().spawn((
-            Bolt,
-            BoltServing,
-            Velocity2D(Vec2::new(0.0, 0.0)),
-            bolt_launch_bundle(),
-        ));
+        spawn_serving_bolt(&mut app);
 
         app.world_mut()
             .resource_mut::<InputActions>()

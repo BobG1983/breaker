@@ -1,15 +1,15 @@
 // Adversarial: Until(TimeExpires(1.0)) wraps a 2x SpeedBoost on PerfectBumped.
 // If Until doesn't expire — or if the removal message fails to remove the speed boost
 // buff entry — each perfect bump permanently stacks 2x multipliers and bolt speed
-// blows past the configured maximum. BoltSpeedInRange will fire if clamping is bypassed
+// blows past the configured maximum. BoltSpeedAccurate will fire if clamping is bypassed
 // or Until cleanup is broken. 5000 frames gives many Until cycles to expire and restart.
 (
     breaker: "Aegis",
     layout: "Corridor",
     input: Chaos((action_prob: 0.5)),
     max_frames: 5000,
-    invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 3141,

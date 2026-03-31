@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::{Bolt, BoltBaseSpeed},
+    bolt::components::Bolt,
     breaker::components::{Breaker, BreakerTilt},
     effect::effects::speed_boost::ActiveSpeedBoosts,
     shared::GameDrawLayer,
@@ -70,9 +70,8 @@ fn tilt_affects_reflection() {
         default_breaker_width(),
         default_breaker_height(),
         default_max_reflection_angle(),
-        default_min_angle(),
         Position2D(Vec2::new(0.0, y_pos)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -94,7 +93,7 @@ fn tilt_affects_reflection() {
 
 /// Behavior 7: `reflect_top_hit` uses `base_speed * ActiveSpeedBoosts.multiplier()` as speed floor.
 ///
-/// Given: Bolt with `BoltBaseSpeed(400.0)`, `ActiveSpeedBoosts(vec![2.0])`,
+/// Given: Bolt with `BaseSpeed(400.0)`, `ActiveSpeedBoosts(vec![2.0])`,
 ///        velocity (0.0, 300.0) (speed=300, below boosted base of 800), hitting breaker center.
 /// When: bolt hits breaker top surface.
 /// Then: post-reflection speed >= 800.0 (400.0 * 2.0).
@@ -106,17 +105,16 @@ fn reflect_top_hit_uses_active_speed_boosts_as_speed_floor() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -300.0)),
-            BoltBaseSpeed(400.0),
-            default_bolt_radius(),
-            ActiveSpeedBoosts(vec![2.0]),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = Bolt::builder()
+        .at_position(Vec2::new(0.0, start_y))
+        .with_speed(400.0, 0.0, f32::MAX)
+        .with_angle(0.0, 0.0)
+        .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
+        .primary()
+        .spawn(app.world_mut());
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(ActiveSpeedBoosts(vec![2.0]));
 
     tick(&mut app);
 
@@ -142,17 +140,14 @@ fn reflect_top_hit_without_speed_boosts_uses_raw_base_speed() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -300.0)),
-            BoltBaseSpeed(400.0),
-            default_bolt_radius(),
-            // No ActiveSpeedBoosts
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = Bolt::builder()
+        .at_position(Vec2::new(0.0, start_y))
+        .with_speed(400.0, 0.0, f32::MAX)
+        .with_angle(0.0, 0.0)
+        .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
+        .primary()
+        .spawn(app.world_mut());
+    // No ActiveSpeedBoosts
 
     tick(&mut app);
 
@@ -169,9 +164,9 @@ fn reflect_top_hit_without_speed_boosts_uses_raw_base_speed() {
     );
 }
 
-/// Behavior 8: `reflect_top_hit` ignores `BoltBaseSpeed` alone when boost active.
+/// Behavior 8: `reflect_top_hit` ignores `BaseSpeed` alone when boost active.
 ///
-/// Given: Bolt with `BoltBaseSpeed(400.0)`, `ActiveSpeedBoosts(vec![2.0])`,
+/// Given: Bolt with `BaseSpeed(400.0)`, `ActiveSpeedBoosts(vec![2.0])`,
 ///        velocity (0.0, 500.0) (speed=500, above raw base but below boosted base of 800).
 /// When: bolt hits breaker top surface.
 /// Then: post-reflection speed >= 800.0 (not just 400.0).
@@ -183,17 +178,16 @@ fn reflect_top_hit_ignores_base_speed_alone_when_boost_active() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -500.0)),
-            BoltBaseSpeed(400.0),
-            default_bolt_radius(),
-            ActiveSpeedBoosts(vec![2.0]),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = Bolt::builder()
+        .at_position(Vec2::new(0.0, start_y))
+        .with_speed(400.0, 0.0, f32::MAX)
+        .with_angle(0.0, 0.0)
+        .with_velocity(Velocity2D(Vec2::new(0.0, -500.0)))
+        .primary()
+        .spawn(app.world_mut());
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(ActiveSpeedBoosts(vec![2.0]));
 
     tick(&mut app);
 

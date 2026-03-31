@@ -4,7 +4,6 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, V
 
 use super::helpers::*;
 use crate::{
-    bolt::components::Bolt,
     cells::components::Cell,
     shared::{BOLT_LAYER, CELL_LAYER, EntityScale, GameDrawLayer, WALL_LAYER},
     wall::components::{Wall, WallSize},
@@ -20,16 +19,10 @@ fn scaled_bolt_effective_radius_changes_cell_collision_boundary() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = 81.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 50.0)),
-            EntityScale(0.5),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 50.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(EntityScale(0.5));
 
     tick(&mut app);
 
@@ -54,13 +47,8 @@ fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 5.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        // No EntityScale component
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    // No EntityScale component
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -110,12 +98,7 @@ fn ccd_reads_cell_half_extents_from_aabb2d_not_cell_dimensions() {
     // Aabb2D range (half=5). Place below the cell's bottom.
     let expanded_bottom = cell_y - cc.height / 2.0 - bc.radius;
     let start_y = expanded_bottom - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(20.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 20.0, start_y, 0.0, 400.0);
 
     // Run one tick to populate quadtree, then another for collision
     tick(&mut app);
@@ -164,12 +147,7 @@ fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
     // Bolt outside the expanded AABB on the left (x=137 < 142=200-50-8)
     // but at y=50 which is inside WallSize range but outside Aabb2D range.
     let start_x = 200.0 - 50.0 - bc.radius - 5.0; // 137.0
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(400.0, 0.1)),
-        Position2D(Vec2::new(start_x, 50.0)),
-    ));
+    spawn_bolt(&mut app, start_x, 50.0, 400.0, 0.1);
 
     tick(&mut app);
 
@@ -216,12 +194,7 @@ fn ccd_uses_aabb2d_larger_than_cell_dimensions_to_detect_hit() {
     // Place bolt at x=60, outside CellWidth range but inside Aabb2D range
     // Aabb2D expanded bottom: 100 - 50 - 8 = 42
     let start_y = 42.0 - 2.0; // just below the Aabb2D expanded bottom
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(60.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 60.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -277,12 +250,7 @@ fn cell_with_aabb2d_but_no_cell_dimensions_is_collision_candidate() {
     // Bolt approaching from below
     let expanded_bottom = cell_y - half_extents.y - bc.radius;
     let start_y = expanded_bottom - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 

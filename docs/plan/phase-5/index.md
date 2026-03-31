@@ -63,9 +63,9 @@ Phase 5 is purely visual. All audio work (SFX, music, heartbeat timer, layered i
 
 ## Subphases
 
-Steps are ordered by dependency. Architecture and decisions (5a-5b) come first. Infrastructure steps (5c-5f) establish foundations. Entity visuals (5g-5j) build the core look. Effects and feedback (5k-5o) add juice. UI and screens (5p-5s) complete the experience. Evolution VFX (5t-5w) are the crown jewels.
+Steps are ordered by dependency. Architecture and decisions (5a-5b) come first. Infrastructure steps (5c-5f, 5p) establish foundations — note that 5p (PlayingState expansion + transition styles) is infrastructure because all subsequent steps need the final state machine. Entity visuals (5g-5j) build the core look. Effects and feedback (5k-5o) add juice. UI and screens (5q-5s) complete the experience. Evolution VFX (5t-5w) are the crown jewels.
 
-Steps 5d and 5e are independent and can be done in either order.
+Steps 5d and 5e are independent and can be done in either order. 5p can run in parallel with 5d-5f.
 
 ### Architecture & Decisions
 
@@ -78,6 +78,7 @@ Steps 5d and 5e are independent and can be done in either order.
 - [5d: Post-Processing Pipeline](phase-5d-post-processing-pipeline.md) — Bloom tuning, FullscreenMaterial effects, screen distortion, chromatic aberration, additive blending via specialize()
 - [5e: Particle System](phase-5e-particle-system.md) — CPU particle system in rantzsoft_vfx, emitter modes, per-primitive mapping
 - [5f: Temperature Palette & Data-Driven Enums](phase-5f-temperature-and-enums.md) — RunTemperature resource, Hue/Shape/Aura/Trail enums, RON integration
+- [5p: Transitions & PlayingState](phase-5p-transitions.md) — PlayingState substate expansion, 4 transition styles (Flash, Sweep, Glitch, Collapse/Rebuild)
 
 ### Entity Visuals
 
@@ -96,7 +97,6 @@ Steps 5d and 5e are independent and can be done in either order.
 
 ### UI & Screens
 
-- [5p: Transitions](phase-5p-transitions.md) — Flash, Sweep, Glitch, Collapse/Rebuild (tile-based shader), PlayingState substates
 - [5q: HUD & Gameplay UI](phase-5q-hud-ui.md) — Timer wall gauge shader, life orbs, node progress ticks (count to next boss)
 - [5r: Chip Cards](phase-5r-chip-cards.md) — Entity composition, rarity treatments, holographic shader, abstract symbol icons
 - [5s: Screens](phase-5s-screens.md) — Main menu, run-end (hybrid: victory=splash, defeat=hologram), breaker select, pause, loading

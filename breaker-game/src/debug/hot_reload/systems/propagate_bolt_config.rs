@@ -1,11 +1,12 @@
 //! System to propagate `BoltConfig` resource changes to bolt entity components.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::{BaseSpeed, MaxSpeed, MinSpeed};
 
 use crate::bolt::{
     components::{
-        Bolt, BoltBaseSpeed, BoltInitialAngle, BoltMaxSpeed, BoltMinSpeed, BoltRadius,
-        BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY,
+        Bolt, BoltInitialAngle, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
+        BoltSpawnOffsetY,
     },
     resources::BoltConfig,
 };
@@ -13,8 +14,8 @@ use crate::bolt::{
 /// Force-overwrites bolt components on all bolt entities when `BoltConfig` changes.
 ///
 /// Runs in `Update` in the `HotReloadSystems::PropagateConfig` system set,
-/// conditioned on `resource_changed::<BoltConfig>`. Unlike `init_bolt_params`,
-/// this system has no `Without<BoltBaseSpeed>` filter — it always overwrites.
+/// conditioned on `resource_changed::<BoltConfig>`. Always overwrites all
+/// config-derived components on every bolt entity.
 pub(crate) fn propagate_bolt_config(
     mut commands: Commands,
     config: Res<BoltConfig>,
@@ -22,9 +23,9 @@ pub(crate) fn propagate_bolt_config(
 ) {
     for entity in &query {
         commands.entity(entity).insert((
-            BoltBaseSpeed(config.base_speed),
-            BoltMinSpeed(config.min_speed),
-            BoltMaxSpeed(config.max_speed),
+            BaseSpeed(config.base_speed),
+            MinSpeed(config.min_speed),
+            MaxSpeed(config.max_speed),
             BoltRadius(config.radius),
             BoltSpawnOffsetY(config.spawn_offset_y),
             BoltRespawnOffsetY(config.respawn_offset_y),
@@ -49,21 +50,21 @@ mod tests {
     }
 
     /// When `BoltConfig` changes (`is_changed` returns true on first frame after insert),
-    /// the system should overwrite `BoltBaseSpeed` with the config value even if it
+    /// the system should overwrite `BaseSpeed` with the config value even if it
     /// was previously stamped with a different value.
     #[test]
     fn force_overwrites_base_speed_when_config_changes() {
         let mut app = test_app();
         let config = app.world().resource::<BoltConfig>().clone();
 
-        // Spawn bolt with a deliberately wrong BoltBaseSpeed.
+        // Spawn bolt with a deliberately wrong BaseSpeed.
         let entity = app
             .world_mut()
             .spawn((
                 Bolt,
-                BoltBaseSpeed(999.0),
-                BoltMinSpeed(config.min_speed),
-                BoltMaxSpeed(config.max_speed),
+                BaseSpeed(999.0),
+                MinSpeed(config.min_speed),
+                MaxSpeed(config.max_speed),
                 BoltRadius(config.radius),
                 BoltSpawnOffsetY(config.spawn_offset_y),
                 BoltRespawnOffsetY(config.respawn_offset_y),
@@ -76,15 +77,15 @@ mod tests {
         app.world_mut().resource_mut::<BoltConfig>().base_speed = 600.0;
         app.update();
 
-        let base_speed = app.world().get::<BoltBaseSpeed>(entity).unwrap();
+        let base_speed = app.world().get::<BaseSpeed>(entity).unwrap();
         assert!(
             (base_speed.0 - 600.0).abs() < f32::EPSILON,
-            "BoltBaseSpeed should be 600.0 after config change, got {}",
+            "BaseSpeed should be 600.0 after config change, got {}",
             base_speed.0
         );
     }
 
-    /// The system must overwrite ALL 8 bolt components, not just `BoltBaseSpeed`.
+    /// The system must overwrite ALL 8 bolt components, not just `BaseSpeed`.
     #[test]
     fn overwrites_all_eight_bolt_components() {
         let mut app = test_app();
@@ -93,9 +94,9 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltBaseSpeed(999.0),
-                BoltMinSpeed(999.0),
-                BoltMaxSpeed(999.0),
+                BaseSpeed(999.0),
+                MinSpeed(999.0),
+                MaxSpeed(999.0),
                 BoltRadius(999.0),
                 BoltSpawnOffsetY(999.0),
                 BoltRespawnOffsetY(999.0),
@@ -121,16 +122,16 @@ mod tests {
 
         let world = app.world();
         assert!(
-            (world.get::<BoltBaseSpeed>(entity).unwrap().0 - 400.0).abs() < f32::EPSILON,
-            "BoltBaseSpeed should be overwritten to 400.0"
+            (world.get::<BaseSpeed>(entity).unwrap().0 - 400.0).abs() < f32::EPSILON,
+            "BaseSpeed should be overwritten to 400.0"
         );
         assert!(
-            (world.get::<BoltMinSpeed>(entity).unwrap().0 - 200.0).abs() < f32::EPSILON,
-            "BoltMinSpeed should be overwritten to 200.0"
+            (world.get::<MinSpeed>(entity).unwrap().0 - 200.0).abs() < f32::EPSILON,
+            "MinSpeed should be overwritten to 200.0"
         );
         assert!(
-            (world.get::<BoltMaxSpeed>(entity).unwrap().0 - 800.0).abs() < f32::EPSILON,
-            "BoltMaxSpeed should be overwritten to 800.0"
+            (world.get::<MaxSpeed>(entity).unwrap().0 - 800.0).abs() < f32::EPSILON,
+            "MaxSpeed should be overwritten to 800.0"
         );
         assert!(
             (world.get::<BoltRadius>(entity).unwrap().0 - 8.0).abs() < f32::EPSILON,
@@ -159,14 +160,14 @@ mod tests {
     fn updates_all_bolt_entities() {
         let mut app = test_app();
 
-        // Spawn 3 bolt entities with different BoltBaseSpeed values.
+        // Spawn 3 bolt entities with different BaseSpeed values.
         let e1 = app
             .world_mut()
             .spawn((
                 Bolt,
-                BoltBaseSpeed(100.0),
-                BoltMinSpeed(50.0),
-                BoltMaxSpeed(200.0),
+                BaseSpeed(100.0),
+                MinSpeed(50.0),
+                MaxSpeed(200.0),
                 BoltRadius(8.0),
                 BoltSpawnOffsetY(30.0),
                 BoltRespawnOffsetY(30.0),
@@ -178,9 +179,9 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltBaseSpeed(200.0),
-                BoltMinSpeed(50.0),
-                BoltMaxSpeed(200.0),
+                BaseSpeed(200.0),
+                MinSpeed(50.0),
+                MaxSpeed(200.0),
                 BoltRadius(8.0),
                 BoltSpawnOffsetY(30.0),
                 BoltRespawnOffsetY(30.0),
@@ -192,9 +193,9 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltBaseSpeed(300.0),
-                BoltMinSpeed(50.0),
-                BoltMaxSpeed(200.0),
+                BaseSpeed(300.0),
+                MinSpeed(50.0),
+                MaxSpeed(200.0),
                 BoltRadius(8.0),
                 BoltSpawnOffsetY(30.0),
                 BoltRespawnOffsetY(30.0),
@@ -209,16 +210,16 @@ mod tests {
 
         let world = app.world();
         assert!(
-            (world.get::<BoltBaseSpeed>(e1).unwrap().0 - 500.0).abs() < f32::EPSILON,
-            "entity 1 BoltBaseSpeed should be 500.0"
+            (world.get::<BaseSpeed>(e1).unwrap().0 - 500.0).abs() < f32::EPSILON,
+            "entity 1 BaseSpeed should be 500.0"
         );
         assert!(
-            (world.get::<BoltBaseSpeed>(e2).unwrap().0 - 500.0).abs() < f32::EPSILON,
-            "entity 2 BoltBaseSpeed should be 500.0"
+            (world.get::<BaseSpeed>(e2).unwrap().0 - 500.0).abs() < f32::EPSILON,
+            "entity 2 BaseSpeed should be 500.0"
         );
         assert!(
-            (world.get::<BoltBaseSpeed>(e3).unwrap().0 - 500.0).abs() < f32::EPSILON,
-            "entity 3 BoltBaseSpeed should be 500.0"
+            (world.get::<BaseSpeed>(e3).unwrap().0 - 500.0).abs() < f32::EPSILON,
+            "entity 3 BaseSpeed should be 500.0"
         );
     }
 
@@ -241,9 +242,9 @@ mod tests {
             .world_mut()
             .spawn((
                 Bolt,
-                BoltBaseSpeed(999.0),
-                BoltMinSpeed(100.0),
-                BoltMaxSpeed(800.0),
+                BaseSpeed(999.0),
+                MinSpeed(100.0),
+                MaxSpeed(800.0),
                 BoltRadius(8.0),
                 BoltSpawnOffsetY(30.0),
                 BoltRespawnOffsetY(30.0),
@@ -263,11 +264,11 @@ mod tests {
         // overwrite hadn't happened. But since the first update runs (resource was
         // just inserted = changed), the value will reflect config.base_speed (400.0).
         // The key assertion: a second update without mutation does NOT reset to 999.0.
-        let base_speed = app.world().get::<BoltBaseSpeed>(entity).unwrap();
+        let base_speed = app.world().get::<BaseSpeed>(entity).unwrap();
         let config_base = app.world().resource::<BoltConfig>().base_speed;
         assert!(
             (base_speed.0 - config_base).abs() < f32::EPSILON,
-            "BoltBaseSpeed should match config after initial propagation and not revert; got {}",
+            "BaseSpeed should match config after initial propagation and not revert; got {}",
             base_speed.0
         );
     }

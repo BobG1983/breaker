@@ -193,8 +193,8 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
                 layout: "Corridor".to_owned(),
                 input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
                 max_frames: 1000,
-                invariants: vec![],
-                expected_violations: None,
+                disallowed_failures: vec![],
+                allowed_failures: None,
                 debug_setup: None,
                 invariant_params: InvariantParams {
                     max_bolt_count: 8,

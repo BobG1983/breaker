@@ -308,11 +308,13 @@ fn spawn_bolt_sends_bolt_spawned_message() {
 
 #[test]
 fn existing_bolt_is_not_double_spawned() {
-    use crate::shared::CleanupOnRunEnd;
-
     let mut app = test_app();
-    app.world_mut()
-        .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0)), CleanupOnRunEnd));
+    Bolt::builder()
+        .at_position(Vec2::ZERO)
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .primary()
+        .spawn(app.world_mut());
     app.add_systems(Startup, spawn_bolt);
     app.update();
 
@@ -429,8 +431,12 @@ fn spawned_bolt_has_collision_layers_bolt_membership_cell_wall_breaker_mask() {
 #[test]
 fn existing_bolt_still_triggers_bolt_spawned_message() {
     let mut app = test_app();
-    app.world_mut()
-        .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0))));
+    Bolt::builder()
+        .at_position(Vec2::ZERO)
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .primary()
+        .spawn(app.world_mut());
     app.add_systems(Startup, spawn_bolt);
     app.update();
 

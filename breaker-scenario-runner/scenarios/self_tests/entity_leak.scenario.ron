@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 300,
-    invariants: [NoEntityLeaks],
-    expected_violations: [NoEntityLeaks],
+    disallowed_failures: [NoEntityLeaks],
+    allowed_failures: [NoEntityLeaks],
     debug_setup: (
         disable_physics: true,
     ),

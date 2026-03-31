@@ -1,27 +1,21 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D, Velocity2D};
 
 /// Marker component identifying the bolt entity.
 #[derive(Component, Debug, Default)]
-#[require(Spatial2D, InterpolateTransform2D, Velocity2D)]
 pub struct Bolt;
+
+/// Marker component identifying the single primary bolt entity.
+///
+/// Stamped by the builder's `.primary()` method. Only ONE entity should
+/// have `PrimaryBolt` at any time. Use `With<PrimaryBolt>` to query for the
+/// primary bolt. `ExtraBolt` entities never have this marker.
+#[derive(Component, Debug, Default)]
+pub struct PrimaryBolt;
 
 /// Marker component indicating the bolt is hovering above the breaker,
 /// waiting for the player to launch it. Present only on the first node.
 #[derive(Component, Debug)]
 pub struct BoltServing;
-
-/// Base speed in world units per second.
-#[derive(Component, Debug)]
-pub struct BoltBaseSpeed(pub f32);
-
-/// Minimum speed cap.
-#[derive(Component, Debug)]
-pub struct BoltMinSpeed(pub f32);
-
-/// Maximum speed cap.
-#[derive(Component, Debug)]
-pub struct BoltMaxSpeed(pub f32);
 
 /// Bolt radius in world units.
 #[derive(Component, Debug)]
@@ -42,33 +36,6 @@ pub struct BoltRespawnAngleSpread(pub f32);
 /// Initial launch angle from vertical in radians.
 #[derive(Component, Debug)]
 pub struct BoltInitialAngle(pub f32);
-
-/// Adjusts velocity so it never gets too close to horizontal (free-function variant).
-///
-/// If the angle from horizontal is less than `min_angle`, rotates the
-/// vector to the minimum angle while preserving speed and Y sign.
-/// Zero velocity is returned unchanged.
-///
-/// This is the `Velocity2D`-compatible replacement for
-/// the old `BoltVelocity::enforce_min_angle`.
-pub fn enforce_min_angle(velocity: &mut Vec2, min_angle: f32) {
-    let speed = velocity.length();
-    if speed < f32::EPSILON {
-        return;
-    }
-
-    let angle_from_horizontal = velocity.y.abs().atan2(velocity.x.abs());
-    if angle_from_horizontal < min_angle {
-        let sign_x = velocity.x.signum();
-        let sign_y = if velocity.y.abs() < f32::EPSILON {
-            1.0 // Default to upward if perfectly horizontal
-        } else {
-            velocity.y.signum()
-        };
-        velocity.x = sign_x * speed * min_angle.cos();
-        velocity.y = sign_y * speed * min_angle.sin();
-    }
-}
 
 /// Marker for extra bolts spawned by breaker consequences (e.g. Prism).
 ///

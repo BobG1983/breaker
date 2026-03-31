@@ -1,11 +1,11 @@
 //! Tests for `ActiveDamageBoosts` interaction with piercing lookahead.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::helpers::*;
 use crate::{
-    bolt::components::{Bolt, PiercingRemaining},
+    bolt::components::PiercingRemaining,
     effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
 };
 
@@ -24,18 +24,12 @@ fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead()
     spawn_cell_with_health(&mut app, 0.0, cell_y, 12.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![1]),
-            PiercingRemaining(1),
-            ActiveDamageBoosts(vec![1.5]),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut().entity_mut(bolt_entity).insert((
+        ActivePiercings(vec![1]),
+        PiercingRemaining(1),
+        ActiveDamageBoosts(vec![1.5]),
+    ));
 
     tick(&mut app);
 
@@ -73,18 +67,11 @@ fn piercing_without_effective_damage_multiplier_reflects_off_tough_cell() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 12.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![1]),
-            PiercingRemaining(1),
-            // NO ActiveDamageBoosts => default base damage 10.0
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+    // NO ActiveDamageBoosts => default base damage 10.0
 
     tick(&mut app);
 

@@ -22,12 +22,7 @@ fn bolt_above_floor_does_not_consume_charges() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -200.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, 100.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, 100.0), Vec2::new(100.0, -200.0));
     tick(&mut app);
 
     let vel = app
@@ -83,12 +78,7 @@ fn bolt_at_exactly_threshold_is_not_lost() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -308.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -308.0), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     let vel = app
@@ -120,12 +110,7 @@ fn bolt_barely_below_threshold_is_absorbed_by_shield() {
     let mut app = test_app();
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -308.001)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -308.001), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     let vel = app
@@ -161,12 +146,7 @@ fn shield_absorbs_barely_below_floor_bolt_and_removes_on_last_charge() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 1);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -308.5)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -308.5), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     let vel = app

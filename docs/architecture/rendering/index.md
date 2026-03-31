@@ -29,6 +29,7 @@ There is **no `rendering/` or `graphics/` game domain**. All rendering primitive
 | [Headless Mode](headless.md) | How rantzsoft_vfx operates without rendering (scenario runner) |
 | [Communication](communication.md) | All message types, gameplay↔VFX data flow, system ordering, domain restructuring |
 | [Bolt Migration](bolt-graphics-migration.md) | Delta from data-driven bolts to new graphics system |
+| [Placeholder Defaults](placeholder-defaults.md) | Phase 5 placeholder tuning values (tuned in Phase 7) |
 
 ## Design Reference
 

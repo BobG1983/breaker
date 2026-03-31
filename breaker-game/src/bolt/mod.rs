@@ -1,5 +1,6 @@
 //! Bolt domain plugin — bolt physics, reflection model, speed management.
 
+pub(crate) mod builder;
 pub mod components;
 pub mod filters;
 pub mod messages;

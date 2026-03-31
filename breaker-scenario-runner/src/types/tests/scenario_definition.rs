@@ -1,42 +1,42 @@
 use super::super::*;
 
 // -------------------------------------------------------------------------
-// ScenarioDefinition — expected_violations field
+// ScenarioDefinition — allowed_failures field
 // -------------------------------------------------------------------------
 
 #[test]
-fn scenario_definition_expected_violations_some_parses() {
+fn scenario_definition_allowed_failures_some_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [BoltInBounds, NoNaN],
-        expected_violations: Some([BoltInBounds, NoNaN]),
+        disallowed_failures: [BoltInBounds, NoNaN],
+        allowed_failures: Some([BoltInBounds, NoNaN]),
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
         ron::de::from_str(ron).expect("ScenarioDefinition with Some violations should parse");
     assert_eq!(
-        result.expected_violations,
+        result.allowed_failures,
         Some(vec![InvariantKind::BoltInBounds, InvariantKind::NoNaN])
     );
 }
 
 #[test]
-fn scenario_definition_expected_violations_none_parses() {
+fn scenario_definition_allowed_failures_none_parses() {
     let ron = r#"(
         breaker: "aegis",
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
         ron::de::from_str(ron).expect("ScenarioDefinition with None violations should parse");
-    assert!(result.expected_violations.is_none());
+    assert!(result.allowed_failures.is_none());
 }
 
 // -------------------------------------------------------------------------
@@ -50,8 +50,8 @@ fn full_scenario_definition_parses_all_fields() {
         layout: "corridor",
         input: Chaos((action_prob: 0.25)),
         max_frames: 20000,
-        invariants: [BoltInBounds, NoNaN],
-        expected_violations: None,
+        disallowed_failures: [BoltInBounds, NoNaN],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
@@ -65,10 +65,10 @@ fn full_scenario_definition_parses_all_fields() {
     );
     assert_eq!(result.max_frames, 20_000);
     assert_eq!(
-        result.invariants,
+        result.disallowed_failures,
         vec![InvariantKind::BoltInBounds, InvariantKind::NoNaN]
     );
-    assert!(result.expected_violations.is_none());
+    assert!(result.allowed_failures.is_none());
     assert!(result.debug_setup.is_none());
 }
 
@@ -83,8 +83,8 @@ fn scenario_definition_allow_early_end_defaults_to_true() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
@@ -106,8 +106,8 @@ fn scenario_definition_seed_defaults_to_none_when_omitted() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
@@ -125,8 +125,8 @@ fn scenario_definition_seed_some_value_parses() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         seed: Some(42),
     )"#;
@@ -146,8 +146,8 @@ fn scenario_definition_stress_field_defaults_to_none_when_omitted() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
@@ -165,8 +165,8 @@ fn scenario_definition_stress_some_with_explicit_values_parses() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         stress: Some((runs: 64, parallelism: 4)),
     )"#;
@@ -188,8 +188,8 @@ fn scenario_definition_stress_some_empty_uses_defaults() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         stress: Some(()),
     )"#;
@@ -215,8 +215,8 @@ fn scenario_definition_initial_chips_single_parses() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         initial_chips: Some(["Surge"]),
     )"#;
@@ -234,8 +234,8 @@ fn scenario_definition_initial_chips_multiple_parses() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         initial_chips: Some(["Surge", "Piercing Shot"]),
     )"#;
@@ -257,8 +257,8 @@ fn scenario_definition_initial_chips_defaults_to_none() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
@@ -280,8 +280,8 @@ fn scenario_definition_with_frame_mutations_parses_from_ron() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         frame_mutations: Some([(frame: 3, mutation: TogglePause)]),
     )"#;
@@ -303,8 +303,8 @@ fn scenario_definition_without_frame_mutations_defaults_to_none() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =

@@ -1,14 +1,14 @@
 //! System to initialize breaker entity components from config.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::breaker::{
     components::{
         BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerMaxSpeed, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
-        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle,
-        MinAngleFromHorizontal, SettleDuration, SettleTiltEase,
+        BreakerHeight, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
+        BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
+        DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, SettleDuration, SettleTiltEase,
     },
     resources::BreakerConfig,
 };
@@ -16,12 +16,12 @@ use crate::breaker::{
 /// Materializes config values as components on the breaker entity.
 ///
 /// Runs `OnEnter(GameState::Playing)` after `spawn_breaker`. Uses
-/// `Without<BreakerMaxSpeed>` to skip already-initialized breakers
+/// `Without<MaxSpeed>` to skip already-initialized breakers
 /// (persisted across nodes).
 pub fn init_breaker_params(
     mut commands: Commands,
     config: Res<BreakerConfig>,
-    query: Query<Entity, (With<Breaker>, Without<BreakerMaxSpeed>)>,
+    query: Query<Entity, (With<Breaker>, Without<MaxSpeed>)>,
 ) {
     for entity in &query {
         commands
@@ -30,7 +30,7 @@ pub fn init_breaker_params(
                 BreakerWidth(config.width),
                 BreakerHeight(config.height),
                 BreakerBaseY(config.y_position),
-                BreakerMaxSpeed(config.max_speed),
+                MaxSpeed(config.max_speed),
                 BreakerAcceleration(config.acceleration),
                 BreakerDeceleration(config.deceleration),
                 DecelEasing {
@@ -48,7 +48,6 @@ pub fn init_breaker_params(
                 },
                 BrakeDecel(config.brake_decel_multiplier),
                 MaxReflectionAngle(config.max_reflection_angle.to_radians()),
-                MinAngleFromHorizontal(config.min_angle_from_horizontal.to_radians()),
             ))
             .insert((
                 SettleDuration(config.settle_duration),
@@ -101,7 +100,7 @@ mod tests {
         assert!(world.get::<BreakerWidth>(entity).is_some());
         assert!(world.get::<BreakerHeight>(entity).is_some());
         assert!(world.get::<BreakerBaseY>(entity).is_some());
-        assert!(world.get::<BreakerMaxSpeed>(entity).is_some());
+        assert!(world.get::<MaxSpeed>(entity).is_some());
         assert!(world.get::<BreakerAcceleration>(entity).is_some());
         assert!(world.get::<BreakerDeceleration>(entity).is_some());
         assert!(world.get::<DecelEasing>(entity).is_some());
@@ -112,7 +111,6 @@ mod tests {
         assert!(world.get::<BrakeTilt>(entity).is_some());
         assert!(world.get::<BrakeDecel>(entity).is_some());
         assert!(world.get::<MaxReflectionAngle>(entity).is_some());
-        assert!(world.get::<MinAngleFromHorizontal>(entity).is_some());
         assert!(world.get::<SettleDuration>(entity).is_some());
         assert!(world.get::<SettleTiltEase>(entity).is_some());
         assert!(world.get::<BumpPerfectWindow>(entity).is_some());
@@ -140,10 +138,7 @@ mod tests {
 
         let config = app.world().resource::<BreakerConfig>();
         let world = app.world();
-        assert!(
-            (world.get::<BreakerMaxSpeed>(entity).unwrap().0 - config.max_speed).abs()
-                < f32::EPSILON
-        );
+        assert!((world.get::<MaxSpeed>(entity).unwrap().0 - config.max_speed).abs() < f32::EPSILON);
         assert!(
             (world.get::<BreakerBaseY>(entity).unwrap().0 - config.y_position).abs() < f32::EPSILON
         );
@@ -166,13 +161,6 @@ mod tests {
                 < 1e-5,
             "MaxReflectionAngle should match config (converted to radians)"
         );
-        assert!(
-            (world.get::<MinAngleFromHorizontal>(entity).unwrap().0
-                - config.min_angle_from_horizontal.to_radians())
-            .abs()
-                < 1e-5,
-            "MinAngleFromHorizontal should match config (converted to radians)"
-        );
         let params = world.get::<BumpVisualParams>(entity).unwrap();
         assert!(
             (params.duration - config.bump_visual_duration).abs() < f32::EPSILON,
@@ -194,14 +182,14 @@ mod tests {
                 BreakerState::default(),
                 BreakerVelocity::default(),
                 BumpState::default(),
-                BreakerMaxSpeed(999.0),
+                MaxSpeed(999.0),
             ))
             .id();
 
         app.update();
 
         // Should not overwrite existing value
-        let max_speed = app.world().get::<BreakerMaxSpeed>(entity).unwrap();
+        let max_speed = app.world().get::<MaxSpeed>(entity).unwrap();
         assert!((max_speed.0 - 999.0).abs() < f32::EPSILON);
     }
 }

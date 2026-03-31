@@ -4,7 +4,7 @@
 // risk: if NodeStart fires more than once per node (e.g. due to state re-entry or
 // restart logic), SpeedBoost stacks to 2.25x then 3.375x and escapes BoltMaxSpeed.
 // If the boost is applied before the bolt has a BoundEffects component, the fire()
-// call silently drops it and no boost occurs — BoltSpeedInRange won't fire, but the
+// call silently drops it and no boost occurs — BoltSpeedAccurate won't fire, but the
 // scenario documents expected baseline speed range. 3000 frames is sufficient to clear
 // most Dense nodes and verify no double-application on node transitions.
 (
@@ -12,8 +12,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.4)),
     max_frames: 3000,
-    invariants: [BoltSpeedInRange],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 1024,

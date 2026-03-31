@@ -3,8 +3,8 @@
     layout: "Scatter",
     input: Chaos((action_prob: 0.9)),
     max_frames: 20000,
-    invariants: [BoltCountReasonable, NoEntityLeaks, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltCountReasonable, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     invariant_params: (
         max_bolt_count: 12,

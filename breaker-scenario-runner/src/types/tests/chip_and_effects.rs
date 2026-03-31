@@ -11,8 +11,8 @@ fn chip_selections_parses_from_ron() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         chip_selections: Some(["Surge", "Surge"]),
     )"#;
@@ -32,8 +32,8 @@ fn chip_selections_defaults_to_none() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =
@@ -57,8 +57,8 @@ fn initial_effects_parses_from_ron() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
         initial_effects: Some([On(target: Bolt, then: [Do(Piercing(1))])]),
     )"#;
@@ -85,8 +85,8 @@ fn initial_effects_defaults_to_none() {
         layout: "corridor",
         input: Chaos((action_prob: 0.1)),
         max_frames: 1000,
-        invariants: [],
-        expected_violations: None,
+        disallowed_failures: [],
+        allowed_failures: None,
         debug_setup: None,
     )"#;
     let result: ScenarioDefinition =

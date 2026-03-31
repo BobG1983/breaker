@@ -23,10 +23,6 @@ pub struct BreakerTilt {
     pub ease_target: f32,
 }
 
-/// Maximum horizontal speed in world units per second.
-#[derive(Component, Debug)]
-pub struct BreakerMaxSpeed(pub f32);
-
 /// Horizontal acceleration in world units per second squared.
 #[derive(Component, Debug)]
 pub struct BreakerAcceleration(pub f32);

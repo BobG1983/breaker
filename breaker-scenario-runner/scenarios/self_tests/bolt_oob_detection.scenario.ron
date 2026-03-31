@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [BoltInBounds],
-    expected_violations: [BoltInBounds],
+    disallowed_failures: [BoltInBounds],
+    allowed_failures: [BoltInBounds],
     debug_setup: (
         bolt_position: (0.0, 1000.0),
         disable_physics: true,

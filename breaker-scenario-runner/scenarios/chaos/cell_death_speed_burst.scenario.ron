@@ -7,7 +7,7 @@
 // within a single fixed-update tick: 1.05^N overflows BoltMaxSpeed quickly.
 // If each individual cell impact in a piercing chain generates a separate Death event,
 // a single bolt pass through 8 cells fires SpeedBoost 8 times: 1.05^8 ≈ 1.48x.
-// BoltSpeedInRange is the primary detector. NoNaN guards against floating-point
+// BoltSpeedAccurate is the primary detector. NoNaN guards against floating-point
 // corruption from very large velocity magnitudes. NoEntityLeaks ensures no orphaned
 // SpeedBoost component entries accumulate on destroyed entities.
 // 5000 frames at moderate chaos gives enough cell destruction events to expose both
@@ -17,8 +17,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 5000,
-    invariants: [BoltSpeedInRange, NoNaN, NoEntityLeaks],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, NoNaN, NoEntityLeaks],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 4271,

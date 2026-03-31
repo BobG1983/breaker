@@ -20,8 +20,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.7)),
     max_frames: 8000,
-    invariants: [GravityWellCountReasonable, NoNaN, NoEntityLeaks, BoltInBounds],
-    expected_violations: None,
+    disallowed_failures: [GravityWellCountReasonable, NoNaN, NoEntityLeaks, BoltInBounds],
+    allowed_failures: None,
     debug_setup: None,
     invariant_params: (
         max_gravity_well_count: 20,

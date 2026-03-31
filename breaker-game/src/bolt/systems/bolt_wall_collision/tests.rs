@@ -7,7 +7,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, V
 use super::*;
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseSpeed, BoltRadius, ImpactSide, LastImpact, PiercingRemaining},
+        components::{Bolt, ImpactSide, LastImpact, PiercingRemaining},
         messages::BoltImpactWall,
         resources::BoltConfig,
     },
@@ -16,7 +16,7 @@ use crate::{
     wall::components::Wall,
 };
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────
 
 fn test_app() -> App {
     let mut app = App::new();
@@ -33,11 +33,6 @@ fn test_app() -> App {
     app
 }
 
-fn bolt_param_bundle() -> (BoltBaseSpeed, BoltRadius) {
-    let bc = BoltConfig::default();
-    (BoltBaseSpeed(bc.base_speed), BoltRadius(bc.radius))
-}
-
 /// Accumulates one fixed timestep of overstep, then runs one update.
 fn tick(app: &mut App) {
     let timestep = app.world().resource::<Time<Fixed>>().timestep();
@@ -49,21 +44,12 @@ fn tick(app: &mut App) {
 
 /// Spawns a bolt at the given position with the given velocity.
 fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
-    let bc = BoltConfig::default();
-    let pos = Vec2::new(x, y);
-    app.world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(vx, vy)),
-            Position2D(pos),
-            GlobalPosition2D(pos),
-            Spatial2D,
-            Aabb2D::new(Vec2::ZERO, Vec2::splat(bc.radius)),
-            CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
-            GameDrawLayer::Bolt,
-        ))
-        .id()
+    Bolt::builder()
+        .at_position(Vec2::new(x, y))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+        .primary()
+        .spawn(app.world_mut())
 }
 
 /// Spawns a bolt with `ActivePiercings` and `PiercingRemaining` components.
@@ -76,23 +62,17 @@ fn spawn_piercing_bolt(
     active_piercings: Vec<u32>,
     piercing_remaining: u32,
 ) -> Entity {
-    let bc = BoltConfig::default();
-    let pos = Vec2::new(x, y);
-    app.world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(vx, vy)),
-            Position2D(pos),
-            GlobalPosition2D(pos),
-            Spatial2D,
-            Aabb2D::new(Vec2::ZERO, Vec2::splat(bc.radius)),
-            CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
-            GameDrawLayer::Bolt,
-            ActivePiercings(active_piercings),
-            PiercingRemaining(piercing_remaining),
-        ))
-        .id()
+    let entity = Bolt::builder()
+        .at_position(Vec2::new(x, y))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+        .primary()
+        .spawn(app.world_mut());
+    app.world_mut().entity_mut(entity).insert((
+        ActivePiercings(active_piercings),
+        PiercingRemaining(piercing_remaining),
+    ));
+    entity
 }
 
 /// Spawns a wall entity at the given position with the given half-extents.
@@ -211,24 +191,10 @@ fn bolt_with_piercing_remaining_but_no_active_piercings_unchanged_on_wall_hit() 
     spawn_wall(&mut app, -5.0, 200.0, 5.0, 400.0);
 
     // Spawn bolt with PiercingRemaining but NO ActivePiercings
-    let bc = BoltConfig::default();
-    let pos = Vec2::new(-2.0, 200.0);
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(-400.0, 0.0)),
-            Position2D(pos),
-            GlobalPosition2D(pos),
-            Spatial2D,
-            Aabb2D::new(Vec2::ZERO, Vec2::splat(bc.radius)),
-            CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
-            GameDrawLayer::Bolt,
-            PiercingRemaining(1),
-            // No ActivePiercings
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, -2.0, 200.0, -400.0, 0.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(PiercingRemaining(1));
 
     tick(&mut app);
 

@@ -1,7 +1,7 @@
 //! Behavior 10: Multiple bolts lost in same frame each consume one shield charge.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{
     super::{super::system::bolt_lost, helpers::*},
@@ -27,26 +27,11 @@ fn three_bolts_lost_consume_three_charges() {
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
     // Bolt A
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(-100.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(-100.0, -309.0), Vec2::new(0.0, -400.0));
     // Bolt B
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(0.0, -400.0));
     // Bolt C
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(100.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(100.0, -309.0), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     // All three reflected upward
@@ -94,12 +79,7 @@ fn four_bolts_lost_but_only_three_charges_fourth_falls_through() {
 
     // Four bolts below floor
     for x in [-150.0, -50.0, 50.0, 150.0] {
-        app.world_mut().spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_lost_bundle(),
-            Position2D(Vec2::new(x, -309.0)),
-        ));
+        spawn_bolt(&mut app, Vec2::new(x, -309.0), Vec2::new(0.0, -400.0));
     }
     tick(&mut app);
 

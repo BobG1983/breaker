@@ -7,8 +7,8 @@ Architecture principles shared across all screens. Per-screen entity layouts, sh
 1. **Each screen is a module in `screen/`.** `screen/main_menu/`, `screen/run_end/`, `screen/pause/`, etc.
 2. **Entity lifecycle:** Spawn entities on `OnEnter(GameState::*)`, despawn on `OnExit(GameState::*)` via cleanup markers. No persistent screen entities across state changes.
 3. **VFX via rantzsoft_vfx primitives.** Screens use `ExecuteRecipe`, `AttachVisuals`, and modifier messages — same tools as gameplay domains. No screen-specific rendering infrastructure.
-4. **Text rendering:** Bevy `Text2d` with monospace font. Glitch effects via GlitchText overlay where appropriate (titles, highlight labels).
-5. **No Bevy UI nodes.** All screen content is world-space entities, not UI nodes. Consistent with the diegetic aesthetic. Input handling via custom systems (raycast or position-based).
+4. **Text rendering:** Bevy `Text2d` with monospace font for in-world text. Glitch effects via GlitchText overlay where appropriate (titles, highlight labels).
+5. **Input handling is per-screen.** Menus may use Bevy UI (Node, Button, Interaction) or world-space entities with cursor-to-world input — whichever fits the screen. The "no UI nodes" rule applies to the diegetic HUD (`screen/playing/hud/`), not to menu screens. Menus that need standard input handling (hover, click, keyboard nav) can use Bevy UI styled to match the aesthetic.
 
 ## Per-Screen Design Direction
 

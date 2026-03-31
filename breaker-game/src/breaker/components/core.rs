@@ -40,10 +40,6 @@ pub struct BreakerBaseY(pub f32);
 #[derive(Component, Debug)]
 pub struct MaxReflectionAngle(pub f32);
 
-/// Minimum angle from horizontal in radians.
-#[derive(Component, Debug)]
-pub struct MinAngleFromHorizontal(pub f32);
-
 /// Marker: breaker entity has been initialized by `init_breaker`.
 /// Prevents duplicate chain pushes on node re-entry.
 #[derive(Component)]

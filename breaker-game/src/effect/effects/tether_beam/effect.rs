@@ -3,11 +3,12 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rand::Rng;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, ccd::ray_vs_aabb, collision_layers::CollisionLayers, plugin::PhysicsSystems,
     resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
 
 use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
@@ -16,7 +17,7 @@ use crate::{
         core::{EffectSourceChip, chip_attribution},
         effects::damage_boost::ActiveDamageBoosts,
     },
-    shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
+    shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState, rng::GameRng},
 };
 
 /// Marker on a tether bolt entity, indicating it belongs to a tether beam.
@@ -70,12 +71,29 @@ pub(crate) fn fire(
     }
 }
 
+/// Spawns a single extra bolt with a random velocity direction at the given position.
+fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, config: &BoltConfig) -> Entity {
+    let angle = {
+        let mut rng = world.resource_mut::<GameRng>();
+        rng.0.random_range(0.0..std::f32::consts::TAU)
+    };
+    let direction = Vec2::new(angle.cos(), angle.sin());
+    let velocity = Velocity2D(direction * config.base_speed);
+    Bolt::builder()
+        .at_position(spawn_pos)
+        .config(config)
+        .with_velocity(velocity)
+        .extra()
+        .spawn(world)
+}
+
 /// Standard mode: spawn two tethered bolts with a beam between them.
 fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
     let spawn_pos = super::super::entity_position(world, entity);
+    let config = world.resource::<BoltConfig>().clone();
 
-    let bolt_a = super::super::spawn_extra_bolt(world, spawn_pos);
-    let bolt_b = super::super::spawn_extra_bolt(world, spawn_pos);
+    let bolt_a = spawn_tether_bolt(world, spawn_pos, &config);
+    let bolt_b = spawn_tether_bolt(world, spawn_pos, &config);
 
     let edm = world
         .get::<ActiveDamageBoosts>(entity)

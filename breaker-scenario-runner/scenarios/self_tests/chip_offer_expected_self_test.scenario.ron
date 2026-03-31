@@ -3,8 +3,8 @@
     layout: "quick_clear",
     input: Perfect(AlwaysPerfect),
     max_frames: 3000,
-    invariants: [ChipOfferExpected],
-    expected_violations: Some([ChipOfferExpected]),
+    disallowed_failures: [ChipOfferExpected],
+    allowed_failures: Some([ChipOfferExpected]),
     allow_early_end: true,
     expected_offerings: Some(["Railgun"]),
 )

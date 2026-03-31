@@ -22,9 +22,11 @@ pub(crate) fn apply_entity_scale_to_bolt(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
     use super::*;
     use crate::{
-        bolt::components::ExtraBolt,
+        bolt::resources::BoltConfig,
         run::node::{NodeLayout, definition::NodePool},
     };
 
@@ -48,6 +50,15 @@ mod tests {
         })
     }
 
+    fn spawn_bolt(app: &mut App) -> Entity {
+        Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .config(&BoltConfig::default())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .spawn(app.world_mut())
+    }
+
     #[test]
     fn inserts_entity_scale_from_active_node_layout() {
         // Given: Bolt entity, ActiveNodeLayout with entity_scale = 0.7
@@ -56,7 +67,7 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(make_layout(0.7));
 
-        let entity = app.world_mut().spawn(Bolt).id();
+        let entity = spawn_bolt(&mut app);
 
         app.update();
 
@@ -76,7 +87,8 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(make_layout(1.0));
 
-        let entity = app.world_mut().spawn((Bolt, EntityScale(0.7))).id();
+        let entity = spawn_bolt(&mut app);
+        app.world_mut().entity_mut(entity).insert(EntityScale(0.7));
 
         app.update();
 
@@ -96,10 +108,11 @@ mod tests {
         let mut app = test_app();
         // Do NOT insert ActiveNodeLayout
 
-        let entity = app.world_mut().spawn(Bolt).id();
+        let entity = spawn_bolt(&mut app);
 
         app.update();
 
+        // Builder does not insert EntityScale, so it should still be absent.
         assert!(
             app.world().get::<EntityScale>(entity).is_none(),
             "EntityScale should not be inserted without ActiveNodeLayout",
@@ -114,8 +127,13 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(make_layout(0.7));
 
-        let primary = app.world_mut().spawn(Bolt).id();
-        let extra = app.world_mut().spawn((Bolt, ExtraBolt)).id();
+        let primary = spawn_bolt(&mut app);
+        let extra = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .config(&BoltConfig::default())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .extra()
+            .spawn(app.world_mut());
 
         app.update();
 

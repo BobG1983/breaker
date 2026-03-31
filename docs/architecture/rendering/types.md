@@ -28,7 +28,9 @@ pub enum Hue {
 
 ```rust
 pub enum Shape {
-    Rectangle, RoundedRectangle, Hexagon, Octagon,
+    Rectangle,
+    RoundedRectangle { corner_radius: f32 },  // 0.0-1.0 normalized (fraction of half-extent)
+    Hexagon, Octagon,
     Circle, Diamond, Shield, Angular, Crystalline,
     Custom(CustomShape),
 }
@@ -48,19 +50,21 @@ Entities are rendered as **SDF-on-quad**: one oversized quad per entity, the fra
 | Variant | SDF Function | Notes |
 |---------|-------------|-------|
 | Rectangle | `sdBox(uv, half_extents)` | Standard box SDF |
-| RoundedRectangle | `sdRoundedBox(uv, half_extents, corner_radius)` | Box SDF with rounded corners |
+| RoundedRectangle | `sdRoundedBox(uv, half_extents, corner_radius)` | Box SDF with rounded corners. `corner_radius` from the enum field. |
 | Hexagon | `sdHexagon(uv, radius)` | 6-sided regular polygon SDF |
 | Octagon | `sdRegularPolygon(uv, radius, 8)` | 8-sided regular polygon SDF |
 | Circle | `sdCircle(uv, radius)` | Standard circle SDF |
 | Diamond | `sdRhombus(uv, half_diags)` | Rhombus SDF |
-| Shield | Custom SDF (wide convex top, tapered bottom) | Approximate with sdBox + smoothstep or custom polygon SDF |
-| Angular | Custom SDF (chevron/arrowhead) | Polygon SDF from vertex list |
-| Crystalline | Custom SDF (irregular facets) | Polygon SDF from vertex list |
-| Custom | `sdPolygon(uv, vertices)` | Arbitrary convex polygon SDF |
+| Shield | `sdPolygon(uv, SHIELD_VERTS)` | Hardcoded vertex list in WGSL (wide convex top, tapered bottom) |
+| Angular | `sdPolygon(uv, ANGULAR_VERTS)` | Hardcoded vertex list in WGSL (chevron/arrowhead) |
+| Crystalline | `sdPolygon(uv, CRYSTALLINE_VERTS)` | Hardcoded vertex list in WGSL (irregular facets) |
+| Custom | `sdPolygon(uv, vertices)` | Vertices passed as uniform array (max 16 vertices) |
+
+**Custom shape SDF vertex data**: Shield, Angular, and Crystalline have vertex lists **hardcoded in WGSL** as `const` arrays within the `switch` cases. The `shape_type` uniform selects which `const` array to use. This avoids passing vertex data per-entity for built-in shapes. Only `Custom(CustomShape)` passes vertices as a uniform array (capped at 16 vertices for uniform buffer size). See [research/mesh-generation.md](research/mesh-generation.md) for the vertex coordinates used in each built-in shape.
 
 **SDF advantages**: one draw call per entity, infinitely smooth at any scale, all modifiers (SpikeCount, CoreBrightness, HaloRadius) are uniform changes — no vertex regeneration. SDF math is trivial at our entity sizes (30-80px).
 
-**Shape is just "which SDF function"** — it carries no size/dimension parameters. SDF dimensions come from the entity's `Scale2D` component (already used by the spatial system). The entity_glow shader reads scale from the mesh transform and normalizes UV coordinates accordingly. A `Shape::Rectangle` on a 60x20 entity uses `sdBox(uv, vec2(0.5, 0.167))` — half-extents derived from the aspect ratio.
+**Shape is just "which SDF function"** — it carries no size/dimension parameters (except `RoundedRectangle.corner_radius`). SDF dimensions come from the entity's `Scale2D` component (already used by the spatial system). The entity_glow shader reads scale from the mesh transform and normalizes UV coordinates accordingly. A `Shape::Rectangle` on a 60x20 entity uses `sdBox(uv, vec2(0.5, 0.167))` — half-extents derived from the aspect ratio.
 
 **SDF function selection**: single `entity_glow.wgsl` shader with an integer `shape_type` uniform. WGSL `switch` statement selects the SDF function. At 50-100 entities with branch divergence only at entity boundaries, GPU performance impact is negligible.
 

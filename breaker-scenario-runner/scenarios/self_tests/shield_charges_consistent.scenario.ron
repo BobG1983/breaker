@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [ShieldChargesConsistent],
-    expected_violations: Some([ShieldChargesConsistent]),
+    disallowed_failures: [ShieldChargesConsistent],
+    allowed_failures: Some([ShieldChargesConsistent]),
     debug_setup: (
         disable_physics: true,
     ),

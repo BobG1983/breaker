@@ -81,3 +81,9 @@ cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transit
 cargo deny: same error (paste unmaintained) + same warnings (Unicode-DFS-2016 unmatched, 40+ duplicate transitive).
 cargo machete: no unused dependencies found.
 No new external crates introduced.
+
+## Cache removal refactor audit (2026-03-30, feature/scenario-coverage — commits d6d9b80 + 2bdb81b)
+No new dependencies. Dependency baseline unchanged from prior note.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
+cargo machete: no unused dependencies found.
+No new external crates introduced. Removals are internal types only.

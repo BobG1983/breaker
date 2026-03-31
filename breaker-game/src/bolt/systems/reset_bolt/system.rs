@@ -6,7 +6,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{
     bolt::{
         components::{Bolt, BoltServing, ExtraBolt},
-        queries::ResetBoltQuery,
+        queries::{ResetBoltData, apply_velocity_formula},
         resources::BoltConfig,
     },
     breaker::components::Breaker,
@@ -28,7 +28,7 @@ pub(crate) fn reset_bolt(
     config: Res<BoltConfig>,
     run_state: Res<RunState>,
     breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
-    mut bolt_query: Query<ResetBoltQuery, (With<Bolt>, Without<ExtraBolt>)>,
+    mut bolt_query: Query<ResetBoltData, (With<Bolt>, Without<ExtraBolt>)>,
 ) {
     let Ok(breaker_pos) = breaker_query.single() else {
         return;
@@ -39,26 +39,30 @@ pub(crate) fn reset_bolt(
 
     let serving = run_state.node_index == 0;
 
-    for (entity, mut position, mut velocity, piercing_remaining, active_piercings, prev_pos) in
-        &mut bolt_query
-    {
+    for mut bolt in &mut bolt_query {
         let new_pos = Vec2::new(breaker_x, breaker_y + config.spawn_offset_y);
-        position.0 = new_pos;
+        bolt.spatial.position.0 = new_pos;
 
-        if let Some(mut prev) = prev_pos {
+        if let Some(ref mut prev) = bolt.previous_position {
             prev.0 = new_pos;
         }
 
         if serving {
-            velocity.0 = Vec2::ZERO;
-            commands.entity(entity).insert(BoltServing);
+            bolt.spatial.velocity.0 = Vec2::ZERO;
+            commands.entity(bolt.entity).insert(BoltServing);
         } else {
             let v = config.initial_velocity();
-            velocity.0 = Vec2::new(v.x, v.y);
-            commands.entity(entity).remove::<BoltServing>();
+            bolt.spatial.velocity.0 = Vec2::new(v.x, v.y);
+
+            // Apply the canonical velocity formula after setting launch velocity
+            apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+
+            commands.entity(bolt.entity).remove::<BoltServing>();
         }
 
-        if let (Some(mut remaining), Some(ap)) = (piercing_remaining, active_piercings) {
+        if let (Some(ref mut remaining), Some(ap)) =
+            (bolt.piercing_remaining, bolt.active_piercings)
+        {
             remaining.0 = ap.total();
         }
     }

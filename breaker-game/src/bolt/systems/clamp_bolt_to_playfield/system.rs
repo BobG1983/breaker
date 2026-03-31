@@ -1,11 +1,13 @@
 //! Safety clamp -- catches bolts that escape through wall corner overlaps.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
-    bolt::{components::BoltRadius, filters::ActiveFilter},
-    shared::{EntityScale, PlayfieldConfig},
+    bolt::{
+        filters::ActiveFilter,
+        queries::{BoltCollisionData, apply_velocity_formula},
+    },
+    shared::PlayfieldConfig,
 };
 
 /// Sub-pixel inset applied when clamping bolt position to playfield walls.
@@ -25,26 +27,18 @@ const BOUNDARY_INSET: f32 = 0.01;
 /// playfield are handled by [`bolt_lost`].
 pub(crate) fn clamp_bolt_to_playfield(
     playfield: Res<PlayfieldConfig>,
-    mut bolt_query: Query<
-        (
-            &mut Position2D,
-            &mut Velocity2D,
-            &BoltRadius,
-            Option<&EntityScale>,
-        ),
-        ActiveFilter,
-    >,
+    mut bolt_query: Query<BoltCollisionData, ActiveFilter>,
 ) {
-    for (mut position, mut vel, radius, bolt_entity_scale) in &mut bolt_query {
-        let r = radius.0 * bolt_entity_scale.map_or(1.0, |s| s.0);
-        let pos = position.0;
+    for mut bolt in &mut bolt_query {
+        let r = bolt.collision.radius.0 * bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let pos = bolt.spatial.position.0;
 
         let x_min = playfield.left() + r + BOUNDARY_INSET;
         let x_max = playfield.right() - r - BOUNDARY_INSET;
         let y_max = playfield.top() - r - BOUNDARY_INSET;
 
         let mut new_pos = pos;
-        let mut new_vel = vel.0;
+        let mut new_vel = bolt.spatial.velocity.0;
         let mut clamped = false;
 
         if pos.x < x_min {
@@ -71,8 +65,11 @@ pub(crate) fn clamp_bolt_to_playfield(
         // No bottom clamp -- intentionally open for bolt-lost
 
         if clamped {
-            position.0 = new_pos;
-            vel.0 = new_vel;
+            bolt.spatial.position.0 = new_pos;
+            bolt.spatial.velocity.0 = new_vel;
+
+            // Apply the canonical velocity formula after clamping
+            apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
         }
     }
 }

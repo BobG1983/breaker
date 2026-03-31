@@ -1,12 +1,13 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::system::*;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
-            BreakerStateTimer, BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier,
-            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
+            BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier, DashTilt,
+            DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
         },
         resources::BreakerConfig,
     },
@@ -19,7 +20,7 @@ mod flash_step;
 fn breaker_param_bundle(
     config: &BreakerConfig,
 ) -> (
-    BreakerMaxSpeed,
+    MaxSpeed,
     BreakerDeceleration,
     DecelEasing,
     DashSpeedMultiplier,
@@ -32,7 +33,7 @@ fn breaker_param_bundle(
     SettleTiltEase,
 ) {
     (
-        BreakerMaxSpeed(config.max_speed),
+        MaxSpeed(config.max_speed),
         BreakerDeceleration(config.deceleration),
         DecelEasing {
             ease: config.decel_ease,

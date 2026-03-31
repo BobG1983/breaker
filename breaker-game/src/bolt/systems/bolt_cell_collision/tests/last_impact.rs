@@ -5,11 +5,10 @@
 //! when the bolt pierces through a cell.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::{Bolt, ImpactSide, LastImpact, PiercingRemaining},
+    bolt::components::{ImpactSide, LastImpact, PiercingRemaining},
     effect::effects::piercing::ActivePiercings,
 };
 
@@ -31,15 +30,7 @@ fn cell_bottom_rebound_stamps_last_impact_with_bottom_side() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -79,15 +70,7 @@ fn cell_top_rebound_stamps_last_impact_with_top_side() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
 
     let start_y = cell_y + cc.height / 2.0 + bc.radius + 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
 
     tick(&mut app);
 
@@ -117,15 +100,7 @@ fn cell_top_rebound_side_determined_by_normal_not_velocity() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
 
     let start_y = cell_y + cc.height / 2.0 + bc.radius + 0.1;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(399.0, -20.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 399.0, -20.0);
 
     tick(&mut app);
 
@@ -159,15 +134,7 @@ fn cell_left_rebound_stamps_last_impact_with_left_side() {
     let cc = crate::cells::resources::CellConfig::default();
     let bc = crate::bolt::resources::BoltConfig::default();
     let start_x = cell_x - cc.width / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(400.0, 0.0)),
-            Position2D(Vec2::new(start_x, cell_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, start_x, cell_y, 400.0, 0.0);
 
     tick(&mut app);
 
@@ -201,15 +168,7 @@ fn cell_right_rebound_stamps_last_impact_with_right_side() {
     let cc = crate::cells::resources::CellConfig::default();
     let bc = crate::bolt::resources::BoltConfig::default();
     let start_x = cell_x + cc.width / 2.0 + bc.radius + 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(-400.0, 0.0)),
-            Position2D(Vec2::new(start_x, cell_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, start_x, cell_y, -400.0, 0.0);
 
     tick(&mut app);
 
@@ -242,17 +201,10 @@ fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![2]),
-            PiercingRemaining(2),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
 
     tick(&mut app);
 
@@ -275,17 +227,10 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![2]),
-            PiercingRemaining(2),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
     // Insert a pre-existing LastImpact
     let original = LastImpact {
         position: Vec2::new(50.0, 300.0),
@@ -328,17 +273,10 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![1]),
-            PiercingRemaining(1),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
 
     tick(&mut app);
 
@@ -371,17 +309,10 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![1]),
-            PiercingRemaining(0),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![1]), PiercingRemaining(0)));
 
     tick(&mut app);
 
@@ -408,17 +339,10 @@ fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActivePiercings(vec![]),
-            PiercingRemaining(0),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![]), PiercingRemaining(0)));
 
     tick(&mut app);
 

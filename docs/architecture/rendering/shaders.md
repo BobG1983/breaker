@@ -68,7 +68,7 @@ Single `aura.wgsl` shader with a `variant` uniform selecting the rendering algor
 Shared shader for ExpandingRing, EnergyRing, and ExpandingDisc. SDF-based: `sdCircle(uv, radius)` with configurable rendering mode via a `filled` uniform toggle.
 
 - **Ring mode** (`filled = 0`): core glow at distance == 0 (ring boundary), exponential falloff both inward and outward. `thickness` controls the band width.
-- **Disc mode** (`filled = 1`): alpha = 1.0 inside the circle (inverted — transparent core for the center, opaque fill around it). Wait — per user: "invert the filled core, should be alpha in the middle." So: **opaque center, transparent/glowing edge**. The disc interior is the bright part, with glow falloff outside. `step(0.0, -d)` for solid fill inside + exponential halo outside.
+- **Disc mode** (`filled = 1`): opaque center, glowing edge. The disc interior is the bright part (`step(0.0, -d)` for solid fill inside), with exponential halo glow falloff outside.
 
 Radius animates from 0 to `max_radius` over lifetime. HDR color for bloom.
 

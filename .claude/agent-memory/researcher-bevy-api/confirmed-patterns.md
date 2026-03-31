@@ -74,9 +74,138 @@ TODO: add from next research session.
 
 ---
 
-## Queries
+## Queries — QueryData Derive (custom named query structs)
 
-TODO: add from next research session.
+Verified against `docs.rs/bevy/0.18.0` and `github.com/bevyengine/bevy/blob/v0.18.0/examples/ecs/custom_query_param.rs`.
+
+### Read-only struct (no mutable components)
+
+```rust
+use bevy::ecs::query::QueryData;
+
+#[derive(QueryData)]
+struct MyQuery {
+    entity: Entity,
+    position: &'static Transform,
+    velocity: Option<&'static Velocity>,
+}
+```
+
+- No attribute needed for read-only structs.
+- Iterating with `&query` or `&mut query` both yield the same read-only item type.
+
+### Mutable struct (at least one `&'static mut` field)
+
+```rust
+#[derive(QueryData)]
+#[query_data(mutable)]
+struct MyQuery {
+    entity: Entity,
+    position: &'static mut Transform,
+    velocity: Option<&'static mut Velocity>,
+    speed: &'static Speed,  // read-only field is fine in a mutable struct
+}
+```
+
+**The `#[query_data(mutable)]` attribute is required whenever any field is `&'static mut`.**
+
+### Generated types (for a struct named `MyQuery`)
+
+| Type | When generated | Use |
+|------|---------------|-----|
+| `MyQueryItem<'w, 's>` | Always | The item when iterating `&mut query` |
+| `MyQueryReadOnly` | Only with `mutable` | Read-only variant usable in `Query<MyQueryReadOnly>` |
+| `MyQueryReadOnlyItem<'w, 's>` | Only with `mutable` | The item when iterating `&query` (immutable borrow of a mutable query) |
+
+### Iterating in a system
+
+```rust
+// Immutable iteration — yields read-only items
+fn my_system(query: Query<MyQuery>) {
+    for item in &query {
+        // item fields are all &T (read-only refs)
+        let _ = item.entity;
+        let _ = item.position;
+    }
+}
+
+// Mutable iteration — yields mutable items
+fn my_mut_system(mut query: Query<MyQuery>) {
+    for mut item in &mut query {
+        // mutable fields are Mut<T>
+        item.position.translation.x += 1.0;
+    }
+}
+
+// Explicit item type annotation (useful for clarity)
+fn my_explicit_system(mut query: Query<MyQuery>) {
+    for e in &mut query {
+        let e: MyQueryItem<'_, '_, > = e;
+        // ...
+    }
+}
+```
+
+### Deriving Debug on the generated item types
+
+Pass extra derives via the attribute:
+
+```rust
+#[derive(QueryData)]
+#[query_data(mutable, derive(Debug))]
+struct MyQuery { ... }
+```
+
+### Nesting QueryData structs
+
+Fields can themselves be another `#[derive(QueryData)]` struct — no special syntax needed:
+
+```rust
+#[derive(QueryData)]
+struct Inner { c: &'static ComponentC }
+
+#[derive(QueryData)]
+#[query_data(mutable)]
+struct Outer {
+    a: &'static mut ComponentA,
+    inner: Inner,  // nested read-only QueryData
+}
+```
+
+### Generics
+
+Supported — type parameters must be `Component`:
+
+```rust
+#[derive(QueryData)]
+struct GenericQuery<T: Component, P: Component> {
+    t: &'static T,
+    p: &'static P,
+}
+```
+
+### `Option<>` fields
+
+Supported for optional components, exactly like tuple queries:
+
+```rust
+active_boost: Option<&'static ActiveSpeedBoosts>,
+```
+
+### Import path
+
+```rust
+use bevy::ecs::query::QueryData;
+// or via prelude if re-exported (verify — safe to use full path)
+```
+
+### Key rules summary
+
+1. Any `&'static mut` field → **requires** `#[query_data(mutable)]` on the struct
+2. Read-only fields (`&'static T`) are valid in a mutable struct
+3. Field type is always `&'static T` or `&'static mut T` (with the `'static` lifetime) in the struct definition
+4. The actual item type in system iteration uses short lifetimes (`'w`) — Bevy handles this
+5. Tuple fields work: `Option<(&'static ComponentB, &'static ComponentZ)>`
 
 ---
 

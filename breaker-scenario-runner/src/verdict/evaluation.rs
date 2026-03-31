@@ -57,8 +57,8 @@ impl ScenarioVerdict {
     ) {
         self.reasons.clear();
 
-        // Check violations against expected_violations.
-        match definition.expected_violations.as_deref() {
+        // Check violations against allowed_failures.
+        match definition.allowed_failures.as_deref() {
             None | Some([]) => {
                 // No expected violations: any violation is a failure (one reason per kind).
                 let mut seen = HashSet::<InvariantKind>::new();

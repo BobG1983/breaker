@@ -1,9 +1,8 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::{Bolt, PiercingRemaining},
+    bolt::components::PiercingRemaining,
     effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
 };
 
@@ -17,15 +16,7 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let _bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -58,13 +49,8 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        // No ActiveDamageBoosts component
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    // No ActiveDamageBoosts component
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -93,16 +79,10 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let _bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            ActiveDamageBoosts(vec![1.5]),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(ActiveDamageBoosts(vec![1.5]));
 
     tick(&mut app);
 
@@ -126,13 +106,10 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        ActiveDamageBoosts(vec![1.0]),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(ActiveDamageBoosts(vec![1.0]));
 
     tick(&mut app);
 
@@ -160,24 +137,8 @@ fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
 
     let start_y = 100.0 - cc.height / 2.0 - bc.radius - 2.0;
 
-    let _bolt_a = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(-100.0, start_y)),
-        ))
-        .id();
-    let _bolt_b = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(100.0, start_y)),
-        ))
-        .id();
+    spawn_bolt(&mut app, -100.0, start_y, 0.0, 400.0);
+    spawn_bolt(&mut app, 100.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -203,12 +164,7 @@ fn wall_hit_does_not_emit_damage_cell() {
     spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
 
     let start_x = 200.0 - 50.0 - bc.radius - 5.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(400.0, 0.1)),
-        Position2D(Vec2::new(start_x, 0.0)),
-    ));
+    spawn_bolt(&mut app, start_x, 0.0, 400.0, 0.1);
 
     tick(&mut app);
 
@@ -231,17 +187,10 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
     let cell_b = spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10.0);
 
     let start_y = near_cell_y - bc.radius - 25.0;
-    let _bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 10000.0)),
-            ActivePiercings(vec![2]),
-            PiercingRemaining(2),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 10000.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
 
     tick(&mut app);
 
@@ -282,15 +231,7 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -327,13 +268,10 @@ fn cell_collision_uses_active_damage_boosts_multiplier() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        ActiveDamageBoosts(vec![3.0]),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(ActiveDamageBoosts(vec![3.0]));
 
     tick(&mut app);
 
@@ -365,13 +303,8 @@ fn cell_collision_ignores_stale_effective_damage_multiplier() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        // No ActiveDamageBoosts — verifies default multiplier of 1.0
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    // No ActiveDamageBoosts — verifies default multiplier of 1.0
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 

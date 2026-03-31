@@ -1,6 +1,6 @@
 mod bolt_count_reasonable;
 mod bolt_in_bounds;
-mod bolt_speed_in_range;
+mod bolt_speed_accurate;
 mod breaker_in_bounds;
 mod breaker_position_clamped;
 mod check_aabb_matches_entity_dimensions;
@@ -24,7 +24,7 @@ mod valid_state_transitions;
 
 pub use bolt_count_reasonable::*;
 pub use bolt_in_bounds::*;
-pub use bolt_speed_in_range::*;
+pub use bolt_speed_accurate::*;
 pub use breaker_in_bounds::*;
 pub use breaker_position_clamped::*;
 pub use check_aabb_matches_entity_dimensions::*;

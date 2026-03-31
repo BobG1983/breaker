@@ -8,7 +8,7 @@ use super::{
     helpers::spawn_shielded_breaker,
 };
 use crate::{
-    bolt::{components::Bolt, messages::BoltLost},
+    bolt::{components::Bolt, messages::BoltLost, resources::BoltConfig},
     effect::effects::shield::ShieldActive,
     shared::{GameRng, PlayfieldConfig},
 };
@@ -32,12 +32,7 @@ fn shield_absorbs_bolt_loss_and_decrements_charges() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(100.0, -250.0), 3);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(100.0, -400.0));
     tick(&mut app);
 
     // Bolt reflected upward
@@ -94,12 +89,17 @@ fn shield_absorbs_bolt_straight_down_and_decrements() {
     let mut app = test_app();
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(100.0, -250.0), 3);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -309.0)),
-    ));
+    let config = BoltConfig {
+        min_angle_horizontal: 0.0,
+        min_angle_vertical: 0.0,
+        ..BoltConfig::default()
+    };
+    spawn_bolt_with_config(
+        &mut app,
+        Vec2::new(0.0, -309.0),
+        Vec2::new(0.0, -400.0),
+        &config,
+    );
     tick(&mut app);
 
     let vel = app
@@ -140,12 +140,7 @@ fn shield_charges_decrement_to_0_removes_component() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 1);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     // Bolt reflected
@@ -190,12 +185,7 @@ fn shield_charges_0_behaves_as_no_shield() {
 
     let _breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 0);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     // BoltLost should be sent (no shield protection with charges: 0)

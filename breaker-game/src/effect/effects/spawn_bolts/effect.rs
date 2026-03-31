@@ -2,10 +2,16 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
+use rand::Rng;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::components::{Bolt, BoltLifespan, ExtraBolt},
+    bolt::{
+        components::{Bolt, BoltLifespan, ExtraBolt},
+        resources::BoltConfig,
+    },
     effect::BoundEffects,
+    shared::rng::GameRng,
 };
 
 /// Spawns additional bolts from an entity.
@@ -22,6 +28,7 @@ pub(crate) fn fire(
     world: &mut World,
 ) {
     let spawn_pos = super::super::entity_position(world, entity);
+    let config = world.resource::<BoltConfig>().clone();
 
     let bound_effects = if inherit {
         let mut query = world.query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>();
@@ -31,7 +38,18 @@ pub(crate) fn fire(
     };
 
     for _ in 0..count {
-        let bolt_entity = super::super::spawn_extra_bolt(world, spawn_pos);
+        let angle = {
+            let mut rng = world.resource_mut::<GameRng>();
+            rng.0.random_range(0.0..std::f32::consts::TAU)
+        };
+        let direction = Vec2::new(angle.cos(), angle.sin());
+        let velocity = Velocity2D(direction * config.base_speed);
+        let bolt_entity = Bolt::builder()
+            .at_position(spawn_pos)
+            .config(&config)
+            .with_velocity(velocity)
+            .extra()
+            .spawn(world);
 
         if let Some(duration) = lifespan {
             world

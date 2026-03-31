@@ -1,6 +1,6 @@
 // Adversarial: RandomEffect fires on every bump — 50% chance SpeedBoost, 50% chance
 // Shockwave. The weighted random selection must always produce exactly one child effect.
-// If RandomEffect fires both (weight bug) or neither (zero-weight fallthrough), BoltSpeedInRange
+// If RandomEffect fires both (weight bug) or neither (zero-weight fallthrough), BoltSpeedAccurate
 // or NoEntityLeaks diverge from expected. High action_prob (0.7) maximises bump frequency
 // across 5000 frames. Seeds vary across runs to hit different probability sequences.
 (
@@ -8,8 +8,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.7)),
     max_frames: 5000,
-    invariants: [BoltInBounds, BoltSpeedInRange, NoEntityLeaks, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 6174,

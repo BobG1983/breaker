@@ -61,7 +61,7 @@ mod tests {
                     layout: "Corridor".to_owned(),
                     input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
                     max_frames: 1000,
-                    invariants: vec![],
+                    disallowed_failures: vec![],
                     invariant_params: InvariantParams {
                         max_chain_arc_count,
                         ..InvariantParams::default()

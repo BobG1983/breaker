@@ -24,12 +24,7 @@ fn shield_reflects_velocity_and_clamps_position() {
     let original_vel = Vec2::new(200.0, -346.4);
     let original_magnitude = original_vel.length();
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(original_vel),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(50.0, -310.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(50.0, -310.0), original_vel);
     tick(&mut app);
 
     let vel = app
@@ -84,12 +79,7 @@ fn shield_reflects_zero_velocity_unchanged() {
     let mut app = test_app();
     spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5);
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, 0.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(0.0, 0.0));
     tick(&mut app);
 
     let vel = app

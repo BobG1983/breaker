@@ -1,13 +1,10 @@
 //! Tests for `PiercingRemaining` reset on breaker hit via `ActivePiercings`.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::helpers::*;
-use crate::{
-    bolt::components::{Bolt, PiercingRemaining},
-    effect::effects::piercing::ActivePiercings,
-};
+use crate::{bolt::components::PiercingRemaining, effect::effects::piercing::ActivePiercings};
 
 // --- Piercing reset tests (using ActivePiercings) ---
 
@@ -20,17 +17,10 @@ fn breaker_hit_resets_piercing_remaining_to_effective_piercing() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_param_bundle(),
-            ActivePiercings(vec![3]),
-            PiercingRemaining(0),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![3]), PiercingRemaining(0)));
 
     tick(&mut app);
 
@@ -58,17 +48,11 @@ fn piercing_remaining_without_effective_piercing_does_not_reset_on_breaker_hit()
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_param_bundle(),
-            PiercingRemaining(0),
-            // No ActivePiercings
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
+    app.world_mut().entity_mut(bolt_entity).insert(
+        PiercingRemaining(0),
+        // No ActivePiercings
+    );
 
     tick(&mut app);
 
@@ -100,18 +84,10 @@ fn breaker_hit_resets_piercing_remaining_from_active_piercings_total() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_param_bundle(),
-            ActivePiercings(vec![2, 1]),
-            PiercingRemaining(0),
-            // NO stale piercing cache
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2, 1]), PiercingRemaining(0)));
 
     tick(&mut app);
 
@@ -143,17 +119,11 @@ fn breaker_hit_ignores_stale_effective_piercing() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_param_bundle(),
-            PiercingRemaining(0),
-            // NO ActivePiercings — verifies PiercingRemaining stays at 0
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
+    app.world_mut().entity_mut(bolt_entity).insert(
+        PiercingRemaining(0),
+        // NO ActivePiercings — verifies PiercingRemaining stays at 0
+    );
 
     tick(&mut app);
 

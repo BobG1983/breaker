@@ -1,56 +1,51 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::definitions::*;
 
-// ── Bolt #[require] tests ────────────────────────────────────
+// ── Bolt component tests (no #[require] — builder handles insertion) ────────
 
 #[test]
-fn bolt_require_inserts_spatial2d() {
+fn bolt_does_not_auto_insert_spatial2d() {
     use rantzsoft_spatial2d::components::Spatial2D;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Bolt).id();
     app.update();
     assert!(
-        app.world().get::<Spatial2D>(entity).is_some(),
-        "Bolt should auto-insert Spatial2D via #[require]"
+        app.world().get::<Spatial2D>(entity).is_none(),
+        "Bolt should NOT auto-insert Spatial2D (builder handles this)"
     );
 }
 
 #[test]
-fn bolt_require_inserts_interpolate_transform2d() {
+fn bolt_does_not_auto_insert_interpolate_transform2d() {
     use rantzsoft_spatial2d::components::InterpolateTransform2D;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Bolt).id();
     app.update();
     assert!(
-        app.world().get::<InterpolateTransform2D>(entity).is_some(),
-        "Bolt should auto-insert InterpolateTransform2D via #[require]"
+        app.world().get::<InterpolateTransform2D>(entity).is_none(),
+        "Bolt should NOT auto-insert InterpolateTransform2D (builder handles this)"
     );
 }
 
 #[test]
-fn bolt_require_inserts_bolt_velocity_default() {
+fn bolt_does_not_auto_insert_velocity2d() {
+    use rantzsoft_spatial2d::components::Velocity2D;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Bolt).id();
     app.update();
-    let velocity = app
-        .world()
-        .get::<Velocity2D>(entity)
-        .expect("Bolt should auto-insert Velocity2D via #[require]");
-    assert_eq!(
-        velocity.0,
-        Vec2::ZERO,
-        "default Velocity2D should have value Vec2::ZERO"
+    assert!(
+        app.world().get::<Velocity2D>(entity).is_none(),
+        "Bolt should NOT auto-insert Velocity2D (builder handles this)"
     );
 }
 
 #[test]
-fn bolt_explicit_values_override_require_defaults() {
-    use rantzsoft_spatial2d::components::Position2D;
+fn bolt_explicit_components_still_work() {
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app
@@ -65,25 +60,25 @@ fn bolt_explicit_values_override_require_defaults() {
     let velocity = app
         .world()
         .get::<Velocity2D>(entity)
-        .expect("Velocity2D should be present");
+        .expect("Velocity2D should be present when explicitly added");
     assert!(
         (velocity.0.x - 0.0).abs() < f32::EPSILON && (velocity.0.y - 400.0).abs() < f32::EPSILON,
-        "explicit Velocity2D(0.0, 400.0) should override the default, got {:?}",
+        "explicit Velocity2D(0.0, 400.0) should be preserved, got {:?}",
         velocity.0
     );
     let position = app
         .world()
         .get::<Position2D>(entity)
-        .expect("Position2D should be present");
+        .expect("Position2D should be present when explicitly added");
     assert_eq!(
         position.0,
         Vec2::new(10.0, 20.0),
-        "explicit Position2D(10.0, 20.0) should override the default"
+        "explicit Position2D(10.0, 20.0) should be preserved"
     );
 }
 
 #[test]
-fn bolt_require_does_not_insert_cleanup_on_run_end() {
+fn bolt_does_not_insert_cleanup_on_run_end() {
     use crate::shared::CleanupOnRunEnd;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -91,12 +86,12 @@ fn bolt_require_does_not_insert_cleanup_on_run_end() {
     app.update();
     assert!(
         app.world().get::<CleanupOnRunEnd>(entity).is_none(),
-        "Bolt #[require] should NOT auto-insert CleanupOnRunEnd"
+        "Bolt should NOT auto-insert CleanupOnRunEnd"
     );
 }
 
 #[test]
-fn bolt_require_does_not_insert_cleanup_on_node_exit() {
+fn bolt_does_not_insert_cleanup_on_node_exit() {
     use crate::shared::CleanupOnNodeExit;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -104,94 +99,29 @@ fn bolt_require_does_not_insert_cleanup_on_node_exit() {
     app.update();
     assert!(
         app.world().get::<CleanupOnNodeExit>(entity).is_none(),
-        "Bolt #[require] should NOT auto-insert CleanupOnNodeExit"
+        "Bolt should NOT auto-insert CleanupOnNodeExit"
     );
 }
 
-// ── Velocity2D migration tests ────────────────────────────────
+// ── PrimaryBolt component tests ───────────────────────────────
 
 #[test]
-fn bolt_require_inserts_velocity2d_default() {
-    use rantzsoft_spatial2d::components::Velocity2D;
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    let entity = app.world_mut().spawn(Bolt).id();
-    app.update();
-    let velocity = app
-        .world()
-        .get::<Velocity2D>(entity)
-        .expect("Bolt should auto-insert Velocity2D via #[require]");
+fn primary_bolt_is_zero_sized() {
     assert_eq!(
-        velocity.0,
-        Vec2::ZERO,
-        "default Velocity2D should be Vec2::ZERO"
-    );
-}
-
-// ── enforce_min_angle free function tests ─────────────────────
-
-#[test]
-fn free_enforce_min_angle_corrects_shallow() {
-    use std::f32::consts::FRAC_PI_4;
-    let mut velocity = Vec2::new(10.0, 0.01);
-    let speed_before = velocity.length();
-    enforce_min_angle(&mut velocity, FRAC_PI_4);
-    let speed_after = velocity.length();
-    assert!(
-        (speed_before - speed_after).abs() < 1e-4,
-        "speed should be preserved: before={speed_before}, after={speed_after}"
-    );
-    let angle = velocity.y.abs().atan2(velocity.x.abs());
-    assert!(
-        angle >= FRAC_PI_4 - 1e-4,
-        "angle {angle} should be >= PI/4 ({FRAC_PI_4})"
+        std::mem::size_of::<PrimaryBolt>(),
+        0,
+        "PrimaryBolt should be a zero-sized type"
     );
 }
 
 #[test]
-fn free_enforce_min_angle_preserves_signs() {
-    use std::f32::consts::FRAC_PI_4;
-    let mut velocity = Vec2::new(-10.0, -0.01);
-    enforce_min_angle(&mut velocity, FRAC_PI_4);
+fn primary_bolt_has_debug() {
+    let marker = PrimaryBolt;
+    let debug_str = format!("{marker:?}");
     assert!(
-        velocity.x < 0.0,
-        "x sign should be negative, got {}",
-        velocity.x
+        !debug_str.is_empty(),
+        "PrimaryBolt should have a Debug impl"
     );
-    assert!(
-        velocity.y < 0.0,
-        "y sign should be negative, got {}",
-        velocity.y
-    );
-}
-
-#[test]
-fn free_enforce_min_angle_leaves_steep_unchanged() {
-    use crate::breaker::resources::BreakerConfig;
-    let mut velocity = Vec2::new(1.0, 5.0);
-    let original = velocity;
-    enforce_min_angle(
-        &mut velocity,
-        BreakerConfig::default()
-            .min_angle_from_horizontal
-            .to_radians(),
-    );
-    assert!(
-        (velocity.x - original.x).abs() < 1e-6,
-        "steep velocity x should be unchanged"
-    );
-    assert!(
-        (velocity.y - original.y).abs() < 1e-6,
-        "steep velocity y should be unchanged"
-    );
-}
-
-#[test]
-fn free_enforce_min_angle_zero_velocity_unchanged() {
-    use std::f32::consts::FRAC_PI_4;
-    let mut velocity = Vec2::ZERO;
-    enforce_min_angle(&mut velocity, FRAC_PI_4);
-    assert_eq!(velocity, Vec2::ZERO, "zero velocity should remain zero");
 }
 
 // ── CollisionLayers tests ──────────────────────────────────────
@@ -226,52 +156,5 @@ fn bolt_collision_layers_have_correct_values() {
         "Bolt mask should be CELL|WALL|BREAKER (0x{:02X}), got 0x{:02X}",
         CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
         layers.mask
-    );
-}
-
-// ── enforce_min_angle: horizontal velocity defaults upward ───
-
-#[test]
-fn free_enforce_min_angle_horizontal_velocity_defaults_upward() {
-    use std::f32::consts::FRAC_PI_4;
-
-    // Exactly horizontal positive-x: y == 0.0
-    let mut velocity = Vec2::new(400.0, 0.0);
-    enforce_min_angle(&mut velocity, FRAC_PI_4);
-
-    // Should default upward (positive y)
-    assert!(
-        velocity.y > 0.0,
-        "exactly horizontal velocity should be deflected upward, got y={}",
-        velocity.y
-    );
-
-    // Speed preserved
-    assert!(
-        (velocity.length() - 400.0).abs() < 1e-3,
-        "speed should be preserved at 400.0, got {}",
-        velocity.length()
-    );
-
-    // Angle from horizontal is at least PI/4
-    let angle = velocity.y.abs().atan2(velocity.x.abs());
-    assert!(
-        angle >= FRAC_PI_4 - 1e-4,
-        "angle from horizontal {angle} should be >= PI/4 ({FRAC_PI_4})"
-    );
-
-    // Edge case: negative-x horizontal also defaults upward
-    let mut velocity_neg = Vec2::new(-400.0, 0.0);
-    enforce_min_angle(&mut velocity_neg, FRAC_PI_4);
-
-    assert!(
-        velocity_neg.y > 0.0,
-        "negative-x horizontal should also default upward, got y={}",
-        velocity_neg.y
-    );
-    assert!(
-        velocity_neg.x < 0.0,
-        "x sign should remain negative, got x={}",
-        velocity_neg.x
     );
 }

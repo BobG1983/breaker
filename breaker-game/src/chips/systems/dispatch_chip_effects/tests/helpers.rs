@@ -80,20 +80,29 @@ pub(super) fn select_chip(app: &mut App, name: &str) {
 
 /// Spawn a Bolt entity with effect components.
 pub(super) fn spawn_bolt(app: &mut App) -> Entity {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
     use crate::{
-        bolt::components::Bolt,
+        bolt::{components::Bolt, resources::BoltConfig},
         effect::effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
     };
 
-    app.world_mut()
-        .spawn((
-            Bolt,
-            BoundEffects::default(),
-            StagedEffects::default(),
-            ActiveDamageBoosts::default(),
-            ActiveSpeedBoosts::default(),
-        ))
-        .id()
+    let entity = Bolt::builder()
+        .at_position(Vec2::ZERO)
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::ZERO))
+        .primary()
+        .spawn(app.world_mut());
+
+    // Test-specific effect components not handled by builder
+    app.world_mut().entity_mut(entity).insert((
+        BoundEffects::default(),
+        StagedEffects::default(),
+        ActiveDamageBoosts::default(),
+        ActiveSpeedBoosts::default(),
+    ));
+
+    entity
 }
 
 /// Spawn a Breaker entity with effect components.

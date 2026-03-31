@@ -6,6 +6,7 @@ use crate::{
     bolt::{
         components::{Bolt, ExtraBolt},
         messages::BoltLost,
+        resources::BoltConfig,
     },
     breaker::components::Breaker,
     shared::{GameDrawLayer, GameRng, PlayfieldConfig},
@@ -22,16 +23,12 @@ fn extra_bolt_below_floor_is_despawned() {
         GameDrawLayer::Breaker,
     ));
 
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            ExtraBolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_lost_bundle(),
-            Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-        ))
-        .id();
+    let entity = Bolt::builder()
+        .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+        .extra()
+        .spawn(app.world_mut());
     tick(&mut app);
 
     assert!(
@@ -54,13 +51,12 @@ fn extra_bolt_sends_bolt_lost_on_despawn() {
     app.init_resource::<BoltLostCount>();
     app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
 
-    app.world_mut().spawn((
-        Bolt,
-        ExtraBolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    Bolt::builder()
+        .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+        .extra()
+        .spawn(app.world_mut());
     tick(&mut app);
 
     let count = app.world().resource::<BoltLostCount>();
@@ -79,20 +75,18 @@ fn baseline_bolt_still_respawns_with_extra_present() {
     ));
 
     // Baseline bolt (no ExtraBolt)
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     // Extra bolt
-    app.world_mut().spawn((
-        Bolt,
-        ExtraBolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(50.0, playfield.bottom() - 100.0)),
-    ));
+    Bolt::builder()
+        .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+        .extra()
+        .spawn(app.world_mut());
     tick(&mut app);
 
     // Baseline bolt should still exist (respawned)
@@ -139,16 +133,12 @@ fn extra_bolt_writes_request_bolt_destroyed_instead_of_despawning() {
         GameDrawLayer::Breaker,
     ));
 
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            ExtraBolt,
-            Velocity2D(Vec2::new(0.0, -400.0)),
-            bolt_lost_bundle(),
-            Position2D(Vec2::new(50.0, playfield.bottom() - 100.0)),
-        ))
-        .id();
+    let entity = Bolt::builder()
+        .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+        .extra()
+        .spawn(app.world_mut());
     tick(&mut app);
 
     let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
@@ -192,12 +182,11 @@ fn baseline_bolt_does_not_write_request_bolt_destroyed() {
     ));
 
     // Baseline bolt (no ExtraBolt marker)
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
 
     tick(&mut app);
 
@@ -227,12 +216,11 @@ fn baseline_bolt_still_sends_bolt_lost_message() {
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
 
     tick(&mut app);
 

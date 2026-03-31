@@ -1,12 +1,9 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::system::bolt_lost;
 use crate::{
-    bolt::{
-        components::{BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY},
-        messages::BoltLost,
-        resources::BoltConfig,
-    },
+    bolt::{components::Bolt, messages::BoltLost, resources::BoltConfig},
     shared::{GameRng, PlayfieldConfig},
 };
 
@@ -28,19 +25,29 @@ pub(super) fn tick(app: &mut App) {
     app.update();
 }
 
-pub(super) fn bolt_lost_bundle() -> (
-    BoltBaseSpeed,
-    BoltRadius,
-    BoltRespawnOffsetY,
-    BoltRespawnAngleSpread,
-) {
-    let config = BoltConfig::default();
-    (
-        BoltBaseSpeed(config.base_speed),
-        BoltRadius(config.radius),
-        BoltRespawnOffsetY(config.respawn_offset_y),
-        BoltRespawnAngleSpread(config.respawn_angle_spread),
-    )
+/// Spawns a bolt at the given position with the given velocity using the builder.
+pub(super) fn spawn_bolt(app: &mut App, pos: Vec2, vel: Vec2) -> Entity {
+    Bolt::builder()
+        .at_position(pos)
+        .config(&BoltConfig::default())
+        .with_velocity(Velocity2D(vel))
+        .primary()
+        .spawn(app.world_mut())
+}
+
+/// Spawns a bolt with a custom `BoltConfig` (e.g. zero `respawn_angle_spread`).
+pub(super) fn spawn_bolt_with_config(
+    app: &mut App,
+    pos: Vec2,
+    vel: Vec2,
+    config: &BoltConfig,
+) -> Entity {
+    Bolt::builder()
+        .at_position(pos)
+        .config(config)
+        .with_velocity(Velocity2D(vel))
+        .primary()
+        .spawn(app.world_mut())
 }
 
 #[derive(Resource, Default)]

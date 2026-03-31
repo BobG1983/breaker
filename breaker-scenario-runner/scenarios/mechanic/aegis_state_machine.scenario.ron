@@ -3,8 +3,8 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.95)),
     max_frames: 10000,
-    invariants: [ValidBreakerState, BreakerInBounds, BreakerPositionClamped, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [ValidBreakerState, BreakerInBounds, BreakerPositionClamped, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     seed: 300,
 )

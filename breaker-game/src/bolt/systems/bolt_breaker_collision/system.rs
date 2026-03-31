@@ -8,17 +8,13 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     bolt::{
-        components::{
-            ImpactSide, LastImpact, PiercingRemaining, ccd_normal_to_impact_side, enforce_min_angle,
-        },
+        components::{ImpactSide, LastImpact, PiercingRemaining, ccd_normal_to_impact_side},
         filters::ActiveFilter,
         messages::BoltImpactBreaker,
-        queries::CollisionQueryBolt,
+        queries::{BoltCollisionData, apply_velocity_formula},
     },
     breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
-    effect::effects::{
-        piercing::ActivePiercings, size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-    },
+    effect::effects::{piercing::ActivePiercings, size_boost::ActiveSizeBoosts},
     shared::BREAKER_LAYER,
 };
 
@@ -27,7 +23,6 @@ struct CcdHit {
     normal: Vec2,
     safe_pos: Vec2,
     above_y: f32,
-    effective_base_speed: f32,
 }
 
 /// Shared per-frame physics context for CCD sweeps.
@@ -43,8 +38,6 @@ struct BoltGeometry {
     r: f32,
     expanded_half: Vec2,
     above_y: f32,
-    base_speed: f32,
-    speed_mult: f32,
 }
 
 /// Precomputed breaker surface properties used for bolt reflection.
@@ -54,28 +47,19 @@ struct BreakerSurface {
     half_h: f32,
     tilt_angle: f32,
     max_angle: f32,
-    min_angle_from_horizontal: f32,
     entity: Entity,
 }
 
 impl BreakerSurface {
-    /// Overwrites bolt velocity based on a normalized hit position on the breaker's top surface.
-    fn reflect_top_hit(
-        &self,
-        impact_x: f32,
-        bolt_velocity: &mut Velocity2D,
-        effective_base_speed: f32,
-    ) {
+    /// Sets bolt velocity to a unit-vector direction based on the normalized hit
+    /// position on the breaker's top surface. Speed is applied separately via
+    /// [`apply_velocity_formula`].
+    fn reflect_top_hit(&self, impact_x: f32, bolt_velocity: &mut Velocity2D) {
         let fraction = hit_fraction(impact_x, self.pos.x, self.half_w);
         let base_angle = fraction * self.max_angle;
         let total_angle = base_angle + self.tilt_angle;
         let clamped_angle = total_angle.clamp(-self.max_angle, self.max_angle);
-        let new_speed = bolt_velocity.speed().max(effective_base_speed);
-        bolt_velocity.0 = Vec2::new(
-            new_speed * clamped_angle.sin(),
-            new_speed * clamped_angle.cos(),
-        );
-        enforce_min_angle(&mut bolt_velocity.0, self.min_angle_from_horizontal);
+        bolt_velocity.0 = Vec2::new(clamped_angle.sin(), clamped_angle.cos());
     }
 
     /// Emits a [`BoltImpactBreaker`] message and resets piercing charges.
@@ -105,13 +89,12 @@ impl BreakerSurface {
         bolt_entity: Entity,
         bolt_pos: Vec2,
         bolt_velocity: &mut Velocity2D,
-        effective_base_speed: f32,
         last_impact: &mut Option<Mut<'_, LastImpact>>,
     ) -> bool {
         if bolt_velocity.0.y > 0.0 {
             return false;
         }
-        self.reflect_top_hit(bolt_pos.x, bolt_velocity, effective_base_speed);
+        self.reflect_top_hit(bolt_pos.x, bolt_velocity);
         let impact_pos = Vec2::new(bolt_pos.x, self.pos.y + self.half_h);
         stamp_last_impact(
             commands,
@@ -143,7 +126,6 @@ impl BreakerSurface {
                 geom.entity,
                 geom.bolt_pos,
                 bolt_velocity,
-                geom.base_speed * geom.speed_mult,
                 last_impact,
             );
         }
@@ -173,7 +155,6 @@ impl BreakerSurface {
             normal,
             safe_pos,
             above_y: geom.above_y,
-            effective_base_speed: geom.base_speed * geom.speed_mult,
         };
         self.reflect_ccd_hit(
             commands,
@@ -203,7 +184,7 @@ impl BreakerSurface {
             let side = ccd_normal_to_impact_side(hit.normal);
             stamp_last_impact(commands, bolt_entity, last_impact, hit.safe_pos, side);
         } else {
-            self.reflect_top_hit(hit.safe_pos.x, bolt_velocity, hit.effective_base_speed);
+            self.reflect_top_hit(hit.safe_pos.x, bolt_velocity);
             bolt_position.x = hit.safe_pos.x;
             bolt_position.y = hit.above_y;
             let impact_pos = Vec2::new(hit.safe_pos.x, self.pos.y + self.half_h);
@@ -295,7 +276,7 @@ pub(crate) fn bolt_breaker_collision(
     mut commands: Commands,
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
-    mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
+    mut bolt_query: Query<BoltCollisionData, ActiveFilter>,
     breaker_query: Query<(Entity, CollisionQueryBreaker), CollisionFilterBreaker>,
     mut writer: MessageWriter<BoltImpactBreaker>,
 ) {
@@ -307,7 +288,6 @@ pub(crate) fn bolt_breaker_collision(
             breaker_w,
             breaker_h,
             max_angle,
-            min_angle,
             size_mult,
             breaker_entity_scale,
         ),
@@ -325,7 +305,6 @@ pub(crate) fn bolt_breaker_collision(
         half_h: breaker_h.half_height() * breaker_scale,
         tilt_angle: breaker_tilt.angle,
         max_angle: max_angle.0,
-        min_angle_from_horizontal: min_angle.0,
         entity: breaker_entity,
     };
     let sweep = SweepContext {
@@ -333,47 +312,32 @@ pub(crate) fn bolt_breaker_collision(
         dt: time.delta_secs(),
     };
 
-    for (
-        bolt_entity,
-        mut bolt_position,
-        mut bolt_velocity,
-        base_speed,
-        bolt_radius,
-        mut piercing_remaining,
-        active_piercings,
-        _damage_mult,
-        bolt_entity_scale,
-        _,
-        mut last_impact,
-        active_speed_boosts,
-    ) in &mut bolt_query
-    {
-        let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
-        let r = bolt_radius.0 * bolt_scale;
-        let speed_mult = active_speed_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier);
+    for mut bolt in &mut bolt_query {
+        let bolt_scale = bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let r = bolt.collision.radius.0 * bolt_scale;
         let geom = BoltGeometry {
-            entity: bolt_entity,
-            bolt_pos: bolt_position.0,
+            entity: bolt.entity,
+            bolt_pos: bolt.spatial.position.0,
             r,
             expanded_half: Vec2::new(surface.half_w + r, surface.half_h + r),
             above_y: surface.pos.y + surface.half_h + r,
-            base_speed: base_speed.0,
-            speed_mult,
         };
 
         if surface.process_bolt(
             &mut commands,
             &sweep,
             &geom,
-            &mut bolt_position,
-            &mut bolt_velocity,
-            &mut last_impact,
+            &mut bolt.spatial.position,
+            &mut bolt.spatial.velocity,
+            &mut bolt.collision.last_impact,
         ) {
+            // Apply the canonical velocity formula after reflection
+            apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
             surface.emit_bump(
                 &mut writer,
-                bolt_entity,
-                &mut piercing_remaining,
-                active_piercings,
+                bolt.entity,
+                &mut bolt.collision.piercing_remaining,
+                bolt.collision.active_piercings,
             );
         }
     }

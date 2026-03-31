@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [NoNaN],
-    expected_violations: [NoNaN],
+    disallowed_failures: [NoNaN],
+    allowed_failures: [NoNaN],
     debug_setup: (
         bolt_position: (NaN, 0.0),
         disable_physics: true,

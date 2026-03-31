@@ -1,15 +1,14 @@
 //! Breaker domain query type aliases — clippy `type_complexity` lint.
 
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Scale2D};
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousPosition, Scale2D};
 
 use crate::{
     breaker::components::{
         BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt,
-        BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
-        BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
-        DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal,
-        SettleDuration, SettleTiltEase,
+        BreakerHeight, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth,
+        BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+        BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing,
+        MaxReflectionAngle, SettleDuration, SettleTiltEase,
     },
     effect::{
         AnchorActive, AnchorPlanted,
@@ -28,7 +27,6 @@ pub(crate) type CollisionQueryBreaker = (
     &'static BreakerWidth,
     &'static BreakerHeight,
     &'static MaxReflectionAngle,
-    &'static MinAngleFromHorizontal,
     Option<&'static ActiveSizeBoosts>,
     Option<&'static EntityScale>,
 );
@@ -38,7 +36,7 @@ pub(crate) type MovementQuery = (
     &'static mut Position2D,
     &'static mut BreakerVelocity,
     &'static BreakerState,
-    &'static BreakerMaxSpeed,
+    &'static MaxSpeed,
     &'static BreakerAcceleration,
     &'static BreakerDeceleration,
     &'static DecelEasing,
@@ -58,7 +56,7 @@ pub(crate) type DashQuery = (
         &'static mut BreakerVelocity,
         &'static mut BreakerTilt,
         &'static mut BreakerStateTimer,
-        &'static BreakerMaxSpeed,
+        &'static MaxSpeed,
         &'static BreakerDeceleration,
         &'static DecelEasing,
         &'static DashSpeedMultiplier,

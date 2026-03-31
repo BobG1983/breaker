@@ -60,9 +60,15 @@ PlayingState::Active → NodeCleared → set TransitionOut
 
 ~0.3–0.5s each. All transitions live in `screen/transition/`.
 
+## Sequencing
+
+**This step is infrastructure** — it runs alongside 5d-5f, before entity visuals (5g-5j). The PlayingState substate expansion must be in place before any step writes code that references transition states. Transition style implementation (the visual effects) can happen in parallel with 5d-5f since it needs the post-processing pipeline.
+
 ## Dependencies
 
-- **Requires**: 5c (crate), 5d (post-processing for flash/chromatic/distortion), 5e (particles for sweep sparks)
+- **Requires**: 5c (crate, screen/transition/ exists)
+- **Enhanced by**: 5d (post-processing for flash/chromatic/distortion in Glitch style), 5e (particles for Sweep sparks)
+- **Blocks**: 5g-5w (all subsequent steps use the final PlayingState machine)
 - DR-8 resolved: 4 + extensible
 
 ## Verification

@@ -3,8 +3,8 @@
     layout: "Fortress",
     input: Chaos((action_prob: 0.02)),
     max_frames: 15000,
-    invariants: [TimerNonNegative, TimerMonotonicallyDecreasing, BoltInBounds, ValidStateTransitions],
-    expected_violations: None,
+    disallowed_failures: [TimerNonNegative, TimerMonotonicallyDecreasing, BoltInBounds, ValidStateTransitions],
+    allowed_failures: None,
     debug_setup: None,
     seed: 200,
 )

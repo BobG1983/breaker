@@ -67,9 +67,9 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
         assert_eq!(layers.mask, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
 
         // Speed components
-        assert!((world.get::<BoltBaseSpeed>(*bolt).unwrap().0 - 400.0).abs() < f32::EPSILON);
-        assert!((world.get::<BoltMinSpeed>(*bolt).unwrap().0 - 200.0).abs() < f32::EPSILON);
-        assert!((world.get::<BoltMaxSpeed>(*bolt).unwrap().0 - 800.0).abs() < f32::EPSILON);
+        assert!((world.get::<BaseSpeed>(*bolt).unwrap().0 - 400.0).abs() < f32::EPSILON);
+        assert!((world.get::<MinSpeed>(*bolt).unwrap().0 - 200.0).abs() < f32::EPSILON);
+        assert!((world.get::<MaxSpeed>(*bolt).unwrap().0 - 800.0).abs() < f32::EPSILON);
         assert!((world.get::<BoltRadius>(*bolt).unwrap().0 - 8.0).abs() < f32::EPSILON);
 
         // CleanupOnNodeExit

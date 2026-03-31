@@ -24,6 +24,7 @@ fn apply_attraction_clamps_force_to_max_force_when_exceeded() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 1000.0,
@@ -75,6 +76,7 @@ fn apply_attraction_at_cap_exactly_applies_unchanged() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 200.0,
@@ -126,6 +128,7 @@ fn apply_attraction_does_not_clamp_when_force_below_max_force() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 100.0,
@@ -178,6 +181,7 @@ fn apply_attraction_does_not_clamp_when_max_force_is_none() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 1000.0,
@@ -230,6 +234,7 @@ fn apply_attraction_multiple_entries_uses_nearest_entry_max_force() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![
                 AttractionEntry {
                     attraction_type: AttractionType::Cell,
@@ -309,6 +314,7 @@ fn apply_attraction_max_force_zero_disables_steering() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,

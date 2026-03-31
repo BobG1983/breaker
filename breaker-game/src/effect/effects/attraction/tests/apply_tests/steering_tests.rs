@@ -25,6 +25,7 @@ fn apply_attraction_steers_toward_nearest_cell_target() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
@@ -70,6 +71,7 @@ fn apply_attraction_zero_distance_no_steering() {
         .spawn((
             GlobalPosition2D(Vec2::new(100.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
@@ -114,6 +116,7 @@ fn apply_attraction_inactive_entry_produces_no_steering() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
@@ -158,6 +161,7 @@ fn apply_attraction_mixed_active_inactive_only_active_steers() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![
                 AttractionEntry {
                     attraction_type: AttractionType::Cell,
@@ -210,6 +214,7 @@ fn apply_attraction_multiple_types_nearest_target_wins() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![
                 AttractionEntry {
                     attraction_type: AttractionType::Cell,
@@ -276,6 +281,7 @@ fn apply_attraction_only_queries_matching_layer() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
@@ -351,6 +357,7 @@ fn apply_attraction_no_targets_velocity_unchanged() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::new(100.0, 200.0)),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 500.0,
@@ -424,6 +431,7 @@ fn apply_attraction_empty_attractions_no_steering() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::new(100.0, 200.0)),
+            spatial_params(),
             ActiveAttractions(vec![]),
         ))
         .id();
@@ -462,6 +470,7 @@ fn apply_attraction_force_scales_with_dt() {
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
             Velocity2D(Vec2::ZERO),
+            spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
                 force: 1000.0,

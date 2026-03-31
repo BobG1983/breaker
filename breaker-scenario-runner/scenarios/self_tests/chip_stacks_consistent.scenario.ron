@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [ChipStacksConsistent],
-    expected_violations: [ChipStacksConsistent],
+    disallowed_failures: [ChipStacksConsistent],
+    allowed_failures: [ChipStacksConsistent],
     debug_setup: (
         disable_physics: true,
     ),

@@ -1,12 +1,9 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::{
-        components::{Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY},
-        resources::BoltConfig,
-    },
+    bolt::{components::Bolt, resources::BoltConfig},
     breaker::components::Breaker,
     shared::{EntityScale, GameDrawLayer, PlayfieldConfig},
 };
@@ -18,16 +15,15 @@ fn bolt_below_floor_detected_via_position2d() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let vel = app
@@ -48,16 +44,15 @@ fn respawn_inserts_position2d_at_breaker_x() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(breaker_x, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(200.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(200.0, playfield.bottom() - 100.0),
+        Vec2::new(100.0, -400.0),
+    );
     tick(&mut app);
 
     let (vel, pos) = app
@@ -94,26 +89,26 @@ fn respawn_inserts_position2d_at_breaker_x() {
 #[test]
 fn respawn_with_zero_spread_launches_straight_up() {
     let mut app = test_app();
-    let bolt_config = BoltConfig::default();
     let playfield = PlayfieldConfig::default();
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -400.0)),
-        (
-            BoltBaseSpeed(bolt_config.base_speed),
-            BoltRadius(bolt_config.radius),
-            BoltRespawnOffsetY(bolt_config.respawn_offset_y),
-            BoltRespawnAngleSpread(0.0),
-        ),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    let config = BoltConfig {
+        respawn_angle_spread: 0.0,
+        min_angle_horizontal: 0.0,
+        min_angle_vertical: 0.0,
+        ..BoltConfig::default()
+    };
+    spawn_bolt_with_config(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(100.0, -400.0),
+        &config,
+    );
     tick(&mut app);
 
     let vel = app
@@ -139,16 +134,15 @@ fn respawn_position2d_y_uses_respawn_offset() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, breaker_y)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let pos = app
@@ -176,16 +170,15 @@ fn respawn_inserts_previous_position_matching_position2d() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(breaker_x, breaker_y)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let (pos, prev_pos) = app
@@ -214,16 +207,11 @@ fn bolt_above_floor_not_lost() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -200.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, 100.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, 100.0), Vec2::new(100.0, -200.0));
     tick(&mut app);
 
     let vel = app
@@ -244,18 +232,13 @@ fn scaled_bolt_uses_effective_radius_for_lost_detection() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
     let bolt_y = playfield.bottom() - 4.0 - 1.0; // -305.0
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        EntityScale(0.5),
-        Position2D(Vec2::new(0.0, bolt_y)),
-    ));
+    let entity = spawn_bolt(&mut app, Vec2::new(0.0, bolt_y), Vec2::new(0.0, -400.0));
+    app.world_mut().entity_mut(entity).insert(EntityScale(0.5));
     tick(&mut app);
 
     let vel = app
@@ -278,17 +261,16 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        // No EntityScale
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    // No EntityScale
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let vel = app

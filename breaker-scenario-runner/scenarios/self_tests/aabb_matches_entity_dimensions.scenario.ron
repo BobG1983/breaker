@@ -12,8 +12,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [AabbMatchesEntityDimensions],
-    expected_violations: Some([AabbMatchesEntityDimensions]),
+    disallowed_failures: [AabbMatchesEntityDimensions],
+    allowed_failures: Some([AabbMatchesEntityDimensions]),
     debug_setup: (
         disable_physics: true,
         bolt_velocity: (0.0, 0.0),

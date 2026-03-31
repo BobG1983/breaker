@@ -15,7 +15,7 @@ fn apply_debug_setup_sets_bolt_velocity_when_some() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             bolt_velocity: Some((0.0, 2000.0)),
             ..Default::default()
@@ -59,7 +59,7 @@ fn apply_debug_setup_leaves_bolt_velocity_unchanged_when_none() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             bolt_velocity: None,
             ..Default::default()
@@ -108,7 +108,7 @@ fn apply_debug_setup_sets_bolt_velocity_on_all_tagged_bolts() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             bolt_velocity: Some((100.0, 200.0)),
             ..Default::default()

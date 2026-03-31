@@ -5,7 +5,7 @@
 // The adversarial risk: if BumpForce values accumulate without being reversed (e.g. an
 // Until wrapper isn't present, so each Bumped permanently adds to ActiveBumpForces), the
 // effective force multiplier grows without bound and the bolt's post-bump velocity
-// exceeds BoltMaxSpeed. BoltSpeedInRange is the primary detector; BoltInBounds catches
+// exceeds BoltMaxSpeed. BoltSpeedAccurate is the primary detector; BoltInBounds catches
 // position corruption if the high-speed bolt escapes CCD. NoNaN covers overflow.
 // 5000 frames of extreme chaos ensures hundreds of bumps and force applications.
 (
@@ -13,8 +13,8 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.9)),
     max_frames: 5000,
-    invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, BoltInBounds, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 2357,

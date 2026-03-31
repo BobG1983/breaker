@@ -2,7 +2,7 @@
 
 pub(crate) mod fire_helpers;
 
-pub(crate) use fire_helpers::{effective_range, entity_position, spawn_extra_bolt};
+pub(crate) use fire_helpers::{effective_range, entity_position};
 
 /// Breaker plants after stationary delay, modifying bump behavior.
 pub mod anchor;

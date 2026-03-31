@@ -97,14 +97,14 @@ fn apply_deceleration(velocity: &mut f32, decel: f32, dt: f32) {
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::Position2D;
+    use rantzsoft_spatial2d::components::{MaxSpeed, Position2D};
 
     use super::*;
     use crate::{
         breaker::{
             components::{
-                BreakerAcceleration, BreakerDeceleration, BreakerMaxSpeed, BreakerState,
-                BreakerVelocity, BreakerWidth, DecelEasing,
+                BreakerAcceleration, BreakerDeceleration, BreakerState, BreakerVelocity,
+                BreakerWidth, DecelEasing,
             },
             resources::BreakerConfig,
         },
@@ -157,7 +157,7 @@ mod tests {
                 Breaker,
                 state,
                 BreakerVelocity { x: 0.0 },
-                BreakerMaxSpeed(config.max_speed),
+                MaxSpeed(config.max_speed),
                 BreakerAcceleration(config.acceleration),
                 BreakerDeceleration(config.deceleration),
                 DecelEasing {
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn speed_multiplier_raises_effective_max_speed() {
-        // Given: BreakerMaxSpeed(500.0) + ActiveSpeedBoosts(vec![1.2]), velocity.x = 590.0
+        // Given: MaxSpeed(500.0) + ActiveSpeedBoosts(vec![1.2]), velocity.x = 590.0
         //        MoveRight input active (so the acceleration+clamp path runs)
         // When: move_breaker system runs
         // Then: velocity.x > 500 AND velocity.x <= 600 (effective max = 500 * 1.2 = 600)
@@ -264,7 +264,7 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 590.0 },
-                BreakerMaxSpeed(500.0),
+                MaxSpeed(500.0),
                 BreakerAcceleration(config.acceleration),
                 BreakerDeceleration(config.deceleration),
                 DecelEasing {
@@ -307,7 +307,7 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 600.0 },
-                BreakerMaxSpeed(500.0),
+                MaxSpeed(500.0),
                 BreakerAcceleration(0.0),
                 BreakerDeceleration(0.0),
                 DecelEasing {
@@ -356,7 +356,7 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 0.0 },
-                BreakerMaxSpeed(config.max_speed),
+                MaxSpeed(config.max_speed),
                 BreakerAcceleration(0.0),
                 BreakerDeceleration(0.0),
                 DecelEasing {
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn move_breaker_reads_active_speed_boosts_for_max_speed() {
-        // Given: Breaker with ActiveSpeedBoosts(vec![2.0]), BreakerMaxSpeed(300.0),
+        // Given: Breaker with ActiveSpeedBoosts(vec![2.0]), MaxSpeed(300.0),
         //        BreakerVelocity { x: 590.0 }, MoveRight active
         // When: move_breaker runs
         // Then: velocity.x clamped to 600.0 (300.0 * 2.0), not 300.0
@@ -395,7 +395,7 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 590.0 },
-                BreakerMaxSpeed(300.0),
+                MaxSpeed(300.0),
                 BreakerAcceleration(5000.0),
                 BreakerDeceleration(3000.0),
                 DecelEasing {
@@ -441,7 +441,7 @@ mod tests {
                 Breaker,
                 BreakerState::Idle,
                 BreakerVelocity { x: 0.0 },
-                BreakerMaxSpeed(300.0),
+                MaxSpeed(300.0),
                 BreakerAcceleration(0.0),
                 BreakerDeceleration(0.0),
                 DecelEasing {

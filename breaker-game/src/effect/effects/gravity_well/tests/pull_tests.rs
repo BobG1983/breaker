@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
 use super::{super::effect::*, helpers::*};
-use crate::{bolt::components::Bolt, shared::playing_state::PlayingState};
 
 #[test]
 fn apply_gravity_pull_steers_bolt_toward_well_within_radius() {
@@ -22,14 +21,7 @@ fn apply_gravity_pull_steers_bolt_toward_well_within_radius() {
     ));
 
     // Bolt at (100, 0) with zero velocity — should be pulled toward (0,0)
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(100.0, 0.0)),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
 
     app.update();
 
@@ -63,15 +55,10 @@ fn apply_gravity_pull_uses_position2d_for_bolt_distance() {
     ));
 
     // Bolt at Position2D (100, 0) with deliberately different Transform.
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(100.0, 0.0)),
-            Transform::from_xyz(999.0, 999.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(999.0, 999.0, 0.0));
 
     app.update();
 
@@ -105,15 +92,10 @@ fn apply_gravity_pull_uses_position2d_for_well_position_not_transform() {
     ));
 
     // Bolt at Position2D (100, 0).
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(100.0, 0.0)),
-            Transform::from_xyz(100.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(100.0, 0.0, 0.0));
 
     app.update();
 
@@ -147,15 +129,10 @@ fn apply_gravity_pull_uses_position2d_radius_check_not_transform() {
     ));
 
     // Bolt at Position2D origin.
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::ZERO),
-            Transform::from_xyz(0.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(0.0, 0.0, 0.0));
 
     app.update();
 
@@ -189,15 +166,10 @@ fn apply_gravity_pull_does_not_pull_bolt_outside_radius_by_position2d() {
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(100.0, 0.0)),
-            Transform::from_xyz(10.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(10.0, 0.0, 0.0));
 
     app.update();
 
@@ -232,15 +204,10 @@ fn apply_gravity_pull_pulls_bolt_at_exact_radius_boundary() {
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(50.0, 0.0)),
-            Transform::from_xyz(999.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(50.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(999.0, 0.0, 0.0));
 
     app.update();
 
@@ -273,15 +240,10 @@ fn apply_gravity_pull_no_pull_when_bolt_at_same_position2d_as_well() {
         Transform::from_xyz(100.0, 0.0, 0.0),
     ));
 
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::ZERO),
-            Transform::from_xyz(50.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(50.0, 0.0, 0.0));
 
     app.update();
 
@@ -313,15 +275,10 @@ fn apply_gravity_pull_skips_well_without_position2d() {
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(10.0, 0.0)),
-            Transform::from_xyz(10.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(10.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(10.0, 0.0, 0.0));
 
     app.update();
 
@@ -366,15 +323,10 @@ fn apply_gravity_pull_only_well_with_position2d_affects_bolt() {
     ));
 
     // Bolt at Position2D (100, 0) — within radius of well A.
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::ZERO),
-            Position2D(Vec2::new(100.0, 0.0)),
-            Transform::from_xyz(100.0, 0.0, 0.0),
-        ))
-        .id();
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(bolt)
+        .insert(Transform::from_xyz(100.0, 0.0, 0.0));
 
     app.update();
 
@@ -385,109 +337,5 @@ fn apply_gravity_pull_only_well_with_position2d_affects_bolt() {
         velocity.x < 0.0,
         "bolt should be pulled by well with Position2D. Got velocity.x = {}",
         velocity.x
-    );
-}
-
-// ── Regression: apply_gravity_pull must run before speed clamp ───
-
-/// Regression: `apply_gravity_pull` adds velocity after speed clamp, allowing
-/// bolt speed to exceed `BoltMaxSpeed`.
-///
-/// Given: Bolt at max speed (600.0) heading upward, gravity well at (0, 200)
-///        pulling bolt upward (same direction), strength 5000.0.
-/// When: Both `apply_gravity_pull` and `prepare_bolt_velocity` run in the same
-///        `FixedUpdate` tick.
-/// Then: Final bolt speed is at most `BoltMaxSpeed` (600.0).
-///
-/// This test FAILS if `apply_gravity_pull` runs after the speed clamp (the bug).
-/// The fix: add `.before(BoltSystems::PrepareVelocity)` to `register()` so
-/// the speed clamp always catches velocity added by gravity pull.
-///
-/// Scheduling note: uses production `register()` for gravity well systems.
-/// `prepare_bolt_velocity` is registered FIRST so that without an explicit
-/// `.before()` constraint, Bevy's topological sort may place gravity pull
-/// after the clamp, reproducing the bug.
-#[test]
-fn apply_gravity_pull_is_ordered_before_prepare_velocity() {
-    use crate::{
-        bolt::{
-            BoltSystems,
-            components::{Bolt, BoltMaxSpeed, BoltMinSpeed},
-            systems::prepare_bolt_velocity,
-        },
-        breaker::components::{Breaker, MinAngleFromHorizontal},
-    };
-
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(bevy::state::app::StatesPlugin);
-    app.init_state::<crate::shared::game_state::GameState>();
-    app.add_sub_state::<PlayingState>();
-
-    // Register bolt speed clamping FIRST.
-    app.add_systems(
-        FixedUpdate,
-        prepare_bolt_velocity
-            .in_set(BoltSystems::PrepareVelocity)
-            .run_if(in_state(PlayingState::Active)),
-    );
-
-    // Register gravity well systems via production register() SECOND.
-    // Without .before(BoltSystems::PrepareVelocity), apply_gravity_pull
-    // may run after the speed clamp.
-    register(&mut app);
-
-    // Enter Playing state
-    app.world_mut()
-        .resource_mut::<NextState<crate::shared::game_state::GameState>>()
-        .set(crate::shared::game_state::GameState::Playing);
-    app.update();
-
-    // Spawn breaker with MinAngleFromHorizontal (required by prepare_bolt_velocity)
-    app.world_mut()
-        .spawn((Breaker, MinAngleFromHorizontal(15.0_f32.to_radians())));
-
-    let max_speed = 600.0_f32;
-
-    // Gravity well above bolt, pulling bolt upward (same direction as velocity).
-    // Very high strength to ensure measurable pull in one tick.
-    app.world_mut().spawn((
-        GravityWellMarker,
-        GravityWellConfig {
-            strength: 5000.0,
-            radius: 500.0,
-            remaining: 10.0,
-            owner: Entity::PLACEHOLDER,
-        },
-        Position2D(Vec2::new(0.0, 200.0)),
-    ));
-
-    // Bolt already at max speed heading upward, positioned at (0,0)
-    // within the gravity well radius.
-    let bolt = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, max_speed)),
-            BoltMinSpeed(200.0),
-            BoltMaxSpeed(max_speed),
-            Position2D(Vec2::ZERO),
-        ))
-        .id();
-
-    // Tick one fixed update
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-
-    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
-    let final_speed = velocity.speed();
-    assert!(
-        final_speed <= max_speed + 1.0,
-        "bolt speed ({final_speed:.1}) should not exceed BoltMaxSpeed ({max_speed:.1}) \
-         after gravity pull + speed clamp — apply_gravity_pull must be ordered \
-         before BoltSystems::PrepareVelocity"
     );
 }

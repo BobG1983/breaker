@@ -228,6 +228,31 @@ in production code.
   defaults to false via serde default. Correct.
 - All scenario RON files loaded via `load_scenario()` which returns `Option` — no panic.
 
+## Cache removal refactor (2026-03-30, commits d6d9b80 + 2bdb81b)
+
+### InjectWrongEffectiveSpeed and InjectWrongSizeMultiplier mutations removed (Safe)
+- Two frame mutation variants removed from scenario runner: InjectWrongEffectiveSpeed
+  and InjectWrongSizeMultiplier. Both were scenario runner-internal test tools.
+- Their corresponding RON self-test files also deleted:
+  effective_speed_consistent.scenario.ron, size_boost_in_range.scenario.ron.
+- These were internal to the scenario runner tool (never user-facing data).
+  No production panic surface affected.
+
+### Confirmed safe: on-demand multiplier computation now used everywhere (Safe)
+- All systems that previously may have used EffectiveSpeedMultiplier / EffectiveSizeMultiplier
+  components now call ActiveSpeedBoosts::multiplier() / ActiveSizeBoosts::multiplier() on demand.
+- Specifically: prepare_bolt_velocity (line 37), bolt_breaker_collision (line 323, 353),
+  move_breaker (line 41, 77), dash/system.rs.
+- Both multiplier() methods use if self.0.is_empty() { 1.0 } else { self.0.iter().product() }
+  — no division, no panic surface.
+
+### Stale BUG comment in prepare_bolt_velocity tests (Info-level)
+- `src/bolt/systems/prepare_bolt_velocity/tests.rs:288` contains a doc comment
+  "BUG: current implementation sees no EffectiveSpeedMultiplier, defaults to mult=1.0"
+  describing the OLD pre-refactor behavior. The implementation now reads ActiveSpeedBoosts
+  directly, so this test passes. The comment is misleading but harmless — it's in test
+  doc only, not runtime code.
+
 ## feature/scenario-coverage (2026-03-30)
 
 ### New scenario RON files — no new panic risk (Safe)

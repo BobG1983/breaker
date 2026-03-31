@@ -2,12 +2,14 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Scale2D, Velocity2D};
+use rantzsoft_spatial2d::components::{
+    BaseSpeed, MaxSpeed, MinSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
+};
 
 use super::super::effect::*;
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseSpeed, BoltMaxSpeed, BoltMinSpeed, BoltRadius, ExtraBolt},
+        components::{Bolt, BoltRadius, ExtraBolt},
         resources::BoltConfig,
     },
     shared::{
@@ -78,18 +80,18 @@ fn fire_spawns_requested_count_with_full_physics_components() {
 
         // Speed components
         let base = world
-            .get::<BoltBaseSpeed>(*bolt)
-            .expect("bolt should have BoltBaseSpeed");
+            .get::<BaseSpeed>(*bolt)
+            .expect("bolt should have BaseSpeed");
         assert!((base.0 - 400.0).abs() < f32::EPSILON);
 
         let min = world
-            .get::<BoltMinSpeed>(*bolt)
-            .expect("bolt should have BoltMinSpeed");
+            .get::<MinSpeed>(*bolt)
+            .expect("bolt should have MinSpeed");
         assert!((min.0 - 200.0).abs() < f32::EPSILON);
 
         let max = world
-            .get::<BoltMaxSpeed>(*bolt)
-            .expect("bolt should have BoltMaxSpeed");
+            .get::<MaxSpeed>(*bolt)
+            .expect("bolt should have MaxSpeed");
         assert!((max.0 - 800.0).abs() < f32::EPSILON);
 
         let radius = world
