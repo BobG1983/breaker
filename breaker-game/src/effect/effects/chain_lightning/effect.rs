@@ -175,7 +175,7 @@ pub(crate) fn tick_chain_lightning(
         match current_state {
             ChainState::Idle => {
                 if chain.remaining_jumps == 0 {
-                    commands.entity(chain_entity).despawn();
+                    commands.entity(chain_entity).try_despawn();
                     continue;
                 }
 
@@ -191,12 +191,12 @@ pub(crate) fn tick_chain_lightning(
                     .collect();
 
                 if valid.is_empty() {
-                    commands.entity(chain_entity).despawn();
+                    commands.entity(chain_entity).try_despawn();
                     continue;
                 }
 
                 let Some(&target) = valid.choose(&mut world.rng.0) else {
-                    commands.entity(chain_entity).despawn();
+                    commands.entity(chain_entity).try_despawn();
                     continue;
                 };
 
@@ -250,10 +250,10 @@ pub(crate) fn tick_chain_lightning(
                     chain.source = target_gp.map_or(target_pos, |gp| gp.0);
 
                     chain.remaining_jumps -= 1;
-                    commands.entity(arc_entity).despawn();
+                    commands.entity(arc_entity).try_despawn();
 
                     if chain.remaining_jumps == 0 {
-                        commands.entity(chain_entity).despawn();
+                        commands.entity(chain_entity).try_despawn();
                     } else {
                         chain.state = ChainState::Idle;
                     }
