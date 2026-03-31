@@ -435,7 +435,7 @@ fn piercing_beam_end_to_end_damage_includes_effective_damage_multiplier() {
         .spawn((
             Position2D(Vec2::ZERO),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 

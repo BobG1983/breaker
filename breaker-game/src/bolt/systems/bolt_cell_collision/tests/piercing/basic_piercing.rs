@@ -7,7 +7,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use super::super::helpers::*;
 use crate::{
     bolt::components::{Bolt, PiercingRemaining},
-    effect::EffectivePiercing,
+    effect::effects::piercing::ActivePiercings,
 };
 
 #[test]
@@ -31,7 +31,7 @@ fn non_piercing_bolt_reflects_off_cell() {
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 400.0)),
-        // No PiercingRemaining or EffectivePiercing component
+        // No PiercingRemaining or ActivePiercings component
         Position2D(Vec2::new(0.0, start_y)),
     ));
 
@@ -53,8 +53,8 @@ fn non_piercing_bolt_reflects_off_cell() {
     assert_eq!(hits.0.len(), 1, "BoltImpactCell should be sent");
 }
 
-/// Spec behavior 8: `bolt_cell_collision` uses `EffectivePiercing` for pierce check.
-/// Bolt with `EffectivePiercing(2)`, `PiercingRemaining(2)`, cell with `CellHealth(10.0)`.
+/// Spec behavior 8: `bolt_cell_collision` uses `ActivePiercings` for pierce check.
+/// Bolt with `ActivePiercings(vec![2])`, `PiercingRemaining(2)`, cell with `CellHealth(10.0)`.
 /// Bolt pierces through, `PiercingRemaining` decremented to 1.
 #[test]
 fn piercing_bolt_passes_through_cell_it_would_destroy() {
@@ -76,7 +76,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(2),
+            ActivePiercings(vec![2]),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -112,7 +112,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
 
 #[test]
 fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
-    // Bolt with PiercingRemaining(1), no EffectiveDamageMultiplier.
+    // Bolt with PiercingRemaining(1), no ActiveDamageBoosts.
     // Cell with CellHealth(30) — base damage 10, cell survives.
     // Bolt should reflect (velocity.y < 0). PiercingRemaining stays 1.
     let mut app = test_app();
@@ -129,7 +129,7 @@ fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
+            ActivePiercings(vec![1]),
             PiercingRemaining(1),
             Position2D(Vec2::new(0.0, start_y)),
         ))

@@ -1,32 +1,52 @@
 use bevy::prelude::*;
-use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed};
+use breaker::{
+    bolt::components::{BoltMaxSpeed, BoltMinSpeed},
+    effect::effects::speed_boost::ActiveSpeedBoosts,
+};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{invariants::*, types::InvariantKind};
 
+type BoltSpeedQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Velocity2D,
+        &'static BoltMinSpeed,
+        &'static BoltMaxSpeed,
+        Option<&'static ActiveSpeedBoosts>,
+    ),
+    With<ScenarioTagBolt>,
+>;
+
 /// Checks that bolt speed stays within configured min/max bounds.
 ///
-/// Reads speed from `Velocity2D`.
+/// Reads speed from `Velocity2D`. Computes effective bounds from
+/// `ActiveSpeedBoosts` (same source as `prepare_bolt_velocity`).
 /// Skips bolts with zero speed (serving or dead bolts).
 pub fn check_bolt_speed_in_range(
-    bolts: Query<(Entity, &Velocity2D, &BoltMinSpeed, &BoltMaxSpeed), With<ScenarioTagBolt>>,
+    bolts: BoltSpeedQuery,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
 ) {
     const SPEED_TOLERANCE: f32 = 1.0;
-    for (entity, velocity, min_speed, max_speed) in &bolts {
+    for (entity, velocity, min_speed, max_speed, active_boosts) in &bolts {
         let speed = velocity.speed();
         if speed < f32::EPSILON {
             continue;
         }
-        if speed < min_speed.0 - SPEED_TOLERANCE || speed > max_speed.0 + SPEED_TOLERANCE {
+        let mult = active_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier);
+        let effective_min = min_speed.0 * mult;
+        let effective_max = max_speed.0 * mult;
+        if speed < effective_min - SPEED_TOLERANCE || speed > effective_max + SPEED_TOLERANCE {
             log.0.push(ViolationEntry {
                 frame: frame.0,
                 invariant: InvariantKind::BoltSpeedInRange,
                 entity: Some(entity),
                 message: format!(
-                    "BoltSpeedInRange FAIL frame={} entity={entity:?} speed={speed:.1} bounds=[{:.1}, {:.1}]",
-                    frame.0, min_speed.0, max_speed.0,
+                    "BoltSpeedInRange FAIL frame={} entity={entity:?} speed={speed:.1} bounds=[{:.1}, {:.1}] mult={mult:.2}",
+                    frame.0, effective_min, effective_max,
                 ),
             });
         }

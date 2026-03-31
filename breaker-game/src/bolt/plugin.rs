@@ -57,19 +57,14 @@ impl Plugin for BoltPlugin {
                 FixedUpdate,
                 (
                     launch_bolt,
-                    (
-                        hover_bolt,
-                        prepare_bolt_velocity
-                            .in_set(BoltSystems::PrepareVelocity)
-                            .after(
-                            rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
-                        ),
-                    )
-                        .after(BreakerSystems::Move),
+                    hover_bolt.after(BreakerSystems::Move),
                     spawn_bolt_lost_text,
                     // Collision systems
                     bolt_cell_collision
-                        .after(BoltSystems::PrepareVelocity)
+                        .after(
+                            rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
+                        )
+                        .after(BreakerSystems::Move)
                         .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
                         .in_set(BoltSystems::CellCollision),
                     bolt_wall_collision
@@ -79,6 +74,11 @@ impl Plugin for BoltPlugin {
                         .after(BoltSystems::CellCollision)
                         .in_set(BoltSystems::BreakerCollision),
                     clamp_bolt_to_playfield.after(bolt_breaker_collision),
+                    // Speed clamp + min angle — runs AFTER all velocity-modifying systems
+                    prepare_bolt_velocity
+                        .in_set(BoltSystems::PrepareVelocity)
+                        .after(BoltSystems::BreakerCollision)
+                        .after(BoltSystems::WallCollision),
                     bolt_lost
                         .after(
                             rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,

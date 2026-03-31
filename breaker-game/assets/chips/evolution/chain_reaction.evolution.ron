@@ -1,5 +1,5 @@
 (
-    name: "Chain Reaction",
+    name: "Shock Chain",
     description: "Destroyed cells trigger recursive shockwaves — each kill spawns another wave",
     effects: [
         On(target: Bolt, then: [

@@ -9,7 +9,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -63,7 +63,7 @@ pub(crate) struct PulseSpeed(pub(crate) f32);
 pub(crate) struct PulseDamaged(pub(crate) HashSet<Entity>);
 
 /// Damage multiplier snapshotted from the emitter's captured
-/// `EffectiveDamageMultiplier` at ring-spawn time. Default `1.0`.
+/// `ActiveDamageBoosts` at ring-spawn time. Default `1.0`.
 #[derive(Component)]
 pub(crate) struct PulseRingDamageMultiplier(pub(crate) f32);
 
@@ -72,7 +72,7 @@ type EmitterQuery = (
     Entity,
     &'static mut PulseEmitter,
     &'static Position2D,
-    Option<&'static EffectiveDamageMultiplier>,
+    Option<&'static ActiveDamageBoosts>,
     Option<&'static EffectSourceChip>,
 );
 
@@ -107,13 +107,13 @@ pub(crate) fn tick_pulse_emitter(
     mut emitters: Query<EmitterQuery>,
 ) {
     let dt = time.timestep().as_secs_f32();
-    for (_entity, mut emitter, position, edm, esc) in &mut emitters {
+    for (_entity, mut emitter, position, active_boosts, esc) in &mut emitters {
         emitter.timer += dt;
         if emitter.timer >= emitter.interval {
             emitter.timer -= emitter.interval;
             let effective_range = emitter.effective_max_radius();
             let speed = emitter.speed;
-            let damage_multiplier = edm.map_or(1.0, |e| e.0);
+            let damage_multiplier = active_boosts.map_or(1.0, ActiveDamageBoosts::multiplier);
             let mut ring = commands.spawn((
                 PulseRing,
                 PulseSource,

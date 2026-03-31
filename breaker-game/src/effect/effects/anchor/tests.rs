@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::effect::*;
 use crate::{
     breaker::components::{Breaker, BreakerState, BreakerVelocity},
-    effect::effects::bump_force::{ActiveBumpForces, EffectiveBumpForce},
+    effect::effects::bump_force::ActiveBumpForces,
     shared::{game_state::GameState, playing_state::PlayingState},
 };
 
@@ -748,7 +748,6 @@ fn planted_breaker_has_anchor_force_in_active_bump_forces() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 0.0 },
             BreakerState::Idle,
         ))
@@ -800,7 +799,6 @@ fn planted_breaker_appends_force_to_existing_entries() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![1.5]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 0.0 },
             BreakerState::Idle,
         ))
@@ -848,7 +846,6 @@ fn movement_removes_planted_and_pops_force_multiplier() {
             },
             AnchorPlanted,
             ActiveBumpForces(vec![1.5, 2.0]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 200.0 },
             BreakerState::Idle,
         ))
@@ -886,7 +883,6 @@ fn movement_pops_force_from_single_entry_forces() {
             },
             AnchorPlanted,
             ActiveBumpForces(vec![2.0]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 200.0 },
             BreakerState::Idle,
         ))
@@ -924,7 +920,6 @@ fn no_planted_means_active_bump_forces_unchanged() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![1.5]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 200.0 },
             BreakerState::Idle,
         ))
@@ -951,7 +946,6 @@ fn no_anchor_active_means_active_bump_forces_unchanged() {
         .spawn((
             Breaker,
             ActiveBumpForces(vec![1.5]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 200.0 },
             BreakerState::Idle,
         ))
@@ -987,7 +981,6 @@ fn replanting_after_cancellation_readds_single_force_entry() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![]),
-            EffectiveBumpForce(1.0),
             BreakerVelocity { x: 0.0 },
             BreakerState::Idle,
         ))
@@ -1071,9 +1064,9 @@ fn replanting_after_cancellation_readds_single_force_entry() {
 
 #[test]
 fn tick_anchor_inserts_active_bump_forces_on_plant_when_missing() {
-    // Given: No ActiveBumpForces or EffectiveBumpForce. AnchorTimer about to expire.
+    // Given: No ActiveBumpForces. AnchorTimer about to expire.
     // When: tick_anchor runs, timer expires, AnchorPlanted inserted.
-    // Then: ActiveBumpForces inserted with [2.0], EffectiveBumpForce inserted with default 1.0.
+    // Then: ActiveBumpForces inserted with [2.0].
     let mut app = test_app_fixed();
 
     let entity = app
@@ -1088,7 +1081,7 @@ fn tick_anchor_inserts_active_bump_forces_on_plant_when_missing() {
             AnchorTimer(0.001), // about to expire
             BreakerVelocity { x: 0.0 },
             BreakerState::Idle,
-            // NO ActiveBumpForces, NO EffectiveBumpForce
+            // NO ActiveBumpForces
         ))
         .id();
 
@@ -1109,21 +1102,11 @@ fn tick_anchor_inserts_active_bump_forces_on_plant_when_missing() {
         "ActiveBumpForces should contain [2.0], got {:?}",
         forces.0
     );
-
-    let effective = app
-        .world()
-        .get::<EffectiveBumpForce>(entity)
-        .expect("EffectiveBumpForce should be inserted when missing");
-    assert!(
-        (effective.0 - 1.0).abs() < f32::EPSILON,
-        "EffectiveBumpForce should be default 1.0, got {}",
-        effective.0
-    );
 }
 
 #[test]
-fn tick_anchor_inserts_only_active_bump_forces_when_effective_exists() {
-    // Edge case: EffectiveBumpForce already exists but ActiveBumpForces does not.
+fn tick_anchor_inserts_active_bump_forces_on_plant_when_no_active_forces() {
+    // Edge case: no ActiveBumpForces on the entity before planting.
     // Only ActiveBumpForces should be inserted.
     let mut app = test_app_fixed();
 
@@ -1137,7 +1120,6 @@ fn tick_anchor_inserts_only_active_bump_forces_when_effective_exists() {
                 plant_delay: 0.3,
             },
             AnchorTimer(0.001), // about to expire
-            EffectiveBumpForce(1.0),
             // NO ActiveBumpForces
             BreakerVelocity { x: 0.0 },
             BreakerState::Idle,
@@ -1156,11 +1138,4 @@ fn tick_anchor_inserts_only_active_bump_forces_when_effective_exists() {
         .get::<ActiveBumpForces>(entity)
         .expect("ActiveBumpForces should be inserted");
     assert_eq!(forces.0, vec![2.0], "ActiveBumpForces should contain [2.0]");
-
-    let effective = app.world().get::<EffectiveBumpForce>(entity).unwrap();
-    assert!(
-        (effective.0 - 1.0).abs() < f32::EPSILON,
-        "existing EffectiveBumpForce should remain at 1.0, got {}",
-        effective.0
-    );
 }

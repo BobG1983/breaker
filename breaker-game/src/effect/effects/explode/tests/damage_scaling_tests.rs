@@ -1,11 +1,11 @@
-//! Tests for explode damage scaling by `EffectiveDamageMultiplier`.
+//! Tests for explode damage scaling by `ActiveDamageBoosts`.
 
 use bevy::prelude::*;
 
 use super::{super::effect::*, helpers::*};
 use crate::bolt::BASE_BOLT_DAMAGE;
 
-// -- Damage scaling: Explode damage scales by source entity's EffectiveDamageMultiplier ──
+// -- Damage scaling: Explode damage scales by source entity's ActiveDamageBoosts ──
 
 #[test]
 fn explode_damage_scales_by_effective_damage_multiplier() {
@@ -13,13 +13,13 @@ fn explode_damage_scales_by_effective_damage_multiplier() {
 
     let cell = spawn_test_cell(&mut app, 30.0, 0.0);
 
-    // fire() on an entity with EDM(1.5), damage_mult=2.0
+    // fire() on an entity with ActiveDamageBoosts([1.5]), damage_mult=2.0
     // Expected: DamageCell.damage = 10.0 * 2.0 * 1.5 = 30.0
     let source = app
         .world_mut()
         .spawn((
             Transform::from_xyz(0.0, 0.0, 0.0),
-            crate::effect::EffectiveDamageMultiplier(1.5),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![1.5]),
         ))
         .id();
 
@@ -51,12 +51,12 @@ fn explode_damage_with_edm_and_unit_damage_mult() {
 
     let cell = spawn_test_cell(&mut app, 30.0, 0.0);
 
-    // damage_mult=1.0, EDM=2.0 => damage = 10.0 * 1.0 * 2.0 = 20.0
+    // damage_mult=1.0, ActiveDamageBoosts([2.0]) => damage = 10.0 * 1.0 * 2.0 = 20.0
     let source = app
         .world_mut()
         .spawn((
             Transform::from_xyz(0.0, 0.0, 0.0),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 

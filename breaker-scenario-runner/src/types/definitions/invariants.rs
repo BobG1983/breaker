@@ -48,18 +48,12 @@ pub enum InvariantKind {
     /// [`PulseRing`](breaker::effect::effects::pulse::PulseRing) entity count stays
     /// within `invariant_params.max_pulse_ring_count`.
     PulseRingAccumulation,
-    /// [`EffectiveSpeedMultiplier`](breaker::effect::EffectiveSpeedMultiplier) must
-    /// equal the product of all [`ActiveSpeedBoosts`](breaker::effect::effects::speed_boost::ActiveSpeedBoosts)
-    /// entries within floating-point epsilon.
-    EffectiveSpeedConsistent,
     /// Chain lightning chain + arc entity count stays within `invariant_params.max_chain_arc_count`.
     ChainArcCountReasonable,
     /// Bolt `Aabb2D` `half_extents` match the entity's actual dimensions.
     AabbMatchesEntityDimensions,
     /// Gravity well entity count stays within `invariant_params.max_gravity_well_count`.
     GravityWellCountReasonable,
-    /// `EffectiveSizeMultiplier` equals `ActiveSizeBoosts` product within epsilon.
-    SizeBoostInRange,
 }
 
 impl InvariantKind {
@@ -89,11 +83,9 @@ impl InvariantKind {
         Self::SecondWindWallAtMostOne,
         Self::ShieldChargesConsistent,
         Self::PulseRingAccumulation,
-        Self::EffectiveSpeedConsistent,
         Self::ChainArcCountReasonable,
         Self::AabbMatchesEntityDimensions,
         Self::GravityWellCountReasonable,
-        Self::SizeBoostInRange,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -123,17 +115,11 @@ impl InvariantKind {
             Self::SecondWindWallAtMostOne => "more than one SecondWindWall entity exists",
             Self::ShieldChargesConsistent => "ShieldActive with zero charges not removed",
             Self::PulseRingAccumulation => "PulseRing entity count exceeds maximum",
-            Self::EffectiveSpeedConsistent => {
-                "EffectiveSpeedMultiplier diverged from ActiveSpeedBoosts product"
-            }
             Self::ChainArcCountReasonable => "chain lightning arc/chain count exceeds maximum",
             Self::AabbMatchesEntityDimensions => {
                 "Aabb2D half_extents do not match entity dimensions"
             }
             Self::GravityWellCountReasonable => "gravity well entity count exceeds maximum",
-            Self::SizeBoostInRange => {
-                "EffectiveSizeMultiplier diverged from ActiveSizeBoosts product"
-            }
         }
     }
 }

@@ -1,18 +1,26 @@
 //! Despawns bolt entities when `RequestBoltDestroyed` messages are received.
 
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 
 use crate::bolt::messages::RequestBoltDestroyed;
 
 /// Despawns bolt entities from [`RequestBoltDestroyed`] messages.
 ///
-/// Runs after all bridges have finished evaluating the entity's data.
+/// Deduplicates entity IDs to avoid double-despawn when multiple systems
+/// request destruction of the same bolt in the same frame (e.g., lifespan
+/// expiry + out-of-bounds in the same tick).
 pub(crate) fn cleanup_destroyed_bolts(
     mut reader: MessageReader<RequestBoltDestroyed>,
     mut commands: Commands,
 ) {
+    let mut to_despawn: HashSet<Entity> = HashSet::new();
     for msg in reader.read() {
-        commands.entity(msg.bolt).despawn();
+        to_despawn.insert(msg.bolt);
+    }
+    for entity in to_despawn {
+        commands.entity(entity).despawn();
     }
 }
 

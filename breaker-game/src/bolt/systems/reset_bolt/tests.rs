@@ -8,12 +8,8 @@ use crate::{
         resources::BoltConfig,
     },
     breaker::components::Breaker,
-    effect::{
-        EffectiveDamageMultiplier, EffectivePiercing,
-        effects::{
-            damage_boost::ActiveDamageBoosts, piercing::ActivePiercings,
-            speed_boost::ActiveSpeedBoosts,
-        },
+    effect::effects::{
+        damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
     },
     run::RunState,
     shared::GameDrawLayer,
@@ -216,9 +212,9 @@ fn reset_bolt_removes_serving_on_subsequent_nodes() {
     );
 }
 
-/// Spec behavior 11: `reset_bolt` resets `PiercingRemaining` to `EffectivePiercing` on node start.
+/// `reset_bolt` resets `PiercingRemaining` to `ActivePiercings.total()` on node start.
 #[test]
-fn reset_bolt_resets_piercing_remaining_to_effective_piercing() {
+fn reset_bolt_resets_piercing_remaining_to_active_piercings_total() {
     let mut app = test_app();
     let bolt_id = app
         .world_mut()
@@ -227,7 +223,7 @@ fn reset_bolt_resets_piercing_remaining_to_effective_piercing() {
             Velocity2D(Vec2::new(0.0, 0.0)),
             Position2D(Vec2::new(0.0, 0.0)),
             PreviousPosition(Vec2::new(0.0, 0.0)),
-            EffectivePiercing(3),
+            ActivePiercings(vec![3]),
             PiercingRemaining(0),
         ))
         .id();
@@ -241,13 +237,12 @@ fn reset_bolt_resets_piercing_remaining_to_effective_piercing() {
         .expect("bolt should have PiercingRemaining");
     assert_eq!(
         remaining.0, 3,
-        "PiercingRemaining should be reset to EffectivePiercing(3), got {}",
+        "PiercingRemaining should be reset to ActivePiercings.total() (3), got {}",
         remaining.0
     );
 }
 
-/// Spec behavior 12: `reset_bolt` preserves Active*/Effective* effect state.
-/// Replaces old test that checked `BoltSpeedBoost`, `BoltSizeBoost`, `ChainHit`, `DamageBoost`.
+/// `reset_bolt` preserves Active* effect state; resets `PiercingRemaining` to `ActivePiercings.total()`.
 #[test]
 fn reset_bolt_preserves_effect_state() {
     let mut app = test_app();
@@ -261,8 +256,6 @@ fn reset_bolt_preserves_effect_state() {
             ActiveDamageBoosts(vec![1.5]),
             ActiveSpeedBoosts(vec![1.2]),
             ActivePiercings(vec![3]),
-            EffectiveDamageMultiplier(1.5),
-            EffectivePiercing(3),
             PiercingRemaining(0),
         ))
         .id();
@@ -291,23 +284,20 @@ fn reset_bolt_preserves_effect_state() {
         "ActiveSpeedBoosts should be unchanged after reset"
     );
 
-    // Effective* components should be unchanged
-    let effective_dmg = world
-        .get::<EffectiveDamageMultiplier>(bolt_id)
-        .expect("EffectiveDamageMultiplier should be present");
+    // ActiveDamageBoosts multiplier should be unchanged
     assert!(
-        (effective_dmg.0 - 1.5).abs() < f32::EPSILON,
-        "EffectiveDamageMultiplier should be unchanged at 1.5 after reset, got {}",
-        effective_dmg.0
+        (active_dmg.multiplier() - 1.5).abs() < f32::EPSILON,
+        "ActiveDamageBoosts multiplier should be 1.5 after reset, got {}",
+        active_dmg.multiplier()
     );
 
-    // PiercingRemaining should be RESET to EffectivePiercing (3), not preserved
+    // PiercingRemaining should be RESET to ActivePiercings.total() (3), not preserved
     let pr = world
         .get::<PiercingRemaining>(bolt_id)
         .expect("PiercingRemaining should be present");
     assert_eq!(
         pr.0, 3,
-        "PiercingRemaining should be reset to EffectivePiercing(3), got {}",
+        "PiercingRemaining should be reset to ActivePiercings.total() (3), got {}",
         pr.0
     );
 }
@@ -375,5 +365,39 @@ fn reset_bolt_ignores_extra_bolt_entities() {
         (extra_pos.0.y - 50.0).abs() < f32::EPSILON,
         "extra bolt y should be unchanged at 50.0, got {}",
         extra_pos.0.y,
+    );
+}
+
+/// Behavior 6: `reset_bolt` resets `PiercingRemaining` from `ActivePiercings.total()` (multi-entry).
+///
+/// Given: Bolt with `ActivePiercings(vec![2, 1])`, `PiercingRemaining(0)`.
+/// When: `reset_bolt` runs (node start).
+/// Then: `PiercingRemaining` = 3 (2 + 1).
+#[test]
+fn reset_bolt_resets_piercing_remaining_from_multi_entry_active_piercings() {
+    let mut app = test_app();
+    let bolt_id = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            Velocity2D(Vec2::new(0.0, 0.0)),
+            Position2D(Vec2::new(0.0, 0.0)),
+            PreviousPosition(Vec2::new(0.0, 0.0)),
+            ActivePiercings(vec![2, 1]),
+            PiercingRemaining(0),
+        ))
+        .id();
+    spawn_breaker(&mut app, 0.0, -250.0);
+
+    app.update();
+
+    let remaining = app
+        .world()
+        .get::<PiercingRemaining>(bolt_id)
+        .expect("bolt should have PiercingRemaining");
+    assert_eq!(
+        remaining.0, 3,
+        "PiercingRemaining should be reset to ActivePiercings.total() (2 + 1 = 3), got {}",
+        remaining.0
     );
 }

@@ -10,7 +10,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use super::helpers::*;
 use crate::{
     bolt::components::{Bolt, ImpactSide, LastImpact, PiercingRemaining},
-    effect::EffectivePiercing,
+    effect::effects::piercing::ActivePiercings,
 };
 
 // ── Behavior 3: bottom face rebound stamps ImpactSide::Bottom ──
@@ -229,7 +229,7 @@ fn cell_right_rebound_stamps_last_impact_with_right_side() {
 
 #[test]
 fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
-    // Given: Bolt with EffectivePiercing(2), PiercingRemaining(2).
+    // Given: Bolt with ActivePiercings(vec![2]), PiercingRemaining(2).
     //        Cell at (0.0, 100.0) with CellHealth(10.0) — bolt base damage 10.0 would destroy it.
     //        No pre-existing LastImpact on the bolt.
     // When: bolt_cell_collision runs for one fixed tick
@@ -248,7 +248,7 @@ fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(2),
+            ActivePiercings(vec![2]),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -281,7 +281,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(2),
+            ActivePiercings(vec![2]),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -315,7 +315,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
 
 #[test]
 fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
-    // Given: Bolt with EffectivePiercing(1), PiercingRemaining(1).
+    // Given: Bolt with ActivePiercings(vec![1]), PiercingRemaining(1).
     //        Cell at (0.0, 100.0) with CellHealth(30.0) — bolt base damage 10.0, cell survives.
     //        Cannot pierce because cell would survive.
     // When: bolt_cell_collision runs for one fixed tick
@@ -334,7 +334,7 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
+            ActivePiercings(vec![1]),
             PiercingRemaining(1),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -358,7 +358,7 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
 
 #[test]
 fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() {
-    // Given: Bolt with EffectivePiercing(1), PiercingRemaining(0).
+    // Given: Bolt with ActivePiercings(vec![1]), PiercingRemaining(0).
     //        Cell at (0.0, 100.0) with CellHealth(10.0) — bolt base damage 10.0 would destroy it,
     //        but piercing is exhausted so it cannot pierce through.
     // When: bolt_cell_collision runs for one fixed tick
@@ -377,7 +377,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
+            ActivePiercings(vec![1]),
             PiercingRemaining(0),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -399,7 +399,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
 
 #[test]
 fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
-    // Edge case: PiercingRemaining(0) with EffectivePiercing(0) — same behavior.
+    // Edge case: PiercingRemaining(0) with ActivePiercings(vec![]) — same behavior.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
     let cc = crate::cells::resources::CellConfig::default();
@@ -414,7 +414,7 @@ fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(0),
+            ActivePiercings(vec![]),
             PiercingRemaining(0),
             Position2D(Vec2::new(0.0, start_y)),
         ))

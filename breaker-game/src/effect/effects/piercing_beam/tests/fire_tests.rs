@@ -389,7 +389,7 @@ fn reverse_on_empty_entity_is_noop() {
     );
 }
 
-// ── Damage scaling: fire() includes EffectiveDamageMultiplier in pre-computed damage ──
+// ── Damage scaling: fire() includes ActiveDamageBoosts in pre-computed damage ──
 
 #[test]
 fn fire_scales_damage_by_effective_damage_multiplier() {
@@ -399,7 +399,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
         .spawn((
             Position2D(Vec2::ZERO),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 

@@ -11,7 +11,7 @@ use crate::{
         messages::BoltImpactWall,
         resources::BoltConfig,
     },
-    effect::EffectivePiercing,
+    effect::effects::piercing::ActivePiercings,
     shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
     wall::components::Wall,
 };
@@ -66,14 +66,14 @@ fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
         .id()
 }
 
-/// Spawns a bolt with `EffectivePiercing` and `PiercingRemaining` components.
+/// Spawns a bolt with `ActivePiercings` and `PiercingRemaining` components.
 fn spawn_piercing_bolt(
     app: &mut App,
     x: f32,
     y: f32,
     vx: f32,
     vy: f32,
-    effective_piercing: u32,
+    active_piercings: Vec<u32>,
     piercing_remaining: u32,
 ) -> Entity {
     let bc = BoltConfig::default();
@@ -89,7 +89,7 @@ fn spawn_piercing_bolt(
             Aabb2D::new(Vec2::ZERO, Vec2::splat(bc.radius)),
             CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
             GameDrawLayer::Bolt,
-            EffectivePiercing(effective_piercing),
+            ActivePiercings(active_piercings),
             PiercingRemaining(piercing_remaining),
         ))
         .id()
@@ -168,23 +168,25 @@ fn bolt_overlapping_left_wall_emits_impact_and_reflects_velocity() {
     );
 }
 
-// ── Behavior 9: bolt_wall_collision resets PiercingRemaining to EffectivePiercing on wall overlap ──
+// ── Behavior 9: bolt_wall_collision resets PiercingRemaining to ActivePiercings.total() on wall overlap ──
 
 #[test]
 fn bolt_overlapping_wall_resets_piercing_remaining() {
-    // Spec behavior 9:
-    // Given: Bolt overlapping a wall, with EffectivePiercing(3) and PiercingRemaining(1)
+    // Given: Bolt overlapping a wall, with ActivePiercings(vec![3]) and PiercingRemaining(1)
     // When: bolt_wall_collision detects wall overlap
-    // Then: PiercingRemaining resets to 3 (matching EffectivePiercing.0)
+    // Then: PiercingRemaining resets to 3 (matching ActivePiercings.total())
     let mut app = test_app();
 
     // Wall at x=-5 with half_width=5, bolt at x=-2 with radius 8 => overlap
     spawn_wall(&mut app, -5.0, 200.0, 5.0, 400.0);
     let bolt_entity = spawn_piercing_bolt(
-        &mut app, -2.0, 200.0, // position: inside wall's expanded AABB
-        -400.0, 0.0, // velocity: moving left
-        3,   // EffectivePiercing(3)
-        1,   // PiercingRemaining(1) — partially spent
+        &mut app,
+        -2.0,
+        200.0, // position: inside wall's expanded AABB
+        -400.0,
+        0.0,     // velocity: moving left
+        vec![3], // ActivePiercings(vec![3])
+        1,       // PiercingRemaining(1) — partially spent
     );
 
     tick(&mut app);
@@ -195,20 +197,20 @@ fn bolt_overlapping_wall_resets_piercing_remaining() {
         .expect("PiercingRemaining should still be present on bolt");
     assert_eq!(
         pr.0, 3,
-        "PiercingRemaining should reset to EffectivePiercing.0 (3) on wall overlap, got {}",
+        "PiercingRemaining should reset to ActivePiercings.total() (3) on wall overlap, got {}",
         pr.0
     );
 }
 
-/// Spec behavior 9 edge case: `PiercingRemaining` without `EffectivePiercing` stays unchanged.
+/// Edge case: `PiercingRemaining` without `ActivePiercings` stays unchanged.
 #[test]
-fn bolt_with_piercing_remaining_but_no_effective_piercing_unchanged_on_wall_hit() {
+fn bolt_with_piercing_remaining_but_no_active_piercings_unchanged_on_wall_hit() {
     let mut app = test_app();
 
     // Wall at x=-5 with half_width=5, bolt at x=-2 with radius 8 => overlap
     spawn_wall(&mut app, -5.0, 200.0, 5.0, 400.0);
 
-    // Spawn bolt with PiercingRemaining but NO EffectivePiercing
+    // Spawn bolt with PiercingRemaining but NO ActivePiercings
     let bc = BoltConfig::default();
     let pos = Vec2::new(-2.0, 200.0);
     let bolt_entity = app
@@ -224,7 +226,7 @@ fn bolt_with_piercing_remaining_but_no_effective_piercing_unchanged_on_wall_hit(
             CollisionLayers::new(BOLT_LAYER, WALL_LAYER),
             GameDrawLayer::Bolt,
             PiercingRemaining(1),
-            // No EffectivePiercing
+            // No ActivePiercings
         ))
         .id();
 
@@ -236,7 +238,7 @@ fn bolt_with_piercing_remaining_but_no_effective_piercing_unchanged_on_wall_hit(
         .expect("PiercingRemaining should still be present on bolt");
     assert_eq!(
         pr.0, 1,
-        "PiercingRemaining without EffectivePiercing should stay at 1 on wall overlap, got {}",
+        "PiercingRemaining without ActivePiercings should stay at 1 on wall overlap, got {}",
         pr.0
     );
 }
@@ -568,5 +570,41 @@ fn bolt_with_zero_velocity_does_not_gain_last_impact() {
     assert!(
         last_impact.is_none(),
         "bolt with zero velocity should NOT get LastImpact, got {last_impact:?}"
+    );
+}
+
+// ── Behavior 5: bolt_wall_collision resets PiercingRemaining from ActivePiercings.total() ──
+
+/// Given: Bolt with `ActivePiercings(vec![2, 1])`, `PiercingRemaining(0)`, NO `EffectivePiercing`.
+/// When: bolt hits wall.
+/// Then: `PiercingRemaining` = 3 (2 + 1).
+///
+/// Fails at RED because production reads `EffectivePiercing` (absent -> no reset).
+#[test]
+fn bolt_wall_collision_resets_piercing_remaining_from_active_piercings_total() {
+    let mut app = test_app();
+
+    // Wall at x=-5 with half_width=5, bolt at x=-2 with radius 8 => overlap
+    spawn_wall(&mut app, -5.0, 200.0, 5.0, 400.0);
+    let bolt_entity = spawn_piercing_bolt(
+        &mut app,
+        -2.0,
+        200.0, // position: inside wall's expanded AABB
+        -400.0,
+        0.0,        // velocity: moving left
+        vec![2, 1], // ActivePiercings(vec![2, 1]) -> total = 3
+        0,          // PiercingRemaining(0)
+    );
+
+    tick(&mut app);
+
+    let pr = app
+        .world()
+        .get::<PiercingRemaining>(bolt_entity)
+        .expect("PiercingRemaining should still be present on bolt");
+    assert_eq!(
+        pr.0, 3,
+        "PiercingRemaining should reset to ActivePiercings.total() (2 + 1 = 3) on wall overlap, got {}",
+        pr.0
     );
 }

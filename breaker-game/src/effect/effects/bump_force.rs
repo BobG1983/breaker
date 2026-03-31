@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 /// Tracks active bump force multipliers on an entity.
 ///
-/// Recalculation: `base_force * product(all_boosts)`.
+/// Formula: `base_force * product(all_boosts)`. Computed on demand via `multiplier()`.
 #[derive(Component, Debug, Default, Clone)]
 pub struct ActiveBumpForces(pub Vec<f32>);
 
@@ -24,15 +24,7 @@ pub(crate) fn fire(entity: Entity, force: f32, _source_chip: &str, world: &mut W
     }
 
     if world.get::<ActiveBumpForces>(entity).is_none() {
-        world
-            .entity_mut(entity)
-            .insert((ActiveBumpForces::default(), EffectiveBumpForce::default()));
-    }
-
-    if world.get::<EffectiveBumpForce>(entity).is_none() {
-        world
-            .entity_mut(entity)
-            .insert(EffectiveBumpForce::default());
+        world.entity_mut(entity).insert(ActiveBumpForces::default());
     }
 
     if let Some(mut active) = world.get_mut::<ActiveBumpForces>(entity) {
@@ -48,29 +40,6 @@ pub(crate) fn reverse(entity: Entity, force: f32, _source_chip: &str, world: &mu
             .position(|&v| (v - force).abs() < f32::EPSILON)
     {
         active.0.swap_remove(pos);
-    }
-}
-
-/// Effective bump force multiplier computed by `recalculate_bump_force`.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub struct EffectiveBumpForce(pub f32);
-
-impl Default for EffectiveBumpForce {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
-
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        recalculate_bump_force.in_set(crate::effect::sets::EffectSystems::Recalculate),
-    );
-}
-
-fn recalculate_bump_force(mut query: Query<(&ActiveBumpForces, &mut EffectiveBumpForce)>) {
-    for (active, mut effective) in &mut query {
-        effective.0 = active.multiplier();
     }
 }
 
@@ -94,34 +63,6 @@ mod tests {
         fire(entity, 50.0, "", &mut world);
         let active = world.get::<ActiveBumpForces>(entity).unwrap();
         assert_eq!(active.0, vec![50.0]);
-        assert!(world.get::<EffectiveBumpForce>(entity).is_some());
-    }
-
-    #[test]
-    fn fire_on_bare_entity_second_fire_appends() {
-        let mut world = World::new();
-        let entity = world.spawn_empty().id();
-        fire(entity, 50.0, "", &mut world);
-        fire(entity, 25.0, "", &mut world);
-        let active = world.get::<ActiveBumpForces>(entity).unwrap();
-        assert_eq!(active.0, vec![50.0, 25.0]);
-        // Effective retains default from first fire — not recalculated until system runs
-        let effective = world.get::<EffectiveBumpForce>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn fire_with_existing_components_preserves_effective() {
-        let mut world = World::new();
-        let entity = world
-            .spawn((ActiveBumpForces(vec![]), EffectiveBumpForce(3.0)))
-            .id();
-        fire(entity, 50.0, "", &mut world);
-        let active = world.get::<ActiveBumpForces>(entity).unwrap();
-        assert_eq!(active.0, vec![50.0]);
-        // fire() must not overwrite the pre-existing effective value
-        let effective = world.get::<EffectiveBumpForce>(entity).unwrap();
-        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -131,7 +72,6 @@ mod tests {
         reverse(entity, 50.0, "", &mut world);
         reverse(entity, 50.0, "", &mut world);
         assert!(world.get::<ActiveBumpForces>(entity).is_none());
-        assert!(world.get::<EffectiveBumpForce>(entity).is_none());
     }
 
     #[test]
@@ -141,17 +81,6 @@ mod tests {
         reverse(entity, 999.0, "", &mut world);
         let active = world.get::<ActiveBumpForces>(entity).unwrap();
         assert_eq!(active.0, vec![50.0, 25.0]);
-    }
-
-    #[test]
-    fn fire_on_half_initialized_entity_inserts_effective() {
-        let mut world = World::new();
-        let entity = world.spawn(ActiveBumpForces(vec![])).id();
-        fire(entity, 50.0, "", &mut world);
-        let active = world.get::<ActiveBumpForces>(entity).unwrap();
-        assert_eq!(active.0, vec![50.0]);
-        let effective = world.get::<EffectiveBumpForce>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -204,47 +133,5 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let forces = ActiveBumpForces(vec![]);
         assert!((forces.multiplier() - 1.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_bump_force_single_boost() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_bump_force);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveBumpForces(vec![1.5]), EffectiveBumpForce(1.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveBumpForce>(entity).unwrap();
-        assert!((effective.0 - 1.5).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_bump_force_multiple_boosts_multiplicative() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_bump_force);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveBumpForces(vec![1.5, 2.0]), EffectiveBumpForce(1.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveBumpForce>(entity).unwrap();
-        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_bump_force_empty_boosts_resets_to_default() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_bump_force);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveBumpForces(vec![]), EffectiveBumpForce(2.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveBumpForce>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 }

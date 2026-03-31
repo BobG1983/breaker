@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::bump_force::{ActiveBumpForces, EffectiveBumpForce};
+use super::super::bump_force::ActiveBumpForces;
 use crate::{
     breaker::components::{BreakerState, BreakerVelocity},
     shared::playing_state::PlayingState,
@@ -87,7 +87,6 @@ type AnchorTickQuery = (
     Option<&'static mut AnchorTimer>,
     Option<&'static AnchorPlanted>,
     Option<&'static mut ActiveBumpForces>,
-    Option<&'static mut EffectiveBumpForce>,
 );
 
 /// Tick system for anchor planting state machine.
@@ -103,7 +102,7 @@ pub(crate) fn tick_anchor(
     mut query: Query<AnchorTickQuery>,
 ) {
     let dt = time.delta_secs();
-    for (entity, active, velocity, state, timer, planted, active_forces, _effective) in &mut query {
+    for (entity, active, velocity, state, timer, planted, active_forces) in &mut query {
         let is_stationary = velocity.x.abs() < f32::EPSILON
             && matches!(state, BreakerState::Idle | BreakerState::Settling);
 
@@ -134,10 +133,9 @@ pub(crate) fn tick_anchor(
                 if let Some(mut forces) = active_forces {
                     forces.0.push(active.bump_force_multiplier);
                 } else {
-                    commands.entity(entity).insert((
-                        ActiveBumpForces(vec![active.bump_force_multiplier]),
-                        EffectiveBumpForce::default(),
-                    ));
+                    commands
+                        .entity(entity)
+                        .insert(ActiveBumpForces(vec![active.bump_force_multiplier]));
                 }
             }
         } else if planted.is_none() {

@@ -10,7 +10,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Velocity2D};
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::messages::DamageCell,
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig, PlayingState},
 };
 
@@ -64,8 +64,8 @@ pub(crate) fn fire(
     let beam_length = min_t.max(0.0);
 
     let edm = world
-        .get::<EffectiveDamageMultiplier>(entity)
-        .map_or(1.0, |e| e.0);
+        .get::<ActiveDamageBoosts>(entity)
+        .map_or(1.0, ActiveDamageBoosts::multiplier);
 
     world.spawn((
         PiercingBeamRequest {

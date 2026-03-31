@@ -41,6 +41,7 @@ use crate::{
         components::{Cell, CellHealth},
         messages::DamageCell,
     },
+    effect::effects::damage_boost::ActiveDamageBoosts,
     shared::CELL_LAYER,
 };
 
@@ -106,11 +107,12 @@ pub(crate) fn bolt_cell_collision(
         _,
         bolt_radius,
         mut piercing_remaining,
-        _effective_piercing,
+        _active_piercings,
         damage_mult,
         bolt_entity_scale,
         spawned_by_evo,
         mut last_impact,
+        _active_speed_boosts,
     ) in &mut bolt_query
     {
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
@@ -121,7 +123,8 @@ pub(crate) fn bolt_cell_collision(
 
         // Effective damage for pierce lookahead (compared against cell HP).
         // must match `handle_cell_hit` damage formula
-        let effective_damage = BASE_BOLT_DAMAGE * damage_mult.map_or(1.0, |e| e.0);
+        let effective_damage =
+            BASE_BOLT_DAMAGE * damage_mult.map_or(1.0, ActiveDamageBoosts::multiplier);
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();

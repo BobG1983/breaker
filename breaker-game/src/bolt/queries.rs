@@ -10,7 +10,9 @@ use crate::{
         BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, ExtraBolt,
         LastImpact, PiercingRemaining, SpawnedByEvolution,
     },
-    effect::{EffectiveDamageMultiplier, EffectivePiercing},
+    effect::effects::{
+        damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
+    },
     shared::EntityScale,
 };
 
@@ -22,11 +24,12 @@ pub(crate) type CollisionQueryBolt = (
     &'static BoltBaseSpeed,
     &'static BoltRadius,
     Option<&'static mut PiercingRemaining>,
-    Option<&'static EffectivePiercing>,
-    Option<&'static EffectiveDamageMultiplier>,
+    Option<&'static ActivePiercings>,
+    Option<&'static ActiveDamageBoosts>,
     Option<&'static EntityScale>,
     Option<&'static SpawnedByEvolution>,
     Option<&'static mut LastImpact>,
+    Option<&'static ActiveSpeedBoosts>,
 );
 
 /// Bolt entity data needed by the reset system at node start.
@@ -35,7 +38,7 @@ pub(crate) type ResetBoltQuery = (
     &'static mut Position2D,
     &'static mut Velocity2D,
     Option<&'static mut PiercingRemaining>,
-    Option<&'static EffectivePiercing>,
+    Option<&'static ActivePiercings>,
     Option<&'static mut PreviousPosition>,
 );
 

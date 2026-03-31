@@ -15,7 +15,7 @@ use rantzsoft_spatial2d::components::GlobalPosition2D;
 use crate::{
     bolt::BASE_BOLT_DAMAGE,
     cells::{components::Cell, messages::DamageCell},
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState, rng::GameRng},
 };
 
@@ -86,8 +86,8 @@ pub(crate) fn fire(
     let position = super::super::entity_position(world, entity);
 
     let edm = world
-        .get::<EffectiveDamageMultiplier>(entity)
-        .map_or(1.0, |e| e.0);
+        .get::<ActiveDamageBoosts>(entity)
+        .map_or(1.0, ActiveDamageBoosts::multiplier);
 
     let damage = BASE_BOLT_DAMAGE * damage_mult * edm;
 

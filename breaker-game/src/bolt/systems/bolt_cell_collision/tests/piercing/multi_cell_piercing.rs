@@ -7,7 +7,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use super::super::helpers::*;
 use crate::{
     bolt::components::{Bolt, PiercingRemaining},
-    effect::EffectivePiercing,
+    effect::effects::piercing::ActivePiercings,
 };
 
 #[test]
@@ -36,7 +36,7 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 10000.0)), // 10000/64 ~ 156 units/frame -- covers both cells
-            EffectivePiercing(2),
+            ActivePiercings(vec![2]),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -84,7 +84,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
+            ActivePiercings(vec![1]),
             PiercingRemaining(1),
             Position2D(Vec2::new(-100.0, start_y)),
         ))
@@ -97,7 +97,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
+            ActivePiercings(vec![1]),
             PiercingRemaining(1),
             Position2D(Vec2::new(100.0, start_y)),
         ))
@@ -127,7 +127,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
 
 #[test]
 fn bolt_with_exhausted_piercing_reflects_normally() {
-    // Bolt has EffectivePiercing(2) but PiercingRemaining(0) — all pierces used up.
+    // Bolt has ActivePiercings(vec![2]) but PiercingRemaining(0) — all pierces used up.
     // It should reflect off a destroyable cell, not pierce through it.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
@@ -144,7 +144,7 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(2),
+            ActivePiercings(vec![2]),
             PiercingRemaining(0),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -174,7 +174,7 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
 
 #[test]
 fn piercing_bolt_hits_grid_adjacent_cells() {
-    // Bolt with EffectivePiercing(2), PiercingRemaining(2) should pierce through
+    // Bolt with ActivePiercings(vec![2]), PiercingRemaining(2) should pierce through
     // both grid-adjacent cells (spaced GRID_STEP_Y=28 apart) in one frame.
     let mut app = test_app();
     let bc = crate::bolt::resources::BoltConfig::default();
@@ -195,7 +195,7 @@ fn piercing_bolt_hits_grid_adjacent_cells() {
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 10000.0)), // very fast to cover both cells in one frame
-        EffectivePiercing(2),
+        ActivePiercings(vec![2]),
         PiercingRemaining(2),
         Position2D(Vec2::new(0.0, start_y)),
     ));

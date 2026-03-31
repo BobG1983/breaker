@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use super::helpers::*;
 use crate::{
     bolt::components::{Bolt, PiercingRemaining},
-    effect::{EffectiveDamageMultiplier, EffectivePiercing},
+    effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
 };
 
 #[test]
@@ -46,8 +46,8 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
     );
 }
 
-/// Spec behavior 1: Base damage with no `EffectiveDamageMultiplier` component.
-/// `EffectiveDamageMultiplier` absent => identity (1.0), damage = 10.0 * 1.0 = 10.0.
+/// Spec behavior 1: Base damage with no `ActiveDamageBoosts` component.
+/// `ActiveDamageBoosts` absent => identity (1.0), damage = 10.0 * 1.0 = 10.0.
 #[test]
 fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
@@ -62,7 +62,7 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 400.0)),
-        // No EffectiveDamageMultiplier component
+        // No ActiveDamageBoosts component
         Position2D(Vec2::new(0.0, start_y)),
     ));
 
@@ -72,16 +72,16 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     assert_eq!(
         msgs.0.len(),
         1,
-        "bolt with no EffectiveDamageMultiplier should emit one DamageCell"
+        "bolt with no ActiveDamageBoosts should emit one DamageCell"
     );
     assert!(
         (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
-        "no EffectiveDamageMultiplier should produce damage == 10.0 (identity), got {}",
+        "no ActiveDamageBoosts should produce damage == 10.0 (identity), got {}",
         msgs.0[0].damage
     );
 }
 
-/// Spec behavior 2: Boosted damage with `EffectiveDamageMultiplier(1.5)`.
+/// Spec behavior 2: Boosted damage with `ActiveDamageBoosts(1.5)`.
 /// Formula: 10.0 * 1.5 = 15.0.
 #[test]
 fn cell_collision_emits_damage_cell_with_boosted_damage() {
@@ -99,7 +99,7 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectiveDamageMultiplier(1.5),
+            ActiveDamageBoosts(vec![1.5]),
             Position2D(Vec2::new(0.0, start_y)),
         ))
         .id();
@@ -110,12 +110,12 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
     assert_eq!(msgs.0.len(), 1, "boosted bolt should emit one DamageCell");
     assert!(
         (msgs.0[0].damage - 15.0).abs() < f32::EPSILON,
-        "DamageCell.damage with EffectiveDamageMultiplier(1.5) should be 15.0, got {}",
+        "DamageCell.damage with ActiveDamageBoosts(1.5) should be 15.0, got {}",
         msgs.0[0].damage
     );
 }
 
-/// Spec behavior 2 edge case: `EffectiveDamageMultiplier(1.0)` is identity.
+/// Spec behavior 2 edge case: `ActiveDamageBoosts(1.0)` is identity.
 #[test]
 fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
@@ -130,7 +130,7 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
         Bolt,
         bolt_param_bundle(),
         Velocity2D(Vec2::new(0.0, 400.0)),
-        EffectiveDamageMultiplier(1.0),
+        ActiveDamageBoosts(vec![1.0]),
         Position2D(Vec2::new(0.0, start_y)),
     ));
 
@@ -140,11 +140,11 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
     assert_eq!(
         msgs.0.len(),
         1,
-        "EffectiveDamageMultiplier(1.0) bolt should emit one DamageCell"
+        "ActiveDamageBoosts(1.0) bolt should emit one DamageCell"
     );
     assert!(
         (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
-        "EffectiveDamageMultiplier(1.0) should produce damage == 10.0, got {}",
+        "ActiveDamageBoosts(1.0) should produce damage == 10.0, got {}",
         msgs.0[0].damage
     );
 }
@@ -237,7 +237,7 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
             Bolt,
             bolt_param_bundle(),
             Velocity2D(Vec2::new(0.0, 10000.0)),
-            EffectivePiercing(2),
+            ActivePiercings(vec![2]),
             PiercingRemaining(2),
             Position2D(Vec2::new(0.0, start_y)),
         ))
@@ -310,4 +310,80 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
         "should emit exactly one DamageCell alongside BoltImpactCell"
     );
     assert_eq!(dmg_msgs.0[0].cell, cell_entity);
+}
+
+/// Behavior 1: `bolt_cell_collision` uses `ActiveDamageBoosts.multiplier()` for damage.
+///
+/// Given: Bolt with `ActiveDamageBoosts(vec![3.0])`, cell entity.
+/// When: bolt collides with cell.
+/// Then: `DamageCell` message has damage = 10.0 * 3.0 = 30.0.
+#[test]
+fn cell_collision_uses_active_damage_boosts_multiplier() {
+    let mut app = test_app_with_damage_and_wall_messages();
+    let bc = crate::bolt::resources::BoltConfig::default();
+    let cc = crate::cells::resources::CellConfig::default();
+
+    let cell_y = 100.0;
+    spawn_cell(&mut app, 0.0, cell_y);
+
+    let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+    app.world_mut().spawn((
+        Bolt,
+        bolt_param_bundle(),
+        Velocity2D(Vec2::new(0.0, 400.0)),
+        ActiveDamageBoosts(vec![3.0]),
+        Position2D(Vec2::new(0.0, start_y)),
+    ));
+
+    tick(&mut app);
+
+    let msgs = app.world().resource::<DamageCellMessages>();
+    assert_eq!(
+        msgs.0.len(),
+        1,
+        "bolt with ActiveDamageBoosts should emit one DamageCell"
+    );
+    assert!(
+        (msgs.0[0].damage - 30.0).abs() < f32::EPSILON,
+        "DamageCell.damage should be 10.0 * 3.0 = 30.0 from ActiveDamageBoosts, got {}",
+        msgs.0[0].damage
+    );
+}
+
+/// Behavior 2: `bolt_cell_collision` uses default multiplier when no `ActiveDamageBoosts`.
+///
+/// Given: Bolt with NO `ActiveDamageBoosts`.
+/// When: bolt collides with cell.
+/// Then: `DamageCell` message has damage = 10.0 (default 1.0 multiplier).
+#[test]
+fn cell_collision_ignores_stale_effective_damage_multiplier() {
+    let mut app = test_app_with_damage_and_wall_messages();
+    let bc = crate::bolt::resources::BoltConfig::default();
+    let cc = crate::cells::resources::CellConfig::default();
+
+    let cell_y = 100.0;
+    spawn_cell(&mut app, 0.0, cell_y);
+
+    let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
+    app.world_mut().spawn((
+        Bolt,
+        bolt_param_bundle(),
+        Velocity2D(Vec2::new(0.0, 400.0)),
+        // No ActiveDamageBoosts — verifies default multiplier of 1.0
+        Position2D(Vec2::new(0.0, start_y)),
+    ));
+
+    tick(&mut app);
+
+    let msgs = app.world().resource::<DamageCellMessages>();
+    assert_eq!(
+        msgs.0.len(),
+        1,
+        "bolt with no ActiveDamageBoosts should emit one DamageCell"
+    );
+    assert!(
+        (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
+        "DamageCell.damage should be 10.0 (no ActiveDamageBoosts = default multiplier), got {}",
+        msgs.0[0].damage
+    );
 }

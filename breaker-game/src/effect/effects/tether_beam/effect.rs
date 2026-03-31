@@ -13,8 +13,8 @@ use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
     cells::{components::Cell, messages::DamageCell},
     effect::{
-        EffectiveDamageMultiplier,
         core::{EffectSourceChip, chip_attribution},
+        effects::damage_boost::ActiveDamageBoosts,
     },
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
@@ -47,7 +47,7 @@ pub(crate) struct TetherBeamComponent {
     /// Damage multiplier applied to `BASE_BOLT_DAMAGE`.
     pub damage_mult: f32,
     /// Effective damage multiplier snapshotted from the source entity's
-    /// `EffectiveDamageMultiplier` at fire-time. Default `1.0`.
+    /// `ActiveDamageBoosts` at fire-time. Default `1.0`.
     pub effective_damage_multiplier: f32,
 }
 
@@ -78,8 +78,8 @@ fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mu
     let bolt_b = super::super::spawn_extra_bolt(world, spawn_pos);
 
     let edm = world
-        .get::<EffectiveDamageMultiplier>(entity)
-        .map_or(1.0, |e| e.0);
+        .get::<ActiveDamageBoosts>(entity)
+        .map_or(1.0, ActiveDamageBoosts::multiplier);
 
     // Spawn the beam entity linking both bolts
     let _beam = world
@@ -113,8 +113,8 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
 
     // Snapshot EDM from the fire entity
     let edm = world
-        .get::<EffectiveDamageMultiplier>(entity)
-        .map_or(1.0, |e| e.0);
+        .get::<ActiveDamageBoosts>(entity)
+        .map_or(1.0, ActiveDamageBoosts::multiplier);
 
     // Query all bolt entities and sort by index (ascending spawn order)
     let mut bolts: Vec<Entity> = world
@@ -181,7 +181,7 @@ pub(crate) fn reverse(
 pub(crate) fn tick_tether_beam(
     mut commands: Commands,
     beams: Query<(Entity, &TetherBeamComponent, Option<&EffectSourceChip>)>,
-    bolt_positions: Query<&Position2D, With<Bolt>>,
+    bolts: Query<(&Position2D, Has<TetherBoltMarker>), With<Bolt>>,
     quadtree: Res<CollisionQuadtree>,
     cell_aabbs: Query<(&Aabb2D, &GlobalPosition2D), With<Cell>>,
     bolt_config: Option<Res<BoltConfig>>,
@@ -194,13 +194,13 @@ pub(crate) fn tick_tether_beam(
 
     for (beam_entity, component, esc) in &beams {
         // Look up both bolt positions; despawn beam if either is missing
-        let pos_a = if let Ok(p) = bolt_positions.get(component.bolt_a) {
+        let pos_a = if let Ok((p, _)) = bolts.get(component.bolt_a) {
             p.0
         } else {
             commands.entity(beam_entity).despawn();
             continue;
         };
-        let pos_b = if let Ok(p) = bolt_positions.get(component.bolt_b) {
+        let pos_b = if let Ok((p, _)) = bolts.get(component.bolt_b) {
             p.0
         } else {
             commands.entity(beam_entity).despawn();

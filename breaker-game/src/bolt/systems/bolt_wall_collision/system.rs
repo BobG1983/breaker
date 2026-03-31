@@ -31,7 +31,7 @@ type WallLookup<'w, 's> =
 /// For each active bolt, queries the quadtree for walls within the bolt's radius.
 /// If a wall overlap is confirmed, the bolt is pushed out to a safe position,
 /// its velocity is reflected off the nearest wall face, and `PiercingRemaining`
-/// is reset to `EffectivePiercing.0`.
+/// is reset to `ActivePiercings.total()`.
 pub(crate) fn bolt_wall_collision(
     mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
@@ -48,11 +48,12 @@ pub(crate) fn bolt_wall_collision(
         _,
         bolt_radius,
         mut piercing_remaining,
-        effective_piercing,
+        active_piercings,
         _,
         bolt_entity_scale,
         _,
         mut last_impact,
+        _,
     ) in &mut bolt_query
     {
         let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
@@ -135,9 +136,9 @@ pub(crate) fn bolt_wall_collision(
                 });
             }
 
-            // Reset PiercingRemaining to EffectivePiercing.0
-            if let (Some(pr), Some(ep)) = (&mut piercing_remaining, effective_piercing) {
-                pr.0 = ep.0;
+            // Reset PiercingRemaining to ActivePiercings.total()
+            if let (Some(pr), Some(ap)) = (&mut piercing_remaining, active_piercings) {
+                pr.0 = ap.total();
             }
 
             writer.write(BoltImpactWall {

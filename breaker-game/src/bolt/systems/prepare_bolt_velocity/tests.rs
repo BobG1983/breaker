@@ -11,7 +11,7 @@ use crate::{
         components::{Breaker, MinAngleFromHorizontal},
         resources::BreakerConfig,
     },
-    effect::EffectiveSpeedMultiplier,
+    effect::effects::speed_boost::ActiveSpeedBoosts,
 };
 
 fn bolt_param_bundle() -> (BoltBaseSpeed, BoltMinSpeed, BoltMaxSpeed) {
@@ -148,69 +148,9 @@ fn speed_below_min_is_clamped_up() {
     );
 }
 
-// --- EffectiveSpeedMultiplier tests ---
-
-/// Spec behavior 5: `EffectiveSpeedMultiplier` raises the effective minimum speed multiplicatively.
+/// No `EffectiveSpeedMultiplier` and no `ActiveSpeedBoosts` uses base min/max.
 ///
-/// Given: speed=100, min=200, max=600, `EffectiveSpeedMultiplier(1.5)` -> `effective_min`=300.
-/// Speed 100 < 300 -> should clamp UP to 300.
-#[test]
-fn effective_speed_multiplier_raises_effective_min_speed() {
-    let mut app = test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 100.0)), // speed=100
-            BoltMinSpeed(200.0),
-            BoltMaxSpeed(600.0),
-            EffectiveSpeedMultiplier(1.5), // effective_min = 200 * 1.5 = 300
-        ))
-        .id();
-
-    tick(&mut app);
-
-    let vel = app.world().get::<Velocity2D>(entity).unwrap();
-    assert!(
-        vel.speed() >= 300.0 - f32::EPSILON,
-        "speed {} should be at least effective_min 300.0 (base 200 * 1.5)",
-        vel.speed()
-    );
-}
-
-/// Spec behavior 6: `EffectiveSpeedMultiplier` clamps high speed to boosted max.
-///
-/// Given: speed=1000, min=200, max=600, `EffectiveSpeedMultiplier(1.5)` -> `effective_max`=900.
-/// Speed 1000 > 900 -> should clamp DOWN to 900.
-#[test]
-fn effective_speed_multiplier_clamps_high_speed_to_boosted_max() {
-    let mut app = test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 1000.0)), // speed=1000
-            BoltMinSpeed(200.0),
-            BoltMaxSpeed(600.0),
-            EffectiveSpeedMultiplier(1.5), // effective_max = 600 * 1.5 = 900
-        ))
-        .id();
-
-    tick(&mut app);
-
-    let vel = app.world().get::<Velocity2D>(entity).unwrap();
-    assert!(
-        (vel.speed() - 900.0).abs() < 1.0,
-        "speed {} should be clamped down to effective_max 900.0 (base 600 * 1.5)",
-        vel.speed()
-    );
-}
-
-/// Spec behavior 7: No `EffectiveSpeedMultiplier` uses base min/max.
-///
-/// Given: speed=100, min=200, max=600, NO `EffectiveSpeedMultiplier`.
+/// Given: speed=100, min=200, max=600, NO `EffectiveSpeedMultiplier`, NO `ActiveSpeedBoosts`.
 /// Speed 100 < 200 -> clamped to 200 (base min). No multiplier applied.
 #[test]
 fn no_effective_speed_multiplier_uses_base_min_speed() {
@@ -223,7 +163,7 @@ fn no_effective_speed_multiplier_uses_base_min_speed() {
             Velocity2D(Vec2::new(0.0, 100.0)), // speed=100
             BoltMinSpeed(200.0),
             BoltMaxSpeed(600.0),
-            // No EffectiveSpeedMultiplier
+            // No EffectiveSpeedMultiplier, no ActiveSpeedBoosts
         ))
         .id();
 
@@ -232,66 +172,7 @@ fn no_effective_speed_multiplier_uses_base_min_speed() {
     let vel = app.world().get::<Velocity2D>(entity).unwrap();
     assert!(
         (vel.speed() - 200.0).abs() < 1.0,
-        "speed {} should be clamped to base min 200.0 when no EffectiveSpeedMultiplier present",
-        vel.speed()
-    );
-}
-
-/// [`BoltServing`] bolt is not affected by [`EffectiveSpeedMultiplier`] (excluded by `ActiveFilter`).
-///
-/// Given: serving bolt, speed=1, min=200, max=600, `EffectiveSpeedMultiplier(1.5)`.
-/// `ActiveFilter` excludes [`BoltServing`] -> velocity unchanged at speed=1.
-#[test]
-fn serving_bolt_not_affected_by_effective_speed_multiplier() {
-    let mut app = test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            BoltServing,
-            Velocity2D(Vec2::new(0.0, 1.0)), // speed=1, below any min
-            BoltMinSpeed(200.0),
-            BoltMaxSpeed(600.0),
-            EffectiveSpeedMultiplier(1.5), // effective_min would be 300
-        ))
-        .id();
-
-    tick(&mut app);
-
-    let vel = app.world().get::<Velocity2D>(entity).unwrap();
-    assert!(
-        (vel.speed() - 1.0).abs() < f32::EPSILON,
-        "serving bolt speed {} should be unchanged at 1.0 (excluded by ActiveFilter)",
-        vel.speed()
-    );
-}
-
-/// `EffectiveSpeedMultiplier(1.0)` is identical to no multiplier -- base clamping applies.
-///
-/// Given: speed=600, min=200, max=600, `EffectiveSpeedMultiplier(1.0)` -> `effective_max`=600.
-/// Speed 600 == `effective_max` -> should remain at 600 (no change needed).
-#[test]
-fn effective_speed_multiplier_identity_same_as_no_multiplier() {
-    let mut app = test_app();
-
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(0.0, 600.0)), // speed=600, exactly at base max
-            BoltMinSpeed(200.0),
-            BoltMaxSpeed(600.0),
-            EffectiveSpeedMultiplier(1.0), // identity -- no change expected
-        ))
-        .id();
-
-    tick(&mut app);
-
-    let vel = app.world().get::<Velocity2D>(entity).unwrap();
-    assert!(
-        (vel.speed() - 600.0).abs() < 1.0,
-        "speed {} should remain at 600.0 when EffectiveSpeedMultiplier is 1.0 (identity)",
+        "speed {} should be clamped to base min 200.0 when no speed multiplier present",
         vel.speed()
     );
 }
@@ -358,6 +239,79 @@ fn velocity2d_speed_above_max_is_clamped_down() {
     assert!(
         (vel.speed() - 600.0).abs() < 1.0,
         "Velocity2D speed {} should be clamped down to max_speed 600.0",
+        vel.speed()
+    );
+}
+
+// -- Regression: speed clamp must use ActiveSpeedBoosts, not stale EffectiveSpeedMultiplier --
+
+/// Speed clamp should use the current product of `ActiveSpeedBoosts` for its effective
+/// min/max calculation.
+///
+/// Given: speed=400, min=200, max=800, `ActiveSpeedBoosts([2.0])` (product=2.0).
+/// When: `prepare_bolt_velocity` runs.
+/// Then: `effective_min` = 200 * 2.0 = 400, speed 400 is within [400, 1600]. Speed unchanged.
+#[test]
+fn speed_clamp_uses_current_active_speed_boosts() {
+    let mut app = test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            Velocity2D(Vec2::new(0.0, 400.0)),
+            BoltMinSpeed(200.0),
+            BoltMaxSpeed(800.0),
+            ActiveSpeedBoosts(vec![2.0]),
+        ))
+        .id();
+
+    tick(&mut app);
+
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    // With mult=2.0, effective_min=400, effective_max=1600. Speed 400 is exactly at effective_min.
+    assert!(
+        (vel.speed() - 400.0).abs() < 1.0,
+        "speed {} should remain at 400.0 (within boosted range [400, 1600])",
+        vel.speed()
+    );
+}
+
+/// When `ActiveSpeedBoosts` is present but `EffectiveSpeedMultiplier` is absent, the system
+/// should compute the multiplier from `ActiveSpeedBoosts` rather than defaulting to 1.0.
+///
+/// Given: speed=100, min=200, max=800, `ActiveSpeedBoosts([2.0])` (product=2.0),
+///        NO `EffectiveSpeedMultiplier`.
+/// When: `prepare_bolt_velocity` runs.
+/// Then: Correct `effective_min` = 200 * 2.0 = 400. Speed 100 < 400, clamp UP to 400.
+///
+/// BUG: current implementation sees no `EffectiveSpeedMultiplier`, defaults to mult=1.0,
+/// computes `effective_min` = 200. Clamps speed up to 200, not the correct 400.
+#[test]
+fn speed_clamp_without_effective_multiplier_uses_active_boosts() {
+    let mut app = test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            Velocity2D(Vec2::new(0.0, 100.0)),
+            BoltMinSpeed(200.0),
+            BoltMaxSpeed(800.0),
+            ActiveSpeedBoosts(vec![2.0]), // product = 2.0
+                                          // No EffectiveSpeedMultiplier — simulates component not yet inserted
+        ))
+        .id();
+
+    tick(&mut app);
+
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    // Correct behavior: mult from ActiveSpeedBoosts = 2.0, effective_min = 400.
+    // Speed 100 < 400, should be clamped UP to 400.
+    assert!(
+        (vel.speed() - 400.0).abs() < 1.0,
+        "speed {} should be clamped up to effective_min 400.0 (base 200 * ActiveSpeedBoosts product 2.0), \
+         not 200.0 from default mult=1.0 when EffectiveSpeedMultiplier is absent",
         vel.speed()
     );
 }

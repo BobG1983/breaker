@@ -140,7 +140,7 @@ fn fire_chain_entity_damage_includes_effective_damage_multiplier() {
         .world_mut()
         .spawn((
             Position2D(Vec2::ZERO),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 

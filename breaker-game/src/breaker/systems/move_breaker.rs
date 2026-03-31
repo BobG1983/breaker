@@ -7,6 +7,7 @@ use crate::{
         components::{Breaker, BreakerState},
         queries::MovementQuery,
     },
+    effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
     input::resources::{GameAction, InputActions},
     shared::PlayfieldConfig,
 };
@@ -37,7 +38,7 @@ pub(crate) fn move_breaker(
         size_mult,
     ) in &mut query
     {
-        let effective_max = max_speed.0 * speed_mult.map_or(1.0, |e| e.0);
+        let effective_max = max_speed.0 * speed_mult.map_or(1.0, ActiveSpeedBoosts::multiplier);
 
         // Only allow direct input movement in Idle and Settling states
         let can_move = matches!(state, BreakerState::Idle | BreakerState::Settling);
@@ -72,7 +73,8 @@ pub(crate) fn move_breaker(
         position.0.x = velocity.x.mul_add(dt, position.0.x);
 
         // Clamp to playfield bounds (accounting for breaker effective half-width)
-        let effective_half_w = half_width.half_width() * size_mult.map_or(1.0, |e| e.0);
+        let effective_half_w =
+            half_width.half_width() * size_mult.map_or(1.0, ActiveSizeBoosts::multiplier);
         let min_x = playfield.left() + effective_half_w;
         let max_x = playfield.right() - effective_half_w;
         position.0.x = position.0.x.clamp(min_x, max_x);
@@ -106,7 +108,7 @@ mod tests {
             },
             resources::BreakerConfig,
         },
-        effect::{EffectiveSizeMultiplier, EffectiveSpeedMultiplier},
+        effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
     };
 
     #[test]
@@ -250,7 +252,7 @@ mod tests {
 
     #[test]
     fn speed_multiplier_raises_effective_max_speed() {
-        // Given: BreakerMaxSpeed(500.0) + EffectiveSpeedMultiplier(1.2), velocity.x = 590.0
+        // Given: BreakerMaxSpeed(500.0) + ActiveSpeedBoosts(vec![1.2]), velocity.x = 590.0
         //        MoveRight input active (so the acceleration+clamp path runs)
         // When: move_breaker system runs
         // Then: velocity.x > 500 AND velocity.x <= 600 (effective max = 500 * 1.2 = 600)
@@ -270,7 +272,7 @@ mod tests {
                     strength: config.decel_ease_strength,
                 },
                 BreakerWidth(config.width),
-                EffectiveSpeedMultiplier(1.2),
+                ActiveSpeedBoosts(vec![1.2]),
                 Position2D(Vec2::new(0.0, config.y_position)),
             ))
             .id();
@@ -284,7 +286,7 @@ mod tests {
         let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
         assert!(
             vel.x > 500.0 + f32::EPSILON,
-            "velocity {:.3} should NOT be clamped to base 500 when EffectiveSpeedMultiplier(1.2) makes effective max 600",
+            "velocity {:.3} should NOT be clamped to base 500 when ActiveSpeedBoosts([1.2]) makes effective max 600",
             vel.x
         );
         assert!(
@@ -333,7 +335,7 @@ mod tests {
 
     #[test]
     fn size_multiplier_increases_effective_half_width_for_clamping() {
-        // Given: BreakerWidth(120.0), EffectiveSizeMultiplier(4/3), PlayfieldConfig default (right=400)
+        // Given: BreakerWidth(120.0), ActiveSizeBoosts(vec![4/3]), PlayfieldConfig default (right=400)
         //        effective half_w = 60.0 * (4/3) = 80
         //        Breaker placed far right (9999.0) — position will be clamped during tick
         // When: move_breaker runs
@@ -362,7 +364,7 @@ mod tests {
                     strength: config.decel_ease_strength,
                 },
                 BreakerWidth(120.0),
-                EffectiveSizeMultiplier(4.0_f32 / 3.0),
+                ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
                 Position2D(Vec2::new(9999.0, config.y_position)),
             ))
             .id();
@@ -373,10 +375,94 @@ mod tests {
         let expected_max_x = 320.0_f32;
         assert!(
             pos.0.x <= expected_max_x + f32::EPSILON,
-            "with EffectiveSizeMultiplier(4/3) effective half_w=80, Position2D.x {:.3} should be clamped to {:.3}, not to base {:.3}",
+            "with ActiveSizeBoosts([4/3]) effective half_w=80, Position2D.x {:.3} should be clamped to {:.3}, not to base {:.3}",
             pos.0.x,
             expected_max_x,
             400.0 - 60.0
+        );
+    }
+
+    #[test]
+    fn move_breaker_reads_active_speed_boosts_for_max_speed() {
+        // Given: Breaker with ActiveSpeedBoosts(vec![2.0]), BreakerMaxSpeed(300.0),
+        //        BreakerVelocity { x: 590.0 }, MoveRight active
+        // When: move_breaker runs
+        // Then: velocity.x clamped to 600.0 (300.0 * 2.0), not 300.0
+        let mut app = integration_app();
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BreakerState::Idle,
+                BreakerVelocity { x: 590.0 },
+                BreakerMaxSpeed(300.0),
+                BreakerAcceleration(5000.0),
+                BreakerDeceleration(3000.0),
+                DecelEasing {
+                    ease: bevy::math::curve::easing::EaseFunction::QuadraticIn,
+                    strength: 1.0,
+                },
+                BreakerWidth(120.0),
+                ActiveSpeedBoosts(vec![2.0]),
+                Position2D(Vec2::new(0.0, -250.0)),
+            ))
+            .id();
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::MoveRight);
+        tick(&mut app);
+
+        let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
+        assert!(
+            vel.x > 300.0 + f32::EPSILON,
+            "velocity {:.3} should exceed base max 300.0 with ActiveSpeedBoosts([2.0]) → effective max 600.0",
+            vel.x
+        );
+        assert!(
+            vel.x <= 600.0 + f32::EPSILON,
+            "velocity {:.3} should be clamped to effective max 600.0 (300 * 2.0)",
+            vel.x
+        );
+    }
+
+    #[test]
+    fn move_breaker_reads_active_size_boosts_for_playfield_clamping() {
+        // Given: Breaker with ActiveSizeBoosts(vec![2.0]), BreakerWidth(120.0) (half_width=60.0),
+        //        Position2D far right (9999.0)
+        // When: move_breaker clamps position
+        // Then: position clamped using effective_half_w = 60.0 * 2.0 = 120.0
+        //       -> max_x = 400.0 - 120.0 = 280.0
+        let mut app = integration_app();
+        let entity = app
+            .world_mut()
+            .spawn((
+                Breaker,
+                BreakerState::Idle,
+                BreakerVelocity { x: 0.0 },
+                BreakerMaxSpeed(300.0),
+                BreakerAcceleration(0.0),
+                BreakerDeceleration(0.0),
+                DecelEasing {
+                    ease: bevy::math::curve::easing::EaseFunction::QuadraticIn,
+                    strength: 1.0,
+                },
+                BreakerWidth(120.0),
+                ActiveSizeBoosts(vec![2.0]),
+                Position2D(Vec2::new(9999.0, -250.0)),
+            ))
+            .id();
+
+        tick(&mut app);
+
+        let pos = app.world().get::<Position2D>(entity).unwrap();
+        let expected_max_x = 280.0_f32; // 400.0 - (60.0 * 2.0)
+        assert!(
+            pos.0.x <= expected_max_x + f32::EPSILON,
+            "with ActiveSizeBoosts([2.0]) effective half_w=120.0, Position2D.x {:.3} should be clamped to {:.3}",
+            pos.0.x,
+            expected_max_x
         );
     }
 }

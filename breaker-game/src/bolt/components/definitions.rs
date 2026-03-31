@@ -84,7 +84,7 @@ pub struct ExtraBolt;
 #[derive(Component, Debug, Clone)]
 pub struct SpawnedByEvolution(pub String);
 
-/// Remaining pierces before exhaustion. Reset to [`EffectivePiercing`] on
+/// Remaining pierces before exhaustion. Reset to [`ActivePiercings::total()`] on
 /// wall/breaker contact.
 ///
 /// This is bolt gameplay state — decremented by `bolt_cell_collision` on each

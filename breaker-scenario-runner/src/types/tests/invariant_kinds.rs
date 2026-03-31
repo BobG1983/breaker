@@ -87,13 +87,6 @@ fn invariant_kind_pulse_ring_accumulation_parses() {
     assert_eq!(result, InvariantKind::PulseRingAccumulation);
 }
 
-#[test]
-fn invariant_kind_effective_speed_consistent_parses() {
-    let result: InvariantKind = ron::de::from_str("EffectiveSpeedConsistent")
-        .expect("EffectiveSpeedConsistent should parse");
-    assert_eq!(result, InvariantKind::EffectiveSpeedConsistent);
-}
-
 // -------------------------------------------------------------------------
 // InvariantKind::fail_reason — each variant returns non-empty string
 // -------------------------------------------------------------------------
@@ -298,51 +291,15 @@ fn invariant_kind_gravity_well_count_reasonable_debug_round_trip() {
 }
 
 // -------------------------------------------------------------------------
-// InvariantKind::SizeBoostInRange — behaviors 9-12
+// InvariantKind::ALL — count after removals
 // -------------------------------------------------------------------------
 
 #[test]
-fn invariant_kind_size_boost_in_range_parses() {
-    let result: InvariantKind =
-        ron::de::from_str("SizeBoostInRange").expect("SizeBoostInRange should parse");
-    assert_eq!(result, InvariantKind::SizeBoostInRange);
-}
-
-#[test]
-fn invariant_kind_all_includes_size_boost_in_range() {
-    assert!(
-        InvariantKind::ALL.contains(&InvariantKind::SizeBoostInRange),
-        "InvariantKind::ALL must include SizeBoostInRange"
-    );
-}
-
-#[test]
-fn fail_reason_size_boost_in_range() {
-    assert_eq!(
-        InvariantKind::SizeBoostInRange.fail_reason(),
-        "EffectiveSizeMultiplier diverged from ActiveSizeBoosts product"
-    );
-}
-
-#[test]
-fn invariant_kind_size_boost_in_range_debug_round_trip() {
-    let debug_str = format!("{:?}", InvariantKind::SizeBoostInRange);
-    assert!(
-        debug_str.contains("SizeBoostInRange"),
-        "Debug output should contain 'SizeBoostInRange', got: {debug_str}"
-    );
-}
-
-// -------------------------------------------------------------------------
-// InvariantKind::ALL — count after additions (behavior 13)
-// -------------------------------------------------------------------------
-
-#[test]
-fn invariant_kind_all_contains_25_variants() {
+fn invariant_kind_all_contains_23_variants() {
     assert_eq!(
         InvariantKind::ALL.len(),
-        25,
-        "InvariantKind::ALL should contain 25 variants (22 existing + 3 new)"
+        23,
+        "InvariantKind::ALL should contain 23 variants"
     );
 }
 

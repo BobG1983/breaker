@@ -98,16 +98,6 @@ pub enum MutationKind {
     /// Used by the `pulse_ring_accumulation` self-test to trigger a
     /// [`InvariantKind::PulseRingAccumulation`] violation.
     SpawnExtraPulseRings(usize),
-    /// Override `EffectiveSpeedMultiplier` to a wrong value on all entities that
-    /// also have `ActiveSpeedBoosts`.
-    ///
-    /// Used by the `effective_speed_consistent` self-test to trigger a
-    /// [`InvariantKind::EffectiveSpeedConsistent`] violation by creating
-    /// a stale/diverged multiplier.
-    InjectWrongEffectiveSpeed {
-        /// The incorrect value to set on `EffectiveSpeedMultiplier`.
-        wrong_value: f32,
-    },
     /// Spawn N [`ChainLightningChain`] + N [`ChainLightningArc`] marker entities (2N total).
     ///
     /// Used by the `chain_arc_count_exceeded` self-test to trigger a
@@ -123,15 +113,6 @@ pub enum MutationKind {
     /// Used by the `gravity_well_count_reasonable` self-test to trigger a
     /// [`InvariantKind::GravityWellCountReasonable`] violation.
     SpawnExtraGravityWells(usize),
-    /// Override `EffectiveSizeMultiplier` to a wrong value on a spawned entity
-    /// that also has `ActiveSizeBoosts`.
-    ///
-    /// Used by the `size_boost_in_range` self-test to trigger a
-    /// [`InvariantKind::SizeBoostInRange`] violation.
-    InjectWrongSizeMultiplier {
-        /// The incorrect value to set on `EffectiveSizeMultiplier`.
-        wrong_value: f32,
-    },
 }
 
 /// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.

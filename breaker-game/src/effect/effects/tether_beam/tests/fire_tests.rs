@@ -405,7 +405,7 @@ fn fire_chain_false_does_not_spawn_tether_chain_beam_entities() {
 // Section C: Chain mode fire (chain: true) — core behavior
 // ══════════════════════════════════════════════════════════════════
 
-use crate::effect::EffectiveDamageMultiplier;
+use crate::effect::effects::damage_boost::ActiveDamageBoosts;
 
 // Behavior 6: fire() with chain=true and 3 existing bolts creates 2 chain beams
 #[test]
@@ -414,7 +414,7 @@ fn fire_chain_true_with_three_bolts_creates_two_chain_beams() {
     world.spawn(Bolt);
     world.spawn(Bolt);
     world.spawn(Bolt);
-    let entity = world.spawn(EffectiveDamageMultiplier(1.5)).id();
+    let entity = world.spawn(ActiveDamageBoosts(vec![1.5])).id();
 
     fire(entity, 2.0, true, "arcwelder", &mut world);
 
@@ -448,7 +448,7 @@ fn fire_chain_true_with_three_bolts_creates_two_chain_beams() {
     }
 }
 
-// Behavior 6 edge case: entity without EffectiveDamageMultiplier uses default 1.0
+// Behavior 6 edge case: entity without ActiveDamageBoosts uses default 1.0
 #[test]
 fn fire_chain_true_without_edm_uses_default_one() {
     let mut world = World::new();
@@ -463,7 +463,7 @@ fn fire_chain_true_without_edm_uses_default_one() {
     for beam in beam_query.iter(&world) {
         assert!(
             (beam.effective_damage_multiplier - 1.0).abs() < f32::EPSILON,
-            "chain beam EDM should default to 1.0 when entity has no EffectiveDamageMultiplier, got {}",
+            "chain beam EDM should default to 1.0 when entity has no ActiveDamageBoosts, got {}",
             beam.effective_damage_multiplier
         );
     }
@@ -603,7 +603,7 @@ fn fire_chain_true_inserts_tether_chain_active_resource() {
     world.spawn(Bolt);
     world.spawn(Bolt);
     world.spawn(Bolt);
-    let entity = world.spawn(EffectiveDamageMultiplier(2.0)).id();
+    let entity = world.spawn(ActiveDamageBoosts(vec![2.0])).id();
 
     fire(entity, 1.5, true, "arcwelder", &mut world);
 
@@ -734,7 +734,7 @@ fn fire_chain_true_overwrites_existing_tether_chain_active() {
     world.spawn(Bolt);
     world.spawn(Bolt);
     world.spawn(Bolt);
-    let entity = world.spawn(EffectiveDamageMultiplier(2.0)).id();
+    let entity = world.spawn(ActiveDamageBoosts(vec![2.0])).id();
 
     fire(entity, 2.5, true, "arcwelder", &mut world);
 

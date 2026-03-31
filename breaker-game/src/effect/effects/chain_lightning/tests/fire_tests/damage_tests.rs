@@ -57,7 +57,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
         .world_mut()
         .spawn((
             Position2D(Vec2::new(100.0, 200.0)),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 

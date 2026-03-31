@@ -202,7 +202,9 @@ pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            apply_attraction.after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
+            apply_attraction
+                .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
+                .before(crate::bolt::BoltSystems::PrepareVelocity),
             manage_attraction_types,
         )
             .run_if(in_state(PlayingState::Active)),

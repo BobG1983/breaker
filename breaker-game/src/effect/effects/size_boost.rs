@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 /// Tracks active size boost multipliers on an entity.
 ///
-/// Recalculation: `base_size * product(all_boosts)`.
+/// Formula: `base_size * product(all_boosts)`. Computed on demand via `multiplier()`.
 #[derive(Component, Debug, Default, Clone)]
 pub struct ActiveSizeBoosts(pub Vec<f32>);
 
@@ -24,16 +24,7 @@ pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &
     }
 
     if world.get::<ActiveSizeBoosts>(entity).is_none() {
-        world.entity_mut(entity).insert((
-            ActiveSizeBoosts::default(),
-            EffectiveSizeMultiplier::default(),
-        ));
-    }
-
-    if world.get::<EffectiveSizeMultiplier>(entity).is_none() {
-        world
-            .entity_mut(entity)
-            .insert(EffectiveSizeMultiplier::default());
+        world.entity_mut(entity).insert(ActiveSizeBoosts::default());
     }
 
     if let Some(mut active) = world.get_mut::<ActiveSizeBoosts>(entity) {
@@ -49,29 +40,6 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world
             .position(|&v| (v - multiplier).abs() < f32::EPSILON)
     {
         active.0.swap_remove(pos);
-    }
-}
-
-/// Effective size multiplier computed by `recalculate_size`.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub struct EffectiveSizeMultiplier(pub f32);
-
-impl Default for EffectiveSizeMultiplier {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
-
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        recalculate_size.in_set(crate::effect::sets::EffectSystems::Recalculate),
-    );
-}
-
-fn recalculate_size(mut query: Query<(&ActiveSizeBoosts, &mut EffectiveSizeMultiplier)>) {
-    for (active, mut effective) in &mut query {
-        effective.0 = active.multiplier();
     }
 }
 
@@ -95,34 +63,6 @@ mod tests {
         fire(entity, 5.0, "", &mut world);
         let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![5.0]);
-        assert!(world.get::<EffectiveSizeMultiplier>(entity).is_some());
-    }
-
-    #[test]
-    fn fire_on_bare_entity_second_fire_appends() {
-        let mut world = World::new();
-        let entity = world.spawn_empty().id();
-        fire(entity, 5.0, "", &mut world);
-        fire(entity, 3.0, "", &mut world);
-        let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
-        assert_eq!(active.0, vec![5.0, 3.0]);
-        // Effective retains default from first fire — not recalculated until system runs
-        let effective = world.get::<EffectiveSizeMultiplier>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn fire_with_existing_components_preserves_effective() {
-        let mut world = World::new();
-        let entity = world
-            .spawn((ActiveSizeBoosts(vec![]), EffectiveSizeMultiplier(3.0)))
-            .id();
-        fire(entity, 5.0, "", &mut world);
-        let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
-        assert_eq!(active.0, vec![5.0]);
-        // fire() must not overwrite the pre-existing effective value
-        let effective = world.get::<EffectiveSizeMultiplier>(entity).unwrap();
-        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -132,7 +72,6 @@ mod tests {
         reverse(entity, 5.0, "", &mut world);
         reverse(entity, 5.0, "", &mut world);
         assert!(world.get::<ActiveSizeBoosts>(entity).is_none());
-        assert!(world.get::<EffectiveSizeMultiplier>(entity).is_none());
     }
 
     #[test]
@@ -142,17 +81,6 @@ mod tests {
         reverse(entity, 999.0, "", &mut world);
         let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
         assert_eq!(active.0, vec![5.0, 3.0]);
-    }
-
-    #[test]
-    fn fire_on_half_initialized_entity_inserts_effective() {
-        let mut world = World::new();
-        let entity = world.spawn(ActiveSizeBoosts(vec![])).id();
-        fire(entity, 5.0, "", &mut world);
-        let active = world.get::<ActiveSizeBoosts>(entity).unwrap();
-        assert_eq!(active.0, vec![5.0]);
-        let effective = world.get::<EffectiveSizeMultiplier>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -205,50 +133,5 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let boosts = ActiveSizeBoosts(vec![]);
         assert!((boosts.multiplier() - 1.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_size_single_boost() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_size);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveSizeBoosts(vec![1.5]), EffectiveSizeMultiplier(1.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveSizeMultiplier>(entity).unwrap();
-        assert!((effective.0 - 1.5).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_size_multiple_boosts_multiplicative() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_size);
-        let entity = app
-            .world_mut()
-            .spawn((
-                ActiveSizeBoosts(vec![1.5, 2.0]),
-                EffectiveSizeMultiplier(1.0),
-            ))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveSizeMultiplier>(entity).unwrap();
-        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_size_empty_boosts_resets_to_default() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_size);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveSizeBoosts(vec![]), EffectiveSizeMultiplier(2.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveSizeMultiplier>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 }

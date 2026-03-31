@@ -12,8 +12,11 @@ use crate::{
         SettleDuration, SettleTiltEase,
     },
     effect::{
-        AnchorActive, AnchorPlanted, EffectiveSizeMultiplier, EffectiveSpeedMultiplier,
-        effects::flash_step::FlashStepActive,
+        AnchorActive, AnchorPlanted,
+        effects::{
+            flash_step::FlashStepActive, size_boost::ActiveSizeBoosts,
+            speed_boost::ActiveSpeedBoosts,
+        },
     },
     shared::EntityScale,
 };
@@ -26,7 +29,7 @@ pub(crate) type CollisionQueryBreaker = (
     &'static BreakerHeight,
     &'static MaxReflectionAngle,
     &'static MinAngleFromHorizontal,
-    Option<&'static EffectiveSizeMultiplier>,
+    Option<&'static ActiveSizeBoosts>,
     Option<&'static EntityScale>,
 );
 
@@ -40,8 +43,8 @@ pub(crate) type MovementQuery = (
     &'static BreakerDeceleration,
     &'static DecelEasing,
     &'static BreakerWidth,
-    Option<&'static EffectiveSpeedMultiplier>,
-    Option<&'static EffectiveSizeMultiplier>,
+    Option<&'static ActiveSpeedBoosts>,
+    Option<&'static ActiveSizeBoosts>,
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
@@ -71,8 +74,8 @@ pub(crate) type DashQuery = (
         Option<&'static FlashStepActive>,
         Option<&'static mut Position2D>,
         Option<&'static BreakerWidth>,
-        Option<&'static EffectiveSpeedMultiplier>,
-        Option<&'static EffectiveSizeMultiplier>,
+        Option<&'static ActiveSpeedBoosts>,
+        Option<&'static ActiveSizeBoosts>,
     ),
 );
 
@@ -114,7 +117,7 @@ pub(crate) type BumpGradingQuery = (
 /// Breaker data needed by the width boost visual system.
 pub(crate) type WidthBoostVisualQuery = (
     &'static BreakerWidth,
-    Option<&'static EffectiveSizeMultiplier>,
+    Option<&'static ActiveSizeBoosts>,
     &'static BreakerHeight,
     Option<&'static EntityScale>,
     &'static mut Scale2D,
