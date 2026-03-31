@@ -3,7 +3,10 @@ use bevy::{
     time::{Timer, TimerMode},
 };
 
-use crate::{bolt::components::BoltLifespan, effect::BoundEffects};
+use crate::{
+    bolt::components::{Bolt, BoltLifespan, ExtraBolt},
+    effect::BoundEffects,
+};
 
 /// Spawns additional bolts from an entity.
 ///
@@ -21,7 +24,8 @@ pub(crate) fn fire(
     let spawn_pos = super::super::entity_position(world, entity);
 
     let bound_effects = if inherit {
-        world.get::<BoundEffects>(entity).cloned()
+        let mut query = world.query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>();
+        query.iter(world).next().cloned()
     } else {
         None
     };

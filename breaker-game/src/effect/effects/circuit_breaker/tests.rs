@@ -536,10 +536,11 @@ fn fire_reward_with_inherit_true_clones_bound_effects_to_spawned_bolts() {
         "test".to_string(),
         EffectNode::Do(EffectKind::DamageBoost(2.0)),
     )]);
+    // Primary bolt with BoundEffects — SpawnBolts(inherit: true) copies from here
+    world.spawn((Bolt, Position2D(Vec2::ZERO), bound));
     let entity = world
         .spawn((
             Position2D(Vec2::ZERO),
-            bound,
             CircuitBreakerCounter {
                 remaining: 1,
                 bumps_required: 3,

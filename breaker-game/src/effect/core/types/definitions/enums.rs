@@ -358,6 +358,9 @@ pub enum EffectKind {
     TetherBeam {
         /// Damage multiplier for beam contact (1.x format).
         damage_mult: f32,
+        /// If true, chain mode connects all existing bolts instead of spawning new ones.
+        #[serde(default)]
+        chain: bool,
     },
     /// Spawn a mirrored bolt reflected across the last impact surface.
     MirrorProtocol {
@@ -467,5 +470,43 @@ mod tests {
             },
             "From<RootEffect> with Breaker should preserve nested children with permanent=false"
         );
+    }
+
+    // -- TetherBeam chain field serde tests --
+
+    #[test]
+    fn tether_beam_serde_with_chain_true() {
+        let ron_str = "TetherBeam(damage_mult: 1.5, chain: true)";
+        let effect: EffectKind =
+            ron::from_str(ron_str).expect("should deserialize TetherBeam with chain: true");
+
+        match &effect {
+            EffectKind::TetherBeam { damage_mult, chain } => {
+                assert!(
+                    (*damage_mult - 1.5).abs() < f32::EPSILON,
+                    "expected damage_mult 1.5, got {damage_mult}"
+                );
+                assert!(*chain, "expected chain true, got {chain}");
+            }
+            other => panic!("expected TetherBeam variant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn tether_beam_serde_defaults_chain_to_false_when_omitted() {
+        let ron_str = "TetherBeam(damage_mult: 2.0)";
+        let effect: EffectKind =
+            ron::from_str(ron_str).expect("should deserialize TetherBeam with omitted chain");
+
+        match &effect {
+            EffectKind::TetherBeam { damage_mult, chain } => {
+                assert!(
+                    (*damage_mult - 2.0).abs() < f32::EPSILON,
+                    "expected damage_mult 2.0, got {damage_mult}"
+                );
+                assert!(!*chain, "expected chain false (serde default), got {chain}");
+            }
+            other => panic!("expected TetherBeam variant, got {other:?}"),
+        }
     }
 }

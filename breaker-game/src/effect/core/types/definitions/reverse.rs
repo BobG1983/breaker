@@ -191,10 +191,11 @@ impl EffectKind {
                     world,
                 );
             }
-            Self::TetherBeam { damage_mult } => {
+            Self::TetherBeam { damage_mult, chain } => {
                 super::super::super::super::effects::tether_beam::reverse(
                     entity,
                     *damage_mult,
+                    *chain,
                     source_chip,
                     world,
                 );

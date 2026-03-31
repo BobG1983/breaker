@@ -192,3 +192,26 @@ type: reference
 
 ## apply_gravity_pull Query Analysis (confirmed correct in Bevy 0.18)
 - `wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>` + `bolts: Query<(&Position2D, &mut Velocity2D), With<Bolt>>` — safe because Bolt and GravityWellMarker are disjoint tags; no entity can have both; Position2D read-only in wells, Position2D read-only in bolts — no write conflict
+
+## resource_exists + .and() Condition Combinator (confirmed for Bevy 0.18)
+- `resource_exists::<T>.and(in_state(S::Variant))` — valid; `resource_exists` is a function that implements `Condition`; the `Condition` trait provides `.and()` / `.or()` / `.nand()` / etc. as combinator methods
+- This pattern is the correct way to gate a system on BOTH a resource existing AND a state predicate
+- Used in `tether_beam/effect.rs` register(): `maintain_tether_chain.run_if(resource_exists::<TetherChainActive>.and(in_state(PlayingState::Active)))` — CORRECT
+- `world.remove_resource::<T>()` — confirmed present in Bevy 0.18 World API
+- `world.insert_resource(value)` — confirmed present in Bevy 0.18 World API
+
+## Entity::index() Return Type (Bevy 0.18)
+- `Entity::index()` returns `EntityIndex` (NOT `u32`) in Bevy 0.18
+- `EntityIndex` implements `Ord`, `PartialOrd`, `Eq`, `PartialEq`, `Hash`, `Copy`
+- `sort_by_key(|e| e.index())` is valid because `EntityIndex: Ord`
+- `Entity::index_u32()` is the companion method returning `u32` directly (equivalent to `self.index().index()`)
+- Used in `tether_beam/effect.rs` fire_chain() and maintain_tether_chain() — CORRECT
+
+## world.query_filtered in fire()/reverse() World Functions
+- `world.query_filtered::<Entity, With<T>>().iter(world).collect::<Vec<_>>()` — correct pattern for collecting entities matching a filter in a World-access function
+- Confirmed in `tether_beam/effect.rs` fire_chain() and reverse() — CORRECT
+
+## spawn_bolts/effect.rs query_filtered Pattern
+- `world.query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>()` — correct compound filter tuple in world.query_filtered; returns QueryState which is then iterated
+- `.iter(world).next().cloned()` — correct; QueryState::iter takes &World, then next() and cloned() on Option<&BoundEffects> yield Option<BoundEffects>
+- This pattern is safe: query is created (mut borrow), then iterated (immutable borrow) after the exclusive borrow ends via the temporary scope

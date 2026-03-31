@@ -111,6 +111,34 @@ are always scale-1.0 semantics. This means bolt invariant is wrong for scaled la
 Scenarios using Corridor (entity_scale=1.0) are not affected. Affects any scenario that adds
 `AabbMatchesEntityDimensions` invariant to a non-1.0-scale layout.
 
+## gravity_well and spawn_phantom fire(): missing despawned-entity guard — OPEN as of 2026-03-30
+
+All 5 stat-boost `fire()` functions (speed_boost, damage_boost, size_boost, bump_force, piercing)
+have `if world.get_entity(entity).is_err() { return; }` as the first guard.
+
+`gravity_well/effect.rs::fire()` and `spawn_phantom/effect.rs::fire()` do NOT have this guard.
+If fired on a despawned entity: spawns a ghost well/phantom with `owner: dead_entity`, pollutes
+`GravityWellSpawnCounter`/`PhantomSpawnCounter` with a dead entity key, and the ghost takes up
+a FIFO slot that can never be reclaimed for the same owner.
+
+**Status**: OPEN — filed as regression spec hints in Wave 1 review 2026-03-30.
+
+## TetherChainActive resource leaks across node boundaries — OPEN as of 2026-03-30
+
+`TetherChainActive` is a `Resource` inserted by `fire_chain`. It is only removed by
+`reverse(chain=true)`. On node exit, `cleanup_entities::<CleanupOnNodeExit>` despawns the
+`TetherChainBeam` entities (they have `CleanupOnNodeExit`) but does NOT remove the resource.
+If a node ends while chain mode is active (cleared, timer expired, etc.), `TetherChainActive`
+persists into the next node. On the next node, `maintain_tether_chain` runs immediately
+(guarded only by `resource_exists::<TetherChainActive>`), sees `bolt_count != last_bolt_count`,
+and spawns spurious chain beams on a node that never fired chain mode.
+
+**Fix needed**: Remove `TetherChainActive` in an `OnExit(GameState::Playing)` system,
+or add `CleanupOnNodeExit` marker to a dedicated entity that removes the resource when despawned,
+or remove it alongside the chain beams in the same cleanup path.
+
+**Status**: OPEN — filed as regression spec hint in Wave 3 review 2026-03-30.
+
 ## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
 
 Confirmed in Phase 3 review. The bolt/breaker consumer systems (`prepare_bolt_velocity`,

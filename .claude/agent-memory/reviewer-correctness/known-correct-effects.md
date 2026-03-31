@@ -108,6 +108,41 @@ after `tag_game_entities`. Both bugs from the prior review are fixed.
 before extending, matching the cell/wall variants. Previously it queried `&mut BoundEffects` directly
 and silently dropped effects if the component was absent.
 
+## Stat-boost lazy-init two-step guard is intentional and correct (Wave 1 scenario-coverage)
+
+`speed_boost`, `damage_boost`, `size_boost`, `bump_force`, `piercing` `fire()` functions use a
+two-step guard: (1) if `Active*` absent, insert both `Active*::default()` and `Effective*::default()`;
+(2) if `Effective*` still absent (half-initialized), insert just `Effective*::default()`.
+
+The "has Effective* but not Active*" overwrite concern is theoretical only — fire() always inserts
+both together, there are no `remove::<Active*>` calls anywhere, so this state is unreachable.
+The `if let Some(mut active) = world.get_mut::<Active*>` at the end always succeeds because
+the guard above guarantees the component exists. Do NOT re-flag these patterns.
+
+## TetherBeam chain mode: collect-before-despawn in fire_chain is correct
+
+`fire_chain` (tether_beam/effect.rs line 105-111) collects existing `TetherChainBeam` entities
+into a `Vec<Entity>` first, then iterates the vec calling `world.despawn()`. This is the
+correct collect-before-despawn pattern for direct `&mut World` access. No aliasing issue.
+
+## TetherBeam maintain_tether_chain: deferred despawn during query iteration is safe
+
+`maintain_tether_chain` (tether_beam/effect.rs lines 274-276) iterates `chain_beams` query
+and calls `commands.entity(beam_entity).despawn()`. In Bevy 0.18, `Commands` are deferred —
+no execution happens during iteration. This is safe.
+
+## TetherBeam chain mode: With<Bolt> query intentionally includes standard tether bolts
+
+`fire_chain` (line 119) and `maintain_tether_chain` (line 265) both query `With<Bolt>` to
+find all bolts for chain connection — including standard-mode tether bolts (which also have Bolt+ExtraBolt).
+This is the intended design: chain mode connects ALL active bolts.
+
+## SpawnBolts inherit: query_filtered (With<Bolt>, Without<ExtraBolt>) correctly finds primary bolt
+
+`spawn_bolts/effect.rs:27` uses `query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>()`.
+This correctly matches only the primary bolt (has Bolt, does NOT have ExtraBolt). The `.next()`
+pick is intentional for the degenerate multi-primary-bolt case.
+
 ## ShieldActive charge-decrement: deferred remove + eager in-memory decrement is intentional
 
 `handle_cell_hit` and `bolt_lost` both use the same pattern:

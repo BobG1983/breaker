@@ -107,18 +107,41 @@ as broad-phase, then does its own OBB narrow-phase check. This is the efficient 
 
 ## tether_beam.rs — tick_tether_beam: Per-tick quadtree query — CORRECT PATTERN
 
-tick_tether_beam calls query_aabb_filtered once per active beam per FixedUpdate tick (line 196).
-With 0-1 beams active: 0-1 quadtree queries per tick (1 Vec + 1 HashSet).
-Has correct run_if(in_state(PlayingState::Active)) guard (line 243).
+tick_tether_beam calls query_aabb_filtered once per active beam per FixedUpdate tick (line 214-216
+in effect.rs). With 0-1 beams active (standard mode): 0-1 quadtree queries per tick (1 Vec + 1
+HashSet). Chain mode up to N-1 beams where N = bolt count (~8 max = 7 beams).
+Has correct run_if(in_state(PlayingState::Active)) guard (line 309).
 
 ## tether_beam.rs — HashSet allocated per beam per tick
 
-damaged_this_tick: HashSet<Entity> is allocated fresh every tick per active beam (line 204).
-With 0-1 beams: 0-1 HashSet allocations per FixedUpdate tick.
+damaged_this_tick: HashSet<Entity> is allocated fresh every tick per active beam (line 225
+in effect.rs). With 0-1 beams: 0-1 HashSet allocations per FixedUpdate tick.
 Acceptable at current scale. Would become Moderate at 5+ simultaneous beams.
 
 The HashSet is used to deduplicate candidates from the quadtree — necessary because
 query_aabb_filtered may return duplicates. Cannot easily avoid this.
+
+## tether_beam.rs — maintain_tether_chain: hot-path bolt count check (CLEAN)
+
+maintain_tether_chain runs every FixedUpdate when TetherChainActive resource exists (chain mode only).
+Early-exit at line 269 checks `bolt_count == chain_active.last_bolt_count` — returns immediately
+when bolt count unchanged. `bolts.iter().count()` is the only cost on the fast path: iterates
+~1-8 Bolt entities, no allocation. Vec<Entity> is only collected + sorted on actual bolt-count
+changes (episodic: bolt spawn/despawn). CLEAN — not a hot-path allocation problem.
+
+## tether_beam.rs — TetherChainBeam marker archetype: CORRECT PATTERN
+
+TetherChainBeam is a marker distinguishing chain beams from standard beams. Two archetypes:
+- Standard beam: TetherBeamComponent + EffectSourceChip + CleanupOnNodeExit
+- Chain beam: TetherBeamComponent + TetherChainBeam + EffectSourceChip + CleanupOnNodeExit
+maintain_tether_chain queries only TetherChainBeam entities; tick_tether_beam queries all
+TetherBeamComponent entities (both types). The marker is correct — not archetype fragmentation.
+
+## tether_beam.rs — esc.clone() inside maintain_tether_chain spawn loop
+
+Line 283: EffectSourceChip built from chain_active.source_chip.clone() (one Option<String> clone).
+Line 293: esc.clone() inside windows(2) loop — one EffectSourceChip clone per beam spawned.
+With max ~7 beams per rebuild and rebuilds being episodic (bolt count changes only), this is clean.
 
 ## spawn_bolts.rs — BoundEffects.clone() per spawned bolt — Intentional
 

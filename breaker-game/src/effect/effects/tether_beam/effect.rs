@@ -12,13 +12,30 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D};
 use crate::{
     bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
     cells::{components::Cell, messages::DamageCell},
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{
+        EffectiveDamageMultiplier,
+        core::{EffectSourceChip, chip_attribution},
+    },
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
 /// Marker on a tether bolt entity, indicating it belongs to a tether beam.
 #[derive(Component)]
 pub(crate) struct TetherBoltMarker;
+
+/// Marker component on chain-mode beam entities to distinguish them from standard tether beams.
+#[derive(Component)]
+pub(crate) struct TetherChainBeam;
+
+/// Resource inserted when chain mode is active. Stores parameters for dynamic beam rebuilding.
+#[derive(Resource)]
+pub(crate) struct TetherChainActive {
+    pub damage_mult: f32,
+    pub effective_damage_multiplier: f32,
+    pub source_chip: Option<String>,
+    /// Bolt count from the last rebuild — compared against the current count to detect changes.
+    pub last_bolt_count: usize,
+}
 
 /// The beam entity linking two tether bolts.
 #[derive(Component)]
@@ -34,11 +51,27 @@ pub(crate) struct TetherBeamComponent {
     pub effective_damage_multiplier: f32,
 }
 
-/// Spawns two tethered bolts with a damaging beam between them.
+/// Spawns two tethered bolts with a damaging beam between them (standard mode),
+/// or connects all existing bolts with chain beams (chain mode).
 ///
 /// Evolution of `ChainBolt`. The beam is a line segment between the two bolt
 /// positions — cells intersecting the beam take damage each tick.
-pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
+pub(crate) fn fire(
+    entity: Entity,
+    damage_mult: f32,
+    chain: bool,
+    source_chip: &str,
+    world: &mut World,
+) {
+    if chain {
+        fire_chain(entity, damage_mult, source_chip, world);
+    } else {
+        fire_standard(entity, damage_mult, source_chip, world);
+    }
+}
+
+/// Standard mode: spawn two tethered bolts with a beam between them.
+fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
     let spawn_pos = super::super::entity_position(world, entity);
 
     let bolt_a = super::super::spawn_extra_bolt(world, spawn_pos);
@@ -67,13 +100,72 @@ pub(crate) fn fire(entity: Entity, damage_mult: f32, source_chip: &str, world: &
     world.entity_mut(bolt_b).insert(TetherBoltMarker);
 }
 
-/// No-op — tether bolts have their own lifecycle.
-pub(crate) const fn reverse(
+/// Chain mode: connect all existing bolts with chain beams.
+fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
+    // Despawn all existing TetherChainBeam entities
+    let existing_chain_beams: Vec<Entity> = world
+        .query_filtered::<Entity, With<TetherChainBeam>>()
+        .iter(world)
+        .collect();
+    for e in existing_chain_beams {
+        world.despawn(e);
+    }
+
+    // Snapshot EDM from the fire entity
+    let edm = world
+        .get::<EffectiveDamageMultiplier>(entity)
+        .map_or(1.0, |e| e.0);
+
+    // Query all bolt entities and sort by index (ascending spawn order)
+    let mut bolts: Vec<Entity> = world
+        .query_filtered::<Entity, With<Bolt>>()
+        .iter(world)
+        .collect();
+    bolts.sort_by_key(|e| e.index());
+
+    // Spawn chain beams for each consecutive pair
+    for pair in bolts.windows(2) {
+        world.spawn((
+            TetherBeamComponent {
+                bolt_a: pair[0],
+                bolt_b: pair[1],
+                damage_mult,
+                effective_damage_multiplier: edm,
+            },
+            TetherChainBeam,
+            EffectSourceChip::new(source_chip),
+            CleanupOnNodeExit,
+        ));
+    }
+
+    // Insert TetherChainActive resource
+    world.insert_resource(TetherChainActive {
+        damage_mult,
+        effective_damage_multiplier: edm,
+        source_chip: chip_attribution(source_chip),
+        last_bolt_count: bolts.len(),
+    });
+}
+
+/// No-op for standard mode. Chain mode: removes `TetherChainActive` resource and despawns chain beams.
+pub(crate) fn reverse(
     _entity: Entity,
     _damage_mult: f32,
+    chain: bool,
     _source_chip: &str,
-    _world: &mut World,
+    world: &mut World,
 ) {
+    if chain {
+        world.remove_resource::<TetherChainActive>();
+
+        let chain_beams: Vec<Entity> = world
+            .query_filtered::<Entity, With<TetherChainBeam>>()
+            .iter(world)
+            .collect();
+        for e in chain_beams {
+            world.despawn(e);
+        }
+    }
 }
 
 /// Tick system: damages cells whose AABB intersects each tether beam segment.
@@ -164,12 +256,69 @@ pub(crate) fn tick_tether_beam(
     }
 }
 
+/// Maintains chain beams when the bolt count changes (bolts spawned or despawned).
+///
+/// Rebuilds the chain when bolts are added or removed, creating N-1 beams for
+/// N sorted bolts. No-ops when bolt count is unchanged.
+pub(crate) fn maintain_tether_chain(
+    mut commands: Commands,
+    mut chain_active: ResMut<TetherChainActive>,
+    bolts: Query<Entity, With<Bolt>>,
+    chain_beams: Query<Entity, With<TetherChainBeam>>,
+) {
+    let bolt_count = bolts.iter().count();
+    if bolt_count == chain_active.last_bolt_count {
+        return;
+    }
+
+    // Despawn all existing chain beam entities
+    for beam_entity in &chain_beams {
+        commands.entity(beam_entity).despawn();
+    }
+
+    // Collect and sort bolts by index (ascending spawn order)
+    let mut sorted_bolts: Vec<Entity> = bolts.iter().collect();
+    sorted_bolts.sort_by_key(|e| e.index());
+
+    // Spawn N-1 beams for consecutive bolt pairs
+    let esc = EffectSourceChip(chain_active.source_chip.clone());
+    for pair in sorted_bolts.windows(2) {
+        commands.spawn((
+            TetherBeamComponent {
+                bolt_a: pair[0],
+                bolt_b: pair[1],
+                damage_mult: chain_active.damage_mult,
+                effective_damage_multiplier: chain_active.effective_damage_multiplier,
+            },
+            TetherChainBeam,
+            esc.clone(),
+            CleanupOnNodeExit,
+        ));
+    }
+
+    chain_active.last_bolt_count = bolt_count;
+}
+
 /// Registers systems for `TetherBeam` effect.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        tick_tether_beam
-            .after(PhysicsSystems::MaintainQuadtree)
-            .run_if(in_state(PlayingState::Active)),
+        (
+            maintain_tether_chain
+                .run_if(resource_exists::<TetherChainActive>.and(in_state(PlayingState::Active)))
+                .before(tick_tether_beam),
+            tick_tether_beam.run_if(in_state(PlayingState::Active)),
+        )
+            .after(PhysicsSystems::MaintainQuadtree),
     );
+    app.add_systems(
+        OnExit(crate::shared::GameState::Playing),
+        cleanup_tether_chain_resource.run_if(resource_exists::<TetherChainActive>),
+    );
+}
+
+/// Remove `TetherChainActive` resource on node exit to prevent stale chain
+/// state from leaking into the next node.
+fn cleanup_tether_chain_resource(mut commands: Commands) {
+    commands.remove_resource::<TetherChainActive>();
 }
