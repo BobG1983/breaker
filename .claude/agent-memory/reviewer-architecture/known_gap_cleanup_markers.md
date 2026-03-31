@@ -7,7 +7,7 @@ type: project
 All known effect entities have `CleanupOnNodeExit` markers as of 2026-03-30 (full-verification-fixes branch).
 
 **Confirmed correctly handled:**
-- `effect/effects/gravity_well.rs` — FIXED (full-verification-fixes): spawned `GravityWellMarker` entity now includes `CleanupOnNodeExit` at spawn site (fire(), line 69). Tests assert presence.
+- `effect/effects/gravity_well/effect.rs` — FIXED (full-verification-fixes): spawned `GravityWellMarker` entity now includes `CleanupOnNodeExit` at spawn site (fire(), confirmed present in directory module). Tests assert presence.
 - `effect/effects/shockwave.rs` — has `CleanupOnNodeExit` (fixed in Phase 4)
 - `effect/effects/pulse.rs` — PulseRing entities have `CleanupOnNodeExit`
 - `effect/effects/explode.rs` — ExplodeRequest entities have `CleanupOnNodeExit`

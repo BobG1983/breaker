@@ -108,16 +108,18 @@ after `tag_game_entities`. Both bugs from the prior review are fixed.
 before extending, matching the cell/wall variants. Previously it queried `&mut BoundEffects` directly
 and silently dropped effects if the component was absent.
 
-## Stat-boost lazy-init two-step guard is intentional and correct (Wave 1 scenario-coverage)
+## Stat-boost lazy-init: Effective* cache removed in cache-removal refactor
 
-`speed_boost`, `damage_boost`, `size_boost`, `bump_force`, `piercing` `fire()` functions use a
-two-step guard: (1) if `Active*` absent, insert both `Active*::default()` and `Effective*::default()`;
-(2) if `Effective*` still absent (half-initialized), insert just `Effective*::default()`.
+After the cache-removal refactor, `speed_boost`, `damage_boost`, `size_boost`, `bump_force`,
+and `piercing` `fire()` functions no longer insert `Effective*` components (they were removed).
+They now only lazy-init `Active*` with `insert(Active*::default())` if absent, then push
+the value. The old two-step guard is now a single-step guard. Do NOT re-flag the absence
+of `Effective*` insertion — it is correct post-refactor.
 
-The "has Effective* but not Active*" overwrite concern is theoretical only — fire() always inserts
-both together, there are no `remove::<Active*>` calls anywhere, so this state is unreachable.
-The `if let Some(mut active) = world.get_mut::<Active*>` at the end always succeeds because
-the guard above guarantees the component exists. Do NOT re-flag these patterns.
+`quick_stop::fire()` DIFFERS: it does NOT lazy-init `ActiveQuickStops` if absent — it silently
+no-ops. This is intentional: QuickStop only applies to entities that already have the component
+(breaker spawned with `ActiveQuickStops`). However, no gameplay system reads
+`ActiveQuickStops.multiplier()` for actual deceleration — confirmed open gap.
 
 ## TetherBeam chain mode: collect-before-despawn in fire_chain is correct
 

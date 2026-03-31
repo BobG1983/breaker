@@ -1,10 +1,10 @@
 ---
 name: Post-refactor file length findings
-description: Phase 7+ open findings; updated 2026-03-30 after feature/scenario-coverage scan; HIGH items remain open; 25 MEDIUM items remain open
+description: Phase 7+ open findings; updated 2026-03-30 after Wave 3 (feature/scenario-coverage) scan; 6 HIGH + 2 mod.rs violations + 13 MEDIUM open; run fresh reviewer-file-length before acting
 type: project
 ---
 
-Updated after full scan post-new-scenarios merge (2026-03-30) and feature/scenario-coverage branch review.
+Updated after Wave 3 (feature/scenario-coverage) full scan (2026-03-30).
 
 ## Previously HIGH priority — ALL SPLIT (as of post-new-scenarios merge)
 
@@ -19,62 +19,63 @@ All 7 files listed as HIGH priority after source-chip-shield-absorption have bee
 
 ## Previously open mod.rs violations — ALL FIXED
 
-- `breaker-scenario-runner/src/input/mod.rs` — now routing-only (drivers/ + re-exports)
-- `breaker-scenario-runner/src/verdict/mod.rs` — now routing-only (evaluation/ + re-exports)
+- `breaker-scenario-runner/src/input/mod.rs` — now routing-only
+- `breaker-scenario-runner/src/verdict/mod.rs` — now routing-only
 
-## NEW HIGH priority — feature/scenario-coverage branch (2026-03-30)
+## NEW mod.rs violations (2026-03-30 Wave 3 scan)
+
+| File | Total | Violation |
+|------|-------|-----------|
+| `breaker-game/src/breaker/systems/dash/tests/mod.rs` | 471 | Contains test helpers + 14 test functions — must extract to `dash_state_tests.rs` |
+| `breaker-game/src/effect/effects/tether_beam/tests/mod.rs` | 130 | Contains shared test helper functions — must extract to `helpers.rs` |
+
+## NEW HIGH priority (2026-03-30 Wave 3 scan)
 
 | File | Total | Prod | Tests | Test Fns | Strategy | Priority |
 |------|-------|------|-------|----------|----------|----------|
-| `breaker-scenario-runner/src/invariants/checkers/check_aabb_matches_entity_dimensions.rs` | 581 | 76 | 505 | 20 | A: test extraction | HIGH |
+| `effect/effects/tether_beam/tests/fire_tests.rs` | 1068 | 0 | 1068 | 36 | C: fire_basic + chain_fire + chain_reverse + dispatch | HIGH |
+| `effect/effects/anchor/tests.rs` | 1166 | 0 | 1166 | 33 | C: fire_reverse + tick_timer + bump_forces | HIGH |
+| `chips/systems/dispatch_chip_effects/tests/edge_cases.rs` | 842 | 0 | 842 | 18 | C: read file to group | HIGH |
+| `breaker/systems/dash/tests/mod.rs` | 471 | 0 | 471 | 14 | mod.rs violation + extract to dash_state_tests.rs | HIGH |
+| `breaker/systems/dash/tests/flash_step.rs` | 824 | 0 | 824 | 18 | C: reversal + clamping + reset | HIGH |
+| `chips/systems/dispatch_chip_effects/tests/desugaring/e2e.rs` | 817 | 0 | 817 | 4 | C: already at boundary, read to group | HIGH |
 
-## NEW MEDIUM priority — feature/scenario-coverage branch (2026-03-30)
+## Previously open MEDIUM priority — ALL SPLIT (refactor/file-splits branch, merged to develop 2026-03-30)
+
+All 25 files from the previous list were split by the refactor/file-splits branch. Verified as directory modules.
+
+## NEW MEDIUM priority (2026-03-30 Wave 3 scan)
 
 | File | Total | Prod | Tests | Test Fns | Strategy | Priority |
 |------|-------|------|-------|----------|----------|----------|
-| `breaker-scenario-runner/src/lifecycle/systems/frame_mutations.rs` | 504 | 360 | 144 | 5 | A: test extraction | MEDIUM |
+| `effect/effects/circuit_breaker/tests.rs` | 782 | 0 | 782 | 18 | C: fire_counter + fire_reward + reverse + edge_cases | MEDIUM |
+| `breaker/systems/bump/tests/anchor_multipliers.rs` | 769 | 0 | 769 | 17 | C: forward_grade + retroactive + timer + planted | MEDIUM |
+| `effect/effects/piercing_beam/tests/fire_tests.rs` | 654 | 0 | 654 | 20 | C: geometry + damage + source_chip | MEDIUM |
+| `effect/commands/tests/transfer_insert_tests.rs` | 623 | 0 | 623 | 18 | C: permanent + non_permanent + edge_cases | MEDIUM |
+| `effect/effects/piercing_beam/tests/process_tests.rs` | 609 | 0 | 609 | 16 | C: damage + source_chip + targeting | MEDIUM |
+| `invariants/checkers/check_aabb_matches_entity_dimensions/tests.rs` | 515 | 0 | 515 | 20 | C: bolt_aabb + breaker_aabb + combined | MEDIUM |
+| `bolt/systems/bolt_wall_collision/tests.rs` | 572 | 0 | 572 | 14 | C: impact + reflection + last_impact | MEDIUM |
+| `effect/effects/gravity_well/tests/pull_tests.rs` | 493 | 0 | 493 | 10 | C: steering + boundary + position2d | MEDIUM |
+| `cells/resources.rs` | 460 | 152 | 307 | 14 | A: test extraction | MEDIUM |
+| `rantzsoft_physics2d/src/systems/maintain_quadtree.rs` | 453 | 64 | 388 | 9 | A: test extraction | MEDIUM |
+| `rantzsoft_physics2d/src/systems/enforce_distance_constraints.rs` | 436 | 59 | 376 | 7 | A: test extraction | MEDIUM |
+| `bolt/systems/spawn_bolt/tests.rs` | 467 | 0 | 467 | 17 | C: at boundary, monitor | MEDIUM |
+| `chips/definition/tests/template_tests.rs` | 475 | 0 | 475 | 13 | C: at boundary, monitor | MEDIUM |
 
-## NEW LOW priority — feature/scenario-coverage branch (2026-03-30)
+## NEW LOW priority (2026-03-30 Wave 3 scan)
 
 | File | Total | Notes |
 |------|-------|-------|
-| `breaker-scenario-runner/src/types/tests/invariant_kinds.rs` | 418 | Already separate test file; under 800-line sub-split threshold |
-
-## MEDIUM priority still open (as of 2026-03-30 pre-branch scan)
-
-These are the MEDIUM items from the previous phase4 list that have NOT been confirmed split yet.
-Run a fresh `reviewer-file-length` pass before acting — some may have been addressed.
-
-| File | ~Lines | Strategy |
-|------|--------|----------|
-| effect/effects/attraction/tests/apply_tests.rs | 838 | C: basic + force_clamping |
-| bolt/systems/bolt_lost/tests/shield_tests.rs | 757 | C: absorption + reflection + extra_bolt |
-| cells/systems/handle_cell_hit/tests/shield_tests.rs | 750 | C: absorption + dedup + edge_cases |
-| runner/tests.rs (scenario-runner) | 744 | C: cli_parsing + run_list + execution + stress + grouping |
-| effect/effects/entropy_engine/tests.rs | 736 | C: fire + reset + edge_cases |
-| run/systems/track_node_cleared_stats/tests.rs | 729 | C: basic_stats + highlight_detection + streaks |
-| effect/effects/explode/tests.rs | 685 | C: fire + process + source_chip |
-| chips/resources/tests.rs | 682 | C: registry + recipes + templates |
-| chips/offering/tests.rs | 646 | C: read file first |
-| run/node/systems/spawn_cells_from_layout/tests/shield_cells.rs | 634 | C: spawning + orbit + locking |
-| verdict/tests.rs (scenario-runner) | 633 | C: defaults + evaluation + health + violations |
-| systems/compute_globals/tests.rs (rantzsoft_spatial2d) | 627 | C: root + hierarchy + absolute |
-| lifecycle/tests/frame_mutations.rs (scenario-runner) | 626 | C: read file first |
-| run/systems/spawn_highlight_text/tests/ordering.rs | 613 | C: layout + timing + culling |
-| lifecycle/tests/debug_setup.rs (scenario-runner) | 609 | C: read file first |
-| effect/triggers/impacted/tests.rs | 598 | C: bolt + breaker + other collisions |
-| types/definitions.rs (scenario-runner) | 587 | B: read file first |
-| effect/effects/tether_beam/tests/tick_damage_tests.rs | 574 | C: read file first |
-| run/systems/generate_node_sequence/tests.rs | 566 | C: sequence_properties + boss_nodes + system |
-| plugin/tests.rs (rantzsoft_spatial2d) | 554 | C: plugin_behavior + system_ordering |
-| effect/effects/shockwave/tests/damage_tests.rs | 543 | C: read file first |
-| effect/triggers/impact/tests.rs | 518 | C: bolt + breaker + other collisions |
-| effect/effects/pulse/tests/tick_tests.rs | 527 | C: read file first |
-| invariants/checkers/bolt_in_bounds/tests.rs (scenario-runner) | 507 | C: read file first |
-| breaker/systems/spawn_breaker/tests.rs | 506 | C: read file first |
+| `effect/core/types/definitions/enums.rs` | 512 | Mostly prod (406 lines), tests only 105 — low priority for extraction |
+| `bolt/systems/bolt_cell_collision/tests/last_impact.rs` | 435 | 10 tests, under sub-split threshold |
+| `chips/resources/tests/chip_catalog.rs` | 431 | 19 tests, already separate — monitor |
+| `run/node/systems/spawn_cells_from_layout/tests/position2d.rs` | 436 | 10 tests, already separate |
+| `effect/effects/pulse/tests/damage_tests.rs` | 411 | 12 tests, already separate |
+| `effect/core/types/tests.rs` | 411 | 18 tests, already separate — monitor |
+| `breaker-scenario-runner/src/types/tests/invariant_kinds.rs` | 418 | Already separate — monitor |
 
 ## Files confirmed unsplittable
 
 - rantzsoft_physics2d/src/quadtree/tree.rs — single data structure, no tests
 - breaker-scenario-runner/src/runner/execution.rs — single concern, no tests
-- breaker-scenario-runner/src/runner/app.rs — single concern, tiny test section
+- breaker-scenario-runner/src/runner/app.rs — single concern, tiny test section (44 test lines)

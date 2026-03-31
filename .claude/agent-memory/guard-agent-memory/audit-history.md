@@ -4,6 +4,55 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-03-30 (feature/scenario-coverage branch, Wave 3 review)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/scenario-coverage branch (current). refactor/file-splits merged into develop (commit 35dfece), splitting all 25 previous MEDIUM items plus adding new Wave 3 HIGH/MEDIUM findings. Previous "gravity_well max==0 infinite loop" bug is FIXED in scenario-coverage branch (confirmed in code lines 51-53).
+
+**Issues found and fixed (8):**
+
+1. **researcher-codebase/effect-system-domain-map.md** — Stale holdover at line 92: "but all trigger bridges are stubs, so no trigger evaluation happens yet." Contradicted by line 49 of the same file ("ALL trigger bridges are REAL"). Fixed: corrected to "all trigger bridges are REAL."
+
+2. **researcher-bevy-api/MEMORY.md** — Listed individual ephemeral file `ephemeral/bevy018-post-processing.md` as an indexed entry. Violates convention (ephemeral = one line only). Fixed: removed individual file link.
+
+3. **reviewer-performance/wave1-stat-boost-and-fifo-effects.md** — Claimed the second `is_none()` guard in stat-boost fire() is "dead code." Code inspection (speed_boost.rs lines 21-25) and reviewer-quality/wave1-lazy-init-fifo-patterns.md both confirm it IS reachable (entity with Active* but no Effective*). Fixed: corrected the claim.
+
+4. **reviewer-file-length/phase4_findings.md** — "Previously open MEDIUM priority" section listed 25 files as needing splits. All 25 have been split by refactor/file-splits. Also the frontmatter description was stale. Fixed: replaced MEDIUM section with SPLIT confirmation; updated description.
+
+5. **reviewer-file-length/MEMORY.md** — Description still referenced "25 MEDIUM items remain open." Fixed: updated to reflect Wave 3 state.
+
+6. **runner-scenarios/MEMORY.md** — File was 1 line (effectively empty). Fixed: added Session History line.
+
+7. **reviewer-architecture/known_gap_velocity_cross_domain_write.md** — Referenced `effect/effects/gravity_well.rs` (line 89) but gravity_well is now a directory module. Fixed: updated path to `gravity_well/effect.rs`.
+
+8. **reviewer-architecture/known_gap_cleanup_markers.md** — Referenced `effect/effects/gravity_well.rs` (line 69, stale line number). Fixed: updated path to `gravity_well/effect.rs`.
+
+**No new cross-agent duplication found.**
+**No broken MEMORY.md links found.**
+
+**Stale patterns confirmed still open:**
+- 1-frame stale ordering for Effective* consumers (bolt/plugin.rs) — reviewer-correctness/bug-patterns.md
+- BASE_BOLT_DAMAGE hardcoding in combat effects (guard-game-design blocker 1)
+- chip-catalog doc drift (guard-game-design blocker 2)
+- check_aabb_matches_entity_dimensions false positive for non-1.0 EntityScale layouts — reviewer-correctness/bug-patterns.md
+- gravity_well + spawn_phantom missing despawned-entity guard — reviewer-correctness/bug-patterns.md OPEN
+- TetherChainActive resource leaks across node boundaries — reviewer-correctness/bug-patterns.md OPEN
+- file-length HIGH items: 6 files in reviewer-file-length/phase4_findings.md (Wave 3 scan)
+- file-length mod.rs violations: 2 files in reviewer-file-length/phase4_findings.md (Wave 3 scan)
+
+**Items resolved since last audit:**
+- gravity_well::fire() infinite loop when max == 0: FIXED in scenario-coverage branch (lines 51-53)
+- check_aabb_matches_entity_dimensions.rs 581-line HIGH item: SPLIT (now directory module)
+- All 25 previous MEDIUM items: ALL SPLIT by refactor/file-splits
+
+**New staleness patterns detected this audit:**
+- **Phase4_findings MEDIUM carry-forward list**: After any large refactor/file-splits merge, the "MEDIUM priority still open" section becomes entirely stale. Always clear and re-run reviewer-file-length.
+- **Cross-agent performance/quality contradiction on "dead code"**: reviewer-performance wave1 file incorrectly called the second guard dead code; reviewer-quality correctly said it was reachable. When agents disagree, verify against codebase.
+- **Directory module refactors change file paths**: After any refactor/file-splits merge, file-path references in memory (especially reviewer-architecture gap files) may point to .rs files that are now directory modules. Check reviewer-architecture after any split refactor.
+
+---
+
 ## Full Audit — 2026-03-30 (develop branch, post feature/missing-unit-tests + feature/scenario-coverage merge)
 
 **Scope:** All agent memory directories (full audit)
@@ -53,13 +102,13 @@ type: project
 **No new cross-agent duplication found.**
 **No MEMORY.md broken links found** (all linked files verified to exist).
 
-**Stale patterns confirmed still open:**
-- gravity_well::fire() infinite loop when max == 0 (reviewer-correctness/bug-patterns.md)
+**Stale patterns confirmed still open at time of this audit (some now resolved — see audit above):**
+- gravity_well::fire() infinite loop when max == 0 — FIXED in scenario-coverage branch
 - 1-frame stale ordering for Effective* consumers (bolt/plugin.rs)
 - BASE_BOLT_DAMAGE hardcoding in combat effects (guard-game-design blocker 1)
 - chip-catalog doc drift (guard-game-design blocker 2)
-- HIGH file-length: check_aabb_matches_entity_dimensions.rs (581 lines)
-- MEDIUM file-length items: 25+ files in reviewer-file-length/phase4_findings.md
+- HIGH file-length: check_aabb_matches_entity_dimensions.rs (581 lines) — SPLIT
+- MEDIUM file-length items: 25+ files — ALL SPLIT by refactor/file-splits
 
 **New staleness patterns detected this audit:**
 - **Source marker struct-to-unit-struct conversions**: Conversion from tuple structs to unit structs eliminates dead_code field warnings. runner-linting/lint_patterns_core.md is primary risk file.
@@ -89,6 +138,9 @@ See [audit-history-archive.md](audit-history-archive.md) for audits prior to 202
 - **Phase4 HIGH items can be split silently**: After any large feature merge, re-check the HIGH priority list in phase4_findings.md.
 - **Source marker struct-to-unit-struct conversions**: After refactors touching source attribution markers, check lint_patterns_core.md.
 - **EffectPlugin new system sets**: New sets added to EffectPlugin must carry run_if guard.
+- **MEDIUM carry-forward list in phase4_findings.md**: After any refactor/file-splits merge, the entire "MEDIUM priority still open" section may be stale. Clear and re-run reviewer-file-length.
+- **Cross-agent performance/quality disagreements**: reviewer-performance may mark code patterns as "dead code" that reviewer-quality correctly identifies as reachable. On disagreement, verify against the actual code.
+- **Directory module refactors change file paths**: After any refactor/file-splits merge, file-path references in reviewer-architecture gap files may point to .rs files that are now directory modules. Check reviewer-architecture path references after any split refactor.
 
 ## Agents Accumulating Memory Fastest
 

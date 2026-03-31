@@ -53,7 +53,7 @@
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5d (post-processing: bloom, chromatic aberration), 5e (particles: Energy Ring, Spark, Trail, Glow Mote), 5k (screen effects: shake, flash), 5m (base Shockwave VFX for Chain Reaction and Feedback Loop payoff), 5n (visual modifier inheritance for Split Decision)
+- **Requires**: 5c (rantzsoft_vfx crate), 5d (post-processing: bloom, chromatic aberration), 5e (particles: Energy Ring, Spark, Trail, Glow Mote), 5k (screen effects: shake, flash), 5m (base Shockwave VFX for Chain Reaction and Feedback Loop payoff), 5n (visual modifier inheritance for Split Decision)
 - DR-9 resolved: Entropy Engine corrected (no counter gauge, prismatic flash per trigger)
 
 ## Verification

@@ -37,6 +37,11 @@ Still confirmed after feature/missing-unit-tests (2026-03-30):
 Branch adds test code only (plus one pub(super) visibility widening). No unsafe blocks added.
 Workspace lint unsafe_code = "deny" remains in force.
 
+Still confirmed after Wave 3 (2026-03-30, tether_beam chain mode + spawn_bolts inherit fix):
+No unsafe blocks in tether_beam/effect.rs, spawn_bolts/effect.rs, or enums.rs.
+World::query_filtered, world.get(), world.despawn(), world.insert_resource(),
+world.remove_resource() — all safe Bevy World APIs.
+
 Still confirmed after feature/scenario-coverage (2026-03-30):
 New scenario runner checkers (check_aabb_matches_entity_dimensions.rs,
 check_gravity_well_count_reasonable.rs, check_size_boost_in_range.rs), new frame mutation

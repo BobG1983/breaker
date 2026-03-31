@@ -1,6 +1,6 @@
 # Core Types
 
-All core types live in `effect/core/types/` (directory module: `definitions.rs` holds the types, exposed via `mod.rs`).
+All core types live in `effect/core/types/` (directory module: `definitions/enums.rs` holds the enum types; `definitions/fire.rs` and `definitions/reverse.rs` hold the dispatch methods; all exported via `definitions/mod.rs` → `types/mod.rs`).
 
 ## Trigger
 
@@ -153,7 +153,22 @@ pub enum EffectKind {
     RampingDamage { damage_per_trigger: f32 },
     Explode { range: f32, damage_mult: f32 },
     QuickStop { multiplier: f32 },
-    TetherBeam { damage_mult: f32 },
+    TetherBeam {
+        damage_mult: f32,
+        #[serde(default)] chain: bool,  // if true: chain mode — connects all bolts instead of spawning new ones
+    },
+    MirrorProtocol {
+        #[serde(default)] inherit: bool,  // if true: spawned bolt gets parent's BoundEffects
+    },
+    Anchor { bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32 },
+    FlashStep,              // unit variant — no fields
+    CircuitBreaker {
+        bumps_required: u32,
+        #[serde(default = "one")] spawn_count: u32,
+        #[serde(default)] inherit: bool,
+        shockwave_range: f32,
+        shockwave_speed: f32,
+    },
 }
 ```
 
@@ -192,7 +207,7 @@ impl EffectSourceChip {
 pub fn chip_attribution(source_chip: &str) -> Option<String> { ... }
 ```
 
-Lives in `effect/core/types/definitions.rs`. Used by AoE/spawn effects that need to carry chip attribution
+Lives in `effect/core/types/definitions/enums.rs`. Used by AoE/spawn effects that need to carry chip attribution
 from dispatch time to damage-application time (since those effects damage cells on a later tick).
 
 ## fire() and reverse()
@@ -212,7 +227,7 @@ impl EffectKind {
             Self::DamageBoost(v) => damage_boost::fire(entity, *v, source_chip, world),
             Self::LoseLife => life_lost::fire(entity, source_chip, world),
             Self::SecondWind => second_wind::fire(entity, source_chip, world),
-            // ... one arm per variant; falls through to fire_aoe_and_spawn / fire_utility_and_spawn
+            // ... one arm per variant; falls through to fire_aoe_and_spawn / fire_utility_and_spawn / fire_breaker_effects
         }
     }
 
@@ -223,15 +238,16 @@ impl EffectKind {
             Self::DamageBoost(v) => damage_boost::reverse(entity, *v, source_chip, world),
             Self::LoseLife => life_lost::reverse(entity, source_chip, world),
             Self::SecondWind => second_wind::reverse(entity, source_chip, world),
-            // ... falls through to reverse_aoe_and_spawn — ALL variants covered
+            // ... falls through to reverse_aoe_and_spawn / reverse_utility / reverse_breaker_effects — ALL variants covered
         }
     }
 }
 ```
 
-The `fire` match is split across **three** private methods (`fire`, `fire_aoe_and_spawn`,
-`fire_utility_and_spawn`) purely for line count. The `reverse` match is split across **two**
-private methods (`reverse`, `reverse_aoe_and_spawn`). All splits are exhaustive.
+The `fire` match is split across **four** private methods (`fire`, `fire_aoe_and_spawn`,
+`fire_utility_and_spawn`, `fire_breaker_effects`) purely for line count. The `reverse` match is
+split across **four** private methods (`reverse`, `reverse_aoe_and_spawn`, `reverse_utility`,
+`reverse_breaker_effects`). All splits are exhaustive.
 
 ## Per-Effect Modules
 

@@ -5,17 +5,16 @@
 // the breaker fails to intercept the bolt. This drives repeated death-trigger cycles through
 // the BoltLost path so the DMH on-death chain fires multiple times across 10000 frames.
 // The adversarial risk: if DMH's death effect incorrectly re-arms after firing, ActiveSpeedBoosts
-// or similar stat components accumulate without being reversed, causing EffectiveSpeedConsistent
-// to diverge. NoEntityLeaks catches any death-trigger entities left behind after the chain fires.
+// or similar stat components accumulate without being reversed, causing speed divergence.
+// NoEntityLeaks catches any death-trigger entities left behind after the chain fires.
 // NoNaN guards against multiplier overflow if DamageBoost stacks unchecked. BoltSpeedInRange
-// catches speed-floor violations from a corrupted EffectiveSpeedMultiplier after repeated
-// bolt-loss cycles.
+// catches speed-floor violations from corrupted speed multipliers after repeated bolt-loss cycles.
 (
     breaker: "Aegis",
     layout: "Fortress",
     input: Chaos((action_prob: 0.1)),
     max_frames: 10000,
-    invariants: [EffectiveSpeedConsistent, NoEntityLeaks, NoNaN, BoltSpeedInRange],
+    invariants: [NoEntityLeaks, NoNaN, BoltSpeedInRange],
     expected_violations: None,
     debug_setup: None,
     allow_early_end: false,

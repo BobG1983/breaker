@@ -1,87 +1,67 @@
 # 5f: Temperature Palette & Data-Driven Enums
 
-**Goal**: Build the temperature palette system that shifts colors across a run, and implement all visual composition enums that entity visual steps (5g-5j) will consume.
+**Goal**: Build the temperature palette system and implement all visual composition types in `rantzsoft_vfx` that entity visual steps (5g-5j) will consume.
+
+Architecture: `docs/architecture/rendering/temperature.md`, `docs/architecture/rendering/types.md`
 
 ## What to Build
 
 ### 1. Temperature Palette System
 
-A rendering/ resource tracking the run's visual temperature:
+- `RunTemperature(f32)` resource in `run/` domain: 0.0 (cool) to 1.0 (hot), derived from node progression
+- `TemperaturePalette` in `GraphicsDefaults` RON (shared/): cool/hot endpoint colors for grid, bloom, walls
+- System in `run/` that reads `RunState.node_index` and updates `RunTemperature` on node transition
+- Instant snap on transition (no interpolation — transition animation masks the change)
+- Grid, bloom, and wall systems read RunTemperature to interpolate between palette endpoints
 
-- **RunTemperature** resource: `f32` from 0.0 (cool) to 1.0 (hot), derived from node progression
-- **Temperature palette lookup**: Given a temperature value, returns the current color set:
-  - Nodes 1-3 (0.0-0.3): Cool — deep blues, teals, cyans
-  - Nodes 4-6 (0.3-0.6): Transitional — cyan→purple, violet, early magenta
-  - Nodes 7-9 (0.6-0.9): Hot — magentas, ambers, warm whites
-  - Final/boss (0.9-1.0): White-hot — whites and golds with magenta/amber accents
-- **Temperature application targets**: Grid tint, default cell glow, particle base color, wall border tint, ambient bloom color
-- **Temperature-exempt elements**: Bolt core, breaker archetype colors, rarity tier colors, UI elements
+### 2. Hue Enum
 
-System that reads `RunState.node_index` and updates `RunTemperature` on node transitions.
+~148 CSS named colors + `Custom(f32, f32, f32, f32)` in `rantzsoft_vfx`. RON files use CSS color names directly (e.g., `color: CadetBlue`, `color: Gold`). Implements `From<Hue> for Color`, `From<Color> for Hue`, `From<Hue> for LinearRgba`.
 
-### 2. Cell Visual Composition Enums
+### 3. Shape Enum
 
-All visual composition enums are defined in rendering/ as generic rendering primitives — not prefixed with entity names. Any entity can use any variant. Owning domains (cells/, breaker/, etc.) reference these types in their RON data and attach them as components at spawn.
+Rectangle, RoundedRectangle, Hexagon, Octagon, Circle, Diamond, Shield, Angular, Crystalline, Custom(CustomShape). Selects which SDF function the entity_glow shader evaluates via an integer `shape_type` uniform.
 
-- **Shape**: Rectangle, RoundedRectangle, Hexagon, Octagon, Circle, Diamond, Shield, Angular, Crystalline
-- **Color**: TemperatureDefault, CoolBlue, CoolCyan, CoolGreen, WarmAmber, WarmMagenta, WarmRed, Gold, Neutral, BlueCyan, Amber, Magenta
-- **DamageDisplay**: Fracture, Fade, Flicker, Shrink, ColorShift
-- **DeathEffect**: Dissolve, Shatter, EnergyRelease, Custom(String)
-- **AuraType**: ShieldShimmer, TimeDistortion, PrismaticSplit
-- **TrailType**: ShieldEnergy, Afterimage, PrismaticSplit
+### 4. Aura Enum
 
-Each enum derives `Deserialize` for RON integration. Cell definition RON files and breaker archetype RON files gain these fields.
+ShieldShimmer, TimeDistortion, PrismaticSplit — each with params (pulse_speed, intensity, color, etc.). Rendered via single `AuraMaterial` with variant uniform (not separate Material2d types).
 
-### 4. Visual Modifier Enums
+### 5. Trail Enum
 
-Defined in rendering/ (cross-cutting concern):
+ShieldEnergy, Afterimage, PrismaticSplit — each with params. Trails are top-level entities (NOT children), track source entity via `TrailSource` component.
 
-- **ColorShift**: Warmer, Cooler, Custom(Color)
-- **ShapeModifier**: Spikier, Smoother, Larger
-- **VisualModifier** struct: trail_length_multiplier, glow_intensity_multiplier, color_shift, particle_emitter, shape_modifier
+### 6. Visual Parameters
 
-These are the building blocks for 5n (visual modifier system).
+- `GlowParams` (core_brightness, halo_radius, halo_falloff, bloom)
+- `HdrBrightness(f32)`, `BloomIntensity(f32)`, `EmissiveStrength(f32)` newtypes
+- `EntityVisualConfig` struct (shape, color, glow, aura, trail)
 
-### 5. RON Integration
+### 7. VisualModifier Enum
 
-Update existing RON data files with the new enum fields:
-- Cell definition RON files: add cell_shape, cell_color, damage_display, death_effect
-- Breaker archetype RON files: add breaker_shape, color_accent, aura_type, trail_type
-- Use sensible defaults matching current placeholder visuals
+12 variants: TrailLength, GlowIntensity, CoreBrightness, HaloRadius, ShapeScale, SpikeCount, ColorShift, ColorCycle, AlphaOscillation, SquashStretch, AfterimageTrail, RotationSpeed. SquashStretch is shader-uniform-based (doesn't affect collision AABB).
 
-### 6. Visual Identity Components (Separate Components)
+### 8. RON Integration
 
-Each visual property is its own component. Entities only get the ones that apply:
-- `Shape(Shape)`, `Color(Color)`, `AuraType(AuraType)`, `TrailType(TrailType)`, `DamageDisplay(DamageDisplay)`, `DeathEffect(DeathEffect)`
-- Cell gets: Shape + Color + DamageDisplay + DeathEffect
-- Breaker gets: Shape + Color + AuraType + TrailType
-- Bolt gets: Color (mostly state-driven)
-
-Owning domain attaches at spawn from RON data. rendering/ reads via queries.
+Update entity RON files with `rendering` blocks:
+- Cell definition RON: shape, color, glow, damage_recipe, death_recipe, hit_recipe
+- Breaker archetype RON: shape, color, glow, aura, trail, bump recipes
+- Bolt definition RON: shape, color, glow, trail, spawn/death/expiry recipes
+- Use `#[serde(default)]` for incremental migration
 
 ## What NOT to Do
 
-- Do NOT implement the rendering of these enums (that's 5g-5j)
-- Do NOT implement visual modifier stacking logic (that's 5n)
-- Just define the types, integrate with RON, and attach identity components at spawn
+- Do NOT implement the rendering of these types (that's 5g-5j)
+- Do NOT implement modifier stacking logic (that's 5n)
+- Define the types, integrate with RON, wire `AttachVisuals` message
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/ domain exists, visual identity component pattern established)
-- **Enhanced by**: 5b (design decisions may refine some enum variants)
-
-## What This Step Builds
-
-- RunTemperature resource + system that updates on node transitions
-- Generic visual enums in rendering/: Shape, Color, DamageDisplay, DeathEffect, AuraType, TrailType
-- VisualModifier types (trail_length_multiplier, glow_intensity_multiplier, color_shift, etc.)
-- Separate visual identity components (Shape, Color, AuraType, etc.) attached at spawn
-- RON integration for cell definitions and breaker archetypes
+- **Requires**: 5c (rantzsoft_vfx crate exists)
 
 ## Verification
 
 - All enums deserialize from RON correctly
-- Existing RON files load with new fields (defaults for backwards compat)
-- Visual identity components are attached at entity spawn
+- Existing RON files load with new rendering blocks (serde defaults for backwards compat)
+- `AttachVisuals` message can be sent with `EntityVisualConfig`
 - Temperature resource updates on node transitions
-- All existing tests pass, game plays normally
+- All existing tests pass

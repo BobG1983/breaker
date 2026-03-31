@@ -105,7 +105,7 @@ Random effect from weighted pool fires on every cell destroyed. Prismatic flash 
 
 Destroyed cells spawn 2 permanent inheriting bolts. Fission visual — cell splits into bolt orbs.
 
-### Chain Reaction
+### Shock Chain
 **Ingredients**: Chain Reaction x1 + Aftershock x2 + Cascade x2
 
 Destroyed cells trigger recursive shockwaves — each shockwave kill spawns another shockwave. Escalating intensity per generation depth.

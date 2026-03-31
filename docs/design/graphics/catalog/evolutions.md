@@ -12,7 +12,7 @@ Each evolution requires bespoke VFX that looks fundamentally different from base
 | Gravity Well (evo) | NONE | High | COVERED | Larger distortion lens — wider radius (160), stronger warping, 4 active, more glow motes. |
 | Second Wind | NONE | High | COVERED | Invisible wall materializes with bright flash on save — salvation moment. Brief slow-mo. |
 | Entropy Engine | NONE | High | COVERED | Prismatic flash per cell destroy, then selected effect fires. Bolt has persistent prismatic shimmer. No counter gauge. |
-| Chain Reaction | NONE | High | COVERED | Recursive shockwaves with escalating intensity per generation. Chromatic aberration scales with depth. |
+| Shock Chain | NONE | High | COVERED | Recursive shockwaves with escalating intensity per generation. Chromatic aberration scales with depth. |
 | Circuit Breaker | NONE | High | COVERED | Three-node triangle charge indicator. Each perfect bump lights a node. On completion: nodes collapse, circuit closes, spawn + shockwave. |
 | Split Decision | NONE | High | COVERED | Fission effect: cell splits, halves condense into bolt orbs. Energy filaments. Prismatic birth trails. |
 | ArcWelder | NONE | High | COVERED | Crackling electric tether beams connecting ALL bolts in sequence. Electric corona on all connected bolts. Web aesthetic. |

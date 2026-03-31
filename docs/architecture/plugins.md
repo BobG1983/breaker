@@ -86,15 +86,15 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`, `Recalculate`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 
 The architectural boundary is about **writes** (mutations), not reads. Domains freely **read** other domains' types — components, message types, resources — via standard ECS queries. This is normal Bevy and not a violation:
 
-- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `EffectivePiercing`, `EffectiveDamageMultiplier` (effect domain) from bolt entities, `CellHealth` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
-- **cells** receives pre-computed damage via the `DamageCell` message — it does not read `EffectiveDamageMultiplier` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
-- **breaker** reads `EffectiveSpeedMultiplier`, `EffectiveSizeMultiplier` (effect domain) from its own entity.
+- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `ActivePiercings`, `ActiveDamageBoosts` (effect domain) from bolt entities, `CellHealth` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
+- **cells** receives pre-computed damage via the `DamageCell` message — it does not read `ActiveDamageBoosts` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
+- **breaker** reads `ActiveSpeedBoosts`, `ActiveSizeBoosts` (effect domain) from its own entity.
 - **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `RequestCellDestroyed` / `CellDestroyedAt` (cells domain) messages in bridge systems.
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the accepted exception (read AND write, compiled out of release builds). There is one additional narrow production exception — see "ShieldActive Cross-Domain Write" below.
@@ -139,9 +139,12 @@ effect/
   core/
     mod.rs             # Re-exports from types/
     types/             # Directory module (split from types.rs)
-      mod.rs           # Re-exports from definitions.rs
-      definitions.rs   # All core types: Trigger, ImpactTarget, Target, AttractionType,
+      mod.rs           # Re-exports from definitions/
+      definitions/     # Directory module (split from definitions.rs for fire/reverse line count)
+        enums.rs       # All core types: Trigger, ImpactTarget, Target, AttractionType,
                        #   RootEffect, EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
+        fire.rs        # EffectKind::fire() + 3 private helpers
+        reverse.rs     # EffectKind::reverse() + 3 private helpers
   effects/             # Per-effect modules with fire(), reverse(), register()
     mod.rs             # pub mod declarations + register() dispatcher + spawn_extra_bolt helper
     speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
@@ -149,9 +152,11 @@ effect/
     life_lost.rs       # fire(), reverse(), register()
     ramping_damage.rs  # fire(), reverse(), register()
     quick_stop.rs      # fire(), reverse(), register()
+    flash_step.rs      # fire(), reverse(), register()
     piercing.rs / size_boost.rs / bump_force.rs / shield.rs / gravity_well.rs / time_penalty.rs
     shockwave/ chain_bolt/ chain_lightning/ explode/ tether_beam/ pulse/ piercing_beam/
     attraction/ spawn_bolts/ spawn_phantom/ entropy_engine/ second_wind/ random_effect/
+    anchor/ circuit_breaker/ mirror_protocol/
     ... (directory modules — split per System File Split Convention when tests exceed ~400 lines)
   triggers/            # Bridge systems (one file or dir per trigger type)
     mod.rs             # pub mod declarations + register() dispatcher
@@ -167,7 +172,7 @@ effect/
   commands.rs          # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
   mod.rs               # Re-exports + pub mod declarations
   plugin.rs            # EffectPlugin — calls effects::register() and triggers::register()
-  sets.rs              # EffectSystems::Bridge, EffectSystems::Recalculate sets
+  sets.rs              # EffectSystems::Bridge set
 ```
 
 ### Effect File Pattern

@@ -2,7 +2,7 @@
 // event. The Until wrapper must fire the boost immediately and schedule a reversal after
 // 1.0 seconds. If the reversal message fails — or if multiple concurrent Until timers each
 // queue a reversal and one is dropped — ActiveDamageBoosts grows unboundedly and
-// EffectiveDamageMultiplier diverges from the expected single-boost value.
+// the damage multiplier diverges from the expected single-boost value.
 // Dense layout drives frequent bumps to create many overlapping Until windows.
 // BoltSpeedInRange is included as a secondary signal: a corrupted damage multiplier can
 // indirectly affect bolt physics in systems that gate on damage state. 5000 frames gives

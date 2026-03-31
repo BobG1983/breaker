@@ -139,19 +139,20 @@ or remove it alongside the chain beams in the same cleanup path.
 
 **Status**: OPEN — filed as regression spec hint in Wave 3 review 2026-03-30.
 
-## Missing cross-domain ordering: EffectSystems::Recalculate before consumer systems
+## Missing cross-domain ordering: EffectSystems::Recalculate — RESOLVED by cache removal
 
-Confirmed in Phase 3 review. The bolt/breaker consumer systems (`prepare_bolt_velocity`,
-`bolt_cell_collision`, `bolt_breaker_collision`, `move_breaker`) read `Effective*`
-components but have NO `.after(EffectSystems::Recalculate)` constraint. When an
-effect fires via Bridge and Recalculate updates the Effective* value, the consumer
-systems may have already run that frame — producing a 1-frame stale value.
+The Phase 3 issue about `Effective*` components needing `.after(EffectSystems::Recalculate)` is
+no longer applicable. The cache-removal refactor (scenario-coverage branch) eliminated all
+`Effective*` components and the `recalculate_*` systems entirely. Consumer systems now read
+`Active*` directly each frame — no stale-cache risk exists. **Do NOT re-flag this ordering issue.**
 
-**Reproduces as**: bolt speed/damage/size does not immediately reflect the new
-multiplier in the same frame the effect fires.
+## ActiveQuickStops: fire() is no-op when component absent; no consumer reads multiplier — OPEN
 
-**Location**: `bolt/plugin.rs` (PrepareVelocity, CellCollision, BreakerCollision sets)
-and `breaker/plugin.rs` (Move set). Fix: add `.after(EffectSystems::Recalculate)`
-to those system registrations.
+`quick_stop::fire()` silently no-ops if `ActiveQuickStops` is absent (unlike all other stat boosts
+which lazy-init). Neither `move_breaker` nor `dash::handle_braking` queries `ActiveQuickStops` to
+scale their deceleration. `MovementQuery` and `DashQuery` do not include `ActiveQuickStops`.
+The `QuickStop` effect fires but its multiplier is never applied to actual deceleration.
 
-**Status**: OPEN — filed in Phase 3 review.
+**Status**: OPEN — confirmed in cache-removal refactor review 2026-03-30.
+Location: `effect/effects/quick_stop.rs` (fire fn), `breaker/queries.rs` (MovementQuery),
+`breaker/systems/move_breaker.rs`, `breaker/systems/dash/system.rs`.

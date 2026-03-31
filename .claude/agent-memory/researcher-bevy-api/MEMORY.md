@@ -2,6 +2,3 @@
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.
-
-Notable ephemeral files:
-- [bevy018-post-processing.md](ephemeral/bevy018-post-processing.md) — FullscreenMaterial API, Node2d order, HDR/Bloom interaction, WGSL bindings

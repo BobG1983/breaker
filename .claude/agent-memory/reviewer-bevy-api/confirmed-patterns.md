@@ -215,3 +215,12 @@ type: reference
 - `world.query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>()` — correct compound filter tuple in world.query_filtered; returns QueryState which is then iterated
 - `.iter(world).next().cloned()` — correct; QueryState::iter takes &World, then next() and cloned() on Option<&BoundEffects> yield Option<BoundEffects>
 - This pattern is safe: query is created (mut borrow), then iterated (immutable borrow) after the exclusive borrow ends via the temporary scope
+
+## Active* Component Query Tuple Size and Method Access (cache-removal refactor — confirmed correct)
+- `CollisionQueryBolt` with 12 elements (including `Option<&'static ActiveSpeedBoosts>`) — within the 15-element QueryData limit; CORRECT
+- `DashQuery` nested tuple with 15 elements in group 1 and 5 in group 2 — outer tuple wraps two inner tuples to avoid exceeding the per-tuple limit; both correct
+- `Option<&'static ActiveSpeedBoosts>` / `Option<&'static ActiveSizeBoosts>` / `Option<&'static ActiveDamageBoosts>` as Optional query data — correct Bevy 0.18 pattern
+- `.map_or(1.0, ActiveSpeedBoosts::multiplier)` on `Option<&ActiveSpeedBoosts>` — function reference form; passes `&ActiveSpeedBoosts` to `fn multiplier(&self) -> f32`; CORRECT Rust
+- Same pattern for `ActiveSizeBoosts::multiplier`, `ActiveDamageBoosts::multiplier`, `ActivePiercings::total` — all correct
+- All three Active* types are `#[derive(Component)]` with a `Vec<f32>` / `Vec<u32>` inner field and a `.multiplier()` / `.total()` method — no tuple struct `.0` field access anywhere in systems
+- Bevy 0.18 QueryData tuple limit is 15 elements per tuple level; nested tuples each count independently

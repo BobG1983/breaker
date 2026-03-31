@@ -233,3 +233,42 @@ type: project
 - `docs/plan/index.md` — phase completion status accurate; no new phases
 - `docs/design/graphics/index.md` modification — references catalog/ which exists on disk; consistent
 - `docs/design/graphics/effects-particles.md` modification — working-tree change; design doc (forward-looking Phase 5 content), not architecture drift
+
+## 2026-03-30 — feature/scenario-coverage Wave 3 review
+
+**Branch:** feature/scenario-coverage
+
+**Files reviewed:**
+- `breaker-game/src/effect/effects/tether_beam/effect.rs` — confirmed chain: bool field, TetherChainBeam, TetherChainActive, maintain_tether_chain
+- `breaker-game/src/effect/core/types/definitions/enums.rs` — full EffectKind enum (all variants incl. Wave 3)
+- `breaker-game/src/effect/core/types/definitions/fire.rs` — 4 fire methods
+- `breaker-game/src/effect/core/types/definitions/reverse.rs` — 4 reverse methods
+- `breaker-game/src/effect/effects/mod.rs` — confirmed anchor, circuit_breaker, mirror_protocol, flash_step registered
+- `breaker-game/src/effect/effects/flash_step.rs` — single file
+- `breaker-game/src/effect/effects/anchor/mod.rs` — directory module
+- `breaker-game/src/effect/effects/circuit_breaker/mod.rs` — directory module
+- `breaker-game/src/effect/effects/mirror_protocol/mod.rs` — directory module
+- `breaker-game/src/effect/effects/spawn_bolts/effect.rs` — confirmed inherit copies from primary bolt
+- `docs/design/effects/tether_beam.md` — chain field and chain mode documented correctly
+- `docs/design/effects/flash_step.md`, `mirror_protocol.md`, `anchor.md`, `circuit_breaker.md`, `spawn_bolts.md` — confirmed correct
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — confirmed 25 variants (no new ones in Wave 3)
+
+**Drifts found and fixed:**
+- `docs/architecture/effects/core_types.md` — TetherBeam variant: `{ damage_mult: f32 }` → added `chain: bool` field
+- `docs/architecture/effects/core_types.md` — EffectKind block: added FlashStep, MirrorProtocol, Anchor, CircuitBreaker variants
+- `docs/architecture/effects/core_types.md` — fire/reverse method count: "3 fire / 2 reverse" → "4 fire / 4 reverse" (fire_breaker_effects and reverse_utility/reverse_breaker_effects added)
+- `docs/architecture/effects/core_types.md` — opening line: `definitions.rs` → `definitions/enums.rs`; EffectSourceChip location updated
+- `docs/architecture/effects/structure.md` — `definitions.rs` → `definitions/` directory module with enums.rs/fire.rs/reverse.rs
+- `docs/architecture/effects/adding_effects.md` — `definitions.rs` → `definitions/enums.rs`; step 3 updated to name fire.rs/reverse.rs
+- `docs/architecture/effects/adding_triggers.md` — `definitions.rs` → `definitions/enums.rs`
+- `docs/architecture/layout.md` — types/ tree updated: definitions.rs → definitions/ directory; flash_step.rs + anchor/circuit_breaker/mirror_protocol/ added; rule updated
+- `docs/architecture/plugins.md` — Actual Structure block: definitions.rs → definitions/ directory; flash_step.rs + anchor/circuit_breaker/mirror_protocol/ added
+- `docs/architecture/content.md` — TetherBeam variant: added chain field; added FlashStep/MirrorProtocol/Anchor/CircuitBreaker variants; both definitions.rs references → definitions/enums.rs
+- `docs/design/terminology/chips.md` — BoundEffects/StagedEffects/RootEffect: `definitions.rs` → `definitions/enums.rs`
+
+**Items confirmed no-drift:**
+- `docs/design/effects/tether_beam.md` — chain field and chain/standard mode sections already present (correct)
+- `docs/design/effects/spawn_bolts.md` — inherit field already documented
+- InvariantKind count — still 25 (no new invariants in Wave 3)
+- `docs/architecture/ordering.md` — maintain_tether_chain is effect-internal (no cross-domain ordering); no update needed
+- `docs/plan/index.md` — no plan entry for Wave 3 scenario coverage; no update needed

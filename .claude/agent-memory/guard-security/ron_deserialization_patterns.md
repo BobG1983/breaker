@@ -170,6 +170,64 @@ in production code.
 - All new .expect()/.unwrap() occurrences are inside #[cfg(test)] modules or
   debug/hot_reload/ (dev-feature only, never in release build).
 
+## Wave 3 audit (2026-03-30, feature/scenario-coverage — tether_beam chain mode, spawn_bolts inherit fix, TetherBeam RON variant)
+
+### TetherBeam chain field serde default — zero-bolt edge case is safe (Info-level)
+- `EffectKind::TetherBeam::chain` uses `#[serde(default)]` → defaults to `false` when omitted.
+- RON serde tests in enums.rs confirm round-trip for both `chain: true` and omitted `chain`.
+- `fire_chain` with zero bolts: `bolts.windows(2)` produces an empty iterator — no beams
+  spawned, but `TetherChainActive` is still inserted with `last_bolt_count: 0`.
+  A malformed RON file or pathological scenario that fires chain mode when no bolts exist
+  produces a dangling resource with zero last_bolt_count. This is not a panic: the
+  `maintain_tether_chain` system re-runs each frame but `bolt_count == 0 == last_bolt_count`
+  so the body is skipped. Resource is removed by `cleanup_tether_chain_resource` on
+  `OnExit(GameState::Playing)`. Benign, but a TetherChainActive resource with no beams
+  and no bolts persists until node exit. Info-level only.
+
+### TetherChainActive resource cleanup: OnExit(GameState::Playing) is correct (Safe)
+- `cleanup_tether_chain_resource` is registered on `OnExit(GameState::Playing)`.
+- `CleanupOnNodeExit` entities (including all TetherBeamComponent entities) are also
+  despawned on `OnExit(GameState::Playing)` in `screen/plugin.rs`.
+- Both resource and beam entities are cleaned up at the same state-exit hook.
+  No race condition between resource removal and entity despawn.
+- `reverse()` for chain mode removes `TetherChainActive` and despawns chain beams
+  immediately at `Until` trigger resolution — this is the normal in-gameplay path.
+  The `OnExit` hook is a safety net for abnormal exits (e.g., game over, back to menu).
+
+### spawn_bolts inherit fix: query_filtered now includes `Without<ExtraBolt>` (Safe)
+- `spawn_bolts/effect.rs:27` — `query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>()`
+- The `Without<ExtraBolt>` filter prevents infinite effect-inheritance chains when
+  `SpawnBolts(inherit: true)` fires on a bolt that is itself an extra bolt.
+- No panic surface: if no primary bolt entity exists the iterator is empty and
+  `bound_effects` is `None` — spawned bolts get no inherited effects. Silent no-op.
+- `lifespan: None` → `BoltLifespan` not inserted → extra bolt lives until node exit.
+  This is correct and intentional.
+
+### damage computation in tick_tether_beam: no zero-bolt-distance guard (Warning-level)
+- `breaker-game/src/effect/effects/tether_beam/effect.rs:220-221`
+  ```rust
+  let beam_vec = pos_b - pos_a;
+  let max_dist = beam_vec.length();
+  let direction = beam_vec.normalize_or_zero();
+  ```
+- If `bolt_a` and `bolt_b` are at the same position, `max_dist = 0.0` and
+  `direction = Vec2::ZERO`. `ray_vs_aabb` is called with `direction = Vec2::ZERO`
+  and `max_dist = 0.0`. This is not a panic — `normalize_or_zero()` prevents NaN —
+  but the ray test result depends on the physics library's handling of a zero-length
+  ray. If `ray_vs_aabb` returns `Some` for a zero-length ray starting inside the
+  AABB, all cells near the coincident bolt positions will be damaged every tick.
+  The `origin_inside` check on line 245 also fires in that case, so damage is
+  delivered regardless. Not a crash, but unexpected behavior when two tether bolts
+  collide to the same pixel. Design-level note: the game likely prevents this via
+  DistanceConstraint or natural physics separation. Warning-level.
+
+### No new RON deserialization panic surface (Safe)
+- `arcwelder.evolution.ron` uses `TetherBeam(damage_mult: 1.5, chain: true)` —
+  both fields are validated f32/bool. No injection risk.
+- `tether_beam_stress.scenario.ron` uses `TetherBeam(damage_mult: 1.5)` — chain
+  defaults to false via serde default. Correct.
+- All scenario RON files loaded via `load_scenario()` which returns `Option` — no panic.
+
 ## feature/scenario-coverage (2026-03-30)
 
 ### New scenario RON files — no new panic risk (Safe)

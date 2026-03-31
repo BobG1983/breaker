@@ -1,85 +1,60 @@
 # 5q: HUD & Gameplay UI
 
-**Goal**: Implement a diegetic HUD — all gameplay information is integrated into the game world. No overlaid panels or dashboards. Timer, lives, and node progress live inside the playfield.
+**Goal**: Implement a diegetic HUD — all gameplay information integrated into the game world. No overlaid panels.
+
+Architecture: `docs/architecture/rendering/hud.md`
 
 ## What to Build
 
-### 1. Timer as Wall Glow
+### 1. Timer Wall Gauge
 
-Current: Plain text number in status panel, proportional font.
+Separate overlay entity on top of the top wall with `timer_wall.wgsl` shader (gauge glow primitive in `rantzsoft_vfx`):
+- `fill_level` uniform (0.0–1.0): full glow left of fill point, fading right
+- `temperature` uniform: color shifts cool → red-orange at <25% time
+- `pulse_speed` uniform: increases at low time for urgency
+- Small monospace Text2d child for numeric readout
+- System in `screen/playing/hud/timer_wall.rs`: spawns on `OnEnter(PlayingState::Active)`, updates fill_level each FixedUpdate from timer resource
 
-Target:
-- Timer is a glow bar along the **top wall** — wall glow intensity/length represents time remaining
-- As time decreases, the glow recedes from both ends toward center (or one end to the other)
-- Color shifts from cool (safe) to red-orange (danger) as time drops below 25%
-- Must be readable in peripheral vision — the player feels the timer without looking at it
-- Exact numeric time displayed as small monospace text integrated into the wall (Data typography, stable, no jitter)
+### 2. Life Orbs
 
-### 2. Lives as Orbs
+N energy orb entities at fixed positions below the breaker:
+- Each orb gets `AttachVisuals` with breaker archetype tint
+- Layout: evenly spaced at fixed y-offset from breaker spawn position
+- Tracking system: orbs follow breaker x-position each FixedUpdate
+- Life loss: rightmost orb plays dissolve recipe (Disintegrate + SparkBurst) and despawns
+- Life gain (Second Wind): new orb materializes with birth recipe (ExpandingRing + GlowMotes inward)
+- System in `screen/playing/hud/life_orbs.rs`
 
-Current: `LivesCount` tracked but never displayed.
+### 3. Node Progress Ticks
 
-Target:
-- Lives displayed as small energy orbs near the breaker or along the bottom edge
-- Glanceable without looking away from bolt
-- Visual depletion on life loss: orb dims and dissolves (connects to 5l failure VFX)
-- Orb color follows breaker archetype accent
+Tick marks on one side wall showing progress within current act/section:
+- N ticks where N = nodes until next boss (resets each boss clear)
+- Scales for infinite runs — always shows finite "progress within current section"
+- Current node: bright glow. Completed: dim. Upcoming: very dim outline.
+- Small entity_glow rectangles at fixed wall positions
+- System in `screen/playing/hud/node_progress.rs`: reads RunState, spawns ticks on enter, updates brightness on node clear, re-spawns on section transition
 
-### 3. Node Progress in Playfield Frame
+### 4. Side Panel Removal
 
-Current: `RunState.node_index` tracked but not displayed.
+- Remove "AUGMENTS" left panel
+- Remove status right panel
+- Playfield takes full width with thin wall borders (from 5j)
 
-Target:
-- Node progress integrated into the playfield frame (e.g., segment markers along a wall)
-- Subtle — does not compete with gameplay
-- Current node visually distinct from completed/upcoming nodes
+### 5. Monospace Font
 
-### 4. Active Chips (Minimal)
-
-Current: Empty "AUGMENTS" left panel container.
-
-Target:
-- The build is primarily communicated through entity visual state (bolt appearance, breaker aura, modifier effects from 5n)
-- Optionally: small, subtle indicators along a playfield edge showing chip count per category
-- Low priority — the visual modifier system (5n) IS the chip display
-- Remove the empty side panel container
-
-### 5. Side Panel Removal
-
-With diegetic HUD, the side panels no longer serve a purpose:
-- Remove the "AUGMENTS" left panel
-- Remove the status right panel
-- Playfield takes full width (or near-full with thin glowing wall borders from 5j)
-
-### 6. Data Font (Monospace)
-
-Current: No monospace font in assets.
-
-Target:
-- Add monospace font for timer numeric display, seed display, and any numeric data
-- Timer and seed MUST use monospace for readability
+Add monospace font asset for timer readout, seed display, numeric data. Timer and seed MUST use monospace for readability.
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5f (temperature palette for wall tinting), 5j (wall meshes — timer integrates into top wall)
-- **Enhanced by**: 5o (glitch text shader could apply to node progress indicators)
+- **Requires**: 5c (crate), 5f (temperature for timer color), 5j (wall entities for timer overlay positioning)
 - DR-1 resolved: Diegetic/Integrated
-
-## What This Step Builds
-
-- Diegetic timer (top wall glow bar + small monospace readout, color shifts at danger thresholds)
-- Lives display (energy orbs near breaker, archetype-tinted, dissolve on loss)
-- Node progress (segment markers in playfield frame)
-- Side panel removal (replaced by diegetic elements)
-- Monospace data font asset
-- Active chip display via entity visual state (builds on 5n visual modifier system)
 
 ## Verification
 
-- Timer is visible as wall glow bar and monospace readout
-- Timer glow changes color at danger thresholds
-- Lives orbs visible near breaker, deplete on loss
-- Node progress visible in playfield frame
+- Timer visible as wall gauge with fill level and monospace readout
+- Timer color shifts at danger thresholds
+- Life orbs visible, track breaker, dissolve on loss, materialize on gain
+- Node progress ticks visible, update on clear, reset on section transition
 - No side panels remain
-- All HUD info readable without distracting from gameplay
+- All HUD readable without distracting from gameplay
 - All existing tests pass

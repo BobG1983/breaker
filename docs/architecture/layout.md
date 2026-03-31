@@ -93,9 +93,13 @@ src/effect/
 ├── core/                  # Core types (NOT a sub-domain — no plugin.rs)
 │   ├── mod.rs             # Re-exports from types/
 │   └── types/             # Directory module (split from types.rs — has tests)
-│       ├── mod.rs         # Re-exports from definitions.rs
-│       └── definitions.rs # Trigger, ImpactTarget, Target, AttractionType, RootEffect,
-│                          #   EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
+│       ├── mod.rs         # Re-exports from definitions/
+│       └── definitions/   # Directory module (split from definitions.rs for fire/reverse line count)
+│           ├── mod.rs     # Re-exports from enums.rs
+│           ├── enums.rs   # Trigger, ImpactTarget, Target, AttractionType, RootEffect,
+│           │              #   EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
+│           ├── fire.rs    # EffectKind::fire() + 3 private helpers
+│           └── reverse.rs # EffectKind::reverse() + 3 private helpers
 ├── effects/               # Per-effect modules (NOT a sub-domain — no plugin.rs)
 │   ├── mod.rs             # pub mod declarations + register() dispatcher + spawn_extra_bolt helper
 │   ├── speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
@@ -121,7 +125,11 @@ src/effect/
 │   ├── spawn_phantom/     # Directory module (split for tests)
 │   ├── entropy_engine/    # Directory module (split for tests)
 │   ├── second_wind/       # Directory module (split for tests)
-│   └── random_effect/     # Directory module
+│   ├── random_effect/     # Directory module
+│   ├── flash_step.rs      # fire(), reverse(), register()
+│   ├── mirror_protocol/   # Directory module (split for tests)
+│   ├── anchor/            # Directory module (split for tests)
+│   └── circuit_breaker/   # Directory module (split for tests)
 └── triggers/              # Bridge systems (one file or dir per trigger type — NOT a sub-domain)
     ├── mod.rs             # pub mod declarations + register() dispatcher
     ├── evaluate/          # Directory module — shared chain evaluation helpers (has tests)
@@ -150,10 +158,10 @@ src/effect/
 **Rules:**
 - One module per effect type (either a single `.rs` file or a directory module split per the System File Split Convention above). The module owns any active-state `Component`s, plus `fire()`, `reverse()`, and `register(app: &mut App)` free functions.
 - `effects/` and `triggers/` and `core/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectPlugin` registers all systems through `effects::register(app)` and `triggers::register(app)`.
-- `core/types/definitions.rs` holds all shared data types: `Trigger`, `ImpactTarget`, `Target`, `AttractionType`, `RootEffect`, `EffectNode`, `EffectKind`, `BoundEffects`, `StagedEffects`, `EffectSourceChip`. No observers, no systems.
+- `core/types/definitions/enums.rs` holds all shared data types: `Trigger`, `ImpactTarget`, `Target`, `AttractionType`, `RootEffect`, `EffectNode`, `EffectKind`, `BoundEffects`, `StagedEffects`, `EffectSourceChip`. No observers, no systems. `definitions/fire.rs` and `definitions/reverse.rs` hold the dispatch methods.
 - `commands.rs` holds `EffectCommandsExt` — the `Commands` extension trait for queuing fire/reverse/transfer operations.
 - `BreakerDefinition` lives in `breaker/definition.rs`. `BreakerRegistry` lives in `breaker/registry.rs`.
-- Adding a new leaf effect = new module in `effects/` (file or dir) + `pub mod` entry in `effects/mod.rs` + variant in `EffectKind` + `fire()`/`reverse()` arms in `EffectKind` match + `register()` call in `effects/mod.rs::register()`.
+- Adding a new leaf effect = new module in `effects/` (file or dir) + `pub mod` entry in `effects/mod.rs` + variant in `EffectKind` in `definitions/enums.rs` + `fire()`/`reverse()` arms in `definitions/fire.rs` and `definitions/reverse.rs` + `register()` call in `effects/mod.rs::register()`.
 - Adding a new trigger = new module in `triggers/` (file or dir) + `pub mod` in `triggers/mod.rs` + `register()` call in `triggers/mod.rs::register()`.
 - Adding a new breaker = new RON file only (if using existing trigger fields and effects).
 - This layout applies **only** to the `effect/` domain. Standard domains use the canonical category-based layout.

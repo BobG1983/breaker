@@ -1,5 +1,5 @@
 - [performance-baseline.md](performance-baseline.md) — Phase 1 entity scale, quadtree allocation costs, confirmed efficient/inefficient patterns, placeholder systems to watch
-- [phase3-stat-effects.md](phase3-stat-effects.md) — Phase 3 recalculate system analysis: run_if gap FIXED (plugin.rs line 13); unconditional recalc and Vec alloc minor; entity scale (0-5 entities)
+- [phase3-stat-effects.md](phase3-stat-effects.md) — CACHE REMOVAL: all 6 Effective* components and recalculate_* systems REMOVED; .multiplier() called inline at ~5 hot-path sites; net win at all scales
 - [phase4-runtime-effects.md](phase4-runtime-effects.md) — Phase 4 shockwave/pulse/explode/attraction/second_wind: quadtree patterns, archetype impact, HashSet allocation timing, entity scale
 - [phase5-complex-effects.md](phase5-complex-effects.md) — Phase 5 chain_lightning/piercing_beam/tether_beam/spawn_bolts/entropy_engine: all run_if gaps FIXED; Transform vs Position2D FIXED; per-arc allocs, per-tick HashSet, archetype impact
 - [source-chip-threading.md](source-chip-threading.md) — source_chip/EffectSourceChip threading: archetype impact, chip_attribution alloc, per-DamageCell clone, DamageVisualQuery shield change, tether HashSet

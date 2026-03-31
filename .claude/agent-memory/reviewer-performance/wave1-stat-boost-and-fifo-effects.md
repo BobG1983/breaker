@@ -23,20 +23,19 @@ Pattern in all four files:
   if let Some(mut active) = world.get_mut::<Active*>(entity) { active.0.push(...); }
 
 Performance verdict: CLEAN. fire() is episodic (chip activation, not per-frame).
-The second `is_none()` check is dead code in both branches:
-  - If first insert ran: both components present → second branch false.
-  - If first insert skipped: Effective* already present → second branch false.
-No performance impact (single world.get on one entity during episodic fire). Note for cleanup
-when files are next touched.
+The second `is_none()` check is a defensive guard for entities that have Active* but not
+Effective* (half-initialized via external insertion). This IS reachable — see reviewer-quality
+wave1-lazy-init-fifo-patterns.md which correctly documents this as intentional.
+No performance impact (single world.get on one entity during episodic fire).
 
 quick_stop.rs does NOT have the lazy init pattern — it assumes components are pre-inserted.
 This is intentional (different registration pattern). Not a bug or gap.
 
 ## recalculate_* systems
 
-recalculate_speed/damage/size/bump_force all run unconditionally every FixedUpdate tick in
-PlayingState::Active. No run_if(on change) guard. This is the existing pattern, already
-recorded in phase3-stat-effects.md as Minor/deferred. Wave 1 does not change this.
+REMOVED as of the cache-removal refactor (same branch). All 6 recalculate_* systems and all
+6 Effective* components are gone. Consumers call .multiplier() inline. See
+phase3-stat-effects.md for the updated call-site inventory and net-cost analysis.
 
 ## GravityWell FIFO (gravity_well/effect.rs)
 

@@ -9,10 +9,7 @@
         "Basic Piercing Shot",
         "Basic Piercing Shot",
         "Basic Piercing Shot",
-        "Slight Bolt Speed",
-        "Slight Bolt Speed",
-        "Slight Bolt Speed",
-        "Slight Bolt Speed",
+        "Basic Surge",
     ]),
-    expected_offerings: Some(["Railgun"]),
+    expected_offerings: Some(["Supernova"]),
 )

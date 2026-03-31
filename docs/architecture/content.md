@@ -27,10 +27,10 @@ See `docs/design/decisions/chip-template-system.md` for the full design decision
 
 ### Unified Effect Model
 
-All chip and breaker effects are `EffectNode` trees referencing `EffectKind` — the actual action enum. There is no separate `Effect` enum. The canonical location is `effect/core/types/definitions.rs`.
+All chip and breaker effects are `EffectNode` trees referencing `EffectKind` — the actual action enum. There is no separate `Effect` enum. The canonical location is `effect/core/types/definitions/enums.rs`.
 
 ```rust
-// effect/core/types/definitions.rs
+// effect/core/types/definitions/enums.rs
 
 pub enum EffectNode {
     When { trigger: Trigger, then: Vec<EffectNode> },
@@ -58,7 +58,7 @@ pub enum EffectKind {
     Explode { range: f32, damage_mult: f32 },
     ChainLightning { arcs: u32, range: f32, damage_mult: f32, #[serde(default = "default_chain_lightning_arc_speed")] arc_speed: f32 },
     PiercingBeam { damage_mult: f32, width: f32 },
-    TetherBeam { damage_mult: f32 },
+    TetherBeam { damage_mult: f32, #[serde(default)] chain: bool },
 
     // Spawn effects
     SpawnBolts { #[serde(default = "one")] count: u32, #[serde(default)] lifespan: Option<f32>, #[serde(default)] inherit: bool },
@@ -71,6 +71,12 @@ pub enum EffectKind {
     SecondWind,                        // unit variant — no fields
     LoseLife,
     TimePenalty { seconds: f32 },
+
+    // Breaker utility effects
+    FlashStep,                             // unit variant — teleport on reversal-during-settling
+    MirrorProtocol { #[serde(default)] inherit: bool },
+    Anchor { bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32 },
+    CircuitBreaker { bumps_required: u32, #[serde(default = "one")] spawn_count: u32, #[serde(default)] inherit: bool, shockwave_range: f32, shockwave_speed: f32 },
 
     // Meta effects
     RandomEffect(Vec<(f32, EffectNode)>),
@@ -88,7 +94,7 @@ When a player selects a chip, the chip dispatch system pushes the chip's `Effect
 - **AoE/spawn effects** (`Shockwave`, `ChainLightning`, `Explode`, etc.): `fire()` spawns a request entity or directly damages nearby cells via `DamageCell` message. These carry chip attribution via `EffectSourceChip` component for damage tracking.
 - **Shield**: `fire()` inserts or adds charges to `ShieldActive` on the entity. Charge decrement happens in `bolt_lost` (breaker entity) and `handle_cell_hit` (cell entities) — not in a separate effect system.
 
-**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types/definitions.rs` + new module in `effect/effects/` + `register()` call, requires recompile.
+**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types/definitions/enums.rs` + new module in `effect/effects/` + fire/reverse arms in `definitions/fire.rs` and `definitions/reverse.rs` + `register()` call, requires recompile.
 
 ### Registries
 

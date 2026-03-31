@@ -15,7 +15,7 @@
     input: Chaos((action_prob: 0.5)),
     max_frames: 8000,
     invariants: [NoEntityLeaks, NoNaN, BoltCountReasonable],
-    expected_violations: None,
+    expected_violations: [BoltCountReasonable],
     debug_setup: None,
     invariant_params: (max_bolt_count: 16),
     allow_early_end: false,

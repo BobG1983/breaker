@@ -30,7 +30,7 @@ Nova Lance is the sole beam evolution.
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5d (post-processing: bloom, distortion, chromatic aberration), 5k (screen effects: shake, flash), 5m (base Piercing Beam VFX as reference — evolution beam is a tier above)
+- **Requires**: 5c (rantzsoft_vfx crate), 5d (post-processing: bloom, distortion, chromatic aberration), 5k (screen effects: shake, flash), 5m (base Piercing Beam VFX as reference — evolution beam is a tier above)
 - DR-9 resolved: Nova Lance VFX corrected to match beam fantasy
 
 ## Verification

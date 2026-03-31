@@ -4,8 +4,8 @@ description: Crate versions at last audit (2026-03-30) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-03-30 (updated 2026-03-30, rantzsoft_physics2d added to breaker-scenario-runner)
-Branch: develop
+Audit date: 2026-03-30 (updated 2026-03-30, Wave 3 / feature/scenario-coverage — no new deps)
+Branch: feature/scenario-coverage
 
 ## Direct Dependencies
 
@@ -29,7 +29,7 @@ Branch: develop
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - breaker (path, default-features = false)
 - rantzsoft_spatial2d (path)
-- rantzsoft_physics2d (path)  ← NEW as of this audit
+- rantzsoft_physics2d (path)
 - clap 4 (features = ["derive"])
 - tracing 0.1
 - tracing-subscriber 0.3 (features = ["env-filter"])
@@ -56,7 +56,7 @@ Branch: develop
 - quote 1
 - proc-macro2 1 (ignored by machete — required for proc-macro crates)
 
-## Resolved versions (from Cargo.lock — verified 2026-03-30)
+## Resolved versions (from cargo tree — verified 2026-03-30)
 - rand 0.9.2, rand_chacha 0.9.0
 - bevy_egui 0.39.1
 - iyes_progress 0.16.0
@@ -65,13 +65,15 @@ Branch: develop
 - bitflags v1.3.2 + v2.11.0 (dual — known wontfix)
 - getrandom v0.3.4 + v0.4.2 (dual — known wontfix)
 - foldhash v0.1.5 + v0.2.0 (dual — known wontfix)
-- r-efi v5.3.0 + v6.0.0 (dual — platform-conditional, WASM+Android targets only; not loaded on macOS)
+- read-fonts v0.35.0 + v0.36.0 (dual — known wontfix; versions bumped within same pattern)
+- skrifa v0.37.0 + v0.39.0 (dual — known wontfix; versions bumped within same pattern)
 
-## Changes since 2026-03-30 prior audit
-- rantzsoft_physics2d added to breaker-scenario-runner/Cargo.toml
-  Usage confirmed: Aabb2D imported in frame_mutations.rs and check_aabb_matches_entity_dimensions.rs
-  No new duplicate transitive deps introduced by this addition.
-- ron 0.12.1 now available (was 0.12.0 at prior audit) — patch-only, see known-findings for action item.
+## Changes since prior audit (2026-03-30 develop audit)
+- No new direct dependencies added in Wave 3 / feature/scenario-coverage branch.
+- quick-error v1.2.3 + v2.0.1 duplicate is GONE (proptest likely removed or tree changed).
+- read-fonts: versions bumped from previous audit values — pattern unchanged (still wontfix).
+- skrifa: versions bumped from previous audit values — pattern unchanged (still wontfix).
+- All Cargo.toml files confirmed unchanged from develop snapshot.
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)
@@ -82,18 +84,16 @@ Branch: develop
 ## Transitive Advisory
 - paste 1.0.15 (RUSTSEC-2024-0436, unmaintained) — pulled in by metal → wgpu-hal → wgpu → bevy_render
   No actionable fix: upstream Bevy 0.18 owns this dep. Will resolve with Bevy upgrade.
-  Confirmed still present 2026-03-30 via cargo deny check advisories.
 
 ## License Compliance (as of audit)
-- cargo deny check licenses: PASS (one harmless warning: Unicode-DFS-2016 pre-allowlisted but not currently used)
-- r-efi (LGPL-2.1-or-later): deny.toml exception present; r-efi is platform-target-only (Android/WASM)
-  Not loaded on macOS. Exception is appropriate; flag for review if project targets Android/WASM.
-- self_cell (GPL-2.0-only): deny.toml exception present; self_cell → cosmic-text → bevy_text → bevy
-  This is a runtime dep on all platforms. GPL-2.0-only exception requires scrutiny — see known-findings.md.
+- cargo deny check licenses: PASS
+- One harmless warning: Unicode-DFS-2016 pre-allowlisted but not currently matched by any dep
+- r-efi (LGPL-2.1-or-later): deny.toml exception present; platform-target-only (Android/WASM)
+- self_cell (GPL-2.0-only): deny.toml exception present; runtime dep via cosmic-text → bevy_text
 
 ## Feature Flag Audit (as of audit)
 - bevy/dynamic_linking: ONLY in .cargo/config.toml aliases; NOT in any Cargo.toml or release profile. CLEAN.
-- bevy features ("2d", "serialize"): appropriate; serialize is needed for RON/serde scene support.
+- bevy features ("2d", "serialize"): appropriate; serialize needed for RON/serde scene support.
 - bevy_egui: optional behind "dev" feature; not included in release/scenario builds. CLEAN.
 - iyes_progress: optional behind "progress" feature in rantzsoft_defaults. CLEAN.
 - hot-reload: feature-gated in rantzsoft_defaults; activated by breaker-game dev feature. CLEAN.

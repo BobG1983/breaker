@@ -106,6 +106,42 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `RootEffect` entry in chips.md: updated file reference from `effect/definition.rs` to `effect/core/types/definitions.rs`.
 - `plan/index.md`: Runtime Effects updated from "In Progress" to "Done" (all 24 effects implemented and merged).
 
+## Confirmed Correct / Fixed (Wave 3 / feature/scenario-coverage, 2026-03-30)
+
+**IMPORTANT: `definitions.rs` was further split into `definitions/` directory module:**
+- `effect/core/types/definitions.rs` is now `effect/core/types/definitions/` with `mod.rs` + `enums.rs` + `fire.rs` + `reverse.rs`.
+- `enums.rs` holds all types (Trigger, EffectKind, EffectNode, etc.); `fire.rs`/`reverse.rs` hold dispatch methods.
+- All docs now reference `effect/core/types/definitions/enums.rs` (not `definitions.rs`).
+- Updated: `core_types.md`, `layout.md`, `plugins.md`, `structure.md`, `adding_effects.md`, `adding_triggers.md`, `content.md`, `chips.md`.
+
+**New Wave 3 effects (4 additions to EffectKind):**
+- `TetherBeam { damage_mult: f32, #[serde(default)] chain: bool }` — chain field added. Chain mode connects all bolts instead of spawning new ones.
+- `FlashStep` — unit variant. Inserts `FlashStepActive` on breaker. Reversal removes it.
+- `MirrorProtocol { #[serde(default)] inherit: bool }` — spawns a mirrored bolt based on last impact position/side.
+- `Anchor { bump_force_multiplier, perfect_window_multiplier, plant_delay }` — plant mechanic. Components: `AnchorActive`, `AnchorTimer`, `AnchorPlanted`.
+- `CircuitBreaker { bumps_required, spawn_count, inherit, shockwave_range, shockwave_speed }` — charge-and-release. Component: `CircuitBreakerCounter`.
+
+**New types in tether_beam module:**
+- `TetherChainBeam` — marker on chain-mode beam entities.
+- `TetherChainActive` — resource inserted when chain mode is active.
+- `maintain_tether_chain` — FixedUpdate system (.run_if(resource_exists::<TetherChainActive>)).before(tick_tether_beam)).
+
+**fire/reverse split is now 4 methods each** (not 3 fire / 2 reverse):
+- fire: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` → `fire_breaker_effects`
+- reverse: `reverse` → `reverse_aoe_and_spawn` → `reverse_utility` → `reverse_breaker_effects`
+
+**Design docs already existed and are correct:**
+- `docs/design/effects/tether_beam.md` — documents chain: bool field correctly (standard/chain mode sections).
+- `docs/design/effects/flash_step.md` — correct.
+- `docs/design/effects/mirror_protocol.md` — correct.
+- `docs/design/effects/anchor.md` — correct.
+- `docs/design/effects/circuit_breaker.md` — correct.
+- `docs/design/effects/spawn_bolts.md` — inherit field already documented.
+
+**New layout modules confirmed as directory modules:**
+- `anchor/`, `circuit_breaker/`, `mirror_protocol/` — directory modules.
+- `flash_step.rs` — single file.
+
 ## RON Format Confirmed (2026-03-30)
 
 - Chip template fields: `common:`, `uncommon:`, `rare:`, `legendary:` — NOT `Some((...))`; absence means the slot is not present

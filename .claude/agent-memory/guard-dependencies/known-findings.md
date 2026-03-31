@@ -36,8 +36,10 @@ type: project
 ### hashbrown v0.15.5 + v0.16.1 dual versions
 - Two Bevy subcrates using different hashbrown minors. Not actionable.
 
-### read-fonts / skrifa dual versions
+### read-fonts v0.35.0 + v0.36.0 / skrifa v0.37.0 + v0.39.0 dual versions
 - Parley text layout stack split between two font crate generations. Owned by Bevy.
+- Paths: v0.35.0/v0.37.0 via swash → cosmic-text; v0.36.0/v0.39.0 via harfrust → cosmic-text
+- Versions updated as of 2026-03-30 audit; pattern unchanged and not actionable.
 
 ### core-graphics-types v0.1.3 + v0.2.0 dual versions
 - macOS graphics transitive chain. Owned by Bevy/wgpu. Not actionable.
@@ -62,13 +64,6 @@ type: project
 - v0.14.0: bevy_egui, bevy_math
 - Rationale: bindgen is a build-time-only dep for the macOS audio stack. The two versions don't
   coexist in the final binary (build deps compile separately). Not actionable.
-- Action: None.
-
-### quick-error v1.2.3 + v2.0.1 dual versions
-- v1.2.3: rusty-fork → proptest (dev-only dependency)
-- v2.0.1: tiff → image → Bevy rendering
-- Rationale: v1 is dev-only (proptest) and v2 is production rendering. No runtime conflict.
-  Not actionable — both owned by upstream crates.
 - Action: None.
 
 ### rustc-hash v1.1.0 + v2.1.1 dual versions

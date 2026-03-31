@@ -89,4 +89,4 @@ CellImpactWall (cells/messages.rs)
 DamageCell (cells/messages.rs)
 
 One collision message → four triggers (Impact(X) global + Impacted(X) targeted) —
-but all trigger bridges are stubs, so no trigger evaluation happens yet.
+all trigger bridges are REAL as of feature/source-chip-shield-absorption.

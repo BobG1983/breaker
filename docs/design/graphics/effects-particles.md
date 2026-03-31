@@ -101,7 +101,7 @@ Each evolution has **completely unique, bespoke VFX**. Evolutions are the ultima
 | Gravity Well | Larger/more intense distortion lens — wider radius (160), stronger warping, more glow motes, 4 active wells. |
 | Second Wind | Invisible bottom wall materializes with bright flash (HDR >2.0) on save. Brief slow-mo (~0.1s). Wall visible momentarily then fades. |
 | Entropy Engine | Prismatic flash per cell destroy (~0.1s, spectral cycle), then selected random effect fires. Bolt has persistent prismatic shimmer. No counter gauge. |
-| Chain Reaction | Recursive shockwaves with escalating intensity per generation depth. Chromatic aberration scales with depth. Screen shake scales with total chain size. |
+| Shock Chain | Recursive shockwaves with escalating intensity per generation depth. Chromatic aberration scales with depth. Screen shake scales with total chain size. |
 | Circuit Breaker | Three-node triangle charge indicator near bolt. Each perfect bump lights a node. On completion: nodes flash white-hot, collapse, circuit closes. Spawn + amplified shockwave. Screen flash + medium shake. |
 | Split Decision | Fission effect: cell glow splits along axis, halves condense into bolt orbs (~0.15s). Energy filaments connect during split. Spawned bolts inherit parent visual modifiers. Prismatic birth trails. |
 | ArcWelder | Crackling electric tether beams connecting ALL active bolts in sequence. Electric corona on all connected bolts. Chain forms visible electric web when many bolts active. |

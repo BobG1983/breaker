@@ -40,7 +40,6 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
 | `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_death`, `bridge_timer_threshold` |
-| `EffectSystems::Recalculate` | `effect/sets.rs` | `recalculate_speed`, `recalculate_damage`, `recalculate_piercing`, `recalculate_size`, `recalculate_bump_force`, `recalculate_quick_stop` — unordered relative to gameplay chain; `run_if(PlayingState::Active)` |
 | `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
@@ -115,11 +114,6 @@ rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree
     <- shockwave_collision .after(tick_shockwave)
                            .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
 
-EffectSystems::Recalculate
-  (recalculate_speed, recalculate_damage, recalculate_piercing,
-   recalculate_size, recalculate_bump_force, recalculate_quick_stop)
-  [effect domain — unordered relative to gameplay chain; reads Active* from previous frame]
-
 move_breaker .after(update_bump)
   BreakerSystems::Move
     <- (hover_bolt, prepare_bolt_velocity) .after(BreakerSystems::Move)
@@ -160,7 +154,7 @@ move_breaker .after(update_bump)
                [effect domain, unordered relative to physics chain]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). `EffectSystems::Recalculate` converts `Active*` stacks into `Effective*` scalars (`EffectiveSpeedMultiplier`, `EffectiveDamageMultiplier`, `EffectivePiercing`, `EffectiveSizeMultiplier`, `EffectiveBumpForce`, `EffectiveQuickStop`) — it runs unordered relative to the gameplay chain, reading Active* state that is stable during gameplay (Active* vecs only change at chip selection between nodes). Then breaker moves, bolt velocity is prepared, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, bolt velocity is prepared, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion

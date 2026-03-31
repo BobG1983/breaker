@@ -33,6 +33,20 @@ type: project
 - `BoltSystems::CellCollision` — tags `bolt_cell_collision` (added when stat-effects needed ordering anchor)
 - `BreakerSystems::UpdateState` — tags `update_breaker_state`
 
+## Wave 3 New Types (feature/scenario-coverage)
+
+- `TetherChainBeam` — marker component on chain-mode beam entities (distinguishes from standard TetherBeamComponent)
+- `TetherChainActive` — resource inserted when TetherBeam chain mode is active; stores damage_mult, effective_damage_multiplier, source_chip, last_bolt_count
+- `maintain_tether_chain` — FixedUpdate system; rebuilds chain beams when bolt count changes; gated on resource_exists::<TetherChainActive>; runs before tick_tether_beam
+- `FlashStepActive` — marker component inserted by FlashStep::fire() on breaker entity
+- `AnchorActive { bump_force_multiplier, perfect_window_multiplier, plant_delay }` — config component for Anchor effect
+- `AnchorTimer(f32)` — countdown timer; inserted when breaker stops moving
+- `AnchorPlanted` — marker inserted when AnchorTimer reaches zero
+- `CircuitBreakerCounter { remaining, config }` — counter component for CircuitBreaker effect
+- `CircuitBreakerConfig { bumps_required, spawn_count, inherit, shockwave_range, shockwave_speed }` — config struct in circuit_breaker module
+- `LastImpact { position: Vec2, side: ImpactSide }` — component on bolts (written by collision systems); read by MirrorProtocol::fire()
+- `ImpactSide` — enum (Top, Bottom, Left, Right); used by MirrorProtocol
+
 ## ChainBolt Runtime Components (runtime-effects phase)
 
 - `ChainBoltMarker(Entity)` — on chain bolt entity, pointing to its anchor entity

@@ -5,8 +5,8 @@ type: project
 ---
 
 Two effect domain runtime systems write `Velocity2D` on bolt entities:
-- `apply_gravity_pull` in `effect/effects/gravity_well.rs` (line 89)
-- `apply_attraction` in `effect/effects/attraction/effect.rs` (line 88)
+- `apply_gravity_pull` in `effect/effects/gravity_well/effect.rs` (see FixedUpdate registration in gravity_well/mod.rs or plugin.rs)
+- `apply_attraction` in `effect/effects/attraction/effect.rs`
 
 These are FixedUpdate systems (not fire() functions), running each tick to continuously modify bolt velocity. Velocity2D is a rantzsoft_spatial2d component carried by bolt entities.
 

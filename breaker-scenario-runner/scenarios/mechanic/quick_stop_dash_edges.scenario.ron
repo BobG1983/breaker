@@ -3,7 +3,7 @@
 // breaker reaches edges frequently. The adversarial conditions: rapid direction reversals
 // at wall edges, dash attempts mid-deceleration, and QuickStop multiplier stacking if
 // reverse() is missed. If the breaker position is not clamped after a dash that overshoots,
-// BreakerPositionClamped fires. If EffectiveQuickStop accumulates without reversal,
+// BreakerPositionClamped fires. If ActiveQuickStops accumulates without reversal,
 // the breaker freezes in a degenerated state and BreakerInBounds may fire on the next
 // dash. NoNaN covers f32 corruption in velocity/position under extreme deceleration.
 // 5000 frames of high-chaos input maximises edge-case breaker state machine transitions.

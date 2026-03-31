@@ -1,8 +1,16 @@
 ---
 name: Effect System Coverage Map
-description: Which effects/triggers have scenario coverage and which are completely untested — updated post-branch-3-new-invariants-8-new-scenarios
+description: Which effects/triggers have scenario coverage and which are completely untested — updated Wave 3 (tether chain mode, spawn_bolts inherit fix, maintain_tether_chain)
 type: project
 ---
+
+## Wave 3 New Mechanics — Coverage Status (feature/scenario-coverage branch)
+
+| Mechanic | Unit tests | Scenario coverage | Quality |
+|----------|-----------|-------------------|---------|
+| TetherBeam chain mode (`chain: true`) | maintain_chain_tests.rs — thorough | NONE — tether_beam_stress only exercises standard mode (`chain: false`, `damage_mult: 1.5`) | MISSING |
+| SpawnBolts inherit fix | fire_inherit.rs — thorough | spawn_bolts_stress uses `inherit: true` but only tests BoltCountReasonable/NoEntityLeaks/BoltInBounds/NoNaN — no invariant verifies inherited BoundEffects actually fire on spawned bolts | WEAK |
+| maintain_tether_chain | maintain_chain_tests.rs — thorough (bolt lost, bolt spawned, no-op, resource absent, rebuild props, all-dead, repair-from-zero) | NONE — no scenario exercises TetherChainActive dynamic rebuild under chaos | MISSING |
 
 ## Effects with Scenario Coverage (develop branch state, post 3-invariant / 8-scenario branch)
 
@@ -26,7 +34,8 @@ type: project
 | Pulse | pulse_accumulation_stress | Good |
 | Explode | explode_chaos | Good |
 | PiercingBeam | piercing_beam_stress | Good |
-| TetherBeam | tether_beam_stress | Good |
+| TetherBeam (standard mode) | tether_beam_stress | Good — standard mode only |
+| TetherBeam (chain mode) | NONE | MISSING — chain mode never exercised by any scenario |
 | BumpForce | bump_force_stress | Good |
 | RampingDamage | ramping_damage_reset | Weak — still only NoNaN+BoltInBounds; no monotonicity invariant |
 | QuickStop | quick_stop_dash_edges | Good |

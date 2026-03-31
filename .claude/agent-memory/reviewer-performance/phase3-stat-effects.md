@@ -1,47 +1,70 @@
 ---
 name: Phase 3 stat-effects performance analysis
-description: Analysis of 6 recalculate systems added in Phase 3 (feature/stat-effects): entity scale, query patterns, archetype impact (run_if gap FIXED)
+description: Analysis of Active*/Effective* components and recalculate systems (feature/stat-effects through cache-removal refactor)
 type: project
 ---
 
 ## Phase 3 Entity Scale
 
-The 6 Active*/Effective* component pairs target bolt and breaker entities only:
+The Active* components target bolt and breaker entities only:
 - Bolt: 1 normally, up to ~4 with chain-bolt
 - Breaker: 1
 
-So each recalculate query matches at most 5 entities in worst case. This is the correct scale for severity calibration.
+At most 5 entities in worst case.
 
-## How Active* Components Are Pre-Inserted
+## Cache Removal Refactor (2026-03-30)
 
-`fire()` for each stat effect does `world.get_mut::<Active*>(entity)` — push only if component already exists. The component must be pre-inserted at spawn time. Bolt spawn (`spawn_bolt.rs`) and breaker init (`init_breaker_params.rs`) do NOT insert them — they are inserted at chip dispatch time. This means the recalculate queries match ZERO entities until a chip fires. This is significant: 6 queries running over zero entities every FixedUpdate frame — trivial cost now but the `run_if` gap is still worth noting for correctness.
+All 6 `Effective*` cache components (`EffectiveSpeedMultiplier`, `EffectiveDamageMultiplier`,
+`EffectiveSizeMultiplier`, `EffectiveBumpForceMultiplier`, `EffectiveQuickStopMultiplier`,
+`EffectivePiercingTotal`) and all 6 `recalculate_*` systems have been REMOVED.
 
-## run_if Gap — FIXED (2026-03-30)
+Consumers now call `.multiplier()` inline at point of use. EffectPlugin no longer has
+`EffectSystems::Recalculate` — the `sets.rs` file only defines `EffectSystems::Bridge`.
 
-`EffectPlugin::build()` now configures `EffectSystems::Recalculate.run_if(in_state(PlayingState::Active))` (effect/plugin.rs line 13). Confirmed by code inspection. The previously flagged minor gap is resolved — recalculate systems no longer run during pause, ChipSelect, or non-playing states.
+## Hot-Path Call Sites for .multiplier()
 
-## Unconditional Recalculation: No Change Detection
+These are the FixedUpdate call sites (all confirmed by code inspection):
 
-All 6 recalculate systems run unconditionally every frame — they call `.multiplier()` or `.total()` on every matching entity regardless of whether Active* changed. No `Changed<Active*>` filter. At 1-5 entities, unconditional iteration costs nothing measurable. If entity count grows (Phase 5+), change detection would be the right fix.
+- `prepare_bolt_velocity` — `active_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier)` — once per bolt
+- `bolt_cell_collision` — `damage_mult.map_or(1.0, ActiveDamageBoosts::multiplier)` — once per bolt BEFORE the CCD bounce loop (not inside it)
+- `bolt_breaker_collision` — `active_speed_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier)` — once per bolt; `size_mult.map_or(1.0, ActiveSizeBoosts::multiplier)` — once per breaker
+- `move_breaker` — `ActiveSpeedBoosts::multiplier` once, `ActiveSizeBoosts::multiplier` once — 1 breaker entity
+- `update_breaker_state` (dash) — `ActiveSpeedBoosts::multiplier` once, `ActiveSizeBoosts::multiplier` once — 1 breaker entity
 
-**Why:** Minor at current scale. Would become Moderate at 50+ affected entities.
+Performance verdict: CLEAN. `.multiplier()` is `iter().product()` on a `&[f32]` — no allocation.
+Vec typically has 0-3 elements. Total compute per frame: ~10 multiplications across all call sites.
+
+## Net Cost vs Prior Architecture
+
+PRIOR: 6 FixedUpdate systems × query iteration × write to Effective* components + subsequent read
+NOW: Direct `Option<&Active*>::map_or(1.0, ...)` calls at consumption point
+
+The refactor eliminates 6 system calls, 6 query iterations, and 6 component write passes per
+FixedUpdate frame. Consumers incur the product computation directly but this is cheaper than the
+prior round-trip through the scheduler and component table. Net win at all scales.
+
+## Archetype Impact
+
+Removing 6 `Effective*` components strictly reduces fragmentation:
+- Bolt entities no longer straddle archetypes based on which Effective* they have
+- `CollisionQueryBolt` and `MovementQuery` already used `Option<&Active*>` — these queries are
+  unchanged since Effective* was never in them
+
+The only remaining Optional component pattern: `CollisionQueryBolt` has
+`Option<&ActiveDamageBoosts>`, `Option<&ActivePiercings>`, `Option<&ActiveSpeedBoosts>` plus
+existing optional fields. At 1-4 bolts, this is not a fragmentation concern.
 
 ## Vec<f32> Allocation Pattern
 
-Each Active* component stores a `Vec<f32>` (or `Vec<u32>` for piercing). The `.multiplier()` and `.total()` methods iterate this vec inline — no additional allocation. The vec itself is heap-allocated per entity but this is a one-time spawn cost, not per-frame. Clean.
+Each Active* stores a `Vec<f32>` (or `Vec<u32>` for piercing). `.multiplier()` / `.total()`
+iterate this vec inline — no allocation. The Vec is heap-allocated per entity at chip dispatch
+time (lazy init in fire()), not per frame. Clean.
 
-## 6 Systems vs 1: Parallelism Benefit
+## How Active* Components Are Inserted
 
-6 separate systems in the same system set with non-overlapping component access CAN run in parallel in Bevy's scheduler. However: all 6 target different archetypes (ActiveDamageBoosts vs ActiveSpeedBoosts etc.) so even a merged system would not cause contention. At 1-5 entities, the parallelism gain is zero. No action needed.
+Lazy init in `fire()` — inserted on first chip activation, not at entity spawn. Entities without
+any stat chip activated have none of these components. `query.get()` returns None → `map_or(1.0, ...)`
+→ returns the default multiplier. Zero overhead when no chip has fired.
 
-## Archetype Fragmentation from Active* Components
-
-Each stat type is a separate component. Entities that have some but not all stat effects will occupy different archetypes. With only 2 possible host entities (bolt, breaker) and at most 6 extra components each, fragmentation is bounded and trivial. The key insight: these components are not added/removed at runtime per-frame — they are added once at chip dispatch and persist until reversed. So archetype invalidation only happens at chip selection time, not during gameplay. Clean.
-
-## Intentional Pattern: Silent No-Op Until Chip Fires
-
-The design intent is that recalculate systems produce zero results until at least one chip fires the matching stat. This is correct behavior. The zero-entity case is not a bug.
-
-## Note: recalculate systems are REAL (not placeholder) as of feature/runtime-effects
-
-All 6 recalculate systems (recalculate_speed, recalculate_damage, recalculate_piercing, recalculate_size, recalculate_bump_force, recalculate_quick_stop) are fully implemented — they query (&ActiveXxx, &mut EffectiveXxx) and update the scalar. The "Wave 6 placeholder" comment from earlier phases no longer applies.
+`quick_stop.rs` does NOT have lazy init — assumes `ActiveQuickStops` is pre-inserted.
+This is intentional (different registration pattern).
